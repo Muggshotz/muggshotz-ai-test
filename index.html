@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>MuggsHotz Caricature Generator</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:#111;font-family:system-ui,sans-serif;color:#fff;}
+.header{background:#0a0a0a;border-bottom:2px solid #ff6a00;padding:1rem 1.5rem;display:flex;align-items:center;gap:1rem;}
+.logo{font-size:22px;font-weight:700;color:#fff;letter-spacing:1px;}
+.logo span{color:#ff6a00;}
+.sub{font-size:11px;color:#888;letter-spacing:2px;text-transform:uppercase;}
+.tagline{background:#1a0a00;border-bottom:1px solid #3a1a00;text-align:center;padding:.5rem;font-size:11px;color:#ff6a00;letter-spacing:1px;}
+.main{padding:1.5rem;display:flex;flex-direction:column;gap:1.5rem;max-width:600px;margin:0 auto;}
+.card{background:#1a1a1a;border:.5px solid #333;border-radius:12px;padding:1.25rem;}
+.card-title{font-size:13px;font-weight:600;color:#ff6a00;letter-spacing:1px;text-transform:uppercase;margin-bottom:1rem;}
+input[type=password],input[type=text],textarea{width:100%;background:#0d0d0d;border:1px solid #444;border-radius:8px;padding:12px;color:#fff;font-size:14px;font-family:system-ui,sans-serif;}
+input[type=password]:focus,input[type=text]:focus,textarea:focus{outline:none;border-color:#ff6a00;}
+textarea{resize:vertical;min-height:80px;}
+.note{font-size:11px;color:#555;margin-top:6px;}
+.upload-zone{border:1.5px dashed #444;border-radius:12px;padding:2rem;text-align:center;cursor:pointer;background:#0d0d0d;}
+.upload-zone.has-image{border-color:#ff6a00;border-style:solid;}
+.upload-text{font-size:14px;color:#888;}
+.upload-sub{font-size:12px;color:#555;margin-top:4px;}
+.preview-img{width:100%;max-height:200px;object-fit:cover;border-radius:8px;margin-top:1rem;}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+.grid2{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;}
+.btn-select{background:#0d0d0d;border:.5px solid #333;border-radius:8px;padding:.75rem .5rem;text-align:center;cursor:pointer;color:#888;font-size:12px;}
+.btn-select.selected{border-color:#ff6a00;background:#1a0a00;color:#ff6a00;}
+.icon{font-size:20px;margin-bottom:4px;display:block;}
+.quick-btns{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;}
+.quick-btn{background:#0d0d0d;border:.5px solid #444;border-radius:20px;padding:4px 10px;color:#888;font-size:11px;cursor:pointer;}
+.quick-btn:hover{border-color:#ff6a00;color:#ff6a00;}
+.generate-btn{width:100%;background:#ff6a00;border:none;border-radius:10px;padding:1.1rem;color:#fff;font-size:17px;font-weight:700;cursor:pointer;letter-spacing:1px;}
+.generate-btn:disabled{background:#333;color:#666;cursor:not-allowed;}
+.status{font-size:13px;color:#ff6a00;text-align:center;padding:1rem;display:none;}
+.status.visible{display:block;}
+.error{color:#e24b4a!important;}
+.spinner{display:inline-block;width:16px;height:16px;border:2px solid #ff6a00;border-top-color:transparent;border-radius:50%;animation:spin .8s linear infinite;vertical-align:middle;margin-right:8px;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.result-area{display:none;}
+.result-area.visible{display:block;}
+.result-img{width:100%;border-radius:12px;border:1px solid #ff6a00;}
+.mockup-label{font-size:12px;color:#666;text-align:center;margin-top:8px;}
+.download-btn{width:100%;background:#0d0d0d;border:1px solid #ff6a00;border-radius:10px;padding:.75rem;color:#ff6a00;font-size:14px;cursor:pointer;margin-top:.75rem;}
+</style>
+</head>
+<body>
+<div class="header">
+  <div style="font-size:28px">🦝</div>
+  <div>
+    <div class="logo">MUGGS<span>HOT</span>Z</div>
+    <div class="sub">Personalized · Hilarious · Unforgettable</div>
+  </div>
+</div>
+<div class="tagline">YOUR HONEY. OUR FUNNY.</div>
+<div class="main">
+
+  <div class="card">
+    <div class="card-title">🔑 Stability AI Key</div>
+    <input type="password" id="apiKey" placeholder="sk-..." autocomplete="off"/>
+    <div class="note">🔒 Stored locally only. Never shared.</div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">📸 Upload Photo</div>
+    <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()">
+      <div style="font-size:32px;color:#555;margin-bottom:8px;">👤</div>
+      <div class="upload-text">Tap here to upload a photo</div>
+      <div class="upload-sub">Clear face photo works best</div>
+    </div>
+    <input type="file" id="fileInput" accept="image/*" style="display:none"/>
+    <img id="previewImg" class="preview-img" style="display:none"/>
+  </div>
+
+  <div class="card">
+    <div class="card-title">👗 Outfit & Scene</div>
+    <textarea id="outfitDesc" placeholder="Describe outfit, accessories, background...&#10;e.g. 'wearing a tuxedo, holding a coffee mug, city skyline background'"></textarea>
+    <div class="quick-btns">
+      <div class="quick-btn" onclick="setOutfit('business suit and tie')">💼 Suit</div>
+      <div class="quick-btn" onclick="setOutfit('superhero costume with cape')">🦸 Superhero</div>
+      <div class="quick-btn" onclick="setOutfit('chef uniform and tall white hat')">👨‍🍳 Chef</div>
+      <div class="quick-btn" onclick="setOutfit('astronaut suit')">🚀 Astronaut</div>
+      <div class="quick-btn" onclick="setOutfit('hawaiian shirt and sunglasses, beach background')">🌴 Beach</div>
+      <div class="quick-btn" onclick="setOutfit('royal crown and robe')">👑 Royalty</div>
+      <div class="quick-btn" onclick="setOutfit('rock star with electric guitar, stage lights')">🎸 Rock Star</div>
+      <div class="quick-btn" onclick="setOutfit('full clown outfit, big red nose, colorful wig')">🤡 Clown</div>
+      <div class="quick-btn" onclick="setOutfit('police uniform, mugshot backdrop with height chart')">🚔 Mugshot</div>
+      <div class="quick-btn" onclick="setOutfit('graduation cap and gown')">🎓 Grad</div>
+    </div>
+    <div class="note">Tap a quick option or type your own.</div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">🎁 Product</div>
+    <div class="grid3">
+      <div class="btn-select selected" data-val="mug" onclick="pick(this,'product')"><span class="icon">☕</span>Mug</div>
+      <div class="btn-select" data-val="greeting card" onclick="pick(this,'product')"><span class="icon">💌</span>Card</div>
+      <div class="btn-select" data-val="water bottle" onclick="pick(this,'product')"><span class="icon">🍶</span>Bottle</div>
+      <div class="btn-select" data-val="post-it note" onclick="pick(this,'product')"><span class="icon">📝</span>Post-it</div>
+      <div class="btn-select" data-val="phone case" onclick="pick(this,'product')"><span class="icon">📱</span>Phone case</div>
+      <div class="btn-select" data-val="tote bag" onclick="pick(this,'product')"><span class="icon">👜</span>Tote bag</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">🎨 Style</div>
+    <div class="grid2">
+      <div class="btn-select selected" data-val="bold comic caricature, exaggerated features, vibrant colors, white background" onclick="pick(this,'style')">😄 Bold Comic</div>
+      <div class="btn-select" data-val="classic editorial caricature, ink illustration, black and white, white background" onclick="pick(this,'style')">✒️ Classic Ink</div>
+      <div class="btn-select" data-val="fun cartoon caricature, warm colors, white background" onclick="pick(this,'style')">🎠 Cartoon</div>
+      <div class="btn-select" data-val="humorous mugshot caricature, police lineup backdrop" onclick="pick(this,'style')">🚔 Mugshot</div>
+    </div>
+  </div>
+
+  <button class="generate-btn" id="generateBtn" onclick="generate()">🎨 GENERATE CARICATURE</button>
+  <div class="status" id="status"></div>
+
+  <div class="card result-area" id="resultArea">
+    <div class="card-title">✨ Your Caricature</div>
+    <img id="resultImg" class="result-img"/>
+    <div class="mockup-label" id="mockupLabel"></div>
+    <button class="download-btn" onclick="downloadImage()">⬇️ Download for Printify</button>
+  </div>
+
+</div>
+<script>
+let product='mug';
+let style='bold comic caricature, exaggerated features, vibrant colors, white background';
+let uploadedFile=null;
+let resultUrl=null;
+
+function pick(el,type){
+  el.closest('.grid3,.grid2').querySelectorAll('.btn-select').forEach(b=>b.classList.remove('selected'));
+  el.classList.add('selected');
+  if(type==='product')product=el.dataset.val;
+  else style=el.dataset.val;
+}
+function setOutfit(text){document.getElementById('outfitDesc').value=text;}
+document.getElementById('fileInput').addEventListener('change',function(e){
+  const file=e.target.files[0];if(!file)return;
+  uploadedFile=file;
+  const r=new FileReader();
+  r.onload=function(ev){
+    const img=document.getElementById('previewImg');
+    img.src=ev.target.result;img.style.display='block';
+    const z=document.getElementById('uploadZone');
+    z.classList.add('has-image');
+    z.querySelector('.upload-text').textContent='✅ Photo ready!';
+    z.querySelector('.upload-sub').textContent='Tap to change';
+  };
+  r.readAsDataURL(file);
+});
+function setStatus(msg,isError){
+  const el=document.getElementById('status');
+  el.className='status visible'+(isError?' error':'');
+  el.innerHTML=isError?'❌ '+msg:'<span class="spinner"></span>'+msg;
+}
+function clearStatus(){document.getElementById('status').className='status';}
+async function generate(){
+  const apiKey=document.getElementById('apiKey').value.trim();
+  if(!apiKey){setStatus('Please enter your Stability AI key.',true);return;}
+  if(!uploadedFile){setStatus('Please upload a photo first.',true);return;}
+  const btn=document.getElementById('generateBtn');
+  btn.disabled=true;
+  document.getElementById('resultArea').className='card result-area';
+  setStatus('Generating your caricature — about 15 seconds...');
+  try{
+    const outfit=document.getElementById('outfitDesc').value.trim();
+    const outfitPart=outfit?`The subject is ${outfit}.`:'';
+    const prompt=`A ${style} caricature portrait for a personalized ${product}. ${outfitPart} Humorously exaggerate the most distinctive facial features. Fun, warm, likeable tone. Clean white background. High quality print-ready illustration.`;
+    const fd=new FormData();
+    fd.append('prompt',prompt);
+    fd.append('image',uploadedFile,uploadedFile.name);
+    fd.append('strength','0.8');
+    fd.append('output_format','png');
+    const resp=await fetch('https://api.stability.ai/v2beta/stable-image/generate/core',{
+      method:'POST',
+      headers:{'Authorization':'Bearer '+apiKey,'Accept':'image/*'},
+      body:fd
+    });
+    if(!resp.ok){let e='Error '+resp.status;try{const t=await resp.text();e+=': '+t;}catch(x){}throw new Error(e);}
+    const blob=await resp.blob();
+    resultUrl=URL.createObjectURL(blob);
+    document.getElementById('resultImg').src=resultUrl;
+    document.getElementById('mockupLabel').textContent='Ready to upload to Printify as a '+product+' design';
+    document.getElementById('resultArea').className='card result-area visible';
+    clearStatus();
+  }catch(err){setStatus(err.message,true);}
+  finally{btn.disabled=false;}
+}
+function downloadImage(){
+  if(!resultUrl)return;
+  const a=document.createElement('a');
+  a.href=resultUrl;a.download='muggshotz-caricature.png';a.click();
+}
+</script>
+</body>
+</html>
