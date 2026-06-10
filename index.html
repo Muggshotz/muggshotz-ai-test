@@ -169,7 +169,7 @@ async function generate(){
   try{
     const outfit=document.getElementById('outfitDesc').value.trim();
     const outfitPart=outfit?`The subject is ${outfit}.`:'';
-    const prompt=`A ${style} caricature portrait for a personalized ${product}. ${outfitPart} Humorously exaggerate the most distinctive facial features. Fun, warm, likeable tone. Clean white background. High quality print-ready illustration.`;
+    const prompt=`Caricature portrait in the style of: ${style}. SUBJECT: The face in the reference photo — preserve their exact facial structure, skin tone, hair color, and most distinctive features, exaggerated for comic effect. OUTFIT AND SCENE: ${outfitPart||'casual clothing'} — this must be depicted accurately and prominently. PRODUCT USE: designed for a ${product}. Fun, warm, likeable tone. Clean white background. High quality, print-ready illustration. Do not invent a generic face — use the uploaded photo as the primary reference.`;
     const fd=new FormData();
     fd.append('prompt',prompt);
     fd.append('image',uploadedFile,uploadedFile.name);
