@@ -169,7 +169,7 @@ async function generate(){
   try{
     const outfit=document.getElementById('outfitDesc').value.trim();
     const outfitPart=outfit?`dressed in ${outfit}`:'in casual clothing';
-    const prompt=`Create a ${style} caricature of the exact person in this photo for use on a ${product}. Study their face carefully — preserve their real skin tone, head shape, facial structure, and most distinctive features, then exaggerate those features in a fun, comic way. Show them ${outfitPart}. The result should be immediately recognizable as the person in the photo. Fun, warm, likeable tone. Clean white background. High quality print-ready illustration.`;
+    const prompt=`Make me a high quality caricature of the person in this photo, ${outfitPart}. Make it funny and vibrant with an illustrated comic style. The person should be immediately recognizable — keep their exact face, skin tone, bald or hair style, and smile, just exaggerated in a fun caricature way. Add a funny caption that fits the scene. High quality, detailed, print-ready illustration for a ${product}.`;
     const fd=new FormData();
     fd.append('model','gpt-image-1');
     fd.append('prompt',prompt);
