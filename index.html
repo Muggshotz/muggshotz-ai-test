@@ -15,8 +15,8 @@ body{background:#111;font-family:system-ui,sans-serif;color:#fff;}
 .main{padding:1.5rem;display:flex;flex-direction:column;gap:1.5rem;max-width:600px;margin:0 auto;}
 .card{background:#1a1a1a;border:.5px solid #333;border-radius:12px;padding:1.25rem;}
 .card-title{font-size:13px;font-weight:600;color:#ff6a00;letter-spacing:1px;text-transform:uppercase;margin-bottom:1rem;}
-input[type=password],input[type=text],textarea{width:100%;background:#0d0d0d;border:1px solid #444;border-radius:8px;padding:12px;color:#fff;font-size:14px;font-family:system-ui,sans-serif;}
-input[type=password]:focus,input[type=text]:focus,textarea:focus{outline:none;border-color:#ff6a00;}
+input[type=password],textarea{width:100%;background:#0d0d0d;border:1px solid #444;border-radius:8px;padding:12px;color:#fff;font-size:14px;font-family:system-ui,sans-serif;}
+input[type=password]:focus,textarea:focus{outline:none;border-color:#ff6a00;}
 textarea{resize:vertical;min-height:80px;}
 .note{font-size:11px;color:#555;margin-top:6px;line-height:1.35;}
 .upload-zone{border:1.5px dashed #444;border-radius:12px;padding:2rem;text-align:center;cursor:pointer;background:#0d0d0d;}
@@ -79,7 +79,7 @@ textarea{resize:vertical;min-height:80px;}
 
   <div class="card">
     <div class="card-title">👗 Outfit & Scene</div>
-    <textarea id="outfitDesc" placeholder="Describe outfit, accessories, background...&#10;e.g. wearing a tuxedo, holding a coffee mug, city skyline background"></textarea>
+    <textarea id="outfitDesc" placeholder="Describe outfit, accessories, background..."></textarea>
     <div class="quick-btns">
       <div class="quick-btn" onclick="setOutfit('business suit and tie')">💼 Suit</div>
       <div class="quick-btn" onclick="setOutfit('superhero costume with cape')">🦸 Superhero</div>
@@ -92,13 +92,12 @@ textarea{resize:vertical;min-height:80px;}
       <div class="quick-btn" onclick="setOutfit('police uniform, mugshot backdrop with height chart')">🚔 Mugshot</div>
       <div class="quick-btn" onclick="setOutfit('graduation cap and gown')">🎓 Grad</div>
     </div>
-    <div class="note">Tap a quick option or type your own.</div>
   </div>
 
   <div class="card">
     <div class="card-title">🌄 Scene & Caption</div>
-    <textarea id="sceneDesc" placeholder="Describe the full scene and any text you want...&#10;e.g. riding a tricycle down a sunny neighborhood street, trees and blue sky, caption at the bottom that says I run this town"></textarea>
-    <div class="note">Important: short captions work best. Long text may not render cleanly.</div>
+    <textarea id="sceneDesc" placeholder="Describe the scene and any caption..."></textarea>
+    <div class="note">Short captions work best. The generator will try to improve the joke visually.</div>
   </div>
 
   <div class="card">
@@ -116,10 +115,10 @@ textarea{resize:vertical;min-height:80px;}
   <div class="card">
     <div class="card-title">🎨 Style</div>
     <div class="grid2">
-      <div class="btn-select selected" data-val="Muggshotz Classic: polished custom caricature gift art, oversized head, expressive eyes, warm smile, bold clean outlines, vibrant colors, flattering humor, white background" onclick="pick(this,'style')">🦝 Muggshotz Classic</div>
-      <div class="btn-select" data-val="bold comic caricature, exaggerated features, vibrant colors, white background" onclick="pick(this,'style')">😄 Bold Comic</div>
-      <div class="btn-select" data-val="classic editorial caricature, ink illustration, black and white, white background" onclick="pick(this,'style')">✒️ Classic Ink</div>
-      <div class="btn-select" data-val="humorous mugshot caricature, police lineup backdrop" onclick="pick(this,'style')">🚔 Mugshot</div>
+      <div class="btn-select selected" data-val="Muggshotz Classic: polished custom caricature gift art, oversized head, expressive eyes, bold clean outlines, vibrant colors, humorous exaggeration, warm flattering likeness" onclick="pick(this,'style')">🦝 Muggshotz Classic</div>
+      <div class="btn-select" data-val="bold comic caricature, high energy, exaggerated expression, vibrant colors" onclick="pick(this,'style')">😄 Bold Comic</div>
+      <div class="btn-select" data-val="classic editorial caricature, detailed ink illustration, witty visual satire" onclick="pick(this,'style')">✒️ Classic Ink</div>
+      <div class="btn-select" data-val="humorous mugshot caricature, lineup backdrop, funny guilty expression" onclick="pick(this,'style')">🚔 Mugshot</div>
     </div>
   </div>
 
@@ -130,7 +129,6 @@ textarea{resize:vertical;min-height:80px;}
       <div class="btn-select selected" data-val="0.3" onclick="pick(this,'likeness')"><span class="icon">😄</span>Balanced</div>
       <div class="btn-select" data-val="0.4" onclick="pick(this,'likeness')"><span class="icon">🤪</span>Wild</div>
     </div>
-    <div class="note">Lifelike = closest to the real person. Wild = most exaggerated.</div>
   </div>
 
   <button class="generate-btn" id="generateBtn" onclick="generate()">🎨 GENERATE CARICATURE</button>
@@ -147,7 +145,7 @@ textarea{resize:vertical;min-height:80px;}
 
 <script>
 let product='mug';
-let style='Muggshotz Classic: polished custom caricature gift art, oversized head, expressive eyes, warm smile, bold clean outlines, vibrant colors, flattering humor, white background';
+let style='Muggshotz Classic: polished custom caricature gift art, oversized head, expressive eyes, bold clean outlines, vibrant colors, humorous exaggeration, warm flattering likeness';
 let likeness='0.3';
 let uploadedFile=null;
 let resultUrl=null;
@@ -167,10 +165,9 @@ function setOutfit(text){
 document.getElementById('fileInput').addEventListener('change',function(e){
   const file=e.target.files[0];
   if(!file)return;
-
   uploadedFile=file;
-  const r=new FileReader();
 
+  const r=new FileReader();
   r.onload=function(ev){
     const img=document.getElementById('previewImg');
     img.src=ev.target.result;
@@ -181,7 +178,6 @@ document.getElementById('fileInput').addEventListener('change',function(e){
     z.querySelector('.upload-text').textContent='✅ Photo ready!';
     z.querySelector('.upload-sub').textContent='Tap to change';
   };
-
   r.readAsDataURL(file);
 });
 
@@ -200,57 +196,46 @@ function getProductRules(selectedProduct){
     return `
 Product format: coffee mug artwork.
 Use a centered square composition.
-Keep the person large, clear, and readable.
-Keep all important artwork away from the bottom edge and side edges.
-If there is a caption, place it safely inside the artwork with generous margin.
-Avoid tiny text because it will be printed on a curved mug.
+Keep the character large, readable, and funny.
+Keep all text and important details away from the bottom and side edges.
+Make the design bold enough to print well on a curved mug.
 `;
   }
 
   if(selectedProduct==='greeting card'){
     return `
 Product format: greeting card artwork.
-Use a polished square illustration with strong composition.
-Leave clean visual space for a short readable caption.
-Make any requested text large, centered, correctly spelled, and fully visible.
-Keep the face, caption, and main props away from the edges.
+Use a polished illustration with room for a readable caption.
+Make the scene charming, funny, and emotionally expressive.
 `;
   }
 
   if(selectedProduct==='water bottle'){
     return `
 Product format: water bottle artwork.
-Use a tall-feeling centered design inside the square image.
-Keep the main character and face large and clear.
-Avoid wide tiny details that will be hard to see on a bottle.
-Keep all important details away from the edges.
+Use a tall-feeling centered design.
+Keep details bold and simple enough to see on a bottle.
 `;
   }
 
   if(selectedProduct==='phone case'){
     return `
 Product format: phone case artwork.
-Use a vertical-feeling centered composition inside the square image.
-Keep the face and main character clearly visible.
-Avoid placing key details near corners or edges.
-Do not put important text too low.
+Use a vertical-feeling centered composition.
+Keep the face and main joke clearly visible.
 `;
   }
 
   if(selectedProduct==='tote bag'){
     return `
 Product format: tote bag artwork.
-Use bold, simple, high-impact gift artwork.
-The character should be large, clean, and readable from a distance.
-Keep all important elements centered with safe margins.
+Use bold, high-impact artwork readable from a distance.
 `;
   }
 
   return `
 Product format: printable custom gift artwork.
-Use a clean centered square composition.
-Keep all important faces, words, hands, props, and signs safely inside the image.
-Leave generous margin around the edges.
+Use a clean centered square composition with safe margins.
 `;
 }
 
@@ -277,19 +262,19 @@ async function generate(){
     const scene=document.getElementById('sceneDesc').value.trim();
 
     const outfitPart=outfit
-      ? `Outfit and accessories: ${outfit}.`
-      : `Outfit and accessories: clean casual clothing.`;
+      ? `Outfit and accessories requested by the user: ${outfit}.`
+      : `Outfit and accessories: choose something visually funny and appropriate to the scene.`;
 
     const scenePart=scene
-      ? `Scene and caption request: ${scene}.`
-      : `Scene and caption request: create a fun clean product-ready illustrated scene.`;
+      ? `User's scene and caption idea: ${scene}.`
+      : `User did not provide a detailed scene, so invent a funny product-ready caricature scene based on the outfit and product.`;
 
     const likenessDesc =
       likeness==='0.2'
-        ? 'Likeness mode: very lifelike. Keep the face close to the real photo with only light caricature exaggeration.'
+        ? 'Likeness mode: mostly lifelike. Use light caricature exaggeration while preserving the real face closely.'
         : likeness==='0.3'
-        ? 'Likeness mode: balanced caricature. Use fun exaggeration while keeping the person immediately recognizable.'
-        : 'Likeness mode: wild caricature. Use bold comic exaggeration, but still preserve strong facial likeness.';
+        ? 'Likeness mode: balanced caricature. Use clear comic exaggeration while keeping the person immediately recognizable.'
+        : 'Likeness mode: wild caricature. Use bold comic exaggeration, but do not lose the person’s real identity.';
 
     const productRules=getProductRules(product);
 
@@ -305,16 +290,29 @@ ${scenePart}
 Selected visual style:
 ${style}
 
-Muggshotz production-art rules:
-Create polished Muggshotz-style custom gift artwork.
-The final image must feel finished, commercial, warm, funny, flattering, and printable.
-Preserve the real person's identity: face shape, skin tone, eyes, smile, hair or bald head, age, and general personality.
-Make the person expressive and humorous, but not grotesque.
-Use clean outlines, clear facial features, strong color, and a cheerful gift-art look.
+MUGGSHOTZ CREATIVE COMEDY ENGINE:
+Do not merely reproduce the user's words literally.
+Use the user's idea as the starting point, then elevate it into a funnier, more dynamic, more imaginative caricature scene.
+Invent 2 to 4 clever visual gag details that support the user's idea without changing the main request.
+Make the pose active, expressive, and full of personality.
+Make the face emotionally alive: raised eyebrows, mischievous grin, heroic confidence, panic, swagger, surprise, playful determination, or comic seriousness when appropriate.
+Create a clear visual punchline.
+The result should feel like a professional humorous gift caricature, not a literal prompt diagram.
+Add amusing supporting props, background reactions, motion, scale exaggeration, or comic irony when it improves the joke.
+Make the scene feel like a funny moment caught in action, not a still posed portrait.
 
-Composition and print safety rules:
+MUGGSHOTZ PRODUCTION ART RULES:
+Create polished custom gift artwork.
+The image must feel finished, commercial, warm, funny, flattering, and printable.
+Preserve the real person's identity: face shape, skin tone, eyes, smile, hair or bald head, age, and general personality.
+Make the person humorous but respectful.
+Avoid grotesque distortion.
+Use clean outlines, expressive detail, lively color, and professional illustration quality.
+The artwork should have the richer, more detailed, imaginative feel of a custom commission.
+
+COMPOSITION AND PRINT SAFETY:
 Use a square 1024x1024 composition.
-Center the person and main idea clearly.
+Center the person and the main joke clearly.
 Keep the full face, head, hands, important props, signs, and any text safely inside the frame.
 Leave clear safe margin around every edge.
 Do not crop off captions, faces, hats, hair, hands, feet, props, or signs.
@@ -327,7 +325,7 @@ Avoid extra fingers, warped eyes, broken hands, melted faces, duplicate faces, d
 ${productRules}
 
 Final result:
-A clean, centered, detailed, colorful, print-ready square illustration suitable for upload to Printify as a ${product} design.
+A clean, centered, detailed, colorful, imaginative, print-ready square illustration suitable for upload to Printify as a ${product} design.
 `;
 
     const fd=new FormData();
@@ -370,7 +368,6 @@ A clean, centered, detailed, colorful, print-ready square illustration suitable 
 
 function downloadImage(){
   if(!resultUrl)return;
-
   const a=document.createElement('a');
   a.href=resultUrl;
   a.download='muggshotz-caricature.png';
