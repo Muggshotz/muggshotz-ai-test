@@ -114,6 +114,16 @@ textarea{resize:vertical;min-height:80px;}
     </div>
   </div>
 
+  <div class="card">
+    <div class="card-title">🎭 Degree of Caricature</div>
+    <div class="grid3">
+      <div class="btn-select" data-val="0.2" onclick="pick(this,'likeness')"><span class="icon">😊</span>Lifelike</div>
+      <div class="btn-select selected" data-val="0.3" onclick="pick(this,'likeness')"><span class="icon">😄</span>Balanced</div>
+      <div class="btn-select" data-val="0.4" onclick="pick(this,'likeness')"><span class="icon">🤪</span>Wild</div>
+    </div>
+    <div class="note">Lifelike = closest to the real person. Wild = most exaggerated.</div>
+  </div>
+
   <button class="generate-btn" id="generateBtn" onclick="generate()">🎨 GENERATE CARICATURE</button>
   <div class="status" id="status"></div>
 
@@ -128,6 +138,7 @@ textarea{resize:vertical;min-height:80px;}
 <script>
 let product='mug';
 let style='bold comic caricature, exaggerated features, vibrant colors, white background';
+let likeness='0.3';
 let uploadedFile=null;
 let resultUrl=null;
 
@@ -135,7 +146,8 @@ function pick(el,type){
   el.closest('.grid3,.grid2').querySelectorAll('.btn-select').forEach(b=>b.classList.remove('selected'));
   el.classList.add('selected');
   if(type==='product')product=el.dataset.val;
-  else style=el.dataset.val;
+  else if(type==='style')style=el.dataset.val;
+  else if(type==='likeness')likeness=el.dataset.val;
 }
 function setOutfit(text){document.getElementById('outfitDesc').value=text;}
 document.getElementById('fileInput').addEventListener('change',function(e){
@@ -174,6 +186,7 @@ async function generate(){
     fd.append('model','gpt-image-1');
     fd.append('prompt',prompt);
     fd.append('image[]',uploadedFile,uploadedFile.name);
+    fd.append('image_strength',likeness);
     fd.append('size','1024x1024');
     fd.append('quality','high');
     const resp=await fetch('https://api.openai.com/v1/images/edits',{
