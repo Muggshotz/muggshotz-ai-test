@@ -177,7 +177,7 @@ async function generate(){
   const btn=document.getElementById('generateBtn');
   btn.disabled=true;
   document.getElementById('resultArea').className='card result-area';
-  setStatus('Generating your caricature — about 20 seconds...');
+  setStatus('Generating your caricature - about 20 seconds...');
   try{
     const outfit=document.getElementById('outfitDesc').value.trim();
     const outfitPart=outfit?`dressed in ${outfit}`:'in casual clothing';
@@ -191,7 +191,7 @@ async function generate(){
     fd.append('quality','high');
     const resp=await fetch('https://api.openai.com/v1/images/edits',{
       method:'POST',
-      headers:{'Authorization':'Bearer '+apiKey},
+      headers:{'Authorization':'Bearer '+apiKey.replace(/[^\x20-\x7E]/g,'')},
       body:fd
     });
     if(!resp.ok){let e='Error '+resp.status;try{const t=await resp.text();e+=': '+t;}catch(x){}throw new Error(e);}
