@@ -58,7 +58,7 @@ textarea{resize:vertical;min-height:80px;}
 <div class="main">
 
   <div class="card">
-    <div class="card-title">🔑 Stability AI Key</div>
+    <div class="card-title">🔑 OpenAI Key</div>
     <input type="password" id="apiKey" placeholder="sk-..." autocomplete="off"/>
     <div class="note">🔒 Stored locally only. Never shared.</div>
   </div>
@@ -160,29 +160,31 @@ function setStatus(msg,isError){
 function clearStatus(){document.getElementById('status').className='status';}
 async function generate(){
   const apiKey=document.getElementById('apiKey').value.trim();
-  if(!apiKey){setStatus('Please enter your Stability AI key.',true);return;}
+  if(!apiKey){setStatus('Please enter your OpenAI key.',true);return;}
   if(!uploadedFile){setStatus('Please upload a photo first.',true);return;}
   const btn=document.getElementById('generateBtn');
   btn.disabled=true;
   document.getElementById('resultArea').className='card result-area';
-  setStatus('Generating your caricature — about 15 seconds...');
+  setStatus('Generating your caricature — about 20 seconds...');
   try{
     const outfit=document.getElementById('outfitDesc').value.trim();
-    const outfitPart=outfit?`The subject is ${outfit}.`:'';
-    const prompt=`Caricature portrait in the style of: ${style}. SUBJECT: The face in the reference photo — preserve their exact facial structure, skin tone, hair color, and most distinctive features, exaggerated for comic effect. OUTFIT AND SCENE: ${outfitPart||'casual clothing'} — this must be depicted accurately and prominently. PRODUCT USE: designed for a ${product}. Fun, warm, likeable tone. Clean white background. High quality, print-ready illustration. Do not invent a generic face — use the uploaded photo as the primary reference.`;
+    const outfitPart=outfit?`dressed in ${outfit}`:'in casual clothing';
+    const prompt=`Create a ${style} caricature of the exact person in this photo for use on a ${product}. Study their face carefully — preserve their real skin tone, head shape, facial structure, and most distinctive features, then exaggerate those features in a fun, comic way. Show them ${outfitPart}. The result should be immediately recognizable as the person in the photo. Fun, warm, likeable tone. Clean white background. High quality print-ready illustration.`;
     const fd=new FormData();
+    fd.append('model','gpt-image-1');
     fd.append('prompt',prompt);
-    fd.append('image',uploadedFile,uploadedFile.name);
-    fd.append('strength','0.4');
-    fd.append('output_format','png');
-    const resp=await fetch('https://api.stability.ai/v2beta/stable-image/generate/core',{
+    fd.append('image[]',uploadedFile,uploadedFile.name);
+    fd.append('size','1024x1024');
+    fd.append('quality','high');
+    const resp=await fetch('https://api.openai.com/v1/images/edits',{
       method:'POST',
-      headers:{'Authorization':'Bearer '+apiKey,'Accept':'image/*'},
+      headers:{'Authorization':'Bearer '+apiKey},
       body:fd
     });
     if(!resp.ok){let e='Error '+resp.status;try{const t=await resp.text();e+=': '+t;}catch(x){}throw new Error(e);}
-    const blob=await resp.blob();
-    resultUrl=URL.createObjectURL(blob);
+    const data=await resp.json();
+    const b64=data.data[0].b64_json;
+    resultUrl='data:image/png;base64,'+b64;
     document.getElementById('resultImg').src=resultUrl;
     document.getElementById('mockupLabel').textContent='Ready to upload to Printify as a '+product+' design';
     document.getElementById('resultArea').className='card result-area visible';
