@@ -181,12 +181,12 @@ async function generate(){
   try{
     const outfit=document.getElementById('outfitDesc').value.trim();
     const outfitPart=outfit?`dressed in ${outfit}`:'in casual clothing';
-    const prompt=`Make me a high quality caricature of the person in this photo, ${outfitPart}. Make it funny and vibrant with an illustrated comic style. The person should be immediately recognizable -- keep their exact face, skin tone, bald or hair style, and smile, just exaggerated in a fun caricature way. Add a funny caption that fits the scene. High quality, detailed, print-ready illustration for a ${product}.`;
+    const likenessDesc = likeness==='0.2' ? 'very realistic and lifelike, minimal exaggeration' : likeness==='0.3' ? 'moderately exaggerated caricature style' : 'highly exaggerated, wild comic caricature style';
+    const prompt=`Make me a high quality caricature of the person in this photo, ${outfitPart}. Style: ${likenessDesc}. Make it funny and vibrant with an illustrated comic style. The person should be immediately recognizable -- keep their exact face, skin tone, bald or hair style, and smile, just exaggerated in a fun caricature way. Add a funny caption that fits the scene. High quality, detailed, print-ready illustration for a ${product}.`;
     const fd=new FormData();
     fd.append('model','gpt-image-1');
     fd.append('prompt',prompt);
     fd.append('image[]',uploadedFile,uploadedFile.name);
-    fd.append('image_strength',likeness);
     fd.append('size','1024x1024');
     fd.append('quality','high');
     const resp=await fetch('https://api.openai.com/v1/images/edits',{
