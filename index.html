@@ -279,53 +279,53 @@ async function generate(){
     const productRules=getProductRules(product);
 
     const prompt=`
-Create a high-quality custom caricature illustration based on the uploaded photo.
+Create a premium professional caricature illustration from the uploaded photo.
 
-${likenessDesc}
+The person must remain instantly recognizable.
 
+Preserve their real face shape, skin tone, eyes, smile, age, bald head or hairstyle, facial structure, and natural personality.
+
+Create the image like a skilled professional caricature artist made it for a paid custom commission.
+
+Do not make a simple children's cartoon.
+Do not make clip-art.
+Do not make a flat mascot drawing.
+Do not make generic costume art.
+
+Use intelligent caricature exaggeration:
+large expressive head,
+recognizable facial features,
+lively eyes,
+strong smile,
+confident personality,
+expressive body language,
+rich detail,
+professional linework,
+painterly shading,
+high-quality finished illustration.
+
+Make the scene funny and imaginative.
+Do not merely copy the user's words.
+Use the user's idea as a starting point and improve it with visual comedy, expressive pose, motion, background jokes, props, scale exaggeration, and storytelling.
+
+User request:
 ${outfitPart}
-
 ${scenePart}
 
-Selected visual style:
+Selected style:
 ${style}
 
-MUGGSHOTZ CREATIVE COMEDY ENGINE:
-Do not merely reproduce the user's words literally.
-Use the user's idea as the starting point, then elevate it into a funnier, more dynamic, more imaginative caricature scene.
-Invent 2 to 4 clever visual gag details that support the user's idea without changing the main request.
-Make the pose active, expressive, and full of personality.
-Make the face emotionally alive: raised eyebrows, mischievous grin, heroic confidence, panic, swagger, surprise, playful determination, or comic seriousness when appropriate.
-Create a clear visual punchline.
-The result should feel like a professional humorous gift caricature, not a literal prompt diagram.
-Add amusing supporting props, background reactions, motion, scale exaggeration, or comic irony when it improves the joke.
-Make the scene feel like a funny moment caught in action, not a still posed portrait.
-
-MUGGSHOTZ PRODUCTION ART RULES:
-Create polished custom gift artwork.
-The image must feel finished, commercial, warm, funny, flattering, and printable.
-Preserve the real person's identity: face shape, skin tone, eyes, smile, hair or bald head, age, and general personality.
-Make the person humorous but respectful.
-Avoid grotesque distortion.
-Use clean outlines, expressive detail, lively color, and professional illustration quality.
-The artwork should have the richer, more detailed, imaginative feel of a custom commission.
-
-COMPOSITION AND PRINT SAFETY:
-Use a square 1024x1024 composition.
-Center the person and the main joke clearly.
-Keep the full face, head, hands, important props, signs, and any text safely inside the frame.
-Leave clear safe margin around every edge.
-Do not crop off captions, faces, hats, hair, hands, feet, props, or signs.
-Do not place captions or important details at the very bottom edge.
-If text is included, make it short, large, clean, centered, correctly spelled, and fully visible.
-Avoid tiny unreadable text.
-Avoid random background words.
-Avoid extra fingers, warped eyes, broken hands, melted faces, duplicate faces, distorted smiles, or unfinished sketchy areas.
-
+Product target:
 ${productRules}
 
+Composition:
+Use a square 1024x1024 image.
+Keep the face, hands, props, and any words safely inside the frame.
+Do not crop important details.
+If text is included, keep it short, bold, spelled correctly, and fully visible.
+
 Final result:
-A clean, centered, detailed, colorful, imaginative, print-ready square illustration suitable for upload to Printify as a ${product} design.
+A premium, funny, highly recognizable Muggshotz caricature suitable for Printify product artwork.
 `;
 
     const fd=new FormData();
