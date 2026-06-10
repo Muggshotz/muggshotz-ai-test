@@ -173,7 +173,7 @@ async function generate(){
     const fd=new FormData();
     fd.append('prompt',prompt);
     fd.append('image',uploadedFile,uploadedFile.name);
-    fd.append('strength','0.8');
+    fd.append('strength','0.4');
     fd.append('output_format','png');
     const resp=await fetch('https://api.stability.ai/v2beta/stable-image/generate/core',{
       method:'POST',
