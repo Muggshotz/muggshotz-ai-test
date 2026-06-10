@@ -93,6 +93,12 @@ textarea{resize:vertical;min-height:80px;}
   </div>
 
   <div class="card">
+    <div class="card-title">🌄 Scene & Caption</div>
+    <textarea id="sceneDesc" placeholder="Describe the full scene and any text you want...&#10;e.g. 'riding a tricycle down a sunny neighborhood street, trees and blue sky, a sign that says Big Boss, caption at the bottom that says I run this town'"></textarea>
+    <div class="note">The more detail you add here, the richer the illustration will be.</div>
+  </div>
+
+  <div class="card">
     <div class="card-title">🎁 Product</div>
     <div class="grid3">
       <div class="btn-select selected" data-val="mug" onclick="pick(this,'product')"><span class="icon">☕</span>Mug</div>
@@ -180,9 +186,11 @@ async function generate(){
   setStatus('Generating your caricature - about 20 seconds...');
   try{
     const outfit=document.getElementById('outfitDesc').value.trim();
+    const scene=document.getElementById('sceneDesc').value.trim();
     const outfitPart=outfit?`dressed in ${outfit}`:'in casual clothing';
+    const scenePart=scene?`Full scene details: ${scene}.`:'';
     const likenessDesc = likeness==='0.2' ? 'very realistic and lifelike, minimal exaggeration' : likeness==='0.3' ? 'moderately exaggerated caricature style' : 'highly exaggerated, wild comic caricature style';
-    const prompt=`Make me a high quality caricature of the person in this photo, ${outfitPart}. Style: ${likenessDesc}. Make it funny and vibrant with an illustrated comic style. The person should be immediately recognizable -- keep their exact face, skin tone, bald or hair style, and smile, just exaggerated in a fun caricature way. Add a funny caption that fits the scene. High quality, detailed, print-ready illustration for a ${product}.`;
+    const prompt=`Make me a high quality caricature illustration of the person in this photo, ${outfitPart}. ${scenePart} Style: ${likenessDesc}. Paint a rich, detailed illustrated scene with background, environment, props, and any signs or captions exactly as described. The person should be immediately recognizable -- keep their exact face, skin tone, bald or hair style, and smile, just exaggerated in a fun caricature way. High quality, detailed, print-ready illustration for a ${product}.`;
     const fd=new FormData();
     fd.append('model','gpt-image-1');
     fd.append('prompt',prompt);
