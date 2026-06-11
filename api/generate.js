@@ -10,6 +10,22 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: "Missing image or prompt." });
     }
 
+    const identityLock = `
+CRITICAL IDENTITY LOCK:
+Preserve the exact facial identity of the person in the reference image.
+Do not create a similar-looking person.
+Do not reinterpret, beautify, average, de-age, age-up, slim, widen, soften, or genericize the face.
+Preserve exact head shape, skull shape, eye shape, eye spacing, brow angle, nose bridge, nose width, nostril shape, mouth shape, smile asymmetry, teeth, jawline, cheek structure, ears, skin texture, facial hair, wrinkles, age lines, expression, head tilt, and natural personality.
+Caricature only the person's real existing features.
+Do not invent new facial features.
+Do not replace the face with a generic attractive AI face.
+The output must remain unmistakably the same individual from the uploaded photo.
+`;
+
+    const finalPrompt = `${identityLock}
+
+${prompt}`;
+
     const response = await fetch("https://api.replicate.com/v1/models/black-forest-labs/flux-kontext-pro/predictions", {
       method: "POST",
       headers: {
@@ -20,7 +36,7 @@ export default async function handler(req, res) {
       body: JSON.stringify({
         input: {
           input_image: image,
-          prompt: prompt
+          prompt: finalPrompt
         }
       })
     });
