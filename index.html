@@ -12,25 +12,187 @@
 <div class="header"><div style="font-size:28px">🦝</div><div><div class="logo">MUGG<span>SHOT</span>Z</div><div class="sub">Personalized · Hilarious · Unforgettable</div></div></div>
 <div class="tagline">YOUR HONEY. OUR FUNNY.</div>
 <div class="main">
+
 <div class="card"><div class="card-title">📸 Upload Photo</div><div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()"><div style="font-size:32px;color:#555;margin-bottom:8px">👤</div><div class="upload-text">Tap here to upload a photo</div><div class="upload-sub">Clear face photo works best</div></div><input type="file" id="fileInput" accept="image/*" style="display:none"/><img id="previewImg" class="preview-img" style="display:none"/></div>
+
 <div class="card"><div class="card-title">👗 Outfit & Scene</div><textarea id="outfitDesc" placeholder="Describe outfit, accessories, background..."></textarea><div class="quick-btns"><div class="quick-btn" onclick="setOutfit('business suit and tie')">💼 Suit</div><div class="quick-btn" onclick="setOutfit('superhero costume with cape')">🦸 Superhero</div><div class="quick-btn" onclick="setOutfit('chef uniform and tall white hat')">👨‍🍳 Chef</div><div class="quick-btn" onclick="setOutfit('astronaut suit')">🚀 Astronaut</div><div class="quick-btn" onclick="setOutfit('hawaiian shirt and sunglasses, beach background')">🌴 Beach</div><div class="quick-btn" onclick="setOutfit('royal crown and robe')">👑 Royalty</div><div class="quick-btn" onclick="setOutfit('rock star with electric guitar, stage lights')">🎸 Rock Star</div><div class="quick-btn" onclick="setOutfit('full clown outfit, big red nose, colorful wig')">🤡 Clown</div><div class="quick-btn" onclick="setOutfit('police uniform, mugshot backdrop with height chart')">🚔 Mugshot</div><div class="quick-btn" onclick="setOutfit('graduation cap and gown')">🎓 Grad</div></div></div>
+
 <div class="card"><div class="card-title">🌄 Scene & Caption</div><textarea id="sceneDesc" placeholder="Describe the scene and any caption..."></textarea><div class="note">Short captions work best. The generator will try to improve the joke visually.</div></div>
+
 <div class="card"><div class="card-title">🎁 Product</div><div class="grid3"><div class="btn-select selected" data-val="mug" onclick="pick(this,'product')"><span class="icon">☕</span>Mug</div><div class="btn-select" data-val="greeting card" onclick="pick(this,'product')"><span class="icon">💌</span>Card</div><div class="btn-select" data-val="water bottle" onclick="pick(this,'product')"><span class="icon">🍶</span>Bottle</div><div class="btn-select" data-val="post-it note" onclick="pick(this,'product')"><span class="icon">📝</span>Post-it</div><div class="btn-select" data-val="phone case" onclick="pick(this,'product')"><span class="icon">📱</span>Phone case</div><div class="btn-select" data-val="tote bag" onclick="pick(this,'product')"><span class="icon">👜</span>Tote bag</div></div></div>
+
 <div class="card"><div class="card-title">🎨 Style</div><div class="grid2"><div class="btn-select selected" data-val="Muggshotz Classic: premium professional caricature, expressive face, rich detail, painterly shading, funny gift-art scene" onclick="pick(this,'style')">🦝 Muggshotz Classic</div><div class="btn-select" data-val="bold comic caricature, high energy, exaggerated expression, vibrant colors" onclick="pick(this,'style')">😄 Bold Comic</div><div class="btn-select" data-val="classic editorial caricature, detailed ink illustration, witty visual satire" onclick="pick(this,'style')">✒️ Classic Ink</div><div class="btn-select" data-val="humorous mugshot caricature, lineup backdrop, funny guilty expression" onclick="pick(this,'style')">🚔 Mugshot</div></div></div>
-<div class="card"><div class="card-title">🎭 Degree of Caricature</div><div class="grid3"><div class="btn-select" data-val="0.2" onclick="pick(this,'likeness')"><span class="icon">😊</span>Lifelike</div><div class="btn-select selected" data-val="0.3" onclick="pick(this,'likeness')"><span class="icon">😄</span>Balanced</div><div class="btn-select" data-val="0.4" onclick="pick(this,'likeness')"><span class="icon">🤪</span>Wild</div></div></div>
+
+<div class="card"><div class="card-title">🎭 Degree of Caricature</div><div class="grid3"><div class="btn-select selected" data-val="0.15" onclick="pick(this,'likeness')"><span class="icon">😊</span>Lifelike</div><div class="btn-select" data-val="0.25" onclick="pick(this,'likeness')"><span class="icon">😄</span>Balanced</div><div class="btn-select" data-val="0.35" onclick="pick(this,'likeness')"><span class="icon">🤪</span>Wild</div></div></div>
+
 <button class="generate-btn" id="generateBtn" onclick="generate()">🎨 GENERATE CARICATURE</button><div class="status" id="status"></div>
+
 <div class="card result-area" id="resultArea"><div class="card-title">✨ Your Caricature</div><img id="resultImg" class="result-img"/><div class="mockup-label" id="mockupLabel"></div><button class="download-btn" onclick="downloadImage()">⬇️ Download for Printify</button></div>
+
 </div>
+
 <script>
-let product='mug',style='Muggshotz Classic: premium professional caricature, expressive face, rich detail, painterly shading, funny gift-art scene',likeness='0.3',uploadedImageData=null,resultUrl=null;
-function pick(el,type){el.closest('.grid3,.grid2').querySelectorAll('.btn-select').forEach(b=>b.classList.remove('selected'));el.classList.add('selected');if(type==='product')product=el.dataset.val;else if(type==='style')style=el.dataset.val;else if(type==='likeness')likeness=el.dataset.val}
-function setOutfit(text){document.getElementById('outfitDesc').value=text}
-document.getElementById('fileInput').addEventListener('change',function(e){const file=e.target.files[0];if(!file)return;const r=new FileReader();r.onload=function(ev){uploadedImageData=ev.target.result;const img=document.getElementById('previewImg');img.src=uploadedImageData;img.style.display='block';const z=document.getElementById('uploadZone');z.classList.add('has-image');z.querySelector('.upload-text').textContent='✅ Photo ready!';z.querySelector('.upload-sub').textContent='Tap to change'};r.readAsDataURL(file)});
-function setStatus(msg,isError){const el=document.getElementById('status');el.className='status visible'+(isError?' error':'');el.innerHTML=isError?'❌ '+msg:'<span class="spinner"></span>'+msg}
-function clearStatus(){document.getElementById('status').className='status'}
-function getProductRules(p){if(p==='mug')return 'coffee mug artwork, centered square composition, bold readable character, safe margins, clear face and caption';if(p==='greeting card')return 'greeting card artwork, polished composition, room for readable caption, expressive and charming';if(p==='water bottle')return 'water bottle artwork, tall-feeling centered design, bold simple details';if(p==='phone case')return 'phone case artwork, vertical-feeling composition, face and joke clearly visible';if(p==='tote bag')return 'tote bag artwork, bold high-impact design readable from a distance';return 'printable custom gift artwork with clean centered square composition and safe margins'}
-async function generate(){if(!uploadedImageData){setStatus('Please upload a photo first.',true);return}const btn=document.getElementById('generateBtn');btn.disabled=true;document.getElementById('resultArea').className='card result-area';setStatus('Generating with FLUX Kontext Pro...');try{const outfit=document.getElementById('outfitDesc').value.trim();const scene=document.getElementById('sceneDesc').value.trim();const outfitPart=outfit?`Outfit and accessories requested by the user: ${outfit}.`:`Outfit and accessories: choose something visually funny and appropriate to the scene.`;const scenePart=scene?`User's scene and caption idea: ${scene}.`:`User did not provide a detailed scene, so invent a funny product-ready caricature scene based on the outfit and product.`;const likenessDesc=likeness==='0.2'?'Mostly lifelike with light caricature exaggeration while preserving identity.':likeness==='0.3'?'Balanced caricature with clear comic exaggeration while keeping the person recognizable.':'Wild caricature with bold comic exaggeration while preserving the person’s real identity.';const prompt=`Create a premium professional Muggshotz caricature based on the uploaded person. Preserve the person's identity, face shape, skin tone, eyes, smile, age, bald head or hairstyle, facial structure, and personality. ${likenessDesc} ${outfitPart} ${scenePart} Selected style: ${style}. Product target: ${getProductRules(product)}. Make it look like a paid custom caricature commission, not a simple cartoon. Use rich detail, expressive eyes, intelligent facial exaggeration, lively body language, painterly shading, strong composition, and visual comedy. Do not merely copy the request. Improve it with funny props, background reactions, motion, scale exaggeration, and storytelling. Keep all important details and any words safely inside the square frame. Final image should be funny, polished, highly recognizable, and ready for Printify product artwork.`;const resp=await fetch('/api/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({image:uploadedImageData,prompt})});const data=await resp.json();if(!resp.ok)throw new Error(data.error||data.detail||'Generation failed.');resultUrl=data.imageUrl;if(!resultUrl)throw new Error('No image returned from FLUX.');document.getElementById('resultImg').src=resultUrl;document.getElementById('mockupLabel').textContent='Generated with FLUX Kontext Pro. Ready to upload to Printify as a '+product+' design';document.getElementById('resultArea').className='card result-area visible';clearStatus()}catch(err){setStatus(err.message,true)}finally{btn.disabled=false}}
-function downloadImage(){if(!resultUrl)return;const a=document.createElement('a');a.href=resultUrl;a.download='muggshotz-caricature.png';a.click()}
+let product='mug',style='Muggshotz Classic: premium professional caricature, expressive face, rich detail, painterly shading, funny gift-art scene',likeness='0.15',uploadedImageData=null,resultUrl=null;
+
+function pick(el,type){
+  el.closest('.grid3,.grid2').querySelectorAll('.btn-select').forEach(b=>b.classList.remove('selected'));
+  el.classList.add('selected');
+  if(type==='product')product=el.dataset.val;
+  else if(type==='style')style=el.dataset.val;
+  else if(type==='likeness')likeness=el.dataset.val;
+}
+
+function setOutfit(text){
+  document.getElementById('outfitDesc').value=text;
+}
+
+document.getElementById('fileInput').addEventListener('change',function(e){
+  const file=e.target.files[0];
+  if(!file)return;
+  const r=new FileReader();
+  r.onload=function(ev){
+    uploadedImageData=ev.target.result;
+    const img=document.getElementById('previewImg');
+    img.src=uploadedImageData;
+    img.style.display='block';
+    const z=document.getElementById('uploadZone');
+    z.classList.add('has-image');
+    z.querySelector('.upload-text').textContent='✅ Photo ready!';
+    z.querySelector('.upload-sub').textContent='Tap to change';
+  };
+  r.readAsDataURL(file);
+});
+
+function setStatus(msg,isError){
+  const el=document.getElementById('status');
+  el.className='status visible'+(isError?' error':'');
+  el.innerHTML=isError?'❌ '+msg:'<span class="spinner"></span>'+msg;
+}
+
+function clearStatus(){
+  document.getElementById('status').className='status';
+}
+
+function getProductRules(p){
+  if(p==='mug')return 'coffee mug artwork, centered square composition, bold readable character, safe margins, clear face and caption';
+  if(p==='greeting card')return 'greeting card artwork, polished composition, room for readable caption, expressive and charming';
+  if(p==='water bottle')return 'water bottle artwork, tall-feeling centered design, bold simple details';
+  if(p==='phone case')return 'phone case artwork, vertical-feeling composition, face and joke clearly visible';
+  if(p==='tote bag')return 'tote bag artwork, bold high-impact design readable from a distance';
+  return 'printable custom gift artwork with clean centered square composition and safe margins';
+}
+
+async function generate(){
+  if(!uploadedImageData){
+    setStatus('Please upload a photo first.',true);
+    return;
+  }
+
+  const btn=document.getElementById('generateBtn');
+  btn.disabled=true;
+  document.getElementById('resultArea').className='card result-area';
+  setStatus('Generating with FLUX Kontext Pro...');
+
+  try{
+    const outfit=document.getElementById('outfitDesc').value.trim();
+    const scene=document.getElementById('sceneDesc').value.trim();
+
+    const outfitPart=outfit
+      ? `Requested outfit/accessories: ${outfit}. Apply these to the exact uploaded person without changing their face.`
+      : `Outfit/accessories: choose something funny, but do not change the uploaded person's face.`;
+
+    const scenePart=scene
+      ? `Requested scene/caption idea: ${scene}. Build the scene around the exact uploaded person.`
+      : `Scene: invent a simple funny product-ready scene, but keep the uploaded person's face as the main focus.`;
+
+    const likenessDesc =
+      likeness==='0.15'
+        ? 'Caricature strength: LIGHT. Preserve identity very strongly. Use only mild exaggeration.'
+        : likeness==='0.25'
+        ? 'Caricature strength: BALANCED. Use moderate exaggeration, but identity must remain unmistakable.'
+        : 'Caricature strength: WILD. Use bold exaggeration only on the person’s real existing features. Do not invent new facial features.';
+
+    const prompt=`
+Transform the uploaded person into a premium professional Muggshotz caricature.
+
+IDENTITY PRESERVATION IS THE TOP PRIORITY.
+
+Use the uploaded face as the source of truth.
+Do not invent a new person.
+Do not replace the face with a generic cartoon face.
+Do not beautify, age-shift, race-shift, gender-shift, or change the person’s facial structure.
+
+Preserve the exact recognizable identity:
+same bald head or hairstyle,
+same hairline,
+same forehead,
+same eyebrow shape,
+same eye shape and eye spacing,
+same nose shape,
+same mouth and smile shape,
+same teeth characteristics,
+same cheeks,
+same jawline,
+same chin,
+same skin tone,
+same age impression,
+same facial proportions,
+same natural personality.
+
+Caricature this exact person only.
+Exaggerate existing real features, but keep the person immediately recognizable as the uploaded person.
+
+${likenessDesc}
+
+${outfitPart}
+${scenePart}
+
+Selected style: ${style}.
+Product target: ${getProductRules(product)}.
+
+Comedy, outfit, props, and background are secondary to likeness.
+Keep the face large, clear, and central.
+Do not let costume, action, background, or joke overpower the face.
+Avoid extreme facial distortion.
+Avoid generic caricature stock faces.
+Avoid changing the person into a different actor, celebrity, mascot, or invented character.
+
+Create a polished, funny, product-ready caricature suitable for Muggshotz and Printify.
+`;
+
+    const resp=await fetch('/api/generate',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({image:uploadedImageData,prompt})
+    });
+
+    const data=await resp.json();
+
+    if(!resp.ok)throw new Error(data.error||data.detail||'Generation failed.');
+
+    resultUrl=data.imageUrl;
+
+    if(!resultUrl)throw new Error('No image returned from FLUX.');
+
+    document.getElementById('resultImg').src=resultUrl;
+    document.getElementById('mockupLabel').textContent='Generated with FLUX Kontext Pro. Ready to upload to Printify as a '+product+' design';
+    document.getElementById('resultArea').className='card result-area visible';
+    clearStatus();
+
+  }catch(err){
+    setStatus(err.message,true);
+  }finally{
+    btn.disabled=false;
+  }
+}
+
+function downloadImage(){
+  if(!resultUrl)return;
+  const a=document.createElement('a');
+  a.href=resultUrl;
+  a.download='muggshotz-caricature.png';
+  a.click();
+}
 </script>
 </body>
 </html>
