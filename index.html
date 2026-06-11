@@ -77,7 +77,7 @@ function getProductRules(p){
   if(p==='mug')return 'coffee mug artwork, centered square composition, bold readable character, safe margins, clear face and caption';
   if(p==='greeting card')return 'greeting card artwork, polished composition, room for readable caption, expressive and charming';
   if(p==='water bottle')return 'water bottle artwork, tall-feeling centered design, bold simple details';
-  if(p==='phone case')return 'phone case artwork, vertical-feeling composition, face and joke clearly visible';
+  if(p==='phone case')return 'phone case artwork, vertical-feeling composition, face and main joke clearly visible';
   if(p==='tote bag')return 'tote bag artwork, bold high-impact design readable from a distance';
   return 'printable custom gift artwork with clean centered square composition and safe margins';
 }
@@ -102,8 +102,8 @@ async function generate(){
       : `Outfit/accessories: choose something funny, but do not change the uploaded person's face.`;
 
     const scenePart=scene
-      ? `Requested scene/caption idea: ${scene}. Build the scene around the exact uploaded person.`
-      : `Scene: invent a simple funny product-ready scene, but keep the uploaded person's face as the main focus.`;
+      ? `Requested scene/caption idea: ${scene}. Build a rich, cinematic, detailed environment around the exact uploaded person. Keep the person and face dominant, but make the background feel deep, dimensional, atmospheric, and alive. Include believable props, lighting, perspective, texture, and storytelling details. Avoid flat watercolor washes, empty backdrops, generic gradients, or plain cartoon scenery.`
+      : `Scene: invent a simple funny product-ready scene around the exact uploaded person. Keep the face dominant, but create a rich cinematic environment with depth, perspective, atmospheric lighting, believable props, textures, and background storytelling. Avoid flat watercolor washes, empty backdrops, generic gradients, or plain cartoon scenery.`;
 
     const likenessDesc =
       likeness==='0.15'
@@ -150,7 +150,7 @@ ${scenePart}
 Selected style: ${style}.
 Product target: ${getProductRules(product)}.
 
-Comedy, outfit, props, and background are secondary to likeness.
+Comedy, outfit, props, and background are secondary to likeness, but the image should still feel visually rich and professionally illustrated.
 Keep the face large, clear, and central.
 Do not let costume, action, background, or joke overpower the face.
 Avoid extreme facial distortion.
@@ -158,6 +158,12 @@ Avoid generic caricature stock faces.
 Avoid changing the person into a different actor, celebrity, mascot, or invented character.
 
 Create a polished, funny, product-ready caricature suitable for Muggshotz and Printify.
+
+BACKGROUND AND SCENE QUALITY:
+The environment should not look flat, empty, washed out, or generic.
+Use cinematic depth, realistic perspective, layered foreground/midground/background detail, believable props, textured surfaces, dynamic lighting, shadows, reflections, and atmospheric detail.
+The background should feel like a finished professional illustration or magazine-cover scene, not a simple children's cartoon backdrop.
+Use rich environmental storytelling while keeping the face as the primary focal point.
 `;
 
     const resp=await fetch('/api/generate',{
