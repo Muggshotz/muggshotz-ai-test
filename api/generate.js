@@ -11,55 +11,50 @@ export default async function handler(req, res) {
     }
 
     const identityLock = `
-CRITICAL IDENTITY LOCK:
+THIS IS AN IMAGE EDIT, NOT A NEW CREATION.
 
-The uploaded photo is the master identity reference.
+The uploaded photograph is the master identity reference.
 
-The output must show the EXACT SAME PERSON from the uploaded photo.
+Do NOT create a similar-looking person.
+Do NOT redesign the face.
+Do NOT replace the face.
+Do NOT average facial features.
+Do NOT beautify.
+Do NOT make the person younger or older.
+Do NOT change ethnicity.
+Do NOT change facial proportions.
 
-Do not create a similar person.
-Do not create a better-looking version.
-Do not create a younger version.
-Do not create an older version.
-Do not create a generic caricature face.
-Do not change the facial identity.
+Treat the uploaded face exactly like a professional artist tracing the person's identity before adding humor.
 
-Before applying any style, costume, background, joke, or caricature effect, preserve the person's real face.
+The finished image must instantly be recognized as the exact same individual.
 
-Preserve:
+Only exaggerate features that already exist.
+
+Keep:
 - same head shape
+- same skull shape
 - same forehead
-- same eye shape
+- same ears
+- same eyes
 - same eye spacing
 - same eyelids
-- same eyebrow shape
-- same nose bridge
-- same nose width
-- same nostrils
-- same mouth shape
-- same lip shape
-- same smile or serious expression
-- same teeth if visible
-- same jawline
+- same eyebrows
+- same nose
+- same mouth
+- same lips
+- same teeth
 - same chin
-- same cheek structure
-- same ears
+- same jaw
 - same facial hair
-- same wrinkles and age lines
-- same skin tone
-- same age
 - same expression
-- same personality
+- same age
+- same skin tone
 
-Only exaggerate features that already exist in the uploaded photo.
+Preserve the original head-to-body proportions.
 
-Keep the face realistic first, caricature second.
+The costume, setting, props and joke may change.
 
-If likeness and comedy conflict, preserve likeness.
-
-If likeness and style conflict, preserve likeness.
-
-The finished image must be immediately recognizable to close friends and family as the exact person in the uploaded photo.
+The person's identity may NOT.
 `;
 
     const finalPrompt = `${identityLock}
@@ -68,16 +63,18 @@ CUSTOMER REQUEST:
 ${prompt}
 
 STYLE:
-Premium professional Muggshotz caricature.
+Edit the uploaded image into a premium professional Muggshotz caricature.
+Keep the exact person from the uploaded photo.
 Realistic illustrated finish.
 Natural skin texture.
 Detailed lighting.
 Clean polished artwork.
 Funny but respectful.
 Do not over-cartoon the face.
+Do not make the head oversized.
 Do not invent new facial anatomy.
 Do not change the person's expression unless the customer specifically asks.
-Keep the person unmistakably recognizable.
+Preserve the uploaded person's likeness above everything else.
 `;
 
     const response = await fetch("https://api.replicate.com/v1/models/black-forest-labs/flux-kontext-pro/predictions", {
