@@ -15,9 +15,7 @@
 
 <div class="card"><div class="card-title">📸 Upload Photo</div><div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()"><div style="font-size:32px;color:#555;margin-bottom:8px">👤</div><div class="upload-text">Tap here to upload a photo</div><div class="upload-sub">Clear face photo works best</div></div><input type="file" id="fileInput" accept="image/*" style="display:none"/><img id="previewImg" class="preview-img" style="display:none"/></div>
 
-<div class="card"><div class="card-title">👗 Outfit & Scene</div><textarea id="outfitDesc" placeholder="Describe outfit, accessories, background..."></textarea><div class="quick-btns"><div class="quick-btn" onclick="setOutfit('business suit and tie')">💼 Suit</div><div class="quick-btn" onclick="setOutfit('superhero costume with cape')">🦸 Superhero</div><div class="quick-btn" onclick="setOutfit('chef uniform and tall white hat')">👨‍🍳 Chef</div><div class="quick-btn" onclick="setOutfit('astronaut suit')">🚀 Astronaut</div><div class="quick-btn" onclick="setOutfit('hawaiian shirt and sunglasses, beach background')">🌴 Beach</div><div class="quick-btn" onclick="setOutfit('royal crown and robe')">👑 Royalty</div><div class="quick-btn" onclick="setOutfit('rock star with electric guitar, stage lights')">🎸 Rock Star</div><div class="quick-btn" onclick="setOutfit('full clown outfit, big red nose, colorful wig')">🤡 Clown</div><div class="quick-btn" onclick="setOutfit('police uniform, mugshot backdrop with height chart')">🚔 Mugshot</div><div class="quick-btn" onclick="setOutfit('graduation cap and gown')">🎓 Grad</div></div></div>
-
-<div class="card"><div class="card-title">🌄 Scene & Caption</div><textarea id="sceneDesc" placeholder="Describe the scene and any caption..."></textarea><div class="note">Short captions work best. The generator will try to improve the joke visually.</div></div>
+<div class="card"><div class="card-title">💬 Tell Us Your Idea</div><textarea id="ideaDesc" placeholder="Example: Put me on a tiny red tricycle wearing a firefighter helmet and full firefighter outfit, racing through a parade with smoke and sirens behind me."></textarea><div class="quick-btns"><div class="quick-btn" onclick="setIdea('business suit and tie, confident executive portrait')">💼 Suit</div><div class="quick-btn" onclick="setIdea('superhero costume with cape, dramatic heroic background')">🦸 Superhero</div><div class="quick-btn" onclick="setIdea('chef uniform and tall white hat, cooking chaos in a kitchen')">👨‍🍳 Chef</div><div class="quick-btn" onclick="setIdea('astronaut suit, standing on the moon')">🚀 Astronaut</div><div class="quick-btn" onclick="setIdea('hawaiian shirt and sunglasses, beach background')">🌴 Beach</div><div class="quick-btn" onclick="setIdea('royal crown and robe, sitting on a throne')">👑 Royalty</div><div class="quick-btn" onclick="setIdea('rock star with electric guitar, stage lights')">🎸 Rock Star</div><div class="quick-btn" onclick="setIdea('full clown outfit, big red nose, colorful circus background')">🤡 Clown</div><div class="quick-btn" onclick="setIdea('police uniform, mugshot backdrop with height chart')">🚔 Mugshot</div><div class="quick-btn" onclick="setIdea('graduation cap and gown, proud celebration scene')">🎓 Grad</div></div><div class="note">Say it naturally. One clear idea works best.</div></div>
 
 <div class="card"><div class="card-title">🎁 Product</div><div class="grid3"><div class="btn-select selected" data-val="mug" onclick="pick(this,'product')"><span class="icon">☕</span>Mug</div><div class="btn-select" data-val="greeting card" onclick="pick(this,'product')"><span class="icon">💌</span>Card</div><div class="btn-select" data-val="water bottle" onclick="pick(this,'product')"><span class="icon">🍶</span>Bottle</div><div class="btn-select" data-val="post-it note" onclick="pick(this,'product')"><span class="icon">📝</span>Post-it</div><div class="btn-select" data-val="phone case" onclick="pick(this,'product')"><span class="icon">📱</span>Phone case</div><div class="btn-select" data-val="tote bag" onclick="pick(this,'product')"><span class="icon">👜</span>Tote bag</div></div></div>
 
@@ -42,8 +40,8 @@ function pick(el,type){
   else if(type==='likeness')likeness=el.dataset.val;
 }
 
-function setOutfit(text){
-  document.getElementById('outfitDesc').value=text;
+function setIdea(text){
+  document.getElementById('ideaDesc').value=text;
 }
 
 document.getElementById('fileInput').addEventListener('change',function(e){
@@ -96,16 +94,11 @@ async function generate(){
   setStatus('Generating with FLUX Kontext Pro...');
 
   try{
-    const outfit=document.getElementById('outfitDesc').value.trim();
-    const scene=document.getElementById('sceneDesc').value.trim();
+    const idea=document.getElementById('ideaDesc').value.trim();
 
-    const outfitPart=outfit
-      ? `Requested outfit/accessories: ${outfit}. Apply these to the exact uploaded person without changing their face.`
-      : `Outfit/accessories: choose something funny, but do not change the uploaded person's face.`;
-
-    const scenePart=scene
-      ? `Requested scene/caption idea: ${scene}. Build a rich, cinematic, detailed environment around the exact uploaded person. Keep the person and face dominant, but make the background feel deep, dimensional, atmospheric, and alive. Include believable props, lighting, perspective, texture, and storytelling details. Avoid flat watercolor washes, empty backdrops, generic gradients, or plain cartoon scenery.`
-      : `Scene: invent a simple funny product-ready scene around the exact uploaded person. Keep the face dominant, but create a rich cinematic environment with depth, perspective, atmospheric lighting, believable props, textures, and background storytelling. Avoid flat watercolor washes, empty backdrops, generic gradients, or plain cartoon scenery.`;
+    const customerIdea=idea
+      ? `Customer idea: ${idea}.`
+      : `Customer idea: Create a funny, polished, product-ready caricature of the uploaded person.`;
 
     const likenessDesc =
       likeness==='0.15'
@@ -146,13 +139,13 @@ Exaggerate existing real features, but keep the person immediately recognizable 
 
 ${likenessDesc}
 
-${outfitPart}
-${scenePart}
+${customerIdea}
 
 Selected style: ${style}.
 Product target: ${getProductRules(product)}.
 
-Comedy, outfit, props, and background are secondary to likeness, but the image should still feel visually rich and professionally illustrated.
+Follow the customer idea naturally.
+Costume, background, props, joke, caption, and scene should all come from the single customer idea above.
 Keep the face large, clear, and central.
 Do not let costume, action, background, or joke overpower the face.
 Avoid extreme facial distortion.
