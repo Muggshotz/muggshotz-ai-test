@@ -32,26 +32,49 @@ Funny but respectful exaggeration, not a flattened cartoon mascot.
 Head proportions stay natural unless the customer specifically requests exaggeration.
 Polished gift-art quality.
 `;
-    const response = await fetch("https://api.replicate.com/v1/models/black-forest-labs/flux-kontext-pro/predictions", {
+
+    // image comes in as a data URL like "data:image/png;base64,AAAA..."
+    // OpenAI's edit endpoint needs the raw file bytes, not the data URL prefix.
+    const matches = image.match(/^data:(image\/\w+);base64,(.+)$/);
+    if (!matches) {
+      return res.status(400).json({ error: "Image must be a base64 data URL." });
+    }
+    const mimeType = matches[1];
+    const base64Data = matches[2];
+    const imageBuffer = Buffer.from(base64Data, "base64");
+    const extension = mimeType === "image/png" ? "png" : "jpg";
+
+    const formData = new FormData();
+    formData.append("model", "gpt-image-2");
+    formData.append("prompt", finalPrompt);
+    formData.append(
+      "image",
+      new Blob([imageBuffer], { type: mimeType }),
+      `upload.${extension}`
+    );
+
+    const response = await fetch("https://api.openai.com/v1/images/edits", {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${process.env.REPLICATE_API_TOKEN}`,
-        "Content-Type": "application/json",
-        "Prefer": "wait"
+        "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`
       },
-      body: JSON.stringify({
-        input: {
-          input_image: image,
-          prompt: finalPrompt
-        }
-      })
+      body: formData
     });
+
     const data = await response.json();
     if (!response.ok) {
       return res.status(response.status).json(data);
     }
-    const output = Array.isArray(data.output) ? data.output[0] : data.output;
-    return res.status(200).json({ imageUrl: output });
+
+    const b64 = data?.data?.[0]?.b64_json;
+    if (!b64) {
+      return res.status(502).json({ error: "No image returned from OpenAI.", raw: data });
+    }
+
+    // Package the result the same way the old code did: a single imageUrl
+    // the front end can drop straight into an <img src="..."> tag.
+    const outputDataUrl = `data:image/png;base64,${b64}`;
+    return res.status(200).json({ imageUrl: outputDataUrl });
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }
