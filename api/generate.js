@@ -11,50 +11,53 @@ export default async function handler(req, res) {
     }
 
     const identityLock = `
-THIS IS AN IMAGE EDIT, NOT A NEW CREATION.
+CRITICAL MUGGSHOTZ LIKENESS RULE:
 
-The uploaded photograph is the master identity reference.
+This is a caricature of the exact person in the uploaded photo.
 
-Do NOT create a similar-looking person.
-Do NOT redesign the face.
-Do NOT replace the face.
-Do NOT average facial features.
-Do NOT beautify.
-Do NOT make the person younger or older.
-Do NOT change ethnicity.
-Do NOT change facial proportions.
+Do not make a similar person.
+Do not make a nicer person.
+Do not make a younger person.
+Do not make a generic handsome face.
+Do not replace the uploaded person with a new identity.
 
-Treat the uploaded face exactly like a professional artist tracing the person's identity before adding humor.
+Study the uploaded face first.
 
-The finished image must instantly be recognized as the exact same individual.
+Capture the spark in the eyes.
+Capture the personality behind the eyes.
+Capture the same attitude, expression, mood, and presence.
+The eyes are the center of the likeness.
 
-Only exaggerate features that already exist.
+A good result must feel like the same person is looking back at you.
 
-Keep:
-- same head shape
-- same skull shape
-- same forehead
-- same ears
-- same eyes
-- same eye spacing
-- same eyelids
-- same eyebrows
-- same nose
-- same mouth
-- same lips
-- same teeth
-- same chin
-- same jaw
-- same facial hair
-- same expression
-- same age
-- same skin tone
+Caricature the real person, not an imagined version.
 
-Preserve the original head-to-body proportions.
+Exaggerate only the features that are actually visible in the uploaded photo:
+- the real eye shape
+- the real eye spacing
+- the real eyelids
+- the real brow angle
+- the real nose shape
+- the real mouth shape
+- the real smile or serious expression
+- the real jawline
+- the real cheeks
+- the real ears
+- the real facial hair
+- the real head shape
+- the real skin tone
+- the real age
 
-The costume, setting, props and joke may change.
+Do not invent new facial features.
+Do not average the face.
+Do not smooth away personality.
+Do not change the emotional character of the person.
 
-The person's identity may NOT.
+The face may be artistically caricatured, but every change must come from something already visible in the uploaded photo.
+
+If the image stops feeling like the same person, the result has failed.
+
+Preserve normal head-to-body proportions unless the customer asks for wild exaggeration.
 `;
 
     const finalPrompt = `${identityLock}
@@ -63,18 +66,17 @@ CUSTOMER REQUEST:
 ${prompt}
 
 STYLE:
-Edit the uploaded image into a premium professional Muggshotz caricature.
-Keep the exact person from the uploaded photo.
-Realistic illustrated finish.
+Premium realistic Muggshotz caricature.
+High-detail illustrated realism.
 Natural skin texture.
-Detailed lighting.
-Clean polished artwork.
+Strong likeness.
+Expressive eyes.
+Personality-centered face.
 Funny but respectful.
+Polished gift-art quality.
 Do not over-cartoon the face.
 Do not make the head oversized.
-Do not invent new facial anatomy.
-Do not change the person's expression unless the customer specifically asks.
-Preserve the uploaded person's likeness above everything else.
+Keep the person unmistakably recognizable.
 `;
 
     const response = await fetch("https://api.replicate.com/v1/models/black-forest-labs/flux-kontext-pro/predictions", {
