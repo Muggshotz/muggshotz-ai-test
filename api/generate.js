@@ -1,9 +1,22 @@
+import fs from "fs";
+import path from "path";
+
+const TEMPLATE_FILES = {
+  "Marbling": "Laced marble.png",
+  "Cloud Mist": "Clouds.png",
+  "Pastel Leaf": "Pastel leaf.png",
+  "Satin Sheets": "Satin sheets.png",
+  "Frosted Glass": "Frosted mirror.png",
+  "Bubble Drift": "Bubble drift.png",
+  "Rose Crepe": "Rose crepe.png"
+};
+
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
   try {
-    const { image, prompt } = req.body;
+    const { image, prompt, theme } = req.body;
     if (!image || !prompt) {
       return res.status(400).json({ error: "Missing image or prompt." });
     }
@@ -19,9 +32,21 @@ the real mouth shape and expression; the real jawline, cheeks, and ears;
 the real facial hair, head shape, skin tone, and age.
 Preserve normal head-to-body proportions unless the customer asks for wild exaggeration.
 `;
+
+    const templateFile = theme ? TEMPLATE_FILES[theme] : null;
+    const backgroundInstruction = templateFile
+      ? `
+BACKGROUND REFERENCE:
+Image 1 is the customer's photo — use it only for the person's face and likeness.
+Image 2 is a background style reference — match its texture, pattern, and soft-edged blending style for the background only.
+Do not copy any people, objects, or text from Image 2. Only use it as a background style guide.
+`
+      : "";
+
     const finalPrompt = `${identityLock}
 CUSTOMER REQUEST:
 ${prompt}
+${backgroundInstruction}
 STYLE:
 Photorealistic rendering with caricature-level exaggeration of real features.
 Painted, airbrushed illustration finish — not cartoon, not vector, not anime style.
@@ -33,8 +58,6 @@ Head proportions stay natural unless the customer specifically requests exaggera
 Polished gift-art quality.
 `;
 
-    // image comes in as a data URL like "data:image/png;base64,AAAA..."
-    // OpenAI's edit endpoint needs the raw file bytes, not the data URL prefix.
     const matches = image.match(/^data:(image\/\w+);base64,(.+)$/);
     if (!matches) {
       return res.status(400).json({ error: "Image must be a base64 data URL." });
@@ -48,10 +71,24 @@ Polished gift-art quality.
     formData.append("model", "gpt-image-2");
     formData.append("prompt", finalPrompt);
     formData.append(
-      "image",
+      "image[]",
       new Blob([imageBuffer], { type: mimeType }),
       `upload.${extension}`
     );
+
+    if (templateFile) {
+      try {
+        const templatePath = path.join(process.cwd(), templateFile);
+        const templateBuffer = fs.readFileSync(templatePath);
+        formData.append(
+          "image[]",
+          new Blob([templateBuffer], { type: "image/png" }),
+          "background-reference.png"
+        );
+      } catch (fileErr) {
+        console.error("Could not load template file:", templateFile, fileErr.message);
+      }
+    }
 
     const response = await fetch("https://api.openai.com/v1/images/edits", {
       method: "POST",
@@ -71,8 +108,6 @@ Polished gift-art quality.
       return res.status(502).json({ error: "No image returned from OpenAI.", raw: data });
     }
 
-    // Package the result the same way the old code did: a single imageUrl
-    // the front end can drop straight into an <img src="..."> tag.
     const outputDataUrl = `data:image/png;base64,${b64}`;
     return res.status(200).json({ imageUrl: outputDataUrl });
   } catch (error) {
