@@ -6,7 +6,7 @@
 <title>Muggshotz Image Generator</title>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Bebas+Neue&family=Pacifico&family=Lobster&family=Caveat:wght@600&family=Permanent+Marker&family=Patrick+Hand&family=Playfair+Display:wght@700&display=swap" rel="stylesheet"/>
 <style>
-*{box-sizing:border-box;margin:0;padding:0}body{background:#111;font-family:system-ui,sans-serif;color:#fff}.header{background:#0a0a0a;border-bottom:2px solid #ff6a00;padding:1rem 1.5rem;display:flex;align-items:center;gap:1rem}.logo{font-size:22px;font-weight:700;color:#fff;letter-spacing:1px}.logo span{color:#ff6a00}.sub{font-size:11px;color:#888;letter-spacing:2px;text-transform:uppercase}.tagline{background:#1a0a00;border-bottom:1px solid #3a1a00;text-align:center;padding:.5rem;font-size:11px;color:#ff6a00;letter-spacing:1px}.main{padding:1.5rem;display:flex;flex-direction:column;gap:1.5rem;max-width:600px;margin:0 auto}.card{background:#1a1a1a;border:.5px solid #333;border-radius:12px;padding:1.25rem}.card-title{font-size:13px;font-weight:600;color:#ff6a00;letter-spacing:1px;text-transform:uppercase;margin-bottom:1rem}textarea{width:100%;background:#0d0d0d;border:1px solid #444;border-radius:8px;padding:12px;color:#fff;font-size:14px;font-family:system-ui,sans-serif}textarea:focus{outline:none;border-color:#ff6a00}textarea{resize:vertical;min-height:80px}.note{font-size:11px;color:#555;margin-top:6px;line-height:1.35}.upload-zone{border:1.5px dashed #444;border-radius:12px;padding:2rem;text-align:center;cursor:pointer;background:#0d0d0d}.upload-zone.has-image{border-color:#ff6a00;border-style:solid}.upload-text{font-size:14px;color:#888}.upload-sub{font-size:12px;color:#555;margin-top:4px}.preview-img{width:100%;max-height:320px;object-fit:contain;border-radius:8px;margin-top:0;cursor:pointer}.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.grid2{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}.btn-select{background:#0d0d0d;border:.5px solid #333;border-radius:8px;padding:.75rem .5rem;text-align:center;cursor:pointer;color:#888;font-size:12px}.btn-select.selected{border-color:#ff6a00;background:#1a0a00;color:#ff6a00}.icon{font-size:20px;margin-bottom:4px;display:block}.quick-btns{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}.quick-btn{background:#0d0d0d;border:.5px solid #444;border-radius:20px;padding:4px 10px;color:#888;font-size:11px;cursor:pointer}.quick-btn:hover{border-color:#ff6a00;color:#ff6a00}.generate-btn{width:100%;background:#ff6a00;border:none;border-radius:10px;padding:1.1rem;color:#fff;font-size:17px;font-weight:700;cursor:pointer;letter-spacing:1px}.generate-btn:disabled{background:#333;color:#666;cursor:not-allowed}.status{font-size:13px;color:#ff6a00;text-align:center;padding:1rem;display:none}.status.visible{display:block}.error{color:#e24b4a!important}.spinner{display:inline-block;width:16px;height:16px;border:2px solid #ff6a00;border-top-color:transparent;border-radius:50%;animation:spin .8s linear infinite;vertical-align:middle;margin-right:8px}@keyframes spin{to{transform:rotate(360deg)}}.result-area{display:none}.result-area.visible{display:block}.result-img{width:100%;border-radius:12px;border:1px solid #ff6a00}.mockup-label{font-size:12px;color:#666;text-align:center;margin-top:8px}.download-btn{width:100%;background:#0d0d0d;border:1px solid #ff6a00;border-radius:10px;padding:.75rem;color:#ff6a00;font-size:14px;cursor:pointer;margin-top:.75rem}
+*{box-sizing:border-box;margin:0;padding:0}body{background:#111;font-family:system-ui,sans-serif;color:#fff}.header{background:#0a0a0a;border-bottom:2px solid #ff6a00;padding:1rem 1.5rem;display:flex;align-items:center;gap:1rem}.logo{font-size:22px;font-weight:700;color:#fff;letter-spacing:1px}.logo span{color:#ff6a00;text-shadow:0 0 6px rgba(255,154,0,0.8),0 0 2px rgba(255,255,255,0.6)}.logo .hot{color:#000;-webkit-text-stroke:1px #fff;text-shadow:none}.sub{font-size:11px;color:#888;letter-spacing:2px;text-transform:uppercase}.tagline{background:#1a0a00;border-bottom:1px solid #3a1a00;text-align:center;padding:.5rem;font-size:11px;color:#ff6a00;letter-spacing:1px}.main{padding:1.5rem;display:flex;flex-direction:column;gap:1.5rem;max-width:600px;margin:0 auto}.card{background:#1a1a1a;border:.5px solid #333;border-radius:12px;padding:1.25rem}.card-title{font-size:13px;font-weight:600;color:#ff6a00;letter-spacing:1px;text-transform:uppercase;margin-bottom:1rem}textarea{width:100%;background:#0d0d0d;border:1px solid #444;border-radius:8px;padding:12px;color:#fff;font-size:14px;font-family:system-ui,sans-serif}textarea:focus{outline:none;border-color:#ff6a00}textarea{resize:vertical;min-height:80px}.note{font-size:11px;color:#555;margin-top:6px;line-height:1.35}.upload-zone{border:1.5px dashed #444;border-radius:12px;padding:2rem;text-align:center;cursor:pointer;background:#0d0d0d}.upload-zone.has-image{border-color:#ff6a00;border-style:solid}.upload-text{font-size:14px;color:#888}.upload-sub{font-size:12px;color:#555;margin-top:4px}.preview-img{width:100%;max-height:320px;object-fit:contain;border-radius:8px;margin-top:0;cursor:pointer}.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.grid2{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}.btn-select{background:#0d0d0d;border:.5px solid #333;border-radius:8px;padding:.75rem .5rem;text-align:center;cursor:pointer;color:#888;font-size:12px}.btn-select.selected{border-color:#ff6a00;background:#1a0a00;color:#ff6a00}.icon{font-size:20px;margin-bottom:4px;display:block}.quick-btns{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}.quick-btn{background:#0d0d0d;border:.5px solid #444;border-radius:20px;padding:4px 10px;color:#888;font-size:11px;cursor:pointer}.quick-btn:hover{border-color:#ff6a00;color:#ff6a00}.generate-btn{width:100%;background:#ff6a00;border:none;border-radius:10px;padding:1.1rem;color:#fff;font-size:17px;font-weight:700;cursor:pointer;letter-spacing:1px}.generate-btn:disabled{background:#333;color:#666;cursor:not-allowed}.status{font-size:13px;color:#ff6a00;text-align:center;padding:1rem;display:none}.status.visible{display:block}.error{color:#e24b4a!important}.spinner{display:inline-block;width:16px;height:16px;border:2px solid #ff6a00;border-top-color:transparent;border-radius:50%;animation:spin .8s linear infinite;vertical-align:middle;margin-right:8px}@keyframes spin{to{transform:rotate(360deg)}}.result-area{display:none}.result-area.visible{display:block}.result-img{width:100%;border-radius:12px;border:1px solid #ff6a00}.mockup-label{font-size:12px;color:#666;text-align:center;margin-top:8px}.download-btn{width:100%;background:#0d0d0d;border:1px solid #ff6a00;border-radius:10px;padding:.75rem;color:#ff6a00;font-size:14px;cursor:pointer;margin-top:.75rem}
 .caption-card{display:none}.caption-card.visible{display:block}
 .caption-input{width:100%;background:#0d0d0d;border:1px solid #444;border-radius:8px;padding:10px 12px;color:#fff;font-size:14px;font-family:system-ui,sans-serif}
 .caption-input:focus{outline:none;border-color:#ff6a00}
@@ -22,15 +22,21 @@
 .pos-btn::after{content:'';width:8px;height:8px;border-radius:50%;background:#555}
 .pos-btn.selected{border-color:#ff6a00}
 .pos-btn.selected::after{background:#ff6a00}
-.color-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
-.color-btn{aspect-ratio:1;border-radius:8px;border:2px solid #333;cursor:pointer;position:relative}
-.color-btn.selected{border-color:#ff6a00;box-shadow:0 0 0 2px #ff6a00}
-.color-btn .label{position:absolute;bottom:-18px;left:0;right:0;text-align:center;font-size:9px;color:#888;text-transform:uppercase}
+.color-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;max-width:340px}
+.color-btn{width:100%;max-width:48px;aspect-ratio:1;border-radius:50%;background:#1a1a1a;padding:5px;cursor:pointer;box-shadow:0 3px 6px rgba(0,0,0,0.6);margin:0 auto}
+.color-btn .ball{width:100%;height:100%;border-radius:50%;position:relative;box-shadow:inset 0 -5px 9px rgba(0,0,0,0.35),inset 0 3px 7px rgba(255,255,255,0.35)}
+.color-btn .ball::after{content:'';position:absolute;top:18%;left:22%;width:30%;height:18%;background:rgba(255,255,255,0.55);border-radius:50%;filter:blur(2px);transform:rotate(-30deg)}
+.color-btn.selected{box-shadow:0 0 0 3px #ff6a00,0 0 14px 2px rgba(255,106,0,0.7)}
 .theme-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+.theme-btn{position:relative;border-radius:10px;overflow:hidden;cursor:pointer;border:2px solid #333;display:flex;flex-direction:column}
+.theme-btn img{width:100%;height:56px;object-fit:cover;display:block}
+.theme-btn .theme-label{padding:5px 6px;background:#0d0d0d;color:#ccc;font-size:12px;font-weight:600;text-align:center}
+.theme-btn.selected{border-color:#ff6a00;box-shadow:0 0 0 2px #ff6a00,0 0 10px 1px rgba(255,106,0,0.6)}
+.theme-btn.selected .theme-label{color:#ff6a00}
 </style>
 </head>
 <body>
-<div class="header"><div style="font-size:28px">🦝</div><div><div class="logo">MUGG<span>SHOT</span>Z</div><div class="sub">Personalized · Hilarious · Unforgettable</div></div></div>
+<div class="header"><div style="font-size:28px">🦝</div><div><div class="logo">MUGGS<span class="hot">HOT</span><span>Z</span></div><div class="sub">Personalized · Hilarious · Unforgettable</div></div></div>
 <div class="tagline">YOUR HONEY. OUR FUNNY.</div>
 <div class="main">
 
@@ -47,29 +53,29 @@
 <div class="card"><div class="card-title">🖼️ Background</div>
 <div class="note" style="margin-top:0;margin-bottom:.75rem">Optional — pick a theme and a color, or leave blank and just describe it above.</div>
 <div class="theme-grid" id="themeGrid">
-<div class="btn-select" data-val="Marbling" onclick="pickTheme(this)">Marbling</div>
-<div class="btn-select" data-val="Cloud Mist" onclick="pickTheme(this)">Cloud Mist</div>
-<div class="btn-select" data-val="Pastel Leaf" onclick="pickTheme(this)">Pastel Leaf</div>
-<div class="btn-select" data-val="Satin Sheets" onclick="pickTheme(this)">Satin Sheets</div>
-<div class="btn-select" data-val="Frosted Glass" onclick="pickTheme(this)">Frosted Glass</div>
-<div class="btn-select" data-val="Bubble Drift" onclick="pickTheme(this)">Bubble Drift</div>
-<div class="btn-select" data-val="Rose Crepe" onclick="pickTheme(this)">Rose Crepe</div>
-<div class="btn-select" data-val="Fade to White" onclick="pickTheme(this)">Fade to White</div>
+<div class="theme-btn" data-val="Marbling" onclick="pickTheme(this)"><img src="Laced marble.png"/><div class="theme-label">Marbling</div></div>
+<div class="theme-btn" data-val="Cloud Mist" onclick="pickTheme(this)"><img src="Clouds.png"/><div class="theme-label">Cloud Mist</div></div>
+<div class="theme-btn" data-val="Pastel Leaf" onclick="pickTheme(this)"><img src="Pastel leaf.png"/><div class="theme-label">Pastel Leaf</div></div>
+<div class="theme-btn" data-val="Satin Sheets" onclick="pickTheme(this)"><img src="Satin sheets.png"/><div class="theme-label">Satin Sheets</div></div>
+<div class="theme-btn" data-val="Frosted Glass" onclick="pickTheme(this)"><img src="Frosted mirror.png"/><div class="theme-label">Frosted Glass</div></div>
+<div class="theme-btn" data-val="Bubble Drift" onclick="pickTheme(this)"><img src="Bubble drift.png"/><div class="theme-label">Bubble Drift</div></div>
+<div class="theme-btn" data-val="Rose Crepe" onclick="pickTheme(this)"><img src="Rose crepe.png"/><div class="theme-label">Rose Crepe</div></div>
+<div class="theme-btn" data-val="Fade to White" onclick="pickTheme(this)"><img src="Fade to white.png"/><div class="theme-label">Fade to White</div></div>
 </div>
 <div class="note" style="margin-bottom:6px">Color</div>
 <div class="color-grid" id="colorGrid" style="margin-bottom:18px">
-<div class="color-btn" style="background:#C3B1E1" data-val="Lavender" onclick="pickColor(this)"></div>
-<div class="color-btn" style="background:#E8A0AE" data-val="Rose" onclick="pickColor(this)"></div>
-<div class="color-btn" style="background:#A8D5A0" data-val="Light Green" onclick="pickColor(this)"></div>
-<div class="color-btn" style="background:#2E5E3E" data-val="Dark Green" onclick="pickColor(this)"></div>
-<div class="color-btn" style="background:#C0392B" data-val="Red" onclick="pickColor(this)"></div>
-<div class="color-btn" style="background:#E08A2C" data-val="Orange" onclick="pickColor(this)"></div>
-<div class="color-btn" style="background:#9EC6E8" data-val="Light Blue" onclick="pickColor(this)"></div>
-<div class="color-btn" style="background:#1B3A6B" data-val="Navy Blue" onclick="pickColor(this)"></div>
-<div class="color-btn" style="background:#1a1a1a;border:2px solid #555" data-val="Black" onclick="pickColor(this)"></div>
-<div class="color-btn" style="background:#E8D44D" data-val="Yellow" onclick="pickColor(this)"></div>
-<div class="color-btn" style="background:#2E8B82" data-val="Teal" onclick="pickColor(this)"></div>
-<div class="color-btn" style="background:#7B4FA0" data-val="Purple" onclick="pickColor(this)"></div>
+<div class="color-btn" data-val="Lavender" onclick="pickColor(this)"><div class="ball" style="background:#8B5FBF"></div></div>
+<div class="color-btn" data-val="Rose" onclick="pickColor(this)"><div class="ball" style="background:#E0457B"></div></div>
+<div class="color-btn" data-val="Light Green" onclick="pickColor(this)"><div class="ball" style="background:#5FBF5F"></div></div>
+<div class="color-btn" data-val="Dark Green" onclick="pickColor(this)"><div class="ball" style="background:#1F7A45"></div></div>
+<div class="color-btn" data-val="Red" onclick="pickColor(this)"><div class="ball" style="background:#D62828"></div></div>
+<div class="color-btn" data-val="Orange" onclick="pickColor(this)"><div class="ball" style="background:#F0701A"></div></div>
+<div class="color-btn" data-val="Light Blue" onclick="pickColor(this)"><div class="ball" style="background:#5FA8DE"></div></div>
+<div class="color-btn" data-val="Navy Blue" onclick="pickColor(this)"><div class="ball" style="background:#1B3D7A"></div></div>
+<div class="color-btn" data-val="Black" onclick="pickColor(this)"><div class="ball" style="background:#1c1c1c"></div></div>
+<div class="color-btn" data-val="Yellow" onclick="pickColor(this)"><div class="ball" style="background:#F0D43A"></div></div>
+<div class="color-btn" data-val="Teal" onclick="pickColor(this)"><div class="ball" style="background:#1F9E8E"></div></div>
+<div class="color-btn" data-val="Purple" onclick="pickColor(this)"><div class="ball" style="background:#8E3FC9"></div></div>
 </div>
 </div>
 
@@ -129,7 +135,7 @@ function pick(el,type){
 
 function pickTheme(el){
   const wasSelected=el.classList.contains('selected');
-  document.getElementById('themeGrid').querySelectorAll('.btn-select').forEach(b=>b.classList.remove('selected'));
+  document.getElementById('themeGrid').querySelectorAll('.theme-btn').forEach(b=>b.classList.remove('selected'));
   if(wasSelected){
     selectedTheme=null;
   } else {
