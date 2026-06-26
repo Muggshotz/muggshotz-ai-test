@@ -6,7 +6,7 @@
 <title>Muggshotz Image Generator</title>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Bebas+Neue&family=Pacifico&family=Lobster&family=Caveat:wght@600&family=Permanent+Marker&family=Patrick+Hand&family=Playfair+Display:wght@700&display=swap" rel="stylesheet"/>
 <style>
-*{box-sizing:border-box;margin:0;padding:0}body{background:#111;font-family:system-ui,sans-serif;color:#fff}.header{background:#0a0a0a;border-bottom:2px solid #ff6a00;padding:1rem 1.5rem;display:flex;align-items:center;gap:1rem}.logo{font-size:22px;font-weight:700;color:#fff;letter-spacing:1px}.logo span{color:#ff6a00}.sub{font-size:11px;color:#888;letter-spacing:2px;text-transform:uppercase}.tagline{background:#1a0a00;border-bottom:1px solid #3a1a00;text-align:center;padding:.5rem;font-size:11px;color:#ff6a00;letter-spacing:1px}.main{padding:1.5rem;display:flex;flex-direction:column;gap:1.5rem;max-width:600px;margin:0 auto}.card{background:#1a1a1a;border:.5px solid #333;border-radius:12px;padding:1.25rem}.card-title{font-size:13px;font-weight:600;color:#ff6a00;letter-spacing:1px;text-transform:uppercase;margin-bottom:1rem}textarea{width:100%;background:#0d0d0d;border:1px solid #444;border-radius:8px;padding:12px;color:#fff;font-size:14px;font-family:system-ui,sans-serif}textarea:focus{outline:none;border-color:#ff6a00}textarea{resize:vertical;min-height:80px}.note{font-size:11px;color:#555;margin-top:6px;line-height:1.35}.upload-zone{border:1.5px dashed #444;border-radius:12px;padding:2rem;text-align:center;cursor:pointer;background:#0d0d0d}.upload-zone.has-image{border-color:#ff6a00;border-style:solid}.upload-text{font-size:14px;color:#888}.upload-sub{font-size:12px;color:#555;margin-top:4px}.preview-img{width:100%;max-height:320px;object-fit:contain;border-radius:8px;margin-top:0;cursor:pointer}.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.grid2{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}.btn-select{background:#0d0d0d;border:.5px solid #333;border-radius:8px;padding:.75rem .5rem;text-align:center;cursor:pointer;color:#888;font-size:12px}.btn-select.selected{border-color:#ff6a00;background:#1a0a00;color:#ff6a00}.icon{font-size:20px;margin-bottom:4px;display:block}.quick-btns{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}.quick-btn{background:#0d0d0d;border:.5px solid #444;border-radius:20px;padding:4px 10px;color:#888;font-size:11px;cursor:pointer}.quick-btn:hover{border-color:#ff6a00;color:#ff6a00}.generate-btn{width:100%;background:#ff6a00;border:none;border-radius:10px;padding:1.1rem;color:#fff;font-size:17px;font-weight:700;cursor:pointer;letter-spacing:1px}.generate-btn:disabled{background:#333;color:#666;cursor:not-allowed}.status{font-size:13px;color:#ff6a00;text-align:center;padding:1rem;display:none}.status.visible{display:block}.error{color:#e24b4a!important}.spinner{display:inline-block;width:16px;height:16px;border:2px solid #ff6a00;border-top-color:transparent;border-radius:50%;animation:spin .8s linear infinite;vertical-align:middle;margin-right:8px}@keyframes spin{to{transform:rotate(360deg)}}.result-area{display:none}.result-area.visible{display:block}.result-img{width:100%;border-radius:12px;border:1px solid #ff6a00}.mockup-label{font-size:12px;color:#666;text-align:center;margin-top:8px}.download-btn{width:100%;background:#0d0d0d;border:1px solid #ff6a00;border-radius:10px;padding:.75rem;color:#ff6a00;font-size:14px;cursor:pointer;margin-top:.75rem}
+*{box-sizing:border-box;margin:0;padding:0}body{background:#111;font-family:system-ui,sans-serif;color:#fff}.header{background:#0a0a0a;border-bottom:2px solid #ff6a00;padding:1rem 1.5rem;display:flex;align-items:center;gap:1rem}.logo{font-size:22px;font-weight:700;color:#fff;letter-spacing:1px}.logo span{color:#ff6a00;text-shadow:0 0 6px rgba(255,154,0,0.8),0 0 2px rgba(255,255,255,0.6)}.logo .hot{color:#000;-webkit-text-stroke:1px #fff;text-shadow:none}.sub{font-size:11px;color:#888;letter-spacing:2px;text-transform:uppercase}.tagline{background:#1a0a00;border-bottom:1px solid #3a1a00;text-align:center;padding:.5rem;font-size:11px;color:#ff6a00;letter-spacing:1px}.main{padding:1.5rem;display:flex;flex-direction:column;gap:1.5rem;max-width:600px;margin:0 auto}.card{background:#1a1a1a;border:.5px solid #333;border-radius:12px;padding:1.25rem}.card-title{font-size:13px;font-weight:600;color:#ff6a00;letter-spacing:1px;text-transform:uppercase;margin-bottom:1rem}textarea{width:100%;background:#0d0d0d;border:1px solid #444;border-radius:8px;padding:12px;color:#fff;font-size:14px;font-family:system-ui,sans-serif}textarea:focus{outline:none;border-color:#ff6a00}textarea{resize:vertical;min-height:80px}.note{font-size:11px;color:#555;margin-top:6px;line-height:1.35}.upload-zone{border:1.5px dashed #444;border-radius:12px;padding:2rem;text-align:center;cursor:pointer;background:#0d0d0d}.upload-zone.has-image{border-color:#ff6a00;border-style:solid}.upload-text{font-size:14px;color:#888}.upload-sub{font-size:12px;color:#555;margin-top:4px}.preview-img{width:100%;max-height:320px;object-fit:contain;border-radius:8px;margin-top:0;cursor:pointer}.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.grid2{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}.btn-select{background:#0d0d0d;border:.5px solid #333;border-radius:8px;padding:.75rem .5rem;text-align:center;cursor:pointer;color:#888;font-size:12px}.btn-select.selected{border-color:#ff6a00;background:#1a0a00;color:#ff6a00}.icon{font-size:20px;margin-bottom:4px;display:block}.quick-btns{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}.quick-btn{background:#0d0d0d;border:.5px solid #444;border-radius:20px;padding:4px 10px;color:#888;font-size:11px;cursor:pointer}.quick-btn:hover{border-color:#ff6a00;color:#ff6a00}.generate-btn{width:100%;background:#ff6a00;border:none;border-radius:10px;padding:1.1rem;color:#fff;font-size:17px;font-weight:700;cursor:pointer;letter-spacing:1px}.generate-btn:disabled{background:#333;color:#666;cursor:not-allowed}.status{font-size:13px;color:#ff6a00;text-align:center;padding:1rem;display:none}.status.visible{display:block}.error{color:#e24b4a!important}.spinner{display:inline-block;width:16px;height:16px;border:2px solid #ff6a00;border-top-color:transparent;border-radius:50%;animation:spin .8s linear infinite;vertical-align:middle;margin-right:8px}@keyframes spin{to{transform:rotate(360deg)}}.result-area{display:none}.result-area.visible{display:block}.result-img{width:100%;border-radius:12px;border:1px solid #ff6a00}.mockup-label{font-size:12px;color:#666;text-align:center;margin-top:8px}.download-btn{width:100%;background:#0d0d0d;border:1px solid #ff6a00;border-radius:10px;padding:.75rem;color:#ff6a00;font-size:14px;cursor:pointer;margin-top:.75rem}
 .caption-card{display:none}.caption-card.visible{display:block}
 .caption-input{width:100%;background:#0d0d0d;border:1px solid #444;border-radius:8px;padding:10px 12px;color:#fff;font-size:14px;font-family:system-ui,sans-serif}
 .caption-input:focus{outline:none;border-color:#ff6a00}
@@ -22,10 +22,16 @@
 .pos-btn::after{content:'';width:8px;height:8px;border-radius:50%;background:#555}
 .pos-btn.selected{border-color:#ff6a00}
 .pos-btn.selected::after{background:#ff6a00}
+.color-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;max-width:340px}
+.color-btn{width:100%;max-width:48px;aspect-ratio:1;border-radius:50%;background:#1a1a1a;padding:5px;cursor:pointer;box-shadow:0 3px 6px rgba(0,0,0,0.6);margin:0 auto}
+.color-btn .ball{width:100%;height:100%;border-radius:50%;position:relative;box-shadow:inset 0 -5px 9px rgba(0,0,0,0.35),inset 0 3px 7px rgba(255,255,255,0.35)}
+.color-btn .ball::after{content:'';position:absolute;top:18%;left:22%;width:30%;height:18%;background:rgba(255,255,255,0.55);border-radius:50%;filter:blur(2px);transform:rotate(-30deg)}
+.color-btn.selected{box-shadow:0 0 0 3px #ff6a00,0 0 14px 2px rgba(255,106,0,0.7)}
+.theme-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
 </style>
 </head>
 <body>
-<div class="header"><div style="font-size:28px">🦝</div><div><div class="logo">MUGG<span>SHOT</span>Z</div><div class="sub">Personalized · Hilarious · Unforgettable</div></div></div>
+<div class="header"><div style="font-size:28px">🦝</div><div><div class="logo">MUGGS<span class="hot">HOT</span><span>Z</span></div><div class="sub">Personalized · Hilarious · Unforgettable</div></div></div>
 <div class="tagline">YOUR HONEY. OUR FUNNY.</div>
 <div class="main">
 
@@ -38,6 +44,35 @@
 <div class="card"><div class="card-title">🎨 Style</div><div class="grid2"><div class="btn-select selected" data-val="Muggshotz Classic: premium professional caricature, expressive face, rich detail, painterly shading, funny gift-art scene" onclick="pick(this,'style')">🦝 Muggshotz Classic</div><div class="btn-select" data-val="bold comic caricature, high energy, exaggerated expression, vibrant colors" onclick="pick(this,'style')">😄 Bold Comic</div><div class="btn-select" data-val="classic editorial caricature, detailed ink illustration, witty visual satire" onclick="pick(this,'style')">✒️ Classic Ink</div><div class="btn-select" data-val="humorous mugshot caricature, lineup backdrop, funny guilty expression" onclick="pick(this,'style')">🚔 Mugshot</div></div></div>
 
 <div class="card"><div class="card-title">🎭 Degree of Caricature</div><div class="grid3"><div class="btn-select selected" data-val="0.15" onclick="pick(this,'likeness')"><span class="icon">😊</span>Lifelike</div><div class="btn-select" data-val="0.25" onclick="pick(this,'likeness')"><span class="icon">😄</span>Balanced</div><div class="btn-select" data-val="0.35" onclick="pick(this,'likeness')"><span class="icon">🤪</span>Wild</div></div></div>
+
+<div class="card"><div class="card-title">🖼️ Background</div>
+<div class="note" style="margin-top:0;margin-bottom:.75rem">Optional — pick a theme and a color, or leave blank and just describe it above.</div>
+<div class="theme-grid" id="themeGrid">
+<div class="btn-select" data-val="Marbling" onclick="pickTheme(this)">Marbling</div>
+<div class="btn-select" data-val="Cloud Mist" onclick="pickTheme(this)">Cloud Mist</div>
+<div class="btn-select" data-val="Pastel Leaf" onclick="pickTheme(this)">Pastel Leaf</div>
+<div class="btn-select" data-val="Satin Sheets" onclick="pickTheme(this)">Satin Sheets</div>
+<div class="btn-select" data-val="Frosted Glass" onclick="pickTheme(this)">Frosted Glass</div>
+<div class="btn-select" data-val="Bubble Drift" onclick="pickTheme(this)">Bubble Drift</div>
+<div class="btn-select" data-val="Rose Crepe" onclick="pickTheme(this)">Rose Crepe</div>
+<div class="btn-select" data-val="Fade to White" onclick="pickTheme(this)">Fade to White</div>
+</div>
+<div class="note" style="margin-bottom:6px">Color</div>
+<div class="color-grid" id="colorGrid" style="margin-bottom:18px">
+<div class="color-btn" data-val="Lavender" onclick="pickColor(this)"><div class="ball" style="background:#8B5FBF"></div></div>
+<div class="color-btn" data-val="Rose" onclick="pickColor(this)"><div class="ball" style="background:#E0457B"></div></div>
+<div class="color-btn" data-val="Light Green" onclick="pickColor(this)"><div class="ball" style="background:#5FBF5F"></div></div>
+<div class="color-btn" data-val="Dark Green" onclick="pickColor(this)"><div class="ball" style="background:#1F7A45"></div></div>
+<div class="color-btn" data-val="Red" onclick="pickColor(this)"><div class="ball" style="background:#D62828"></div></div>
+<div class="color-btn" data-val="Orange" onclick="pickColor(this)"><div class="ball" style="background:#F0701A"></div></div>
+<div class="color-btn" data-val="Light Blue" onclick="pickColor(this)"><div class="ball" style="background:#5FA8DE"></div></div>
+<div class="color-btn" data-val="Navy Blue" onclick="pickColor(this)"><div class="ball" style="background:#1B3D7A"></div></div>
+<div class="color-btn" data-val="Black" onclick="pickColor(this)"><div class="ball" style="background:#1c1c1c"></div></div>
+<div class="color-btn" data-val="Yellow" onclick="pickColor(this)"><div class="ball" style="background:#F0D43A"></div></div>
+<div class="color-btn" data-val="Teal" onclick="pickColor(this)"><div class="ball" style="background:#1F9E8E"></div></div>
+<div class="color-btn" data-val="Purple" onclick="pickColor(this)"><div class="ball" style="background:#8E3FC9"></div></div>
+</div>
+</div>
 
 <button class="generate-btn" id="generateBtn" onclick="generate()">🎨 GENERATE CARICATURE</button><div class="status" id="status"></div>
 
@@ -83,6 +118,7 @@
 <script>
 let product='mug',style='Muggshotz Classic: premium professional caricature, expressive face, rich detail, painterly shading, funny gift-art scene',likeness='0.15',uploadedImageData=null,resultUrl=null;
 let captionFont="Anton",captionPos="bottom-left",baseImg=null,finalImageUrl=null;
+let selectedTheme=null,selectedColor=null;
 
 function pick(el,type){
   el.closest('.grid3,.grid2').querySelectorAll('.btn-select').forEach(b=>b.classList.remove('selected'));
@@ -90,6 +126,46 @@ function pick(el,type){
   if(type==='product')product=el.dataset.val;
   else if(type==='style')style=el.dataset.val;
   else if(type==='likeness')likeness=el.dataset.val;
+}
+
+function pickTheme(el){
+  const wasSelected=el.classList.contains('selected');
+  document.getElementById('themeGrid').querySelectorAll('.btn-select').forEach(b=>b.classList.remove('selected'));
+  if(wasSelected){
+    selectedTheme=null;
+  } else {
+    el.classList.add('selected');
+    selectedTheme=el.dataset.val;
+  }
+}
+
+function pickColor(el){
+  const wasSelected=el.classList.contains('selected');
+  document.getElementById('colorGrid').querySelectorAll('.color-btn').forEach(b=>b.classList.remove('selected'));
+  if(wasSelected){
+    selectedColor=null;
+  } else {
+    el.classList.add('selected');
+    selectedColor=el.dataset.val;
+  }
+}
+
+const BACKGROUND_DESCRIPTIONS={
+"Marbling":{"Lavender":"pale lavender marble with soft dusty-purple veining, gentle watercolor blending, edges fading to white","Rose":"soft pink marble with delicate rose-gold veining, gentle watercolor blending, edges fading to white","Light Green":"soft sage-green marble with faint pale veining, gentle watercolor blending, edges fading to white","Dark Green":"deep forest-green marble with darker emerald veining, richer watercolor blending, edges fading to white","Red":"soft warm red marble with fine coral-red veining, gentle watercolor blending, edges fading to white","Orange":"warm peachy-orange marble with soft amber veining, gentle watercolor blending, edges fading to white","Light Blue":"soft sky-blue marble with pale silvery veining, gentle watercolor blending, edges fading to white","Navy Blue":"deep navy marble with fine silver-blue veining, richer watercolor blending, edges fading to white","Black":"soft charcoal-gray marble with fine pale-gray veining, moody watercolor blending, edges fading to white","Yellow":"soft golden-yellow marble with warm honey veining, gentle watercolor blending, edges fading to white","Teal":"soft teal marble with pale aqua veining, gentle watercolor blending, edges fading to white","Purple":"rich violet-purple marble with deeper plum veining, richer watercolor blending, edges fading to white"},
+"Cloud Mist":{"Lavender":"soft lavender-tinted clouds, puffy and three-dimensional, gentle dreamy sky light","Rose":"soft rose-pink clouds, puffy and three-dimensional, gentle warm sky light","Light Green":"soft mint-green clouds, puffy and three-dimensional, gentle fresh sky light","Dark Green":"deeper emerald-tinted clouds, puffy and three-dimensional, moodier forest-sky light","Red":"soft warm red-tinted clouds, puffy and three-dimensional, gentle sunset-glow light","Orange":"soft peachy-orange clouds, puffy and three-dimensional, warm sunset sky light","Light Blue":"soft classic sky-blue clouds, puffy and three-dimensional, bright airy daylight","Navy Blue":"deep twilight-blue clouds, puffy and three-dimensional, moody dusk light","Black":"soft charcoal-gray storm-tinted clouds, puffy and three-dimensional, dramatic soft light","Yellow":"soft golden sunlit clouds, puffy and three-dimensional, warm glowing light","Teal":"soft teal-tinted clouds, puffy and three-dimensional, cool fresh light","Purple":"soft violet twilight clouds, puffy and three-dimensional, dreamy dusk light"},
+"Pastel Leaf":{"Lavender":"soft lavender watercolor blooms with faint pale leaf and branch silhouettes","Rose":"soft rose-pink watercolor blooms with faint leaf and branch silhouettes","Light Green":"soft pale green watercolor blooms with faint leaf and branch silhouettes","Dark Green":"deeper forest-green watercolor blooms with bolder leaf and branch silhouettes","Red":"soft warm red watercolor blooms with faint leaf and branch silhouettes","Orange":"soft peachy-orange watercolor blooms with faint leaf and branch silhouettes","Light Blue":"soft pale blue watercolor blooms with faint leaf and branch silhouettes","Navy Blue":"deeper indigo-blue watercolor blooms with bolder leaf and branch silhouettes","Black":"soft muted charcoal watercolor blooms with faint dark leaf and branch silhouettes","Yellow":"soft golden-yellow watercolor blooms with faint leaf and branch silhouettes","Teal":"soft teal watercolor blooms with faint leaf and branch silhouettes","Purple":"rich violet watercolor blooms with bolder leaf and branch silhouettes"},
+"Satin Sheets":{"Lavender":"soft lavender satin fabric, flowing folds defined by gentle highlight and shadow","Rose":"soft rose-pink satin fabric, flowing folds defined by gentle highlight and shadow","Light Green":"soft pale-green satin fabric, flowing folds defined by gentle highlight and shadow","Dark Green":"rich deep-green satin fabric, flowing folds defined by bold highlight and shadow","Red":"rich warm-red satin fabric, flowing folds defined by bold highlight and shadow","Orange":"warm soft-orange satin fabric, flowing folds defined by gentle highlight and shadow","Light Blue":"soft pale-blue satin fabric, flowing folds defined by gentle highlight and shadow","Navy Blue":"rich deep-navy satin fabric, flowing folds defined by bold highlight and shadow","Black":"deep black satin fabric, flowing folds defined by sharp highlight and soft shadow","Yellow":"pale golden satin fabric, flowing folds defined by warm highlight and soft shadow","Teal":"rich teal satin fabric, flowing folds defined by cool highlight and soft shadow","Purple":"rich violet satin fabric, flowing folds defined by bold highlight and shadow"},
+"Frosted Glass":{"Lavender":"frosted glass with a cool lavender sheen, fern-like ice crystals framing the edges, soft light glowing through","Rose":"frosted glass with a soft rose-pink sheen, fern-like ice crystals framing the edges, soft light glowing through","Light Green":"frosted glass with a cool mint-green sheen, fern-like ice crystals framing the edges, soft light glowing through","Dark Green":"frosted glass with a deep emerald sheen, fern-like ice crystals framing the edges, soft light glowing through","Red":"frosted glass with a warm ember-red sheen, fern-like ice crystals framing the edges, soft light glowing through","Orange":"frosted glass with a warm amber-orange sheen, fern-like ice crystals framing the edges, soft light glowing through","Light Blue":"frosted glass with a cool icy-blue sheen, fern-like ice crystals framing the edges, soft light glowing through","Navy Blue":"frosted glass with a deep moonlit-blue sheen, fern-like ice crystals framing the edges, soft light glowing through","Black":"frosted glass with a cool silvery sheen, fern-like ice crystals framing the edges, soft light glowing through","Yellow":"frosted glass with a warm golden sheen, fern-like ice crystals framing the edges, soft light glowing through","Teal":"frosted glass with a cool teal sheen, fern-like ice crystals framing the edges, soft light glowing through","Purple":"frosted glass with a rich violet sheen, fern-like ice crystals framing the edges, soft light glowing through"},
+"Bubble Drift":{"Lavender":"soft iridescent bubbles drifting against a pale lavender glow, gentle sparkle highlights","Rose":"soft iridescent bubbles drifting against a pale rose-pink glow, gentle sparkle highlights","Light Green":"soft iridescent bubbles drifting against a pale mint-green glow, gentle sparkle highlights","Dark Green":"soft iridescent bubbles drifting against a deeper emerald glow, gentle sparkle highlights","Red":"soft iridescent bubbles drifting against a warm soft-red glow, gentle sparkle highlights","Orange":"soft iridescent bubbles drifting against a warm peachy-orange glow, gentle sparkle highlights","Light Blue":"soft iridescent bubbles drifting against a pale sky-blue glow, gentle sparkle highlights","Navy Blue":"soft iridescent bubbles drifting against a deeper twilight-blue glow, gentle sparkle highlights","Black":"soft iridescent bubbles drifting against a soft charcoal-gray glow, gentle sparkle highlights","Yellow":"soft iridescent bubbles drifting against a warm golden glow, gentle sparkle highlights","Teal":"soft iridescent bubbles drifting against a pale teal glow, gentle sparkle highlights","Purple":"soft iridescent bubbles drifting against a rich violet glow, gentle sparkle highlights"},
+"Rose Crepe":{"Lavender":"soft lavender crepe-paper texture, gentle creases and folds, delicate watercolor softness","Rose":"soft rose-pink crepe-paper texture, gentle creases and folds, delicate watercolor softness","Light Green":"soft pale-green crepe-paper texture, gentle creases and folds, delicate watercolor softness","Dark Green":"deeper forest-green crepe-paper texture, richer creases and folds, watercolor softness","Red":"soft warm-red crepe-paper texture, gentle creases and folds, delicate watercolor softness","Orange":"soft peachy-orange crepe-paper texture, gentle creases and folds, delicate watercolor softness","Light Blue":"soft pale-blue crepe-paper texture, gentle creases and folds, delicate watercolor softness","Navy Blue":"deeper indigo-blue crepe-paper texture, richer creases and folds, watercolor softness","Black":"soft muted charcoal crepe-paper texture, gentle creases and folds, watercolor softness","Yellow":"soft golden-yellow crepe-paper texture, gentle creases and folds, delicate watercolor softness","Teal":"soft teal crepe-paper texture, gentle creases and folds, delicate watercolor softness","Purple":"rich violet crepe-paper texture, richer creases and folds, watercolor softness"},
+"Fade to White":{"Lavender":"a soft lavender glow at the center, fading gently and completely to pure white at the edges","Rose":"a soft rose-pink glow at the center, fading gently and completely to pure white at the edges","Light Green":"a soft mint-green glow at the center, fading gently and completely to pure white at the edges","Dark Green":"a soft emerald-green glow at the center, fading gently and completely to pure white at the edges","Red":"a soft warm red glow at the center, fading gently and completely to pure white at the edges","Orange":"a soft peachy-orange glow at the center, fading gently and completely to pure white at the edges","Light Blue":"a soft sky-blue glow at the center, fading gently and completely to pure white at the edges","Navy Blue":"a soft deep-blue glow at the center, fading gently and completely to pure white at the edges","Black":"a soft charcoal-gray glow at the center, fading gently and completely to pure white at the edges","Yellow":"a soft golden glow at the center, fading gently and completely to pure white at the edges","Teal":"a soft teal glow at the center, fading gently and completely to pure white at the edges","Purple":"a soft violet glow at the center, fading gently and completely to pure white at the edges"}
+};
+
+function getBackgroundDescription(){
+  if(!selectedTheme)return null;
+  const colorKey=selectedColor||"Light Blue";
+  const themeData=BACKGROUND_DESCRIPTIONS[selectedTheme];
+  return themeData ? themeData[colorKey] : null;
 }
 
 function pickFont(el){
@@ -228,6 +304,11 @@ async function generate(){
         ? 'Caricature strength: BALANCED. Use moderate exaggeration, but identity must remain unmistakable.'
         : 'Caricature strength: WILD. Use bold exaggeration only on the person’s real existing features. Do not invent new facial features.';
 
+    const backgroundDesc=getBackgroundDescription();
+    const backgroundLine=backgroundDesc
+      ? `Background option selected: ${backgroundDesc}. No hard edges or sticker-cutout look — all edges should fade or blend softly.`
+      : '';
+
     const prompt=`
 Transform the uploaded person into a premium professional Muggshotz caricature.
 
@@ -264,9 +345,16 @@ ${customerIdea}
 
 Selected style: ${style}.
 Product target: ${getProductRules(product)}.
+${backgroundLine}
+
+PRIORITY ORDER: The customer idea above is the primary instruction for what the scene contains.
+The background option, style, and product target are supporting suggestions only.
+If the customer idea conflicts with the background option (for example, it describes a different
+setting or background), follow the customer idea and ignore the conflicting part of the background
+option. Never let a button selection override or contradict what the customer typed.
 
 Follow the customer idea naturally.
-Costume, background, props, joke, caption, and scene should all come from the single customer idea above.
+Costume, background, props, joke, caption, and scene should all come from the single customer idea above, unless a background option is also selected and does not conflict with it.
 Keep the face large, clear, and central.
 Do not let costume, action, background, or joke overpower the face.
 Avoid extreme facial distortion.
@@ -285,7 +373,7 @@ Use rich environmental storytelling while keeping the face as the primary focal 
     const resp=await fetch('/api/generate',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({image:uploadedImageData,prompt})
+      body:JSON.stringify({image:uploadedImageData,prompt,theme:selectedTheme})
     });
 
     const data=await resp.json();
