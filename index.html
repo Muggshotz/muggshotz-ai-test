@@ -27,7 +27,12 @@
 .color-btn .ball{width:100%;height:100%;border-radius:50%;position:relative;box-shadow:inset 0 -5px 9px rgba(0,0,0,0.35),inset 0 3px 7px rgba(255,255,255,0.35)}
 .color-btn .ball::after{content:'';position:absolute;top:18%;left:22%;width:30%;height:18%;background:rgba(255,255,255,0.55);border-radius:50%;filter:blur(2px);transform:rotate(-30deg)}
 .color-btn.selected{box-shadow:0 0 0 3px #ff6a00,0 0 14px 2px rgba(255,106,0,0.7)}
-.theme-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+.theme-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.theme-btn{position:relative;border-radius:10px;overflow:hidden;cursor:pointer;border:2px solid #333;display:flex;flex-direction:column}
+.theme-btn img{width:100%;aspect-ratio:1;object-fit:cover;display:block}
+.theme-btn .theme-label{padding:4px 4px;background:#0d0d0d;color:#ccc;font-size:10px;font-weight:600;text-align:center;line-height:1.2}
+.theme-btn.selected{border-color:#ff6a00;box-shadow:0 0 0 2px #ff6a00,0 0 10px 1px rgba(255,106,0,0.6)}
+.theme-btn.selected .theme-label{color:#ff6a00}
 </style>
 </head>
 <body>
@@ -48,14 +53,14 @@
 <div class="card"><div class="card-title">🖼️ Background</div>
 <div class="note" style="margin-top:0;margin-bottom:.75rem">Optional — pick a theme and a color, or leave blank and just describe it above.</div>
 <div class="theme-grid" id="themeGrid">
-<div class="btn-select" data-val="Marbling" onclick="pickTheme(this)">Marbling</div>
-<div class="btn-select" data-val="Cloud Mist" onclick="pickTheme(this)">Cloud Mist</div>
-<div class="btn-select" data-val="Pastel Leaf" onclick="pickTheme(this)">Pastel Leaf</div>
-<div class="btn-select" data-val="Satin Sheets" onclick="pickTheme(this)">Satin Sheets</div>
-<div class="btn-select" data-val="Frosted Glass" onclick="pickTheme(this)">Frosted Glass</div>
-<div class="btn-select" data-val="Bubble Drift" onclick="pickTheme(this)">Bubble Drift</div>
-<div class="btn-select" data-val="Rose Crepe" onclick="pickTheme(this)">Rose Crepe</div>
-<div class="btn-select" data-val="Fade to White" onclick="pickTheme(this)">Fade to White</div>
+<div class="theme-btn" data-val="Marbling" onclick="pickTheme(this)"><img src="Laced marble.png"/><div class="theme-label">Marbling</div></div>
+<div class="theme-btn" data-val="Cloud Mist" onclick="pickTheme(this)"><img src="Clouds.png"/><div class="theme-label">Cloud Mist</div></div>
+<div class="theme-btn" data-val="Pastel Leaf" onclick="pickTheme(this)"><img src="Pastel leaf.png"/><div class="theme-label">Pastel Leaf</div></div>
+<div class="theme-btn" data-val="Satin Sheets" onclick="pickTheme(this)"><img src="Satin sheets.png"/><div class="theme-label">Satin Sheets</div></div>
+<div class="theme-btn" data-val="Frosted Glass" onclick="pickTheme(this)"><img src="Frosted mirror.png"/><div class="theme-label">Frosted Glass</div></div>
+<div class="theme-btn" data-val="Bubble Drift" onclick="pickTheme(this)"><img src="Bubble drift.png"/><div class="theme-label">Bubble Drift</div></div>
+<div class="theme-btn" data-val="Rose Crepe" onclick="pickTheme(this)"><img src="Rose crepe.png"/><div class="theme-label">Rose Crepe</div></div>
+<div class="theme-btn" data-val="Fade to White" onclick="pickTheme(this)"><img src="Fade to white.png"/><div class="theme-label">Fade to White</div></div>
 </div>
 <div class="note" style="margin-bottom:6px">Color</div>
 <div class="color-grid" id="colorGrid" style="margin-bottom:18px">
@@ -130,7 +135,7 @@ function pick(el,type){
 
 function pickTheme(el){
   const wasSelected=el.classList.contains('selected');
-  document.getElementById('themeGrid').querySelectorAll('.btn-select').forEach(b=>b.classList.remove('selected'));
+  document.getElementById('themeGrid').querySelectorAll('.theme-btn').forEach(b=>b.classList.remove('selected'));
   if(wasSelected){
     selectedTheme=null;
   } else {
