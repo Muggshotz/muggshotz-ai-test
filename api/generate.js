@@ -1,9 +1,25 @@
+import fs from "fs";
+import path from "path";
+
+// Maps the theme name sent from the front end to its exact reference image
+// filename in the repo root. Filenames include spaces exactly as uploaded.
+const TEMPLATE_FILES = {
+  "Marbling": "laced marble.png",
+  "Cloud Mist": "clouds.png",
+  "Pastel Leaf": "pastel leaf.png",
+  "Satin Sheets": "satin sheets.png",
+  "Frosted Glass": "frosted mirror.png",
+  "Bubble Drift": "bubble drift.png",
+  "Rose Crepe": "rose crepe.png",
+  "Fade to White": "fade to white.png"
+};
+
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
   try {
-    const { image, prompt } = req.body;
+    const { image, prompt, theme } = req.body;
     if (!image || !prompt) {
       return res.status(400).json({ error: "Missing image or prompt." });
     }
@@ -19,9 +35,23 @@ the real mouth shape and expression; the real jawline, cheeks, and ears;
 the real facial hair, head shape, skin tone, and age.
 Preserve normal head-to-body proportions unless the customer asks for wild exaggeration.
 `;
+
+    // If a background theme was chosen and we have a matching reference
+    // image, tell the model explicitly how to use the two images together.
+    const templateFile = theme ? TEMPLATE_FILES[theme] : null;
+    const backgroundInstruction = templateFile
+      ? `
+BACKGROUND REFERENCE:
+Image 1 is the customer's photo — use it only for the person's face and likeness.
+Image 2 is a background style reference — match its texture, pattern, and soft-edged blending style for the background only.
+Do not copy any people, objects, or text from Image 2. Only use it as a background style guide.
+`
+      : "";
+
     const finalPrompt = `${identityLock}
 CUSTOMER REQUEST:
 ${prompt}
+${backgroundInstruction}
 STYLE:
 Photorealistic rendering with caricature-level exaggeration of real features.
 Painted, airbrushed illustration finish — not cartoon, not vector, not anime style.
@@ -48,10 +78,28 @@ Polished gift-art quality.
     formData.append("model", "gpt-image-2");
     formData.append("prompt", finalPrompt);
     formData.append(
-      "image",
+      "image[]",
       new Blob([imageBuffer], { type: mimeType }),
       `upload.${extension}`
     );
+
+    // If a matching template file exists on disk, attach it as a second
+    // reference image so the model can copy its background style.
+    if (templateFile) {
+      try {
+        const templatePath = path.join(process.cwd(), templateFile);
+        const templateBuffer = fs.readFileSync(templatePath);
+        formData.append(
+          "image[]",
+          new Blob([templateBuffer], { type: "image/png" }),
+          "background-reference.png"
+        );
+      } catch (fileErr) {
+        // If the template file can't be read for any reason, continue
+        // without it rather than failing the whole request.
+        console.error("Could not load template file:", templateFile, fileErr.message);
+      }
+    }
 
     const response = await fetch("https://api.openai.com/v1/images/edits", {
       method: "POST",
