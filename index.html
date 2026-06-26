@@ -51,6 +51,18 @@
 .bi-row{display:flex;gap:8px;margin-top:.75rem}
 .bi-btn{flex:1;background:#0d0d0d;border:.5px solid #333;border-radius:8px;padding:.6rem;text-align:center;cursor:pointer;color:#888;font-size:16px}
 .bi-btn.selected{border-color:#ff6a00;background:#1a0a00;color:#ff6a00}
+
+.curve-mode-row{display:flex;gap:8px;margin-top:.75rem}
+.curve-mode-btn{flex:1;background:#0d0d0d;border:.5px solid #333;border-radius:8px;padding:.6rem .4rem;text-align:center;cursor:pointer;color:#888;font-size:12px;font-weight:600}
+.curve-mode-btn.selected{border-color:#ff6a00;background:#1a0a00;color:#ff6a00}
+.draw-path-wrap{position:relative;margin-top:.75rem;border-radius:10px;overflow:hidden;border:1.5px dashed #444;background:#0d0d0d;touch-action:none}
+.draw-path-wrap canvas{display:block;width:100%;height:auto;touch-action:none}
+.draw-path-actions{display:flex;gap:8px;margin-top:.6rem}
+.draw-path-actions .quick-btn{flex:1;text-align:center}
+.caption-header-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem}
+.caption-header-row .card-title{margin-bottom:0}
+.reset-caption-btn{background:#2a1010;border:1px solid #5a2a2a;border-radius:20px;padding:.4rem .8rem;color:#ff8a7a;font-size:11px;font-weight:600;cursor:pointer;letter-spacing:.3px;white-space:nowrap}
+.reset-caption-btn:hover{background:#3a1414;border-color:#7a3a3a}
 </style>
 </head>
 <body>
@@ -102,7 +114,7 @@
 <div class="card result-area" id="resultArea"><div class="card-title">✨ Your Caricature</div><img id="resultImg" class="result-img"/><div class="mockup-label" id="mockupLabel"></div><button class="download-btn" onclick="downloadImage()">⬇️ Download for Printify</button></div>
 
 <div class="card caption-card" id="captionCard">
-<div class="card-title">✏️ Add a Caption</div>
+<div class="caption-header-row"><div class="card-title" style="margin-bottom:0">✏️ Add a Caption</div><div class="reset-caption-btn" onclick="resetCaptionSettings()">↺ Reset to Default</div></div>
 <input type="text" class="caption-input" id="captionText" placeholder="Example: God Bless America" oninput="drawCaption()"/>
 
 <div class="font-grid" id="fontGrid">
@@ -124,8 +136,28 @@
 <div class="cap-row"><label>Color</label><input type="color" id="captionColor" value="#ffffff" oninput="drawCaption()"/></div>
 <div class="cap-row"><label>Size</label><input type="range" id="captionSize" min="20" max="90" value="48" oninput="drawCaption()"/></div>
 <div class="cap-row"><label>Spacing</label><input type="range" id="letterSpacing" min="-5" max="30" value="0" oninput="drawCaption()"/></div>
+
+<div class="sub-section-label">Text Path</div>
+<div class="curve-mode-row" id="curveModeRow">
+<div class="curve-mode-btn selected" data-mode="straight" onclick="pickCurveMode(this)">➖ Straight</div>
+<div class="curve-mode-btn" data-mode="slider" onclick="pickCurveMode(this)">🌙 Quick Arc</div>
+<div class="curve-mode-btn" data-mode="draw" onclick="pickCurveMode(this)">✏️ Draw Path</div>
+</div>
+
+<div id="sliderModeBox" style="display:none">
 <div class="cap-row"><label>Curve</label><input type="range" id="curveAmount" min="-100" max="100" value="0" oninput="drawCaption()"/></div>
-<div class="note" style="margin-top:-.5rem">Curve: drag left for a downward arc (smile), right for an upward arc (frown), center for flat.</div>
+<div class="note" style="margin-top:-.5rem">Drag left for a downward arc (smile), right for an upward arc (frown), center for flat.</div>
+</div>
+
+<div id="drawModeBox" style="display:none">
+<div class="note" style="margin-top:0">Draw a line on the box below with your finger, mouse, or pencil. Your caption will follow that exact path. Draw left to right.</div>
+<div class="draw-path-wrap" id="drawPathWrap">
+<canvas id="pathDrawCanvas"></canvas>
+</div>
+<div class="draw-path-actions">
+<div class="quick-btn" onclick="clearDrawnPath()">🗑️ Clear Path</div>
+</div>
+</div>
 
 <div class="sub-section-label">Outline</div>
 <div class="cap-row"><label>Thickness</label><input type="range" id="outlineThickness" min="0" max="20" value="12" oninput="drawCaption()"/></div>
@@ -174,6 +206,10 @@ let product='mug',style='Muggshotz Classic: premium professional caricature, exp
 let captionFont="Anton",captionPos="bottom-left",baseImg=null,finalImageUrl=null;
 let selectedTheme=null,selectedColor=null;
 let captionBold=false,captionItalic=false,captionEffect="none";
+let curveMode="straight";
+let drawnPath=[];
+let isDrawingPath=false;
+let pathCanvasReady=false;
 
 function pick(el,type){
   el.closest('.grid3,.grid2').querySelectorAll('.btn-select').forEach(b=>b.classList.remove('selected'));
@@ -269,6 +305,160 @@ function pickPreset(el){
   drawCaption();
 }
 
+function pickCurveMode(el){
+  document.getElementById('curveModeRow').querySelectorAll('.curve-mode-btn').forEach(b=>b.classList.remove('selected'));
+  el.classList.add('selected');
+  curveMode=el.dataset.mode;
+  document.getElementById('sliderModeBox').style.display=(curveMode==='slider')?'block':'none';
+  document.getElementById('drawModeBox').style.display=(curveMode==='draw')?'block':'none';
+  if(curveMode==='draw'){
+    setupPathCanvas();
+  }
+  drawCaption();
+}
+
+function setupPathCanvas(){
+  const wrap=document.getElementById('drawPathWrap');
+  const canvas=document.getElementById('pathDrawCanvas');
+  const displayWidth=wrap.clientWidth || 300;
+  const displayHeight=Math.round(displayWidth*0.5);
+  canvas.width=displayWidth;
+  canvas.height=displayHeight;
+  canvas.style.width=displayWidth+'px';
+  canvas.style.height=displayHeight+'px';
+  redrawPathCanvas();
+
+  if(pathCanvasReady)return;
+  pathCanvasReady=true;
+
+  function getPoint(e){
+    const rect=canvas.getBoundingClientRect();
+    const clientX=(e.touches&&e.touches[0])?e.touches[0].clientX:e.clientX;
+    const clientY=(e.touches&&e.touches[0])?e.touches[0].clientY:e.clientY;
+    return {
+      x:(clientX-rect.left)*(canvas.width/rect.width),
+      y:(clientY-rect.top)*(canvas.height/rect.height)
+    };
+  }
+
+  function start(e){
+    e.preventDefault();
+    isDrawingPath=true;
+    drawnPath=[getPoint(e)];
+    redrawPathCanvas();
+  }
+  function move(e){
+    if(!isDrawingPath)return;
+    e.preventDefault();
+    drawnPath.push(getPoint(e));
+    redrawPathCanvas();
+  }
+  function end(e){
+    if(!isDrawingPath)return;
+    isDrawingPath=false;
+    drawCaption();
+  }
+
+  canvas.addEventListener('mousedown',start);
+  canvas.addEventListener('mousemove',move);
+  canvas.addEventListener('mouseup',end);
+  canvas.addEventListener('mouseleave',end);
+  canvas.addEventListener('touchstart',start,{passive:false});
+  canvas.addEventListener('touchmove',move,{passive:false});
+  canvas.addEventListener('touchend',end,{passive:false});
+}
+
+function redrawPathCanvas(){
+  const canvas=document.getElementById('pathDrawCanvas');
+  if(!canvas)return;
+  const ctx=canvas.getContext('2d');
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  ctx.fillStyle='#0d0d0d';
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+
+  ctx.strokeStyle='#333';
+  ctx.lineWidth=1;
+  ctx.beginPath();
+  ctx.moveTo(0,canvas.height/2);
+  ctx.lineTo(canvas.width,canvas.height/2);
+  ctx.stroke();
+
+  if(drawnPath.length>1){
+    ctx.strokeStyle='#ff6a00';
+    ctx.lineWidth=3;
+    ctx.lineCap='round';
+    ctx.lineJoin='round';
+    ctx.beginPath();
+    ctx.moveTo(drawnPath[0].x,drawnPath[0].y);
+    for(let i=1;i<drawnPath.length;i++){
+      ctx.lineTo(drawnPath[i].x,drawnPath[i].y);
+    }
+    ctx.stroke();
+  } else {
+    ctx.fillStyle='#555';
+    ctx.font='13px system-ui,sans-serif';
+    ctx.textAlign='center';
+    ctx.fillText('Draw here →',canvas.width/2,canvas.height/2-10);
+  }
+}
+
+function clearDrawnPath(){
+  drawnPath=[];
+  redrawPathCanvas();
+  drawCaption();
+}
+
+function resetCaptionSettings(){
+  // Reset all state variables back to original defaults
+  captionFont="Anton";
+  captionPos="bottom-left";
+  captionBold=false;
+  captionItalic=false;
+  captionEffect="none";
+  curveMode="straight";
+  drawnPath=[];
+
+  // Reset text input
+  document.getElementById('captionText').value='';
+
+  // Reset font picker
+  document.getElementById('fontGrid').querySelectorAll('.font-btn').forEach(b=>{
+    b.classList.toggle('selected',b.dataset.font==='Anton');
+  });
+
+  // Reset bold/italic
+  document.getElementById('boldBtn').classList.remove('selected');
+  document.getElementById('italicBtn').classList.remove('selected');
+
+  // Reset color, size, spacing, curve, outline sliders to defaults
+  document.getElementById('captionColor').value='#ffffff';
+  document.getElementById('captionSize').value=48;
+  document.getElementById('letterSpacing').value=0;
+  document.getElementById('curveAmount').value=0;
+  document.getElementById('outlineThickness').value=12;
+
+  // Reset effect chips
+  document.getElementById('effectRow').querySelectorAll('.style-chip').forEach(b=>{
+    b.classList.toggle('selected',b.dataset.effect==='none');
+  });
+
+  // Reset position grid and presets
+  document.getElementById('posGrid').querySelectorAll('.pos-btn').forEach(b=>{
+    b.classList.toggle('selected',b.dataset.pos==='bottom-left');
+  });
+  document.getElementById('presetRow').querySelectorAll('.seg-btn').forEach(b=>b.classList.remove('selected'));
+
+  // Reset curve mode buttons and show/hide the right panel
+  document.getElementById('curveModeRow').querySelectorAll('.curve-mode-btn').forEach(b=>{
+    b.classList.toggle('selected',b.dataset.mode==='straight');
+  });
+  document.getElementById('sliderModeBox').style.display='none';
+  document.getElementById('drawModeBox').style.display='none';
+  redrawPathCanvas();
+
+  drawCaption();
+}
+
 function getCaptionXY(canvas,pad){
   const w=canvas.width,h=canvas.height;
   const xs={left:pad,center:w/2,right:w-pad};
@@ -352,25 +542,105 @@ function drawTextOnArc(ctx,text,centerX,centerY,radius,curveAmount,spacing,drawF
   const chars=text.split('');
   const charWidths=chars.map(c=>ctx.measureText(c).width+spacing);
   const totalWidth=charWidths.reduce((a,b)=>a+b,0);
-  const totalAngle=(totalWidth/radius)*strength*direction;
+  // NOTE: angle traversal must stay left-to-right regardless of curve
+  // direction. Only the Y-offset and per-glyph rotation flip with
+  // direction; multiplying the traversal angle by direction as well
+  // would mirror the text and make it read backwards on a downward arc.
+  const totalAngle=(totalWidth/radius)*strength;
   let angle=-totalAngle/2;
 
+  // Force middle/center alignment for the duration of the arc draw, since
+  // each glyph is individually positioned and rotated around its own pivot.
+  // Leaving textBaseline as top/bottom here causes glyphs to draw offset
+  // in the ROTATED direction instead of vertically, producing overlap.
   const prevAlign=ctx.textAlign;
+  const prevBaseline=ctx.textBaseline;
   ctx.textAlign='center';
+  ctx.textBaseline='middle';
 
   chars.forEach((c,i)=>{
-    const charAngle=angle+(charWidths[i]/2/radius)*strength*direction;
+    const charAngle=angle+(charWidths[i]/2/radius)*strength;
     const px=centerX+radius*Math.sin(charAngle);
     const py=centerY-direction*radius*(1-Math.cos(charAngle));
     ctx.save();
     ctx.translate(px,py);
-    ctx.rotate(charAngle);
+    ctx.rotate(direction*charAngle);
     drawFn(c,0,0);
     ctx.restore();
-    angle+=(charWidths[i]/radius)*strength*direction;
+    angle+=(charWidths[i]/radius)*strength;
   });
 
   ctx.textAlign=prevAlign;
+  ctx.textBaseline=prevBaseline;
+}
+
+function getPathTangentPoints(path){
+  // Build cumulative arc-length lookup along the user-drawn polyline so we
+  // can place each character at an exact distance along the path, and
+  // compute the local tangent angle for rotation.
+  const points=[{x:path[0].x,y:path[0].y,dist:0}];
+  let total=0;
+  for(let i=1;i<path.length;i++){
+    const dx=path[i].x-path[i-1].x;
+    const dy=path[i].y-path[i-1].y;
+    total+=Math.sqrt(dx*dx+dy*dy);
+    points.push({x:path[i].x,y:path[i].y,dist:total});
+  }
+  return {points,total};
+}
+
+function samplePathAt(pathData,dist){
+  const {points,total}=pathData;
+  if(dist<=0)return {x:points[0].x,y:points[0].y,angle:pathAngleAt(points,0)};
+  if(dist>=total)return {x:points[points.length-1].x,y:points[points.length-1].y,angle:pathAngleAt(points,points.length-2)};
+  for(let i=1;i<points.length;i++){
+    if(points[i].dist>=dist){
+      const segStart=points[i-1],segEnd=points[i];
+      const segLen=segEnd.dist-segStart.dist;
+      const t=segLen>0?(dist-segStart.dist)/segLen:0;
+      const x=segStart.x+(segEnd.x-segStart.x)*t;
+      const y=segStart.y+(segEnd.y-segStart.y)*t;
+      const angle=Math.atan2(segEnd.y-segStart.y,segEnd.x-segStart.x);
+      return {x,y,angle};
+    }
+  }
+  return {x:points[points.length-1].x,y:points[points.length-1].y,angle:0};
+}
+
+function pathAngleAt(points,i){
+  const a=points[Math.max(0,i)],b=points[Math.min(points.length-1,i+1)];
+  return Math.atan2(b.y-a.y,b.x-a.x);
+}
+
+function drawTextOnPath(ctx,text,pathPointsCanvasSpace,spacing,drawFn){
+  if(pathPointsCanvasSpace.length<2)return;
+  const pathData=getPathTangentPoints(pathPointsCanvasSpace);
+  const chars=text.split('');
+  const charWidths=chars.map(c=>ctx.measureText(c).width+spacing);
+  const totalTextWidth=charWidths.reduce((a,b)=>a+b,0)-spacing;
+
+  // Center the text along the path's total length
+  let dist=(pathData.total-totalTextWidth)/2;
+  if(dist<0)dist=0;
+
+  const prevAlign=ctx.textAlign;
+  const prevBaseline=ctx.textBaseline;
+  ctx.textAlign='center';
+  ctx.textBaseline='middle';
+
+  chars.forEach((c,i)=>{
+    const charCenterDist=dist+charWidths[i]/2;
+    const sample=samplePathAt(pathData,charCenterDist);
+    ctx.save();
+    ctx.translate(sample.x,sample.y);
+    ctx.rotate(sample.angle);
+    drawFn(c,0,0);
+    ctx.restore();
+    dist+=charWidths[i];
+  });
+
+  ctx.textAlign=prevAlign;
+  ctx.textBaseline=prevBaseline;
 }
 
 function drawCaption(){
@@ -426,7 +696,13 @@ function drawCaption(){
       ctx.fillText(str,x,y);
     };
 
-    if(curveAmount!==0){
+    if(curveMode==='draw'&&drawnPath.length>1){
+      const drawCanvas=document.getElementById('pathDrawCanvas');
+      const scaleX=canvas.width/drawCanvas.width;
+      const scaleY=canvas.height/drawCanvas.height;
+      const scaledPath=drawnPath.map(p=>({x:p.x*scaleX,y:p.y*scaleY}));
+      drawTextOnPath(ctx,text,scaledPath,spacing,drawGlyph);
+    } else if(curveMode==='slider'&&curveAmount!==0){
       const radius=canvas.width*1.1;
       drawTextOnArc(ctx,text,pos.x,pos.y,radius,curveAmount,spacing,drawGlyph);
     } else {
