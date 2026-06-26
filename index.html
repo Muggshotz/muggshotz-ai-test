@@ -33,6 +33,24 @@
 .theme-btn .theme-label{padding:4px 4px;background:#0d0d0d;color:#ccc;font-size:10px;font-weight:600;text-align:center;line-height:1.2}
 .theme-btn.selected{border-color:#ff6a00;box-shadow:0 0 0 2px #ff6a00,0 0 10px 1px rgba(255,106,0,0.6)}
 .theme-btn.selected .theme-label{color:#ff6a00}
+
+.seg-row{display:flex;gap:6px;margin-top:.75rem;flex-wrap:wrap}
+.seg-btn{flex:1;min-width:60px;background:#0d0d0d;border:.5px solid #333;border-radius:8px;padding:.55rem .4rem;text-align:center;cursor:pointer;color:#888;font-size:12px;font-weight:600}
+.seg-btn.selected{border-color:#ff6a00;background:#1a0a00;color:#ff6a00}
+.toggle-row{display:flex;align-items:center;justify-content:space-between;margin-top:.75rem}
+.toggle-row label{font-size:12px;color:#888}
+.toggle-switch{position:relative;width:42px;height:24px;background:#0d0d0d;border:1px solid #444;border-radius:20px;cursor:pointer;flex-shrink:0}
+.toggle-switch::after{content:'';position:absolute;top:2px;left:2px;width:18px;height:18px;background:#888;border-radius:50%;transition:left .15s,background .15s}
+.toggle-switch.on{border-color:#ff6a00;background:#1a0a00}
+.toggle-switch.on::after{left:20px;background:#ff6a00}
+.style-chip-row{display:flex;gap:8px;margin-top:.75rem;flex-wrap:wrap}
+.style-chip{background:#0d0d0d;border:.5px solid #333;border-radius:20px;padding:.5rem .85rem;cursor:pointer;color:#888;font-size:12px;display:flex;align-items:center;gap:6px}
+.style-chip.selected{border-color:#ff6a00;background:#1a0a00;color:#ff6a00}
+.swatch-dot{width:14px;height:14px;border-radius:50%;display:inline-block;border:1px solid rgba(255,255,255,0.25)}
+.sub-section-label{font-size:11px;color:#666;letter-spacing:.5px;text-transform:uppercase;margin-top:1.1rem;margin-bottom:-.25rem}
+.bi-row{display:flex;gap:8px;margin-top:.75rem}
+.bi-btn{flex:1;background:#0d0d0d;border:.5px solid #333;border-radius:8px;padding:.6rem;text-align:center;cursor:pointer;color:#888;font-size:16px}
+.bi-btn.selected{border-color:#ff6a00;background:#1a0a00;color:#ff6a00}
 </style>
 </head>
 <body>
@@ -98,8 +116,32 @@
 <div class="font-btn" data-font="'Playfair Display'" style="font-family:'Playfair Display';font-weight:700;font-style:italic" onclick="pickFont(this)">Elegant</div>
 </div>
 
+<div class="bi-row">
+<div class="bi-btn" id="boldBtn" onclick="toggleBold()"><b>B</b> Bold</div>
+<div class="bi-btn" id="italicBtn" onclick="toggleItalic()"><i>I</i> Italic</div>
+</div>
+
 <div class="cap-row"><label>Color</label><input type="color" id="captionColor" value="#ffffff" oninput="drawCaption()"/></div>
 <div class="cap-row"><label>Size</label><input type="range" id="captionSize" min="20" max="90" value="48" oninput="drawCaption()"/></div>
+<div class="cap-row"><label>Spacing</label><input type="range" id="letterSpacing" min="-5" max="30" value="0" oninput="drawCaption()"/></div>
+<div class="cap-row"><label>Curve</label><input type="range" id="curveAmount" min="-100" max="100" value="0" oninput="drawCaption()"/></div>
+<div class="note" style="margin-top:-.5rem">Curve: drag left for a downward arc (smile), right for an upward arc (frown), center for flat.</div>
+
+<div class="sub-section-label">Outline</div>
+<div class="cap-row"><label>Thickness</label><input type="range" id="outlineThickness" min="0" max="20" value="12" oninput="drawCaption()"/></div>
+
+<div class="sub-section-label">Effect</div>
+<div class="style-chip-row" id="effectRow">
+<div class="style-chip selected" data-effect="none" onclick="pickEffect(this)">🚫 None</div>
+<div class="style-chip" data-effect="shadow" onclick="pickEffect(this)">🌑 Drop Shadow</div>
+<div class="style-chip" data-effect="glow" onclick="pickEffect(this)">✨ Glow</div>
+<div class="style-chip" data-effect="metallic-gold" onclick="pickEffect(this)"><span class="swatch-dot" style="background:linear-gradient(135deg,#fff6d0,#d4a017 60%,#7a5a00)"></span> Gold</div>
+<div class="style-chip" data-effect="metallic-silver" onclick="pickEffect(this)"><span class="swatch-dot" style="background:linear-gradient(135deg,#ffffff,#a8a8a8 60%,#5c5c5c)"></span> Silver</div>
+<div class="style-chip" data-effect="metallic-chrome" onclick="pickEffect(this)"><span class="swatch-dot" style="background:linear-gradient(135deg,#ffffff,#7fa8c9 50%,#1c2e3a)"></span> Chrome</div>
+<div class="style-chip" data-effect="metallic-pearl" onclick="pickEffect(this)"><span class="swatch-dot" style="background:linear-gradient(135deg,#fff9fb,#f3e3ee 45%,#d9c2dd 70%,#bfa9c8)"></span> Pearl</div>
+<div class="style-chip" data-effect="metallic-diamond" onclick="pickEffect(this)"><span class="swatch-dot" style="background:linear-gradient(135deg,#ffffff,#dff6ff 35%,#9fe7f5 55%,#5cc9e8 75%,#ffffff)"></span> Diamond</div>
+<div class="style-chip" data-effect="metallic-money" onclick="pickEffect(this)"><span class="swatch-dot" style="background:linear-gradient(135deg,#e9f9e6,#5fbf5f 50%,#1f6b2e 80%,#0e3d1a)"></span> Money</div>
+</div>
 
 <div class="cap-row" style="align-items:flex-start"><label>Position</label>
 <div class="pos-grid" id="posGrid">
@@ -115,6 +157,13 @@
 </div>
 </div>
 
+<div class="seg-row" id="presetRow">
+<div class="seg-btn" data-preset="top" onclick="pickPreset(this)">⬆️ Top</div>
+<div class="seg-btn" data-preset="middle" onclick="pickPreset(this)">➖ Middle</div>
+<div class="seg-btn" data-preset="bottom" onclick="pickPreset(this)">⬇️ Bottom</div>
+</div>
+<div class="note" style="margin-top:.5rem">Top/Middle/Bottom presets center the caption horizontally at that height. Use the grid above for fine corner control.</div>
+
 <canvas id="captionCanvas" style="display:none"></canvas>
 </div>
 
@@ -124,6 +173,7 @@
 let product='mug',style='Muggshotz Classic: premium professional caricature, expressive face, rich detail, painterly shading, funny gift-art scene',likeness='0.15',uploadedImageData=null,resultUrl=null;
 let captionFont="Anton",captionPos="bottom-left",baseImg=null,finalImageUrl=null;
 let selectedTheme=null,selectedColor=null;
+let captionBold=false,captionItalic=false,captionEffect="none";
 
 function pick(el,type){
   el.closest('.grid3,.grid2').querySelectorAll('.btn-select').forEach(b=>b.classList.remove('selected'));
@@ -180,10 +230,42 @@ function pickFont(el){
   drawCaption();
 }
 
+function toggleBold(){
+  captionBold=!captionBold;
+  document.getElementById('boldBtn').classList.toggle('selected',captionBold);
+  drawCaption();
+}
+
+function toggleItalic(){
+  captionItalic=!captionItalic;
+  document.getElementById('italicBtn').classList.toggle('selected',captionItalic);
+  drawCaption();
+}
+
+function pickEffect(el){
+  document.getElementById('effectRow').querySelectorAll('.style-chip').forEach(b=>b.classList.remove('selected'));
+  el.classList.add('selected');
+  captionEffect=el.dataset.effect;
+  drawCaption();
+}
+
 function pickPos(el){
   document.getElementById('posGrid').querySelectorAll('.pos-btn').forEach(b=>b.classList.remove('selected'));
   el.classList.add('selected');
   captionPos=el.dataset.pos;
+  document.getElementById('presetRow').querySelectorAll('.seg-btn').forEach(b=>b.classList.remove('selected'));
+  drawCaption();
+}
+
+function pickPreset(el){
+  document.getElementById('presetRow').querySelectorAll('.seg-btn').forEach(b=>b.classList.remove('selected'));
+  el.classList.add('selected');
+  const preset=el.dataset.preset;
+  const posMap={top:'top-center',middle:'mid-center',bottom:'bottom-center'};
+  captionPos=posMap[preset];
+  document.getElementById('posGrid').querySelectorAll('.pos-btn').forEach(b=>{
+    b.classList.toggle('selected',b.dataset.pos===captionPos);
+  });
   drawCaption();
 }
 
@@ -193,6 +275,102 @@ function getCaptionXY(canvas,pad){
   const ys={top:pad,mid:h/2,bottom:h-pad};
   const [vPos,hPos]=captionPos.split('-');
   return {x:xs[hPos],y:ys[vPos],align:hPos,baseline:vPos};
+}
+
+function buildFontString(fontSize){
+  const weight=captionBold?'700':'400';
+  const style=captionItalic?'italic':'normal';
+  return `${style} ${weight} ${fontSize}px ${captionFont}`;
+}
+
+function getMetallicGradient(ctx,x,y,fontSize,kind){
+  const grad=ctx.createLinearGradient(x,y-fontSize*0.7,x,y+fontSize*0.3);
+  if(kind==='metallic-gold'){
+    grad.addColorStop(0,'#fff6d0');
+    grad.addColorStop(0.45,'#d4a017');
+    grad.addColorStop(0.55,'#a8780a');
+    grad.addColorStop(1,'#7a5a00');
+  } else if(kind==='metallic-silver'){
+    grad.addColorStop(0,'#ffffff');
+    grad.addColorStop(0.45,'#c4c4c4');
+    grad.addColorStop(0.55,'#8a8a8a');
+    grad.addColorStop(1,'#5c5c5c');
+  } else if(kind==='metallic-chrome'){
+    grad.addColorStop(0,'#ffffff');
+    grad.addColorStop(0.35,'#bcdcef');
+    grad.addColorStop(0.55,'#7fa8c9');
+    grad.addColorStop(0.75,'#3a5a70');
+    grad.addColorStop(1,'#1c2e3a');
+  } else if(kind==='metallic-pearl'){
+    grad.addColorStop(0,'#ffffff');
+    grad.addColorStop(0.3,'#fdf2f7');
+    grad.addColorStop(0.5,'#f0dcec');
+    grad.addColorStop(0.7,'#dcc3e0');
+    grad.addColorStop(1,'#b9a0c4');
+  } else if(kind==='metallic-diamond'){
+    grad.addColorStop(0,'#ffffff');
+    grad.addColorStop(0.25,'#eafcff');
+    grad.addColorStop(0.45,'#aeeefb');
+    grad.addColorStop(0.6,'#6fd4ee');
+    grad.addColorStop(0.8,'#bdf3ff');
+    grad.addColorStop(1,'#ffffff');
+  } else if(kind==='metallic-money'){
+    grad.addColorStop(0,'#eafbe3');
+    grad.addColorStop(0.4,'#7fd47f');
+    grad.addColorStop(0.55,'#3a9b3a');
+    grad.addColorStop(0.8,'#1f6b2e');
+    grad.addColorStop(1,'#103d18');
+  }
+  return grad;
+}
+
+function drawTextWithSpacing(ctx,text,x,y,align,spacing,drawFn){
+  if(!spacing){
+    drawFn(text,x,y);
+    return;
+  }
+  const chars=text.split('');
+  const widths=chars.map(c=>ctx.measureText(c).width+spacing);
+  const total=widths.reduce((a,b)=>a+b,0)-spacing;
+  let startX;
+  if(align==='left')startX=x;
+  else if(align==='right')startX=x-total;
+  else startX=x-total/2;
+  const prevAlign=ctx.textAlign;
+  ctx.textAlign='left';
+  let cx=startX;
+  chars.forEach((c,i)=>{
+    drawFn(c,cx,y);
+    cx+=widths[i];
+  });
+  ctx.textAlign=prevAlign;
+}
+
+function drawTextOnArc(ctx,text,centerX,centerY,radius,curveAmount,spacing,drawFn){
+  const direction=curveAmount<0?-1:1;
+  const strength=Math.abs(curveAmount)/100;
+  const chars=text.split('');
+  const charWidths=chars.map(c=>ctx.measureText(c).width+spacing);
+  const totalWidth=charWidths.reduce((a,b)=>a+b,0);
+  const totalAngle=(totalWidth/radius)*strength*direction;
+  let angle=-totalAngle/2;
+
+  const prevAlign=ctx.textAlign;
+  ctx.textAlign='center';
+
+  chars.forEach((c,i)=>{
+    const charAngle=angle+(charWidths[i]/2/radius)*strength*direction;
+    const px=centerX+radius*Math.sin(charAngle);
+    const py=centerY-direction*radius*(1-Math.cos(charAngle));
+    ctx.save();
+    ctx.translate(px,py);
+    ctx.rotate(charAngle);
+    drawFn(c,0,0);
+    ctx.restore();
+    angle+=(charWidths[i]/radius)*strength*direction;
+  });
+
+  ctx.textAlign=prevAlign;
 }
 
 function drawCaption(){
@@ -209,19 +387,53 @@ function drawCaption(){
     const fontSize=Math.round(canvas.width*(sizePct/1000));
     const color=document.getElementById('captionColor').value;
     const pad=Math.round(canvas.width*0.04);
+    const spacing=parseFloat(document.getElementById('letterSpacing').value)||0;
+    const curveAmount=parseFloat(document.getElementById('curveAmount').value)||0;
+    const outlineThickness=parseFloat(document.getElementById('outlineThickness').value);
 
-    ctx.font=`${fontSize}px ${captionFont}`;
+    ctx.font=buildFontString(fontSize);
     ctx.textAlign=captionPos.endsWith('left')?'left':captionPos.endsWith('right')?'right':'center';
     ctx.textBaseline=captionPos.startsWith('top')?'top':captionPos.startsWith('bottom')?'bottom':'middle';
 
     const pos=getCaptionXY(canvas,pad);
     ctx.lineJoin='round';
     ctx.miterLimit=2;
-    ctx.lineWidth=fontSize*0.12;
-    ctx.strokeStyle='rgba(0,0,0,0.55)';
-    ctx.strokeText(text,pos.x,pos.y);
-    ctx.fillStyle=color;
-    ctx.fillText(text,pos.x,pos.y);
+
+    ctx.save();
+
+    if(captionEffect==='glow'){
+      ctx.shadowColor=color;
+      ctx.shadowBlur=fontSize*0.45;
+    } else if(captionEffect==='shadow'){
+      ctx.shadowColor='rgba(0,0,0,0.65)';
+      ctx.shadowBlur=fontSize*0.12;
+      ctx.shadowOffsetX=fontSize*0.06;
+      ctx.shadowOffsetY=fontSize*0.08;
+    }
+
+    let fillStyle=color;
+    if(captionEffect.startsWith('metallic-')){
+      fillStyle=getMetallicGradient(ctx,pos.x,pos.y,fontSize,captionEffect);
+    }
+
+    const drawGlyph=(str,x,y)=>{
+      if(outlineThickness>0){
+        ctx.lineWidth=fontSize*(outlineThickness/100);
+        ctx.strokeStyle='rgba(0,0,0,0.55)';
+        ctx.strokeText(str,x,y);
+      }
+      ctx.fillStyle=fillStyle;
+      ctx.fillText(str,x,y);
+    };
+
+    if(curveAmount!==0){
+      const radius=canvas.width*1.1;
+      drawTextOnArc(ctx,text,pos.x,pos.y,radius,curveAmount,spacing,drawGlyph);
+    } else {
+      drawTextWithSpacing(ctx,text,pos.x,pos.y,pos.align,spacing,drawGlyph);
+    }
+
+    ctx.restore();
   }
 
   finalImageUrl=canvas.toDataURL('image/png');
