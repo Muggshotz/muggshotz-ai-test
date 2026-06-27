@@ -151,12 +151,13 @@
 </div>
 
 <div id="drawModeBox" style="display:none">
-<div class="note" style="margin-top:0">Draw a line on the box below with your finger, mouse, or pencil. Your caption will follow that exact path. Draw left to right.</div>
+<div class="note" style="margin-top:0">Draw one line for a single flowing caption, or draw several separate lines (lift your finger between each) to stack words — line 1 gets the first word, line 2 gets the second, and so on. Don't worry about a perfectly steady hand — it gets smoothed automatically.</div>
 <div class="draw-path-wrap" id="drawPathWrap">
 <canvas id="pathDrawCanvas"></canvas>
 </div>
 <div class="draw-path-actions">
-<div class="quick-btn" onclick="clearDrawnPath()">🗑️ Clear Path</div>
+<div class="quick-btn" onclick="undoLastStroke()">↩️ Undo Last Line</div>
+<div class="quick-btn" onclick="clearDrawnPath()">🗑️ Clear All</div>
 </div>
 </div>
 
@@ -208,7 +209,8 @@ let captionFont="Anton",captionPos="bottom-left",baseImg=null,finalImageUrl=null
 let selectedTheme=null,selectedColor=null;
 let captionBold=false,captionItalic=false,captionEffect="none";
 let curveMode="straight";
-let drawnPath=[];
+let drawnStrokes=[];
+let currentStroke=[];
 let isDrawingPath=false;
 let pathCanvasReady=false;
 
@@ -345,18 +347,23 @@ function setupPathCanvas(){
   function start(e){
     e.preventDefault();
     isDrawingPath=true;
-    drawnPath=[getPoint(e)];
+    currentStroke=[getPoint(e)];
     redrawPathCanvas();
   }
   function move(e){
     if(!isDrawingPath)return;
     e.preventDefault();
-    drawnPath.push(getPoint(e));
+    currentStroke.push(getPoint(e));
     redrawPathCanvas();
   }
   function end(e){
     if(!isDrawingPath)return;
     isDrawingPath=false;
+    if(currentStroke.length>2){
+      drawnStrokes.push(currentStroke);
+    }
+    currentStroke=[];
+    redrawPathCanvas();
     drawCaption();
   }
 
@@ -384,27 +391,47 @@ function redrawPathCanvas(){
   ctx.lineTo(canvas.width,canvas.height/2);
   ctx.stroke();
 
-  if(drawnPath.length>1){
+  const allStrokes=currentStroke.length>1?[...drawnStrokes,currentStroke]:drawnStrokes;
+
+  if(allStrokes.length===0){
+    ctx.fillStyle='#555';
+    ctx.font='13px system-ui,sans-serif';
+    ctx.textAlign='center';
+    ctx.fillText('Draw here →',canvas.width/2,canvas.height/2-10);
+    return;
+  }
+
+  allStrokes.forEach((stroke,idx)=>{
+    if(stroke.length<2)return;
     ctx.strokeStyle='#ff6a00';
     ctx.lineWidth=3;
     ctx.lineCap='round';
     ctx.lineJoin='round';
     ctx.beginPath();
-    ctx.moveTo(drawnPath[0].x,drawnPath[0].y);
-    for(let i=1;i<drawnPath.length;i++){
-      ctx.lineTo(drawnPath[i].x,drawnPath[i].y);
+    ctx.moveTo(stroke[0].x,stroke[0].y);
+    for(let i=1;i<stroke.length;i++){
+      ctx.lineTo(stroke[i].x,stroke[i].y);
     }
     ctx.stroke();
-  } else {
-    ctx.fillStyle='#555';
-    ctx.font='13px system-ui,sans-serif';
-    ctx.textAlign='center';
-    ctx.fillText('Draw here →',canvas.width/2,canvas.height/2-10);
-  }
+
+    if(allStrokes.length>1){
+      ctx.fillStyle='#ff6a00';
+      ctx.font='bold 13px system-ui,sans-serif';
+      ctx.textAlign='center';
+      ctx.fillText(String(idx+1),stroke[0].x,stroke[0].y-10);
+    }
+  });
 }
 
 function clearDrawnPath(){
-  drawnPath=[];
+  drawnStrokes=[];
+  currentStroke=[];
+  redrawPathCanvas();
+  drawCaption();
+}
+
+function undoLastStroke(){
+  drawnStrokes.pop();
   redrawPathCanvas();
   drawCaption();
 }
@@ -417,7 +444,8 @@ function resetCaptionSettings(){
   captionItalic=false;
   captionEffect="none";
   curveMode="straight";
-  drawnPath=[];
+  drawnStrokes=[];
+  currentStroke=[];
 
   // Reset text input
   document.getElementById('captionText').value='';
@@ -575,6 +603,76 @@ function drawTextOnArc(ctx,text,centerX,centerY,radius,curveAmount,spacing,drawF
   ctx.textBaseline=prevBaseline;
 }
 
+function smoothStroke(points,numSamples){
+  // Fits a smooth cubic curve through a raw hand-drawn stroke, in the
+  // stroke's own local rotated frame (so it works at any angle on the
+  // canvas), using least-squares regression. This filters out natural
+  // hand shake/jitter while preserving the actual shape the person
+  // intended to draw (arc, wave, S-curve, or straight line).
+  if(points.length<4)return points;
+
+  const first=points[0],last=points[points.length-1];
+  let dx=last.x-first.x,dy=last.y-first.y;
+  let len=Math.sqrt(dx*dx+dy*dy);
+  if(len<1e-6){dx=1;dy=0;len=1;}
+  const ux=dx/len,uy=dy/len;
+  const vx=-uy,vy=ux;
+
+  const local=points.map(p=>{
+    const rx=p.x-first.x,ry=p.y-first.y;
+    return {u:rx*ux+ry*uy,v:rx*vx+ry*vy};
+  });
+
+  const degree=3;
+  const numCoef=degree+1;
+  const A=Array.from({length:numCoef},()=>Array(numCoef).fill(0));
+  const B=Array(numCoef).fill(0);
+  local.forEach(({u,v})=>{
+    const powers=[];
+    let p=1;
+    for(let k=0;k<=2*degree;k++){powers.push(p);p*=u;}
+    for(let i=0;i<numCoef;i++){
+      for(let j=0;j<numCoef;j++)A[i][j]+=powers[i+j];
+      B[i]+=powers[i]*v;
+    }
+  });
+
+  function solveLinearSystem(A,B){
+    const m=A.length;
+    const M=A.map((row,i)=>[...row,B[i]]);
+    for(let i=0;i<m;i++){
+      let maxRow=i;
+      for(let k=i+1;k<m;k++)if(Math.abs(M[k][i])>Math.abs(M[maxRow][i]))maxRow=k;
+      [M[i],M[maxRow]]=[M[maxRow],M[i]];
+      if(Math.abs(M[i][i])<1e-12)continue;
+      for(let k=i+1;k<m;k++){
+        const factor=M[k][i]/M[i][i];
+        for(let j=i;j<=m;j++)M[k][j]-=factor*M[i][j];
+      }
+    }
+    const x=Array(m).fill(0);
+    for(let i=m-1;i>=0;i--){
+      let sum=M[i][m];
+      for(let j=i+1;j<m;j++)sum-=M[i][j]*x[j];
+      x[i]=Math.abs(M[i][i])>1e-12?sum/M[i][i]:0;
+    }
+    return x;
+  }
+
+  const coeffs=solveLinearSystem(A,B);
+  const uMin=Math.min(...local.map(p=>p.u));
+  const uMax=Math.max(...local.map(p=>p.u));
+
+  const smoothed=[];
+  for(let i=0;i<numSamples;i++){
+    const u=uMin+(uMax-uMin)*(i/(numSamples-1));
+    let v=0,p=1;
+    for(let k=0;k<coeffs.length;k++){v+=coeffs[k]*p;p*=u;}
+    smoothed.push({x:first.x+u*ux+v*vx,y:first.y+u*uy+v*vy});
+  }
+  return smoothed;
+}
+
 function getPathTangentPoints(path){
   // Build cumulative arc-length lookup along the user-drawn polyline so we
   // can place each character at an exact distance along the path, and
@@ -697,12 +795,25 @@ function drawCaption(){
       ctx.fillText(str,x,y);
     };
 
-    if(curveMode==='draw'&&drawnPath.length>1){
+    if(curveMode==='draw'&&drawnStrokes.length>0){
       const drawCanvas=document.getElementById('pathDrawCanvas');
       const scaleX=canvas.width/drawCanvas.width;
       const scaleY=canvas.height/drawCanvas.height;
-      const scaledPath=drawnPath.map(p=>({x:p.x*scaleX,y:p.y*scaleY}));
-      drawTextOnPath(ctx,text,scaledPath,spacing,drawGlyph);
+
+      const smoothedStrokes=drawnStrokes.map(stroke=>{
+        const smoothed=smoothStroke(stroke,40);
+        return smoothed.map(p=>({x:p.x*scaleX,y:p.y*scaleY}));
+      });
+
+      if(smoothedStrokes.length===1){
+        drawTextOnPath(ctx,text,smoothedStrokes[0],spacing,drawGlyph);
+      } else {
+        const words=text.split(/\s+/).filter(w=>w.length>0);
+        const lineCount=Math.min(words.length,smoothedStrokes.length);
+        for(let i=0;i<lineCount;i++){
+          drawTextOnPath(ctx,words[i],smoothedStrokes[i],spacing,drawGlyph);
+        }
+      }
     } else if(curveMode==='slider'&&curveAmount!==0){
       const radius=canvas.width*1.1;
       drawTextOnArc(ctx,text,pos.x,pos.y,radius,curveAmount,spacing,drawGlyph);
