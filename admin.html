@@ -173,13 +173,52 @@ const logList = document.getElementById("logList");
 // in this page's memory so it can be sent along with every grant/deduct
 // request. The real check always happens server-side in admin-grant.js;
 // this is just a convenience so you don't retype the password every time.
-unlockBtn.addEventListener("click", () => {
+unlockBtn.addEventListener("click", async () => {
   const pw = passwordInput.value.trim();
   if (!pw) return;
-  adminPassword = pw;
-  lockSection.style.display = "none";
-  toolSection.style.display = "block";
+
+  unlockBtn.disabled = true;
+  unlockBtn.textContent = "Checking...";
+
+  try {
+    const response = await fetch("/api/admin-check-password", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password: pw })
+    });
+    const data = await response.json();
+
+    if (!response.ok) {
+      showLockError(data.error || "Incorrect password.");
+      return;
+    }
+
+    adminPassword = pw;
+    lockSection.style.display = "none";
+    toolSection.style.display = "block";
+  } catch (err) {
+    showLockError("Network error: " + err.message);
+  } finally {
+    unlockBtn.disabled = false;
+    unlockBtn.textContent = "Unlock";
+  }
 });
+
+function showLockError(message) {
+  let lockError = document.getElementById("lockError");
+  if (!lockError) {
+    lockError = document.createElement("div");
+    lockError.id = "lockError";
+    lockError.style.marginTop = "12px";
+    lockError.style.padding = "10px";
+    lockError.style.borderRadius = "8px";
+    lockError.style.fontSize = "0.85rem";
+    lockError.style.background = "rgba(217,83,79,0.15)";
+    lockError.style.border = "1px solid var(--danger)";
+    lockSection.appendChild(lockError);
+  }
+  lockError.textContent = message;
+}
 
 passwordInput.addEventListener("keydown", (e) => {
   if (e.key === "Enter") unlockBtn.click();
