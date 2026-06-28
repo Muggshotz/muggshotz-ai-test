@@ -54,6 +54,24 @@
     font-size: 1rem;
   }
   input:focus { outline: 2px solid var(--orange); border-color: var(--orange); }
+  .password-wrap { position: relative; }
+  .password-wrap input { padding-right: 64px; }
+  #togglePasswordBtn {
+    position: absolute;
+    right: 6px;
+    top: 50%;
+    transform: translateY(calc(-50% - 8px));
+    background: #333;
+    color: var(--text);
+    border: none;
+    border-radius: 6px;
+    padding: 6px 10px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    flex: none;
+  }
+  #togglePasswordBtn:hover { background: #444; }
   .btn-row { display: flex; gap: 12px; }
   button {
     flex: 1;
@@ -100,7 +118,10 @@
 
   <div class="card" id="lockSection">
     <label for="passwordInput">Admin Password</label>
-    <input type="password" id="passwordInput" placeholder="Enter admin password" autocomplete="off">
+    <div class="password-wrap">
+      <input type="password" id="passwordInput" placeholder="Enter admin password" autocomplete="off">
+      <button type="button" id="togglePasswordBtn" aria-label="Show password">Show</button>
+    </div>
     <button id="unlockBtn">Unlock</button>
   </div>
 
@@ -138,6 +159,7 @@ let adminPassword = "";
 const lockSection = document.getElementById("lockSection");
 const toolSection = document.getElementById("toolSection");
 const passwordInput = document.getElementById("passwordInput");
+const togglePasswordBtn = document.getElementById("togglePasswordBtn");
 const unlockBtn = document.getElementById("unlockBtn");
 const emailInput = document.getElementById("emailInput");
 const amountInput = document.getElementById("amountInput");
@@ -161,6 +183,15 @@ unlockBtn.addEventListener("click", () => {
 
 passwordInput.addEventListener("keydown", (e) => {
   if (e.key === "Enter") unlockBtn.click();
+});
+
+// Lets you confirm exactly what you typed before submitting — useful since
+// the password has mixed case, numbers, and symbols that are easy to fat-
+// finger, especially on a headset or with voice-to-text.
+togglePasswordBtn.addEventListener("click", () => {
+  const isHidden = passwordInput.type === "password";
+  passwordInput.type = isHidden ? "text" : "password";
+  togglePasswordBtn.textContent = isHidden ? "Hide" : "Show";
 });
 
 function showStatus(message, isError) {
