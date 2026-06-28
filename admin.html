@@ -109,7 +109,7 @@
       <label for="emailInput">Customer Email</label>
       <input type="email" id="emailInput" placeholder="customer@example.com">
 
-      <label for="amountInput">Number of Spins</label>
+      <label for="amountInput">Number of Muggsy Mint Tokens</label>
       <input type="number" id="amountInput" min="1" step="1" placeholder="e.g. 3">
 
       <label for="reasonInput">Reason (required)</label>
@@ -177,8 +177,8 @@ function addLogEntry(email, amount, reason, newBalance) {
   const sign = amount > 0 ? "+" : "";
   const cls = amount > 0 ? "log-amount-positive" : "log-amount-negative";
   entry.innerHTML = `
-    <span class="${cls}">${sign}${amount}</span> spins — ${email}
-    <div class="log-meta">${reason} · new balance: ${newBalance} · ${new Date().toLocaleTimeString()}</div>
+    <span class="${cls}">${sign}${amount}</span> tokens — ${email}
+    <div class="log-meta">${reason} · new token balance: ${newBalance} · ${new Date().toLocaleTimeString()}</div>
   `;
   logList.prepend(entry);
 }
@@ -218,8 +218,8 @@ async function submitAction(action) {
     }
 
     const verb = action === "grant" ? "Granted" : "Deducted";
-    showStatus(`${verb} ${amount} spins for ${customerEmail}. New balance: ${data.newBalance}`, false);
-    addLogEntry(customerEmail, data.change, reason, data.newBalance);
+    showStatus(`${verb} ${amount} — ${customerEmail} now has ${data.newTokenBalance} Muggsy Mint tokens (${data.newSpinBalance} spins).`, false);
+    addLogEntry(customerEmail, data.change, reason, data.newTokenBalance);
 
     // Clear the form for the next entry, but leave the email in place
     // in case you're about to do a related action for the same customer.
