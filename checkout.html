@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>MuggsHotz Checkout</title>
+</head>
+<body>
+  <script>
+    fetch('/api/create-checkout-session', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({})
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data.url) {
+        window.location.href = data.url;
+      }
+    });
+  </script>
+  <p style="font-family:sans-serif;text-align:center;margin-top:20%;">
+    Taking you to checkout...
+  </p>
+</body>
+</html>
