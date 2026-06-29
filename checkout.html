@@ -15,7 +15,12 @@
     .then(data => {
       if (data.url) {
         window.location.href = data.url;
+      } else {
+        document.body.innerHTML = '<p style="font-family:sans-serif;text-align:center;margin-top:20%;color:red;">Error: ' + (data.error || 'Unknown error') + '</p>';
       }
+    })
+    .catch(err => {
+      document.body.innerHTML = '<p style="font-family:sans-serif;text-align:center;margin-top:20%;color:red;">Network error: ' + err.message + '</p>';
     });
   </script>
   <p style="font-family:sans-serif;text-align:center;margin-top:20%;">
