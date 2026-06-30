@@ -214,6 +214,19 @@
 
 <script>
 let product='mug',style='Muggshotz Classic: premium professional caricature, expressive face, rich detail, painterly shading, funny gift-art scene',likeness='0.15',uploadedImageData=null,resultUrl=null;
+
+// --- Device sticky-note: silently identifies this browser/device across
+// visits so the server can track free tokens, without any login or signup.
+function getDeviceId(){
+  let id=localStorage.getItem('muggshotz_device_id');
+  if(!id){
+    id='dev-'+Date.now()+'-'+Math.random().toString(36).slice(2,10);
+    localStorage.setItem('muggshotz_device_id',id);
+  }
+  return id;
+}
+const deviceId=getDeviceId();
+
 let captionFont="Anton",captionPos="bottom-left",baseImg=null,finalImageUrl=null;
 let selectedTheme=null,selectedColor=null;
 let captionBold=false,captionItalic=false,captionEffect="none";
@@ -987,7 +1000,7 @@ Use rich environmental storytelling while keeping the face as the primary focal 
     const resp=await fetch('/api/generate',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({image:uploadedImageData,prompt,theme:selectedTheme})
+      body:JSON.stringify({image:uploadedImageData,prompt,theme:selectedTheme,deviceId})
     });
 
     const data=await resp.json();
