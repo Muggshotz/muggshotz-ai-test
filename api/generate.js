@@ -74,7 +74,7 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: "Method not allowed" });
   }
   try {
-    const { image, prompt, theme, deviceId } = req.body;
+    const { image, prompt, theme, deviceId, refImageA, refImageB } = req.body;
     if (!image || !prompt) {
       return res.status(400).json({ error: "Missing image or prompt." });
     }
@@ -172,6 +172,18 @@ Polished gift-art quality.
         console.error("Could not load template file:", templateFile, fileErr.message);
       }
     }
+
+    // If reference images were provided, attach them as additional images
+    // so the model can pull specific elements (a face, an object, a
+    // setting) from them as instructed in the prompt text above.
+    function attachDataUrlImage(dataUrl, filename) {
+      const m = dataUrl.match(/^data:(image\/\w+);base64,(.+)$/);
+      if (!m) return;
+      const buf = Buffer.from(m[2], "base64");
+      formData.append("image[]", new Blob([buf], { type: m[1] }), filename);
+    }
+    if (refImageA) attachDataUrlImage(refImageA, "reference-a.png");
+    if (refImageB) attachDataUrlImage(refImageB, "reference-b.png");
 
     const response = await fetch("https://api.openai.com/v1/images/edits", {
       method: "POST",
