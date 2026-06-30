@@ -195,7 +195,15 @@ Polished gift-art quality.
 
     const data = await response.json();
     if (!response.ok) {
-      return res.status(response.status).json(data);
+      // OpenAI sometimes returns error as a nested object rather than a
+      // plain string. Flatten it here so the front end always has a
+      // readable message instead of "[object Object]".
+      const rawError = data?.error;
+      const readableError =
+        typeof rawError === "string"
+          ? rawError
+          : rawError?.message || JSON.stringify(rawError) || "Unknown error from image service.";
+      return res.status(response.status).json({ error: readableError });
     }
 
     const b64 = data?.data?.[0]?.b64_json;
