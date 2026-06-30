@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import crypto from 'crypto';
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 
@@ -32,7 +33,6 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'This device has already verified an email.' });
     }
 
-    const crypto = require('crypto');
     const token = crypto.randomBytes(32).toString('hex');
 
     const { error: updateError } = await supabase
