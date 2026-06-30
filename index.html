@@ -142,7 +142,13 @@
 <button class="generate-btn" id="generateBtn" onclick="generate()">🎨 GENERATE CARICATURE</button><div class="status" id="status"></div>
 
 <div class="card result-area" id="resultArea"><div class="card-title">✨ Your Caricature</div><img id="resultImg" class="result-img"/><div class="mockup-label" id="mockupLabel"></div><button class="download-btn" onclick="downloadImage()">⬇️ Download for Printify</button></div>
-
+<div class="card" id="verifyCard" style="display:none">
+<div class="card-title">🎁 Get a Second Free Token</div>
+<div class="note" style="margin-top:0;margin-bottom:.75rem">Verify your email and we'll send you another free token to keep creating.</div>
+<input type="email" class="caption-input" id="verifyEmailInput" placeholder="you@example.com"/>
+<button class="generate-btn" style="margin-top:.75rem" onclick="sendVerification()" id="verifyBtn">📧 Send Me a Bonus Token</button>
+<div class="note" id="verifyStatus" style="margin-top:.5rem"></div>
+</div>
 <div class="card caption-card" id="captionCard">
 <div class="caption-header-row"><div class="card-title" style="margin-bottom:0">✏️ Add a Caption</div><div class="reset-caption-btn" onclick="resetCaptionSettings()">↺ Reset to Default</div></div>
 <input type="text" class="caption-input" id="captionText" placeholder="Example: God Bless America" oninput="drawCaption()"/>
@@ -1098,6 +1104,7 @@ Use rich environmental storytelling while keeping the face as the primary focal 
     document.getElementById('resultArea').className='card result-area visible';
     document.getElementById('captionCard').className='card caption-card visible';
     document.getElementById('captionText').value='';
+  document.getElementById('verifyCard').style.display='block';
     await loadBaseImageForCaption(resultUrl);
     clearStatus();
 
@@ -1114,6 +1121,34 @@ function downloadImage(){
   a.href=finalImageUrl;
   a.download='muggshotz-caricature.png';
   a.click();
+}
+  async function sendVerification(){
+  const email=document.getElementById('verifyEmailInput').value.trim();
+  const statusEl=document.getElementById('verifyStatus');
+  const btn=document.getElementById('verifyBtn');
+  if(!email){
+    statusEl.textContent='Please enter your email.';
+    statusEl.style.color='#e24b4a';
+    return;
+  }
+  btn.disabled=true;
+  statusEl.textContent='Sending...';
+  statusEl.style.color='#888';
+  try{
+    const resp=await fetch('/api/send-verification',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({email,deviceId})
+    });
+    const data=await resp.json();
+    if(!resp.ok)throw new Error(data.error||'Something went wrong.');
+    statusEl.textContent='Check your email for a verification link!';
+    statusEl.style.color='#ff6a00';
+  }catch(err){
+    statusEl.textContent=err.message;
+    statusEl.style.color='#e24b4a';
+    btn.disabled=false;
+  }
 }
 </script>
 </body>
