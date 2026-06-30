@@ -87,7 +87,8 @@ export default async function handler(req, res) {
     if (!customer) {
       customer = await createCustomerForDevice(deviceId);
     }
-    if (customer.token_balance <= 0) {
+    const isAdmin = customer.role === "admin";
+    if (!isAdmin && customer.token_balance <= 0) {
       return res.status(403).json({
         error: "You're out of free tokens. Verify your email to unlock another, or grab the $5 Preview Reservation for 4 more."
       });
@@ -191,8 +192,11 @@ Polished gift-art quality.
     }
 
     // Only deduct the token AFTER a successful generation, so a failed
-    // OpenAI call never costs the customer a token.
-    await deductOneToken(customer.id, customer.token_balance);
+    // OpenAI call never costs the customer a token. Admin accounts have
+    // unlimited tokens and are never deducted.
+    if (!isAdmin) {
+      await deductOneToken(customer.id, customer.token_balance);
+    }
 
     // Package the result the same way the old code did: a single imageUrl
     // the front end can drop straight into an <img src="..."> tag.
