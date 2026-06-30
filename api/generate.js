@@ -19,7 +19,7 @@ const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 // Looks up a customer row by device ID. Returns null if no row exists yet.
 async function findCustomerByDeviceId(deviceId) {
-  const url = `${SUPABASE_URL}/rest/v1/customers?device_id=eq.${encodeURIComponent(deviceId)}&select=id,token_balance`;
+  const url = `${SUPABASE_URL}/rest/v1/customers?device_id=eq.${encodeURIComponent(deviceId)}&select=id,token_balance,role`;
   const resp = await fetch(url, {
     headers: {
       "apikey": SUPABASE_SERVICE_ROLE_KEY,
