@@ -80,7 +80,27 @@
 <div class="tagline">YOUR HONEY. OUR FUNNY.</div>
 <div class="main">
 
-<div class="card"><div class="card-title">📸 Upload Photo</div><div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()"><div style="font-size:32px;color:#555;margin-bottom:8px">👤</div><div class="upload-text">Tap here to upload a photo</div><div class="upload-sub">Clear face photo works best</div></div><input type="file" id="fileInput" accept="image/*" style="display:none"/><img id="previewImg" class="preview-img" style="display:none"/></div>
+<div class="card"><div class="card-title">📸 Upload Photo</div><div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()"><div style="font-size:32px;color:#555;margin-bottom:8px">👤</div><div class="upload-text">Tap here to upload a photo</div><div class="upload-sub">Clear face photo works best</div></div><input type="file" id="fileInput" accept="image/*" style="display:none"/><img id="previewImg" class="preview-img" style="display:none"/>
+
+<div style="margin-top:1.1rem;padding-top:1rem;border-top:1px dashed #333">
+<div class="note" style="margin-top:0;margin-bottom:.6rem">Optional — add reference photos if you want to combine or pull elements from other pictures (e.g. "use the face from Reference A on the body in the main photo").</div>
+<div class="grid2">
+<div>
+<div style="font-size:11px;color:#777;letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px;text-align:center">Reference A</div>
+<div class="upload-zone" id="refAZone" style="padding:1rem;" onclick="document.getElementById('refAInput').click()"><div style="font-size:20px;color:#555;margin-bottom:4px">➕</div><div class="upload-text" style="font-size:12px">Tap to add</div></div>
+<input type="file" id="refAInput" accept="image/*" style="display:none"/>
+<img id="refAPreview" class="preview-img" style="display:none;max-height:140px"/>
+</div>
+<div>
+<div style="font-size:11px;color:#777;letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px;text-align:center">Reference B</div>
+<div class="upload-zone" id="refBZone" style="padding:1rem;" onclick="document.getElementById('refBInput').click()"><div style="font-size:20px;color:#555;margin-bottom:4px">➕</div><div class="upload-text" style="font-size:12px">Tap to add</div></div>
+<input type="file" id="refBInput" accept="image/*" style="display:none"/>
+<img id="refBPreview" class="preview-img" style="display:none;max-height:140px"/>
+</div>
+</div>
+</div>
+
+</div>
 
 <div class="card"><div class="card-title">💬 Tell Us Your Idea</div><textarea id="ideaDesc" placeholder="Example: Put me on a tiny red tricycle wearing a firefighter helmet and full firefighter outfit, racing through a parade with smoke and sirens behind me."></textarea><div class="quick-btns" id="quickBtns"></div><div class="note">Say it naturally. One clear idea works best.</div></div>
 
@@ -214,6 +234,7 @@
 
 <script>
 let product='mug',style='Muggshotz Classic: premium professional caricature, expressive face, rich detail, painterly shading, funny gift-art scene',likeness='0.15',uploadedImageData=null,resultUrl=null;
+let refImageAData=null, refImageBData=null;
 
 // --- Device sticky-note: silently identifies this browser/device across
 // visits so the server can track free tokens, without any login or signup.
@@ -887,6 +908,29 @@ document.getElementById('fileInput').addEventListener('change',function(e){
   r.readAsDataURL(file);
 });
 
+function setupRefUpload(inputId, zoneId, previewId, setter){
+  document.getElementById(inputId).addEventListener('change', function(e){
+    const file = e.target.files[0];
+    if(!file) return;
+    const r = new FileReader();
+    r.onload = function(ev){
+      setter(ev.target.result);
+      const img = document.getElementById(previewId);
+      img.src = ev.target.result;
+      img.style.display = 'block';
+      img.onclick = () => document.getElementById(inputId).click();
+      const z = document.getElementById(zoneId);
+      z.classList.add('has-image');
+      z.style.padding = '0';
+      z.innerHTML = '';
+      z.appendChild(img);
+    };
+    r.readAsDataURL(file);
+  });
+}
+setupRefUpload('refAInput','refAZone','refAPreview', (v)=>{ refImageAData = v; });
+setupRefUpload('refBInput','refBZone','refBPreview', (v)=>{ refImageBData = v; });
+
 function setStatus(msg,isError){
   const el=document.getElementById('status');
   el.className='status visible'+(isError?' error':'');
@@ -936,6 +980,16 @@ async function generate(){
       ? `Background option selected: ${backgroundDesc}. No hard edges or sticker-cutout look — all edges should fade or blend softly.`
       : '';
 
+    const referenceLine = (refImageAData || refImageBData)
+      ? `
+REFERENCE IMAGES: Additional reference photos have been provided beyond the main photo.
+${refImageAData ? 'Image labeled "Reference A" is provided — when the customer idea above mentions "Reference A," use that exact image for the element described (e.g. a face, an object, a scene, a setting).' : ''}
+${refImageBData ? 'Image labeled "Reference B" is provided — when the customer idea above mentions "Reference B," use that exact image for the element described.' : ''}
+Only use these reference images for the specific elements the customer idea calls out. Do not blend in unrelated details from a reference image.
+`
+      : '';
+
+
     const prompt=`
 Transform the uploaded person into a premium professional Muggshotz caricature.
 
@@ -973,6 +1027,7 @@ ${customerIdea}
 Selected style: ${style}.
 Product target: ${getProductRules(product)}.
 ${backgroundLine}
+${referenceLine}
 
 PRIORITY ORDER: The customer idea above is the primary instruction for what the scene contains.
 The background option, style, and product target are supporting suggestions only.
@@ -1000,7 +1055,7 @@ Use rich environmental storytelling while keeping the face as the primary focal 
     const resp=await fetch('/api/generate',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({image:uploadedImageData,prompt,theme:selectedTheme,deviceId})
+      body:JSON.stringify({image:uploadedImageData,prompt,theme:selectedTheme,deviceId,refImageA:refImageAData,refImageB:refImageBData})
     });
 
     const data=await resp.json();
