@@ -14,15 +14,86 @@ const TEMPLATE_FILES = {
   "Fade to White": "fade to white.png"
 };
 
+const SUPABASE_URL = process.env.SUPABASE_URL;
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+// Looks up a customer row by device ID. Returns null if no row exists yet.
+async function findCustomerByDeviceId(deviceId) {
+  const url = `${SUPABASE_URL}/rest/v1/customers?device_id=eq.${encodeURIComponent(deviceId)}&select=id,token_balance`;
+  const resp = await fetch(url, {
+    headers: {
+      "apikey": SUPABASE_SERVICE_ROLE_KEY,
+      "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`
+    }
+  });
+  const rows = await resp.json();
+  if (!resp.ok) throw new Error("Supabase lookup failed: " + JSON.stringify(rows));
+  return rows.length > 0 ? rows[0] : null;
+}
+
+// Creates a brand-new customer row for a first-time device, starting with
+// 1 free token (their first free generation).
+async function createCustomerForDevice(deviceId) {
+  const url = `${SUPABASE_URL}/rest/v1/customers`;
+  const resp = await fetch(url, {
+    method: "POST",
+    headers: {
+      "apikey": SUPABASE_SERVICE_ROLE_KEY,
+      "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+      "Content-Type": "application/json",
+      "Prefer": "return=representation"
+    },
+    body: JSON.stringify({ device_id: deviceId, token_balance: 1 })
+  });
+  const rows = await resp.json();
+  if (!resp.ok) throw new Error("Supabase insert failed: " + JSON.stringify(rows));
+  return rows[0];
+}
+
+// Deducts exactly 1 token from a customer's balance after a successful
+// generation.
+async function deductOneToken(customerId, currentBalance) {
+  const url = `${SUPABASE_URL}/rest/v1/customers?id=eq.${customerId}`;
+  const resp = await fetch(url, {
+    method: "PATCH",
+    headers: {
+      "apikey": SUPABASE_SERVICE_ROLE_KEY,
+      "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+      "Content-Type": "application/json",
+      "Prefer": "return=representation"
+    },
+    body: JSON.stringify({ token_balance: currentBalance - 1 })
+  });
+  const rows = await resp.json();
+  if (!resp.ok) throw new Error("Supabase token deduction failed: " + JSON.stringify(rows));
+  return rows[0];
+}
+
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
   try {
-    const { image, prompt, theme } = req.body;
+    const { image, prompt, theme, deviceId } = req.body;
     if (!image || !prompt) {
       return res.status(400).json({ error: "Missing image or prompt." });
     }
+    if (!deviceId) {
+      return res.status(400).json({ error: "Missing device ID." });
+    }
+
+    // --- TOKEN CHECK: look up or create this device's customer record ---
+    let customer = await findCustomerByDeviceId(deviceId);
+    if (!customer) {
+      customer = await createCustomerForDevice(deviceId);
+    }
+    if (customer.token_balance <= 0) {
+      return res.status(403).json({
+        error: "You're out of free tokens. Verify your email to unlock another, or grab the $5 Preview Reservation for 4 more."
+      });
+    }
+    // --- END TOKEN CHECK ---
+
     const identityLock = `
 CRITICAL MUGGSHOTZ LIKENESS RULE:
 This is a caricature of the exact person in the uploaded photo.
@@ -118,6 +189,10 @@ Polished gift-art quality.
     if (!b64) {
       return res.status(502).json({ error: "No image returned from OpenAI.", raw: data });
     }
+
+    // Only deduct the token AFTER a successful generation, so a failed
+    // OpenAI call never costs the customer a token.
+    await deductOneToken(customer.id, customer.token_balance);
 
     // Package the result the same way the old code did: a single imageUrl
     // the front end can drop straight into an <img src="..."> tag.
