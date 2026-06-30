@@ -892,9 +892,8 @@ function setIdea(text){
 document.getElementById('fileInput').addEventListener('change',function(e){
   const file=e.target.files[0];
   if(!file)return;
-  const r=new FileReader();
-  r.onload=function(ev){
-    uploadedImageData=ev.target.result;
+  resizeImageFile(file, 1280).then((dataUrl)=>{
+    uploadedImageData=dataUrl;
     const img=document.getElementById('previewImg');
     img.src=uploadedImageData;
     img.style.display='block';
@@ -904,19 +903,48 @@ document.getElementById('fileInput').addEventListener('change',function(e){
     z.style.padding='0';
     z.innerHTML='';
     z.appendChild(img);
-  };
-  r.readAsDataURL(file);
+  });
 });
+
+// Shrinks an uploaded photo down to a reasonable max dimension and
+// re-encodes it as a compressed JPEG. This keeps multi-image requests
+// (main photo + reference photos) well under the server's size limit
+// without any visible quality loss for this use case.
+function resizeImageFile(file, maxDimension){
+  return new Promise((resolve)=>{
+    const reader = new FileReader();
+    reader.onload = function(ev){
+      const img = new Image();
+      img.onload = function(){
+        let { width, height } = img;
+        if (width > height && width > maxDimension) {
+          height = Math.round(height * (maxDimension / width));
+          width = maxDimension;
+        } else if (height > maxDimension) {
+          width = Math.round(width * (maxDimension / height));
+          height = maxDimension;
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL('image/jpeg', 0.85));
+      };
+      img.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
 
 function setupRefUpload(inputId, zoneId, previewId, setter){
   document.getElementById(inputId).addEventListener('change', function(e){
     const file = e.target.files[0];
     if(!file) return;
-    const r = new FileReader();
-    r.onload = function(ev){
-      setter(ev.target.result);
+    resizeImageFile(file, 1280).then((dataUrl)=>{
+      setter(dataUrl);
       const img = document.getElementById(previewId);
-      img.src = ev.target.result;
+      img.src = dataUrl;
       img.style.display = 'block';
       img.onclick = () => document.getElementById(inputId).click();
       const z = document.getElementById(zoneId);
@@ -924,8 +952,7 @@ function setupRefUpload(inputId, zoneId, previewId, setter){
       z.style.padding = '0';
       z.innerHTML = '';
       z.appendChild(img);
-    };
-    r.readAsDataURL(file);
+    });
   });
 }
 setupRefUpload('refAInput','refAZone','refAPreview', (v)=>{ refImageAData = v; });
