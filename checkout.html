@@ -6,10 +6,22 @@
 </head>
 <body>
   <script>
+    // Device sticky-note: same ID system used by the generator, so the
+    // payment can be matched back to the right customer record.
+    function getDeviceId(){
+      let id = localStorage.getItem('muggshotz_device_id');
+      if(!id){
+        id = 'dev-' + Date.now() + '-' + Math.random().toString(36).slice(2,10);
+        localStorage.setItem('muggshotz_device_id', id);
+      }
+      return id;
+    }
+    const deviceId = getDeviceId();
+
     fetch('/api/create-checkout-session', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({})
+      body: JSON.stringify({ deviceId })
     })
     .then(res => res.json())
     .then(data => {
