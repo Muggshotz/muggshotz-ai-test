@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8"/>
+<title>Printify Order Test</title>
+<style>
+body{background:#111;color:#fff;font-family:system-ui,sans-serif;padding:2rem;max-width:500px;margin:0 auto}
+h2{color:#ff6a00}
+label{display:block;margin-top:1rem;font-size:13px;color:#aaa}
+input,select{width:100%;padding:10px;margin-top:4px;background:#0d0d0d;border:1px solid #444;border-radius:6px;color:#fff;box-sizing:border-box}
+button{margin-top:1.5rem;width:100%;padding:14px;background:#ff6a00;border:none;border-radius:8px;color:#fff;font-weight:700;font-size:16px;cursor:pointer}
+button:disabled{background:#333;color:#777}
+#result{margin-top:1.5rem;padding:1rem;background:#0d0d0d;border-radius:8px;white-space:pre-wrap;word-break:break-word;font-size:13px}
+</style>
+</head>
+<body>
+<h2>🧪 Printify Order Test</h2>
+<p style="color:#888;font-size:13px">This is a test page only — it sends a real test order to Printify. Use your own address so you receive the test mug.</p>
+
+<label>Design image</label>
+<input type="file" id="imageInput" accept="image/*"/>
+
+<label>Mug size</label>
+<select id="sizeSelect">
+<option value="11oz">11oz</option>
+<option value="15oz">15oz</option>
+</select>
+
+<label>Your full name</label>
+<input type="text" id="nameInput" placeholder="Jane Smith"/>
+
+<label>Email</label>
+<input type="text" id="emailInput" placeholder="jane@example.com"/>
+
+<label>Address line 1</label>
+<input type="text" id="addr1Input" placeholder="123 Main St"/>
+
+<label>City</label>
+<input type="text" id="cityInput" placeholder="Westland"/>
+
+<label>State (2-letter)</label>
+<input type="text" id="stateInput" placeholder="MI"/>
+
+<label>ZIP code</label>
+<input type="text" id="zipInput" placeholder="48185"/>
+
+<label>Country (2-letter code)</label>
+<input type="text" id="countryInput" placeholder="US"/>
+
+<button id="submitBtn" onclick="submitTestOrder()">Send Test Order to Printify</button>
+
+<div id="result" style="display:none"></div>
+
+<script>
+function readFileAsDataUrl(file){
+  return new Promise((resolve)=>{
+    const r = new FileReader();
+    r.onload = (e) => resolve(e.target.result);
+    r.readAsDataURL(file);
+  });
+}
+
+async function submitTestOrder(){
+  const fileInput = document.getElementById('imageInput');
+  const resultBox = document.getElementById('result');
+  const btn = document.getElementById('submitBtn');
+
+  if(!fileInput.files[0]){
+    alert('Please choose an image first.');
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'Sending to Printify...';
+  resultBox.style.display = 'block';
+  resultBox.textContent = 'Working...';
+
+  const imageDataUrl = await readFileAsDataUrl(fileInput.files[0]);
+
+  const body = {
+    imageDataUrl,
+    mugType: "Classic White",
+    sizeLabel: document.getElementById('sizeSelect').value,
+    customerName: document.getElementById('nameInput').value,
+    orderId: 'test-' + Date.now(),
+    shippingAddress: {
+      first_name: document.getElementById('nameInput').value.split(' ')[0] || 'Test',
+      last_name: document.getElementById('nameInput').value.split(' ').slice(1).join(' ') || 'Customer',
+      email: document.getElementById('emailInput').value,
+      phone: '',
+      country: document.getElementById('countryInput').value,
+      region: document.getElementById('stateInput').value,
+      address1: document.getElementById('addr1Input').value,
+      address2: '',
+      city: document.getElementById('cityInput').value,
+      zip: document.getElementById('zipInput').value
+    }
+  };
+
+  try{
+    const resp = await fetch('/api/create-printify-order', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(body)
+    });
+    const data = await resp.json();
+    resultBox.textContent = JSON.stringify(data, null, 2);
+  }catch(err){
+    resultBox.textContent = 'Network error: ' + err.message;
+  }finally{
+    btn.disabled = false;
+    btn.textContent = 'Send Test Order to Printify';
+  }
+}
+</script>
+</body>
+</html>
