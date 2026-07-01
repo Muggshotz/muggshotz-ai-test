@@ -26,7 +26,7 @@ export default async function handler(req, res) {
       .single();
 
     if (findError || !customer) {
-      return res.status(404).json({ error: 'Could not find your account. Try generating an image first.' });
+      return res.status(404).json({ error: 'Could not find your account. Try generating an image first.', detail: findError ? findError.message : 'no customer' });
     }
 
     if (customer.email_verified) {
@@ -41,7 +41,7 @@ export default async function handler(req, res) {
       .eq('id', customer.id);
 
     if (updateError) {
-      return res.status(500).json({ error: 'Could not save your email. Please try again.' });
+      return res.status(500).json({ error: 'Could not save your email. Please try again.', detail: updateError.message });
     }
 
     const verifyUrl = `https://muggshotz-ai-test.vercel.app/api/verify-email?token=${token}`;
