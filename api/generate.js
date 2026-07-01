@@ -69,6 +69,57 @@ async function deductOneToken(customerId, currentBalance) {
   return rows[0];
 }
 
+// Uploads the generated image bytes to Supabase Storage and returns a
+// permanent public URL, so we never store giant base64 blobs in the
+// database or send them back over the wire more than once.
+async function uploadGenerationToStorage(imageBuffer, deviceId) {
+  const fileName = `${deviceId}-${Date.now()}.png`;
+  const uploadUrl = `${SUPABASE_URL}/storage/v1/object/generations/${fileName}`;
+  const resp = await fetch(uploadUrl, {
+    method: "POST",
+    headers: {
+      "apikey": SUPABASE_SERVICE_ROLE_KEY,
+      "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+      "Content-Type": "image/png"
+    },
+    body: imageBuffer
+  });
+  if (!resp.ok) {
+    const errText = await resp.text();
+    throw new Error("Supabase storage upload failed: " + errText);
+  }
+  return `${SUPABASE_URL}/storage/v1/object/public/generations/${fileName}`;
+}
+
+// Saves a record of this generation so it can later be shown in the
+// "pick from your recent generations" picker for multi-placement orders.
+async function saveGenerationRecord(customerId, promptText, theme, imageUrl) {
+  const url = `${SUPABASE_URL}/rest/v1/generations`;
+  const resp = await fetch(url, {
+    method: "POST",
+    headers: {
+      "apikey": SUPABASE_SERVICE_ROLE_KEY,
+      "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+      "Content-Type": "application/json",
+      "Prefer": "return=representation"
+    },
+    body: JSON.stringify({
+      customer_id: customerId,
+      prompt_text: promptText,
+      background_theme: theme || null,
+      image_url: imageUrl
+    })
+  });
+  const rows = await resp.json();
+  if (!resp.ok) {
+    // Don't fail the whole request if this record-keeping step fails —
+    // the customer already has their image either way.
+    console.error("Could not save generation record:", JSON.stringify(rows));
+    return null;
+  }
+  return rows[0];
+}
+
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
@@ -211,6 +262,16 @@ Polished gift-art quality.
       return res.status(502).json({ error: "No image returned from OpenAI.", raw: data });
     }
 
+    // Upload the finished image to Supabase Storage and get a real,
+    // permanent URL back instead of shipping raw base64 around.
+    const generatedBuffer = Buffer.from(b64, "base64");
+    const publicImageUrl = await uploadGenerationToStorage(generatedBuffer, deviceId);
+
+    // Record this generation so it can be picked later for multi-placement
+    // mug orders. Never lets a record-keeping failure block the customer's
+    // actual image from coming back.
+    await saveGenerationRecord(customer.id, prompt, theme, publicImageUrl);
+
     // Only deduct the token AFTER a successful generation, so a failed
     // OpenAI call never costs the customer a token. Admin accounts have
     // unlimited tokens and are never deducted.
@@ -218,10 +279,7 @@ Polished gift-art quality.
       await deductOneToken(customer.id, customer.token_balance);
     }
 
-    // Package the result the same way the old code did: a single imageUrl
-    // the front end can drop straight into an <img src="..."> tag.
-    const outputDataUrl = `data:image/png;base64,${b64}`;
-    return res.status(200).json({ imageUrl: outputDataUrl });
+    return res.status(200).json({ imageUrl: publicImageUrl });
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }
