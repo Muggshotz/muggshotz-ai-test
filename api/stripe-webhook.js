@@ -25,9 +25,11 @@ function readRawBody(req) {
   });
 }
 
-// Looks up a customer row by device ID.
+// Looks up a customer row by device ID. Now also pulls email_verified
+// so we can decide whether this payment also owes them the separate
+// email-verification bonus token.
 async function findCustomerByDeviceId(deviceId) {
-  const url = `${SUPABASE_URL}/rest/v1/customers?device_id=eq.${encodeURIComponent(deviceId)}&select=id,token_balance`;
+  const url = `${SUPABASE_URL}/rest/v1/customers?device_id=eq.${encodeURIComponent(deviceId)}&select=id,token_balance,email,email_verified`;
   const resp = await fetch(url, {
     headers: {
       "apikey": SUPABASE_SERVICE_ROLE_KEY,
@@ -41,7 +43,8 @@ async function findCustomerByDeviceId(deviceId) {
 
 // Creates a brand-new customer row if this device somehow paid before
 // ever generating an image (shouldn't normally happen, but handled just
-// in case), starting with 0 tokens before the 4 bonus tokens are added.
+// in case), starting with 0 tokens and unverified email before this
+// payment's tokens get added.
 async function createCustomerForDevice(deviceId) {
   const url = `${SUPABASE_URL}/rest/v1/customers`;
   const resp = await fetch(url, {
@@ -52,16 +55,37 @@ async function createCustomerForDevice(deviceId) {
       "Content-Type": "application/json",
       "Prefer": "return=representation"
     },
-    body: JSON.stringify({ device_id: deviceId, token_balance: 0 })
+    body: JSON.stringify({ device_id: deviceId, token_balance: 0, email_verified: false })
   });
   const rows = await resp.json();
   if (!resp.ok) throw new Error("Supabase insert failed: " + JSON.stringify(rows));
   return rows[0];
 }
 
-// Adds 4 tokens to a customer's existing balance.
-async function addFourTokens(customerId, currentBalance) {
-  const url = `${SUPABASE_URL}/rest/v1/customers?id=eq.${customerId}`;
+// Credits tokens to a customer's balance. If they hadn't already earned
+// the separate email-verification bonus token, this payment covers that
+// too — 5 tokens instead of 4 — and marks their email verified using
+// whatever address Stripe collected during checkout. This keeps the
+// total tokens a customer can reach the same (6) no matter which order
+// they go through free-email-verification vs. paying the $5 deposit.
+async function creditTokensForPayment(customer, stripeEmail) {
+  const alreadyVerified = customer.email_verified === true;
+  const tokensToAdd = alreadyVerified ? 4 : 5;
+
+  const patchBody = {
+    token_balance: customer.token_balance + tokensToAdd,
+    has_unlocked_starter_pack: true
+  };
+
+  // Only touch email/email_verified if they hadn't already verified by
+  // some other path — never downgrade or overwrite an existing
+  // verified email.
+  if (!alreadyVerified && stripeEmail) {
+    patchBody.email = stripeEmail;
+    patchBody.email_verified = true;
+  }
+
+  const url = `${SUPABASE_URL}/rest/v1/customers?id=eq.${customer.id}`;
   const resp = await fetch(url, {
     method: "PATCH",
     headers: {
@@ -70,10 +94,7 @@ async function addFourTokens(customerId, currentBalance) {
       "Content-Type": "application/json",
       "Prefer": "return=representation"
     },
-    body: JSON.stringify({
-      token_balance: currentBalance + 4,
-      has_unlocked_starter_pack: true
-    })
+    body: JSON.stringify(patchBody)
   });
   const rows = await resp.json();
   if (!resp.ok) throw new Error("Supabase token credit failed: " + JSON.stringify(rows));
@@ -114,12 +135,16 @@ export default async function handler(req, res) {
         return res.status(200).json({ received: true, warning: "No device_id in metadata" });
       }
 
+      // Stripe Checkout collects the email during the payment form
+      // itself, under customer_details.
+      const stripeEmail = session.customer_details?.email || session.customer_email || null;
+
       let customer = await findCustomerByDeviceId(deviceId);
       if (!customer) {
         customer = await createCustomerForDevice(deviceId);
       }
 
-      await addFourTokens(customer.id, customer.token_balance);
+      await creditTokensForPayment(customer, stripeEmail);
     }
 
     // Acknowledge receipt so Stripe knows not to retry this event again.
