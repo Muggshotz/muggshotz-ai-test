@@ -139,8 +139,9 @@
 </div>
 </div>
 
-<button class="generate-btn" id="generateBtn" onclick="generate()">🎨 GENERATE CARICATURE</button><div class="status" id="status"></div>
-
+<button class="generate-btn" id="generateBtn" onclick="generate()">🎨 GENERATE CARICATURE</button>
+<button class="download-btn" id="cancelBtn" onclick="cancelGeneration()" style="display:none;margin-top:.5rem">✖ Cancel & Try a Different Photo</button>
+<div class="status" id="status"></div>
 <div class="card result-area" id="resultArea"><div class="card-title">✨ Your Caricature</div><img id="resultImg" class="result-img"/><div class="mockup-label" id="mockupLabel"></div><button class="download-btn" onclick="downloadImage()">⬇️ Download for Printify</button></div>
 <div class="card" id="verifyCard" style="display:none">
 <div class="card-title">🎁 Get a Second Free Token</div>
@@ -992,8 +993,8 @@ async function generate(){
   const btn=document.getElementById('generateBtn');
   btn.disabled=true;
   document.getElementById('resultArea').className='card result-area';
-  setStatus('Generating your caricature...');
-
+setStatus('Generating your caricature... this can take up to 3 minutes. Please stay on this screen until it finishes.');
+document.getElementById('cancelBtn').style.display='block';
   try{
     const idea=document.getElementById('ideaDesc').value.trim();
 
@@ -1085,10 +1086,12 @@ The background should feel like a finished professional illustration or magazine
 Use rich environmental storytelling while keeping the face as the primary focal point.
 `;
 
+    currentGenerationController=new AbortController();
     const resp=await fetch('/api/generate',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({image:uploadedImageData,prompt,theme:selectedTheme,deviceId,refImageA:refImageAData,refImageB:refImageBData})
+      body:JSON.stringify({image:uploadedImageData,prompt,theme:selectedTheme,deviceId,refImageA:refImageAData,refImageB:refImageBData}),
+      signal:currentGenerationController.signal
     });
 
     const data=await resp.json();
@@ -1111,11 +1114,20 @@ Use rich environmental storytelling while keeping the face as the primary focal 
   }catch(err){
     setStatus(err.message,true);
   }finally{
-    btn.disabled=false;
-  }
-}
+btn.disabled=false;
+document.getElementById('cancelBtn').style.display='none';}
 
-function downloadImage(){
+let currentGenerationController=null;
+function cancelGeneration(){
+  if(currentGenerationController){
+    currentGenerationController.abort();
+  }
+  document.getElementById('cancelBtn').style.display='none';
+  document.getElementById('generateBtn').disabled=false;
+  clearStatus();
+}
+  
+  function downloadImage(){
   if(!finalImageUrl)return;
   const a=document.createElement('a');
   a.href=finalImageUrl;
