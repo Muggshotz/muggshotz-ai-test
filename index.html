@@ -153,14 +153,14 @@
 <div class="card result-area" id="resultArea"><div class="card-title">✨ Your Caricature</div><img id="resultImg" class="result-img"/><div class="mockup-label" id="mockupLabel"></div><button class="download-btn" onclick="downloadImage()">⬇️ Download for Printify</button></div>
   <div class="card" id="positionHolderCard" style="display:none">
 <div class="card-title">🖼️ Design Your Mug</div>
-<div class="note" style="margin-top:0;margin-bottom:.9rem">Left, Center, and Right are the three sides of your mug. Tap "New" on any side to generate a fresh picture just for that spot, or swap sides using the arrows.</div>
+<div class="note" style="margin-top:0;margin-bottom:.9rem">Your first picture goes to Center automatically — but plenty of people actually prefer it on the Left or Right (facing away from you, so others can see it while you drink), so feel free to swap it with the arrows below. Happy with just one picture? Your mug is ready — see below. Want a fuller design? Generate pictures for the other two sides too, for a small extra charge.</div>
 <div id="positionHolderRow" style="display:flex;align-items:flex-start;gap:6px;justify-content:center;flex-wrap:nowrap"></div>
 <button class="quick-btn" id="libraryToggleBtn" onclick="toggleLibrary()" style="margin-top:1.1rem;width:100%;text-align:center;padding:.65rem;border-radius:8px">📚 My Designs (0)</button>
 <div id="libraryPanel" style="display:none;margin-top:.75rem">
 <div class="note" style="margin-top:0;margin-bottom:.6rem">Tap Left, Center, or Right under a design to put it on your mug.</div>
 <div id="recentDesignsStrip" style="display:flex;gap:10px;overflow-x:auto;padding-bottom:6px"></div>
 </div>
-<button class="generate-btn" id="orderMugBtn" onclick="goToOrder()" style="display:none;margin-top:.9rem">🛒 Order This Mug</button>
+<button class="generate-btn" id="orderMugBtn" onclick="goToOrder()" style="display:none;margin-top:.9rem">✅ Available Now</button>
 </div>
 <div class="card" id="verifyCard" style="display:none">
 <div class="card-title">🎁 Get a Second Free Token</div>
@@ -1145,12 +1145,18 @@ let libraryOpen=false;
 
 function addToRecentDesigns(url){
   const designId='design-'+Date.now();
+  const isFirstDesign=recentDesigns.length===0;
   recentDesigns.push({id:designId,url:url});
   document.getElementById('positionHolderCard').style.display='block';
 
   if(pendingSlotTarget){
     placements[pendingSlotTarget]=designId;
     pendingSlotTarget=null;
+  } else if(isFirstDesign && !placements.front){
+    // Their very first picture becomes the Center design automatically —
+    // no extra tap required. They can still swap it to Left or Right
+    // anytime using the arrows.
+    placements.front=designId;
   }
 
   renderRecentDesigns();
