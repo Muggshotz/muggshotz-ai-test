@@ -1115,8 +1115,9 @@ Use rich environmental storytelling while keeping the face as the primary focal 
     setStatus(err.message,true);
   }finally{
 btn.disabled=false;
-document.getElementById('cancelBtn').style.display='none';}
-
+document.getElementById('cancelBtn').style.display='none';
+  }
+}
 let currentGenerationController=null;
 function cancelGeneration(){
   if(currentGenerationController){
