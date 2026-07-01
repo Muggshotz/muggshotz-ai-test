@@ -143,6 +143,13 @@
 <button class="download-btn" id="cancelBtn" onclick="cancelGeneration()" style="display:none;margin-top:.5rem">✖ Cancel & Try a Different Photo</button>
 <div class="status" id="status"></div>
 <div class="card result-area" id="resultArea"><div class="card-title">✨ Your Caricature</div><img id="resultImg" class="result-img"/><div class="mockup-label" id="mockupLabel"></div><button class="download-btn" onclick="downloadImage()">⬇️ Download for Printify</button></div>
+  <div class="card" id="recentDesignsCard" style="display:none">
+<div class="card-title">🖼️ Your Recent Designs</div>
+<div class="note" style="margin-top:0;margin-bottom:.75rem">Assign your favorite designs to each mug side. Generate as many as you want — everything shows up here.</div>
+<div id="recentDesignsStrip" style="display:flex;gap:10px;overflow-x:auto;padding-bottom:6px"></div>
+<div class="note" id="placementSummary" style="margin-top:.75rem">Tap Left, Right, or Front under a design to assign it to your mug.</div>
+<button class="generate-btn" id="orderMugBtn" onclick="goToOrder()" style="display:none;margin-top:.75rem">🛒 Order This Mug</button>
+</div>
 <div class="card" id="verifyCard" style="display:none">
 <div class="card-title">🎁 Get a Second Free Token</div>
 <div class="note" style="margin-top:0;margin-bottom:.75rem">Verify your email and we'll send you another free token to keep creating.</div>
@@ -1108,6 +1115,7 @@ Use rich environmental storytelling while keeping the face as the primary focal 
     document.getElementById('captionCard').className='card caption-card visible';
     document.getElementById('captionText').value='';
   document.getElementById('verifyCard').style.display='block';
+    addToRecentDesigns(resultUrl);
     await loadBaseImageForCaption(resultUrl);
     clearStatus();
 
@@ -1118,7 +1126,90 @@ btn.disabled=false;
 document.getElementById('cancelBtn').style.display='none';
   }
 }
-let currentGenerationController=null;
+let recentDesigns=[];
+let placements={left:null,right:null,front:null};
+
+function addToRecentDesigns(url){
+  const designId='design-'+Date.now();
+  recentDesigns.push({id:designId,url:url});
+  renderRecentDesigns();
+  document.getElementById('recentDesignsCard').style.display='block';
+}
+
+function renderRecentDesigns(){
+  const strip=document.getElementById('recentDesignsStrip');
+  strip.innerHTML='';
+  recentDesigns.forEach(design=>{
+    const wrap=document.createElement('div');
+    wrap.style.flexShrink='0';
+    wrap.style.width='110px';
+    wrap.style.textAlign='center';
+
+    const img=document.createElement('img');
+    img.src=design.url;
+    img.style.width='100%';
+    img.style.height='110px';
+    img.style.objectFit='cover';
+    img.style.borderRadius='8px';
+    img.style.border=isAssigned(design.id)?'2px solid #ff6a00':'2px solid #333';
+    wrap.appendChild(img);
+
+    const btnRow=document.createElement('div');
+    btnRow.style.display='flex';
+    btnRow.style.gap='3px';
+    btnRow.style.marginTop='4px';
+
+    ['left','right','front'].forEach(pos=>{
+      const btn=document.createElement('div');
+      const isThisOne=placements[pos]===design.id;
+      btn.textContent=pos.charAt(0).toUpperCase()+pos.slice(1);
+      btn.style.flex='1';
+      btn.style.fontSize='10px';
+      btn.style.padding='4px 2px';
+      btn.style.borderRadius='6px';
+      btn.style.cursor='pointer';
+      btn.style.border=isThisOne?'1px solid #ff6a00':'1px solid #333';
+      btn.style.background=isThisOne?'#1a0a00':'#0d0d0d';
+      btn.style.color=isThisOne?'#ff6a00':'#888';
+      btn.onclick=()=>assignPlacement(pos,design.id);
+      btnRow.appendChild(btn);
+    });
+    wrap.appendChild(btnRow);
+    strip.appendChild(wrap);
+  });
+}
+
+function isAssigned(designId){
+  return placements.left===designId||placements.right===designId||placements.front===designId;
+}
+
+function assignPlacement(pos,designId){
+  if(placements[pos]===designId){
+    placements[pos]=null;
+  } else {
+    placements[pos]=designId;
+  }
+  renderRecentDesigns();
+  updatePlacementSummary();
+}
+
+function updatePlacementSummary(){
+  const assignedCount=['left','right','front'].filter(p=>placements[p]).length;
+  const summaryEl=document.getElementById('placementSummary');
+  const orderBtn=document.getElementById('orderMugBtn');
+  if(assignedCount===0){
+    summaryEl.textContent='Tap Left, Right, or Front under a design to assign it to your mug.';
+    orderBtn.style.display='none';
+  } else {
+    const parts=['left','right','front'].filter(p=>placements[p]).map(p=>p.charAt(0).toUpperCase()+p.slice(1));
+    summaryEl.textContent='Assigned: '+parts.join(', ')+'.';
+    orderBtn.style.display='block';
+  }
+}
+
+function goToOrder(){
+  alert('Order flow coming soon! Placements: '+JSON.stringify(placements));
+} let currentGenerationController=null;
 function cancelGeneration(){
   if(currentGenerationController){
     currentGenerationController.abort();
