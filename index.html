@@ -1141,7 +1141,7 @@ function downloadImage(){
       body:JSON.stringify({email,deviceId})
     });
     const data=await resp.json();
-    if(!resp.ok)throw new Error(data.error||'Something went wrong.');
+    if(!resp.ok)throw new Error((data.error||'Something went wrong.')+(data.detail?' — '+data.detail:''));
     statusEl.textContent='Check your email for a verification link!';
     statusEl.style.color='#ff6a00';
   }catch(err){
