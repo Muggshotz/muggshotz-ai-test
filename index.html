@@ -84,6 +84,18 @@
 </style>
 </head>
 <body>
+<button id="creditsBtn" onclick="openCreditsPanel()" style="position:fixed;top:10px;right:10px;z-index:999;background:#ff6a00;border:none;border-radius:20px;padding:.55rem 1rem;color:#fff;font-size:12px;font-weight:700;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,0.6);letter-spacing:.3px">💳 Credits & Extras</button>
+<div id="creditsModalOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:1000;align-items:center;justify-content:center;padding:1.5rem">
+  <div class="card" style="max-width:420px;width:100%;position:relative">
+    <button onclick="closeCreditsPanel()" style="position:absolute;top:8px;right:8px;background:none;border:none;color:#888;font-size:20px;cursor:pointer;line-height:1">✖</button>
+    <div class="card-title">💳 Credits & Extras</div>
+    <div id="creditsPanelMessage" class="note" style="margin-top:0;margin-bottom:1.1rem;color:#ccc;font-size:13px;line-height:1.4"></div>
+    <a href="checkout.html" style="text-decoration:none;display:block">
+      <button class="generate-btn">✅ $5 Preview Reservation</button>
+    </a>
+    <div class="note" style="margin-top:.75rem">That $5 isn't an extra charge — it comes straight off your mug's price at checkout, and unlocks more tokens right away so you can keep creating.</div>
+  </div>
+</div>
 <div class="header"><video class="header-video" autoplay muted loop playsinline preload="auto" onerror="document.getElementById('headerVideoFallback').style.display='block'"><source src="https://res.cloudinary.com/fixgpggr/video/upload/v1782516227/Hailuo_Video_Animate_only_the_fire_Keep_th_527026914314145793_3_ruvdfn.mp4" type="video/mp4"></video><div id="headerVideoFallback" style="display:none;color:#ff6a00;text-align:center;padding:1.5rem;font-size:13px">Logo video failed to load.</div></div>
 <div class="tagline">YOUR HONEY. OUR FUNNY.</div>
 <div class="main">
@@ -917,6 +929,20 @@ function setIdea(text){
   document.getElementById('ideaDesc').value=text;
 }
 
+// Opens the Credits & Extras panel. Called two ways: manually via the
+// always-visible top-right button (no message — generic framing), or
+// automatically from generate() when a 403 zero-token response comes
+// back (custom "you're out of credits" framing).
+function openCreditsPanel(message){
+  document.getElementById('creditsPanelMessage').textContent = message
+    || "Buy more tokens anytime to keep creating — pick an option below.";
+  document.getElementById('creditsModalOverlay').style.display='flex';
+}
+
+function closeCreditsPanel(){
+  document.getElementById('creditsModalOverlay').style.display='none';
+}
+
 document.getElementById('fileInput').addEventListener('change',function(e){
   const file=e.target.files[0];
   if(!file)return;
@@ -1117,7 +1143,16 @@ Use rich environmental storytelling while keeping the face as the primary focal 
 
     const data=await resp.json();
 
-    if(!resp.ok)throw new Error(data.error||data.detail||'Generation failed.');
+    if(!resp.ok){
+      if(resp.status===403){
+        // Zero-token dead end: don't show a dead-end red error, open the
+        // purchase path immediately instead.
+        clearStatus();
+        openCreditsPanel("You're out of image credits. Grab the $5 Preview Reservation below to unlock more and keep creating.");
+        return;
+      }
+      throw new Error(data.error||data.detail||'Generation failed.');
+    }
 
     resultUrl=data.imageUrl;
 
