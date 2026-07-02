@@ -64,29 +64,22 @@ async function createCustomerForDevice(deviceId) {
 
 // Credits tokens to a customer's balance. If they hadn't already earned
 // the separate email-verification bonus token, this payment covers that
-// too — 5 tokens instead of 4 — and marks their email verified using
-// whatever address Stripe collected during checkout. This keeps the
-// total tokens a customer can reach the same (6) no matter which order
-// they go through free-email-verification vs. paying the $5 deposit.
+// too — 5 tokens instead of 4. This keeps the total tokens a customer
+// can reach the same (6) no matter which order they go through
+// free-email-verification vs. paying the $5 deposit.
+//
+// Token crediting and the email update are done as two SEPARATE steps
+// on purpose. Token crediting is tied to real money already paid and
+// must always succeed. The email update is just bookkeeping on top of
+// that — if it fails for any reason (like the email already being used
+// by a different customer row), that should never cost the customer
+// the tokens they already paid for. It just gets logged instead.
 async function creditTokensForPayment(customer, stripeEmail) {
   const alreadyVerified = customer.email_verified === true;
   const tokensToAdd = alreadyVerified ? 4 : 5;
 
-  const patchBody = {
-    token_balance: customer.token_balance + tokensToAdd,
-    has_unlocked_starter_pack: true
-  };
-
-  // Only touch email/email_verified if they hadn't already verified by
-  // some other path — never downgrade or overwrite an existing
-  // verified email.
-  if (!alreadyVerified && stripeEmail) {
-    patchBody.email = stripeEmail;
-    patchBody.email_verified = true;
-  }
-
-  const url = `${SUPABASE_URL}/rest/v1/customers?id=eq.${customer.id}`;
-  const resp = await fetch(url, {
+  const tokenUrl = `${SUPABASE_URL}/rest/v1/customers?id=eq.${customer.id}`;
+  const tokenResp = await fetch(tokenUrl, {
     method: "PATCH",
     headers: {
       "apikey": SUPABASE_SERVICE_ROLE_KEY,
@@ -94,11 +87,39 @@ async function creditTokensForPayment(customer, stripeEmail) {
       "Content-Type": "application/json",
       "Prefer": "return=representation"
     },
-    body: JSON.stringify(patchBody)
+    body: JSON.stringify({
+      token_balance: customer.token_balance + tokensToAdd,
+      has_unlocked_starter_pack: true
+    })
   });
-  const rows = await resp.json();
-  if (!resp.ok) throw new Error("Supabase token credit failed: " + JSON.stringify(rows));
-  return rows[0];
+  const tokenRows = await tokenResp.json();
+  if (!tokenResp.ok) throw new Error("Supabase token credit failed: " + JSON.stringify(tokenRows));
+
+  // Only attempt this if they hadn't already verified by some other
+  // path — never downgrade or overwrite an existing verified email.
+  if (!alreadyVerified && stripeEmail) {
+    try {
+      const emailUrl = `${SUPABASE_URL}/rest/v1/customers?id=eq.${customer.id}`;
+      const emailResp = await fetch(emailUrl, {
+        method: "PATCH",
+        headers: {
+          "apikey": SUPABASE_SERVICE_ROLE_KEY,
+          "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+          "Content-Type": "application/json",
+          "Prefer": "return=representation"
+        },
+        body: JSON.stringify({ email: stripeEmail, email_verified: true })
+      });
+      if (!emailResp.ok) {
+        const emailErr = await emailResp.json();
+        console.warn("Email update after payment failed (tokens were still credited):", JSON.stringify(emailErr));
+      }
+    } catch (emailErr) {
+      console.warn("Email update after payment failed (tokens were still credited):", emailErr.message);
+    }
+  }
+
+  return tokenRows[0];
 }
 
 export default async function handler(req, res) {
