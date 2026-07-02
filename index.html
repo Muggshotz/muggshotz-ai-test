@@ -88,19 +88,21 @@
 <div class="tagline">YOUR HONEY. OUR FUNNY.</div>
 <div class="main">
 
-<div class="card"><div class="card-title">📸 Upload Photo</div><div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()"><div style="font-size:32px;color:#555;margin-bottom:8px">👤</div><div class="upload-text">Tap here to upload a photo</div><div class="upload-sub">Clear face photo works best</div></div><input type="file" id="fileInput" accept="image/*" style="display:none"/><img id="previewImg" class="preview-img" style="display:none"/>
+<div class="card"><div class="card-title">📸 Upload Photo</div>
+<div style="font-size:11px;color:#777;letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px;text-align:center">Photo 1</div>
+<div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()"><div style="font-size:32px;color:#555;margin-bottom:8px">👤</div><div class="upload-text">Tap here to upload a photo</div><div class="upload-sub">Clear face photo works best</div></div><input type="file" id="fileInput" accept="image/*" style="display:none"/><img id="previewImg" class="preview-img" style="display:none"/>
 
 <div style="margin-top:1.1rem;padding-top:1rem;border-top:1px dashed #333">
-<div class="note" style="margin-top:0;margin-bottom:.6rem">Optional — add reference photos if you want to combine or pull elements from other pictures (e.g. "use the face from Reference A on the body in the main photo").</div>
+<div class="note" style="margin-top:0;margin-bottom:.6rem">Optional — add more photos if you want to combine or pull elements from other pictures (e.g. "use the face from Photo 2 on the body in Photo 1").</div>
 <div class="grid2">
 <div>
-<div style="font-size:11px;color:#777;letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px;text-align:center">Reference A</div>
+<div style="font-size:11px;color:#777;letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px;text-align:center">Photo 2</div>
 <div class="upload-zone" id="refAZone" style="padding:1rem;" onclick="document.getElementById('refAInput').click()"><div style="font-size:20px;color:#555;margin-bottom:4px">➕</div><div class="upload-text" style="font-size:12px">Tap to add</div></div>
 <input type="file" id="refAInput" accept="image/*" style="display:none"/>
 <img id="refAPreview" class="preview-img" style="display:none;max-height:140px"/>
 </div>
 <div>
-<div style="font-size:11px;color:#777;letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px;text-align:center">Reference B</div>
+<div style="font-size:11px;color:#777;letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px;text-align:center">Photo 3</div>
 <div class="upload-zone" id="refBZone" style="padding:1rem;" onclick="document.getElementById('refBInput').click()"><div style="font-size:20px;color:#555;margin-bottom:4px">➕</div><div class="upload-text" style="font-size:12px">Tap to add</div></div>
 <input type="file" id="refBInput" accept="image/*" style="display:none"/>
 <img id="refBPreview" class="preview-img" style="display:none;max-height:140px"/>
@@ -1035,10 +1037,10 @@ document.getElementById('cancelBtn').style.display='block';
 
     const referenceLine = (refImageAData || refImageBData)
       ? `
-REFERENCE IMAGES: Additional reference photos have been provided beyond the main photo.
-${refImageAData ? 'Image labeled "Reference A" is provided — when the customer idea above mentions "Reference A," use that exact image for the element described (e.g. a face, an object, a scene, a setting).' : ''}
-${refImageBData ? 'Image labeled "Reference B" is provided — when the customer idea above mentions "Reference B," use that exact image for the element described.' : ''}
-Only use these reference images for the specific elements the customer idea calls out. Do not blend in unrelated details from a reference image.
+REFERENCE IMAGES: Additional photos have been provided beyond Photo 1 (the main photo).
+${refImageAData ? 'This image is "Photo 2" — when the customer idea above mentions "Photo 2," use that exact image for the element described (e.g. a face, an object, a scene, a setting).' : ''}
+${refImageBData ? 'This image is "Photo 3" — when the customer idea above mentions "Photo 3," use that exact image for the element described.' : ''}
+Only use these reference images for the specific elements the customer idea calls out. Do not blend in unrelated details from a reference photo.
 `
       : '';
 
