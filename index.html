@@ -294,6 +294,12 @@
 <script>
 let product='mug',style='Muggshotz Classic: premium professional caricature, expressive face, rich detail, painterly shading, funny gift-art scene',likeness='0.15',uploadedImageData=null,resultUrl=null;
 let refImageAData=null, refImageBData=null;
+// Tracks the most recent generated result (as a base64 data URL) so the
+// NEXT generate() call can send it back as a "current design" reference,
+// enabling true iterative refinement instead of always restarting from
+// the original photo. Reset to null whenever a brand-new main photo is
+// uploaded, since that starts a fresh design session.
+let lastGeneratedImageData=null;
 
 // --- Device sticky-note: silently identifies this browser/device across
 // visits so the server can track free tokens, without any login or signup.
@@ -972,6 +978,9 @@ function togglePriceTable(){
 document.getElementById('fileInput').addEventListener('change',function(e){
   const file=e.target.files[0];
   if(!file)return;
+  // A brand-new main photo means a fresh design session — stop chaining
+  // refinements onto whatever was generated for the previous photo.
+  lastGeneratedImageData=null;
   resizeImageFile(file, 1280).then((dataUrl)=>{
     uploadedImageData=dataUrl;
     const img=document.getElementById('previewImg');
@@ -1055,6 +1064,20 @@ function getProductRules(p){
   if(p==='phone case')return 'phone case artwork, vertical-feeling composition, face and main joke clearly visible';
   if(p==='tote bag')return 'tote bag artwork, bold high-impact design readable from a distance';
   return 'printable custom gift artwork with clean centered square composition and safe margins';
+}
+
+// Fetches a generated result's public URL and converts it back into a
+// base64 data URL, so it can be sent to /api/generate as a "current
+// design" reference image on the next refinement.
+function urlToDataURL(url){
+  return fetch(url)
+    .then(r=>r.blob())
+    .then(blob=>new Promise((resolve,reject)=>{
+      const reader=new FileReader();
+      reader.onloadend=()=>resolve(reader.result);
+      reader.onerror=reject;
+      reader.readAsDataURL(blob);
+    }));
 }
 
 async function generate(){
@@ -1163,7 +1186,7 @@ Use rich environmental storytelling while keeping the face as the primary focal 
     const resp=await fetch('/api/generate',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({image:uploadedImageData,prompt,theme:selectedTheme,deviceId,refImageA:refImageAData,refImageB:refImageBData}),
+      body:JSON.stringify({image:uploadedImageData,prompt,theme:selectedTheme,deviceId,refImageA:refImageAData,refImageB:refImageBData,currentDesign:lastGeneratedImageData}),
       signal:currentGenerationController.signal
     });
 
@@ -1192,6 +1215,16 @@ Use rich environmental storytelling while keeping the face as the primary focal 
   document.getElementById('verifyCard').style.display='block';
     addToRecentDesigns(resultUrl);
     await loadBaseImageForCaption(resultUrl);
+    // Cache this result so the next Generate press refines it instead of
+    // starting over from the original photo. A failure here just means
+    // the next generation falls back to starting fresh — never blocks
+    // the customer from seeing their current image.
+    try{
+      lastGeneratedImageData=await urlToDataURL(resultUrl);
+    }catch(cacheErr){
+      console.error('Could not cache result for refinement:',cacheErr);
+      lastGeneratedImageData=null;
+    }
     clearStatus();
 
   }catch(err){
