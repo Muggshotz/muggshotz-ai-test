@@ -82,17 +82,16 @@
 .pos-slot-gen-btn{margin-top:6px;font-size:10px;background:#0d0d0d;border:1px solid #444;border-radius:14px;padding:4px 0;color:#ff6a00;cursor:pointer;width:100%}
 .swap-btn{background:#0d0d0d;border:1px solid #444;border-radius:50%;width:30px;height:30px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#ff6a00;font-size:15px;flex-shrink:0;margin-top:28px}
 
-/* Token meter + Credits & Extras button: stacked together in the
-   top-right corner by default (mobile / narrow viewports, where there's
-   no side margin to place them in). On wide screens, they split apart
-   into the dark side columns on either side of the centered content,
-   vertically centered, so they don't crowd each other or overlap the
-   header video. */
-.token-credits-row{position:fixed;top:10px;right:10px;z-index:999;display:flex;align-items:center;gap:8px}
+/* Token meter + Credits & Extras button: always fixed to the viewport
+   so they can never occupy real document-flow space (which was the
+   cause of the header being pushed down before this fix). Stacked
+   top-right on narrow/mobile screens; spread to opposite corners,
+   vertically centered, on wide screens. Deliberately NOT using
+   display:contents here — that technique is unreliable across browsers
+   for pulling fixed-position children out of a flex parent. */
+.token-credits-row{position:fixed;top:10px;right:10px;left:auto;z-index:999;display:flex;align-items:center;gap:8px}
 @media (min-width:1000px){
-  .token-credits-row{position:static;display:contents}
-  #tokenMeterWrap{position:fixed;left:24px;top:50%;transform:translateY(-50%);z-index:999}
-  #creditsBtn{position:fixed;right:24px;top:50%;transform:translateY(-50%);z-index:999}
+  .token-credits-row{top:50%;left:24px;right:24px;transform:translateY(-50%);justify-content:space-between;gap:0}
 }
 </style>
 </head>
@@ -720,17 +719,9 @@ function drawTextOnArc(ctx,text,centerX,centerY,radius,curveAmount,spacing,drawF
   const chars=text.split('');
   const charWidths=chars.map(c=>ctx.measureText(c).width+spacing);
   const totalWidth=charWidths.reduce((a,b)=>a+b,0);
-  // NOTE: angle traversal must stay left-to-right regardless of curve
-  // direction. Only the Y-offset and per-glyph rotation flip with
-  // direction; multiplying the traversal angle by direction as well
-  // would mirror the text and make it read backwards on a downward arc.
   const totalAngle=(totalWidth/radius)*strength;
   let angle=-totalAngle/2;
 
-  // Force middle/center alignment for the duration of the arc draw, since
-  // each glyph is individually positioned and rotated around its own pivot.
-  // Leaving textBaseline as top/bottom here causes glyphs to draw offset
-  // in the ROTATED direction instead of vertically, producing overlap.
   const prevAlign=ctx.textAlign;
   const prevBaseline=ctx.textBaseline;
   ctx.textAlign='center';
@@ -753,11 +744,6 @@ function drawTextOnArc(ctx,text,centerX,centerY,radius,curveAmount,spacing,drawF
 }
 
 function smoothStroke(points,numSamples){
-  // Fits a smooth cubic curve through a raw hand-drawn stroke, in the
-  // stroke's own local rotated frame (so it works at any angle on the
-  // canvas), using least-squares regression. This filters out natural
-  // hand shake/jitter while preserving the actual shape the person
-  // intended to draw (arc, wave, S-curve, or straight line).
   if(points.length<4)return points;
 
   const first=points[0],last=points[points.length-1];
@@ -823,9 +809,6 @@ function smoothStroke(points,numSamples){
 }
 
 function getPathTangentPoints(path){
-  // Build cumulative arc-length lookup along the user-drawn polyline so we
-  // can place each character at an exact distance along the path, and
-  // compute the local tangent angle for rotation.
   const points=[{x:path[0].x,y:path[0].y,dist:0}];
   let total=0;
   for(let i=1;i<path.length;i++){
@@ -867,7 +850,6 @@ function drawTextOnPath(ctx,text,pathPointsCanvasSpace,spacing,drawFn){
   const charWidths=chars.map(c=>ctx.measureText(c).width+spacing);
   const totalTextWidth=charWidths.reduce((a,b)=>a+b,0)-spacing;
 
-  // Center the text along the path's total length
   let dist=(pathData.total-totalTextWidth)/2;
   if(dist<0)dist=0;
 
@@ -1019,8 +1001,6 @@ function togglePriceTable(){
 document.getElementById('fileInput').addEventListener('change',function(e){
   const file=e.target.files[0];
   if(!file)return;
-  // A brand-new main photo means a fresh design session — stop chaining
-  // refinements onto whatever was generated for the previous photo.
   lastGeneratedImageData=null;
   resizeImageFile(file, 1280).then((dataUrl)=>{
     uploadedImageData=dataUrl;
@@ -1036,10 +1016,6 @@ document.getElementById('fileInput').addEventListener('change',function(e){
   });
 });
 
-// Shrinks an uploaded photo down to a reasonable max dimension and
-// re-encodes it as a compressed JPEG. This keeps multi-image requests
-// (main photo + reference photos) well under the server's size limit
-// without any visible quality loss for this use case.
 function resizeImageFile(file, maxDimension){
   return new Promise((resolve)=>{
     const reader = new FileReader();
@@ -1107,9 +1083,6 @@ function getProductRules(p){
   return 'printable custom gift artwork with clean centered square composition and safe margins';
 }
 
-// Fetches a generated result's public URL and converts it back into a
-// base64 data URL, so it can be sent to /api/generate as a "current
-// design" reference image on the next refinement.
 function urlToDataURL(url){
   return fetch(url)
     .then(r=>r.blob())
@@ -1235,8 +1208,6 @@ Use rich environmental storytelling while keeping the face as the primary focal 
 
     if(!resp.ok){
       if(resp.status===403){
-        // Zero-token dead end: don't show a dead-end red error, open the
-        // purchase path immediately instead.
         clearStatus();
         refreshTokenMeter();
         openCreditsPanel("You're out of image credits. Grab the $5 Preview Reservation below to unlock more and keep creating.");
@@ -1257,10 +1228,6 @@ Use rich environmental storytelling while keeping the face as the primary focal 
   document.getElementById('verifyCard').style.display='block';
     addToRecentDesigns(resultUrl);
     await loadBaseImageForCaption(resultUrl);
-    // Cache this result so the next Generate press refines it instead of
-    // starting over from the original photo. A failure here just means
-    // the next generation falls back to starting fresh — never blocks
-    // the customer from seeing their current image.
     try{
       lastGeneratedImageData=await urlToDataURL(resultUrl);
     }catch(cacheErr){
@@ -1278,8 +1245,8 @@ document.getElementById('cancelBtn').style.display='none';
   }
 }
 let recentDesigns=[];
-let placements={left:null,right:null,front:null}; // 'front' key = the Center slot, kept as "front" internally to match create-printify-order.js
-let pendingSlotTarget=null; // when set, the next successful generation auto-assigns straight into this slot
+let placements={left:null,right:null,front:null};
+let pendingSlotTarget=null;
 let libraryOpen=false;
 
 function addToRecentDesigns(url){
@@ -1292,9 +1259,6 @@ function addToRecentDesigns(url){
     placements[pendingSlotTarget]=designId;
     pendingSlotTarget=null;
   } else if(isFirstDesign && !placements.front){
-    // Their very first picture becomes the Center design automatically —
-    // no extra tap required. They can still swap it to Left or Right
-    // anytime using the arrows.
     placements.front=designId;
   }
 
@@ -1305,9 +1269,6 @@ function addToRecentDesigns(url){
   return designId;
 }
 
-// Triggered by a slot's own "🎨 New" button. Just flags which slot should
-// receive the result, then runs the exact same generate() flow (same
-// token check, same form inputs) as the main Generate button.
 function generateForSlot(slotName){
   pendingSlotTarget=slotName;
   generate();
@@ -1375,9 +1336,6 @@ function findDesignById(designId){
   return recentDesigns.find(d=>d.id===designId);
 }
 
-// Builds the fixed Left / Center / Right row that sits right under the
-// picture at all times. This is the "design the mug" area — separate
-// from the collapsible Library below it.
 function renderPositionHolder(){
   const row=document.getElementById('positionHolderRow');
   if(!row)return;
