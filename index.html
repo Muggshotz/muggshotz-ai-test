@@ -81,10 +81,23 @@
 .pos-slot-empty-icon{font-size:22px;color:#444}
 .pos-slot-gen-btn{margin-top:6px;font-size:10px;background:#0d0d0d;border:1px solid #444;border-radius:14px;padding:4px 0;color:#ff6a00;cursor:pointer;width:100%}
 .swap-btn{background:#0d0d0d;border:1px solid #444;border-radius:50%;width:30px;height:30px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#ff6a00;font-size:15px;flex-shrink:0;margin-top:28px}
+
+/* Token meter + Credits & Extras button: stacked together in the
+   top-right corner by default (mobile / narrow viewports, where there's
+   no side margin to place them in). On wide screens, they split apart
+   into the dark side columns on either side of the centered content,
+   vertically centered, so they don't crowd each other or overlap the
+   header video. */
+.token-credits-row{position:fixed;top:10px;right:10px;z-index:999;display:flex;align-items:center;gap:8px}
+@media (min-width:1000px){
+  .token-credits-row{position:static;display:contents}
+  #tokenMeterWrap{position:fixed;left:24px;top:50%;transform:translateY(-50%);z-index:999}
+  #creditsBtn{position:fixed;right:24px;top:50%;transform:translateY(-50%);z-index:999}
+}
 </style>
 </head>
 <body>
-<div style="position:fixed;top:10px;right:10px;z-index:999;display:flex;align-items:center;gap:8px">
+<div class="token-credits-row">
   <div id="tokenMeterWrap" style="position:relative;width:210px;flex-shrink:0">
     <img src="meter.png" style="width:100%;display:block" alt="Chip meter"/>
     <div id="tokenMeterNumber" style="position:absolute;left:44.4%;top:31.3%;width:13%;height:25.3%;display:flex;align-items:center;justify-content:center;color:#ff6a00;font-family:'Anton',sans-serif;font-weight:700;font-size:clamp(14px,3.6vw,22px);text-shadow:0 0 8px rgba(255,106,0,0.7)">—</div>
