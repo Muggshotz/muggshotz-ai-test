@@ -1,7 +1,7 @@
 export default async function handler(req, res) {
   try {
     const response = await fetch(
-      "https://api.printify.com/v1/catalog/blueprints/478/print_providers/99/variants.json",
+"https://api.printify.com/v1/catalog/blueprints/1151/print_providers/59/variants.json",
       {
         headers: {
           "Authorization": `Bearer ${process.env.PRINTIFY_API_TOKEN}`
