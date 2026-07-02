@@ -125,7 +125,7 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: "Method not allowed" });
   }
   try {
-    const { image, prompt, theme, deviceId, refImageA, refImageB } = req.body;
+    const { image, prompt, theme, deviceId, refImageA, refImageB, currentDesign } = req.body;
     if (!image || !prompt) {
       return res.status(400).json({ error: "Missing image or prompt." });
     }
@@ -171,10 +171,28 @@ Do not copy any people, objects, or text from Image 2. Only use it as a backgrou
 `
       : "";
 
+    // If a current-design image was provided, this is a refinement of an
+    // existing result rather than a fresh generation. The ORIGINAL
+    // uploaded photo remains the identity anchor — it stays attached and
+    // stays the source of truth for the real face — but the current
+    // design is what the customer is actually looking at and wants
+    // modified, so treat it as the visual starting point to build on.
+    const currentDesignInstruction = currentDesign
+      ? `
+CURRENT DESIGN REFERENCE:
+An additional image labeled "current design" is attached. This is the customer's most recent generated result from this session — the actual image they are looking at right now.
+Use the current design as the visual starting point: keep its existing composition, background, costume, and styling unless the customer's new request below specifically asks to change something.
+The ORIGINAL uploaded customer photo remains the source of truth for facial identity and likeness at all times — the current design is a stylized rendering, not a real photo, so do not let it override or drift the real facial identity captured from the original photo.
+Apply the customer's new instruction as an edit on top of the current design, not as a brand-new unrelated generation.
+`
+      : "";
+
+
     const finalPrompt = `${identityLock}
 CUSTOMER REQUEST:
 ${prompt}
 ${backgroundInstruction}
+${currentDesignInstruction}
 STYLE:
 Photorealistic rendering with caricature-level exaggeration of real features.
 Painted, airbrushed illustration finish — not cartoon, not vector, not anime style.
@@ -235,6 +253,7 @@ Polished gift-art quality.
     }
     if (refImageA) attachDataUrlImage(refImageA, "reference-a.png");
     if (refImageB) attachDataUrlImage(refImageB, "reference-b.png");
+    if (currentDesign) attachDataUrlImage(currentDesign, "current-design.png");
 
     const response = await fetch("https://api.openai.com/v1/images/edits", {
       method: "POST",
