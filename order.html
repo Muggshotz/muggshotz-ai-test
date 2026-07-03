@@ -221,10 +221,17 @@ function renderPreview(){
   });
 }
 
-if (!pendingOrder || !pendingOrder.placements || !pendingOrder.placements.front) {
+// A design can live in ANY slot — Left, Center, or Right. No single
+// slot is mandatory (side placement is a deliberate choice, e.g. so
+// the art faces outward for a left- or right-handed drinker). The only
+// requirement is at least one design somewhere.
+const hasAnyDesign = pendingOrder && pendingOrder.placements &&
+  (pendingOrder.placements.left || pendingOrder.placements.front || pendingOrder.placements.right);
+
+if (!hasAnyDesign) {
   document.getElementById('previewCard').innerHTML =
     '<div class="card-title">⚠️ No Design Found</div>' +
-    '<div class="note" style="margin-top:0">It looks like you got here without a design ready to order. Head back to the generator and create a caricature first.</div>';
+    '<div class="note" style="margin-top:0">There\'s no design placed in any mug slot yet. Head back to the generator, then place a design in the Left, Center, or Right slot before ordering.</div>';
   document.getElementById('submitBtn').disabled = true;
 } else {
   renderPreview();
