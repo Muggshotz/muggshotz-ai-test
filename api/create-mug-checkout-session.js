@@ -74,14 +74,15 @@ export default async function handler(req, res) {
 
     const productName = `Muggshotz ${mugType} Mug (${sizeLabel})${color ? " - " + color : ""}`;
 
-    // Everything the webhook will need later to actually place the
-    // Printify order lives in metadata here. Placements are already
-    // public Supabase Storage URLs (not raw image data), so they're
-    // small enough to fit Stripe's metadata size limits comfortably.
+    // NOTE: We deliberately do NOT pass customer_email here. Locking the
+    // session to the shipping email caused Stripe's
+    // "customer_and_confirmation_email_mismatch" error whenever Link
+    // signed the buyer in under a different saved email. The shipping
+    // email still travels safely in metadata below, which is what the
+    // webhook actually uses to place the Printify order.
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
       payment_method_types: ["card"],
-      customer_email: shippingAddress.email,
       line_items: [
         {
           price_data: {
