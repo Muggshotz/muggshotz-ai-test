@@ -34,6 +34,20 @@ function dataUrlToBuffer(dataUrl) {
   return Buffer.from(match[1], "base64");
 }
 
+// Placements coming from a real customer order are live Supabase
+// Storage URLs (the actual generated design), not base64 data — only
+// the manual test-printify.html page still sends raw base64 uploads.
+// This handles both so buildWraparoundImage works correctly either way.
+async function resolveImageBuffer(source) {
+  if (source.startsWith("data:")) {
+    return dataUrlToBuffer(source);
+  }
+  const response = await fetch(source);
+  if (!response.ok) throw new Error(`Could not fetch design image: ${source}`);
+  const arrayBuffer = await response.arrayBuffer();
+  return Buffer.from(arrayBuffer);
+}
+
 // Asks Printify for this variant's actual print-area size, rather than
 // hardcoding it, so this keeps working correctly even if 15oz (or a
 // future size) turns out to use different dimensions than 11oz.
@@ -68,7 +82,7 @@ async function buildWraparoundImage(placements, canvasWidth, canvasHeight) {
 
   if (providedCount <= 1) {
     const soleImage = front || left || right;
-    return await sharp(dataUrlToBuffer(soleImage))
+    return await sharp(await resolveImageBuffer(soleImage))
       .resize(canvasWidth, canvasHeight, { fit: "cover", position: "centre" })
       .png()
       .toBuffer();
@@ -81,13 +95,13 @@ async function buildWraparoundImage(placements, canvasWidth, canvasHeight) {
   // only 2 of 3 slots filled doesn't end up with a broken/transparent gap.
   const FALLBACK_FILL = { r: 26, g: 26, b: 26 };
 
-  async function renderSection(imageDataUrl, width) {
-    if (!imageDataUrl) {
+  async function renderSection(imageSource, width) {
+    if (!imageSource) {
       return await sharp({
         create: { width, height: canvasHeight, channels: 3, background: FALLBACK_FILL }
       }).png().toBuffer();
     }
-    return await sharp(dataUrlToBuffer(imageDataUrl))
+    return await sharp(await resolveImageBuffer(imageSource))
       .resize(width, canvasHeight, { fit: "cover", position: "centre" })
       .png()
       .toBuffer();
@@ -205,63 +219,65 @@ function calculateUpsellCharge(placements) {
   };
 }
 
+// The real, reusable order-placing logic. Called two ways: directly by
+// the HTTP handler below (for the manual test-printify.html page), and
+// directly by stripe-webhook.js once a real customer payment succeeds.
+// Keeping this as one shared function means both paths always place
+// orders exactly the same way — no risk of the "real" and "test" paths
+// quietly drifting apart from each other over time.
+export async function placeMugOrder({ placements, mugType, sizeLabel, shippingAddress, customerName, orderId }) {
+  if (!placements || !placements.front) {
+    throw new Error("At least a Center design is required.");
+  }
+  if (!mugType || !sizeLabel || !shippingAddress) {
+    throw new Error("Missing required fields.");
+  }
+
+  const settings = MUG_SETTINGS[mugType];
+  if (!settings) throw new Error(`Unknown mug type: ${mugType}`);
+  const variantId = settings.variants[sizeLabel];
+  if (!variantId) throw new Error(`Unknown size "${sizeLabel}" for mug type "${mugType}".`);
+
+  const { width, height } = await getPlaceholderDimensions(
+    settings.blueprint_id,
+    settings.print_provider_id,
+    variantId
+  );
+
+  const compositeImageBuffer = await buildWraparoundImage(placements, width, height);
+
+  const fileName = `muggshotz-${Date.now()}.png`;
+  const imageId = await uploadImageToPrintify(compositeImageBuffer, fileName);
+
+  const productTitle = `Muggshotz Caricature Mug${customerName ? " - " + customerName : ""}`;
+  const { productId } = await createPrintifyProduct(imageId, mugType, sizeLabel, productTitle);
+
+  const orderResult = await submitPrintifyOrder(
+    productId,
+    variantId,
+    shippingAddress,
+    orderId || `muggshotz-${Date.now()}`
+  );
+
+  const pricing = calculateUpsellCharge(placements);
+
+  return {
+    success: true,
+    printifyOrderId: orderResult.id,
+    productId,
+    upsellCharge: pricing.upsellCharge,
+    upsellReason: pricing.reason,
+    needsPricingConfirmation: pricing.needsPricingConfirmation || false
+  };
+}
+
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
   try {
-    const {
-      placements,       // { left, front, right } — each a base64 data URL or null/undefined
-      mugType,
-      sizeLabel,
-      shippingAddress,
-      customerName,
-      orderId
-    } = req.body;
-
-    if (!placements || !placements.front) {
-      return res.status(400).json({ error: "At least a Front placement image is required." });
-    }
-    if (!mugType || !sizeLabel || !shippingAddress) {
-      return res.status(400).json({ error: "Missing required fields." });
-    }
-
-    const settings = MUG_SETTINGS[mugType];
-    if (!settings) return res.status(400).json({ error: `Unknown mug type: ${mugType}` });
-    const variantId = settings.variants[sizeLabel];
-    if (!variantId) return res.status(400).json({ error: `Unknown size "${sizeLabel}" for mug type "${mugType}".` });
-
-    const { width, height } = await getPlaceholderDimensions(
-      settings.blueprint_id,
-      settings.print_provider_id,
-      variantId
-    );
-
-    const compositeImageBuffer = await buildWraparoundImage(placements, width, height);
-
-    const fileName = `muggshotz-${Date.now()}.png`;
-    const imageId = await uploadImageToPrintify(compositeImageBuffer, fileName);
-
-    const productTitle = `Muggshotz Caricature Mug${customerName ? " - " + customerName : ""}`;
-    const { productId } = await createPrintifyProduct(imageId, mugType, sizeLabel, productTitle);
-
-    const orderResult = await submitPrintifyOrder(
-      productId,
-      variantId,
-      shippingAddress,
-      orderId || `muggshotz-${Date.now()}`
-    );
-
-    const pricing = calculateUpsellCharge(placements);
-
-    return res.status(200).json({
-      success: true,
-      printifyOrderId: orderResult.id,
-      productId,
-      upsellCharge: pricing.upsellCharge,
-      upsellReason: pricing.reason,
-      needsPricingConfirmation: pricing.needsPricingConfirmation || false
-    });
+    const result = await placeMugOrder(req.body);
+    return res.status(200).json(result);
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }
