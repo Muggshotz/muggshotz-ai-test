@@ -1429,7 +1429,16 @@ function updatePlacementSummary(){
 }
 
 function goToOrder(){
-  alert('Order flow coming soon! Placements: '+JSON.stringify(placements));
+  const orderData = {
+    placements: {
+      left: placements.left ? findDesignById(placements.left).url : null,
+      front: placements.front ? findDesignById(placements.front).url : null,
+      right: placements.right ? findDesignById(placements.right).url : null
+    },
+    deviceId: deviceId
+  };
+  localStorage.setItem('muggshotz_pending_order', JSON.stringify(orderData));
+  window.location.href = 'order.html';
 } let currentGenerationController=null;
 function cancelGeneration(){
   if(currentGenerationController){
