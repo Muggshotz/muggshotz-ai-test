@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Muggshotz — Order Your Mug</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#111;font-family:system-ui,sans-serif;color:#fff}
+.main{padding:1.5rem;display:flex;flex-direction:column;gap:1.5rem;max-width:600px;margin:0 auto}
+.header-title{font-size:22px;font-weight:800;color:#ff6a00;text-align:center;padding:1.5rem 0 0}
+.card{background:#1a1a1a;border:.5px solid #333;border-radius:12px;padding:1.25rem}
+.card-title{font-size:13px;font-weight:600;color:#ff6a00;letter-spacing:1px;text-transform:uppercase;margin-bottom:1rem}
+.note{font-size:11px;color:#555;margin-top:6px;line-height:1.35}
+.grid2{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+.btn-select{background:#0d0d0d;border:.5px solid #333;border-radius:8px;padding:.9rem .6rem;text-align:center;cursor:pointer;color:#888;font-size:13px;font-weight:600}
+.btn-select.selected{border-color:#ff6a00;background:#1a0a00;color:#ff6a00}
+.btn-select .price{display:block;font-size:11px;color:#666;margin-top:3px;font-weight:400}
+.btn-select.selected .price{color:#ff9a4d}
+.preview-row{display:flex;gap:10px;justify-content:center}
+.preview-slot{width:90px;text-align:center}
+.preview-slot img{width:90px;height:90px;object-fit:cover;border-radius:8px;border:2px solid #ff6a00}
+.preview-slot .empty{width:90px;height:90px;border-radius:8px;border:2px dashed #333;display:flex;align-items:center;justify-content:center;color:#444;font-size:12px}
+.preview-label{font-size:10px;color:#888;letter-spacing:1px;text-transform:uppercase;margin-top:5px}
+.color-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:10px}
+.color-btn{width:100%;max-width:44px;aspect-ratio:1;border-radius:50%;background:#1a1a1a;padding:4px;cursor:pointer;box-shadow:0 3px 6px rgba(0,0,0,0.6);margin:0 auto;border:2px solid transparent}
+.color-btn .ball{width:100%;height:100%;border-radius:50%;position:relative;box-shadow:inset 0 -5px 9px rgba(0,0,0,0.35),inset 0 3px 7px rgba(255,255,255,0.35)}
+.color-btn.selected{border-color:#ff6a00;box-shadow:0 0 0 2px #ff6a00,0 0 10px 1px rgba(255,106,0,0.6)}
+.color-label{font-size:11px;color:#888;text-align:center;margin-top:10px}
+input,select{width:100%;background:#0d0d0d;border:1px solid #444;border-radius:8px;padding:11px 12px;color:#fff;font-size:14px;font-family:system-ui,sans-serif;margin-bottom:.6rem}
+input:focus,select:focus{outline:none;border-color:#ff6a00}
+label{font-size:11px;color:#888;letter-spacing:.5px;text-transform:uppercase;display:block;margin-bottom:4px}
+.field-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.summary-row{display:flex;justify-content:space-between;font-size:13px;color:#ccc;padding:.35rem 0}
+.summary-row.total{border-top:1px solid #333;margin-top:.5rem;padding-top:.75rem;font-size:16px;font-weight:700;color:#fff}
+.generate-btn{width:100%;background:#ff6a00;border:none;border-radius:10px;padding:1.1rem;color:#fff;font-size:17px;font-weight:700;cursor:pointer;letter-spacing:1px}
+.generate-btn:disabled{background:#333;color:#666;cursor:not-allowed}
+.status{font-size:13px;color:#ff6a00;text-align:center;padding:1rem;display:none}
+.status.visible{display:block}
+.error{color:#e24b4a!important}
+.back-link{display:block;text-align:center;color:#888;font-size:12px;text-decoration:none;margin-top:-.5rem}
+</style>
+</head>
+<body>
+<div class="header-title">🛒 Order Your Mug</div>
+<div class="main">
+
+<div class="card" id="previewCard">
+<div class="card-title">🖼️ Your Design</div>
+<div class="preview-row" id="previewRow"></div>
+</div>
+
+<div class="card">
+<div class="card-title">☕ Mug Style</div>
+<div class="grid2">
+<div class="btn-select selected" data-style="Classic White" onclick="pickStyle(this)">Classic White<span class="price" id="priceCW"></span></div>
+<div class="btn-select" data-style="Color Pop" onclick="pickStyle(this)">Color Pop<span class="price" id="priceCP"></span></div>
+</div>
+<div class="note">Trimmed and Accented are coming soon — not available to order just yet.</div>
+</div>
+
+<div class="card">
+<div class="card-title">📏 Size</div>
+<div class="grid2">
+<div class="btn-select selected" data-size="11oz" onclick="pickSize(this)">11oz</div>
+<div class="btn-select" data-size="15oz" onclick="pickSize(this)">15oz</div>
+</div>
+</div>
+
+<div class="card" id="colorCard" style="display:none">
+<div class="card-title">🎨 Mug Color</div>
+<div class="color-grid" id="colorGrid"></div>
+<div class="color-label" id="colorLabel">Pick a color</div>
+</div>
+
+<div class="card">
+<div class="card-title">📦 Shipping Info</div>
+<label>Full Name</label>
+<input type="text" id="fullName" placeholder="Jane Smith"/>
+<label>Email</label>
+<input type="email" id="email" placeholder="jane@example.com"/>
+<label>Phone</label>
+<input type="tel" id="phone" placeholder="(555) 123-4567"/>
+<label>Address Line 1</label>
+<input type="text" id="address1" placeholder="123 Main St"/>
+<label>Address Line 2 (optional)</label>
+<input type="text" id="address2" placeholder="Apt, suite, etc."/>
+<div class="field-row">
+<div>
+<label>City</label>
+<input type="text" id="city" placeholder="Westland"/>
+</div>
+<div>
+<label>State</label>
+<input type="text" id="state" placeholder="MI"/>
+</div>
+</div>
+<div class="field-row">
+<div>
+<label>ZIP Code</label>
+<input type="text" id="zip" placeholder="48185"/>
+</div>
+<div>
+<label>Country</label>
+<input type="text" id="country" value="US"/>
+</div>
+</div>
+</div>
+
+<div class="card">
+<div class="card-title">💰 Order Summary</div>
+<div class="summary-row"><span id="summaryStyleSize">Classic White, 11oz</span><span id="summaryBase">$19.95</span></div>
+<div class="summary-row" id="summaryUpsellRow" style="display:none"><span id="summaryUpsellLabel">Extra design charge</span><span id="summaryUpsell"></span></div>
+<div class="summary-row total"><span>Total</span><span id="summaryTotal">$19.95</span></div>
+</div>
+
+<button class="generate-btn" id="submitBtn" onclick="submitOrder()">Continue to Payment</button>
+<div class="status" id="status"></div>
+<a href="index.html" class="back-link">← Back to the generator</a>
+
+</div>
+
+<script>
+const PRICING = {
+  "Classic White": { "11oz": 19.95, "15oz": 24.95 },
+  "Color Pop": { "11oz": 34.95, "15oz": 39.95 }
+};
+
+// Colors available on both 11oz and 15oz for Color Pop, with approximate
+// swatch colors matching Printify's real options.
+const COLOR_OPTIONS = [
+  { name: "Black", hex: "#1c1c1c" },
+  { name: "Blue", hex: "#1B3D7A" },
+  { name: "Cambridge Blue", hex: "#7fb5b0" },
+  { name: "Green", hex: "#1F7A45" },
+  { name: "Light Blue", hex: "#5FA8DE" },
+  { name: "Light Green", hex: "#5FBF5F" },
+  { name: "Maroon", hex: "#7a1f2b" },
+  { name: "Orange", hex: "#F0701A" },
+  { name: "Pink", hex: "#E0457B" },
+  { name: "Red", hex: "#D62828" },
+  { name: "Yellow", hex: "#F0D43A" }
+];
+
+let selectedStyle = "Classic White";
+let selectedSize = "11oz";
+let selectedColor = null;
+
+// --- Load the pending order (placements + deviceId) saved by index.html ---
+let pendingOrder = null;
+try {
+  const raw = localStorage.getItem('muggshotz_pending_order');
+  pendingOrder = raw ? JSON.parse(raw) : null;
+} catch (e) {
+  pendingOrder = null;
+}
+
+function renderPreview(){
+  const row = document.getElementById('previewRow');
+  row.innerHTML = '';
+  const slots = [['left','Left'],['front','Center'],['right','Right']];
+  slots.forEach(([key,label])=>{
+    const wrap = document.createElement('div');
+    wrap.className = 'preview-slot';
+    const url = pendingOrder?.placements?.[key];
+    if (url) {
+      const img = document.createElement('img');
+      img.src = url;
+      wrap.appendChild(img);
+    } else {
+      const empty = document.createElement('div');
+      empty.className = 'empty';
+      empty.textContent = '—';
+      wrap.appendChild(empty);
+    }
+    const lbl = document.createElement('div');
+    lbl.className = 'preview-label';
+    lbl.textContent = label;
+    wrap.appendChild(lbl);
+    row.appendChild(wrap);
+  });
+}
+
+if (!pendingOrder || !pendingOrder.placements || !pendingOrder.placements.front) {
+  document.getElementById('previewCard').innerHTML =
+    '<div class="card-title">⚠️ No Design Found</div>' +
+    '<div class="note" style="margin-top:0">It looks like you got here without a design ready to order. Head back to the generator and create a caricature first.</div>';
+  document.getElementById('submitBtn').disabled = true;
+} else {
+  renderPreview();
+}
+
+function pickStyle(el){
+  document.querySelectorAll('[data-style]').forEach(b=>b.classList.remove('selected'));
+  el.classList.add('selected');
+  selectedStyle = el.dataset.style;
+  document.getElementById('colorCard').style.display = selectedStyle === 'Color Pop' ? 'block' : 'none';
+  if (selectedStyle !== 'Color Pop') selectedColor = null;
+  updateSummary();
+}
+
+function pickSize(el){
+  document.querySelectorAll('[data-size]').forEach(b=>b.classList.remove('selected'));
+  el.classList.add('selected');
+  selectedSize = el.dataset.size;
+  updateSummary();
+}
+
+function pickColor(el){
+  document.querySelectorAll('.color-btn').forEach(b=>b.classList.remove('selected'));
+  el.classList.add('selected');
+  selectedColor = el.dataset.color;
+  document.getElementById('colorLabel').textContent = selectedColor;
+}
+
+function renderColorGrid(){
+  const grid = document.getElementById('colorGrid');
+  COLOR_OPTIONS.forEach(c=>{
+    const btn = document.createElement('div');
+    btn.className = 'color-btn';
+    btn.dataset.color = c.name;
+    btn.onclick = ()=>pickColor(btn);
+    const ball = document.createElement('div');
+    ball.className = 'ball';
+    ball.style.background = c.hex;
+    btn.appendChild(ball);
+    grid.appendChild(btn);
+  });
+}
+renderColorGrid();
+
+function calculateUpsell(){
+  if (!pendingOrder) return { charge: 0, label: '' };
+  const { left, front, right } = pendingOrder.placements;
+  const filled = [left, front, right].filter(Boolean);
+  const distinct = new Set(filled).size;
+  if (filled.length <= 1) return { charge: 0, label: '' };
+  if (filled.length === 2) {
+    return distinct === 1
+      ? { charge: 3, label: 'Same design on 2 sides' }
+      : { charge: 5, label: 'Different designs on 2 sides' };
+  }
+  return distinct === 1
+    ? { charge: 3, label: 'Same design on all 3 sides' }
+    : { charge: 5, label: 'Different designs on 3 sides' };
+}
+
+function updateSummary(){
+  const basePrice = PRICING[selectedStyle][selectedSize];
+  const upsell = calculateUpsell();
+  const total = basePrice + upsell.charge;
+
+  document.getElementById('priceCW').textContent = '11oz $' + PRICING['Classic White']['11oz'].toFixed(2);
+  document.getElementById('priceCP').textContent = '11oz $' + PRICING['Color Pop']['11oz'].toFixed(2);
+
+  document.getElementById('summaryStyleSize').textContent = selectedStyle + ', ' + selectedSize;
+  document.getElementById('summaryBase').textContent = '$' + basePrice.toFixed(2);
+
+  const upsellRow = document.getElementById('summaryUpsellRow');
+  if (upsell.charge > 0) {
+    upsellRow.style.display = 'flex';
+    document.getElementById('summaryUpsellLabel').textContent = upsell.label;
+    document.getElementById('summaryUpsell').textContent = '+$' + upsell.charge.toFixed(2);
+  } else {
+    upsellRow.style.display = 'none';
+  }
+
+  document.getElementById('summaryTotal').textContent = '$' + total.toFixed(2);
+}
+updateSummary();
+
+function setStatus(msg, isError){
+  const el = document.getElementById('status');
+  el.className = 'status visible' + (isError ? ' error' : '');
+  el.textContent = msg;
+}
+
+async function submitOrder(){
+  const fullName = document.getElementById('fullName').value.trim();
+  const email = document.getElementById('email').value.trim();
+  const phone = document.getElementById('phone').value.trim();
+  const address1 = document.getElementById('address1').value.trim();
+  const address2 = document.getElementById('address2').value.trim();
+  const city = document.getElementById('city').value.trim();
+  const state = document.getElementById('state').value.trim();
+  const zip = document.getElementById('zip').value.trim();
+  const country = document.getElementById('country').value.trim() || 'US';
+
+  if (!fullName || !email || !address1 || !city || !state || !zip) {
+    setStatus('Please fill in your name, email, and full shipping address.', true);
+    return;
+  }
+  if (selectedStyle === 'Color Pop' && !selectedColor) {
+    setStatus('Please pick a mug color.', true);
+    return;
+  }
+
+  const nameParts = fullName.split(' ');
+  const firstName = nameParts[0] || 'Customer';
+  const lastName = nameParts.slice(1).join(' ') || '-';
+
+  const btn = document.getElementById('submitBtn');
+  btn.disabled = true;
+  setStatus('Setting up your secure checkout...');
+
+  try {
+    const resp = await fetch('/api/create-mug-checkout-session', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        deviceId: pendingOrder.deviceId,
+        placements: pendingOrder.placements,
+        mugType: selectedStyle,
+        sizeLabel: selectedSize,
+        color: selectedColor,
+        customerName: fullName,
+        shippingAddress: {
+          first_name: firstName,
+          last_name: lastName,
+          email,
+          phone,
+          country,
+          region: state,
+          address1,
+          address2,
+          city,
+          zip
+        }
+      })
+    });
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data.error || 'Could not start checkout.');
+    if (data.url) {
+      window.location.href = data.url;
+    } else {
+      throw new Error('No checkout URL returned.');
+    }
+  } catch (err) {
+    setStatus(err.message, true);
+    btn.disabled = false;
+  }
+}
+</script>
+</body>
+</html>
