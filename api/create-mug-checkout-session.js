@@ -45,8 +45,12 @@ export default async function handler(req, res) {
 
     // --- Validation: never trust the client, always verify server-side ---
     if (!deviceId) return res.status(400).json({ error: "Missing device ID." });
-    if (!placements || !placements.front) {
-      return res.status(400).json({ error: "At least a Center design is required." });
+    // A design can live in ANY slot — Left, Center, or Right. Customers
+    // often deliberately want side placement (e.g. facing outward for a
+    // right- or left-handed drinker), so no single slot is mandatory.
+    // The only rule: the mug must have at least one design somewhere.
+    if (!placements || !(placements.left || placements.front || placements.right)) {
+      return res.status(400).json({ error: "At least one design is required, in any slot." });
     }
     const mugSettings = PRICING[mugType];
     if (!mugSettings) {
