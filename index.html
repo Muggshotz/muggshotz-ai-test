@@ -346,11 +346,7 @@ async function refreshTokenMeter(){
     const resp=await fetch('/api/get-balance?deviceId='+encodeURIComponent(deviceId));
     const data=await resp.json();
     if(!resp.ok)throw new Error(data.error||'Could not load balance.');
-    if(data.isAdmin){
-      meterEl.textContent='∞';
-    } else {
-      meterEl.textContent=data.tokenBalance;
-    }
+    meterEl.textContent=data.tokenBalance;
   }catch(err){
     meterEl.textContent='—';
   }
