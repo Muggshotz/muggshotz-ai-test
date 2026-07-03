@@ -1,4 +1,5 @@
 import Stripe from "stripe";
+import { placeMugOrder } from "./create-printify-order.js";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
@@ -146,26 +147,18 @@ export default async function handler(req, res) {
   try {
     if (event.type === "checkout.session.completed") {
       const session = event.data.object;
-      const deviceId = session.metadata?.device_id;
 
-      if (!deviceId) {
-        // Payment succeeded but we have no device to credit. Log it so
-        // it can be manually resolved, but still acknowledge the event
-        // so Stripe doesn't keep retrying forever.
-        console.error("Checkout completed with no device_id in metadata:", session.id);
-        return res.status(200).json({ received: true, warning: "No device_id in metadata" });
+      // Two completely different kinds of payment come through this
+      // same webhook: the $5 Preview Reservation (credits tokens) and
+      // a real mug order (fires the actual Printify order). The
+      // order_type metadata field set at checkout creation is what
+      // tells them apart — the $5 flow never sets it, so this check is
+      // purely additive and can't affect the existing token flow.
+      if (session.metadata?.order_type === "mug_order") {
+        await handleMugOrderPayment(session);
+      } else {
+        await handleTokenPayment(session);
       }
-
-      // Stripe Checkout collects the email during the payment form
-      // itself, under customer_details.
-      const stripeEmail = session.customer_details?.email || session.customer_email || null;
-
-      let customer = await findCustomerByDeviceId(deviceId);
-      if (!customer) {
-        customer = await createCustomerForDevice(deviceId);
-      }
-
-      await creditTokensForPayment(customer, stripeEmail);
     }
 
     // Acknowledge receipt so Stripe knows not to retry this event again.
@@ -174,4 +167,80 @@ export default async function handler(req, res) {
     console.error("Error handling webhook event:", error.message);
     return res.status(500).json({ error: error.message });
   }
+}
+
+// Handles a real mug order payment: reconstructs the order details from
+// the session metadata and fires the actual Printify order. If Printify
+// fails for any reason, this is logged clearly for manual follow-up —
+// but the webhook still acknowledges receipt to Stripe (the customer
+// already paid; a fulfillment failure needs a human to fix, not an
+// endless Stripe retry loop).
+async function handleMugOrderPayment(session) {
+  const m = session.metadata || {};
+
+  const placements = {
+    left: m.left_image_url || null,
+    front: m.front_image_url || null,
+    right: m.right_image_url || null
+  };
+
+  const shippingAddress = {
+    first_name: m.first_name,
+    last_name: m.last_name,
+    email: m.email,
+    phone: m.phone,
+    country: m.country,
+    region: m.region,
+    address1: m.address1,
+    address2: m.address2,
+    city: m.city,
+    zip: m.zip
+  };
+
+  try {
+    const result = await placeMugOrder({
+      placements,
+      mugType: m.mug_type,
+      sizeLabel: m.size_label,
+      shippingAddress,
+      customerName: m.customer_name,
+      orderId: session.id
+    });
+    console.log("Mug order placed successfully for session", session.id, "-> Printify order", result.printifyOrderId);
+  } catch (error) {
+    // Never let a Printify failure look like it silently vanished —
+    // this is the one thing that genuinely needs a human to notice and
+    // manually fix, since the customer has already been charged.
+    console.error("CRITICAL: Mug order payment succeeded but Printify order failed.", {
+      stripeSessionId: session.id,
+      deviceId: m.device_id,
+      customerEmail: m.email,
+      error: error.message
+    });
+  }
+}
+
+// Handles the original $5 Preview Reservation flow — unchanged from
+// before, just moved into its own named function alongside the new
+// mug-order path.
+async function handleTokenPayment(session) {
+  const deviceId = session.metadata?.device_id;
+
+  if (!deviceId) {
+    // Payment succeeded but we have no device to credit. Log it so
+    // it can be manually resolved.
+    console.error("Checkout completed with no device_id in metadata:", session.id);
+    return;
+  }
+
+  // Stripe Checkout collects the email during the payment form
+  // itself, under customer_details.
+  const stripeEmail = session.customer_details?.email || session.customer_email || null;
+
+  let customer = await findCustomerByDeviceId(deviceId);
+  if (!customer) {
+    customer = await createCustomerForDevice(deviceId);
+  }
+
+  await creditTokensForPayment(customer, stripeEmail);
 }
