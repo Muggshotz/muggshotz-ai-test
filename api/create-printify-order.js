@@ -74,13 +74,10 @@ async function getPlaceholderDimensions(blueprintId, printProviderId, variantId)
 //
 // The canvas is ALWAYS white (an unprinted mug is white), and every
 // design is scaled to fit INSIDE its own section without cropping
-// (fit: "contain"). A single Center design therefore lands neatly in
-// the middle third of the wraparound — the classic front-of-mug look —
-// with the rest of the mug left clean white. Previously a single
-// design was cover-stretched across the entire canvas, which produced
-// a giant cropped image wrapping the whole mug; and empty slots were
-// filled dark gray, which would have printed dark panels on a white
-// mug. Both of those are what this version fixes.
+// (fit: "contain"). Designs land only in the slots the customer chose —
+// a Right-only mug prints with art on the right third and clean white
+// everywhere else, which is a deliberate, legitimate product choice
+// (e.g. so the art faces outward for a left-handed drinker).
 async function buildWraparoundImage(placements, canvasWidth, canvasHeight) {
   const { left, front, right } = placements;
 
@@ -220,8 +217,10 @@ function calculateUpsellCharge(placements) {
 // orders exactly the same way — no risk of the "real" and "test" paths
 // quietly drifting apart from each other over time.
 export async function placeMugOrder({ placements, mugType, sizeLabel, shippingAddress, customerName, orderId }) {
-  if (!placements || !placements.front) {
-    throw new Error("At least a Center design is required.");
+  // A design can live in ANY slot — Left, Center, or Right. No single
+  // slot is mandatory; the only rule is at least one design somewhere.
+  if (!placements || !(placements.left || placements.front || placements.right)) {
+    throw new Error("At least one design is required, in any slot.");
   }
   if (!mugType || !sizeLabel || !shippingAddress) {
     throw new Error("Missing required fields.");
