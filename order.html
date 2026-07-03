@@ -26,6 +26,9 @@ body{background:#111;font-family:system-ui,sans-serif;color:#fff}
 .color-btn{width:100%;max-width:44px;aspect-ratio:1;border-radius:50%;background:#1a1a1a;padding:4px;cursor:pointer;box-shadow:0 3px 6px rgba(0,0,0,0.6);margin:0 auto;border:2px solid transparent}
 .color-btn .ball{width:100%;height:100%;border-radius:50%;position:relative;box-shadow:inset 0 -5px 9px rgba(0,0,0,0.35),inset 0 3px 7px rgba(255,255,255,0.35)}
 .color-btn.selected{border-color:#ff6a00;box-shadow:0 0 0 2px #ff6a00,0 0 10px 1px rgba(255,106,0,0.6)}
+.mug-photo-wrap{width:100%;max-width:220px;margin:0 auto 1rem;border-radius:12px;overflow:hidden;background:#0d0d0d}
+.mug-photo-wrap img{width:100%;display:block;opacity:1;transition:opacity 200ms ease}
+.mug-photo-wrap img.fading{opacity:0}
 .color-label{font-size:11px;color:#888;text-align:center;margin-top:10px}
 input,select{width:100%;background:#0d0d0d;border:1px solid #444;border-radius:8px;padding:11px 12px;color:#fff;font-size:14px;font-family:system-ui,sans-serif;margin-bottom:.6rem}
 input:focus,select:focus{outline:none;border-color:#ff6a00}
@@ -69,6 +72,7 @@ label{font-size:11px;color:#888;letter-spacing:.5px;text-transform:uppercase;dis
 
 <div class="card" id="colorCard" style="display:none">
 <div class="card-title">🎨 Mug Color</div>
+<div class="mug-photo-wrap"><img id="mugPhoto" src="" alt="Mug color preview"/></div>
 <div class="color-grid" id="colorGrid"></div>
 <div class="color-label" id="colorLabel">Pick a color</div>
 </div>
@@ -108,9 +112,23 @@ label{font-size:11px;color:#888;letter-spacing:.5px;text-transform:uppercase;dis
 </div>
 
 <div class="card">
+<div class="card-title">💌 Gift Message</div>
+<div class="note" style="margin-top:0;margin-bottom:.75rem">Add a printed card with a personal message, included right in the package.</div>
+<div style="display:flex;align-items:center;gap:10px;margin-bottom:.75rem">
+<input type="checkbox" id="giftMessageToggle" onchange="toggleGiftMessage()" style="width:20px;height:20px;cursor:pointer"/>
+<label style="margin:0;text-transform:none;font-size:14px;color:#fff;cursor:pointer" onclick="document.getElementById('giftMessageToggle').click()">Add a gift message (+$1.00)</label>
+</div>
+<div id="giftMessageBox" style="display:none">
+<textarea id="giftMessageText" maxlength="200" placeholder="Write your message here (up to 200 characters)..." oninput="updateGiftMessageCount(); updateSummary()" style="width:100%;background:#0d0d0d;border:1px solid #444;border-radius:8px;padding:11px 12px;color:#fff;font-size:14px;font-family:system-ui,sans-serif;min-height:80px;resize:vertical"></textarea>
+<div class="note" id="giftMessageCount" style="text-align:right;margin-top:4px">200 characters remaining</div>
+</div>
+</div>
+
+<div class="card">
 <div class="card-title">💰 Order Summary</div>
 <div class="summary-row"><span id="summaryStyleSize">Classic White, 11oz</span><span id="summaryBase">$19.95</span></div>
 <div class="summary-row" id="summaryUpsellRow" style="display:none"><span id="summaryUpsellLabel">Extra design charge</span><span id="summaryUpsell"></span></div>
+<div class="summary-row" id="summaryGiftRow" style="display:none"><span>Gift message</span><span id="summaryGift"></span></div>
 <div class="summary-row total"><span>Total</span><span id="summaryTotal">$19.95</span></div>
 </div>
 
@@ -126,25 +144,47 @@ const PRICING = {
   "Color Pop": { "11oz": 34.95, "15oz": 39.95 }
 };
 
-// Colors available on both 11oz and 15oz for Color Pop, with approximate
-// swatch colors matching Printify's real options.
+// --- Color Pop mug photos ---
+// This is the single, configurable source of truth for what photo shows
+// for each mug color. Right now it points at Printify's own stock
+// catalog photos as placeholders. To upgrade to real product photography
+// later: just replace the "image" URL for each color below — nothing
+// else in the picker logic needs to change.
+//
+// TO REPLACE: open the Color Pop product in the Printify dashboard,
+// right-click each color's mockup photo, "Copy image address," and
+// paste it in here.
 const COLOR_OPTIONS = [
-  { name: "Black", hex: "#1c1c1c" },
-  { name: "Blue", hex: "#1B3D7A" },
-  { name: "Cambridge Blue", hex: "#7fb5b0" },
-  { name: "Green", hex: "#1F7A45" },
-  { name: "Light Blue", hex: "#5FA8DE" },
-  { name: "Light Green", hex: "#5FBF5F" },
-  { name: "Maroon", hex: "#7a1f2b" },
-  { name: "Orange", hex: "#F0701A" },
-  { name: "Pink", hex: "#E0457B" },
-  { name: "Red", hex: "#D62828" },
-  { name: "Yellow", hex: "#F0D43A" }
+  { name: "Black", image: "https://images.printify.com/PLACEHOLDER-black.jpg" },
+  { name: "Blue", image: "https://images.printify.com/PLACEHOLDER-blue.jpg" },
+  { name: "Cambridge Blue", image: "https://images.printify.com/PLACEHOLDER-cambridge-blue.jpg" },
+  { name: "Green", image: "https://images.printify.com/PLACEHOLDER-green.jpg" },
+  { name: "Light Blue", image: "https://images.printify.com/PLACEHOLDER-light-blue.jpg" },
+  { name: "Light Green", image: "https://images.printify.com/PLACEHOLDER-light-green.jpg" },
+  { name: "Maroon", image: "https://images.printify.com/PLACEHOLDER-maroon.jpg" },
+  { name: "Orange", image: "https://images.printify.com/PLACEHOLDER-orange.jpg" },
+  { name: "Pink", image: "https://images.printify.com/PLACEHOLDER-pink.jpg" },
+  { name: "Red", image: "https://images.printify.com/PLACEHOLDER-red.jpg" },
+  { name: "Yellow", image: "https://images.printify.com/PLACEHOLDER-yellow.jpg" }
 ];
 
 let selectedStyle = "Classic White";
 let selectedSize = "11oz";
 let selectedColor = null;
+let giftMessageEnabled = false;
+
+const GIFT_MESSAGE_PRICE = 1.00;
+
+function toggleGiftMessage(){
+  giftMessageEnabled = document.getElementById('giftMessageToggle').checked;
+  document.getElementById('giftMessageBox').style.display = giftMessageEnabled ? 'block' : 'none';
+  updateSummary();
+}
+
+function updateGiftMessageCount(){
+  const len = document.getElementById('giftMessageText').value.length;
+  document.getElementById('giftMessageCount').textContent = (200 - len) + ' characters remaining';
+}
 
 // --- Load the pending order (placements + deviceId) saved by index.html ---
 let pendingOrder = null;
@@ -206,25 +246,46 @@ function pickSize(el){
   updateSummary();
 }
 
-function pickColor(el){
+function pickColor(el, colorData){
   document.querySelectorAll('.color-btn').forEach(b=>b.classList.remove('selected'));
   el.classList.add('selected');
-  selectedColor = el.dataset.color;
+  selectedColor = colorData.name;
   document.getElementById('colorLabel').textContent = selectedColor;
+  swapMugPhoto(colorData.image);
+}
+
+// Swaps the big preview photo with a quick 200ms fade rather than an
+// instant jump-cut, per Bud's note — makes the picker feel considered
+// rather than mechanical.
+function swapMugPhoto(imageUrl){
+  const photo = document.getElementById('mugPhoto');
+  photo.classList.add('fading');
+  setTimeout(()=>{
+    photo.src = imageUrl;
+    photo.classList.remove('fading');
+  }, 200);
 }
 
 function renderColorGrid(){
   const grid = document.getElementById('colorGrid');
-  COLOR_OPTIONS.forEach(c=>{
+  COLOR_OPTIONS.forEach((c, i)=>{
     const btn = document.createElement('div');
-    btn.className = 'color-btn';
+    btn.className = 'color-btn' + (i === 0 ? ' selected' : '');
     btn.dataset.color = c.name;
-    btn.onclick = ()=>pickColor(btn);
-    const ball = document.createElement('div');
-    ball.className = 'ball';
-    ball.style.background = c.hex;
-    btn.appendChild(ball);
+    btn.onclick = ()=>pickColor(btn, c);
+    const thumb = document.createElement('img');
+    thumb.src = c.image;
+    thumb.style.width = '100%';
+    thumb.style.height = '100%';
+    thumb.style.borderRadius = '50%';
+    thumb.style.objectFit = 'cover';
+    btn.appendChild(thumb);
     grid.appendChild(btn);
+    if (i === 0) {
+      document.getElementById('mugPhoto').src = c.image;
+      document.getElementById('colorLabel').textContent = c.name;
+      selectedColor = c.name;
+    }
   });
 }
 renderColorGrid();
@@ -248,7 +309,8 @@ function calculateUpsell(){
 function updateSummary(){
   const basePrice = PRICING[selectedStyle][selectedSize];
   const upsell = calculateUpsell();
-  const total = basePrice + upsell.charge;
+  const giftCharge = giftMessageEnabled ? GIFT_MESSAGE_PRICE : 0;
+  const total = basePrice + upsell.charge + giftCharge;
 
   document.getElementById('priceCW').textContent = '11oz $' + PRICING['Classic White']['11oz'].toFixed(2);
   document.getElementById('priceCP').textContent = '11oz $' + PRICING['Color Pop']['11oz'].toFixed(2);
@@ -263,6 +325,14 @@ function updateSummary(){
     document.getElementById('summaryUpsell').textContent = '+$' + upsell.charge.toFixed(2);
   } else {
     upsellRow.style.display = 'none';
+  }
+
+  const giftRow = document.getElementById('summaryGiftRow');
+  if (giftCharge > 0) {
+    giftRow.style.display = 'flex';
+    document.getElementById('summaryGift').textContent = '+$' + giftCharge.toFixed(2);
+  } else {
+    giftRow.style.display = 'none';
   }
 
   document.getElementById('summaryTotal').textContent = '$' + total.toFixed(2);
@@ -314,6 +384,7 @@ async function submitOrder(){
         sizeLabel: selectedSize,
         color: selectedColor,
         customerName: fullName,
+        giftMessage: giftMessageEnabled ? document.getElementById('giftMessageText').value.trim() : null,
         shippingAddress: {
           first_name: firstName,
           last_name: lastName,
