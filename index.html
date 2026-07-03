@@ -93,7 +93,8 @@
    vertically centered, on wide screens. Deliberately NOT using
    display:contents here — that technique is unreliable across browsers
    for pulling fixed-position children out of a flex parent. */
-.token-credits-row{position:fixed;top:10px;right:10px;left:auto;z-index:999;display:flex;align-items:center;gap:8px}
+.token-credits-row{position:fixed;top:10px;right:10px;left:auto;z-index:999;display:flex;align-items:center;gap:8px;pointer-events:none}
+#creditsBtn{pointer-events:auto}
 @media (min-width:1000px){
   .token-credits-row{top:50%;left:24px;right:24px;transform:translateY(-50%);justify-content:space-between;gap:0}
 }
