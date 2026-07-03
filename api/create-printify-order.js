@@ -69,40 +69,33 @@ async function getPlaceholderDimensions(blueprintId, printProviderId, variantId)
 // Printify only exposes ONE print position on this mug ("front"), and it
 // covers the entire wraparound surface, not just the front-facing side.
 // To get Left / Front / Right onto one mug, we build that single wide
-// image ourselves: three equal side-by-side sections, each design
-// anchored/cover-filled into its own section, then upload the combined
-// result as the one "front" image Printify expects.
+// image ourselves: three equal side-by-side sections, then upload the
+// combined result as the one "front" image Printify expects.
 //
-// If only one design was provided at all (the normal single-design
-// case), this just fills the whole canvas with it — identical to how
-// the mug generator worked before multi-placement existed.
+// The canvas is ALWAYS white (an unprinted mug is white), and every
+// design is scaled to fit INSIDE its own section without cropping
+// (fit: "contain"). A single Center design therefore lands neatly in
+// the middle third of the wraparound — the classic front-of-mug look —
+// with the rest of the mug left clean white. Previously a single
+// design was cover-stretched across the entire canvas, which produced
+// a giant cropped image wrapping the whole mug; and empty slots were
+// filled dark gray, which would have printed dark panels on a white
+// mug. Both of those are what this version fixes.
 async function buildWraparoundImage(placements, canvasWidth, canvasHeight) {
   const { left, front, right } = placements;
-  const providedCount = [left, front, right].filter(Boolean).length;
 
-  if (providedCount <= 1) {
-    const soleImage = front || left || right;
-    return await sharp(await resolveImageBuffer(soleImage))
-      .resize(canvasWidth, canvasHeight, { fit: "cover", position: "centre" })
-      .png()
-      .toBuffer();
-  }
+  const WHITE = { r: 255, g: 255, b: 255 };
 
   const sectionWidth = Math.round(canvasWidth / 3);
   const lastSectionWidth = canvasWidth - sectionWidth * 2; // absorb rounding into the right section
 
-  // Neutral fallback fill for any placement left empty, so a mug with
-  // only 2 of 3 slots filled doesn't end up with a broken/transparent gap.
-  const FALLBACK_FILL = { r: 26, g: 26, b: 26 };
-
+  // Renders one design scaled to fit fully inside its section, on a
+  // white background. Returns null for empty slots — the white base
+  // canvas already handles those.
   async function renderSection(imageSource, width) {
-    if (!imageSource) {
-      return await sharp({
-        create: { width, height: canvasHeight, channels: 3, background: FALLBACK_FILL }
-      }).png().toBuffer();
-    }
+    if (!imageSource) return null;
     return await sharp(await resolveImageBuffer(imageSource))
-      .resize(width, canvasHeight, { fit: "cover", position: "centre" })
+      .resize(width, canvasHeight, { fit: "contain", background: WHITE })
       .png()
       .toBuffer();
   }
@@ -113,14 +106,15 @@ async function buildWraparoundImage(placements, canvasWidth, canvasHeight) {
     renderSection(right, lastSectionWidth)
   ]);
 
+  const composites = [];
+  if (leftBuf) composites.push({ input: leftBuf, left: 0, top: 0 });
+  if (frontBuf) composites.push({ input: frontBuf, left: sectionWidth, top: 0 });
+  if (rightBuf) composites.push({ input: rightBuf, left: sectionWidth * 2, top: 0 });
+
   return await sharp({
-    create: { width: canvasWidth, height: canvasHeight, channels: 3, background: FALLBACK_FILL }
+    create: { width: canvasWidth, height: canvasHeight, channels: 3, background: WHITE }
   })
-    .composite([
-      { input: leftBuf, left: 0, top: 0 },
-      { input: frontBuf, left: sectionWidth, top: 0 },
-      { input: rightBuf, left: sectionWidth * 2, top: 0 }
-    ])
+    .composite(composites)
     .png()
     .toBuffer();
 }
