@@ -51,7 +51,10 @@ async function createCustomerForDevice(deviceId) {
 }
 
 // Deducts exactly 1 token from a customer's balance after a successful
-// generation.
+// generation. Now runs for admin accounts too, so the meter shows a real,
+// moving countdown instead of a static infinity symbol. Admin accounts
+// are still never blocked from generating regardless of how low (or
+// negative) this number goes — that's enforced separately below, not here.
 async function deductOneToken(customerId, currentBalance) {
   const url = `${SUPABASE_URL}/rest/v1/customers?id=eq.${customerId}`;
   const resp = await fetch(url, {
@@ -292,11 +295,11 @@ Polished gift-art quality.
     await saveGenerationRecord(customer.id, prompt, theme, publicImageUrl);
 
     // Only deduct the token AFTER a successful generation, so a failed
-    // OpenAI call never costs the customer a token. Admin accounts have
-    // unlimited tokens and are never deducted.
-    if (!isAdmin) {
-      await deductOneToken(customer.id, customer.token_balance);
-    }
+    // OpenAI call never costs anyone a token. Admin accounts are deducted
+    // the same as everyone else now (for a real, visible countdown on the
+    // token meter) — they just can never be BLOCKED by the zero-token
+    // check above, no matter how low this number goes.
+    await deductOneToken(customer.id, customer.token_balance);
 
     return res.status(200).json({ imageUrl: publicImageUrl });
   } catch (error) {
