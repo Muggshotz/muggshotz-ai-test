@@ -147,6 +147,7 @@
 <div class="card"><div class="card-title">📸 Upload Photo</div>
 <div style="font-size:11px;color:#777;letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px;text-align:center">Photo 1</div>
 <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()"><div style="font-size:32px;color:#555;margin-bottom:8px">👤</div><div class="upload-text">Tap here to upload a photo</div><div class="upload-sub">Clear face photo works best</div></div><input type="file" id="fileInput" accept="image/*" style="display:none"/><img id="previewImg" class="preview-img" style="display:none"/>
+<button class="download-btn" id="toggleImageBtn" onclick="toggleWorkingImage()" style="display:none;margin-top:.6rem">↔️ Toggle Between Previous & New Image</button>
 
 <div style="margin-top:1.1rem;padding-top:1rem;border-top:1px dashed #333">
 <div class="note" style="margin-top:0;margin-bottom:.6rem">Optional — add more photos if you want to combine or pull elements from other pictures (e.g. "use the face from Photo 2 on the body in Photo 1").</div>
@@ -319,12 +320,33 @@
 <script>
 let product='mug',style='Muggshotz Classic: premium professional caricature, expressive face, rich detail, painterly shading, funny gift-art scene',likeness='0.15',uploadedImageData=null,resultUrl=null;
 let refImageAData=null, refImageBData=null;
-// Tracks the most recent generated result (as a base64 data URL) so the
-// NEXT generate() call can send it back as a "current design" reference,
-// enabling true iterative refinement instead of always restarting from
-// the original photo. Reset to null whenever a brand-new main photo is
-// uploaded, since that starts a fresh design session.
-let lastGeneratedImageData=null;
+// One-slot recycling workflow: after every generation the RESULT becomes
+// the new working image in the main Photo 1 slot, and the next prompt
+// applies to IT. previousImageData remembers the image it replaced, so
+// the toggle button can swap back if the new result isn't a keeper.
+// Uploading a brand-new photo starts a fresh session and clears the toggle.
+let previousImageData=null;
+
+function setMainSlotImage(dataUrl){
+  uploadedImageData=dataUrl;
+  const img=document.getElementById('previewImg');
+  img.src=dataUrl;
+  img.style.display='block';
+  img.onclick=()=>document.getElementById('fileInput').click();
+  const z=document.getElementById('uploadZone');
+  z.classList.add('has-image');
+  z.style.padding='0';
+  z.innerHTML='';
+  z.appendChild(img);
+}
+
+function toggleWorkingImage(){
+  if(!previousImageData)return;
+  const temp=uploadedImageData;
+  uploadedImageData=previousImageData;
+  previousImageData=temp;
+  document.getElementById('previewImg').src=uploadedImageData;
+}
 
 // --- Device sticky-note: silently identifies this browser/device across
 // visits so the server can track free tokens, without any login or signup.
@@ -1003,18 +1025,10 @@ function togglePriceTable(){
 document.getElementById('fileInput').addEventListener('change',function(e){
   const file=e.target.files[0];
   if(!file)return;
-  lastGeneratedImageData=null;
+  previousImageData=null;
+  document.getElementById('toggleImageBtn').style.display='none';
   resizeImageFile(file, 1280).then((dataUrl)=>{
-    uploadedImageData=dataUrl;
-    const img=document.getElementById('previewImg');
-    img.src=uploadedImageData;
-    img.style.display='block';
-    img.onclick=()=>document.getElementById('fileInput').click();
-    const z=document.getElementById('uploadZone');
-    z.classList.add('has-image');
-    z.style.padding='0';
-    z.innerHTML='';
-    z.appendChild(img);
+    setMainSlotImage(dataUrl);
   });
 });
 
@@ -1202,7 +1216,7 @@ Use rich environmental storytelling while keeping the face as the primary focal 
     const resp=await fetch('/api/generate',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({image:uploadedImageData,prompt,theme:selectedTheme,deviceId,refImageA:refImageAData,refImageB:refImageBData,currentDesign:lastGeneratedImageData}),
+      body:JSON.stringify({image:uploadedImageData,prompt,theme:selectedTheme,deviceId,refImageA:refImageAData,refImageB:refImageBData,currentDesign:null}),
       signal:currentGenerationController.signal
     });
 
@@ -1230,11 +1244,17 @@ Use rich environmental storytelling while keeping the face as the primary focal 
   document.getElementById('verifyCard').style.display='block';
     addToRecentDesigns(resultUrl);
     await loadBaseImageForCaption(resultUrl);
+    // Recycle: the fresh result immediately becomes the working image in
+    // the main Photo 1 slot, so the next prompt applies to IT. The image
+    // it replaced waits behind the toggle button in case this take isn't
+    // a keeper.
     try{
-      lastGeneratedImageData=await urlToDataURL(resultUrl);
-    }catch(cacheErr){
-      console.error('Could not cache result for refinement:',cacheErr);
-      lastGeneratedImageData=null;
+      const newWorking=await urlToDataURL(resultUrl);
+      previousImageData=uploadedImageData;
+      setMainSlotImage(newWorking);
+      document.getElementById('toggleImageBtn').style.display='block';
+    }catch(recycleErr){
+      console.error('Could not recycle result into the main slot:',recycleErr);
     }
     refreshTokenMeter();
     clearStatus();
