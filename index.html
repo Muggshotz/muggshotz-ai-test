@@ -209,7 +209,15 @@
 <button class="generate-btn" id="generateBtn" onclick="generate()">🎨 GENERATE CARICATURE</button>
 <button class="download-btn" id="cancelBtn" onclick="cancelGeneration()" style="display:none;margin-top:.5rem">✖ Cancel & Try a Different Photo</button>
 <div class="status" id="status"></div>
-<div class="card result-area" id="resultArea"><div class="card-title">✨ Your Caricature</div><img id="resultImg" class="result-img"/><div class="mockup-label" id="mockupLabel"></div><button class="download-btn" onclick="downloadImage()">⬇️ Download for Printify</button></div>
+<div class="card result-area" id="resultArea"><div class="card-title">✨ Your Caricature</div><img id="resultImg" class="result-img"/><div class="mockup-label" id="mockupLabel"></div><button class="download-btn" onclick="downloadImage()">⬇️ Download for Printify</button>
+<div id="approveRow" style="display:none">
+<div class="note" style="margin-top:.9rem;text-align:center;font-size:13px;color:#ccc">Are you satisfied with this design?</div>
+<div class="bi-row">
+<button class="generate-btn" style="flex:1;width:auto;padding:.8rem .5rem;font-size:14px" onclick="approveDesign()">✅ Yes — Put It On My Mug</button>
+<button class="download-btn" style="flex:1;width:auto;margin-top:0" onclick="keepTweaking()">🔧 No — Keep Tweaking</button>
+</div>
+</div>
+</div>
   <div class="card" id="positionHolderCard" style="display:none">
 <div class="card-title">🖼️ Design Your Mug</div>
 <div class="note" style="margin-top:0;margin-bottom:.9rem">Happy with just this one picture? We'll gladly take you to checkout. Want to try a few more designs first? If you're out of free tokens, a $5 Preview Reservation unlocks more tokens to keep creating — that $5 isn't an extra charge, it comes straight off your mug's price at checkout. Whatever you end up with, your exact total (including any charge for extra printed designs, or an image on both sides) is always shown before you pay.</div>
@@ -326,6 +334,9 @@ let refImageAData=null, refImageBData=null;
 // the toggle button can swap back if the new result isn't a keeper.
 // Uploading a brand-new photo starts a fresh session and clears the toggle.
 let previousImageData=null;
+// The generation currently sitting in the workshop awaiting the person's
+// verdict. Nothing lands on the mug until approveDesign() blesses it.
+let currentDesignId=null;
 
 function setMainSlotImage(dataUrl){
   uploadedImageData=dataUrl;
@@ -1080,6 +1091,89 @@ function setupRefUpload(inputId, zoneId, previewId, setter){
 setupRefUpload('refAInput','refAZone','refAPreview', (v)=>{ refImageAData = v; });
 setupRefUpload('refBInput','refBZone','refBPreview', (v)=>{ refImageBData = v; });
 
+// After a generation, Photos 2 & 3 have been baked into the new working
+// image — they were reference points and they've served their purpose.
+// These helpers clear their slots back to the empty "Tap to add" state,
+// ready for the next tweak's references.
+function resetRefSlot(zoneId, previewId, inputId){
+  const z=document.getElementById(zoneId);
+  if(!z)return;
+  z.classList.remove('has-image');
+  z.style.padding='1rem';
+  z.innerHTML='<div style="font-size:20px;color:#555;margin-bottom:4px">\u2795</div><div class="upload-text" style="font-size:12px">Tap to add</div>';
+  const oldImg=document.getElementById(previewId);
+  if(oldImg)oldImg.remove();
+  const fresh=document.createElement('img');
+  fresh.id=previewId;
+  fresh.className='preview-img';
+  fresh.style.display='none';
+  fresh.style.maxHeight='140px';
+  z.insertAdjacentElement('afterend',fresh);
+  const input=document.getElementById(inputId);
+  if(input)input.value='';
+}
+
+function clearReferenceSlots(){
+  refImageAData=null;
+  refImageBData=null;
+  resetRefSlot('refAZone','refAPreview','refAInput');
+  resetRefSlot('refBZone','refBPreview','refBInput');
+}
+
+// The approval gate: pressing YES is the signal that tweaking is done.
+// The blessed design drops to a mug slot (the slot whose 🎨 New button
+// started this session if there was one, otherwise the first open slot:
+// Center, then Left, then Right), and the workshop up top empties out,
+// ready for a brand-new photo and a brand-new session.
+function approveDesign(){
+  if(!currentDesignId)return;
+  let target=(pendingSlotTarget&&!placements[pendingSlotTarget])?pendingSlotTarget:['front','left','right'].find(p=>!placements[p]);
+  pendingSlotTarget=null;
+  if(target){
+    placements[target]=currentDesignId;
+  } else if(!libraryOpen){
+    // Mug is full — the design stays in My Designs; pop the library
+    // open so it's visible, and the person can reassign slots there.
+    toggleLibrary();
+  }
+  currentDesignId=null;
+  document.getElementById('approveRow').style.display='none';
+  resetMainSlot();
+  clearReferenceSlots();
+  renderRecentDesigns();
+  renderPositionHolder();
+  updatePlacementSummary();
+}
+
+// Pressing NO: back to the workbench — the working image stays loaded
+// in Photo 1, so all the person has to do is describe the next tweak.
+function keepTweaking(){
+  const box=document.getElementById('ideaDesc');
+  box.placeholder='What would you like to add or change? Describe it here, then hit Generate again.';
+  box.scrollIntoView({behavior:'smooth',block:'center'});
+  box.focus();
+}
+
+// Empties the Photo 1 workshop back to its original "Tap here to upload
+// a photo" state after an approved design leaves for the mug.
+function resetMainSlot(){
+  uploadedImageData=null;
+  previousImageData=null;
+  document.getElementById('toggleImageBtn').style.display='none';
+  const z=document.getElementById('uploadZone');
+  z.classList.remove('has-image');
+  z.style.padding='2rem';
+  z.innerHTML='<div style="font-size:32px;color:#555;margin-bottom:8px">\ud83d\udc64</div><div class="upload-text">Tap here to upload a photo</div><div class="upload-sub">Clear face photo works best</div>';
+  const oldImg=document.getElementById('previewImg');
+  if(oldImg)oldImg.remove();
+  const fresh=document.createElement('img');
+  fresh.id='previewImg';
+  fresh.className='preview-img';
+  fresh.style.display='none';
+  z.insertAdjacentElement('afterend',fresh);
+  document.getElementById('fileInput').value='';
+}
+
 function setStatus(msg,isError){
   const el=document.getElementById('status');
   el.className='status visible'+(isError?' error':'');
@@ -1242,7 +1336,8 @@ Use rich environmental storytelling while keeping the face as the primary focal 
     document.getElementById('captionCard').className='card caption-card visible';
     document.getElementById('captionText').value='';
   document.getElementById('verifyCard').style.display='block';
-    addToRecentDesigns(resultUrl);
+    currentDesignId=addToRecentDesigns(resultUrl);
+    document.getElementById('approveRow').style.display='block';
     await loadBaseImageForCaption(resultUrl);
     // Recycle: the fresh result immediately becomes the working image in
     // the main Photo 1 slot, so the next prompt applies to IT. The image
@@ -1253,6 +1348,9 @@ Use rich environmental storytelling while keeping the face as the primary focal 
       previousImageData=uploadedImageData;
       setMainSlotImage(newWorking);
       document.getElementById('toggleImageBtn').style.display='block';
+      // Photos 2 & 3 are now merged into the new working image — clear
+      // their slots so stale references never bleed into the next round.
+      clearReferenceSlots();
     }catch(recycleErr){
       console.error('Could not recycle result into the main slot:',recycleErr);
     }
@@ -1272,18 +1370,12 @@ let pendingSlotTarget=null;
 let libraryOpen=false;
 
 function addToRecentDesigns(url){
+  // Library-only duty: every generation is archived here, but NOTHING
+  // is placed on the mug from this function. Placement happens solely
+  // through approveDesign() — the person's explicit blessing.
   const designId='design-'+Date.now();
-  const isFirstDesign=recentDesigns.length===0;
   recentDesigns.push({id:designId,url:url});
   document.getElementById('positionHolderCard').style.display='block';
-
-  if(pendingSlotTarget){
-    placements[pendingSlotTarget]=designId;
-    pendingSlotTarget=null;
-  } else if(isFirstDesign && !placements.front){
-    placements.front=designId;
-  }
-
   renderRecentDesigns();
   renderPositionHolder();
   updateLibraryToggleLabel();
