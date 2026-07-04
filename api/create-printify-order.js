@@ -116,6 +116,25 @@ async function buildWraparoundImage(placements, canvasWidth, canvasHeight) {
     .toBuffer();
 }
 
+// THE ALL-CUP SWITCH (Second Glance Funny / Ewww Stew engine).
+//
+// The deliberate opposite of buildWraparoundImage's polite manners:
+// ONE design is scaled UP with fit: "cover" until it floods the ENTIRE
+// printable canvas edge to edge — bottom of the mug, around past the
+// handle, up to the print ceiling — and any overflow is cropped away.
+// This is the intentionally-resurrected "accident" behavior that gave
+// the lifeguard test mug its near-full coverage: liquid doesn't respect
+// margins. Art for this mode should be designed at the full print-area
+// proportions with sacrificial bleed at the edges, and with the top
+// inch fading pale so the print ceiling melts into the white ceramic
+// (the "Cleanish principle").
+async function buildFullBleedImage(imageSource, canvasWidth, canvasHeight) {
+  return await sharp(await resolveImageBuffer(imageSource))
+    .resize(canvasWidth, canvasHeight, { fit: "cover", position: "centre" })
+    .png()
+    .toBuffer();
+}
+
 async function createPrintifyProduct(imageId, mugType, sizeLabel, title) {
   const settings = MUG_SETTINGS[mugType];
   if (!settings) throw new Error(`Unknown mug type: ${mugType}`);
@@ -216,7 +235,17 @@ function calculateUpsellCharge(placements) {
 // Keeping this as one shared function means both paths always place
 // orders exactly the same way — no risk of the "real" and "test" paths
 // quietly drifting apart from each other over time.
-export async function placeMugOrder({ placements, mugType, sizeLabel, shippingAddress, customerName, orderId }) {
+//
+// printMode (the switch):
+//   "standard" (default) — the existing three-slot caricature layout:
+//       each design contain-fits politely inside its own third with
+//       white everywhere else. Right for faces.
+//   "fullBleed" (aliases: "allCup") — ONE design floods the entire
+//       print area edge to edge via buildFullBleedImage. Right for
+//       Ewww Stew / Second Glance Funny / All-Cup products. Uses the
+//       first design found (front, then left, then right); slot choice
+//       is meaningless in this mode since the art covers everything.
+export async function placeMugOrder({ placements, mugType, sizeLabel, shippingAddress, customerName, orderId, printMode = "standard" }) {
   // A design can live in ANY slot — Left, Center, or Right. No single
   // slot is mandatory; the only rule is at least one design somewhere.
   if (!placements || !(placements.left || placements.front || placements.right)) {
@@ -231,18 +260,28 @@ export async function placeMugOrder({ placements, mugType, sizeLabel, shippingAd
   const variantId = settings.variants[sizeLabel];
   if (!variantId) throw new Error(`Unknown size "${sizeLabel}" for mug type "${mugType}".`);
 
+  const isFullBleed = printMode === "fullBleed" || printMode === "allCup";
+
   const { width, height } = await getPlaceholderDimensions(
     settings.blueprint_id,
     settings.print_provider_id,
     variantId
   );
 
-  const compositeImageBuffer = await buildWraparoundImage(placements, width, height);
+  const compositeImageBuffer = isFullBleed
+    ? await buildFullBleedImage(
+        placements.front || placements.left || placements.right,
+        width,
+        height
+      )
+    : await buildWraparoundImage(placements, width, height);
 
   const fileName = `muggshotz-${Date.now()}.png`;
   const imageId = await uploadImageToPrintify(compositeImageBuffer, fileName);
 
-  const productTitle = `Muggshotz Caricature Mug${customerName ? " - " + customerName : ""}`;
+  const productTitle = isFullBleed
+    ? `Muggshotz All-Cup Mug${customerName ? " - " + customerName : ""}`
+    : `Muggshotz Caricature Mug${customerName ? " - " + customerName : ""}`;
   const { productId } = await createPrintifyProduct(imageId, mugType, sizeLabel, productTitle);
 
   const orderResult = await submitPrintifyOrder(
@@ -252,12 +291,19 @@ export async function placeMugOrder({ placements, mugType, sizeLabel, shippingAd
     orderId || `muggshotz-${Date.now()}`
   );
 
-  const pricing = calculateUpsellCharge(placements);
+  // In full-bleed mode there's only one design covering everything, so
+  // the multi-placement upsell doesn't apply — the All-Cup markup will
+  // be handled at checkout (order.html / create-mug-checkout-session)
+  // when the customer-facing option is built.
+  const pricing = isFullBleed
+    ? { upsellCharge: 0, reason: "All-Cup full-bleed print — single design covers the entire mug; multi-placement upsell not applicable." }
+    : calculateUpsellCharge(placements);
 
   return {
     success: true,
     printifyOrderId: orderResult.id,
     productId,
+    printMode: isFullBleed ? "fullBleed" : "standard",
     upsellCharge: pricing.upsellCharge,
     upsellReason: pricing.reason,
     needsPricingConfirmation: pricing.needsPricingConfirmation || false
