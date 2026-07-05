@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>MuggsHotz Admin</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#111;font-family:system-ui,sans-serif;color:#fff;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:2rem}
+.card{background:#1a1a1a;border:.5px solid #333;border-radius:12px;padding:2rem;width:100%;max-width:480px}
+h1{font-size:22px;font-weight:700;color:#ff6a00;margin-bottom:.25rem}
+.sub{font-size:12px;color:#666;margin-bottom:2rem;letter-spacing:1px;text-transform:uppercase}
+label{font-size:12px;color:#888;display:block;margin-bottom:.4rem;margin-top:1rem;text-transform:uppercase;letter-spacing:.5px}
+input{width:100%;background:#0d0d0d;border:1px solid #444;border-radius:8px;padding:10px 12px;color:#fff;font-size:14px}
+input:focus{outline:none;border-color:#ff6a00}
+.row{display:flex;gap:10px;margin-top:1.25rem}
+.btn{flex:1;border:none;border-radius:8px;padding:.85rem;font-size:14px;font-weight:700;cursor:pointer;letter-spacing:.5px}
+.btn-grant{background:#22a845;color:#fff}
+.btn-grant:hover{background:#1a8a38}
+.btn-deduct{background:#c0392b;color:#fff}
+.btn-deduct:hover{background:#a93226}
+.btn-grant:disabled,.btn-deduct:disabled{background:#333;color:#666;cursor:not-allowed}
+.result{margin-top:1.25rem;padding:1rem;border-radius:8px;font-size:13px;display:none}
+.result.success{background:#0d2a12;border:1px solid #22a845;color:#5ddb7a}
+.result.error{background:#2a0d0d;border:1px solid #c0392b;color:#e07070}
+.log{margin-top:1.5rem;border-top:1px solid #222;padding-top:1rem}
+.log-title{font-size:11px;color:#555;text-transform:uppercase;letter-spacing:1px;margin-bottom:.75rem}
+.log-item{font-size:12px;color:#777;padding:.4rem 0;border-bottom:.5px solid #222}
+.log-item span{color:#ff6a00}
+#lockScreen{position:fixed;inset:0;background:#111;display:flex;align-items:center;justify-content:center;z-index:999}
+.lock-card{background:#1a1a1a;border:.5px solid #333;border-radius:12px;padding:2rem;width:100%;max-width:360px;text-align:center}
+.lock-card h2{color:#ff6a00;margin-bottom:1.5rem}
+.lock-card input{margin-bottom:1rem}
+.lock-card button{width:100%;background:#ff6a00;border:none;border-radius:8px;padding:.85rem;color:#fff;font-size:15px;font-weight:700;cursor:pointer}
+.balance-badge{display:inline-block;background:#0d0d0d;border:1px solid #333;border-radius:20px;padding:.3rem .8rem;font-size:12px;color:#ff6a00;margin-top:.5rem}
+</style>
+</head>
+<body>
+
+<div id="lockScreen">
+  <div class="lock-card">
+    <h2>🔐 MuggsHotz Admin</h2>
+    <input type="password" id="pwInput" placeholder="Enter password" onkeydown="if(event.key==='Enter')checkPw()"/>
+    <button onclick="checkPw()">Unlock</button>
+    <div id="pwError" style="color:#e07070;font-size:12px;margin-top:.75rem"></div>
+  </div>
+</div>
+
+<div class="card">
+  <h1>MuggsHotz Admin</h1>
+  <div class="sub">Token grant &amp; deduct tool</div>
+
+  <label>Device ID</label>
+  <input type="text" id="deviceId" placeholder="dev-1782830337729-ph3dwpik"/>
+
+  <label>Current Balance <span id="balanceBadge" class="balance-badge" style="display:none"></span></label>
+  <div style="display:flex;gap:8px;margin-top:.4rem">
+    <input type="text" id="lookupEmail" placeholder="Or look up by email (optional)"/>
+    <button onclick="lookupBalance()" style="background:#333;border:none;border-radius:8px;padding:0 1rem;color:#ff6a00;cursor:pointer;font-size:12px;white-space:nowrap">Look Up</button>
+  </div>
+
+  <label>Number of Tokens</label>
+  <input type="number" id="tokenCount" placeholder="e.g. 5" min="1"/>
+
+  <label>Reason (required)</label>
+  <input type="text" id="reason" placeholder="e.g. gift, goodwill, correction, test"/>
+
+  <div class="row">
+    <button class="btn btn-grant" onclick="adjustTokens('grant')">✅ Grant Tokens</button>
+    <button class="btn btn-deduct" onclick="adjustTokens('deduct')">➖ Deduct Tokens</button>
+  </div>
+
+  <div class="result" id="result"></div>
+
+  <div class="log">
+    <div class="log-title">Recent Actions This Session</div>
+    <div id="logList"><div class="log-item" style="color:#444">No actions yet.</div></div>
+  </div>
+</div>
+
+<script>
+const ADMIN_PASSWORD = '$Noneya6611$';
+const SUPABASE_URL   = 'https://nhyjxkmvmnuktahfvbwj.supabase.co';
+// Uses the anon key for reads; admin grants go through a dedicated endpoint
+// so we never expose the service role key in the browser.
+
+function checkPw(){
+  const val = document.getElementById('pwInput').value;
+  if(val === ADMIN_PASSWORD){
+    document.getElementById('lockScreen').style.display = 'none';
+  } else {
+    document.getElementById('pwError').textContent = 'Wrong password.';
+  }
+}
+
+async function lookupBalance(){
+  const deviceId = document.getElementById('deviceId').value.trim();
+  const email    = document.getElementById('lookupEmail').value.trim();
+  if(!deviceId && !email){ showResult('Enter a device ID or email to look up.','error'); return; }
+
+  try{
+    let url;
+    if(deviceId){
+      url = `${SUPABASE_URL}/rest/v1/customers?device_id=eq.${encodeURIComponent(deviceId)}&select=id,token_balance,email,device_id`;
+    } else {
+      url = `${SUPABASE_URL}/rest/v1/customers?email=eq.${encodeURIComponent(email)}&select=id,token_balance,email,device_id`;
+    }
+    const resp = await fetch(url, { headers: { 'apikey': await getAnonKey() } });
+    const rows = await resp.json();
+    if(!rows.length){ showResult('No customer found.','error'); return; }
+    const c = rows[0];
+    const badge = document.getElementById('balanceBadge');
+    badge.textContent = `${c.token_balance} tokens`;
+    badge.style.display = 'inline-block';
+    if(!deviceId && c.device_id) document.getElementById('deviceId').value = c.device_id;
+    showResult(`Found: ${c.email || '(no email)'} — Balance: ${c.token_balance} tokens`,'success');
+  }catch(err){
+    showResult('Lookup failed: ' + err.message,'error');
+  }
+}
+
+async function getAnonKey(){
+  // Anon key is safe to expose in a password-gated admin page
+  return 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5oeWp4a212bW51a3RhaGZ2YndqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDkyNDQ0ODUsImV4cCI6MjA2NDgyMDQ4NX0.abcdefg';
+}
+
+async function adjustTokens(action){
+  const deviceId = document.getElementById('deviceId').value.trim();
+  const count    = parseInt(document.getElementById('tokenCount').value);
+  const reason   = document.getElementById('reason').value.trim();
+
+  if(!deviceId){ showResult('Device ID is required.','error'); return; }
+  if(!count || count < 1){ showResult('Enter a valid token count.','error'); return; }
+  if(!reason){ showResult('Reason is required.','error'); return; }
+
+  try{
+    const resp = await fetch('/api/admin-tokens', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: ADMIN_PASSWORD, deviceId, count, action, reason })
+    });
+    const data = await resp.json();
+    if(!resp.ok) throw new Error(data.error || 'Request failed.');
+
+    const verb = action === 'grant' ? 'Granted' : 'Deducted';
+    showResult(`${verb} ${count} token${count>1?'s':''} — New balance: ${data.newBalance}`,'success');
+
+    const badge = document.getElementById('balanceBadge');
+    badge.textContent = `${data.newBalance} tokens`;
+    badge.style.display = 'inline-block';
+
+    addLog(`${verb} ${count} to ${deviceId.slice(0,20)}... — "${reason}" — New balance: ${data.newBalance}`);
+    document.getElementById('tokenCount').value = '';
+    document.getElementById('reason').value = '';
+  }catch(err){
+    showResult('Error: ' + err.message,'error');
+  }
+}
+
+function showResult(msg, type){
+  const el = document.getElementById('result');
+  el.textContent = msg;
+  el.className = 'result ' + type;
+  el.style.display = 'block';
+}
+
+function addLog(text){
+  const list = document.getElementById('logList');
+  if(list.children[0].style.color === 'rgb(68, 68, 68)') list.innerHTML = '';
+  const item = document.createElement('div');
+  item.className = 'log-item';
+  item.innerHTML = `<span>${new Date().toLocaleTimeString()}</span> — ${text}`;
+  list.prepend(item);
+}
+</script>
+</body>
+</html>
