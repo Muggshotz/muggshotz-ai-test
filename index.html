@@ -1041,10 +1041,10 @@ function closeCreditsPanel(){
 // refreshes automatically on page load.
 async function buyTokenPack(packId){
   try{
-    const resp=await fetch('/api/create-token-checkout-session',{
+    const resp=await fetch('/api/create-checkout-session',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({deviceId,packId})
+      body:JSON.stringify({type:'token_purchase',deviceId,packId})
     });
     const data=await resp.json();
     if(!resp.ok)throw new Error(data.error||'Could not start checkout.');
