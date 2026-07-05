@@ -15,7 +15,12 @@ const GIFT_MESSAGE_PRICE = 1.00;
 
 // Mirrors the upsell logic in create-printify-order.js exactly, so the
 // price shown at checkout always matches what the order will actually
-// charge later.
+// charge later. Full price table:
+//   1 placement                      → $0 (base price)
+//   2 placements, same design        → $3
+//   2 placements, different designs  → $5
+//   3 placements, same design        → $3
+//   3 placements, different designs  → $6 (set-discount vs. buying à la carte)
 function calculateUpsellCharge(placements) {
   const { left, front, right } = placements;
   const filled = [left, front, right].filter(Boolean);
@@ -23,7 +28,7 @@ function calculateUpsellCharge(placements) {
 
   if (filled.length <= 1) return 0;
   if (filled.length === 2) return distinctCount === 1 ? 3 : 5;
-  return distinctCount === 1 ? 3 : 5;
+  return distinctCount === 1 ? 3 : 6;
 }
 
 export default async function handler(req, res) {
