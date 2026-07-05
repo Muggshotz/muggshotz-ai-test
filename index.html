@@ -1547,6 +1547,12 @@ function renderPositionHolder(){
       const img=document.createElement('img');
       img.src=design.url;
       thumb.appendChild(img);
+      // Visible remove button: one tap empties this slot.
+      const removeBtn=document.createElement('div');
+      removeBtn.textContent='✖';
+      removeBtn.style.cssText='position:absolute;top:-8px;right:-8px;width:22px;height:22px;border-radius:50%;background:#2a1010;border:1px solid #5a2a2a;color:#ff8a7a;font-size:11px;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:3';
+      removeBtn.onclick=(e)=>{e.stopPropagation();placements[pos]=null;renderRecentDesigns();renderPositionHolder();updatePlacementSummary();saveMugState();};
+      thumbWrap.appendChild(removeBtn);
     } else {
       const empty=document.createElement('div');
       empty.className='pos-slot-empty-icon';
