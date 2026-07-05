@@ -225,6 +225,7 @@
 <div class="note" style="margin-top:0;margin-bottom:.9rem">Happy with just this one picture? We'll gladly take you to checkout. Want to try a few more designs first? If you're out of free tokens, a $5 Preview Reservation unlocks more tokens to keep creating — that $5 isn't an extra charge, it comes straight off your mug's price at checkout. Whatever you end up with, your exact total (including any charge for extra printed designs, or an image on both sides) is always shown before you pay.</div>
 <div id="positionHolderRow" style="display:flex;align-items:flex-start;gap:6px;justify-content:center;flex-wrap:nowrap"></div>
 <button class="quick-btn" id="libraryToggleBtn" onclick="toggleLibrary()" style="margin-top:1.1rem;width:100%;text-align:center;padding:.65rem;border-radius:8px">📚 My Designs (0)</button>
+<button class="quick-btn" onclick="clearAllDesigns()" style="margin-top:.5rem;width:100%;text-align:center;padding:.65rem;border-radius:8px;border-color:#5a2a2a;color:#ff8a7a">🧹 Clear All Designs — Fresh Start</button>
 <div id="libraryPanel" style="display:none;margin-top:.75rem">
 <div class="note" style="margin-top:0;margin-bottom:.6rem">Tap Left, Center, or Right under a design to put it on your mug.</div>
 <div id="recentDesignsStrip" style="display:flex;gap:10px;overflow-x:auto;padding-bottom:6px"></div>
@@ -1497,8 +1498,30 @@ function renderRecentDesigns(){
       btnRow.appendChild(btn);
     });
     wrap.appendChild(btnRow);
+
+    // Per-design delete: removes this design from the library AND from
+    // any mug slot it occupies. One tap, gone.
+    const delBtn=document.createElement('div');
+    delBtn.textContent='🗑️ Delete';
+    delBtn.style.cssText='margin-top:4px;font-size:10px;padding:4px 2px;border-radius:6px;cursor:pointer;border:1px solid #5a2a2a;background:#2a1010;color:#ff8a7a;text-align:center';
+    delBtn.onclick=()=>deleteDesign(design.id);
+    wrap.appendChild(delBtn);
+
     strip.appendChild(wrap);
   });
+}
+
+function deleteDesign(designId){
+  recentDesigns=recentDesigns.filter(d=>d.id!==designId);
+  ['left','front','right'].forEach(p=>{
+    if(placements[p]===designId)placements[p]=null;
+  });
+  if(currentDesignId===designId)currentDesignId=null;
+  renderRecentDesigns();
+  renderPositionHolder();
+  updateLibraryToggleLabel();
+  updatePlacementSummary();
+  saveMugState();
 }
 
 function isAssigned(designId){
@@ -1600,6 +1623,23 @@ function swapSlots(posA,posB){
   renderPositionHolder();
   updatePlacementSummary();
   saveMugState();
+}
+
+// The big broom: one tap wipes EVERYTHING accumulated — every design in
+// the library, all three mug slots, and the saved memory. Total fresh
+// start, no trick taps required.
+function clearAllDesigns(){
+  recentDesigns=[];
+  placements={left:null,right:null,front:null};
+  currentDesignId=null;
+  pendingSlotTarget=null;
+  try{localStorage.removeItem('muggshotz_mug_state');}catch(e){}
+  document.getElementById('positionHolderCard').style.display='none';
+  document.getElementById('approveRow').style.display='none';
+  renderRecentDesigns();
+  renderPositionHolder();
+  updateLibraryToggleLabel();
+  updatePlacementSummary();
 }
 
 function toggleLibrary(){
