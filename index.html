@@ -148,6 +148,7 @@
 <div style="font-size:11px;color:#777;letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px;text-align:center">Photo 1</div>
 <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()"><div style="font-size:32px;color:#555;margin-bottom:8px">👤</div><div class="upload-text">Tap here to upload a photo</div><div class="upload-sub">Clear face photo works best</div></div><input type="file" id="fileInput" accept="image/*" style="display:none"/><img id="previewImg" class="preview-img" style="display:none"/>
 <button class="download-btn" id="toggleImageBtn" onclick="toggleWorkingImage()" style="display:none;margin-top:.6rem">↔️ Toggle Between Previous & New Image</button>
+<button class="download-btn" id="startOverBtn" onclick="startOver()" style="display:none;margin-top:.6rem;border-color:#5a2a2a;color:#ff8a7a">🗑️ Start Over — Clear This Photo</button>
 <div id="approveRow" style="display:none">
 <button class="download-btn" onclick="downloadImage()">⬇️ Download for Printify</button>
 <div class="note" style="margin-top:.9rem;text-align:center;font-size:13px;color:#ccc">Are you satisfied with this design?</div>
@@ -350,6 +351,7 @@ function setMainSlotImage(dataUrl){
   z.style.padding='0';
   z.innerHTML='';
   z.appendChild(img);
+  document.getElementById('startOverBtn').style.display='block';
 }
 
 function toggleWorkingImage(){
@@ -1202,12 +1204,25 @@ function keepTweaking(){
   box.focus();
 }
 
+// The off switch: wipes the easel completely — working image, previous
+// image, references, pending verdict, and the saved session in browser
+// storage. The canvas returns to blank "Tap here to upload a photo."
+function startOver(){
+  currentDesignId=null;
+  pendingSlotTarget=null;
+  document.getElementById('approveRow').style.display='none';
+  resetMainSlot();
+  clearReferenceSlots();
+  clearWorkshopStorage();
+}
+
 // Empties the Photo 1 workshop back to its original "Tap here to upload
 // a photo" state after an approved design leaves for the mug.
 function resetMainSlot(){
   uploadedImageData=null;
   previousImageData=null;
   document.getElementById('toggleImageBtn').style.display='none';
+  document.getElementById('startOverBtn').style.display='none';
   const z=document.getElementById('uploadZone');
   z.classList.remove('has-image');
   z.style.padding='2rem';
