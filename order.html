@@ -42,9 +42,18 @@ label{font-size:11px;color:#888;letter-spacing:.5px;text-transform:uppercase;dis
 .status.visible{display:block}
 .error{color:#e24b4a!important}
 .back-link{display:block;text-align:center;color:#888;font-size:12px;text-decoration:none;margin-top:-.5rem}
+.token-meter-row{position:fixed;top:8px;right:10px;left:auto;z-index:999;display:flex;align-items:center;pointer-events:none}
+#tokenMeterWrap{position:relative;width:150px;flex-shrink:0}
+@media (min-width:1000px){.token-meter-row{top:16px;right:24px}}
 </style>
 </head>
 <body>
+<div class="token-meter-row">
+  <div id="tokenMeterWrap">
+    <img src="meter.png" style="width:100%;display:block" alt="Chip meter"/>
+    <div id="tokenMeterNumber" style="position:absolute;left:44.4%;top:31.3%;width:13%;height:25.3%;display:flex;align-items:center;justify-content:center;color:#ff6a00;font-family:'Anton',sans-serif;font-weight:700;font-size:clamp(12px,3vw,18px);text-shadow:0 0 8px rgba(255,106,0,0.7)">—</div>
+  </div>
+</div>
 <div class="header-title">🛒 Order Your Mug</div>
 <div class="main">
 
@@ -75,6 +84,15 @@ label{font-size:11px;color:#888;letter-spacing:.5px;text-transform:uppercase;dis
 <div class="mug-photo-wrap"><img id="mugPhoto" src="" alt="Mug color preview"/></div>
 <div class="color-grid" id="colorGrid"></div>
 <div class="color-label" id="colorLabel">Pick a color</div>
+</div>
+
+<div class="card">
+<div class="card-title">🌀 Full-Wrap Print</div>
+<div class="note" style="margin-top:0;margin-bottom:.75rem">Have your design printed edge-to-edge, wrapping all the way around the mug (rather than a single front-facing panel). Best suited for designs built for a full wraparound look.</div>
+<div style="display:flex;align-items:center;gap:10px">
+<input type="checkbox" id="fullWrapToggle" onchange="toggleFullWrap()" style="width:20px;height:20px;cursor:pointer"/>
+<label style="margin:0;text-transform:none;font-size:14px;color:#fff;cursor:pointer" onclick="document.getElementById('fullWrapToggle').click()">Yes, wrap my design all the way around <span style="color:#ff9a4d;font-weight:700">— FREE</span></label>
+</div>
 </div>
 
 <div class="card">
@@ -172,8 +190,13 @@ let selectedStyle = "Classic White";
 let selectedSize = "11oz";
 let selectedColor = null;
 let giftMessageEnabled = false;
+let fullWrapEnabled = false;
 
 const GIFT_MESSAGE_PRICE = 1.00;
+
+function toggleFullWrap(){
+  fullWrapEnabled = document.getElementById('fullWrapToggle').checked;
+}
 
 function toggleGiftMessage(){
   giftMessageEnabled = document.getElementById('giftMessageToggle').checked;
@@ -194,6 +217,34 @@ try {
 } catch (e) {
   pendingOrder = null;
 }
+
+// --- Token meter: same device ID + endpoint index.html already uses ---
+// pendingOrder.deviceId is set by index.html when it hands off to this
+// page. Falls back to reading/creating the same localStorage key
+// directly, in case someone lands here without a pending order.
+function getDeviceId(){
+  if (pendingOrder && pendingOrder.deviceId) return pendingOrder.deviceId;
+  let id = localStorage.getItem('muggshotz_device_id');
+  if (!id) {
+    id = 'dev-' + Date.now() + '-' + Math.random().toString(36).slice(2, 10);
+    localStorage.setItem('muggshotz_device_id', id);
+  }
+  return id;
+}
+const deviceId = getDeviceId();
+
+async function refreshTokenMeter(){
+  const meterEl = document.getElementById('tokenMeterNumber');
+  try {
+    const resp = await fetch('/api/get-balance?deviceId=' + encodeURIComponent(deviceId));
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data.error || 'Could not load balance.');
+    meterEl.textContent = data.tokenBalance;
+  } catch (err) {
+    meterEl.textContent = '—';
+  }
+}
+refreshTokenMeter();
 
 function renderPreview(){
   const row = document.getElementById('previewRow');
@@ -398,6 +449,7 @@ async function submitOrder(){
         mugType: selectedStyle,
         sizeLabel: selectedSize,
         color: selectedColor,
+        printMode: fullWrapEnabled ? 'fullBleed' : 'standard',
         customerName: fullName,
         giftMessage: giftMessageEnabled ? document.getElementById('giftMessageText').value.trim() : null,
         shippingAddress: {
