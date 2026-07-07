@@ -44,7 +44,7 @@ async function handleReservation(req, res) {
 async function handleMugOrder(req, res) {
   const {
     deviceId, placements, mugType, sizeLabel, color,
-    customerName, giftMessage, shippingAddress
+    customerName, giftMessage, shippingAddress, printMode
   } = req.body;
 
   if (!deviceId) return res.status(400).json({ error: "Missing device ID." });
@@ -60,6 +60,11 @@ async function handleMugOrder(req, res) {
       !shippingAddress?.region || !shippingAddress?.zip)
     return res.status(400).json({ error: "Missing required shipping information." });
 
+  // Full-wrap printing (fullBleed/allCup) is a free style choice, not an
+  // upsell — it costs nothing extra to fulfill, so it never touches price.
+  // Defaults to "standard" (front-facing panel) unless the customer opts in.
+  const resolvedPrintMode = printMode === "fullBleed" ? "fullBleed" : "standard";
+
   const upsellCharge = calculateUpsellCharge(placements);
   const giftCharge   = giftMessage?.trim() ? GIFT_MESSAGE_PRICE : 0;
   const totalCents   = Math.round((basePrice + upsellCharge + giftCharge) * 100);
@@ -74,6 +79,7 @@ async function handleMugOrder(req, res) {
       order_type: "mug_order",
       device_id: deviceId,
       mug_type: mugType, size_label: sizeLabel, color: color || "",
+      print_mode: resolvedPrintMode,
       left_image_url: placements.left || "", front_image_url: placements.front || "", right_image_url: placements.right || "",
       customer_name: customerName || "", gift_message: giftMessage || "",
       first_name: shippingAddress.first_name || "", last_name: shippingAddress.last_name || "",
