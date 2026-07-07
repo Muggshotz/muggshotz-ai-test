@@ -26,10 +26,13 @@ body{background:#111;font-family:system-ui,sans-serif;color:#fff}
 .color-btn{width:100%;max-width:44px;aspect-ratio:1;border-radius:50%;background:#1a1a1a;padding:4px;cursor:pointer;box-shadow:0 3px 6px rgba(0,0,0,0.6);margin:0 auto;border:2px solid transparent}
 .color-btn .ball{width:100%;height:100%;border-radius:50%;position:relative;box-shadow:inset 0 -5px 9px rgba(0,0,0,0.35),inset 0 3px 7px rgba(255,255,255,0.35)}
 .color-btn.selected{border-color:#ff6a00;box-shadow:0 0 0 2px #ff6a00,0 0 10px 1px rgba(255,106,0,0.6)}
-.mug-photo-wrap{width:100%;max-width:220px;margin:0 auto 1rem;border-radius:12px;overflow:hidden;background:#0d0d0d}
-.mug-photo-wrap img{width:100%;display:block;opacity:1;transition:opacity 200ms ease}
-.mug-photo-wrap img.fading{opacity:0}
 .color-label{font-size:11px;color:#888;text-align:center;margin-top:10px}
+.mug-preview-wrap{width:100%;max-width:260px;margin:0 auto 1rem;text-align:center}
+#mugPreviewSvg{width:100%;height:auto;transition:transform 250ms ease;transform-origin:bottom center}
+#mugPreviewSvg.size-15oz{transform:scaleY(1.14)}
+.view-toggle-row{display:flex;gap:6px;justify-content:center;margin-top:1rem}
+.view-toggle-btn{flex:1;max-width:90px;background:#0d0d0d;border:.5px solid #333;border-radius:8px;padding:.5rem .4rem;text-align:center;cursor:pointer;color:#888;font-size:12px;font-weight:600}
+.view-toggle-btn.selected{border-color:#ff6a00;background:#1a0a00;color:#ff6a00}
 input,select{width:100%;background:#0d0d0d;border:1px solid #444;border-radius:8px;padding:11px 12px;color:#fff;font-size:14px;font-family:system-ui,sans-serif;margin-bottom:.6rem}
 input:focus,select:focus{outline:none;border-color:#ff6a00}
 label{font-size:11px;color:#888;letter-spacing:.5px;text-transform:uppercase;display:block;margin-bottom:4px}
@@ -79,9 +82,36 @@ label{font-size:11px;color:#888;letter-spacing:.5px;text-transform:uppercase;dis
 </div>
 </div>
 
+<div class="card">
+<div class="card-title">🖼️ Live Preview</div>
+<div class="mug-preview-wrap">
+<svg id="mugPreviewSvg" viewBox="0 0 300 300" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <clipPath id="frontClip">
+      <rect x="78" y="88" width="114" height="146" rx="6"/>
+    </clipPath>
+  </defs>
+  <path id="mugHandle" d="M210,112 C262,112 262,196 210,196" fill="none" stroke="#e6e6e6" stroke-width="20" stroke-linecap="round"/>
+  <path id="mugBody" d="M62,72 L62,232 Q62,262 92,262 L178,262 Q208,262 208,232 L208,72 Z" fill="#ffffff" stroke="#ccc" stroke-width="1.5"/>
+  <g clip-path="url(#frontClip)">
+    <rect x="78" y="88" width="114" height="146" fill="#f4f4f4"/>
+    <image id="mugDesignImage" x="78" y="88" width="114" height="146" preserveAspectRatio="xMidYMid slice" href=""/>
+    <text id="mugNoDesignText" x="135" y="165" text-anchor="middle" font-size="11" fill="#999" font-family="system-ui,sans-serif">No design</text>
+  </g>
+  <rect x="78" y="88" width="114" height="146" rx="6" fill="none" stroke="#ddd" stroke-width="1" stroke-dasharray="4 3"/>
+  <ellipse id="mugRim" cx="135" cy="72" rx="73" ry="13" fill="#ffffff" stroke="#ccc" stroke-width="1.5"/>
+</svg>
+</div>
+<div class="view-toggle-row">
+<div class="view-toggle-btn" data-view="left" onclick="pickPreviewView(this)">◀ Left</div>
+<div class="view-toggle-btn selected" data-view="front" onclick="pickPreviewView(this)">Front</div>
+<div class="view-toggle-btn" data-view="right" onclick="pickPreviewView(this)">Right ▶</div>
+</div>
+<div class="note" style="text-align:center;margin-top:.6rem">Switch views to see each design you placed. This preview is illustrative — exact colors and proportions may vary slightly from the finished print.</div>
+</div>
+
 <div class="card" id="colorCard" style="display:none">
 <div class="card-title">🎨 Mug Color</div>
-<div class="mug-photo-wrap"><img id="mugPhoto" src="" alt="Mug color preview"/></div>
 <div class="color-grid" id="colorGrid"></div>
 <div class="color-label" id="colorLabel">Pick a color</div>
 </div>
@@ -162,28 +192,18 @@ const PRICING = {
   "Color Pop": { "11oz": 34.95, "15oz": 39.95 }
 };
 
-// --- Color Pop mug photos ---
-// This is the single, configurable source of truth for what photo shows
-// for each mug color. Right now it points at Printify's own stock
-// catalog photos as placeholders. To upgrade to real product photography
-// later: just replace the "image" URL for each color below — nothing
-// else in the picker logic needs to change.
-//
-// TO REPLACE: open the Color Pop product in the Printify dashboard,
-// right-click each color's mockup photo, "Copy image address," and
-// paste it in here.
 const COLOR_OPTIONS = [
-  { name: "Black", image: "https://images.printify.com/PLACEHOLDER-black.jpg" },
-  { name: "Blue", image: "https://images.printify.com/PLACEHOLDER-blue.jpg" },
-  { name: "Cambridge Blue", image: "https://images.printify.com/PLACEHOLDER-cambridge-blue.jpg" },
-  { name: "Green", image: "https://images.printify.com/PLACEHOLDER-green.jpg" },
-  { name: "Light Blue", image: "https://images.printify.com/PLACEHOLDER-light-blue.jpg" },
-  { name: "Light Green", image: "https://images.printify.com/PLACEHOLDER-light-green.jpg" },
-  { name: "Maroon", image: "https://images.printify.com/PLACEHOLDER-maroon.jpg" },
-  { name: "Orange", image: "https://images.printify.com/PLACEHOLDER-orange.jpg" },
-  { name: "Pink", image: "https://images.printify.com/PLACEHOLDER-pink.jpg" },
-  { name: "Red", image: "https://images.printify.com/PLACEHOLDER-red.jpg" },
-  { name: "Yellow", image: "https://images.printify.com/PLACEHOLDER-yellow.jpg" }
+  { name: "Black", hex: "#1c1c1c" },
+  { name: "Blue", hex: "#2255A4" },
+  { name: "Cambridge Blue", hex: "#A3C1AD" },
+  { name: "Green", hex: "#1F7A45" },
+  { name: "Light Blue", hex: "#5FA8DE" },
+  { name: "Light Green", hex: "#5FBF5F" },
+  { name: "Maroon", hex: "#7A1F2B" },
+  { name: "Orange", hex: "#F0701A" },
+  { name: "Pink", hex: "#E0457B" },
+  { name: "Red", hex: "#D62828" },
+  { name: "Yellow", hex: "#F0D43A" }
 ];
 
 let selectedStyle = "Classic White";
@@ -191,12 +211,9 @@ let selectedSize = "11oz";
 let selectedColor = null;
 let giftMessageEnabled = false;
 let fullWrapEnabled = false;
+let previewView = "front";
 
 const GIFT_MESSAGE_PRICE = 1.00;
-
-function toggleFullWrap(){
-  fullWrapEnabled = document.getElementById('fullWrapToggle').checked;
-}
 
 function toggleGiftMessage(){
   giftMessageEnabled = document.getElementById('giftMessageToggle').checked;
@@ -204,12 +221,15 @@ function toggleGiftMessage(){
   updateSummary();
 }
 
+function toggleFullWrap(){
+  fullWrapEnabled = document.getElementById('fullWrapToggle').checked;
+}
+
 function updateGiftMessageCount(){
   const len = document.getElementById('giftMessageText').value.length;
   document.getElementById('giftMessageCount').textContent = (200 - len) + ' characters remaining';
 }
 
-// --- Load the pending order (placements + deviceId) saved by index.html ---
 let pendingOrder = null;
 try {
   const raw = localStorage.getItem('muggshotz_pending_order');
@@ -218,10 +238,6 @@ try {
   pendingOrder = null;
 }
 
-// --- Token meter: same device ID + endpoint index.html already uses ---
-// pendingOrder.deviceId is set by index.html when it hands off to this
-// page. Falls back to reading/creating the same localStorage key
-// directly, in case someone lands here without a pending order.
 function getDeviceId(){
   if (pendingOrder && pendingOrder.deviceId) return pendingOrder.deviceId;
   let id = localStorage.getItem('muggshotz_device_id');
@@ -272,10 +288,6 @@ function renderPreview(){
   });
 }
 
-// A design can live in ANY slot — Left, Center, or Right. No single
-// slot is mandatory (side placement is a deliberate choice, e.g. so
-// the art faces outward for a left- or right-handed drinker). The only
-// requirement is at least one design somewhere.
 const hasAnyDesign = pendingOrder && pendingOrder.placements &&
   (pendingOrder.placements.left || pendingOrder.placements.front || pendingOrder.placements.right);
 
@@ -288,12 +300,44 @@ if (!hasAnyDesign) {
   renderPreview();
 }
 
+function renderMugPreview(){
+  const bodyColor = (selectedStyle === 'Color Pop' && selectedColor)
+    ? (COLOR_OPTIONS.find(c => c.name === selectedColor)?.hex || '#ffffff')
+    : '#ffffff';
+
+  document.getElementById('mugBody').setAttribute('fill', bodyColor);
+  document.getElementById('mugRim').setAttribute('fill', bodyColor);
+  document.getElementById('mugHandle').setAttribute('stroke', bodyColor === '#ffffff' ? '#e6e6e6' : bodyColor);
+
+  const designUrl = pendingOrder?.placements?.[previewView] || null;
+  const img = document.getElementById('mugDesignImage');
+  const noDesignText = document.getElementById('mugNoDesignText');
+  if (designUrl) {
+    img.setAttribute('href', designUrl);
+    noDesignText.style.display = 'none';
+  } else {
+    img.setAttribute('href', '');
+    noDesignText.style.display = 'block';
+  }
+
+  const svg = document.getElementById('mugPreviewSvg');
+  svg.classList.toggle('size-15oz', selectedSize === '15oz');
+}
+
+function pickPreviewView(el){
+  document.querySelectorAll('.view-toggle-btn').forEach(b=>b.classList.remove('selected'));
+  el.classList.add('selected');
+  previewView = el.dataset.view;
+  renderMugPreview();
+}
+
 function pickStyle(el){
   document.querySelectorAll('[data-style]').forEach(b=>b.classList.remove('selected'));
   el.classList.add('selected');
   selectedStyle = el.dataset.style;
   document.getElementById('colorCard').style.display = selectedStyle === 'Color Pop' ? 'block' : 'none';
   if (selectedStyle !== 'Color Pop') selectedColor = null;
+  renderMugPreview();
   updateSummary();
 }
 
@@ -301,6 +345,7 @@ function pickSize(el){
   document.querySelectorAll('[data-size]').forEach(b=>b.classList.remove('selected'));
   el.classList.add('selected');
   selectedSize = el.dataset.size;
+  renderMugPreview();
   updateSummary();
 }
 
@@ -309,19 +354,7 @@ function pickColor(el, colorData){
   el.classList.add('selected');
   selectedColor = colorData.name;
   document.getElementById('colorLabel').textContent = selectedColor;
-  swapMugPhoto(colorData.image);
-}
-
-// Swaps the big preview photo with a quick 200ms fade rather than an
-// instant jump-cut, per Bud's note — makes the picker feel considered
-// rather than mechanical.
-function swapMugPhoto(imageUrl){
-  const photo = document.getElementById('mugPhoto');
-  photo.classList.add('fading');
-  setTimeout(()=>{
-    photo.src = imageUrl;
-    photo.classList.remove('fading');
-  }, 200);
+  renderMugPreview();
 }
 
 function renderColorGrid(){
@@ -331,27 +364,20 @@ function renderColorGrid(){
     btn.className = 'color-btn' + (i === 0 ? ' selected' : '');
     btn.dataset.color = c.name;
     btn.onclick = ()=>pickColor(btn, c);
-    const thumb = document.createElement('img');
-    thumb.src = c.image;
-    thumb.style.width = '100%';
-    thumb.style.height = '100%';
-    thumb.style.borderRadius = '50%';
-    thumb.style.objectFit = 'cover';
-    btn.appendChild(thumb);
+    const ball = document.createElement('div');
+    ball.className = 'ball';
+    ball.style.background = c.hex;
+    btn.appendChild(ball);
     grid.appendChild(btn);
     if (i === 0) {
-      document.getElementById('mugPhoto').src = c.image;
       document.getElementById('colorLabel').textContent = c.name;
       selectedColor = c.name;
     }
   });
 }
 renderColorGrid();
+renderMugPreview();
 
-// FIXED: 3-filled-slots/all-different-designs case now charges +$6 to
-// match create-checkout-session.js's calculateUpsellCharge() exactly —
-// previously showed +$5 here while actually being charged +$6 at
-// Stripe checkout. Everything else in this function was already correct.
 function calculateUpsell(){
   if (!pendingOrder) return { charge: 0, label: '' };
   const { left, front, right } = pendingOrder.placements;
@@ -436,9 +462,6 @@ async function submitOrder(){
   setStatus('Setting up your secure checkout...');
 
   try {
-    // FIXED: was calling the now-deleted /api/create-mug-checkout-session.
-    // Now correctly calls the unified /api/create-checkout-session with
-    // type:'mug_order' so the router sends it to handleMugOrder().
     const resp = await fetch('/api/create-checkout-session', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
