@@ -297,6 +297,10 @@ function renderColorGrid(){
 }
 renderColorGrid();
 
+// FIXED: 3-filled-slots/all-different-designs case now charges +$6 to
+// match create-checkout-session.js's calculateUpsellCharge() exactly —
+// previously showed +$5 here while actually being charged +$6 at
+// Stripe checkout. Everything else in this function was already correct.
 function calculateUpsell(){
   if (!pendingOrder) return { charge: 0, label: '' };
   const { left, front, right } = pendingOrder.placements;
@@ -310,7 +314,7 @@ function calculateUpsell(){
   }
   return distinct === 1
     ? { charge: 3, label: 'Same design on all 3 sides' }
-    : { charge: 5, label: 'Different designs on 3 sides' };
+    : { charge: 6, label: 'Different designs on 3 sides' };
 }
 
 function updateSummary(){
@@ -381,10 +385,14 @@ async function submitOrder(){
   setStatus('Setting up your secure checkout...');
 
   try {
-    const resp = await fetch('/api/create-mug-checkout-session', {
+    // FIXED: was calling the now-deleted /api/create-mug-checkout-session.
+    // Now correctly calls the unified /api/create-checkout-session with
+    // type:'mug_order' so the router sends it to handleMugOrder().
+    const resp = await fetch('/api/create-checkout-session', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
+        type: 'mug_order',
         deviceId: pendingOrder.deviceId,
         placements: pendingOrder.placements,
         mugType: selectedStyle,
