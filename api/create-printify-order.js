@@ -197,13 +197,10 @@ async function submitPrintifyOrder(productId, variantId, shippingAddress, extern
   return data;
 }
 
-// Determines the $3 / $5 upsell charge based on how many placements were
-// filled and whether they're duplicate or distinct designs.
-//
-// NOTE: pricing for filling all THREE placements with three DIFFERENT
-// designs hasn't been finalized in the business rules yet. This
-// currently falls back to the $5 tier for that case and flags it, so
-// it's visible in the response rather than silently guessed.
+// Determines the $3 / $5 / $6 upsell charge based on how many placements
+// were filled and whether they're duplicate or distinct designs.
+// Finalized to match order.html and create-checkout-session.js exactly:
+// three distinct designs on all three placements is $6, not $5.
 function calculateUpsellCharge(placements) {
   const { left, front, right } = placements;
   const filled = [left, front, right].filter(Boolean);
@@ -219,14 +216,9 @@ function calculateUpsellCharge(placements) {
       : { upsellCharge: 5, reason: "Two placements, different designs." };
   }
 
-  if (distinctCount === 1) {
-    return { upsellCharge: 3, reason: "Three placements, same design." };
-  }
-  return {
-    upsellCharge: 5,
-    reason: "Three placements with multiple designs — pricing for this exact combination is not finalized yet; defaulting to the $5 tier.",
-    needsPricingConfirmation: true
-  };
+  return distinctCount === 1
+    ? { upsellCharge: 3, reason: "Three placements, same design." }
+    : { upsellCharge: 6, reason: "Three placements, all different designs." };
 }
 
 // The real, reusable order-placing logic. Called two ways: directly by
@@ -245,6 +237,7 @@ function calculateUpsellCharge(placements) {
 //       Ewww Stew / Second Glance Funny / All-Cup products. Uses the
 //       first design found (front, then left, then right); slot choice
 //       is meaningless in this mode since the art covers everything.
+//       This option is offered to customers at no extra charge.
 export async function placeMugOrder({ placements, mugType, sizeLabel, shippingAddress, customerName, orderId, printMode = "standard" }) {
   // A design can live in ANY slot — Left, Center, or Right. No single
   // slot is mandatory; the only rule is at least one design somewhere.
@@ -292,11 +285,10 @@ export async function placeMugOrder({ placements, mugType, sizeLabel, shippingAd
   );
 
   // In full-bleed mode there's only one design covering everything, so
-  // the multi-placement upsell doesn't apply — the All-Cup markup will
-  // be handled at checkout (order.html / create-mug-checkout-session)
-  // when the customer-facing option is built.
+  // the multi-placement upsell doesn't apply — full-wrap printing is a
+  // free style choice, not an upsell (it costs nothing extra to fulfill).
   const pricing = isFullBleed
-    ? { upsellCharge: 0, reason: "All-Cup full-bleed print — single design covers the entire mug; multi-placement upsell not applicable." }
+    ? { upsellCharge: 0, reason: "All-Cup full-bleed print — single design covers the entire mug; offered free of charge." }
     : calculateUpsellCharge(placements);
 
   return {
@@ -305,8 +297,7 @@ export async function placeMugOrder({ placements, mugType, sizeLabel, shippingAd
     productId,
     printMode: isFullBleed ? "fullBleed" : "standard",
     upsellCharge: pricing.upsellCharge,
-    upsellReason: pricing.reason,
-    needsPricingConfirmation: pricing.needsPricingConfirmation || false
+    upsellReason: pricing.reason
   };
 }
 
