@@ -48,6 +48,7 @@ label{font-size:11px;color:#888;letter-spacing:.5px;text-transform:uppercase;dis
 .token-meter-row{position:fixed;top:8px;right:10px;left:auto;z-index:999;display:flex;align-items:center;pointer-events:none}
 #tokenMeterWrap{position:relative;width:150px;flex-shrink:0}
 @media (min-width:1000px){.token-meter-row{top:16px;right:24px}}
+#phoneSearchInput{margin-bottom:0}
 </style>
 </head>
 <body>
@@ -72,6 +73,13 @@ label{font-size:11px;color:#888;letter-spacing:.5px;text-transform:uppercase;dis
 <div class="btn-select" data-style="Color Pop" onclick="pickStyle(this)">Color Pop<span class="price" id="priceCP"></span></div>
 </div>
 <div class="note">Trimmed and Accented are coming soon — not available to order just yet.</div>
+</div>
+
+<div class="card">
+<div class="card-title">📱 Phone Case</div>
+<div class="note" style="margin-top:0;margin-bottom:.75rem">Search your phone model to see if we can make a case for it.</div>
+<input type="text" id="phoneSearchInput" placeholder="e.g. iPhone 15, Galaxy S23"/>
+<div id="phoneSearchResult" style="margin-top:.5rem;font-size:13px;"></div>
 </div>
 
 <div class="card">
@@ -229,6 +237,31 @@ function updateGiftMessageCount(){
   const len = document.getElementById('giftMessageText').value.length;
   document.getElementById('giftMessageCount').textContent = (200 - len) + ' characters remaining';
 }
+
+let phoneSearchTimeout;
+document.getElementById('phoneSearchInput').addEventListener('input', function(e) {
+  clearTimeout(phoneSearchTimeout);
+  const q = e.target.value.trim();
+  const resultDiv = document.getElementById('phoneSearchResult');
+  if (q.length < 3) {
+    resultDiv.innerHTML = '';
+    return;
+  }
+  resultDiv.innerHTML = '<span style="color:#888;">Checking...</span>';
+  phoneSearchTimeout = setTimeout(async () => {
+    try {
+      const res = await fetch('/api/phone-compatibility-check?q=' + encodeURIComponent(q));
+      const data = await res.json();
+      if (data.supported) {
+        resultDiv.innerHTML = '<span style="color:#4ade80;">✓ Yes! We can make a case for your ' + q + '.</span>';
+      } else {
+        resultDiv.innerHTML = '<span style="color:#f87171;">✗ Sorry, we don\'t currently offer a case for that model.</span>';
+      }
+    } catch (err) {
+      resultDiv.innerHTML = '<span style="color:#f87171;">Something went wrong checking that — try again.</span>';
+    }
+  }, 500);
+});
 
 let pendingOrder = null;
 try {
