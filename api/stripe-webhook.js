@@ -1,5 +1,5 @@
 import Stripe from "stripe";
-import { placeMugOrder } from "./create-printify-order.js";
+import { placeProductOrder } from "./create-printify-order.js";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
@@ -202,22 +202,39 @@ async function handleMugOrderPayment(session) {
   // "standard" if it's ever missing from older/edge-case sessions.
   const printMode = m.print_mode === "fullBleed" ? "fullBleed" : "standard";
 
+  // Maps the old plain-text mug_type metadata value to the new catalog
+  // product key. Add a line here any time a new mug-family product is
+  // added to the catalog that this checkout flow can produce.
+  const MUG_TYPE_TO_PRODUCT_KEY = {
+    "Classic White": "classic-white-mug",
+    "Color Pop": "color-pop-mug"
+  };
+  const productKey = MUG_TYPE_TO_PRODUCT_KEY[m.mug_type];
+  if (!productKey) {
+    console.error("CRITICAL: Unknown mug_type in session metadata, cannot place order.", {
+      stripeSessionId: session.id,
+      mugType: m.mug_type
+    });
+    return;
+  }
+
   try {
-    const result = await placeMugOrder({
-      placements,
-      mugType: m.mug_type,
+    const result = await placeProductOrder({
+      productKey,
       sizeLabel: m.size_label,
+      colorName: m.color || null,
+      placements,
       printMode,
       shippingAddress,
       customerName: m.customer_name,
       orderId: session.id
     });
-    console.log("Mug order placed successfully for session", session.id, "-> Printify order", result.printifyOrderId);
+    console.log("Order placed successfully for session", session.id, "-> Printify order", result.printifyOrderId);
   } catch (error) {
     // Never let a Printify failure look like it silently vanished —
     // this is the one thing that genuinely needs a human to notice and
     // manually fix, since the customer has already been charged.
-    console.error("CRITICAL: Mug order payment succeeded but Printify order failed.", {
+    console.error("CRITICAL: Order payment succeeded but Printify order failed.", {
       stripeSessionId: session.id,
       deviceId: m.device_id,
       customerEmail: m.email,
