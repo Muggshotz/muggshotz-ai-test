@@ -4,12 +4,23 @@
 // GET /api/printify-catalog?action=product  → returns a specific product's details
 // GET /api/printify-catalog?action=variants&blueprintId=X&providerId=Y → returns variants
 // GET /api/printify-catalog?action=search&keyword=tumbler → searches all blueprints by keyword
+// GET /api/printify-catalog?action=providers&blueprintId=X → lists valid print providers for a blueprint
 const SHOP_ID = "27439202";
 const DEFAULT_PRODUCT_ID = "6a38968893a2ad63ed041050";
 export default async function handler(req, res) {
   if (req.method !== "GET") return res.status(405).json({ error: "Method not allowed" });
   const { action, blueprintId, providerId } = req.query;
   try {
+    if (action === "providers") {
+      if (!blueprintId) return res.status(400).json({ error: "blueprintId is required." });
+      const response = await fetch(
+        `https://api.printify.com/v1/catalog/blueprints/${blueprintId}/print_providers.json`,
+        { headers: { "Authorization": `Bearer ${process.env.PRINTIFY_API_TOKEN}` } }
+      );
+      const data = await response.json();
+      if (!response.ok) return res.status(response.status).json(data);
+      return res.status(200).json(data);
+    }
     if (action === "search") {
       const keyword = (req.query.keyword || "").toLowerCase();
       if (!keyword) return res.status(400).json({ error: "keyword is required." });
