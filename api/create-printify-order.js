@@ -1,14 +1,7 @@
 import sharp from "sharp";
+import { getProduct } from "../lib/products-catalog.js";
 
 const SHOP_ID = "27439202";
-
-const MUG_SETTINGS = {
-  "Classic White": {
-    blueprint_id: 478,
-    print_provider_id: 99,
-    variants: { "11oz": 65216, "15oz": 104692 }
-  }
-};
 
 async function uploadImageToPrintify(imageBuffer, fileName) {
   const base64Data = imageBuffer.toString("base64");
@@ -37,7 +30,6 @@ function dataUrlToBuffer(dataUrl) {
 // Placements coming from a real customer order are live Supabase
 // Storage URLs (the actual generated design), not base64 data — only
 // the manual test-printify.html page still sends raw base64 uploads.
-// This handles both so buildWraparoundImage works correctly either way.
 async function resolveImageBuffer(source) {
   if (source.startsWith("data:")) {
     return dataUrlToBuffer(source);
@@ -49,9 +41,9 @@ async function resolveImageBuffer(source) {
 }
 
 // Asks Printify for this variant's actual print-area size, rather than
-// hardcoding it, so this keeps working correctly even if 15oz (or a
-// future size) turns out to use different dimensions than 11oz.
-async function getPlaceholderDimensions(blueprintId, printProviderId, variantId) {
+// trusting a hardcoded number, so this keeps working correctly even if
+// Printify changes a product's dimensions later.
+async function getPlaceholderDimensions(blueprintId, printProviderId, variantId, position) {
   const response = await fetch(
     `https://api.printify.com/v1/catalog/blueprints/${blueprintId}/print_providers/${printProviderId}/variants.json`,
     { headers: { "Authorization": `Bearer ${process.env.PRINTIFY_API_TOKEN}` } }
@@ -59,36 +51,31 @@ async function getPlaceholderDimensions(blueprintId, printProviderId, variantId)
   const data = await response.json();
   if (!response.ok) throw new Error("Failed to fetch blueprint variants: " + JSON.stringify(data));
   const variant = (data.variants || []).find(v => v.id === variantId);
-  if (!variant || !variant.placeholders || !variant.placeholders[0]) {
-    throw new Error(`No placeholder found for variant ${variantId}`);
+  if (!variant || !variant.placeholders) {
+    throw new Error(`No placeholders found for variant ${variantId}`);
   }
-  const ph = variant.placeholders[0];
-  return { width: ph.width, height: ph.height };
+  const ph = position
+    ? variant.placeholders.find(p => p.position === position)
+    : variant.placeholders[0];
+  if (!ph) throw new Error(`No "${position || "default"}" placeholder found for variant ${variantId}`);
+  return { width: ph.width, height: ph.height, position: ph.position };
 }
 
-// Printify only exposes ONE print position on this mug ("front"), and it
-// covers the entire wraparound surface, not just the front-facing side.
-// To get Left / Front / Right onto one mug, we build that single wide
-// image ourselves: three equal side-by-side sections, then upload the
-// combined result as the one "front" image Printify expects.
-//
-// The canvas is ALWAYS white (an unprinted mug is white), and every
-// design is scaled to fit INSIDE its own section without cropping
-// (fit: "contain"). Designs land only in the slots the customer chose —
-// a Right-only mug prints with art on the right third and clean white
-// everywhere else, which is a deliberate, legitimate product choice
-// (e.g. so the art faces outward for a left-handed drinker).
+// ===== LAYOUT BUILDERS =====
+// Each one takes whatever image source(s) the customer approved and
+// returns a finished PNG buffer ready to upload to Printify. Adding a
+// future layout type (a fifth pattern nobody's invented yet) means
+// adding one more function here — nothing else needs to change.
+
+// "three-slot-wrap" — existing coffee mug behavior. Left/Center/Right
+// sections side by side on one wide image, white canvas, each design
+// scaled to fit inside its own third without cropping.
 async function buildWraparoundImage(placements, canvasWidth, canvasHeight) {
   const { left, front, right } = placements;
-
   const WHITE = { r: 255, g: 255, b: 255 };
-
   const sectionWidth = Math.round(canvasWidth / 3);
-  const lastSectionWidth = canvasWidth - sectionWidth * 2; // absorb rounding into the right section
+  const lastSectionWidth = canvasWidth - sectionWidth * 2;
 
-  // Renders one design scaled to fit fully inside its section, on a
-  // white background. Returns null for empty slots — the white base
-  // canvas already handles those.
   async function renderSection(imageSource, width) {
     if (!imageSource) return null;
     return await sharp(await resolveImageBuffer(imageSource))
@@ -116,18 +103,9 @@ async function buildWraparoundImage(placements, canvasWidth, canvasHeight) {
     .toBuffer();
 }
 
-// THE ALL-CUP SWITCH (Second Glance Funny / Ewww Stew engine).
-//
-// The deliberate opposite of buildWraparoundImage's polite manners:
-// ONE design is scaled UP with fit: "cover" until it floods the ENTIRE
-// printable canvas edge to edge — bottom of the mug, around past the
-// handle, up to the print ceiling — and any overflow is cropped away.
-// This is the intentionally-resurrected "accident" behavior that gave
-// the lifeguard test mug its near-full coverage: liquid doesn't respect
-// margins. Art for this mode should be designed at the full print-area
-// proportions with sacrificial bleed at the edges, and with the top
-// inch fading pale so the print ceiling melts into the white ceramic
-// (the "Cleanish principle").
+// "full-bleed" — one design floods the entire print area edge to edge
+// (Ewww Stew / Second Glance Funny line). Deliberate opposite of the
+// wraparound builder's polite manners.
 async function buildFullBleedImage(imageSource, canvasWidth, canvasHeight) {
   return await sharp(await resolveImageBuffer(imageSource))
     .resize(canvasWidth, canvasHeight, { fit: "cover", position: "centre" })
@@ -135,11 +113,74 @@ async function buildFullBleedImage(imageSource, canvasWidth, canvasHeight) {
     .toBuffer();
 }
 
-async function createPrintifyProduct(imageId, mugType, sizeLabel, title) {
-  const settings = MUG_SETTINGS[mugType];
-  if (!settings) throw new Error(`Unknown mug type: ${mugType}`);
-  const variantId = settings.variants[sizeLabel];
-  if (!variantId) throw new Error(`Unknown size "${sizeLabel}" for mug type "${mugType}".`);
+// "single-image" — one design, contain-fit onto a white canvas sized to
+// the product's one print area. For products with exactly one design
+// slot and no left/right sections (e.g. Travel Mug with Handle, 14oz).
+async function buildSingleImage(imageSource, canvasWidth, canvasHeight) {
+  const WHITE = { r: 255, g: 255, b: 255 };
+  return await sharp(await resolveImageBuffer(imageSource))
+    .resize(canvasWidth, canvasHeight, { fit: "contain", background: WHITE })
+    .png()
+    .toBuffer();
+}
+
+// "front-back" — two independent designs, each contain-fit onto its own
+// separate print area (e.g. Travel Mug 20oz, which has distinct
+// mug_front and mug_back placeholders instead of one wraparound image).
+// Uses the SAME two builder calls as single-image, just run twice.
+async function buildFrontBackImages(frontSource, backSource, frontDims, backDims) {
+  const WHITE = { r: 255, g: 255, b: 255 };
+  async function build(source, dims) {
+    if (!source || !dims) return null;
+    return await sharp(await resolveImageBuffer(source))
+      .resize(dims.width, dims.height, { fit: "contain", background: WHITE })
+      .png()
+      .toBuffer();
+  }
+  const [frontBuf, backBuf] = await Promise.all([
+    build(frontSource, frontDims),
+    build(backSource, backDims)
+  ]);
+  return { frontBuf, backBuf };
+}
+
+// ===== VARIANT RESOLUTION =====
+// Looks up the correct Printify variant ID for a given product/size/
+// color combination, handling the two different catalog shapes:
+// flat sizes (most products) and colors-nested-under-size (Color Pop,
+// where available colors differ by size).
+function resolveVariant(product, sizeLabel, colorName) {
+  const sizeEntry = product.sizes?.[sizeLabel];
+  if (!sizeEntry) throw new Error(`Unknown size "${sizeLabel}" for this product.`);
+
+  // Case 1: colors nested under this size (e.g. Color Pop)
+  if (sizeEntry.colors) {
+    if (!colorName) throw new Error("A color selection is required for this product.");
+    const colorEntry = sizeEntry.colors.find(c => c.name === colorName);
+    if (!colorEntry) throw new Error(`Unknown color "${colorName}" for size "${sizeLabel}".`);
+    return { variantId: colorEntry.variantId, price: sizeEntry.price };
+  }
+
+  // Case 2: flat top-level colors array (e.g. Travel Mug 20oz)
+  if (product.colors) {
+    if (!colorName) throw new Error("A color selection is required for this product.");
+    const colorEntry = product.colors.find(c => c.name === colorName);
+    if (!colorEntry) throw new Error(`Unknown color "${colorName}".`);
+    return { variantId: colorEntry.variantId, price: sizeEntry.price };
+  }
+
+  // Case 3: no color choice at all — variant ID lives directly on the size
+  if (!sizeEntry.variantId) throw new Error(`No variantId configured for size "${sizeLabel}".`);
+  return { variantId: sizeEntry.variantId, price: sizeEntry.price };
+}
+
+async function createPrintifyProduct(images, product, variantId, title) {
+  // images is either { position: imageId } for single/full-bleed/front-back,
+  // built into the placeholders array below.
+  const placeholders = Object.entries(images).map(([position, imageId]) => ({
+    position,
+    images: [{ id: imageId, x: 0.5, y: 0.5, scale: 1, angle: 0 }]
+  }));
 
   const response = await fetch(`https://api.printify.com/v1/shops/${SHOP_ID}/products.json`, {
     method: "POST",
@@ -149,30 +190,16 @@ async function createPrintifyProduct(imageId, mugType, sizeLabel, title) {
     },
     body: JSON.stringify({
       title: title,
-      description: "Custom Muggshotz caricature mug.",
-      blueprint_id: settings.blueprint_id,
-      print_provider_id: settings.print_provider_id,
-      variants: [
-        { id: variantId, price: 1, is_enabled: true }
-      ],
-      print_areas: [
-        {
-          variant_ids: [variantId],
-          placeholders: [
-            {
-              position: "front",
-              images: [
-                { id: imageId, x: 0.5, y: 0.5, scale: 1, angle: 0 }
-              ]
-            }
-          ]
-        }
-      ]
+      description: `Custom Muggshotz ${product.displayName}.`,
+      blueprint_id: product.blueprintId,
+      print_provider_id: product.printProviderId,
+      variants: [{ id: variantId, price: 1, is_enabled: true }],
+      print_areas: [{ variant_ids: [variantId], placeholders }]
     })
   });
   const data = await response.json();
   if (!response.ok) throw new Error("Printify product creation failed: " + JSON.stringify(data));
-  return { productId: data.id, variantId };
+  return { productId: data.id };
 }
 
 async function submitPrintifyOrder(productId, variantId, shippingAddress, externalOrderId) {
@@ -184,9 +211,7 @@ async function submitPrintifyOrder(productId, variantId, shippingAddress, extern
     },
     body: JSON.stringify({
       external_id: externalOrderId,
-      line_items: [
-        { product_id: productId, variant_id: variantId, quantity: 1 }
-      ],
+      line_items: [{ product_id: productId, variant_id: variantId, quantity: 1 }],
       shipping_method: 1,
       send_shipping_notification: true,
       address_to: shippingAddress
@@ -199,103 +224,115 @@ async function submitPrintifyOrder(productId, variantId, shippingAddress, extern
 
 // Determines the $3 / $5 / $6 upsell charge based on how many placements
 // were filled and whether they're duplicate or distinct designs.
-// Finalized to match order.html and create-checkout-session.js exactly:
-// three distinct designs on all three placements is $6, not $5.
+// Only meaningful for "three-slot-wrap" products — other layout types
+// don't have multiple slots, so this returns 0 for them.
 function calculateUpsellCharge(placements) {
+  if (!placements) return { upsellCharge: 0, reason: "Not applicable to this product." };
   const { left, front, right } = placements;
   const filled = [left, front, right].filter(Boolean);
   const distinctCount = new Set(filled).size;
 
-  if (filled.length <= 1) {
-    return { upsellCharge: 0, reason: "Single design, base price only." };
-  }
-
+  if (filled.length <= 1) return { upsellCharge: 0, reason: "Single design, base price only." };
   if (filled.length === 2) {
     return distinctCount === 1
       ? { upsellCharge: 3, reason: "Two placements, same design." }
       : { upsellCharge: 5, reason: "Two placements, different designs." };
   }
-
   return distinctCount === 1
     ? { upsellCharge: 3, reason: "Three placements, same design." }
     : { upsellCharge: 6, reason: "Three placements, all different designs." };
 }
 
-// The real, reusable order-placing logic. Called two ways: directly by
-// the HTTP handler below (for the manual test-printify.html page), and
-// directly by stripe-webhook.js once a real customer payment succeeds.
-// Keeping this as one shared function means both paths always place
-// orders exactly the same way — no risk of the "real" and "test" paths
-// quietly drifting apart from each other over time.
+// ===== THE MAIN ENTRY POINT =====
+// Generic across every product in the catalog. Called by stripe-webhook.js
+// once payment succeeds, and directly by the HTTP handler below for
+// manual testing.
 //
-// printMode (the switch):
-//   "standard" (default) — the existing three-slot caricature layout:
-//       each design contain-fits politely inside its own third with
-//       white everywhere else. Right for faces.
-//   "fullBleed" (aliases: "allCup") — ONE design floods the entire
-//       print area edge to edge via buildFullBleedImage. Right for
-//       Ewww Stew / Second Glance Funny / All-Cup products. Uses the
-//       first design found (front, then left, then right); slot choice
-//       is meaningless in this mode since the art covers everything.
-//       This option is offered to customers at no extra charge.
-export async function placeMugOrder({ placements, mugType, sizeLabel, shippingAddress, customerName, orderId, printMode = "standard" }) {
-  // A design can live in ANY slot — Left, Center, or Right. No single
-  // slot is mandatory; the only rule is at least one design somewhere.
-  if (!placements || !(placements.left || placements.front || placements.right)) {
-    throw new Error("At least one design is required, in any slot.");
+// Expected input shape varies slightly by layoutType:
+//   three-slot-wrap : { placements: {left, front, right}, printMode }
+//   front-back      : { frontImage, backImage }
+//   single-image     : { image }
+//   full-bleed       : { image }
+export async function placeProductOrder({
+  productKey,
+  sizeLabel,
+  colorName,
+  placements,
+  frontImage,
+  backImage,
+  image,
+  shippingAddress,
+  customerName,
+  orderId,
+  printMode = "standard"
+}) {
+  const product = getProduct(productKey);
+  if (!product) throw new Error(`Unknown product: "${productKey}"`);
+  if (!shippingAddress) throw new Error("shippingAddress is required.");
+
+  const { variantId, price } = resolveVariant(product, sizeLabel, colorName);
+
+  let printifyImages = {};
+  let pricing = { upsellCharge: 0, reason: "N/A" };
+
+  if (product.layoutType === "three-slot-wrap") {
+    if (!placements || !(placements.left || placements.front || placements.right)) {
+      throw new Error("At least one design is required, in any slot.");
+    }
+    const isFullBleed = printMode === "fullBleed" || printMode === "allCup";
+    const { width, height, position } = await getPlaceholderDimensions(
+      product.blueprintId, product.printProviderId, variantId
+    );
+    const buffer = isFullBleed
+      ? await buildFullBleedImage(placements.front || placements.left || placements.right, width, height)
+      : await buildWraparoundImage(placements, width, height);
+    const imageId = await uploadImageToPrintify(buffer, `muggshotz-${Date.now()}.png`);
+    printifyImages[position] = imageId;
+    pricing = isFullBleed
+      ? { upsellCharge: 0, reason: "All-Cup full-bleed print — offered free of charge." }
+      : calculateUpsellCharge(placements);
+
+  } else if (product.layoutType === "front-back") {
+    if (!frontImage && !backImage) throw new Error("At least a front or back image is required.");
+    const frontDims = product.printDimensions?.front;
+    const backDims = product.printDimensions?.back;
+    const { frontBuf, backBuf } = await buildFrontBackImages(frontImage, backImage, frontDims, backDims);
+    if (frontBuf) printifyImages["mug_front"] = await uploadImageToPrintify(frontBuf, `muggshotz-front-${Date.now()}.png`);
+    if (backBuf) printifyImages["mug_back"] = await uploadImageToPrintify(backBuf, `muggshotz-back-${Date.now()}.png`);
+
+  } else if (product.layoutType === "single-image") {
+    if (!image) throw new Error("An image is required.");
+    const dims = product.printDimensions?.front;
+    const { width, height, position } = dims
+      ? { ...dims, position: "front" }
+      : await getPlaceholderDimensions(product.blueprintId, product.printProviderId, variantId);
+    const buffer = await buildSingleImage(image, width, height);
+    printifyImages[position] = await uploadImageToPrintify(buffer, `muggshotz-${Date.now()}.png`);
+
+  } else if (product.layoutType === "full-bleed") {
+    if (!image) throw new Error("An image is required.");
+    const { width, height, position } = await getPlaceholderDimensions(
+      product.blueprintId, product.printProviderId, variantId
+    );
+    const buffer = await buildFullBleedImage(image, width, height);
+    printifyImages[position] = await uploadImageToPrintify(buffer, `muggshotz-${Date.now()}.png`);
+
+  } else {
+    throw new Error(`Unknown layoutType "${product.layoutType}" for product "${productKey}".`);
   }
-  if (!mugType || !sizeLabel || !shippingAddress) {
-    throw new Error("Missing required fields.");
-  }
 
-  const settings = MUG_SETTINGS[mugType];
-  if (!settings) throw new Error(`Unknown mug type: ${mugType}`);
-  const variantId = settings.variants[sizeLabel];
-  if (!variantId) throw new Error(`Unknown size "${sizeLabel}" for mug type "${mugType}".`);
-
-  const isFullBleed = printMode === "fullBleed" || printMode === "allCup";
-
-  const { width, height } = await getPlaceholderDimensions(
-    settings.blueprint_id,
-    settings.print_provider_id,
-    variantId
-  );
-
-  const compositeImageBuffer = isFullBleed
-    ? await buildFullBleedImage(
-        placements.front || placements.left || placements.right,
-        width,
-        height
-      )
-    : await buildWraparoundImage(placements, width, height);
-
-  const fileName = `muggshotz-${Date.now()}.png`;
-  const imageId = await uploadImageToPrintify(compositeImageBuffer, fileName);
-
-  const productTitle = isFullBleed
-    ? `Muggshotz All-Cup Mug${customerName ? " - " + customerName : ""}`
-    : `Muggshotz Caricature Mug${customerName ? " - " + customerName : ""}`;
-  const { productId } = await createPrintifyProduct(imageId, mugType, sizeLabel, productTitle);
+  const productTitle = `Muggshotz ${product.displayName}${customerName ? " - " + customerName : ""}`;
+  const { productId } = await createPrintifyProduct(printifyImages, product, variantId, productTitle);
 
   const orderResult = await submitPrintifyOrder(
-    productId,
-    variantId,
-    shippingAddress,
-    orderId || `muggshotz-${Date.now()}`
+    productId, variantId, shippingAddress, orderId || `muggshotz-${Date.now()}`
   );
-
-  // In full-bleed mode there's only one design covering everything, so
-  // the multi-placement upsell doesn't apply — full-wrap printing is a
-  // free style choice, not an upsell (it costs nothing extra to fulfill).
-  const pricing = isFullBleed
-    ? { upsellCharge: 0, reason: "All-Cup full-bleed print — single design covers the entire mug; offered free of charge." }
-    : calculateUpsellCharge(placements);
 
   return {
     success: true,
     printifyOrderId: orderResult.id,
     productId,
-    printMode: isFullBleed ? "fullBleed" : "standard",
+    basePrice: price,
     upsellCharge: pricing.upsellCharge,
     upsellReason: pricing.reason
   };
@@ -306,7 +343,7 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: "Method not allowed" });
   }
   try {
-    const result = await placeMugOrder(req.body);
+    const result = await placeProductOrder(req.body);
     return res.status(200).json(result);
   } catch (error) {
     return res.status(500).json({ error: error.message });
