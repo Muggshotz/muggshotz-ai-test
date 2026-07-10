@@ -44,7 +44,9 @@ function resolvePrice(product, sizeLabel, colorName) {
 // productKey directly for new products.
 const MUG_TYPE_TO_PRODUCT_KEY = {
   "Classic White": "classic-white-mug",
-  "Color Pop": "color-pop-mug"
+  "Color Pop": "color-pop-mug",
+  "Trimmed": "trimmed-mug",
+  "Accented": "accented-mug"
 };
 
 // ── Preview Reservation ($5, credits tokens, acts as deposit on mug) ──
