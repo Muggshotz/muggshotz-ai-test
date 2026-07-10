@@ -61,6 +61,20 @@ label{font-size:11px;color:#888;letter-spacing:.5px;text-transform:uppercase;dis
 <div class="header-title">🛒 Order Your Product</div>
 <div class="main">
 
+<div class="card" id="bridgeGridCard">
+<div class="card-title">🎨 Your Artwork's Ready. Now Where Will It Live?</div>
+<div class="note" id="bridgeGridSubnote" style="margin-top:0;margin-bottom:.9rem"></div>
+<div class="grid3" id="bridgeGridReal"></div>
+<div id="comingSoonToggleBar" onclick="toggleComingSoonPanel()"
+  style="margin-top:.85rem;padding:.55rem;border-radius:20px;border:.5px dashed #444;text-align:center;font-size:12px;color:#888;cursor:pointer;letter-spacing:.3px">
+  ...and many, many, many more <span id="comingSoonArrow">▼</span>
+</div>
+<div id="comingSoonPanel" style="display:none;margin-top:.85rem">
+<div class="note" style="margin-top:0;margin-bottom:.75rem">We're rapidly growing this list — here's what's coming next. Your artwork will work on every one of these too, the moment they go live.</div>
+<div class="grid3" id="bridgeGridComingSoon"></div>
+</div>
+</div>
+
 <div class="card" id="previewCard">
 <div class="card-title">🖼️ Your Design</div>
 <div class="preview-row" id="previewRow"></div>
@@ -76,6 +90,17 @@ label{font-size:11px;color:#888;letter-spacing:.5px;text-transform:uppercase;dis
 <div class="card-title">🧳 Suitcase Size</div>
 <div class="grid3" id="suitcaseSizeGrid"></div>
 <div class="note">Comes in Black only.</div>
+</div>
+
+<div class="card" id="toteBagSizeCard" style="display:none">
+<div class="card-title">👜 Tote Bag Size</div>
+<div class="grid3" id="toteBagSizeGrid"></div>
+</div>
+
+<div class="card" id="toteBagColorCard" style="display:none">
+<div class="card-title">🎨 Tote Bag Color</div>
+<div class="color-grid" id="toteBagColorGrid"></div>
+<div class="color-label" id="toteBagColorLabel">Pick a color</div>
 </div>
 
 <div class="card" id="phoneCaseCard" style="display:none">
@@ -361,9 +386,21 @@ try {
 // pending order saved before that change simply won't have it — treated
 // safely here as "mug" (the original, only-ever behavior), so nothing
 // breaks for anyone mid-session during the rollout of this change.
-const isTravelMug = pendingOrder?.productIcon === 'water bottle';
-const isMug = pendingOrder?.productIcon === 'mug';
-const isSuitcase = pendingOrder?.productIcon === 'suitcase';
+//
+// selectedProductFamily starts as whatever icon was picked before
+// generating, but is now just a STARTING SUGGESTION — the bridge grid
+// at the top of this page lets the customer override it entirely,
+// since the artwork itself works on any product regardless of which
+// aspect-ratio icon shaped it originally.
+let selectedProductFamily = pendingOrder?.productIcon || 'mug';
+
+// These are now small functions instead of fixed constants, since
+// selectedProductFamily can change after the page has already loaded.
+function isTravelMug(){ return selectedProductFamily === 'water bottle'; }
+function isMug(){ return selectedProductFamily === 'mug'; }
+function isSuitcase(){ return selectedProductFamily === 'suitcase'; }
+function isPhoneCase(){ return selectedProductFamily === 'phone case'; }
+function isToteBag(){ return selectedProductFamily === 'tote bag'; }
 
 // Suitcase pricing — kept in sync manually with lib/products-catalog.js
 // "suitcase" entry. Single color (Black), one design covers the whole
@@ -374,8 +411,6 @@ const SUITCASE_SIZES = {
   "Large": { price: 214.95 }
 };
 let selectedSuitcaseSize = "Small";
-
-const isPhoneCase = pendingOrder?.productIcon === 'phone case';
 
 // Phone case model list — kept in sync manually with lib/products-catalog.js
 // "phone-case-tough" entry. Flat $24.95 price across every model, single
@@ -393,6 +428,55 @@ const PHONE_CASE_MODELS = [
 ];
 const PHONE_CASE_PRICE = 24.95;
 let selectedPhoneModel = null;
+
+// Tote bag pricing — kept in sync manually with lib/products-catalog.js
+// "tote-bag" entry. Flat +$5 profit per size (not tiered), same 5 colors
+// available at every size.
+const TOTE_BAG_SIZES = {
+  "13\" x 13\"": { price: 23.95, colors: [
+    { name: "Beige", hex: "#E8DCC8" }, { name: "Black", hex: "#1c1c1c" },
+    { name: "Light Blue", hex: "#A8D4E8" }, { name: "Light Pink", hex: "#F4C2D7" },
+    { name: "White", hex: "#FFFFFF" }
+  ]},
+  "16\" x 16\"": { price: 24.95, colors: [
+    { name: "Beige", hex: "#E8DCC8" }, { name: "Black", hex: "#1c1c1c" },
+    { name: "Light Blue", hex: "#A8D4E8" }, { name: "Light Pink", hex: "#F4C2D7" },
+    { name: "White", hex: "#FFFFFF" }
+  ]},
+  "18\" x 18\"": { price: 25.95, colors: [
+    { name: "Beige", hex: "#E8DCC8" }, { name: "Black", hex: "#1c1c1c" },
+    { name: "Light Blue", hex: "#A8D4E8" }, { name: "Light Pink", hex: "#F4C2D7" },
+    { name: "White", hex: "#FFFFFF" }
+  ]}
+};
+let selectedToteSize = "13\" x 13\"";
+let selectedToteColor = null;
+
+// Real, working products — shown as clickable tiles in the bridge grid.
+// Adding a new working product later means adding one entry here.
+const BRIDGE_GRID_PRODUCTS = [
+  { key: 'mug', icon: '☕', label: 'Coffee Mug', priceFrom: '$14.95' },
+  { key: 'water bottle', icon: '🍶', label: 'Travel Cups', priceFrom: '$34.95' },
+  { key: 'suitcase', icon: '🧳', label: 'Suitcase', priceFrom: '$169.95' },
+  { key: 'phone case', icon: '📱', label: 'Phone Case', priceFrom: '$24.95' },
+  { key: 'tote bag', icon: '👜', label: 'Tote Bag', priceFrom: '$23.95' }
+  // 6th real product slot — pending Alyx's pick.
+];
+// Honest coming-soon list — shown behind the expandable "many more" bar,
+// not the main grid, since this is meant to grow continuously as new
+// products get built. Add a line here any time a new future product
+// idea comes up, even before it's actually sourced/built.
+const BRIDGE_GRID_COMING_SOON = [
+  { icon: '🧸', label: 'Teddy Bear' }, // priority next build — Alyx's pick for the 6th real slot
+  { icon: '💌', label: 'Greeting Card' },
+  { icon: '📝', label: 'Post-it Note' },
+  { icon: '👕', label: 'T-Shirt' },
+  { icon: '🧥', label: 'Hoodie' },
+  { icon: '🎒', label: 'Backpack' },
+  { icon: '📓', label: 'Notebook' },
+  { icon: '🪧', label: 'Desk Plaque' },
+  { icon: '🖼️', label: 'Poster' }
+];
 
 // Friendly display names for product icons that don't have a real
 // checkout flow yet — used only for the honest "not available yet"
@@ -434,6 +518,95 @@ function pickPhoneModel(model){
   document.getElementById('phoneModelSearchInput').value = model;
   document.getElementById('phoneModelResults').innerHTML = '';
   document.getElementById('phoneModelSelectedNote').textContent = '✓ Case selected for ' + model + ' — $' + PHONE_CASE_PRICE.toFixed(2) + ' + shipping.';
+  updateSummary();
+}
+
+let comingSoonOpen = false;
+function toggleComingSoonPanel(){
+  comingSoonOpen = !comingSoonOpen;
+  document.getElementById('comingSoonPanel').style.display = comingSoonOpen ? 'block' : 'none';
+  document.getElementById('comingSoonArrow').textContent = comingSoonOpen ? '▲' : '▼';
+}
+
+function renderBridgeGrid(){
+  document.getElementById('bridgeGridSubnote').textContent =
+    'Your design works on any of these — pick whichever you want, no need to go back and regenerate.';
+
+  const realGrid = document.getElementById('bridgeGridReal');
+  realGrid.innerHTML = '';
+  BRIDGE_GRID_PRODUCTS.forEach(p => {
+    const btn = document.createElement('div');
+    btn.className = 'btn-select' + (p.key === selectedProductFamily ? ' selected' : '');
+    btn.innerHTML = '<span class="icon">' + p.icon + '</span>' + p.label + '<span class="price">From ' + p.priceFrom + '</span>';
+    btn.onclick = () => pickProductFamily(p.key);
+    realGrid.appendChild(btn);
+  });
+
+  const soonGrid = document.getElementById('bridgeGridComingSoon');
+  soonGrid.innerHTML = '';
+  BRIDGE_GRID_COMING_SOON.forEach(p => {
+    const tile = document.createElement('div');
+    tile.className = 'btn-select';
+    tile.style.opacity = '0.45';
+    tile.style.cursor = 'default';
+    tile.innerHTML = '<span class="icon">' + p.icon + '</span>' + p.label;
+    soonGrid.appendChild(tile);
+  });
+}
+
+function pickProductFamily(key){
+  selectedProductFamily = key;
+  renderBridgeGrid();
+  setupPageForMode();
+  document.getElementById('previewCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function renderToteBagSizeGrid(){
+  const grid = document.getElementById('toteBagSizeGrid');
+  grid.innerHTML = '';
+  Object.keys(TOTE_BAG_SIZES).forEach(sizeName => {
+    const btn = document.createElement('div');
+    btn.className = 'btn-select' + (sizeName === selectedToteSize ? ' selected' : '');
+    const price = TOTE_BAG_SIZES[sizeName].price;
+    btn.innerHTML = sizeName + '<span class="price">$' + price.toFixed(2) + '</span>';
+    btn.onclick = () => pickToteBagSize(sizeName);
+    grid.appendChild(btn);
+  });
+}
+
+function pickToteBagSize(sizeName){
+  selectedToteSize = sizeName;
+  selectedToteColor = null;
+  renderToteBagSizeGrid();
+  renderToteBagColorGrid();
+  updateSummary();
+}
+
+function renderToteBagColorGrid(){
+  const grid = document.getElementById('toteBagColorGrid');
+  grid.innerHTML = '';
+  const colors = TOTE_BAG_SIZES[selectedToteSize].colors;
+  colors.forEach((c, i) => {
+    const btn = document.createElement('div');
+    btn.className = 'color-btn' + (i === 0 ? ' selected' : '');
+    btn.onclick = () => pickToteBagColor(btn, c);
+    const ball = document.createElement('div');
+    ball.className = 'ball';
+    ball.style.background = c.hex;
+    btn.appendChild(ball);
+    grid.appendChild(btn);
+    if (i === 0) {
+      document.getElementById('toteBagColorLabel').textContent = c.name;
+      selectedToteColor = c.name;
+    }
+  });
+}
+
+function pickToteBagColor(el, colorData){
+  document.querySelectorAll('#toteBagColorGrid .color-btn').forEach(b=>b.classList.remove('selected'));
+  el.classList.add('selected');
+  selectedToteColor = colorData.name;
+  document.getElementById('toteBagColorLabel').textContent = selectedToteColor;
   updateSummary();
 }
 
@@ -709,16 +882,19 @@ function pickTravelColor(el, colorData){
 function updateSummary(){
   let basePrice, upsellCharge = 0, upsellLabel = '', styleSizeLabel;
 
-  if (isTravelMug) {
+  if (isTravelMug()) {
     const product = selectedTravelProductKey ? TRAVEL_MUG_CATALOG[selectedTravelProductKey] : null;
     basePrice = product ? product.price : 0;
     styleSizeLabel = product ? (product.displayName + (selectedTravelColor ? ' - ' + selectedTravelColor : '')) : 'Pick a style above';
-  } else if (isSuitcase) {
+  } else if (isSuitcase()) {
     basePrice = SUITCASE_SIZES[selectedSuitcaseSize].price;
     styleSizeLabel = 'Suitcase, ' + selectedSuitcaseSize + ' (Black)';
-  } else if (isPhoneCase) {
+  } else if (isPhoneCase()) {
     basePrice = selectedPhoneModel ? PHONE_CASE_PRICE : 0;
     styleSizeLabel = selectedPhoneModel ? ('Phone Case, ' + selectedPhoneModel) : 'Search and pick your phone model above';
+  } else if (isToteBag()) {
+    basePrice = TOTE_BAG_SIZES[selectedToteSize].price;
+    styleSizeLabel = 'Tote Bag, ' + selectedToteSize + (selectedToteColor ? ' - ' + selectedToteColor : '');
   } else {
     basePrice = MUG_STYLES[selectedStyle].sizes[selectedSize].price;
     const upsell = calculateUpsell();
@@ -791,7 +967,7 @@ async function submitOrder(){
 
   let body;
 
-  if (isTravelMug) {
+  if (isTravelMug()) {
     const product = selectedTravelProductKey ? TRAVEL_MUG_CATALOG[selectedTravelProductKey] : null;
     if (!product) { setStatus('Please pick which travel mug you want.', true); return; }
     if (product.colors && !selectedTravelColor) { setStatus('Please pick a color.', true); return; }
@@ -826,7 +1002,7 @@ async function submitOrder(){
       return;
     }
 
-  } else if (isSuitcase) {
+  } else if (isSuitcase()) {
     const left = pendingOrder?.placements?.left || null;
     const front = pendingOrder?.placements?.front || null;
     const right = pendingOrder?.placements?.right || null;
@@ -848,7 +1024,7 @@ async function submitOrder(){
       shippingAddress
     };
 
-  } else if (isPhoneCase) {
+  } else if (isPhoneCase()) {
     if (!selectedPhoneModel) {
       setStatus('Please search and select your phone model above.', true);
       return;
@@ -868,6 +1044,33 @@ async function submitOrder(){
       deviceId,
       productKey: 'phone-case-tough',
       sizeLabel: selectedPhoneModel,
+      image,
+      customerName: fullName,
+      giftMessage: giftMessageEnabled ? document.getElementById('giftMessageText').value.trim() : null,
+      shippingAddress
+    };
+
+  } else if (isToteBag()) {
+    if (!selectedToteColor) {
+      setStatus('Please pick a color.', true);
+      return;
+    }
+    const left = pendingOrder?.placements?.left || null;
+    const front = pendingOrder?.placements?.front || null;
+    const right = pendingOrder?.placements?.right || null;
+    const image = left || front || right || null;
+
+    if (!image) {
+      setStatus('No design found — please go back and place a design first.', true);
+      return;
+    }
+
+    body = {
+      type: 'mug_order',
+      deviceId,
+      productKey: 'tote-bag',
+      sizeLabel: selectedToteSize,
+      colorName: selectedToteColor,
       image,
       customerName: fullName,
       giftMessage: giftMessageEnabled ? document.getElementById('giftMessageText').value.trim() : null,
@@ -918,66 +1121,84 @@ async function submitOrder(){
 
 // ===== Page setup — switches between the two modes =====
 function setupPageForMode(){
-  const unsupportedName = UNSUPPORTED_PRODUCT_NAMES[pendingOrder?.productIcon];
+  const unsupportedName = UNSUPPORTED_PRODUCT_NAMES[selectedProductFamily];
 
   if (unsupportedName) {
     // Honest dead-end: this product has no real checkout flow yet. Show
     // that plainly instead of silently substituting a mug — the bug
     // this replaces let a customer buy a mug thinking it was a phone
-    // case, tote bag, card, or post-it.
+    // case, tote bag, card, or post-it. Note: bridgeGridCard is NOT
+    // hidden here on purpose — it must stay visible/clickable so the
+    // customer can pick a real product instead, right from this screen.
     document.getElementById('notAvailableCard').style.display = 'block';
     document.getElementById('notAvailableText').textContent =
-      `${unsupportedName} isn't available to order yet — we're still building this one out. Check back soon, or head back to the generator to try a Mug or Tumbler instead.`;
-    ['mugStyleCard','sizeCard','livePreviewCard','colorCard','fullWrapCard','travelMugStyleCard','travelColorCard','suitcaseSizeCard','phoneCaseCard','shippingCard','giftMessageCard','summaryCard'].forEach(id => {
+      `${unsupportedName} isn't available to order yet — we're still building this one out. Pick a real option above instead.`;
+    hideAllProductCards();
+    ['shippingCard','giftMessageCard','summaryCard'].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.style.display = 'none';
     });
     document.getElementById('submitBtn').style.display = 'none';
     return;
+  } else {
+    document.getElementById('notAvailableCard').style.display = 'none';
+    ['shippingCard','giftMessageCard','summaryCard'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.style.display = 'block';
+    });
+    document.getElementById('submitBtn').style.display = 'block';
   }
 
-  if (isTravelMug) {
-    document.getElementById('mugStyleCard').style.display = 'none';
-    document.getElementById('sizeCard').style.display = 'none';
-    document.getElementById('livePreviewCard').style.display = 'none';
-    document.getElementById('colorCard').style.display = 'none';
-    document.getElementById('fullWrapCard').style.display = 'none';
-    document.getElementById('suitcaseSizeCard').style.display = 'none';
+  // All the product-specific cards that only one product family's flow
+// should show at a time. Hiding all of them first, then showing just
+// the right one(s), avoids the repeated long hide-lists that got
+// unwieldy as more products were added.
+const ALL_PRODUCT_SPECIFIC_CARDS = [
+  'mugStyleCard','sizeCard','livePreviewCard','colorCard','fullWrapCard',
+  'travelMugStyleCard','travelColorCard','suitcaseSizeCard','phoneCaseCard',
+  'toteBagSizeCard','toteBagColorCard'
+];
+function hideAllProductCards(){
+  ALL_PRODUCT_SPECIFIC_CARDS.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = 'none';
+  });
+}
+
+if (isTravelMug()) {
+    hideAllProductCards();
     document.getElementById('travelMugStyleCard').style.display = 'block';
     document.getElementById('previewNote').textContent =
       'Left = Front of your travel mug, Right = Back. Center is not used for this product.';
     renderTravelMugStyleGrid();
-  } else if (isSuitcase) {
-    document.getElementById('mugStyleCard').style.display = 'none';
-    document.getElementById('sizeCard').style.display = 'none';
-    document.getElementById('livePreviewCard').style.display = 'none';
-    document.getElementById('colorCard').style.display = 'none';
-    document.getElementById('fullWrapCard').style.display = 'none';
-    document.getElementById('travelMugStyleCard').style.display = 'none';
-    document.getElementById('travelColorCard').style.display = 'none';
-    document.getElementById('phoneCaseCard').style.display = 'none';
+  } else if (isSuitcase()) {
+    hideAllProductCards();
     document.getElementById('suitcaseSizeCard').style.display = 'block';
     document.getElementById('previewNote').textContent =
       'Whichever design you placed first (Left, Center, or Right) will be printed edge-to-edge across your suitcase — one design covers the whole case.';
     renderSuitcaseSizeGrid();
-  } else if (isPhoneCase) {
-    document.getElementById('mugStyleCard').style.display = 'none';
-    document.getElementById('sizeCard').style.display = 'none';
-    document.getElementById('livePreviewCard').style.display = 'none';
-    document.getElementById('colorCard').style.display = 'none';
-    document.getElementById('fullWrapCard').style.display = 'none';
-    document.getElementById('travelMugStyleCard').style.display = 'none';
-    document.getElementById('travelColorCard').style.display = 'none';
-    document.getElementById('suitcaseSizeCard').style.display = 'none';
+  } else if (isPhoneCase()) {
+    hideAllProductCards();
     document.getElementById('phoneCaseCard').style.display = 'block';
     document.getElementById('previewNote').textContent =
       'Whichever design you placed first (Left, Center, or Right) will be printed on your phone case.';
     setupPhoneModelSearch();
-  } else if (isMug) {
+  } else if (isToteBag()) {
+    hideAllProductCards();
+    document.getElementById('toteBagSizeCard').style.display = 'block';
+    document.getElementById('toteBagColorCard').style.display = 'block';
+    document.getElementById('previewNote').textContent =
+      'Whichever design you placed first (Left, Center, or Right) will be printed on your tote bag.';
+    renderToteBagSizeGrid();
+    renderToteBagColorGrid();
+  } else if (isMug()) {
     // This branch is ONLY for actual coffee mugs, never a silent
     // default for anything else.
-    document.getElementById('travelMugStyleCard').style.display = 'none';
-    document.getElementById('travelColorCard').style.display = 'none';
+    hideAllProductCards();
+    document.getElementById('mugStyleCard').style.display = 'block';
+    document.getElementById('sizeCard').style.display = 'block';
+    document.getElementById('livePreviewCard').style.display = 'block';
+    document.getElementById('fullWrapCard').style.display = 'block';
     renderMugStyleGrid();
     const hasColors = !!MUG_STYLES[selectedStyle].sizes[selectedSize].colors;
     document.getElementById('colorCard').style.display = hasColors ? 'block' : 'none';
@@ -987,6 +1208,7 @@ function setupPageForMode(){
   updateSummary();
 }
 
+renderBridgeGrid();
 setupPageForMode();
 </script>
 </body>
