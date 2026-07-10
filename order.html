@@ -13,6 +13,7 @@ body{background:#111;font-family:system-ui,sans-serif;color:#fff}
 .card-title{font-size:13px;font-weight:600;color:#ff6a00;letter-spacing:1px;text-transform:uppercase;margin-bottom:1rem}
 .note{font-size:11px;color:#555;margin-top:6px;line-height:1.35}
 .grid2{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
 .btn-select{background:#0d0d0d;border:.5px solid #333;border-radius:8px;padding:.9rem .6rem;text-align:center;cursor:pointer;color:#888;font-size:13px;font-weight:600}
 .btn-select.selected{border-color:#ff6a00;background:#1a0a00;color:#ff6a00}
 .btn-select .price{display:block;font-size:11px;color:#666;margin-top:3px;font-weight:400}
@@ -48,7 +49,6 @@ label{font-size:11px;color:#888;letter-spacing:.5px;text-transform:uppercase;dis
 .token-meter-row{position:fixed;top:8px;right:10px;left:auto;z-index:999;display:flex;align-items:center;pointer-events:none}
 #tokenMeterWrap{position:relative;width:150px;flex-shrink:0}
 @media (min-width:1000px){.token-meter-row{top:16px;right:24px}}
-#phoneSearchInput{margin-bottom:0}
 </style>
 </head>
 <body>
@@ -58,15 +58,16 @@ label{font-size:11px;color:#888;letter-spacing:.5px;text-transform:uppercase;dis
     <div id="tokenMeterNumber" style="position:absolute;left:44.4%;top:31.3%;width:13%;height:25.3%;display:flex;align-items:center;justify-content:center;color:#ff6a00;font-family:'Anton',sans-serif;font-weight:700;font-size:clamp(12px,3vw,18px);text-shadow:0 0 8px rgba(255,106,0,0.7)">—</div>
   </div>
 </div>
-<div class="header-title">🛒 Order Your Mug</div>
+<div class="header-title">🛒 Order Your Product</div>
 <div class="main">
 
 <div class="card" id="previewCard">
 <div class="card-title">🖼️ Your Design</div>
 <div class="preview-row" id="previewRow"></div>
+<div class="note" id="previewNote" style="margin-top:.75rem;text-align:center"></div>
 </div>
 
-<div class="card">
+<div class="card" id="mugStyleCard">
 <div class="card-title">☕ Mug Style</div>
 <div class="grid2">
 <div class="btn-select selected" data-style="Classic White" onclick="pickStyle(this)">Classic White<span class="price" id="priceCW"></span></div>
@@ -75,14 +76,12 @@ label{font-size:11px;color:#888;letter-spacing:.5px;text-transform:uppercase;dis
 <div class="note">Trimmed and Accented are coming soon — not available to order just yet.</div>
 </div>
 
-<div class="card">
-<div class="card-title">📱 Phone Case</div>
-<div class="note" style="margin-top:0;margin-bottom:.75rem">Search your phone model to see if we can make a case for it.</div>
-<input type="text" id="phoneSearchInput" placeholder="e.g. iPhone 15, Galaxy S23"/>
-<div id="phoneSearchResult" style="margin-top:.5rem;font-size:13px;"></div>
+<div class="card" id="travelMugStyleCard" style="display:none">
+<div class="card-title">🍶 Which Travel Mug?</div>
+<div class="grid3" id="travelMugStyleGrid"></div>
 </div>
 
-<div class="card">
+<div class="card" id="sizeCard">
 <div class="card-title">📏 Size</div>
 <div class="grid2">
 <div class="btn-select selected" data-size="11oz" onclick="pickSize(this)">11oz</div>
@@ -90,7 +89,7 @@ label{font-size:11px;color:#888;letter-spacing:.5px;text-transform:uppercase;dis
 </div>
 </div>
 
-<div class="card">
+<div class="card" id="livePreviewCard">
 <div class="card-title">🖼️ Live Preview</div>
 <div class="mug-preview-wrap">
 <svg id="mugPreviewSvg" viewBox="0 0 300 300" xmlns="http://www.w3.org/2000/svg">
@@ -124,7 +123,13 @@ label{font-size:11px;color:#888;letter-spacing:.5px;text-transform:uppercase;dis
 <div class="color-label" id="colorLabel">Pick a color</div>
 </div>
 
-<div class="card">
+<div class="card" id="travelColorCard" style="display:none">
+<div class="card-title">🎨 Color</div>
+<div class="color-grid" id="travelColorGrid"></div>
+<div class="color-label" id="travelColorLabel">Pick a color</div>
+</div>
+
+<div class="card" id="fullWrapCard">
 <div class="card-title">🌀 Full-Wrap Print</div>
 <div class="note" style="margin-top:0;margin-bottom:.75rem">Have your design printed edge-to-edge, wrapping all the way around the mug (rather than a single front-facing panel). Best suited for designs built for a full wraparound look.</div>
 <div style="display:flex;align-items:center;gap:10px">
@@ -182,10 +187,11 @@ label{font-size:11px;color:#888;letter-spacing:.5px;text-transform:uppercase;dis
 
 <div class="card">
 <div class="card-title">💰 Order Summary</div>
-<div class="summary-row"><span id="summaryStyleSize">Classic White, 11oz</span><span id="summaryBase">$19.95</span></div>
+<div class="summary-row"><span id="summaryStyleSize">Classic White, 11oz</span><span id="summaryBase">$14.95</span></div>
 <div class="summary-row" id="summaryUpsellRow" style="display:none"><span id="summaryUpsellLabel">Extra design charge</span><span id="summaryUpsell"></span></div>
 <div class="summary-row" id="summaryGiftRow" style="display:none"><span>Gift message</span><span id="summaryGift"></span></div>
-<div class="summary-row total"><span>Total</span><span id="summaryTotal">$19.95</span></div>
+<div class="summary-row" id="summaryShippingRow"><span>Shipping & Handling</span><span id="summaryShipping">$6.95</span></div>
+<div class="summary-row total"><span>Total</span><span id="summaryTotal">$21.90</span></div>
 </div>
 
 <button class="generate-btn" id="submitBtn" onclick="submitOrder()">Continue to Payment</button>
@@ -195,9 +201,12 @@ label{font-size:11px;color:#888;letter-spacing:.5px;text-transform:uppercase;dis
 </div>
 
 <script>
+// Coffee mug pricing (unchanged mechanism, updated numbers per the July
+// 2026 universal pricing overhaul — shipping now shown separately below
+// instead of baked into these).
 const PRICING = {
-  "Classic White": { "11oz": 19.95, "15oz": 24.95 },
-  "Color Pop": { "11oz": 34.95, "15oz": 39.95 }
+  "Classic White": { "11oz": 14.95, "15oz": 19.95 },
+  "Color Pop": { "11oz": 29.95, "15oz": 34.95 }
 };
 
 const COLOR_OPTIONS = [
@@ -214,6 +223,50 @@ const COLOR_OPTIONS = [
   { name: "Yellow", hex: "#F0D43A" }
 ];
 
+// Travel mug catalog — kept in sync manually with lib/products-catalog.js
+// (this is client-side HTML, so it can't import that server-only file
+// directly). If travel mug pricing/colors ever change, update both places.
+const TRAVEL_MUG_CATALOG = {
+  "travel-mug-20oz": {
+    displayName: "Travel Mug, 20oz",
+    layoutType: "front-back",
+    sizeLabel: "20oz",
+    price: 34.95,
+    colors: [
+      { name: "White", hex: "#FFFFFF" }, { name: "Black", hex: "#1c1c1c" },
+      { name: "Navy", hex: "#1B3D7A" }, { name: "Royal", hex: "#2255A4" },
+      { name: "Light Blue", hex: "#5FA8DE" }, { name: "Teal", hex: "#1F9E8E" },
+      { name: "Green", hex: "#1F7A45" }, { name: "Olive Green", hex: "#6B8E23" },
+      { name: "Dark Gray", hex: "#4a4a4a" }, { name: "Maroon", hex: "#7A1F2B" },
+      { name: "Red", hex: "#D62828" }, { name: "Coral", hex: "#F08070" },
+      { name: "Orange", hex: "#F0701A" }, { name: "Pink", hex: "#E0457B" },
+      { name: "Dark Purple", hex: "#4B2E5A" }, { name: "Light Purple", hex: "#8E3FC9" },
+      { name: "Yellow", hex: "#F0D43A" }
+    ]
+  },
+  "travel-mug-14oz-handle": {
+    displayName: "Travel Mug with Handle, 14oz",
+    layoutType: "single-image",
+    sizeLabel: "14oz",
+    price: 34.95,
+    colors: null
+  },
+  "travel-mug-40oz-insulated": {
+    displayName: "Insulated Travel Mug, 40oz",
+    layoutType: "front-back",
+    sizeLabel: "40oz",
+    price: 44.95,
+    colors: [
+      { name: "White", hex: "#FFFFFF" }, { name: "Black", hex: "#1c1c1c" },
+      { name: "Navy Blue", hex: "#1B3D7A" }, { name: "Royal Blue", hex: "#2255A4" },
+      { name: "Teal", hex: "#1F9E8E" }, { name: "Olive Green", hex: "#6B8E23" },
+      { name: "Dark Gray", hex: "#4a4a4a" }, { name: "Red", hex: "#D62828" }
+    ]
+  }
+};
+
+const FLAT_SHIPPING = 6.95; // matches FLAT_SHIPPING_CENTS in create-checkout-session.js
+
 let selectedStyle = "Classic White";
 let selectedSize = "11oz";
 let selectedColor = null;
@@ -221,7 +274,25 @@ let giftMessageEnabled = false;
 let fullWrapEnabled = false;
 let previewView = "front";
 
+let selectedTravelProductKey = null;
+let selectedTravelColor = null;
+
 const GIFT_MESSAGE_PRICE = 1.00;
+
+// ===== Determine mode: coffee mug (default/unchanged) vs travel mug =====
+let pendingOrder = null;
+try {
+  const raw = localStorage.getItem('muggshotz_pending_order');
+  pendingOrder = raw ? JSON.parse(raw) : null;
+} catch (e) {
+  pendingOrder = null;
+}
+
+// productIcon was only just added to index.html's goToOrder(). Any
+// pending order saved before that change simply won't have it — treated
+// safely here as "mug" (the original, only-ever behavior), so nothing
+// breaks for anyone mid-session during the rollout of this change.
+const isTravelMug = pendingOrder?.productIcon === 'water bottle';
 
 function toggleGiftMessage(){
   giftMessageEnabled = document.getElementById('giftMessageToggle').checked;
@@ -236,39 +307,6 @@ function toggleFullWrap(){
 function updateGiftMessageCount(){
   const len = document.getElementById('giftMessageText').value.length;
   document.getElementById('giftMessageCount').textContent = (200 - len) + ' characters remaining';
-}
-
-let phoneSearchTimeout;
-document.getElementById('phoneSearchInput').addEventListener('input', function(e) {
-  clearTimeout(phoneSearchTimeout);
-  const q = e.target.value.trim();
-  const resultDiv = document.getElementById('phoneSearchResult');
-  if (q.length < 3) {
-    resultDiv.innerHTML = '';
-    return;
-  }
-  resultDiv.innerHTML = '<span style="color:#888;">Checking...</span>';
-  phoneSearchTimeout = setTimeout(async () => {
-    try {
-      const res = await fetch('/api/phone-compatibility-check?q=' + encodeURIComponent(q));
-      const data = await res.json();
-      if (data.supported) {
-        resultDiv.innerHTML = '<span style="color:#4ade80;">✓ Yes! We can make a case for your ' + q + '.</span>';
-      } else {
-        resultDiv.innerHTML = '<span style="color:#f87171;">✗ Sorry, we don\'t currently offer a case for that model.</span>';
-      }
-    } catch (err) {
-      resultDiv.innerHTML = '<span style="color:#f87171;">Something went wrong checking that — try again.</span>';
-    }
-  }, 500);
-});
-
-let pendingOrder = null;
-try {
-  const raw = localStorage.getItem('muggshotz_pending_order');
-  pendingOrder = raw ? JSON.parse(raw) : null;
-} catch (e) {
-  pendingOrder = null;
 }
 
 function getDeviceId(){
@@ -333,6 +371,7 @@ if (!hasAnyDesign) {
   renderPreview();
 }
 
+// ===== Coffee mug functions (unchanged from before) =====
 function renderMugPreview(){
   const bodyColor = (selectedStyle === 'Color Pop' && selectedColor)
     ? (COLOR_OPTIONS.find(c => c.name === selectedColor)?.hex || '#ffffff')
@@ -408,8 +447,6 @@ function renderColorGrid(){
     }
   });
 }
-renderColorGrid();
-renderMugPreview();
 
 function calculateUpsell(){
   if (!pendingOrder) return { charge: 0, label: '' };
@@ -427,23 +464,89 @@ function calculateUpsell(){
     : { charge: 6, label: 'Different designs on 3 sides' };
 }
 
+// ===== Travel mug functions (new) =====
+function renderTravelMugStyleGrid(){
+  const grid = document.getElementById('travelMugStyleGrid');
+  grid.innerHTML = '';
+  Object.entries(TRAVEL_MUG_CATALOG).forEach(([key, product]) => {
+    const btn = document.createElement('div');
+    btn.className = 'btn-select';
+    btn.innerHTML = product.displayName + '<span class="price">$' + product.price.toFixed(2) + '</span>';
+    btn.onclick = () => pickTravelMugStyle(key, btn);
+    grid.appendChild(btn);
+  });
+}
+
+function pickTravelMugStyle(key, el){
+  document.querySelectorAll('#travelMugStyleGrid .btn-select').forEach(b=>b.classList.remove('selected'));
+  el.classList.add('selected');
+  selectedTravelProductKey = key;
+  selectedTravelColor = null;
+
+  const product = TRAVEL_MUG_CATALOG[key];
+  const colorCard = document.getElementById('travelColorCard');
+  if (product.colors) {
+    colorCard.style.display = 'block';
+    renderTravelColorGrid(product.colors);
+  } else {
+    colorCard.style.display = 'none';
+  }
+  updateSummary();
+}
+
+function renderTravelColorGrid(colors){
+  const grid = document.getElementById('travelColorGrid');
+  grid.innerHTML = '';
+  colors.forEach((c, i) => {
+    const btn = document.createElement('div');
+    btn.className = 'color-btn';
+    btn.onclick = () => pickTravelColor(btn, c);
+    const ball = document.createElement('div');
+    ball.className = 'ball';
+    ball.style.background = c.hex;
+    btn.appendChild(ball);
+    grid.appendChild(btn);
+  });
+}
+
+function pickTravelColor(el, colorData){
+  document.querySelectorAll('#travelColorGrid .color-btn').forEach(b=>b.classList.remove('selected'));
+  el.classList.add('selected');
+  selectedTravelColor = colorData.name;
+  document.getElementById('travelColorLabel').textContent = selectedTravelColor;
+}
+
+// ===== Shared summary logic, branches by mode =====
 function updateSummary(){
-  const basePrice = PRICING[selectedStyle][selectedSize];
-  const upsell = calculateUpsell();
+  let basePrice, upsellCharge = 0, upsellLabel = '', styleSizeLabel;
+
+  if (isTravelMug) {
+    const product = selectedTravelProductKey ? TRAVEL_MUG_CATALOG[selectedTravelProductKey] : null;
+    basePrice = product ? product.price : 0;
+    styleSizeLabel = product ? (product.displayName + (selectedTravelColor ? ' - ' + selectedTravelColor : '')) : 'Pick a style above';
+  } else {
+    basePrice = PRICING[selectedStyle][selectedSize];
+    const upsell = calculateUpsell();
+    upsellCharge = upsell.charge;
+    upsellLabel = upsell.label;
+    styleSizeLabel = selectedStyle + ', ' + selectedSize;
+
+    document.getElementById('priceCW').textContent = '11oz $' + PRICING['Classic White']['11oz'].toFixed(2);
+    document.getElementById('priceCP').textContent = '11oz $' + PRICING['Color Pop']['11oz'].toFixed(2);
+  }
+
   const giftCharge = giftMessageEnabled ? GIFT_MESSAGE_PRICE : 0;
-  const total = basePrice + upsell.charge + giftCharge;
+  const shipping = FLAT_SHIPPING;
+  const total = basePrice + upsellCharge + giftCharge + shipping;
 
-  document.getElementById('priceCW').textContent = '11oz $' + PRICING['Classic White']['11oz'].toFixed(2);
-  document.getElementById('priceCP').textContent = '11oz $' + PRICING['Color Pop']['11oz'].toFixed(2);
-
-  document.getElementById('summaryStyleSize').textContent = selectedStyle + ', ' + selectedSize;
+  document.getElementById('summaryStyleSize').textContent = styleSizeLabel;
   document.getElementById('summaryBase').textContent = '$' + basePrice.toFixed(2);
 
   const upsellRow = document.getElementById('summaryUpsellRow');
-  if (upsell.charge > 0) {
+  if (upsellCharge > 0) {
     upsellRow.style.display = 'flex';
-    document.getElementById('summaryUpsellLabel').textContent = upsell.label;
-    document.getElementById('summaryUpsell').textContent = '+$' + upsell.charge.toFixed(2);
+    document.getElementById('summaryUpsellLabel').textContent = upsellLabel;
+    document.getElementById('summaryUpsell').textContent = '+$' + upsellCharge.toFixed(2);
   } else {
     upsellRow.style.display = 'none';
   }
@@ -456,9 +559,9 @@ function updateSummary(){
     giftRow.style.display = 'none';
   }
 
+  document.getElementById('summaryShipping').textContent = '$' + shipping.toFixed(2);
   document.getElementById('summaryTotal').textContent = '$' + total.toFixed(2);
 }
-updateSummary();
 
 function setStatus(msg, isError){
   const el = document.getElementById('status');
@@ -466,6 +569,7 @@ function setStatus(msg, isError){
   el.textContent = msg;
 }
 
+// ===== Submit — branches by mode, both paths hit the same generic backend =====
 async function submitOrder(){
   const fullName = document.getElementById('fullName').value.trim();
   const email = document.getElementById('email').value.trim();
@@ -481,14 +585,71 @@ async function submitOrder(){
     setStatus('Please fill in your name, email, and full shipping address.', true);
     return;
   }
-  if (selectedStyle === 'Color Pop' && !selectedColor) {
-    setStatus('Please pick a mug color.', true);
-    return;
-  }
 
   const nameParts = fullName.split(' ');
   const firstName = nameParts[0] || 'Customer';
   const lastName = nameParts.slice(1).join(' ') || '-';
+
+  const shippingAddress = {
+    first_name: firstName, last_name: lastName, email, phone, country,
+    region: state, address1, address2, city, zip
+  };
+
+  let body;
+
+  if (isTravelMug) {
+    const product = selectedTravelProductKey ? TRAVEL_MUG_CATALOG[selectedTravelProductKey] : null;
+    if (!product) { setStatus('Please pick which travel mug you want.', true); return; }
+    if (product.colors && !selectedTravelColor) { setStatus('Please pick a color.', true); return; }
+
+    // Option A mapping (see order.html build notes): Left slot becomes
+    // Front, Right slot becomes Back for front-back products; for
+    // single-image products, whichever slot has a design is used.
+    const left = pendingOrder?.placements?.left || null;
+    const front = pendingOrder?.placements?.front || null;
+    const right = pendingOrder?.placements?.right || null;
+
+    body = {
+      type: 'mug_order',
+      deviceId,
+      productKey: selectedTravelProductKey,
+      sizeLabel: product.sizeLabel,
+      colorName: selectedTravelColor,
+      customerName: fullName,
+      giftMessage: giftMessageEnabled ? document.getElementById('giftMessageText').value.trim() : null,
+      shippingAddress
+    };
+
+    if (product.layoutType === 'front-back') {
+      body.frontImage = left || front || null;
+      body.backImage = right || null;
+    } else {
+      body.image = left || front || right || null;
+    }
+
+    if (!(product.layoutType === 'front-back' ? (body.frontImage || body.backImage) : body.image)) {
+      setStatus('No design found — please go back and place a design first.', true);
+      return;
+    }
+
+  } else {
+    if (selectedStyle === 'Color Pop' && !selectedColor) {
+      setStatus('Please pick a mug color.', true);
+      return;
+    }
+    body = {
+      type: 'mug_order',
+      deviceId: pendingOrder.deviceId,
+      placements: pendingOrder.placements,
+      mugType: selectedStyle,
+      sizeLabel: selectedSize,
+      color: selectedColor,
+      printMode: fullWrapEnabled ? 'fullBleed' : 'standard',
+      customerName: fullName,
+      giftMessage: giftMessageEnabled ? document.getElementById('giftMessageText').value.trim() : null,
+      shippingAddress
+    };
+  }
 
   const btn = document.getElementById('submitBtn');
   btn.disabled = true;
@@ -498,29 +659,7 @@ async function submitOrder(){
     const resp = await fetch('/api/create-checkout-session', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        type: 'mug_order',
-        deviceId: pendingOrder.deviceId,
-        placements: pendingOrder.placements,
-        mugType: selectedStyle,
-        sizeLabel: selectedSize,
-        color: selectedColor,
-        printMode: fullWrapEnabled ? 'fullBleed' : 'standard',
-        customerName: fullName,
-        giftMessage: giftMessageEnabled ? document.getElementById('giftMessageText').value.trim() : null,
-        shippingAddress: {
-          first_name: firstName,
-          last_name: lastName,
-          email,
-          phone,
-          country,
-          region: state,
-          address1,
-          address2,
-          city,
-          zip
-        }
-      })
+      body: JSON.stringify(body)
     });
     const data = await resp.json();
     if (!resp.ok) throw new Error(data.error || 'Could not start checkout.');
@@ -534,6 +673,29 @@ async function submitOrder(){
     btn.disabled = false;
   }
 }
+
+// ===== Page setup — switches between the two modes =====
+function setupPageForMode(){
+  if (isTravelMug) {
+    document.getElementById('mugStyleCard').style.display = 'none';
+    document.getElementById('sizeCard').style.display = 'none';
+    document.getElementById('livePreviewCard').style.display = 'none';
+    document.getElementById('colorCard').style.display = 'none';
+    document.getElementById('fullWrapCard').style.display = 'none';
+    document.getElementById('travelMugStyleCard').style.display = 'block';
+    document.getElementById('previewNote').textContent =
+      'Left = Front of your travel mug, Right = Back. Center is not used for this product.';
+    renderTravelMugStyleGrid();
+  } else {
+    document.getElementById('travelMugStyleCard').style.display = 'none';
+    document.getElementById('travelColorCard').style.display = 'none';
+    renderColorGrid();
+    renderMugPreview();
+  }
+  updateSummary();
+}
+
+setupPageForMode();
 </script>
 </body>
 </html>
