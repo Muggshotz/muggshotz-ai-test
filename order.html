@@ -78,6 +78,15 @@ label{font-size:11px;color:#888;letter-spacing:.5px;text-transform:uppercase;dis
 <div class="note">Comes in Black only.</div>
 </div>
 
+<div class="card" id="phoneCaseCard" style="display:none">
+<div class="card-title">📱 Phone Model</div>
+<div class="note" style="margin-top:0;margin-bottom:.75rem">We carry cases for iPhone 11-17 and Galaxy S21-S26. Search your model below to check.</div>
+<input type="text" id="phoneModelSearchInput" placeholder="e.g. iPhone 15 Pro, Galaxy S24"
+  style="width:100%;padding:.6rem;border-radius:8px;border:.5px solid #333;background:#0d0d0d;color:#fff;box-sizing:border-box"/>
+<div id="phoneModelResults" style="margin-top:.6rem"></div>
+<div class="note" id="phoneModelSelectedNote" style="margin-top:.6rem"></div>
+</div>
+
 <div class="card" id="mugStyleCard">
 <div class="card-title">☕ Mug Style</div>
 <div class="grid2" id="mugStyleGrid"></div>
@@ -366,15 +375,67 @@ const SUITCASE_SIZES = {
 };
 let selectedSuitcaseSize = "Small";
 
+const isPhoneCase = pendingOrder?.productIcon === 'phone case';
+
+// Phone case model list — kept in sync manually with lib/products-catalog.js
+// "phone-case-tough" entry. Flat $24.95 price across every model, single
+// image (single-image layout), no color picker — model IS the variant.
+const PHONE_CASE_MODELS = [
+  "iPhone 11","iPhone 11 Pro","iPhone 11 Pro Max",
+  "iPhone 12","iPhone 12 Mini","iPhone 12 Pro","iPhone 12 Pro Max",
+  "iPhone 13","iPhone 13 Mini","iPhone 13 Pro","iPhone 13 Pro Max",
+  "iPhone 14","iPhone 14 Pro","iPhone 14 Pro Max","iPhone 14 Plus",
+  "iPhone 15","iPhone 15 Pro","iPhone 15 Plus","iPhone 15 Pro Max",
+  "iPhone 16","iPhone 16 Pro","iPhone 16 Pro Max","iPhone 16 Plus",
+  "iPhone 17","iPhone 17 Pro","iPhone 17 Pro Max","iPhone 17 Air",
+  "Samsung Galaxy S21","Samsung Galaxy S22","Samsung Galaxy S23",
+  "Samsung Galaxy S24","Samsung Galaxy S25","Samsung Galaxy S26"
+];
+const PHONE_CASE_PRICE = 24.95;
+let selectedPhoneModel = null;
+
 // Friendly display names for product icons that don't have a real
 // checkout flow yet — used only for the honest "not available yet"
 // message, never assumed to be a mug.
 const UNSUPPORTED_PRODUCT_NAMES = {
   'greeting card': 'Greeting Card',
   'post-it note': 'Post-it Note',
-  'phone case': 'Phone Case',
   'tote bag': 'Tote Bag'
 };
+
+let phoneSearchListenerAttached = false;
+function setupPhoneModelSearch(){
+  const input = document.getElementById('phoneModelSearchInput');
+  if (phoneSearchListenerAttached) return;
+  phoneSearchListenerAttached = true;
+  input.addEventListener('input', function(){
+    const q = input.value.trim().toLowerCase();
+    const resultsEl = document.getElementById('phoneModelResults');
+    resultsEl.innerHTML = '';
+    if (q.length < 2) return;
+    const matches = PHONE_CASE_MODELS.filter(m => m.toLowerCase().includes(q));
+    if (matches.length === 0) {
+      resultsEl.innerHTML = '<div class="note" style="color:#e24b4a">We don\'t currently carry a case for that model.</div>';
+      return;
+    }
+    matches.slice(0, 8).forEach(model => {
+      const btn = document.createElement('div');
+      btn.className = 'btn-select' + (model === selectedPhoneModel ? ' selected' : '');
+      btn.style.marginBottom = '6px';
+      btn.textContent = model;
+      btn.onclick = () => pickPhoneModel(model);
+      resultsEl.appendChild(btn);
+    });
+  });
+}
+
+function pickPhoneModel(model){
+  selectedPhoneModel = model;
+  document.getElementById('phoneModelSearchInput').value = model;
+  document.getElementById('phoneModelResults').innerHTML = '';
+  document.getElementById('phoneModelSelectedNote').textContent = '✓ Case selected for ' + model + ' — $' + PHONE_CASE_PRICE.toFixed(2) + ' + shipping.';
+  updateSummary();
+}
 
 function renderSuitcaseSizeGrid(){
   const grid = document.getElementById('suitcaseSizeGrid');
@@ -655,6 +716,9 @@ function updateSummary(){
   } else if (isSuitcase) {
     basePrice = SUITCASE_SIZES[selectedSuitcaseSize].price;
     styleSizeLabel = 'Suitcase, ' + selectedSuitcaseSize + ' (Black)';
+  } else if (isPhoneCase) {
+    basePrice = selectedPhoneModel ? PHONE_CASE_PRICE : 0;
+    styleSizeLabel = selectedPhoneModel ? ('Phone Case, ' + selectedPhoneModel) : 'Search and pick your phone model above';
   } else {
     basePrice = MUG_STYLES[selectedStyle].sizes[selectedSize].price;
     const upsell = calculateUpsell();
@@ -784,6 +848,32 @@ async function submitOrder(){
       shippingAddress
     };
 
+  } else if (isPhoneCase) {
+    if (!selectedPhoneModel) {
+      setStatus('Please search and select your phone model above.', true);
+      return;
+    }
+    const left = pendingOrder?.placements?.left || null;
+    const front = pendingOrder?.placements?.front || null;
+    const right = pendingOrder?.placements?.right || null;
+    const image = left || front || right || null;
+
+    if (!image) {
+      setStatus('No design found — please go back and place a design first.', true);
+      return;
+    }
+
+    body = {
+      type: 'mug_order',
+      deviceId,
+      productKey: 'phone-case-tough',
+      sizeLabel: selectedPhoneModel,
+      image,
+      customerName: fullName,
+      giftMessage: giftMessageEnabled ? document.getElementById('giftMessageText').value.trim() : null,
+      shippingAddress
+    };
+
   } else {
     if (MUG_STYLES[selectedStyle].sizes[selectedSize].colors && !selectedColor) {
       setStatus('Please pick a mug color.', true);
@@ -838,7 +928,7 @@ function setupPageForMode(){
     document.getElementById('notAvailableCard').style.display = 'block';
     document.getElementById('notAvailableText').textContent =
       `${unsupportedName} isn't available to order yet — we're still building this one out. Check back soon, or head back to the generator to try a Mug or Tumbler instead.`;
-    ['mugStyleCard','sizeCard','livePreviewCard','colorCard','fullWrapCard','travelMugStyleCard','travelColorCard','shippingCard','giftMessageCard','summaryCard'].forEach(id => {
+    ['mugStyleCard','sizeCard','livePreviewCard','colorCard','fullWrapCard','travelMugStyleCard','travelColorCard','suitcaseSizeCard','phoneCaseCard','shippingCard','giftMessageCard','summaryCard'].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.style.display = 'none';
     });
@@ -865,10 +955,24 @@ function setupPageForMode(){
     document.getElementById('fullWrapCard').style.display = 'none';
     document.getElementById('travelMugStyleCard').style.display = 'none';
     document.getElementById('travelColorCard').style.display = 'none';
+    document.getElementById('phoneCaseCard').style.display = 'none';
     document.getElementById('suitcaseSizeCard').style.display = 'block';
     document.getElementById('previewNote').textContent =
       'Whichever design you placed first (Left, Center, or Right) will be printed edge-to-edge across your suitcase — one design covers the whole case.';
     renderSuitcaseSizeGrid();
+  } else if (isPhoneCase) {
+    document.getElementById('mugStyleCard').style.display = 'none';
+    document.getElementById('sizeCard').style.display = 'none';
+    document.getElementById('livePreviewCard').style.display = 'none';
+    document.getElementById('colorCard').style.display = 'none';
+    document.getElementById('fullWrapCard').style.display = 'none';
+    document.getElementById('travelMugStyleCard').style.display = 'none';
+    document.getElementById('travelColorCard').style.display = 'none';
+    document.getElementById('suitcaseSizeCard').style.display = 'none';
+    document.getElementById('phoneCaseCard').style.display = 'block';
+    document.getElementById('previewNote').textContent =
+      'Whichever design you placed first (Left, Center, or Right) will be printed on your phone case.';
+    setupPhoneModelSearch();
   } else if (isMug) {
     // This branch is ONLY for actual coffee mugs, never a silent
     // default for anything else.
