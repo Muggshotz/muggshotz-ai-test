@@ -72,6 +72,12 @@ label{font-size:11px;color:#888;letter-spacing:.5px;text-transform:uppercase;dis
 <div class="note" id="notAvailableText" style="margin-top:0;font-size:14px;color:#ccc"></div>
 </div>
 
+<div class="card" id="suitcaseSizeCard" style="display:none">
+<div class="card-title">🧳 Suitcase Size</div>
+<div class="grid3" id="suitcaseSizeGrid"></div>
+<div class="note">Comes in Black only.</div>
+</div>
+
 <div class="card" id="mugStyleCard">
 <div class="card-title">☕ Mug Style</div>
 <div class="grid2" id="mugStyleGrid"></div>
@@ -348,6 +354,17 @@ try {
 // breaks for anyone mid-session during the rollout of this change.
 const isTravelMug = pendingOrder?.productIcon === 'water bottle';
 const isMug = pendingOrder?.productIcon === 'mug';
+const isSuitcase = pendingOrder?.productIcon === 'suitcase';
+
+// Suitcase pricing — kept in sync manually with lib/products-catalog.js
+// "suitcase" entry. Single color (Black), one design covers the whole
+// case (single-image layout), price varies by size only.
+const SUITCASE_SIZES = {
+  "Small": { price: 169.95 },
+  "Medium": { price: 194.95 },
+  "Large": { price: 214.95 }
+};
+let selectedSuitcaseSize = "Small";
 
 // Friendly display names for product icons that don't have a real
 // checkout flow yet — used only for the honest "not available yet"
@@ -358,6 +375,27 @@ const UNSUPPORTED_PRODUCT_NAMES = {
   'phone case': 'Phone Case',
   'tote bag': 'Tote Bag'
 };
+
+function renderSuitcaseSizeGrid(){
+  const grid = document.getElementById('suitcaseSizeGrid');
+  grid.innerHTML = '';
+  Object.keys(SUITCASE_SIZES).forEach((sizeName, i) => {
+    const btn = document.createElement('div');
+    btn.className = 'btn-select' + (sizeName === selectedSuitcaseSize ? ' selected' : '');
+    btn.dataset.size = sizeName;
+    const price = SUITCASE_SIZES[sizeName].price;
+    btn.innerHTML = sizeName + '<span class="price">$' + price.toFixed(2) + '</span>';
+    btn.onclick = () => pickSuitcaseSize(btn);
+    grid.appendChild(btn);
+  });
+}
+
+function pickSuitcaseSize(el){
+  document.querySelectorAll('#suitcaseSizeGrid .btn-select').forEach(b=>b.classList.remove('selected'));
+  el.classList.add('selected');
+  selectedSuitcaseSize = el.dataset.size;
+  updateSummary();
+}
 
 function toggleGiftMessage(){
   giftMessageEnabled = document.getElementById('giftMessageToggle').checked;
@@ -614,6 +652,9 @@ function updateSummary(){
     const product = selectedTravelProductKey ? TRAVEL_MUG_CATALOG[selectedTravelProductKey] : null;
     basePrice = product ? product.price : 0;
     styleSizeLabel = product ? (product.displayName + (selectedTravelColor ? ' - ' + selectedTravelColor : '')) : 'Pick a style above';
+  } else if (isSuitcase) {
+    basePrice = SUITCASE_SIZES[selectedSuitcaseSize].price;
+    styleSizeLabel = 'Suitcase, ' + selectedSuitcaseSize + ' (Black)';
   } else {
     basePrice = MUG_STYLES[selectedStyle].sizes[selectedSize].price;
     const upsell = calculateUpsell();
@@ -721,6 +762,28 @@ async function submitOrder(){
       return;
     }
 
+  } else if (isSuitcase) {
+    const left = pendingOrder?.placements?.left || null;
+    const front = pendingOrder?.placements?.front || null;
+    const right = pendingOrder?.placements?.right || null;
+    const image = left || front || right || null;
+
+    if (!image) {
+      setStatus('No design found — please go back and place a design first.', true);
+      return;
+    }
+
+    body = {
+      type: 'mug_order',
+      deviceId,
+      productKey: 'suitcase',
+      sizeLabel: selectedSuitcaseSize,
+      image,
+      customerName: fullName,
+      giftMessage: giftMessageEnabled ? document.getElementById('giftMessageText').value.trim() : null,
+      shippingAddress
+    };
+
   } else {
     if (MUG_STYLES[selectedStyle].sizes[selectedSize].colors && !selectedColor) {
       setStatus('Please pick a mug color.', true);
@@ -789,13 +852,26 @@ function setupPageForMode(){
     document.getElementById('livePreviewCard').style.display = 'none';
     document.getElementById('colorCard').style.display = 'none';
     document.getElementById('fullWrapCard').style.display = 'none';
+    document.getElementById('suitcaseSizeCard').style.display = 'none';
     document.getElementById('travelMugStyleCard').style.display = 'block';
     document.getElementById('previewNote').textContent =
       'Left = Front of your travel mug, Right = Back. Center is not used for this product.';
     renderTravelMugStyleGrid();
-  } else {
-    // isMug is true here — this branch is ONLY for actual coffee mugs,
-    // never a silent default for anything else.
+  } else if (isSuitcase) {
+    document.getElementById('mugStyleCard').style.display = 'none';
+    document.getElementById('sizeCard').style.display = 'none';
+    document.getElementById('livePreviewCard').style.display = 'none';
+    document.getElementById('colorCard').style.display = 'none';
+    document.getElementById('fullWrapCard').style.display = 'none';
+    document.getElementById('travelMugStyleCard').style.display = 'none';
+    document.getElementById('travelColorCard').style.display = 'none';
+    document.getElementById('suitcaseSizeCard').style.display = 'block';
+    document.getElementById('previewNote').textContent =
+      'Whichever design you placed first (Left, Center, or Right) will be printed edge-to-edge across your suitcase — one design covers the whole case.';
+    renderSuitcaseSizeGrid();
+  } else if (isMug) {
+    // This branch is ONLY for actual coffee mugs, never a silent
+    // default for anything else.
     document.getElementById('travelMugStyleCard').style.display = 'none';
     document.getElementById('travelColorCard').style.display = 'none';
     renderMugStyleGrid();
