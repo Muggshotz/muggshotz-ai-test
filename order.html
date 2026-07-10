@@ -538,7 +538,7 @@ function renderBridgeGrid(){
   BRIDGE_GRID_PRODUCTS.forEach(p => {
     const btn = document.createElement('div');
     btn.className = 'btn-select' + (p.key === selectedProductFamily ? ' selected' : '');
-    btn.innerHTML = '<span class="icon">' + p.icon + '</span>' + p.label + '<span class="price">From ' + p.priceFrom + '</span>';
+    btn.innerHTML = '<span class="icon">' + p.icon + '</span>' + p.label;
     btn.onclick = () => pickProductFamily(p.key);
     realGrid.appendChild(btn);
   });
