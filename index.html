@@ -86,14 +86,6 @@
 .pos-slot-gen-btn{margin-top:6px;font-size:10px;background:#0d0d0d;border:1px solid #444;border-radius:14px;padding:4px 0;color:#ff6a00;cursor:pointer;width:100%}
 .swap-btn{background:#0d0d0d;border:1px solid #444;border-radius:50%;width:44px;height:44px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#ff6a00;font-size:18px;flex-shrink:0;margin-top:24px}
 
-/* Token meter + Credits & Extras button: always fixed to the viewport
-   so they can never occupy real document-flow space (which was the
-   cause of the header being pushed down before this fix). Anchored to
-   the BOTTOM of the frame: stacked bottom-right on narrow/mobile
-   screens; spread to opposite bottom corners on wide screens.
-   Deliberately NOT using display:contents here — that technique is
-   unreliable across browsers for pulling fixed-position children out
-   of a flex parent. */
 .token-credits-row{position:fixed;bottom:12px;top:auto;right:10px;left:auto;z-index:999;display:flex;align-items:center;gap:8px;pointer-events:none;transition:top .2s,bottom .2s}
 .token-credits-row.scrolled{bottom:auto;top:8px;right:10px;left:auto}
 #creditsBtn{pointer-events:auto}
@@ -137,12 +129,10 @@
     <div id="priceTablePanel" style="display:none;margin-top:.85rem">
       <table style="width:100%;border-collapse:collapse;font-size:12px">
         <tr style="color:#ff6a00;text-align:left"><th style="padding:4px 0">Style</th><th style="padding:4px 0;text-align:right">11oz</th><th style="padding:4px 0;text-align:right">15oz</th></tr>
-        <tr style="border-top:1px solid #333"><td style="padding:6px 0;color:#ccc">Classic White</td><td style="padding:6px 0;text-align:right;color:#ccc">$19.95</td><td style="padding:6px 0;text-align:right;color:#ccc">$24.95</td></tr>
-        <tr style="border-top:1px solid #333"><td style="padding:6px 0;color:#ccc">Trimmed</td><td style="padding:6px 0;text-align:right;color:#ccc">$24.95</td><td style="padding:6px 0;text-align:right;color:#ccc">$29.95</td></tr>
-        <tr style="border-top:1px solid #333"><td style="padding:6px 0;color:#ccc">Accented</td><td style="padding:6px 0;text-align:right;color:#ccc">$29.95</td><td style="padding:6px 0;text-align:right;color:#ccc">$34.95</td></tr>
-        <tr style="border-top:1px solid #333"><td style="padding:6px 0;color:#ccc">Color Pop</td><td style="padding:6px 0;text-align:right;color:#ccc">$34.95</td><td style="padding:6px 0;text-align:right;color:#ccc">$39.95</td></tr>
+        <tr style="border-top:1px solid #333"><td style="padding:6px 0;color:#ccc">Classic White</td><td style="padding:6px 0;text-align:right;color:#ccc">$14.95</td><td style="padding:6px 0;text-align:right;color:#ccc">$19.95</td></tr>
+        <tr style="border-top:1px solid #333"><td style="padding:6px 0;color:#ccc">Color Pop</td><td style="padding:6px 0;text-align:right;color:#ccc">$29.95</td><td style="padding:6px 0;text-align:right;color:#ccc">$34.95</td></tr>
       </table>
-      <div class="note" style="margin-top:.6rem">Your $5 Preview Reservation always comes off this price at checkout — it's a deposit, not an extra fee.</div>
+      <div class="note" style="margin-top:.6rem">Prices shown are for the mug itself — shipping and handling is calculated and added at checkout.</div>
     </div>
   </div>
 </div>
@@ -337,14 +327,7 @@
 <script>
 let product='mug',style='Muggshotz Classic: premium professional caricature, expressive face, rich detail, painterly shading, funny gift-art scene',likeness='0.15',uploadedImageData=null,resultUrl=null;
 let refImageAData=null, refImageBData=null;
-// One-slot recycling workflow: after every generation the RESULT becomes
-// the new working image in the main Photo 1 slot, and the next prompt
-// applies to IT. previousImageData remembers the image it replaced, so
-// the toggle button can swap back if the new result isn't a keeper.
-// Uploading a brand-new photo starts a fresh session and clears the toggle.
 let previousImageData=null;
-// The generation currently sitting in the workshop awaiting the person's
-// verdict. Nothing lands on the mug until approveDesign() blesses it.
 let currentDesignId=null;
 
 function setMainSlotImage(dataUrl){
@@ -370,8 +353,6 @@ function toggleWorkingImage(){
   saveWorkshop();
 }
 
-// --- Device sticky-note: silently identifies this browser/device across
-// visits so the server can track free tokens, without any login or signup.
 function getDeviceId(){
   let id=localStorage.getItem('muggshotz_device_id');
   if(!id){
@@ -382,10 +363,6 @@ function getDeviceId(){
 }
 const deviceId=getDeviceId();
 
-// Token meter: pulls the real balance from Supabase (via the new
-// get-balance endpoint) and displays it near the Credits & Extras
-// button. Called on page load, and again after every generation so the
-// number stays accurate without a full page refresh.
 async function refreshTokenMeter(){
   const meterEl=document.getElementById('tokenMeterNumber');
   try{
@@ -631,7 +608,6 @@ function undoLastStroke(){
 }
 
 function resetCaptionSettings(){
-  // Reset all state variables back to original defaults
   captionFont="Anton";
   captionPos="bottom-left";
   captionBold=false;
@@ -641,37 +617,30 @@ function resetCaptionSettings(){
   drawnStrokes=[];
   currentStroke=[];
 
-  // Reset text input
   document.getElementById('captionText').value='';
 
-  // Reset font picker
   document.getElementById('fontGrid').querySelectorAll('.font-btn').forEach(b=>{
     b.classList.toggle('selected',b.dataset.font==='Anton');
   });
 
-  // Reset bold/italic
   document.getElementById('boldBtn').classList.remove('selected');
   document.getElementById('italicBtn').classList.remove('selected');
 
-  // Reset color, size, spacing, curve, outline sliders to defaults
   document.getElementById('captionColor').value='#ffffff';
   document.getElementById('captionSize').value=48;
   document.getElementById('letterSpacing').value=0;
   document.getElementById('curveAmount').value=0;
   document.getElementById('outlineThickness').value=12;
 
-  // Reset effect chips
   document.getElementById('effectRow').querySelectorAll('.style-chip').forEach(b=>{
     b.classList.toggle('selected',b.dataset.effect==='none');
   });
 
-  // Reset position grid and presets
   document.getElementById('posGrid').querySelectorAll('.pos-btn').forEach(b=>{
     b.classList.toggle('selected',b.dataset.pos==='bottom-left');
   });
   document.getElementById('presetRow').querySelectorAll('.seg-btn').forEach(b=>b.classList.remove('selected'));
 
-  // Reset curve mode buttons and show/hide the right panel
   document.getElementById('curveModeRow').querySelectorAll('.curve-mode-btn').forEach(b=>{
     b.classList.toggle('selected',b.dataset.mode==='straight');
   });
@@ -1024,10 +993,6 @@ function setIdea(text){
   document.getElementById('ideaDesc').value=text;
 }
 
-// Opens the Credits & Extras panel. Called two ways: manually via the
-// always-visible top-right button (no message — generic framing), or
-// automatically from generate() when a 403 zero-token response comes
-// back (custom "you're out of credits" framing).
 function openCreditsPanel(message){
   document.getElementById('creditsPanelMessage').textContent = message
     || "Buy more tokens anytime to keep creating — pick an option below.";
@@ -1038,9 +1003,6 @@ function closeCreditsPanel(){
   document.getElementById('creditsModalOverlay').style.display='none';
 }
 
-// Sends the customer to Stripe to purchase a token pack. On success,
-// Stripe redirects back to index.html?tokens=added, and the meter
-// refreshes automatically on page load.
 async function buyTokenPack(packId){
   try{
     const resp=await fetch('/api/create-checkout-session',{
@@ -1122,10 +1084,6 @@ function setupRefUpload(inputId, zoneId, previewId, setter){
 setupRefUpload('refAInput','refAZone','refAPreview', (v)=>{ refImageAData = v; });
 setupRefUpload('refBInput','refBZone','refBPreview', (v)=>{ refImageBData = v; });
 
-// After a generation, Photos 2 & 3 have been baked into the new working
-// image — they were reference points and they've served their purpose.
-// These helpers clear their slots back to the empty "Tap to add" state,
-// ready for the next tweak's references.
 function resetRefSlot(zoneId, previewId, inputId){
   const z=document.getElementById(zoneId);
   if(!z)return;
@@ -1151,8 +1109,6 @@ function clearReferenceSlots(){
   resetRefSlot('refBZone','refBPreview','refBInput');
 }
 
-// While a generation runs, ALL THREE canvases go blank — the big one
-// shows "creation in progress" until the new picture lands in it.
 function showGenerationInProgress(){
   const z=document.getElementById('uploadZone');
   z.classList.remove('has-image');
@@ -1167,9 +1123,6 @@ function showGenerationInProgress(){
   z.insertAdjacentElement('afterend',fresh);
 }
 
-// If a generation FAILS, the ingredients come back: the working image
-// returns to the big canvas and any reference photos return to their
-// small slots, so nothing is lost to an error.
 function restoreRefPreview(zoneId, previewId, inputId, dataUrl, setter){
   if(!dataUrl)return;
   setter(dataUrl);
@@ -1185,15 +1138,9 @@ function restoreRefPreview(zoneId, previewId, inputId, dataUrl, setter){
   z.appendChild(img);
 }
 
-// The approval gate: pressing YES is the signal that tweaking is done.
-// The blessed design drops to a mug slot (the slot whose 🎨 New button
-// started this session if there was one, otherwise the first open slot:
-// Center, then Left, then Right), and the workshop up top empties out,
-// ready for a brand-new photo and a brand-new session.
 function approveDesign(allThree){
   if(!currentDesignId)return;
   if(allThree){
-    // Same picture on all three sides — one press does it.
     placements.front=currentDesignId;
     placements.left=currentDesignId;
     placements.right=currentDesignId;
@@ -1204,8 +1151,6 @@ function approveDesign(allThree){
     if(target){
       placements[target]=currentDesignId;
     } else if(!libraryOpen){
-      // Mug is full — the design stays in My Designs; pop the library
-      // open so it's visible, and the person can reassign slots there.
       toggleLibrary();
     }
   }
@@ -1220,8 +1165,6 @@ function approveDesign(allThree){
   updatePlacementSummary();
 }
 
-// Pressing NO: back to the workbench — the working image stays loaded
-// in Photo 1, so all the person has to do is describe the next tweak.
 function keepTweaking(){
   const box=document.getElementById('ideaDesc');
   box.placeholder='What would you like to add or change? Describe it here, then hit Generate again.';
@@ -1229,9 +1172,6 @@ function keepTweaking(){
   box.focus();
 }
 
-// The off switch: wipes the easel completely — working image, previous
-// image, references, pending verdict, and the saved session in browser
-// storage. The canvas returns to blank "Tap here to upload a photo."
 function startOver(){
   currentDesignId=null;
   pendingSlotTarget=null;
@@ -1241,8 +1181,6 @@ function startOver(){
   clearWorkshopStorage();
 }
 
-// Empties the Photo 1 workshop back to its original "Tap here to upload
-// a photo" state after an approved design leaves for the mug.
 function resetMainSlot(){
   uploadedImageData=null;
   previousImageData=null;
@@ -1300,8 +1238,6 @@ async function generate(){
 
   const btn=document.getElementById('generateBtn');
   btn.disabled=true;
-  // Snapshot the ingredients, then blank all three canvases — the big
-  // one shows the in-progress message until the new picture arrives.
   const workingImage=uploadedImageData;
   const refASnapshot=refImageAData;
   const refBSnapshot=refImageBData;
@@ -1431,9 +1367,6 @@ Use rich environmental storytelling while keeping the face as the primary focal 
     currentDesignId=addToRecentDesigns(resultUrl);
     document.getElementById('approveRow').style.display='block';
     await loadBaseImageForCaption(resultUrl);
-    // The new picture takes over the ONE canvas — the big Photo 1 slot.
-    // The image it replaced waits behind the toggle button in case this
-    // take isn't a keeper.
     try{
       const newWorking=await urlToDataURL(resultUrl);
       previousImageData=workingImage;
@@ -1449,7 +1382,6 @@ Use rich environmental storytelling while keeping the face as the primary focal 
 
   }catch(err){
     setStatus(err.message,true);
-    // Generation failed — bring the ingredients back so nothing is lost.
     if(workingImage)setMainSlotImage(workingImage);
     restoreRefPreview('refAZone','refAPreview','refAInput',refASnapshot,(v)=>{refImageAData=v;});
     restoreRefPreview('refBZone','refBPreview','refBInput',refBSnapshot,(v)=>{refImageBData=v;});
@@ -1464,9 +1396,6 @@ let pendingSlotTarget=null;
 let libraryOpen=false;
 
 function addToRecentDesigns(url){
-  // Library-only duty: every generation is archived here, but NOTHING
-  // is placed on the mug from this function. Placement happens solely
-  // through approveDesign() — the person's explicit blessing.
   const designId='design-'+Date.now();
   recentDesigns.push({id:designId,url:url});
   document.getElementById('positionHolderCard').style.display='block';
@@ -1523,8 +1452,6 @@ function renderRecentDesigns(){
     });
     wrap.appendChild(btnRow);
 
-    // Per-design delete: removes this design from the library AND from
-    // any mug slot it occupies. One tap, gone.
     const delBtn=document.createElement('div');
     delBtn.textContent='🗑️ Delete';
     delBtn.style.cssText='margin-top:4px;font-size:10px;padding:4px 2px;border-radius:6px;cursor:pointer;border:1px solid #5a2a2a;background:#2a1010;color:#ff8a7a;text-align:center';
@@ -1594,7 +1521,6 @@ function renderPositionHolder(){
       const img=document.createElement('img');
       img.src=design.url;
       thumb.appendChild(img);
-      // Visible remove button: one tap empties this slot.
       const removeBtn=document.createElement('div');
       removeBtn.textContent='✖';
       removeBtn.style.cssText='position:absolute;top:-8px;right:-8px;width:22px;height:22px;border-radius:50%;background:#2a1010;border:1px solid #5a2a2a;color:#ff8a7a;font-size:11px;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:3';
@@ -1649,9 +1575,6 @@ function swapSlots(posA,posB){
   saveMugState();
 }
 
-// The big broom: one tap wipes EVERYTHING accumulated — every design in
-// the library, all three mug slots, and the saved memory. Total fresh
-// start, no trick taps required.
 function clearAllDesigns(){
   recentDesigns=[];
   placements={left:null,right:null,front:null};
@@ -1691,7 +1614,8 @@ function goToOrder(){
       front: placements.front ? findDesignById(placements.front).url : null,
       right: placements.right ? findDesignById(placements.right).url : null
     },
-    deviceId: deviceId
+    deviceId: deviceId,
+    productIcon: product
   };
   localStorage.setItem('muggshotz_pending_order', JSON.stringify(orderData));
   window.location.href = 'order.html';
@@ -1741,17 +1665,10 @@ function cancelGeneration(){
   }
 }
 
-// ===== THE EASEL: session persistence =====
-// The painting stays on the easel even if the window closes. The working
-// image, its previous version, and the mug's slot assignments are saved
-// in the browser's localStorage and restored when the page reopens.
-// Cleared only when a design is approved (the workshop empties) — note
-// this lives in THIS browser on THIS device, same as the device ID.
 function saveWorkshop(){
   try{
     localStorage.setItem('muggshotz_workshop',JSON.stringify({working:uploadedImageData,previous:previousImageData,designId:currentDesignId}));
   }catch(e){
-    // Storage full — sacrifice the previous image, keep the working one.
     try{
       localStorage.setItem('muggshotz_workshop',JSON.stringify({working:uploadedImageData,previous:null,designId:currentDesignId}));
     }catch(e2){console.error('Could not save workshop:',e2);}
@@ -1787,8 +1704,6 @@ function restoreWorkshop(){
       setMainSlotImage(saved.working);
       if(previousImageData)document.getElementById('toggleImageBtn').style.display='block';
       if(currentDesignId){
-        // The last generation was still awaiting a verdict — put the
-        // satisfaction question back up under the main canvas.
         document.getElementById('approveRow').style.display='block';
         loadBaseImageForCaption(saved.working);
       }
@@ -1797,8 +1712,6 @@ function restoreWorkshop(){
 }
 restoreWorkshop();
 
-// Snap the token meter + Credits button to the top when scrolling,
-// back to the bottom when at the very top of the page.
 window.addEventListener('scroll',function(){
   const row=document.querySelector('.token-credits-row');
   if(!row)return;
