@@ -182,7 +182,9 @@ export default async function handler(req, res) {
 // in flight with the old mug_type-only metadata) doesn't silently fail.
 const MUG_TYPE_TO_PRODUCT_KEY = {
   "Classic White": "classic-white-mug",
-  "Color Pop": "color-pop-mug"
+  "Color Pop": "color-pop-mug",
+  "Trimmed": "trimmed-mug",
+  "Accented": "accented-mug"
 };
 
 async function handleMugOrderPayment(session) {
