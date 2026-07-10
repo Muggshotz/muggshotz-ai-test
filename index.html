@@ -112,9 +112,9 @@
     <a href="checkout.html" style="text-decoration:none;display:block">
       <button class="generate-btn">✅ $5 Preview Reservation</button>
     </a>
-    <div class="note" style="margin-top:.5rem;margin-bottom:1.1rem">That $5 isn't an extra charge — it comes straight off your mug's price at checkout, and unlocks more tokens right away so you can keep creating.</div>
+    <div class="note" style="margin-top:.5rem;margin-bottom:1.1rem">That $5 isn't an extra charge — it comes straight off your product's price at checkout, and unlocks more tokens right away so you can keep creating.</div>
 
-    <div class="note" style="margin-bottom:.6rem;color:#ccc;font-size:13px">Just want to play? Buy tokens directly — no mug purchase required.</div>
+    <div class="note" style="margin-bottom:.6rem;color:#ccc;font-size:13px">Just want to play? Buy tokens directly — no purchase required.</div>
 
     <button class="generate-btn" style="margin-bottom:.4rem" onclick="buyTokenPack('1token')">🪙 1 Token — 50¢</button>
     <div class="note" style="margin-top:0;margin-bottom:.75rem">One more shot — perfect if you know exactly what tweak you need.</div>
@@ -123,7 +123,7 @@
     <div class="note" style="margin-top:0;margin-bottom:.75rem">A few more tries to get it exactly right.</div>
 
     <button class="generate-btn" style="margin-bottom:.4rem" onclick="buyTokenPack('20tokens')">🪙 20 Tokens — $5.00</button>
-    <div class="note" style="margin-top:0;margin-bottom:1.1rem">A couple hours of creative fun — use them however you like, no mug required.</div>
+    <div class="note" style="margin-top:0;margin-bottom:1.1rem">A couple hours of creative fun — use them however you like, no purchase required.</div>
 
     <button class="quick-btn" onclick="togglePriceTable()" id="priceTableToggleBtn" style="width:100%;text-align:center;padding:.65rem;border-radius:8px;margin-top:.5rem">💰 See what a mug actually costs ▼</button>
     <div id="priceTablePanel" style="display:none;margin-top:.85rem">
@@ -149,7 +149,7 @@
 <button class="download-btn" onclick="downloadImage()">⬇️ Download for Printify</button>
 <div class="note" style="margin-top:.9rem;text-align:center;font-size:13px;color:#ccc">Are you satisfied with this design?</div>
 <div class="bi-row">
-<button class="generate-btn" style="flex:1;width:auto;padding:.8rem .4rem;font-size:13px" onclick="approveDesign(false)">✅ Yes — Put It On My Mug</button>
+<button class="generate-btn" style="flex:1;width:auto;padding:.8rem .4rem;font-size:13px" onclick="approveDesign(false)">✅ Yes — Use This Design</button>
 <button class="generate-btn" style="flex:1;width:auto;padding:.8rem .4rem;font-size:13px" onclick="approveDesign(true)">✅ Yes — All 3 Sides</button>
 </div>
 <button class="download-btn" style="margin-top:.6rem" onclick="keepTweaking()">🔧 No — Keep Tweaking</button>
@@ -178,7 +178,7 @@
 
 <div class="card"><div class="card-title">💬 Tell Us Your Idea</div><textarea id="ideaDesc" placeholder="Example: Put me on a tiny red tricycle wearing a firefighter helmet and full firefighter outfit, racing through a parade with smoke and sirens behind me."></textarea><div class="quick-btns" id="quickBtns"></div><div class="note">Paint us a clear picture — the more detail you give us, the better our chances of getting your exact idea right.</div></div>
 
-<div class="card"><div class="card-title">🎁 Product</div><div class="grid3"><div class="btn-select selected" data-val="mug" onclick="pick(this,'product')"><span class="icon">☕</span>Mug</div><div class="btn-select" data-val="greeting card" onclick="pick(this,'product')"><span class="icon">💌</span>Card</div><div class="btn-select" data-val="water bottle" onclick="pick(this,'product')"><span class="icon">🍶</span>Tumbler</div><div class="btn-select" data-val="post-it note" onclick="pick(this,'product')"><span class="icon">📝</span>Post-it</div><div class="btn-select" data-val="phone case" onclick="pick(this,'product')"><span class="icon">📱</span>Phone case</div><div class="btn-select" data-val="tote bag" onclick="pick(this,'product')"><span class="icon">👜</span>Tote bag</div><div class="btn-select" data-val="suitcase" onclick="pick(this,'product')"><span class="icon">🧳</span>Suitcase</div></div></div>
+<div class="card"><div class="card-title">🎁 Product</div><div class="grid3"><div class="btn-select selected" data-val="mug" onclick="pick(this,'product')"><span class="icon">☕</span>Mug</div><div class="btn-select" data-val="greeting card" onclick="pick(this,'product')"><span class="icon">💌</span>Card</div><div class="btn-select" data-val="water bottle" onclick="pick(this,'product')"><span class="icon">🍶</span>Travel Cups</div><div class="btn-select" data-val="post-it note" onclick="pick(this,'product')"><span class="icon">📝</span>Post-it</div><div class="btn-select" data-val="phone case" onclick="pick(this,'product')"><span class="icon">📱</span>Phone case</div><div class="btn-select" data-val="tote bag" onclick="pick(this,'product')"><span class="icon">👜</span>Tote bag</div><div class="btn-select" data-val="suitcase" onclick="pick(this,'product')"><span class="icon">🧳</span>Suitcase</div><div class="btn-select" data-val="puzzle" onclick="pick(this,'product')"><span class="icon">🧩</span>Puzzle</div></div></div>
 
 <div class="card"><div class="card-title">🎨 Style</div><div class="grid2"><div class="btn-select selected" data-val="Muggshotz Classic: premium professional caricature, expressive face, rich detail, painterly shading, funny gift-art scene" onclick="pick(this,'style')">🦝 Muggshotz Classic</div><div class="btn-select" data-val="photorealistic rendering, natural skin texture and lighting like a real photograph, shot on camera — not illustrated, not painted, not stylized" onclick="pick(this,'style')">📷 Photorealistic</div><div class="btn-select" data-val="flat cel-shaded comic strip illustration, bold black outlines, flat solid color fills, no gradients or painterly shading" onclick="pick(this,'style')">💥 Comic Strip</div><div class="btn-select" data-val="black and white pen-and-ink line drawing, clean linework only, no color, no shading fills — cross-hatching for shadow only" onclick="pick(this,'style')">✏️ Line Art</div></div></div>
 
@@ -217,13 +217,13 @@
 <button class="download-btn" id="cancelBtn" onclick="cancelGeneration()" style="display:none;margin-top:.5rem">✖ Cancel & Try a Different Photo</button>
 <div class="status" id="status"></div>
   <div class="card" id="positionHolderCard" style="display:none">
-<div class="card-title">🖼️ Design Your Mug</div>
-<div class="note" style="margin-top:0;margin-bottom:.9rem">Happy with just this one picture? We'll gladly take you to checkout. Want to try a few more designs first? If you're out of free tokens, a $5 Preview Reservation unlocks more tokens to keep creating — that $5 isn't an extra charge, it comes straight off your mug's price at checkout. Whatever you end up with, your exact total (including any charge for extra printed designs, or an image on both sides) is always shown before you pay.</div>
+<div class="card-title">🖼️ Design Your Product</div>
+<div class="note" style="margin-top:0;margin-bottom:.9rem">Happy with just this one picture? We'll gladly take you to checkout. Want to try a few more designs first? If you're out of free tokens, a $5 Preview Reservation unlocks more tokens to keep creating — that $5 isn't an extra charge, it comes straight off your product's price at checkout. Whatever you end up with, your exact total (including any charge for extra printed designs, or an image on both sides) is always shown before you pay.</div>
 <div id="positionHolderRow" style="display:flex;align-items:flex-start;gap:6px;justify-content:center;flex-wrap:nowrap"></div>
 <button class="quick-btn" id="libraryToggleBtn" onclick="toggleLibrary()" style="margin-top:1.1rem;width:100%;text-align:center;padding:.65rem;border-radius:8px">📚 My Designs (0)</button>
 <button class="quick-btn" onclick="clearAllDesigns()" style="margin-top:.5rem;width:100%;text-align:center;padding:.65rem;border-radius:8px;border-color:#5a2a2a;color:#ff8a7a">🧹 Clear All Designs — Fresh Start</button>
 <div id="libraryPanel" style="display:none;margin-top:.75rem">
-<div class="note" style="margin-top:0;margin-bottom:.6rem">Tap Left, Center, or Right under a design to put it on your mug.</div>
+<div class="note" style="margin-top:0;margin-bottom:.6rem">Tap Left, Center, or Right under a design to place it.</div>
 <div id="recentDesignsStrip" style="display:flex;gap:10px;overflow-x:auto;padding-bottom:6px"></div>
 </div>
 <button class="generate-btn" id="orderMugBtn" onclick="goToOrder()" style="display:none;margin-top:.9rem">✅ Available Now</button>
@@ -1217,6 +1217,7 @@ function getProductRules(p){
   if(p==='phone case')return 'phone case artwork, vertical-feeling composition, face and main joke clearly visible';
   if(p==='tote bag')return 'tote bag artwork, bold high-impact design readable from a distance';
   if(p==='suitcase')return 'travel suitcase artwork, bold full-coverage design that reads well from a distance, adventurous or eye-catching composition';
+  if(p==='puzzle')return 'photo puzzle artwork, clear central subject with good contrast between pieces, works well when cut into interlocking pieces';
   return 'printable custom gift artwork with clean centered square composition and safe margins';
 }
 
