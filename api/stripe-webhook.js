@@ -1,5 +1,6 @@
 import Stripe from "stripe";
 import { placeProductOrder } from "./create-printify-order.js";
+import { getProduct } from "../lib/products-catalog.js";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
@@ -168,21 +169,35 @@ export default async function handler(req, res) {
   }
 }
 
-// Handles a real mug order payment: reconstructs the order details from
-// the session metadata (including the free print_mode choice — standard
-// vs. fullBleed) and fires the actual Printify order. If Printify fails
-// for any reason, this is logged clearly for manual follow-up — but the
-// webhook still acknowledges receipt to Stripe (the customer already
-// paid; a fulfillment failure needs a human to fix, not an endless
-// Stripe retry loop).
+// Handles a real product order payment: reconstructs the order details
+// from the session metadata and fires the actual Printify order. If
+// Printify fails for any reason, this is logged clearly for manual
+// follow-up — but the webhook still acknowledges receipt to Stripe (the
+// customer already paid; a fulfillment failure needs a human to fix,
+// not an endless Stripe retry loop).
+//
+// Old-mug-type fallback: create-checkout-session.js was recently
+// updated to send product_key directly, but keeping this fallback
+// means any checkout session created moments before that deploy (still
+// in flight with the old mug_type-only metadata) doesn't silently fail.
+const MUG_TYPE_TO_PRODUCT_KEY = {
+  "Classic White": "classic-white-mug",
+  "Color Pop": "color-pop-mug"
+};
+
 async function handleMugOrderPayment(session) {
   const m = session.metadata || {};
 
-  const placements = {
-    left: m.left_image_url || null,
-    front: m.front_image_url || null,
-    right: m.right_image_url || null
-  };
+  const productKey = m.product_key || MUG_TYPE_TO_PRODUCT_KEY[m.mug_type];
+  const product = productKey ? getProduct(productKey) : null;
+  if (!product) {
+    console.error("CRITICAL: Unknown product in session metadata, cannot place order.", {
+      stripeSessionId: session.id,
+      productKey,
+      mugType: m.mug_type
+    });
+    return;
+  }
 
   const shippingAddress = {
     first_name: m.first_name,
@@ -202,33 +217,33 @@ async function handleMugOrderPayment(session) {
   // "standard" if it's ever missing from older/edge-case sessions.
   const printMode = m.print_mode === "fullBleed" ? "fullBleed" : "standard";
 
-  // Maps the old plain-text mug_type metadata value to the new catalog
-  // product key. Add a line here any time a new mug-family product is
-  // added to the catalog that this checkout flow can produce.
-  const MUG_TYPE_TO_PRODUCT_KEY = {
-    "Classic White": "classic-white-mug",
-    "Color Pop": "color-pop-mug"
+  // image_url_a/b/c mean different things depending on layoutType — see
+  // create-checkout-session.js for the packing side of this same map.
+  const orderInput = {
+    productKey,
+    sizeLabel: m.size_label,
+    colorName: m.color || null,
+    printMode,
+    shippingAddress,
+    customerName: m.customer_name,
+    orderId: session.id
   };
-  const productKey = MUG_TYPE_TO_PRODUCT_KEY[m.mug_type];
-  if (!productKey) {
-    console.error("CRITICAL: Unknown mug_type in session metadata, cannot place order.", {
-      stripeSessionId: session.id,
-      mugType: m.mug_type
-    });
-    return;
+
+  if (product.layoutType === "three-slot-wrap") {
+    orderInput.placements = {
+      left: m.image_url_a || null,
+      front: m.image_url_b || null,
+      right: m.image_url_c || null
+    };
+  } else if (product.layoutType === "front-back") {
+    orderInput.frontImage = m.image_url_a || null;
+    orderInput.backImage = m.image_url_b || null;
+  } else {
+    orderInput.image = m.image_url_a || null;
   }
 
   try {
-    const result = await placeProductOrder({
-      productKey,
-      sizeLabel: m.size_label,
-      colorName: m.color || null,
-      placements,
-      printMode,
-      shippingAddress,
-      customerName: m.customer_name,
-      orderId: session.id
-    });
+    const result = await placeProductOrder(orderInput);
     console.log("Order placed successfully for session", session.id, "-> Printify order", result.printifyOrderId);
   } catch (error) {
     // Never let a Printify failure look like it silently vanished —
