@@ -90,6 +90,9 @@ label{font-size:11px;color:#888;letter-spacing:.5px;text-transform:uppercase;dis
 <div class="card-title">🧳 Suitcase Size</div>
 <div class="grid3" id="suitcaseSizeGrid"></div>
 <div class="note">Comes in Black only.</div>
+<button class="download-btn" id="suitcaseMockupBtn" onclick="fetchSingleImageMockup('suitcase', selectedSuitcaseSize, null, 'suitcaseMockupBtn', 'suitcaseMockupNote', 'suitcaseMockupImg')" style="margin-top:1rem">📸 See a Real Photo Preview</button>
+<div class="note" id="suitcaseMockupNote" style="margin-top:.5rem;text-align:center;display:none"></div>
+<img id="suitcaseMockupImg" style="display:none;width:100%;border-radius:12px;border:1px solid #ff6a00;margin-top:.75rem"/>
 </div>
 
 <div class="card" id="toteBagSizeCard" style="display:none">
@@ -101,6 +104,9 @@ label{font-size:11px;color:#888;letter-spacing:.5px;text-transform:uppercase;dis
 <div class="card-title">🎨 Tote Bag Color</div>
 <div class="color-grid" id="toteBagColorGrid"></div>
 <div class="color-label" id="toteBagColorLabel">Pick a color</div>
+<button class="download-btn" id="toteMockupBtn" onclick="fetchSingleImageMockup('tote-bag', selectedToteSize, selectedToteColor, 'toteMockupBtn', 'toteMockupNote', 'toteMockupImg')" style="margin-top:1rem">📸 See a Real Photo Preview</button>
+<div class="note" id="toteMockupNote" style="margin-top:.5rem;text-align:center;display:none"></div>
+<img id="toteMockupImg" style="display:none;width:100%;border-radius:12px;border:1px solid #ff6a00;margin-top:.75rem"/>
 </div>
 
 <div class="card" id="phoneCaseCard" style="display:none">
@@ -110,6 +116,9 @@ label{font-size:11px;color:#888;letter-spacing:.5px;text-transform:uppercase;dis
   style="width:100%;padding:.6rem;border-radius:8px;border:.5px solid #333;background:#0d0d0d;color:#fff;box-sizing:border-box"/>
 <div id="phoneModelResults" style="margin-top:.6rem"></div>
 <div class="note" id="phoneModelSelectedNote" style="margin-top:.6rem"></div>
+<button class="download-btn" id="phoneMockupBtn" onclick="fetchSingleImageMockup('phone-case-tough', selectedPhoneModel, null, 'phoneMockupBtn', 'phoneMockupNote', 'phoneMockupImg')" style="margin-top:1rem">📸 See a Real Photo Preview</button>
+<div class="note" id="phoneMockupNote" style="margin-top:.5rem;text-align:center;display:none"></div>
+<img id="phoneMockupImg" style="display:none;width:100%;border-radius:12px;border:1px solid #ff6a00;margin-top:.75rem"/>
 </div>
 
 <div class="card" id="mugStyleCard">
@@ -527,6 +536,8 @@ function pickPhoneModel(model){
   document.getElementById('phoneModelSearchInput').value = model;
   document.getElementById('phoneModelResults').innerHTML = '';
   document.getElementById('phoneModelSelectedNote').textContent = '✓ Case selected for ' + model + ' — $' + PHONE_CASE_PRICE.toFixed(2) + ' + shipping.';
+  const img=document.getElementById('phoneMockupImg'); if(img) img.style.display='none';
+  const btn=document.getElementById('phoneMockupBtn'); if(btn) btn.textContent='📸 See a Real Photo Preview';
   updateSummary();
 }
 
@@ -616,6 +627,8 @@ function pickToteBagColor(el, colorData){
   el.classList.add('selected');
   selectedToteColor = colorData.name;
   document.getElementById('toteBagColorLabel').textContent = selectedToteColor;
+  const img=document.getElementById('toteMockupImg'); if(img) img.style.display='none';
+  const btn=document.getElementById('toteMockupBtn'); if(btn) btn.textContent='📸 See a Real Photo Preview';
   updateSummary();
 }
 
@@ -637,6 +650,8 @@ function pickSuitcaseSize(el){
   document.querySelectorAll('#suitcaseSizeGrid .btn-select').forEach(b=>b.classList.remove('selected'));
   el.classList.add('selected');
   selectedSuitcaseSize = el.dataset.size;
+  const img=document.getElementById('suitcaseMockupImg'); if(img) img.style.display='none';
+  const btn=document.getElementById('suitcaseMockupBtn'); if(btn) btn.textContent='📸 See a Real Photo Preview';
   updateSummary();
 }
 
@@ -774,6 +789,60 @@ const MUG_STYLE_TO_PRODUCT_KEY = {
   "Trimmed": "trimmed-mug",
   "Accented": "accented-mug"
 };
+
+// Shared by suitcase, phone case, and tote bag — all three are
+// single-image layout products, so one function covers all of them.
+// Whichever design was placed first (Left, Center, or Right) is used,
+// same fallback order the actual order submission already uses.
+async function fetchSingleImageMockup(productKey, sizeLabel, colorName, btnId, noteId, imgId){
+  const btn = document.getElementById(btnId);
+  const noteEl = document.getElementById(noteId);
+  const imgEl = document.getElementById(imgId);
+
+  if (!sizeLabel) {
+    noteEl.textContent = 'Pick an option above first.';
+    noteEl.className = 'note error';
+    noteEl.style.display = 'block';
+    return;
+  }
+
+  const left = pendingOrder?.placements?.left || null;
+  const front = pendingOrder?.placements?.front || null;
+  const right = pendingOrder?.placements?.right || null;
+  const image = left || front || right || null;
+
+  if (!image) {
+    noteEl.textContent = 'No design found — please go back and place a design first.';
+    noteEl.className = 'note error';
+    noteEl.style.display = 'block';
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = '📸 Generating your real photo... (a few seconds)';
+  noteEl.style.display = 'none';
+
+  try {
+    const resp = await fetch('/api/generate-mockup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ productKey, sizeLabel, colorName, image })
+    });
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data.error || 'Could not generate a real photo preview.');
+
+    imgEl.src = data.mockupUrl;
+    imgEl.style.display = 'block';
+    btn.textContent = '✅ Real Photo Preview';
+  } catch (err) {
+    noteEl.textContent = err.message;
+    noteEl.className = 'note error';
+    noteEl.style.display = 'block';
+    btn.textContent = '📸 See a Real Photo Preview';
+  } finally {
+    btn.disabled = false;
+  }
+}
 
 function resetTravelMockupPreview(){
   const btn = document.getElementById('travelMockupPreviewBtn');
