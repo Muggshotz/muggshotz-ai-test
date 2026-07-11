@@ -12,6 +12,17 @@ const TOKEN_PACKS = {
 
 const GIFT_MESSAGE_PRICE = 1.00;
 
+// Flat charge for an auto-generated Wraparound set (the generator's
+// scene-continuation pipeline — 3 real panels from 1 paid generation).
+// Deliberately SEPARATE from calculateUpsellCharge() below, which is
+// for the older, unrelated "customer manually placed 3 different
+// designs" ladder. Both features happen to fill left/front/right, but
+// they are not the same thing and must not share pricing logic — a
+// wraparound set always costs a flat +$3, regardless of the ladder's
+// same/different-design distinction (July 2026, Alyx: wraparound costs
+// more in real API usage and shouldn't be priced like a free gimme).
+const WRAPAROUND_SET_SURCHARGE = 3;
+
 // Flat shipping estimate shown as its own line item so the customer
 // sees "product price" and "shipping" as two separate numbers at
 // Stripe checkout — this is a placeholder rate, not a real Printify
@@ -72,7 +83,7 @@ async function handleReservation(req, res) {
 //              anything added going forward)
 async function handleProductOrder(req, res) {
   const {
-    deviceId, sizeLabel, customerName, giftMessage, shippingAddress, printMode
+    deviceId, sizeLabel, customerName, giftMessage, shippingAddress, printMode, isWraparoundSet
   } = req.body;
 
   // Figure out which product this is, old-shape or new-shape.
@@ -116,7 +127,15 @@ async function handleProductOrder(req, res) {
     return res.status(400).json({ error: "Missing required shipping information." });
 
   const resolvedPrintMode = printMode === "fullBleed" ? "fullBleed" : "standard";
-  const upsellCharge = product.layoutType === "three-slot-wrap" ? calculateUpsellCharge(placements) : 0;
+
+  // isWraparoundSet (flat +$3) and the manual-placement upsell ladder
+  // ($3/$5/$6) are mutually exclusive — an auto-generated wraparound
+  // set always uses the flat surcharge, never the ladder, even though
+  // it also fills all three slots with genuinely distinct images. See
+  // WRAPAROUND_SET_SURCHARGE above for why these must stay separate.
+  const upsellCharge = product.layoutType === "three-slot-wrap"
+    ? (isWraparoundSet ? WRAPAROUND_SET_SURCHARGE : calculateUpsellCharge(placements))
+    : 0;
   const giftCharge = giftMessage?.trim() ? GIFT_MESSAGE_PRICE : 0;
 
   const productCents = Math.round((basePrice + upsellCharge + giftCharge) * 100);
@@ -164,6 +183,7 @@ async function handleProductOrder(req, res) {
       size_label: sizeLabel,
       color: colorName || "",
       print_mode: resolvedPrintMode,
+      is_wraparound_set: isWraparoundSet ? "true" : "false",
       image_url_a: imageUrlA, image_url_b: imageUrlB, image_url_c: imageUrlC,
       customer_name: customerName || "", gift_message: giftMessage || "",
       first_name: shippingAddress.first_name || "", last_name: shippingAddress.last_name || "",
