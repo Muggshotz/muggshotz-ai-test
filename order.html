@@ -421,6 +421,20 @@ try {
 // checkbox in sync rather than conflicting with an earlier decision.
 fullWrapEnabled = pendingOrder?.mugPrintMode === 'wraparound';
 
+// Honor the style/size/color the customer already picked in the
+// generator (while watching the live mockup update) — no reason to
+// make them choose all over again here. Falls back to the original
+// defaults if this pending order predates that feature.
+if (pendingOrder?.preselectedMugStyle && MUG_STYLES[pendingOrder.preselectedMugStyle]) {
+  selectedStyle = pendingOrder.preselectedMugStyle;
+}
+if (pendingOrder?.preselectedMugSize && MUG_STYLES[selectedStyle]?.sizes?.[pendingOrder.preselectedMugSize]) {
+  selectedSize = pendingOrder.preselectedMugSize;
+}
+if (pendingOrder?.preselectedMugColor) {
+  selectedColor = pendingOrder.preselectedMugColor;
+}
+
 // productIcon was only just added to index.html's goToOrder(). Any
 // pending order saved before that change simply won't have it — treated
 // safely here as "mug" (the original, only-ever behavior), so nothing
@@ -1132,9 +1146,9 @@ function pickPreviewView(el){
 function renderMugStyleGrid(){
   const grid = document.getElementById('mugStyleGrid');
   grid.innerHTML = '';
-  Object.keys(MUG_STYLES).forEach((styleName, i) => {
+  Object.keys(MUG_STYLES).forEach((styleName) => {
     const btn = document.createElement('div');
-    btn.className = 'btn-select' + (i === 0 ? ' selected' : '');
+    btn.className = 'btn-select' + (styleName === selectedStyle ? ' selected' : '');
     btn.dataset.style = styleName;
     const startPrice = MUG_STYLES[styleName].sizes['11oz'].price;
     btn.innerHTML = styleName + '<span class="price">from $' + startPrice.toFixed(2) + '</span>';
@@ -1183,9 +1197,11 @@ function renderColorGrid(){
   const grid = document.getElementById('colorGrid');
   grid.innerHTML = '';
   const colors = MUG_STYLES[selectedStyle].sizes[selectedSize].colors || [];
+  const preselected = selectedColor && colors.some(c => c.name === selectedColor);
   colors.forEach((c, i)=>{
     const btn = document.createElement('div');
-    btn.className = 'color-btn' + (i === 0 ? ' selected' : '');
+    const isSelected = preselected ? (c.name === selectedColor) : (i === 0);
+    btn.className = 'color-btn' + (isSelected ? ' selected' : '');
     btn.dataset.color = c.name;
     btn.onclick = ()=>pickColor(btn, c);
     const ball = document.createElement('div');
@@ -1193,7 +1209,7 @@ function renderColorGrid(){
     ball.style.background = c.hex;
     btn.appendChild(ball);
     grid.appendChild(btn);
-    if (i === 0) {
+    if (isSelected) {
       document.getElementById('colorLabel').textContent = c.name;
       selectedColor = c.name;
     }
@@ -1668,6 +1684,9 @@ if (isTravelMug()) {
     document.getElementById('livePreviewCard').style.display = 'block';
     document.getElementById('fullWrapCard').style.display = 'block';
     renderMugStyleGrid();
+    document.querySelectorAll('#sizeCard [data-size]').forEach(b=>{
+      b.classList.toggle('selected', b.dataset.size === selectedSize);
+    });
     const hasColors = !!MUG_STYLES[selectedStyle].sizes[selectedSize].colors;
     document.getElementById('colorCard').style.display = hasColors ? 'block' : 'none';
     if (hasColors) renderColorGrid();
