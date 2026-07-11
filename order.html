@@ -600,6 +600,21 @@ function toggleComingSoonPanel(){
 }
 
 function renderBridgeGrid(){
+  const gridCard = document.getElementById('bridgeGridCard');
+
+  // A wraparound set is three purpose-built panels that only make sense
+  // together as one continuous coffee mug wrap — letting the customer
+  // switch to Suitcase/Tote/etc. from here would produce a genuinely
+  // broken result (mismatched, disconnected panels forced onto a
+  // single-image product), not just a suboptimal one. Lock it instead
+  // of pretending the choice is real.
+  if (pendingOrder?.isWraparoundSet) {
+    gridCard.innerHTML =
+      '<div class="card-title">🎨 Your Wraparound Design</div>' +
+      '<div class="note" style="margin-top:0">These three panels were generated as one continuous scene specifically shaped for a Coffee Mug wrap — they\'re locked to Coffee Mug and won\'t work correctly on any other product.</div>';
+    return;
+  }
+
   document.getElementById('bridgeGridSubnote').textContent =
     'Your design works on any of these — pick whichever you want, no need to go back and regenerate.';
 
