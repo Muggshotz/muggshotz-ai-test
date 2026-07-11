@@ -61,6 +61,105 @@ async function getPlaceholderDimensions(blueprintId, printProviderId, variantId,
   return { width: ph.width, height: ph.height, position: ph.position };
 }
 
+// ===== PHOTO/POSTER-ONLY HELPERS =====
+// photo-poster is the one catalog entry whose blueprint AND print
+// provider aren't fixed — they depend on whether the customer picked
+// framed or unframed, since those are genuinely two separate Printify
+// products (blueprint 1079 vs blueprint 492), not two variants of one.
+// These two helpers exist so the catalog can be written today with
+// some fields still unknown (printProviderId / variantIds left null
+// for the unframed side — see products-catalog.js) and have the real
+// values resolved live against Printify's API at order time, instead
+// of blocking on manual lookup in the dashboard.
+
+const PRINT_PROVIDER_ID_CACHE = {};
+
+async function resolvePrintProviderId(blueprintId, providerNameHint) {
+  if (PRINT_PROVIDER_ID_CACHE[blueprintId]) return PRINT_PROVIDER_ID_CACHE[blueprintId];
+  const response = await fetch(
+    `https://api.printify.com/v1/catalog/blueprints/${blueprintId}/print_providers.json`,
+    { headers: { "Authorization": `Bearer ${process.env.PRINTIFY_API_TOKEN}` } }
+  );
+  const data = await response.json();
+  if (!response.ok) throw new Error("Failed to fetch print providers: " + JSON.stringify(data));
+  const match = (providerNameHint
+    ? data.find(p => p.title?.toLowerCase().includes(providerNameHint.toLowerCase()))
+    : null) || data[0];
+  if (!match) throw new Error(`No print providers found for blueprint ${blueprintId}`);
+  PRINT_PROVIDER_ID_CACHE[blueprintId] = match.id;
+  return match.id;
+}
+
+async function resolveVariantIdByTitleMatch(blueprintId, printProviderId, matchTerms) {
+  const response = await fetch(
+    `https://api.printify.com/v1/catalog/blueprints/${blueprintId}/print_providers/${printProviderId}/variants.json`,
+    { headers: { "Authorization": `Bearer ${process.env.PRINTIFY_API_TOKEN}` } }
+  );
+  const data = await response.json();
+  if (!response.ok) throw new Error("Failed to fetch blueprint variants: " + JSON.stringify(data));
+  const variant = (data.variants || []).find(v =>
+    matchTerms.every(term => v.title?.toLowerCase().includes(term.toLowerCase()))
+  );
+  if (!variant) throw new Error(`No Printify variant matched [${matchTerms.join(", ")}] for blueprint ${blueprintId}`);
+  return variant.id;
+}
+
+// Resolves everything order-creation needs for photo-poster: which
+// blueprint, which print provider, which exact variant, the price, and
+// the aspectRatio (needed upstream by the generation step, not used
+// here, but returned so the caller has it available).
+async function resolvePhotoPosterSelection(product, { framed, sizeLabel, orientation, finish, frameColor }) {
+  if (framed) {
+    const tree = product.framedUpsell;
+    const sizeEntry = tree.sizes[sizeLabel];
+    if (!sizeEntry) throw new Error(`Unknown framed poster size "${sizeLabel}".`);
+    if (!frameColor) throw new Error("A frame color selection is required.");
+    const colorEntry = sizeEntry.colors.find(c => c.name === frameColor);
+    if (!colorEntry) throw new Error(`Unknown frame color "${frameColor}" for size "${sizeLabel}".`);
+    return {
+      variantId: colorEntry.variantId,
+      price: sizeEntry.price,
+      blueprintId: tree.blueprintId,
+      printProviderId: tree.printProviderId,
+      aspectRatio: sizeEntry.aspectRatio
+    };
+  }
+
+  // Unframed
+  const tree = product.base;
+  const sizeEntry = tree.sizes[sizeLabel];
+  if (!sizeEntry) throw new Error(`Unknown poster size "${sizeLabel}".`);
+  if (!orientation || !sizeEntry.orientations.includes(orientation)) {
+    throw new Error(`Unknown or missing orientation "${orientation}" for size "${sizeLabel}".`);
+  }
+  if (!finish || !tree.finishes.includes(finish)) {
+    throw new Error(`Unknown or missing finish "${finish}".`);
+  }
+
+  const printProviderId = tree.printProviderId || await resolvePrintProviderId(tree.blueprintId, "Prima Printing");
+
+  const variantKey = `${orientation.toLowerCase()}${finish}`; // e.g. "horizontalGlossy"
+  let variantId = sizeEntry.variantIds?.[variantKey];
+
+  if (!variantId) {
+    // Catalog entry doesn't have the real ID yet — match the live
+    // Printify variant by title instead of failing outright. sizeLabel
+    // is stored as e.g. "16x20", representing the Vertical dimension
+    // order; Horizontal is that pair reversed.
+    const [a, b] = sizeLabel.split("x").map(s => s.trim());
+    const dimsTerm = orientation === "Vertical" ? `${a}" x ${b}"` : `${b}" x ${a}"`;
+    variantId = await resolveVariantIdByTitleMatch(tree.blueprintId, printProviderId, [dimsTerm, orientation, finish]);
+  }
+
+  return {
+    variantId,
+    price: sizeEntry.price,
+    blueprintId: tree.blueprintId,
+    printProviderId,
+    aspectRatio: sizeEntry.aspectRatio
+  };
+}
+
 // ===== LAYOUT BUILDERS =====
 // Each one takes whatever image source(s) the customer approved and
 // returns a finished PNG buffer ready to upload to Printify. Adding a
@@ -115,7 +214,8 @@ async function buildFullBleedImage(imageSource, canvasWidth, canvasHeight) {
 
 // "single-image" — one design, contain-fit onto a white canvas sized to
 // the product's one print area. For products with exactly one design
-// slot and no left/right sections (e.g. Travel Mug with Handle, 14oz).
+// slot and no left/right sections (e.g. Travel Mug with Handle, 14oz;
+// also Photo/Poster).
 async function buildSingleImage(imageSource, canvasWidth, canvasHeight) {
   const WHITE = { r: 255, g: 255, b: 255 };
   return await sharp(await resolveImageBuffer(imageSource))
@@ -148,7 +248,10 @@ async function buildFrontBackImages(frontSource, backSource, frontDims, backDims
 // Looks up the correct Printify variant ID for a given product/size/
 // color combination, handling the two different catalog shapes:
 // flat sizes (most products) and colors-nested-under-size (Color Pop,
-// where available colors differ by size).
+// where available colors differ by size). NOTE: photo-poster does NOT
+// go through this function — its blueprint/provider isn't fixed at the
+// top level, so it uses resolvePhotoPosterSelection() instead. See the
+// branch in placeProductOrder below.
 function resolveVariant(product, sizeLabel, colorName) {
   const sizeEntry = product.sizes?.[sizeLabel];
   if (!sizeEntry) throw new Error(`Unknown size "${sizeLabel}" for this product.`);
@@ -174,7 +277,7 @@ function resolveVariant(product, sizeLabel, colorName) {
   return { variantId: sizeEntry.variantId, price: sizeEntry.price };
 }
 
-async function createPrintifyProduct(images, product, variantId, title) {
+async function createPrintifyProduct(images, { blueprintId, printProviderId, displayName }, variantId, title) {
   // images is either { position: imageId } for single/full-bleed/front-back,
   // built into the placeholders array below.
   const placeholders = Object.entries(images).map(([position, imageId]) => ({
@@ -190,9 +293,9 @@ async function createPrintifyProduct(images, product, variantId, title) {
     },
     body: JSON.stringify({
       title: title,
-      description: `Custom Muggshotz ${product.displayName}.`,
-      blueprint_id: product.blueprintId,
-      print_provider_id: product.printProviderId,
+      description: `Custom Muggshotz ${displayName}.`,
+      blueprint_id: blueprintId,
+      print_provider_id: printProviderId,
       variants: [{ id: variantId, price: 1, is_enabled: true }],
       print_areas: [{ variant_ids: [variantId], placeholders }]
     })
@@ -253,6 +356,12 @@ function calculateUpsellCharge(placements) {
 //   front-back      : { frontImage, backImage }
 //   single-image     : { image }
 //   full-bleed       : { image }
+//
+// photo-poster (layoutType "single-image") additionally needs:
+//   posterFramed     : boolean — true if the customer chose the framed upsell
+//   posterOrientation: "Horizontal" | "Vertical" — unframed only, ignored if framed
+//   posterFinish      : "Glossy" | "Matte" — unframed only, ignored if framed
+//   colorName         : reused as the frame color ("Black" | "White") — framed only
 export async function placeProductOrder({
   productKey,
   sizeLabel,
@@ -264,13 +373,34 @@ export async function placeProductOrder({
   shippingAddress,
   customerName,
   orderId,
-  printMode = "standard"
+  printMode = "standard",
+  posterFramed,
+  posterOrientation,
+  posterFinish
 }) {
   const product = getProduct(productKey);
   if (!product) throw new Error(`Unknown product: "${productKey}"`);
   if (!shippingAddress) throw new Error("shippingAddress is required.");
 
-  const { variantId, price } = resolveVariant(product, sizeLabel, colorName);
+  let variantId, price, effectiveBlueprintId, effectivePrintProviderId;
+
+  if (productKey === "photo-poster") {
+    const resolved = await resolvePhotoPosterSelection(product, {
+      framed: !!posterFramed,
+      sizeLabel,
+      orientation: posterOrientation,
+      finish: posterFinish,
+      frameColor: colorName
+    });
+    variantId = resolved.variantId;
+    price = resolved.price;
+    effectiveBlueprintId = resolved.blueprintId;
+    effectivePrintProviderId = resolved.printProviderId;
+  } else {
+    ({ variantId, price } = resolveVariant(product, sizeLabel, colorName));
+    effectiveBlueprintId = product.blueprintId;
+    effectivePrintProviderId = product.printProviderId;
+  }
 
   let printifyImages = {};
   let pricing = { upsellCharge: 0, reason: "N/A" };
@@ -281,7 +411,7 @@ export async function placeProductOrder({
     }
     const isFullBleed = printMode === "fullBleed" || printMode === "allCup";
     const { width, height, position } = await getPlaceholderDimensions(
-      product.blueprintId, product.printProviderId, variantId
+      effectiveBlueprintId, effectivePrintProviderId, variantId
     );
     const buffer = isFullBleed
       ? await buildFullBleedImage(placements.front || placements.left || placements.right, width, height)
@@ -305,14 +435,14 @@ export async function placeProductOrder({
     const dims = product.printDimensions?.front;
     const { width, height, position } = dims
       ? { ...dims, position: "front" }
-      : await getPlaceholderDimensions(product.blueprintId, product.printProviderId, variantId);
+      : await getPlaceholderDimensions(effectiveBlueprintId, effectivePrintProviderId, variantId);
     const buffer = await buildSingleImage(image, width, height);
     printifyImages[position] = await uploadImageToPrintify(buffer, `muggshotz-${Date.now()}.png`);
 
   } else if (product.layoutType === "full-bleed") {
     if (!image) throw new Error("An image is required.");
     const { width, height, position } = await getPlaceholderDimensions(
-      product.blueprintId, product.printProviderId, variantId
+      effectiveBlueprintId, effectivePrintProviderId, variantId
     );
     const buffer = await buildFullBleedImage(image, width, height);
     printifyImages[position] = await uploadImageToPrintify(buffer, `muggshotz-${Date.now()}.png`);
@@ -322,7 +452,12 @@ export async function placeProductOrder({
   }
 
   const productTitle = `Muggshotz ${product.displayName}${customerName ? " - " + customerName : ""}`;
-  const { productId } = await createPrintifyProduct(printifyImages, product, variantId, productTitle);
+  const { productId } = await createPrintifyProduct(
+    printifyImages,
+    { blueprintId: effectiveBlueprintId, printProviderId: effectivePrintProviderId, displayName: product.displayName },
+    variantId,
+    productTitle
+  );
 
   const orderResult = await submitPrintifyOrder(
     productId, variantId, shippingAddress, orderId || `muggshotz-${Date.now()}`
