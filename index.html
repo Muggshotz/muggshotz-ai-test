@@ -419,6 +419,7 @@ function getDeviceId(){
 const deviceId=getDeviceId();
 
 let hasPurchased=false; // set by refreshTokenMeter() below — gates the Wraparound option (+$3, more real API usage) behind having made at least one real payment
+let isAdminDevice=false; // admin devices bypass the Wraparound purchase gate the same way they already bypass the token-balance block
 
 async function refreshTokenMeter(){
   const meterEl=document.getElementById('tokenMeterNumber');
@@ -428,6 +429,7 @@ async function refreshTokenMeter(){
     if(!resp.ok)throw new Error(data.error||'Could not load balance.');
     meterEl.textContent=data.tokenBalance;
     hasPurchased=!!data.hasPurchased;
+    isAdminDevice=!!data.isAdmin;
     refreshMugPrintModeVisibility();
   }catch(err){
     meterEl.textContent='—';
@@ -447,10 +449,6 @@ let pathCanvasReady=false;
 let mugPrintMode='three-panel'; // 'three-panel' | 'wraparound' — coffee/travel mugs only, chosen BEFORE generation since it changes composition
 
 function pickMugPrintMode(mode){
-  if(mode==='wraparound' && !hasPurchased){
-    setStatus('Wraparound is a +$3 option that unlocks after your first purchase — it uses more real generation power than a single design, so it\'s not part of the free first token. Grab the $5 Preview Reservation or any token pack to unlock it.',true);
-    return;
-  }
   mugPrintMode=mode;
   document.getElementById('printModeThreeBtn').classList.toggle('selected',mode==='three-panel');
   document.getElementById('printModeWrapBtn').classList.toggle('selected',mode==='wraparound');
@@ -460,25 +458,12 @@ function refreshMugPrintModeVisibility(){
   const card=document.getElementById('mugPrintModeCard');
   if(!card)return;
   card.style.display=(product==='mug'||product==='water bottle')?'block':'none';
-
-  const wrapBtn=document.getElementById('printModeWrapBtn');
-  if(!wrapBtn)return;
-  const locked = !hasPurchased;
-  wrapBtn.style.opacity = locked ? '0.5' : '1';
-  wrapBtn.style.cursor = locked ? 'not-allowed' : 'pointer';
-  const noteEl = wrapBtn.querySelector('.note');
-  if(noteEl){
-    noteEl.textContent = locked
-      ? 'One continuous picture that wraps all the way around. 🔒 Unlocks after your first purchase (+$3).'
-      : 'One continuous picture that wraps all the way around. (+$3)';
-  }
-  // If the customer somehow had wraparound selected before losing
-  // purchase status (shouldn't normally happen), fall back safely.
-  if(locked && mugPrintMode==='wraparound'){
-    mugPrintMode='three-panel';
-    document.getElementById('printModeThreeBtn').classList.add('selected');
-    wrapBtn.classList.remove('selected');
-  }
+  // No purchase gate here on purpose — Wraparound is always selectable,
+  // even on a brand-new customer's very first visit. What guarantees
+  // it's never given away for free is the flat +$3 surcharge charged
+  // at actual checkout (see create-checkout-session.js), not a
+  // pre-generation lock. A lock would have blocked a legitimate
+  // first-time customer whose very first purchase IS a wraparound mug.
 }
 
 // Photo/Poster catalog — kept in sync manually with lib/products-catalog.js
