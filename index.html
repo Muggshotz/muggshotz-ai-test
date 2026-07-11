@@ -180,6 +180,22 @@
 
 <div class="card"><div class="card-title">🎁 Product</div><div class="grid3"><div class="btn-select selected" data-val="mug" onclick="pick(this,'product')"><span class="icon">☕</span>Mug</div><div class="btn-select" data-val="greeting card" onclick="pick(this,'product')"><span class="icon">💌</span>Card</div><div class="btn-select" data-val="water bottle" onclick="pick(this,'product')"><span class="icon">🍶</span>Travel Cups</div><div class="btn-select" data-val="post-it note" onclick="pick(this,'product')"><span class="icon">📝</span>Post-it</div><div class="btn-select" data-val="phone case" onclick="pick(this,'product')"><span class="icon">📱</span>Phone case</div><div class="btn-select" data-val="tote bag" onclick="pick(this,'product')"><span class="icon">👜</span>Tote bag</div><div class="btn-select" data-val="suitcase" onclick="pick(this,'product')"><span class="icon">🧳</span>Suitcase</div><div class="btn-select" data-val="puzzle" onclick="pick(this,'product')"><span class="icon">🧩</span>Puzzle</div></div></div>
 
+<div class="card" id="mugPrintModeCard">
+<div class="card-title">☕ Mug Print Style</div>
+<div class="note" style="margin-top:0;margin-bottom:.9rem">Coffee mugs (and travel mugs) can be printed two ways — pick before you generate, since it changes how the artwork is composed.</div>
+<div style="display:flex;align-items:stretch;gap:10px">
+<div class="btn-select selected" id="printModeThreeBtn" style="flex:1;padding:1rem .6rem" onclick="pickMugPrintMode('three-panel')">
+<span class="icon">🔲🔲🔲</span>Three Separate Designs
+<div class="note" style="margin-top:6px;color:#888">Left, Center, and Right can each be a completely different picture.</div>
+</div>
+<div style="display:flex;align-items:center;color:#666;font-size:12px;font-weight:700">or</div>
+<div class="btn-select" id="printModeWrapBtn" style="flex:1;padding:1rem .6rem" onclick="pickMugPrintMode('wraparound')">
+<span class="icon">🌀</span>Wraparound
+<div class="note" style="margin-top:6px;color:#888">One continuous picture that wraps all the way around.</div>
+</div>
+</div>
+</div>
+
 <div class="card"><div class="card-title">🎨 Style</div><div class="grid2"><div class="btn-select selected" data-val="Muggshotz Classic: premium professional caricature, expressive face, rich detail, painterly shading, funny gift-art scene" onclick="pick(this,'style')">🦝 Muggshotz Classic</div><div class="btn-select" data-val="photorealistic rendering, natural skin texture and lighting like a real photograph, shot on camera — not illustrated, not painted, not stylized" onclick="pick(this,'style')">📷 Photorealistic</div><div class="btn-select" data-val="flat cel-shaded comic strip illustration, bold black outlines, flat solid color fills, no gradients or painterly shading" onclick="pick(this,'style')">💥 Comic Strip</div><div class="btn-select" data-val="black and white pen-and-ink line drawing, clean linework only, no color, no shading fills — cross-hatching for shadow only" onclick="pick(this,'style')">✏️ Line Art</div></div></div>
 
 <div class="card"><div class="card-title">🎭 Degree of Caricature</div><div class="grid3"><div class="btn-select selected" data-val="0.15" onclick="pick(this,'likeness')"><span class="icon">😊</span>Lifelike</div><div class="btn-select" data-val="0.25" onclick="pick(this,'likeness')"><span class="icon">😄</span>Balanced</div><div class="btn-select" data-val="0.35" onclick="pick(this,'likeness')"><span class="icon">🤪</span>Wild</div></div></div>
@@ -385,12 +401,27 @@ let currentStroke=[];
 let isDrawingPath=false;
 let pathCanvasReady=false;
 
+let mugPrintMode='three-panel'; // 'three-panel' | 'wraparound' — coffee/travel mugs only, chosen BEFORE generation since it changes composition
+
+function pickMugPrintMode(mode){
+  mugPrintMode=mode;
+  document.getElementById('printModeThreeBtn').classList.toggle('selected',mode==='three-panel');
+  document.getElementById('printModeWrapBtn').classList.toggle('selected',mode==='wraparound');
+}
+
+function refreshMugPrintModeVisibility(){
+  const card=document.getElementById('mugPrintModeCard');
+  if(!card)return;
+  card.style.display=(product==='mug'||product==='water bottle')?'block':'none';
+}
+
 function pick(el,type){
   el.closest('.grid3,.grid2').querySelectorAll('.btn-select').forEach(b=>b.classList.remove('selected'));
   el.classList.add('selected');
   if(type==='product'){
     product=el.dataset.val;
     refreshApproveRowForMode();
+    refreshMugPrintModeVisibility();
   }
   else if(type==='style')style=el.dataset.val;
   else if(type==='likeness')likeness=el.dataset.val;
@@ -1174,8 +1205,8 @@ function restoreRefPreview(zoneId, previewId, inputId, dataUrl, setter){
 // every other product a single design slot. Replaces the old "every
 // product gets Left/Center/Right" behavior. =====
 function getSlotMode(){
-  if (product === 'mug') return 'three';
-  if (product === 'water bottle') return 'two';
+  if (product === 'mug') return mugPrintMode === 'wraparound' ? 'one' : 'three';
+  if (product === 'water bottle') return mugPrintMode === 'wraparound' ? 'one' : 'two';
   return 'one';
 }
 function getSlotOrder(){
@@ -1188,6 +1219,7 @@ function getSlotLabel(pos){
   const mode = getSlotMode();
   if (mode === 'three') return pos === 'left' ? 'Left' : pos === 'right' ? 'Right' : 'Center';
   if (mode === 'two') return pos === 'front' ? 'Front' : 'Back';
+  if (mode === 'one' && mugPrintMode === 'wraparound') return 'Wraparound';
   return 'Design';
 }
 
@@ -1338,6 +1370,12 @@ document.getElementById('cancelBtn').style.display='block';
       ? `Background option selected: ${backgroundDesc}. No hard edges or sticker-cutout look — all edges should fade or blend softly.`
       : '';
 
+    const wrapCompositionLine = (product==='mug'||product==='water bottle')
+      ? (mugPrintMode==='wraparound'
+          ? 'COMPOSITION: This design will be printed as ONE CONTINUOUS WRAPAROUND image around a curved surface, including past a handle. Compose with detail extended toward the edges rather than tightly centered, so nothing important is lost at the seam or the handle gap.'
+          : 'COMPOSITION: This design will be printed as a single self-contained panel viewed from one flat angle. Keep the subject centered with clean, safe margins on all sides.')
+      : '';
+
     const referenceLine = (refASnapshot || refBSnapshot)
       ? `
 REFERENCE IMAGES: Additional photos have been provided beyond Photo 1 (the main photo).
@@ -1385,6 +1423,7 @@ ${customerIdea}
 Selected style: ${style}.
 Product target: ${getProductRules(product)}.
 ${backgroundLine}
+${wrapCompositionLine}
 ${referenceLine}
 
 PRIORITY ORDER: The customer idea above is the primary instruction for what the scene contains.
@@ -1791,6 +1830,7 @@ function restoreWorkshop(){
 }
 restoreWorkshop();
 refreshApproveRowForMode();
+refreshMugPrintModeVisibility();
 
 window.addEventListener('scroll',function(){
   const row=document.querySelector('.token-credits-row');
