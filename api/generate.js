@@ -1,2010 +1,318 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Muggshotz Image Generator</title>
-<link rel="icon" type="image/x-icon" href="favicon.ico"/>
-<link rel="icon" type="image/png" sizes="16x16" href="favicon-16.png"/>
-<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png"/>
-<link rel="icon" type="image/png" sizes="48x48" href="favicon-48.png"/>
-<link rel="icon" type="image/png" sizes="192x192" href="favicon-192.png"/>
-<link rel="icon" type="image/png" sizes="512x512" href="favicon-512.png"/>
-<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png"/>
-<link rel="manifest" href="manifest.json"/>
-<meta name="theme-color" content="#ff6a00"/>
-<link href="https://fonts.googleapis.com/css2?family=Anton&family=Bebas+Neue&family=Pacifico&family=Lobster&family=Caveat:wght@600&family=Permanent+Marker&family=Patrick+Hand&family=Playfair+Display:wght@700&display=swap" rel="stylesheet"/>
-<style>
-*{box-sizing:border-box;margin:0;padding:0}body{background:#111;font-family:system-ui,sans-serif;color:#fff;padding-bottom:80px}.header{background:#000;border-bottom:2px solid #ff6a00;padding:14px 0 0;display:block;overflow:hidden}
-.header-video{display:block;width:min(90%,1900px);aspect-ratio:864/496;max-height:90vh;object-fit:contain;margin:0 auto;background:#000}.logo{font-size:22px;font-weight:700;color:#fff;letter-spacing:1px}.logo span{color:#ff6a00;text-shadow:0 0 6px rgba(255,154,0,0.8),0 0 2px rgba(255,255,255,0.6)}.logo .hot{color:#000;-webkit-text-stroke:1px #fff;text-shadow:none}.sub{font-size:11px;color:#888;letter-spacing:2px;text-transform:uppercase}.tagline{background:#1a0a00;border-bottom:1px solid #3a1a00;text-align:center;padding:.5rem;font-size:11px;color:#ff6a00;letter-spacing:1px}.main{padding:1.5rem;display:flex;flex-direction:column;gap:1.5rem;max-width:600px;margin:0 auto}.card{background:#1a1a1a;border:.5px solid #333;border-radius:12px;padding:1.25rem}.card-title{font-size:13px;font-weight:600;color:#ff6a00;letter-spacing:1px;text-transform:uppercase;margin-bottom:1rem}textarea{width:100%;background:#0d0d0d;border:1px solid #444;border-radius:8px;padding:12px;color:#fff;font-size:14px;font-family:system-ui,sans-serif}textarea:focus{outline:none;border-color:#ff6a00}textarea{resize:vertical;min-height:80px}.note{font-size:11px;color:#555;margin-top:6px;line-height:1.35}.upload-zone{border:1.5px dashed #444;border-radius:12px;padding:2rem;text-align:center;cursor:pointer;background:#0d0d0d}.upload-zone.has-image{border-color:#ff6a00;border-style:solid}.upload-text{font-size:14px;color:#888}.upload-sub{font-size:12px;color:#555;margin-top:4px}.preview-img{width:100%;max-height:320px;object-fit:contain;border-radius:8px;margin-top:0;cursor:pointer}.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.grid2{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}.btn-select{background:#0d0d0d;border:.5px solid #333;border-radius:8px;padding:.75rem .5rem;text-align:center;cursor:pointer;color:#888;font-size:12px}.btn-select.selected{border-color:#ff6a00;background:#1a0a00;color:#ff6a00}.icon{font-size:20px;margin-bottom:4px;display:block}.quick-btns{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}.quick-btn{background:#0d0d0d;border:.5px solid #444;border-radius:20px;padding:4px 10px;color:#888;font-size:11px;cursor:pointer}.quick-btn:hover{border-color:#ff6a00;color:#ff6a00}.generate-btn{width:100%;background:#ff6a00;border:none;border-radius:10px;padding:1.1rem;color:#fff;font-size:17px;font-weight:700;cursor:pointer;letter-spacing:1px}.generate-btn:disabled{background:#333;color:#666;cursor:not-allowed}.status{font-size:13px;color:#ff6a00;text-align:center;padding:1rem;display:none}.status.visible{display:block}.error{color:#e24b4a!important}.spinner{display:inline-block;width:16px;height:16px;border:2px solid #ff6a00;border-top-color:transparent;border-radius:50%;animation:spin .8s linear infinite;vertical-align:middle;margin-right:8px}@keyframes spin{to{transform:rotate(360deg)}}.result-area{display:none}.result-area.visible{display:block}.result-img{width:100%;border-radius:12px;border:1px solid #ff6a00}.mockup-label{font-size:12px;color:#666;text-align:center;margin-top:8px}.download-btn{width:100%;background:#0d0d0d;border:1px solid #ff6a00;border-radius:10px;padding:.75rem;color:#ff6a00;font-size:14px;cursor:pointer;margin-top:.75rem}
-.caption-card{display:none}.caption-card.visible{display:block}
-.caption-input{width:100%;background:#0d0d0d;border:1px solid #444;border-radius:8px;padding:10px 12px;color:#fff;font-size:14px;font-family:system-ui,sans-serif}
-.caption-input:focus{outline:none;border-color:#ff6a00}
-.font-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:.75rem}
-.font-btn{background:#0d0d0d;border:.5px solid #333;border-radius:8px;padding:.6rem .4rem;text-align:center;cursor:pointer;color:#ccc;font-size:15px}
-.font-btn.selected{border-color:#ff6a00;background:#1a0a00}
-.cap-row{display:flex;align-items:center;gap:10px;margin-top:.75rem}
-.cap-row label{font-size:12px;color:#888;min-width:60px}
-.cap-row input[type=color]{width:40px;height:32px;border:1px solid #444;border-radius:6px;background:#0d0d0d;cursor:pointer}
-.cap-row input[type=range]{flex:1}
-.pos-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:.75rem;max-width:160px}
-.pos-btn{background:#0d0d0d;border:.5px solid #333;border-radius:6px;aspect-ratio:1;cursor:pointer;display:flex;align-items:center;justify-content:center}
-.pos-btn::after{content:'';width:8px;height:8px;border-radius:50%;background:#555}
-.pos-btn.selected{border-color:#ff6a00}
-.pos-btn.selected::after{background:#ff6a00}
-.color-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;max-width:340px}
-.color-btn{width:100%;max-width:48px;aspect-ratio:1;border-radius:50%;background:#1a1a1a;padding:5px;cursor:pointer;box-shadow:0 3px 6px rgba(0,0,0,0.6);margin:0 auto}
-.color-btn .ball{width:100%;height:100%;border-radius:50%;position:relative;box-shadow:inset 0 -5px 9px rgba(0,0,0,0.35),inset 0 3px 7px rgba(255,255,255,0.35)}
-.color-btn .ball::after{content:'';position:absolute;top:18%;left:22%;width:30%;height:18%;background:rgba(255,255,255,0.55);border-radius:50%;filter:blur(2px);transform:rotate(-30deg)}
-.color-btn.selected{box-shadow:0 0 0 3px #ff6a00,0 0 14px 2px rgba(255,106,0,0.7)}
-.theme-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
-.theme-btn{position:relative;border-radius:10px;overflow:hidden;cursor:pointer;border:2px solid #333;display:flex;flex-direction:column}
-.theme-btn img{width:100%;aspect-ratio:1;object-fit:cover;display:block}
-.theme-btn .theme-label{padding:4px 4px;background:#0d0d0d;color:#ccc;font-size:10px;font-weight:600;text-align:center;line-height:1.2}
-.theme-btn.selected{border-color:#ff6a00;box-shadow:0 0 0 2px #ff6a00,0 0 10px 1px rgba(255,106,0,0.6)}
-.theme-btn.selected .theme-label{color:#ff6a00}
+import fs from "fs";
+import path from "path";
 
-.seg-row{display:flex;gap:6px;margin-top:.75rem;flex-wrap:wrap}
-.seg-btn{flex:1;min-width:60px;background:#0d0d0d;border:.5px solid #333;border-radius:8px;padding:.55rem .4rem;text-align:center;cursor:pointer;color:#888;font-size:12px;font-weight:600}
-.seg-btn.selected{border-color:#ff6a00;background:#1a0a00;color:#ff6a00}
-.toggle-row{display:flex;align-items:center;justify-content:space-between;margin-top:.75rem}
-.toggle-row label{font-size:12px;color:#888}
-.toggle-switch{position:relative;width:42px;height:24px;background:#0d0d0d;border:1px solid #444;border-radius:20px;cursor:pointer;flex-shrink:0}
-.toggle-switch::after{content:'';position:absolute;top:2px;left:2px;width:18px;height:18px;background:#888;border-radius:50%;transition:left .15s,background .15s}
-.toggle-switch.on{border-color:#ff6a00;background:#1a0a00}
-.toggle-switch.on::after{left:20px;background:#ff6a00}
-.style-chip-row{display:flex;gap:8px;margin-top:.75rem;flex-wrap:wrap}
-.style-chip{background:#0d0d0d;border:.5px solid #333;border-radius:20px;padding:.5rem .85rem;cursor:pointer;color:#888;font-size:12px;display:flex;align-items:center;gap:6px}
-.style-chip.selected{border-color:#ff6a00;background:#1a0a00;color:#ff6a00}
-.swatch-dot{width:14px;height:14px;border-radius:50%;display:inline-block;border:1px solid rgba(255,255,255,0.25)}
-.sub-section-label{font-size:11px;color:#666;letter-spacing:.5px;text-transform:uppercase;margin-top:1.1rem;margin-bottom:-.25rem}
-.bi-row{display:flex;gap:8px;margin-top:.75rem}
-.bi-btn{flex:1;background:#0d0d0d;border:.5px solid #333;border-radius:8px;padding:.6rem;text-align:center;cursor:pointer;color:#888;font-size:16px}
-.bi-btn.selected{border-color:#ff6a00;background:#1a0a00;color:#ff6a00}
-
-.curve-mode-row{display:flex;gap:8px;margin-top:.75rem}
-.curve-mode-btn{flex:1;background:#0d0d0d;border:.5px solid #333;border-radius:8px;padding:.6rem .4rem;text-align:center;cursor:pointer;color:#888;font-size:12px;font-weight:600}
-.curve-mode-btn.selected{border-color:#ff6a00;background:#1a0a00;color:#ff6a00}
-.draw-path-wrap{position:relative;margin-top:.75rem;border-radius:10px;overflow:hidden;border:1.5px dashed #444;background:#0d0d0d;touch-action:none}
-.draw-path-wrap canvas{display:block;width:100%;height:auto;touch-action:none}
-.draw-path-actions{display:flex;gap:8px;margin-top:.6rem}
-.draw-path-actions .quick-btn{flex:1;text-align:center}
-.caption-header-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem}
-.caption-header-row .card-title{margin-bottom:0}
-.reset-caption-btn{background:#2a1010;border:1px solid #5a2a2a;border-radius:20px;padding:.4rem .8rem;color:#ff8a7a;font-size:11px;font-weight:600;cursor:pointer;letter-spacing:.3px;white-space:nowrap}
-.reset-caption-btn:hover{background:#3a1414;border-color:#7a3a3a}
-.pos-slot{width:92px;text-align:center;flex-shrink:0}
-.pos-slot-label{font-size:10px;color:#888;letter-spacing:1px;text-transform:uppercase;margin-bottom:5px;font-weight:600}
-.pos-thumb-wrap{position:relative}
-.pos-slot-thumb{width:92px;height:92px;border-radius:10px;background:#0d0d0d;border:2px dashed #333;display:flex;align-items:center;justify-content:center;overflow:hidden}
-.pos-slot-thumb.filled{border-style:solid;border-color:#ff6a00}
-.pos-slot-thumb img{width:100%;height:100%;object-fit:cover}
-.pos-slot-empty-icon{font-size:22px;color:#444}
-.pos-handle{position:absolute;top:50%;width:14px;height:24px;border:3px solid #555;background:transparent;transform:translateY(-50%);pointer-events:none;z-index:2}
-.pos-handle-left{left:-13px;border-radius:8px 0 0 8px;border-right:none}
-.pos-handle-right{right:-13px;border-radius:0 8px 8px 0;border-left:none}
-.pos-slot-gen-btn{margin-top:6px;font-size:10px;background:#0d0d0d;border:1px solid #444;border-radius:14px;padding:4px 0;color:#ff6a00;cursor:pointer;width:100%}
-.swap-btn{background:#0d0d0d;border:1px solid #444;border-radius:50%;width:44px;height:44px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#ff6a00;font-size:18px;flex-shrink:0;margin-top:24px}
-
-.token-credits-row{position:fixed;bottom:12px;top:auto;right:10px;left:auto;z-index:999;display:flex;align-items:center;gap:8px;pointer-events:none;transition:top .2s,bottom .2s}
-.token-credits-row.scrolled{bottom:auto;top:8px;right:10px;left:auto}
-#creditsBtn{pointer-events:auto}
-@media (min-width:1000px){
-  .token-credits-row{bottom:16px;top:auto;left:24px;right:24px;transform:none;justify-content:space-between;gap:0}
-  .token-credits-row.scrolled{bottom:auto;top:8px;left:24px;right:24px}
-}
-</style>
-</head>
-<body>
-<div class="token-credits-row">
-  <div id="tokenMeterWrap" style="position:relative;width:210px;flex-shrink:0">
-    <img src="meter.png" style="width:100%;display:block" alt="Chip meter"/>
-    <div id="tokenMeterNumber" style="position:absolute;left:44.4%;top:31.3%;width:13%;height:25.3%;display:flex;align-items:center;justify-content:center;color:#ff6a00;font-family:'Anton',sans-serif;font-weight:700;font-size:clamp(14px,3.6vw,22px);text-shadow:0 0 8px rgba(255,106,0,0.7)">—</div>
-  </div>
-  <button id="creditsBtn" onclick="openCreditsPanel()" style="background:#ff6a00;border:none;border-radius:20px;padding:.55rem 1rem;color:#fff;font-size:12px;font-weight:700;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,0.6);letter-spacing:.3px;flex-shrink:0">💳 Credits & Extras</button>
-</div>
-<div id="creditsModalOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:1000;align-items:center;justify-content:center;padding:1.5rem;overflow-y:auto">
-  <div class="card" style="max-width:420px;width:100%;position:relative;margin:auto">
-    <button onclick="closeCreditsPanel()" style="position:absolute;top:8px;right:8px;background:none;border:none;color:#888;font-size:20px;cursor:pointer;line-height:1">✖</button>
-    <div class="card-title">💳 Credits & Extras</div>
-    <div id="creditsPanelMessage" class="note" style="margin-top:0;margin-bottom:1.1rem;color:#ccc;font-size:13px;line-height:1.4"></div>
-
-    <a href="checkout.html" style="text-decoration:none;display:block">
-      <button class="generate-btn">✅ $5 Preview Reservation</button>
-    </a>
-    <div class="note" style="margin-top:.5rem;margin-bottom:1.1rem">That $5 isn't an extra charge — it comes straight off your product's price at checkout, and unlocks more tokens right away so you can keep creating.</div>
-
-    <div class="note" style="margin-bottom:.6rem;color:#ccc;font-size:13px">Just want to play? Buy tokens directly — no purchase required.</div>
-
-    <button class="generate-btn" style="margin-bottom:.4rem" onclick="buyTokenPack('1token')">🪙 1 Token — 50¢</button>
-    <div class="note" style="margin-top:0;margin-bottom:.75rem">One more shot — perfect if you know exactly what tweak you need.</div>
-
-    <button class="generate-btn" style="margin-bottom:.4rem" onclick="buyTokenPack('3tokens')">🪙 3 Tokens — $1.00</button>
-    <div class="note" style="margin-top:0;margin-bottom:.75rem">A few more tries to get it exactly right.</div>
-
-    <button class="generate-btn" style="margin-bottom:.4rem" onclick="buyTokenPack('20tokens')">🪙 20 Tokens — $5.00</button>
-    <div class="note" style="margin-top:0;margin-bottom:1.1rem">A couple hours of creative fun — use them however you like, no purchase required.</div>
-
-    <button class="quick-btn" onclick="togglePriceTable()" id="priceTableToggleBtn" style="width:100%;text-align:center;padding:.65rem;border-radius:8px;margin-top:.5rem">💰 See what a mug actually costs ▼</button>
-    <div id="priceTablePanel" style="display:none;margin-top:.85rem">
-      <table style="width:100%;border-collapse:collapse;font-size:12px">
-        <tr style="color:#ff6a00;text-align:left"><th style="padding:4px 0">Style</th><th style="padding:4px 0;text-align:right">11oz</th><th style="padding:4px 0;text-align:right">15oz</th></tr>
-        <tr style="border-top:1px solid #333"><td style="padding:6px 0;color:#ccc">Classic White</td><td style="padding:6px 0;text-align:right;color:#ccc">$14.95</td><td style="padding:6px 0;text-align:right;color:#ccc">$19.95</td></tr>
-        <tr style="border-top:1px solid #333"><td style="padding:6px 0;color:#ccc">Color Pop</td><td style="padding:6px 0;text-align:right;color:#ccc">$29.95</td><td style="padding:6px 0;text-align:right;color:#ccc">$34.95</td></tr>
-      </table>
-      <div class="note" style="margin-top:.6rem">Prices shown are for the mug itself — shipping and handling is calculated and added at checkout.</div>
-    </div>
-  </div>
-</div>
-<div class="header"><video class="header-video" autoplay muted loop playsinline preload="auto" onerror="document.getElementById('headerVideoFallback').style.display='block'"><source src="https://res.cloudinary.com/fixgpggr/video/upload/The_one_zxizmo.mp4" type="video/mp4"></video><div id="headerVideoFallback" style="display:none;color:#ff6a00;text-align:center;padding:1.5rem;font-size:13px">Logo video failed to load.</div></div>
-<div class="tagline">YOUR HONEY. OUR FUNNY.</div>
-<div class="main">
-
-<div class="card"><div class="card-title">📸 Upload Photo</div>
-<div style="font-size:11px;color:#777;letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px;text-align:center">Photo 1</div>
-<div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()"><div style="font-size:32px;color:#555;margin-bottom:8px">👤</div><div class="upload-text">Tap here to upload a photo</div><div class="upload-sub">Clear face photo works best</div></div><input type="file" id="fileInput" accept="image/*" style="display:none"/><img id="previewImg" class="preview-img" style="display:none"/>
-<button class="download-btn" id="toggleImageBtn" onclick="toggleWorkingImage()" style="display:none;margin-top:.6rem">↔️ Toggle Between Previous & New Image</button>
-<button class="download-btn" id="startOverBtn" onclick="startOver()" style="display:none;margin-top:.6rem;border-color:#5a2a2a;color:#ff8a7a">🗑️ Start Over — Clear This Photo</button>
-<div id="approveRow" style="display:none">
-<button class="download-btn" onclick="downloadImage()">⬇️ Download for Printify</button>
-<div class="note" style="margin-top:.9rem;text-align:center;font-size:13px;color:#ccc">Are you satisfied with this design?</div>
-<div class="bi-row">
-<button class="generate-btn" style="flex:1;width:auto;padding:.8rem .4rem;font-size:13px" onclick="approveDesign(false)">✅ Yes — Use This Design</button>
-<button class="generate-btn" id="allSidesBtn" style="flex:1;width:auto;padding:.8rem .4rem;font-size:13px" onclick="approveDesign(true)">✅ Yes — All 3 Sides</button>
-</div>
-<button class="download-btn" style="margin-top:.6rem" onclick="keepTweaking()">🔧 No — Keep Tweaking</button>
-<div class="note" id="approveRowHint" style="margin-top:.5rem">Want it on exactly two sides? Press Yes first, then tap Left / Center / Right under the design in "My Designs" to add or remove spots.</div>
-</div>
-
-<div style="margin-top:1.1rem;padding-top:1rem;border-top:1px dashed #333">
-<div class="note" style="margin-top:0;margin-bottom:.6rem">Optional — add more photos if you want to combine or pull elements from other pictures (e.g. "use the face from Photo 2 on the body in Photo 1").</div>
-<div class="grid2">
-<div>
-<div style="font-size:11px;color:#777;letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px;text-align:center">Photo 2</div>
-<div class="upload-zone" id="refAZone" style="padding:1rem;" onclick="document.getElementById('refAInput').click()"><div style="font-size:20px;color:#555;margin-bottom:4px">➕</div><div class="upload-text" style="font-size:12px">Tap to add</div></div>
-<input type="file" id="refAInput" accept="image/*" style="display:none"/>
-<img id="refAPreview" class="preview-img" style="display:none;max-height:140px"/>
-</div>
-<div>
-<div style="font-size:11px;color:#777;letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px;text-align:center">Photo 3</div>
-<div class="upload-zone" id="refBZone" style="padding:1rem;" onclick="document.getElementById('refBInput').click()"><div style="font-size:20px;color:#555;margin-bottom:4px">➕</div><div class="upload-text" style="font-size:12px">Tap to add</div></div>
-<input type="file" id="refBInput" accept="image/*" style="display:none"/>
-<img id="refBPreview" class="preview-img" style="display:none;max-height:140px"/>
-</div>
-</div>
-</div>
-
-</div>
-
-<div class="card"><div class="card-title">💬 Tell Us Your Idea</div><textarea id="ideaDesc" placeholder="Example: Put me on a tiny red tricycle wearing a firefighter helmet and full firefighter outfit, racing through a parade with smoke and sirens behind me."></textarea><div class="quick-btns" id="quickBtns"></div><div class="note">Paint us a clear picture — the more detail you give us, the better our chances of getting your exact idea right.</div></div>
-
-<div class="card"><div class="card-title">🎁 Product</div><div class="grid3"><div class="btn-select selected" data-val="mug" onclick="pick(this,'product')"><span class="icon">☕</span>Mug</div><div class="btn-select" data-val="greeting card" onclick="pick(this,'product')"><span class="icon">💌</span>Card</div><div class="btn-select" data-val="water bottle" onclick="pick(this,'product')"><span class="icon">🍶</span>Travel Cups</div><div class="btn-select" data-val="post-it note" onclick="pick(this,'product')"><span class="icon">📝</span>Post-it</div><div class="btn-select" data-val="phone case" onclick="pick(this,'product')"><span class="icon">📱</span>Phone case</div><div class="btn-select" data-val="tote bag" onclick="pick(this,'product')"><span class="icon">👜</span>Tote bag</div><div class="btn-select" data-val="suitcase" onclick="pick(this,'product')"><span class="icon">🧳</span>Suitcase</div><div class="btn-select" data-val="puzzle" onclick="pick(this,'product')"><span class="icon">🧩</span>Puzzle</div><div class="btn-select" data-val="photo poster" onclick="pick(this,'product')"><span class="icon">🖼️</span>Photo/Poster</div></div></div>
-
-<div class="card" id="mugPrintModeCard">
-<div class="card-title">☕ Mug Print Style</div>
-<div class="note" style="margin-top:0;margin-bottom:.9rem">Coffee mugs (and travel mugs) can be printed two ways — pick before you generate, since it changes how the artwork is composed.</div>
-<div style="display:flex;align-items:stretch;gap:10px">
-<div class="btn-select selected" id="printModeThreeBtn" style="flex:1;padding:1rem .6rem" onclick="pickMugPrintMode('three-panel')">
-<span class="icon">🔲🔲🔲</span>Three Separate Designs
-<div class="note" style="margin-top:6px;color:#888">Left, Center, and Right can each be a completely different picture.</div>
-</div>
-<div style="display:flex;align-items:center;color:#666;font-size:12px;font-weight:700">or</div>
-<div class="btn-select" id="printModeWrapBtn" style="flex:1;padding:1rem .6rem" onclick="pickMugPrintMode('wraparound')">
-<span class="icon">🌀</span>Wraparound
-<div class="note" style="margin-top:6px;color:#888">One continuous picture that wraps all the way around.</div>
-</div>
-</div>
-</div>
-
-<div class="card" id="photoPosterOptionsCard" style="display:none">
-<div class="card-title">🖼️ Photo/Poster Options</div>
-<div class="note" style="margin-top:0;margin-bottom:.9rem">This is the one product where you pick everything BEFORE generating — the exact shape of your print determines how the artwork gets composed, so getting this locked in first means no cropping surprises later.</div>
-
-<div style="display:flex;gap:10px;margin-bottom:1rem">
-<div class="btn-select selected" id="posterUnframedBtn" style="flex:1;padding:.9rem .6rem" onclick="pickPosterFramed(false)">Unframed</div>
-<div class="btn-select" id="posterFramedBtn" style="flex:1;padding:.9rem .6rem" onclick="pickPosterFramed(true)">Framed</div>
-</div>
-
-<div id="posterSizeGridWrap">
-<div class="note" style="margin-bottom:6px">Size</div>
-<div class="grid3" id="posterSizeGrid"></div>
-</div>
-
-<div id="posterOrientationFinishWrap" style="margin-top:1rem">
-<div class="note" style="margin-bottom:6px">Orientation</div>
-<div class="grid2" style="margin-bottom:1rem">
-<div class="btn-select selected" id="posterOrientVerticalBtn" onclick="pickPosterOrientation('Vertical')">Vertical</div>
-<div class="btn-select" id="posterOrientHorizontalBtn" onclick="pickPosterOrientation('Horizontal')">Horizontal</div>
-</div>
-<div class="note" style="margin-bottom:6px">Finish</div>
-<div class="grid2">
-<div class="btn-select selected" id="posterFinishGlossyBtn" onclick="pickPosterFinish('Glossy')">Glossy</div>
-<div class="btn-select" id="posterFinishMatteBtn" onclick="pickPosterFinish('Matte')">Matte</div>
-</div>
-</div>
-
-<div id="posterFrameColorWrap" style="display:none;margin-top:1rem">
-<div class="note" style="margin-bottom:6px">Frame Color</div>
-<div class="grid2">
-<div class="btn-select selected" id="posterFrameBlackBtn" onclick="pickPosterFrameColor('Black')">Black</div>
-<div class="btn-select" id="posterFrameWhiteBtn" onclick="pickPosterFrameColor('White')">White</div>
-</div>
-<div class="note" style="margin-top:.75rem;color:#ff9a4d">Ships separately from outside the US — slightly longer delivery.</div>
-</div>
-
-<div class="note" id="posterPriceNote" style="margin-top:1rem;font-size:14px;color:#ff6a00;font-weight:700"></div>
-</div>
-
-<div class="card"><div class="card-title">🎨 Style</div><div class="grid2"><div class="btn-select selected" data-val="Muggshotz Classic: premium professional caricature, expressive face, rich detail, painterly shading, funny gift-art scene" onclick="pick(this,'style')">🦝 Muggshotz Classic</div><div class="btn-select" data-val="photorealistic rendering, natural skin texture and lighting like a real photograph, shot on camera — not illustrated, not painted, not stylized" onclick="pick(this,'style')">📷 Photorealistic</div><div class="btn-select" data-val="flat cel-shaded comic strip illustration, bold black outlines, flat solid color fills, no gradients or painterly shading" onclick="pick(this,'style')">💥 Comic Strip</div><div class="btn-select" data-val="black and white pen-and-ink line drawing, clean linework only, no color, no shading fills — cross-hatching for shadow only" onclick="pick(this,'style')">✏️ Line Art</div></div></div>
-
-<div class="card"><div class="card-title">🎭 Degree of Caricature</div><div class="grid3"><div class="btn-select selected" data-val="0.15" onclick="pick(this,'likeness')"><span class="icon">😊</span>Lifelike</div><div class="btn-select" data-val="0.25" onclick="pick(this,'likeness')"><span class="icon">😄</span>Balanced</div><div class="btn-select" data-val="0.35" onclick="pick(this,'likeness')"><span class="icon">🤪</span>Wild</div></div></div>
-
-<div class="card"><div class="card-title">🖼️ Background</div>
-<div class="note" style="margin-top:0;margin-bottom:.75rem">Optional — pick a theme and a color, or leave blank and just describe it above.</div>
-<div class="theme-grid" id="themeGrid">
-<div class="theme-btn" data-val="Marbling" onclick="pickTheme(this)"><img src="laced marble.png"/><div class="theme-label">Marbling</div></div>
-<div class="theme-btn" data-val="Cloud Mist" onclick="pickTheme(this)"><img src="clouds.png"/><div class="theme-label">Cloud Mist</div></div>
-<div class="theme-btn" data-val="Pastel Leaf" onclick="pickTheme(this)"><img src="pastel leaf.png"/><div class="theme-label">Pastel Leaf</div></div>
-<div class="theme-btn" data-val="Satin Sheets" onclick="pickTheme(this)"><img src="satin sheets.png"/><div class="theme-label">Satin Sheets</div></div>
-<div class="theme-btn" data-val="Frosted Glass" onclick="pickTheme(this)"><img src="frosted mirror.png"/><div class="theme-label">Frosted Glass</div></div>
-<div class="theme-btn" data-val="Bubble Drift" onclick="pickTheme(this)"><img src="bubble drift.png"/><div class="theme-label">Bubble Drift</div></div>
-<div class="theme-btn" data-val="Rose Crepe" onclick="pickTheme(this)"><img src="rose crepe.png"/><div class="theme-label">Rose Crepe</div></div>
-<div class="theme-btn" data-val="Fade to White" onclick="pickTheme(this)"><img src="fade to white.png"/><div class="theme-label">Fade to White</div></div>
-</div>
-<div class="note" style="margin-bottom:6px">Color</div>
-<div class="color-grid" id="colorGrid" style="margin-bottom:18px">
-<div class="color-btn" data-val="Lavender" onclick="pickColor(this)"><div class="ball" style="background:#8B5FBF"></div></div>
-<div class="color-btn" data-val="Rose" onclick="pickColor(this)"><div class="ball" style="background:#E0457B"></div></div>
-<div class="color-btn" data-val="Light Green" onclick="pickColor(this)"><div class="ball" style="background:#5FBF5F"></div></div>
-<div class="color-btn" data-val="Dark Green" onclick="pickColor(this)"><div class="ball" style="background:#1F7A45"></div></div>
-<div class="color-btn" data-val="Red" onclick="pickColor(this)"><div class="ball" style="background:#D62828"></div></div>
-<div class="color-btn" data-val="Orange" onclick="pickColor(this)"><div class="ball" style="background:#F0701A"></div></div>
-<div class="color-btn" data-val="Light Blue" onclick="pickColor(this)"><div class="ball" style="background:#5FA8DE"></div></div>
-<div class="color-btn" data-val="Navy Blue" onclick="pickColor(this)"><div class="ball" style="background:#1B3D7A"></div></div>
-<div class="color-btn" data-val="Black" onclick="pickColor(this)"><div class="ball" style="background:#1c1c1c"></div></div>
-<div class="color-btn" data-val="Yellow" onclick="pickColor(this)"><div class="ball" style="background:#F0D43A"></div></div>
-<div class="color-btn" data-val="Teal" onclick="pickColor(this)"><div class="ball" style="background:#1F9E8E"></div></div>
-<div class="color-btn" data-val="Purple" onclick="pickColor(this)"><div class="ball" style="background:#8E3FC9"></div></div>
-</div>
-</div>
-
-<button class="generate-btn" id="generateBtn" onclick="generate()">🎨 GENERATE CARICATURE</button>
-<button class="download-btn" id="cancelBtn" onclick="cancelGeneration()" style="display:none;margin-top:.5rem">✖ Cancel & Try a Different Photo</button>
-<div class="status" id="status"></div>
-  <div class="card" id="positionHolderCard" style="display:none">
-<div class="card-title">🖼️ Design Your Product</div>
-<div class="note" style="margin-top:0;margin-bottom:.9rem">Happy with just this one picture? We'll gladly take you to checkout. Want to try a few more designs first? If you're out of free tokens, a $5 Preview Reservation unlocks more tokens to keep creating — that $5 isn't an extra charge, it comes straight off your product's price at checkout. Whatever you end up with, your exact total (including any charge for extra printed designs, or an image on both sides) is always shown before you pay.</div>
-<div id="positionHolderRow" style="display:flex;align-items:flex-start;gap:6px;justify-content:center;flex-wrap:nowrap"></div>
-<button class="quick-btn" id="libraryToggleBtn" onclick="toggleLibrary()" style="margin-top:1.1rem;width:100%;text-align:center;padding:.65rem;border-radius:8px">📚 My Designs (0)</button>
-<button class="quick-btn" onclick="clearAllDesigns()" style="margin-top:.5rem;width:100%;text-align:center;padding:.65rem;border-radius:8px;border-color:#5a2a2a;color:#ff8a7a">🧹 Clear All Designs — Fresh Start</button>
-<div id="libraryPanel" style="display:none;margin-top:.75rem">
-<div class="note" style="margin-top:0;margin-bottom:.6rem">Tap Left, Center, or Right under a design to place it.</div>
-<div id="recentDesignsStrip" style="display:flex;gap:10px;overflow-x:auto;padding-bottom:6px"></div>
-</div>
-<button class="generate-btn" id="orderMugBtn" onclick="goToOrder()" style="display:none;margin-top:.9rem">✅ Available Now</button>
-</div>
-<div class="card" id="verifyCard" style="display:none">
-<div class="card-title">🎁 Get a Second Free Token</div>
-<div class="note" style="margin-top:0;margin-bottom:.75rem">Verify your email and we'll send you another free token to keep creating. We check that it's a real, working address — this keeps one bonus token per person fair for everyone.</div>
-<input type="email" class="caption-input" id="verifyEmailInput" placeholder="you@example.com"/>
-<button class="generate-btn" style="margin-top:.75rem" onclick="sendVerification()" id="verifyBtn">📧 Send Me a Bonus Token</button>
-<div class="note" id="verifyStatus" style="margin-top:.5rem"></div>
-</div>
-<div class="card caption-card" id="captionCard">
-<div class="caption-header-row"><div class="card-title" style="margin-bottom:0">✏️ Add a Caption</div><div class="reset-caption-btn" onclick="resetCaptionSettings()">↺ Reset to Default</div></div>
-<input type="text" class="caption-input" id="captionText" placeholder="Example: God Bless America" oninput="drawCaption()"/>
-
-<div class="font-grid" id="fontGrid">
-<div class="font-btn selected" data-font="Anton" style="font-family:'Anton'" onclick="pickFont(this)">Stout</div>
-<div class="font-btn" data-font="'Bebas Neue'" style="font-family:'Bebas Neue'" onclick="pickFont(this)">Demanding</div>
-<div class="font-btn" data-font="Pacifico" style="font-family:'Pacifico'" onclick="pickFont(this)">Drippy</div>
-<div class="font-btn" data-font="Lobster" style="font-family:'Lobster'" onclick="pickFont(this)">Retro</div>
-<div class="font-btn" data-font="Caveat" style="font-family:'Caveat';font-weight:600" onclick="pickFont(this)">Doodle</div>
-<div class="font-btn" data-font="'Permanent Marker'" style="font-family:'Permanent Marker'" onclick="pickFont(this)">Wacky</div>
-<div class="font-btn" data-font="'Patrick Hand'" style="font-family:'Patrick Hand'" onclick="pickFont(this)">Casual</div>
-<div class="font-btn" data-font="'Playfair Display'" style="font-family:'Playfair Display';font-weight:700;font-style:italic" onclick="pickFont(this)">Elegant</div>
-</div>
-
-<div class="bi-row">
-<div class="bi-btn" id="boldBtn" onclick="toggleBold()"><b>B</b> Bold</div>
-<div class="bi-btn" id="italicBtn" onclick="toggleItalic()"><i>I</i> Italic</div>
-</div>
-
-<div class="cap-row"><label>Color</label><input type="color" id="captionColor" value="#ffffff" oninput="drawCaption()"/></div>
-<div class="cap-row"><label>Size</label><input type="range" id="captionSize" min="20" max="90" value="48" oninput="drawCaption()"/></div>
-<div class="cap-row"><label>Spacing</label><input type="range" id="letterSpacing" min="-5" max="30" value="0" oninput="drawCaption()"/></div>
-
-<div class="sub-section-label">Text Path</div>
-<div class="curve-mode-row" id="curveModeRow">
-<div class="curve-mode-btn selected" data-mode="straight" onclick="pickCurveMode(this)">➖ Straight</div>
-<div class="curve-mode-btn" data-mode="slider" onclick="pickCurveMode(this)">🌙 Quick Arc</div>
-<div class="curve-mode-btn" data-mode="draw" onclick="pickCurveMode(this)">✏️ Draw Path</div>
-</div>
-
-<div id="sliderModeBox" style="display:none">
-<div class="cap-row"><label>Curve</label><input type="range" id="curveAmount" min="-100" max="100" value="0" oninput="drawCaption()"/></div>
-<div class="note" style="margin-top:-.5rem">Drag left for a downward arc (smile), right for an upward arc (frown), center for flat.</div>
-</div>
-
-<div id="drawModeBox" style="display:none">
-<div class="note" style="margin-top:0">Draw one line for a single flowing caption, or draw several separate lines (lift your finger between each) to stack words — line 1 gets the first word, line 2 gets the second, and so on. Don't worry about a perfectly steady hand — it gets smoothed automatically.</div>
-<div class="draw-path-wrap" id="drawPathWrap">
-<canvas id="pathDrawCanvas"></canvas>
-</div>
-<div class="draw-path-actions">
-<div class="quick-btn" onclick="undoLastStroke()">↩️ Undo Last Line</div>
-<div class="quick-btn" onclick="clearDrawnPath()">🗑️ Clear All</div>
-</div>
-</div>
-
-<div class="sub-section-label">Outline</div>
-<div class="cap-row"><label>Thickness</label><input type="range" id="outlineThickness" min="0" max="20" value="12" oninput="drawCaption()"/></div>
-
-<div class="sub-section-label">Effect</div>
-<div class="style-chip-row" id="effectRow">
-<div class="style-chip selected" data-effect="none" onclick="pickEffect(this)">🚫 None</div>
-<div class="style-chip" data-effect="shadow" onclick="pickEffect(this)">🌑 Drop Shadow</div>
-<div class="style-chip" data-effect="glow" onclick="pickEffect(this)">✨ Glow</div>
-<div class="style-chip" data-effect="metallic-gold" onclick="pickEffect(this)"><span class="swatch-dot" style="background:linear-gradient(135deg,#fff6d0,#d4a017 60%,#7a5a00)"></span> Gold</div>
-<div class="style-chip" data-effect="metallic-silver" onclick="pickEffect(this)"><span class="swatch-dot" style="background:linear-gradient(135deg,#ffffff,#a8a8a8 60%,#5c5c5c)"></span> Silver</div>
-<div class="style-chip" data-effect="metallic-chrome" onclick="pickEffect(this)"><span class="swatch-dot" style="background:linear-gradient(135deg,#ffffff,#7fa8c9 50%,#1c2e3a)"></span> Chrome</div>
-<div class="style-chip" data-effect="metallic-pearl" onclick="pickEffect(this)"><span class="swatch-dot" style="background:linear-gradient(135deg,#fff9fb,#f3e3ee 45%,#d9c2dd 70%,#bfa9c8)"></span> Pearl</div>
-<div class="style-chip" data-effect="metallic-diamond" onclick="pickEffect(this)"><span class="swatch-dot" style="background:linear-gradient(135deg,#ffffff,#dff6ff 35%,#9fe7f5 55%,#5cc9e8 75%,#ffffff)"></span> Diamond</div>
-<div class="style-chip" data-effect="metallic-money" onclick="pickEffect(this)"><span class="swatch-dot" style="background:linear-gradient(135deg,#e9f9e6,#5fbf5f 50%,#1f6b2e 80%,#0e3d1a)"></span> Money</div>
-</div>
-
-<div class="cap-row" style="align-items:flex-start"><label>Position</label>
-<div class="pos-grid" id="posGrid">
-<div class="pos-btn" data-pos="top-left" onclick="pickPos(this)"></div>
-<div class="pos-btn" data-pos="top-center" onclick="pickPos(this)"></div>
-<div class="pos-btn" data-pos="top-right" onclick="pickPos(this)"></div>
-<div class="pos-btn" data-pos="mid-left" onclick="pickPos(this)"></div>
-<div class="pos-btn" data-pos="mid-center" onclick="pickPos(this)"></div>
-<div class="pos-btn" data-pos="mid-right" onclick="pickPos(this)"></div>
-<div class="pos-btn selected" data-pos="bottom-left" onclick="pickPos(this)"></div>
-<div class="pos-btn" data-pos="bottom-center" onclick="pickPos(this)"></div>
-<div class="pos-btn" data-pos="bottom-right" onclick="pickPos(this)"></div>
-</div>
-</div>
-
-<div class="seg-row" id="presetRow">
-<div class="seg-btn" data-preset="top" onclick="pickPreset(this)">⬆️ Top</div>
-<div class="seg-btn" data-preset="middle" onclick="pickPreset(this)">➖ Middle</div>
-<div class="seg-btn" data-preset="bottom" onclick="pickPreset(this)">⬇️ Bottom</div>
-</div>
-<div class="note" style="margin-top:.5rem">Top/Middle/Bottom presets center the caption horizontally at that height. Use the grid above for fine corner control.</div>
-
-<canvas id="captionCanvas" style="display:none"></canvas>
-</div>
-
-</div>
-
-<script>
-let product='mug',style='Muggshotz Classic: premium professional caricature, expressive face, rich detail, painterly shading, funny gift-art scene',likeness='0.15',uploadedImageData=null,resultUrl=null;
-let refImageAData=null, refImageBData=null;
-let previousImageData=null;
-let currentDesignId=null;
-
-function setMainSlotImage(dataUrl){
-  uploadedImageData=dataUrl;
-  const img=document.getElementById('previewImg');
-  img.src=dataUrl;
-  img.style.display='block';
-  img.onclick=()=>document.getElementById('fileInput').click();
-  const z=document.getElementById('uploadZone');
-  z.classList.add('has-image');
-  z.style.padding='0';
-  z.innerHTML='';
-  z.appendChild(img);
-  document.getElementById('startOverBtn').style.display='block';
-}
-
-function toggleWorkingImage(){
-  if(!previousImageData)return;
-  const temp=uploadedImageData;
-  uploadedImageData=previousImageData;
-  previousImageData=temp;
-  document.getElementById('previewImg').src=uploadedImageData;
-  saveWorkshop();
-}
-
-function getDeviceId(){
-  let id=localStorage.getItem('muggshotz_device_id');
-  if(!id){
-    id='dev-'+Date.now()+'-'+Math.random().toString(36).slice(2,10);
-    localStorage.setItem('muggshotz_device_id',id);
-  }
-  return id;
-}
-const deviceId=getDeviceId();
-
-async function refreshTokenMeter(){
-  const meterEl=document.getElementById('tokenMeterNumber');
-  try{
-    const resp=await fetch('/api/get-balance?deviceId='+encodeURIComponent(deviceId));
-    const data=await resp.json();
-    if(!resp.ok)throw new Error(data.error||'Could not load balance.');
-    meterEl.textContent=data.tokenBalance;
-  }catch(err){
-    meterEl.textContent='—';
-  }
-}
-refreshTokenMeter();
-
-let captionFont="Anton",captionPos="bottom-left",baseImg=null,finalImageUrl=null;
-let selectedTheme=null,selectedColor=null;
-let captionBold=false,captionItalic=false,captionEffect="none";
-let curveMode="straight";
-let drawnStrokes=[];
-let currentStroke=[];
-let isDrawingPath=false;
-let pathCanvasReady=false;
-
-let mugPrintMode='three-panel'; // 'three-panel' | 'wraparound' — coffee/travel mugs only, chosen BEFORE generation since it changes composition
-
-function pickMugPrintMode(mode){
-  mugPrintMode=mode;
-  document.getElementById('printModeThreeBtn').classList.toggle('selected',mode==='three-panel');
-  document.getElementById('printModeWrapBtn').classList.toggle('selected',mode==='wraparound');
-}
-
-function refreshMugPrintModeVisibility(){
-  const card=document.getElementById('mugPrintModeCard');
-  if(!card)return;
-  card.style.display=(product==='mug'||product==='water bottle')?'block':'none';
-}
-
-// Photo/Poster catalog — kept in sync manually with lib/products-catalog.js
-// "photo-poster" entry. THE ONE choose-first product — size/frame/etc.
-// must be locked in before generation, since aspect ratio has to match
-// the actual print shape or the art gets cropped badly later.
-const PHOTO_POSTER_CATALOG = {
-  base: {
-    finishes: ["Glossy", "Matte"],
-    sizes: {
-      "16x20": { price: 12.95, aspectRatio: 1.25 },
-      "20x24": { price: 13.95, aspectRatio: 1.2 },
-      "20x30": { price: 15.95, aspectRatio: 1.5 }
-    }
-  },
-  framedUpsell: {
-    frameColors: ["Black", "White"],
-    sizes: {
-      "8x11":  { price: 35.95, aspectRatio: 1.375 },
-      "11x14": { price: 39.95, aspectRatio: 1.2727 },
-      "12x18": { price: 44.95, aspectRatio: 1.5 },
-      "16x20": { price: 53.95, aspectRatio: 1.25 },
-      "18x24": { price: 61.95, aspectRatio: 1.333 },
-      "20x30": { price: 73.95, aspectRatio: 1.5 },
-      "24x36": { price: 93.95, aspectRatio: 1.5 }
-    }
-  }
+// Maps the theme name sent from the front end to its exact reference image
+// filename in the repo root. Filenames include spaces exactly as uploaded.
+const TEMPLATE_FILES = {
+  "Marbling": "laced marble.png",
+  "Cloud Mist": "clouds.png",
+  "Pastel Leaf": "pastel leaf.png",
+  "Satin Sheets": "satin sheets.png",
+  "Frosted Glass": "frosted mirror.png",
+  "Bubble Drift": "bubble drift.png",
+  "Rose Crepe": "rose crepe.png",
+  "Fade to White": "fade to white.png"
 };
 
-let posterFramed = false;
-let posterSize = "16x20";
-let posterOrientation = "Vertical";
-let posterFinish = "Glossy";
-let posterFrameColor = "Black";
+const SUPABASE_URL = process.env.SUPABASE_URL;
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-function pickPosterFramed(framed){
-  posterFramed = framed;
-  document.getElementById('posterUnframedBtn').classList.toggle('selected', !framed);
-  document.getElementById('posterFramedBtn').classList.toggle('selected', framed);
-  document.getElementById('posterOrientationFinishWrap').style.display = framed ? 'none' : 'block';
-  document.getElementById('posterFrameColorWrap').style.display = framed ? 'block' : 'none';
-  const tree = framed ? PHOTO_POSTER_CATALOG.framedUpsell : PHOTO_POSTER_CATALOG.base;
-  posterSize = Object.keys(tree.sizes)[0];
-  renderPosterSizeGrid();
-  updatePosterPriceNote();
-}
-
-function renderPosterSizeGrid(){
-  const tree = posterFramed ? PHOTO_POSTER_CATALOG.framedUpsell : PHOTO_POSTER_CATALOG.base;
-  const grid = document.getElementById('posterSizeGrid');
-  grid.innerHTML = '';
-  Object.entries(tree.sizes).forEach(([sizeKey, data]) => {
-    const btn = document.createElement('div');
-    btn.className = 'btn-select' + (sizeKey === posterSize ? ' selected' : '');
-    btn.innerHTML = sizeKey.replace('x', '" x ') + '"<span class="price">$' + data.price.toFixed(2) + '</span>';
-    btn.onclick = () => { posterSize = sizeKey; renderPosterSizeGrid(); updatePosterPriceNote(); };
-    grid.appendChild(btn);
-  });
-}
-
-function pickPosterOrientation(orientation){
-  posterOrientation = orientation;
-  document.getElementById('posterOrientVerticalBtn').classList.toggle('selected', orientation === 'Vertical');
-  document.getElementById('posterOrientHorizontalBtn').classList.toggle('selected', orientation === 'Horizontal');
-}
-
-function pickPosterFinish(finish){
-  posterFinish = finish;
-  document.getElementById('posterFinishGlossyBtn').classList.toggle('selected', finish === 'Glossy');
-  document.getElementById('posterFinishMatteBtn').classList.toggle('selected', finish === 'Matte');
-}
-
-function pickPosterFrameColor(color){
-  posterFrameColor = color;
-  document.getElementById('posterFrameBlackBtn').classList.toggle('selected', color === 'Black');
-  document.getElementById('posterFrameWhiteBtn').classList.toggle('selected', color === 'White');
-}
-
-function getPosterAspectRatio(){
-  const tree = posterFramed ? PHOTO_POSTER_CATALOG.framedUpsell : PHOTO_POSTER_CATALOG.base;
-  return tree.sizes[posterSize]?.aspectRatio || 1.25;
-}
-
-function updatePosterPriceNote(){
-  const tree = posterFramed ? PHOTO_POSTER_CATALOG.framedUpsell : PHOTO_POSTER_CATALOG.base;
-  const price = tree.sizes[posterSize]?.price || 0;
-  document.getElementById('posterPriceNote').textContent = '$' + price.toFixed(2) + ' + shipping';
-}
-
-function refreshPhotoPosterVisibility(){
-  const card = document.getElementById('photoPosterOptionsCard');
-  if (!card) return;
-  card.style.display = (product === 'photo poster') ? 'block' : 'none';
-  if (product === 'photo poster') {
-    renderPosterSizeGrid();
-    updatePosterPriceNote();
-  }
-}
-
-function pick(el,type){
-  el.closest('.grid3,.grid2').querySelectorAll('.btn-select').forEach(b=>b.classList.remove('selected'));
-  el.classList.add('selected');
-  if(type==='product'){
-    product=el.dataset.val;
-    refreshApproveRowForMode();
-    refreshMugPrintModeVisibility();
-    refreshPhotoPosterVisibility();
-  }
-  else if(type==='style')style=el.dataset.val;
-  else if(type==='likeness')likeness=el.dataset.val;
-}
-
-function pickTheme(el){
-  const wasSelected=el.classList.contains('selected');
-  document.getElementById('themeGrid').querySelectorAll('.theme-btn').forEach(b=>b.classList.remove('selected'));
-  if(wasSelected){
-    selectedTheme=null;
-  } else {
-    el.classList.add('selected');
-    selectedTheme=el.dataset.val;
-  }
-}
-
-function pickColor(el){
-  const wasSelected=el.classList.contains('selected');
-  document.getElementById('colorGrid').querySelectorAll('.color-btn').forEach(b=>b.classList.remove('selected'));
-  if(wasSelected){
-    selectedColor=null;
-  } else {
-    el.classList.add('selected');
-    selectedColor=el.dataset.val;
-  }
-}
-
-const BACKGROUND_DESCRIPTIONS={
-"Marbling":{"Lavender":"pale lavender marble with soft dusty-purple veining, gentle watercolor blending, edges fading to white","Rose":"soft pink marble with delicate rose-gold veining, gentle watercolor blending, edges fading to white","Light Green":"soft sage-green marble with faint pale veining, gentle watercolor blending, edges fading to white","Dark Green":"deep forest-green marble with darker emerald veining, richer watercolor blending, edges fading to white","Red":"soft warm red marble with fine coral-red veining, gentle watercolor blending, edges fading to white","Orange":"warm peachy-orange marble with soft amber veining, gentle watercolor blending, edges fading to white","Light Blue":"soft sky-blue marble with pale silvery veining, gentle watercolor blending, edges fading to white","Navy Blue":"deep navy marble with fine silver-blue veining, richer watercolor blending, edges fading to white","Black":"soft charcoal-gray marble with fine pale-gray veining, moody watercolor blending, edges fading to white","Yellow":"soft golden-yellow marble with warm honey veining, gentle watercolor blending, edges fading to white","Teal":"soft teal marble with pale aqua veining, gentle watercolor blending, edges fading to white","Purple":"rich violet-purple marble with deeper plum veining, richer watercolor blending, edges fading to white"},
-"Cloud Mist":{"Lavender":"soft lavender-tinted clouds, puffy and three-dimensional, gentle dreamy sky light","Rose":"soft rose-pink clouds, puffy and three-dimensional, gentle warm sky light","Light Green":"soft mint-green clouds, puffy and three-dimensional, gentle fresh sky light","Dark Green":"deeper emerald-tinted clouds, puffy and three-dimensional, moodier forest-sky light","Red":"soft warm red-tinted clouds, puffy and three-dimensional, gentle sunset-glow light","Orange":"soft peachy-orange clouds, puffy and three-dimensional, warm sunset sky light","Light Blue":"soft classic sky-blue clouds, puffy and three-dimensional, bright airy daylight","Navy Blue":"deep twilight-blue clouds, puffy and three-dimensional, moody dusk light","Black":"soft charcoal-gray storm-tinted clouds, puffy and three-dimensional, dramatic soft light","Yellow":"soft golden sunlit clouds, puffy and three-dimensional, warm glowing light","Teal":"soft teal-tinted clouds, puffy and three-dimensional, cool fresh light","Purple":"soft violet twilight clouds, puffy and three-dimensional, dreamy dusk light"},
-"Pastel Leaf":{"Lavender":"soft lavender watercolor blooms with faint pale leaf and branch silhouettes","Rose":"soft rose-pink watercolor blooms with faint leaf and branch silhouettes","Light Green":"soft pale green watercolor blooms with faint leaf and branch silhouettes","Dark Green":"deeper forest-green watercolor blooms with bolder leaf and branch silhouettes","Red":"soft warm red watercolor blooms with faint leaf and branch silhouettes","Orange":"soft peachy-orange watercolor blooms with faint leaf and branch silhouettes","Light Blue":"soft pale blue watercolor blooms with faint leaf and branch silhouettes","Navy Blue":"deeper indigo-blue watercolor blooms with bolder leaf and branch silhouettes","Black":"soft muted charcoal watercolor blooms with faint dark leaf and branch silhouettes","Yellow":"soft golden-yellow watercolor blooms with faint leaf and branch silhouettes","Teal":"soft teal watercolor blooms with faint leaf and branch silhouettes","Purple":"rich violet watercolor blooms with bolder leaf and branch silhouettes"},
-"Satin Sheets":{"Lavender":"soft lavender satin fabric, flowing folds defined by gentle highlight and shadow","Rose":"soft rose-pink satin fabric, flowing folds defined by gentle highlight and shadow","Light Green":"soft pale-green satin fabric, flowing folds defined by gentle highlight and shadow","Dark Green":"rich deep-green satin fabric, flowing folds defined by bold highlight and shadow","Red":"rich warm-red satin fabric, flowing folds defined by bold highlight and shadow","Orange":"warm soft-orange satin fabric, flowing folds defined by gentle highlight and shadow","Light Blue":"soft pale-blue satin fabric, flowing folds defined by gentle highlight and shadow","Navy Blue":"rich deep-navy satin fabric, flowing folds defined by bold highlight and shadow","Black":"deep black satin fabric, flowing folds defined by sharp highlight and soft shadow","Yellow":"pale golden satin fabric, flowing folds defined by warm highlight and soft shadow","Teal":"rich teal satin fabric, flowing folds defined by cool highlight and soft shadow","Purple":"rich violet satin fabric, flowing folds defined by bold highlight and shadow"},
-"Frosted Glass":{"Lavender":"frosted glass with a cool lavender sheen, fern-like ice crystals framing the edges, soft light glowing through","Rose":"frosted glass with a soft rose-pink sheen, fern-like ice crystals framing the edges, soft light glowing through","Light Green":"frosted glass with a cool mint-green sheen, fern-like ice crystals framing the edges, soft light glowing through","Dark Green":"frosted glass with a deep emerald sheen, fern-like ice crystals framing the edges, soft light glowing through","Red":"frosted glass with a warm ember-red sheen, fern-like ice crystals framing the edges, soft light glowing through","Orange":"frosted glass with a warm amber-orange sheen, fern-like ice crystals framing the edges, soft light glowing through","Light Blue":"frosted glass with a cool icy-blue sheen, fern-like ice crystals framing the edges, soft light glowing through","Navy Blue":"frosted glass with a deep moonlit-blue sheen, fern-like ice crystals framing the edges, soft light glowing through","Black":"frosted glass with a cool silvery sheen, fern-like ice crystals framing the edges, soft light glowing through","Yellow":"frosted glass with a warm golden sheen, fern-like ice crystals framing the edges, soft light glowing through","Teal":"frosted glass with a cool teal sheen, fern-like ice crystals framing the edges, soft light glowing through","Purple":"frosted glass with a rich violet sheen, fern-like ice crystals framing the edges, soft light glowing through"},
-"Bubble Drift":{"Lavender":"soft iridescent bubbles drifting against a pale lavender glow, gentle sparkle highlights","Rose":"soft iridescent bubbles drifting against a pale rose-pink glow, gentle sparkle highlights","Light Green":"soft iridescent bubbles drifting against a pale mint-green glow, gentle sparkle highlights","Dark Green":"soft iridescent bubbles drifting against a deeper emerald glow, gentle sparkle highlights","Red":"soft iridescent bubbles drifting against a warm soft-red glow, gentle sparkle highlights","Orange":"soft iridescent bubbles drifting against a warm peachy-orange glow, gentle sparkle highlights","Light Blue":"soft iridescent bubbles drifting against a pale sky-blue glow, gentle sparkle highlights","Navy Blue":"soft iridescent bubbles drifting against a deeper twilight-blue glow, gentle sparkle highlights","Black":"soft iridescent bubbles drifting against a soft charcoal-gray glow, gentle sparkle highlights","Yellow":"soft iridescent bubbles drifting against a warm golden glow, gentle sparkle highlights","Teal":"soft iridescent bubbles drifting against a pale teal glow, gentle sparkle highlights","Purple":"soft iridescent bubbles drifting against a rich violet glow, gentle sparkle highlights"},
-"Rose Crepe":{"Lavender":"soft lavender crepe-paper texture, gentle creases and folds, delicate watercolor softness","Rose":"soft rose-pink crepe-paper texture, gentle creases and folds, delicate watercolor softness","Light Green":"soft pale-green crepe-paper texture, gentle creases and folds, delicate watercolor softness","Dark Green":"deeper forest-green crepe-paper texture, richer creases and folds, watercolor softness","Red":"soft warm-red crepe-paper texture, gentle creases and folds, delicate watercolor softness","Orange":"soft peachy-orange crepe-paper texture, gentle creases and folds, delicate watercolor softness","Light Blue":"soft pale-blue crepe-paper texture, gentle creases and folds, delicate watercolor softness","Navy Blue":"deeper indigo-blue crepe-paper texture, richer creases and folds, watercolor softness","Black":"soft muted charcoal crepe-paper texture, gentle creases and folds, watercolor softness","Yellow":"soft golden-yellow crepe-paper texture, gentle creases and folds, delicate watercolor softness","Teal":"soft teal crepe-paper texture, gentle creases and folds, delicate watercolor softness","Purple":"rich violet crepe-paper texture, richer creases and folds, watercolor softness"},
-"Fade to White":{"Lavender":"a soft lavender glow at the center, fading gently and completely to pure white at the edges","Rose":"a soft rose-pink glow at the center, fading gently and completely to pure white at the edges","Light Green":"a soft mint-green glow at the center, fading gently and completely to pure white at the edges","Dark Green":"a soft emerald-green glow at the center, fading gently and completely to pure white at the edges","Red":"a soft warm red glow at the center, fading gently and completely to pure white at the edges","Orange":"a soft peachy-orange glow at the center, fading gently and completely to pure white at the edges","Light Blue":"a soft sky-blue glow at the center, fading gently and completely to pure white at the edges","Navy Blue":"a soft deep-blue glow at the center, fading gently and completely to pure white at the edges","Black":"a soft charcoal-gray glow at the center, fading gently and completely to pure white at the edges","Yellow":"a soft golden glow at the center, fading gently and completely to pure white at the edges","Teal":"a soft teal glow at the center, fading gently and completely to pure white at the edges","Purple":"a soft violet glow at the center, fading gently and completely to pure white at the edges"}
-};
-
-function getBackgroundDescription(){
-  if(!selectedTheme)return null;
-  const colorKey=selectedColor||"Light Blue";
-  const themeData=BACKGROUND_DESCRIPTIONS[selectedTheme];
-  return themeData ? themeData[colorKey] : null;
-}
-
-function pickFont(el){
-  document.getElementById('fontGrid').querySelectorAll('.font-btn').forEach(b=>b.classList.remove('selected'));
-  el.classList.add('selected');
-  captionFont=el.dataset.font;
-  drawCaption();
-}
-
-function toggleBold(){
-  captionBold=!captionBold;
-  document.getElementById('boldBtn').classList.toggle('selected',captionBold);
-  drawCaption();
-}
-
-function toggleItalic(){
-  captionItalic=!captionItalic;
-  document.getElementById('italicBtn').classList.toggle('selected',captionItalic);
-  drawCaption();
-}
-
-function pickEffect(el){
-  document.getElementById('effectRow').querySelectorAll('.style-chip').forEach(b=>b.classList.remove('selected'));
-  el.classList.add('selected');
-  captionEffect=el.dataset.effect;
-  drawCaption();
-}
-
-function pickPos(el){
-  document.getElementById('posGrid').querySelectorAll('.pos-btn').forEach(b=>b.classList.remove('selected'));
-  el.classList.add('selected');
-  captionPos=el.dataset.pos;
-  document.getElementById('presetRow').querySelectorAll('.seg-btn').forEach(b=>b.classList.remove('selected'));
-  drawCaption();
-}
-
-function pickPreset(el){
-  document.getElementById('presetRow').querySelectorAll('.seg-btn').forEach(b=>b.classList.remove('selected'));
-  el.classList.add('selected');
-  const preset=el.dataset.preset;
-  const posMap={top:'top-center',middle:'mid-center',bottom:'bottom-center'};
-  captionPos=posMap[preset];
-  document.getElementById('posGrid').querySelectorAll('.pos-btn').forEach(b=>{
-    b.classList.toggle('selected',b.dataset.pos===captionPos);
-  });
-  drawCaption();
-}
-
-function pickCurveMode(el){
-  document.getElementById('curveModeRow').querySelectorAll('.curve-mode-btn').forEach(b=>b.classList.remove('selected'));
-  el.classList.add('selected');
-  curveMode=el.dataset.mode;
-  document.getElementById('sliderModeBox').style.display=(curveMode==='slider')?'block':'none';
-  document.getElementById('drawModeBox').style.display=(curveMode==='draw')?'block':'none';
-  if(curveMode==='draw'){
-    setupPathCanvas();
-  }
-  drawCaption();
-}
-
-function setupPathCanvas(){
-  const wrap=document.getElementById('drawPathWrap');
-  const canvas=document.getElementById('pathDrawCanvas');
-  const displayWidth=wrap.clientWidth || 300;
-  const displayHeight=Math.round(displayWidth*0.5);
-  canvas.width=displayWidth;
-  canvas.height=displayHeight;
-  canvas.style.width=displayWidth+'px';
-  canvas.style.height=displayHeight+'px';
-  redrawPathCanvas();
-
-  if(pathCanvasReady)return;
-  pathCanvasReady=true;
-
-  function getPoint(e){
-    const rect=canvas.getBoundingClientRect();
-    const clientX=(e.touches&&e.touches[0])?e.touches[0].clientX:e.clientX;
-    const clientY=(e.touches&&e.touches[0])?e.touches[0].clientY:e.clientY;
-    return {
-      x:(clientX-rect.left)*(canvas.width/rect.width),
-      y:(clientY-rect.top)*(canvas.height/rect.height)
-    };
-  }
-
-  function start(e){
-    e.preventDefault();
-    isDrawingPath=true;
-    currentStroke=[getPoint(e)];
-    redrawPathCanvas();
-  }
-  function move(e){
-    if(!isDrawingPath)return;
-    e.preventDefault();
-    currentStroke.push(getPoint(e));
-    redrawPathCanvas();
-  }
-  function end(e){
-    if(!isDrawingPath)return;
-    isDrawingPath=false;
-    if(currentStroke.length>2){
-      drawnStrokes.push(currentStroke);
-    }
-    currentStroke=[];
-    redrawPathCanvas();
-    drawCaption();
-  }
-
-  canvas.addEventListener('mousedown',start);
-  canvas.addEventListener('mousemove',move);
-  canvas.addEventListener('mouseup',end);
-  canvas.addEventListener('mouseleave',end);
-  canvas.addEventListener('touchstart',start,{passive:false});
-  canvas.addEventListener('touchmove',move,{passive:false});
-  canvas.addEventListener('touchend',end,{passive:false});
-}
-
-function redrawPathCanvas(){
-  const canvas=document.getElementById('pathDrawCanvas');
-  if(!canvas)return;
-  const ctx=canvas.getContext('2d');
-  ctx.clearRect(0,0,canvas.width,canvas.height);
-  ctx.fillStyle='#0d0d0d';
-  ctx.fillRect(0,0,canvas.width,canvas.height);
-
-  ctx.strokeStyle='#333';
-  ctx.lineWidth=1;
-  ctx.beginPath();
-  ctx.moveTo(0,canvas.height/2);
-  ctx.lineTo(canvas.width,canvas.height/2);
-  ctx.stroke();
-
-  const allStrokes=currentStroke.length>1?[...drawnStrokes,currentStroke]:drawnStrokes;
-
-  if(allStrokes.length===0){
-    ctx.fillStyle='#555';
-    ctx.font='13px system-ui,sans-serif';
-    ctx.textAlign='center';
-    ctx.fillText('Draw here →',canvas.width/2,canvas.height/2-10);
-    return;
-  }
-
-  allStrokes.forEach((stroke,idx)=>{
-    if(stroke.length<2)return;
-    ctx.strokeStyle='#ff6a00';
-    ctx.lineWidth=3;
-    ctx.lineCap='round';
-    ctx.lineJoin='round';
-    ctx.beginPath();
-    ctx.moveTo(stroke[0].x,stroke[0].y);
-    for(let i=1;i<stroke.length;i++){
-      ctx.lineTo(stroke[i].x,stroke[i].y);
-    }
-    ctx.stroke();
-
-    if(allStrokes.length>1){
-      ctx.fillStyle='#ff6a00';
-      ctx.font='bold 13px system-ui,sans-serif';
-      ctx.textAlign='center';
-      ctx.fillText(String(idx+1),stroke[0].x,stroke[0].y-10);
+// Looks up a customer row by device ID. Returns null if no row exists yet.
+async function findCustomerByDeviceId(deviceId) {
+  const url = `${SUPABASE_URL}/rest/v1/customers?device_id=eq.${encodeURIComponent(deviceId)}&select=id,token_balance,role`;
+  const resp = await fetch(url, {
+    headers: {
+      "apikey": SUPABASE_SERVICE_ROLE_KEY,
+      "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`
     }
   });
+  const rows = await resp.json();
+  if (!resp.ok) throw new Error("Supabase lookup failed: " + JSON.stringify(rows));
+  return rows.length > 0 ? rows[0] : null;
 }
 
-function clearDrawnPath(){
-  drawnStrokes=[];
-  currentStroke=[];
-  redrawPathCanvas();
-  drawCaption();
-}
-
-function undoLastStroke(){
-  drawnStrokes.pop();
-  redrawPathCanvas();
-  drawCaption();
-}
-
-function resetCaptionSettings(){
-  captionFont="Anton";
-  captionPos="bottom-left";
-  captionBold=false;
-  captionItalic=false;
-  captionEffect="none";
-  curveMode="straight";
-  drawnStrokes=[];
-  currentStroke=[];
-
-  document.getElementById('captionText').value='';
-
-  document.getElementById('fontGrid').querySelectorAll('.font-btn').forEach(b=>{
-    b.classList.toggle('selected',b.dataset.font==='Anton');
+// Creates a brand-new customer row for a first-time device, starting with
+// 1 free token (their first free generation).
+async function createCustomerForDevice(deviceId) {
+  const url = `${SUPABASE_URL}/rest/v1/customers`;
+  const resp = await fetch(url, {
+    method: "POST",
+    headers: {
+      "apikey": SUPABASE_SERVICE_ROLE_KEY,
+      "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+      "Content-Type": "application/json",
+      "Prefer": "return=representation"
+    },
+    body: JSON.stringify({ device_id: deviceId, token_balance: 1 })
   });
-
-  document.getElementById('boldBtn').classList.remove('selected');
-  document.getElementById('italicBtn').classList.remove('selected');
-
-  document.getElementById('captionColor').value='#ffffff';
-  document.getElementById('captionSize').value=48;
-  document.getElementById('letterSpacing').value=0;
-  document.getElementById('curveAmount').value=0;
-  document.getElementById('outlineThickness').value=12;
-
-  document.getElementById('effectRow').querySelectorAll('.style-chip').forEach(b=>{
-    b.classList.toggle('selected',b.dataset.effect==='none');
-  });
-
-  document.getElementById('posGrid').querySelectorAll('.pos-btn').forEach(b=>{
-    b.classList.toggle('selected',b.dataset.pos==='bottom-left');
-  });
-  document.getElementById('presetRow').querySelectorAll('.seg-btn').forEach(b=>b.classList.remove('selected'));
-
-  document.getElementById('curveModeRow').querySelectorAll('.curve-mode-btn').forEach(b=>{
-    b.classList.toggle('selected',b.dataset.mode==='straight');
-  });
-  document.getElementById('sliderModeBox').style.display='none';
-  document.getElementById('drawModeBox').style.display='none';
-  redrawPathCanvas();
-
-  drawCaption();
+  const rows = await resp.json();
+  if (!resp.ok) throw new Error("Supabase insert failed: " + JSON.stringify(rows));
+  return rows[0];
 }
 
-function getCaptionXY(canvas,pad){
-  const w=canvas.width,h=canvas.height;
-  const xs={left:pad,center:w/2,right:w-pad};
-  const ys={top:pad,mid:h/2,bottom:h-pad};
-  const [vPos,hPos]=captionPos.split('-');
-  return {x:xs[hPos],y:ys[vPos],align:hPos,baseline:vPos};
+// Deducts exactly 1 token from a customer's balance after a successful
+// generation. Now runs for admin accounts too, so the meter shows a real,
+// moving countdown instead of a static infinity symbol. Admin accounts
+// are still never blocked from generating regardless of how low (or
+// negative) this number goes — that's enforced separately below, not here.
+async function deductOneToken(customerId, currentBalance) {
+  const url = `${SUPABASE_URL}/rest/v1/customers?id=eq.${customerId}`;
+  const resp = await fetch(url, {
+    method: "PATCH",
+    headers: {
+      "apikey": SUPABASE_SERVICE_ROLE_KEY,
+      "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+      "Content-Type": "application/json",
+      "Prefer": "return=representation"
+    },
+    body: JSON.stringify({ token_balance: currentBalance - 1 })
+  });
+  const rows = await resp.json();
+  if (!resp.ok) throw new Error("Supabase token deduction failed: " + JSON.stringify(rows));
+  return rows[0];
 }
 
-function buildFontString(fontSize){
-  const weight=captionBold?'700':'400';
-  const style=captionItalic?'italic':'normal';
-  return `${style} ${weight} ${fontSize}px ${captionFont}`;
-}
-
-function getMetallicGradient(ctx,x,y,fontSize,kind){
-  const grad=ctx.createLinearGradient(x,y-fontSize*0.7,x,y+fontSize*0.3);
-  if(kind==='metallic-gold'){
-    grad.addColorStop(0,'#fff6d0');
-    grad.addColorStop(0.45,'#d4a017');
-    grad.addColorStop(0.55,'#a8780a');
-    grad.addColorStop(1,'#7a5a00');
-  } else if(kind==='metallic-silver'){
-    grad.addColorStop(0,'#ffffff');
-    grad.addColorStop(0.45,'#c4c4c4');
-    grad.addColorStop(0.55,'#8a8a8a');
-    grad.addColorStop(1,'#5c5c5c');
-  } else if(kind==='metallic-chrome'){
-    grad.addColorStop(0,'#ffffff');
-    grad.addColorStop(0.35,'#bcdcef');
-    grad.addColorStop(0.55,'#7fa8c9');
-    grad.addColorStop(0.75,'#3a5a70');
-    grad.addColorStop(1,'#1c2e3a');
-  } else if(kind==='metallic-pearl'){
-    grad.addColorStop(0,'#ffffff');
-    grad.addColorStop(0.3,'#fdf2f7');
-    grad.addColorStop(0.5,'#f0dcec');
-    grad.addColorStop(0.7,'#dcc3e0');
-    grad.addColorStop(1,'#b9a0c4');
-  } else if(kind==='metallic-diamond'){
-    grad.addColorStop(0,'#ffffff');
-    grad.addColorStop(0.25,'#eafcff');
-    grad.addColorStop(0.45,'#aeeefb');
-    grad.addColorStop(0.6,'#6fd4ee');
-    grad.addColorStop(0.8,'#bdf3ff');
-    grad.addColorStop(1,'#ffffff');
-  } else if(kind==='metallic-money'){
-    grad.addColorStop(0,'#eafbe3');
-    grad.addColorStop(0.4,'#7fd47f');
-    grad.addColorStop(0.55,'#3a9b3a');
-    grad.addColorStop(0.8,'#1f6b2e');
-    grad.addColorStop(1,'#103d18');
+// Uploads the generated image bytes to Supabase Storage and returns a
+// permanent public URL, so we never store giant base64 blobs in the
+// database or send them back over the wire more than once.
+async function uploadGenerationToStorage(imageBuffer, deviceId) {
+  const fileName = `${deviceId}-${Date.now()}.png`;
+  const uploadUrl = `${SUPABASE_URL}/storage/v1/object/generations/${fileName}`;
+  const resp = await fetch(uploadUrl, {
+    method: "POST",
+    headers: {
+      "apikey": SUPABASE_SERVICE_ROLE_KEY,
+      "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+      "Content-Type": "image/png"
+    },
+    body: imageBuffer
+  });
+  if (!resp.ok) {
+    const errText = await resp.text();
+    throw new Error("Supabase storage upload failed: " + errText);
   }
-  return grad;
+  return `${SUPABASE_URL}/storage/v1/object/public/generations/${fileName}`;
 }
 
-function drawTextWithSpacing(ctx,text,x,y,align,spacing,drawFn){
-  if(!spacing){
-    drawFn(text,x,y);
-    return;
+// Saves a record of this generation so it can later be shown in the
+// "pick from your recent generations" picker for multi-placement orders.
+async function saveGenerationRecord(customerId, promptText, theme, imageUrl) {
+  const url = `${SUPABASE_URL}/rest/v1/generations`;
+  const resp = await fetch(url, {
+    method: "POST",
+    headers: {
+      "apikey": SUPABASE_SERVICE_ROLE_KEY,
+      "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+      "Content-Type": "application/json",
+      "Prefer": "return=representation"
+    },
+    body: JSON.stringify({
+      customer_id: customerId,
+      prompt_text: promptText,
+      background_theme: theme || null,
+      image_url: imageUrl
+    })
+  });
+  const rows = await resp.json();
+  if (!resp.ok) {
+    // Don't fail the whole request if this record-keeping step fails —
+    // the customer already has their image either way.
+    console.error("Could not save generation record:", JSON.stringify(rows));
+    return null;
   }
-  const chars=text.split('');
-  const widths=chars.map(c=>ctx.measureText(c).width+spacing);
-  const total=widths.reduce((a,b)=>a+b,0)-spacing;
-  let startX;
-  if(align==='left')startX=x;
-  else if(align==='right')startX=x-total;
-  else startX=x-total/2;
-  const prevAlign=ctx.textAlign;
-  ctx.textAlign='left';
-  let cx=startX;
-  chars.forEach((c,i)=>{
-    drawFn(c,cx,y);
-    cx+=widths[i];
-  });
-  ctx.textAlign=prevAlign;
+  return rows[0];
 }
 
-function drawTextOnArc(ctx,text,centerX,centerY,radius,curveAmount,spacing,drawFn){
-  const direction=curveAmount<0?-1:1;
-  const strength=Math.abs(curveAmount)/100;
-  const chars=text.split('');
-  const charWidths=chars.map(c=>ctx.measureText(c).width+spacing);
-  const totalWidth=charWidths.reduce((a,b)=>a+b,0);
-  const totalAngle=(totalWidth/radius)*strength;
-  let angle=-totalAngle/2;
-
-  const prevAlign=ctx.textAlign;
-  const prevBaseline=ctx.textBaseline;
-  ctx.textAlign='center';
-  ctx.textBaseline='middle';
-
-  chars.forEach((c,i)=>{
-    const charAngle=angle+(charWidths[i]/2/radius)*strength;
-    const px=centerX+radius*Math.sin(charAngle);
-    const py=centerY-direction*radius*(1-Math.cos(charAngle));
-    ctx.save();
-    ctx.translate(px,py);
-    ctx.rotate(direction*charAngle);
-    drawFn(c,0,0);
-    ctx.restore();
-    angle+=(charWidths[i]/radius)*strength;
-  });
-
-  ctx.textAlign=prevAlign;
-  ctx.textBaseline=prevBaseline;
-}
-
-function smoothStroke(points,numSamples){
-  if(points.length<4)return points;
-
-  const first=points[0],last=points[points.length-1];
-  let dx=last.x-first.x,dy=last.y-first.y;
-  let len=Math.sqrt(dx*dx+dy*dy);
-  if(len<1e-6){dx=1;dy=0;len=1;}
-  const ux=dx/len,uy=dy/len;
-  const vx=-uy,vy=ux;
-
-  const local=points.map(p=>{
-    const rx=p.x-first.x,ry=p.y-first.y;
-    return {u:rx*ux+ry*uy,v:rx*vx+ry*vy};
-  });
-
-  const degree=3;
-  const numCoef=degree+1;
-  const A=Array.from({length:numCoef},()=>Array(numCoef).fill(0));
-  const B=Array(numCoef).fill(0);
-  local.forEach(({u,v})=>{
-    const powers=[];
-    let p=1;
-    for(let k=0;k<=2*degree;k++){powers.push(p);p*=u;}
-    for(let i=0;i<numCoef;i++){
-      for(let j=0;j<numCoef;j++)A[i][j]+=powers[i+j];
-      B[i]+=powers[i]*v;
+export default async function handler(req, res) {
+  if (req.method !== "POST") {
+    return res.status(405).json({ error: "Method not allowed" });
+  }
+  try {
+    const { image, prompt, theme, deviceId, refImageA, refImageB, currentDesign, size } = req.body;
+    if (!image || !prompt) {
+      return res.status(400).json({ error: "Missing image or prompt." });
     }
-  });
-
-  function solveLinearSystem(A,B){
-    const m=A.length;
-    const M=A.map((row,i)=>[...row,B[i]]);
-    for(let i=0;i<m;i++){
-      let maxRow=i;
-      for(let k=i+1;k<m;k++)if(Math.abs(M[k][i])>Math.abs(M[maxRow][i]))maxRow=k;
-      [M[i],M[maxRow]]=[M[maxRow],M[i]];
-      if(Math.abs(M[i][i])<1e-12)continue;
-      for(let k=i+1;k<m;k++){
-        const factor=M[k][i]/M[i][i];
-        for(let j=i;j<=m;j++)M[k][j]-=factor*M[i][j];
-      }
-    }
-    const x=Array(m).fill(0);
-    for(let i=m-1;i>=0;i--){
-      let sum=M[i][m];
-      for(let j=i+1;j<m;j++)sum-=M[i][j]*x[j];
-      x[i]=Math.abs(M[i][i])>1e-12?sum/M[i][i]:0;
-    }
-    return x;
-  }
-
-  const coeffs=solveLinearSystem(A,B);
-  const uMin=Math.min(...local.map(p=>p.u));
-  const uMax=Math.max(...local.map(p=>p.u));
-
-  const smoothed=[];
-  for(let i=0;i<numSamples;i++){
-    const u=uMin+(uMax-uMin)*(i/(numSamples-1));
-    let v=0,p=1;
-    for(let k=0;k<coeffs.length;k++){v+=coeffs[k]*p;p*=u;}
-    smoothed.push({x:first.x+u*ux+v*vx,y:first.y+u*uy+v*vy});
-  }
-  return smoothed;
-}
-
-function getPathTangentPoints(path){
-  const points=[{x:path[0].x,y:path[0].y,dist:0}];
-  let total=0;
-  for(let i=1;i<path.length;i++){
-    const dx=path[i].x-path[i-1].x;
-    const dy=path[i].y-path[i-1].y;
-    total+=Math.sqrt(dx*dx+dy*dy);
-    points.push({x:path[i].x,y:path[i].y,dist:total});
-  }
-  return {points,total};
-}
-
-function samplePathAt(pathData,dist){
-  const {points,total}=pathData;
-  if(dist<=0)return {x:points[0].x,y:points[0].y,angle:pathAngleAt(points,0)};
-  if(dist>=total)return {x:points[points.length-1].x,y:points[points.length-1].y,angle:pathAngleAt(points,points.length-2)};
-  for(let i=1;i<points.length;i++){
-    if(points[i].dist>=dist){
-      const segStart=points[i-1],segEnd=points[i];
-      const segLen=segEnd.dist-segStart.dist;
-      const t=segLen>0?(dist-segStart.dist)/segLen:0;
-      const x=segStart.x+(segEnd.x-segStart.x)*t;
-      const y=segStart.y+(segEnd.y-segStart.y)*t;
-      const angle=Math.atan2(segEnd.y-segStart.y,segEnd.x-segStart.x);
-      return {x,y,angle};
-    }
-  }
-  return {x:points[points.length-1].x,y:points[points.length-1].y,angle:0};
-}
-
-function pathAngleAt(points,i){
-  const a=points[Math.max(0,i)],b=points[Math.min(points.length-1,i+1)];
-  return Math.atan2(b.y-a.y,b.x-a.x);
-}
-
-function drawTextOnPath(ctx,text,pathPointsCanvasSpace,spacing,drawFn){
-  if(pathPointsCanvasSpace.length<2)return;
-  const pathData=getPathTangentPoints(pathPointsCanvasSpace);
-  const chars=text.split('');
-  const charWidths=chars.map(c=>ctx.measureText(c).width+spacing);
-  const totalTextWidth=charWidths.reduce((a,b)=>a+b,0)-spacing;
-
-  let dist=(pathData.total-totalTextWidth)/2;
-  if(dist<0)dist=0;
-
-  const prevAlign=ctx.textAlign;
-  const prevBaseline=ctx.textBaseline;
-  ctx.textAlign='center';
-  ctx.textBaseline='middle';
-
-  chars.forEach((c,i)=>{
-    const charCenterDist=dist+charWidths[i]/2;
-    const sample=samplePathAt(pathData,charCenterDist);
-    ctx.save();
-    ctx.translate(sample.x,sample.y);
-    ctx.rotate(sample.angle);
-    drawFn(c,0,0);
-    ctx.restore();
-    dist+=charWidths[i];
-  });
-
-  ctx.textAlign=prevAlign;
-  ctx.textBaseline=prevBaseline;
-}
-
-function drawCaption(){
-  if(!baseImg)return;
-  const canvas=document.getElementById('captionCanvas');
-  canvas.width=baseImg.naturalWidth;
-  canvas.height=baseImg.naturalHeight;
-  const ctx=canvas.getContext('2d');
-  ctx.drawImage(baseImg,0,0,canvas.width,canvas.height);
-
-  const text=document.getElementById('captionText').value.trim();
-  if(text){
-    const sizePct=document.getElementById('captionSize').value;
-    const fontSize=Math.round(canvas.width*(sizePct/1000));
-    const color=document.getElementById('captionColor').value;
-    const pad=Math.round(canvas.width*0.04);
-    const spacing=parseFloat(document.getElementById('letterSpacing').value)||0;
-    const curveAmount=parseFloat(document.getElementById('curveAmount').value)||0;
-    const outlineThickness=parseFloat(document.getElementById('outlineThickness').value);
-
-    ctx.font=buildFontString(fontSize);
-    ctx.textAlign=captionPos.endsWith('left')?'left':captionPos.endsWith('right')?'right':'center';
-    ctx.textBaseline=captionPos.startsWith('top')?'top':captionPos.startsWith('bottom')?'bottom':'middle';
-
-    const pos=getCaptionXY(canvas,pad);
-    ctx.lineJoin='round';
-    ctx.miterLimit=2;
-
-    ctx.save();
-
-    if(captionEffect==='glow'){
-      ctx.shadowColor=color;
-      ctx.shadowBlur=fontSize*0.45;
-    } else if(captionEffect==='shadow'){
-      ctx.shadowColor='rgba(0,0,0,0.65)';
-      ctx.shadowBlur=fontSize*0.12;
-      ctx.shadowOffsetX=fontSize*0.06;
-      ctx.shadowOffsetY=fontSize*0.08;
+    if (!deviceId) {
+      return res.status(400).json({ error: "Missing device ID." });
     }
 
-    let fillStyle=color;
-    if(captionEffect.startsWith('metallic-')){
-      fillStyle=getMetallicGradient(ctx,pos.x,pos.y,fontSize,captionEffect);
+    // gpt-image-2 needs an explicit size, or it infers a default shape
+    // (typically matching the uploaded photo's own orientation) —
+    // composition instructions in the prompt text alone were NOT
+    // reliably controlling actual output dimensions. Only these three
+    // values are valid for this endpoint; anything else from the front
+    // end falls back to square.
+    const VALID_SIZES = ["1024x1024", "1536x1024", "1024x1536"];
+    const imageSize = VALID_SIZES.includes(size) ? size : "1024x1024";
+
+    // --- TOKEN CHECK: look up or create this device's customer record ---
+    let customer = await findCustomerByDeviceId(deviceId);
+    if (!customer) {
+      customer = await createCustomerForDevice(deviceId);
     }
-
-    const drawGlyph=(str,x,y)=>{
-      if(outlineThickness>0){
-        ctx.lineWidth=fontSize*(outlineThickness/100);
-        ctx.strokeStyle='rgba(0,0,0,0.55)';
-        ctx.strokeText(str,x,y);
-      }
-      ctx.fillStyle=fillStyle;
-      ctx.fillText(str,x,y);
-    };
-
-    if(curveMode==='draw'&&drawnStrokes.length>0){
-      const drawCanvas=document.getElementById('pathDrawCanvas');
-      const scaleX=canvas.width/drawCanvas.width;
-      const scaleY=canvas.height/drawCanvas.height;
-
-      const smoothedStrokes=drawnStrokes.map(stroke=>{
-        const smoothed=smoothStroke(stroke,40);
-        return smoothed.map(p=>({x:p.x*scaleX,y:p.y*scaleY}));
+    const isAdmin = customer.role === "admin";
+    if (!isAdmin && customer.token_balance <= 0) {
+      return res.status(403).json({
+        error: "You're out of free tokens. Verify your email to unlock another, or grab the $5 Preview Reservation for 4 more."
       });
-
-      if(smoothedStrokes.length===1){
-        drawTextOnPath(ctx,text,smoothedStrokes[0],spacing,drawGlyph);
-      } else {
-        const words=text.split(/\s+/).filter(w=>w.length>0);
-        const lineCount=Math.min(words.length,smoothedStrokes.length);
-        for(let i=0;i<lineCount;i++){
-          drawTextOnPath(ctx,words[i],smoothedStrokes[i],spacing,drawGlyph);
-        }
-      }
-    } else if(curveMode==='slider'&&curveAmount!==0){
-      const radius=canvas.width*1.1;
-      drawTextOnArc(ctx,text,pos.x,pos.y,radius,curveAmount,spacing,drawGlyph);
-    } else {
-      drawTextWithSpacing(ctx,text,pos.x,pos.y,pos.align,spacing,drawGlyph);
     }
+    // --- END TOKEN CHECK ---
 
-    ctx.restore();
-  }
-
-  finalImageUrl=canvas.toDataURL('image/png');
-  const mainPreview=document.getElementById('previewImg');
-  if(mainPreview&&mainPreview.style.display!=='none')mainPreview.src=finalImageUrl;
-}
-
-function loadBaseImageForCaption(url){
-  return new Promise((resolve)=>{
-    const img=new Image();
-    img.crossOrigin='anonymous';
-    img.onload=function(){
-      baseImg=img;
-      finalImageUrl=url;
-      drawCaption();
-      resolve();
-    };
-    img.src=url;
-  });
-}
-
-function setIdea(text){
-  document.getElementById('ideaDesc').value=text;
-}
-
-function openCreditsPanel(message){
-  document.getElementById('creditsPanelMessage').textContent = message
-    || "Buy more tokens anytime to keep creating — pick an option below.";
-  document.getElementById('creditsModalOverlay').style.display='flex';
-}
-
-function closeCreditsPanel(){
-  document.getElementById('creditsModalOverlay').style.display='none';
-}
-
-async function buyTokenPack(packId){
-  try{
-    const resp=await fetch('/api/create-checkout-session',{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({type:'token_purchase',deviceId,packId})
-    });
-    const data=await resp.json();
-    if(!resp.ok)throw new Error(data.error||'Could not start checkout.');
-    window.location.href=data.url;
-  }catch(err){
-    alert('Could not open checkout: '+err.message);
-  }
-}
-
-let priceTableOpen=false;
-function togglePriceTable(){
-  priceTableOpen=!priceTableOpen;
-  document.getElementById('priceTablePanel').style.display=priceTableOpen?'block':'none';
-  document.getElementById('priceTableToggleBtn').textContent='💰 See what a mug actually costs '+(priceTableOpen?'▲':'▼');
-}
-
-document.getElementById('fileInput').addEventListener('change',function(e){
-  const file=e.target.files[0];
-  if(!file)return;
-  previousImageData=null;
-  document.getElementById('toggleImageBtn').style.display='none';
-  resizeImageFile(file, 1280).then((dataUrl)=>{
-    setMainSlotImage(dataUrl);
-    saveWorkshop();
-  });
-});
-
-function resizeImageFile(file, maxDimension){
-  return new Promise((resolve)=>{
-    const reader = new FileReader();
-    reader.onload = function(ev){
-      const img = new Image();
-      img.onload = function(){
-        let { width, height } = img;
-        if (width > height && width > maxDimension) {
-          height = Math.round(height * (maxDimension / width));
-          width = maxDimension;
-        } else if (height > maxDimension) {
-          width = Math.round(width * (maxDimension / height));
-          height = maxDimension;
-        }
-        const canvas = document.createElement('canvas');
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0, width, height);
-        resolve(canvas.toDataURL('image/jpeg', 0.85));
-      };
-      img.src = ev.target.result;
-    };
-    reader.readAsDataURL(file);
-  });
-}
-
-// Same downsizing as resizeImageFile, but for a data URL we already
-// have in memory instead of a fresh File upload — used to recycle a
-// generation result back into the working slot at a safe size, instead
-// of the full-resolution original, which is what was causing "Request
-// Entity Too Large" on a second generate() call.
-function resizeDataUrl(dataUrl, maxDimension){
-  return new Promise((resolve)=>{
-    const img = new Image();
-    img.onload = function(){
-      let { width, height } = img;
-      if (width > height && width > maxDimension) {
-        height = Math.round(height * (maxDimension / width));
-        width = maxDimension;
-      } else if (height > maxDimension) {
-        width = Math.round(width * (maxDimension / height));
-        height = maxDimension;
-      }
-      const canvas = document.createElement('canvas');
-      canvas.width = width;
-      canvas.height = height;
-      const ctx = canvas.getContext('2d');
-      ctx.drawImage(img, 0, 0, width, height);
-      resolve(canvas.toDataURL('image/jpeg', 0.85));
-    };
-    img.src = dataUrl;
-  });
-}
-
-function setupRefUpload(inputId, zoneId, previewId, setter){
-  document.getElementById(inputId).addEventListener('change', function(e){
-    const file = e.target.files[0];
-    if(!file) return;
-    resizeImageFile(file, 1280).then((dataUrl)=>{
-      setter(dataUrl);
-      const img = document.getElementById(previewId);
-      img.src = dataUrl;
-      img.style.display = 'block';
-      img.onclick = () => document.getElementById(inputId).click();
-      const z = document.getElementById(zoneId);
-      z.classList.add('has-image');
-      z.style.padding = '0';
-      z.innerHTML = '';
-      z.appendChild(img);
-    });
-  });
-}
-setupRefUpload('refAInput','refAZone','refAPreview', (v)=>{ refImageAData = v; });
-setupRefUpload('refBInput','refBZone','refBPreview', (v)=>{ refImageBData = v; });
-
-function resetRefSlot(zoneId, previewId, inputId){
-  const z=document.getElementById(zoneId);
-  if(!z)return;
-  z.classList.remove('has-image');
-  z.style.padding='1rem';
-  z.innerHTML='<div style="font-size:20px;color:#555;margin-bottom:4px">\u2795</div><div class="upload-text" style="font-size:12px">Tap to add</div>';
-  const oldImg=document.getElementById(previewId);
-  if(oldImg)oldImg.remove();
-  const fresh=document.createElement('img');
-  fresh.id=previewId;
-  fresh.className='preview-img';
-  fresh.style.display='none';
-  fresh.style.maxHeight='140px';
-  z.insertAdjacentElement('afterend',fresh);
-  const input=document.getElementById(inputId);
-  if(input)input.value='';
-}
-
-function clearReferenceSlots(){
-  refImageAData=null;
-  refImageBData=null;
-  resetRefSlot('refAZone','refAPreview','refAInput');
-  resetRefSlot('refBZone','refBPreview','refBInput');
-}
-
-function showGenerationInProgress(){
-  const z=document.getElementById('uploadZone');
-  z.classList.remove('has-image');
-  z.style.padding='2rem';
-  z.innerHTML='<div class="spinner" style="width:26px;height:26px;margin-bottom:10px"></div><div class="upload-text">\ud83c\udfa8 Creation in progress...</div><div class="upload-sub">Your new picture will appear right here</div>';
-  const oldImg=document.getElementById('previewImg');
-  if(oldImg)oldImg.remove();
-  const fresh=document.createElement('img');
-  fresh.id='previewImg';
-  fresh.className='preview-img';
-  fresh.style.display='none';
-  z.insertAdjacentElement('afterend',fresh);
-}
-
-function restoreRefPreview(zoneId, previewId, inputId, dataUrl, setter){
-  if(!dataUrl)return;
-  setter(dataUrl);
-  const img=document.getElementById(previewId);
-  if(!img)return;
-  img.src=dataUrl;
-  img.style.display='block';
-  img.onclick=()=>document.getElementById(inputId).click();
-  const z=document.getElementById(zoneId);
-  z.classList.add('has-image');
-  z.style.padding='0';
-  z.innerHTML='';
-  z.appendChild(img);
-}
-
-// ===== Placement slot mode — restricts the 3-panel choice to coffee
-// mugs, gives travel mugs a proper Front/Back (2-slot), and gives
-// every other product a single design slot. Replaces the old "every
-// product gets Left/Center/Right" behavior. =====
-function getSlotMode(){
-  if (product === 'mug') return mugPrintMode === 'wraparound' ? 'one' : 'three';
-  if (product === 'water bottle') return mugPrintMode === 'wraparound' ? 'one' : 'two';
-  return 'one';
-}
-function getSlotOrder(){
-  const mode = getSlotMode();
-  if (mode === 'three') return ['left','front','right'];
-  if (mode === 'two') return ['front','right'];
-  return ['front'];
-}
-function getSlotLabel(pos){
-  const mode = getSlotMode();
-  if (mode === 'three') return pos === 'left' ? 'Left' : pos === 'right' ? 'Right' : 'Center';
-  if (mode === 'two') return pos === 'front' ? 'Front' : 'Back';
-  if (mode === 'one' && mugPrintMode === 'wraparound') return 'Wraparound';
-  return 'Design';
-}
-
-function refreshApproveRowForMode(){
-  const allSidesBtn = document.getElementById('allSidesBtn');
-  const hint = document.getElementById('approveRowHint');
-  if (!allSidesBtn) return;
-  const mode = getSlotMode();
-  if (mode === 'three') {
-    allSidesBtn.style.display = 'block';
-    allSidesBtn.textContent = '✅ Yes — All 3 Sides';
-    hint.textContent = 'Want it on exactly two sides? Press Yes first, then tap Left / Center / Right under the design in "My Designs" to add or remove spots.';
-  } else if (mode === 'two') {
-    allSidesBtn.style.display = 'block';
-    allSidesBtn.textContent = '✅ Yes — Front & Back';
-    hint.textContent = 'Want a different design on the back? Press Yes first, then tap Front / Back under the design in "My Designs" to swap it.';
-  } else {
-    allSidesBtn.style.display = 'none';
-    hint.textContent = 'This product uses a single design.';
-  }
-}
-
-function approveDesign(allThree){
-  if(!currentDesignId)return;
-  const order = getSlotOrder();
-  if(allThree){
-    order.forEach(pos => { placements[pos] = currentDesignId; });
-    pendingSlotTarget=null;
-  } else {
-    let target=(pendingSlotTarget && order.includes(pendingSlotTarget) && !placements[pendingSlotTarget])?pendingSlotTarget:order.find(p=>!placements[p]);
-    pendingSlotTarget=null;
-    if(target){
-      placements[target]=currentDesignId;
-    } else if(!libraryOpen){
-      toggleLibrary();
-    }
-  }
-  currentDesignId=null;
-  document.getElementById('approveRow').style.display='none';
-  resetMainSlot();
-  clearReferenceSlots();
-  clearWorkshopStorage();
-  saveMugState();
-  renderRecentDesigns();
-  renderPositionHolder();
-  updatePlacementSummary();
-}
-
-function keepTweaking(){
-  const box=document.getElementById('ideaDesc');
-  box.placeholder='What would you like to add or change? Describe it here, then hit Generate again.';
-  box.scrollIntoView({behavior:'smooth',block:'center'});
-  box.focus();
-}
-
-function startOver(){
-  currentDesignId=null;
-  pendingSlotTarget=null;
-  document.getElementById('approveRow').style.display='none';
-  resetMainSlot();
-  clearReferenceSlots();
-  clearWorkshopStorage();
-}
-
-function resetMainSlot(){
-  uploadedImageData=null;
-  previousImageData=null;
-  document.getElementById('toggleImageBtn').style.display='none';
-  document.getElementById('startOverBtn').style.display='none';
-  const z=document.getElementById('uploadZone');
-  z.classList.remove('has-image');
-  z.style.padding='2rem';
-  z.innerHTML='<div style="font-size:32px;color:#555;margin-bottom:8px">\ud83d\udc64</div><div class="upload-text">Tap here to upload a photo</div><div class="upload-sub">Clear face photo works best</div>';
-  const oldImg=document.getElementById('previewImg');
-  if(oldImg)oldImg.remove();
-  const fresh=document.createElement('img');
-  fresh.id='previewImg';
-  fresh.className='preview-img';
-  fresh.style.display='none';
-  z.insertAdjacentElement('afterend',fresh);
-  document.getElementById('fileInput').value='';
-}
-
-function setStatus(msg,isError){
-  const el=document.getElementById('status');
-  el.className='status visible'+(isError?' error':'');
-  el.innerHTML=isError?'❌ '+msg:'<span class="spinner"></span>'+msg;
-}
-
-function clearStatus(){
-  document.getElementById('status').className='status';
-}
-
-function getProductRules(p){
-  if(p==='mug')return 'coffee mug artwork, centered square composition, bold readable character, safe margins, clear face and caption';
-  if(p==='greeting card')return 'greeting card artwork, polished composition, room for readable caption, expressive and charming';
-  if(p==='water bottle')return 'water bottle artwork, tall-feeling centered design, bold simple details';
-  if(p==='phone case')return 'phone case artwork, vertical-feeling composition, face and main joke clearly visible';
-  if(p==='tote bag')return 'tote bag artwork, bold high-impact design readable from a distance';
-  if(p==='suitcase')return 'travel suitcase artwork, bold full-coverage design that reads well from a distance, adventurous or eye-catching composition';
-  if(p==='puzzle')return 'photo puzzle artwork, clear central subject with good contrast between pieces, works well when cut into interlocking pieces';
-  return 'printable custom gift artwork with clean centered square composition and safe margins';
-}
-
-// Maps the current selection to one of OpenAI's three valid gpt-image-2
-// sizes. Composition instructions in the prompt text alone were NOT
-// reliably controlling actual output shape — this is what actually
-// forces a wide canvas for wraparound, or a tall one for posters.
-function getImageSizeParam(){
-  if ((product==='mug'||product==='water bottle') && mugPrintMode==='wraparound'){
-    return '1536x1024'; // wide landscape — needed for a continuous wrap
-  }
-  if (product==='photo poster'){
-    return posterOrientation==='Horizontal' ? '1536x1024' : '1024x1536';
-  }
-  return '1024x1024';
-}
-
-function urlToDataURL(url){
-  return fetch(url)
-    .then(r=>r.blob())
-    .then(blob=>new Promise((resolve,reject)=>{
-      const reader=new FileReader();
-      reader.onloadend=()=>resolve(reader.result);
-      reader.onerror=reject;
-      reader.readAsDataURL(blob);
-    }));
-}
-
-async function generate(){
-  if(!uploadedImageData){
-    setStatus('Please upload a photo first.',true);
-    return;
-  }
-  if(product==='photo poster' && !posterSize){
-    setStatus('Please pick your Photo/Poster size and options above first.',true);
-    return;
-  }
-
-  const btn=document.getElementById('generateBtn');
-  btn.disabled=true;
-  const workingImage=uploadedImageData;
-  const refASnapshot=refImageAData;
-  const refBSnapshot=refImageBData;
-  showGenerationInProgress();
-  clearReferenceSlots();
-  document.getElementById('approveRow').style.display='none';
-setStatus('Generating your caricature... this can take up to 3 minutes. Please stay on this screen until it finishes.');
-document.getElementById('cancelBtn').style.display='block';
-  try{
-    const idea=document.getElementById('ideaDesc').value.trim();
-
-    const customerIdea=idea
-      ? `Customer idea: ${idea}.`
-      : `Customer idea: Create a funny, polished, product-ready caricature of the uploaded person.`;
-
-    const likenessDesc =
-      likeness==='0.15'
-        ? 'Caricature strength: LIGHT. Preserve identity very strongly. Use only mild exaggeration.'
-        : likeness==='0.25'
-        ? 'Caricature strength: BALANCED. Use moderate exaggeration, but identity must remain unmistakable.'
-        : 'Caricature strength: WILD. Use bold exaggeration only on the person’s real existing features. Do not invent new facial features.';
-
-    const backgroundDesc=getBackgroundDescription();
-    const backgroundLine=backgroundDesc
-      ? `Background option selected: ${backgroundDesc}. No hard edges or sticker-cutout look — all edges should fade or blend softly.`
-      : '';
-
-    const wrapCompositionLine = (product==='mug'||product==='water bottle')
-      ? (mugPrintMode==='wraparound'
-          ? 'COMPOSITION: This design will be printed as ONE CONTINUOUS WRAPAROUND image around a curved surface, including past a handle. Compose with detail extended toward the edges rather than tightly centered, so nothing important is lost at the seam or the handle gap.'
-          : 'COMPOSITION: This design will be printed as a single self-contained panel viewed from one flat angle. Keep the subject centered with clean, safe margins on all sides.')
-      : (product==='photo poster'
-          ? `COMPOSITION: This will be printed at a fixed aspect ratio of approximately ${getPosterAspectRatio().toFixed(2)}:1 in ${posterOrientation} orientation. Compose the subject to work within that exact shape — do not treat this as a standard square or default photo ratio.`
-          : '');
-
-    const referenceLine = (refASnapshot || refBSnapshot)
-      ? `
-REFERENCE IMAGES: Additional photos have been provided beyond Photo 1 (the main photo).
-${refASnapshot ? 'This image is "Photo 2" — when the customer idea above mentions "Photo 2," use that exact image for the element described (e.g. a face, an object, a scene, a setting).' : ''}
-${refBSnapshot ? 'This image is "Photo 3" — when the customer idea above mentions "Photo 3," use that exact image for the element described.' : ''}
-Only use these reference images for the specific elements the customer idea calls out. Do not blend in unrelated details from a reference photo.
-`
-      : '';
-
-
-    const prompt=`
-Transform the uploaded person into a premium professional Muggshotz caricature.
-
-IDENTITY PRESERVATION IS THE TOP PRIORITY.
-
-Use the uploaded face as the source of truth.
-Do not invent a new person.
-Do not replace the face with a generic cartoon face.
-Do not beautify, age-shift, race-shift, gender-shift, or change the person’s facial structure.
-
-Preserve the exact recognizable identity:
-same bald head or hairstyle,
-same hairline,
-same forehead,
-same eyebrow shape,
-same eye shape and eye spacing,
-same nose shape,
-same mouth and smile shape,
-same teeth characteristics,
-same cheeks,
-same jawline,
-same chin,
-same skin tone,
-same age impression,
-same facial proportions,
-same natural personality.
-
-Caricature this exact person only.
-Exaggerate existing real features, but keep the person immediately recognizable as the uploaded person.
-
-${likenessDesc}
-
-${customerIdea}
-
-Selected style: ${style}.
-Product target: ${getProductRules(product)}.
-${backgroundLine}
-${wrapCompositionLine}
-${referenceLine}
-
-PRIORITY ORDER: The customer idea above is the primary instruction for what the scene contains.
-The background option, style, and product target are supporting suggestions only.
-If the customer idea conflicts with the background option (for example, it describes a different
-setting or background), follow the customer idea and ignore the conflicting part of the background
-option. Never let a button selection override or contradict what the customer typed.
-
-Follow the customer idea naturally.
-Costume, background, props, joke, caption, and scene should all come from the single customer idea above, unless a background option is also selected and does not conflict with it.
-Keep the face large, clear, and central.
-Do not let costume, action, background, or joke overpower the face.
-Avoid extreme facial distortion.
-Avoid generic caricature stock faces.
-Avoid changing the person into a different actor, celebrity, mascot, or invented character.
-
-Create a polished, funny, product-ready caricature suitable for Muggshotz and Printify.
-
-BACKGROUND AND SCENE QUALITY:
-The environment should not look flat, empty, washed out, or generic.
-Use cinematic depth, realistic perspective, layered foreground/midground/background detail, believable props, textured surfaces, dynamic lighting, shadows, reflections, and atmospheric detail.
-The background should feel like a finished professional illustration or magazine-cover scene, not a simple children's cartoon backdrop.
-Use rich environmental storytelling while keeping the face as the primary focal point.
+    const identityLock = `
+CRITICAL MUGGSHOTZ LIKENESS RULE:
+This is a caricature of the exact person in the uploaded photo.
+Study the uploaded face first. Capture the spark and personality behind the eyes.
+Keep the same attitude, expression, mood, and presence as the real photo.
+The eyes are the center of the likeness — a good result must feel like the same person is looking back at you.
+Base every exaggeration on features that are actually visible in the uploaded photo, including:
+the real eye shape, eye spacing, and eyelids; the real brow angle; the real nose shape;
+the real mouth shape and expression; the real jawline, cheeks, and ears;
+the real facial hair, head shape, skin tone, and age.
+Preserve normal head-to-body proportions unless the customer asks for wild exaggeration.
 `;
 
-    currentGenerationController=new AbortController();
-    const resp=await fetch('/api/generate',{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({image:workingImage,prompt,theme:selectedTheme,deviceId,refImageA:refASnapshot,refImageB:refBSnapshot,currentDesign:null,size:getImageSizeParam()}),
-      signal:currentGenerationController.signal
-    });
+    // If a background theme was chosen and we have a matching reference
+    // image, tell the model explicitly how to use the two images together.
+    const templateFile = theme ? TEMPLATE_FILES[theme] : null;
+    const backgroundInstruction = templateFile
+      ? `
+BACKGROUND REFERENCE:
+Image 1 is the customer's photo — use it only for the person's face and likeness.
+Image 2 is a background style reference — match its texture, pattern, and soft-edged blending style for the background only.
+Do not copy any people, objects, or text from Image 2. Only use it as a background style guide.
+`
+      : "";
 
-    const data=await resp.json();
+    // If a current-design image was provided, this is a refinement of an
+    // existing result rather than a fresh generation. The ORIGINAL
+    // uploaded photo remains the identity anchor — it stays attached and
+    // stays the source of truth for the real face — but the current
+    // design is what the customer is actually looking at and wants
+    // modified, so treat it as the visual starting point to build on.
+    const currentDesignInstruction = currentDesign
+      ? `
+CURRENT DESIGN REFERENCE:
+An additional image labeled "current design" is attached. This is the customer's most recent generated result from this session — the actual image they are looking at right now.
+Use the current design as the visual starting point: keep its existing composition, background, costume, and styling unless the customer's new request below specifically asks to change something.
+The ORIGINAL uploaded customer photo remains the source of truth for facial identity and likeness at all times — the current design is a stylized rendering, not a real photo, so do not let it override or drift the real facial identity captured from the original photo.
+Apply the customer's new instruction as an edit on top of the current design, not as a brand-new unrelated generation.
+`
+      : "";
 
-    if(!resp.ok){
-      if(resp.status===403){
-        clearStatus();
-        refreshTokenMeter();
-        openCreditsPanel("You're out of image credits. Grab the $5 Preview Reservation below to unlock more and keep creating.");
-        return;
-      }
-      throw new Error(data.error||data.detail||'Generation failed.');
+
+    const finalPrompt = `${identityLock}
+CUSTOMER REQUEST:
+${prompt}
+${backgroundInstruction}
+${currentDesignInstruction}
+STYLE:
+Photorealistic rendering with caricature-level exaggeration of real features.
+Painted, airbrushed illustration finish — not cartoon, not vector, not anime style.
+Natural skin texture and lighting.
+Strong, unmistakable likeness to the uploaded photo.
+Expressive eyes, personality-centered face.
+Funny but respectful exaggeration, not a flattened cartoon mascot.
+Head proportions stay natural unless the customer specifically requests exaggeration.
+Polished gift-art quality.
+`;
+
+    // image comes in as a data URL like "data:image/png;base64,AAAA..."
+    // OpenAI's edit endpoint needs the raw file bytes, not the data URL prefix.
+    const matches = image.match(/^data:(image\/\w+);base64,(.+)$/);
+    if (!matches) {
+      return res.status(400).json({ error: "Image must be a base64 data URL." });
     }
+    const mimeType = matches[1];
+    const base64Data = matches[2];
+    const imageBuffer = Buffer.from(base64Data, "base64");
+    const extension = mimeType === "image/png" ? "png" : "jpg";
 
-    resultUrl=data.imageUrl;
+    const formData = new FormData();
+    formData.append("model", "gpt-image-2");
+    formData.append("prompt", finalPrompt);
+    formData.append("size", imageSize);
+    formData.append(
+      "image[]",
+      new Blob([imageBuffer], { type: mimeType }),
+      `upload.${extension}`
+    );
 
-    if(!resultUrl)throw new Error('No image returned.');
-
-    document.getElementById('captionCard').className='card caption-card visible';
-    document.getElementById('captionText').value='';
-  document.getElementById('verifyCard').style.display='block';
-    currentDesignId=addToRecentDesigns(resultUrl);
-    document.getElementById('approveRow').style.display='block';
-    refreshApproveRowForMode();
-    await loadBaseImageForCaption(resultUrl);
-    try{
-      const newWorkingRaw=await urlToDataURL(resultUrl);
-      const newWorking=await resizeDataUrl(newWorkingRaw, 1280);
-      previousImageData=workingImage;
-      setMainSlotImage(newWorking);
-      document.getElementById('toggleImageBtn').style.display='block';
-      saveWorkshop();
-    }catch(recycleErr){
-      console.error('Could not recycle result into the main slot:',recycleErr);
-      setMainSlotImage(workingImage);
-    }
-    refreshTokenMeter();
-    clearStatus();
-
-  }catch(err){
-    setStatus(err.message,true);
-    if(workingImage)setMainSlotImage(workingImage);
-    restoreRefPreview('refAZone','refAPreview','refAInput',refASnapshot,(v)=>{refImageAData=v;});
-    restoreRefPreview('refBZone','refBPreview','refBInput',refBSnapshot,(v)=>{refImageBData=v;});
-  }finally{
-btn.disabled=false;
-document.getElementById('cancelBtn').style.display='none';
-  }
-}
-let recentDesigns=[];
-let placements={left:null,right:null,front:null};
-let pendingSlotTarget=null;
-let libraryOpen=false;
-
-function addToRecentDesigns(url){
-  const designId='design-'+Date.now();
-  recentDesigns.push({id:designId,url:url});
-  document.getElementById('positionHolderCard').style.display='block';
-  renderRecentDesigns();
-  renderPositionHolder();
-  updateLibraryToggleLabel();
-  updatePlacementSummary();
-  saveMugState();
-  return designId;
-}
-
-function generateForSlot(slotName){
-  pendingSlotTarget=slotName;
-  generate();
-}
-
-function renderRecentDesigns(){
-  const strip=document.getElementById('recentDesignsStrip');
-  strip.innerHTML='';
-  const order=getSlotOrder();
-  recentDesigns.forEach(design=>{
-    const wrap=document.createElement('div');
-    wrap.style.flexShrink='0';
-    wrap.style.width='110px';
-    wrap.style.textAlign='center';
-
-    const img=document.createElement('img');
-    img.src=design.url;
-    img.style.width='100%';
-    img.style.height='110px';
-    img.style.objectFit='cover';
-    img.style.borderRadius='8px';
-    img.style.border=isAssigned(design.id)?'2px solid #ff6a00':'2px solid #333';
-    wrap.appendChild(img);
-
-    const btnRow=document.createElement('div');
-    btnRow.style.display='flex';
-    btnRow.style.gap='3px';
-    btnRow.style.marginTop='4px';
-
-    order.forEach(pos=>{
-      const label=getSlotLabel(pos);
-      const btn=document.createElement('div');
-      const isThisOne=placements[pos]===design.id;
-      btn.textContent=label;
-      btn.style.flex='1';
-      btn.style.fontSize='10px';
-      btn.style.padding='4px 2px';
-      btn.style.borderRadius='6px';
-      btn.style.cursor='pointer';
-      btn.style.border=isThisOne?'1px solid #ff6a00':'1px solid #333';
-      btn.style.background=isThisOne?'#1a0a00':'#0d0d0d';
-      btn.style.color=isThisOne?'#ff6a00':'#888';
-      btn.onclick=()=>assignPlacement(pos,design.id);
-      btnRow.appendChild(btn);
-    });
-    wrap.appendChild(btnRow);
-
-    const delBtn=document.createElement('div');
-    delBtn.textContent='🗑️ Delete';
-    delBtn.style.cssText='margin-top:4px;font-size:10px;padding:4px 2px;border-radius:6px;cursor:pointer;border:1px solid #5a2a2a;background:#2a1010;color:#ff8a7a;text-align:center';
-    delBtn.onclick=()=>deleteDesign(design.id);
-    wrap.appendChild(delBtn);
-
-    strip.appendChild(wrap);
-  });
-}
-
-function deleteDesign(designId){
-  recentDesigns=recentDesigns.filter(d=>d.id!==designId);
-  ['left','front','right'].forEach(p=>{
-    if(placements[p]===designId)placements[p]=null;
-  });
-  if(currentDesignId===designId)currentDesignId=null;
-  renderRecentDesigns();
-  renderPositionHolder();
-  updateLibraryToggleLabel();
-  updatePlacementSummary();
-  saveMugState();
-}
-
-function isAssigned(designId){
-  return placements.left===designId||placements.right===designId||placements.front===designId;
-}
-
-function assignPlacement(pos,designId){
-  if(placements[pos]===designId){
-    placements[pos]=null;
-  } else {
-    placements[pos]=designId;
-  }
-  renderRecentDesigns();
-  renderPositionHolder();
-  updatePlacementSummary();
-  saveMugState();
-}
-
-function findDesignById(designId){
-  return recentDesigns.find(d=>d.id===designId);
-}
-
-function renderPositionHolder(){
-  const row=document.getElementById('positionHolderRow');
-  if(!row)return;
-  row.innerHTML='';
-  const order=getSlotOrder();
-
-  function makeSlot(pos,label){
-    const designId=placements[pos];
-    const design=designId?findDesignById(designId):null;
-
-    const slot=document.createElement('div');
-    slot.className='pos-slot';
-
-    const labelEl=document.createElement('div');
-    labelEl.className='pos-slot-label';
-    labelEl.textContent=label;
-    slot.appendChild(labelEl);
-
-    const thumbWrap=document.createElement('div');
-    thumbWrap.className='pos-thumb-wrap';
-
-    const thumb=document.createElement('div');
-    thumb.className='pos-slot-thumb'+(design?' filled':'');
-    if(design){
-      const img=document.createElement('img');
-      img.src=design.url;
-      thumb.appendChild(img);
-      const removeBtn=document.createElement('div');
-      removeBtn.textContent='✖';
-      removeBtn.style.cssText='position:absolute;top:-8px;right:-8px;width:22px;height:22px;border-radius:50%;background:#2a1010;border:1px solid #5a2a2a;color:#ff8a7a;font-size:11px;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:3';
-      removeBtn.onclick=(e)=>{e.stopPropagation();placements[pos]=null;renderRecentDesigns();renderPositionHolder();updatePlacementSummary();saveMugState();};
-      thumbWrap.appendChild(removeBtn);
-    } else {
-      const empty=document.createElement('div');
-      empty.className='pos-slot-empty-icon';
-      empty.textContent='+';
-      thumb.appendChild(empty);
-    }
-    thumbWrap.appendChild(thumb);
-
-    if(pos==='left'||pos==='right'){
-      const handle=document.createElement('div');
-      handle.className='pos-handle pos-handle-'+pos;
-      thumbWrap.appendChild(handle);
-    }
-    slot.appendChild(thumbWrap);
-
-    const genBtn=document.createElement('div');
-    genBtn.className='pos-slot-gen-btn';
-    genBtn.textContent='🎨 New';
-    genBtn.onclick=()=>generateForSlot(pos);
-    slot.appendChild(genBtn);
-
-    return slot;
-  }
-
-  function makeSwapBtn(posA,posB){
-    const btn=document.createElement('div');
-    btn.className='swap-btn';
-    btn.textContent='⇄';
-    btn.onclick=()=>swapSlots(posA,posB);
-    return btn;
-  }
-
-  order.forEach((pos,i)=>{
-    row.appendChild(makeSlot(pos,getSlotLabel(pos)));
-    if(i<order.length-1){
-      row.appendChild(makeSwapBtn(pos,order[i+1]));
-    }
-  });
-}
-
-function swapSlots(posA,posB){
-  const temp=placements[posA];
-  placements[posA]=placements[posB];
-  placements[posB]=temp;
-  renderRecentDesigns();
-  renderPositionHolder();
-  updatePlacementSummary();
-  saveMugState();
-}
-
-function clearAllDesigns(){
-  recentDesigns=[];
-  placements={left:null,right:null,front:null};
-  currentDesignId=null;
-  pendingSlotTarget=null;
-  try{localStorage.removeItem('muggshotz_mug_state');}catch(e){}
-  document.getElementById('positionHolderCard').style.display='none';
-  document.getElementById('approveRow').style.display='none';
-  renderRecentDesigns();
-  renderPositionHolder();
-  updateLibraryToggleLabel();
-  updatePlacementSummary();
-}
-
-function toggleLibrary(){
-  libraryOpen=!libraryOpen;
-  document.getElementById('libraryPanel').style.display=libraryOpen?'block':'none';
-  updateLibraryToggleLabel();
-}
-
-function updateLibraryToggleLabel(){
-  const btn=document.getElementById('libraryToggleBtn');
-  const arrow=libraryOpen?'▲':'▼';
-  btn.textContent=`📚 My Designs (${recentDesigns.length}) ${arrow}`;
-}
-
-function updatePlacementSummary(){
-  const assignedCount=['left','front','right'].filter(p=>placements[p]).length;
-  const orderBtn=document.getElementById('orderMugBtn');
-  orderBtn.style.display=assignedCount>0?'block':'none';
-}
-
-function goToOrder(){
-  const orderData = {
-    placements: {
-      left: placements.left ? findDesignById(placements.left).url : null,
-      front: placements.front ? findDesignById(placements.front).url : null,
-      right: placements.right ? findDesignById(placements.right).url : null
-    },
-    deviceId: deviceId,
-    productIcon: product,
-    mugPrintMode: mugPrintMode,
-    posterFramed: posterFramed,
-    posterSize: posterSize,
-    posterOrientation: posterOrientation,
-    posterFinish: posterFinish,
-    posterFrameColor: posterFrameColor
-  };
-  localStorage.setItem('muggshotz_pending_order', JSON.stringify(orderData));
-  window.location.href = 'order.html';
-} let currentGenerationController=null;
-function cancelGeneration(){
-  if(currentGenerationController){
-    currentGenerationController.abort();
-  }
-  document.getElementById('cancelBtn').style.display='none';
-  document.getElementById('generateBtn').disabled=false;
-  clearStatus();
-}
-  
-  function downloadImage(){
-  if(!finalImageUrl)return;
-  const a=document.createElement('a');
-  a.href=finalImageUrl;
-  a.download='muggshotz-caricature.png';
-  a.click();
-}
-  async function sendVerification(){
-  const email=document.getElementById('verifyEmailInput').value.trim();
-  const statusEl=document.getElementById('verifyStatus');
-  const btn=document.getElementById('verifyBtn');
-  if(!email){
-    statusEl.textContent='Please enter your email.';
-    statusEl.style.color='#e24b4a';
-    return;
-  }
-  btn.disabled=true;
-  statusEl.textContent='Sending...';
-  statusEl.style.color='#888';
-  try{
-    const resp=await fetch('/api/send-verification',{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({email,deviceId})
-    });
-    const data=await resp.json();
-    if(!resp.ok)throw new Error((data.error||'Something went wrong.')+(data.detail?' — '+data.detail:''));
-    statusEl.textContent='Check your email for a verification link!';
-    statusEl.style.color='#ff6a00';
-  }catch(err){
-    statusEl.textContent=err.message;
-    statusEl.style.color='#e24b4a';
-    btn.disabled=false;
-  }
-}
-
-function saveWorkshop(){
-  try{
-    localStorage.setItem('muggshotz_workshop',JSON.stringify({working:uploadedImageData,previous:previousImageData,designId:currentDesignId}));
-  }catch(e){
-    try{
-      localStorage.setItem('muggshotz_workshop',JSON.stringify({working:uploadedImageData,previous:null,designId:currentDesignId}));
-    }catch(e2){console.error('Could not save workshop:',e2);}
-  }
-}
-
-function clearWorkshopStorage(){
-  try{localStorage.removeItem('muggshotz_workshop');}catch(e){}
-}
-
-function saveMugState(){
-  try{
-    localStorage.setItem('muggshotz_mug_state',JSON.stringify({designs:recentDesigns,placements:placements}));
-  }catch(e){console.error('Could not save mug state:',e);}
-}
-
-function restoreWorkshop(){
-  try{
-    const mug=JSON.parse(localStorage.getItem('muggshotz_mug_state')||'null');
-    if(mug&&Array.isArray(mug.designs)&&mug.designs.length){
-      recentDesigns=mug.designs;
-      placements=mug.placements||{left:null,right:null,front:null};
-      document.getElementById('positionHolderCard').style.display='block';
-      renderRecentDesigns();
-      renderPositionHolder();
-      updateLibraryToggleLabel();
-      updatePlacementSummary();
-    }
-    const saved=JSON.parse(localStorage.getItem('muggshotz_workshop')||'null');
-    if(saved&&saved.working){
-      previousImageData=saved.previous||null;
-      currentDesignId=saved.designId||null;
-      setMainSlotImage(saved.working);
-      if(previousImageData)document.getElementById('toggleImageBtn').style.display='block';
-      if(currentDesignId){
-        document.getElementById('approveRow').style.display='block';
-        loadBaseImageForCaption(saved.working);
+    // If a matching template file exists on disk, attach it as a second
+    // reference image so the model can copy its background style.
+    if (templateFile) {
+      try {
+        const templatePath = path.join(process.cwd(), templateFile);
+        const templateBuffer = fs.readFileSync(templatePath);
+        formData.append(
+          "image[]",
+          new Blob([templateBuffer], { type: "image/png" }),
+          "background-reference.png"
+        );
+      } catch (fileErr) {
+        // If the template file can't be read for any reason, continue
+        // without it rather than failing the whole request.
+        console.error("Could not load template file:", templateFile, fileErr.message);
       }
     }
-  }catch(e){console.error('Workshop restore failed:',e);}
-}
-restoreWorkshop();
-refreshApproveRowForMode();
-refreshMugPrintModeVisibility();
-refreshPhotoPosterVisibility();
 
-window.addEventListener('scroll',function(){
-  const row=document.querySelector('.token-credits-row');
-  if(!row)return;
-  if(window.scrollY > 10){
-    row.classList.add('scrolled');
-  } else {
-    row.classList.remove('scrolled');
+    // If reference images were provided, attach them as additional images
+    // so the model can pull specific elements (a face, an object, a
+    // setting) from them as instructed in the prompt text above.
+    function attachDataUrlImage(dataUrl, filename) {
+      const m = dataUrl.match(/^data:(image\/\w+);base64,(.+)$/);
+      if (!m) return;
+      const buf = Buffer.from(m[2], "base64");
+      formData.append("image[]", new Blob([buf], { type: m[1] }), filename);
+    }
+    if (refImageA) attachDataUrlImage(refImageA, "reference-a.png");
+    if (refImageB) attachDataUrlImage(refImageB, "reference-b.png");
+    if (currentDesign) attachDataUrlImage(currentDesign, "current-design.png");
+
+    const response = await fetch("https://api.openai.com/v1/images/edits", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`
+      },
+      body: formData
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+      // OpenAI sometimes returns error as a nested object rather than a
+      // plain string. Flatten it here so the front end always has a
+      // readable message instead of "[object Object]".
+      const rawError = data?.error;
+      const readableError =
+        typeof rawError === "string"
+          ? rawError
+          : rawError?.message || JSON.stringify(rawError) || "Unknown error from image service.";
+      return res.status(response.status).json({ error: readableError });
+    }
+
+    const b64 = data?.data?.[0]?.b64_json;
+    if (!b64) {
+      return res.status(502).json({ error: "No image returned from OpenAI.", raw: data });
+    }
+
+    // Upload the finished image to Supabase Storage and get a real,
+    // permanent URL back instead of shipping raw base64 around.
+    const generatedBuffer = Buffer.from(b64, "base64");
+    const publicImageUrl = await uploadGenerationToStorage(generatedBuffer, deviceId);
+
+    // Record this generation so it can be picked later for multi-placement
+    // mug orders. Never lets a record-keeping failure block the customer's
+    // actual image from coming back.
+    await saveGenerationRecord(customer.id, prompt, theme, publicImageUrl);
+
+    // Only deduct the token AFTER a successful generation, so a failed
+    // OpenAI call never costs anyone a token. Admin accounts are deducted
+    // the same as everyone else now (for a real, visible countdown on the
+    // token meter) — they just can never be BLOCKED by the zero-token
+    // check above, no matter how low this number goes.
+    await deductOneToken(customer.id, customer.token_balance);
+
+    return res.status(200).json({ imageUrl: publicImageUrl });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
   }
-},{passive:true});
-</script>
-</body>
-</html>
+}
