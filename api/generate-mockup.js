@@ -4,7 +4,10 @@ import {
   getPlaceholderDimensions,
   buildWraparoundImage,
   buildFullBleedImage,
+  buildFrontBackImages,
+  buildSingleImage,
   resolveVariant,
+  resolvePhotoPosterSelection,
   createPrintifyProduct
 } from "./create-printify-order.js";
 
@@ -43,10 +46,9 @@ async function waitForMockupImages(productId, attempts = 6, delayMs = 1500) {
 }
 
 // ===== MAIN ENTRY POINT =====
-// Coffee mugs only for now (three-slot-wrap layout) — this is the
-// product with the generic SVG illustration Alyx flagged as the
-// priority to replace with a real photo. Other layout types can be
-// added here the same way once this pattern is proven out.
+// Handles both coffee mugs (three-slot-wrap) and travel mugs
+// (front-back or single-image). Suitcase/phone case/tote bag can be
+// added the same way later — same pattern, different branch.
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
@@ -55,32 +57,71 @@ export default async function handler(req, res) {
   let tempProductId = null;
 
   try {
-    const { productKey, sizeLabel, colorName, placements, printMode = "standard" } = req.body;
+    const {
+      productKey, sizeLabel, colorName, placements,
+      frontImage, backImage, image,
+      printMode = "standard",
+      posterFramed, posterOrientation, posterFinish
+    } = req.body;
 
     const product = getProduct(productKey);
     if (!product) throw new Error(`Unknown product: "${productKey}"`);
-    if (product.layoutType !== "three-slot-wrap") {
-      throw new Error("Real-photo mockups are only available for coffee mugs right now.");
+
+    let variantId, effectiveBlueprintId, effectivePrintProviderId;
+
+    if (productKey === "photo-poster") {
+      const resolved = await resolvePhotoPosterSelection(product, {
+        framed: !!posterFramed, sizeLabel, orientation: posterOrientation, finish: posterFinish, frameColor: colorName
+      });
+      variantId = resolved.variantId;
+      effectiveBlueprintId = resolved.blueprintId;
+      effectivePrintProviderId = resolved.printProviderId;
+    } else {
+      ({ variantId } = resolveVariant(product, sizeLabel, colorName));
+      effectiveBlueprintId = product.blueprintId;
+      effectivePrintProviderId = product.printProviderId;
     }
-    if (!placements || !(placements.left || placements.front || placements.right)) {
-      throw new Error("At least one design is required to generate a mockup.");
+
+    let printifyImages = {};
+
+    if (product.layoutType === "three-slot-wrap") {
+      if (!placements || !(placements.left || placements.front || placements.right)) {
+        throw new Error("At least one design is required to generate a mockup.");
+      }
+      const isFullBleed = printMode === "fullBleed" || printMode === "allCup";
+      const { width, height, position } = await getPlaceholderDimensions(
+        product.blueprintId, product.printProviderId, variantId
+      );
+      const buffer = isFullBleed
+        ? await buildFullBleedImage(placements.front || placements.left || placements.right, width, height)
+        : await buildWraparoundImage(placements, width, height);
+      const imageId = await uploadImageToPrintify(buffer, `muggshotz-mockup-preview-${Date.now()}.png`);
+      printifyImages[position] = imageId;
+
+    } else if (product.layoutType === "front-back") {
+      if (!frontImage && !backImage) throw new Error("At least a front or back image is required.");
+      const frontDims = product.printDimensions?.front;
+      const backDims = product.printDimensions?.back;
+      const { frontBuf, backBuf } = await buildFrontBackImages(frontImage, backImage, frontDims, backDims);
+      if (frontBuf) printifyImages["mug_front"] = await uploadImageToPrintify(frontBuf, `muggshotz-mockup-front-${Date.now()}.png`);
+      if (backBuf) printifyImages["mug_back"] = await uploadImageToPrintify(backBuf, `muggshotz-mockup-back-${Date.now()}.png`);
+
+    } else if (product.layoutType === "single-image") {
+      if (!image) throw new Error("An image is required to generate a mockup.");
+      const dims = product.printDimensions?.front;
+      const { width, height, position } = dims
+        ? { ...dims, position: "front" }
+        : await getPlaceholderDimensions(effectiveBlueprintId, effectivePrintProviderId, variantId);
+      const buffer = await buildSingleImage(image, width, height);
+      printifyImages[position] = await uploadImageToPrintify(buffer, `muggshotz-mockup-preview-${Date.now()}.png`);
+
+    } else {
+      throw new Error("Real-photo mockups aren't available for this product type yet.");
     }
-
-    const { variantId } = resolveVariant(product, sizeLabel, colorName);
-
-    const isFullBleed = printMode === "fullBleed" || printMode === "allCup";
-    const { width, height, position } = await getPlaceholderDimensions(
-      product.blueprintId, product.printProviderId, variantId
-    );
-    const buffer = isFullBleed
-      ? await buildFullBleedImage(placements.front || placements.left || placements.right, width, height)
-      : await buildWraparoundImage(placements, width, height);
-
-    const imageId = await uploadImageToPrintify(buffer, `muggshotz-mockup-preview-${Date.now()}.png`);
 
     const { productId } = await createPrintifyProduct(
-      { [position]: imageId },
-      { blueprintId: product.blueprintId, printProviderId: product.printProviderId, displayName: product.displayName },
+      printifyImages,
+      { blueprintId: effectiveBlueprintId, printProviderId: effectivePrintProviderId, displayName: product.displayName },
       variantId,
       `[PREVIEW - DELETE] Muggshotz ${product.displayName} mockup`
     );
