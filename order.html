@@ -120,6 +120,9 @@ label{font-size:11px;color:#888;letter-spacing:.5px;text-transform:uppercase;dis
 <div class="card" id="travelMugStyleCard" style="display:none">
 <div class="card-title">🍶 Which Travel Mug?</div>
 <div class="grid3" id="travelMugStyleGrid"></div>
+<button class="download-btn" id="travelMockupPreviewBtn" onclick="fetchTravelMockupPreview()" style="margin-top:1rem">📸 See a Real Photo Preview</button>
+<div class="note" id="travelMockupPreviewNote" style="margin-top:.5rem;text-align:center;display:none"></div>
+<img id="travelMockupPreviewImg" style="display:none;width:100%;border-radius:12px;border:1px solid #ff6a00;margin-top:.75rem"/>
 </div>
 
 <div class="card" id="sizeCard">
@@ -132,6 +135,9 @@ label{font-size:11px;color:#888;letter-spacing:.5px;text-transform:uppercase;dis
 
 <div class="card" id="livePreviewCard">
 <div class="card-title">🖼️ Live Preview</div>
+<button class="download-btn" id="mockupPreviewBtn" onclick="fetchMockupPreview()" style="margin-bottom:1rem">📸 See a Real Photo Preview</button>
+<div class="note" id="mockupPreviewNote" style="margin-top:-.6rem;margin-bottom:1rem;text-align:center;display:none"></div>
+<img id="mockupPreviewImg" style="display:none;width:100%;border-radius:12px;border:1px solid #ff6a00;margin-bottom:1rem"/>
 <div class="mug-preview-wrap">
 <svg id="mugPreviewSvg" viewBox="0 0 300 300" xmlns="http://www.w3.org/2000/svg">
   <defs>
@@ -642,6 +648,7 @@ function toggleGiftMessage(){
 
 function toggleFullWrap(){
   fullWrapEnabled = document.getElementById('fullWrapToggle').checked;
+  resetMockupPreview();
 }
 
 function updateGiftMessageCount(){
@@ -758,6 +765,139 @@ function renderMugPreview(){
   svg.classList.toggle('size-15oz', selectedSize === '15oz');
 }
 
+// Maps the order page's display style name to the real catalog key
+// used server-side, since order.html's MUG_STYLES uses the friendly
+// display name but lib/products-catalog.js keys off e.g. "trimmed-mug".
+const MUG_STYLE_TO_PRODUCT_KEY = {
+  "Classic White": "classic-white-mug",
+  "Color Pop": "color-pop-mug",
+  "Trimmed": "trimmed-mug",
+  "Accented": "accented-mug"
+};
+
+function resetTravelMockupPreview(){
+  const btn = document.getElementById('travelMockupPreviewBtn');
+  const noteEl = document.getElementById('travelMockupPreviewNote');
+  const imgEl = document.getElementById('travelMockupPreviewImg');
+  if (!btn) return;
+  btn.textContent = '📸 See a Real Photo Preview';
+  btn.disabled = false;
+  noteEl.style.display = 'none';
+  imgEl.style.display = 'none';
+}
+
+async function fetchTravelMockupPreview(){
+  const btn = document.getElementById('travelMockupPreviewBtn');
+  const noteEl = document.getElementById('travelMockupPreviewNote');
+  const imgEl = document.getElementById('travelMockupPreviewImg');
+
+  if (!selectedTravelProductKey) {
+    noteEl.textContent = 'Pick a travel mug style above first.';
+    noteEl.className = 'note error';
+    noteEl.style.display = 'block';
+    return;
+  }
+  const product = TRAVEL_MUG_CATALOG[selectedTravelProductKey];
+  if (product.colors && !selectedTravelColor) {
+    noteEl.textContent = 'Pick a color above first.';
+    noteEl.className = 'note error';
+    noteEl.style.display = 'block';
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = '📸 Generating your real photo... (a few seconds)';
+  noteEl.style.display = 'none';
+
+  const left = pendingOrder?.placements?.left || null;
+  const front = pendingOrder?.placements?.front || null;
+  const right = pendingOrder?.placements?.right || null;
+
+  const body = {
+    productKey: selectedTravelProductKey,
+    sizeLabel: product.sizeLabel,
+    colorName: selectedTravelColor
+  };
+  if (product.layoutType === 'front-back') {
+    body.frontImage = left || front || null;
+    body.backImage = right || null;
+  } else {
+    body.image = left || front || right || null;
+  }
+
+  try {
+    const resp = await fetch('/api/generate-mockup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data.error || 'Could not generate a real photo preview.');
+
+    imgEl.src = data.mockupUrl;
+    imgEl.style.display = 'block';
+    btn.textContent = '✅ Real Photo Preview';
+  } catch (err) {
+    noteEl.textContent = err.message;
+    noteEl.className = 'note error';
+    noteEl.style.display = 'block';
+    btn.textContent = '📸 See a Real Photo Preview';
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+function resetMockupPreview(){
+  const btn = document.getElementById('mockupPreviewBtn');
+  const noteEl = document.getElementById('mockupPreviewNote');
+  const imgEl = document.getElementById('mockupPreviewImg');
+  if (!btn) return;
+  btn.textContent = '📸 See a Real Photo Preview';
+  btn.disabled = false;
+  noteEl.style.display = 'none';
+  imgEl.style.display = 'none';
+  const wrap = document.querySelector('.mug-preview-wrap');
+  if (wrap) wrap.style.display = 'block';
+}
+
+async function fetchMockupPreview(){
+  const btn = document.getElementById('mockupPreviewBtn');
+  const noteEl = document.getElementById('mockupPreviewNote');
+  const imgEl = document.getElementById('mockupPreviewImg');
+
+  btn.disabled = true;
+  btn.textContent = '📸 Generating your real photo... (a few seconds)';
+  noteEl.style.display = 'none';
+
+  try {
+    const resp = await fetch('/api/generate-mockup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        productKey: MUG_STYLE_TO_PRODUCT_KEY[selectedStyle],
+        sizeLabel: selectedSize,
+        colorName: selectedColor,
+        placements: pendingOrder?.placements || {},
+        printMode: fullWrapEnabled ? 'fullBleed' : 'standard'
+      })
+    });
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data.error || 'Could not generate a real photo preview.');
+
+    imgEl.src = data.mockupUrl;
+    imgEl.style.display = 'block';
+    document.querySelector('.mug-preview-wrap').style.display = 'none';
+    btn.textContent = '✅ Real Photo Preview';
+  } catch (err) {
+    noteEl.textContent = err.message + ' — showing the illustrated preview instead.';
+    noteEl.className = 'note error';
+    noteEl.style.display = 'block';
+    btn.textContent = '📸 See a Real Photo Preview';
+  } finally {
+    btn.disabled = false;
+  }
+}
+
 function pickPreviewView(el){
   document.querySelectorAll('.view-toggle-btn').forEach(b=>b.classList.remove('selected'));
   el.classList.add('selected');
@@ -788,6 +928,7 @@ function pickStyle(el){
   document.getElementById('colorCard').style.display = hasColors ? 'block' : 'none';
   if (hasColors) renderColorGrid();
   renderMugPreview();
+  resetMockupPreview();
   updateSummary();
 }
 
@@ -800,6 +941,7 @@ function pickSize(el){
   document.getElementById('colorCard').style.display = hasColors ? 'block' : 'none';
   if (hasColors) renderColorGrid();
   renderMugPreview();
+  resetMockupPreview();
   updateSummary();
 }
 
@@ -809,6 +951,7 @@ function pickColor(el, colorData){
   selectedColor = colorData.name;
   document.getElementById('colorLabel').textContent = selectedColor;
   renderMugPreview();
+  resetMockupPreview();
   updateSummary();
 }
 
@@ -876,6 +1019,7 @@ function pickTravelMugStyle(key, el){
   } else {
     colorCard.style.display = 'none';
   }
+  resetTravelMockupPreview();
   updateSummary();
 }
 
@@ -899,6 +1043,7 @@ function pickTravelColor(el, colorData){
   el.classList.add('selected');
   selectedTravelColor = colorData.name;
   document.getElementById('travelColorLabel').textContent = selectedTravelColor;
+  resetTravelMockupPreview();
 }
 
 // ===== Shared summary logic, branches by mode =====
