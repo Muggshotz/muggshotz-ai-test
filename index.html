@@ -150,10 +150,10 @@
 <div class="note" style="margin-top:.9rem;text-align:center;font-size:13px;color:#ccc">Are you satisfied with this design?</div>
 <div class="bi-row">
 <button class="generate-btn" style="flex:1;width:auto;padding:.8rem .4rem;font-size:13px" onclick="approveDesign(false)">✅ Yes — Use This Design</button>
-<button class="generate-btn" style="flex:1;width:auto;padding:.8rem .4rem;font-size:13px" onclick="approveDesign(true)">✅ Yes — All 3 Sides</button>
+<button class="generate-btn" id="allSidesBtn" style="flex:1;width:auto;padding:.8rem .4rem;font-size:13px" onclick="approveDesign(true)">✅ Yes — All 3 Sides</button>
 </div>
 <button class="download-btn" style="margin-top:.6rem" onclick="keepTweaking()">🔧 No — Keep Tweaking</button>
-<div class="note" style="margin-top:.5rem">Want it on exactly two sides? Press Yes first, then tap Left / Center / Right under the design in "My Designs" to add or remove spots.</div>
+<div class="note" id="approveRowHint" style="margin-top:.5rem">Want it on exactly two sides? Press Yes first, then tap Left / Center / Right under the design in "My Designs" to add or remove spots.</div>
 </div>
 
 <div style="margin-top:1.1rem;padding-top:1rem;border-top:1px dashed #333">
@@ -388,7 +388,10 @@ let pathCanvasReady=false;
 function pick(el,type){
   el.closest('.grid3,.grid2').querySelectorAll('.btn-select').forEach(b=>b.classList.remove('selected'));
   el.classList.add('selected');
-  if(type==='product')product=el.dataset.val;
+  if(type==='product'){
+    product=el.dataset.val;
+    refreshApproveRowForMode();
+  }
   else if(type==='style')style=el.dataset.val;
   else if(type==='likeness')likeness=el.dataset.val;
 }
@@ -1138,15 +1141,55 @@ function restoreRefPreview(zoneId, previewId, inputId, dataUrl, setter){
   z.appendChild(img);
 }
 
+// ===== Placement slot mode — restricts the 3-panel choice to coffee
+// mugs, gives travel mugs a proper Front/Back (2-slot), and gives
+// every other product a single design slot. Replaces the old "every
+// product gets Left/Center/Right" behavior. =====
+function getSlotMode(){
+  if (product === 'mug') return 'three';
+  if (product === 'water bottle') return 'two';
+  return 'one';
+}
+function getSlotOrder(){
+  const mode = getSlotMode();
+  if (mode === 'three') return ['left','front','right'];
+  if (mode === 'two') return ['front','right'];
+  return ['front'];
+}
+function getSlotLabel(pos){
+  const mode = getSlotMode();
+  if (mode === 'three') return pos === 'left' ? 'Left' : pos === 'right' ? 'Right' : 'Center';
+  if (mode === 'two') return pos === 'front' ? 'Front' : 'Back';
+  return 'Design';
+}
+
+function refreshApproveRowForMode(){
+  const allSidesBtn = document.getElementById('allSidesBtn');
+  const hint = document.getElementById('approveRowHint');
+  if (!allSidesBtn) return;
+  const mode = getSlotMode();
+  if (mode === 'three') {
+    allSidesBtn.style.display = 'block';
+    allSidesBtn.textContent = '✅ Yes — All 3 Sides';
+    hint.textContent = 'Want it on exactly two sides? Press Yes first, then tap Left / Center / Right under the design in "My Designs" to add or remove spots.';
+  } else if (mode === 'two') {
+    allSidesBtn.style.display = 'block';
+    allSidesBtn.textContent = '✅ Yes — Front & Back';
+    hint.textContent = 'Want a different design on the back? Press Yes first, then tap Front / Back under the design in "My Designs" to swap it.';
+  } else {
+    allSidesBtn.style.display = 'none';
+    hint.textContent = 'This product uses a single design.';
+  }
+}
+
 function approveDesign(allThree){
   if(!currentDesignId)return;
+  const order = getSlotOrder();
   if(allThree){
-    placements.front=currentDesignId;
-    placements.left=currentDesignId;
-    placements.right=currentDesignId;
+    order.forEach(pos => { placements[pos] = currentDesignId; });
     pendingSlotTarget=null;
   } else {
-    let target=(pendingSlotTarget&&!placements[pendingSlotTarget])?pendingSlotTarget:['front','left','right'].find(p=>!placements[p]);
+    let target=(pendingSlotTarget && order.includes(pendingSlotTarget) && !placements[pendingSlotTarget])?pendingSlotTarget:order.find(p=>!placements[p]);
     pendingSlotTarget=null;
     if(target){
       placements[target]=currentDesignId;
@@ -1368,6 +1411,7 @@ Use rich environmental storytelling while keeping the face as the primary focal 
   document.getElementById('verifyCard').style.display='block';
     currentDesignId=addToRecentDesigns(resultUrl);
     document.getElementById('approveRow').style.display='block';
+    refreshApproveRowForMode();
     await loadBaseImageForCaption(resultUrl);
     try{
       const newWorking=await urlToDataURL(resultUrl);
@@ -1417,6 +1461,7 @@ function generateForSlot(slotName){
 function renderRecentDesigns(){
   const strip=document.getElementById('recentDesignsStrip');
   strip.innerHTML='';
+  const order=getSlotOrder();
   recentDesigns.forEach(design=>{
     const wrap=document.createElement('div');
     wrap.style.flexShrink='0';
@@ -1437,7 +1482,8 @@ function renderRecentDesigns(){
     btnRow.style.gap='3px';
     btnRow.style.marginTop='4px';
 
-    [['left','Left'],['front','Center'],['right','Right']].forEach(([pos,label])=>{
+    order.forEach(pos=>{
+      const label=getSlotLabel(pos);
       const btn=document.createElement('div');
       const isThisOne=placements[pos]===design.id;
       btn.textContent=label;
@@ -1501,6 +1547,7 @@ function renderPositionHolder(){
   const row=document.getElementById('positionHolderRow');
   if(!row)return;
   row.innerHTML='';
+  const order=getSlotOrder();
 
   function makeSlot(pos,label){
     const designId=placements[pos];
@@ -1560,11 +1607,12 @@ function renderPositionHolder(){
     return btn;
   }
 
-  row.appendChild(makeSlot('left','Left'));
-  row.appendChild(makeSwapBtn('left','front'));
-  row.appendChild(makeSlot('front','Center'));
-  row.appendChild(makeSwapBtn('front','right'));
-  row.appendChild(makeSlot('right','Right'));
+  order.forEach((pos,i)=>{
+    row.appendChild(makeSlot(pos,getSlotLabel(pos)));
+    if(i<order.length-1){
+      row.appendChild(makeSwapBtn(pos,order[i+1]));
+    }
+  });
 }
 
 function swapSlots(posA,posB){
@@ -1713,6 +1761,7 @@ function restoreWorkshop(){
   }catch(e){console.error('Workshop restore failed:',e);}
 }
 restoreWorkshop();
+refreshApproveRowForMode();
 
 window.addEventListener('scroll',function(){
   const row=document.querySelector('.token-credits-row');
