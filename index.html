@@ -1066,6 +1066,34 @@ function resizeImageFile(file, maxDimension){
   });
 }
 
+// Same downsizing as resizeImageFile, but for a data URL we already
+// have in memory instead of a fresh File upload — used to recycle a
+// generation result back into the working slot at a safe size, instead
+// of the full-resolution original, which is what was causing "Request
+// Entity Too Large" on a second generate() call.
+function resizeDataUrl(dataUrl, maxDimension){
+  return new Promise((resolve)=>{
+    const img = new Image();
+    img.onload = function(){
+      let { width, height } = img;
+      if (width > height && width > maxDimension) {
+        height = Math.round(height * (maxDimension / width));
+        width = maxDimension;
+      } else if (height > maxDimension) {
+        width = Math.round(width * (maxDimension / height));
+        height = maxDimension;
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, width, height);
+      resolve(canvas.toDataURL('image/jpeg', 0.85));
+    };
+    img.src = dataUrl;
+  });
+}
+
 function setupRefUpload(inputId, zoneId, previewId, setter){
   document.getElementById(inputId).addEventListener('change', function(e){
     const file = e.target.files[0];
@@ -1414,7 +1442,8 @@ Use rich environmental storytelling while keeping the face as the primary focal 
     refreshApproveRowForMode();
     await loadBaseImageForCaption(resultUrl);
     try{
-      const newWorking=await urlToDataURL(resultUrl);
+      const newWorkingRaw=await urlToDataURL(resultUrl);
+      const newWorking=await resizeDataUrl(newWorkingRaw, 1280);
       previousImageData=workingImage;
       setMainSlotImage(newWorking);
       document.getElementById('toggleImageBtn').style.display='block';
