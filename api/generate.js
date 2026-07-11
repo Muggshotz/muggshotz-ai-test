@@ -128,7 +128,7 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: "Method not allowed" });
   }
   try {
-    const { image, prompt, theme, deviceId, refImageA, refImageB, currentDesign, size } = req.body;
+    const { image, prompt, theme, deviceId, refImageA, refImageB, currentDesign, size, panelRole } = req.body;
     if (!image || !prompt) {
       return res.status(400).json({ error: "Missing image or prompt." });
     }
@@ -145,18 +145,28 @@ export default async function handler(req, res) {
     const VALID_SIZES = ["1024x1024", "1536x1024", "1024x1536"];
     const imageSize = VALID_SIZES.includes(size) ? size : "1024x1024";
 
-    // --- TOKEN CHECK: look up or create this device's customer record ---
-    let customer = await findCustomerByDeviceId(deviceId);
-    if (!customer) {
-      customer = await createCustomerForDevice(deviceId);
+    // Left/Right panel calls are scene-continuations of an already-paid
+    // Center generation (see index.html's wraparound orchestration) —
+    // they ride free as part of the same set, so they skip the token
+    // gate/deduction entirely rather than costing 3 tokens for one
+    // wraparound design.
+    const isPanelContinuation = panelRole === "left" || panelRole === "right";
+
+    let customer = null;
+    if (!isPanelContinuation) {
+      // --- TOKEN CHECK: look up or create this device's customer record ---
+      customer = await findCustomerByDeviceId(deviceId);
+      if (!customer) {
+        customer = await createCustomerForDevice(deviceId);
+      }
+      const isAdmin = customer.role === "admin";
+      if (!isAdmin && customer.token_balance <= 0) {
+        return res.status(403).json({
+          error: "You're out of free tokens. Verify your email to unlock another, or grab the $5 Preview Reservation for 4 more."
+        });
+      }
+      // --- END TOKEN CHECK ---
     }
-    const isAdmin = customer.role === "admin";
-    if (!isAdmin && customer.token_balance <= 0) {
-      return res.status(403).json({
-        error: "You're out of free tokens. Verify your email to unlock another, or grab the $5 Preview Reservation for 4 more."
-      });
-    }
-    // --- END TOKEN CHECK ---
 
     const identityLock = `
 CRITICAL MUGGSHOTZ LIKENESS RULE:
@@ -170,6 +180,21 @@ the real mouth shape and expression; the real jawline, cheeks, and ears;
 the real facial hair, head shape, skin tone, and age.
 Preserve normal head-to-body proportions unless the customer asks for wild exaggeration.
 `;
+
+    // Left/Right panel calls are NOT edits of the customer's photo — the
+    // "image" field for these is the already-generated CENTER panel
+    // itself, and the goal is a plausible continuation of that same
+    // scene to one side, not a fresh caricature. Using a completely
+    // different, simpler prompt here (no identity-lock language) avoids
+    // confusing the model with face-preservation instructions that
+    // don't apply to a background-continuation panel.
+    const panelContinuationPrompt = isPanelContinuation ? `
+SCENE CONTINUATION — ${panelRole.toUpperCase()} PANEL:
+The attached image is the CENTER panel of a three-panel wraparound design that has already been generated and approved.
+Generate a NEW image that continues this exact same scene as if the camera panned to the ${panelRole === "left" ? "LEFT" : "RIGHT"} of the center panel — same environment, same lighting direction, same color palette, same art style, continuing background and environmental elements naturally from the ${panelRole === "left" ? "left" : "right"} edge of the reference image.
+This is a BACKGROUND/ENVIRONMENT continuation panel. Do NOT repeat the main subject's face or body in this panel, unless the scene naturally calls for a background element related to them (e.g. a shadow, a reflection, a distant object they'd plausibly be near). The goal is extending the WORLD of the scene outward, not duplicating the subject.
+Match the lighting direction, color grading, and visual style of the reference image exactly, so all three panels feel like one single continuous photograph or illustration when placed side by side.
+` : "";
 
     // If a background theme was chosen and we have a matching reference
     // image, tell the model explicitly how to use the two images together.
@@ -200,7 +225,15 @@ Apply the customer's new instruction as an edit on top of the current design, no
       : "";
 
 
-    const finalPrompt = `${identityLock}
+    const finalPrompt = isPanelContinuation
+      ? `${panelContinuationPrompt}
+STYLE:
+Photorealistic rendering with caricature-level exaggeration of real features.
+Painted, airbrushed illustration finish — not cartoon, not vector, not anime style.
+Natural skin texture and lighting.
+Polished gift-art quality.
+`
+      : `${identityLock}
 CUSTOMER REQUEST:
 ${prompt}
 ${backgroundInstruction}
@@ -301,15 +334,23 @@ Polished gift-art quality.
 
     // Record this generation so it can be picked later for multi-placement
     // mug orders. Never lets a record-keeping failure block the customer's
-    // actual image from coming back.
-    await saveGenerationRecord(customer.id, prompt, theme, publicImageUrl);
+    // actual image from coming back. Skipped for left/right panel
+    // continuations since there's no separate customer/token event for
+    // those — they're logged implicitly as part of the center panel.
+    if (!isPanelContinuation) {
+      await saveGenerationRecord(customer.id, prompt, theme, publicImageUrl);
+    }
 
     // Only deduct the token AFTER a successful generation, so a failed
     // OpenAI call never costs anyone a token. Admin accounts are deducted
     // the same as everyone else now (for a real, visible countdown on the
     // token meter) — they just can never be BLOCKED by the zero-token
-    // check above, no matter how low this number goes.
-    await deductOneToken(customer.id, customer.token_balance);
+    // check above, no matter how low this number goes. Left/right panel
+    // continuations never reach this — only the Center call in a
+    // wraparound set is gated/charged at all.
+    if (!isPanelContinuation) {
+      await deductOneToken(customer.id, customer.token_balance);
+    }
 
     return res.status(200).json({ imageUrl: publicImageUrl });
   } catch (error) {
