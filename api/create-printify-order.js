@@ -3,7 +3,7 @@ import { getProduct } from "../lib/products-catalog.js";
 
 const SHOP_ID = "27439202";
 
-async function uploadImageToPrintify(imageBuffer, fileName) {
+export async function uploadImageToPrintify(imageBuffer, fileName) {
   const base64Data = imageBuffer.toString("base64");
   const response = await fetch("https://api.printify.com/v1/uploads/images.json", {
     method: "POST",
@@ -43,7 +43,7 @@ async function resolveImageBuffer(source) {
 // Asks Printify for this variant's actual print-area size, rather than
 // trusting a hardcoded number, so this keeps working correctly even if
 // Printify changes a product's dimensions later.
-async function getPlaceholderDimensions(blueprintId, printProviderId, variantId, position) {
+export async function getPlaceholderDimensions(blueprintId, printProviderId, variantId, position) {
   const response = await fetch(
     `https://api.printify.com/v1/catalog/blueprints/${blueprintId}/print_providers/${printProviderId}/variants.json`,
     { headers: { "Authorization": `Bearer ${process.env.PRINTIFY_API_TOKEN}` } }
@@ -169,7 +169,7 @@ async function resolvePhotoPosterSelection(product, { framed, sizeLabel, orienta
 // "three-slot-wrap" — existing coffee mug behavior. Left/Center/Right
 // sections side by side on one wide image, white canvas, each design
 // scaled to fit inside its own third without cropping.
-async function buildWraparoundImage(placements, canvasWidth, canvasHeight) {
+export async function buildWraparoundImage(placements, canvasWidth, canvasHeight) {
   const { left, front, right } = placements;
   const WHITE = { r: 255, g: 255, b: 255 };
   const sectionWidth = Math.round(canvasWidth / 3);
@@ -205,7 +205,7 @@ async function buildWraparoundImage(placements, canvasWidth, canvasHeight) {
 // "full-bleed" — one design floods the entire print area edge to edge
 // (Ewww Stew / Second Glance Funny line). Deliberate opposite of the
 // wraparound builder's polite manners.
-async function buildFullBleedImage(imageSource, canvasWidth, canvasHeight) {
+export async function buildFullBleedImage(imageSource, canvasWidth, canvasHeight) {
   return await sharp(await resolveImageBuffer(imageSource))
     .resize(canvasWidth, canvasHeight, { fit: "cover", position: "centre" })
     .png()
@@ -252,7 +252,7 @@ async function buildFrontBackImages(frontSource, backSource, frontDims, backDims
 // go through this function — its blueprint/provider isn't fixed at the
 // top level, so it uses resolvePhotoPosterSelection() instead. See the
 // branch in placeProductOrder below.
-function resolveVariant(product, sizeLabel, colorName) {
+export function resolveVariant(product, sizeLabel, colorName) {
   const sizeEntry = product.sizes?.[sizeLabel];
   if (!sizeEntry) throw new Error(`Unknown size "${sizeLabel}" for this product.`);
 
@@ -277,7 +277,7 @@ function resolveVariant(product, sizeLabel, colorName) {
   return { variantId: sizeEntry.variantId, price: sizeEntry.price };
 }
 
-async function createPrintifyProduct(images, { blueprintId, printProviderId, displayName }, variantId, title) {
+export async function createPrintifyProduct(images, { blueprintId, printProviderId, displayName }, variantId, title) {
   // images is either { position: imageId } for single/full-bleed/front-back,
   // built into the placeholders array below.
   const placeholders = Object.entries(images).map(([position, imageId]) => ({
