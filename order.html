@@ -405,6 +405,12 @@ try {
   pendingOrder = null;
 }
 
+// Pre-set the full-wrap toggle from the choice already made at
+// generation time on index.html — the composition itself was already
+// built for wraparound or panel at that point, so this just keeps the
+// checkbox in sync rather than conflicting with an earlier decision.
+fullWrapEnabled = pendingOrder?.mugPrintMode === 'wraparound';
+
 // productIcon was only just added to index.html's goToOrder(). Any
 // pending order saved before that change simply won't have it — treated
 // safely here as "mug" (the original, only-ever behavior), so nothing
@@ -1511,6 +1517,8 @@ if (isTravelMug()) {
 
 renderBridgeGrid();
 setupPageForMode();
+const fullWrapCheckboxEl = document.getElementById('fullWrapToggle');
+if (fullWrapCheckboxEl) fullWrapCheckboxEl.checked = fullWrapEnabled;
 </script>
 </body>
 </html>
