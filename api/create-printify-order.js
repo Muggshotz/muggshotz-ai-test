@@ -171,22 +171,30 @@ export async function resolvePhotoPosterSelection(product, { framed, sizeLabel, 
 // scaled to fit inside its own third without cropping.
 export async function buildWraparoundImage(placements, canvasWidth, canvasHeight) {
   const { left, front, right } = placements;
-  const WHITE = { r: 255, g: 255, b: 255 };
+  const WHITE = { r: 255, g: 255, b: 255 }; // fallback canvas color only — visible only if a slot is genuinely empty, since filled sections now cover edge-to-edge with no padding
   const sectionWidth = Math.round(canvasWidth / 3);
   const lastSectionWidth = canvasWidth - sectionWidth * 2;
 
-  async function renderSection(imageSource, width) {
+  // "cover" fit (not "contain") so every section is filled completely
+  // edge-to-edge — no white padding anywhere. The position argument
+  // controls which part of the source image survives the crop: the
+  // LEFT panel keeps its RIGHT edge (so it touches Center with no gap),
+  // the RIGHT panel keeps its LEFT edge (same reason from the other
+  // side), and Center stays centered since it has no neighbor bias
+  // either direction. This is what actually makes the three panels
+  // meet seamlessly instead of leaving white space at the seams.
+  async function renderSection(imageSource, width, position) {
     if (!imageSource) return null;
     return await sharp(await resolveImageBuffer(imageSource))
-      .resize(width, canvasHeight, { fit: "contain", background: WHITE })
+      .resize(width, canvasHeight, { fit: "cover", position })
       .png()
       .toBuffer();
   }
 
   const [leftBuf, frontBuf, rightBuf] = await Promise.all([
-    renderSection(left, sectionWidth),
-    renderSection(front, sectionWidth),
-    renderSection(right, lastSectionWidth)
+    renderSection(left, sectionWidth, "right"),
+    renderSection(front, sectionWidth, "centre"),
+    renderSection(right, lastSectionWidth, "left")
   ]);
 
   const composites = [];
