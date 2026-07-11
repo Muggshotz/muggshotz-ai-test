@@ -715,13 +715,33 @@ if (!hasAnyDesign) {
 function renderMugPreview(){
   const hasColors = !!MUG_STYLES[selectedStyle].sizes[selectedSize].colors;
   const colorList = hasColors ? MUG_STYLES[selectedStyle].sizes[selectedSize].colors : [];
-  const bodyColor = (hasColors && selectedColor)
-    ? (colorList.find(c => c.name === selectedColor)?.hex || '#ffffff')
-    : '#ffffff';
+  const pickedColor = (hasColors && selectedColor)
+    ? (colorList.find(c => c.name === selectedColor)?.hex || null)
+    : null;
+  const WHITE = '#ffffff';
+  const DEFAULT_HANDLE = '#e6e6e6';
 
-  document.getElementById('mugBody').setAttribute('fill', bodyColor);
-  document.getElementById('mugRim').setAttribute('fill', bodyColor);
-  document.getElementById('mugHandle').setAttribute('stroke', bodyColor === '#ffffff' ? '#e6e6e6' : bodyColor);
+  // Each mug style colors a DIFFERENT part of the mug — Color Pop
+  // (interior+handle), Trimmed (rim+handle), Accented (interior only).
+  // Classic White has no color choice at all. Map the single picked hex
+  // onto only the parts that style actually colors, instead of
+  // recoloring the whole mug the same way for every style.
+  let bodyFill = WHITE, rimFill = WHITE, handleStroke = DEFAULT_HANDLE;
+  if (pickedColor) {
+    if (selectedStyle === 'Color Pop') {
+      bodyFill = pickedColor;
+      handleStroke = pickedColor;
+    } else if (selectedStyle === 'Trimmed') {
+      rimFill = pickedColor;
+      handleStroke = pickedColor;
+    } else if (selectedStyle === 'Accented') {
+      bodyFill = pickedColor;
+    }
+  }
+
+  document.getElementById('mugBody').setAttribute('fill', bodyFill);
+  document.getElementById('mugRim').setAttribute('fill', rimFill);
+  document.getElementById('mugHandle').setAttribute('stroke', handleStroke);
 
   const designUrl = pendingOrder?.placements?.[previewView] || null;
   const img = document.getElementById('mugDesignImage');
