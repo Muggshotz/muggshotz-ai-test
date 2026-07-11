@@ -1342,7 +1342,12 @@ function restoreRefPreview(zoneId, previewId, inputId, dataUrl, setter){
 // every other product a single design slot. Replaces the old "every
 // product gets Left/Center/Right" behavior. =====
 function getSlotMode(){
-  if (product === 'mug') return mugPrintMode === 'wraparound' ? 'one' : 'three';
+  // Coffee mugs always use 3 physical print positions now — for
+  // "Three Separate Designs" they're manually placed by the customer;
+  // for "Wraparound" they're auto-filled by the scene-continuation
+  // pipeline in generate() below. Travel mugs are unaffected — this
+  // continuation approach is scoped to coffee mugs only for now.
+  if (product === 'mug') return 'three';
   if (product === 'water bottle') return mugPrintMode === 'wraparound' ? 'one' : 'two';
   return 'one';
 }
@@ -1461,6 +1466,20 @@ function getProductRules(p){
   return 'printable custom gift artwork with clean centered square composition and safe margins';
 }
 
+// Maps the current selection to one of OpenAI's three valid gpt-image-2
+// sizes. Composition instructions in the prompt text alone were NOT
+// reliably controlling actual output shape — this is what actually
+// forces a wide canvas for wraparound, or a tall one for posters.
+function getImageSizeParam(){
+  if ((product==='mug'||product==='water bottle') && mugPrintMode==='wraparound'){
+    return '1536x1024'; // wide landscape — needed for a continuous wrap
+  }
+  if (product==='photo poster'){
+    return posterOrientation==='Horizontal' ? '1536x1024' : '1024x1536';
+  }
+  return '1024x1024';
+}
+
 function urlToDataURL(url){
   return fetch(url)
     .then(r=>r.blob())
@@ -1470,6 +1489,37 @@ function urlToDataURL(url){
       reader.onerror=reject;
       reader.readAsDataURL(blob);
     }));
+}
+
+// Core call to /api/generate — used both for a normal single generation
+// and for each panel of a wraparound set (center/left/right). Returns
+// the resulting image URL, or throws with a readable message. Does NOT
+// touch any UI state itself — callers handle their own status/slot logic.
+async function callGenerateAPI({ workingImage, prompt, refImageA, refImageB, panelRole, signal }){
+  const resp=await fetch('/api/generate',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({
+      image:workingImage,
+      prompt,
+      theme:selectedTheme,
+      deviceId,
+      refImageA:refImageA||null,
+      refImageB:refImageB||null,
+      currentDesign:null,
+      size:getImageSizeParam(),
+      panelRole:panelRole||undefined
+    }),
+    signal
+  });
+  const data=await resp.json();
+  if(!resp.ok){
+    const err=new Error(data.error||data.detail||'Generation failed.');
+    err.status=resp.status;
+    throw err;
+  }
+  if(!data.imageUrl)throw new Error('No image returned.');
+  return data.imageUrl;
 }
 
 async function generate(){
@@ -1596,7 +1646,7 @@ Use rich environmental storytelling while keeping the face as the primary focal 
     const resp=await fetch('/api/generate',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({image:workingImage,prompt,theme:selectedTheme,deviceId,refImageA:refASnapshot,refImageB:refBSnapshot,currentDesign:null}),
+      body:JSON.stringify({image:workingImage,prompt,theme:selectedTheme,deviceId,refImageA:refASnapshot,refImageB:refBSnapshot,currentDesign:null,size:getImageSizeParam()}),
       signal:currentGenerationController.signal
     });
 
@@ -1616,10 +1666,59 @@ Use rich environmental storytelling while keeping the face as the primary focal 
 
     if(!resultUrl)throw new Error('No image returned.');
 
+    currentDesignId=addToRecentDesigns(resultUrl);
+
+    // ===== WRAPAROUND SCENE-CONTINUATION PIPELINE (coffee mugs only) =====
+    // Center panel just finished above and is already the one that cost
+    // a token. Now generate Left and Right as continuations of the
+    // CENTER IMAGE ITSELF (not the original photo) — using the actual
+    // generated scene as input anchors style/lighting far more reliably
+    // than describing it in words, and the API bill only ever reflects
+    // one paid generation per wraparound design.
+    if (product==='mug' && mugPrintMode==='wraparound'){
+      placements.front = currentDesignId;
+      document.getElementById('approveRow').style.display='none';
+      setStatus('Center panel done. Generating the left panel — continuing the same scene...');
+
+      const centerRaw = await urlToDataURL(resultUrl);
+      const centerForApi = await resizeDataUrl(centerRaw, 1280);
+
+      const leftUrl = await callGenerateAPI({
+        workingImage: centerForApi,
+        prompt: 'Continue this scene to the left.',
+        panelRole: 'left',
+        signal: currentGenerationController.signal
+      });
+      placements.left = addToRecentDesigns(leftUrl);
+
+      setStatus('Left panel done. Generating the right panel...');
+      const rightUrl = await callGenerateAPI({
+        workingImage: centerForApi,
+        prompt: 'Continue this scene to the right.',
+        panelRole: 'right',
+        signal: currentGenerationController.signal
+      });
+      placements.right = addToRecentDesigns(rightUrl);
+
+      renderRecentDesigns();
+      renderPositionHolder();
+      updatePlacementSummary();
+      saveMugState();
+
+      currentDesignId=null;
+      resetMainSlot();
+      clearReferenceSlots();
+      clearWorkshopStorage();
+      refreshTokenMeter();
+      setStatus('✅ All three wraparound panels are ready — scroll down to see Left / Center / Right.');
+      document.getElementById('positionHolderCard').scrollIntoView({behavior:'smooth',block:'start'});
+      return;
+    }
+    // ===== END WRAPAROUND PIPELINE =====
+
     document.getElementById('captionCard').className='card caption-card visible';
     document.getElementById('captionText').value='';
   document.getElementById('verifyCard').style.display='block';
-    currentDesignId=addToRecentDesigns(resultUrl);
     document.getElementById('approveRow').style.display='block';
     refreshApproveRowForMode();
     await loadBaseImageForCaption(resultUrl);
