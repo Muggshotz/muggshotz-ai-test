@@ -275,6 +275,25 @@
 <div class="card-title">🖼️ Design Your Product</div>
 <div class="note" style="margin-top:0;margin-bottom:.9rem">Happy with just this one picture? We'll gladly take you to checkout. Want to try a few more designs first? If you're out of free tokens, a $5 Preview Reservation unlocks more tokens to keep creating — that $5 isn't an extra charge, it comes straight off your product's price at checkout. Whatever you end up with, your exact total (including any charge for extra printed designs, or an image on both sides) is always shown before you pay.</div>
 <div id="positionHolderRow" style="display:flex;align-items:flex-start;gap:6px;justify-content:center;flex-wrap:nowrap"></div>
+
+<div id="genMugOptionsWrap" style="display:none;margin-top:1.1rem">
+<div class="note" style="margin-top:0;margin-bottom:.6rem">Pick a style below — the real photo preview updates to match, so you can see exactly what you're getting before you decide.</div>
+<div class="note" style="margin-bottom:6px">Style</div>
+<div class="grid2" id="genMugStyleGrid"></div>
+<div class="note" style="margin:.75rem 0 6px">Size</div>
+<div class="grid2">
+<div class="btn-select selected" id="genSize11Btn" onclick="pickGenMugSize('11oz')">11oz</div>
+<div class="btn-select" id="genSize15Btn" onclick="pickGenMugSize('15oz')">15oz</div>
+</div>
+<div id="genMugColorWrap" style="display:none;margin-top:.75rem">
+<div class="note" style="margin-bottom:6px">Color</div>
+<div class="color-grid" id="genMugColorGrid"></div>
+</div>
+</div>
+
+<button class="quick-btn" id="genPreviewBtn" onclick="fetchGeneratorMockupPreview()" style="display:none;margin-top:1.1rem;width:100%;text-align:center;padding:.65rem;border-radius:8px">📸 See a Real Photo Preview</button>
+<div class="note" id="genPreviewNote" style="margin-top:.5rem;text-align:center;display:none"></div>
+<img id="genPreviewImg" style="display:none;width:100%;border-radius:12px;border:1px solid #ff6a00;margin-top:.75rem"/>
 <button class="quick-btn" id="libraryToggleBtn" onclick="toggleLibrary()" style="margin-top:1.1rem;width:100%;text-align:center;padding:.65rem;border-radius:8px">📚 My Designs (0)</button>
 <button class="quick-btn" onclick="clearAllDesigns()" style="margin-top:.5rem;width:100%;text-align:center;padding:.65rem;border-radius:8px;border-color:#5a2a2a;color:#ff8a7a">🧹 Clear All Designs — Fresh Start</button>
 <div id="libraryPanel" style="display:none;margin-top:.75rem">
@@ -1977,6 +1996,206 @@ function updatePlacementSummary(){
   const assignedCount=['left','front','right'].filter(p=>placements[p]).length;
   const orderBtn=document.getElementById('orderMugBtn');
   orderBtn.style.display=assignedCount>0?'block':'none';
+
+  const showMugOptions = (assignedCount>0 && product==='mug');
+  const optionsWrap=document.getElementById('genMugOptionsWrap');
+  const previewBtn=document.getElementById('genPreviewBtn');
+  if(optionsWrap) optionsWrap.style.display = showMugOptions ? 'block' : 'none';
+  if(previewBtn) previewBtn.style.display = showMugOptions ? 'block' : 'none';
+  if(showMugOptions){
+    renderGenMugStyleGrid();
+    renderGenMugColorGrid();
+  }
+  resetGeneratorMockupPreview();
+}
+
+// Same 4-style catalog as order.html's MUG_STYLES — duplicated here on
+// purpose (this is client-side HTML, can't import the server-only
+// catalog directly). If mug pricing/colors ever change, update both
+// places. Only price + colors are needed here (no size-specific price
+// display in this picker — that's shown in full on order.html).
+const GEN_MUG_STYLES = {
+  "Classic White": { colors: { "11oz": null, "15oz": null } },
+  "Color Pop": { colors: { "11oz": [
+    { name: "Black", hex: "#1c1c1c" }, { name: "Blue", hex: "#2255A4" },
+    { name: "Cambridge Blue", hex: "#A3C1AD" }, { name: "Golden Yellow", hex: "#D4A017" },
+    { name: "Green", hex: "#1F7A45" }, { name: "Light Blue", hex: "#5FA8DE" },
+    { name: "Light Green", hex: "#5FBF5F" }, { name: "Maroon", hex: "#7A1F2B" },
+    { name: "Orange", hex: "#F0701A" }, { name: "Pink", hex: "#E0457B" },
+    { name: "Red", hex: "#D62828" }, { name: "Yellow", hex: "#F0D43A" }
+  ], "15oz": [
+    { name: "Black", hex: "#1c1c1c" }, { name: "Blue", hex: "#2255A4" },
+    { name: "Cambridge Blue", hex: "#A3C1AD" }, { name: "Green", hex: "#1F7A45" },
+    { name: "Light Blue", hex: "#5FA8DE" }, { name: "Light Green", hex: "#5FBF5F" },
+    { name: "Maroon", hex: "#7A1F2B" }, { name: "Orange", hex: "#F0701A" },
+    { name: "Pink", hex: "#E0457B" }, { name: "Red", hex: "#D62828" },
+    { name: "Yellow", hex: "#F0D43A" }
+  ]}},
+  "Trimmed": { colors: { "11oz": [
+    { name: "Black", hex: "#1c1c1c" }, { name: "Blue", hex: "#2255A4" },
+    { name: "Maroon", hex: "#7A1F2B" }, { name: "Green", hex: "#1F7A45" },
+    { name: "Yellow", hex: "#F0D43A" }, { name: "Red", hex: "#D62828" },
+    { name: "Cambridge Blue", hex: "#A3C1AD" }, { name: "Light Blue", hex: "#5FA8DE" },
+    { name: "Orange", hex: "#F0701A" }, { name: "Light Green", hex: "#5FBF5F" },
+    { name: "Pink", hex: "#E0457B" }
+  ], "15oz": [
+    { name: "Black", hex: "#1c1c1c" }, { name: "Blue", hex: "#2255A4" },
+    { name: "Maroon", hex: "#7A1F2B" }, { name: "Green", hex: "#1F7A45" },
+    { name: "Cambridge Blue", hex: "#A3C1AD" }, { name: "Yellow", hex: "#F0D43A" }
+  ]}},
+  "Accented": { colors: { "11oz": [
+    { name: "Black", hex: "#1c1c1c" }, { name: "Blue", hex: "#2255A4" },
+    { name: "Maroon", hex: "#7A1F2B" }, { name: "Green", hex: "#1F7A45" },
+    { name: "Yellow", hex: "#F0D43A" }, { name: "Pink", hex: "#E0457B" },
+    { name: "Orange", hex: "#F0701A" }, { name: "Cambridge Blue", hex: "#A3C1AD" },
+    { name: "Light Green", hex: "#5FBF5F" }, { name: "Red", hex: "#D62828" },
+    { name: "Light Blue", hex: "#5FA8DE" }
+  ], "15oz": [
+    { name: "Black", hex: "#1c1c1c" }, { name: "Blue", hex: "#2255A4" },
+    { name: "Maroon", hex: "#7A1F2B" }, { name: "Green", hex: "#1F7A45" },
+    { name: "Yellow", hex: "#F0D43A" }, { name: "Pink", hex: "#E0457B" },
+    { name: "Light Blue", hex: "#5FA8DE" }
+  ]}}
+};
+const GEN_STYLE_TO_PRODUCT_KEY = {
+  "Classic White": "classic-white-mug",
+  "Color Pop": "color-pop-mug",
+  "Trimmed": "trimmed-mug",
+  "Accented": "accented-mug"
+};
+
+let selectedGenStyle='Classic White';
+let selectedGenSize='11oz';
+let selectedGenColor=null;
+
+function renderGenMugStyleGrid(){
+  const grid=document.getElementById('genMugStyleGrid');
+  if(!grid || grid.childElementCount)return; // render once, buttons update via class toggle after
+  Object.keys(GEN_MUG_STYLES).forEach(styleName=>{
+    const btn=document.createElement('div');
+    btn.className='btn-select'+(styleName===selectedGenStyle?' selected':'');
+    btn.dataset.style=styleName;
+    btn.textContent=styleName;
+    btn.onclick=()=>pickGenMugStyle(styleName);
+    grid.appendChild(btn);
+  });
+}
+
+function pickGenMugStyle(styleName){
+  selectedGenStyle=styleName;
+  document.querySelectorAll('#genMugStyleGrid .btn-select').forEach(b=>{
+    b.classList.toggle('selected', b.dataset.style===styleName);
+  });
+  selectedGenColor=null;
+  renderGenMugColorGrid();
+  resetGeneratorMockupPreview();
+}
+
+function pickGenMugSize(size){
+  selectedGenSize=size;
+  document.getElementById('genSize11Btn').classList.toggle('selected', size==='11oz');
+  document.getElementById('genSize15Btn').classList.toggle('selected', size==='15oz');
+  selectedGenColor=null;
+  renderGenMugColorGrid();
+  resetGeneratorMockupPreview();
+}
+
+function renderGenMugColorGrid(){
+  const wrap=document.getElementById('genMugColorWrap');
+  const grid=document.getElementById('genMugColorGrid');
+  const colors=GEN_MUG_STYLES[selectedGenStyle]?.colors?.[selectedGenSize] || null;
+  if(!colors){
+    wrap.style.display='none';
+    return;
+  }
+  wrap.style.display='block';
+  grid.innerHTML='';
+  colors.forEach((c,i)=>{
+    const btn=document.createElement('div');
+    btn.className='color-btn'+(i===0?' selected':'');
+    btn.onclick=()=>pickGenMugColor(btn,c.name);
+    const ball=document.createElement('div');
+    ball.className='ball';
+    ball.style.background=c.hex;
+    btn.appendChild(ball);
+    grid.appendChild(btn);
+    if(i===0) selectedGenColor=c.name;
+  });
+}
+
+function pickGenMugColor(el,colorName){
+  document.querySelectorAll('#genMugColorGrid .color-btn').forEach(b=>b.classList.remove('selected'));
+  el.classList.add('selected');
+  selectedGenColor=colorName;
+  resetGeneratorMockupPreview();
+}
+
+// This preview now reflects the customer's ACTUAL chosen style/size/
+// color, live — this is the whole point of moving the picker here
+// instead of after checkout-adjacent screens: the decision itself
+// becomes the thing that sells the product.
+function resetGeneratorMockupPreview(){
+  const btn=document.getElementById('genPreviewBtn');
+  const noteEl=document.getElementById('genPreviewNote');
+  const imgEl=document.getElementById('genPreviewImg');
+  if(!btn)return;
+  btn.textContent='📸 See a Real Photo Preview';
+  btn.disabled=false;
+  if(noteEl)noteEl.style.display='none';
+  if(imgEl)imgEl.style.display='none';
+}
+
+async function fetchGeneratorMockupPreview(){
+  const btn=document.getElementById('genPreviewBtn');
+  const noteEl=document.getElementById('genPreviewNote');
+  const imgEl=document.getElementById('genPreviewImg');
+
+  const productKey=GEN_STYLE_TO_PRODUCT_KEY[selectedGenStyle];
+  const requiresColor=!!(GEN_MUG_STYLES[selectedGenStyle]?.colors?.[selectedGenSize]);
+  if(requiresColor && !selectedGenColor){
+    noteEl.textContent='Please pick a color above first.';
+    noteEl.className='note error';
+    noteEl.style.display='block';
+    return;
+  }
+
+  btn.disabled=true;
+  btn.textContent='📸 Generating your real photo... (a few seconds)';
+  noteEl.style.display='none';
+
+  const printifyPlacements = {
+    left: placements.left ? findDesignById(placements.left).url : null,
+    front: placements.front ? findDesignById(placements.front).url : null,
+    right: placements.right ? findDesignById(placements.right).url : null
+  };
+
+  try{
+    const resp=await fetch('/api/generate-mockup',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        productKey,
+        sizeLabel:selectedGenSize,
+        colorName:selectedGenColor,
+        placements:printifyPlacements,
+        printMode:(product==='mug' && mugPrintMode==='wraparound')?'fullBleed':'standard'
+      })
+    });
+    const data=await resp.json();
+    if(!resp.ok)throw new Error(data.error||'Could not generate a real photo preview.');
+
+    imgEl.src=data.mockupUrl;
+    imgEl.style.display='block';
+    noteEl.style.display='none';
+    btn.textContent='✅ Real Photo Preview';
+  }catch(err){
+    noteEl.textContent=err.message;
+    noteEl.className='note error';
+    noteEl.style.display='block';
+    btn.textContent='📸 See a Real Photo Preview';
+  }finally{
+    btn.disabled=false;
+  }
 }
 
 function goToOrder(){
@@ -1994,7 +2213,10 @@ function goToOrder(){
     posterSize: posterSize,
     posterOrientation: posterOrientation,
     posterFinish: posterFinish,
-    posterFrameColor: posterFrameColor
+    posterFrameColor: posterFrameColor,
+    preselectedMugStyle: (product==='mug') ? selectedGenStyle : null,
+    preselectedMugSize: (product==='mug') ? selectedGenSize : null,
+    preselectedMugColor: (product==='mug') ? selectedGenColor : null
   };
   localStorage.setItem('muggshotz_pending_order', JSON.stringify(orderData));
   window.location.href = 'order.html';
