@@ -109,6 +109,14 @@ label{font-size:11px;color:#888;letter-spacing:.5px;text-transform:uppercase;dis
 <img id="toteMockupImg" style="display:none;width:100%;border-radius:12px;border:1px solid #ff6a00;margin-top:.75rem"/>
 </div>
 
+<div class="card" id="puzzleSizeCard" style="display:none">
+<div class="card-title">🧩 Puzzle Size</div>
+<div class="grid2" id="puzzleSizeGrid"></div>
+<button class="download-btn" id="puzzleMockupBtn" onclick="fetchSingleImageMockup('photo-puzzle', selectedPuzzleSize, null, 'puzzleMockupBtn', 'puzzleMockupNote', 'puzzleMockupImg')" style="margin-top:1rem">📸 See a Real Photo Preview</button>
+<div class="note" id="puzzleMockupNote" style="margin-top:.5rem;text-align:center;display:none"></div>
+<img id="puzzleMockupImg" style="display:none;width:100%;border-radius:12px;border:1px solid #ff6a00;margin-top:.75rem"/>
+</div>
+
 <div class="card" id="phoneCaseCard" style="display:none">
 <div class="card-title">📱 Phone Model</div>
 <div class="note" style="margin-top:0;margin-bottom:.75rem">We carry cases for iPhone 11-17 and Galaxy S21-S26. Search your model below to check.</div>
@@ -416,6 +424,15 @@ function isMug(){ return selectedProductFamily === 'mug'; }
 function isSuitcase(){ return selectedProductFamily === 'suitcase'; }
 function isPhoneCase(){ return selectedProductFamily === 'phone case'; }
 function isToteBag(){ return selectedProductFamily === 'tote bag'; }
+function isPuzzle(){ return selectedProductFamily === 'puzzle'; }
+
+const PUZZLE_SIZES = {
+  "96 pcs": { price: 40.95 },
+  "252 pcs": { price: 38.95 },
+  "500 pcs": { price: 43.95 },
+  "1000 pcs": { price: 43.95 }
+};
+let selectedPuzzleSize = "96 pcs";
 
 // Suitcase pricing — kept in sync manually with lib/products-catalog.js
 // "suitcase" entry. Single color (Black), one design covers the whole
@@ -474,16 +491,15 @@ const BRIDGE_GRID_PRODUCTS = [
   { key: 'water bottle', icon: '🍶', label: 'Travel Cups', priceFrom: '$34.95' },
   { key: 'suitcase', icon: '🧳', label: 'Suitcase', priceFrom: '$169.95' },
   { key: 'phone case', icon: '📱', label: 'Phone Case', priceFrom: '$24.95' },
-  { key: 'tote bag', icon: '👜', label: 'Tote Bag', priceFrom: '$23.95' }
-  // 6th real product slot — pending Alyx's pick.
+  { key: 'tote bag', icon: '👜', label: 'Tote Bag', priceFrom: '$23.95' },
+  { key: 'puzzle', icon: '🧩', label: 'Photo Puzzle', priceFrom: '$38.95' }
 ];
 // Honest coming-soon list — shown behind the expandable "many more" bar,
 // not the main grid, since this is meant to grow continuously as new
 // products get built. Add a line here any time a new future product
 // idea comes up, even before it's actually sourced/built.
 const BRIDGE_GRID_COMING_SOON = [
-  { icon: '🧸', label: 'Teddy Bear' }, // priority next build — Alyx's pick for the 6th real slot
-  { icon: '🧩', label: 'Photo Puzzle' }, // priority next build — Alyx's pick for the 7th real slot (250/500/1000+ piece)
+  { icon: '🧸', label: 'Teddy Bear' },
   { icon: '💌', label: 'Greeting Card' },
   { icon: '📝', label: 'Post-it Note' },
   { icon: '👕', label: 'T-Shirt' },
@@ -494,13 +510,9 @@ const BRIDGE_GRID_COMING_SOON = [
   { icon: '🖼️', label: 'Poster' }
 ];
 
-// Friendly display names for product icons that don't have a real
-// checkout flow yet — used only for the honest "not available yet"
-// message, never assumed to be a mug.
 const UNSUPPORTED_PRODUCT_NAMES = {
   'greeting card': 'Greeting Card',
   'post-it note': 'Post-it Note',
-  'puzzle': 'Photo Puzzle',
   'framed poster': 'Framed Poster',
   'teddy bear': 'Teddy Bear'
 };
@@ -629,6 +641,27 @@ function pickToteBagColor(el, colorData){
   document.getElementById('toteBagColorLabel').textContent = selectedToteColor;
   const img=document.getElementById('toteMockupImg'); if(img) img.style.display='none';
   const btn=document.getElementById('toteMockupBtn'); if(btn) btn.textContent='📸 See a Real Photo Preview';
+  updateSummary();
+}
+
+function renderPuzzleSizeGrid(){
+  const grid = document.getElementById('puzzleSizeGrid');
+  grid.innerHTML = '';
+  Object.keys(PUZZLE_SIZES).forEach(sizeName => {
+    const btn = document.createElement('div');
+    btn.className = 'btn-select' + (sizeName === selectedPuzzleSize ? ' selected' : '');
+    const price = PUZZLE_SIZES[sizeName].price;
+    btn.innerHTML = sizeName + '<span class="price">$' + price.toFixed(2) + '</span>';
+    btn.onclick = () => pickPuzzleSize(sizeName);
+    grid.appendChild(btn);
+  });
+}
+
+function pickPuzzleSize(sizeName){
+  selectedPuzzleSize = sizeName;
+  renderPuzzleSizeGrid();
+  const img=document.getElementById('puzzleMockupImg'); if(img) img.style.display='none';
+  const btn=document.getElementById('puzzleMockupBtn'); if(btn) btn.textContent='📸 See a Real Photo Preview';
   updateSummary();
 }
 
@@ -1132,6 +1165,9 @@ function updateSummary(){
   } else if (isToteBag()) {
     basePrice = TOTE_BAG_SIZES[selectedToteSize].price;
     styleSizeLabel = 'Tote Bag, ' + selectedToteSize + (selectedToteColor ? ' - ' + selectedToteColor : '');
+  } else if (isPuzzle()) {
+    basePrice = PUZZLE_SIZES[selectedPuzzleSize].price;
+    styleSizeLabel = 'Photo Puzzle, ' + selectedPuzzleSize;
   } else {
     basePrice = MUG_STYLES[selectedStyle].sizes[selectedSize].price;
     const upsell = calculateUpsell();
@@ -1314,6 +1350,28 @@ async function submitOrder(){
       shippingAddress
     };
 
+  } else if (isPuzzle()) {
+    const left = pendingOrder?.placements?.left || null;
+    const front = pendingOrder?.placements?.front || null;
+    const right = pendingOrder?.placements?.right || null;
+    const image = left || front || right || null;
+
+    if (!image) {
+      setStatus('No design found — please go back and place a design first.', true);
+      return;
+    }
+
+    body = {
+      type: 'mug_order',
+      deviceId,
+      productKey: 'photo-puzzle',
+      sizeLabel: selectedPuzzleSize,
+      image,
+      customerName: fullName,
+      giftMessage: giftMessageEnabled ? document.getElementById('giftMessageText').value.trim() : null,
+      shippingAddress
+    };
+
   } else {
     if (MUG_STYLES[selectedStyle].sizes[selectedSize].colors && !selectedColor) {
       setStatus('Please pick a mug color.', true);
@@ -1393,7 +1451,7 @@ function setupPageForMode(){
 const ALL_PRODUCT_SPECIFIC_CARDS = [
   'mugStyleCard','sizeCard','livePreviewCard','colorCard','fullWrapCard',
   'travelMugStyleCard','travelColorCard','suitcaseSizeCard','phoneCaseCard',
-  'toteBagSizeCard','toteBagColorCard'
+  'toteBagSizeCard','toteBagColorCard','puzzleSizeCard'
 ];
 function hideAllProductCards(){
   ALL_PRODUCT_SPECIFIC_CARDS.forEach(id => {
@@ -1428,6 +1486,12 @@ if (isTravelMug()) {
       'Whichever design you placed first (Left, Center, or Right) will be printed on your tote bag.';
     renderToteBagSizeGrid();
     renderToteBagColorGrid();
+  } else if (isPuzzle()) {
+    hideAllProductCards();
+    document.getElementById('puzzleSizeCard').style.display = 'block';
+    document.getElementById('previewNote').textContent =
+      'Whichever design you placed first (Left, Center, or Right) will be printed on your puzzle.';
+    renderPuzzleSizeGrid();
   } else if (isMug()) {
     // This branch is ONLY for actual coffee mugs, never a silent
     // default for anything else.
