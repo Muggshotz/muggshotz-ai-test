@@ -1733,7 +1733,8 @@ function goToOrder(){
       right: placements.right ? findDesignById(placements.right).url : null
     },
     deviceId: deviceId,
-    productIcon: product
+    productIcon: product,
+    mugPrintMode: mugPrintMode
   };
   localStorage.setItem('muggshotz_pending_order', JSON.stringify(orderData));
   window.location.href = 'order.html';
