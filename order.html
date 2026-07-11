@@ -86,6 +86,16 @@ label{font-size:11px;color:#888;letter-spacing:.5px;text-transform:uppercase;dis
 <div class="note" id="notAvailableText" style="margin-top:0;font-size:14px;color:#ccc"></div>
 </div>
 
+<div class="card" id="photoPosterCard" style="display:none">
+<div class="card-title">🖼️ Your Photo/Poster</div>
+<div class="note" style="margin-top:0;margin-bottom:.9rem">These options were locked in before you generated, since the print shape determines how the art was composed.</div>
+<div class="note" id="photoPosterSummary" style="font-size:14px;color:#fff"></div>
+<div class="note" id="photoPosterShippingNote" style="margin-top:.75rem;color:#ff9a4d;display:none">Ships separately from outside the US — slightly longer delivery.</div>
+<button class="download-btn" id="posterMockupBtn" onclick="fetchPosterMockup()" style="margin-top:1rem">📸 See a Real Photo Preview</button>
+<div class="note" id="posterMockupNote" style="margin-top:.5rem;text-align:center;display:none"></div>
+<img id="posterMockupImg" style="display:none;width:100%;border-radius:12px;border:1px solid #ff6a00;margin-top:.75rem"/>
+</div>
+
 <div class="card" id="suitcaseSizeCard" style="display:none">
 <div class="card-title">🧳 Suitcase Size</div>
 <div class="grid3" id="suitcaseSizeGrid"></div>
@@ -431,6 +441,29 @@ function isSuitcase(){ return selectedProductFamily === 'suitcase'; }
 function isPhoneCase(){ return selectedProductFamily === 'phone case'; }
 function isToteBag(){ return selectedProductFamily === 'tote bag'; }
 function isPuzzle(){ return selectedProductFamily === 'puzzle'; }
+function isPhotoPoster(){ return selectedProductFamily === 'photo poster'; }
+
+// Mirrors lib/products-catalog.js "photo-poster" entry.
+const PHOTO_POSTER_CATALOG = {
+  base: {
+    sizes: {
+      "16x20": { price: 12.95 },
+      "20x24": { price: 13.95 },
+      "20x30": { price: 15.95 }
+    }
+  },
+  framedUpsell: {
+    sizes: {
+      "8x11":  { price: 35.95 },
+      "11x14": { price: 39.95 },
+      "12x18": { price: 44.95 },
+      "16x20": { price: 53.95 },
+      "18x24": { price: 61.95 },
+      "20x30": { price: 73.95 },
+      "24x36": { price: 93.95 }
+    }
+  }
+};
 
 const PUZZLE_SIZES = {
   "96 pcs": { price: 40.95 },
@@ -883,6 +916,74 @@ async function fetchSingleImageMockup(productKey, sizeLabel, colorName, btnId, n
   }
 }
 
+function renderPhotoPosterCard(){
+  const framed = pendingOrder?.posterFramed;
+  const size = pendingOrder?.posterSize;
+  const tree = framed ? PHOTO_POSTER_CATALOG.framedUpsell : PHOTO_POSTER_CATALOG.base;
+  const price = tree.sizes[size]?.price || 0;
+  const sizeLabel = size ? size.replace('x', '" x ') + '"' : 'Unknown size';
+
+  let summary = (framed ? 'Framed' : 'Unframed') + ', ' + sizeLabel;
+  summary += framed
+    ? (', ' + (pendingOrder?.posterFrameColor || 'Black') + ' frame')
+    : (', ' + (pendingOrder?.posterOrientation || 'Vertical') + ', ' + (pendingOrder?.posterFinish || 'Glossy'));
+  summary += ' — $' + price.toFixed(2) + ' + shipping';
+
+  document.getElementById('photoPosterSummary').textContent = summary;
+  document.getElementById('photoPosterShippingNote').style.display = framed ? 'block' : 'none';
+}
+
+async function fetchPosterMockup(){
+  const btn = document.getElementById('posterMockupBtn');
+  const noteEl = document.getElementById('posterMockupNote');
+  const imgEl = document.getElementById('posterMockupImg');
+
+  const left = pendingOrder?.placements?.left || null;
+  const front = pendingOrder?.placements?.front || null;
+  const right = pendingOrder?.placements?.right || null;
+  const image = left || front || right || null;
+
+  if (!image) {
+    noteEl.textContent = 'No design found — please go back and generate one first.';
+    noteEl.className = 'note error';
+    noteEl.style.display = 'block';
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = '📸 Generating your real photo... (a few seconds)';
+  noteEl.style.display = 'none';
+
+  try {
+    const resp = await fetch('/api/generate-mockup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        productKey: 'photo-poster',
+        sizeLabel: pendingOrder?.posterSize,
+        colorName: pendingOrder?.posterFrameColor,
+        posterFramed: pendingOrder?.posterFramed,
+        posterOrientation: pendingOrder?.posterOrientation,
+        posterFinish: pendingOrder?.posterFinish,
+        image
+      })
+    });
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data.error || 'Could not generate a real photo preview.');
+
+    imgEl.src = data.mockupUrl;
+    imgEl.style.display = 'block';
+    btn.textContent = '✅ Real Photo Preview';
+  } catch (err) {
+    noteEl.textContent = err.message;
+    noteEl.className = 'note error';
+    noteEl.style.display = 'block';
+    btn.textContent = '📸 See a Real Photo Preview';
+  } finally {
+    btn.disabled = false;
+  }
+}
+
 function resetTravelMockupPreview(){
   const btn = document.getElementById('travelMockupPreviewBtn');
   const noteEl = document.getElementById('travelMockupPreviewNote');
@@ -1174,6 +1275,10 @@ function updateSummary(){
   } else if (isPuzzle()) {
     basePrice = PUZZLE_SIZES[selectedPuzzleSize].price;
     styleSizeLabel = 'Photo Puzzle, ' + selectedPuzzleSize;
+  } else if (isPhotoPoster()) {
+    const tree = pendingOrder?.posterFramed ? PHOTO_POSTER_CATALOG.framedUpsell : PHOTO_POSTER_CATALOG.base;
+    basePrice = tree.sizes[pendingOrder?.posterSize]?.price || 0;
+    styleSizeLabel = 'Photo/Poster, ' + (pendingOrder?.posterSize || '').replace('x', '" x ') + '"';
   } else {
     basePrice = MUG_STYLES[selectedStyle].sizes[selectedSize].price;
     const upsell = calculateUpsell();
@@ -1378,6 +1483,32 @@ async function submitOrder(){
       shippingAddress
     };
 
+  } else if (isPhotoPoster()) {
+    const left = pendingOrder?.placements?.left || null;
+    const front = pendingOrder?.placements?.front || null;
+    const right = pendingOrder?.placements?.right || null;
+    const image = left || front || right || null;
+
+    if (!image) {
+      setStatus('No design found — please go back and generate one first.', true);
+      return;
+    }
+
+    body = {
+      type: 'mug_order',
+      deviceId,
+      productKey: 'photo-poster',
+      sizeLabel: pendingOrder?.posterSize,
+      colorName: pendingOrder?.posterFrameColor,
+      posterFramed: pendingOrder?.posterFramed,
+      posterOrientation: pendingOrder?.posterOrientation,
+      posterFinish: pendingOrder?.posterFinish,
+      image,
+      customerName: fullName,
+      giftMessage: giftMessageEnabled ? document.getElementById('giftMessageText').value.trim() : null,
+      shippingAddress
+    };
+
   } else {
     if (MUG_STYLES[selectedStyle].sizes[selectedSize].colors && !selectedColor) {
       setStatus('Please pick a mug color.', true);
@@ -1457,7 +1588,7 @@ function setupPageForMode(){
 const ALL_PRODUCT_SPECIFIC_CARDS = [
   'mugStyleCard','sizeCard','livePreviewCard','colorCard','fullWrapCard',
   'travelMugStyleCard','travelColorCard','suitcaseSizeCard','phoneCaseCard',
-  'toteBagSizeCard','toteBagColorCard','puzzleSizeCard'
+  'toteBagSizeCard','toteBagColorCard','puzzleSizeCard','photoPosterCard'
 ];
 function hideAllProductCards(){
   ALL_PRODUCT_SPECIFIC_CARDS.forEach(id => {
@@ -1498,6 +1629,12 @@ if (isTravelMug()) {
     document.getElementById('previewNote').textContent =
       'Whichever design you placed first (Left, Center, or Right) will be printed on your puzzle.';
     renderPuzzleSizeGrid();
+  } else if (isPhotoPoster()) {
+    hideAllProductCards();
+    document.getElementById('photoPosterCard').style.display = 'block';
+    document.getElementById('previewNote').textContent =
+      'Your Photo/Poster options were locked in before generation — see the card below for what was chosen.';
+    renderPhotoPosterCard();
   } else if (isMug()) {
     // This branch is ONLY for actual coffee mugs, never a silent
     // default for anything else.
