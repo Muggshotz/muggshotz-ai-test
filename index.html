@@ -178,7 +178,7 @@
 
 <div class="card"><div class="card-title">💬 Tell Us Your Idea</div><textarea id="ideaDesc" placeholder="Example: Put me on a tiny red tricycle wearing a firefighter helmet and full firefighter outfit, racing through a parade with smoke and sirens behind me."></textarea><div class="quick-btns" id="quickBtns"></div><div class="note">Paint us a clear picture — the more detail you give us, the better our chances of getting your exact idea right.</div></div>
 
-<div class="card"><div class="card-title">🎁 Product</div><div class="grid3"><div class="btn-select selected" data-val="mug" onclick="pick(this,'product')"><span class="icon">☕</span>Mug</div><div class="btn-select" data-val="greeting card" onclick="pick(this,'product')"><span class="icon">💌</span>Card</div><div class="btn-select" data-val="water bottle" onclick="pick(this,'product')"><span class="icon">🍶</span>Travel Cups</div><div class="btn-select" data-val="post-it note" onclick="pick(this,'product')"><span class="icon">📝</span>Post-it</div><div class="btn-select" data-val="phone case" onclick="pick(this,'product')"><span class="icon">📱</span>Phone case</div><div class="btn-select" data-val="tote bag" onclick="pick(this,'product')"><span class="icon">👜</span>Tote bag</div><div class="btn-select" data-val="suitcase" onclick="pick(this,'product')"><span class="icon">🧳</span>Suitcase</div><div class="btn-select" data-val="puzzle" onclick="pick(this,'product')"><span class="icon">🧩</span>Puzzle</div></div></div>
+<div class="card"><div class="card-title">🎁 Product</div><div class="grid3"><div class="btn-select selected" data-val="mug" onclick="pick(this,'product')"><span class="icon">☕</span>Mug</div><div class="btn-select" data-val="greeting card" onclick="pick(this,'product')"><span class="icon">💌</span>Card</div><div class="btn-select" data-val="water bottle" onclick="pick(this,'product')"><span class="icon">🍶</span>Travel Cups</div><div class="btn-select" data-val="post-it note" onclick="pick(this,'product')"><span class="icon">📝</span>Post-it</div><div class="btn-select" data-val="phone case" onclick="pick(this,'product')"><span class="icon">📱</span>Phone case</div><div class="btn-select" data-val="tote bag" onclick="pick(this,'product')"><span class="icon">👜</span>Tote bag</div><div class="btn-select" data-val="suitcase" onclick="pick(this,'product')"><span class="icon">🧳</span>Suitcase</div><div class="btn-select" data-val="puzzle" onclick="pick(this,'product')"><span class="icon">🧩</span>Puzzle</div><div class="btn-select" data-val="photo poster" onclick="pick(this,'product')"><span class="icon">🖼️</span>Photo/Poster</div></div></div>
 
 <div class="card" id="mugPrintModeCard">
 <div class="card-title">☕ Mug Print Style</div>
@@ -194,6 +194,45 @@
 <div class="note" style="margin-top:6px;color:#888">One continuous picture that wraps all the way around.</div>
 </div>
 </div>
+</div>
+
+<div class="card" id="photoPosterOptionsCard" style="display:none">
+<div class="card-title">🖼️ Photo/Poster Options</div>
+<div class="note" style="margin-top:0;margin-bottom:.9rem">This is the one product where you pick everything BEFORE generating — the exact shape of your print determines how the artwork gets composed, so getting this locked in first means no cropping surprises later.</div>
+
+<div style="display:flex;gap:10px;margin-bottom:1rem">
+<div class="btn-select selected" id="posterUnframedBtn" style="flex:1;padding:.9rem .6rem" onclick="pickPosterFramed(false)">Unframed</div>
+<div class="btn-select" id="posterFramedBtn" style="flex:1;padding:.9rem .6rem" onclick="pickPosterFramed(true)">Framed</div>
+</div>
+
+<div id="posterSizeGridWrap">
+<div class="note" style="margin-bottom:6px">Size</div>
+<div class="grid3" id="posterSizeGrid"></div>
+</div>
+
+<div id="posterOrientationFinishWrap" style="margin-top:1rem">
+<div class="note" style="margin-bottom:6px">Orientation</div>
+<div class="grid2" style="margin-bottom:1rem">
+<div class="btn-select selected" id="posterOrientVerticalBtn" onclick="pickPosterOrientation('Vertical')">Vertical</div>
+<div class="btn-select" id="posterOrientHorizontalBtn" onclick="pickPosterOrientation('Horizontal')">Horizontal</div>
+</div>
+<div class="note" style="margin-bottom:6px">Finish</div>
+<div class="grid2">
+<div class="btn-select selected" id="posterFinishGlossyBtn" onclick="pickPosterFinish('Glossy')">Glossy</div>
+<div class="btn-select" id="posterFinishMatteBtn" onclick="pickPosterFinish('Matte')">Matte</div>
+</div>
+</div>
+
+<div id="posterFrameColorWrap" style="display:none;margin-top:1rem">
+<div class="note" style="margin-bottom:6px">Frame Color</div>
+<div class="grid2">
+<div class="btn-select selected" id="posterFrameBlackBtn" onclick="pickPosterFrameColor('Black')">Black</div>
+<div class="btn-select" id="posterFrameWhiteBtn" onclick="pickPosterFrameColor('White')">White</div>
+</div>
+<div class="note" style="margin-top:.75rem;color:#ff9a4d">Ships separately from outside the US — slightly longer delivery.</div>
+</div>
+
+<div class="note" id="posterPriceNote" style="margin-top:1rem;font-size:14px;color:#ff6a00;font-weight:700"></div>
 </div>
 
 <div class="card"><div class="card-title">🎨 Style</div><div class="grid2"><div class="btn-select selected" data-val="Muggshotz Classic: premium professional caricature, expressive face, rich detail, painterly shading, funny gift-art scene" onclick="pick(this,'style')">🦝 Muggshotz Classic</div><div class="btn-select" data-val="photorealistic rendering, natural skin texture and lighting like a real photograph, shot on camera — not illustrated, not painted, not stylized" onclick="pick(this,'style')">📷 Photorealistic</div><div class="btn-select" data-val="flat cel-shaded comic strip illustration, bold black outlines, flat solid color fills, no gradients or painterly shading" onclick="pick(this,'style')">💥 Comic Strip</div><div class="btn-select" data-val="black and white pen-and-ink line drawing, clean linework only, no color, no shading fills — cross-hatching for shadow only" onclick="pick(this,'style')">✏️ Line Art</div></div></div>
@@ -415,6 +454,103 @@ function refreshMugPrintModeVisibility(){
   card.style.display=(product==='mug'||product==='water bottle')?'block':'none';
 }
 
+// Photo/Poster catalog — kept in sync manually with lib/products-catalog.js
+// "photo-poster" entry. THE ONE choose-first product — size/frame/etc.
+// must be locked in before generation, since aspect ratio has to match
+// the actual print shape or the art gets cropped badly later.
+const PHOTO_POSTER_CATALOG = {
+  base: {
+    finishes: ["Glossy", "Matte"],
+    sizes: {
+      "16x20": { price: 12.95, aspectRatio: 1.25 },
+      "20x24": { price: 13.95, aspectRatio: 1.2 },
+      "20x30": { price: 15.95, aspectRatio: 1.5 }
+    }
+  },
+  framedUpsell: {
+    frameColors: ["Black", "White"],
+    sizes: {
+      "8x11":  { price: 35.95, aspectRatio: 1.375 },
+      "11x14": { price: 39.95, aspectRatio: 1.2727 },
+      "12x18": { price: 44.95, aspectRatio: 1.5 },
+      "16x20": { price: 53.95, aspectRatio: 1.25 },
+      "18x24": { price: 61.95, aspectRatio: 1.333 },
+      "20x30": { price: 73.95, aspectRatio: 1.5 },
+      "24x36": { price: 93.95, aspectRatio: 1.5 }
+    }
+  }
+};
+
+let posterFramed = false;
+let posterSize = "16x20";
+let posterOrientation = "Vertical";
+let posterFinish = "Glossy";
+let posterFrameColor = "Black";
+
+function pickPosterFramed(framed){
+  posterFramed = framed;
+  document.getElementById('posterUnframedBtn').classList.toggle('selected', !framed);
+  document.getElementById('posterFramedBtn').classList.toggle('selected', framed);
+  document.getElementById('posterOrientationFinishWrap').style.display = framed ? 'none' : 'block';
+  document.getElementById('posterFrameColorWrap').style.display = framed ? 'block' : 'none';
+  const tree = framed ? PHOTO_POSTER_CATALOG.framedUpsell : PHOTO_POSTER_CATALOG.base;
+  posterSize = Object.keys(tree.sizes)[0];
+  renderPosterSizeGrid();
+  updatePosterPriceNote();
+}
+
+function renderPosterSizeGrid(){
+  const tree = posterFramed ? PHOTO_POSTER_CATALOG.framedUpsell : PHOTO_POSTER_CATALOG.base;
+  const grid = document.getElementById('posterSizeGrid');
+  grid.innerHTML = '';
+  Object.entries(tree.sizes).forEach(([sizeKey, data]) => {
+    const btn = document.createElement('div');
+    btn.className = 'btn-select' + (sizeKey === posterSize ? ' selected' : '');
+    btn.innerHTML = sizeKey.replace('x', '" x ') + '"<span class="price">$' + data.price.toFixed(2) + '</span>';
+    btn.onclick = () => { posterSize = sizeKey; renderPosterSizeGrid(); updatePosterPriceNote(); };
+    grid.appendChild(btn);
+  });
+}
+
+function pickPosterOrientation(orientation){
+  posterOrientation = orientation;
+  document.getElementById('posterOrientVerticalBtn').classList.toggle('selected', orientation === 'Vertical');
+  document.getElementById('posterOrientHorizontalBtn').classList.toggle('selected', orientation === 'Horizontal');
+}
+
+function pickPosterFinish(finish){
+  posterFinish = finish;
+  document.getElementById('posterFinishGlossyBtn').classList.toggle('selected', finish === 'Glossy');
+  document.getElementById('posterFinishMatteBtn').classList.toggle('selected', finish === 'Matte');
+}
+
+function pickPosterFrameColor(color){
+  posterFrameColor = color;
+  document.getElementById('posterFrameBlackBtn').classList.toggle('selected', color === 'Black');
+  document.getElementById('posterFrameWhiteBtn').classList.toggle('selected', color === 'White');
+}
+
+function getPosterAspectRatio(){
+  const tree = posterFramed ? PHOTO_POSTER_CATALOG.framedUpsell : PHOTO_POSTER_CATALOG.base;
+  return tree.sizes[posterSize]?.aspectRatio || 1.25;
+}
+
+function updatePosterPriceNote(){
+  const tree = posterFramed ? PHOTO_POSTER_CATALOG.framedUpsell : PHOTO_POSTER_CATALOG.base;
+  const price = tree.sizes[posterSize]?.price || 0;
+  document.getElementById('posterPriceNote').textContent = '$' + price.toFixed(2) + ' + shipping';
+}
+
+function refreshPhotoPosterVisibility(){
+  const card = document.getElementById('photoPosterOptionsCard');
+  if (!card) return;
+  card.style.display = (product === 'photo poster') ? 'block' : 'none';
+  if (product === 'photo poster') {
+    renderPosterSizeGrid();
+    updatePosterPriceNote();
+  }
+}
+
 function pick(el,type){
   el.closest('.grid3,.grid2').querySelectorAll('.btn-select').forEach(b=>b.classList.remove('selected'));
   el.classList.add('selected');
@@ -422,6 +558,7 @@ function pick(el,type){
     product=el.dataset.val;
     refreshApproveRowForMode();
     refreshMugPrintModeVisibility();
+    refreshPhotoPosterVisibility();
   }
   else if(type==='style')style=el.dataset.val;
   else if(type==='likeness')likeness=el.dataset.val;
@@ -1340,6 +1477,10 @@ async function generate(){
     setStatus('Please upload a photo first.',true);
     return;
   }
+  if(product==='photo poster' && !posterSize){
+    setStatus('Please pick your Photo/Poster size and options above first.',true);
+    return;
+  }
 
   const btn=document.getElementById('generateBtn');
   btn.disabled=true;
@@ -1374,7 +1515,9 @@ document.getElementById('cancelBtn').style.display='block';
       ? (mugPrintMode==='wraparound'
           ? 'COMPOSITION: This design will be printed as ONE CONTINUOUS WRAPAROUND image around a curved surface, including past a handle. Compose with detail extended toward the edges rather than tightly centered, so nothing important is lost at the seam or the handle gap.'
           : 'COMPOSITION: This design will be printed as a single self-contained panel viewed from one flat angle. Keep the subject centered with clean, safe margins on all sides.')
-      : '';
+      : (product==='photo poster'
+          ? `COMPOSITION: This will be printed at a fixed aspect ratio of approximately ${getPosterAspectRatio().toFixed(2)}:1 in ${posterOrientation} orientation. Compose the subject to work within that exact shape — do not treat this as a standard square or default photo ratio.`
+          : '');
 
     const referenceLine = (refASnapshot || refBSnapshot)
       ? `
@@ -1734,7 +1877,12 @@ function goToOrder(){
     },
     deviceId: deviceId,
     productIcon: product,
-    mugPrintMode: mugPrintMode
+    mugPrintMode: mugPrintMode,
+    posterFramed: posterFramed,
+    posterSize: posterSize,
+    posterOrientation: posterOrientation,
+    posterFinish: posterFinish,
+    posterFrameColor: posterFrameColor
   };
   localStorage.setItem('muggshotz_pending_order', JSON.stringify(orderData));
   window.location.href = 'order.html';
@@ -1832,6 +1980,7 @@ function restoreWorkshop(){
 restoreWorkshop();
 refreshApproveRowForMode();
 refreshMugPrintModeVisibility();
+refreshPhotoPosterVisibility();
 
 window.addEventListener('scroll',function(){
   const row=document.querySelector('.token-credits-row');
