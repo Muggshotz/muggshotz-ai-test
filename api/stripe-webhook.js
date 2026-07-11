@@ -64,6 +64,33 @@ async function createCustomerForDevice(deviceId) {
   return rows[0];
 }
 
+// Marks a customer as having made a real payment at least once. Used
+// to gate the Wraparound generation option (see get-balance.js) — a
+// simple, permanent flag once true, never reset. Failure here is
+// logged but never allowed to block order/token fulfillment, since the
+// customer has already been charged real money by the time this runs.
+async function markHasPurchased(customerId) {
+  try {
+    const url = `${SUPABASE_URL}/rest/v1/customers?id=eq.${customerId}`;
+    const resp = await fetch(url, {
+      method: "PATCH",
+      headers: {
+        "apikey": SUPABASE_SERVICE_ROLE_KEY,
+        "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+        "Content-Type": "application/json",
+        "Prefer": "return=representation"
+      },
+      body: JSON.stringify({ has_purchased: true })
+    });
+    if (!resp.ok) {
+      const err = await resp.json();
+      console.warn("Could not mark has_purchased (non-fatal):", JSON.stringify(err));
+    }
+  } catch (err) {
+    console.warn("Could not mark has_purchased (non-fatal):", err.message);
+  }
+}
+
 // Credits tokens to a customer's balance. If they hadn't already earned
 // the separate email-verification bonus token, this payment covers that
 // too — 5 tokens instead of 4. This keeps the total tokens a customer
@@ -91,7 +118,8 @@ async function creditTokensForPayment(customer, stripeEmail) {
     },
     body: JSON.stringify({
       token_balance: customer.token_balance + tokensToAdd,
-      has_unlocked_starter_pack: true
+      has_unlocked_starter_pack: true,
+      has_purchased: true
     })
   });
   const tokenRows = await tokenResp.json();
@@ -247,6 +275,15 @@ async function handleMugOrderPayment(session) {
   try {
     const result = await placeProductOrder(orderInput);
     console.log("Order placed successfully for session", session.id, "-> Printify order", result.printifyOrderId);
+
+    // Mark this device as having made a real purchase, same as token
+    // payments below. Looked up AFTER a successful order (not before)
+    // since a failed/undeliverable order shouldn't unlock anything.
+    if (m.device_id) {
+      let customer = await findCustomerByDeviceId(m.device_id);
+      if (!customer) customer = await createCustomerForDevice(m.device_id);
+      await markHasPurchased(customer.id);
+    }
   } catch (error) {
     // Never let a Printify failure look like it silently vanished —
     // this is the one thing that genuinely needs a human to notice and
