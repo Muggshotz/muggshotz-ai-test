@@ -108,7 +108,7 @@ async function resolveVariantIdByTitleMatch(blueprintId, printProviderId, matchT
 // blueprint, which print provider, which exact variant, the price, and
 // the aspectRatio (needed upstream by the generation step, not used
 // here, but returned so the caller has it available).
-async function resolvePhotoPosterSelection(product, { framed, sizeLabel, orientation, finish, frameColor }) {
+export async function resolvePhotoPosterSelection(product, { framed, sizeLabel, orientation, finish, frameColor }) {
   if (framed) {
     const tree = product.framedUpsell;
     const sizeEntry = tree.sizes[sizeLabel];
@@ -216,7 +216,7 @@ export async function buildFullBleedImage(imageSource, canvasWidth, canvasHeight
 // the product's one print area. For products with exactly one design
 // slot and no left/right sections (e.g. Travel Mug with Handle, 14oz;
 // also Photo/Poster).
-async function buildSingleImage(imageSource, canvasWidth, canvasHeight) {
+export async function buildSingleImage(imageSource, canvasWidth, canvasHeight) {
   const WHITE = { r: 255, g: 255, b: 255 };
   return await sharp(await resolveImageBuffer(imageSource))
     .resize(canvasWidth, canvasHeight, { fit: "contain", background: WHITE })
@@ -228,7 +228,7 @@ async function buildSingleImage(imageSource, canvasWidth, canvasHeight) {
 // separate print area (e.g. Travel Mug 20oz, which has distinct
 // mug_front and mug_back placeholders instead of one wraparound image).
 // Uses the SAME two builder calls as single-image, just run twice.
-async function buildFrontBackImages(frontSource, backSource, frontDims, backDims) {
+export async function buildFrontBackImages(frontSource, backSource, frontDims, backDims) {
   const WHITE = { r: 255, g: 255, b: 255 };
   async function build(source, dims) {
     if (!source || !dims) return null;
