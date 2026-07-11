@@ -204,11 +204,11 @@ label{font-size:11px;color:#888;letter-spacing:.5px;text-transform:uppercase;dis
 </div>
 
 <div class="card" id="fullWrapCard">
-<div class="card-title">🌀 Full-Wrap Print</div>
-<div class="note" style="margin-top:0;margin-bottom:.75rem">Have your design printed edge-to-edge, wrapping all the way around the mug (rather than a single front-facing panel). Best suited for designs built for a full wraparound look.</div>
+<div class="card-title">🌀 Full Wrap</div>
+<div class="note" style="margin-top:0;margin-bottom:.75rem">Have your design stretched edge-to-edge across the mug (rather than a single front-facing panel). Best suited for designs already built for a full wraparound look. Note: this stretches ONE image across the whole print area — it's a different option from the generator's "Wraparound" scene-continuation feature, which auto-creates three matching panels instead.</div>
 <div style="display:flex;align-items:center;gap:10px">
 <input type="checkbox" id="fullWrapToggle" onchange="toggleFullWrap()" style="width:20px;height:20px;cursor:pointer"/>
-<label style="margin:0;text-transform:none;font-size:14px;color:#fff;cursor:pointer" onclick="document.getElementById('fullWrapToggle').click()">Yes, wrap my design all the way around <span style="color:#ff9a4d;font-weight:700">— FREE</span></label>
+<label style="margin:0;text-transform:none;font-size:14px;color:#fff;cursor:pointer" onclick="document.getElementById('fullWrapToggle').click()">Yes, apply Full Wrap <span style="color:#ff9a4d;font-weight:700">— FREE</span></label>
 </div>
 </div>
 
@@ -1187,6 +1187,14 @@ function renderColorGrid(){
 
 function calculateUpsell(){
   if (!pendingOrder) return { charge: 0, label: '' };
+  // Auto-generated wraparound set: flat +$3, regardless of how many
+  // slots are filled or whether the images are distinct — this is a
+  // completely separate charge from the manual-placement ladder below,
+  // even though both fill left/front/right. See create-checkout-session.js
+  // for why these must never be combined.
+  if (pendingOrder.isWraparoundSet) {
+    return { charge: 3, label: 'Wraparound design (+$3)' };
+  }
   const { left, front, right } = pendingOrder.placements;
   const filled = [left, front, right].filter(Boolean);
   const distinct = new Set(filled).size;
@@ -1522,6 +1530,7 @@ async function submitOrder(){
       sizeLabel: selectedSize,
       color: selectedColor,
       printMode: fullWrapEnabled ? 'fullBleed' : 'standard',
+      isWraparoundSet: !!pendingOrder.isWraparoundSet,
       customerName: fullName,
       giftMessage: giftMessageEnabled ? document.getElementById('giftMessageText').value.trim() : null,
       shippingAddress
