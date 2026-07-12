@@ -292,6 +292,16 @@
 </div>
 </div>
 
+<div id="genTravelOptionsWrap" style="display:none;margin-top:1.1rem">
+<div class="note" style="margin-top:0;margin-bottom:.6rem">Pick which travel mug below — the real photo preview updates to match.</div>
+<div class="note" style="margin-bottom:6px">Style</div>
+<div class="grid3" id="genTravelStyleGrid"></div>
+<div id="genTravelColorWrap" style="display:none;margin-top:.75rem">
+<div class="note" style="margin-bottom:6px">Color</div>
+<div class="color-grid" id="genTravelColorGrid"></div>
+</div>
+</div>
+
 <div id="genPreviewSection" style="display:none;margin-top:1.1rem">
 <div class="note" style="margin-top:0;margin-bottom:.5rem;text-align:center;color:#888;letter-spacing:.5px;text-transform:uppercase;font-size:11px">🖼️ Real Photo Preview</div>
 <div class="note" id="genPreviewLoading" style="text-align:center;display:none"><span class="spinner"></span>Loading your real mockup preview...</div>
@@ -585,6 +595,10 @@ function pick(el,type){
     refreshApproveRowForMode();
     refreshMugPrintModeVisibility();
     refreshPhotoPosterVisibility();
+    // Switching products can change which mockup (if any) applies to
+    // the currently-placed design — refresh immediately instead of
+    // leaving the previous product's stale mockup on screen.
+    updatePlacementSummary();
   }
   else if(type==='style')style=el.dataset.val;
   else if(type==='likeness')likeness=el.dataset.val;
@@ -1963,13 +1977,19 @@ function updatePlacementSummary(){
   orderBtn.style.display=assignedCount>0?'block':'none';
 
   const showMugOptions = (assignedCount>0 && product==='mug');
-  const optionsWrap=document.getElementById('genMugOptionsWrap');
+  const showTravelOptions = (assignedCount>0 && product==='water bottle');
+  const mugOptionsWrap=document.getElementById('genMugOptionsWrap');
+  const travelOptionsWrap=document.getElementById('genTravelOptionsWrap');
   const previewSection=document.getElementById('genPreviewSection');
-  if(optionsWrap) optionsWrap.style.display = showMugOptions ? 'block' : 'none';
-  if(previewSection) previewSection.style.display = showMugOptions ? 'block' : 'none';
+  if(mugOptionsWrap) mugOptionsWrap.style.display = showMugOptions ? 'block' : 'none';
+  if(travelOptionsWrap) travelOptionsWrap.style.display = showTravelOptions ? 'block' : 'none';
+  if(previewSection) previewSection.style.display = (showMugOptions || showTravelOptions) ? 'block' : 'none';
   if(showMugOptions){
     renderGenMugStyleGrid();
     renderGenMugColorGrid();
+  }
+  if(showTravelOptions){
+    renderGenTravelStyleGrid();
   }
   maybeAutoFetchMockup();
 }
@@ -2027,6 +2047,48 @@ const GEN_STYLE_TO_PRODUCT_KEY = {
 let selectedGenStyle='Classic White';
 let selectedGenSize='11oz';
 let selectedGenColor=null;
+
+// Travel mug catalog — kept in sync manually with lib/products-catalog.js
+// (this is client-side HTML, can't import that server-only file
+// directly), same pattern order.html already uses for the same reason.
+const TRAVEL_MUG_CATALOG = {
+  "travel-mug-20oz": {
+    displayName: "Travel Mug, 20oz",
+    layoutType: "front-back",
+    sizeLabel: "20oz",
+    colors: [
+      { name: "White", hex: "#FFFFFF" }, { name: "Black", hex: "#1c1c1c" },
+      { name: "Navy", hex: "#1B3D7A" }, { name: "Royal", hex: "#2255A4" },
+      { name: "Light Blue", hex: "#5FA8DE" }, { name: "Teal", hex: "#1F9E8E" },
+      { name: "Green", hex: "#1F7A45" }, { name: "Olive Green", hex: "#6B8E23" },
+      { name: "Dark Gray", hex: "#4a4a4a" }, { name: "Maroon", hex: "#7A1F2B" },
+      { name: "Red", hex: "#D62828" }, { name: "Coral", hex: "#F08070" },
+      { name: "Orange", hex: "#F0701A" }, { name: "Pink", hex: "#E0457B" },
+      { name: "Dark Purple", hex: "#4B2E5A" }, { name: "Light Purple", hex: "#8E3FC9" },
+      { name: "Yellow", hex: "#F0D43A" }
+    ]
+  },
+  "travel-mug-14oz-handle": {
+    displayName: "Travel Mug with Handle, 14oz",
+    layoutType: "single-image",
+    sizeLabel: "14oz",
+    colors: null
+  },
+  "travel-mug-40oz-insulated": {
+    displayName: "Insulated Travel Mug, 40oz",
+    layoutType: "front-back",
+    sizeLabel: "40oz",
+    colors: [
+      { name: "White", hex: "#FFFFFF" }, { name: "Black", hex: "#1c1c1c" },
+      { name: "Navy Blue", hex: "#1B3D7A" }, { name: "Royal Blue", hex: "#2255A4" },
+      { name: "Teal", hex: "#1F9E8E" }, { name: "Olive Green", hex: "#6B8E23" },
+      { name: "Dark Gray", hex: "#4a4a4a" }, { name: "Red", hex: "#D62828" }
+    ]
+  }
+};
+
+let selectedTravelProductKey = null;
+let selectedTravelColor = null;
 
 function renderGenMugStyleGrid(){
   const grid=document.getElementById('genMugStyleGrid');
@@ -2090,6 +2152,60 @@ function pickGenMugColor(el,colorName){
   maybeAutoFetchMockup();
 }
 
+function renderGenTravelStyleGrid(){
+  const grid=document.getElementById('genTravelStyleGrid');
+  if(!grid || grid.childElementCount)return;
+  Object.entries(TRAVEL_MUG_CATALOG).forEach(([key, prod])=>{
+    const btn=document.createElement('div');
+    btn.className='btn-select'+(key===selectedTravelProductKey?' selected':'');
+    btn.dataset.key=key;
+    btn.textContent=prod.displayName;
+    btn.onclick=()=>pickGenTravelStyle(key);
+    grid.appendChild(btn);
+  });
+}
+
+function pickGenTravelStyle(key){
+  selectedTravelProductKey=key;
+  selectedTravelColor=null;
+  document.querySelectorAll('#genTravelStyleGrid .btn-select').forEach(b=>{
+    b.classList.toggle('selected', b.dataset.key===key);
+  });
+  renderGenTravelColorGrid();
+  maybeAutoFetchMockup();
+}
+
+function renderGenTravelColorGrid(){
+  const wrap=document.getElementById('genTravelColorWrap');
+  const grid=document.getElementById('genTravelColorGrid');
+  const prod=selectedTravelProductKey ? TRAVEL_MUG_CATALOG[selectedTravelProductKey] : null;
+  const colors=prod?.colors || null;
+  if(!colors){
+    wrap.style.display='none';
+    return;
+  }
+  wrap.style.display='block';
+  grid.innerHTML='';
+  colors.forEach((c,i)=>{
+    const btn=document.createElement('div');
+    btn.className='color-btn'+(i===0?' selected':'');
+    btn.onclick=()=>pickGenTravelColor(btn,c.name);
+    const ball=document.createElement('div');
+    ball.className='ball';
+    ball.style.background=c.hex;
+    btn.appendChild(ball);
+    grid.appendChild(btn);
+    if(i===0) selectedTravelColor=c.name;
+  });
+}
+
+function pickGenTravelColor(el,colorName){
+  document.querySelectorAll('#genTravelColorGrid .color-btn').forEach(b=>b.classList.remove('selected'));
+  el.classList.add('selected');
+  selectedTravelColor=colorName;
+  maybeAutoFetchMockup();
+}
+
 // ===== Automatic real-photo mockup engine =====
 // Replaces the old manual "See a Real Photo Preview" button. The moment
 // a design is placed into a slot (or the customer changes style/size/
@@ -2108,20 +2224,34 @@ let autoMockupRequestId = 0;
 let autoMockupDebounceTimer = null;
 
 function maybeAutoFetchMockup(){
-  // SCOPED TO COFFEE MUG FOR NOW — every other product still needs its
-  // own style/size/color picker built into this page before it can get
-  // the same automatic treatment. Extending this later just means
-  // adding another branch here, not rewriting the engine below.
-  if (product !== 'mug') return;
-
+  // Supports Coffee Mug and Travel Cups today. Every other product still
+  // needs its own style/size/color picker built into this page before
+  // it can get the same automatic treatment — extending this later
+  // means adding another branch here, not rewriting the engine below.
   const assignedCount = ['left','front','right'].filter(p=>placements[p]).length;
   if (assignedCount === 0) {
     hideAutoMockup();
     return;
   }
 
-  const requiresColor = !!(GEN_MUG_STYLES[selectedGenStyle]?.colors?.[selectedGenSize]);
-  if (requiresColor && !selectedGenColor) {
+  if (product === 'mug') {
+    const requiresColor = !!(GEN_MUG_STYLES[selectedGenStyle]?.colors?.[selectedGenSize]);
+    if (requiresColor && !selectedGenColor) {
+      hideAutoMockup();
+      return;
+    }
+  } else if (product === 'water bottle') {
+    if (!selectedTravelProductKey) {
+      showAutoMockupNote('Pick a travel mug style above to see a real preview.');
+      return;
+    }
+    const travelProduct = TRAVEL_MUG_CATALOG[selectedTravelProductKey];
+    if (travelProduct.colors && !selectedTravelColor) {
+      showAutoMockupNote('Pick a color above to see a real preview.');
+      return;
+    }
+  } else {
+    // Not wired up for this product yet.
     hideAutoMockup();
     return;
   }
@@ -2137,6 +2267,63 @@ function hideAutoMockup(){
   if (loadingEl) loadingEl.style.display = 'none';
   if (noteEl) noteEl.style.display = 'none';
   if (imgEl) imgEl.style.display = 'none';
+  autoMockupRequestId++; // invalidate any in-flight fetch so it can't pop back in
+}
+
+function showAutoMockupNote(msg){
+  const loadingEl = document.getElementById('genPreviewLoading');
+  const noteEl = document.getElementById('genPreviewNote');
+  const imgEl = document.getElementById('genPreviewImg');
+  if (loadingEl) loadingEl.style.display = 'none';
+  if (imgEl) imgEl.style.display = 'none';
+  if (noteEl) {
+    noteEl.textContent = msg;
+    noteEl.className = 'note';
+    noteEl.style.display = 'block';
+  }
+  autoMockupRequestId++; // invalidate any in-flight fetch
+}
+
+// Builds the request body /api/start-mockup needs, branching by which
+// product is currently selected. Each product's layoutType (three-slot-
+// wrap, front-back, single-image) determines which fields it expects —
+// see api/start-mockup.js's handleStart for the matching logic.
+function buildMockupRequestBody(){
+  if (product === 'mug') {
+    return {
+      productKey: GEN_STYLE_TO_PRODUCT_KEY[selectedGenStyle],
+      sizeLabel: selectedGenSize,
+      colorName: selectedGenColor,
+      placements: {
+        left: placements.left ? findDesignById(placements.left).url : null,
+        front: placements.front ? findDesignById(placements.front).url : null,
+        right: placements.right ? findDesignById(placements.right).url : null
+      },
+      printMode: mugPrintMode==='wraparound' ? 'fullBleed' : 'standard'
+    };
+  }
+
+  if (product === 'water bottle') {
+    const travelProduct = TRAVEL_MUG_CATALOG[selectedTravelProductKey];
+    const left = placements.left ? findDesignById(placements.left).url : null;
+    const front = placements.front ? findDesignById(placements.front).url : null;
+    const right = placements.right ? findDesignById(placements.right).url : null;
+
+    const body = {
+      productKey: selectedTravelProductKey,
+      sizeLabel: travelProduct.sizeLabel,
+      colorName: selectedTravelColor
+    };
+    if (travelProduct.layoutType === 'front-back') {
+      body.frontImage = left || front || null;
+      body.backImage = right || null;
+    } else {
+      body.image = left || front || right || null;
+    }
+    return body;
+  }
+
+  return null;
 }
 
 async function runAutoMockupFetch(){
@@ -2149,23 +2336,12 @@ async function runAutoMockupFetch(){
   noteEl.style.display = 'none';
   imgEl.style.display = 'none';
 
-  const productKey = GEN_STYLE_TO_PRODUCT_KEY[selectedGenStyle];
-  const printifyPlacements = {
-    left: placements.left ? findDesignById(placements.left).url : null,
-    front: placements.front ? findDesignById(placements.front).url : null,
-    right: placements.right ? findDesignById(placements.right).url : null
-  };
-
-  const body = {
-    productKey,
-    sizeLabel: selectedGenSize,
-    colorName: selectedGenColor,
-    placements: printifyPlacements,
-    printMode: (product==='mug' && mugPrintMode==='wraparound') ? 'fullBleed' : 'standard'
-  };
+  const body = buildMockupRequestBody();
+  if (!body) { loadingEl.style.display = 'none'; return; }
 
   try {
     const startResp = await fetch('/api/start-mockup', {
+
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ...body, action: 'start' })
