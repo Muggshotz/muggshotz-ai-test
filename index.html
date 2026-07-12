@@ -2098,6 +2098,63 @@ function resetGeneratorMockupPreview(){
   if(imgEl)imgEl.style.display='none';
 }
 
+// ===== Shared real-photo mockup job runner (two-step start/check flow) =====
+// Kept in sync with order.html's version. Calls /api/start-mockup, which
+// handles both "start" and "check" actions in one combined function
+// (to stay within Vercel's Hobby-plan 12-function limit). Every request
+// stays short — well under the 10 second per-function cap — even though
+// the overall wait for the real photo can run up to ~30 seconds.
+async function runMockupJob(body, btn, noteEl, imgEl){
+  btn.disabled = true;
+  btn.textContent = '📸 Generating your real photo... (a few seconds)';
+  noteEl.style.display = 'none';
+
+  try {
+    const startResp = await fetch('/api/start-mockup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...body, action: 'start' })
+    });
+    const startData = await startResp.json();
+    if (!startResp.ok) throw new Error(startData.error || 'Could not start the real photo preview.');
+
+    const productId = startData.productId;
+    let mockupUrl = null;
+    const maxTries = 20;
+
+    for (let i = 0; i < maxTries; i++) {
+      await new Promise(r => setTimeout(r, 1500));
+      const checkResp = await fetch('/api/start-mockup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'check', productId })
+      });
+      const checkData = await checkResp.json();
+      if (!checkResp.ok) throw new Error(checkData.error || 'Could not check on the real photo preview.');
+      if (checkData.ready) {
+        mockupUrl = checkData.mockupUrl;
+        break;
+      }
+    }
+
+    if (!mockupUrl) throw new Error("Printify didn't return a mockup photo in time — try again in a moment.");
+
+    imgEl.src = mockupUrl;
+    imgEl.style.display = 'block';
+    btn.textContent = '✅ Real Photo Preview';
+    btn.disabled = false;
+    return mockupUrl;
+
+  } catch (err) {
+    noteEl.textContent = err.message;
+    noteEl.className = 'note error';
+    noteEl.style.display = 'block';
+    btn.textContent = '📸 See a Real Photo Preview';
+    btn.disabled = false;
+    return null;
+  }
+}
+
 async function fetchGeneratorMockupPreview(){
   const btn=document.getElementById('genPreviewBtn');
   const noteEl=document.getElementById('genPreviewNote');
@@ -2112,43 +2169,19 @@ async function fetchGeneratorMockupPreview(){
     return;
   }
 
-  btn.disabled=true;
-  btn.textContent='📸 Generating your real photo... (a few seconds)';
-  noteEl.style.display='none';
-
   const printifyPlacements = {
     left: placements.left ? findDesignById(placements.left).url : null,
     front: placements.front ? findDesignById(placements.front).url : null,
     right: placements.right ? findDesignById(placements.right).url : null
   };
 
-  try{
-    const resp=await fetch('/api/generate-mockup',{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({
-        productKey,
-        sizeLabel:selectedGenSize,
-        colorName:selectedGenColor,
-        placements:printifyPlacements,
-        printMode:(product==='mug' && mugPrintMode==='wraparound')?'fullBleed':'standard'
-      })
-    });
-    const data=await resp.json();
-    if(!resp.ok)throw new Error(data.error||'Could not generate a real photo preview.');
-
-    imgEl.src=data.mockupUrl;
-    imgEl.style.display='block';
-    noteEl.style.display='none';
-    btn.textContent='✅ Real Photo Preview';
-  }catch(err){
-    noteEl.textContent=err.message;
-    noteEl.className='note error';
-    noteEl.style.display='block';
-    btn.textContent='📸 See a Real Photo Preview';
-  }finally{
-    btn.disabled=false;
-  }
+  await runMockupJob({
+    productKey,
+    sizeLabel:selectedGenSize,
+    colorName:selectedGenColor,
+    placements:printifyPlacements,
+    printMode:(product==='mug' && mugPrintMode==='wraparound')?'fullBleed':'standard'
+  }, btn, noteEl, imgEl);
 }
 
 function goToOrder(){
