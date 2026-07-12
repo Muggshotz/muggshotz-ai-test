@@ -410,12 +410,15 @@ export async function placeProductOrder({
     throw new Error(`Unknown layoutType "${product.layoutType}" for product "${productKey}".`);
   }
 
-  // Only coffee mugs get the reduced 80% scale and a downward nudge —
-  // everything else keeps full-size, centered placement, since travel
-  // mugs/suitcases/etc. were already coming out correctly.
+  // CALIBRATION STEP 2 of N (Alyx's request, July 2026): dropped further
+  // starting too small (50%, dead-center) to isolate whether SCALE is
+  // really the cause of the head-cropping, one variable at a time,
+  // before nudging it back up incrementally. Everything else keeps
+  // full-size, centered placement, since travel mugs/suitcases/etc.
+  // were already coming out correctly.
   const isCoffeeMug = product.layoutType === "three-slot-wrap";
-  const imageScale = isCoffeeMug ? 0.8 : 1;
-  const imageY = isCoffeeMug ? 0.58 : 0.5;
+  const imageScale = isCoffeeMug ? 0.25 : 1;
+  const imageY = isCoffeeMug ? 0.5 : 0.5;
 
   const productTitle = `Muggshotz ${product.displayName}${customerName ? " - " + customerName : ""}`;
   const { productId } = await createPrintifyProduct(
