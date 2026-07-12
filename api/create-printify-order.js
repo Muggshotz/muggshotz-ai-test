@@ -143,18 +143,28 @@ export async function buildWraparoundImage(placements, canvasWidth, canvasHeight
   const sectionWidth = Math.round(canvasWidth / 3);
   const lastSectionWidth = canvasWidth - sectionWidth * 2;
 
-  async function renderSection(imageSource, width, position) {
+  // UPDATED (July 2026, Alyx's request): was using fit:"cover", which
+  // scales the source image UP to completely fill each section and
+  // crops away whatever doesn't fit — that's what was cutting off
+  // captions at the top and content at the bottom. Switched to
+  // fit:"contain" (with a white background for the resulting margin),
+  // the exact same approach buildSingleImage() already uses for travel
+  // mugs and suitcases — shrinks the WHOLE image down to fit inside the
+  // section first, so nothing gets cropped away, matching how Printify's
+  // own manual editor lets a person resize a design to fit the canvas
+  // before printing.
+  async function renderSection(imageSource, width) {
     if (!imageSource) return null;
     return await sharp(await resolveImageBuffer(imageSource))
-      .resize(width, canvasHeight, { fit: "cover", position })
+      .resize(width, canvasHeight, { fit: "contain", background: WHITE })
       .png()
       .toBuffer();
   }
 
   const [leftBuf, frontBuf, rightBuf] = await Promise.all([
-    renderSection(left, sectionWidth, "right"),
-    renderSection(front, sectionWidth, "centre"),
-    renderSection(right, lastSectionWidth, "left")
+    renderSection(left, sectionWidth),
+    renderSection(front, sectionWidth),
+    renderSection(right, lastSectionWidth)
   ]);
 
   const composites = [];
