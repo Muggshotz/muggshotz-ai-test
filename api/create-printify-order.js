@@ -449,7 +449,7 @@ export async function placeProductOrder({
   // three-slot-wrap mode. Everything else keeps full-size, centered
   // placement, since travel mugs/suitcases/etc. were already correct.
   const isCoffeeMug = product.layoutType === "three-slot-wrap";
-  const imageScale = isCoffeeMug ? 0.8 : 1;
+  const imageScale = isCoffeeMug ? 0.85 : 1;
   const imageY = isCoffeeMug ? 0.58 : 0.5;
 
   const productTitle = `Muggshotz ${product.displayName}${customerName ? " - " + customerName : ""}`;
