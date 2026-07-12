@@ -342,20 +342,13 @@ const MUG_STYLES = {
 const TRAVEL_MUG_CATALOG = {
   "travel-mug-20oz": {
     displayName: "Travel Mug, 20oz",
-    layoutType: "front-back",
+    layoutType: "single-image",
     sizeLabel: "20oz",
     price: 34.95,
-    colors: [
-      { name: "White", hex: "#FFFFFF" }, { name: "Black", hex: "#1c1c1c" },
-      { name: "Navy", hex: "#1B3D7A" }, { name: "Royal", hex: "#2255A4" },
-      { name: "Light Blue", hex: "#5FA8DE" }, { name: "Teal", hex: "#1F9E8E" },
-      { name: "Green", hex: "#1F7A45" }, { name: "Olive Green", hex: "#6B8E23" },
-      { name: "Dark Gray", hex: "#4a4a4a" }, { name: "Maroon", hex: "#7A1F2B" },
-      { name: "Red", hex: "#D62828" }, { name: "Coral", hex: "#F08070" },
-      { name: "Orange", hex: "#F0701A" }, { name: "Pink", hex: "#E0457B" },
-      { name: "Dark Purple", hex: "#4B2E5A" }, { name: "Light Purple", hex: "#8E3FC9" },
-      { name: "Yellow", hex: "#F0D43A" }
-    ]
+    // UPDATED (July 2026): swapped print provider (see products-catalog.js
+    // for why) — this blueprint comes in white only, no color picker,
+    // and prints as one continuous wrap image instead of front/back.
+    colors: null
   },
   "travel-mug-14oz-handle": {
     displayName: "Travel Mug with Handle, 14oz",
