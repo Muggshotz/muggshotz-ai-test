@@ -233,20 +233,24 @@ export function resolveVariant(product, sizeLabel, colorName) {
   return { variantId: sizeEntry.variantId, price: sizeEntry.price };
 }
 
-// UPDATED (July 2026, Alyx's request): added an optional imageScale
-// parameter (defaults to 1 = 100%, unchanged from before) instead of
-// hardcoding one value for every product. Coffee mugs specifically were
-// coming out too tightly cropped — text and faces running edge-to-edge
-// with zero margin — so placeProductOrder/start-mockup.js pass 0.8 (80%)
-// only for three-slot-wrap (coffee mug) products. Travel mugs, suitcases,
-// and everything else keep the original full-size placement, since those
-// were already coming out correctly. This is the exact same x/y/scale
-// placement control Printify's own manual editor exposes when a person
-// resizes a design by hand.
-export async function createPrintifyProduct(images, { blueprintId, printProviderId, displayName }, variantId, title, imageScale = 1) {
+// UPDATED (July 2026, Alyx's request): added optional imageScale and
+// imageY parameters (default 1 / 0.5 — both unchanged from before)
+// instead of hardcoding one value for every product. Coffee mugs
+// specifically were coming out too tightly cropped — text and faces
+// running edge-to-edge with zero margin — so placeProductOrder/
+// start-mockup.js pass 0.8 (80%) scale only for three-slot-wrap
+// (coffee mug) products. After fixing the crop, the design still sat
+// too high on the mug (centered vertically leaves it looking too close
+// to the rim) — imageY nudges it down toward center-lower instead.
+// Travel mugs, suitcases, and everything else keep the original
+// full-size, centered placement, since those were already coming out
+// correctly. This is the exact same x/y/scale placement control
+// Printify's own manual editor exposes when a person resizes/repositions
+// a design by hand.
+export async function createPrintifyProduct(images, { blueprintId, printProviderId, displayName }, variantId, title, imageScale = 1, imageY = 0.5) {
   const placeholders = Object.entries(images).map(([position, imageId]) => ({
     position,
-    images: [{ id: imageId, x: 0.5, y: 0.5, scale: imageScale, angle: 0 }]
+    images: [{ id: imageId, x: 0.5, y: imageY, scale: imageScale, angle: 0 }]
   }));
 
   const response = await fetch(`https://api.printify.com/v1/shops/${SHOP_ID}/products.json`, {
@@ -406,10 +410,12 @@ export async function placeProductOrder({
     throw new Error(`Unknown layoutType "${product.layoutType}" for product "${productKey}".`);
   }
 
-  // Only coffee mugs get the reduced 80% scale — everything else keeps
-  // full-size placement, since travel mugs/suitcases/etc. were already
-  // coming out correctly and shouldn't change.
-  const imageScale = product.layoutType === "three-slot-wrap" ? 0.8 : 1;
+  // Only coffee mugs get the reduced 80% scale and a downward nudge —
+  // everything else keeps full-size, centered placement, since travel
+  // mugs/suitcases/etc. were already coming out correctly.
+  const isCoffeeMug = product.layoutType === "three-slot-wrap";
+  const imageScale = isCoffeeMug ? 0.8 : 1;
+  const imageY = isCoffeeMug ? 0.58 : 0.5;
 
   const productTitle = `Muggshotz ${product.displayName}${customerName ? " - " + customerName : ""}`;
   const { productId } = await createPrintifyProduct(
@@ -417,7 +423,8 @@ export async function placeProductOrder({
     { blueprintId: effectiveBlueprintId, printProviderId: effectivePrintProviderId, displayName: product.displayName },
     variantId,
     productTitle,
-    imageScale
+    imageScale,
+    imageY
   );
 
   const orderResult = await submitPrintifyOrder(
