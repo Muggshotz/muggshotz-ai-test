@@ -99,12 +99,12 @@ async function handleStart(req, res) {
     throw new Error("Real-photo mockups aren't available for this product type yet.");
   }
 
-  // Matches placeProductOrder's logic in create-printify-order.js — only
-  // coffee mugs get reduced scale and a downward nudge, so the preview
-  // accurately reflects what a real order would actually look like.
+  // CALIBRATION STEP 1 of N — matches placeProductOrder's logic in
+  // create-printify-order.js, so the preview accurately reflects what a
+  // real order would actually look like.
   const isCoffeeMug = product.layoutType === "three-slot-wrap";
-  const imageScale = isCoffeeMug ? 0.8 : 1;
-  const imageY = isCoffeeMug ? 0.58 : 0.5;
+  const imageScale = isCoffeeMug ? 0.25 : 1;
+  const imageY = isCoffeeMug ? 0.5 : 0.5;
 
   const { productId } = await createPrintifyProduct(
     printifyImages,
