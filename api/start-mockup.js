@@ -100,16 +100,19 @@ async function handleStart(req, res) {
   }
 
   // Matches placeProductOrder's logic in create-printify-order.js — only
-  // coffee mugs get reduced scale, so the preview accurately reflects
-  // what a real order would actually look like.
-  const imageScale = product.layoutType === "three-slot-wrap" ? 0.8 : 1;
+  // coffee mugs get reduced scale and a downward nudge, so the preview
+  // accurately reflects what a real order would actually look like.
+  const isCoffeeMug = product.layoutType === "three-slot-wrap";
+  const imageScale = isCoffeeMug ? 0.8 : 1;
+  const imageY = isCoffeeMug ? 0.58 : 0.5;
 
   const { productId } = await createPrintifyProduct(
     printifyImages,
     { blueprintId: effectiveBlueprintId, printProviderId: effectivePrintProviderId, displayName: product.displayName },
     variantId,
     `[PREVIEW - DELETE] Muggshotz ${product.displayName} mockup`,
-    imageScale
+    imageScale,
+    imageY
   );
 
   return res.status(200).json({ productId });
