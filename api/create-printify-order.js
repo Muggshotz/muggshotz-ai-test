@@ -223,19 +223,20 @@ export function resolveVariant(product, sizeLabel, colorName) {
   return { variantId: sizeEntry.variantId, price: sizeEntry.price };
 }
 
-// UPDATED (July 2026, Alyx's request): scale reduced from 1.0 (100% —
-// filling the entire print area edge-to-edge, zero margin) to 0.8 (80%)
-// after real printed/mocked-up results looked too tightly cropped —
-// text and faces were running right to the edge of the print area. This
-// is the exact same x/y/scale placement control Printify's own manual
-// editor exposes when a person resizes a design by hand; we're just
-// setting a smaller default here instead of leaving it at full size.
-// Applies everywhere a product gets created — both real orders and
-// real-photo mockup previews — since both go through this one function.
-export async function createPrintifyProduct(images, { blueprintId, printProviderId, displayName }, variantId, title) {
+// UPDATED (July 2026, Alyx's request): added an optional imageScale
+// parameter (defaults to 1 = 100%, unchanged from before) instead of
+// hardcoding one value for every product. Coffee mugs specifically were
+// coming out too tightly cropped — text and faces running edge-to-edge
+// with zero margin — so placeProductOrder/start-mockup.js pass 0.8 (80%)
+// only for three-slot-wrap (coffee mug) products. Travel mugs, suitcases,
+// and everything else keep the original full-size placement, since those
+// were already coming out correctly. This is the exact same x/y/scale
+// placement control Printify's own manual editor exposes when a person
+// resizes a design by hand.
+export async function createPrintifyProduct(images, { blueprintId, printProviderId, displayName }, variantId, title, imageScale = 1) {
   const placeholders = Object.entries(images).map(([position, imageId]) => ({
     position,
-    images: [{ id: imageId, x: 0.5, y: 0.5, scale: 0.8, angle: 0 }]
+    images: [{ id: imageId, x: 0.5, y: 0.5, scale: imageScale, angle: 0 }]
   }));
 
   const response = await fetch(`https://api.printify.com/v1/shops/${SHOP_ID}/products.json`, {
@@ -395,12 +396,18 @@ export async function placeProductOrder({
     throw new Error(`Unknown layoutType "${product.layoutType}" for product "${productKey}".`);
   }
 
+  // Only coffee mugs get the reduced 80% scale — everything else keeps
+  // full-size placement, since travel mugs/suitcases/etc. were already
+  // coming out correctly and shouldn't change.
+  const imageScale = product.layoutType === "three-slot-wrap" ? 0.8 : 1;
+
   const productTitle = `Muggshotz ${product.displayName}${customerName ? " - " + customerName : ""}`;
   const { productId } = await createPrintifyProduct(
     printifyImages,
     { blueprintId: effectiveBlueprintId, printProviderId: effectivePrintProviderId, displayName: product.displayName },
     variantId,
-    productTitle
+    productTitle,
+    imageScale
   );
 
   const orderResult = await submitPrintifyOrder(
