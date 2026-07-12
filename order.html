@@ -275,17 +275,6 @@ label{font-size:11px;color:#888;letter-spacing:.5px;text-transform:uppercase;dis
 </div>
 
 <script>
-// Coffee mug pricing (unchanged mechanism, updated numbers per the July
-// 2026 universal pricing overhaul — shipping now shown separately below
-// instead of baked into these).
-// Coffee mug catalog — kept in sync manually with lib/products-catalog.js
-// (this is client-side HTML, can't import the server-only catalog file
-// directly). All 4 styles confirmed via real Printify lookups:
-//   Classic White — no colors, one white mug
-//   Color Pop     — colored interior + handle, colors vary by size
-//   Trimmed       — colored rim + handle, colors vary by size
-//   Accented      — colored interior only, colors vary by size
-// If any style's pricing/colors change, update both this and the catalog.
 const MUG_STYLES = {
   "Classic White": {
     sizes: {
@@ -350,9 +339,6 @@ const MUG_STYLES = {
   }
 };
 
-// Travel mug catalog — kept in sync manually with lib/products-catalog.js
-// (this is client-side HTML, so it can't import that server-only file
-// directly). If travel mug pricing/colors ever change, update both places.
 const TRAVEL_MUG_CATALOG = {
   "travel-mug-20oz": {
     displayName: "Travel Mug, 20oz",
@@ -392,7 +378,7 @@ const TRAVEL_MUG_CATALOG = {
   }
 };
 
-const FLAT_SHIPPING = 6.95; // matches FLAT_SHIPPING_CENTS in create-checkout-session.js
+const FLAT_SHIPPING = 6.95;
 
 let selectedStyle = "Classic White";
 let selectedSize = "11oz";
@@ -406,7 +392,63 @@ let selectedTravelColor = null;
 
 const GIFT_MESSAGE_PRICE = 1.00;
 
-// ===== Determine mode: coffee mug (default/unchanged) vs travel mug =====
+// ===== Shared real-photo mockup job runner (two-step start/check flow) =====
+// Replaces the old single long-running call to /api/generate-mockup,
+// which could exceed Vercel's Hobby-plan 10 second function limit while
+// waiting on Printify. Instead: kick the job off (fast), then poll a
+// lightweight status-check endpoint every 1.5s until the photo is ready.
+// Every individual request stays well under the 10 second cap this way.
+async function runMockupJob(body, btn, noteEl, imgEl){
+  btn.disabled = true;
+  btn.textContent = '📸 Generating your real photo... (a few seconds)';
+  noteEl.style.display = 'none';
+
+  try {
+    const startResp = await fetch('/api/start-mockup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...body, action: 'start' })
+    });
+    const startData = await startResp.json();
+    if (!startResp.ok) throw new Error(startData.error || 'Could not start the real photo preview.');
+
+    const productId = startData.productId;
+    let mockupUrl = null;
+    const maxTries = 20; // ~30 seconds of polling at 1.5s apart
+
+    for (let i = 0; i < maxTries; i++) {
+      await new Promise(r => setTimeout(r, 1500));
+      const checkResp = await fetch('/api/start-mockup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'check', productId })
+      });
+      const checkData = await checkResp.json();
+      if (!checkResp.ok) throw new Error(checkData.error || 'Could not check on the real photo preview.');
+      if (checkData.ready) {
+        mockupUrl = checkData.mockupUrl;
+        break;
+      }
+    }
+
+    if (!mockupUrl) throw new Error("Printify didn't return a mockup photo in time — try again in a moment.");
+
+    imgEl.src = mockupUrl;
+    imgEl.style.display = 'block';
+    btn.textContent = '✅ Real Photo Preview';
+    btn.disabled = false;
+    return mockupUrl;
+
+  } catch (err) {
+    noteEl.textContent = err.message;
+    noteEl.className = 'note error';
+    noteEl.style.display = 'block';
+    btn.textContent = '📸 See a Real Photo Preview';
+    btn.disabled = false;
+    return null;
+  }
+}
+
 let pendingOrder = null;
 try {
   const raw = localStorage.getItem('muggshotz_pending_order');
@@ -415,16 +457,8 @@ try {
   pendingOrder = null;
 }
 
-// Pre-set the full-wrap toggle from the choice already made at
-// generation time on index.html — the composition itself was already
-// built for wraparound or panel at that point, so this just keeps the
-// checkbox in sync rather than conflicting with an earlier decision.
 fullWrapEnabled = pendingOrder?.mugPrintMode === 'wraparound';
 
-// Honor the style/size/color the customer already picked in the
-// generator (while watching the live mockup update) — no reason to
-// make them choose all over again here. Falls back to the original
-// defaults if this pending order predates that feature.
 if (pendingOrder?.preselectedMugStyle && MUG_STYLES[pendingOrder.preselectedMugStyle]) {
   selectedStyle = pendingOrder.preselectedMugStyle;
 }
@@ -435,20 +469,8 @@ if (pendingOrder?.preselectedMugColor) {
   selectedColor = pendingOrder.preselectedMugColor;
 }
 
-// productIcon was only just added to index.html's goToOrder(). Any
-// pending order saved before that change simply won't have it — treated
-// safely here as "mug" (the original, only-ever behavior), so nothing
-// breaks for anyone mid-session during the rollout of this change.
-//
-// selectedProductFamily starts as whatever icon was picked before
-// generating, but is now just a STARTING SUGGESTION — the bridge grid
-// at the top of this page lets the customer override it entirely,
-// since the artwork itself works on any product regardless of which
-// aspect-ratio icon shaped it originally.
 let selectedProductFamily = pendingOrder?.productIcon || 'mug';
 
-// These are now small functions instead of fixed constants, since
-// selectedProductFamily can change after the page has already loaded.
 function isTravelMug(){ return selectedProductFamily === 'water bottle'; }
 function isMug(){ return selectedProductFamily === 'mug'; }
 function isSuitcase(){ return selectedProductFamily === 'suitcase'; }
@@ -457,7 +479,6 @@ function isToteBag(){ return selectedProductFamily === 'tote bag'; }
 function isPuzzle(){ return selectedProductFamily === 'puzzle'; }
 function isPhotoPoster(){ return selectedProductFamily === 'photo poster'; }
 
-// Mirrors lib/products-catalog.js "photo-poster" entry.
 const PHOTO_POSTER_CATALOG = {
   base: {
     sizes: {
@@ -487,9 +508,6 @@ const PUZZLE_SIZES = {
 };
 let selectedPuzzleSize = "96 pcs";
 
-// Suitcase pricing — kept in sync manually with lib/products-catalog.js
-// "suitcase" entry. Single color (Black), one design covers the whole
-// case (single-image layout), price varies by size only.
 const SUITCASE_SIZES = {
   "Small": { price: 169.95 },
   "Medium": { price: 194.95 },
@@ -497,9 +515,6 @@ const SUITCASE_SIZES = {
 };
 let selectedSuitcaseSize = "Small";
 
-// Phone case model list — kept in sync manually with lib/products-catalog.js
-// "phone-case-tough" entry. Flat $24.95 price across every model, single
-// image (single-image layout), no color picker — model IS the variant.
 const PHONE_CASE_MODELS = [
   "iPhone 11","iPhone 11 Pro","iPhone 11 Pro Max",
   "iPhone 12","iPhone 12 Mini","iPhone 12 Pro","iPhone 12 Pro Max",
@@ -514,9 +529,6 @@ const PHONE_CASE_MODELS = [
 const PHONE_CASE_PRICE = 24.95;
 let selectedPhoneModel = null;
 
-// Tote bag pricing — kept in sync manually with lib/products-catalog.js
-// "tote-bag" entry. Flat +$5 profit per size (not tiered), same 5 colors
-// available at every size.
 const TOTE_BAG_SIZES = {
   "13\" x 13\"": { price: 23.95, colors: [
     { name: "Beige", hex: "#E8DCC8" }, { name: "Black", hex: "#1c1c1c" },
@@ -537,8 +549,6 @@ const TOTE_BAG_SIZES = {
 let selectedToteSize = "13\" x 13\"";
 let selectedToteColor = null;
 
-// Real, working products — shown as clickable tiles in the bridge grid.
-// Adding a new working product later means adding one entry here.
 const BRIDGE_GRID_PRODUCTS = [
   { key: 'mug', icon: '☕', label: 'Coffee Mug', priceFrom: '$14.95' },
   { key: 'water bottle', icon: '🍶', label: 'Travel Cups', priceFrom: '$34.95' },
@@ -547,10 +557,6 @@ const BRIDGE_GRID_PRODUCTS = [
   { key: 'tote bag', icon: '👜', label: 'Tote Bag', priceFrom: '$23.95' },
   { key: 'puzzle', icon: '🧩', label: 'Photo Puzzle', priceFrom: '$38.95' }
 ];
-// Honest coming-soon list — shown behind the expandable "many more" bar,
-// not the main grid, since this is meant to grow continuously as new
-// products get built. Add a line here any time a new future product
-// idea comes up, even before it's actually sourced/built.
 const BRIDGE_GRID_COMING_SOON = [
   { icon: '🧸', label: 'Teddy Bear' },
   { icon: '💌', label: 'Greeting Card' },
@@ -616,12 +622,6 @@ function toggleComingSoonPanel(){
 function renderBridgeGrid(){
   const gridCard = document.getElementById('bridgeGridCard');
 
-  // A wraparound set is three purpose-built panels that only make sense
-  // together as one continuous coffee mug wrap — letting the customer
-  // switch to Suitcase/Tote/etc. from here would produce a genuinely
-  // broken result (mismatched, disconnected panels forced onto a
-  // single-image product), not just a suboptimal one. Lock it instead
-  // of pretending the choice is real.
   if (pendingOrder?.isWraparoundSet) {
     gridCard.innerHTML =
       '<div class="card-title">🎨 Your Wraparound Design</div>' +
@@ -834,7 +834,6 @@ if (!hasAnyDesign) {
   renderPreview();
 }
 
-// ===== Coffee mug functions (unchanged from before) =====
 function renderMugPreview(){
   const hasColors = !!MUG_STYLES[selectedStyle].sizes[selectedSize].colors;
   const colorList = hasColors ? MUG_STYLES[selectedStyle].sizes[selectedSize].colors : [];
@@ -844,11 +843,6 @@ function renderMugPreview(){
   const WHITE = '#ffffff';
   const DEFAULT_HANDLE = '#e6e6e6';
 
-  // Each mug style colors a DIFFERENT part of the mug — Color Pop
-  // (interior+handle), Trimmed (rim+handle), Accented (interior only).
-  // Classic White has no color choice at all. Map the single picked hex
-  // onto only the parts that style actually colors, instead of
-  // recoloring the whole mug the same way for every style.
   let bodyFill = WHITE, rimFill = WHITE, handleStroke = DEFAULT_HANDLE;
   if (pickedColor) {
     if (selectedStyle === 'Color Pop') {
@@ -881,9 +875,6 @@ function renderMugPreview(){
   svg.classList.toggle('size-15oz', selectedSize === '15oz');
 }
 
-// Maps the order page's display style name to the real catalog key
-// used server-side, since order.html's MUG_STYLES uses the friendly
-// display name but lib/products-catalog.js keys off e.g. "trimmed-mug".
 const MUG_STYLE_TO_PRODUCT_KEY = {
   "Classic White": "classic-white-mug",
   "Color Pop": "color-pop-mug",
@@ -891,10 +882,6 @@ const MUG_STYLE_TO_PRODUCT_KEY = {
   "Accented": "accented-mug"
 };
 
-// Shared by suitcase, phone case, and tote bag — all three are
-// single-image layout products, so one function covers all of them.
-// Whichever design was placed first (Left, Center, or Right) is used,
-// same fallback order the actual order submission already uses.
 async function fetchSingleImageMockup(productKey, sizeLabel, colorName, btnId, noteId, imgId){
   const btn = document.getElementById(btnId);
   const noteEl = document.getElementById(noteId);
@@ -919,30 +906,7 @@ async function fetchSingleImageMockup(productKey, sizeLabel, colorName, btnId, n
     return;
   }
 
-  btn.disabled = true;
-  btn.textContent = '📸 Generating your real photo... (a few seconds)';
-  noteEl.style.display = 'none';
-
-  try {
-    const resp = await fetch('/api/generate-mockup', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ productKey, sizeLabel, colorName, image })
-    });
-    const data = await resp.json();
-    if (!resp.ok) throw new Error(data.error || 'Could not generate a real photo preview.');
-
-    imgEl.src = data.mockupUrl;
-    imgEl.style.display = 'block';
-    btn.textContent = '✅ Real Photo Preview';
-  } catch (err) {
-    noteEl.textContent = err.message;
-    noteEl.className = 'note error';
-    noteEl.style.display = 'block';
-    btn.textContent = '📸 See a Real Photo Preview';
-  } finally {
-    btn.disabled = false;
-  }
+  await runMockupJob({ productKey, sizeLabel, colorName, image }, btn, noteEl, imgEl);
 }
 
 function renderPhotoPosterCard(){
@@ -979,38 +943,15 @@ async function fetchPosterMockup(){
     return;
   }
 
-  btn.disabled = true;
-  btn.textContent = '📸 Generating your real photo... (a few seconds)';
-  noteEl.style.display = 'none';
-
-  try {
-    const resp = await fetch('/api/generate-mockup', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        productKey: 'photo-poster',
-        sizeLabel: pendingOrder?.posterSize,
-        colorName: pendingOrder?.posterFrameColor,
-        posterFramed: pendingOrder?.posterFramed,
-        posterOrientation: pendingOrder?.posterOrientation,
-        posterFinish: pendingOrder?.posterFinish,
-        image
-      })
-    });
-    const data = await resp.json();
-    if (!resp.ok) throw new Error(data.error || 'Could not generate a real photo preview.');
-
-    imgEl.src = data.mockupUrl;
-    imgEl.style.display = 'block';
-    btn.textContent = '✅ Real Photo Preview';
-  } catch (err) {
-    noteEl.textContent = err.message;
-    noteEl.className = 'note error';
-    noteEl.style.display = 'block';
-    btn.textContent = '📸 See a Real Photo Preview';
-  } finally {
-    btn.disabled = false;
-  }
+  await runMockupJob({
+    productKey: 'photo-poster',
+    sizeLabel: pendingOrder?.posterSize,
+    colorName: pendingOrder?.posterFrameColor,
+    posterFramed: pendingOrder?.posterFramed,
+    posterOrientation: pendingOrder?.posterOrientation,
+    posterFinish: pendingOrder?.posterFinish,
+    image
+  }, btn, noteEl, imgEl);
 }
 
 function resetTravelMockupPreview(){
@@ -1043,10 +984,6 @@ async function fetchTravelMockupPreview(){
     return;
   }
 
-  btn.disabled = true;
-  btn.textContent = '📸 Generating your real photo... (a few seconds)';
-  noteEl.style.display = 'none';
-
   const left = pendingOrder?.placements?.left || null;
   const front = pendingOrder?.placements?.front || null;
   const right = pendingOrder?.placements?.right || null;
@@ -1063,26 +1000,7 @@ async function fetchTravelMockupPreview(){
     body.image = left || front || right || null;
   }
 
-  try {
-    const resp = await fetch('/api/generate-mockup', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
-    });
-    const data = await resp.json();
-    if (!resp.ok) throw new Error(data.error || 'Could not generate a real photo preview.');
-
-    imgEl.src = data.mockupUrl;
-    imgEl.style.display = 'block';
-    btn.textContent = '✅ Real Photo Preview';
-  } catch (err) {
-    noteEl.textContent = err.message;
-    noteEl.className = 'note error';
-    noteEl.style.display = 'block';
-    btn.textContent = '📸 See a Real Photo Preview';
-  } finally {
-    btn.disabled = false;
-  }
+  await runMockupJob(body, btn, noteEl, imgEl);
 }
 
 function resetMockupPreview(){
@@ -1103,36 +1021,16 @@ async function fetchMockupPreview(){
   const noteEl = document.getElementById('mockupPreviewNote');
   const imgEl = document.getElementById('mockupPreviewImg');
 
-  btn.disabled = true;
-  btn.textContent = '📸 Generating your real photo... (a few seconds)';
-  noteEl.style.display = 'none';
+  const url = await runMockupJob({
+    productKey: MUG_STYLE_TO_PRODUCT_KEY[selectedStyle],
+    sizeLabel: selectedSize,
+    colorName: selectedColor,
+    placements: pendingOrder?.placements || {},
+    printMode: fullWrapEnabled ? 'fullBleed' : 'standard'
+  }, btn, noteEl, imgEl);
 
-  try {
-    const resp = await fetch('/api/generate-mockup', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        productKey: MUG_STYLE_TO_PRODUCT_KEY[selectedStyle],
-        sizeLabel: selectedSize,
-        colorName: selectedColor,
-        placements: pendingOrder?.placements || {},
-        printMode: fullWrapEnabled ? 'fullBleed' : 'standard'
-      })
-    });
-    const data = await resp.json();
-    if (!resp.ok) throw new Error(data.error || 'Could not generate a real photo preview.');
-
-    imgEl.src = data.mockupUrl;
-    imgEl.style.display = 'block';
+  if (url) {
     document.querySelector('.mug-preview-wrap').style.display = 'none';
-    btn.textContent = '✅ Real Photo Preview';
-  } catch (err) {
-    noteEl.textContent = err.message + ' — showing the illustrated preview instead.';
-    noteEl.className = 'note error';
-    noteEl.style.display = 'block';
-    btn.textContent = '📸 See a Real Photo Preview';
-  } finally {
-    btn.disabled = false;
   }
 }
 
@@ -1218,11 +1116,6 @@ function renderColorGrid(){
 
 function calculateUpsell(){
   if (!pendingOrder) return { charge: 0, label: '' };
-  // Auto-generated wraparound set: flat +$3, regardless of how many
-  // slots are filled or whether the images are distinct — this is a
-  // completely separate charge from the manual-placement ladder below,
-  // even though both fill left/front/right. See create-checkout-session.js
-  // for why these must never be combined.
   if (pendingOrder.isWraparoundSet) {
     return { charge: 3, label: 'Wraparound design (+$3)' };
   }
@@ -1240,7 +1133,6 @@ function calculateUpsell(){
     : { charge: 6, label: 'Different designs on 3 sides' };
 }
 
-// ===== Travel mug functions (new) =====
 function renderTravelMugStyleGrid(){
   const grid = document.getElementById('travelMugStyleGrid');
   grid.innerHTML = '';
@@ -1294,7 +1186,6 @@ function pickTravelColor(el, colorData){
   resetTravelMockupPreview();
 }
 
-// ===== Shared summary logic, branches by mode =====
 function updateSummary(){
   let basePrice, upsellCharge = 0, upsellLabel = '', styleSizeLabel;
 
@@ -1324,8 +1215,6 @@ function updateSummary(){
     upsellCharge = upsell.charge;
     upsellLabel = upsell.label;
     styleSizeLabel = selectedStyle + ', ' + selectedSize;
-
-    // (Style button prices are set once in renderMugStyleGrid(), not per-update)
   }
 
   const giftCharge = giftMessageEnabled ? GIFT_MESSAGE_PRICE : 0;
@@ -1362,7 +1251,6 @@ function setStatus(msg, isError){
   el.textContent = msg;
 }
 
-// ===== Submit — branches by mode, both paths hit the same generic backend =====
 async function submitOrder(){
   const fullName = document.getElementById('fullName').value.trim();
   const email = document.getElementById('email').value.trim();
@@ -1395,9 +1283,6 @@ async function submitOrder(){
     if (!product) { setStatus('Please pick which travel mug you want.', true); return; }
     if (product.colors && !selectedTravelColor) { setStatus('Please pick a color.', true); return; }
 
-    // Option A mapping (see order.html build notes): Left slot becomes
-    // Front, Right slot becomes Back for front-back products; for
-    // single-image products, whichever slot has a design is used.
     const left = pendingOrder?.placements?.left || null;
     const front = pendingOrder?.placements?.front || null;
     const right = pendingOrder?.placements?.right || null;
@@ -1591,17 +1476,10 @@ async function submitOrder(){
   }
 }
 
-// ===== Page setup — switches between the two modes =====
 function setupPageForMode(){
   const unsupportedName = UNSUPPORTED_PRODUCT_NAMES[selectedProductFamily];
 
   if (unsupportedName) {
-    // Honest dead-end: this product has no real checkout flow yet. Show
-    // that plainly instead of silently substituting a mug — the bug
-    // this replaces let a customer buy a mug thinking it was a phone
-    // case, tote bag, card, or post-it. Note: bridgeGridCard is NOT
-    // hidden here on purpose — it must stay visible/clickable so the
-    // customer can pick a real product instead, right from this screen.
     document.getElementById('notAvailableCard').style.display = 'block';
     document.getElementById('notAvailableText').textContent =
       `${unsupportedName} isn't available to order yet — we're still building this one out. Pick a real option above instead.`;
@@ -1621,10 +1499,6 @@ function setupPageForMode(){
     document.getElementById('submitBtn').style.display = 'block';
   }
 
-  // All the product-specific cards that only one product family's flow
-// should show at a time. Hiding all of them first, then showing just
-// the right one(s), avoids the repeated long hide-lists that got
-// unwieldy as more products were added.
 const ALL_PRODUCT_SPECIFIC_CARDS = [
   'mugStyleCard','sizeCard','livePreviewCard','colorCard','fullWrapCard',
   'travelMugStyleCard','travelColorCard','suitcaseSizeCard','phoneCaseCard',
@@ -1676,8 +1550,6 @@ if (isTravelMug()) {
       'Your Photo/Poster options were locked in before generation — see the card below for what was chosen.';
     renderPhotoPosterCard();
   } else if (isMug()) {
-    // This branch is ONLY for actual coffee mugs, never a silent
-    // default for anything else.
     hideAllProductCards();
     document.getElementById('mugStyleCard').style.display = 'block';
     document.getElementById('sizeCard').style.display = 'block';
