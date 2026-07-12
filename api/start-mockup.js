@@ -115,8 +115,11 @@ async function handleCheck(req, res) {
     : null;
 
   if (mockupUrl) {
-    deletePrintifyProduct(productId).catch(() => {});
-    return res.status(200).json({ ready: true, mockupUrl });
+    // TEMPORARILY DISABLED for diagnosis — leave this test product in
+    // Printify's shop so it can be inspected directly. Re-enable once
+    // the travel mug mockup issue is resolved.
+    // deletePrintifyProduct(productId).catch(() => {});
+    return res.status(200).json({ ready: true, mockupUrl, allImages: data.images.map(img => img.src), productId });
   }
 
   return res.status(200).json({ ready: false });
