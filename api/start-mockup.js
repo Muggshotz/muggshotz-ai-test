@@ -8,6 +8,7 @@ import {
   getPlaceholderDimensions,
   buildWraparoundImage,
   buildFullBleedImage,
+  buildSeamlessWrapImage,
   buildFrontBackImages,
   buildSingleImage,
   resolveVariant,
@@ -68,12 +69,19 @@ async function handleStart(req, res) {
     if (!placements || !(placements.left || placements.front || placements.right)) {
       throw new Error("At least one design is required to generate a mockup.");
     }
-    const isFullBleed = printMode === "fullBleed" || printMode === "allCup";
+    // Matches create-printify-order.js's split — "fullBleed" (Wraparound
+    // scene-continuation, no cropping) vs "allCup" (reserved for the
+    // future Ewww Stew overflow line). See buildSeamlessWrapImage's
+    // comment there for why these must stay separate.
+    const isSeamlessWrap = printMode === "fullBleed";
+    const isFullBleed = printMode === "allCup";
     const { width, height, position } = await getPlaceholderDimensions(
       product.blueprintId, product.printProviderId, variantId
     );
     const buffer = isFullBleed
       ? await buildFullBleedImage(placements.front || placements.left || placements.right, width, height)
+      : isSeamlessWrap
+      ? await buildSeamlessWrapImage(placements.front || placements.left || placements.right, width, height)
       : await buildWraparoundImage(placements, width, height);
     const imageId = await uploadImageToPrintify(buffer, `muggshotz-mockup-preview-${Date.now()}.png`);
     printifyImages[position] = imageId;
@@ -99,12 +107,12 @@ async function handleStart(req, res) {
     throw new Error("Real-photo mockups aren't available for this product type yet.");
   }
 
-  // CALIBRATION STEP 1 of N — matches placeProductOrder's logic in
+  // RESOLVED — matches placeProductOrder's logic in
   // create-printify-order.js, so the preview accurately reflects what a
   // real order would actually look like.
   const isCoffeeMug = product.layoutType === "three-slot-wrap";
-  const imageScale = isCoffeeMug ? 0.25 : 1;
-  const imageY = isCoffeeMug ? 0.5 : 0.5;
+  const imageScale = isCoffeeMug ? 0.8 : 1;
+  const imageY = isCoffeeMug ? 0.58 : 0.5;
 
   const { productId } = await createPrintifyProduct(
     printifyImages,
