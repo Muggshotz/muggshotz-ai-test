@@ -292,9 +292,12 @@
 </div>
 </div>
 
-<button class="quick-btn" id="genPreviewBtn" onclick="fetchGeneratorMockupPreview()" style="display:none;margin-top:1.1rem;width:100%;text-align:center;padding:.65rem;border-radius:8px">📸 See a Real Photo Preview</button>
-<div class="note" id="genPreviewNote" style="margin-top:.5rem;text-align:center;display:none"></div>
-<img id="genPreviewImg" style="display:none;width:100%;border-radius:12px;border:1px solid #ff6a00;margin-top:.75rem"/>
+<div id="genPreviewSection" style="display:none;margin-top:1.1rem">
+<div class="note" style="margin-top:0;margin-bottom:.5rem;text-align:center;color:#888;letter-spacing:.5px;text-transform:uppercase;font-size:11px">🖼️ Real Photo Preview</div>
+<div class="note" id="genPreviewLoading" style="text-align:center;display:none"><span class="spinner"></span>Loading your real mockup preview...</div>
+<div class="note" id="genPreviewNote" style="text-align:center;display:none"></div>
+<img id="genPreviewImg" style="display:none;width:100%;border-radius:12px;border:1px solid #ff6a00"/>
+</div>
 <button class="quick-btn" id="libraryToggleBtn" onclick="toggleLibrary()" style="margin-top:1.1rem;width:100%;text-align:center;padding:.65rem;border-radius:8px">📚 My Designs (0)</button>
 <button class="quick-btn" onclick="clearAllDesigns()" style="margin-top:.5rem;width:100%;text-align:center;padding:.65rem;border-radius:8px;border-color:#5a2a2a;color:#ff8a7a">🧹 Clear All Designs — Fresh Start</button>
 <div id="libraryPanel" style="display:none;margin-top:.75rem">
@@ -1961,14 +1964,14 @@ function updatePlacementSummary(){
 
   const showMugOptions = (assignedCount>0 && product==='mug');
   const optionsWrap=document.getElementById('genMugOptionsWrap');
-  const previewBtn=document.getElementById('genPreviewBtn');
+  const previewSection=document.getElementById('genPreviewSection');
   if(optionsWrap) optionsWrap.style.display = showMugOptions ? 'block' : 'none';
-  if(previewBtn) previewBtn.style.display = showMugOptions ? 'block' : 'none';
+  if(previewSection) previewSection.style.display = showMugOptions ? 'block' : 'none';
   if(showMugOptions){
     renderGenMugStyleGrid();
     renderGenMugColorGrid();
   }
-  resetGeneratorMockupPreview();
+  maybeAutoFetchMockup();
 }
 
 const GEN_MUG_STYLES = {
@@ -2045,7 +2048,7 @@ function pickGenMugStyle(styleName){
   });
   selectedGenColor=null;
   renderGenMugColorGrid();
-  resetGeneratorMockupPreview();
+  maybeAutoFetchMockup();
 }
 
 function pickGenMugSize(size){
@@ -2054,7 +2057,7 @@ function pickGenMugSize(size){
   document.getElementById('genSize15Btn').classList.toggle('selected', size==='15oz');
   selectedGenColor=null;
   renderGenMugColorGrid();
-  resetGeneratorMockupPreview();
+  maybeAutoFetchMockup();
 }
 
 function renderGenMugColorGrid(){
@@ -2084,30 +2087,82 @@ function pickGenMugColor(el,colorName){
   document.querySelectorAll('#genMugColorGrid .color-btn').forEach(b=>b.classList.remove('selected'));
   el.classList.add('selected');
   selectedGenColor=colorName;
-  resetGeneratorMockupPreview();
+  maybeAutoFetchMockup();
 }
 
-function resetGeneratorMockupPreview(){
-  const btn=document.getElementById('genPreviewBtn');
-  const noteEl=document.getElementById('genPreviewNote');
-  const imgEl=document.getElementById('genPreviewImg');
-  if(!btn)return;
-  btn.textContent='📸 See a Real Photo Preview';
-  btn.disabled=false;
-  if(noteEl)noteEl.style.display='none';
-  if(imgEl)imgEl.style.display='none';
+// ===== Automatic real-photo mockup engine =====
+// Replaces the old manual "See a Real Photo Preview" button. The moment
+// a design is placed into a slot (or the customer changes style/size/
+// color), this fires on its own — no click required, since by that
+// point the customer has already approved the design and told us what
+// they want to buy. We already have everything needed to show them
+// exactly what it'll look like.
+//
+// autoMockupRequestId guards against race conditions: if the customer
+// changes color again while an older fetch is still in flight, the
+// stale response is discarded instead of overwriting the newer choice.
+// autoMockupDebounceTimer prevents spamming Printify if someone taps
+// through several colors quickly — only the last selection within a
+// short window actually triggers a real fetch.
+let autoMockupRequestId = 0;
+let autoMockupDebounceTimer = null;
+
+function maybeAutoFetchMockup(){
+  // SCOPED TO COFFEE MUG FOR NOW — every other product still needs its
+  // own style/size/color picker built into this page before it can get
+  // the same automatic treatment. Extending this later just means
+  // adding another branch here, not rewriting the engine below.
+  if (product !== 'mug') return;
+
+  const assignedCount = ['left','front','right'].filter(p=>placements[p]).length;
+  if (assignedCount === 0) {
+    hideAutoMockup();
+    return;
+  }
+
+  const requiresColor = !!(GEN_MUG_STYLES[selectedGenStyle]?.colors?.[selectedGenSize]);
+  if (requiresColor && !selectedGenColor) {
+    hideAutoMockup();
+    return;
+  }
+
+  clearTimeout(autoMockupDebounceTimer);
+  autoMockupDebounceTimer = setTimeout(runAutoMockupFetch, 500);
 }
 
-// ===== Shared real-photo mockup job runner (two-step start/check flow) =====
-// Kept in sync with order.html's version. Calls /api/start-mockup, which
-// handles both "start" and "check" actions in one combined function
-// (to stay within Vercel's Hobby-plan 12-function limit). Every request
-// stays short — well under the 10 second per-function cap — even though
-// the overall wait for the real photo can run up to ~30 seconds.
-async function runMockupJob(body, btn, noteEl, imgEl){
-  btn.disabled = true;
-  btn.textContent = '📸 Generating your real photo... (a few seconds)';
+function hideAutoMockup(){
+  const loadingEl = document.getElementById('genPreviewLoading');
+  const noteEl = document.getElementById('genPreviewNote');
+  const imgEl = document.getElementById('genPreviewImg');
+  if (loadingEl) loadingEl.style.display = 'none';
+  if (noteEl) noteEl.style.display = 'none';
+  if (imgEl) imgEl.style.display = 'none';
+}
+
+async function runAutoMockupFetch(){
+  const thisRequestId = ++autoMockupRequestId;
+  const loadingEl = document.getElementById('genPreviewLoading');
+  const noteEl = document.getElementById('genPreviewNote');
+  const imgEl = document.getElementById('genPreviewImg');
+
+  loadingEl.style.display = 'block';
   noteEl.style.display = 'none';
+  imgEl.style.display = 'none';
+
+  const productKey = GEN_STYLE_TO_PRODUCT_KEY[selectedGenStyle];
+  const printifyPlacements = {
+    left: placements.left ? findDesignById(placements.left).url : null,
+    front: placements.front ? findDesignById(placements.front).url : null,
+    right: placements.right ? findDesignById(placements.right).url : null
+  };
+
+  const body = {
+    productKey,
+    sizeLabel: selectedGenSize,
+    colorName: selectedGenColor,
+    placements: printifyPlacements,
+    printMode: (product==='mug' && mugPrintMode==='wraparound') ? 'fullBleed' : 'standard'
+  };
 
   try {
     const startResp = await fetch('/api/start-mockup', {
@@ -2117,6 +2172,7 @@ async function runMockupJob(body, btn, noteEl, imgEl){
     });
     const startData = await startResp.json();
     if (!startResp.ok) throw new Error(startData.error || 'Could not start the real photo preview.');
+    if (thisRequestId !== autoMockupRequestId) return; // a newer request has since taken over
 
     const productId = startData.productId;
     let mockupUrl = null;
@@ -2124,6 +2180,8 @@ async function runMockupJob(body, btn, noteEl, imgEl){
 
     for (let i = 0; i < maxTries; i++) {
       await new Promise(r => setTimeout(r, 1500));
+      if (thisRequestId !== autoMockupRequestId) return; // superseded mid-poll
+
       const checkResp = await fetch('/api/start-mockup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -2137,51 +2195,20 @@ async function runMockupJob(body, btn, noteEl, imgEl){
       }
     }
 
-    if (!mockupUrl) throw new Error("Printify didn't return a mockup photo in time — try again in a moment.");
+    if (thisRequestId !== autoMockupRequestId) return;
+    if (!mockupUrl) throw new Error("Printify didn't return a mockup photo in time — it'll retry automatically the next time you change something.");
 
+    loadingEl.style.display = 'none';
     imgEl.src = mockupUrl;
     imgEl.style.display = 'block';
-    btn.textContent = '✅ Real Photo Preview';
-    btn.disabled = false;
-    return mockupUrl;
 
   } catch (err) {
+    if (thisRequestId !== autoMockupRequestId) return;
+    loadingEl.style.display = 'none';
     noteEl.textContent = err.message;
     noteEl.className = 'note error';
     noteEl.style.display = 'block';
-    btn.textContent = '📸 See a Real Photo Preview';
-    btn.disabled = false;
-    return null;
   }
-}
-
-async function fetchGeneratorMockupPreview(){
-  const btn=document.getElementById('genPreviewBtn');
-  const noteEl=document.getElementById('genPreviewNote');
-  const imgEl=document.getElementById('genPreviewImg');
-
-  const productKey=GEN_STYLE_TO_PRODUCT_KEY[selectedGenStyle];
-  const requiresColor=!!(GEN_MUG_STYLES[selectedGenStyle]?.colors?.[selectedGenSize]);
-  if(requiresColor && !selectedGenColor){
-    noteEl.textContent='Please pick a color above first.';
-    noteEl.className='note error';
-    noteEl.style.display='block';
-    return;
-  }
-
-  const printifyPlacements = {
-    left: placements.left ? findDesignById(placements.left).url : null,
-    front: placements.front ? findDesignById(placements.front).url : null,
-    right: placements.right ? findDesignById(placements.right).url : null
-  };
-
-  await runMockupJob({
-    productKey,
-    sizeLabel:selectedGenSize,
-    colorName:selectedGenColor,
-    placements:printifyPlacements,
-    printMode:(product==='mug' && mugPrintMode==='wraparound')?'fullBleed':'standard'
-  }, btn, noteEl, imgEl);
 }
 
 function goToOrder(){
