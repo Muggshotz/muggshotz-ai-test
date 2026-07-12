@@ -307,6 +307,7 @@
 <div class="note" id="genPreviewLoading" style="text-align:center;display:none"><span class="spinner"></span>Loading your real mockup preview...</div>
 <div class="note" id="genPreviewNote" style="text-align:center;display:none"></div>
 <img id="genPreviewImg" style="display:none;width:100%;border-radius:12px;border:1px solid #ff6a00"/>
+<div id="genPreviewGallery" style="display:none;gap:8px"></div>
 </div>
 <button class="quick-btn" id="libraryToggleBtn" onclick="toggleLibrary()" style="margin-top:1.1rem;width:100%;text-align:center;padding:.65rem;border-radius:8px">📚 My Designs (0)</button>
 <button class="quick-btn" onclick="clearAllDesigns()" style="margin-top:.5rem;width:100%;text-align:center;padding:.65rem;border-radius:8px;border-color:#5a2a2a;color:#ff8a7a">🧹 Clear All Designs — Fresh Start</button>
@@ -2258,9 +2259,11 @@ function hideAutoMockup(){
   const loadingEl = document.getElementById('genPreviewLoading');
   const noteEl = document.getElementById('genPreviewNote');
   const imgEl = document.getElementById('genPreviewImg');
+  const galleryEl = document.getElementById('genPreviewGallery');
   if (loadingEl) loadingEl.style.display = 'none';
   if (noteEl) noteEl.style.display = 'none';
   if (imgEl) imgEl.style.display = 'none';
+  if (galleryEl) { galleryEl.style.display = 'none'; galleryEl.innerHTML = ''; }
   autoMockupRequestId++; // invalidate any in-flight fetch so it can't pop back in
 }
 
@@ -2268,8 +2271,10 @@ function showAutoMockupNote(msg){
   const loadingEl = document.getElementById('genPreviewLoading');
   const noteEl = document.getElementById('genPreviewNote');
   const imgEl = document.getElementById('genPreviewImg');
+  const galleryEl = document.getElementById('genPreviewGallery');
   if (loadingEl) loadingEl.style.display = 'none';
   if (imgEl) imgEl.style.display = 'none';
+  if (galleryEl) { galleryEl.style.display = 'none'; galleryEl.innerHTML = ''; }
   if (noteEl) {
     noteEl.textContent = msg;
     noteEl.className = 'note';
@@ -2325,10 +2330,13 @@ async function runAutoMockupFetch(){
   const loadingEl = document.getElementById('genPreviewLoading');
   const noteEl = document.getElementById('genPreviewNote');
   const imgEl = document.getElementById('genPreviewImg');
+  const galleryEl = document.getElementById('genPreviewGallery');
 
   loadingEl.style.display = 'block';
   noteEl.style.display = 'none';
   imgEl.style.display = 'none';
+  galleryEl.style.display = 'none';
+  galleryEl.innerHTML = '';
 
   const body = buildMockupRequestBody();
   if (!body) { loadingEl.style.display = 'none'; return; }
@@ -2346,6 +2354,7 @@ async function runAutoMockupFetch(){
 
     const productId = startData.productId;
     let mockupUrl = null;
+    let mockupUrls = [];
     const maxTries = 20;
 
     for (let i = 0; i < maxTries; i++) {
@@ -2361,6 +2370,7 @@ async function runAutoMockupFetch(){
       if (!checkResp.ok) throw new Error(checkData.error || 'Could not check on the real photo preview.');
       if (checkData.ready) {
         mockupUrl = checkData.mockupUrl;
+        mockupUrls = Array.isArray(checkData.mockupUrls) ? checkData.mockupUrls : [];
         break;
       }
     }
@@ -2369,8 +2379,24 @@ async function runAutoMockupFetch(){
     if (!mockupUrl) throw new Error("Printify didn't return a mockup photo in time — it'll retry automatically the next time you change something.");
 
     loadingEl.style.display = 'none';
-    imgEl.src = mockupUrl;
-    imgEl.style.display = 'block';
+
+    // Coffee mugs print as one continuous wraparound design, and
+    // Printify typically photographs that from a few different angles
+    // (front, and a couple of turned views) — show all of them the
+    // customer got instead of just the first shot, so they can see how
+    // Left/Center/Right actually reads around the mug.
+    if (product === 'mug' && mockupUrls.length > 1) {
+      mockupUrls.slice(0, 3).forEach(url => {
+        const img = document.createElement('img');
+        img.src = url;
+        img.style.cssText = 'flex:1;min-width:0;border-radius:12px;border:1px solid #ff6a00;object-fit:cover';
+        galleryEl.appendChild(img);
+      });
+      galleryEl.style.display = 'flex';
+    } else {
+      imgEl.src = mockupUrl;
+      imgEl.style.display = 'block';
+    }
 
   } catch (err) {
     if (thisRequestId !== autoMockupRequestId) return;
