@@ -111,7 +111,7 @@ async function handleStart(req, res) {
   // create-printify-order.js, so the preview accurately reflects what a
   // real order would actually look like.
   const isCoffeeMug = product.layoutType === "three-slot-wrap";
-  const imageScale = isCoffeeMug ? 0.85 : 1;
+  const imageScale = isCoffeeMug ? 1 : 1;
   const imageY = isCoffeeMug ? 0.58 : 0.5;
 
   const { productId } = await createPrintifyProduct(
