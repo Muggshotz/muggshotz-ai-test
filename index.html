@@ -307,7 +307,8 @@
 <div class="note" id="genPreviewLoading" style="text-align:center;display:none"><span class="spinner"></span>Loading your real mockup preview...</div>
 <div class="note" id="genPreviewNote" style="text-align:center;display:none"></div>
 <img id="genPreviewImg" style="display:none;width:100%;border-radius:12px;border:1px solid #ff6a00"/>
-<div id="genPreviewGallery" style="display:none;gap:8px"></div>
+<div id="genPreviewGallery" style="display:none;gap:8px;overflow-x:auto;padding-bottom:4px"></div>
+<div class="note" id="genPreviewGalleryHint" style="display:none;margin-top:4px;text-align:center">Swipe to see all angles Printify photographed — one may show the back of the mug if it's blank.</div>
 </div>
 <button class="quick-btn" id="libraryToggleBtn" onclick="toggleLibrary()" style="margin-top:1.1rem;width:100%;text-align:center;padding:.65rem;border-radius:8px">📚 My Designs (0)</button>
 <button class="quick-btn" onclick="clearAllDesigns()" style="margin-top:.5rem;width:100%;text-align:center;padding:.65rem;border-radius:8px;border-color:#5a2a2a;color:#ff8a7a">🧹 Clear All Designs — Fresh Start</button>
@@ -2260,10 +2261,12 @@ function hideAutoMockup(){
   const noteEl = document.getElementById('genPreviewNote');
   const imgEl = document.getElementById('genPreviewImg');
   const galleryEl = document.getElementById('genPreviewGallery');
+  const galleryHintEl = document.getElementById('genPreviewGalleryHint');
   if (loadingEl) loadingEl.style.display = 'none';
   if (noteEl) noteEl.style.display = 'none';
   if (imgEl) imgEl.style.display = 'none';
   if (galleryEl) { galleryEl.style.display = 'none'; galleryEl.innerHTML = ''; }
+  if (galleryHintEl) galleryHintEl.style.display = 'none';
   autoMockupRequestId++; // invalidate any in-flight fetch so it can't pop back in
 }
 
@@ -2272,9 +2275,11 @@ function showAutoMockupNote(msg){
   const noteEl = document.getElementById('genPreviewNote');
   const imgEl = document.getElementById('genPreviewImg');
   const galleryEl = document.getElementById('genPreviewGallery');
+  const galleryHintEl = document.getElementById('genPreviewGalleryHint');
   if (loadingEl) loadingEl.style.display = 'none';
   if (imgEl) imgEl.style.display = 'none';
   if (galleryEl) { galleryEl.style.display = 'none'; galleryEl.innerHTML = ''; }
+  if (galleryHintEl) galleryHintEl.style.display = 'none';
   if (noteEl) {
     noteEl.textContent = msg;
     noteEl.className = 'note';
@@ -2331,12 +2336,14 @@ async function runAutoMockupFetch(){
   const noteEl = document.getElementById('genPreviewNote');
   const imgEl = document.getElementById('genPreviewImg');
   const galleryEl = document.getElementById('genPreviewGallery');
+  const galleryHintEl = document.getElementById('genPreviewGalleryHint');
 
   loadingEl.style.display = 'block';
   noteEl.style.display = 'none';
   imgEl.style.display = 'none';
   galleryEl.style.display = 'none';
   galleryEl.innerHTML = '';
+  galleryHintEl.style.display = 'none';
 
   const body = buildMockupRequestBody();
   if (!body) { loadingEl.style.display = 'none'; return; }
@@ -2384,15 +2391,19 @@ async function runAutoMockupFetch(){
     // Printify typically photographs that from a few different angles
     // (front, and a couple of turned views) — show all of them the
     // customer got instead of just the first shot, so they can see how
-    // Left/Center/Right actually reads around the mug.
+    // Left/Center/Right actually reads around the mug. Fixed-width
+    // scrollable thumbnails instead of squeezing 5 into one row, which
+    // would make each one too small to see anything on a phone.
     if (product === 'mug' && mockupUrls.length > 1) {
-      mockupUrls.slice(0, 3).forEach(url => {
+      mockupUrls.slice(0, 5).forEach(url => {
         const img = document.createElement('img');
         img.src = url;
-        img.style.cssText = 'flex:1;min-width:0;border-radius:12px;border:1px solid #ff6a00;object-fit:cover';
+        img.style.cssText = 'flex:0 0 150px;width:150px;height:150px;border-radius:12px;border:1px solid #ff6a00;object-fit:contain;background:#fff;cursor:pointer';
+        img.onclick = () => window.open(url, '_blank');
         galleryEl.appendChild(img);
       });
       galleryEl.style.display = 'flex';
+      galleryHintEl.style.display = 'block';
     } else {
       imgEl.src = mockupUrl;
       imgEl.style.display = 'block';
