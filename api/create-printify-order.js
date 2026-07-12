@@ -223,10 +223,19 @@ export function resolveVariant(product, sizeLabel, colorName) {
   return { variantId: sizeEntry.variantId, price: sizeEntry.price };
 }
 
+// UPDATED (July 2026, Alyx's request): scale reduced from 1.0 (100% —
+// filling the entire print area edge-to-edge, zero margin) to 0.8 (80%)
+// after real printed/mocked-up results looked too tightly cropped —
+// text and faces were running right to the edge of the print area. This
+// is the exact same x/y/scale placement control Printify's own manual
+// editor exposes when a person resizes a design by hand; we're just
+// setting a smaller default here instead of leaving it at full size.
+// Applies everywhere a product gets created — both real orders and
+// real-photo mockup previews — since both go through this one function.
 export async function createPrintifyProduct(images, { blueprintId, printProviderId, displayName }, variantId, title) {
   const placeholders = Object.entries(images).map(([position, imageId]) => ({
     position,
-    images: [{ id: imageId, x: 0.5, y: 0.5, scale: 1, angle: 0 }]
+    images: [{ id: imageId, x: 0.5, y: 0.5, scale: 0.8, angle: 0 }]
   }));
 
   const response = await fetch(`https://api.printify.com/v1/shops/${SHOP_ID}/products.json`, {
