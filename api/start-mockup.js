@@ -12,6 +12,7 @@ import {
   buildSingleImage,
   resolveVariant,
   resolvePhotoPosterSelection,
+  resolveVariantIdByTitleMatch,
   createPrintifyProduct
 } from "./create-printify-order.js";
 
@@ -48,6 +49,13 @@ async function handleStart(req, res) {
     variantId = resolved.variantId;
     effectiveBlueprintId = resolved.blueprintId;
     effectivePrintProviderId = resolved.printProviderId;
+  } else if (productKey === "travel-mug-20oz") {
+    // UPDATED (July 2026): matches the same special-case in
+    // create-printify-order.js — this blueprint has one orderable
+    // variant with no hardcoded ID in the catalog, resolved live by name.
+    effectiveBlueprintId = product.blueprintId;
+    effectivePrintProviderId = product.printProviderId;
+    variantId = await resolveVariantIdByTitleMatch(effectiveBlueprintId, effectivePrintProviderId, [sizeLabel]);
   } else {
     ({ variantId } = resolveVariant(product, sizeLabel, colorName));
     effectiveBlueprintId = product.blueprintId;
@@ -115,11 +123,8 @@ async function handleCheck(req, res) {
     : null;
 
   if (mockupUrl) {
-    // TEMPORARILY DISABLED for diagnosis — leave this test product in
-    // Printify's shop so it can be inspected directly. Re-enable once
-    // the travel mug mockup issue is resolved.
-    // deletePrintifyProduct(productId).catch(() => {});
-    return res.status(200).json({ ready: true, mockupUrl, allImages: data.images.map(img => img.src), productId });
+    deletePrintifyProduct(productId).catch(() => {});
+    return res.status(200).json({ ready: true, mockupUrl });
   }
 
   return res.status(200).json({ ready: false });
