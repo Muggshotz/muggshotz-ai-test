@@ -78,4 +78,61 @@ async function handleStart(req, res) {
     if (frontBuf) printifyImages["mug_front"] = await uploadImageToPrintify(frontBuf, `muggshotz-mockup-front-${Date.now()}.png`);
     if (backBuf) printifyImages["mug_back"] = await uploadImageToPrintify(backBuf, `muggshotz-mockup-back-${Date.now()}.png`);
 
-  } else if (product.layoutType
+  } else if (product.layoutType === "single-image") {
+    if (!image) throw new Error("An image is required to generate a mockup.");
+    const dims = product.printDimensions?.front;
+    const { width, height, position } = dims
+      ? { ...dims, position: "front" }
+      : await getPlaceholderDimensions(effectiveBlueprintId, effectivePrintProviderId, variantId);
+    const buffer = await buildSingleImage(image, width, height);
+    printifyImages[position] = await uploadImageToPrintify(buffer, `muggshotz-mockup-preview-${Date.now()}.png`);
+
+  } else {
+    throw new Error("Real-photo mockups aren't available for this product type yet.");
+  }
+
+  const { productId } = await createPrintifyProduct(
+    printifyImages,
+    { blueprintId: effectiveBlueprintId, printProviderId: effectivePrintProviderId, displayName: product.displayName },
+    variantId,
+    `[PREVIEW - DELETE] Muggshotz ${product.displayName} mockup`
+  );
+
+  return res.status(200).json({ productId });
+}
+
+async function handleCheck(req, res) {
+  const { productId } = req.body;
+  if (!productId) throw new Error("productId is required.");
+
+  const response = await fetch(`https://api.printify.com/v1/shops/${SHOP_ID}/products/${productId}.json`, {
+    headers: { "Authorization": `Bearer ${process.env.PRINTIFY_API_TOKEN}` }
+  });
+  const data = await response.json();
+
+  const mockupUrl = (response.ok && Array.isArray(data.images) && data.images.length > 0)
+    ? data.images[0].src
+    : null;
+
+  if (mockupUrl) {
+    deletePrintifyProduct(productId).catch(() => {});
+    return res.status(200).json({ ready: true, mockupUrl });
+  }
+
+  return res.status(200).json({ ready: false });
+}
+
+export default async function handler(req, res) {
+  if (req.method !== "POST") {
+    return res.status(405).json({ error: "Method not allowed" });
+  }
+
+  try {
+    if (req.body.action === "check") {
+      return await handleCheck(req, res);
+    }
+    return await handleStart(req, res);
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+}
