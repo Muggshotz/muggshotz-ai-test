@@ -187,6 +187,28 @@ export async function buildFullBleedImage(imageSource, canvasWidth, canvasHeight
     .toBuffer();
 }
 
+// NEW (July 2026, Alyx's request): the customer-facing "Wraparound"
+// print mode (auto-generated three-panel continuous scene) was sharing
+// buildFullBleedImage's cover-fit crop — same head-cropping bug as the
+// three-slot-wrap fix, just reached through a different code path
+// (printMode === "fullBleed"), which is why lowering the Printify
+// placement scale didn't help: the crop was already baked into the
+// print file before it ever reached Printify. This function uses
+// contain-fit instead, so nothing gets cropped away. Deliberately kept
+// SEPARATE from buildFullBleedImage — that one's cover-fit crop-to-fill
+// behavior is reserved for the future Ewww Stew line, where designs are
+// supposed to intentionally overflow past the print margins. Only
+// printMode === "allCup" should ever call buildFullBleedImage going
+// forward; printMode === "fullBleed" (the Wraparound scene-continuation
+// customers actually use today) calls this one instead.
+export async function buildSeamlessWrapImage(imageSource, canvasWidth, canvasHeight) {
+  const WHITE = { r: 255, g: 255, b: 255 };
+  return await sharp(await resolveImageBuffer(imageSource))
+    .resize(canvasWidth, canvasHeight, { fit: "contain", background: WHITE })
+    .png()
+    .toBuffer();
+}
+
 export async function buildSingleImage(imageSource, canvasWidth, canvasHeight) {
   const WHITE = { r: 255, g: 255, b: 255 };
   return await sharp(await resolveImageBuffer(imageSource))
@@ -368,17 +390,26 @@ export async function placeProductOrder({
     if (!placements || !(placements.left || placements.front || placements.right)) {
       throw new Error("At least one design is required, in any slot.");
     }
-    const isFullBleed = printMode === "fullBleed" || printMode === "allCup";
+    // "fullBleed" = customer-facing Wraparound scene-continuation mode
+    // (no cropping). "allCup" = reserved for the future Ewww Stew line,
+    // which deliberately wants overflow/crop. Do NOT collapse these
+    // back into one branch — see buildSeamlessWrapImage's comment above.
+    const isSeamlessWrap = printMode === "fullBleed";
+    const isFullBleed = printMode === "allCup";
     const { width, height, position } = await getPlaceholderDimensions(
       effectiveBlueprintId, effectivePrintProviderId, variantId
     );
     const buffer = isFullBleed
       ? await buildFullBleedImage(placements.front || placements.left || placements.right, width, height)
+      : isSeamlessWrap
+      ? await buildSeamlessWrapImage(placements.front || placements.left || placements.right, width, height)
       : await buildWraparoundImage(placements, width, height);
     const imageId = await uploadImageToPrintify(buffer, `muggshotz-${Date.now()}.png`);
     printifyImages[position] = imageId;
     pricing = isFullBleed
       ? { upsellCharge: 0, reason: "All-Cup full-bleed print — offered free of charge." }
+      : isSeamlessWrap
+      ? { upsellCharge: 0, reason: "Wraparound scene-continuation print — offered free of charge." }
       : calculateUpsellCharge(placements);
 
   } else if (product.layoutType === "front-back") {
@@ -410,15 +441,16 @@ export async function placeProductOrder({
     throw new Error(`Unknown layoutType "${product.layoutType}" for product "${productKey}".`);
   }
 
-  // CALIBRATION STEP 2 of N (Alyx's request, July 2026): dropped further
-  // starting too small (50%, dead-center) to isolate whether SCALE is
-  // really the cause of the head-cropping, one variable at a time,
-  // before nudging it back up incrementally. Everything else keeps
-  // full-size, centered placement, since travel mugs/suitcases/etc.
-  // were already coming out correctly.
+  // RESOLVED (July 2026): the calibration test confirmed scale/position
+  // was never the real problem — the actual bug was buildFullBleedImage
+  // still cropping, reached only through the Wraparound auto-continuation
+  // path. Now that buildSeamlessWrapImage fixes the crop at the source,
+  // restoring the values already validated as correct for the manual
+  // three-slot-wrap mode. Everything else keeps full-size, centered
+  // placement, since travel mugs/suitcases/etc. were already correct.
   const isCoffeeMug = product.layoutType === "three-slot-wrap";
-  const imageScale = isCoffeeMug ? 0.25 : 1;
-  const imageY = isCoffeeMug ? 0.5 : 0.5;
+  const imageScale = isCoffeeMug ? 0.8 : 1;
+  const imageY = isCoffeeMug ? 0.58 : 0.5;
 
   const productTitle = `Muggshotz ${product.displayName}${customerName ? " - " + customerName : ""}`;
   const { productId } = await createPrintifyProduct(
