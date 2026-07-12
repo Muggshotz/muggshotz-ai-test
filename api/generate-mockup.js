@@ -1,3 +1,7 @@
+export const config = {
+  maxDuration: 30,
+};
+
 import { getProduct } from "../lib/products-catalog.js";
 import {
   uploadImageToPrintify,
@@ -13,10 +17,6 @@ import {
 
 const SHOP_ID = "27439202";
 
-// Deletes the temporary draft product. Fire-and-forget from the
-// caller's point of view is tempting, but we await it so a failed
-// delete shows up in logs instead of silently leaving drafts behind
-// in the Printify dashboard.
 async function deletePrintifyProduct(productId) {
   const response = await fetch(`https://api.printify.com/v1/shops/${SHOP_ID}/products/${productId}.json`, {
     method: "DELETE",
@@ -28,9 +28,6 @@ async function deletePrintifyProduct(productId) {
   }
 }
 
-// Printify generates real product photos asynchronously after a
-// product is created — they're not always ready instantly. Polls the
-// product a few times, waiting for at least one non-empty mockup image.
 async function waitForMockupImages(productId, attempts = 6, delayMs = 1500) {
   for (let i = 0; i < attempts; i++) {
     const response = await fetch(`https://api.printify.com/v1/shops/${SHOP_ID}/products/${productId}.json`, {
@@ -45,10 +42,6 @@ async function waitForMockupImages(productId, attempts = 6, delayMs = 1500) {
   return [];
 }
 
-// ===== MAIN ENTRY POINT =====
-// Handles both coffee mugs (three-slot-wrap) and travel mugs
-// (front-back or single-image). Suitcase/phone case/tote bag can be
-// added the same way later — same pattern, different branch.
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
