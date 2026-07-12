@@ -118,13 +118,17 @@ async function handleCheck(req, res) {
   });
   const data = await response.json();
 
-  const mockupUrl = (response.ok && Array.isArray(data.images) && data.images.length > 0)
-    ? data.images[0].src
-    : null;
+  const hasImages = response.ok && Array.isArray(data.images) && data.images.length > 0;
+  // Printify often photographs a single wraparound print from several
+  // camera angles (front, and a couple of side/turned views) — return
+  // all of them so a multi-angle product (coffee mugs) can show more
+  // than just the first shot instead of throwing the rest away.
+  const mockupUrls = hasImages ? data.images.map(img => img.src) : [];
+  const mockupUrl = mockupUrls[0] || null;
 
   if (mockupUrl) {
     deletePrintifyProduct(productId).catch(() => {});
-    return res.status(200).json({ ready: true, mockupUrl });
+    return res.status(200).json({ ready: true, mockupUrl, mockupUrls });
   }
 
   return res.status(200).json({ ready: false });
