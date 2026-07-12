@@ -27,9 +27,6 @@ function dataUrlToBuffer(dataUrl) {
   return Buffer.from(match[1], "base64");
 }
 
-// Placements coming from a real customer order are live Supabase
-// Storage URLs (the actual generated design), not base64 data — only
-// the manual test-printify.html page still sends raw base64 uploads.
 async function resolveImageBuffer(source) {
   if (source.startsWith("data:")) {
     return dataUrlToBuffer(source);
@@ -40,9 +37,6 @@ async function resolveImageBuffer(source) {
   return Buffer.from(arrayBuffer);
 }
 
-// Asks Printify for this variant's actual print-area size, rather than
-// trusting a hardcoded number, so this keeps working correctly even if
-// Printify changes a product's dimensions later.
 export async function getPlaceholderDimensions(blueprintId, printProviderId, variantId, position) {
   const response = await fetch(
     `https://api.printify.com/v1/catalog/blueprints/${blueprintId}/print_providers/${printProviderId}/variants.json`,
@@ -60,17 +54,6 @@ export async function getPlaceholderDimensions(blueprintId, printProviderId, var
   if (!ph) throw new Error(`No "${position || "default"}" placeholder found for variant ${variantId}`);
   return { width: ph.width, height: ph.height, position: ph.position };
 }
-
-// ===== PHOTO/POSTER-ONLY HELPERS =====
-// photo-poster is the one catalog entry whose blueprint AND print
-// provider aren't fixed — they depend on whether the customer picked
-// framed or unframed, since those are genuinely two separate Printify
-// products (blueprint 1079 vs blueprint 492), not two variants of one.
-// These two helpers exist so the catalog can be written today with
-// some fields still unknown (printProviderId / variantIds left null
-// for the unframed side — see products-catalog.js) and have the real
-// values resolved live against Printify's API at order time, instead
-// of blocking on manual lookup in the dashboard.
 
 const PRINT_PROVIDER_ID_CACHE = {};
 
@@ -90,7 +73,10 @@ async function resolvePrintProviderId(blueprintId, providerNameHint) {
   return match.id;
 }
 
-async function resolveVariantIdByTitleMatch(blueprintId, printProviderId, matchTerms) {
+// Now exported — reused directly by placeProductOrder() below for
+// travel-mug-20oz, which (like photo-poster's unresolved sizes) has no
+// hardcoded variantId in the catalog and needs it looked up live by name.
+export async function resolveVariantIdByTitleMatch(blueprintId, printProviderId, matchTerms) {
   const response = await fetch(
     `https://api.printify.com/v1/catalog/blueprints/${blueprintId}/print_providers/${printProviderId}/variants.json`,
     { headers: { "Authorization": `Bearer ${process.env.PRINTIFY_API_TOKEN}` } }
@@ -104,10 +90,6 @@ async function resolveVariantIdByTitleMatch(blueprintId, printProviderId, matchT
   return variant.id;
 }
 
-// Resolves everything order-creation needs for photo-poster: which
-// blueprint, which print provider, which exact variant, the price, and
-// the aspectRatio (needed upstream by the generation step, not used
-// here, but returned so the caller has it available).
 export async function resolvePhotoPosterSelection(product, { framed, sizeLabel, orientation, finish, frameColor }) {
   if (framed) {
     const tree = product.framedUpsell;
@@ -125,7 +107,6 @@ export async function resolvePhotoPosterSelection(product, { framed, sizeLabel, 
     };
   }
 
-  // Unframed
   const tree = product.base;
   const sizeEntry = tree.sizes[sizeLabel];
   if (!sizeEntry) throw new Error(`Unknown poster size "${sizeLabel}".`);
@@ -138,14 +119,10 @@ export async function resolvePhotoPosterSelection(product, { framed, sizeLabel, 
 
   const printProviderId = tree.printProviderId || await resolvePrintProviderId(tree.blueprintId, "Prima Printing");
 
-  const variantKey = `${orientation.toLowerCase()}${finish}`; // e.g. "horizontalGlossy"
+  const variantKey = `${orientation.toLowerCase()}${finish}`;
   let variantId = sizeEntry.variantIds?.[variantKey];
 
   if (!variantId) {
-    // Catalog entry doesn't have the real ID yet — match the live
-    // Printify variant by title instead of failing outright. sizeLabel
-    // is stored as e.g. "16x20", representing the Vertical dimension
-    // order; Horizontal is that pair reversed.
     const [a, b] = sizeLabel.split("x").map(s => s.trim());
     const dimsTerm = orientation === "Vertical" ? `${a}" x ${b}"` : `${b}" x ${a}"`;
     variantId = await resolveVariantIdByTitleMatch(tree.blueprintId, printProviderId, [dimsTerm, orientation, finish]);
@@ -160,29 +137,12 @@ export async function resolvePhotoPosterSelection(product, { framed, sizeLabel, 
   };
 }
 
-// ===== LAYOUT BUILDERS =====
-// Each one takes whatever image source(s) the customer approved and
-// returns a finished PNG buffer ready to upload to Printify. Adding a
-// future layout type (a fifth pattern nobody's invented yet) means
-// adding one more function here — nothing else needs to change.
-
-// "three-slot-wrap" — existing coffee mug behavior. Left/Center/Right
-// sections side by side on one wide image, white canvas, each design
-// scaled to fit inside its own third without cropping.
 export async function buildWraparoundImage(placements, canvasWidth, canvasHeight) {
   const { left, front, right } = placements;
-  const WHITE = { r: 255, g: 255, b: 255 }; // fallback canvas color only — visible only if a slot is genuinely empty, since filled sections now cover edge-to-edge with no padding
+  const WHITE = { r: 255, g: 255, b: 255 };
   const sectionWidth = Math.round(canvasWidth / 3);
   const lastSectionWidth = canvasWidth - sectionWidth * 2;
 
-  // "cover" fit (not "contain") so every section is filled completely
-  // edge-to-edge — no white padding anywhere. The position argument
-  // controls which part of the source image survives the crop: the
-  // LEFT panel keeps its RIGHT edge (so it touches Center with no gap),
-  // the RIGHT panel keeps its LEFT edge (same reason from the other
-  // side), and Center stays centered since it has no neighbor bias
-  // either direction. This is what actually makes the three panels
-  // meet seamlessly instead of leaving white space at the seams.
   async function renderSection(imageSource, width, position) {
     if (!imageSource) return null;
     return await sharp(await resolveImageBuffer(imageSource))
@@ -210,9 +170,6 @@ export async function buildWraparoundImage(placements, canvasWidth, canvasHeight
     .toBuffer();
 }
 
-// "full-bleed" — one design floods the entire print area edge to edge
-// (Ewww Stew / Second Glance Funny line). Deliberate opposite of the
-// wraparound builder's polite manners.
 export async function buildFullBleedImage(imageSource, canvasWidth, canvasHeight) {
   return await sharp(await resolveImageBuffer(imageSource))
     .resize(canvasWidth, canvasHeight, { fit: "cover", position: "centre" })
@@ -220,10 +177,6 @@ export async function buildFullBleedImage(imageSource, canvasWidth, canvasHeight
     .toBuffer();
 }
 
-// "single-image" — one design, contain-fit onto a white canvas sized to
-// the product's one print area. For products with exactly one design
-// slot and no left/right sections (e.g. Travel Mug with Handle, 14oz;
-// also Photo/Poster).
 export async function buildSingleImage(imageSource, canvasWidth, canvasHeight) {
   const WHITE = { r: 255, g: 255, b: 255 };
   return await sharp(await resolveImageBuffer(imageSource))
@@ -232,10 +185,6 @@ export async function buildSingleImage(imageSource, canvasWidth, canvasHeight) {
     .toBuffer();
 }
 
-// "front-back" — two independent designs, each contain-fit onto its own
-// separate print area (e.g. Travel Mug 20oz, which has distinct
-// mug_front and mug_back placeholders instead of one wraparound image).
-// Uses the SAME two builder calls as single-image, just run twice.
 export async function buildFrontBackImages(frontSource, backSource, frontDims, backDims) {
   const WHITE = { r: 255, g: 255, b: 255 };
   async function build(source, dims) {
@@ -252,19 +201,10 @@ export async function buildFrontBackImages(frontSource, backSource, frontDims, b
   return { frontBuf, backBuf };
 }
 
-// ===== VARIANT RESOLUTION =====
-// Looks up the correct Printify variant ID for a given product/size/
-// color combination, handling the two different catalog shapes:
-// flat sizes (most products) and colors-nested-under-size (Color Pop,
-// where available colors differ by size). NOTE: photo-poster does NOT
-// go through this function — its blueprint/provider isn't fixed at the
-// top level, so it uses resolvePhotoPosterSelection() instead. See the
-// branch in placeProductOrder below.
 export function resolveVariant(product, sizeLabel, colorName) {
   const sizeEntry = product.sizes?.[sizeLabel];
   if (!sizeEntry) throw new Error(`Unknown size "${sizeLabel}" for this product.`);
 
-  // Case 1: colors nested under this size (e.g. Color Pop)
   if (sizeEntry.colors) {
     if (!colorName) throw new Error("A color selection is required for this product.");
     const colorEntry = sizeEntry.colors.find(c => c.name === colorName);
@@ -272,7 +212,6 @@ export function resolveVariant(product, sizeLabel, colorName) {
     return { variantId: colorEntry.variantId, price: sizeEntry.price };
   }
 
-  // Case 2: flat top-level colors array (e.g. Travel Mug 20oz)
   if (product.colors) {
     if (!colorName) throw new Error("A color selection is required for this product.");
     const colorEntry = product.colors.find(c => c.name === colorName);
@@ -280,14 +219,11 @@ export function resolveVariant(product, sizeLabel, colorName) {
     return { variantId: colorEntry.variantId, price: sizeEntry.price };
   }
 
-  // Case 3: no color choice at all — variant ID lives directly on the size
   if (!sizeEntry.variantId) throw new Error(`No variantId configured for size "${sizeLabel}".`);
   return { variantId: sizeEntry.variantId, price: sizeEntry.price };
 }
 
 export async function createPrintifyProduct(images, { blueprintId, printProviderId, displayName }, variantId, title) {
-  // images is either { position: imageId } for single/full-bleed/front-back,
-  // built into the placeholders array below.
   const placeholders = Object.entries(images).map(([position, imageId]) => ({
     position,
     images: [{ id: imageId, x: 0.5, y: 0.5, scale: 1, angle: 0 }]
@@ -333,10 +269,6 @@ async function submitPrintifyOrder(productId, variantId, shippingAddress, extern
   return data;
 }
 
-// Determines the $3 / $5 / $6 upsell charge based on how many placements
-// were filled and whether they're duplicate or distinct designs.
-// Only meaningful for "three-slot-wrap" products — other layout types
-// don't have multiple slots, so this returns 0 for them.
 function calculateUpsellCharge(placements) {
   if (!placements) return { upsellCharge: 0, reason: "Not applicable to this product." };
   const { left, front, right } = placements;
@@ -354,22 +286,6 @@ function calculateUpsellCharge(placements) {
     : { upsellCharge: 6, reason: "Three placements, all different designs." };
 }
 
-// ===== THE MAIN ENTRY POINT =====
-// Generic across every product in the catalog. Called by stripe-webhook.js
-// once payment succeeds, and directly by the HTTP handler below for
-// manual testing.
-//
-// Expected input shape varies slightly by layoutType:
-//   three-slot-wrap : { placements: {left, front, right}, printMode }
-//   front-back      : { frontImage, backImage }
-//   single-image     : { image }
-//   full-bleed       : { image }
-//
-// photo-poster (layoutType "single-image") additionally needs:
-//   posterFramed     : boolean — true if the customer chose the framed upsell
-//   posterOrientation: "Horizontal" | "Vertical" — unframed only, ignored if framed
-//   posterFinish      : "Glossy" | "Matte" — unframed only, ignored if framed
-//   colorName         : reused as the frame color ("Black" | "White") — framed only
 export async function placeProductOrder({
   productKey,
   sizeLabel,
@@ -404,6 +320,17 @@ export async function placeProductOrder({
     price = resolved.price;
     effectiveBlueprintId = resolved.blueprintId;
     effectivePrintProviderId = resolved.printProviderId;
+  } else if (productKey === "travel-mug-20oz") {
+    // UPDATED (July 2026): this blueprint (SPOKE Custom Products, swapped
+    // in after the previous Polar Camel blueprint turned out to be
+    // Printify "Early Access" with no real mockup support) has exactly
+    // one orderable variant and no hardcoded ID in the catalog — same
+    // reasoning as photo-poster's not-yet-looked-up sizes. Resolved live
+    // by name match instead.
+    effectiveBlueprintId = product.blueprintId;
+    effectivePrintProviderId = product.printProviderId;
+    variantId = await resolveVariantIdByTitleMatch(effectiveBlueprintId, effectivePrintProviderId, [sizeLabel]);
+    price = product.sizes[sizeLabel].price;
   } else {
     ({ variantId, price } = resolveVariant(product, sizeLabel, colorName));
     effectiveBlueprintId = product.blueprintId;
