@@ -978,7 +978,7 @@ async function fetchTravelMockupPreview(){
   }
   const product = TRAVEL_MUG_CATALOG[selectedTravelProductKey];
   if (product.colors && !selectedTravelColor) {
-    noteEl.textContent = 'Pick a color above first.';
+    noteEl.textContent = 'Pick a color below first.';
     noteEl.className = 'note error';
     noteEl.style.display = 'block';
     return;
