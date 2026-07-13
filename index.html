@@ -1459,9 +1459,13 @@ function approveDesign(allThree){
   }
   currentDesignId=null;
   document.getElementById('approveRow').style.display='none';
-  resetMainSlot();
-  clearReferenceSlots();
-  clearWorkshopStorage();
+  // UPDATED (July 2026, Alyx's request): no longer clearing the top
+  // photo/workshop on approve. The generated image — along with the
+  // Toggle Between Previous & New Image option — should stay visible up
+  // top so the customer can keep tweaking or change their mind, even
+  // after a design has already been placed into a slot below. It should
+  // only actually clear when they explicitly tap "Start Over," or once
+  // they've completed a purchase, not automatically here.
   saveMugState();
   renderRecentDesigns();
   renderPositionHolder();
