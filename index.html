@@ -177,6 +177,15 @@
 
 </div>
 
+<div class="card" id="panoramaFadeCard">
+<div class="card-title">🌀 Panorama Edge Fade</div>
+<div class="note" style="margin-top:0;margin-bottom:.75rem">For the Wraparound (panorama) print option only — fades all corners and edges of the picture toward white so it blends seamlessly into a white canvas all the way around. Doesn't change anything you see or type below; it's applied automatically behind the scenes whenever you generate with this switched on.</div>
+<div style="display:flex;align-items:center;gap:10px">
+<input type="checkbox" id="panoramaFadeToggle" onchange="togglePanoramaFadeEdges()" style="width:20px;height:20px;cursor:pointer"/>
+<label style="margin:0;text-transform:none;font-size:14px;color:#fff;cursor:pointer" onclick="document.getElementById('panoramaFadeToggle').click()">Yes, fade all corners and edges to white for a panorama</label>
+</div>
+</div>
+
 <div class="card"><div class="card-title">💬 Tell Us Your Idea</div><textarea id="ideaDesc" placeholder="Example: Put me on a tiny red tricycle wearing a firefighter helmet and full firefighter outfit, racing through a parade with smoke and sirens behind me."></textarea><div class="quick-btns" id="quickBtns"></div><div class="note">Paint us a clear picture — the more detail you give us, the better our chances of getting your exact idea right.</div></div>
 
 <div class="card"><div class="card-title">🎁 Product</div><div class="grid3"><div class="btn-select selected" data-val="mug" onclick="pick(this,'product')"><span class="icon">☕</span>Mug</div><div class="btn-select" data-val="greeting card" onclick="pick(this,'product')"><span class="icon">💌</span>Card</div><div class="btn-select" data-val="water bottle" onclick="pick(this,'product')"><span class="icon">🍶</span>Travel Cups</div><div class="btn-select" data-val="post-it note" onclick="pick(this,'product')"><span class="icon">📝</span>Post-it</div><div class="btn-select" data-val="phone case" onclick="pick(this,'product')"><span class="icon">📱</span>Phone case</div><div class="btn-select" data-val="tote bag" onclick="pick(this,'product')"><span class="icon">👜</span>Tote bag</div><div class="btn-select" data-val="suitcase" onclick="pick(this,'product')"><span class="icon">🧳</span>Suitcase</div><div class="btn-select" data-val="puzzle" onclick="pick(this,'product')"><span class="icon">🧩</span>Puzzle</div><div class="btn-select" data-val="photo poster" onclick="pick(this,'product')"><span class="icon">🖼️</span>Photo/Poster</div></div></div>
@@ -483,6 +492,19 @@ let isDrawingPath=false;
 let pathCanvasReady=false;
 
 let mugPrintMode='three-panel'; // 'three-panel' | 'wraparound' — coffee/travel mugs only, chosen BEFORE generation since it changes composition
+
+// NEW (July 2026, Alyx's request): silent generation-prompt add-on for
+// the Wraparound/panorama print option. When on, this instruction gets
+// appended to the actual prompt sent to the AI on every generate() call
+// (including the auto left/right panel continuations) — the customer
+// never sees this text in their own idea box, it's applied purely
+// behind the scenes.
+let panoramaFadeEdges=false;
+const PANORAMA_FADE_INSTRUCTION = "PANORAMA EDGE FADE: All corners and edges of the entire picture should be faded toward white so it blends into a white canvas all the way around the image.";
+
+function togglePanoramaFadeEdges(){
+  panoramaFadeEdges=document.getElementById('panoramaFadeToggle').checked;
+}
 
 function pickMugPrintMode(mode){
   mugPrintMode=mode;
@@ -1590,6 +1612,8 @@ document.getElementById('cancelBtn').style.display='block';
           ? `COMPOSITION: This will be printed at a fixed aspect ratio of approximately ${getPosterAspectRatio().toFixed(2)}:1 in ${posterOrientation} orientation. Compose the subject to work within that exact shape — do not treat this as a standard square or default photo ratio.`
           : '');
 
+    const panoramaFadeLine = panoramaFadeEdges ? PANORAMA_FADE_INSTRUCTION : '';
+
     const referenceLine = (refASnapshot || refBSnapshot)
       ? `
 REFERENCE IMAGES: Additional photos have been provided beyond Photo 1 (the main photo).
@@ -1638,6 +1662,7 @@ Selected style: ${style}.
 Product target: ${getProductRules(product)}.
 ${backgroundLine}
 ${wrapCompositionLine}
+${panoramaFadeLine}
 ${referenceLine}
 
 PRIORITY ORDER: The customer idea above is the primary instruction for what the scene contains.
@@ -1696,10 +1721,11 @@ Use rich environmental storytelling while keeping the face as the primary focal 
 
       const centerRaw = await urlToDataURL(resultUrl);
       const centerForApi = await resizeDataUrl(centerRaw, 1280);
+      const panoramaFadeSuffix = panoramaFadeEdges ? ' ' + PANORAMA_FADE_INSTRUCTION : '';
 
       const leftUrl = await callGenerateAPI({
         workingImage: centerForApi,
-        prompt: 'Continue this scene to the left.',
+        prompt: 'Continue this scene to the left.' + panoramaFadeSuffix,
         panelRole: 'left',
         signal: currentGenerationController.signal
       });
@@ -1708,7 +1734,7 @@ Use rich environmental storytelling while keeping the face as the primary focal 
       setStatus('Left panel done. Generating the right panel...');
       const rightUrl = await callGenerateAPI({
         workingImage: centerForApi,
-        prompt: 'Continue this scene to the right.',
+        prompt: 'Continue this scene to the right.' + panoramaFadeSuffix,
         panelRole: 'right',
         signal: currentGenerationController.signal
       });
