@@ -23,12 +23,29 @@ const GIFT_MESSAGE_PRICE = 1.00;
 // more in real API usage and shouldn't be priced like a free gimme).
 const WRAPAROUND_SET_SURCHARGE = 3;
 
-// Flat shipping estimate shown as its own line item so the customer
-// sees "product price" and "shipping" as two separate numbers at
-// Stripe checkout — this is a placeholder rate, not a real Printify
-// shipping-cost lookup yet. Revisit once real shipping rates are wired
-// in (Printify has a rates API for this).
-const FLAT_SHIPPING_CENTS = 695; // $6.95
+// ── Real shipping formula (July 2026, replaces old flat $6.95) ──
+// Alyx's rule: charge exactly what Printify charges us for shipping on
+// that specific product. If the item's BASE PRICE is $50 or more, add
+// a 10% markup on top of Printify's shipping cost as a buffer — below
+// $50, no markup at all, just pass Printify's real cost straight through.
+// Real per-product shippingCost values live in products-catalog.js —
+// this function only applies the markup rule, it doesn't invent costs.
+const SHIPPING_MARKUP_THRESHOLD = 50;
+const SHIPPING_MARKUP_RATE = 0.10;
+
+function calculateShippingCharge(product, basePrice) {
+  const printifyShippingCost = product.shippingCost;
+  if (typeof printifyShippingCost !== "number") {
+    // Loud on purpose — silently defaulting to $0 shipping would mean
+    // eating the real cost with no charge to the customer at all.
+    console.error(`CRITICAL: No shippingCost set for product "${product.displayName}" — charging $0 shipping. Add a real value in products-catalog.js.`);
+    return 0;
+  }
+  if (basePrice >= SHIPPING_MARKUP_THRESHOLD) {
+    return Math.round(printifyShippingCost * (1 + SHIPPING_MARKUP_RATE) * 100) / 100;
+  }
+  return printifyShippingCost;
+}
 
 function calculateUpsellCharge(placements) {
   if (!placements) return 0;
@@ -139,7 +156,12 @@ async function handleProductOrder(req, res) {
   const giftCharge = giftMessage?.trim() ? GIFT_MESSAGE_PRICE : 0;
 
   const productCents = Math.round((basePrice + upsellCharge + giftCharge) * 100);
-  const shippingCents = product.shippingSeparate ? FLAT_SHIPPING_CENTS : 0;
+
+  // Real per-product shipping (July 2026) — replaces the old flat
+  // $6.95 charged on every order regardless of size/weight. See
+  // calculateShippingCharge() above for the $50-threshold markup rule.
+  const shippingCharge = product.shippingSeparate ? calculateShippingCharge(product, basePrice) : 0;
+  const shippingCents = Math.round(shippingCharge * 100);
 
   const origin = req.headers.origin || "https://muggshotz-ai-test.vercel.app";
   const productName = `Muggshotz ${product.displayName} (${sizeLabel})${colorName ? " - " + colorName : ""}`;
@@ -175,6 +197,15 @@ async function handleProductOrder(req, res) {
   const session = await stripe.checkout.sessions.create({
     mode: "payment",
     payment_method_types: ["card"],
+    // Stripe Tax (July 2026): calculates real sales tax based on the
+    // customer's address, using the preset tax code + business address
+    // set once in the Stripe Dashboard's Tax settings (Tax > Settings).
+    // Nothing else in this file needs to change per-product — Stripe
+    // handles rate lookup by state/jurisdiction automatically. Requires
+    // an active tax registration on file in the Dashboard to actually
+    // collect anything; with automatic_tax on but no registration,
+    // Stripe silently calculates $0 tax rather than erroring.
+    automatic_tax: { enabled: true },
     line_items,
     metadata: {
       order_type: "mug_order", // kept as-is intentionally — this is how stripe-webhook.js tells a product order apart from a token purchase
