@@ -590,7 +590,7 @@ function setupPhoneModelSearchGen(){
       const btn=document.createElement('div');
       btn.className='btn-select'+(model===selectedPhoneCaseModel?' selected':'');
       btn.style.marginBottom='6px';
-      btn.textContent=model;
+      btn.textContent=model+'?';
       btn.onclick=()=>pickPhoneModelGen(model);
       resultsEl.appendChild(btn);
     });
@@ -717,6 +717,20 @@ function pick(el,type){
     // the currently-placed design — refresh immediately instead of
     // leaving the previous product's stale mockup on screen.
     updatePlacementSummary();
+    // NEW (July 2026, Alyx's request): the instant "Phone case" is
+    // picked, jump straight to the phone-model card and drop the
+    // cursor in the search box — don't make the customer go hunting
+    // for it further down the page.
+    if(product==='phone case'){
+      const phoneCard=document.getElementById('phoneCaseModelCard');
+      if(phoneCard){
+        phoneCard.scrollIntoView({behavior:'smooth',block:'center'});
+        setTimeout(()=>{
+          const input=document.getElementById('phoneModelSearchInputGen');
+          if(input)input.focus();
+        },450);
+      }
+    }
   }
   else if(type==='style')style=el.dataset.val;
   else if(type==='likeness')likeness=el.dataset.val;
