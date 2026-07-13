@@ -140,37 +140,48 @@ export async function resolvePhotoPosterSelection(product, { framed, sizeLabel, 
 export async function buildWraparoundImage(placements, canvasWidth, canvasHeight) {
   const { left, front, right } = placements;
   const WHITE = { r: 255, g: 255, b: 255 };
-  const sectionWidth = Math.round(canvasWidth / 3);
-  const lastSectionWidth = canvasWidth - sectionWidth * 2;
 
-  // UPDATED (July 2026, Alyx's request): was using fit:"cover", which
-  // scales the source image UP to completely fill each section and
-  // crops away whatever doesn't fit — that's what was cutting off
-  // captions at the top and content at the bottom. Switched to
-  // fit:"contain" (with a white background for the resulting margin),
-  // the exact same approach buildSingleImage() already uses for travel
-  // mugs and suitcases — shrinks the WHOLE image down to fit inside the
-  // section first, so nothing gets cropped away, matching how Printify's
-  // own manual editor lets a person resize a design to fit the canvas
-  // before printing.
-  async function renderSection(imageSource, width) {
-    if (!imageSource) return null;
-    return await sharp(await resolveImageBuffer(imageSource))
+  // UPDATED (July 2026, Alyx's request): previously always divided the
+  // canvas into three FIXED thirds regardless of how many slots were
+  // actually filled — a customer who only placed one design got it
+  // squeezed into just 1/3 of the mug's width, with the other 2/3 left
+  // blank, instead of using the full print area. Now the section widths
+  // are calculated dynamically based on how many slots actually have a
+  // design in them: one filled slot gets the FULL width, two filled
+  // slots split it in half, three filled slots split it in thirds
+  // (unchanged from before). Order is preserved left-to-right, skipping
+  // any empty slots entirely.
+  const filledSlots = [
+    ['left', left],
+    ['front', front],
+    ['right', right]
+  ].filter(([, source]) => !!source);
+
+  if (filledSlots.length === 0) {
+    return await sharp({
+      create: { width: canvasWidth, height: canvasHeight, channels: 3, background: WHITE }
+    }).png().toBuffer();
+  }
+
+  const baseWidth = Math.floor(canvasWidth / filledSlots.length);
+  const composites = [];
+  let xOffset = 0;
+
+  for (let i = 0; i < filledSlots.length; i++) {
+    const [, source] = filledSlots[i];
+    const isLast = i === filledSlots.length - 1;
+    // Last slot absorbs any rounding remainder so the full canvas width
+    // is always used, with no leftover gap on the right.
+    const width = isLast ? (canvasWidth - xOffset) : baseWidth;
+
+    const buffer = await sharp(await resolveImageBuffer(source))
       .resize(width, canvasHeight, { fit: "contain", background: WHITE })
       .png()
       .toBuffer();
+
+    composites.push({ input: buffer, left: xOffset, top: 0 });
+    xOffset += width;
   }
-
-  const [leftBuf, frontBuf, rightBuf] = await Promise.all([
-    renderSection(left, sectionWidth),
-    renderSection(front, sectionWidth),
-    renderSection(right, lastSectionWidth)
-  ]);
-
-  const composites = [];
-  if (leftBuf) composites.push({ input: leftBuf, left: 0, top: 0 });
-  if (frontBuf) composites.push({ input: frontBuf, left: sectionWidth, top: 0 });
-  if (rightBuf) composites.push({ input: rightBuf, left: sectionWidth * 2, top: 0 });
 
   return await sharp({
     create: { width: canvasWidth, height: canvasHeight, channels: 3, background: WHITE }
