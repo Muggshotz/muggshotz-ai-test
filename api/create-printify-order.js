@@ -446,9 +446,15 @@ export async function placeProductOrder({
   // still cropping, reached only through the Wraparound auto-continuation
   // path. Now that buildSeamlessWrapImage fixes the crop at the source,
   // restoring the values already validated as correct for the manual
-  // three-slot-wrap mode. Everything else keeps full-size, centered
-  // placement, since travel mugs/suitcases/etc. were already correct.
+  // three-slot-wrap mode.
   const isCoffeeMug = product.layoutType === "three-slot-wrap";
+  // UPDATED (July 2026, Alyx's request): the 20oz travel mug (SPOKE
+  // Custom Products, single-image) was printing too large on some
+  // designs depending on how the source image happened to be framed —
+  // scoped narrowly to ONLY this product key so it can't accidentally
+  // affect the suitcase, phone case, or anything else that was already
+  // coming out correctly.
+  const isTravelMug20oz = productKey === "travel-mug-20oz";
   const imageScale = isCoffeeMug ? 1 : 1;
   const imageY = isCoffeeMug ? 0.58 : 0.5;
 
