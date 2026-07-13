@@ -93,6 +93,13 @@
   .token-credits-row{bottom:16px;top:auto;left:24px;right:24px;transform:none;justify-content:space-between;gap:0}
   .token-credits-row.scrolled{bottom:auto;top:8px;left:24px;right:24px}
 }
+.big-alert-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.78);z-index:1600;align-items:center;justify-content:center;padding:1.5rem}
+.big-alert-overlay.visible{display:flex}
+.big-alert-box{background:#1a1a1a;border:2px solid #e24b4a;border-radius:16px;padding:1.9rem 1.6rem;max-width:380px;width:100%;text-align:center;box-shadow:0 0 34px rgba(226,75,74,0.55);animation:bigAlertPop .25s ease}
+@keyframes bigAlertPop{0%{transform:scale(0.88);opacity:0}100%{transform:scale(1);opacity:1}}
+.big-alert-icon{font-size:36px;margin-bottom:10px}
+.big-alert-msg{color:#fff;font-size:16px;font-weight:600;line-height:1.45;margin-bottom:1.2rem}
+.big-alert-close{background:#e24b4a;border:none;border-radius:10px;padding:.75rem 1.5rem;color:#fff;font-size:14px;font-weight:700;cursor:pointer;letter-spacing:.3px}
 </style>
 </head>
 <body>
@@ -135,6 +142,13 @@
       </table>
       <div class="note" style="margin-top:.6rem">Prices shown are for the mug itself — shipping and handling is calculated and added at checkout.</div>
     </div>
+  </div>
+</div>
+<div id="bigAlertOverlay" class="big-alert-overlay" onclick="if(event.target===this)closeBigAlert()">
+  <div class="big-alert-box">
+    <div class="big-alert-icon">⚠️</div>
+    <div class="big-alert-msg" id="bigAlertMsg"></div>
+    <button class="big-alert-close" onclick="closeBigAlert()">Got It</button>
   </div>
 </div>
 <div class="header"><video class="header-video" autoplay muted loop playsinline preload="auto" onerror="document.getElementById('headerVideoFallback').style.display='block'"><source src="https://res.cloudinary.com/fixgpggr/video/upload/The_one_zxizmo.mp4" type="video/mp4"></video><div id="headerVideoFallback" style="display:none;color:#ff6a00;text-align:center;padding:1.5rem;font-size:13px">Logo video failed to load.</div></div>
@@ -1602,14 +1616,36 @@ function resetMainSlot(){
   document.getElementById('fileInput').value='';
 }
 
+function showBigAlert(msg){
+  document.getElementById('bigAlertMsg').textContent=msg;
+  document.getElementById('bigAlertOverlay').classList.add('visible');
+}
+
+function closeBigAlert(){
+  document.getElementById('bigAlertOverlay').classList.remove('visible');
+}
+
 function setStatus(msg,isError){
   const el=document.getElementById('status');
-  el.className='status visible'+(isError?' error':'');
-  el.innerHTML=isError?'❌ '+msg:'<span class="spinner"></span>'+msg;
+  if(isError){
+    // Big, centered, dismissible alert — not a small line at the
+    // bottom of the screen the person may never have scrolled to.
+    showBigAlert(msg);
+    el.className='status';
+    return;
+  }
+  el.className='status visible';
+  el.innerHTML='<span class="spinner"></span>'+msg;
 }
 
 function clearStatus(){
   document.getElementById('status').className='status';
+}
+
+function scrollToFinishedImage(elementId){
+  const el=document.getElementById(elementId||'uploadZone');
+  if(!el)return;
+  el.scrollIntoView({behavior:'smooth',block:'center'});
 }
 
 function getProductRules(p){
@@ -1877,8 +1913,8 @@ Use rich environmental storytelling while keeping the face as the primary focal 
       clearReferenceSlots();
       clearWorkshopStorage();
       refreshTokenMeter();
-      setStatus('✅ All three wraparound panels are ready — scroll down to see Left / Center / Right.');
-      document.getElementById('positionHolderCard').scrollIntoView({behavior:'smooth',block:'start'});
+      setStatus('✅ All three wraparound panels are ready!');
+      scrollToFinishedImage('positionHolderCard');
       return;
     }
 
@@ -1899,6 +1935,7 @@ Use rich environmental storytelling while keeping the face as the primary focal 
       console.error('Could not recycle result into the main slot:',recycleErr);
       setMainSlotImage(workingImage);
     }
+    scrollToFinishedImage('uploadZone');
     refreshTokenMeter();
     clearStatus();
 
