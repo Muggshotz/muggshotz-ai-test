@@ -1,9 +1,9 @@
 import Stripe from "stripe";
 import { getProduct } from "../lib/products-catalog.js";
+import { getRealShippingCost } from "../lib/printify-shipping.js";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
-// Token pack definitions
 const TOKEN_PACKS = {
   "1token":  { tokens: 1,  amountCents: 50,  label: "1 Token — 50¢" },
   "3tokens": { tokens: 3,  amountCents: 100, label: "3 Tokens — $1.00" },
@@ -11,36 +11,34 @@ const TOKEN_PACKS = {
 };
 
 const GIFT_MESSAGE_PRICE = 1.00;
-
-// Flat charge for an auto-generated Wraparound set (the generator's
-// scene-continuation pipeline — 3 real panels from 1 paid generation).
-// Deliberately SEPARATE from calculateUpsellCharge() below, which is
-// for the older, unrelated "customer manually placed 3 different
-// designs" ladder. Both features happen to fill left/front/right, but
-// they are not the same thing and must not share pricing logic — a
-// wraparound set always costs a flat +$3, regardless of the ladder's
-// same/different-design distinction (July 2026, Alyx: wraparound costs
-// more in real API usage and shouldn't be priced like a free gimme).
 const WRAPAROUND_SET_SURCHARGE = 3;
 
-// ── Real shipping formula (July 2026, replaces old flat $6.95) ──
-// Alyx's rule: charge exactly what Printify charges us for shipping on
-// that specific product. If the item's BASE PRICE is $50 or more, add
-// a 10% markup on top of Printify's shipping cost as a buffer — below
-// $50, no markup at all, just pass Printify's real cost straight through.
-// Real per-product shippingCost values live in products-catalog.js —
-// this function only applies the markup rule, it doesn't invent costs.
 const SHIPPING_MARKUP_THRESHOLD = 50;
 const SHIPPING_MARKUP_RATE = 0.10;
 
-function calculateShippingCharge(product, basePrice) {
-  const printifyShippingCost = product.shippingCost;
-  if (typeof printifyShippingCost !== "number") {
-    // Loud on purpose — silently defaulting to $0 shipping would mean
-    // eating the real cost with no charge to the customer at all.
-    console.error(`CRITICAL: No shippingCost set for product "${product.displayName}" — charging $0 shipping. Add a real value in products-catalog.js.`);
-    return 0;
+// Now ASYNC — calls Printify's live Catalog Shipping endpoint instead
+// of reading a static number. Falls back to product.shippingCost (the
+// placeholder field) only if the live lookup fails or returns nothing,
+// and logs loudly either way so a silent $0 never happens quietly.
+async function calculateShippingCharge(product, basePrice, countryCode) {
+  let printifyShippingCost = null;
+
+  try {
+    printifyShippingCost = await getRealShippingCost(product.blueprintId, product.printProviderId, countryCode);
+  } catch (err) {
+    console.error(`CRITICAL: Live shipping lookup failed for "${product.displayName}": ${err.message}`);
   }
+
+  if (printifyShippingCost === null) {
+    if (typeof product.shippingCost === "number" && product.shippingCost > 0) {
+      console.error(`Falling back to static shippingCost for "${product.displayName}" — live lookup returned nothing.`);
+      printifyShippingCost = product.shippingCost;
+    } else {
+      console.error(`CRITICAL: No shipping cost available (live or static) for "${product.displayName}" — charging $0 shipping.`);
+      return 0;
+    }
+  }
+
   if (basePrice >= SHIPPING_MARKUP_THRESHOLD) {
     return Math.round(printifyShippingCost * (1 + SHIPPING_MARKUP_RATE) * 100) / 100;
   }
@@ -57,19 +55,12 @@ function calculateUpsellCharge(placements) {
   return distinctCount === 1 ? 3 : 6;
 }
 
-// Resolves the base price for a product/size/color combo, handling
-// the two catalog shapes (flat colors, or colors nested under size —
-// see products-catalog.js for why Color Pop needs the nested form).
 function resolvePrice(product, sizeLabel, colorName) {
   const sizeEntry = product.sizes?.[sizeLabel];
   if (!sizeEntry) throw new Error(`Unknown size "${sizeLabel}" for this product.`);
   return sizeEntry.price;
 }
 
-// Old live order.html sends { mugType: "Classic White" | "Color Pop" }.
-// This translates that into the new catalog product key so existing
-// checkout keeps working unchanged while order.html is updated to send
-// productKey directly for new products.
 const MUG_TYPE_TO_PRODUCT_KEY = {
   "Classic White": "classic-white-mug",
   "Color Pop": "color-pop-mug",
@@ -77,7 +68,6 @@ const MUG_TYPE_TO_PRODUCT_KEY = {
   "Accented": "accented-mug"
 };
 
-// ── Preview Reservation ($5, credits tokens, acts as deposit on mug) ──
 async function handleReservation(req, res) {
   const { email, deviceId } = req.body || {};
   const session = await stripe.checkout.sessions.create({
@@ -91,19 +81,11 @@ async function handleReservation(req, res) {
   return res.status(200).json({ url: session.url });
 }
 
-// ── Generic product order checkout — replaces the old mug-only handler ──
-// Accepts EITHER:
-//   old shape: { mugType, sizeLabel, color, placements }  (still sent by
-//              the current live order.html — kept working on purpose)
-//   new shape: { productKey, sizeLabel, colorName, placements,
-//                frontImage, backImage, image }  (for travel mugs and
-//              anything added going forward)
 async function handleProductOrder(req, res) {
   const {
     deviceId, sizeLabel, customerName, giftMessage, shippingAddress, printMode, isWraparoundSet
   } = req.body;
 
-  // Figure out which product this is, old-shape or new-shape.
   const productKey = req.body.productKey || MUG_TYPE_TO_PRODUCT_KEY[req.body.mugType];
   const colorName = req.body.colorName || req.body.color || null;
   const placements = req.body.placements || null;
@@ -122,12 +104,9 @@ async function handleProductOrder(req, res) {
     return res.status(400).json({ error: err.message });
   }
 
-  // Colors nested under size (Color Pop) or a flat top-level list
-  // (travel mugs) both require a color choice if either exists.
   const requiresColor = !!(product.sizes?.[sizeLabel]?.colors || product.colors);
   if (requiresColor && !colorName) return res.status(400).json({ error: "Please pick a color." });
 
-  // Image validation depends on layout type.
   if (product.layoutType === "three-slot-wrap") {
     if (!placements || !(placements.left || placements.front || placements.right))
       return res.status(400).json({ error: "At least one design is required." });
@@ -145,11 +124,6 @@ async function handleProductOrder(req, res) {
 
   const resolvedPrintMode = printMode === "fullBleed" ? "fullBleed" : "standard";
 
-  // isWraparoundSet (flat +$3) and the manual-placement upsell ladder
-  // ($3/$5/$6) are mutually exclusive — an auto-generated wraparound
-  // set always uses the flat surcharge, never the ladder, even though
-  // it also fills all three slots with genuinely distinct images. See
-  // WRAPAROUND_SET_SURCHARGE above for why these must stay separate.
   const upsellCharge = product.layoutType === "three-slot-wrap"
     ? (isWraparoundSet ? WRAPAROUND_SET_SURCHARGE : calculateUpsellCharge(placements))
     : 0;
@@ -157,10 +131,9 @@ async function handleProductOrder(req, res) {
 
   const productCents = Math.round((basePrice + upsellCharge + giftCharge) * 100);
 
-  // Real per-product shipping (July 2026) — replaces the old flat
-  // $6.95 charged on every order regardless of size/weight. See
-  // calculateShippingCharge() above for the $50-threshold markup rule.
-  const shippingCharge = product.shippingSeparate ? calculateShippingCharge(product, basePrice) : 0;
+  const shippingCharge = product.shippingSeparate
+    ? await calculateShippingCharge(product, basePrice, shippingAddress.country || "US")
+    : 0;
   const shippingCents = Math.round(shippingCharge * 100);
 
   const origin = req.headers.origin || "https://muggshotz-ai-test.vercel.app";
@@ -176,12 +149,6 @@ async function handleProductOrder(req, res) {
     });
   }
 
-  // Generic image slots in metadata — image_url_a/b/c map to different
-  // things depending on layoutType (see stripe-webhook.js for the
-  // unpacking side of this):
-  //   three-slot-wrap : a=left, b=front, c=right
-  //   front-back      : a=front, b=back
-  //   single-image / full-bleed : a=image
   let imageUrlA = "", imageUrlB = "", imageUrlC = "";
   if (product.layoutType === "three-slot-wrap") {
     imageUrlA = placements.left || "";
@@ -197,66 +164,14 @@ async function handleProductOrder(req, res) {
   const session = await stripe.checkout.sessions.create({
     mode: "payment",
     payment_method_types: ["card"],
-    // Stripe Tax (July 2026): calculates real sales tax based on the
-    // customer's address, using the preset tax code + business address
-    // set once in the Stripe Dashboard's Tax settings (Tax > Settings).
-    // Nothing else in this file needs to change per-product — Stripe
-    // handles rate lookup by state/jurisdiction automatically. Requires
-    // an active tax registration on file in the Dashboard to actually
-    // collect anything; with automatic_tax on but no registration,
-    // Stripe silently calculates $0 tax rather than erroring.
     automatic_tax: { enabled: true },
     line_items,
     metadata: {
-      order_type: "mug_order", // kept as-is intentionally — this is how stripe-webhook.js tells a product order apart from a token purchase
+      order_type: "mug_order",
       device_id: deviceId,
       product_key: productKey,
       size_label: sizeLabel,
       color: colorName || "",
       print_mode: resolvedPrintMode,
       is_wraparound_set: isWraparoundSet ? "true" : "false",
-      image_url_a: imageUrlA, image_url_b: imageUrlB, image_url_c: imageUrlC,
-      customer_name: customerName || "", gift_message: giftMessage || "",
-      first_name: shippingAddress.first_name || "", last_name: shippingAddress.last_name || "",
-      email: shippingAddress.email || "", phone: shippingAddress.phone || "",
-      country: shippingAddress.country || "", region: shippingAddress.region || "",
-      address1: shippingAddress.address1 || "", address2: shippingAddress.address2 || "",
-      city: shippingAddress.city || "", zip: shippingAddress.zip || ""
-    },
-    success_url: `${origin}/index.html?order=success`,
-    cancel_url:  `${origin}/order.html`
-  });
-  return res.status(200).json({ url: session.url });
-}
-
-// ── Token pack purchase ──
-async function handleTokenPack(req, res) {
-  const { deviceId, packId } = req.body;
-  if (!deviceId) return res.status(400).json({ error: "Missing device ID." });
-  const pack = TOKEN_PACKS[packId];
-  if (!pack) return res.status(400).json({ error: `Unknown pack: ${packId}` });
-
-  const origin = req.headers.origin || "https://muggshotz-ai-test.vercel.app";
-  const session = await stripe.checkout.sessions.create({
-    mode: "payment",
-    payment_method_types: ["card"],
-    line_items: [{ price_data: { currency: "usd", product_data: { name: `Muggshotz ${pack.label}`, description: `${pack.tokens} generation token${pack.tokens > 1 ? "s" : ""}` }, unit_amount: pack.amountCents }, quantity: 1 }],
-    metadata: { order_type: "token_purchase", device_id: deviceId, pack_id: packId, tokens_to_credit: String(pack.tokens) },
-    success_url: `${origin}/index.html?tokens=added`,
-    cancel_url:  `${origin}/index.html`
-  });
-  return res.status(200).json({ url: session.url });
-}
-
-// ── Router ──
-export default async function handler(req, res) {
-  if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
-  try {
-    const type = req.body?.type;
-    if (type === "mug_order")      return await handleProductOrder(req, res);
-    if (type === "token_purchase")  return await handleTokenPack(req, res);
-    return await handleReservation(req, res);
-  } catch (error) {
-    return res.status(500).json({ error: error.message, type: error.type || "unknown" });
-  }
-}
+      image_url_a:
