@@ -598,7 +598,7 @@ function setupPhoneModelSearch(){
       const btn = document.createElement('div');
       btn.className = 'btn-select' + (model === selectedPhoneModel ? ' selected' : '');
       btn.style.marginBottom = '6px';
-      btn.textContent = model;
+      btn.textContent = model + '?';
       btn.onclick = () => pickPhoneModel(model);
       resultsEl.appendChild(btn);
     });
