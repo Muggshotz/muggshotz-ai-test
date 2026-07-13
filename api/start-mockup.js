@@ -113,7 +113,7 @@ async function handleStart(req, res) {
   const isCoffeeMug = product.layoutType === "three-slot-wrap";
   const isTravelMug20oz = productKey === "travel-mug-20oz";
   const imageScale = isCoffeeMug ? 1 : 1;
-  const imageY = isCoffeeMug ? 0.58 : 0.5;
+  const imageY = isCoffeeMug ? 0.54 : 0.5;
 
   const { productId } = await createPrintifyProduct(
     printifyImages,
