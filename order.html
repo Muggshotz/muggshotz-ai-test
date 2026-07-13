@@ -521,6 +521,16 @@ const PHONE_CASE_MODELS = [
 ];
 const PHONE_CASE_PRICE = 24.95;
 let selectedPhoneModel = null;
+// NEW (July 2026, Alyx's request): the phone model was already picked
+// back in the generator (index.html) before the customer ever got here
+// — carry it straight through instead of making them search and pick
+// it a second time.
+if (pendingOrder?.preselectedPhoneModel) {
+  selectedPhoneModel = pendingOrder.preselectedPhoneModel;
+}
+// Guards the auto-fetch below so it only fires once per model — the
+// button remains available afterward as a manual retry/refresh.
+let phoneMockupAutoFetchInFlight = false;
 
 const TOTE_BAG_SIZES = {
   "13\" x 13\"": { price: 23.95, colors: [
@@ -603,6 +613,24 @@ function pickPhoneModel(model){
   const img=document.getElementById('phoneMockupImg'); if(img) img.style.display='none';
   const btn=document.getElementById('phoneMockupBtn'); if(btn) btn.textContent='📸 See a Real Photo Preview';
   updateSummary();
+  // NEW (July 2026, Alyx's request): fetch the real photo preview the
+  // moment a model is picked or changed — no button press required,
+  // matching the automatic preview behavior mugs and travel mugs get
+  // in the generator.
+  maybeAutoFetchPhoneMockup(true);
+}
+
+// force=true re-fetches even if a preview is already showing (used when
+// the customer actively picks/changes a model). Without force, this is
+// a no-op once an image is already displayed, so it's safe to call on
+// every page render without re-fetching unnecessarily.
+function maybeAutoFetchPhoneMockup(force){
+  if (!selectedPhoneModel || phoneMockupAutoFetchInFlight) return;
+  const imgEl = document.getElementById('phoneMockupImg');
+  if (!force && imgEl && imgEl.style.display === 'block') return;
+  phoneMockupAutoFetchInFlight = true;
+  fetchSingleImageMockup('phone-case-tough', selectedPhoneModel, null, 'phoneMockupBtn', 'phoneMockupNote', 'phoneMockupImg')
+    .finally(() => { phoneMockupAutoFetchInFlight = false; });
 }
 
 let comingSoonOpen = false;
@@ -1522,6 +1550,16 @@ if (isTravelMug()) {
     document.getElementById('previewNote').textContent =
       'Whichever design you placed first (Left, Center, or Right) will be printed on your phone case.';
     setupPhoneModelSearch();
+    // NEW (July 2026, Alyx's request): the model was already chosen
+    // back in the generator — reflect it here immediately and fetch
+    // the real photo preview on its own, no re-selecting and no
+    // button press needed.
+    if (selectedPhoneModel) {
+      document.getElementById('phoneModelSearchInput').value = selectedPhoneModel;
+      document.getElementById('phoneModelSelectedNote').textContent =
+        '✓ Case selected for ' + selectedPhoneModel + ' — $' + PHONE_CASE_PRICE.toFixed(2) + ' + shipping.';
+      maybeAutoFetchPhoneMockup(false);
+    }
   } else if (isToteBag()) {
     hideAllProductCards();
     document.getElementById('toteBagSizeCard').style.display = 'block';
