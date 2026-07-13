@@ -1606,7 +1606,9 @@ document.getElementById('cancelBtn').style.display='block';
 
     const wrapCompositionLine = (product==='mug'||product==='water bottle')
       ? (mugPrintMode==='wraparound'
-          ? 'COMPOSITION: This design will be printed as ONE CONTINUOUS WRAPAROUND image around a curved surface, including past a handle. Compose with detail extended toward the edges rather than tightly centered, so nothing important is lost at the seam or the handle gap.'
+          ? (panoramaFadeEdges
+              ? 'COMPOSITION: This design will be printed as ONE CONTINUOUS WRAPAROUND image around a curved surface, including past a handle. Keep the main subject and detail concentrated toward the CENTER of the composition, not pushed out toward the edges — the corners and edges of this image need to fade to white (see the Panorama Edge Fade instruction below), so nothing important should be placed there.'
+              : 'COMPOSITION: This design will be printed as ONE CONTINUOUS WRAPAROUND image around a curved surface, including past a handle. Compose with detail extended toward the edges rather than tightly centered, so nothing important is lost at the seam or the handle gap.')
           : 'COMPOSITION: This design will be printed as a single self-contained panel viewed from one flat angle. Keep the subject centered with clean, safe margins on all sides.')
       : (product==='photo poster'
           ? `COMPOSITION: This will be printed at a fixed aspect ratio of approximately ${getPosterAspectRatio().toFixed(2)}:1 in ${posterOrientation} orientation. Compose the subject to work within that exact shape — do not treat this as a standard square or default photo ratio.`
