@@ -140,38 +140,47 @@ export async function resolvePhotoPosterSelection(product, { framed, sizeLabel, 
 export async function buildWraparoundImage(placements, canvasWidth, canvasHeight) {
   const { left, front, right } = placements;
   const WHITE = { r: 255, g: 255, b: 255 };
-
-  // REVERTED (July 2026, Alyx's request): a brief attempt to give a
-  // single filled slot the FULL canvas width (instead of a fixed third)
-  // backfired — it meant a design placed in "Right" would render
-  // identically to one placed in "Left" or "Center," since expanding to
-  // fill the whole mug erases which position was actually chosen. The
-  // customer needs to be able to intentionally print on just the left,
-  // center, or right third of the mug — always dividing into fixed
-  // thirds is what makes that positional choice mean anything. Back to
-  // fixed thirds, still using fit:"contain" (no cropping) from the
-  // earlier crop fix.
   const sectionWidth = Math.round(canvasWidth / 3);
   const lastSectionWidth = canvasWidth - sectionWidth * 2;
 
-  async function renderSection(imageSource, width) {
-    if (!imageSource) return null;
-    return await sharp(await resolveImageBuffer(imageSource))
-      .resize(width, canvasHeight, { fit: "contain", background: WHITE })
-      .png()
-      .toBuffer();
+  const filledCount = [left, front, right].filter(Boolean).length;
+
+  // UPDATED (July 2026, Alyx's request): when only ONE slot is filled,
+  // that design was correctly anchored to its own third but looked
+  // small against two-thirds of blank mug. Since the neighboring space
+  // really is blank ceramic with nothing to conflict with, widen that
+  // one design's box symmetrically around its slot's original center —
+  // bigger, but still anchored on the correct side of the mug — capped
+  // so it can't run off either edge of the canvas. This ONLY applies
+  // when exactly one slot is filled; two- or three-filled placements
+  // keep the exact fixed thirds as before, unaffected.
+  function boxFor(startX, width) {
+    if (filledCount !== 1) return { x: startX, width };
+    const centerX = startX + width / 2;
+    const widenedWidth = Math.min(canvasWidth, Math.round(width * 1.8));
+    let x = Math.round(centerX - widenedWidth / 2);
+    if (x < 0) x = 0;
+    if (x + widenedWidth > canvasWidth) x = canvasWidth - widenedWidth;
+    return { x, width: widenedWidth };
   }
 
-  const [leftBuf, frontBuf, rightBuf] = await Promise.all([
-    renderSection(left, sectionWidth),
-    renderSection(front, sectionWidth),
-    renderSection(right, lastSectionWidth)
+  async function renderSection(imageSource, startX, width) {
+    if (!imageSource) return null;
+    const box = boxFor(startX, width);
+    const buffer = await sharp(await resolveImageBuffer(imageSource))
+      .resize(box.width, canvasHeight, { fit: "contain", background: WHITE })
+      .png()
+      .toBuffer();
+    return { input: buffer, left: box.x, top: 0 };
+  }
+
+  const [leftComposite, frontComposite, rightComposite] = await Promise.all([
+    renderSection(left, 0, sectionWidth),
+    renderSection(front, sectionWidth, sectionWidth),
+    renderSection(right, sectionWidth * 2, lastSectionWidth)
   ]);
 
-  const composites = [];
-  if (leftBuf) composites.push({ input: leftBuf, left: 0, top: 0 });
-  if (frontBuf) composites.push({ input: frontBuf, left: sectionWidth, top: 0 });
-  if (rightBuf) composites.push({ input: rightBuf, left: sectionWidth * 2, top: 0 });
+  const composites = [leftComposite, frontComposite, rightComposite].filter(Boolean);
 
   return await sharp({
     create: { width: canvasWidth, height: canvasHeight, channels: 3, background: WHITE }
