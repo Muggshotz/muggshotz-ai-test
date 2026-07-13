@@ -179,10 +179,10 @@
 
 <div class="card" id="panoramaFadeCard">
 <div class="card-title">🌀 Panorama Edge Fade</div>
-<div class="note" style="margin-top:0;margin-bottom:.75rem">For the Wraparound (panorama) print option only — fades all corners and edges of the picture toward white so it blends seamlessly into a white canvas all the way around. Doesn't change anything you see or type below; it's applied automatically behind the scenes whenever you generate with this switched on.</div>
+<div class="note" style="margin-top:0;margin-bottom:.75rem">For the Wraparound (panorama) print option only — fades every true outer edge of the design toward white (top, bottom, and the outermost left/right sides), while keeping the seams where Left, Center, and Right join each other sharp and continuous. Doesn't change anything you see or type below; it's applied automatically behind the scenes whenever you generate with this switched on.</div>
 <div style="display:flex;align-items:center;gap:10px">
 <input type="checkbox" id="panoramaFadeToggle" onchange="togglePanoramaFadeEdges()" style="width:20px;height:20px;cursor:pointer"/>
-<label style="margin:0;text-transform:none;font-size:14px;color:#fff;cursor:pointer" onclick="document.getElementById('panoramaFadeToggle').click()">Yes, fade all corners and edges to white for a panorama</label>
+<label style="margin:0;text-transform:none;font-size:14px;color:#fff;cursor:pointer" onclick="document.getElementById('panoramaFadeToggle').click()">Yes, fade all outer edges to white for a panorama</label>
 </div>
 </div>
 
@@ -500,7 +500,15 @@ let mugPrintMode='three-panel'; // 'three-panel' | 'wraparound' — coffee/trave
 // never sees this text in their own idea box, it's applied purely
 // behind the scenes.
 let panoramaFadeEdges=false;
-const PANORAMA_FADE_INSTRUCTION = "PANORAMA EDGE FADE: All corners and edges of the entire picture should be faded toward white so it blends into a white canvas all the way around the image.";
+// Panel-specific fade instructions — which edges are "outer" (should
+// fade to white) vs. "seam" (must stay sharp so panels line up) depends
+// on which panel this is. Center has no outer side edges (both sides
+// join a neighbor), Left's own left edge is the true outer edge, Right's
+// own right edge is the true outer edge — all three fade top and bottom
+// regardless, since those are never seams.
+const PANORAMA_FADE_INSTRUCTION_CENTER = "PANORAMA EDGE FADE: Fade the TOP and BOTTOM outside edges of the picture toward white, so they blend softly into a white canvas. Do NOT fade or soften the LEFT and RIGHT edges — those are the seams where this panel joins its neighbors, and must stay sharp, fully detailed, and continuous all the way to the edge so the scene lines up seamlessly across panels.";
+const PANORAMA_FADE_INSTRUCTION_LEFT = "PANORAMA EDGE FADE: Fade the TOP, BOTTOM, and LEFT outside edges of the picture toward white, so they blend softly into a white canvas — the left edge of this panel is a true outer edge, not a seam. Do NOT fade or soften the RIGHT edge — that is the seam where this panel joins the center panel, and must stay sharp, fully detailed, and continuous all the way to the edge so the scene lines up seamlessly.";
+const PANORAMA_FADE_INSTRUCTION_RIGHT = "PANORAMA EDGE FADE: Fade the TOP, BOTTOM, and RIGHT outside edges of the picture toward white, so they blend softly into a white canvas — the right edge of this panel is a true outer edge, not a seam. Do NOT fade or soften the LEFT edge — that is the seam where this panel joins the center panel, and must stay sharp, fully detailed, and continuous all the way to the edge so the scene lines up seamlessly.";
 
 function togglePanoramaFadeEdges(){
   panoramaFadeEdges=document.getElementById('panoramaFadeToggle').checked;
@@ -1607,14 +1615,14 @@ document.getElementById('cancelBtn').style.display='block';
     const wrapCompositionLine = (product==='mug'||product==='water bottle')
       ? (mugPrintMode==='wraparound'
           ? (panoramaFadeEdges
-              ? 'COMPOSITION: This design will be printed as ONE CONTINUOUS WRAPAROUND image around a curved surface, including past a handle. Keep the main subject and detail concentrated toward the CENTER of the composition, not pushed out toward the edges — the corners and edges of this image need to fade to white (see the Panorama Edge Fade instruction below), so nothing important should be placed there.'
+              ? 'COMPOSITION: This design will be printed as ONE CONTINUOUS WRAPAROUND image around a curved surface, including past a handle. The LEFT and RIGHT edges are the seam where this panel joins the next one — keep detail extended sharply all the way to those edges, exactly as normal, so nothing is lost at the seam or the handle gap. The TOP and BOTTOM edges should fade to white instead (see the Panorama Edge Fade instruction below) — keep the main subject and detail away from the very top and bottom so that fade has room to happen naturally.'
               : 'COMPOSITION: This design will be printed as ONE CONTINUOUS WRAPAROUND image around a curved surface, including past a handle. Compose with detail extended toward the edges rather than tightly centered, so nothing important is lost at the seam or the handle gap.')
           : 'COMPOSITION: This design will be printed as a single self-contained panel viewed from one flat angle. Keep the subject centered with clean, safe margins on all sides.')
       : (product==='photo poster'
           ? `COMPOSITION: This will be printed at a fixed aspect ratio of approximately ${getPosterAspectRatio().toFixed(2)}:1 in ${posterOrientation} orientation. Compose the subject to work within that exact shape — do not treat this as a standard square or default photo ratio.`
           : '');
 
-    const panoramaFadeLine = panoramaFadeEdges ? PANORAMA_FADE_INSTRUCTION : '';
+    const panoramaFadeLine = panoramaFadeEdges ? PANORAMA_FADE_INSTRUCTION_CENTER : '';
 
     const referenceLine = (refASnapshot || refBSnapshot)
       ? `
@@ -1723,11 +1731,12 @@ Use rich environmental storytelling while keeping the face as the primary focal 
 
       const centerRaw = await urlToDataURL(resultUrl);
       const centerForApi = await resizeDataUrl(centerRaw, 1280);
-      const panoramaFadeSuffix = panoramaFadeEdges ? ' ' + PANORAMA_FADE_INSTRUCTION : '';
+      const panoramaFadeSuffixLeft = panoramaFadeEdges ? ' ' + PANORAMA_FADE_INSTRUCTION_LEFT : '';
+      const panoramaFadeSuffixRight = panoramaFadeEdges ? ' ' + PANORAMA_FADE_INSTRUCTION_RIGHT : '';
 
       const leftUrl = await callGenerateAPI({
         workingImage: centerForApi,
-        prompt: 'Continue this scene to the left.' + panoramaFadeSuffix,
+        prompt: 'Continue this scene to the left.' + panoramaFadeSuffixLeft,
         panelRole: 'left',
         signal: currentGenerationController.signal
       });
@@ -1736,7 +1745,7 @@ Use rich environmental storytelling while keeping the face as the primary focal 
       setStatus('Left panel done. Generating the right panel...');
       const rightUrl = await callGenerateAPI({
         workingImage: centerForApi,
-        prompt: 'Continue this scene to the right.' + panoramaFadeSuffix,
+        prompt: 'Continue this scene to the right.' + panoramaFadeSuffixRight,
         panelRole: 'right',
         signal: currentGenerationController.signal
       });
