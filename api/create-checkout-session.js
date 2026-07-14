@@ -81,6 +81,19 @@ async function handleReservation(req, res) {
   return res.status(200).json({ url: session.url });
 }
 
+// RESTORED (July 2026): this file was found truncated mid-way through
+// handleProductOrder's metadata object — cut off right at "image_url_a:"
+// with no closing braces, no shipping fields in metadata, and critically
+// NO export default handler at all, meaning Vercel had nothing callable
+// to run for this endpoint. Everything from here down through the end
+// of the file is reconstructed from two solid sources: (1) exactly what
+// stripe-webhook.js's handleMugOrderPayment() reads out of
+// session.metadata — first_name, last_name, email, phone, country,
+// region, address1, address2, city, zip, customer_name, image_url_a/b/c
+// — and (2) TOKEN_PACKS above, which was defined but had no function
+// left in the file that actually used it, meaning token-pack purchases
+// (the Credits & Extras panel's 1/3/20 token buttons) had no working
+// endpoint to call either.
 async function handleProductOrder(req, res) {
   const {
     deviceId, sizeLabel, customerName, giftMessage, shippingAddress, printMode, isWraparoundSet
@@ -174,4 +187,88 @@ async function handleProductOrder(req, res) {
       color: colorName || "",
       print_mode: resolvedPrintMode,
       is_wraparound_set: isWraparoundSet ? "true" : "false",
-      image_url_a:
+      image_url_a: imageUrlA,
+      image_url_b: imageUrlB,
+      image_url_c: imageUrlC,
+      customer_name: customerName || "",
+      first_name: shippingAddress.first_name || "",
+      last_name: shippingAddress.last_name || "",
+      email: shippingAddress.email || "",
+      phone: shippingAddress.phone || "",
+      country: shippingAddress.country || "US",
+      region: shippingAddress.region || "",
+      address1: shippingAddress.address1 || "",
+      address2: shippingAddress.address2 || "",
+      city: shippingAddress.city || "",
+      zip: shippingAddress.zip || ""
+    },
+    success_url: `${origin}/order.html?checkout=success`,
+    cancel_url: `${origin}/order.html?checkout=cancelled`
+  });
+
+  return res.status(200).json({ url: session.url });
+}
+
+// RESTORED (July 2026): TOKEN_PACKS was defined at the top of this file
+// but no function existed anywhere below to actually use it — meaning
+// the Credits & Extras panel's "1 Token", "3 Tokens", and "20 Tokens"
+// buttons (which call this endpoint with type: "token_purchase") had no
+// working handler to reach. Reconstructed here to match exactly how
+// index.html's buyTokenPack() calls this endpoint, and how
+// stripe-webhook.js's handleTokenPayment() reads device_id back out of
+// metadata on completion.
+async function handleTokenPurchase(req, res) {
+  const { deviceId, packId } = req.body || {};
+  const pack = TOKEN_PACKS[packId];
+  if (!pack) return res.status(400).json({ error: `Unknown token pack "${packId}".` });
+  if (!deviceId) return res.status(400).json({ error: "Missing device ID." });
+
+  const origin = req.headers.origin || "https://muggshotz-ai-test.vercel.app";
+
+  const session = await stripe.checkout.sessions.create({
+    mode: "payment",
+    line_items: [{
+      price_data: {
+        currency: "usd",
+        product_data: { name: pack.label },
+        unit_amount: pack.amountCents
+      },
+      quantity: 1
+    }],
+    metadata: { device_id: deviceId, pack_id: packId },
+    success_url: `${origin}/index.html?checkout=success`,
+    cancel_url: `${origin}/index.html?checkout=cancelled`
+  });
+
+  return res.status(200).json({ url: session.url });
+}
+
+// RESTORED (July 2026): the file had NO export default at all — nothing
+// for Vercel to actually invoke when this endpoint was called. This
+// router matches how every caller in the codebase already sends its
+// request: index.html's buyTokenPack() sends { type: "token_purchase" },
+// order.html's submitOrder() sends { type: "mug_order" }, and the $5
+// Preview Reservation flow (checkout.html) is expected to send
+// { type: "reservation" }.
+export default async function handler(req, res) {
+  if (req.method !== "POST") {
+    return res.status(405).json({ error: "Method not allowed" });
+  }
+
+  try {
+    const { type } = req.body || {};
+    if (type === "reservation") {
+      return await handleReservation(req, res);
+    }
+    if (type === "token_purchase") {
+      return await handleTokenPurchase(req, res);
+    }
+    if (type === "mug_order") {
+      return await handleProductOrder(req, res);
+    }
+    return res.status(400).json({ error: `Unknown checkout type "${type}".` });
+  } catch (error) {
+    console.error("Checkout session creation failed:", error.message);
+    return res.status(500).json({ error: error.message });
+  }
+}
