@@ -177,6 +177,27 @@ export default async function handler(req, res) {
     if (event.type === "checkout.session.completed") {
       const session = event.data.object;
 
+      // CRITICAL SAFETY CHECK (added July 2026): a test-mode Stripe
+      // session can "complete" successfully using Stripe's well-known
+      // public test card numbers, with zero real money ever collected.
+      // Before this check existed, ANY completed session — test or
+      // real — was treated as good enough to fire a real Printify
+      // order, which actually manufactures a physical product and
+      // bills the connected Printify/bank account for it. That means a
+      // test-mode checkout could produce a real charge and a real
+      // shipped product with no real payment ever having occurred.
+      // event.livemode is set directly by Stripe itself (not something
+      // this code or a customer can fake) — true only for genuine live
+      // payments. Anything test-mode is stopped here, before it ever
+      // reaches Printify or the token-crediting logic.
+      if (!event.livemode) {
+        console.warn("Ignored a TEST-MODE checkout.session.completed event — no order placed, no tokens credited.", {
+          stripeSessionId: session.id,
+          orderType: session.metadata?.order_type || "token/reservation"
+        });
+        return res.status(200).json({ received: true, ignored: "test_mode" });
+      }
+
       // Two completely different kinds of payment come through this
       // same webhook: token purchases/the $5 Preview Reservation (credits
       // tokens) and a real mug order (fires the actual Printify order).
