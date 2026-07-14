@@ -19,10 +19,7 @@ const WRAPAROUND_SET_SURCHARGE = 3;
 const SHIPPING_MARKUP_THRESHOLD = 50;
 const SHIPPING_MARKUP_RATE = 0.10;
 
-// RESTORED (July 2026): flyer/referral code support. This entire block —
-// email discount eligibility check + referral code pass-through — was
-// wiped out when this file got truncated and had to be reconstructed
-// from an earlier version. Re-adding it here.
+// flyer/referral code support (July 2026)
 const FLYER_DISCOUNT_RATE = 0.10;
 
 // Checks Supabase for whether this email has already redeemed the
@@ -166,9 +163,7 @@ async function handleProductOrder(req, res) {
     : 0;
   const giftCharge = giftMessage?.trim() ? GIFT_MESSAGE_PRICE : 0;
 
-  // RESTORED: one-time 10% email discount, checked fresh at checkout
-  // creation time. Only ever applies to the base product price, never
-  // to upsells, gift message, or shipping.
+  // one-time 10% email discount, checked fresh at checkout creation time.
   const cleanReferralCode = (referralCode || "").trim().toUpperCase() || null;
   const emailDiscountEligible = await checkEmailDiscountEligibility(shippingAddress.email);
   const discountAmount = emailDiscountEligible ? Math.round(basePrice * FLYER_DISCOUNT_RATE * 100) / 100 : 0;
@@ -233,9 +228,6 @@ async function handleProductOrder(req, res) {
       address2: shippingAddress.address2 || "",
       city: shippingAddress.city || "",
       zip: shippingAddress.zip || "",
-      // RESTORED: referral/flyer code + email discount tracking, read
-      // by stripe-webhook.js AFTER a real payment succeeds — never
-      // credited or marked used before that.
       referral_code: cleanReferralCode || "",
       email_discount_eligible: emailDiscountEligible ? "true" : "false",
       base_price: String(basePrice)
@@ -273,6 +265,97 @@ async function handleTokenPurchase(req, res) {
   return res.status(200).json({ url: session.url });
 }
 
+// NEW (July 2026, flyer tier system): a Beta buying into the next tier
+// once their current tier is fully matured. Priced by TIER_BUY_INS
+// below — kept as a flat lookup here rather than a database table,
+// since these five values essentially never change and this avoids an
+// extra round-trip on every checkout.
+//
+// SECURITY NOTE: eligibility is re-verified server-side here — never
+// trust that the "Upgrade" button was only shown because the tier was
+// actually matured. A Beta (or anyone with a betaId) hitting this
+// endpoint directly must still be correctly blocked if their tier
+// isn't really fully matured yet, or if they try to skip a tier.
+const TIER_SEQUENCE = ["PotShotz", "HotShotz", "BiggsHotz", "Muggshotz"];
+const TIER_BUY_INS = {
+  HotShotz:  { amountCents: 2000,  label: "HotShotz Tier Upgrade — $20" },
+  BiggsHotz: { amountCents: 5000,  label: "BiggsHotz Tier Upgrade — $50" },
+  Muggshotz: { amountCents: 20000, label: "Muggshotz Tier Upgrade — $200" }
+};
+
+async function getBetaForUpgrade(betaId) {
+  const url = `${SUPABASE_URL}/rest/v1/flyer_betas?id=eq.${encodeURIComponent(betaId)}&select=id,base_code,current_tier`;
+  const resp = await fetch(url, {
+    headers: { apikey: SUPABASE_SERVICE_ROLE_KEY, Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}` }
+  });
+  const rows = await resp.json();
+  if (!resp.ok) throw new Error("flyer_betas lookup failed: " + JSON.stringify(rows));
+  return rows.length > 0 ? rows[0] : null;
+}
+
+async function isCurrentTierFullyMatured(betaId, tier) {
+  const url = `${SUPABASE_URL}/rest/v1/flyer_codes?beta_id=eq.${encodeURIComponent(betaId)}&tier=eq.${encodeURIComponent(tier)}&select=matured`;
+  const resp = await fetch(url, {
+    headers: { apikey: SUPABASE_SERVICE_ROLE_KEY, Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}` }
+  });
+  const rows = await resp.json();
+  if (!resp.ok) throw new Error("flyer_codes maturity check failed: " + JSON.stringify(rows));
+  if (rows.length === 0) return false;
+  return rows.every(r => r.matured === true);
+}
+
+async function handleTierUpgrade(req, res) {
+  const { betaId } = req.body || {};
+  if (!betaId) return res.status(400).json({ error: "Missing betaId." });
+
+  try {
+    const beta = await getBetaForUpgrade(betaId);
+    if (!beta) return res.status(404).json({ error: "Beta not found." });
+
+    const currentIndex = TIER_SEQUENCE.indexOf(beta.current_tier);
+    const nextTier = TIER_SEQUENCE[currentIndex + 1];
+    if (!nextTier) {
+      return res.status(400).json({ error: "You're already on the top tier — there's no further upgrade available." });
+    }
+
+    const fullyMatured = await isCurrentTierFullyMatured(beta.id, beta.current_tier);
+    if (!fullyMatured) {
+      return res.status(400).json({ error: `Your ${beta.current_tier} tier isn't fully matured yet — keep sharing your current flyers first.` });
+    }
+
+    const buyIn = TIER_BUY_INS[nextTier];
+    if (!buyIn) return res.status(500).json({ error: `No buy-in price configured for ${nextTier}.` });
+
+    const origin = req.headers.origin || "https://muggshotz-ai-test.vercel.app";
+
+    const session = await stripe.checkout.sessions.create({
+      mode: "payment",
+      line_items: [{
+        price_data: {
+          currency: "usd",
+          product_data: { name: buyIn.label, description: `Beta ${beta.base_code} upgrading from ${beta.current_tier} to ${nextTier}` },
+          unit_amount: buyIn.amountCents
+        },
+        quantity: 1
+      }],
+      metadata: {
+        order_type: "tier_upgrade",
+        beta_id: beta.id,
+        base_code: beta.base_code,
+        from_tier: beta.current_tier,
+        target_tier: nextTier
+      },
+      success_url: `${origin}/flyer-balance.html?upgrade=success`,
+      cancel_url: `${origin}/flyer-balance.html?upgrade=cancelled`
+    });
+
+    return res.status(200).json({ url: session.url });
+  } catch (err) {
+    console.error("Tier upgrade checkout failed:", err.message);
+    return res.status(500).json({ error: err.message });
+  }
+}
+
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
@@ -288,6 +371,9 @@ export default async function handler(req, res) {
     }
     if (type === "mug_order") {
       return await handleProductOrder(req, res);
+    }
+    if (type === "tier_upgrade") {
+      return await handleTierUpgrade(req, res);
     }
     return res.status(400).json({ error: `Unknown checkout type "${type}".` });
   } catch (error) {
