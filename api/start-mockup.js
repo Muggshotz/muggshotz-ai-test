@@ -58,7 +58,13 @@ async function handleStart(req, res) {
     effectivePrintProviderId = product.printProviderId;
     variantId = await resolveVariantIdByTitleMatch(effectiveBlueprintId, effectivePrintProviderId, [sizeLabel]);
   } else {
-    ({ variantId } = resolveVariant(product, sizeLabel, colorName));
+    // FIXED (July 2026): resolveVariant() became async when it gained
+    // the live-lookup fallback for colors missing a hardcoded variantId
+    // (see create-printify-order.js). This call was missing the await,
+    // so variantId came back as an unresolved Promise instead of a real
+    // ID — breaking the mockup preview for every color, not just the
+    // newly-added ones without a hardcoded ID.
+    ({ variantId } = await resolveVariant(product, sizeLabel, colorName));
     effectiveBlueprintId = product.blueprintId;
     effectivePrintProviderId = product.printProviderId;
   }
