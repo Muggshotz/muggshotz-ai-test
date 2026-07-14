@@ -1742,6 +1742,7 @@ async function callGenerateAPI({ workingImage, prompt, refImageA, refImageB, pan
 async function generate(){
   if(!uploadedImageData){
     setStatus('Please upload a photo first.',true);
+    document.getElementById('uploadZone').scrollIntoView({behavior:'smooth',block:'center'});
     return;
   }
   if(product==='photo poster' && !posterSize){
