@@ -7,6 +7,14 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
+// RESTORED (July 2026): flyer/referral commission rate. Kept as a flat
+// rate here since the full tiered PotShotz/HotShotz/BiggsHotz/Muggshotz
+// commission-rate-per-tier system is a separate, not-yet-built project.
+// This is the simpler standalone version: one flat rate against a
+// product's estimatedProfit field (still 0 on every product right now,
+// so nothing pays out until real numbers are filled in).
+const FLYER_COMMISSION_RATE = 0.05;
+
 // Stripe sends the raw, unparsed request body so it can verify the
 // signature. Vercel parses JSON bodies by default, so we have to turn
 // that off specifically for this one endpoint.
@@ -91,6 +99,98 @@ async function markHasPurchased(customerId) {
   }
 }
 
+// RESTORED: credits commission to a flyer/referral code's running
+// balance after a REAL order has genuinely succeeded. Table:
+// referral_codes (code text primary key, balance numeric default 0).
+// Uses Supabase's upsert-on-conflict so a first-time code creates its
+// row automatically. Commission = FLYER_COMMISSION_RATE * product's
+// estimatedProfit — which is 0 for every product right now, so this
+// safely credits $0 until real profit numbers are filled in. Never
+// allowed to throw and block order fulfillment — logged and swallowed
+// on failure, same pattern as markHasPurchased above.
+async function creditFlyerCommission(referralCode, productKey, stripeSessionId) {
+  if (!referralCode) return;
+  try {
+    const product = getProduct(productKey);
+    const estimatedProfit = typeof product?.estimatedProfit === "number" ? product.estimatedProfit : 0;
+    const commission = Math.round(estimatedProfit * FLYER_COMMISSION_RATE * 100) / 100;
+
+    if (commission <= 0) {
+      console.log(`Flyer code ${referralCode} used on session ${stripeSessionId} — $0 commission (estimatedProfit not yet set for "${productKey}").`);
+      return;
+    }
+
+    // Read current balance (if any), then write back balance + commission.
+    // Two-step read-then-write rather than a single atomic increment,
+    // since Supabase's REST interface doesn't support a raw SQL
+    // increment through PostgREST without a custom RPC function.
+    const lookupUrl = `${SUPABASE_URL}/rest/v1/referral_codes?code=eq.${encodeURIComponent(referralCode)}&select=code,balance`;
+    const lookupResp = await fetch(lookupUrl, {
+      headers: {
+        "apikey": SUPABASE_SERVICE_ROLE_KEY,
+        "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`
+      }
+    });
+    const rows = await lookupResp.json();
+    if (!lookupResp.ok) throw new Error("Referral code lookup failed: " + JSON.stringify(rows));
+
+    const currentBalance = rows.length > 0 ? Number(rows[0].balance) || 0 : 0;
+    const newBalance = Math.round((currentBalance + commission) * 100) / 100;
+
+    const upsertResp = await fetch(`${SUPABASE_URL}/rest/v1/referral_codes`, {
+      method: "POST",
+      headers: {
+        "apikey": SUPABASE_SERVICE_ROLE_KEY,
+        "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+        "Content-Type": "application/json",
+        "Prefer": "resolution=merge-duplicates,return=representation"
+      },
+      body: JSON.stringify({ code: referralCode, balance: newBalance })
+    });
+    if (!upsertResp.ok) {
+      const err = await upsertResp.json();
+      throw new Error("Referral code balance update failed: " + JSON.stringify(err));
+    }
+
+    console.log(`Credited $${commission} commission to flyer code ${referralCode} (new balance $${newBalance}) for session ${stripeSessionId}.`);
+  } catch (err) {
+    console.error("CRITICAL: Flyer commission credit failed (order still fulfilled normally):", {
+      referralCode, stripeSessionId, error: err.message
+    });
+  }
+}
+
+// RESTORED: permanently records that this email has now used its
+// one-time 10% discount, so it can never be applied again for this
+// email. Table: email_discounts (email text primary key, used_at
+// timestamp). Only ever called AFTER a real successful order — an
+// abandoned or failed checkout never burns the discount. Never allowed
+// to throw and block order fulfillment.
+async function recordEmailDiscount(email, stripeSessionId) {
+  if (!email) return;
+  try {
+    const resp = await fetch(`${SUPABASE_URL}/rest/v1/email_discounts`, {
+      method: "POST",
+      headers: {
+        "apikey": SUPABASE_SERVICE_ROLE_KEY,
+        "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+        "Content-Type": "application/json",
+        "Prefer": "resolution=merge-duplicates,return=representation"
+      },
+      body: JSON.stringify({ email: email.toLowerCase(), used_at: new Date().toISOString() })
+    });
+    if (!resp.ok) {
+      const err = await resp.json();
+      throw new Error("Email discount record failed: " + JSON.stringify(err));
+    }
+    console.log(`Recorded one-time email discount as used for ${email} (session ${stripeSessionId}).`);
+  } catch (err) {
+    console.error("CRITICAL: Email discount recording failed (order still fulfilled normally):", {
+      email, stripeSessionId, error: err.message
+    });
+  }
+}
+
 // Credits tokens to a customer's balance. If they hadn't already earned
 // the separate email-verification bonus token, this payment covers that
 // too — 5 tokens instead of 4. This keeps the total tokens a customer
@@ -167,8 +267,6 @@ export default async function handler(req, res) {
       process.env.STRIPE_WEBHOOK_SECRET
     );
   } catch (err) {
-    // Signature verification failed, or the request wasn't really from
-    // Stripe. Reject it rather than trusting it.
     console.error("Webhook signature verification failed:", err.message);
     return res.status(400).json({ error: `Webhook signature verification failed: ${err.message}` });
   }
@@ -177,32 +275,21 @@ export default async function handler(req, res) {
     if (event.type === "checkout.session.completed") {
       const session = event.data.object;
 
-      // CRITICAL SAFETY CHECK (added July 2026): a test-mode Stripe
-      // session can "complete" successfully using Stripe's well-known
-      // public test card numbers, with zero real money ever collected.
-      // Before this check existed, ANY completed session — test or
-      // real — was treated as good enough to fire a real Printify
-      // order, which actually manufactures a physical product and
-      // bills the connected Printify/bank account for it. That means a
-      // test-mode checkout could produce a real charge and a real
-      // shipped product with no real payment ever having occurred.
-      // event.livemode is set directly by Stripe itself (not something
-      // this code or a customer can fake) — true only for genuine live
-      // payments. Anything test-mode is stopped here, before it ever
-      // reaches Printify or the token-crediting logic.
+      // CRITICAL SAFETY CHECK: a test-mode Stripe session can "complete"
+      // successfully using Stripe's well-known public test card numbers,
+      // with zero real money ever collected. event.livemode is set
+      // directly by Stripe itself (not something this code or a
+      // customer can fake) — true only for genuine live payments.
+      // Anything test-mode is stopped here, before it ever reaches
+      // Printify, token-crediting, or flyer commission logic.
       if (!event.livemode) {
-        console.warn("Ignored a TEST-MODE checkout.session.completed event — no order placed, no tokens credited.", {
+        console.warn("Ignored a TEST-MODE checkout.session.completed event — no order placed, no tokens or commission credited.", {
           stripeSessionId: session.id,
           orderType: session.metadata?.order_type || "token/reservation"
         });
         return res.status(200).json({ received: true, ignored: "test_mode" });
       }
 
-      // Two completely different kinds of payment come through this
-      // same webhook: token purchases/the $5 Preview Reservation (credits
-      // tokens) and a real mug order (fires the actual Printify order).
-      // The order_type metadata field set at checkout creation is what
-      // tells them apart.
       if (session.metadata?.order_type === "mug_order") {
         await handleMugOrderPayment(session);
       } else {
@@ -210,7 +297,6 @@ export default async function handler(req, res) {
       }
     }
 
-    // Acknowledge receipt so Stripe knows not to retry this event again.
     return res.status(200).json({ received: true });
   } catch (error) {
     console.error("Error handling webhook event:", error.message);
@@ -218,17 +304,6 @@ export default async function handler(req, res) {
   }
 }
 
-// Handles a real product order payment: reconstructs the order details
-// from the session metadata and fires the actual Printify order. If
-// Printify fails for any reason, this is logged clearly for manual
-// follow-up — but the webhook still acknowledges receipt to Stripe (the
-// customer already paid; a fulfillment failure needs a human to fix,
-// not an endless Stripe retry loop).
-//
-// Old-mug-type fallback: create-checkout-session.js was recently
-// updated to send product_key directly, but keeping this fallback
-// means any checkout session created moments before that deploy (still
-// in flight with the old mug_type-only metadata) doesn't silently fail.
 const MUG_TYPE_TO_PRODUCT_KEY = {
   "Classic White": "classic-white-mug",
   "Color Pop": "color-pop-mug",
@@ -263,13 +338,8 @@ async function handleMugOrderPayment(session) {
     zip: m.zip
   };
 
-  // print_mode was added by create-checkout-session.js — "fullBleed" for
-  // the free full-wrap option, "standard" otherwise. Defaults safely to
-  // "standard" if it's ever missing from older/edge-case sessions.
   const printMode = m.print_mode === "fullBleed" ? "fullBleed" : "standard";
 
-  // image_url_a/b/c mean different things depending on layoutType — see
-  // create-checkout-session.js for the packing side of this same map.
   const orderInput = {
     productKey,
     sizeLabel: m.size_label,
@@ -297,18 +367,22 @@ async function handleMugOrderPayment(session) {
     const result = await placeProductOrder(orderInput);
     console.log("Order placed successfully for session", session.id, "-> Printify order", result.printifyOrderId);
 
-    // Mark this device as having made a real purchase, same as token
-    // payments below. Looked up AFTER a successful order (not before)
-    // since a failed/undeliverable order shouldn't unlock anything.
     if (m.device_id) {
       let customer = await findCustomerByDeviceId(m.device_id);
       if (!customer) customer = await createCustomerForDevice(m.device_id);
       await markHasPurchased(customer.id);
     }
+
+    // RESTORED: only after the order has genuinely succeeded — a
+    // failed/undeliverable order never credits commission or burns the
+    // customer's one-time discount.
+    if (m.referral_code) {
+      await creditFlyerCommission(m.referral_code, productKey, session.id);
+    }
+    if (m.email_discount_eligible === "true" && m.email) {
+      await recordEmailDiscount(m.email, session.id);
+    }
   } catch (error) {
-    // Never let a Printify failure look like it silently vanished —
-    // this is the one thing that genuinely needs a human to notice and
-    // manually fix, since the customer has already been charged.
     console.error("CRITICAL: Order payment succeeded but Printify order failed.", {
       stripeSessionId: session.id,
       deviceId: m.device_id,
@@ -318,21 +392,14 @@ async function handleMugOrderPayment(session) {
   }
 }
 
-// Handles token-crediting payments: both the $5 Preview Reservation and
-// the standalone token pack purchases land here, since neither sets
-// order_type to "mug_order".
 async function handleTokenPayment(session) {
   const deviceId = session.metadata?.device_id;
 
   if (!deviceId) {
-    // Payment succeeded but we have no device to credit. Log it so
-    // it can be manually resolved.
     console.error("Checkout completed with no device_id in metadata:", session.id);
     return;
   }
 
-  // Stripe Checkout collects the email during the payment form
-  // itself, under customer_details.
   const stripeEmail = session.customer_details?.email || session.customer_email || null;
 
   let customer = await findCustomerByDeviceId(deviceId);
