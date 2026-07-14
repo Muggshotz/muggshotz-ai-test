@@ -1,11 +1,19 @@
 import fs from "fs";
 import path from "path";
 
+// RESTORED (July 2026): this file was found genuinely truncated — cut
+// off mid-function with no closing brackets and no export default
+// handler at all, meaning every generation request failed instantly.
+// Restored from the last known-good commit (dc14c44, July 11) via
+// GitHub's file history.
+//
 // Vercel kills a function once it exceeds this duration and returns its
 // own plain-text error page instead of JSON — which is what caused the
 // front end's "Unexpected token 'A'... is not valid JSON" crash. 300s is
 // the maximum allowed on the Hobby plan (with Fluid Compute enabled),
 // giving real caricature generations enough headroom to finish normally.
+// This one setting was a genuine, valuable fix made in the commit that
+// broke the rest of the file — kept here rather than lost.
 export const config = {
   maxDuration: 300,
 };
@@ -106,4 +114,263 @@ async function uploadGenerationToStorage(imageBuffer, deviceId) {
 // Saves a record of this generation so it can later be shown in the
 // "pick from your recent generations" picker for multi-placement orders.
 async function saveGenerationRecord(customerId, promptText, theme, imageUrl) {
-  const
+  const url = `${SUPABASE_URL}/rest/v1/generations`;
+  const resp = await fetch(url, {
+    method: "POST",
+    headers: {
+      "apikey": SUPABASE_SERVICE_ROLE_KEY,
+      "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+      "Content-Type": "application/json",
+      "Prefer": "return=representation"
+    },
+    body: JSON.stringify({
+      customer_id: customerId,
+      prompt_text: promptText,
+      background_theme: theme || null,
+      image_url: imageUrl
+    })
+  });
+  const rows = await resp.json();
+  if (!resp.ok) {
+    // Don't fail the whole request if this record-keeping step fails —
+    // the customer already has their image either way.
+    console.error("Could not save generation record:", JSON.stringify(rows));
+    return null;
+  }
+  return rows[0];
+}
+
+export default async function handler(req, res) {
+  if (req.method !== "POST") {
+    return res.status(405).json({ error: "Method not allowed" });
+  }
+  try {
+    const { image, prompt, theme, deviceId, refImageA, refImageB, currentDesign, size, panelRole } = req.body;
+    if (!image || !prompt) {
+      return res.status(400).json({ error: "Missing image or prompt." });
+    }
+    if (!deviceId) {
+      return res.status(400).json({ error: "Missing device ID." });
+    }
+
+    // gpt-image-2 needs an explicit size, or it infers a default shape
+    // (typically matching the uploaded photo's own orientation) —
+    // composition instructions in the prompt text alone were NOT
+    // reliably controlling actual output dimensions. Only these three
+    // values are valid for this endpoint; anything else from the front
+    // end falls back to square.
+    const VALID_SIZES = ["1024x1024", "1536x1024", "1024x1536"];
+    const imageSize = VALID_SIZES.includes(size) ? size : "1024x1024";
+
+    // Left/Right panel calls are scene-continuations of an already-paid
+    // Center generation (see index.html's wraparound orchestration) —
+    // they ride free as part of the same set, so they skip the token
+    // gate/deduction entirely rather than costing 3 tokens for one
+    // wraparound design.
+    const isPanelContinuation = panelRole === "left" || panelRole === "right";
+
+    let customer = null;
+    if (!isPanelContinuation) {
+      // --- TOKEN CHECK: look up or create this device's customer record ---
+      customer = await findCustomerByDeviceId(deviceId);
+      if (!customer) {
+        customer = await createCustomerForDevice(deviceId);
+      }
+      const isAdmin = customer.role === "admin";
+      if (!isAdmin && customer.token_balance <= 0) {
+        return res.status(403).json({
+          error: "You're out of free tokens. Verify your email to unlock another, or grab the $5 Preview Reservation for 4 more."
+        });
+      }
+      // --- END TOKEN CHECK ---
+    }
+
+    const identityLock = `
+CRITICAL MUGGSHOTZ LIKENESS RULE:
+This is a caricature of the exact person in the uploaded photo.
+Study the uploaded face first. Capture the spark and personality behind the eyes.
+Keep the same attitude, expression, mood, and presence as the real photo.
+The eyes are the center of the likeness — a good result must feel like the same person is looking back at you.
+Base every exaggeration on features that are actually visible in the uploaded photo, including:
+the real eye shape, eye spacing, and eyelids; the real brow angle; the real nose shape;
+the real mouth shape and expression; the real jawline, cheeks, and ears;
+the real facial hair, head shape, skin tone, and age.
+Preserve normal head-to-body proportions unless the customer asks for wild exaggeration.
+`;
+
+    // Left/Right panel calls are NOT edits of the customer's photo — the
+    // "image" field for these is the already-generated CENTER panel
+    // itself, and the goal is a plausible continuation of that same
+    // scene to one side, not a fresh caricature. Using a completely
+    // different, simpler prompt here (no identity-lock language) avoids
+    // confusing the model with face-preservation instructions that
+    // don't apply to a background-continuation panel.
+    const panelContinuationPrompt = isPanelContinuation ? `
+SCENE CONTINUATION — ${panelRole.toUpperCase()} PANEL:
+The attached image is the CENTER panel of a three-panel wraparound design that has already been generated and approved.
+Generate a NEW image that continues this exact same scene as if the camera panned to the ${panelRole === "left" ? "LEFT" : "RIGHT"} of the center panel — same environment, same lighting direction, same color palette, same art style, continuing background and environmental elements naturally from the ${panelRole === "left" ? "left" : "right"} edge of the reference image.
+This is a BACKGROUND/ENVIRONMENT continuation panel. Do NOT repeat the main subject's face or body in this panel, unless the scene naturally calls for a background element related to them (e.g. a shadow, a reflection, a distant object they'd plausibly be near). The goal is extending the WORLD of the scene outward, not duplicating the subject.
+Match the lighting direction, color grading, and visual style of the reference image exactly, so all three panels feel like one single continuous photograph or illustration when placed side by side.
+` : "";
+
+    // If a background theme was chosen and we have a matching reference
+    // image, tell the model explicitly how to use the two images together.
+    const templateFile = theme ? TEMPLATE_FILES[theme] : null;
+    const backgroundInstruction = templateFile
+      ? `
+BACKGROUND REFERENCE:
+Image 1 is the customer's photo — use it only for the person's face and likeness.
+Image 2 is a background style reference — match its texture, pattern, and soft-edged blending style for the background only.
+Do not copy any people, objects, or text from Image 2. Only use it as a background style guide.
+`
+      : "";
+
+    // If a current-design image was provided, this is a refinement of an
+    // existing result rather than a fresh generation. The ORIGINAL
+    // uploaded photo remains the identity anchor — it stays attached and
+    // stays the source of truth for the real face — but the current
+    // design is what the customer is actually looking at and wants
+    // modified, so treat it as the visual starting point to build on.
+    const currentDesignInstruction = currentDesign
+      ? `
+CURRENT DESIGN REFERENCE:
+An additional image labeled "current design" is attached. This is the customer's most recent generated result from this session — the actual image they are looking at right now.
+Use the current design as the visual starting point: keep its existing composition, background, costume, and styling unless the customer's new request below specifically asks to change something.
+The ORIGINAL uploaded customer photo remains the source of truth for facial identity and likeness at all times — the current design is a stylized rendering, not a real photo, so do not let it override or drift the real facial identity captured from the original photo.
+Apply the customer's new instruction as an edit on top of the current design, not as a brand-new unrelated generation.
+`
+      : "";
+
+
+    const finalPrompt = isPanelContinuation
+      ? `${panelContinuationPrompt}
+STYLE:
+Photorealistic rendering with caricature-level exaggeration of real features.
+Painted, airbrushed illustration finish — not cartoon, not vector, not anime style.
+Natural skin texture and lighting.
+Polished gift-art quality.
+`
+      : `${identityLock}
+CUSTOMER REQUEST:
+${prompt}
+${backgroundInstruction}
+${currentDesignInstruction}
+STYLE:
+Photorealistic rendering with caricature-level exaggeration of real features.
+Painted, airbrushed illustration finish — not cartoon, not vector, not anime style.
+Natural skin texture and lighting.
+Strong, unmistakable likeness to the uploaded photo.
+Expressive eyes, personality-centered face.
+Funny but respectful exaggeration, not a flattened cartoon mascot.
+Head proportions stay natural unless the customer specifically requests exaggeration.
+Polished gift-art quality.
+`;
+
+    // image comes in as a data URL like "data:image/png;base64,AAAA..."
+    // OpenAI's edit endpoint needs the raw file bytes, not the data URL prefix.
+    const matches = image.match(/^data:(image\/\w+);base64,(.+)$/);
+    if (!matches) {
+      return res.status(400).json({ error: "Image must be a base64 data URL." });
+    }
+    const mimeType = matches[1];
+    const base64Data = matches[2];
+    const imageBuffer = Buffer.from(base64Data, "base64");
+    const extension = mimeType === "image/png" ? "png" : "jpg";
+
+    const formData = new FormData();
+    formData.append("model", "gpt-image-2");
+    formData.append("prompt", finalPrompt);
+    formData.append("size", imageSize);
+    formData.append(
+      "image[]",
+      new Blob([imageBuffer], { type: mimeType }),
+      `upload.${extension}`
+    );
+
+    // If a matching template file exists on disk, attach it as a second
+    // reference image so the model can copy its background style.
+    if (templateFile) {
+      try {
+        const templatePath = path.join(process.cwd(), templateFile);
+        const templateBuffer = fs.readFileSync(templatePath);
+        formData.append(
+          "image[]",
+          new Blob([templateBuffer], { type: "image/png" }),
+          "background-reference.png"
+        );
+      } catch (fileErr) {
+        // If the template file can't be read for any reason, continue
+        // without it rather than failing the whole request.
+        console.error("Could not load template file:", templateFile, fileErr.message);
+      }
+    }
+
+    // If reference images were provided, attach them as additional images
+    // so the model can pull specific elements (a face, an object, a
+    // setting) from them as instructed in the prompt text above.
+    function attachDataUrlImage(dataUrl, filename) {
+      const m = dataUrl.match(/^data:(image\/\w+);base64,(.+)$/);
+      if (!m) return;
+      const buf = Buffer.from(m[2], "base64");
+      formData.append("image[]", new Blob([buf], { type: m[1] }), filename);
+    }
+    if (refImageA) attachDataUrlImage(refImageA, "reference-a.png");
+    if (refImageB) attachDataUrlImage(refImageB, "reference-b.png");
+    if (currentDesign) attachDataUrlImage(currentDesign, "current-design.png");
+
+    const response = await fetch("https://api.openai.com/v1/images/edits", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`
+      },
+      body: formData
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+      // OpenAI sometimes returns error as a nested object rather than a
+      // plain string. Flatten it here so the front end always has a
+      // readable message instead of "[object Object]".
+      const rawError = data?.error;
+      const readableError =
+        typeof rawError === "string"
+          ? rawError
+          : rawError?.message || JSON.stringify(rawError) || "Unknown error from image service.";
+      return res.status(response.status).json({ error: readableError });
+    }
+
+    const b64 = data?.data?.[0]?.b64_json;
+    if (!b64) {
+      return res.status(502).json({ error: "No image returned from OpenAI.", raw: data });
+    }
+
+    // Upload the finished image to Supabase Storage and get a real,
+    // permanent URL back instead of shipping raw base64 around.
+    const generatedBuffer = Buffer.from(b64, "base64");
+    const publicImageUrl = await uploadGenerationToStorage(generatedBuffer, deviceId);
+
+    // Record this generation so it can be picked later for multi-placement
+    // mug orders. Never lets a record-keeping failure block the customer's
+    // actual image from coming back. Skipped for left/right panel
+    // continuations since there's no separate customer/token event for
+    // those — they're logged implicitly as part of the center panel.
+    if (!isPanelContinuation) {
+      await saveGenerationRecord(customer.id, prompt, theme, publicImageUrl);
+    }
+
+    // Only deduct the token AFTER a successful generation, so a failed
+    // OpenAI call never costs anyone a token. Admin accounts are deducted
+    // the same as everyone else now (for a real, visible countdown on the
+    // token meter) — they just can never be BLOCKED by the zero-token
+    // check above, no matter how low this number goes. Left/right panel
+    // continuations never reach this — only the Center call in a
+    // wraparound set is gated/charged at all.
+    if (!isPanelContinuation) {
+      await deductOneToken(customer.id, customer.token_balance);
+    }
+
+    return res.status(200).json({ imageUrl: publicImageUrl });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+}
