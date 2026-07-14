@@ -100,6 +100,17 @@
 .big-alert-icon{font-size:36px;margin-bottom:10px}
 .big-alert-msg{color:#fff;font-size:16px;font-weight:600;line-height:1.45;margin-bottom:1.2rem}
 .big-alert-close{background:#e24b4a;border:none;border-radius:10px;padding:.75rem 1.5rem;color:#fff;font-size:14px;font-weight:700;cursor:pointer;letter-spacing:.3px}
+
+.guidance-prompt{display:none;margin:14px 0;padding:12px 14px;border:1px solid #ff6a00;border-radius:10px;background:#211006;color:#ffd0ad;text-align:center;font-size:13px;font-weight:700;line-height:1.4;box-shadow:0 0 0 rgba(255,106,0,0)}
+.guidance-prompt.visible{display:block;animation:gentlePulse 1.8s ease-in-out infinite}
+@keyframes gentlePulse{0%,100%{opacity:.72;box-shadow:0 0 0 rgba(255,106,0,0)}50%{opacity:1;box-shadow:0 0 16px rgba(255,106,0,.25)}}
+.phone-confirm{display:none;margin-top:.8rem;padding:.9rem;border:1px solid #ff6a00;border-radius:10px;background:#140b06;text-align:center}
+.phone-confirm.visible{display:block}
+.phone-confirm-model{color:#fff;font-size:16px;font-weight:800;margin-bottom:.4rem}
+.phone-confirm-question{color:#ffb27a;font-size:14px;font-weight:700;margin-bottom:.75rem}
+.phone-confirm-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.phone-confirm-actions button{border-radius:8px;padding:.75rem;border:1px solid #ff6a00;background:#0d0d0d;color:#ff9a4d;font-weight:800;cursor:pointer}
+.phone-confirm-actions button:first-child{background:#ff6a00;color:#fff}
 </style>
 </head>
 <body>
@@ -155,7 +166,7 @@
 <div class="tagline">YOUR HONEY. OUR FUNNY.</div>
 <div class="main">
 
-<div class="card"><div class="card-title">📸 Upload Photo</div>
+<div class="card" id="uploadPhotoCard"><div class="card-title">📸 Upload Photo</div>
 <div style="font-size:11px;color:#777;letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px;text-align:center">Photo 1</div>
 <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()"><div style="font-size:32px;color:#555;margin-bottom:8px">👤</div><div class="upload-text">Tap here to upload a photo</div><div class="upload-sub">Clear face photo works best</div></div><input type="file" id="fileInput" accept="image/*" style="display:none"/><img id="previewImg" class="preview-img" style="display:none"/>
 <button class="download-btn" id="toggleImageBtn" onclick="toggleWorkingImage()" style="display:none;margin-top:.6rem">↔️ Toggle Between Previous & New Image</button>
@@ -197,6 +208,14 @@
 <input type="text" id="phoneModelSearchInputGen" placeholder="e.g. iPhone 15 Pro, Galaxy S24"
   style="width:100%;padding:.6rem;border-radius:8px;border:.5px solid #333;background:#0d0d0d;color:#fff;box-sizing:border-box"/>
 <div id="phoneModelResultsGen" style="margin-top:.6rem"></div>
+<div id="phoneModelConfirmGen" class="phone-confirm" aria-live="polite">
+  <div id="phoneModelConfirmNameGen" class="phone-confirm-model"></div>
+  <div class="phone-confirm-question">Is this correct?</div>
+  <div class="phone-confirm-actions">
+    <button type="button" onclick="confirmPhoneModelGen(true)">Yes</button>
+    <button type="button" onclick="confirmPhoneModelGen(false)">No</button>
+  </div>
+</div>
 <div class="note" id="phoneModelSelectedNoteGen" style="margin-top:.6rem"></div>
 </div>
 
@@ -209,9 +228,10 @@
 </div>
 </div>
 
-<div class="card"><div class="card-title">💬 Tell Us Your Idea</div><textarea id="ideaDesc" placeholder="Example: Put me on a tiny red tricycle wearing a firefighter helmet and full firefighter outfit, racing through a parade with smoke and sirens behind me."></textarea><div class="quick-btns" id="quickBtns"></div><div class="note">Paint us a clear picture — the more detail you give us, the better our chances of getting your exact idea right.</div></div>
+<div class="card" id="ideaCard"><div class="card-title">💬 Tell Us Your Idea</div><textarea id="ideaDesc" placeholder="Example: Put me on a tiny red tricycle wearing a firefighter helmet and full firefighter outfit, racing through a parade with smoke and sirens behind me."></textarea><div class="quick-btns" id="quickBtns"></div><div class="note">Paint us a clear picture — the more detail you give us, the better our chances of getting your exact idea right.</div></div>
+<div id="ideaGuidancePrompt" class="guidance-prompt" role="status">Scroll to the next section when ready to select your desired product.</div>
 
-<div class="card"><div class="card-title">🎁 Product</div><div class="grid3"><div class="btn-select selected" data-val="mug" onclick="pick(this,'product')"><span class="icon">☕</span>Mug</div><div class="btn-select" data-val="greeting card" onclick="pick(this,'product')"><span class="icon">💌</span>Card</div><div class="btn-select" data-val="water bottle" onclick="pick(this,'product')"><span class="icon">🍶</span>Travel Cups</div><div class="btn-select" data-val="post-it note" onclick="pick(this,'product')"><span class="icon">📝</span>Post-it</div><div class="btn-select" data-val="phone case" onclick="pick(this,'product')"><span class="icon">📱</span>Phone case</div><div class="btn-select" data-val="tote bag" onclick="pick(this,'product')"><span class="icon">👜</span>Tote bag</div><div class="btn-select" data-val="suitcase" onclick="pick(this,'product')"><span class="icon">🧳</span>Suitcase</div><div class="btn-select" data-val="puzzle" onclick="pick(this,'product')"><span class="icon">🧩</span>Puzzle</div><div class="btn-select" data-val="photo poster" onclick="pick(this,'product')"><span class="icon">🖼️</span>Photo/Poster</div></div></div>
+<div class="card" id="productCard"><div class="card-title">🎁 Product</div><div class="grid3"><div class="btn-select selected" data-val="mug" onclick="pick(this,'product')"><span class="icon">☕</span>Mug</div><div class="btn-select" data-val="greeting card" onclick="pick(this,'product')"><span class="icon">💌</span>Card</div><div class="btn-select" data-val="water bottle" onclick="pick(this,'product')"><span class="icon">🍶</span>Travel Cups</div><div class="btn-select" data-val="post-it note" onclick="pick(this,'product')"><span class="icon">📝</span>Post-it</div><div class="btn-select" data-val="phone case" onclick="pick(this,'product')"><span class="icon">📱</span>Phone case</div><div class="btn-select" data-val="tote bag" onclick="pick(this,'product')"><span class="icon">👜</span>Tote bag</div><div class="btn-select" data-val="suitcase" onclick="pick(this,'product')"><span class="icon">🧳</span>Suitcase</div><div class="btn-select" data-val="puzzle" onclick="pick(this,'product')"><span class="icon">🧩</span>Puzzle</div><div class="btn-select" data-val="photo poster" onclick="pick(this,'product')"><span class="icon">🖼️</span>Photo/Poster</div></div></div>
 
 <div class="card" id="mugPrintModeCard">
 <div class="card-title">☕ Mug Print Style</div>
@@ -301,6 +321,7 @@
 </div>
 </div>
 
+<div id="finalGenerateGuidance" class="guidance-prompt" role="status">If satisfied with all selections, press “Generate.” If not, feel free to scroll back up and make any additional changes.</div>
 <button class="generate-btn" id="generateBtn" onclick="generate()">🎨 GENERATE CARICATURE</button>
 <button class="download-btn" id="cancelBtn" onclick="cancelGeneration()" style="display:none;margin-top:.5rem">✖ Cancel & Try a Different Photo</button>
 <div id="genTimerDisplay" style="display:none;text-align:center;font-size:13px;color:#ff9a4d;font-weight:600;margin-top:.5rem;letter-spacing:.3px"></div>
@@ -453,6 +474,88 @@ let refImageAData=null, refImageBData=null;
 let previousImageData=null;
 let currentDesignId=null;
 
+
+// Guided customer journey: automatic movement only while the customer is inactive.
+// Any real customer action cancels the current automatic step; programmatic scrolling does not.
+let guidedScrollInProgress=false;
+let openingGuideTimer=null;
+let photoGuideTimer=null;
+let ideaGuideTimer=null;
+let openingGuideCancelled=false;
+let photoGuideCancelled=false;
+
+function smoothScrollToTarget(targetId,block='start',after){
+  const target=document.getElementById(targetId);
+  if(!target)return;
+  guidedScrollInProgress=true;
+  target.scrollIntoView({behavior:'smooth',block});
+  setTimeout(()=>{
+    guidedScrollInProgress=false;
+    if(typeof after==='function')after();
+  },750);
+}
+
+function cancelOpeningGuide(){
+  openingGuideCancelled=true;
+  if(openingGuideTimer)clearTimeout(openingGuideTimer);
+}
+function cancelPhotoGuide(){
+  photoGuideCancelled=true;
+  if(photoGuideTimer)clearTimeout(photoGuideTimer);
+}
+function noteRealCustomerActivity(){
+  if(guidedScrollInProgress)return;
+  cancelOpeningGuide();
+  cancelPhotoGuide();
+}
+['wheel','touchstart','pointerdown','keydown'].forEach(evt=>{
+  window.addEventListener(evt,noteRealCustomerActivity,{passive:true});
+});
+
+function startOpeningGuide(){
+  openingGuideCancelled=false;
+  if(openingGuideTimer)clearTimeout(openingGuideTimer);
+  openingGuideTimer=setTimeout(()=>{
+    if(!openingGuideCancelled)smoothScrollToTarget('uploadPhotoCard','start');
+  },12000);
+}
+
+function startPhotoGuide(){
+  photoGuideCancelled=false;
+  if(photoGuideTimer)clearTimeout(photoGuideTimer);
+  // First frame the completed photo together with its Start Over control.
+  setTimeout(()=>{
+    if(!photoGuideCancelled)smoothScrollToTarget('startOverBtn','end');
+  },150);
+  photoGuideTimer=setTimeout(()=>{
+    if(!photoGuideCancelled){
+      smoothScrollToTarget('ideaCard','center',()=>{
+        const idea=document.getElementById('ideaDesc');
+        if(idea)idea.focus({preventScroll:true});
+        restartIdeaGuidanceTimer();
+      });
+    }
+  },10000);
+}
+
+function restartIdeaGuidanceTimer(){
+  const prompt=document.getElementById('ideaGuidancePrompt');
+  if(prompt)prompt.classList.remove('visible');
+  if(ideaGuideTimer)clearTimeout(ideaGuideTimer);
+  ideaGuideTimer=setTimeout(()=>{
+    if(prompt)prompt.classList.add('visible');
+  },30000);
+}
+
+window.addEventListener('DOMContentLoaded',()=>{
+  startOpeningGuide();
+  const idea=document.getElementById('ideaDesc');
+  if(idea){
+    idea.addEventListener('focus',restartIdeaGuidanceTimer);
+    idea.addEventListener('input',restartIdeaGuidanceTimer);
+  }
+});
+
 function setMainSlotImage(dataUrl){
   uploadedImageData=dataUrl;
   const img=document.getElementById('previewImg');
@@ -578,6 +681,10 @@ function setupPhoneModelSearchGen(){
   if(phoneSearchListenerAttachedGen)return;
   phoneSearchListenerAttachedGen=true;
   input.addEventListener('input',function(){
+    selectedPhoneCaseModel=null;
+    pendingPhoneCaseModel=null;
+    hidePhoneConfirmationGen();
+    document.getElementById('phoneModelSelectedNoteGen').textContent='';
     const q=input.value.trim().toLowerCase();
     const resultsEl=document.getElementById('phoneModelResultsGen');
     resultsEl.innerHTML='';
@@ -589,27 +696,51 @@ function setupPhoneModelSearchGen(){
     }
     matches.slice(0,8).forEach(model=>{
       const btn=document.createElement('div');
-      btn.className='btn-select'+(model===selectedPhoneCaseModel?' selected':'');
+      btn.className='btn-select';
       btn.style.marginBottom='6px';
-      btn.textContent=model+'?';
+      btn.textContent=model;
       btn.onclick=()=>pickPhoneModelGen(model);
       resultsEl.appendChild(btn);
     });
   });
 }
 
+let pendingPhoneCaseModel=null;
+
+function hidePhoneConfirmationGen(){
+  const panel=document.getElementById('phoneModelConfirmGen');
+  if(panel)panel.classList.remove('visible');
+}
+
 function pickPhoneModelGen(model){
-  selectedPhoneCaseModel=model;
+  pendingPhoneCaseModel=model;
+  selectedPhoneCaseModel=null;
   document.getElementById('phoneModelSearchInputGen').value=model;
   document.getElementById('phoneModelResultsGen').innerHTML='';
-  document.getElementById('phoneModelSelectedNoteGen').textContent='✓ Generating for '+model+'.';
-  // NEW (July 2026, Alyx's request): if the customer got sent up here
-  // because they tried to Generate without a phone model picked yet,
-  // send them right back down to the Generate button now that it's
-  // resolved — don't leave them stranded up here to scroll back down
-  // manually.
-  const genBtn=document.getElementById('generateBtn');
-  if(genBtn)genBtn.scrollIntoView({behavior:'smooth',block:'center'});
+  document.getElementById('phoneModelConfirmNameGen').textContent=model;
+  document.getElementById('phoneModelConfirmGen').classList.add('visible');
+  document.getElementById('phoneModelSelectedNoteGen').textContent='';
+}
+
+function confirmPhoneModelGen(isCorrect){
+  const input=document.getElementById('phoneModelSearchInputGen');
+  if(!isCorrect){
+    selectedPhoneCaseModel=null;
+    pendingPhoneCaseModel=null;
+    input.value='';
+    document.getElementById('phoneModelResultsGen').innerHTML='';
+    document.getElementById('phoneModelSelectedNoteGen').textContent='';
+    hidePhoneConfirmationGen();
+    input.placeholder='e.g. iPhone 15 Pro, Galaxy S24';
+    input.focus();
+    return;
+  }
+  if(!pendingPhoneCaseModel)return;
+  selectedPhoneCaseModel=pendingPhoneCaseModel;
+  hidePhoneConfirmationGen();
+  document.getElementById('phoneModelSelectedNoteGen').textContent='✓ Confirmed: '+selectedPhoneCaseModel+'.';
+  document.getElementById('finalGenerateGuidance').classList.add('visible');
+  smoothScrollToTarget('finalGenerateGuidance','center');
 }
 
 function refreshPhoneCaseModelVisibility(){
@@ -717,6 +848,8 @@ function pick(el,type){
   el.classList.add('selected');
   if(type==='product'){
     product=el.dataset.val;
+    const finalGuide=document.getElementById('finalGenerateGuidance');
+    if(finalGuide)finalGuide.classList.toggle('visible',product==='phone case'&&!!selectedPhoneCaseModel);
     refreshApproveRowForMode();
     refreshMugPrintModeVisibility();
     refreshPhotoPosterVisibility();
@@ -730,14 +863,10 @@ function pick(el,type){
     // cursor in the search box — don't make the customer go hunting
     // for it further down the page.
     if(product==='phone case'){
-      const phoneCard=document.getElementById('phoneCaseModelCard');
-      if(phoneCard){
-        phoneCard.scrollIntoView({behavior:'smooth',block:'center'});
-        setTimeout(()=>{
-          const input=document.getElementById('phoneModelSearchInputGen');
-          if(input)input.focus();
-        },450);
-      }
+      smoothScrollToTarget('phoneCaseModelCard','center',()=>{
+        const input=document.getElementById('phoneModelSearchInputGen');
+        if(input)input.focus();
+      });
     }
   }
   else if(type==='style')style=el.dataset.val;
@@ -1384,6 +1513,7 @@ document.getElementById('fileInput').addEventListener('change',function(e){
   resizeImageFile(file, 1280).then((dataUrl)=>{
     setMainSlotImage(dataUrl);
     saveWorkshop();
+    startPhotoGuide();
   });
 });
 
