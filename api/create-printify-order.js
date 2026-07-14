@@ -76,6 +76,12 @@ async function resolvePrintProviderId(blueprintId, providerNameHint) {
 // Now exported — reused directly by placeProductOrder() below for
 // travel-mug-20oz, which (like photo-poster's unresolved sizes) has no
 // hardcoded variantId in the catalog and needs it looked up live by name.
+// ALSO reused (July 2026, Alyx's request) by resolveVariant() below as a
+// generic fallback for any catalog color entry missing a hardcoded
+// variantId — e.g. a color just confirmed to exist on Printify but not
+// yet manually looked up. Lets a color go live immediately from just its
+// name, no manual ID-hunting required, then be backfilled with the real
+// number later if ever needed for speed.
 export async function resolveVariantIdByTitleMatch(blueprintId, printProviderId, matchTerms) {
   const response = await fetch(
     `https://api.printify.com/v1/catalog/blueprints/${blueprintId}/print_providers/${printProviderId}/variants.json`,
@@ -243,7 +249,17 @@ export async function buildFrontBackImages(frontSource, backSource, frontDims, b
   return { frontBuf, backBuf };
 }
 
-export function resolveVariant(product, sizeLabel, colorName) {
+// UPDATED (July 2026, Alyx's request): now ASYNC. A color entry in the
+// catalog can be added with variantId left out (null/undefined) the
+// moment it's confirmed to exist on Printify — this function then
+// resolves the real numeric variant ID live, by matching the size and
+// color name against Printify's own variant titles for that blueprint/
+// provider (same resolveVariantIdByTitleMatch() helper travel-mug-20oz
+// already relies on). This means a newly-confirmed color can go live
+// immediately from just its name, with no manual ID lookup required.
+// Every color that already has a real variantId hardcoded is completely
+// unaffected — this fallback only ever runs when one is missing.
+export async function resolveVariant(product, sizeLabel, colorName) {
   const sizeEntry = product.sizes?.[sizeLabel];
   if (!sizeEntry) throw new Error(`Unknown size "${sizeLabel}" for this product.`);
 
@@ -251,14 +267,18 @@ export function resolveVariant(product, sizeLabel, colorName) {
     if (!colorName) throw new Error("A color selection is required for this product.");
     const colorEntry = sizeEntry.colors.find(c => c.name === colorName);
     if (!colorEntry) throw new Error(`Unknown color "${colorName}" for size "${sizeLabel}".`);
-    return { variantId: colorEntry.variantId, price: sizeEntry.price };
+    if (colorEntry.variantId) return { variantId: colorEntry.variantId, price: sizeEntry.price };
+    const variantId = await resolveVariantIdByTitleMatch(product.blueprintId, product.printProviderId, [sizeLabel, colorName]);
+    return { variantId, price: sizeEntry.price };
   }
 
   if (product.colors) {
     if (!colorName) throw new Error("A color selection is required for this product.");
     const colorEntry = product.colors.find(c => c.name === colorName);
     if (!colorEntry) throw new Error(`Unknown color "${colorName}".`);
-    return { variantId: colorEntry.variantId, price: sizeEntry.price };
+    if (colorEntry.variantId) return { variantId: colorEntry.variantId, price: sizeEntry.price };
+    const variantId = await resolveVariantIdByTitleMatch(product.blueprintId, product.printProviderId, [sizeLabel, colorName]);
+    return { variantId, price: sizeEntry.price };
   }
 
   if (!sizeEntry.variantId) throw new Error(`No variantId configured for size "${sizeLabel}".`);
@@ -388,7 +408,7 @@ export async function placeProductOrder({
     variantId = await resolveVariantIdByTitleMatch(effectiveBlueprintId, effectivePrintProviderId, [sizeLabel]);
     price = product.sizes[sizeLabel].price;
   } else {
-    ({ variantId, price } = resolveVariant(product, sizeLabel, colorName));
+    ({ variantId, price } = await resolveVariant(product, sizeLabel, colorName));
     effectiveBlueprintId = product.blueprintId;
     effectivePrintProviderId = product.printProviderId;
   }
