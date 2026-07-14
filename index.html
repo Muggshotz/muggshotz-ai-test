@@ -602,6 +602,13 @@ function pickPhoneModelGen(model){
   document.getElementById('phoneModelSearchInputGen').value=model;
   document.getElementById('phoneModelResultsGen').innerHTML='';
   document.getElementById('phoneModelSelectedNoteGen').textContent='✓ Generating for '+model+'.';
+  // NEW (July 2026, Alyx's request): if the customer got sent up here
+  // because they tried to Generate without a phone model picked yet,
+  // send them right back down to the Generate button now that it's
+  // resolved — don't leave them stranded up here to scroll back down
+  // manually.
+  const genBtn=document.getElementById('generateBtn');
+  if(genBtn)genBtn.scrollIntoView({behavior:'smooth',block:'center'});
 }
 
 function refreshPhoneCaseModelVisibility(){
