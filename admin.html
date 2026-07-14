@@ -32,6 +32,7 @@ input:focus{outline:none;border-color:#ff6a00}
 .lock-card h2{color:#ff6a00;margin-bottom:1.5rem}
 .lock-card input{margin-bottom:1rem}
 .lock-card button{width:100%;background:#ff6a00;border:none;border-radius:8px;padding:.85rem;color:#fff;font-size:15px;font-weight:700;cursor:pointer}
+.lock-card button:disabled{background:#333;color:#666;cursor:not-allowed}
 .balance-badge{display:inline-block;background:#0d0d0d;border:1px solid #333;border-radius:20px;padding:.3rem .8rem;font-size:12px;color:#ff6a00;margin-top:.5rem}
 </style>
 </head>
@@ -41,7 +42,7 @@ input:focus{outline:none;border-color:#ff6a00}
   <div class="lock-card">
     <h2>🔐 MuggsHotz Admin</h2>
     <input type="password" id="pwInput" placeholder="Enter password" onkeydown="if(event.key==='Enter')checkPw()"/>
-    <button onclick="checkPw()">Unlock</button>
+    <button id="unlockBtn" onclick="checkPw()">Unlock</button>
     <div id="pwError" style="color:#e07070;font-size:12px;margin-top:.75rem"></div>
   </div>
 </div>
@@ -79,18 +80,29 @@ input:focus{outline:none;border-color:#ff6a00}
 </div>
 
 <script>
-const ADMIN_PASSWORD = '$Noneya6611$';
-const SUPABASE_URL   = 'https://nhyjxkmvmnuktahfvbwj.supabase.co';
-// Uses the anon key for reads; admin grants go through a dedicated endpoint
-// so we never expose the service role key in the browser.
+// HARDENED (July 2026): this page used to hold the admin password and a
+// Supabase key in plain text right here in the JavaScript — visible to
+// anyone who viewed the page source, no login required. Neither exists
+// in this file anymore. The password the person types below is only
+// ever sent to the server (over the network, same as any normal login
+// form) where /api/admin-tokens and /api/admin-lookup check it against
+// an environment variable that never ships to the browser. This page
+// itself now holds no secret of any kind.
+let enteredPassword = '';
 
 function checkPw(){
   const val = document.getElementById('pwInput').value;
-  if(val === ADMIN_PASSWORD){
-    document.getElementById('lockScreen').style.display = 'none';
-  } else {
-    document.getElementById('pwError').textContent = 'Wrong password.';
+  if(!val){
+    document.getElementById('pwError').textContent = 'Enter a password.';
+    return;
   }
+  // We can't verify the password client-side anymore (that was the
+  // whole problem) — instead we hold onto it and let the very first
+  // real server call (a balance lookup or token action) confirm it.
+  // If it's wrong, every server call below will simply return
+  // "Unauthorized" and the person can try again.
+  enteredPassword = val;
+  document.getElementById('lockScreen').style.display = 'none';
 }
 
 async function lookupBalance(){
@@ -99,29 +111,23 @@ async function lookupBalance(){
   if(!deviceId && !email){ showResult('Enter a device ID or email to look up.','error'); return; }
 
   try{
-    let url;
-    if(deviceId){
-      url = `${SUPABASE_URL}/rest/v1/customers?device_id=eq.${encodeURIComponent(deviceId)}&select=id,token_balance,email,device_id`;
-    } else {
-      url = `${SUPABASE_URL}/rest/v1/customers?email=eq.${encodeURIComponent(email)}&select=id,token_balance,email,device_id`;
-    }
-    const resp = await fetch(url, { headers: { 'apikey': await getAnonKey() } });
-    const rows = await resp.json();
-    if(!rows.length){ showResult('No customer found.','error'); return; }
-    const c = rows[0];
+    const resp = await fetch('/api/admin-lookup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: enteredPassword, deviceId: deviceId || undefined, email: email || undefined })
+    });
+    const data = await resp.json();
+    if (resp.status === 403) { relockWithError('Wrong password.'); return; }
+    if(!resp.ok) throw new Error(data.error || 'Lookup failed.');
+
     const badge = document.getElementById('balanceBadge');
-    badge.textContent = `${c.token_balance} tokens`;
+    badge.textContent = `${data.tokenBalance} tokens`;
     badge.style.display = 'inline-block';
-    if(!deviceId && c.device_id) document.getElementById('deviceId').value = c.device_id;
-    showResult(`Found: ${c.email || '(no email)'} — Balance: ${c.token_balance} tokens`,'success');
+    if(!deviceId && data.deviceId) document.getElementById('deviceId').value = data.deviceId;
+    showResult(`Found: ${data.email || '(no email)'} — Balance: ${data.tokenBalance} tokens`,'success');
   }catch(err){
     showResult('Lookup failed: ' + err.message,'error');
   }
-}
-
-async function getAnonKey(){
-  // Anon key is safe to expose in a password-gated admin page
-  return 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5oeWp4a212bW51a3RhaGZ2YndqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDkyNDQ0ODUsImV4cCI6MjA2NDgyMDQ4NX0.abcdefg';
 }
 
 async function adjustTokens(action){
@@ -137,9 +143,10 @@ async function adjustTokens(action){
     const resp = await fetch('/api/admin-tokens', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ password: ADMIN_PASSWORD, deviceId, count, action, reason })
+      body: JSON.stringify({ password: enteredPassword, deviceId, count, action, reason })
     });
     const data = await resp.json();
+    if (resp.status === 403) { relockWithError('Wrong password.'); return; }
     if(!resp.ok) throw new Error(data.error || 'Request failed.');
 
     const verb = action === 'grant' ? 'Granted' : 'Deducted';
@@ -155,6 +162,16 @@ async function adjustTokens(action){
   }catch(err){
     showResult('Error: ' + err.message,'error');
   }
+}
+
+// If any server call ever comes back Unauthorized, the password we're
+// holding is wrong — re-show the lock screen instead of letting the
+// person keep hammering buttons that will only ever fail.
+function relockWithError(msg){
+  enteredPassword = '';
+  document.getElementById('pwInput').value = '';
+  document.getElementById('pwError').textContent = msg;
+  document.getElementById('lockScreen').style.display = 'flex';
 }
 
 function showResult(msg, type){
