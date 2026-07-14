@@ -1753,6 +1753,24 @@ function urlToDataURL(url){
     }));
 }
 
+// NEW: reads the response body as text first, then tries to parse it as
+// JSON. If Vercel kills a long-running function it sends back its own
+// plain-text/HTML error page instead of JSON — calling resp.json()
+// directly on that throws a raw "Unexpected token..." parse error, which
+// is what customers were seeing on screen. This gives a real, readable
+// message instead, in case a generation ever still runs past the
+// function's max duration.
+async function parseJSONResponse(resp){
+  const text=await resp.text();
+  try{
+    return JSON.parse(text);
+  }catch(parseErr){
+    const err=new Error("This generation took too long and timed out on our end. This can happen on heavier requests — please try again.");
+    err.status=resp.status;
+    throw err;
+  }
+}
+
 async function callGenerateAPI({ workingImage, prompt, refImageA, refImageB, panelRole, signal }){
   const resp=await fetch('/api/generate',{
     method:'POST',
@@ -1770,7 +1788,7 @@ async function callGenerateAPI({ workingImage, prompt, refImageA, refImageB, pan
     }),
     signal
   });
-  const data=await resp.json();
+  const data=await parseJSONResponse(resp);
   if(!resp.ok){
     const err=new Error(data.error||data.detail||'Generation failed.');
     err.status=resp.status;
@@ -1922,7 +1940,7 @@ Use rich environmental storytelling while keeping the face as the primary focal 
       signal:currentGenerationController.signal
     });
 
-    const data=await resp.json();
+    const data=await parseJSONResponse(resp);
 
     if(!resp.ok){
       if(resp.status===403){
