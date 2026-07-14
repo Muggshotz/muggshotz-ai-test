@@ -13,41 +13,88 @@ const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 // generation option, since it costs more in API usage than a single
 // image and shouldn't be available on a customer's very first free
 // token (that would effectively hand out 3 images for the price of 1).
-//
-// RESTORED (July 2026, flyer system Step 3): also handles a second,
-// unrelated lookup — a flyer/referral code's running commission
-// balance, for the self-serve Beta balance-check page (flyer-
-// balance.html). Added as a second branch in this same file rather
-// than a new endpoint file, since Vercel's Hobby plan caps a project at
-// 12 serverless functions and this project is already sitting right at
-// that limit — adding a new file would break deployment the same way
-// admin-lookup.js briefly did earlier this month.
+
+const TIER_SEQUENCE = ["PotShotz", "HotShotz", "BiggsHotz", "Muggshotz"];
+
+// CORRECTED (July 2026): this used to query a table called
+// referral_codes with just (code, balance) columns — that was the
+// EARLY flat-rate draft of the flyer system, which got replaced when
+// the real tiered schema (flyer_betas / flyer_codes / flyer_commission_
+// events / the fn_credit_commission and fn_beta_available_balance
+// functions) was actually run in Supabase. The old referral_codes
+// table either doesn't exist anymore or is disconnected from live
+// data — this was silently returning wrong/empty results on
+// flyer-balance.html until caught. Now correctly reads from
+// flyer_codes + flyer_betas, and also returns everything
+// flyer-balance.html needs to decide whether to show a tier-upgrade
+// button (current tier, whether it's fully matured, what the next
+// tier is).
 async function handleReferralLookup(req, res) {
   const { referralCode } = req.query;
   const cleanCode = (referralCode || "").trim().toUpperCase();
   if (!cleanCode) return res.status(400).json({ error: "Missing referral code." });
 
   try {
-    const url = `${SUPABASE_URL}/rest/v1/referral_codes?code=eq.${encodeURIComponent(cleanCode)}&select=code,balance`;
-    const resp = await fetch(url, {
-      headers: {
-        "apikey": SUPABASE_SERVICE_ROLE_KEY,
-        "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`
-      }
+    const codeUrl = `${SUPABASE_URL}/rest/v1/flyer_codes?code=eq.${encodeURIComponent(cleanCode)}&select=id,beta_id,tier,matured`;
+    const codeResp = await fetch(codeUrl, {
+      headers: { apikey: SUPABASE_SERVICE_ROLE_KEY, Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}` }
     });
-    const rows = await resp.json();
-    if (!resp.ok) throw new Error("Supabase referral lookup failed: " + JSON.stringify(rows));
+    const codeRows = await codeResp.json();
+    if (!codeResp.ok) throw new Error("flyer_codes lookup failed: " + JSON.stringify(codeRows));
 
-    if (rows.length === 0) {
-      // A code with no commission earned yet has no row (see
-      // creditFlyerCommission in stripe-webhook.js — rows are only
-      // created the first time a code actually earns something).
-      // That's a normal, valid state, not an error — a brand-new code
-      // simply has a $0 balance.
-      return res.status(200).json({ code: cleanCode, balance: 0, found: false });
+    if (codeRows.length === 0) {
+      return res.status(200).json({ code: cleanCode, found: false });
     }
+    const flyerCode = codeRows[0];
 
-    return res.status(200).json({ code: rows[0].code, balance: Number(rows[0].balance) || 0, found: true });
+    const betaUrl = `${SUPABASE_URL}/rest/v1/flyer_betas?id=eq.${flyerCode.beta_id}&select=id,base_code,full_name,current_tier`;
+    const betaResp = await fetch(betaUrl, {
+      headers: { apikey: SUPABASE_SERVICE_ROLE_KEY, Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}` }
+    });
+    const betaRows = await betaResp.json();
+    if (!betaResp.ok) throw new Error("flyer_betas lookup failed: " + JSON.stringify(betaRows));
+    if (betaRows.length === 0) {
+      return res.status(200).json({ code: cleanCode, found: false });
+    }
+    const beta = betaRows[0];
+
+    const balResp = await fetch(`${SUPABASE_URL}/rest/v1/rpc/fn_beta_available_balance`, {
+      method: "POST",
+      headers: {
+        apikey: SUPABASE_SERVICE_ROLE_KEY,
+        Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ p_beta_id: beta.id })
+    });
+    const balanceRaw = await balResp.json();
+    if (!balResp.ok) throw new Error("fn_beta_available_balance failed: " + JSON.stringify(balanceRaw));
+    const totalBalance = Number(balanceRaw) || 0;
+
+    const tierCodesUrl = `${SUPABASE_URL}/rest/v1/flyer_codes?beta_id=eq.${beta.id}&tier=eq.${encodeURIComponent(beta.current_tier)}&select=matured`;
+    const tierCodesResp = await fetch(tierCodesUrl, {
+      headers: { apikey: SUPABASE_SERVICE_ROLE_KEY, Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}` }
+    });
+    const tierCodesRows = await tierCodesResp.json();
+    if (!tierCodesResp.ok) throw new Error("tier maturity check failed: " + JSON.stringify(tierCodesRows));
+    const tierFullyMatured = tierCodesRows.length > 0 && tierCodesRows.every(r => r.matured === true);
+
+    const currentIndex = TIER_SEQUENCE.indexOf(beta.current_tier);
+    const nextTier = TIER_SEQUENCE[currentIndex + 1] || null;
+    const canUpgrade = tierFullyMatured && !!nextTier;
+
+    return res.status(200).json({
+      code: cleanCode,
+      found: true,
+      betaId: beta.id,
+      baseCode: beta.base_code,
+      fullName: beta.full_name,
+      currentTier: beta.current_tier,
+      totalBalance,
+      tierFullyMatured,
+      canUpgrade,
+      nextTier
+    });
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }
@@ -58,8 +105,6 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
-  // Branch by which query param is present — deviceId is the original
-  // token-meter lookup, referralCode is the new flyer-balance lookup.
   if (req.query.referralCode) {
     return handleReferralLookup(req, res);
   }
@@ -69,4 +114,8 @@ export default async function handler(req, res) {
     if (!deviceId) {
       return res.status(400).json({ error: "Missing device ID." });
     }
-    const url = `${SUPABASE_URL}/rest/v1/customers?device_id=eq.${encodeURIComponent(deviceId)}&select=token_balance,role,has_purchased`
+    const url = `${SUPABASE_URL}/rest/v1/customers?device_id=eq.${encodeURIComponent(deviceId)}&select=token_balance,role,has_purchased`;
+    const resp = await fetch(url, {
+      headers: {
+        "apikey": SUPABASE_SERVICE_ROLE_KEY,
+        "Authorization":
