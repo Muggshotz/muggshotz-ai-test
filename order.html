@@ -49,6 +49,9 @@ label{font-size:11px;color:#888;letter-spacing:.5px;text-transform:uppercase;dis
 .token-meter-row{position:fixed;top:8px;right:10px;left:auto;z-index:999;display:flex;align-items:center;pointer-events:none}
 #tokenMeterWrap{position:relative;width:150px;flex-shrink:0}
 @media (min-width:1000px){.token-meter-row{top:16px;right:24px}}
+.flyer-status{font-size:11px;margin-top:6px;line-height:1.35}
+.flyer-status.ok{color:#5fbf5f}
+.flyer-status.pending{color:#888}
 </style>
 </head>
 <body>
@@ -246,6 +249,19 @@ label{font-size:11px;color:#888;letter-spacing:.5px;text-transform:uppercase;dis
 </div>
 </div>
 
+<!-- RESTORED (July 2026): flyer/referral code box, wiped out during the
+     create-checkout-session.js truncation and never re-added until now.
+     Purely optional — leaving it blank changes nothing about checkout.
+     The one-time 10% email discount check happens server-side regardless
+     of whether a code is entered here; this field only affects whether
+     a flyer/referral code gets credited commission. -->
+<div class="card" id="flyerCodeCard">
+<div class="card-title">🎟️ Got a Flyer Code?</div>
+<div class="note" style="margin-top:0;margin-bottom:.75rem">Optional — enter it here if a flyer or referral link brought you here. Leave blank if you don't have one.</div>
+<input type="text" id="flyerCodeInput" placeholder="e.g. CHIPPER-07" oninput="onFlyerCodeInput()" style="text-transform:uppercase"/>
+<div class="flyer-status" id="flyerCodeStatus"></div>
+</div>
+
 <div class="card" id="giftMessageCard">
 <div class="card-title">💌 Gift Message</div>
 <div class="note" style="margin-top:0;margin-bottom:.75rem">Add a printed card with a personal message, included right in the package.</div>
@@ -266,6 +282,7 @@ label{font-size:11px;color:#888;letter-spacing:.5px;text-transform:uppercase;dis
 <div class="summary-row" id="summaryGiftRow" style="display:none"><span>Gift message</span><span id="summaryGift"></span></div>
 <div class="summary-row" id="summaryShippingRow"><span>Shipping & Handling</span><span id="summaryShipping">$6.95</span></div>
 <div class="summary-row total"><span>Total</span><span id="summaryTotal">$21.90</span></div>
+<div class="note" id="summaryDiscountNote" style="display:none;color:#5fbf5f;margin-top:.5rem">Your first-order 10% discount will be applied automatically at checkout if your email qualifies.</div>
 </div>
 
 <button class="generate-btn" id="submitBtn" onclick="submitOrder()">Continue to Payment</button>
@@ -345,9 +362,6 @@ const TRAVEL_MUG_CATALOG = {
     layoutType: "single-image",
     sizeLabel: "20oz",
     price: 34.95,
-    // UPDATED (July 2026): swapped print provider (see products-catalog.js
-    // for why) — this blueprint comes in white only, no color picker,
-    // and prints as one continuous wrap image instead of front/back.
     colors: null
   },
   "travel-mug-14oz-handle": {
@@ -383,14 +397,27 @@ let previewView = "front";
 let selectedTravelProductKey = null;
 let selectedTravelColor = null;
 
+// RESTORED: flyer/referral code state, read from the input box above
+// and sent along with the order at checkout. Purely optional.
+let referralCode = "";
+
 const GIFT_MESSAGE_PRICE = 1.00;
 
+function onFlyerCodeInput(){
+  const input = document.getElementById('flyerCodeInput');
+  referralCode = input.value.trim().toUpperCase();
+  input.value = referralCode;
+  const statusEl = document.getElementById('flyerCodeStatus');
+  if (referralCode) {
+    statusEl.className = 'flyer-status ok';
+    statusEl.textContent = "✓ Code " + referralCode + " will be applied at checkout.";
+  } else {
+    statusEl.className = 'flyer-status pending';
+    statusEl.textContent = '';
+  }
+}
+
 // ===== Shared real-photo mockup job runner (two-step start/check flow) =====
-// Replaces the old single long-running call to /api/generate-mockup,
-// which could exceed Vercel's Hobby-plan 10 second function limit while
-// waiting on Printify. Instead: kick the job off (fast), then poll a
-// lightweight status-check endpoint every 1.5s until the photo is ready.
-// Every individual request stays well under the 10 second cap this way.
 async function runMockupJob(body, btn, noteEl, imgEl){
   btn.disabled = true;
   btn.textContent = '📸 Generating your real photo... (a few seconds)';
@@ -407,7 +434,7 @@ async function runMockupJob(body, btn, noteEl, imgEl){
 
     const productId = startData.productId;
     let mockupUrl = null;
-    const maxTries = 20; // ~30 seconds of polling at 1.5s apart
+    const maxTries = 20;
 
     for (let i = 0; i < maxTries; i++) {
       await new Promise(r => setTimeout(r, 1500));
@@ -521,15 +548,9 @@ const PHONE_CASE_MODELS = [
 ];
 const PHONE_CASE_PRICE = 24.95;
 let selectedPhoneModel = null;
-// NEW (July 2026, Alyx's request): the phone model was already picked
-// back in the generator (index.html) before the customer ever got here
-// — carry it straight through instead of making them search and pick
-// it a second time.
 if (pendingOrder?.preselectedPhoneModel) {
   selectedPhoneModel = pendingOrder.preselectedPhoneModel;
 }
-// Guards the auto-fetch below so it only fires once per model — the
-// button remains available afterward as a manual retry/refresh.
 let phoneMockupAutoFetchInFlight = false;
 
 const TOTE_BAG_SIZES = {
@@ -613,17 +634,9 @@ function pickPhoneModel(model){
   const img=document.getElementById('phoneMockupImg'); if(img) img.style.display='none';
   const btn=document.getElementById('phoneMockupBtn'); if(btn) btn.textContent='📸 See a Real Photo Preview';
   updateSummary();
-  // NEW (July 2026, Alyx's request): fetch the real photo preview the
-  // moment a model is picked or changed — no button press required,
-  // matching the automatic preview behavior mugs and travel mugs get
-  // in the generator.
   maybeAutoFetchPhoneMockup(true);
 }
 
-// force=true re-fetches even if a preview is already showing (used when
-// the customer actively picks/changes a model). Without force, this is
-// a no-op once an image is already displayed, so it's safe to call on
-// every page render without re-fetching unnecessarily.
 function maybeAutoFetchPhoneMockup(force){
   if (!selectedPhoneModel || phoneMockupAutoFetchInFlight) return;
   const imgEl = document.getElementById('phoneMockupImg');
@@ -1264,6 +1277,12 @@ function updateSummary(){
 
   document.getElementById('summaryShipping').textContent = '$' + shipping.toFixed(2);
   document.getElementById('summaryTotal').textContent = '$' + total.toFixed(2);
+
+  // RESTORED: reminds the customer the 10% discount is checked
+  // server-side (per email, one-time) — this note is informational
+  // only and never affects the displayed total, since eligibility is
+  // confirmed at checkout creation time, not here on the client.
+  document.getElementById('summaryDiscountNote').style.display = 'block';
 }
 
 function setStatus(msg, isError){
@@ -1316,7 +1335,8 @@ async function submitOrder(){
       colorName: selectedTravelColor,
       customerName: fullName,
       giftMessage: giftMessageEnabled ? document.getElementById('giftMessageText').value.trim() : null,
-      shippingAddress
+      shippingAddress,
+      referralCode
     };
 
     if (product.layoutType === 'front-back') {
@@ -1350,7 +1370,8 @@ async function submitOrder(){
       image,
       customerName: fullName,
       giftMessage: giftMessageEnabled ? document.getElementById('giftMessageText').value.trim() : null,
-      shippingAddress
+      shippingAddress,
+      referralCode
     };
 
   } else if (isPhoneCase()) {
@@ -1376,7 +1397,8 @@ async function submitOrder(){
       image,
       customerName: fullName,
       giftMessage: giftMessageEnabled ? document.getElementById('giftMessageText').value.trim() : null,
-      shippingAddress
+      shippingAddress,
+      referralCode
     };
 
   } else if (isToteBag()) {
@@ -1403,7 +1425,8 @@ async function submitOrder(){
       image,
       customerName: fullName,
       giftMessage: giftMessageEnabled ? document.getElementById('giftMessageText').value.trim() : null,
-      shippingAddress
+      shippingAddress,
+      referralCode
     };
 
   } else if (isPuzzle()) {
@@ -1425,7 +1448,8 @@ async function submitOrder(){
       image,
       customerName: fullName,
       giftMessage: giftMessageEnabled ? document.getElementById('giftMessageText').value.trim() : null,
-      shippingAddress
+      shippingAddress,
+      referralCode
     };
 
   } else if (isPhotoPoster()) {
@@ -1451,7 +1475,8 @@ async function submitOrder(){
       image,
       customerName: fullName,
       giftMessage: giftMessageEnabled ? document.getElementById('giftMessageText').value.trim() : null,
-      shippingAddress
+      shippingAddress,
+      referralCode
     };
 
   } else {
@@ -1470,7 +1495,8 @@ async function submitOrder(){
       isWraparoundSet: !!pendingOrder.isWraparoundSet,
       customerName: fullName,
       giftMessage: giftMessageEnabled ? document.getElementById('giftMessageText').value.trim() : null,
-      shippingAddress
+      shippingAddress,
+      referralCode
     };
   }
 
@@ -1550,10 +1576,6 @@ if (isTravelMug()) {
     document.getElementById('previewNote').textContent =
       'Whichever design you placed first (Left, Center, or Right) will be printed on your phone case.';
     setupPhoneModelSearch();
-    // NEW (July 2026, Alyx's request): the model was already chosen
-    // back in the generator — reflect it here immediately and fetch
-    // the real photo preview on its own, no re-selecting and no
-    // button press needed.
     if (selectedPhoneModel) {
       document.getElementById('phoneModelSearchInput').value = selectedPhoneModel;
       document.getElementById('phoneModelSelectedNote').textContent =
