@@ -4,6 +4,9 @@ import { getRealShippingCost } from "../lib/printify-shipping.js";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
+const SUPABASE_URL = process.env.SUPABASE_URL;
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
 const TOKEN_PACKS = {
   "1token":  { tokens: 1,  amountCents: 50,  label: "1 Token — 50¢" },
   "3tokens": { tokens: 3,  amountCents: 100, label: "3 Tokens — $1.00" },
@@ -15,6 +18,40 @@ const WRAPAROUND_SET_SURCHARGE = 3;
 
 const SHIPPING_MARKUP_THRESHOLD = 50;
 const SHIPPING_MARKUP_RATE = 0.10;
+
+// RESTORED (July 2026): flyer/referral code support. This entire block —
+// email discount eligibility check + referral code pass-through — was
+// wiped out when this file got truncated and had to be reconstructed
+// from an earlier version. Re-adding it here.
+const FLYER_DISCOUNT_RATE = 0.10;
+
+// Checks Supabase for whether this email has already redeemed the
+// one-time 10% discount. Table: email_discounts (email text primary
+// key, used_at timestamp). If the table doesn't exist yet, or the
+// lookup fails for any reason, we fail CLOSED — meaning no discount is
+// applied — rather than fail open and risk giving the discount out
+// unlimited times due to an infrastructure hiccup.
+async function checkEmailDiscountEligibility(email) {
+  if (!email || !SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) return false;
+  try {
+    const url = `${SUPABASE_URL}/rest/v1/email_discounts?email=eq.${encodeURIComponent(email.toLowerCase())}&select=email`;
+    const resp = await fetch(url, {
+      headers: {
+        "apikey": SUPABASE_SERVICE_ROLE_KEY,
+        "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`
+      }
+    });
+    if (!resp.ok) {
+      console.error("Email discount eligibility check failed (failing closed, no discount):", await resp.text());
+      return false;
+    }
+    const rows = await resp.json();
+    return rows.length === 0; // eligible only if no prior redemption row exists
+  } catch (err) {
+    console.error("Email discount eligibility check errored (failing closed, no discount):", err.message);
+    return false;
+  }
+}
 
 // Now ASYNC — calls Printify's live Catalog Shipping endpoint instead
 // of reading a static number. Falls back to product.shippingCost (the
@@ -81,22 +118,9 @@ async function handleReservation(req, res) {
   return res.status(200).json({ url: session.url });
 }
 
-// RESTORED (July 2026): this file was found truncated mid-way through
-// handleProductOrder's metadata object — cut off right at "image_url_a:"
-// with no closing braces, no shipping fields in metadata, and critically
-// NO export default handler at all, meaning Vercel had nothing callable
-// to run for this endpoint. Everything from here down through the end
-// of the file is reconstructed from two solid sources: (1) exactly what
-// stripe-webhook.js's handleMugOrderPayment() reads out of
-// session.metadata — first_name, last_name, email, phone, country,
-// region, address1, address2, city, zip, customer_name, image_url_a/b/c
-// — and (2) TOKEN_PACKS above, which was defined but had no function
-// left in the file that actually used it, meaning token-pack purchases
-// (the Credits & Extras panel's 1/3/20 token buttons) had no working
-// endpoint to call either.
 async function handleProductOrder(req, res) {
   const {
-    deviceId, sizeLabel, customerName, giftMessage, shippingAddress, printMode, isWraparoundSet
+    deviceId, sizeLabel, customerName, giftMessage, shippingAddress, printMode, isWraparoundSet, referralCode
   } = req.body;
 
   const productKey = req.body.productKey || MUG_TYPE_TO_PRODUCT_KEY[req.body.mugType];
@@ -142,7 +166,14 @@ async function handleProductOrder(req, res) {
     : 0;
   const giftCharge = giftMessage?.trim() ? GIFT_MESSAGE_PRICE : 0;
 
-  const productCents = Math.round((basePrice + upsellCharge + giftCharge) * 100);
+  // RESTORED: one-time 10% email discount, checked fresh at checkout
+  // creation time. Only ever applies to the base product price, never
+  // to upsells, gift message, or shipping.
+  const cleanReferralCode = (referralCode || "").trim().toUpperCase() || null;
+  const emailDiscountEligible = await checkEmailDiscountEligibility(shippingAddress.email);
+  const discountAmount = emailDiscountEligible ? Math.round(basePrice * FLYER_DISCOUNT_RATE * 100) / 100 : 0;
+
+  const productCents = Math.round((basePrice - discountAmount + upsellCharge + giftCharge) * 100);
 
   const shippingCharge = product.shippingSeparate
     ? await calculateShippingCharge(product, basePrice, shippingAddress.country || "US")
@@ -150,7 +181,8 @@ async function handleProductOrder(req, res) {
   const shippingCents = Math.round(shippingCharge * 100);
 
   const origin = req.headers.origin || "https://muggshotz-ai-test.vercel.app";
-  const productName = `Muggshotz ${product.displayName} (${sizeLabel})${colorName ? " - " + colorName : ""}`;
+  const discountSuffix = emailDiscountEligible ? " (10% first-order discount applied)" : "";
+  const productName = `Muggshotz ${product.displayName} (${sizeLabel})${colorName ? " - " + colorName : ""}${discountSuffix}`;
 
   const line_items = [
     { price_data: { currency: "usd", product_data: { name: productName, description: `Custom ${product.displayName}` }, unit_amount: productCents }, quantity: 1 }
@@ -200,7 +232,13 @@ async function handleProductOrder(req, res) {
       address1: shippingAddress.address1 || "",
       address2: shippingAddress.address2 || "",
       city: shippingAddress.city || "",
-      zip: shippingAddress.zip || ""
+      zip: shippingAddress.zip || "",
+      // RESTORED: referral/flyer code + email discount tracking, read
+      // by stripe-webhook.js AFTER a real payment succeeds — never
+      // credited or marked used before that.
+      referral_code: cleanReferralCode || "",
+      email_discount_eligible: emailDiscountEligible ? "true" : "false",
+      base_price: String(basePrice)
     },
     success_url: `${origin}/order.html?checkout=success`,
     cancel_url: `${origin}/order.html?checkout=cancelled`
@@ -209,14 +247,6 @@ async function handleProductOrder(req, res) {
   return res.status(200).json({ url: session.url });
 }
 
-// RESTORED (July 2026): TOKEN_PACKS was defined at the top of this file
-// but no function existed anywhere below to actually use it — meaning
-// the Credits & Extras panel's "1 Token", "3 Tokens", and "20 Tokens"
-// buttons (which call this endpoint with type: "token_purchase") had no
-// working handler to reach. Reconstructed here to match exactly how
-// index.html's buyTokenPack() calls this endpoint, and how
-// stripe-webhook.js's handleTokenPayment() reads device_id back out of
-// metadata on completion.
 async function handleTokenPurchase(req, res) {
   const { deviceId, packId } = req.body || {};
   const pack = TOKEN_PACKS[packId];
@@ -243,13 +273,6 @@ async function handleTokenPurchase(req, res) {
   return res.status(200).json({ url: session.url });
 }
 
-// RESTORED (July 2026): the file had NO export default at all — nothing
-// for Vercel to actually invoke when this endpoint was called. This
-// router matches how every caller in the codebase already sends its
-// request: index.html's buyTokenPack() sends { type: "token_purchase" },
-// order.html's submitOrder() sends { type: "mug_order" }, and the $5
-// Preview Reservation flow (checkout.html) is expected to send
-// { type: "reservation" }.
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
