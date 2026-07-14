@@ -41,7 +41,10 @@ input:focus{outline:none;border-color:#ff6a00}
 <div id="lockScreen">
   <div class="lock-card">
     <h2>🔐 MuggsHotz Admin</h2>
-    <input type="password" id="pwInput" placeholder="Enter password" onkeydown="if(event.key==='Enter')checkPw()"/>
+    <div style="position:relative;margin-bottom:1rem">
+      <input type="password" id="pwInput" placeholder="Enter password" onkeydown="if(event.key==='Enter')checkPw()" style="margin-bottom:0;padding-right:40px"/>
+      <span onclick="togglePasswordVisibility()" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);cursor:pointer;font-size:16px;color:#888;user-select:none" id="pwToggleIcon">👁️</span>
+    </div>
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:1rem;justify-content:center">
       <input type="checkbox" id="rememberDeviceCheckbox" style="width:16px;height:16px;cursor:pointer"/>
       <label for="rememberDeviceCheckbox" style="margin:0;text-transform:none;font-size:12px;color:#aaa;cursor:pointer">Remember on this device</label>
@@ -97,6 +100,20 @@ input:focus{outline:none;border-color:#ff6a00}
 // now hit the same /api/admin endpoint with a different `action` field
 // ('lookup' vs 'grant'/'deduct') instead of a different URL.
 let enteredPassword = '';
+
+function togglePasswordVisibility(){
+  const input = document.getElementById('pwInput');
+  const icon = document.getElementById('pwToggleIcon');
+  if(input.type === 'password'){
+    input.type = 'text';
+    icon.style.opacity = '1';
+    icon.textContent = '🙈';
+  } else {
+    input.type = 'password';
+    icon.style.opacity = '0.6';
+    icon.textContent = '👁️';
+  }
+}
 
 // "Remember on this device" (July 2026): stores the password in this
 // browser's localStorage ONLY after it's been confirmed correct by the
