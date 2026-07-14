@@ -7,8 +7,10 @@
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{background:#111;font-family:system-ui,sans-serif;color:#fff;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:2rem}
-.card{background:#1a1a1a;border:.5px solid #333;border-radius:12px;padding:2rem;width:100%;max-width:480px}
+.card{background:#1a1a1a;border:.5px solid #333;border-radius:12px;padding:2rem;width:100%;max-width:480px;margin-bottom:1.5rem}
+.stack{display:flex;flex-direction:column;align-items:center;width:100%}
 h1{font-size:22px;font-weight:700;color:#ff6a00;margin-bottom:.25rem}
+h2.section-title{font-size:18px;font-weight:700;color:#ff6a00;margin-bottom:.25rem}
 .sub{font-size:12px;color:#666;margin-bottom:2rem;letter-spacing:1px;text-transform:uppercase}
 label{font-size:12px;color:#888;display:block;margin-bottom:.4rem;margin-top:1rem;text-transform:uppercase;letter-spacing:.5px}
 input{width:100%;background:#0d0d0d;border:1px solid #444;border-radius:8px;padding:10px 12px;color:#fff;font-size:14px}
@@ -20,6 +22,8 @@ input:focus{outline:none;border-color:#ff6a00}
 .btn-deduct{background:#c0392b;color:#fff}
 .btn-deduct:hover{background:#a93226}
 .btn-grant:disabled,.btn-deduct:disabled{background:#333;color:#666;cursor:not-allowed}
+.btn-full{width:100%;background:#ff6a00;border:none;border-radius:8px;padding:.85rem;color:#fff;font-size:14px;font-weight:700;cursor:pointer;letter-spacing:.5px;margin-top:1.25rem}
+.btn-full:disabled{background:#333;color:#666;cursor:not-allowed}
 .result{margin-top:1.25rem;padding:1rem;border-radius:8px;font-size:13px;display:none}
 .result.success{background:#0d2a12;border:1px solid #22a845;color:#5ddb7a}
 .result.error{background:#2a0d0d;border:1px solid #c0392b;color:#e07070}
@@ -34,6 +38,7 @@ input:focus{outline:none;border-color:#ff6a00}
 .lock-card button{width:100%;background:#ff6a00;border:none;border-radius:8px;padding:.85rem;color:#fff;font-size:15px;font-weight:700;cursor:pointer}
 .lock-card button:disabled{background:#333;color:#666;cursor:not-allowed}
 .balance-badge{display:inline-block;background:#0d0d0d;border:1px solid #333;border-radius:20px;padding:.3rem .8rem;font-size:12px;color:#ff6a00;margin-top:.5rem}
+.codes-output{margin-top:1rem;background:#0d0d0d;border:1px solid #333;border-radius:8px;padding:.85rem;font-size:12px;color:#5ddb7a;font-family:monospace;line-height:1.6;max-height:200px;overflow-y:auto;display:none}
 </style>
 </head>
 <body>
@@ -53,6 +58,8 @@ input:focus{outline:none;border-color:#ff6a00}
     <div id="pwError" style="color:#e07070;font-size:12px;margin-top:.75rem"></div>
   </div>
 </div>
+
+<div class="stack">
 
 <div class="card">
   <h1>MuggsHotz Admin</h1>
@@ -86,6 +93,30 @@ input:focus{outline:none;border-color:#ff6a00}
   </div>
 </div>
 
+<div class="card">
+  <h2 class="section-title">🎟️ Onboard a New Beta</h2>
+  <div class="sub">Flyer Tier System — PotShotz Entry</div>
+
+  <label>Full Name (required)</label>
+  <input type="text" id="betaFullName" placeholder="e.g. Jane Smith"/>
+
+  <label>Base Code (letters/numbers only, required)</label>
+  <input type="text" id="betaBaseCode" placeholder="e.g. CHIPPER" style="text-transform:uppercase"/>
+
+  <label>Contact Email (optional)</label>
+  <input type="email" id="betaContactEmail" placeholder="e.g. jane@example.com"/>
+
+  <label>Contact Phone (optional)</label>
+  <input type="tel" id="betaContactPhone" placeholder="e.g. (555) 123-4567"/>
+
+  <button class="btn-full" id="onboardBtn" onclick="onboardBeta()">✅ Create Beta &amp; Generate 20 PotShotz Codes</button>
+
+  <div class="result" id="onboardResult"></div>
+  <div class="codes-output" id="onboardCodesOutput"></div>
+</div>
+
+</div>
+
 <script>
 // HARDENED (July 2026): no password or Supabase key lives in this file.
 // The password the person types below is only ever sent to the server
@@ -93,186 +124,4 @@ input:focus{outline:none;border-color:#ff6a00}
 // never ships to the browser.
 //
 // MERGED (July 2026): this used to call two separate endpoints,
-// /api/admin-lookup and /api/admin-tokens. They've been combined into
-// one file, /api/admin.js, because having them separate pushed this
-// project's serverless function count to 13 — one over Vercel's Hobby
-// plan cap of 12 — which silently broke deployment. Both calls below
-// now hit the same /api/admin endpoint with a different `action` field
-// ('lookup' vs 'grant'/'deduct') instead of a different URL.
-let enteredPassword = '';
-
-function togglePasswordVisibility(){
-  const input = document.getElementById('pwInput');
-  const icon = document.getElementById('pwToggleIcon');
-  if(input.type === 'password'){
-    input.type = 'text';
-    icon.style.opacity = '1';
-    icon.textContent = '🙈';
-  } else {
-    input.type = 'password';
-    icon.style.opacity = '0.6';
-    icon.textContent = '👁️';
-  }
-}
-
-// "Remember on this device" (July 2026): stores the password in this
-// browser's localStorage ONLY after it's been confirmed correct by the
-// server — never stores an unverified guess. This is the same idea as
-// a bank's "remember this device," which also doesn't literally re-ask
-// for your password every visit — it trusts the device going forward.
-// The real tradeoff: anyone who later uses this same browser on this
-// same device would also get in without typing a password. Fine for a
-// personal admin tool on your own device, worth knowing regardless.
-const REMEMBER_KEY = 'muggshotz_admin_pw';
-
-// Pings the server with a harmless "lookup" call carrying no
-// deviceId/email — the password gets checked first no matter what, so
-// a 403 means wrong password, and anything else (even a 400 asking for
-// a device ID) means the password was right.
-async function verifyPasswordWithServer(pw){
-  try{
-    const resp = await fetch('/api/admin', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'lookup', password: pw })
-    });
-    return resp.status !== 403;
-  }catch(err){
-    return false;
-  }
-}
-
-async function checkPw(){
-  const val = document.getElementById('pwInput').value;
-  if(!val){
-    document.getElementById('pwError').textContent = 'Enter a password.';
-    return;
-  }
-
-  const unlockBtn = document.getElementById('unlockBtn');
-  unlockBtn.disabled = true;
-  unlockBtn.textContent = 'Checking...';
-
-  const ok = await verifyPasswordWithServer(val);
-
-  unlockBtn.disabled = false;
-  unlockBtn.textContent = 'Unlock';
-
-  if(!ok){
-    document.getElementById('pwError').textContent = 'Wrong password.';
-    return;
-  }
-
-  enteredPassword = val;
-  const remember = document.getElementById('rememberDeviceCheckbox').checked;
-  if(remember){
-    try{ localStorage.setItem(REMEMBER_KEY, val); }catch(e){}
-  } else {
-    try{ localStorage.removeItem(REMEMBER_KEY); }catch(e){}
-  }
-  document.getElementById('lockScreen').style.display = 'none';
-}
-
-// On page load, if a password was previously remembered on this
-// device, re-verify it with the server (in case it's since been
-// changed in Vercel) and skip straight past the lock screen if it
-// still checks out.
-(async function tryAutoUnlock(){
-  let saved = null;
-  try{ saved = localStorage.getItem(REMEMBER_KEY); }catch(e){}
-  if(!saved) return;
-
-  const ok = await verifyPasswordWithServer(saved);
-  if(ok){
-    enteredPassword = saved;
-    document.getElementById('lockScreen').style.display = 'none';
-  } else {
-    try{ localStorage.removeItem(REMEMBER_KEY); }catch(e){}
-  }
-})();
-
-async function lookupBalance(){
-  const deviceId = document.getElementById('deviceId').value.trim();
-  const email    = document.getElementById('lookupEmail').value.trim();
-  if(!deviceId && !email){ showResult('Enter a device ID or email to look up.','error'); return; }
-
-  try{
-    const resp = await fetch('/api/admin', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'lookup', password: enteredPassword, deviceId: deviceId || undefined, email: email || undefined })
-    });
-    const data = await resp.json();
-    if (resp.status === 403) { relockWithError('Wrong password.'); return; }
-    if(!resp.ok) throw new Error(data.error || 'Lookup failed.');
-
-    const badge = document.getElementById('balanceBadge');
-    badge.textContent = `${data.tokenBalance} tokens`;
-    badge.style.display = 'inline-block';
-    if(!deviceId && data.deviceId) document.getElementById('deviceId').value = data.deviceId;
-    showResult(`Found: ${data.email || '(no email)'} — Balance: ${data.tokenBalance} tokens`,'success');
-  }catch(err){
-    showResult('Lookup failed: ' + err.message,'error');
-  }
-}
-
-async function adjustTokens(action){
-  const deviceId = document.getElementById('deviceId').value.trim();
-  const count    = parseInt(document.getElementById('tokenCount').value);
-  const reason   = document.getElementById('reason').value.trim();
-
-  if(!deviceId){ showResult('Device ID is required.','error'); return; }
-  if(!count || count < 1){ showResult('Enter a valid token count.','error'); return; }
-  if(!reason){ showResult('Reason is required.','error'); return; }
-
-  try{
-    const resp = await fetch('/api/admin', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action, password: enteredPassword, deviceId, count, reason })
-    });
-    const data = await resp.json();
-    if (resp.status === 403) { relockWithError('Wrong password.'); return; }
-    if(!resp.ok) throw new Error(data.error || 'Request failed.');
-
-    const verb = action === 'grant' ? 'Granted' : 'Deducted';
-    showResult(`${verb} ${count} token${count>1?'s':''} — New balance: ${data.newBalance}`,'success');
-
-    const badge = document.getElementById('balanceBadge');
-    badge.textContent = `${data.newBalance} tokens`;
-    badge.style.display = 'inline-block';
-
-    addLog(`${verb} ${count} to ${deviceId.slice(0,20)}... — "${reason}" — New balance: ${data.newBalance}`);
-    document.getElementById('tokenCount').value = '';
-    document.getElementById('reason').value = '';
-  }catch(err){
-    showResult('Error: ' + err.message,'error');
-  }
-}
-
-function relockWithError(msg){
-  enteredPassword = '';
-  try{ localStorage.removeItem(REMEMBER_KEY); }catch(e){}
-  document.getElementById('pwInput').value = '';
-  document.getElementById('pwError').textContent = msg;
-  document.getElementById('lockScreen').style.display = 'flex';
-}
-
-function showResult(msg, type){
-  const el = document.getElementById('result');
-  el.textContent = msg;
-  el.className = 'result ' + type;
-  el.style.display = 'block';
-}
-
-function addLog(text){
-  const list = document.getElementById('logList');
-  if(list.children[0].style.color === 'rgb(68, 68, 68)') list.innerHTML = '';
-  const item = document.createElement('div');
-  item.className = 'log-item';
-  item.innerHTML = `<span>${new Date().toLocaleTimeString()}</span> — ${text}`;
-  list.prepend(item);
-}
-</script>
-</body>
-</html>
+//
