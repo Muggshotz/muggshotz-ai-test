@@ -303,6 +303,7 @@
 
 <button class="generate-btn" id="generateBtn" onclick="generate()">🎨 GENERATE CARICATURE</button>
 <button class="download-btn" id="cancelBtn" onclick="cancelGeneration()" style="display:none;margin-top:.5rem">✖ Cancel & Try a Different Photo</button>
+<div id="genTimerDisplay" style="display:none;text-align:center;font-size:13px;color:#ff9a4d;font-weight:600;margin-top:.5rem;letter-spacing:.3px"></div>
 <div class="status" id="status"></div>
   <div class="card" id="positionHolderCard" style="display:none">
 <div class="card-title">🖼️ Design Your Product</div>
@@ -1646,6 +1647,46 @@ function closeBigAlert(){
   document.getElementById('bigAlertOverlay').classList.remove('visible');
 }
 
+// NEW (July 2026, Alyx's request): live generation timer. Starts the
+// moment a real generation kicks off, updates every 100ms while it
+// runs, and freezes on a final "Done in X.Xs" readout once the image
+// actually finishes — separate from the status/spinner text so it
+// keeps counting through multi-step flows like the wraparound
+// three-panel sequence (center, then left, then right all count as one
+// total wait, since that's what the customer is actually experiencing).
+let genTimerInterval=null;
+let genTimerStart=null;
+
+function startGenTimer(){
+  genTimerStart=Date.now();
+  const el=document.getElementById('genTimerDisplay');
+  el.style.display='block';
+  el.textContent='⏱ 0.0s';
+  if(genTimerInterval)clearInterval(genTimerInterval);
+  genTimerInterval=setInterval(()=>{
+    const elapsed=(Date.now()-genTimerStart)/1000;
+    el.textContent='⏱ '+elapsed.toFixed(1)+'s';
+  },100);
+}
+
+function stopGenTimerSuccess(){
+  if(genTimerInterval){clearInterval(genTimerInterval);genTimerInterval=null;}
+  if(genTimerStart){
+    const elapsed=(Date.now()-genTimerStart)/1000;
+    const el=document.getElementById('genTimerDisplay');
+    el.textContent='✅ Done in '+elapsed.toFixed(1)+'s';
+  }
+  genTimerStart=null;
+}
+
+function resetGenTimer(){
+  if(genTimerInterval){clearInterval(genTimerInterval);genTimerInterval=null;}
+  genTimerStart=null;
+  const el=document.getElementById('genTimerDisplay');
+  el.style.display='none';
+  el.textContent='';
+}
+
 function setStatus(msg,isError){
   const el=document.getElementById('status');
   if(isError){
@@ -1760,6 +1801,7 @@ async function generate(){
   const workingImage=uploadedImageData;
   const refASnapshot=refImageAData;
   const refBSnapshot=refImageBData;
+  startGenTimer();
   showGenerationInProgress();
   clearReferenceSlots();
   document.getElementById('approveRow').style.display='none';
@@ -1936,6 +1978,7 @@ Use rich environmental storytelling while keeping the face as the primary focal 
       clearWorkshopStorage();
       refreshTokenMeter();
       setStatus('✅ All three wraparound panels are ready!');
+      stopGenTimerSuccess();
       scrollToFinishedImage('positionHolderCard');
       return;
     }
@@ -1960,9 +2003,11 @@ Use rich environmental storytelling while keeping the face as the primary focal 
     scrollToFinishedImage('uploadZone');
     refreshTokenMeter();
     clearStatus();
+    stopGenTimerSuccess();
 
   }catch(err){
     setStatus(err.message,true);
+    resetGenTimer();
     if(workingImage)setMainSlotImage(workingImage);
     restoreRefPreview('refAZone','refAPreview','refAInput',refASnapshot,(v)=>{refImageAData=v;},'A');
     restoreRefPreview('refBZone','refBPreview','refBInput',refBSnapshot,(v)=>{refImageBData=v;},'B');
@@ -2660,6 +2705,7 @@ function cancelGeneration(){
   }
   document.getElementById('cancelBtn').style.display='none';
   document.getElementById('generateBtn').disabled=false;
+  resetGenTimer();
   clearStatus();
 }
   
