@@ -113,14 +113,6 @@
 .phone-confirm-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .phone-confirm-actions button{border-radius:8px;padding:.75rem;border:1px solid #ff6a00;background:#0d0d0d;color:#ff9a4d;font-weight:800;cursor:pointer}
 .phone-confirm-actions button:first-child{background:#ff6a00;color:#fff}
-.upload-zone-wrap{position:relative}
-.side-cta{position:absolute;top:50%;transform:translateY(-50%);display:none;flex-direction:column;align-items:center;justify-content:center;gap:2px;width:30px;padding:8px 3px;border-radius:8px;cursor:pointer;font-size:10px;font-weight:700;line-height:1.25;text-align:center;letter-spacing:.2px;writing-mode:vertical-rl;text-orientation:mixed;z-index:6;background:rgba(10,10,10,0.45);backdrop-filter:blur(1px);border:1px solid rgba(255,255,255,0.15);color:#eee;transition:background .15s,border-color .15s}
-.side-cta.visible{display:flex}
-.side-cta:hover{background:rgba(10,10,10,0.65)}
-.side-cta.cta-left{left:-14px;color:#8fe8a0;border-color:rgba(143,232,160,0.45)}
-.side-cta.cta-left:hover{background:rgba(20,45,25,0.7)}
-.side-cta.cta-right{right:-14px;color:#ffb27a;border-color:rgba(255,178,122,0.45)}
-.side-cta.cta-right:hover{background:rgba(45,25,10,0.7)}
 .reset-everything-btn{width:100%;background:#160808;border:1px solid #5a2a2a;border-radius:10px;padding:1rem;color:#ff8a7a;font-size:13px;font-weight:700;cursor:pointer;letter-spacing:.5px;text-align:center}
 .reset-everything-btn:hover{background:#220c0c;border-color:#7a3a3a}
 </style>
@@ -180,11 +172,7 @@
 
 <div class="card" id="uploadPhotoCard"><div class="card-title">📸 Upload Photo</div>
 <div style="font-size:11px;color:#777;letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px;text-align:center">Photo 1</div>
-<div class="upload-zone-wrap" id="uploadZoneWrap">
 <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()"><div style="font-size:32px;color:#555;margin-bottom:8px">👤</div><div class="upload-text">Tap here to upload a photo</div><div class="upload-sub">Clear face photo works best</div></div>
-<div class="side-cta cta-left" id="sideCtaLeft" onclick="goCheckoutFromPreview(event)">Happy with this? Tap here to check out</div>
-<div class="side-cta cta-right" id="sideCtaRight" onclick="returnToGeneratorFromPreview(event)">Not yet? Tap here to return to generator</div>
-</div>
 <input type="file" id="fileInput" accept="image/*" style="display:none"/><img id="previewImg" class="preview-img" style="display:none"/>
 <div id="approveRow" style="display:none">
 <div class="note" style="margin-top:.9rem;text-align:center;font-size:13px;color:#ccc">Are you satisfied with this design?</div>
@@ -1798,7 +1786,6 @@ function approveDesign(allThree){
   document.getElementById('approveRow').style.display='none';
   document.getElementById('keepTweakingBtn').style.display='none';
   document.getElementById('downloadDesignBtn').style.display='none';
-  hideSideCta();
   // UPDATED (July 2026, Alyx's request): no longer clearing the top
   // photo/workshop on approve. The generated image — along with the
   // Toggle Between Previous & New Image option — should stay visible up
@@ -1826,7 +1813,6 @@ function startOver(){
   document.getElementById('approveRow').style.display='none';
   document.getElementById('keepTweakingBtn').style.display='none';
   document.getElementById('downloadDesignBtn').style.display='none';
-  hideSideCta();
   resetMainSlot();
   clearReferenceSlots();
   clearWorkshopStorage();
@@ -2036,7 +2022,6 @@ async function generate(){
   const refBSnapshot=refImageBData;
   startGenTimer();
   showGenerationInProgress();
-  hideSideCta();
   clearReferenceSlots();
   document.getElementById('approveRow').style.display='none';
   document.getElementById('keepTweakingBtn').style.display='none';
@@ -2054,13 +2039,23 @@ document.getElementById('cancelBtn').style.display='block';
     requestAnimationFrame(()=>{
       const spinnerEl=document.getElementById('uploadZone');
       const timerEl=document.getElementById('genTimerDisplay');
+      const statusEl=document.getElementById('status');
       if(spinnerEl&&timerEl){
         const spinnerTop=spinnerEl.getBoundingClientRect().top+window.scrollY;
-        const timerBottom=timerEl.getBoundingClientRect().bottom+window.scrollY;
+        // The status message ("Generating your caricature...") sits right
+        // after the timer and was getting left just out of view when only
+        // the timer's own bottom edge was used. Measure down through
+        // whichever of the two actually extends further, so the message
+        // text lands on screen together with the timer, not just the
+        // timer by itself.
+        const timerRectBottom=timerEl.getBoundingClientRect().bottom;
+        const statusRectBottom=statusEl?statusEl.getBoundingClientRect().bottom:timerRectBottom;
+        const timerBottom=Math.max(timerRectBottom,statusRectBottom)+window.scrollY;
         const viewportHeight=window.innerHeight;
         const totalSpan=timerBottom-spinnerTop;
         // Center the whole span if it fits on screen; otherwise anchor so
-        // the timer (the part that was getting missed) is guaranteed visible.
+        // the bottom of that span (the part that was getting missed) is
+        // guaranteed visible.
         let target;
         if(totalSpan<viewportHeight){
           target=spinnerTop-((viewportHeight-totalSpan)/2);
@@ -2271,7 +2266,6 @@ Use rich environmental storytelling while keeping the face as the primary focal 
       setMainSlotImage(workingImage);
     }
     await waitForImageReady(document.getElementById('previewImg'));
-    showSideCta();
     scrollToFinishedImage('approveRow','end');
     refreshTokenMeter();
     clearStatus();
@@ -2287,39 +2281,6 @@ Use rich environmental storytelling while keeping the face as the primary focal 
 btn.disabled=false;
 document.getElementById('cancelBtn').style.display='none';
   }
-}
-
-// ===== Post-generation side-margin checkout prompt (July 2026, Alyx's
-// request) =====
-// Replaces the old idea of a big blocking banner over the finished
-// image. Two small, subtly transparent tabs sit in the card's own side
-// margins (outside the picture, never on top of it), vertically centered
-// on the image, offering the two real choices a customer has once a
-// single design is ready: move forward, or go back and try again.
-function showSideCta(){
-  const left=document.getElementById('sideCtaLeft');
-  const right=document.getElementById('sideCtaRight');
-  if(left)left.classList.add('visible');
-  if(right)right.classList.add('visible');
-}
-
-function hideSideCta(){
-  const left=document.getElementById('sideCtaLeft');
-  const right=document.getElementById('sideCtaRight');
-  if(left)left.classList.remove('visible');
-  if(right)right.classList.remove('visible');
-}
-
-function goCheckoutFromPreview(e){
-  if(e)e.stopPropagation();
-  if(!currentDesignId)return;
-  approveDesign(false);
-}
-
-function returnToGeneratorFromPreview(e){
-  if(e)e.stopPropagation();
-  startOver();
-  document.getElementById('uploadPhotoCard').scrollIntoView({behavior:'smooth',block:'start'});
 }
 
 let recentDesigns=[];
@@ -2521,7 +2482,6 @@ function clearAllDesigns(){
   document.getElementById('approveRow').style.display='none';
   document.getElementById('keepTweakingBtn').style.display='none';
   document.getElementById('downloadDesignBtn').style.display='none';
-  hideSideCta();
   renderRecentDesigns();
   renderPositionHolder();
   updateLibraryToggleLabel();
@@ -3097,7 +3057,6 @@ function restoreWorkshop(){
         document.getElementById('keepTweakingBtn').style.display='block';
         document.getElementById('downloadDesignBtn').style.display='block';
         loadBaseImageForCaption(saved.working);
-        showSideCta();
       }
     }
   }catch(e){console.error('Workshop restore failed:',e);}
@@ -3121,7 +3080,6 @@ function resetEverythingFreshStart(){
   // Photo + reference slots + in-progress design state
   currentDesignId=null;
   pendingSlotTarget=null;
-  hideSideCta();
   document.getElementById('approveRow').style.display='none';
   document.getElementById('keepTweakingBtn').style.display='none';
   document.getElementById('downloadDesignBtn').style.display='none';
@@ -3146,7 +3104,6 @@ function resetEverythingFreshStart(){
   // Product, style, likeness — back to defaults (first option in each grid)
   document.querySelectorAll('#productCard .btn-select').forEach((b,i)=>b.classList.toggle('selected',i===0));
   product='mug';
-  const styleGrid=document.querySelectorAll('.card .grid2 .btn-select[data-val*="caricature"]');
   document.querySelectorAll('.card').forEach(card=>{
     const title=card.querySelector('.card-title');
     if(title&&title.textContent.includes('🎨 Style')){
