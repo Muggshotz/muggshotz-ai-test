@@ -234,7 +234,7 @@
 </div>
 </div>
 
-<div class="card" id="ideaCard"><div class="card-title">💬 Tell Us Your Idea</div><textarea id="ideaDesc" placeholder="Example: Put me on a tiny red tricycle wearing a firefighter helmet and full firefighter outfit, racing through a parade with smoke and sirens behind me."></textarea><div class="quick-btns" id="quickBtns"></div><div class="note">Paint us a clear picture — the more detail you give us, the better our chances of getting your exact idea right.</div></div>
+<div class="card" id="ideaCard"><div class="card-title">💬 Tell Us Your Idea</div><textarea id="ideaDesc" placeholder="Example: Put me on a tiny red tricycle wearing a firefighter helmet and full firefighter outfit, racing through a parade with smoke and sirens behind me."></textarea><div class="quick-btns" id="quickBtns"></div><div class="note" id="ideaDefaultNote">Paint us a clear picture — the more detail you give us, the better our chances of getting your exact idea right.</div><div class="note" id="ideaArtistNote" style="display:none">Tell the artist what you have in mind.</div><div id="mugIdeaActionRow" style="display:none;gap:8px;margin-top:.75rem"><button class="download-btn" style="flex:1;margin-top:0" onclick="handleReturnToPhotos()">📸 Return to select additional photos</button><button class="generate-btn" style="flex:1" onclick="handleMugGuidedGenerate()">🎨 Generate</button></div></div>
 <div id="ideaGuidancePrompt" class="guidance-prompt" role="status">Scroll to the next section when ready to select your desired product.</div>
 
 <div class="card" id="productCard"><div class="card-title">🎁 Product</div><div class="grid3"><div class="btn-select selected" data-val="mug" onclick="pick(this,'product')"><span class="icon">☕</span>Mug</div><div class="btn-select" data-val="greeting card" onclick="pick(this,'product')"><span class="icon">💌</span>Card</div><div class="btn-select" data-val="water bottle" onclick="pick(this,'product')"><span class="icon">🍶</span>Travel Cups</div><div class="btn-select" data-val="post-it note" onclick="pick(this,'product')"><span class="icon">📝</span>Post-it</div><div class="btn-select" data-val="phone case" onclick="pick(this,'product')"><span class="icon">📱</span>Phone case</div><div class="btn-select" data-val="tote bag" onclick="pick(this,'product')"><span class="icon">👜</span>Tote bag</div><div class="btn-select" data-val="suitcase" onclick="pick(this,'product')"><span class="icon">🧳</span>Suitcase</div><div class="btn-select" data-val="puzzle" onclick="pick(this,'product')"><span class="icon">🧩</span>Puzzle</div><div class="btn-select" data-val="photo poster" onclick="pick(this,'product')"><span class="icon">🖼️</span>Photo/Poster</div></div></div>
@@ -338,7 +338,11 @@
 <div id="positionHolderRow" style="display:flex;align-items:flex-start;gap:6px;justify-content:center;flex-wrap:nowrap"></div>
 
 <div id="genMugOptionsWrap" style="display:none;margin-top:1.1rem">
-<div class="note" style="margin-top:0;margin-bottom:.6rem">Pick a style below — the real photo preview updates to match, so you can see exactly what you're getting before you decide.</div>
+<div class="note" id="genMugPickStyleNote" style="margin-top:0;margin-bottom:.6rem">Pick a style below — the real photo preview updates to match, so you can see exactly what you're getting before you decide.</div>
+<div id="mugStyleConfirmRow" style="display:none;gap:8px;margin-top:0;margin-bottom:.6rem">
+<button class="generate-btn" style="flex:1;padding:.7rem .5rem;font-size:12px" onclick="handleMugDesignSatisfied()">✅ If satisfied with design, click here</button>
+<button class="download-btn" style="flex:1;margin-top:0;padding:.7rem .5rem;font-size:12px" onclick="handleMugDesignChanges()">🔧 Click here to make changes</button>
+</div>
 <div class="note" style="margin-bottom:6px">Style</div>
 <div class="grid2" id="genMugStyleGrid"></div>
 <div class="note" style="margin:.75rem 0 6px">Size</div>
@@ -363,7 +367,7 @@
 </div>
 
 <div id="genPreviewSection" style="display:none;margin-top:1.1rem">
-<div class="note" style="margin-top:0;margin-bottom:.5rem;text-align:center;color:#888;letter-spacing:.5px;text-transform:uppercase;font-size:11px">🖼️ Real Photo Preview</div>
+<div class="note" id="genPreviewLabel" style="margin-top:0;margin-bottom:.5rem;text-align:center;color:#888;letter-spacing:.5px;text-transform:uppercase;font-size:11px">🖼️ Real Photo Preview</div>
 <div class="note" id="genPreviewLoading" style="text-align:center;display:none"><span class="spinner"></span>Loading your real mockup preview...</div>
 <div class="note" id="genPreviewNote" style="text-align:center;display:none"></div>
 <img id="genPreviewImg" style="display:none;width:100%;border-radius:12px;border:1px solid #ff6a00"/>
@@ -660,6 +664,84 @@ let pathCanvasReady=false;
 
 let mugPrintMode='three-panel'; // 'three-panel' | 'wraparound' — coffee/travel mugs only, chosen BEFORE generation since it changes composition
 
+// ===== Mug guided review flow (July 2026, Alyx's request) =====
+// Applies ONLY when product === 'mug'. After at least one design has
+// been placed into a slot, walks the customer through: (1) pick size/
+// style/color, (2) confirm those selections or jump back up to change
+// them, (3) confirm the design itself or jump to the idea box to
+// request changes, (4) from the idea box, either go back to add more
+// reference photos or fire Generate again. Every other product keeps
+// its existing behavior untouched.
+let mugOptionsTouched=false; // true once the customer has actively picked a style/size/color (not just the pre-selected defaults)
+let mugGuidedChangesActive=false; // true once "click here to make changes" has been pressed, until the next Generate
+
+function updateGenPreviewLabel(){
+  const el=document.getElementById('genPreviewLabel');
+  if(!el)return;
+  if(product!=='mug'){
+    el.textContent='🖼️ Real Photo Preview';
+    el.style.color='#888';
+    el.style.cursor='default';
+    el.onclick=null;
+    return;
+  }
+  if(!mugOptionsTouched){
+    el.textContent='Please select size/style/color';
+    el.style.color='#888';
+    el.style.cursor='default';
+    el.onclick=null;
+  } else {
+    el.textContent='If satisfied with selections click here. If not, make desired changes.';
+    el.style.color='#ff6a00';
+    el.style.cursor='pointer';
+    el.onclick=()=>smoothScrollToTarget('positionHolderCard','start');
+  }
+}
+
+function updateIdeaCardNote(){
+  const defaultNote=document.getElementById('ideaDefaultNote');
+  const artistNote=document.getElementById('ideaArtistNote');
+  const actionRow=document.getElementById('mugIdeaActionRow');
+  if(!defaultNote||!artistNote||!actionRow)return;
+  const active=product==='mug'&&mugGuidedChangesActive;
+  defaultNote.style.display=active?'none':'block';
+  artistNote.style.display=active?'block':'none';
+  actionRow.style.display=active?'flex':'none';
+}
+
+function updateMugGuidedFlow(){
+  updateGenPreviewLabel();
+  const pickNote=document.getElementById('genMugPickStyleNote');
+  const confirmRow=document.getElementById('mugStyleConfirmRow');
+  if(pickNote&&confirmRow){
+    const show=product==='mug'&&mugOptionsTouched;
+    pickNote.style.display=show?'none':'block';
+    confirmRow.style.display=show?'flex':'none';
+  }
+  updateIdeaCardNote();
+}
+
+function handleMugDesignSatisfied(){
+  smoothScrollToTarget('genPreviewSection','start');
+}
+
+function handleMugDesignChanges(){
+  mugGuidedChangesActive=true;
+  updateIdeaCardNote();
+  smoothScrollToTarget('panoramaFadeCard','start');
+}
+
+function handleReturnToPhotos(){
+  smoothScrollToTarget('uploadPhotoCard','start');
+}
+
+function handleMugGuidedGenerate(){
+  mugGuidedChangesActive=false;
+  mugOptionsTouched=false;
+  updateMugGuidedFlow();
+  generate();
+}
+
 // NEW (July 2026, Alyx's request): silent generation-prompt add-on for
 // the Wraparound/panorama print option. When on, this instruction gets
 // appended to the actual prompt sent to the AI on every generate() call
@@ -923,6 +1005,7 @@ function pick(el,type){
     // the currently-placed design — refresh immediately instead of
     // leaving the previous product's stale mockup on screen.
     updatePlacementSummary();
+    updateMugGuidedFlow();
     // NEW (July 2026, Alyx's request): the instant "Phone case" is
     // picked, jump straight to the phone-model card and drop the
     // cursor in the search box — don't make the customer go hunting
@@ -2477,6 +2560,8 @@ function clearAllDesigns(){
   placements={left:null,right:null,front:null};
   currentDesignId=null;
   pendingSlotTarget=null;
+  mugOptionsTouched=false;
+  mugGuidedChangesActive=false;
   try{localStorage.removeItem('muggshotz_mug_state');}catch(e){}
   document.getElementById('positionHolderCard').style.display='none';
   document.getElementById('approveRow').style.display='none';
@@ -2486,6 +2571,7 @@ function clearAllDesigns(){
   renderPositionHolder();
   updateLibraryToggleLabel();
   updatePlacementSummary();
+  updateMugGuidedFlow();
 }
 
 function toggleLibrary(){
@@ -2521,6 +2607,7 @@ function updatePlacementSummary(){
     renderGenTravelStyleGrid();
   }
   maybeAutoFetchMockup();
+  updateMugGuidedFlow();
 }
 
 const GEN_MUG_STYLES = {
@@ -2632,6 +2719,8 @@ function pickGenMugStyle(styleName){
   });
   selectedGenColor=null;
   renderGenMugColorGrid();
+  mugOptionsTouched=true;
+  updateMugGuidedFlow();
   maybeAutoFetchMockup();
 }
 
@@ -2641,6 +2730,8 @@ function pickGenMugSize(size){
   document.getElementById('genSize15Btn').classList.toggle('selected', size==='15oz');
   selectedGenColor=null;
   renderGenMugColorGrid();
+  mugOptionsTouched=true;
+  updateMugGuidedFlow();
   maybeAutoFetchMockup();
 }
 
@@ -2671,6 +2762,8 @@ function pickGenMugColor(el,colorName){
   document.querySelectorAll('#genMugColorGrid .color-btn').forEach(b=>b.classList.remove('selected'));
   el.classList.add('selected');
   selectedGenColor=colorName;
+  mugOptionsTouched=true;
+  updateMugGuidedFlow();
   maybeAutoFetchMockup();
 }
 
@@ -3066,6 +3159,7 @@ refreshApproveRowForMode();
 refreshMugPrintModeVisibility();
 refreshPhotoPosterVisibility();
 refreshPhoneCaseModelVisibility();
+updateMugGuidedFlow();
 
 // ===== Full reset (July 2026, Alyx's request) =====
 // Entirely optional — a customer happy with their in-progress work never
@@ -3151,6 +3245,8 @@ function resetEverythingFreshStart(){
   selectedGenColor=null;
   selectedTravelProductKey=null;
   selectedTravelColor=null;
+  mugOptionsTouched=false;
+  mugGuidedChangesActive=false;
   const genMugGrid=document.getElementById('genMugStyleGrid');
   if(genMugGrid)genMugGrid.innerHTML='';
   const genTravelGrid=document.getElementById('genTravelStyleGrid');
@@ -3174,6 +3270,7 @@ function resetEverythingFreshStart(){
   refreshPhotoPosterVisibility();
   refreshPhoneCaseModelVisibility();
   updatePlacementSummary();
+  updateMugGuidedFlow();
 
   window.scrollTo({top:0,behavior:'smooth'});
 }
