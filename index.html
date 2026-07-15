@@ -476,13 +476,13 @@ let currentDesignId=null;
 
 
 // Guided customer journey: automatic movement only while the customer is inactive.
-// Any real customer action cancels the current automatic step; programmatic scrolling does not.
+// Customer activity RESTARTS the active inactivity clock; it does not permanently cancel the journey.
 let guidedScrollInProgress=false;
 let openingGuideTimer=null;
 let photoGuideTimer=null;
 let ideaGuideTimer=null;
 let openingGuideCancelled=false;
-let photoGuideCancelled=false;
+let photoGuideActive=false;
 
 function smoothScrollToTarget(targetId,block='start',after){
   const target=document.getElementById(targetId);
@@ -499,16 +499,28 @@ function cancelOpeningGuide(){
   openingGuideCancelled=true;
   if(openingGuideTimer)clearTimeout(openingGuideTimer);
 }
-function cancelPhotoGuide(){
-  photoGuideCancelled=true;
+
+function schedulePhotoGuideAdvance(){
   if(photoGuideTimer)clearTimeout(photoGuideTimer);
+  if(!photoGuideActive)return;
+  photoGuideTimer=setTimeout(()=>{
+    if(!photoGuideActive)return;
+    photoGuideActive=false;
+    smoothScrollToTarget('ideaCard','center',()=>{
+      const idea=document.getElementById('ideaDesc');
+      if(idea)idea.focus({preventScroll:true});
+      restartIdeaGuidanceTimer();
+    });
+  },5000);
 }
+
 function noteRealCustomerActivity(){
   if(guidedScrollInProgress)return;
   cancelOpeningGuide();
-  cancelPhotoGuide();
+  // Once a photo is loaded, every real interaction restarts a fresh 5-second inactivity window.
+  if(photoGuideActive)schedulePhotoGuideAdvance();
 }
-['wheel','touchstart','pointerdown','keydown'].forEach(evt=>{
+['wheel','touchstart','pointerdown','mousemove','keydown'].forEach(evt=>{
   window.addEventListener(evt,noteRealCustomerActivity,{passive:true});
 });
 
@@ -521,21 +533,13 @@ function startOpeningGuide(){
 }
 
 function startPhotoGuide(){
-  photoGuideCancelled=false;
+  photoGuideActive=true;
   if(photoGuideTimer)clearTimeout(photoGuideTimer);
   // First frame the completed photo together with its Start Over control.
   setTimeout(()=>{
-    if(!photoGuideCancelled)smoothScrollToTarget('startOverBtn','end');
+    if(photoGuideActive)smoothScrollToTarget('startOverBtn','end');
   },150);
-  photoGuideTimer=setTimeout(()=>{
-    if(!photoGuideCancelled){
-      smoothScrollToTarget('ideaCard','center',()=>{
-        const idea=document.getElementById('ideaDesc');
-        if(idea)idea.focus({preventScroll:true});
-        restartIdeaGuidanceTimer();
-      });
-    }
-  },10000);
+  schedulePhotoGuideAdvance();
 }
 
 function restartIdeaGuidanceTimer(){
