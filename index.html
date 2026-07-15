@@ -1903,6 +1903,26 @@ function scrollToFinishedImage(elementId,block){
   el.scrollIntoView({behavior:'smooth',block:block||'center'});
 }
 
+// The post-generation scroll targets an element whose on-page position
+// depends on the height of the freshly swapped-in result image above it.
+// If we scroll before that image has actually finished decoding and been
+// laid out, the browser calculates the scroll target using the OLD page
+// height, landing too high — then the image finishes rendering a moment
+// later and the page grows underneath the customer with no re-scroll.
+// This waits for the image to be genuinely ready (decoded, or loaded, or
+// already complete) plus one extra animation frame for layout to settle,
+// before the scroll is allowed to fire.
+function waitForImageReady(img){
+  if(!img)return Promise.resolve();
+  const ready = img.complete && img.naturalWidth>0
+    ? (img.decode ? img.decode().catch(()=>{}) : Promise.resolve())
+    : new Promise(resolve=>{
+        img.addEventListener('load',resolve,{once:true});
+        img.addEventListener('error',resolve,{once:true});
+      });
+  return Promise.resolve(ready).then(()=> new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));
+}
+
 function getProductRules(p){
   if(p==='mug')return 'coffee mug artwork, centered square composition, bold readable character, safe margins, clear face and caption';
   if(p==='greeting card')return 'greeting card artwork, polished composition, room for readable caption, expressive and charming';
@@ -2199,6 +2219,7 @@ Use rich environmental storytelling while keeping the face as the primary focal 
       console.error('Could not recycle result into the main slot:',recycleErr);
       setMainSlotImage(workingImage);
     }
+    await waitForImageReady(document.getElementById('previewImg'));
     scrollToFinishedImage('approveRow','end');
     refreshTokenMeter();
     clearStatus();
