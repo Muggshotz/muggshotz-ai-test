@@ -104,6 +104,8 @@
 .guidance-prompt{display:none;margin:14px 0;padding:12px 14px;border:1px solid #ff6a00;border-radius:10px;background:#211006;color:#ffd0ad;text-align:center;font-size:13px;font-weight:700;line-height:1.4;box-shadow:0 0 0 rgba(255,106,0,0)}
 .guidance-prompt.visible{display:block;animation:gentlePulse 1.8s ease-in-out infinite}
 @keyframes gentlePulse{0%,100%{opacity:.72;box-shadow:0 0 0 rgba(255,106,0,0)}50%{opacity:1;box-shadow:0 0 16px rgba(255,106,0,.25)}}
+.guidance-prompt.soft.visible{animation:gentlePulseSoft 2.6s ease-in-out infinite;font-size:12px;padding:8px 10px;box-shadow:none}
+@keyframes gentlePulseSoft{0%,100%{opacity:.45}50%{opacity:.7}}
 .phone-confirm{display:none;margin-top:.8rem;padding:.9rem;border:1px solid #ff6a00;border-radius:10px;background:#140b06;text-align:center}
 .phone-confirm.visible{display:block}
 .phone-confirm-model{color:#fff;font-size:16px;font-weight:800;margin-bottom:.4rem}
@@ -321,7 +323,7 @@
 </div>
 </div>
 
-<div id="finalGenerateGuidance" class="guidance-prompt" role="status">If satisfied with all selections, press “Generate.” If not, feel free to scroll back up and make any additional changes.</div>
+<div id="finalGenerateGuidance" class="guidance-prompt" role="status">If satisfied with all selections, press "Generate." If not, feel free to scroll back up and make any additional changes.</div>
 <button class="generate-btn" id="generateBtn" onclick="generate()">🎨 GENERATE CARICATURE</button>
 <button class="download-btn" id="cancelBtn" onclick="cancelGeneration()" style="display:none;margin-top:.5rem">✖ Cancel & Try a Different Photo</button>
 <div id="genTimerDisplay" style="display:none;text-align:center;font-size:13px;color:#ff9a4d;font-weight:600;margin-top:.5rem;letter-spacing:.3px"></div>
@@ -474,15 +476,43 @@ let refImageAData=null, refImageBData=null;
 let previousImageData=null;
 let currentDesignId=null;
 
-
-// Guided customer journey: automatic movement only while the customer is inactive.
-// Customer activity RESTARTS the active inactivity clock; it does not permanently cancel the journey.
+// Guided customer journey.
+// Timer 1 (12s) and Timer 2 (10s) auto-scroll, but ANY real interaction
+// never hard-cancels them — it just resets to a rolling 5-second "quiet
+// window." The scroll only fires once 5 full seconds pass with no
+// further interaction, no matter how many times it got pushed back.
+// Timer 3 (30s) never auto-scrolls — it only flashes a nudge, first at
+// full strength, then every 30s after that at a softer, less intrusive
+// level, forever, for as long as the customer stays on that section.
 let guidedScrollInProgress=false;
+
 let openingGuideTimer=null;
+let openingGuideDone=false;
+
+function scheduleOpeningGuide(delay){
+  if(openingGuideDone)return;
+  clearTimeout(openingGuideTimer);
+  openingGuideTimer=setTimeout(()=>{
+    openingGuideDone=true;
+    smoothScrollToTarget('uploadPhotoCard','start');
+  },delay);
+}
+
 let photoGuideTimer=null;
-let ideaGuideTimer=null;
-let openingGuideCancelled=false;
 let photoGuideActive=false;
+
+function schedulePhotoGuideAdvance(delay){
+  clearTimeout(photoGuideTimer);
+  if(!photoGuideActive)return;
+  photoGuideTimer=setTimeout(()=>{
+    if(!photoGuideActive)return;
+    photoGuideActive=false;
+    smoothScrollToTarget('ideaCard','center',()=>{
+      const idea=document.getElementById('ideaDesc');
+      if(idea)idea.focus({preventScroll:true});
+    });
+  },delay);
+}
 
 function smoothScrollToTarget(targetId,block='start',after){
   const target=document.getElementById(targetId);
@@ -495,68 +525,68 @@ function smoothScrollToTarget(targetId,block='start',after){
   },750);
 }
 
-function cancelOpeningGuide(){
-  openingGuideCancelled=true;
-  if(openingGuideTimer)clearTimeout(openingGuideTimer);
-}
-
-function schedulePhotoGuideAdvance(){
-  if(photoGuideTimer)clearTimeout(photoGuideTimer);
-  if(!photoGuideActive)return;
-  photoGuideTimer=setTimeout(()=>{
-    if(!photoGuideActive)return;
-    photoGuideActive=false;
-    smoothScrollToTarget('ideaCard','center',()=>{
-      const idea=document.getElementById('ideaDesc');
-      if(idea)idea.focus({preventScroll:true});
-      restartIdeaGuidanceTimer();
-    });
-  },5000);
-}
-
 function noteRealCustomerActivity(){
   if(guidedScrollInProgress)return;
-  cancelOpeningGuide();
-  // Once a photo is loaded, every real interaction restarts a fresh 5-second inactivity window.
-  if(photoGuideActive)schedulePhotoGuideAdvance();
+  scheduleOpeningGuide(5000);
+  if(photoGuideActive)schedulePhotoGuideAdvance(5000);
 }
 ['wheel','touchstart','pointerdown','mousemove','keydown'].forEach(evt=>{
   window.addEventListener(evt,noteRealCustomerActivity,{passive:true});
 });
 
-function startOpeningGuide(){
-  openingGuideCancelled=false;
-  if(openingGuideTimer)clearTimeout(openingGuideTimer);
-  openingGuideTimer=setTimeout(()=>{
-    if(!openingGuideCancelled)smoothScrollToTarget('uploadPhotoCard','start');
-  },12000);
-}
-
 function startPhotoGuide(){
   photoGuideActive=true;
-  if(photoGuideTimer)clearTimeout(photoGuideTimer);
   // First frame the completed photo together with its Start Over control.
   setTimeout(()=>{
     if(photoGuideActive)smoothScrollToTarget('startOverBtn','end');
   },150);
-  schedulePhotoGuideAdvance();
+  schedulePhotoGuideAdvance(10000);
 }
 
-function restartIdeaGuidanceTimer(){
-  const prompt=document.getElementById('ideaGuidancePrompt');
-  if(prompt)prompt.classList.remove('visible');
-  if(ideaGuideTimer)clearTimeout(ideaGuideTimer);
+// Timer 3 — description-box nudge. Starts the moment the idea card
+// actually comes into view (works whether the customer got there via
+// auto-scroll or scrolled themselves), pauses while it's off-screen,
+// and resumes if they scroll back to it. Never advances the page.
+let ideaGuideTimer=null;
+let ideaGuideHasFlashedOnce=false;
+
+function scheduleNextIdeaFlash(){
+  clearTimeout(ideaGuideTimer);
   ideaGuideTimer=setTimeout(()=>{
-    if(prompt)prompt.classList.add('visible');
+    const prompt=document.getElementById('ideaGuidancePrompt');
+    if(prompt){
+      prompt.classList.add('visible');
+      prompt.classList.toggle('soft',ideaGuideHasFlashedOnce);
+    }
+    ideaGuideHasFlashedOnce=true;
+    scheduleNextIdeaFlash();
   },30000);
 }
 
+function pauseIdeaGuideCycle(){
+  clearTimeout(ideaGuideTimer);
+  const prompt=document.getElementById('ideaGuidancePrompt');
+  if(prompt)prompt.classList.remove('visible');
+}
+
+const ideaCardObserver=new IntersectionObserver((entries)=>{
+  entries.forEach(entry=>{
+    if(entry.isIntersecting)scheduleNextIdeaFlash();
+    else pauseIdeaGuideCycle();
+  });
+},{threshold:0.4});
+
 window.addEventListener('DOMContentLoaded',()=>{
-  startOpeningGuide();
+  scheduleOpeningGuide(12000);
+  const ideaCardEl=document.getElementById('ideaCard');
+  if(ideaCardEl)ideaCardObserver.observe(ideaCardEl);
   const idea=document.getElementById('ideaDesc');
   if(idea){
-    idea.addEventListener('focus',restartIdeaGuidanceTimer);
-    idea.addEventListener('input',restartIdeaGuidanceTimer);
+    idea.addEventListener('input',()=>{
+      const prompt=document.getElementById('ideaGuidancePrompt');
+      if(prompt)prompt.classList.remove('visible');
+      scheduleNextIdeaFlash();
+    });
   }
 });
 
@@ -1953,7 +1983,7 @@ document.getElementById('cancelBtn').style.display='block';
         ? 'Caricature strength: LIGHT. Preserve identity very strongly. Use only mild exaggeration.'
         : likeness==='0.25'
         ? 'Caricature strength: BALANCED. Use moderate exaggeration, but identity must remain unmistakable.'
-        : 'Caricature strength: WILD. Use bold exaggeration only on the person’s real existing features. Do not invent new facial features.';
+        : 'Caricature strength: WILD. Use bold exaggeration only on the person\u2019s real existing features. Do not invent new facial features.';
 
     const backgroundDesc=getBackgroundDescription();
     const backgroundLine=backgroundDesc
@@ -1992,7 +2022,7 @@ IDENTITY PRESERVATION IS THE TOP PRIORITY.
 Use the uploaded face as the source of truth.
 Do not invent a new person.
 Do not replace the face with a generic cartoon face.
-Do not beautify, age-shift, race-shift, gender-shift, or change the person’s facial structure.
+Do not beautify, age-shift, race-shift, gender-shift, or change the person's facial structure.
 
 Preserve the exact recognizable identity:
 same bald head or hairstyle,
