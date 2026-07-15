@@ -2026,7 +2026,7 @@ async function generate(){
   document.getElementById('approveRow').style.display='none';
   document.getElementById('keepTweakingBtn').style.display='none';
   document.getElementById('downloadDesignBtn').style.display='none';
-setStatus('Generating your caricature... this can take several minutes, especially on busier or more detailed requests. Please stay on this screen until it finishes.');
+setStatus('Generating your image... this can take several minutes, especially on busier or more detailed requests. Please stay on this screen until it finishes.');
 document.getElementById('cancelBtn').style.display='block';
   // NEW (July 2026, Alyx's request): the moment Generate is tapped, bring
   // the whole in-progress area — spinner, status text, AND the elapsed-time
@@ -2042,7 +2042,7 @@ document.getElementById('cancelBtn').style.display='block';
       const statusEl=document.getElementById('status');
       if(spinnerEl&&timerEl){
         const spinnerTop=spinnerEl.getBoundingClientRect().top+window.scrollY;
-        // The status message ("Generating your caricature...") sits right
+        // The status message ("Generating your image...") sits right
         // after the timer and was getting left just out of view when only
         // the timer's own bottom edge was used. Measure down through
         // whichever of the two actually extends further, so the message
