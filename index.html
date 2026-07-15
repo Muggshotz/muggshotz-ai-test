@@ -115,6 +115,8 @@
 .phone-confirm-actions button:first-child{background:#ff6a00;color:#fff}
 .reset-everything-btn{width:100%;background:#160808;border:1px solid #5a2a2a;border-radius:10px;padding:1rem;color:#ff8a7a;font-size:13px;font-weight:700;cursor:pointer;letter-spacing:.5px;text-align:center}
 .reset-everything-btn:hover{background:#220c0c;border-color:#7a3a3a}
+.mug-select-flash{font-size:15px!important;font-weight:800!important;letter-spacing:.5px!important;text-transform:uppercase;padding:8px 6px;border-radius:8px;animation:mugSelectFlash 1s ease-in-out infinite}
+@keyframes mugSelectFlash{0%,100%{color:#fff;background:#ff6a00;text-shadow:0 0 10px rgba(255,106,0,.9)}50%{color:#ff6a00;background:#2a1200;text-shadow:0 0 10px rgba(255,106,0,.6)}}
 </style>
 </head>
 <body>
@@ -680,18 +682,21 @@ function updateGenPreviewLabel(){
   if(!el)return;
   if(product!=='mug'){
     el.textContent='🖼️ Real Photo Preview';
+    el.classList.remove('mug-select-flash');
     el.style.color='#888';
     el.style.cursor='default';
     el.onclick=null;
     return;
   }
   if(!mugOptionsTouched){
-    el.textContent='Please select size/style/color';
-    el.style.color='#888';
+    el.textContent='⚠️ Please Select Size / Style / Color';
+    el.classList.add('mug-select-flash');
+    el.style.color='';
     el.style.cursor='default';
     el.onclick=null;
   } else {
     el.textContent='If satisfied with selections click here. If not, make desired changes.';
+    el.classList.remove('mug-select-flash');
     el.style.color='#ff6a00';
     el.style.cursor='pointer';
     el.onclick=()=>smoothScrollToTarget('positionHolderCard','start');
