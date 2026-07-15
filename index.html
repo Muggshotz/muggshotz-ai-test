@@ -530,7 +530,7 @@ function noteRealCustomerActivity(){
   scheduleOpeningGuide(5000);
   if(photoGuideActive)schedulePhotoGuideAdvance(5000);
 }
-['wheel','touchstart','pointerdown','mousemove','keydown'].forEach(evt=>{
+['wheel','touchstart','pointerdown','keydown'].forEach(evt=>{
   window.addEventListener(evt,noteRealCustomerActivity,{passive:true});
 });
 
