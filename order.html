@@ -52,9 +52,12 @@ label{font-size:11px;color:#888;letter-spacing:.5px;text-transform:uppercase;dis
 .flyer-status{font-size:11px;margin-top:6px;line-height:1.35}
 .flyer-status.ok{color:#5fbf5f}
 .flyer-status.pending{color:#888}
-.checkout-nudge{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:#ff6a00;color:#fff;padding:.9rem 1.4rem;border-radius:30px;font-weight:700;font-size:14px;box-shadow:0 4px 20px rgba(0,0,0,0.55);cursor:pointer;z-index:1500;display:none;align-items:center;gap:8px;text-align:center;white-space:nowrap;animation:nudgePulse 1.6s ease-in-out infinite}
+.checkout-nudge{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:rgba(255,106,0,0.82);color:#fff;padding:.9rem 1.4rem;border-radius:30px;font-weight:700;font-size:14px;box-shadow:0 4px 20px rgba(0,0,0,0.55);cursor:pointer;z-index:1500;display:none;align-items:center;gap:8px;text-align:center;white-space:nowrap;animation:nudgePulse 1.6s ease-in-out infinite;backdrop-filter:blur(2px)}
 .checkout-nudge.visible{display:inline-flex}
 @keyframes nudgePulse{0%,100%{transform:translateX(-50%) scale(1)}50%{transform:translateX(-50%) scale(1.05)}}
+.mockup-wait-banner{display:none;position:fixed;top:18%;left:50%;transform:translateX(-50%);background:#000;border:2px solid #ff6a00;color:#ff6a00;font-size:19px;font-weight:800;letter-spacing:.3px;padding:1rem 1.4rem;border-radius:14px;z-index:2000;text-align:center;max-width:90vw;box-shadow:0 8px 30px rgba(0,0,0,0.65);animation:mockupBannerBlink 1s steps(1) infinite}
+.mockup-wait-banner.visible{display:block}
+@keyframes mockupBannerBlink{0%,49%{opacity:1}50%,100%{opacity:0}}
 </style>
 </head>
 <body>
@@ -295,6 +298,7 @@ label{font-size:11px;color:#888;letter-spacing:.5px;text-transform:uppercase;dis
 </div>
 
 <div class="checkout-nudge" id="checkoutNudge" onclick="scrollToCheckout()">✅ Happy with this? Tap to checkout →</div>
+<div class="mockup-wait-banner" id="mockupWaitBanner">Please wait while mockup is prepared.</div>
 
 <script>
 const MUG_STYLES = {
@@ -433,6 +437,31 @@ function hideCheckoutNudge(){
   if (el) el.classList.remove('visible');
 }
 
+function showMockupWaitBanner(){
+  const el = document.getElementById('mockupWaitBanner');
+  if (el) el.classList.add('visible');
+}
+
+function hideMockupWaitBanner(){
+  const el = document.getElementById('mockupWaitBanner');
+  if (el) el.classList.remove('visible');
+}
+
+// Same root cause and same fix as index.html's post-generation scroll:
+// scrolling immediately after setting a new image src measures the OLD
+// page layout, since the browser hasn't decoded/rendered the image yet.
+// This waits for the image to actually be ready before anything scrolls.
+function waitForImageReady(img){
+  if (!img) return Promise.resolve();
+  const ready = img.complete && img.naturalWidth > 0
+    ? (img.decode ? img.decode().catch(()=>{}) : Promise.resolve())
+    : new Promise(resolve => {
+        img.addEventListener('load', resolve, { once: true });
+        img.addEventListener('error', resolve, { once: true });
+      });
+  return Promise.resolve(ready).then(() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))));
+}
+
 function scrollToCheckout(){
   const card = document.getElementById('shippingCard');
   if (!card) return;
@@ -448,6 +477,7 @@ async function runMockupJob(body, btn, noteEl, imgEl){
   btn.disabled = true;
   btn.textContent = '📸 Generating your real photo... (a few seconds)';
   noteEl.style.display = 'none';
+  showMockupWaitBanner();
 
   try {
     const startResp = await fetch('/api/start-mockup', {
@@ -483,18 +513,24 @@ async function runMockupJob(body, btn, noteEl, imgEl){
     imgEl.style.display = 'block';
     btn.textContent = '✅ Real Photo Preview';
     btn.disabled = false;
+    hideMockupWaitBanner();
 
     // NEW (July 2026, Alyx's request): once the real photo preview is
     // actually ready, take the customer straight to it and offer a
     // clear, clickable next step — instead of leaving them wherever
     // they happened to land on the page (often back at the top product
-    // picker), unsure whether anything even finished.
-    imgEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    // picker), unsure whether anything even finished. Waits for the
+    // image to truly finish rendering first, and aligns to 'start' so
+    // the image fills the screen rather than being centered with
+    // unrelated sections still peeking in above it.
+    await waitForImageReady(imgEl);
+    imgEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
     showCheckoutNudge();
 
     return mockupUrl;
 
   } catch (err) {
+    hideMockupWaitBanner();
     noteEl.textContent = err.message;
     noteEl.className = 'note error';
     noteEl.style.display = 'block';
