@@ -715,6 +715,10 @@ function setupPhoneModelSearchGen(){
   if(phoneSearchListenerAttachedGen)return;
   phoneSearchListenerAttachedGen=true;
   input.addEventListener('input',function(){
+    // Typing always clears any prior match/confirm state — the confirm
+    // panel only reappears after the next Enter press. A live suggestion
+    // list is still shown as a helpful reference while typing, but it's
+    // just for browsing; Enter is what actually resolves a selection.
     selectedPhoneCaseModel=null;
     pendingPhoneCaseModel=null;
     hidePhoneConfirmationGen();
@@ -736,6 +740,27 @@ function setupPhoneModelSearchGen(){
       btn.onclick=()=>pickPhoneModelGen(model);
       resultsEl.appendChild(btn);
     });
+  });
+  input.addEventListener('keydown',function(e){
+    if(e.key!=='Enter')return;
+    e.preventDefault();
+    const q=input.value.trim().toLowerCase();
+    const resultsEl=document.getElementById('phoneModelResultsGen');
+    // Enter always clears whatever suggestions were showing — from here
+    // on it's either the confirm panel or a not-on-file message, never
+    // both, and never the old suggestion list.
+    resultsEl.innerHTML='';
+    if(q.length<2)return;
+    // Prefer an exact (case-insensitive) match; otherwise fall back to the
+    // first model whose name contains what was typed. Either way, Enter
+    // resolves straight to a single model — no list to click through.
+    const exact=PHONE_CASE_MODELS.find(m=>m.toLowerCase()===q);
+    const match=exact||PHONE_CASE_MODELS.find(m=>m.toLowerCase().includes(q));
+    if(!match){
+      resultsEl.innerHTML='<div class="note" style="color:#e24b4a">We don\'t currently carry a case for that model.</div>';
+      return;
+    }
+    pickPhoneModelGen(match);
   });
 }
 
