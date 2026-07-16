@@ -592,7 +592,24 @@ const ideaCardObserver=new IntersectionObserver((entries)=>{
 },{threshold:0.4});
 
 window.addEventListener('DOMContentLoaded',()=>{
-  scheduleOpeningGuide(12000);
+  let returningToIdea=false;
+  try{
+    if(localStorage.getItem('muggshotz_return_to_idea')==='1'){
+      localStorage.removeItem('muggshotz_return_to_idea');
+      returningToIdea=true;
+    }
+  }catch(e){}
+  if(returningToIdea){
+    openingGuideDone=true;
+    setTimeout(()=>{
+      smoothScrollToTarget('ideaCard','center',()=>{
+        const idea=document.getElementById('ideaDesc');
+        if(idea)idea.focus({preventScroll:true});
+      });
+    },300);
+  } else {
+    scheduleOpeningGuide(12000);
+  }
   const ideaCardEl=document.getElementById('ideaCard');
   if(ideaCardEl)ideaCardObserver.observe(ideaCardEl);
   const idea=document.getElementById('ideaDesc');
