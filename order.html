@@ -104,7 +104,7 @@ label{font-size:11px;color:#888;letter-spacing:.5px;text-transform:uppercase;dis
 <div class="note" style="margin-top:0;margin-bottom:.9rem">These options were locked in before you generated, since the print shape determines how the art was composed.</div>
 <div class="note" id="photoPosterSummary" style="font-size:14px;color:#fff"></div>
 <div class="note" id="photoPosterShippingNote" style="margin-top:.75rem;color:#ff9a4d;display:none">Ships separately from outside the US — slightly longer delivery.</div>
-<button class="download-btn" id="posterMockupBtn" onclick="fetchPosterMockup()" style="margin-top:1rem">📸 See a Real Photo Preview</button>
+<div class="note" id="posterMockupBtn" style="text-align:center;margin-top:1rem;color:#ff9a4d;font-weight:600">🔍 Click Image To Enlarge</div>
 <div class="note" id="posterMockupNote" style="margin-top:.5rem;text-align:center;display:none"></div>
 <img id="posterMockupImg" style="display:none;width:100%;border-radius:12px;border:1px solid #ff6a00;margin-top:.75rem"/>
 </div>
@@ -113,7 +113,7 @@ label{font-size:11px;color:#888;letter-spacing:.5px;text-transform:uppercase;dis
 <div class="card-title">🧳 Suitcase Size</div>
 <div class="grid3" id="suitcaseSizeGrid"></div>
 <div class="note">Comes in Black only.</div>
-<button class="download-btn" id="suitcaseMockupBtn" onclick="fetchSingleImageMockup('suitcase', selectedSuitcaseSize, null, 'suitcaseMockupBtn', 'suitcaseMockupNote', 'suitcaseMockupImg')" style="margin-top:1rem">📸 See a Real Photo Preview</button>
+<div class="note" id="suitcaseMockupBtn" style="text-align:center;margin-top:1rem;color:#ff9a4d;font-weight:600">🔍 Click Image To Enlarge</div>
 <div class="note" id="suitcaseMockupNote" style="margin-top:.5rem;text-align:center;display:none"></div>
 <img id="suitcaseMockupImg" style="display:none;width:100%;border-radius:12px;border:1px solid #ff6a00;margin-top:.75rem"/>
 </div>
@@ -127,7 +127,7 @@ label{font-size:11px;color:#888;letter-spacing:.5px;text-transform:uppercase;dis
 <div class="card-title">🎨 Tote Bag Color</div>
 <div class="color-grid" id="toteBagColorGrid"></div>
 <div class="color-label" id="toteBagColorLabel">Pick a color</div>
-<button class="download-btn" id="toteMockupBtn" onclick="fetchSingleImageMockup('tote-bag', selectedToteSize, selectedToteColor, 'toteMockupBtn', 'toteMockupNote', 'toteMockupImg')" style="margin-top:1rem">📸 See a Real Photo Preview</button>
+<div class="note" id="toteMockupBtn" style="text-align:center;margin-top:1rem;color:#ff9a4d;font-weight:600">🔍 Click Image To Enlarge</div>
 <div class="note" id="toteMockupNote" style="margin-top:.5rem;text-align:center;display:none"></div>
 <img id="toteMockupImg" style="display:none;width:100%;border-radius:12px;border:1px solid #ff6a00;margin-top:.75rem"/>
 </div>
@@ -135,7 +135,7 @@ label{font-size:11px;color:#888;letter-spacing:.5px;text-transform:uppercase;dis
 <div class="card" id="puzzleSizeCard" style="display:none">
 <div class="card-title">🧩 Puzzle Size</div>
 <div class="grid2" id="puzzleSizeGrid"></div>
-<button class="download-btn" id="puzzleMockupBtn" onclick="fetchSingleImageMockup('photo-puzzle', selectedPuzzleSize, null, 'puzzleMockupBtn', 'puzzleMockupNote', 'puzzleMockupImg')" style="margin-top:1rem">📸 See a Real Photo Preview</button>
+<div class="note" id="puzzleMockupBtn" style="text-align:center;margin-top:1rem;color:#ff9a4d;font-weight:600">🔍 Click Image To Enlarge</div>
 <div class="note" id="puzzleMockupNote" style="margin-top:.5rem;text-align:center;display:none"></div>
 <img id="puzzleMockupImg" style="display:none;width:100%;border-radius:12px;border:1px solid #ff6a00;margin-top:.75rem"/>
 </div>
@@ -147,7 +147,7 @@ label{font-size:11px;color:#888;letter-spacing:.5px;text-transform:uppercase;dis
   style="width:100%;padding:.6rem;border-radius:8px;border:.5px solid #333;background:#0d0d0d;color:#fff;box-sizing:border-box"/>
 <div id="phoneModelResults" style="margin-top:.6rem"></div>
 <div class="note" id="phoneModelSelectedNote" style="margin-top:.6rem"></div>
-<button class="download-btn" id="phoneMockupBtn" onclick="fetchSingleImageMockup('phone-case-tough', selectedPhoneModel, null, 'phoneMockupBtn', 'phoneMockupNote', 'phoneMockupImg')" style="margin-top:1rem">📸 See a Real Photo Preview</button>
+<div class="note" id="phoneMockupBtn" style="text-align:center;margin-top:1rem;color:#ff9a4d;font-weight:600">🔍 Click Image To Enlarge</div>
 <div class="note" id="phoneMockupNote" style="margin-top:.5rem;text-align:center;display:none"></div>
 <img id="phoneMockupImg" style="display:none;width:100%;border-radius:12px;border:1px solid #ff6a00;margin-top:.75rem"/>
 </div>
@@ -160,7 +160,7 @@ label{font-size:11px;color:#888;letter-spacing:.5px;text-transform:uppercase;dis
 <div class="card" id="travelMugStyleCard" style="display:none">
 <div class="card-title">🍶 Which Travel Mug?</div>
 <div class="grid3" id="travelMugStyleGrid"></div>
-<button class="download-btn" id="travelMockupPreviewBtn" onclick="fetchTravelMockupPreview()" style="margin-top:1rem">📸 See a Real Photo Preview</button>
+<div class="note" id="travelMockupPreviewBtn" style="text-align:center;margin-top:1rem;color:#ff9a4d;font-weight:600">🔍 Click Image To Enlarge</div>
 <div class="note" id="travelMockupPreviewNote" style="margin-top:.5rem;text-align:center;display:none"></div>
 <img id="travelMockupPreviewImg" style="display:none;width:100%;border-radius:12px;border:1px solid #ff6a00;margin-top:.75rem"/>
 </div>
@@ -175,7 +175,7 @@ label{font-size:11px;color:#888;letter-spacing:.5px;text-transform:uppercase;dis
 
 <div class="card" id="livePreviewCard">
 <div class="card-title">🖼️ Live Preview</div>
-<button class="download-btn" id="mockupPreviewBtn" onclick="fetchMockupPreview()" style="margin-bottom:1rem;display:none">📸 See a Real Photo Preview</button>
+<div class="note" id="mockupPreviewBtn" style="text-align:center;margin-bottom:1rem;color:#ff9a4d;font-weight:600">🔍 Click Image To Enlarge</div>
 <div class="note" id="mockupPreviewNote" style="margin-top:-.6rem;margin-bottom:1rem;text-align:center;display:none"></div>
 <img id="mockupPreviewImg" style="display:none;width:100%;border-radius:12px;border:1px solid #ff6a00;margin-bottom:1rem"/>
 <div class="mug-preview-wrap">
@@ -607,6 +607,8 @@ async function runMockupJob(body, btn, noteEl, imgEl){
     } else {
       imgEl.src = mockupUrl;
       imgEl.style.display = 'block';
+      imgEl.style.cursor = 'pointer';
+      imgEl.onclick = () => window.open(mockupUrl, '_blank');
       await waitForImageReady(imgEl);
       anchorEl = imgEl;
     }
@@ -792,7 +794,6 @@ function pickPhoneModel(model){
   document.getElementById('phoneModelResults').innerHTML = '';
   document.getElementById('phoneModelSelectedNote').textContent = '✓ Case selected for ' + model + ' — $' + PHONE_CASE_PRICE.toFixed(2) + ' + shipping.';
   const img=document.getElementById('phoneMockupImg'); if(img) img.style.display='none';
-  const btn=document.getElementById('phoneMockupBtn'); if(btn) btn.textContent='📸 See a Real Photo Preview';
   hideMockupSideCta();
   updateSummary();
   maybeAutoFetchPhoneMockup(true);
@@ -905,7 +906,6 @@ function pickToteBagColor(el, colorData){
   selectedToteColor = colorData.name;
   document.getElementById('toteBagColorLabel').textContent = selectedToteColor;
   const img=document.getElementById('toteMockupImg'); if(img) img.style.display='none';
-  const btn=document.getElementById('toteMockupBtn'); if(btn) btn.textContent='📸 See a Real Photo Preview';
   hideMockupSideCta();
   updateSummary();
   scheduleAutoMockupFetch();
@@ -928,7 +928,6 @@ function pickPuzzleSize(sizeName){
   selectedPuzzleSize = sizeName;
   renderPuzzleSizeGrid();
   const img=document.getElementById('puzzleMockupImg'); if(img) img.style.display='none';
-  const btn=document.getElementById('puzzleMockupBtn'); if(btn) btn.textContent='📸 See a Real Photo Preview';
   hideMockupSideCta();
   updateSummary();
   scheduleAutoMockupFetch();
@@ -953,7 +952,6 @@ function pickSuitcaseSize(el){
   el.classList.add('selected');
   selectedSuitcaseSize = el.dataset.size;
   const img=document.getElementById('suitcaseMockupImg'); if(img) img.style.display='none';
-  const btn=document.getElementById('suitcaseMockupBtn'); if(btn) btn.textContent='📸 See a Real Photo Preview';
   hideMockupSideCta();
   updateSummary();
   scheduleAutoMockupFetch();
@@ -1163,10 +1161,10 @@ function resetTravelMockupPreview(){
   const noteEl = document.getElementById('travelMockupPreviewNote');
   const imgEl = document.getElementById('travelMockupPreviewImg');
   if (!btn) return;
-  btn.textContent = '📸 See a Real Photo Preview';
-  btn.disabled = false;
   noteEl.style.display = 'none';
   imgEl.style.display = 'none';
+  const gallery = document.getElementById('travelMockupPreviewImgGallery');
+  if (gallery) { gallery.style.display = 'none'; gallery.innerHTML = ''; }
   hideMockupSideCta();
 }
 
@@ -1242,13 +1240,13 @@ async function fetchMockupPreview(){
 }
 
 // ===== Automatic mockup loading (July 2026, Alyx's request) =====
-// No product's "See a Real Photo Preview" button should require a
-// click anymore — the moment enough is selected (style/size/color, a
-// suitcase size, a tote color, etc.) the real Printify mockup(s) load
-// on their own, with the existing flashing "Please Stand By" banner
-// doing the waiting-indicator work. The manual buttons stay in the
-// markup (harmless, just hidden) as a safety net rather than being
-// ripped out.
+// No product's mockup section requires a click anymore — the moment
+// enough is selected (style/size/color, a suitcase size, a tote color,
+// etc.) the real Printify mockup(s) load on their own, with the
+// existing flashing "Please Stand By" banner doing the waiting-indicator
+// work. What used to be a "See a Real Photo Preview" button is now a
+// plain "Click Image To Enlarge" label, since the images themselves are
+// clickable (opens full-size in a new tab).
 let autoMockupDebounceTimer = null;
 function scheduleAutoMockupFetch(){
   clearTimeout(autoMockupDebounceTimer);
