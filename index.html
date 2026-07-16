@@ -378,7 +378,7 @@
 <div class="note" id="genPreviewNote" style="text-align:center;display:none"></div>
 <img id="genPreviewImg" style="display:none;width:100%;border-radius:12px;border:1px solid #ff6a00"/>
 <div id="genPreviewGallery" style="display:none;gap:8px;overflow-x:auto;padding-bottom:4px"></div>
-<div class="note" id="genPreviewGalleryHint" style="display:none;margin-top:4px;text-align:center">Swipe to see all angles Printify photographed — one may show the back of the mug if it's blank.</div>
+<div class="note" id="genPreviewGalleryHint" style="display:none;margin-top:4px;text-align:center">Swipe to see all angles Printify photographed — one may show a blank side if your design doesn't cover it.</div>
 <div class="mug-available-flash" id="mugAvailableNowPrompt" style="display:none">⚠️ Click The "Available Now" Button To See Final Mockups</div>
 </div>
 <button class="quick-btn" id="libraryToggleBtn" onclick="toggleLibrary()" style="margin-top:1.1rem;width:100%;text-align:center;padding:.65rem;border-radius:8px">📚 My Designs (0)</button>
@@ -3068,14 +3068,13 @@ async function runAutoMockupFetch(){
 
     loadingEl.style.display = 'none';
 
-    // Coffee mugs print as one continuous wraparound design, and
-    // Printify typically photographs that from a few different angles
-    // (front, and a couple of turned views) — show all of them the
-    // customer got instead of just the first shot, so they can see how
-    // Left/Center/Right actually reads around the mug. Fixed-width
-    // scrollable thumbnails instead of squeezing 5 into one row, which
-    // would make each one too small to see anything on a phone.
-    if (product === 'mug' && mockupUrls.length > 1) {
+    // Printify typically photographs a design from a few different
+    // angles — show all of them the customer got instead of just the
+    // first shot, whatever the product (coffee mug, travel cup, etc.).
+    // Fixed-width scrollable thumbnails instead of squeezing 5 into one
+    // row, which would make each one too small to see anything on a
+    // phone.
+    if (mockupUrls.length > 1) {
       mockupUrls.slice(0, 5).forEach(url => {
         const img = document.createElement('img');
         img.src = url;
