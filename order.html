@@ -196,12 +196,7 @@ label{font-size:11px;color:#888;letter-spacing:.5px;text-transform:uppercase;dis
   <ellipse id="mugRim" cx="135" cy="72" rx="73" ry="13" fill="#ffffff" stroke="#ccc" stroke-width="1.5"/>
 </svg>
 </div>
-<div class="view-toggle-row">
-<div class="view-toggle-btn" data-view="left" onclick="pickPreviewView(this)">◀ Left</div>
-<div class="view-toggle-btn selected" data-view="front" onclick="pickPreviewView(this)">Front</div>
-<div class="view-toggle-btn" data-view="right" onclick="pickPreviewView(this)">Right ▶</div>
-</div>
-<div class="note" style="text-align:center;margin-top:.6rem">Switch views to see each design you placed. This preview is illustrative — exact colors and proportions may vary slightly from the finished print.</div>
+<div class="note" style="text-align:center;margin-top:.6rem">This illustration is a placeholder while your real photo mockup loads — exact colors and proportions may vary slightly from the finished print.</div>
 </div>
 
 <div class="card" id="colorCard" style="display:none">
@@ -406,7 +401,6 @@ let selectedSize = "11oz";
 let selectedColor = null;
 let giftMessageEnabled = false;
 let fullWrapEnabled = false;
-let previewView = "front";
 
 let selectedTravelProductKey = null;
 let selectedTravelColor = null;
@@ -1070,7 +1064,7 @@ function renderMugPreview(){
   document.getElementById('mugRim').setAttribute('fill', rimFill);
   document.getElementById('mugHandle').setAttribute('stroke', handleStroke);
 
-  const designUrl = pendingOrder?.placements?.[previewView] || null;
+  const designUrl = pendingOrder?.placements?.front || pendingOrder?.placements?.left || pendingOrder?.placements?.right || null;
   const img = document.getElementById('mugDesignImage');
   const noDesignText = document.getElementById('mugNoDesignText');
   if (designUrl) {
@@ -1284,13 +1278,6 @@ function runAutoMockupForMode(){
   }
   // Phone case already had its own working auto-fetch (maybeAutoFetchPhoneMockup)
   // wired to pickPhoneModel() and setupPageForMode() — left as-is.
-}
-
-function pickPreviewView(el){
-  document.querySelectorAll('.view-toggle-btn').forEach(b=>b.classList.remove('selected'));
-  el.classList.add('selected');
-  previewView = el.dataset.view;
-  renderMugPreview();
 }
 
 function renderMugStyleGrid(){
