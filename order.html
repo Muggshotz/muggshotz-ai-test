@@ -175,7 +175,7 @@ label{font-size:11px;color:#888;letter-spacing:.5px;text-transform:uppercase;dis
 
 <div class="card" id="livePreviewCard">
 <div class="card-title">🖼️ Live Preview</div>
-<button class="download-btn" id="mockupPreviewBtn" onclick="fetchMockupPreview()" style="margin-bottom:1rem">📸 See a Real Photo Preview</button>
+<button class="download-btn" id="mockupPreviewBtn" onclick="fetchMockupPreview()" style="margin-bottom:1rem;display:none">📸 See a Real Photo Preview</button>
 <div class="note" id="mockupPreviewNote" style="margin-top:-.6rem;margin-bottom:1rem;text-align:center;display:none"></div>
 <img id="mockupPreviewImg" style="display:none;width:100%;border-radius:12px;border:1px solid #ff6a00;margin-bottom:1rem"/>
 <div class="mug-preview-wrap">
@@ -442,6 +442,23 @@ function hideMockupWaitBanner(){
   if (el) el.classList.remove('visible');
 }
 
+// NEW (July 2026, Alyx's request): every mockup <img> gets a matching
+// gallery strip created on demand right after it, mirroring index.html's
+// auto-preview gallery — Printify usually photographs a design from a
+// few different angles, and the customer should see all of them, not
+// just the first shot. Built dynamically so no product card's markup
+// had to be duplicated per-product.
+function ensureGalleryEl(imgEl){
+  let gallery = document.getElementById(imgEl.id + 'Gallery');
+  if (!gallery) {
+    gallery = document.createElement('div');
+    gallery.id = imgEl.id + 'Gallery';
+    gallery.style.cssText = 'display:none;gap:8px;overflow-x:auto;padding-bottom:4px;margin-top:.75rem';
+    imgEl.insertAdjacentElement('afterend', gallery);
+  }
+  return gallery;
+}
+
 // ===== Post-mockup side-margin checkout/return prompt (July 2026,
 // Alyx's request) =====
 // Replaces the old single bottom-center "Happy with this?" nudge. Two
@@ -453,9 +470,9 @@ function hideMockupWaitBanner(){
 // have their own <img> element, the two tab elements are shared and
 // get reparented into whichever image's card is currently active,
 // rather than duplicating the tabs per product.
-function showMockupSideCta(imgEl){
-  if (!imgEl) return;
-  const parent = imgEl.parentElement;
+function showMockupSideCta(anchorEl){
+  if (!anchorEl) return;
+  const parent = anchorEl.parentElement;
   if (!parent) return;
   parent.style.position = 'relative';
   const left = document.getElementById('mockupCtaLeft');
@@ -465,7 +482,7 @@ function showMockupSideCta(imgEl){
   parent.appendChild(right);
 
   const positionCtas = () => {
-    const top = imgEl.offsetTop + imgEl.offsetHeight / 2;
+    const top = anchorEl.offsetTop + anchorEl.offsetHeight / 2;
     left.style.top = top + 'px';
     right.style.top = top + 'px';
   };
@@ -496,11 +513,18 @@ function goCheckoutFromMockup(e){
   scrollToCheckout();
 }
 
+// UPDATED (July 2026, Alyx's request): "Not yet — I'd still like to
+// make changes" no longer just scrolls back up to this page's own
+// bridge-grid/design cards — it sends the customer back to the
+// generator's description/idea box on index.html, since that's the
+// actual place changes get made. A localStorage flag tells index.html
+// to skip its usual opening auto-scroll and jump straight to the idea
+// card instead.
 function returnToOptionsFromMockup(e){
   if (e) e.stopPropagation();
   hideMockupSideCta();
-  const card = document.getElementById('bridgeGridCard');
-  if (card) card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  try { localStorage.setItem('muggshotz_return_to_idea', '1'); } catch (err) {}
+  window.location.href = 'index.html';
 }
 
 // Same root cause and same fix as index.html's post-generation scroll:
@@ -530,11 +554,14 @@ function scrollToCheckout(){
 }
 
 async function runMockupJob(body, btn, noteEl, imgEl){
-  btn.disabled = true;
-  btn.textContent = '📸 Generating your real photo... (a few seconds)';
+  if (btn) { btn.disabled = true; }
   noteEl.style.display = 'none';
   hideMockupSideCta();
   showMockupWaitBanner();
+  imgEl.style.display = 'none';
+  const galleryEl = ensureGalleryEl(imgEl);
+  galleryEl.style.display = 'none';
+  galleryEl.innerHTML = '';
 
   try {
     const startResp = await fetch('/api/start-mockup', {
@@ -547,6 +574,7 @@ async function runMockupJob(body, btn, noteEl, imgEl){
 
     const productId = startData.productId;
     let mockupUrl = null;
+    let mockupUrls = [];
     const maxTries = 20;
 
     for (let i = 0; i < maxTries; i++) {
@@ -560,28 +588,40 @@ async function runMockupJob(body, btn, noteEl, imgEl){
       if (!checkResp.ok) throw new Error(checkData.error || 'Could not check on the real photo preview.');
       if (checkData.ready) {
         mockupUrl = checkData.mockupUrl;
+        mockupUrls = Array.isArray(checkData.mockupUrls) ? checkData.mockupUrls : [];
         break;
       }
     }
 
     if (!mockupUrl) throw new Error("Printify didn't return a mockup photo in time — try again in a moment.");
 
-    imgEl.src = mockupUrl;
-    imgEl.style.display = 'block';
-    btn.textContent = '✅ Real Photo Preview';
-    btn.disabled = false;
+    let anchorEl = imgEl;
+
+    // Show every angle Printify photographed instead of just the first
+    // shot, same treatment as the generator's own auto-preview gallery.
+    if (mockupUrls.length > 1) {
+      mockupUrls.slice(0, 5).forEach(url => {
+        const thumb = document.createElement('img');
+        thumb.src = url;
+        thumb.style.cssText = 'flex:0 0 150px;width:150px;height:150px;border-radius:12px;border:1px solid #ff6a00;object-fit:contain;background:#fff;cursor:pointer';
+        thumb.onclick = () => window.open(url, '_blank');
+        galleryEl.appendChild(thumb);
+      });
+      galleryEl.style.display = 'flex';
+      anchorEl = galleryEl;
+      await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+    } else {
+      imgEl.src = mockupUrl;
+      imgEl.style.display = 'block';
+      await waitForImageReady(imgEl);
+      anchorEl = imgEl;
+    }
+
+    if (btn) { btn.disabled = false; }
     hideMockupWaitBanner();
 
-    // Once the real photo preview is actually ready, take the customer
-    // straight to it and offer the two clear next steps in the side
-    // margins — instead of leaving them wherever they happened to land
-    // on the page, unsure whether anything even finished. Waits for the
-    // image to truly finish rendering first, and aligns to 'start' so
-    // the image fills the screen rather than being centered with
-    // unrelated sections still peeking in above it.
-    await waitForImageReady(imgEl);
-    imgEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    showMockupSideCta(imgEl);
+    anchorEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    showMockupSideCta(anchorEl);
 
     return mockupUrl;
 
@@ -590,8 +630,7 @@ async function runMockupJob(body, btn, noteEl, imgEl){
     noteEl.textContent = err.message;
     noteEl.className = 'note error';
     noteEl.style.display = 'block';
-    btn.textContent = '📸 See a Real Photo Preview';
-    btn.disabled = false;
+    if (btn) { btn.disabled = false; }
     return null;
   }
 }
@@ -843,6 +882,7 @@ function pickToteBagSize(sizeName){
   renderToteBagSizeGrid();
   renderToteBagColorGrid();
   updateSummary();
+  scheduleAutoMockupFetch();
 }
 
 function renderToteBagColorGrid(){
@@ -874,6 +914,7 @@ function pickToteBagColor(el, colorData){
   const btn=document.getElementById('toteMockupBtn'); if(btn) btn.textContent='📸 See a Real Photo Preview';
   hideMockupSideCta();
   updateSummary();
+  scheduleAutoMockupFetch();
 }
 
 function renderPuzzleSizeGrid(){
@@ -896,6 +937,7 @@ function pickPuzzleSize(sizeName){
   const btn=document.getElementById('puzzleMockupBtn'); if(btn) btn.textContent='📸 See a Real Photo Preview';
   hideMockupSideCta();
   updateSummary();
+  scheduleAutoMockupFetch();
 }
 
 function renderSuitcaseSizeGrid(){
@@ -920,6 +962,7 @@ function pickSuitcaseSize(el){
   const btn=document.getElementById('suitcaseMockupBtn'); if(btn) btn.textContent='📸 See a Real Photo Preview';
   hideMockupSideCta();
   updateSummary();
+  scheduleAutoMockupFetch();
 }
 
 function toggleGiftMessage(){
@@ -931,6 +974,7 @@ function toggleGiftMessage(){
 function toggleFullWrap(){
   fullWrapEnabled = document.getElementById('fullWrapToggle').checked;
   resetMockupPreview();
+  scheduleAutoMockupFetch();
 }
 
 function updateGiftMessageCount(){
@@ -1072,7 +1116,7 @@ async function fetchSingleImageMockup(productKey, sizeLabel, colorName, btnId, n
     return;
   }
 
-  await runMockupJob({ productKey, sizeLabel, colorName, image }, btn, noteEl, imgEl);
+  return await runMockupJob({ productKey, sizeLabel, colorName, image }, btn, noteEl, imgEl);
 }
 
 function renderPhotoPosterCard(){
@@ -1109,7 +1153,7 @@ async function fetchPosterMockup(){
     return;
   }
 
-  await runMockupJob({
+  return await runMockupJob({
     productKey: 'photo-poster',
     sizeLabel: pendingOrder?.posterSize,
     colorName: pendingOrder?.posterFrameColor,
@@ -1167,7 +1211,7 @@ async function fetchTravelMockupPreview(){
     body.image = left || front || right || null;
   }
 
-  await runMockupJob(body, btn, noteEl, imgEl);
+  return await runMockupJob(body, btn, noteEl, imgEl);
 }
 
 function resetMockupPreview(){
@@ -1175,10 +1219,10 @@ function resetMockupPreview(){
   const noteEl = document.getElementById('mockupPreviewNote');
   const imgEl = document.getElementById('mockupPreviewImg');
   if (!btn) return;
-  btn.textContent = '📸 See a Real Photo Preview';
-  btn.disabled = false;
   noteEl.style.display = 'none';
   imgEl.style.display = 'none';
+  const gallery = document.getElementById('mockupPreviewImgGallery');
+  if (gallery) { gallery.style.display = 'none'; gallery.innerHTML = ''; }
   const wrap = document.querySelector('.mug-preview-wrap');
   if (wrap) wrap.style.display = 'block';
   hideMockupSideCta();
@@ -1200,6 +1244,46 @@ async function fetchMockupPreview(){
   if (url) {
     document.querySelector('.mug-preview-wrap').style.display = 'none';
   }
+  return url;
+}
+
+// ===== Automatic mockup loading (July 2026, Alyx's request) =====
+// No product's "See a Real Photo Preview" button should require a
+// click anymore — the moment enough is selected (style/size/color, a
+// suitcase size, a tote color, etc.) the real Printify mockup(s) load
+// on their own, with the existing flashing "Please Stand By" banner
+// doing the waiting-indicator work. The manual buttons stay in the
+// markup (harmless, just hidden) as a safety net rather than being
+// ripped out.
+let autoMockupDebounceTimer = null;
+function scheduleAutoMockupFetch(){
+  clearTimeout(autoMockupDebounceTimer);
+  autoMockupDebounceTimer = setTimeout(runAutoMockupForMode, 500);
+}
+function runAutoMockupForMode(){
+  if (isMug()) {
+    const hasColors = !!MUG_STYLES[selectedStyle]?.sizes?.[selectedSize]?.colors;
+    if (hasColors && !selectedColor) return;
+    fetchMockupPreview();
+  } else if (isTravelMug()) {
+    if (!selectedTravelProductKey) return;
+    const product = TRAVEL_MUG_CATALOG[selectedTravelProductKey];
+    if (product.colors && !selectedTravelColor) return;
+    fetchTravelMockupPreview();
+  } else if (isSuitcase()) {
+    if (!selectedSuitcaseSize) return;
+    fetchSingleImageMockup('suitcase', selectedSuitcaseSize, null, 'suitcaseMockupBtn', 'suitcaseMockupNote', 'suitcaseMockupImg');
+  } else if (isToteBag()) {
+    if (!selectedToteColor) return;
+    fetchSingleImageMockup('tote-bag', selectedToteSize, selectedToteColor, 'toteMockupBtn', 'toteMockupNote', 'toteMockupImg');
+  } else if (isPuzzle()) {
+    if (!selectedPuzzleSize) return;
+    fetchSingleImageMockup('photo-puzzle', selectedPuzzleSize, null, 'puzzleMockupBtn', 'puzzleMockupNote', 'puzzleMockupImg');
+  } else if (isPhotoPoster()) {
+    fetchPosterMockup();
+  }
+  // Phone case already had its own working auto-fetch (maybeAutoFetchPhoneMockup)
+  // wired to pickPhoneModel() and setupPageForMode() — left as-is.
 }
 
 function pickPreviewView(el){
@@ -1234,6 +1318,7 @@ function pickStyle(el){
   renderMugPreview();
   resetMockupPreview();
   updateSummary();
+  scheduleAutoMockupFetch();
 }
 
 function pickSize(el){
@@ -1247,6 +1332,7 @@ function pickSize(el){
   renderMugPreview();
   resetMockupPreview();
   updateSummary();
+  scheduleAutoMockupFetch();
 }
 
 function pickColor(el, colorData){
@@ -1257,6 +1343,7 @@ function pickColor(el, colorData){
   renderMugPreview();
   resetMockupPreview();
   updateSummary();
+  scheduleAutoMockupFetch();
 }
 
 function renderColorGrid(){
@@ -1329,6 +1416,7 @@ function pickTravelMugStyle(key, el){
   }
   resetTravelMockupPreview();
   updateSummary();
+  scheduleAutoMockupFetch();
 }
 
 function renderTravelColorGrid(colors){
@@ -1352,6 +1440,7 @@ function pickTravelColor(el, colorData){
   selectedTravelColor = colorData.name;
   document.getElementById('travelColorLabel').textContent = selectedTravelColor;
   resetTravelMockupPreview();
+  scheduleAutoMockupFetch();
 }
 
 function updateSummary(){
@@ -1752,6 +1841,7 @@ if (isTravelMug()) {
     renderMugPreview();
   }
   updateSummary();
+  scheduleAutoMockupFetch();
 }
 
 renderBridgeGrid();
