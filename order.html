@@ -1393,11 +1393,15 @@ function pickTravelMugStyle(key, el){
 
   const product = TRAVEL_MUG_CATALOG[key];
   const colorCard = document.getElementById('travelColorCard');
+  const label = document.getElementById('travelMockupPreviewBtn');
   if (product.colors) {
     colorCard.style.display = 'block';
     renderTravelColorGrid(product.colors);
+    if (label) label.textContent = '🎨 Pick A Color Below To See Your Real Mockup';
+    colorCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
   } else {
     colorCard.style.display = 'none';
+    if (label) label.textContent = '🔍 Click Image To Enlarge';
   }
   resetTravelMockupPreview();
   updateSummary();
@@ -1424,7 +1428,10 @@ function pickTravelColor(el, colorData){
   el.classList.add('selected');
   selectedTravelColor = colorData.name;
   document.getElementById('travelColorLabel').textContent = selectedTravelColor;
+  const label = document.getElementById('travelMockupPreviewBtn');
+  if (label) label.textContent = '🔍 Click Image To Enlarge';
   resetTravelMockupPreview();
+  updateSummary();
   scheduleAutoMockupFetch();
 }
 
