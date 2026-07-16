@@ -3085,9 +3085,15 @@ async function runAutoMockupFetch(){
       });
       galleryEl.style.display = 'flex';
       galleryHintEl.style.display = 'block';
+      await waitForImageReady(galleryEl.querySelector('img'));
+      galleryEl.scrollIntoView({behavior:'smooth',block:'center'});
     } else {
       imgEl.src = mockupUrl;
       imgEl.style.display = 'block';
+      imgEl.style.cursor = 'pointer';
+      imgEl.onclick = () => window.open(mockupUrl, '_blank');
+      await waitForImageReady(imgEl);
+      imgEl.scrollIntoView({behavior:'smooth',block:'center'});
     }
 
   } catch (err) {
