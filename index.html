@@ -695,7 +695,7 @@ function updateGenPreviewLabel(){
     el.style.cursor='default';
     el.onclick=null;
   } else {
-    el.textContent='If satisfied with selections click here. If not, make desired changes.';
+    el.textContent='If all desired changes have been made, click here to view panoramic panels.';
     el.classList.remove('mug-select-flash');
     el.style.color='#ff6a00';
     el.style.cursor='pointer';
@@ -2295,6 +2295,7 @@ Use rich environmental storytelling while keeping the face as the primary focal 
       document.getElementById('keepTweakingBtn').style.display='none';
       document.getElementById('downloadDesignBtn').style.display='none';
       setStatus('Center panel done. Generating the left panel — continuing the same scene...');
+      smoothScrollToTarget('positionHolderCard','start');
 
       const centerRaw = await urlToDataURL(resultUrl);
       const centerForApi = await resizeDataUrl(centerRaw, 1280);
@@ -2718,6 +2719,7 @@ function renderGenMugStyleGrid(){
 }
 
 function pickGenMugStyle(styleName){
+  const wasTouched=mugOptionsTouched;
   selectedGenStyle=styleName;
   document.querySelectorAll('#genMugStyleGrid .btn-select').forEach(b=>{
     b.classList.toggle('selected', b.dataset.style===styleName);
@@ -2727,9 +2729,11 @@ function pickGenMugStyle(styleName){
   mugOptionsTouched=true;
   updateMugGuidedFlow();
   maybeAutoFetchMockup();
+  if(!wasTouched)smoothScrollToTarget('genPreviewSection','start');
 }
 
 function pickGenMugSize(size){
+  const wasTouched=mugOptionsTouched;
   selectedGenSize=size;
   document.getElementById('genSize11Btn').classList.toggle('selected', size==='11oz');
   document.getElementById('genSize15Btn').classList.toggle('selected', size==='15oz');
@@ -2738,6 +2742,7 @@ function pickGenMugSize(size){
   mugOptionsTouched=true;
   updateMugGuidedFlow();
   maybeAutoFetchMockup();
+  if(!wasTouched)smoothScrollToTarget('genPreviewSection','start');
 }
 
 function renderGenMugColorGrid(){
@@ -2764,12 +2769,14 @@ function renderGenMugColorGrid(){
 }
 
 function pickGenMugColor(el,colorName){
+  const wasTouched=mugOptionsTouched;
   document.querySelectorAll('#genMugColorGrid .color-btn').forEach(b=>b.classList.remove('selected'));
   el.classList.add('selected');
   selectedGenColor=colorName;
   mugOptionsTouched=true;
   updateMugGuidedFlow();
   maybeAutoFetchMockup();
+  if(!wasTouched)smoothScrollToTarget('genPreviewSection','start');
 }
 
 function renderGenTravelStyleGrid(){
