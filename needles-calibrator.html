@@ -14,7 +14,7 @@
     background:var(--bg); color:var(--text); display:flex; min-height:100vh;
   }
   .stage-col{
-    flex:1; display:flex; align-items:center; justify-content:center;
+    flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center;
     padding:24px; background:
       linear-gradient(rgba(255,255,255,.03) 1px, transparent 1px),
       linear-gradient(90deg, rgba(255,255,255,.03) 1px, transparent 1px);
@@ -40,21 +40,33 @@
     justify-content:center; color:var(--dim); font-size:14px; text-align:center;
     padding:2rem; line-height:1.5;
   }
+  .playback-readout{
+    width:100%; max-width:1000px; margin-top:10px; font-size:11px; color:var(--dim);
+    font-family:ui-monospace,Menlo,Consolas,monospace; display:flex; justify-content:space-between; gap:10px;
+  }
+  .badge{font-weight:700; display:none}
+  .badge.active{display:inline}
+  .badge.frozen{color:#fbbf24}
+  .badge.slow{color:#a78bfa}
+  .badge.drift{color:#4ade80}
   .panel{
-    width:340px; background:var(--panel); border-left:1px solid var(--border);
+    width:420px; background:var(--panel); border-left:1px solid var(--border);
     padding:1.5rem; overflow-y:auto;
   }
   h1{font-size:16px; margin:0 0 4px; letter-spacing:.5px}
-  .sub{font-size:11px; color:var(--dim); margin:0 0 1.5rem; line-height:1.5}
-  .field{margin-bottom:1.25rem}
+  h2{font-size:12px; margin:0 0 .75rem; letter-spacing:.5px; text-transform:uppercase; color:var(--blue-soft)}
+  .sub{font-size:11px; color:var(--dim); margin:0 0 1.25rem; line-height:1.5}
+  .field{margin-bottom:1.1rem}
   .field label{
     display:block; font-size:11px; color:var(--dim); text-transform:uppercase;
     letter-spacing:.5px; margin-bottom:6px;
   }
-  input[type=file]{
-    width:100%; font-size:12px; color:var(--dim);
+  .field label.inline{display:inline; text-transform:none; letter-spacing:0; font-size:12px; color:var(--text); margin-left:6px}
+  input[type=file], input[type=text], input[type=password], input[type=number]{
+    width:100%; font-size:12px; color:var(--text);
     background:#0d0d0d; border:1px solid #333; border-radius:6px; padding:8px;
   }
+  input[type=text]::placeholder, input[type=password]::placeholder{color:#555}
   .slider-row{display:flex; align-items:center; gap:10px}
   input[type=range]{flex:1; accent-color:var(--blue)}
   .val{
@@ -66,38 +78,90 @@
     background:#0d0d0d; border:1px solid var(--border); border-radius:8px;
     padding:12px; font-family:ui-monospace,Menlo,Consolas,monospace;
     font-size:12px; color:var(--blue-soft); white-space:pre-wrap; line-height:1.6;
+    max-height:220px; overflow-y:auto;
   }
   button{
     width:100%; margin-top:10px; background:linear-gradient(180deg,#6fb3ff,#3d8bff 55%,#2266cc);
     border:1px solid #7ec4ff; border-radius:8px; padding:.7rem;
     color:#fff; font-size:13px; font-weight:600; cursor:pointer;
   }
-  button.ghost{
-    background:#0d0d0d; border:1px solid #444; color:var(--dim);
+  button.ghost{background:#0d0d0d; border:1px solid #444; color:var(--dim)}
+  button.small{padding:.5rem; font-size:12px; margin-top:6px}
+  button.confirm{background:linear-gradient(180deg,#4ade80,#22c55e 55%,#16a34a); border-color:#86efac}
+  button:disabled{background:#333; border-color:#444; color:#666; cursor:not-allowed}
+  button:active:not(:disabled){transform:translateY(1px)}
+  select{
+    width:100%; background:#0d0d0d; border:1px solid #333; border-radius:6px;
+    color:var(--text); padding:8px; font-size:12px;
   }
-  button:active{transform:translateY(1px)}
-  .label-select{display:flex; gap:6px; margin-bottom:1.25rem}
-  .label-select select{
-    flex:1; background:#0d0d0d; border:1px solid #333; border-radius:6px;
-    color:var(--text); padding:6px; font-size:12px;
-  }
-  .copied{color:#4ade80; font-size:11px; margin-top:6px; display:none; text-align:center}
+  .status{font-size:11px; margin-top:8px; line-height:1.5; display:none}
+  .status.visible{display:block}
+  .status.ok{color:#4ade80}
+  .status.err{color:#f87171}
+  .status.pending{color:var(--blue-soft)}
+  details{margin-bottom:1.1rem}
+  summary{font-size:11px; color:var(--dim); cursor:pointer; letter-spacing:.5px; text-transform:uppercase; margin-bottom:.75rem}
+  .row2{display:grid; grid-template-columns:1fr 1fr; gap:8px}
+  .row3{display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px}
+  .override-row{display:flex; align-items:center; gap:8px; margin-bottom:8px}
+  .override-row input[type=number]{flex:1}
+  .override-row input[type=checkbox]{accent-color:var(--blue); flex:0 0 auto}
+  .capture-row{display:grid; grid-template-columns:1fr auto; gap:8px; align-items:end}
+  .capture-row button{margin-top:0}
 </style>
 </head>
 <body>
 
 <div class="stage-col">
   <div class="stage-wrap" id="stageWrap">
-    <div class="placeholder" id="placeholder">Load the stage background and a clip on the right to begin.</div>
+    <div class="placeholder" id="placeholder">Load the stage background and a clip to begin.</div>
     <img class="stage-bg" id="stageBg">
     <div class="box-outline" id="boxOutline"></div>
     <video class="stage-clip" id="stageClip" autoplay muted loop playsinline></video>
+  </div>
+  <div class="playback-readout">
+    <span>t = <span id="playbackTime">0.00</span>s / <span id="playbackDuration">?</span>s</span>
+    <span>
+      <span class="badge frozen" id="frozenBadge">❄ FROZEN</span>
+      <span class="badge slow" id="slowBadge">🐢 SLOW</span>
+      <span class="badge drift" id="driftBadge">↕ DRIFTING</span>
+    </span>
   </div>
 </div>
 
 <div class="panel">
   <h1>NEEDLES' EASEL — CLIP CALIBRATOR</h1>
-  <p class="sub">Load your local stage background and one clip. Slide scale/position until it looks right, then copy the values back for me to hardcode into the per-clip map.</p>
+  <p class="sub">Load a clip and background, dial everything in, then save straight to needles-studio.html on GitHub — no copy-paste needed.</p>
+
+  <details>
+    <summary>GitHub connection settings</summary>
+    <div class="field">
+      <label>Personal access token</label>
+      <input type="password" id="ghToken" placeholder="ghp_...">
+    </div>
+    <div class="row2">
+      <div class="field">
+        <label>Owner</label>
+        <input type="text" id="ghOwner" value="Muggshotz">
+      </div>
+      <div class="field">
+        <label>Repo</label>
+        <input type="text" id="ghRepo" value="muggshotz-ai-test">
+      </div>
+    </div>
+    <div class="row2">
+      <div class="field">
+        <label>File path</label>
+        <input type="text" id="ghPath" value="needles-studio.html">
+      </div>
+      <div class="field">
+        <label>Branch</label>
+        <input type="text" id="ghBranch" value="main">
+      </div>
+    </div>
+    <p class="sub" style="margin-top:0">Token is only ever stored in this browser (localStorage) and sent directly to api.github.com — never anywhere else. Needs "repo" scope on a classic token, or Contents read/write on a fine-grained one.</p>
+    <button class="ghost" id="saveConnBtn" type="button">Remember these settings</button>
+  </details>
 
   <div class="field">
     <label>Stage background image</label>
@@ -109,9 +173,10 @@
     <input type="file" id="clipInput" accept="video/*">
   </div>
 
-  <div class="label-select">
+  <div class="field">
+    <label>Clip letter (required to save)</label>
     <select id="clipLabel">
-      <option value="">Clip letter (optional, for the readout)</option>
+      <option value="">— choose a letter —</option>
       <option>A</option><option>B</option><option>C</option><option>D</option>
       <option>E</option><option>F</option><option>G</option><option>H</option>
       <option>I</option><option>J</option><option>K</option><option>L</option>
@@ -121,11 +186,12 @@
   </div>
 
   <div class="divider"></div>
+  <h2>Size &amp; position</h2>
 
   <div class="field">
     <label>Scale</label>
     <div class="slider-row">
-      <input type="range" id="scale" min="0.5" max="1.5" step="0.01" value="1">
+      <input type="range" id="scale" min="0.3" max="3" step="0.01" value="1">
       <span class="val" id="scaleVal">1.00</span>
     </div>
   </div>
@@ -133,7 +199,7 @@
   <div class="field">
     <label>Horizontal offset (%)</label>
     <div class="slider-row">
-      <input type="range" id="offsetX" min="-20" max="20" step="0.1" value="0">
+      <input type="range" id="offsetX" min="-50" max="50" step="0.1" value="0">
       <span class="val" id="offsetXVal">0.0</span>
     </div>
   </div>
@@ -141,7 +207,7 @@
   <div class="field">
     <label>Vertical offset (%)</label>
     <div class="slider-row">
-      <input type="range" id="offsetY" min="-20" max="20" step="0.1" value="0">
+      <input type="range" id="offsetY" min="-50" max="50" step="0.1" value="0">
       <span class="val" id="offsetYVal">0.0</span>
     </div>
   </div>
@@ -151,24 +217,177 @@
   </div>
 
   <div class="divider"></div>
+  <h2>Fade timing (this clip only)</h2>
 
-  <div class="readout" id="readout">scale: 1.00
+  <div class="override-row">
+    <input type="checkbox" id="fadeInOverride">
+    <label class="inline" for="fadeInOverride">Override fade-IN duration (s)</label>
+  </div>
+  <input type="number" id="fadeInVal" min="0" max="5" step="0.1" value="1.0" disabled>
+
+  <div class="override-row" style="margin-top:12px">
+    <input type="checkbox" id="fadeOutOverride">
+    <label class="inline" for="fadeOutOverride">Override fade-OUT lead (s)</label>
+  </div>
+  <input type="number" id="fadeOutVal" min="0" max="5" step="0.1" value="2.0" disabled>
+  <p class="sub" style="margin-top:6px">Leave unchecked to use the rotation's global default.</p>
+
+  <div class="divider"></div>
+  <h2>Freeze (this clip only)</h2>
+  <p class="sub">Pick any point in the clip, hold it for a set duration, then release automatically. Overrides the global freeze default below, if one's set.</p>
+
+  <div class="field">
+    <label>Freeze at (seconds into clip)</label>
+    <div class="capture-row">
+      <input type="number" id="freezeAt" min="0" step="0.1" placeholder="unset">
+      <button class="ghost small" id="captureFreezeBtn" type="button">Capture time</button>
+    </div>
+  </div>
+  <div class="field">
+    <label>Freeze duration (seconds, up to 5)</label>
+    <input type="number" id="freezeDuration" min="0" max="5" step="0.1" value="1.0">
+  </div>
+  <div class="override-row">
+    <input type="checkbox" id="freezePreview">
+    <label class="inline" for="freezePreview">Preview freeze live above</label>
+  </div>
+  <button class="ghost small" id="clearFreezeBtn" type="button">Clear freeze point</button>
+
+  <div class="divider"></div>
+  <h2>Slow motion (this clip only)</h2>
+  <p class="sub">Plays at a reduced rate between two points in the clip, then returns to normal speed automatically.</p>
+
+  <div class="row2">
+    <div class="field">
+      <label>Slow-motion start (s)</label>
+      <div class="capture-row">
+        <input type="number" id="slowStart" min="0" step="0.1" placeholder="unset">
+        <button class="ghost small" id="captureSlowStartBtn" type="button">Capture</button>
+      </div>
+    </div>
+    <div class="field">
+      <label>Slow-motion end (s)</label>
+      <div class="capture-row">
+        <input type="number" id="slowEnd" min="0" step="0.1" placeholder="unset">
+        <button class="ghost small" id="captureSlowEndBtn" type="button">Capture</button>
+      </div>
+    </div>
+  </div>
+  <div class="field">
+    <label>Playback rate during slow motion</label>
+    <div class="slider-row">
+      <input type="range" id="slowRate" min="0.05" max="1" step="0.05" value="0.4">
+      <span class="val" id="slowRateVal">0.40x</span>
+    </div>
+  </div>
+  <div class="override-row">
+    <input type="checkbox" id="slowPreview">
+    <label class="inline" for="slowPreview">Preview slow motion live above</label>
+  </div>
+  <button class="ghost small" id="clearSlowBtn" type="button">Clear slow motion</button>
+
+  <div class="divider"></div>
+  <h2>Drift (this clip only)</h2>
+  <p class="sub">Holds the position above steady until a chosen moment, then smoothly eases to a new target offset over a set duration, and holds there. Good for correcting a clip that starts right but drifts off by the end (e.g. climbing too high while walking).</p>
+
+  <div class="field">
+    <label>Drift begins at (s)</label>
+    <div class="capture-row">
+      <input type="number" id="driftStart" min="0" step="0.1" placeholder="unset">
+      <button class="ghost small" id="captureDriftBtn" type="button">Capture</button>
+    </div>
+  </div>
+  <div class="field">
+    <label>Drift duration (s) — how long the ease takes</label>
+    <input type="number" id="driftDuration" min="0.1" step="0.1" value="1.0">
+  </div>
+  <div class="field">
+    <label>Target horizontal offset after drift (%)</label>
+    <div class="slider-row">
+      <input type="range" id="driftToX" min="-50" max="50" step="0.1" value="0">
+      <span class="val" id="driftToXVal">0.0</span>
+    </div>
+  </div>
+  <div class="field">
+    <label>Target vertical offset after drift (%)</label>
+    <div class="slider-row">
+      <input type="range" id="driftToY" min="-50" max="50" step="0.1" value="0">
+      <span class="val" id="driftToYVal">0.0</span>
+    </div>
+  </div>
+  <div class="override-row">
+    <input type="checkbox" id="driftPreview">
+    <label class="inline" for="driftPreview">Preview drift live above</label>
+  </div>
+  <button class="ghost small" id="clearDriftBtn" type="button">Clear drift</button>
+
+  <div class="divider"></div>
+
+  <div class="readout" id="readout">clip: &lt;letter&gt;
+scale: 1.00
 offsetX: 0.0%
 offsetY: 0.0%</div>
-  <button id="copyBtn">Copy values</button>
-  <button class="ghost" id="resetBtn">Reset to default</button>
-  <div class="copied" id="copiedMsg">Copied.</div>
+
+  <button class="ghost" id="copyBtn" type="button">Copy values</button>
+  <button class="ghost" id="resetBtn" type="button">Reset to default</button>
+
+  <div class="divider"></div>
+  <h2>Save this clip to the live site</h2>
+  <button id="previewBtn" type="button">1. Fetch current file &amp; preview change</button>
+  <div class="readout" id="diffReadout" style="display:none; margin-top:10px"></div>
+  <button class="confirm" id="commitBtn" type="button" disabled>2. Confirm &amp; commit to GitHub</button>
+  <div class="status" id="statusMsg"></div>
+
+  <div class="divider"></div>
+  <h2>Global rotation fade defaults</h2>
+  <p class="sub">Apply to every clip without its own fade override.</p>
+  <button class="ghost small" id="fetchGlobalBtn" type="button" style="margin-top:0">Fetch current global values</button>
+  <div class="row2" style="margin-top:10px">
+    <div class="field">
+      <label>Fade-in (s)</label>
+      <input type="number" id="globalFadeIn" min="0" max="5" step="0.1" disabled>
+    </div>
+    <div class="field">
+      <label>Fade-out lead (s)</label>
+      <input type="number" id="globalFadeOut" min="0" max="5" step="0.1" disabled>
+    </div>
+  </div>
+  <button id="globalPreviewBtn" type="button" disabled>1. Preview global fade change</button>
+  <div class="readout" id="globalDiffReadout" style="display:none; margin-top:10px"></div>
+  <button class="confirm" id="globalCommitBtn" type="button" disabled>2. Confirm &amp; commit global fade change</button>
+  <div class="status" id="globalStatusMsg"></div>
+
+  <div class="divider"></div>
+  <h2>Global freeze default</h2>
+  <p class="sub">Applies to every clip that doesn't set its own freeze above. Off by default.</p>
+  <button class="ghost small" id="fetchGlobalFreezeBtn" type="button" style="margin-top:0">Fetch current global freeze</button>
+  <div class="override-row" style="margin-top:10px">
+    <input type="checkbox" id="globalFreezeEnabled" disabled>
+    <label class="inline" for="globalFreezeEnabled">Enable a universal freeze</label>
+  </div>
+  <div class="row2">
+    <div class="field">
+      <label>Freeze at (s)</label>
+      <input type="number" id="globalFreezeAt" min="0" step="0.1" disabled>
+    </div>
+    <div class="field">
+      <label>Duration (s)</label>
+      <input type="number" id="globalFreezeDuration" min="0" max="5" step="0.1" disabled>
+    </div>
+  </div>
+  <button id="globalFreezePreviewBtn" type="button" disabled>1. Preview global freeze change</button>
+  <div class="readout" id="globalFreezeDiffReadout" style="display:none; margin-top:10px"></div>
+  <button class="confirm" id="globalFreezeCommitBtn" type="button" disabled>2. Confirm &amp; commit global freeze change</button>
+  <div class="status" id="globalFreezeStatusMsg"></div>
 </div>
 
 <script>
-// Same DEFAULT_BOX percentages used in needles-studio.html
 const DEFAULT_BOX = { top: 10.59, left: 15.19, width: 78.25, height: 78.27 };
 
-const stageWrap = document.getElementById('stageWrap');
-const placeholder = document.getElementById('placeholder');
 const stageBg = document.getElementById('stageBg');
 const stageClip = document.getElementById('stageClip');
 const boxOutline = document.getElementById('boxOutline');
+const placeholder = document.getElementById('placeholder');
 const bgInput = document.getElementById('bgInput');
 const clipInput = document.getElementById('clipInput');
 const clipLabel = document.getElementById('clipLabel');
@@ -182,7 +401,89 @@ const readout = document.getElementById('readout');
 const showBox = document.getElementById('showBox');
 const copyBtn = document.getElementById('copyBtn');
 const resetBtn = document.getElementById('resetBtn');
-const copiedMsg = document.getElementById('copiedMsg');
+const previewBtn = document.getElementById('previewBtn');
+const commitBtn = document.getElementById('commitBtn');
+const diffReadout = document.getElementById('diffReadout');
+const statusMsg = document.getElementById('statusMsg');
+
+const playbackTime = document.getElementById('playbackTime');
+const playbackDuration = document.getElementById('playbackDuration');
+const frozenBadge = document.getElementById('frozenBadge');
+const slowBadge = document.getElementById('slowBadge');
+const driftBadge = document.getElementById('driftBadge');
+
+const fadeInOverride = document.getElementById('fadeInOverride');
+const fadeOutOverride = document.getElementById('fadeOutOverride');
+const fadeInVal = document.getElementById('fadeInVal');
+const fadeOutVal = document.getElementById('fadeOutVal');
+
+const freezeAtInput = document.getElementById('freezeAt');
+const freezeDurationInput = document.getElementById('freezeDuration');
+const captureFreezeBtn = document.getElementById('captureFreezeBtn');
+const clearFreezeBtn = document.getElementById('clearFreezeBtn');
+const freezePreview = document.getElementById('freezePreview');
+
+const slowStartInput = document.getElementById('slowStart');
+const slowEndInput = document.getElementById('slowEnd');
+const slowRateSlider = document.getElementById('slowRate');
+const slowRateVal = document.getElementById('slowRateVal');
+const captureSlowStartBtn = document.getElementById('captureSlowStartBtn');
+const captureSlowEndBtn = document.getElementById('captureSlowEndBtn');
+const clearSlowBtn = document.getElementById('clearSlowBtn');
+const slowPreview = document.getElementById('slowPreview');
+
+const driftStartInput = document.getElementById('driftStart');
+const driftDurationInput = document.getElementById('driftDuration');
+const driftToXSlider = document.getElementById('driftToX');
+const driftToYSlider = document.getElementById('driftToY');
+const driftToXVal = document.getElementById('driftToXVal');
+const driftToYVal = document.getElementById('driftToYVal');
+const captureDriftBtn = document.getElementById('captureDriftBtn');
+const clearDriftBtn = document.getElementById('clearDriftBtn');
+const driftPreview = document.getElementById('driftPreview');
+
+const ghToken = document.getElementById('ghToken');
+const ghOwner = document.getElementById('ghOwner');
+const ghRepo = document.getElementById('ghRepo');
+const ghPath = document.getElementById('ghPath');
+const ghBranch = document.getElementById('ghBranch');
+const saveConnBtn = document.getElementById('saveConnBtn');
+
+const fetchGlobalBtn = document.getElementById('fetchGlobalBtn');
+const globalFadeIn = document.getElementById('globalFadeIn');
+const globalFadeOut = document.getElementById('globalFadeOut');
+const globalPreviewBtn = document.getElementById('globalPreviewBtn');
+const globalDiffReadout = document.getElementById('globalDiffReadout');
+const globalCommitBtn = document.getElementById('globalCommitBtn');
+const globalStatusMsg = document.getElementById('globalStatusMsg');
+
+const fetchGlobalFreezeBtn = document.getElementById('fetchGlobalFreezeBtn');
+const globalFreezeEnabled = document.getElementById('globalFreezeEnabled');
+const globalFreezeAt = document.getElementById('globalFreezeAt');
+const globalFreezeDuration = document.getElementById('globalFreezeDuration');
+const globalFreezePreviewBtn = document.getElementById('globalFreezePreviewBtn');
+const globalFreezeDiffReadout = document.getElementById('globalFreezeDiffReadout');
+const globalFreezeCommitBtn = document.getElementById('globalFreezeCommitBtn');
+const globalFreezeStatusMsg = document.getElementById('globalFreezeStatusMsg');
+
+// ---- restore remembered connection settings (this browser only) ----
+try{
+  const saved = JSON.parse(localStorage.getItem('needlesCalibratorConn') || '{}');
+  if(saved.token) ghToken.value = saved.token;
+  if(saved.owner) ghOwner.value = saved.owner;
+  if(saved.repo) ghRepo.value = saved.repo;
+  if(saved.path) ghPath.value = saved.path;
+  if(saved.branch) ghBranch.value = saved.branch;
+}catch(e){}
+
+saveConnBtn.addEventListener('click', () => {
+  localStorage.setItem('needlesCalibratorConn', JSON.stringify({
+    token: ghToken.value, owner: ghOwner.value, repo: ghRepo.value,
+    path: ghPath.value, branch: ghBranch.value
+  }));
+  saveConnBtn.textContent = 'Saved \u2713';
+  setTimeout(()=> saveConnBtn.textContent = 'Remember these settings', 1500);
+});
 
 let bgLoaded = false, clipLoaded = false;
 
@@ -217,57 +518,408 @@ function positionBox(){
 }
 positionBox();
 
+function currentValues(){
+  return {
+    scale: parseFloat(scaleSlider.value),
+    offsetX: parseFloat(offsetXSlider.value),
+    offsetY: parseFloat(offsetYSlider.value)
+  };
+}
+
+function buildReadoutObject(){
+  const v = currentValues();
+  const obj = { scale: v.scale, offsetX: v.offsetX, offsetY: v.offsetY };
+  if(fadeInOverride.checked) obj.fadeIn = parseFloat(fadeInVal.value);
+  if(fadeOutOverride.checked) obj.fadeOut = parseFloat(fadeOutVal.value);
+  if(freezeAtInput.value !== ''){
+    obj.freezeAt = parseFloat(freezeAtInput.value);
+    obj.freezeDuration = parseFloat(freezeDurationInput.value || '0');
+  }
+  if(slowStartInput.value !== '' && slowEndInput.value !== ''){
+    obj.slowStart = parseFloat(slowStartInput.value);
+    obj.slowEnd = parseFloat(slowEndInput.value);
+    obj.slowRate = parseFloat(slowRateSlider.value);
+  }
+  if(driftStartInput.value !== ''){
+    obj.driftStart = parseFloat(driftStartInput.value);
+    obj.driftDuration = parseFloat(driftDurationInput.value || '1');
+    obj.driftToOffsetX = parseFloat(driftToXSlider.value);
+    obj.driftToOffsetY = parseFloat(driftToYSlider.value);
+  }
+  return obj;
+}
+
+function smoothstep(p){ return p*p*(3-2*p); }
+
 function applyTransform(){
-  const scale = parseFloat(scaleSlider.value);
-  const offX = parseFloat(offsetXSlider.value);
-  const offY = parseFloat(offsetYSlider.value);
+  const v = currentValues();
+  scaleVal.textContent = v.scale.toFixed(2);
+  offsetXVal.textContent = v.offsetX.toFixed(1);
+  offsetYVal.textContent = v.offsetY.toFixed(1);
+  slowRateVal.textContent = parseFloat(slowRateSlider.value).toFixed(2) + 'x';
+  driftToXVal.textContent = parseFloat(driftToXSlider.value).toFixed(1);
+  driftToYVal.textContent = parseFloat(driftToYSlider.value).toFixed(1);
 
-  scaleVal.textContent = scale.toFixed(2);
-  offsetXVal.textContent = offX.toFixed(1);
-  offsetYVal.textContent = offY.toFixed(1);
-
-  // Base box position/size, then scale from the bottom-center (feet stay anchored)
-  // and nudge with the offsets.
-  const boxTop = DEFAULT_BOX.top + offY;
-  const boxLeft = DEFAULT_BOX.left + offX;
-  stageClip.style.top = boxTop + '%';
-  stageClip.style.left = boxLeft + '%';
+  // Base (non-drifted) position — the drift/live-update loop below will override
+  // top/left continuously once a drift is configured and preview is on; otherwise
+  // this is exactly what's shown, matching how needles-studio.html behaves.
+  stageClip.style.top = (DEFAULT_BOX.top + v.offsetY) + '%';
+  stageClip.style.left = (DEFAULT_BOX.left + v.offsetX) + '%';
   stageClip.style.width = DEFAULT_BOX.width + '%';
   stageClip.style.height = DEFAULT_BOX.height + '%';
   stageClip.style.transformOrigin = 'center bottom';
-  stageClip.style.transform = `scale(${scale})`;
+  stageClip.style.transform = 'scale(' + v.scale + ')';
 
-  const label = clipLabel.value ? clipLabel.value : '<letter>';
-  readout.textContent =
-`clip: ${label}
-scale: ${scale.toFixed(2)}
-offsetX: ${offX.toFixed(1)}%
-offsetY: ${offY.toFixed(1)}%`;
+  updateReadoutText();
+  commitBtn.disabled = true;
+  diffReadout.style.display = 'none';
 }
 
-[scaleSlider, offsetXSlider, offsetYSlider, clipLabel].forEach(el =>
-  el.addEventListener('input', applyTransform)
-);
+function updateReadoutText(){
+  const label = clipLabel.value ? clipLabel.value : '<letter>';
+  const obj = buildReadoutObject();
+  let text = 'clip: ' + label + '\n' +
+    'scale: ' + obj.scale.toFixed(2) + '\n' +
+    'offsetX: ' + obj.offsetX.toFixed(1) + '%\n' +
+    'offsetY: ' + obj.offsetY.toFixed(1) + '%';
+  if(obj.fadeIn != null) text += '\nfadeIn: ' + obj.fadeIn + 's (override)';
+  if(obj.fadeOut != null) text += '\nfadeOut: ' + obj.fadeOut + 's (override)';
+  if(obj.freezeAt != null) text += '\nfreezeAt: ' + obj.freezeAt + 's, freezeDuration: ' + obj.freezeDuration + 's';
+  if(obj.slowStart != null) text += '\nslowStart: ' + obj.slowStart + 's, slowEnd: ' + obj.slowEnd + 's, slowRate: ' + obj.slowRate + 'x';
+  if(obj.driftStart != null) text += '\ndriftStart: ' + obj.driftStart + 's, driftDuration: ' + obj.driftDuration + 's, driftTo: (' + obj.driftToOffsetX + '%, ' + obj.driftToOffsetY + '%)';
+  readout.textContent = text;
+}
 
-showBox.addEventListener('change', () => {
-  boxOutline.style.display = showBox.checked ? 'block' : 'none';
-});
+[scaleSlider, offsetXSlider, offsetYSlider, clipLabel].forEach(el => el.addEventListener('input', applyTransform));
+
+showBox.addEventListener('change', () => { boxOutline.style.display = showBox.checked ? 'block' : 'none'; });
 
 resetBtn.addEventListener('click', () => {
-  scaleSlider.value = 1;
-  offsetXSlider.value = 0;
-  offsetYSlider.value = 0;
+  scaleSlider.value = 1; offsetXSlider.value = 0; offsetYSlider.value = 0;
   applyTransform();
 });
 
 copyBtn.addEventListener('click', () => {
-  navigator.clipboard.writeText(readout.textContent).then(() => {
-    copiedMsg.style.display = 'block';
-    setTimeout(() => copiedMsg.style.display = 'none', 1500);
-  });
+  navigator.clipboard.writeText(readout.textContent);
+  copyBtn.textContent = 'Copied \u2713';
+  setTimeout(()=> copyBtn.textContent = 'Copy values', 1200);
 });
 
+// ---- fade override checkboxes ----
+fadeInOverride.addEventListener('change', () => { fadeInVal.disabled = !fadeInOverride.checked; updateReadoutText(); commitBtn.disabled = true; diffReadout.style.display='none'; });
+fadeOutOverride.addEventListener('change', () => { fadeOutVal.disabled = !fadeOutOverride.checked; updateReadoutText(); commitBtn.disabled = true; diffReadout.style.display='none'; });
+[fadeInVal, fadeOutVal].forEach(el => el.addEventListener('input', () => { updateReadoutText(); commitBtn.disabled = true; diffReadout.style.display='none'; }));
+
+// ---- freeze: capture / clear / readout wiring ----
+function invalidatePending(){ updateReadoutText(); commitBtn.disabled = true; diffReadout.style.display = 'none'; }
+
+captureFreezeBtn.addEventListener('click', () => { freezeAtInput.value = stageClip.currentTime.toFixed(2); invalidatePending(); });
+clearFreezeBtn.addEventListener('click', () => { freezeAtInput.value = ''; invalidatePending(); });
+[freezeAtInput, freezeDurationInput].forEach(el => el.addEventListener('input', invalidatePending));
+
+// ---- slow motion: capture / clear / readout wiring ----
+captureSlowStartBtn.addEventListener('click', () => { slowStartInput.value = stageClip.currentTime.toFixed(2); invalidatePending(); });
+captureSlowEndBtn.addEventListener('click', () => { slowEndInput.value = stageClip.currentTime.toFixed(2); invalidatePending(); });
+clearSlowBtn.addEventListener('click', () => { slowStartInput.value = ''; slowEndInput.value = ''; stageClip.playbackRate = 1; invalidatePending(); });
+[slowStartInput, slowEndInput, slowRateSlider].forEach(el => el.addEventListener('input', invalidatePending));
+
+// ---- drift: capture / clear / readout wiring ----
+captureDriftBtn.addEventListener('click', () => { driftStartInput.value = stageClip.currentTime.toFixed(2); invalidatePending(); });
+clearDriftBtn.addEventListener('click', () => { driftStartInput.value = ''; invalidatePending(); });
+[driftStartInput, driftDurationInput, driftToXSlider, driftToYSlider].forEach(el => el.addEventListener('input', invalidatePending));
+
+// ---- live playback readout + all three live previews ----
+let previewFrozenOnce = false;
+stageClip.addEventListener('timeupdate', () => {
+  playbackTime.textContent = stageClip.currentTime.toFixed(2);
+  playbackDuration.textContent = isNaN(stageClip.duration) ? '?' : stageClip.duration.toFixed(2);
+
+  // freeze preview
+  if(freezePreview.checked && freezeAtInput.value !== ''){
+    const freezeAt = parseFloat(freezeAtInput.value);
+    const freezeDur = parseFloat(freezeDurationInput.value || '0');
+    if(!previewFrozenOnce && stageClip.currentTime >= freezeAt){
+      previewFrozenOnce = true;
+      stageClip.pause();
+      frozenBadge.classList.add('active');
+      setTimeout(() => { frozenBadge.classList.remove('active'); stageClip.play().catch(()=>{}); }, freezeDur * 1000);
+    }
+  }
+
+  // slow motion preview
+  if(slowPreview.checked && slowStartInput.value !== '' && slowEndInput.value !== ''){
+    const s = parseFloat(slowStartInput.value), e = parseFloat(slowEndInput.value), rate = parseFloat(slowRateSlider.value);
+    const inRange = stageClip.currentTime >= s && stageClip.currentTime < e;
+    const wantRate = inRange ? rate : 1;
+    if(stageClip.playbackRate !== wantRate) stageClip.playbackRate = wantRate;
+    slowBadge.classList.toggle('active', inRange);
+  } else {
+    if(stageClip.playbackRate !== 1) stageClip.playbackRate = 1;
+    slowBadge.classList.remove('active');
+  }
+});
+stageClip.addEventListener('seeked', () => { previewFrozenOnce = false; });
+stageClip.addEventListener('play', () => { if(stageClip.currentTime < 0.05) previewFrozenOnce = false; });
+
+// drift preview: continuous rAF loop, same easing as needles-studio.html
+function driftPreviewTick(){
+  if(driftPreview.checked && driftStartInput.value !== '' && clipLoaded){
+    const v = currentValues();
+    const start = parseFloat(driftStartInput.value);
+    const dur = parseFloat(driftDurationInput.value || '1');
+    const targetX = parseFloat(driftToXSlider.value);
+    const targetY = parseFloat(driftToYSlider.value);
+    const t = stageClip.currentTime;
+    const progress = t <= start ? 0 : (dur > 0 ? Math.min(1, (t - start) / dur) : 1);
+    const eased = smoothstep(progress);
+    const curX = v.offsetX + (targetX - v.offsetX) * eased;
+    const curY = v.offsetY + (targetY - v.offsetY) * eased;
+    stageClip.style.top = (DEFAULT_BOX.top + curY) + '%';
+    stageClip.style.left = (DEFAULT_BOX.left + curX) + '%';
+    driftBadge.classList.toggle('active', progress > 0 && progress < 1);
+  } else {
+    driftBadge.classList.remove('active');
+  }
+  requestAnimationFrame(driftPreviewTick);
+}
+requestAnimationFrame(driftPreviewTick);
+
 applyTransform();
+
+// ---- GitHub helpers (shared by all three save flows) ----
+function setStatus(el, msg, kind){
+  el.textContent = msg;
+  el.className = 'status visible ' + (kind || '');
+}
+function b64EncodeUnicode(str){ return btoa(unicodeToLatin1(str)); }
+function unicodeToLatin1(str){
+  return encodeURIComponent(str).replace(/%([0-9A-F]{2})/g, (m, p1) => String.fromCharCode(parseInt(p1, 16)));
+}
+function b64DecodeUnicode(str){
+  return decodeURIComponent(atob(str).split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join(''));
+}
+function apiBase(){
+  return 'https://api.github.com/repos/' + ghOwner.value.trim() + '/' + ghRepo.value.trim() + '/contents/' + ghPath.value.trim();
+}
+async function fetchFile(){
+  const res = await fetch(apiBase() + '?ref=' + encodeURIComponent(ghBranch.value.trim()), {
+    headers: { 'Authorization': 'Bearer ' + ghToken.value.trim(), 'Accept': 'application/vnd.github+json' }
+  });
+  if(!res.ok){ const body = await res.text(); throw new Error('GitHub returned ' + res.status + ': ' + body.slice(0,200)); }
+  const data = await res.json();
+  return { sha: data.sha, content: b64DecodeUnicode(data.content.replace(/\n/g,'')) };
+}
+async function commitFile(newContent, sha, message){
+  const res = await fetch(apiBase(), {
+    method: 'PUT',
+    headers: { 'Authorization': 'Bearer ' + ghToken.value.trim(), 'Accept': 'application/vnd.github+json' },
+    body: JSON.stringify({ message: message, content: b64EncodeUnicode(newContent), sha: sha, branch: ghBranch.value.trim() })
+  });
+  if(!res.ok){ const body = await res.text(); throw new Error('GitHub returned ' + res.status + ': ' + body.slice(0,300)); }
+  return res.json();
+}
+
+// ---- per-clip override save flow ----
+let pendingCommit = null;
+
+function formatOverridesObject(obj){
+  const lines = Object.keys(obj).map(letter => {
+    const v = obj[letter];
+    const parts = ['scale: ' + v.scale, 'offsetX: ' + v.offsetX, 'offsetY: ' + v.offsetY];
+    if(v.fadeIn != null) parts.push('fadeIn: ' + v.fadeIn);
+    if(v.fadeOut != null) parts.push('fadeOut: ' + v.fadeOut);
+    if(v.freezeAt != null){ parts.push('freezeAt: ' + v.freezeAt); parts.push('freezeDuration: ' + (v.freezeDuration != null ? v.freezeDuration : 0)); }
+    if(v.slowStart != null){ parts.push('slowStart: ' + v.slowStart); parts.push('slowEnd: ' + v.slowEnd); parts.push('slowRate: ' + v.slowRate); }
+    if(v.driftStart != null){ parts.push('driftStart: ' + v.driftStart); parts.push('driftDuration: ' + v.driftDuration); parts.push('driftToOffsetX: ' + v.driftToOffsetX); parts.push('driftToOffsetY: ' + v.driftToOffsetY); }
+    return '  ' + letter + ': { ' + parts.join(', ') + ' }';
+  });
+  return 'const NEEDLES_CLIP_OVERRIDES = {\n' + lines.join(',\n') + '\n};';
+}
+
+previewBtn.addEventListener('click', async () => {
+  const letter = clipLabel.value;
+  if(!letter){ setStatus(statusMsg, 'Pick a clip letter first.', 'err'); return; }
+  if(!ghToken.value.trim()){ setStatus(statusMsg, 'Paste your GitHub token in "GitHub connection settings" first.', 'err'); return; }
+  setStatus(statusMsg, 'Fetching current needles-studio.html from GitHub\u2026', 'pending');
+  previewBtn.disabled = true;
+  try{
+    const file = await fetchFile();
+    const blockRegex = /const\s+NEEDLES_CLIP_OVERRIDES\s*=\s*\{[\s\S]*?\}\s*;/;
+    const match = file.content.match(blockRegex);
+    if(!match) throw new Error('Could not find NEEDLES_CLIP_OVERRIDES in the fetched file.');
+    const inner = match[0].replace(/^const\s+NEEDLES_CLIP_OVERRIDES\s*=\s*/, '').replace(/;\s*$/, '');
+    let existingObj;
+    try{ existingObj = new Function('return ' + inner)(); }
+    catch(e){ throw new Error('Could not parse the existing overrides object: ' + e.message); }
+
+    const oldEntry = existingObj[letter] ? JSON.stringify(existingObj[letter]) : '(none yet)';
+    existingObj[letter] = buildReadoutObject();
+    const newEntry = JSON.stringify(existingObj[letter]);
+
+    const newBlock = formatOverridesObject(existingObj);
+    const newFileContent = file.content.slice(0, match.index) + newBlock + file.content.slice(match.index + match[0].length);
+    pendingCommit = { newFileContent, sha: file.sha, letter, oldEntry, newEntry };
+
+    diffReadout.style.display = 'block';
+    diffReadout.textContent = 'Clip ' + letter + '\n  before: ' + oldEntry + '\n  after:  ' + newEntry +
+      '\n\nFile: ' + ghPath.value.trim() + ' @ ' + ghBranch.value.trim() + '\nReady to commit \u2014 nothing has been saved yet.';
+    commitBtn.disabled = false;
+    setStatus(statusMsg, 'Fetched OK. Review the change above, then commit.', 'ok');
+  }catch(err){
+    setStatus(statusMsg, 'Error: ' + err.message, 'err');
+    pendingCommit = null;
+    commitBtn.disabled = true;
+  }finally{ previewBtn.disabled = false; }
+});
+
+commitBtn.addEventListener('click', async () => {
+  if(!pendingCommit) return;
+  commitBtn.disabled = true;
+  setStatus(statusMsg, 'Committing to GitHub\u2026', 'pending');
+  try{
+    const data = await commitFile(pendingCommit.newFileContent, pendingCommit.sha, 'Calibrator: update clip ' + pendingCommit.letter + ' override');
+    const shortSha = (data.commit && data.commit.sha) ? data.commit.sha.slice(0,7) : 'ok';
+    setStatus(statusMsg, 'Committed \u2713 (' + shortSha + '). Live site will update on next deploy.', 'ok');
+    diffReadout.style.display = 'none';
+    pendingCommit = null;
+  }catch(err){
+    setStatus(statusMsg, 'Commit failed: ' + err.message + ' \u2014 click step 1 again to refetch.', 'err');
+    commitBtn.disabled = false;
+  }
+});
+
+// ---- global fade defaults save flow ----
+let pendingGlobalCommit = null;
+
+fetchGlobalBtn.addEventListener('click', async () => {
+  if(!ghToken.value.trim()){ setStatus(globalStatusMsg, 'Paste your GitHub token first.', 'err'); return; }
+  setStatus(globalStatusMsg, 'Fetching current global values\u2026', 'pending');
+  fetchGlobalBtn.disabled = true;
+  try{
+    const file = await fetchFile();
+    const fadeOutMatch = file.content.match(/const\s+NEEDLES_FADE_OUT_LEAD\s*=\s*([\d.]+)\s*;/);
+    const fadeInMatch = file.content.match(/const\s+NEEDLES_FADE_IN_DURATION\s*=\s*([\d.]+)\s*;/);
+    if(!fadeOutMatch || !fadeInMatch) throw new Error('Could not find the global fade constants.');
+    globalFadeIn.value = fadeInMatch[1];
+    globalFadeOut.value = fadeOutMatch[1];
+    globalFadeIn.disabled = false;
+    globalFadeOut.disabled = false;
+    globalPreviewBtn.disabled = false;
+    setStatus(globalStatusMsg, 'Fetched current values. Edit above, then preview the change.', 'ok');
+  }catch(err){ setStatus(globalStatusMsg, 'Error: ' + err.message, 'err'); }
+  finally{ fetchGlobalBtn.disabled = false; }
+});
+
+globalPreviewBtn.addEventListener('click', async () => {
+  setStatus(globalStatusMsg, 'Fetching latest file to diff against\u2026', 'pending');
+  globalPreviewBtn.disabled = true;
+  try{
+    const file = await fetchFile();
+    const fadeOutRegex = /const\s+NEEDLES_FADE_OUT_LEAD\s*=\s*[\d.]+\s*;/;
+    const fadeInRegex = /const\s+NEEDLES_FADE_IN_DURATION\s*=\s*[\d.]+\s*;/;
+    const oldFadeOut = file.content.match(fadeOutRegex)[0];
+    const oldFadeIn = file.content.match(fadeInRegex)[0];
+    const newFadeOut = 'const NEEDLES_FADE_OUT_LEAD = ' + parseFloat(globalFadeOut.value) + ';';
+    const newFadeIn = 'const NEEDLES_FADE_IN_DURATION = ' + parseFloat(globalFadeIn.value) + ';';
+    const newContent = file.content.replace(fadeOutRegex, newFadeOut).replace(fadeInRegex, newFadeIn);
+    pendingGlobalCommit = { newFileContent: newContent, sha: file.sha, oldFadeIn, newFadeIn, oldFadeOut, newFadeOut };
+
+    globalDiffReadout.style.display = 'block';
+    globalDiffReadout.textContent = 'before: ' + oldFadeIn + '\nafter:  ' + newFadeIn + '\n\nbefore: ' + oldFadeOut + '\nafter:  ' + newFadeOut + '\n\nReady to commit \u2014 nothing has been saved yet.';
+    globalCommitBtn.disabled = false;
+    setStatus(globalStatusMsg, 'Fetched OK. Review the change above, then commit.', 'ok');
+  }catch(err){
+    setStatus(globalStatusMsg, 'Error: ' + err.message, 'err');
+    pendingGlobalCommit = null;
+    globalCommitBtn.disabled = true;
+  }finally{ globalPreviewBtn.disabled = false; }
+});
+
+globalCommitBtn.addEventListener('click', async () => {
+  if(!pendingGlobalCommit) return;
+  globalCommitBtn.disabled = true;
+  setStatus(globalStatusMsg, 'Committing to GitHub\u2026', 'pending');
+  try{
+    const data = await commitFile(pendingGlobalCommit.newFileContent, pendingGlobalCommit.sha, 'Calibrator: update global rotation fade defaults');
+    const shortSha = (data.commit && data.commit.sha) ? data.commit.sha.slice(0,7) : 'ok';
+    setStatus(globalStatusMsg, 'Committed \u2713 (' + shortSha + '). Live site will update on next deploy.', 'ok');
+    globalDiffReadout.style.display = 'none';
+    pendingGlobalCommit = null;
+  }catch(err){
+    setStatus(globalStatusMsg, 'Commit failed: ' + err.message, 'err');
+    globalCommitBtn.disabled = false;
+  }
+});
+
+// ---- global freeze default save flow ----
+let pendingGlobalFreezeCommit = null;
+
+fetchGlobalFreezeBtn.addEventListener('click', async () => {
+  if(!ghToken.value.trim()){ setStatus(globalFreezeStatusMsg, 'Paste your GitHub token first.', 'err'); return; }
+  setStatus(globalFreezeStatusMsg, 'Fetching current global freeze\u2026', 'pending');
+  fetchGlobalFreezeBtn.disabled = true;
+  try{
+    const file = await fetchFile();
+    const match = file.content.match(/const\s+NEEDLES_GLOBAL_FREEZE\s*=\s*\{[\s\S]*?\}\s*;/);
+    if(!match) throw new Error('Could not find NEEDLES_GLOBAL_FREEZE in the fetched file.');
+    const inner = match[0].replace(/^const\s+NEEDLES_GLOBAL_FREEZE\s*=\s*/, '').replace(/;\s*$/, '');
+    const obj = new Function('return ' + inner)();
+    globalFreezeEnabled.checked = obj.freezeAt != null;
+    globalFreezeAt.value = obj.freezeAt != null ? obj.freezeAt : '';
+    globalFreezeDuration.value = obj.freezeDuration != null ? obj.freezeDuration : 0;
+    globalFreezeEnabled.disabled = false;
+    globalFreezeAt.disabled = !globalFreezeEnabled.checked;
+    globalFreezeDuration.disabled = !globalFreezeEnabled.checked;
+    globalFreezePreviewBtn.disabled = false;
+    setStatus(globalFreezeStatusMsg, 'Fetched current values. Edit above, then preview the change.', 'ok');
+  }catch(err){ setStatus(globalFreezeStatusMsg, 'Error: ' + err.message, 'err'); }
+  finally{ fetchGlobalFreezeBtn.disabled = false; }
+});
+
+globalFreezeEnabled.addEventListener('change', () => {
+  globalFreezeAt.disabled = !globalFreezeEnabled.checked;
+  globalFreezeDuration.disabled = !globalFreezeEnabled.checked;
+});
+
+globalFreezePreviewBtn.addEventListener('click', async () => {
+  setStatus(globalFreezeStatusMsg, 'Fetching latest file to diff against\u2026', 'pending');
+  globalFreezePreviewBtn.disabled = true;
+  try{
+    const file = await fetchFile();
+    const blockRegex = /const\s+NEEDLES_GLOBAL_FREEZE\s*=\s*\{[\s\S]*?\}\s*;/;
+    const oldBlock = file.content.match(blockRegex)[0];
+    const newFreezeAt = globalFreezeEnabled.checked ? parseFloat(globalFreezeAt.value) : null;
+    const newFreezeDuration = globalFreezeEnabled.checked ? parseFloat(globalFreezeDuration.value || '0') : 0;
+    const newBlock = 'const NEEDLES_GLOBAL_FREEZE = { freezeAt: ' + (newFreezeAt === null ? 'null' : newFreezeAt) + ', freezeDuration: ' + newFreezeDuration + ' };';
+    const newContent = file.content.replace(blockRegex, newBlock);
+    pendingGlobalFreezeCommit = { newFileContent: newContent, sha: file.sha, oldBlock, newBlock };
+
+    globalFreezeDiffReadout.style.display = 'block';
+    globalFreezeDiffReadout.textContent = 'before: ' + oldBlock + '\nafter:  ' + newBlock + '\n\nReady to commit \u2014 nothing has been saved yet.';
+    globalFreezeCommitBtn.disabled = false;
+    setStatus(globalFreezeStatusMsg, 'Fetched OK. Review the change above, then commit.', 'ok');
+  }catch(err){
+    setStatus(globalFreezeStatusMsg, 'Error: ' + err.message, 'err');
+    pendingGlobalFreezeCommit = null;
+    globalFreezeCommitBtn.disabled = true;
+  }finally{ globalFreezePreviewBtn.disabled = false; }
+});
+
+globalFreezeCommitBtn.addEventListener('click', async () => {
+  if(!pendingGlobalFreezeCommit) return;
+  globalFreezeCommitBtn.disabled = true;
+  setStatus(globalFreezeStatusMsg, 'Committing to GitHub\u2026', 'pending');
+  try{
+    const data = await commitFile(pendingGlobalFreezeCommit.newFileContent, pendingGlobalFreezeCommit.sha, 'Calibrator: update global freeze default');
+    const shortSha = (data.commit && data.commit.sha) ? data.commit.sha.slice(0,7) : 'ok';
+    setStatus(globalFreezeStatusMsg, 'Committed \u2713 (' + shortSha + '). Live site will update on next deploy.', 'ok');
+    globalFreezeDiffReadout.style.display = 'none';
+    pendingGlobalFreezeCommit = null;
+  }catch(err){
+    setStatus(globalFreezeStatusMsg, 'Commit failed: ' + err.message, 'err');
+    globalFreezeCommitBtn.disabled = false;
+  }
+});
 </script>
 
 </body>
