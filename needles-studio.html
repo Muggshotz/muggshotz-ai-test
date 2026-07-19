@@ -44,6 +44,21 @@
   background:#d8d0c5;
   border-radius:1px;
 }
+.needles-easel-art{
+  position:absolute;
+  left:33.56%;
+  top:17.50%;
+  width:32.04%;
+  height:39.41%;
+  object-fit:cover;
+  object-position:center;
+  display:none;
+  z-index:1;
+  pointer-events:none;
+  border-radius:7.5%;
+  box-shadow:0 0 0 1px rgba(255,255,255,.18);
+}
+#needlesProgressCluster{display:block}
 .needles-stage-layer{position:absolute;top:10.59%;left:15.19%;width:78.25%;height:78.27%;object-fit:contain;opacity:0;pointer-events:none;z-index:2}.logo{font-size:22px;font-weight:700;color:#fff;letter-spacing:1px}.logo span{color:#3d8bff;text-shadow:0 0 6px rgba(61,139,255,0.8),0 0 2px rgba(255,255,255,0.6)}.logo .hot{color:#000;-webkit-text-stroke:1px #fff;text-shadow:none}.sub{font-size:11px;color:#888;letter-spacing:2px;text-transform:uppercase}.tagline{background:#1a0a00;border-bottom:1px solid #3a1a00;text-align:center;padding:.5rem;font-size:11px;color:#3d8bff;letter-spacing:1px}.main{padding:1.5rem;display:flex;flex-direction:column;gap:1.5rem;max-width:600px;margin:0 auto}.card{background:#151b24;border:1px solid #24344a;border-radius:10px;padding:1.25rem;box-shadow:0 2px 10px rgba(0,0,0,0.35)}.card-title{font-family:'Playfair Display',serif;font-style:italic;font-size:15px;font-weight:700;color:#8ec4ff;letter-spacing:.5px;text-transform:uppercase;margin-bottom:1rem;text-shadow:0 0 10px rgba(61,139,255,0.25)}textarea{width:100%;background:#0d0d0d;border:1px solid #444;border-radius:8px;padding:12px;color:#fff;font-size:14px;font-family:system-ui,sans-serif}textarea:focus{outline:none;border-color:#3d8bff}textarea{resize:vertical;min-height:80px}.note{font-size:11px;color:#555;margin-top:6px;line-height:1.35}.upload-zone{border:1.5px dashed #444;border-radius:12px;padding:2rem;text-align:center;cursor:pointer;background:#0d0d0d}.upload-zone.has-image{border-color:#3d8bff;border-style:solid}.upload-text{font-size:14px;color:#888}.upload-sub{font-size:12px;color:#555;margin-top:4px}.preview-img{width:100%;max-height:320px;object-fit:contain;border-radius:8px;margin-top:0;cursor:pointer}.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.grid2{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}.btn-select{background:#0d0d0d;border:.5px solid #333;border-radius:8px;padding:.75rem .5rem;text-align:center;cursor:pointer;color:#888;font-size:12px}.btn-select.selected{border-color:#3d8bff;background:#0e2036;color:#8ec4ff}.icon{font-size:20px;margin-bottom:4px;display:block}.quick-btns{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}.quick-btn{background:#0d0d0d;border:.5px solid #444;border-radius:20px;padding:4px 10px;color:#888;font-size:11px;cursor:pointer}.quick-btn:hover{border-color:#3d8bff;color:#3d8bff}.generate-btn{width:100%;background:linear-gradient(180deg,#6fb3ff,#3d8bff 55%,#2266cc);border:1px solid #7ec4ff;border-radius:10px;padding:1.1rem;color:#fff;font-size:17px;font-weight:700;cursor:pointer;letter-spacing:1px;box-shadow:0 3px 10px rgba(61,139,255,0.35)}.generate-btn:disabled{background:#333;color:#666;cursor:not-allowed}.status{font-size:16px;font-weight:600;color:#3d8bff;text-align:center;padding:1rem;display:none;line-height:1.4}.status.visible{display:block}.error{color:#e24b4a!important}.spinner{display:inline-block;width:16px;height:16px;border:2px solid #3d8bff;border-top-color:transparent;border-radius:50%;animation:spin .8s linear infinite;vertical-align:middle;margin-right:8px}@keyframes spin{to{transform:rotate(360deg)}}.result-area{display:none}.result-area.visible{display:block}.result-img{width:100%;border-radius:12px;border:1px solid #3d8bff}.mockup-label{font-size:12px;color:#666;text-align:center;margin-top:8px}.download-btn{width:100%;background:#0d0d0d;border:1px solid #3d8bff;border-radius:10px;padding:.75rem;color:#3d8bff;font-size:14px;cursor:pointer;margin-top:.75rem}
 .caption-card{display:none}.caption-card.visible{display:block}
 .caption-input{width:100%;background:#0d0d0d;border:1px solid #444;border-radius:8px;padding:10px 12px;color:#fff;font-size:14px;font-family:system-ui,sans-serif}
@@ -484,10 +499,15 @@
 <div class="needles-stage">
 <img class="needles-stage-bg" src="Easel_with_reference_photo.png" alt="Needles' studio"/>
 <img class="needles-reference-photo" id="needlesReferencePhoto" alt="Customer reference photo"/>
+<img class="needles-easel-art" id="needlesEaselArt" alt="Finished artwork on the easel"/>
 <video class="needles-stage-layer" id="needlesLayerA" muted playsinline></video>
 <video class="needles-stage-layer" id="needlesLayerB" muted playsinline></video>
 </div>
-<div class="note" style="text-align:center;margin-top:.5rem">Needles is working on it...</div>
+<div class="note" id="needlesStageNote" style="text-align:center;margin-top:.5rem">Needles is working on it...</div>
+<div id="needlesProgressCluster">
+  <div id="genTimerDisplay" style="display:none;text-align:center;font-size:13px;color:#7ab8ff;font-weight:600;margin-top:.45rem;letter-spacing:.3px"></div>
+  <div class="status" id="status" style="margin-top:.45rem"></div>
+</div>
 </div>
 <input type="file" id="fileInput" accept="image/*" style="display:none"/><img id="previewImg" class="preview-img" style="display:none"/>
 <div id="approveRow" style="display:none">
@@ -654,8 +674,7 @@
 <div id="finalGenerateGuidance" class="guidance-prompt" role="status">If satisfied with all selections, press "Generate." If not, feel free to scroll back up and make any additional changes.</div>
 <button class="generate-btn" id="generateBtn" onclick="generate()">🎨 GENERATE IMAGE</button>
 <button class="download-btn" id="cancelBtn" onclick="cancelGeneration()" style="display:none;margin-top:.5rem">✖ Cancel & Try a Different Photo</button>
-<div id="genTimerDisplay" style="display:none;text-align:center;font-size:13px;color:#7ab8ff;font-weight:600;margin-top:.5rem;letter-spacing:.3px"></div>
-<div class="status" id="status"></div>
+
   <div class="card" id="positionHolderCard" style="display:none">
 <div class="card-title">🖼️ Design Your Product</div>
 <div class="note" style="margin-top:0;margin-bottom:.9rem">Happy with just this one picture? We'll gladly take you to checkout. Want to try a few more designs first? If you're out of free tokens, a $5 Preview Reservation unlocks more tokens to keep creating — that $5 isn't an extra charge, it comes straight off your product's price at checkout. Whatever you end up with, your exact total (including any charge for extra printed designs, or an image on both sides) is always shown before you pay.</div>
@@ -815,12 +834,14 @@ let product='mug',style='Muggshotz Classic: premium professional caricature, exp
 // loop of Needles clips on the studio-background stage while a real
 // generation request is in flight; hidden the rest of the time.
 const NEEDLES_LOOP = ["A","B","C","D","E","F","G","H","I","J","K","G","L","M","N","O","P","Q","R","S","T"];
+const NEEDLES_FINALE = ["R","S","T"];
 const NEEDLES_TRANSPARENT_LETTERS = ["M","N","O","P","Q","R"];
 const NEEDLES_FADE_OUT_LEAD = 2.0;
 const NEEDLES_FADE_IN_DURATION = 1.0;
 let needlesSeqIndex = 0;
 let needlesActiveLayer = null, needlesIdleLayer = null;
 let needlesPlaying = false;
+let needlesFinalePlaying = false;
 
 function needlesInitLayers(){
   if(needlesActiveLayer) return;
@@ -877,11 +898,21 @@ function needlesAdvance(){
   needlesPlaySlot(letter);
 }
 
+function resetNeedlesPresentationState(){
+  const easelArt = document.getElementById('needlesEaselArt');
+  if(easelArt){
+    easelArt.style.display = 'none';
+    easelArt.removeAttribute('src');
+  }
+  const note = document.getElementById('needlesStageNote');
+  if(note) note.textContent = 'Needles is working on it...';
+}
+
 function startNeedlesStage(){
   needlesInitLayers();
+  needlesFinalePlaying = false;
+  resetNeedlesPresentationState();
 
-  // Keep the customer's Photo 1 visible on the small studio clipboard
-  // for the entire painting sequence.
   const referencePhoto = document.getElementById('needlesReferencePhoto');
   if(referencePhoto && uploadedImageData){
     referencePhoto.src = uploadedImageData;
@@ -897,10 +928,92 @@ function startNeedlesStage(){
 
 function stopNeedlesStage(){
   needlesPlaying = false;
+  needlesFinalePlaying = false;
   const wrap = document.getElementById('needlesStageWrap');
   if(wrap) wrap.classList.remove('visible');
-  if(needlesActiveLayer){ needlesActiveLayer.pause(); needlesActiveLayer.style.opacity = 0; }
-  if(needlesIdleLayer){ needlesIdleLayer.pause(); needlesIdleLayer.style.opacity = 0; }
+  if(needlesActiveLayer){
+    needlesActiveLayer.pause();
+    needlesActiveLayer.oncanplay = null;
+    needlesActiveLayer.ontimeupdate = null;
+    needlesActiveLayer.onended = null;
+    needlesActiveLayer.onerror = null;
+    needlesActiveLayer.style.opacity = 0;
+  }
+  if(needlesIdleLayer){
+    needlesIdleLayer.pause();
+    needlesIdleLayer.oncanplay = null;
+    needlesIdleLayer.ontimeupdate = null;
+    needlesIdleLayer.onended = null;
+    needlesIdleLayer.onerror = null;
+    needlesIdleLayer.style.opacity = 0;
+  }
+  resetNeedlesPresentationState();
+}
+
+function playNeedlesFinale(onDone){
+  needlesInitLayers();
+  needlesPlaying = false;
+  needlesFinalePlaying = true;
+
+  const layerA = document.getElementById('needlesLayerA');
+  const layerB = document.getElementById('needlesLayerB');
+  [layerA, layerB].forEach(v => {
+    if(!v) return;
+    v.pause();
+    v.oncanplay = null;
+    v.ontimeupdate = null;
+    v.onended = null;
+    v.onerror = null;
+    v.style.transition = 'none';
+    v.style.opacity = 0;
+  });
+
+  const player = layerA || needlesActiveLayer;
+  if(!player){
+    if(typeof onDone === 'function') onDone();
+    return;
+  }
+
+  let finished = false;
+  const done = () => {
+    if(finished) return;
+    finished = true;
+    needlesFinalePlaying = false;
+    if(typeof onDone === 'function') onDone();
+  };
+
+  const clips = NEEDLES_FINALE.slice();
+  let idx = 0;
+  const playNext = () => {
+    if(idx >= clips.length){
+      done();
+      return;
+    }
+    const letter = clips[idx++];
+    player.pause();
+    player.src = needlesClipFile(letter);
+    player.load();
+    player.currentTime = 0;
+    player.loop = false;
+    player.style.opacity = 1;
+    player.oncanplay = () => { player.play().catch(()=>{}); };
+    player.onended = () => playNext();
+    player.onerror = () => done();
+  };
+
+  setTimeout(done, 12000);
+  playNext();
+}
+
+function presentFinishedNeedlesArt(imageUrl, onDone){
+  const easelArt = document.getElementById('needlesEaselArt');
+  const note = document.getElementById('needlesStageNote');
+  if(easelArt){
+    easelArt.src = imageUrl;
+    easelArt.style.display = 'block';
+  }
+  if(note) note.textContent = 'Needles presents your finished design.';
+  playNeedlesFinale(onDone);
 }
 let refImageAData=null, refImageBData=null;
 let previousImageData=null;
@@ -1053,6 +1166,27 @@ function setMainSlotImage(dataUrl){
   z.innerHTML='';
   z.appendChild(img);
   document.getElementById('startOverBtn').style.display='block';
+}
+
+function setWorkingImageDataOnly(dataUrl){
+  uploadedImageData=dataUrl;
+  const stageReference=document.getElementById('needlesReferencePhoto');
+  if(stageReference){
+    stageReference.src=dataUrl;
+  }
+}
+
+function renderUploadZoneImage(dataUrl){
+  const img=document.getElementById('previewImg');
+  if(!img)return;
+  img.src=dataUrl;
+  img.style.display='block';
+  img.onclick=()=>document.getElementById('fileInput').click();
+  const z=document.getElementById('uploadZone');
+  z.classList.add('has-image');
+  z.style.padding='0';
+  z.innerHTML='';
+  z.appendChild(img);
 }
 
 function toggleWorkingImage(){
@@ -2477,6 +2611,7 @@ function startOver(){
 }
 
 function resetMainSlot(){
+  stopNeedlesStage();
   uploadedImageData=null;
   previousImageData=null;
   document.getElementById('toggleImageBtn').style.display='none';
@@ -2484,7 +2619,7 @@ function resetMainSlot(){
   const z=document.getElementById('uploadZone');
   z.classList.remove('has-image');
   z.style.padding='2rem';
-  z.innerHTML='<div style="font-size:32px;color:#555;margin-bottom:8px">\ud83d\udc64</div><div class="upload-text">Tap here to upload a photo</div><div class="upload-sub">Clear face photo works best</div>';
+  z.innerHTML='<div style="font-size:32px;color:#555;margin-bottom:8px">👤</div><div class="upload-text">Tap here to upload a photo</div><div class="upload-sub">Clear face photo works best</div>';
   const oldImg=document.getElementById('previewImg');
   if(oldImg)oldImg.remove();
   const fresh=document.createElement('img');
@@ -2685,45 +2820,18 @@ async function generate(){
   document.getElementById('approveRow').style.display='none';
   document.getElementById('keepTweakingBtn').style.display='none';
   document.getElementById('downloadDesignBtn').style.display='none';
+  document.getElementById('toggleImageBtn').style.display='none';
 setStatus('Generating your image... this can take several minutes, especially on busier or more detailed requests. Please stay on this screen until it finishes.');
 document.getElementById('cancelBtn').style.display='block';
-  // NEW (July 2026, Alyx's request): the moment Generate is tapped, bring
-  // the whole in-progress area — spinner, status text, AND the elapsed-time
-  // counter below the Generate button — into view together. The counter
-  // lives much further down the page than the spinner at the top of the
-  // photo card, so a plain scrollIntoView on just one of them left the
-  // other one off-screen. Wait one frame so the freshly-shown spinner/
-  // timer have actually been laid out before measuring where to land.
+  // UPDATED (July 2026, Alyx's request): the moment Generate is tapped,
+  // snap the page to the Needles studio scene itself. That scene is now
+  // the correct generation focus area, and the live timer/message live
+  // directly beneath it.
   requestAnimationFrame(()=>{
     requestAnimationFrame(()=>{
-      const spinnerEl=document.getElementById('uploadZone');
-      const timerEl=document.getElementById('genTimerDisplay');
-      const statusEl=document.getElementById('status');
-      if(spinnerEl&&timerEl){
-        const spinnerTop=spinnerEl.getBoundingClientRect().top+window.scrollY;
-        // The status message ("Generating your image...") sits right
-        // after the timer and was getting left just out of view when only
-        // the timer's own bottom edge was used. Measure down through
-        // whichever of the two actually extends further, so the message
-        // text lands on screen together with the timer, not just the
-        // timer by itself.
-        const timerRectBottom=timerEl.getBoundingClientRect().bottom;
-        const statusRectBottom=statusEl?statusEl.getBoundingClientRect().bottom:timerRectBottom;
-        const timerBottom=Math.max(timerRectBottom,statusRectBottom)+window.scrollY;
-        const viewportHeight=window.innerHeight;
-        const totalSpan=timerBottom-spinnerTop;
-        // Center the whole span if it fits on screen; otherwise anchor so
-        // the bottom of that span (the part that was getting missed) is
-        // guaranteed visible.
-        let target;
-        if(totalSpan<viewportHeight){
-          target=spinnerTop-((viewportHeight-totalSpan)/2);
-        } else {
-          target=timerBottom-viewportHeight+24;
-        }
-        window.scrollTo({top:Math.max(0,target),behavior:'smooth'});
-      } else if(timerEl){
-        timerEl.scrollIntoView({behavior:'smooth',block:'center'});
+      const stageWrap=document.getElementById('needlesStageWrap');
+      if(stageWrap){
+        stageWrap.scrollIntoView({behavior:'smooth',block:'start'});
       }
     });
   });
@@ -2911,29 +3019,35 @@ Use rich environmental storytelling while keeping the face as the primary focal 
 
     document.getElementById('captionCard').className='card caption-card visible';
     document.getElementById('captionText').value='';
-  document.getElementById('verifyCard').style.display='block';
-    document.getElementById('approveRow').style.display='block';
-    document.getElementById('keepTweakingBtn').style.display='block';
-    document.getElementById('downloadDesignBtn').style.display='block';
-    refreshApproveRowForMode();
-    stopNeedlesStage();
+    document.getElementById('verifyCard').style.display='block';
+
     await loadBaseImageForCaption(resultUrl);
+
     try{
       const newWorkingRaw=await urlToDataURL(resultUrl);
       const newWorking=await resizeDataUrl(newWorkingRaw, 1280);
       previousImageData=workingImage;
-      setMainSlotImage(newWorking);
-      document.getElementById('toggleImageBtn').style.display='block';
+      setWorkingImageDataOnly(newWorking);
       saveWorkshop();
     }catch(recycleErr){
-      console.error('Could not recycle result into the main slot:',recycleErr);
-      setMainSlotImage(workingImage);
+      console.error('Could not recycle result into the working image state:',recycleErr);
+      setWorkingImageDataOnly(workingImage);
     }
-    await waitForImageReady(document.getElementById('previewImg'));
-    scrollToFinishedImage('approveRow','end');
+
+    renderUploadZoneImage(workingImage);
+
     refreshTokenMeter();
     clearStatus();
     stopGenTimerSuccess();
+
+    presentFinishedNeedlesArt(resultUrl, ()=>{
+      document.getElementById('approveRow').style.display='block';
+      document.getElementById('keepTweakingBtn').style.display='block';
+      document.getElementById('downloadDesignBtn').style.display='block';
+      document.getElementById('startOverBtn').style.display='block';
+      document.getElementById('toggleImageBtn').style.display='none';
+      refreshApproveRowForMode();
+    });
 
   }catch(err){
     document.getElementById('wraparoundStandbyPrompt').style.display='none';
