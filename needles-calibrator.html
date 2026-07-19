@@ -707,9 +707,27 @@ async function fetchFile(){
   const res = await fetch(apiBase() + '?ref=' + encodeURIComponent(ghBranch.value.trim()), {
     headers: { 'Authorization': 'Bearer ' + ghToken.value.trim(), 'Accept': 'application/vnd.github+json' }
   });
-  if(!res.ok){ const body = await res.text(); throw new Error('GitHub returned ' + res.status + ': ' + body.slice(0,200)); }
-  const data = await res.json();
-  return { sha: data.sha, content: b64DecodeUnicode(data.content.replace(/\n/g,'')) };
+  if(!res.ok){
+    const body = await res.text();
+    throw new Error('GitHub returned ' + res.status + ': ' + body.slice(0,200));
+  }
+  const meta = await res.json();
+  const sha = meta.sha;
+
+  // The Contents API omits the file's content entirely for anything over 1MB
+  // (this file is ~2.6MB) — fetch the actual bytes via the Git blobs API
+  // instead, which reliably returns content up to 100MB.
+  const blobUrl = 'https://api.github.com/repos/' + ghOwner.value.trim() + '/' + ghRepo.value.trim() + '/git/blobs/' + sha;
+  const blobRes = await fetch(blobUrl, {
+    headers: { 'Authorization': 'Bearer ' + ghToken.value.trim(), 'Accept': 'application/vnd.github+json' }
+  });
+  if(!blobRes.ok){
+    const body = await blobRes.text();
+    throw new Error('GitHub blob fetch returned ' + blobRes.status + ': ' + body.slice(0,200));
+  }
+  const blob = await blobRes.json();
+  const content = b64DecodeUnicode(blob.content.replace(/\n/g,''));
+  return { sha, content };
 }
 async function commitFile(newContent, sha, message){
   const res = await fetch(apiBase(), {
