@@ -131,8 +131,8 @@
 </div>
 
 <div class="panel">
-  <h1>NEEDLES' EASEL — CLIP CALIBRATOR · SAFE-KEY REPAIR</h1>
-  <p class="sub">Load a clip and background, dial everything in, then save straight to needles-studio.html on GitHub. This Safe-Key Repair edition automatically fixes older unquoted clip names such as A-final and always writes future clip keys safely.</p>
+  <h1>NEEDLES' EASEL — CLIP CALIBRATOR · UNIFIED REPAIR</h1>
+  <p class="sub">Load a clip and background, dial everything in, then save straight to needles-studio.html on GitHub. Unified Repair automatically adds a missing override block, repairs older unquoted clip keys, and safely quotes every future clip key.</p>
 
   <details>
     <summary>GitHub connection settings</summary>
@@ -766,34 +766,93 @@ previewBtn.addEventListener('click', async () => {
     const file = await fetchFile();
     const blockRegex = /const\s+NEEDLES_CLIP_OVERRIDES\s*=\s*\{[\s\S]*?\}\s*;/;
     const match = file.content.match(blockRegex);
-    if(!match) throw new Error('Could not find NEEDLES_CLIP_OVERRIDES in the fetched file.');
-    const inner = match[0].replace(/^const\s+NEEDLES_CLIP_OVERRIDES\s*=\s*/, '').replace(/;\s*$/, '');
-    let existingObj;
-    try{
-      existingObj = new Function('return ' + inner)();
-    }catch(firstError){
-      const repairedInner = inner.replace(
-        /(^|[{,]\s*)([A-Za-z_$][A-Za-z0-9_$-]*)\s*:/gm,
-        (full, prefix, key) => prefix + JSON.stringify(key) + ':'
-      );
+
+    let existingObj = {};
+    let oldEntry = '(none yet)';
+    let newFileContent;
+    let repairNote = '';
+
+    if(match){
+      const inner = match[0].replace(/^const\s+NEEDLES_CLIP_OVERRIDES\s*=\s*/, '').replace(/;\s*$/, '');
+
       try{
-        existingObj = new Function('return ' + repairedInner)();
-      }catch(secondError){
-        throw new Error('Could not parse the existing overrides object, even after repairing unquoted clip keys: ' + secondError.message);
+        existingObj = new Function('return ' + inner)();
+      }catch(firstError){
+        const repairedInner = inner.replace(
+          /(^|[{,]\s*)([A-Za-z_$][A-Za-z0-9_$-]*)\s*:/gm,
+          (full, prefix, key) => prefix + JSON.stringify(key) + ':'
+        );
+
+        try{
+          existingObj = new Function('return ' + repairedInner)();
+          repairNote = '\n\nRepair applied: older unquoted clip keys were corrected automatically.';
+        }catch(secondError){
+          throw new Error('Could not parse the existing overrides object, even after repairing unquoted clip keys: ' + secondError.message);
+        }
       }
+
+      oldEntry = existingObj[letter] ? JSON.stringify(existingObj[letter]) : '(none yet)';
+      existingObj[letter] = buildReadoutObject();
+
+      const newBlock = formatOverridesObject(existingObj);
+      newFileContent =
+        file.content.slice(0, match.index) +
+        newBlock +
+        file.content.slice(match.index + match[0].length);
+    }else{
+      existingObj[letter] = buildReadoutObject();
+      const newBlock = formatOverridesObject(existingObj);
+
+      const preferredAnchors = [
+        /const\s+NEEDLES_DEFAULT_BOX\s*=\s*\{[\s\S]*?\}\s*;/,
+        /const\s+NEEDLES_CONTINUOUS_POOL\s*=\s*\[[\s\S]*?\]\s*;/,
+        /const\s+NEEDLES_ENDING_SEQUENCE\s*=\s*\[[\s\S]*?\]\s*;/,
+        /const\s+NEEDLES_BEGINNING_SEQUENCE\s*=\s*\[[\s\S]*?\]\s*;/
+      ];
+
+      let anchorMatch = null;
+      for(const regex of preferredAnchors){
+        anchorMatch = file.content.match(regex);
+        if(anchorMatch) break;
+      }
+
+      if(anchorMatch){
+        const insertAt = anchorMatch.index + anchorMatch[0].length;
+        newFileContent =
+          file.content.slice(0, insertAt) +
+          '\n\n// Added automatically by Needles Calibrator Unified Repair.\n' +
+          newBlock +
+          file.content.slice(insertAt);
+      }else{
+        const scriptMatch = file.content.match(/<script(?:\s[^>]*)?>/i);
+        if(!scriptMatch){
+          throw new Error('Could not find a safe JavaScript insertion point in needles-studio.html.');
+        }
+
+        const insertAt = scriptMatch.index + scriptMatch[0].length;
+        newFileContent =
+          file.content.slice(0, insertAt) +
+          '\n// Added automatically by Needles Calibrator Unified Repair.\n' +
+          newBlock +
+          '\n' +
+          file.content.slice(insertAt);
+      }
+
+      repairNote = '\n\nCompatibility repair: NEEDLES_CLIP_OVERRIDES was missing, so it will be added automatically.';
     }
 
-    const oldEntry = existingObj[letter] ? JSON.stringify(existingObj[letter]) : '(none yet)';
-    existingObj[letter] = buildReadoutObject();
     const newEntry = JSON.stringify(existingObj[letter]);
-
-    const newBlock = formatOverridesObject(existingObj);
-    const newFileContent = file.content.slice(0, match.index) + newBlock + file.content.slice(match.index + match[0].length);
     pendingCommit = { newFileContent, sha: file.sha, letter, oldEntry, newEntry };
 
     diffReadout.style.display = 'block';
-    diffReadout.textContent = 'Clip ' + letter + '\n  before: ' + oldEntry + '\n  after:  ' + newEntry +
-      '\n\nFile: ' + ghPath.value.trim() + ' @ ' + ghBranch.value.trim() + '\nReady to commit \u2014 nothing has been saved yet.';
+    diffReadout.textContent =
+      'Clip ' + letter +
+      '\n  before: ' + oldEntry +
+      '\n  after:  ' + newEntry +
+      repairNote +
+      '\n\nFile: ' + ghPath.value.trim() +
+      ' @ ' + ghBranch.value.trim() +
+      '\nReady to commit \u2014 nothing has been saved yet.';
     commitBtn.disabled = false;
     setStatus(statusMsg, 'Fetched OK. Review the change above, then commit.', 'ok');
   }catch(err){
