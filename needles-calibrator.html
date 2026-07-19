@@ -175,15 +175,8 @@
   </div>
 
   <div class="field">
-    <label>Clip letter (required to save)</label>
-    <select id="clipLabel">
-      <option value="">— choose a letter —</option>
-      <option>A</option><option>B</option><option>C</option><option>D</option>
-      <option>E</option><option>F</option><option>G</option><option>H</option>
-      <option>I</option><option>J</option><option>K</option><option>L</option>
-      <option>M</option><option>N</option><option>O</option><option>P</option>
-      <option>Q</option><option>R</option><option>S</option><option>T</option>
-    </select>
+    <label>Clip key (auto-filled from filename — edit if needed)</label>
+    <input type="text" id="clipLabel" placeholder="load a clip to auto-fill">
   </div>
 
   <div class="divider"></div>
@@ -509,6 +502,14 @@ clipInput.addEventListener('change', e => {
   stageClip.play().catch(()=>{});
   clipLoaded = true;
   updatePlaceholder();
+
+  // auto-derive the save key from the filename (strip extension and common
+  // pipeline suffixes) so this isn't limited to any fixed naming scheme —
+  // still editable by hand afterward if the guess isn't what you want.
+  let key = f.name.replace(/\.[^/.]+$/, '');
+  key = key.replace(/_final$/i, '').replace(/_transparent$/i, '');
+  clipLabel.value = key;
+  applyTransform();
 });
 
 function positionBox(){
@@ -739,7 +740,7 @@ function formatOverridesObject(obj){
 
 previewBtn.addEventListener('click', async () => {
   const letter = clipLabel.value;
-  if(!letter){ setStatus(statusMsg, 'Pick a clip letter first.', 'err'); return; }
+  if(!letter){ setStatus(statusMsg, 'Load a clip first (or type a key manually) \u2014 that\u2019s what the save gets keyed under.', 'err'); return; }
   if(!ghToken.value.trim()){ setStatus(statusMsg, 'Paste your GitHub token in "GitHub connection settings" first.', 'err'); return; }
   setStatus(statusMsg, 'Fetching current needles-studio.html from GitHub\u2026', 'pending');
   previewBtn.disabled = true;
