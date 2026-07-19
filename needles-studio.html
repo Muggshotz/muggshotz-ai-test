@@ -545,24 +545,7 @@ const NEEDLES_FADE_IN_DURATION = 1.0;
 // scale is anchored to bottom-center (feet/base stay put while it grows/shrinks);
 // offsetX/offsetY nudge the box itself, in percent of the stage, same axes as the calibrator.
 const NEEDLES_CLIP_OVERRIDES = {
-  A: { scale: 1.37, offsetX: -22.6, offsetY: 11.6 },
-  B: { scale: 1.43, offsetX: 18.1, offsetY: 18.5 },
-  C: { scale: 1.43, offsetX: -2.5, offsetY: 18.5 },
-  D: { scale: 1.68, offsetX: -13, offsetY: 33.9 },
-  E: { scale: 1.84, offsetX: 0.4, offsetY: 38.8 },
-  G: { scale: 1.94, offsetX: -43.8, offsetY: 50 },
-  H: { scale: 1.37, offsetX: 22.1, offsetY: 50 },
-  I: { scale: 1.93, offsetX: -24.3, offsetY: 48.4 },
-  M: { scale: 1.23, offsetX: -24.3, offsetY: 12.7 },
-  N: { scale: 1.72, offsetX: -6.3, offsetY: 43.3 },
-  P: { scale: 1.77, offsetX: -0.9, offsetY: 43.3 },
-  O: { scale: 1.7, offsetX: -31.5, offsetY: 43.3 },
-  Q: { scale: 1.7, offsetX: 33.7, offsetY: 43.3 },
-  R: { scale: 1.74, offsetX: 33.7, offsetY: 44 },
-  F: { scale: 1.94, offsetX: -30.8, offsetY: 50 },
-  J: { scale: 1.69, offsetX: -4.5, offsetY: 46 },
-  S: { scale: 1.91, offsetX: 14.5, offsetY: 50 },
-  T: { scale: 1.74, offsetX: 17.6, offsetY: 50 }
+  A: { scale: 1.32, offsetX: -13.1, offsetY: 9.2 }
 };
 const NEEDLES_DEFAULT_BOX = { top: 10.59, left: 15.19, width: 78.25, height: 78.27 };
 
@@ -2524,7 +2507,10 @@ document.getElementById('cancelBtn').style.display='block';
   // timer have actually been laid out before measuring where to land.
   requestAnimationFrame(()=>{
     requestAnimationFrame(()=>{
-      const spinnerEl=document.getElementById('uploadZone');
+      // Anchor on needlesStageWrap, not uploadZone — uploadZone sits inside
+      // the clipboard wrapper that startNeedlesStage() just hid, so it no
+      // longer reflects real visible content and threw the centering math off.
+      const spinnerEl=document.getElementById('needlesStageWrap');
       const timerEl=document.getElementById('genTimerDisplay');
       const statusEl=document.getElementById('status');
       if(spinnerEl&&timerEl){
