@@ -829,191 +829,301 @@
 <script>
 let product='mug',style='Muggshotz Classic: premium professional caricature, expressive face, rich detail, painterly shading, funny gift-art scene',likeness='0.15',uploadedImageData=null,resultUrl=null;
 
-// ===== Needles' Easel — clip rotation engine =====
-// Adapted from the standalone Needles-master.html demo. Plays a crossfading
-// loop of Needles clips on the studio-background stage while a real
-// generation request is in flight; hidden the rest of the time.
-const NEEDLES_LOOP = ["A","B","C","D","E","F","G","H","I","J","K","G","L","M","N","O","P","Q","R","S","T"];
-const NEEDLES_FINALE = ["R","S","T"];
-const NEEDLES_TRANSPARENT_LETTERS = ["M","N","O","P","Q","R"];
-const NEEDLES_FADE_OUT_LEAD = 2.0;
-const NEEDLES_FADE_IN_DURATION = 1.0;
-let needlesSeqIndex = 0;
-let needlesActiveLayer = null, needlesIdleLayer = null;
+// ===== Needles' Easel — five-group presentation engine =====
+// One generation session is one complete presentation cycle.
+const NEEDLES_BEGINNING_SEQUENCE = [
+  'A_final.webm',
+  'B_final.webm',
+  'C_final.webm'
+];
+
+const NEEDLES_ENDING_TEMPLATE = [
+  'J_final.webm',
+  'S_final.webm',
+  'T_final.webm'
+];
+
+const NEEDLES_ONE_TIME_PAIRS = [
+  ['M_transparent.webm', 'N_transparent.webm'],
+  ['Q_transparent.webm', 'R_transparent.webm']
+];
+
+const NEEDLES_RANDOM_POOL = [
+  'D_final.webm',
+  'E_final.webm',
+  'F_final.webm',
+  'G_final.webm',
+  'H_final.webm',
+  'I_final.webm',
+  'K_final.webm',
+  'L_final.webm',
+  'O_final.webm',
+  'P_final.webm'
+];
+
+const NEEDLES_FADE_IN_DURATION = 0.35;
+const NEEDLES_FADE_OUT_DURATION = 0.55;
+
+let needlesActiveLayer = null;
+let needlesIdleLayer = null;
 let needlesPlaying = false;
 let needlesFinalePlaying = false;
+let needlesGenerationComplete = false;
+let needlesPhase = 'stopped';
+let needlesBeginningQueue = [];
+let needlesEndingQueue = [];
+let needlesPairQueue = [];
+let needlesPairPlan = [];
+let needlesMainClipCount = 0;
+let needlesLastRandomClip = null;
+let needlesFinishedImageUrl = null;
+let needlesPresentationDone = null;
+let needlesSafetyTimer = null;
 
 function needlesInitLayers(){
-  if(needlesActiveLayer) return;
-  needlesActiveLayer = document.getElementById('needlesLayerA');
-  needlesIdleLayer = document.getElementById('needlesLayerB');
+  if(needlesActiveLayer && needlesIdleLayer)return;
+  needlesActiveLayer=document.getElementById('needlesLayerA');
+  needlesIdleLayer=document.getElementById('needlesLayerB');
 }
 
-function needlesClipFile(letter){
-  return letter + (NEEDLES_TRANSPARENT_LETTERS.includes(letter) ? '_transparent.webm' : '_final.webm');
+function needlesRandomInt(min,max){
+  return Math.floor(Math.random()*(max-min+1))+min;
 }
 
-function needlesPlaySlot(letter){
-  const incoming = needlesIdleLayer;
-  const outgoing = needlesActiveLayer;
+function needlesShuffle(items){
+  const copy=items.slice();
+  for(let i=copy.length-1;i>0;i--){
+    const j=Math.floor(Math.random()*(i+1));
+    [copy[i],copy[j]]=[copy[j],copy[i]];
+  }
+  return copy;
+}
+
+function needlesBuildPairPlan(){
+  const shuffledPairs=needlesShuffle(NEEDLES_ONE_TIME_PAIRS);
+  let trigger=needlesRandomInt(1,3);
+  needlesPairPlan=shuffledPairs.map((pair,index)=>{
+    if(index>0)trigger+=needlesRandomInt(2,5);
+    return {pair:pair.slice(),trigger,used:false};
+  });
+}
+
+function needlesPickRandomMainClip(){
+  let choices=NEEDLES_RANDOM_POOL;
+  if(choices.length>1 && needlesLastRandomClip){
+    choices=choices.filter(file=>file!==needlesLastRandomClip);
+  }
+  const file=choices[Math.floor(Math.random()*choices.length)];
+  needlesLastRandomClip=file;
+  return file;
+}
+
+function needlesResetSession(){
+  needlesGenerationComplete=false;
+  needlesFinalePlaying=false;
+  needlesPhase='beginning';
+  needlesBeginningQueue=NEEDLES_BEGINNING_SEQUENCE.slice();
+  needlesEndingQueue=NEEDLES_ENDING_TEMPLATE.slice();
+  needlesPairQueue=[];
+  needlesMainClipCount=0;
+  needlesLastRandomClip=null;
+  needlesFinishedImageUrl=null;
+  needlesPresentationDone=null;
+  clearTimeout(needlesSafetyTimer);
+  needlesSafetyTimer=null;
+  needlesBuildPairPlan();
+}
+
+function needlesRevealFinishedArt(){
+  const easelArt=document.getElementById('needlesEaselArt');
+  const note=document.getElementById('needlesStageNote');
+  if(easelArt && needlesFinishedImageUrl){
+    easelArt.src=needlesFinishedImageUrl;
+    easelArt.style.display='block';
+  }
+  if(note)note.textContent='Needles presents your finished design.';
+}
+
+function needlesFinishPresentation(){
+  if(needlesPhase==='stopped')return;
+  needlesPhase='stopped';
+  needlesPlaying=false;
+  needlesFinalePlaying=false;
+  clearTimeout(needlesSafetyTimer);
+  needlesSafetyTimer=null;
+
+  const layers=[needlesActiveLayer,needlesIdleLayer].filter(Boolean);
+  layers.forEach(layer=>{
+    layer.oncanplay=null;
+    layer.onended=null;
+    layer.onerror=null;
+    layer.style.transition=`opacity ${NEEDLES_FADE_OUT_DURATION}s linear`;
+    layer.style.opacity=0;
+  });
+
+  const done=needlesPresentationDone;
+  needlesPresentationDone=null;
+  setTimeout(()=>{
+    layers.forEach(layer=>layer.pause());
+    if(typeof done==='function')done();
+  },Math.ceil(NEEDLES_FADE_OUT_DURATION*1000));
+}
+
+function needlesNextFile(){
+  if(!needlesPlaying)return null;
+
+  if(needlesPhase==='beginning'){
+    if(needlesBeginningQueue.length)return needlesBeginningQueue.shift();
+    needlesPhase='main';
+  }
+
+  if(needlesPhase==='main'){
+    // A one-time pair is indivisible. If generation completes during its
+    // first clip, its second clip still follows immediately before finale.
+    if(needlesPairQueue.length)return needlesPairQueue.shift();
+
+    if(needlesGenerationComplete){
+      needlesPhase='finale';
+      needlesFinalePlaying=true;
+      needlesRevealFinishedArt();
+      return needlesEndingQueue.shift();
+    }
+
+    const duePair=needlesPairPlan.find(item=>!item.used && needlesMainClipCount>=item.trigger);
+    if(duePair){
+      duePair.used=true;
+      needlesPairQueue=duePair.pair.slice();
+      return needlesPairQueue.shift();
+    }
+
+    needlesMainClipCount++;
+    return needlesPickRandomMainClip();
+  }
+
+  if(needlesPhase==='finale'){
+    if(needlesEndingQueue.length)return needlesEndingQueue.shift();
+    return null;
+  }
+
+  return null;
+}
+
+function needlesPlayFile(filename){
+  if(!filename){
+    needlesFinishPresentation();
+    return;
+  }
+
+  const incoming=needlesIdleLayer;
+  const outgoing=needlesActiveLayer;
   incoming.pause();
-  incoming.src = needlesClipFile(letter);
-  incoming.load(); // force genuine reset even on a repeated letter (e.g. G twice per lap)
-  incoming.currentTime = 0;
-  incoming.loop = false;
-  incoming.style.transition = 'none';
-  incoming.style.opacity = 0;
+  incoming.oncanplay=null;
+  incoming.onended=null;
+  incoming.onerror=null;
+  incoming.src=filename;
+  incoming.load();
+  incoming.currentTime=0;
+  incoming.loop=false;
+  incoming.style.transition='none';
+  incoming.style.opacity=0;
 
-  let started = false; // guards against canplay firing twice for one load
-  incoming.oncanplay = () => {
-    if(started) return;
-    started = true;
+  let started=false;
+  incoming.oncanplay=()=>{
+    if(started)return;
+    started=true;
     incoming.play().catch(()=>{});
     requestAnimationFrame(()=>{
-      incoming.style.transition = `opacity ${NEEDLES_FADE_IN_DURATION}s linear`;
-      incoming.style.opacity = 1;
-    });
-    [needlesActiveLayer, needlesIdleLayer] = [incoming, outgoing];
-    let nextTriggered = false;
-    incoming.ontimeupdate = () => {
-      if(nextTriggered) return;
-      if(!incoming.duration || isNaN(incoming.duration)) return;
-      if(incoming.currentTime < 0.3) return;
-      if(incoming.duration - incoming.currentTime <= NEEDLES_FADE_OUT_LEAD){
-        nextTriggered = true;
-        incoming.style.transition = `opacity ${NEEDLES_FADE_OUT_LEAD}s linear`;
-        incoming.style.opacity = 0;
-        needlesAdvance();
+      incoming.style.transition=`opacity ${NEEDLES_FADE_IN_DURATION}s linear`;
+      incoming.style.opacity=1;
+      if(outgoing){
+        outgoing.style.transition=`opacity ${NEEDLES_FADE_OUT_DURATION}s linear`;
+        outgoing.style.opacity=0;
       }
-    };
-    incoming.onended = () => { if(!nextTriggered){ nextTriggered = true; needlesAdvance(); } };
+    });
+    [needlesActiveLayer,needlesIdleLayer]=[incoming,outgoing];
   };
-  incoming.onerror = () => {};
+
+  // The current clip always reaches its natural end. Only then is the
+  // next ordinary clip, paired companion, or first finale clip selected.
+  incoming.onended=()=>needlesAdvance();
+  incoming.onerror=()=>needlesAdvance();
 }
 
 function needlesAdvance(){
-  if(!needlesPlaying) return;
-  const letter = NEEDLES_LOOP[needlesSeqIndex % NEEDLES_LOOP.length];
-  needlesSeqIndex++;
-  needlesPlaySlot(letter);
+  if(!needlesPlaying)return;
+  const filename=needlesNextFile();
+  if(!filename){
+    needlesFinishPresentation();
+    return;
+  }
+  needlesPlayFile(filename);
 }
 
 function resetNeedlesPresentationState(){
-  const easelArt = document.getElementById('needlesEaselArt');
+  const easelArt=document.getElementById('needlesEaselArt');
   if(easelArt){
-    easelArt.style.display = 'none';
+    easelArt.style.display='none';
     easelArt.removeAttribute('src');
   }
-  const note = document.getElementById('needlesStageNote');
-  if(note) note.textContent = 'Needles is working on it...';
+  const note=document.getElementById('needlesStageNote');
+  if(note)note.textContent='Needles is working on it...';
 }
 
 function startNeedlesStage(){
   needlesInitLayers();
-  needlesFinalePlaying = false;
   resetNeedlesPresentationState();
+  needlesResetSession();
 
-  const referencePhoto = document.getElementById('needlesReferencePhoto');
+  const referencePhoto=document.getElementById('needlesReferencePhoto');
   if(referencePhoto && uploadedImageData){
-    referencePhoto.src = uploadedImageData;
-    referencePhoto.style.display = 'block';
+    referencePhoto.src=uploadedImageData;
+    referencePhoto.style.display='block';
   }
 
-  const wrap = document.getElementById('needlesStageWrap');
-  if(wrap) wrap.classList.add('visible');
-  needlesPlaying = true;
-  needlesSeqIndex = 0;
+  const wrap=document.getElementById('needlesStageWrap');
+  if(wrap)wrap.classList.add('visible');
+  needlesPlaying=true;
   needlesAdvance();
 }
 
 function stopNeedlesStage(){
-  needlesPlaying = false;
-  needlesFinalePlaying = false;
-  const wrap = document.getElementById('needlesStageWrap');
-  if(wrap) wrap.classList.remove('visible');
-  if(needlesActiveLayer){
-    needlesActiveLayer.pause();
-    needlesActiveLayer.oncanplay = null;
-    needlesActiveLayer.ontimeupdate = null;
-    needlesActiveLayer.onended = null;
-    needlesActiveLayer.onerror = null;
-    needlesActiveLayer.style.opacity = 0;
-  }
-  if(needlesIdleLayer){
-    needlesIdleLayer.pause();
-    needlesIdleLayer.oncanplay = null;
-    needlesIdleLayer.ontimeupdate = null;
-    needlesIdleLayer.onended = null;
-    needlesIdleLayer.onerror = null;
-    needlesIdleLayer.style.opacity = 0;
-  }
+  needlesPlaying=false;
+  needlesFinalePlaying=false;
+  needlesPhase='stopped';
+  clearTimeout(needlesSafetyTimer);
+  needlesSafetyTimer=null;
+
+  const wrap=document.getElementById('needlesStageWrap');
+  if(wrap)wrap.classList.remove('visible');
+
+  [needlesActiveLayer,needlesIdleLayer].forEach(layer=>{
+    if(!layer)return;
+    layer.pause();
+    layer.oncanplay=null;
+    layer.onended=null;
+    layer.onerror=null;
+    layer.style.opacity=0;
+  });
   resetNeedlesPresentationState();
 }
 
-function playNeedlesFinale(onDone){
-  needlesInitLayers();
-  needlesPlaying = false;
-  needlesFinalePlaying = true;
+function presentFinishedNeedlesArt(imageUrl,onDone){
+  needlesFinishedImageUrl=imageUrl;
+  needlesPresentationDone=onDone;
+  needlesGenerationComplete=true;
 
-  const layerA = document.getElementById('needlesLayerA');
-  const layerB = document.getElementById('needlesLayerB');
-  [layerA, layerB].forEach(v => {
-    if(!v) return;
-    v.pause();
-    v.oncanplay = null;
-    v.ontimeupdate = null;
-    v.onended = null;
-    v.onerror = null;
-    v.style.transition = 'none';
-    v.style.opacity = 0;
-  });
-
-  const player = layerA || needlesActiveLayer;
-  if(!player){
-    if(typeof onDone === 'function') onDone();
-    return;
-  }
-
-  let finished = false;
-  const done = () => {
-    if(finished) return;
-    finished = true;
-    needlesFinalePlaying = false;
-    if(typeof onDone === 'function') onDone();
-  };
-
-  const clips = NEEDLES_FINALE.slice();
-  let idx = 0;
-  const playNext = () => {
-    if(idx >= clips.length){
-      done();
-      return;
+  // Do not interrupt the clip already in progress. needlesAdvance() will
+  // detect completion at that clip's natural end and begin J, S, then T.
+  // Safety fallback only covers a browser that fails to dispatch ended.
+  clearTimeout(needlesSafetyTimer);
+  needlesSafetyTimer=setTimeout(()=>{
+    if(needlesGenerationComplete && needlesPhase!=='finale' && needlesPhase!=='stopped'){
+      needlesPhase='finale';
+      needlesFinalePlaying=true;
+      needlesRevealFinishedArt();
+      needlesPlayFile(needlesEndingQueue.shift());
     }
-    const letter = clips[idx++];
-    player.pause();
-    player.src = needlesClipFile(letter);
-    player.load();
-    player.currentTime = 0;
-    player.loop = false;
-    player.style.opacity = 1;
-    player.oncanplay = () => { player.play().catch(()=>{}); };
-    player.onended = () => playNext();
-    player.onerror = () => done();
-  };
-
-  setTimeout(done, 12000);
-  playNext();
-}
-
-function presentFinishedNeedlesArt(imageUrl, onDone){
-  const easelArt = document.getElementById('needlesEaselArt');
-  const note = document.getElementById('needlesStageNote');
-  if(easelArt){
-    easelArt.src = imageUrl;
-    easelArt.style.display = 'block';
-  }
-  if(note) note.textContent = 'Needles presents your finished design.';
-  playNeedlesFinale(onDone);
+  },30000);
 }
 let refImageAData=null, refImageBData=null;
 let previousImageData=null;
