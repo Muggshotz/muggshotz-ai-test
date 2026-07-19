@@ -1068,6 +1068,32 @@ function needlesNextFile(){
   return null;
 }
 
+// Added with the override-playback fix: NEEDLES_CLIP_OVERRIDES was being
+// populated correctly by the Clipibrator, but nothing here ever read it —
+// every clip rendered at the one fixed default box size regardless of what
+// had been calibrated, which is what was cropping legs/feet on clips that
+// needed to be scaled or repositioned. This pulls the clip's letter out of
+// its filename (e.g. "A_final.webm" -> "A", "M_transparent.webm" -> "M")
+// and looks it up in NEEDLES_CLIP_OVERRIDES.
+function needlesGetClipLetter(filename){
+  if(!filename)return null;
+  const match=filename.match(/^([A-Za-z]+)_/);
+  return match?match[1]:null;
+}
+
+function needlesApplyClipOverride(layer,filename){
+  const letter=needlesGetClipLetter(filename);
+  const override=letter?NEEDLES_CLIP_OVERRIDES[letter]:null;
+  if(override){
+    const scale=typeof override.scale==='number'?override.scale:1;
+    const offsetX=typeof override.offsetX==='number'?override.offsetX:0;
+    const offsetY=typeof override.offsetY==='number'?override.offsetY:0;
+    layer.style.transform=`translate(${offsetX}%, ${offsetY}%) scale(${scale})`;
+  } else {
+    layer.style.transform='';
+  }
+}
+
 function needlesPlayFile(filename){
   if(!filename){
     needlesFinishPresentation();
@@ -1086,6 +1112,7 @@ function needlesPlayFile(filename){
   incoming.loop=false;
   incoming.style.transition='none';
   incoming.style.opacity=0;
+  needlesApplyClipOverride(incoming,filename);
 
   let started=false;
   incoming.oncanplay=()=>{
