@@ -131,8 +131,8 @@
 </div>
 
 <div class="panel">
-  <h1>NEEDLES' EASEL — CLIP CALIBRATOR</h1>
-  <p class="sub">Load a clip and background, dial everything in, then save straight to needles-studio.html on GitHub — no copy-paste needed.</p>
+  <h1>NEEDLES' EASEL — CLIP CALIBRATOR · BRIDGE EDITION</h1>
+  <p class="sub">Load a clip and background, dial everything in, then save straight to needles-studio.html on GitHub. This Bridge Edition automatically restores the calibration override block when the studio file is missing it.</p>
 
   <details>
     <summary>GitHub connection settings</summary>
@@ -765,37 +765,56 @@ previewBtn.addEventListener('click', async () => {
   try{
     const file = await fetchFile();
     const blockRegex = /const\s+NEEDLES_CLIP_OVERRIDES\s*=\s*\{[\s\S]*?\}\s*;/;
-    let match = file.content.match(blockRegex);
-    let workingContent = file.content;
+    const match = file.content.match(blockRegex);
 
-    if(!match){
-      // The block is missing entirely from this fetch (can happen if the
-      // studio file was uploaded from an older snapshot). Insert a fresh
-      // empty one right before the closing script tag instead of
-      // failing outright \u2014 that's a always-valid place for a top-level
-      // const, regardless of what else is in the file.
-      const scriptCloseIdx = workingContent.lastIndexOf('</scr' + 'ipt>');
-      if(scriptCloseIdx === -1) throw new Error('Could not find NEEDLES_CLIP_OVERRIDES, and no closing script tag to insert a fresh one before.');
-      const freshBlock = 'const NEEDLES_CLIP_OVERRIDES = {\n};\n';
-      workingContent = workingContent.slice(0, scriptCloseIdx) + freshBlock + workingContent.slice(scriptCloseIdx);
-      match = workingContent.match(blockRegex);
+    let existingObj = {};
+    let oldEntry = '(none yet)';
+    let newFileContent;
+    let bridgeNote = '';
+
+    if(match){
+      const inner = match[0].replace(/^const\s+NEEDLES_CLIP_OVERRIDES\s*=\s*/, '').replace(/;\s*$/, '');
+      try{ existingObj = new Function('return ' + inner)(); }
+      catch(e){ throw new Error('Could not parse the existing overrides object: ' + e.message); }
+
+      oldEntry = existingObj[letter] ? JSON.stringify(existingObj[letter]) : '(none yet)';
+      existingObj[letter] = buildReadoutObject();
+
+      const newBlock = formatOverridesObject(existingObj);
+      newFileContent = file.content.slice(0, match.index) + newBlock + file.content.slice(match.index + match[0].length);
+    }else{
+      existingObj[letter] = buildReadoutObject();
+      const newBlock = formatOverridesObject(existingObj);
+
+      const defaultBoxRegex = /const\s+NEEDLES_DEFAULT_BOX\s*=\s*\{[\s\S]*?\}\s*;/;
+      const defaultBoxMatch = file.content.match(defaultBoxRegex);
+
+      if(defaultBoxMatch){
+        const insertAt = defaultBoxMatch.index + defaultBoxMatch[0].length;
+        newFileContent = file.content.slice(0, insertAt) +
+          '\n\n// Added automatically by Needles Calibrator Bridge Edition.\n' +
+          newBlock +
+          file.content.slice(insertAt);
+      }else{
+        const scriptMatch = file.content.match(/<script(?:\s[^>]*)?>/i);
+        if(!scriptMatch) throw new Error('Could not find a safe JavaScript insertion point in the fetched file.');
+        const insertAt = scriptMatch.index + scriptMatch[0].length;
+        newFileContent = file.content.slice(0, insertAt) +
+          '\n// Added automatically by Needles Calibrator Bridge Edition.\n' +
+          newBlock +
+          '\n' +
+          file.content.slice(insertAt);
+      }
+
+      bridgeNote = '\n\nCompatibility bridge: NEEDLES_CLIP_OVERRIDES was missing, so the calibrator will add it automatically.';
     }
 
-    const inner = match[0].replace(/^const\s+NEEDLES_CLIP_OVERRIDES\s*=\s*/, '').replace(/;\s*$/, '');
-    let existingObj;
-    try{ existingObj = new Function('return ' + inner)(); }
-    catch(e){ throw new Error('Could not parse the existing overrides object: ' + e.message); }
-
-    const oldEntry = existingObj[letter] ? JSON.stringify(existingObj[letter]) : '(none yet)';
-    existingObj[letter] = buildReadoutObject();
     const newEntry = JSON.stringify(existingObj[letter]);
-
-    const newBlock = formatOverridesObject(existingObj);
-    const newFileContent = workingContent.slice(0, match.index) + newBlock + workingContent.slice(match.index + match[0].length);
     pendingCommit = { newFileContent, sha: file.sha, letter, oldEntry, newEntry };
 
     diffReadout.style.display = 'block';
     diffReadout.textContent = 'Clip ' + letter + '\n  before: ' + oldEntry + '\n  after:  ' + newEntry +
+      bridgeNote +
       '\n\nFile: ' + ghPath.value.trim() + ' @ ' + ghBranch.value.trim() + '\nReady to commit \u2014 nothing has been saved yet.';
     commitBtn.disabled = false;
     setStatus(statusMsg, 'Fetched OK. Review the change above, then commit.', 'ok');
