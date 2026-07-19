@@ -771,11 +771,11 @@ previewBtn.addEventListener('click', async () => {
     if(!match){
       // The block is missing entirely from this fetch (can happen if the
       // studio file was uploaded from an older snapshot). Insert a fresh
-      // empty one right before the closing </script> tag instead of
+      // empty one right before the closing script tag instead of
       // failing outright \u2014 that's a always-valid place for a top-level
       // const, regardless of what else is in the file.
-      const scriptCloseIdx = workingContent.lastIndexOf('</script>');
-      if(scriptCloseIdx === -1) throw new Error('Could not find NEEDLES_CLIP_OVERRIDES, and no </script> tag to insert a fresh one before.');
+      const scriptCloseIdx = workingContent.lastIndexOf('</scr' + 'ipt>');
+      if(scriptCloseIdx === -1) throw new Error('Could not find NEEDLES_CLIP_OVERRIDES, and no closing script tag to insert a fresh one before.');
       const freshBlock = 'const NEEDLES_CLIP_OVERRIDES = {\n};\n';
       workingContent = workingContent.slice(0, scriptCloseIdx) + freshBlock + workingContent.slice(scriptCloseIdx);
       match = workingContent.match(blockRegex);
