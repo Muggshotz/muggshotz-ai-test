@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Needles' Easel — Clip Calibrator</title>
+<style>
+  :root{
+    --bg:#0d1117; --panel:#151b24; --border:#24344a;
+    --blue:#3d8bff; --blue-soft:#8ec4ff; --text:#e8edf5; --dim:#8a97a8;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; font-family:system-ui,-apple-system,Segoe UI,sans-serif;
+    background:var(--bg); color:var(--text); display:flex; min-height:100vh;
+  }
+  .stage-col{
+    flex:1; display:flex; align-items:center; justify-content:center;
+    padding:24px; background:
+      linear-gradient(rgba(255,255,255,.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,.03) 1px, transparent 1px);
+    background-size:24px 24px;
+  }
+  .stage-wrap{
+    position:relative; width:100%; max-width:1000px; aspect-ratio:1448/1086;
+    background:#000; border:1px solid var(--border); border-radius:8px;
+    overflow:hidden; box-shadow:0 8px 30px rgba(0,0,0,.5);
+  }
+  .stage-bg, .stage-clip{
+    position:absolute; top:0; left:0; width:100%; height:100%;
+    object-fit:contain; display:none;
+  }
+  .stage-bg.loaded, .stage-clip.loaded{display:block}
+  .stage-bg{object-fit:cover}
+  .box-outline{
+    position:absolute; border:1px dashed rgba(61,139,255,.5);
+    pointer-events:none;
+  }
+  .placeholder{
+    position:absolute; inset:0; display:flex; align-items:center;
+    justify-content:center; color:var(--dim); font-size:14px; text-align:center;
+    padding:2rem; line-height:1.5;
+  }
+  .panel{
+    width:340px; background:var(--panel); border-left:1px solid var(--border);
+    padding:1.5rem; overflow-y:auto;
+  }
+  h1{font-size:16px; margin:0 0 4px; letter-spacing:.5px}
+  .sub{font-size:11px; color:var(--dim); margin:0 0 1.5rem; line-height:1.5}
+  .field{margin-bottom:1.25rem}
+  .field label{
+    display:block; font-size:11px; color:var(--dim); text-transform:uppercase;
+    letter-spacing:.5px; margin-bottom:6px;
+  }
+  input[type=file]{
+    width:100%; font-size:12px; color:var(--dim);
+    background:#0d0d0d; border:1px solid #333; border-radius:6px; padding:8px;
+  }
+  .slider-row{display:flex; align-items:center; gap:10px}
+  input[type=range]{flex:1; accent-color:var(--blue)}
+  .val{
+    width:56px; text-align:right; font-variant-numeric:tabular-nums;
+    font-size:13px; color:var(--blue-soft);
+  }
+  .divider{height:1px; background:var(--border); margin:1.25rem 0}
+  .readout{
+    background:#0d0d0d; border:1px solid var(--border); border-radius:8px;
+    padding:12px; font-family:ui-monospace,Menlo,Consolas,monospace;
+    font-size:12px; color:var(--blue-soft); white-space:pre-wrap; line-height:1.6;
+  }
+  button{
+    width:100%; margin-top:10px; background:linear-gradient(180deg,#6fb3ff,#3d8bff 55%,#2266cc);
+    border:1px solid #7ec4ff; border-radius:8px; padding:.7rem;
+    color:#fff; font-size:13px; font-weight:600; cursor:pointer;
+  }
+  button.ghost{
+    background:#0d0d0d; border:1px solid #444; color:var(--dim);
+  }
+  button:active{transform:translateY(1px)}
+  .label-select{display:flex; gap:6px; margin-bottom:1.25rem}
+  .label-select select{
+    flex:1; background:#0d0d0d; border:1px solid #333; border-radius:6px;
+    color:var(--text); padding:6px; font-size:12px;
+  }
+  .copied{color:#4ade80; font-size:11px; margin-top:6px; display:none; text-align:center}
+</style>
+</head>
+<body>
+
+<div class="stage-col">
+  <div class="stage-wrap" id="stageWrap">
+    <div class="placeholder" id="placeholder">Load the stage background and a clip on the right to begin.</div>
+    <img class="stage-bg" id="stageBg">
+    <div class="box-outline" id="boxOutline"></div>
+    <video class="stage-clip" id="stageClip" autoplay muted loop playsinline></video>
+  </div>
+</div>
+
+<div class="panel">
+  <h1>NEEDLES' EASEL — CLIP CALIBRATOR</h1>
+  <p class="sub">Load your local stage background and one clip. Slide scale/position until it looks right, then copy the values back for me to hardcode into the per-clip map.</p>
+
+  <div class="field">
+    <label>Stage background image</label>
+    <input type="file" id="bgInput" accept="image/*">
+  </div>
+
+  <div class="field">
+    <label>Clip (video file)</label>
+    <input type="file" id="clipInput" accept="video/*">
+  </div>
+
+  <div class="label-select">
+    <select id="clipLabel">
+      <option value="">Clip letter (optional, for the readout)</option>
+      <option>A</option><option>B</option><option>C</option><option>D</option>
+      <option>E</option><option>F</option><option>G</option><option>H</option>
+      <option>I</option><option>J</option><option>K</option><option>L</option>
+      <option>M</option><option>N</option><option>O</option><option>P</option>
+      <option>Q</option><option>R</option><option>S</option><option>T</option>
+    </select>
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="field">
+    <label>Scale</label>
+    <div class="slider-row">
+      <input type="range" id="scale" min="0.5" max="1.5" step="0.01" value="1">
+      <span class="val" id="scaleVal">1.00</span>
+    </div>
+  </div>
+
+  <div class="field">
+    <label>Horizontal offset (%)</label>
+    <div class="slider-row">
+      <input type="range" id="offsetX" min="-20" max="20" step="0.1" value="0">
+      <span class="val" id="offsetXVal">0.0</span>
+    </div>
+  </div>
+
+  <div class="field">
+    <label>Vertical offset (%)</label>
+    <div class="slider-row">
+      <input type="range" id="offsetY" min="-20" max="20" step="0.1" value="0">
+      <span class="val" id="offsetYVal">0.0</span>
+    </div>
+  </div>
+
+  <div class="field">
+    <label><input type="checkbox" id="showBox" checked style="accent-color:var(--blue); margin-right:6px">Show bounding box outline</label>
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="readout" id="readout">scale: 1.00
+offsetX: 0.0%
+offsetY: 0.0%</div>
+  <button id="copyBtn">Copy values</button>
+  <button class="ghost" id="resetBtn">Reset to default</button>
+  <div class="copied" id="copiedMsg">Copied.</div>
+</div>
+
+<script>
+// Same DEFAULT_BOX percentages used in needles-studio.html
+const DEFAULT_BOX = { top: 10.59, left: 15.19, width: 78.25, height: 78.27 };
+
+const stageWrap = document.getElementById('stageWrap');
+const placeholder = document.getElementById('placeholder');
+const stageBg = document.getElementById('stageBg');
+const stageClip = document.getElementById('stageClip');
+const boxOutline = document.getElementById('boxOutline');
+const bgInput = document.getElementById('bgInput');
+const clipInput = document.getElementById('clipInput');
+const clipLabel = document.getElementById('clipLabel');
+const scaleSlider = document.getElementById('scale');
+const offsetXSlider = document.getElementById('offsetX');
+const offsetYSlider = document.getElementById('offsetY');
+const scaleVal = document.getElementById('scaleVal');
+const offsetXVal = document.getElementById('offsetXVal');
+const offsetYVal = document.getElementById('offsetYVal');
+const readout = document.getElementById('readout');
+const showBox = document.getElementById('showBox');
+const copyBtn = document.getElementById('copyBtn');
+const resetBtn = document.getElementById('resetBtn');
+const copiedMsg = document.getElementById('copiedMsg');
+
+let bgLoaded = false, clipLoaded = false;
+
+function updatePlaceholder(){
+  placeholder.style.display = (bgLoaded || clipLoaded) ? 'none' : 'flex';
+}
+
+bgInput.addEventListener('change', e => {
+  const f = e.target.files[0];
+  if(!f) return;
+  stageBg.src = URL.createObjectURL(f);
+  stageBg.classList.add('loaded');
+  bgLoaded = true;
+  updatePlaceholder();
+});
+
+clipInput.addEventListener('change', e => {
+  const f = e.target.files[0];
+  if(!f) return;
+  stageClip.src = URL.createObjectURL(f);
+  stageClip.classList.add('loaded');
+  stageClip.play().catch(()=>{});
+  clipLoaded = true;
+  updatePlaceholder();
+});
+
+function positionBox(){
+  boxOutline.style.top = DEFAULT_BOX.top + '%';
+  boxOutline.style.left = DEFAULT_BOX.left + '%';
+  boxOutline.style.width = DEFAULT_BOX.width + '%';
+  boxOutline.style.height = DEFAULT_BOX.height + '%';
+}
+positionBox();
+
+function applyTransform(){
+  const scale = parseFloat(scaleSlider.value);
+  const offX = parseFloat(offsetXSlider.value);
+  const offY = parseFloat(offsetYSlider.value);
+
+  scaleVal.textContent = scale.toFixed(2);
+  offsetXVal.textContent = offX.toFixed(1);
+  offsetYVal.textContent = offY.toFixed(1);
+
+  // Base box position/size, then scale from the bottom-center (feet stay anchored)
+  // and nudge with the offsets.
+  const boxTop = DEFAULT_BOX.top + offY;
+  const boxLeft = DEFAULT_BOX.left + offX;
+  stageClip.style.top = boxTop + '%';
+  stageClip.style.left = boxLeft + '%';
+  stageClip.style.width = DEFAULT_BOX.width + '%';
+  stageClip.style.height = DEFAULT_BOX.height + '%';
+  stageClip.style.transformOrigin = 'center bottom';
+  stageClip.style.transform = `scale(${scale})`;
+
+  const label = clipLabel.value ? clipLabel.value : '<letter>';
+  readout.textContent =
+`clip: ${label}
+scale: ${scale.toFixed(2)}
+offsetX: ${offX.toFixed(1)}%
+offsetY: ${offY.toFixed(1)}%`;
+}
+
+[scaleSlider, offsetXSlider, offsetYSlider, clipLabel].forEach(el =>
+  el.addEventListener('input', applyTransform)
+);
+
+showBox.addEventListener('change', () => {
+  boxOutline.style.display = showBox.checked ? 'block' : 'none';
+});
+
+resetBtn.addEventListener('click', () => {
+  scaleSlider.value = 1;
+  offsetXSlider.value = 0;
+  offsetYSlider.value = 0;
+  applyTransform();
+});
+
+copyBtn.addEventListener('click', () => {
+  navigator.clipboard.writeText(readout.textContent).then(() => {
+    copiedMsg.style.display = 'block';
+    setTimeout(() => copiedMsg.style.display = 'none', 1500);
+  });
+});
+
+applyTransform();
+</script>
+
+</body>
+</html>
