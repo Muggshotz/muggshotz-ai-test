@@ -509,6 +509,10 @@
 <div class="card" id="uploadPhotoCard"><div class="card-title">📸 Upload Photo</div>
 <div style="font-size:11px;color:#777;letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px;text-align:center">Photo 1</div>
 <div class="needles-clipboard"><div class="needles-clip"></div><div class="upload-zone needles-polaroid" id="uploadZone" onclick="document.getElementById('fileInput').click()"><div style="font-size:32px;color:#555;margin-bottom:8px">👤</div><div class="upload-text">Tap here to upload a photo</div><div class="upload-sub">Clear face photo works best</div></div></div>
+<div id="workshopRecallRow" style="display:none;gap:8px;margin-top:.6rem">
+<button class="download-btn" id="recallPhotoBtn" style="flex:1;margin-top:0" onclick="recallLastPhotoUsed()">↻ Use Last Photo Uploaded</button>
+<button class="download-btn" id="recallGeneratedBtn" style="flex:1;margin-top:0" onclick="recallLastGeneratedImage()">↻ Use Last Design Generated</button>
+</div>
 <div class="needles-stage-wrap" id="needlesStageWrap">
 <div class="needles-stage">
 <img class="needles-stage-bg" src="Easel_with_reference_photo.png" alt="Needles' studio"/>
@@ -2543,6 +2547,7 @@ document.getElementById('fileInput').addEventListener('change',function(e){
   resizeImageFile(file, 1280).then((dataUrl)=>{
     setMainSlotImage(dataUrl);
     saveWorkshop();
+    hideWorkshopRecallRow();
     startPhotoGuide();
   });
 });
@@ -4019,7 +4024,18 @@ function saveMugState(){
   }catch(e){console.error('Could not save mug state:',e);}
 }
 
-function restoreWorkshop(){
+// UPDATED (per Alyx's request, July 2026): the generator no longer
+// auto-restores the last-used photo or last-generated design when it
+// opens — every fresh visit now starts on a completely blank upload
+// zone, exactly like a first-time visitor. If there's still recall
+// data sitting in localStorage from a previous session,
+// checkForWorkshopRecall() below just surfaces two buttons so the
+// customer can deliberately pull it back if they want it; nothing
+// restores automatically anymore. The "My Designs" library
+// (placed/positioned designs) still restores automatically, since that
+// wasn't part of the reported problem — only the top photo/workshop
+// slot was reloading unexpectedly.
+function restoreMugLibrary(){
   try{
     const mug=JSON.parse(localStorage.getItem('muggshotz_mug_state')||'null');
     if(mug&&Array.isArray(mug.designs)&&mug.designs.length){
@@ -4031,22 +4047,61 @@ function restoreWorkshop(){
       updateLibraryToggleLabel();
       updatePlacementSummary();
     }
-    const saved=JSON.parse(localStorage.getItem('muggshotz_workshop')||'null');
-    if(saved&&saved.working){
-      previousImageData=saved.previous||null;
-      currentDesignId=saved.designId||null;
-      setMainSlotImage(saved.working);
-      if(previousImageData)document.getElementById('toggleImageBtn').style.display='block';
-      if(currentDesignId){
-        document.getElementById('approveRow').style.display='block';
-        document.getElementById('keepTweakingBtn').style.display='block';
-        document.getElementById('downloadDesignBtn').style.display='block';
-        loadBaseImageForCaption(saved.working);
-      }
-    }
-  }catch(e){console.error('Workshop restore failed:',e);}
+  }catch(e){console.error('Mug library restore failed:',e);}
 }
-restoreWorkshop();
+
+function hideWorkshopRecallRow(){
+  const row=document.getElementById('workshopRecallRow');
+  if(row)row.style.display='none';
+}
+
+function checkForWorkshopRecall(){
+  try{
+    const saved=JSON.parse(localStorage.getItem('muggshotz_workshop')||'null');
+    if(!saved||!saved.working)return;
+    const row=document.getElementById('workshopRecallRow');
+    const genBtn=document.getElementById('recallGeneratedBtn');
+    if(!row||!genBtn)return;
+    const hasGenerated=!!saved.previous; // 'previous' is only ever set once a generation has completed
+    genBtn.style.display=hasGenerated?'block':'none';
+    row.style.display='flex';
+  }catch(e){console.error('Workshop recall check failed:',e);}
+}
+
+function recallLastPhotoUsed(){
+  try{
+    const saved=JSON.parse(localStorage.getItem('muggshotz_workshop')||'null');
+    if(!saved)return;
+    const photo=saved.previous||saved.working;
+    if(!photo)return;
+    previousImageData=null;
+    document.getElementById('toggleImageBtn').style.display='none';
+    setMainSlotImage(photo);
+    saveWorkshop();
+    hideWorkshopRecallRow();
+  }catch(e){console.error('Could not recall last photo used:',e);}
+}
+
+function recallLastGeneratedImage(){
+  try{
+    const saved=JSON.parse(localStorage.getItem('muggshotz_workshop')||'null');
+    if(!saved||!saved.working)return;
+    previousImageData=saved.previous||null;
+    currentDesignId=saved.designId||null;
+    setMainSlotImage(saved.working);
+    if(previousImageData)document.getElementById('toggleImageBtn').style.display='block';
+    if(currentDesignId){
+      document.getElementById('approveRow').style.display='block';
+      document.getElementById('keepTweakingBtn').style.display='block';
+      document.getElementById('downloadDesignBtn').style.display='block';
+      loadBaseImageForCaption(saved.working);
+    }
+    saveWorkshop();
+    hideWorkshopRecallRow();
+  }catch(e){console.error('Could not recall last generated image:',e);}
+}
+restoreMugLibrary();
+checkForWorkshopRecall();
 refreshApproveRowForMode();
 refreshMugPrintModeVisibility();
 refreshPhotoPosterVisibility();
@@ -4073,6 +4128,7 @@ function resetEverythingFreshStart(){
   resetMainSlot();
   clearReferenceSlots();
   clearWorkshopStorage();
+  hideWorkshopRecallRow();
 
   // All generated designs + slot placements
   recentDesigns=[];
