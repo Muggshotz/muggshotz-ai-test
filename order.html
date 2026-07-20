@@ -62,6 +62,9 @@ label{font-size:11px;color:#888;letter-spacing:.5px;text-transform:uppercase;dis
 .mockup-side-cta.cta-left:hover{background:rgba(20,45,25,0.78)}
 .mockup-side-cta.cta-right{left:calc(100% + 14px);color:#ffb27a;border-color:rgba(255,178,122,0.5)}
 .mockup-side-cta.cta-right:hover{background:rgba(45,25,10,0.78)}
+.select-flash-prompt{display:none;position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:2100;max-width:92vw;width:360px;text-align:center;padding:.9rem 1.1rem;border-radius:12px;background:#1a0a00;border:2px solid #ff6a00;color:#ffb27a;font-size:14px;font-weight:800;letter-spacing:.2px;box-shadow:0 8px 24px rgba(0,0,0,0.6);animation:selectFlashPulse 1s ease-in-out infinite}
+.select-flash-prompt.visible{display:block}
+@keyframes selectFlashPulse{0%,100%{opacity:1;box-shadow:0 0 0 rgba(255,106,0,0)}50%{opacity:.85;box-shadow:0 0 18px rgba(255,106,0,.4)}}
 </style>
 </head>
 <body>
@@ -299,6 +302,7 @@ label{font-size:11px;color:#888;letter-spacing:.5px;text-transform:uppercase;dis
 <div class="mockup-wait-banner" id="mockupWaitBanner">Please Stand By While Your Mockup Is Being Created</div>
 <div class="mockup-side-cta cta-left" id="mockupCtaLeft" onclick="goCheckoutFromMockup(event)">Yes, go to checkout</div>
 <div class="mockup-side-cta cta-right" id="mockupCtaRight" onclick="returnToOptionsFromMockup(event)">Not yet — I'd still like to make changes</div>
+<div class="select-flash-prompt" id="selectFlashPrompt"></div>
 
 <script>
 const MUG_STYLES = {
@@ -402,6 +406,14 @@ let selectedColor = null;
 let giftMessageEnabled = false;
 let fullWrapEnabled = false;
 
+// Added for the missing-selection flash prompts: tracks whether the
+// customer has actively clicked a style tile themselves (as opposed to
+// just inheriting the default/preselected value carried over from the
+// generator). Color already has a natural "untouched" signal —
+// selectedColor stays null until they click one — but style always has
+// SOME value selected by default, so it needs its own explicit flag.
+let styleTouched = false;
+
 let selectedTravelProductKey = null;
 let selectedTravelColor = null;
 
@@ -423,6 +435,38 @@ function onFlyerCodeInput(){
     statusEl.className = 'flyer-status pending';
     statusEl.textContent = '';
   }
+}
+
+// ===== Missing-selection flash prompts (Alyx's request) =====
+// Two independent checks, both scrolling back to the relevant card and
+// flashing a message when triggered. Only meaningful for the mug flow,
+// since only mugs have both a style AND an optional color to forget.
+let selectFlashTimer = null;
+function showSelectFlashPrompt(msg, scrollTargetId){
+  const el = document.getElementById('selectFlashPrompt');
+  if (!el) return;
+  el.textContent = msg;
+  el.classList.add('visible');
+  clearTimeout(selectFlashTimer);
+  selectFlashTimer = setTimeout(() => { el.classList.remove('visible'); }, 4000);
+  const target = document.getElementById(scrollTargetId);
+  if (target) target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+// Returns true if selections are complete and it's fine to proceed;
+// false if it flashed a prompt and the caller should stop.
+function validateMugSelectionsAndFlash(){
+  if (!isMug()) return true;
+  const hasColors = !!MUG_STYLES[selectedStyle]?.sizes?.[selectedSize]?.colors;
+  if (hasColors && !selectedColor) {
+    showSelectFlashPrompt('Please select a color, or choose Classic White.', 'colorCard');
+    return false;
+  }
+  if (selectedColor && !styleTouched) {
+    showSelectFlashPrompt('Please select a style.', 'mugStyleCard');
+    return false;
+  }
+  return true;
 }
 
 // ===== Shared real-photo mockup job runner (two-step start/check flow) =====
@@ -504,6 +548,7 @@ function hideMockupSideCta(){
 
 function goCheckoutFromMockup(e){
   if (e) e.stopPropagation();
+  if (!validateMugSelectionsAndFlash()) return;
   scrollToCheckout();
 }
 
@@ -1296,6 +1341,7 @@ function pickStyle(el){
   document.querySelectorAll('#mugStyleGrid .btn-select').forEach(b=>b.classList.remove('selected'));
   el.classList.add('selected');
   selectedStyle = el.dataset.style;
+  styleTouched = true;
   selectedColor = null;
   const hasColors = !!MUG_STYLES[selectedStyle].sizes[selectedSize].colors;
   document.getElementById('colorCard').style.display = hasColors ? 'block' : 'none';
@@ -1507,6 +1553,8 @@ function setStatus(msg, isError){
 }
 
 async function submitOrder(){
+  if (!validateMugSelectionsAndFlash()) return;
+
   const fullName = document.getElementById('fullName').value.trim();
   const email = document.getElementById('email').value.trim();
   const phone = document.getElementById('phone').value.trim();
@@ -1840,6 +1888,21 @@ renderBridgeGrid();
 setupPageForMode();
 const fullWrapCheckboxEl = document.getElementById('fullWrapToggle');
 if (fullWrapCheckboxEl) fullWrapCheckboxEl.checked = fullWrapEnabled;
+
+// ===== Land on the Live Preview area on first load (Alyx's request) =====
+// Previously the page just opened at the very top and left the customer
+// free to scroll straight down into the raw style/color/full-wrap
+// selection cards before their real mockup had even started loading —
+// with nothing to indicate a confirmation step was coming. Scrolling to
+// the Live Preview card immediately puts the customer where the mockup
+// and the "Yes, go to checkout" / "Not yet" choice will actually appear,
+// instead of leaving them stranded in the plain picker cards first.
+if (isMug()) {
+  setTimeout(() => {
+    const livePreview = document.getElementById('livePreviewCard');
+    if (livePreview) livePreview.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, 300);
+}
 </script>
 </body>
 </html>
