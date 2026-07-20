@@ -116,6 +116,15 @@
   .target-row .target-remove{flex:0 0 auto; width:auto; margin:0; padding:2px 8px; font-size:11px; background:#2a1010; border:1px solid #5a2a2a; color:#ff8a7a}
   .add-target-row{display:grid; grid-template-columns:1fr 1fr auto; gap:6px; align-items:end; margin-top:8px}
   .add-target-row button{margin-top:0; width:auto; padding:.55rem .8rem}
+  .thumb-grid{display:grid; grid-template-columns:repeat(3, 1fr); gap:8px; margin-top:10px}
+  .thumb-cell{cursor:pointer; border:2px solid #333; border-radius:6px; overflow:hidden; background:#0d0d0d; text-align:center}
+  .thumb-cell:hover{border-color:var(--blue)}
+  .thumb-cell.selected{border-color:var(--blue); box-shadow:0 0 0 1px var(--blue)}
+  .thumb-cell canvas{width:100%; height:64px; object-fit:cover; display:block; background:#000}
+  .thumb-cell img{width:100%; height:64px; object-fit:cover; display:block; background:#000}
+  .thumb-cell .thumb-label{font-size:10px; color:var(--dim); padding:3px 2px; letter-spacing:.3px}
+  .thumb-cell.thumb-pending .thumb-label{color:#555}
+  .thumb-cell.thumb-has-override .thumb-label{color:var(--blue-soft)}
 </style>
 </head>
 <body>
@@ -182,13 +191,29 @@
     </div>
   </details>
 
+  <details open>
+    <summary>Browse clips — pick one visually</summary>
+    <p class="sub" style="margin-top:0">Pulls the list of clip files straight out of the live file, grabs a real frame from each one as a thumbnail, and loads whichever one you click — already populated with its own currently saved values, not blank defaults.</p>
+    <button class="ghost small" id="loadThumbsBtn" type="button" style="margin-top:0">Load clip thumbnails</button>
+    <div class="status" id="thumbsStatus"></div>
+    <div class="thumb-grid" id="thumbGrid"></div>
+  </details>
+
+  <details open>
+    <summary>Browse backdrops — pick one visually</summary>
+    <p class="sub" style="margin-top:0">Scans the repo for every image file so you can see and compare all the candidate backdrops side by side, and click one to load it onto the stage.</p>
+    <button class="ghost small" id="loadBackdropsBtn" type="button" style="margin-top:0">Load backdrop thumbnails</button>
+    <div class="status" id="backdropsStatus"></div>
+    <div class="thumb-grid" id="backdropGrid"></div>
+  </details>
+
   <div class="field">
-    <label>Stage background image</label>
+    <label>Stage background image — or pick one above instead</label>
     <input type="file" id="bgInput" accept="image/*">
   </div>
 
   <div class="field">
-    <label>Clip (video file)</label>
+    <label>Clip (video file) — or pick one above instead</label>
     <input type="file" id="clipInput" accept="video/*">
   </div>
 
@@ -196,6 +221,8 @@
     <label>Clip key (auto-filled from filename — edit if needed)</label>
     <input type="text" id="clipLabel" placeholder="load a clip to auto-fill">
   </div>
+  <button class="ghost small" id="loadValuesBtn" type="button">Load this clip's currently saved values</button>
+  <div class="status" id="loadValuesStatus"></div>
 
   <div class="divider"></div>
   <h2>Size &amp; position</h2>
@@ -582,6 +609,244 @@ function getEnabledTargets(){
   return TARGETS.filter(t => t.enabled !== false);
 }
 
+// ===== Retweak an already-loaded clip (Alyx's request) =====
+// Populates every slider/field from a saved override object — or resets
+// to plain defaults if none exists yet — so editing an existing clip
+// starts from where it actually sits instead of from scale 1 / offset 0.
+function applyLoadedOverrideValues(obj){
+  if(!obj){
+    scaleSlider.value = 1; offsetXSlider.value = 0; offsetYSlider.value = 0;
+    fadeInOverride.checked = false; fadeInVal.disabled = true; fadeInVal.value = 1.0;
+    fadeOutOverride.checked = false; fadeOutVal.disabled = true; fadeOutVal.value = 2.0;
+    freezeAtInput.value = ''; freezeDurationInput.value = 1.0;
+    slowStartInput.value = ''; slowEndInput.value = ''; slowRateSlider.value = 0.4;
+    driftStartInput.value = ''; driftDurationInput.value = 1.0; driftToXSlider.value = 0; driftToYSlider.value = 0;
+    applyTransform();
+    return;
+  }
+  scaleSlider.value = obj.scale != null ? obj.scale : 1;
+  offsetXSlider.value = obj.offsetX != null ? obj.offsetX : 0;
+  offsetYSlider.value = obj.offsetY != null ? obj.offsetY : 0;
+
+  fadeInOverride.checked = obj.fadeIn != null;
+  fadeInVal.disabled = !fadeInOverride.checked;
+  fadeInVal.value = obj.fadeIn != null ? obj.fadeIn : 1.0;
+
+  fadeOutOverride.checked = obj.fadeOut != null;
+  fadeOutVal.disabled = !fadeOutOverride.checked;
+  fadeOutVal.value = obj.fadeOut != null ? obj.fadeOut : 2.0;
+
+  freezeAtInput.value = obj.freezeAt != null ? obj.freezeAt : '';
+  freezeDurationInput.value = obj.freezeDuration != null ? obj.freezeDuration : 1.0;
+
+  slowStartInput.value = obj.slowStart != null ? obj.slowStart : '';
+  slowEndInput.value = obj.slowEnd != null ? obj.slowEnd : '';
+  slowRateSlider.value = obj.slowRate != null ? obj.slowRate : 0.4;
+
+  driftStartInput.value = obj.driftStart != null ? obj.driftStart : '';
+  driftDurationInput.value = obj.driftDuration != null ? obj.driftDuration : 1.0;
+  driftToXSlider.value = obj.driftToOffsetX != null ? obj.driftToOffsetX : 0;
+  driftToYSlider.value = obj.driftToOffsetY != null ? obj.driftToOffsetY : 0;
+
+  applyTransform();
+}
+
+function parseOverridesFromContent(fileContent){
+  const blockRegex = /const\s+NEEDLES_CLIP_OVERRIDES\s*=\s*\{[\s\S]*?\}\s*;/;
+  const match = fileContent.match(blockRegex);
+  if(!match) return {};
+  const inner = match[0].replace(/^const\s+NEEDLES_CLIP_OVERRIDES\s*=\s*/, '').replace(/;\s*$/, '');
+  try{
+    return new Function('return ' + inner)();
+  }catch(e){
+    const repaired = inner.replace(
+      /(^|[{,]\s*)([A-Za-z_$][A-Za-z0-9_$-]*)\s*:/gm,
+      (full, prefix, key) => prefix + JSON.stringify(key) + ':'
+    );
+    try{ return new Function('return ' + repaired)(); }
+    catch(e2){ return {}; }
+  }
+}
+
+function extractClipFilenames(fileContent){
+  const matches = fileContent.match(/\b[A-Za-z0-9]+_(?:final|transparent)\.webm\b/g) || [];
+  return Array.from(new Set(matches));
+}
+
+function deriveClipKeyFromFilename(name){
+  let key = name.replace(/\.[^/.]+$/, '');
+  key = key.replace(/_final$/i, '').replace(/_transparent$/i, '');
+  return key;
+}
+
+// ---- manual "load this clip's saved values" button ----
+document.getElementById('loadValuesBtn').addEventListener('click', async () => {
+  const key = clipLabel.value.trim();
+  const statusEl = document.getElementById('loadValuesStatus');
+  if(!key){ setStatus(statusEl, 'Type or select a clip key first.', 'err'); return; }
+  if(!ghToken.value.trim()){ setStatus(statusEl, 'Paste your GitHub token first.', 'err'); return; }
+  const targets = getEnabledTargets();
+  if(!targets.length){ setStatus(statusEl, 'No sync targets are checked.', 'err'); return; }
+  setStatus(statusEl, 'Fetching current values from ' + targets[0].label + '\u2026', 'pending');
+  try{
+    const file = await fetchFile(targets[0].path);
+    const obj = parseOverridesFromContent(file.content);
+    if(obj[key]){
+      applyLoadedOverrideValues(obj[key]);
+      setStatus(statusEl, 'Loaded saved values for "' + key + '" from ' + targets[0].label + '.', 'ok');
+    } else {
+      setStatus(statusEl, 'No saved values found for "' + key + '" on ' + targets[0].label + ' \u2014 sliders left as-is.', 'pending');
+    }
+  }catch(err){
+    setStatus(statusEl, 'Error: ' + err.message, 'err');
+  }
+});
+
+// ---- browse-backdrops thumbnail gallery ----
+document.getElementById('loadBackdropsBtn').addEventListener('click', async () => {
+  const backdropsStatus = document.getElementById('backdropsStatus');
+  const grid = document.getElementById('backdropGrid');
+  const btn = document.getElementById('loadBackdropsBtn');
+  if(!ghToken.value.trim()){ setStatus(backdropsStatus, 'Paste your GitHub token first.', 'err'); return; }
+
+  setStatus(backdropsStatus, 'Listing repo files\u2026', 'pending');
+  btn.disabled = true;
+  try{
+    const items = await fetchRepoRootListing();
+    const images = items.filter(it => it.type === 'file' && /\.(png|jpe?g|webp|gif)$/i.test(it.name));
+    if(!images.length) throw new Error('No image files found at the repo root.');
+
+    grid.innerHTML = '';
+    setStatus(backdropsStatus, 'Loading ' + images.length + ' backdrop thumbnails\u2026', 'pending');
+
+    for(const item of images){
+      const filename = item.name;
+      const cell = document.createElement('div');
+      cell.className = 'thumb-cell thumb-pending';
+      const img = document.createElement('img');
+      const labelEl = document.createElement('div');
+      labelEl.className = 'thumb-label';
+      labelEl.textContent = filename;
+      cell.appendChild(img);
+      cell.appendChild(labelEl);
+      grid.appendChild(cell);
+
+      cell.addEventListener('click', async () => {
+        document.querySelectorAll('#backdropGrid .thumb-cell').forEach(c => c.classList.remove('selected'));
+        cell.classList.add('selected');
+        setStatus(backdropsStatus, 'Loading ' + filename + ' onto the stage\u2026', 'pending');
+        try{
+          const url = img.src && img.src.startsWith('blob:') ? img.src : await fetchImageBlobUrl(filename);
+          stageBg.src = url;
+          stageBg.classList.add('loaded');
+          bgLoaded = true;
+          updatePlaceholder();
+          setStatus(backdropsStatus, 'Loaded ' + filename + ' onto the stage.', 'ok');
+        }catch(err){
+          setStatus(backdropsStatus, 'Error loading ' + filename + ': ' + err.message, 'err');
+        }
+      });
+
+      try{
+        const url = await fetchImageBlobUrl(filename);
+        img.src = url;
+        cell.classList.remove('thumb-pending');
+      }catch(err){
+        cell.classList.remove('thumb-pending');
+        labelEl.textContent = filename + ' (failed to load)';
+      }
+    }
+    setStatus(backdropsStatus, 'Loaded ' + images.length + ' backdrop thumbnail(s). Click one to load it onto the stage.', 'ok');
+  }catch(err){
+    setStatus(backdropsStatus, 'Error: ' + err.message, 'err');
+  }finally{
+    btn.disabled = false;
+  }
+});
+
+// ---- browse-clips thumbnail gallery ----
+document.getElementById('loadThumbsBtn').addEventListener('click', async () => {
+  const thumbsStatus = document.getElementById('thumbsStatus');
+  const grid = document.getElementById('thumbGrid');
+  const btn = document.getElementById('loadThumbsBtn');
+  if(!ghToken.value.trim()){ setStatus(thumbsStatus, 'Paste your GitHub token first.', 'err'); return; }
+  const targets = getEnabledTargets();
+  if(!targets.length){ setStatus(thumbsStatus, 'No sync targets are checked.', 'err'); return; }
+
+  setStatus(thumbsStatus, 'Fetching clip list from ' + targets[0].label + '\u2026', 'pending');
+  btn.disabled = true;
+  try{
+    const file = await fetchFile(targets[0].path);
+    const filenames = extractClipFilenames(file.content);
+    if(!filenames.length) throw new Error('No clip filenames found in ' + targets[0].path + '.');
+    const overridesObj = parseOverridesFromContent(file.content);
+
+    grid.innerHTML = '';
+    setStatus(thumbsStatus, 'Generating ' + filenames.length + ' thumbnails\u2026 this can take a little while.', 'pending');
+
+    for(const filename of filenames){
+      const key = deriveClipKeyFromFilename(filename);
+      const cell = document.createElement('div');
+      cell.className = 'thumb-cell thumb-pending';
+      const canvas = document.createElement('canvas');
+      canvas.width = 160; canvas.height = 90;
+      const labelEl = document.createElement('div');
+      labelEl.className = 'thumb-label';
+      labelEl.textContent = key + (overridesObj[key] ? ' \u2713' : '');
+      cell.appendChild(canvas);
+      cell.appendChild(labelEl);
+      grid.appendChild(cell);
+
+      cell.addEventListener('click', async () => {
+        document.querySelectorAll('.thumb-cell').forEach(c => c.classList.remove('selected'));
+        cell.classList.add('selected');
+        setStatus(thumbsStatus, 'Loading ' + filename + '\u2026', 'pending');
+        try{
+          const url = await fetchClipBlobUrl(filename);
+          stageClip.src = url;
+          stageClip.classList.add('loaded');
+          stageClip.play().catch(()=>{});
+          clipLoaded = true;
+          updatePlaceholder();
+          clipLabel.value = key;
+          applyLoadedOverrideValues(overridesObj[key] || null);
+          setStatus(thumbsStatus, 'Loaded ' + filename + (overridesObj[key] ? ' with its saved values.' : ' \u2014 no saved values yet, starting from default.'), 'ok');
+        }catch(err){
+          setStatus(thumbsStatus, 'Error loading ' + filename + ': ' + err.message, 'err');
+        }
+      });
+
+      // Generate the actual preview frame — sequential, one clip at a
+      // time, to stay gentle on GitHub's API rather than firing 20+
+      // parallel blob fetches at once.
+      try{
+        const url = await fetchClipBlobUrl(filename);
+        await new Promise((resolve) => {
+          const v = document.createElement('video');
+          v.muted = true;
+          v.src = url;
+          v.addEventListener('loadeddata', () => { v.currentTime = Math.min(1.0, (v.duration || 2) / 3); });
+          v.addEventListener('seeked', () => {
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(v, 0, 0, canvas.width, canvas.height);
+            cell.classList.remove('thumb-pending');
+            if(overridesObj[key]) cell.classList.add('thumb-has-override');
+            resolve();
+          });
+          v.addEventListener('error', () => { cell.classList.remove('thumb-pending'); resolve(); });
+        });
+      }catch(err){
+        cell.classList.remove('thumb-pending');
+      }
+    }
+    setStatus(thumbsStatus, 'Loaded ' + filenames.length + ' clip thumbnails from ' + targets[0].label + '. Click one to select it.', 'ok');
+  }catch(err){
+    setStatus(thumbsStatus, 'Error: ' + err.message, 'err');
+  }finally{
+    btn.disabled = false;
+  }
+});
+
 let bgLoaded = false, clipLoaded = false;
 
 function updatePlaceholder(){
@@ -821,6 +1086,52 @@ async function commitFile(newContent, sha, message, path){
     body: JSON.stringify({ message: message, content: b64EncodeUnicode(newContent), sha: sha, branch: ghBranch.value.trim() })
   });
   if(!res.ok){ const body = await res.text(); throw new Error('GitHub returned ' + res.status + ' for ' + path + ': ' + body.slice(0,300)); }
+  return res.json();
+}
+
+// Binary-safe fetch, shared by the clip and backdrop browsers below —
+// same Contents-API-then-blobs-API pattern as fetchFile(), but decodes
+// to raw bytes instead of unicode text, since these are media files,
+// not source code. Works for private repos and any file size up to the
+// blobs API's 100MB limit, unlike a plain raw.githubusercontent.com
+// fetch which can't reliably carry the auth token for a private repo.
+async function fetchBinaryBlobUrl(filename, mimeType){
+  const metaRes = await fetch(apiBase(filename) + '?ref=' + encodeURIComponent(ghBranch.value.trim()), {
+    headers: { 'Authorization': 'Bearer ' + ghToken.value.trim(), 'Accept': 'application/vnd.github+json' }
+  });
+  if(!metaRes.ok) throw new Error('Could not find ' + filename + ' in the repo (' + metaRes.status + ').');
+  const meta = await metaRes.json();
+  const blobRes = await fetch('https://api.github.com/repos/' + ghOwner.value.trim() + '/' + ghRepo.value.trim() + '/git/blobs/' + meta.sha, {
+    headers: { 'Authorization': 'Bearer ' + ghToken.value.trim(), 'Accept': 'application/vnd.github+json' }
+  });
+  if(!blobRes.ok) throw new Error('Could not fetch blob for ' + filename + '.');
+  const blobMeta = await blobRes.json();
+  const binary = atob(blobMeta.content.replace(/\n/g,''));
+  const bytes = new Uint8Array(binary.length);
+  for(let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  const blob = new Blob([bytes], { type: mimeType });
+  return URL.createObjectURL(blob);
+}
+function fetchClipBlobUrl(filename){ return fetchBinaryBlobUrl(filename, 'video/webm'); }
+function guessImageMime(filename){
+  const ext = filename.split('.').pop().toLowerCase();
+  if(ext === 'png') return 'image/png';
+  if(ext === 'webp') return 'image/webp';
+  if(ext === 'gif') return 'image/gif';
+  return 'image/jpeg';
+}
+function fetchImageBlobUrl(filename){ return fetchBinaryBlobUrl(filename, guessImageMime(filename)); }
+
+// Lists every file at the repo root (unlike fetchFile, this hits the
+// Contents API on the directory itself, not one specific file) — used
+// to find every candidate backdrop image, whether or not it's currently
+// wired into the live HTML.
+async function fetchRepoRootListing(){
+  const url = 'https://api.github.com/repos/' + ghOwner.value.trim() + '/' + ghRepo.value.trim() + '/contents?ref=' + encodeURIComponent(ghBranch.value.trim());
+  const res = await fetch(url, {
+    headers: { 'Authorization': 'Bearer ' + ghToken.value.trim(), 'Accept': 'application/vnd.github+json' }
+  });
+  if(!res.ok){ const body = await res.text(); throw new Error('GitHub returned ' + res.status + ' listing the repo root: ' + body.slice(0,200)); }
   return res.json();
 }
 
