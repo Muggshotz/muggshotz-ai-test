@@ -234,12 +234,12 @@
 <img class="needles-easel-art" id="needlesEaselArt" alt="Finished artwork on the easel"/>
 <video class="needles-stage-layer" id="needlesLayerA" muted playsinline></video>
 <video class="needles-stage-layer" id="needlesLayerB" muted playsinline></video>
+<div id="needlesProgressCluster" style="position:absolute;top:0;left:0;right:0;z-index:5;padding:10px 14px 14px;background:linear-gradient(180deg,rgba(0,0,0,.72) 0%,rgba(0,0,0,.35) 70%,rgba(0,0,0,0) 100%);pointer-events:none">
+  <div id="genTimerDisplayNeedles" style="display:none;text-align:center;font-size:13px;color:#ff9a4d;font-weight:600;letter-spacing:.3px"></div>
+  <div class="status" id="statusNeedles" style="margin-top:.3rem"></div>
+</div>
 </div>
 <div class="note" id="needlesStageNote" style="text-align:center;margin-top:.5rem">Needles is working on it...</div>
-<div id="needlesProgressCluster">
-  <div id="genTimerDisplayNeedles" style="display:none;text-align:center;font-size:13px;color:#ff9a4d;font-weight:600;margin-top:.45rem;letter-spacing:.3px"></div>
-  <div class="status" id="statusNeedles" style="margin-top:.45rem"></div>
-</div>
 </div>
 <input type="file" id="fileInput" accept="image/*" style="display:none"/><img id="previewImg" class="preview-img" style="display:none"/>
 <div id="approveRow" style="display:none">
@@ -406,8 +406,6 @@
 <div id="finalGenerateGuidance" class="guidance-prompt" role="status">If satisfied with all selections, press "Generate." If not, feel free to scroll back up and make any additional changes.</div>
 <button class="generate-btn" id="generateBtn" onclick="generate()">🎨 GENERATE IMAGE</button>
 <button class="download-btn" id="cancelBtn" onclick="cancelGeneration()" style="display:none;margin-top:.5rem">✖ Cancel & Try a Different Photo</button>
-<div id="genTimerDisplay" style="display:none;text-align:center;font-size:13px;color:#ff9a4d;font-weight:600;margin-top:.5rem;letter-spacing:.3px"></div>
-<div class="status" id="status"></div>
   <div class="card" id="positionHolderCard" style="display:none">
 <div class="card-title">🖼️ Design Your Product</div>
 <div class="note" style="margin-top:0;margin-bottom:.9rem">Happy with just this one picture? We'll gladly take you to checkout. Want to try a few more designs first? If you're out of free tokens, a $5 Preview Reservation unlocks more tokens to keep creating — that $5 isn't an extra charge, it comes straight off your product's price at checkout. Whatever you end up with, your exact total (including any charge for extra printed designs, or an image on both sides) is always shown before you pay.</div>
@@ -585,14 +583,9 @@ const NEEDLES_CLIP_OVERRIDES = {
   "N": { scale: 1.85, offsetX: -0.9, offsetY: 45.8 },
   "P": { scale: 1.85, offsetX: -0.9, offsetY: 45.8 },
   "O": { scale: 1.99, offsetX: 13.6, offsetY: 38.6 },
-  "K": { scale: 1.4, offsetX: -17.6, offsetY: 25.9 },
+  "K": { scale: 1.87, offsetX: -16.1, offsetY: 30.6 },
   "L": { scale: 1.19, offsetX: 13.6, offsetY: 18.5 },
-  "S": { scale: 1.34, offsetX: 8.2, offsetY: 15.4 },
-  "D": { scale: 1.38, offsetX: -15.9, offsetY: 24.3 },
-  "F": { scale: 1.21, offsetX: 0, offsetY: 11.8 },
-  "T": { scale: 1.3, offsetX: 0, offsetY: 17.4 },
-  "I": { scale: 1.29, offsetX: -12.5, offsetY: 25.4 },
-  "E": { scale: 1.44, offsetX: -4.5, offsetY: 24.5 }
+  "S": { scale: 1.34, offsetX: 8.2, offsetY: 15.4 }
 };
 
 const NEEDLES_ENDING_TEMPLATE = [
@@ -2459,7 +2452,7 @@ let genTimerStart=null;
 
 function startGenTimer(){
   genTimerStart=Date.now();
-  const el=document.getElementById('genTimerDisplay');
+  const el=document.getElementById('genTimerDisplayNeedles');
   el.style.display='block';
   el.textContent='⏱ 0.0s';
   if(genTimerInterval)clearInterval(genTimerInterval);
@@ -2473,7 +2466,7 @@ function stopGenTimerSuccess(){
   if(genTimerInterval){clearInterval(genTimerInterval);genTimerInterval=null;}
   if(genTimerStart){
     const elapsed=(Date.now()-genTimerStart)/1000;
-    const el=document.getElementById('genTimerDisplay');
+    const el=document.getElementById('genTimerDisplayNeedles');
     el.textContent='✅ Done in '+elapsed.toFixed(1)+'s';
   }
   genTimerStart=null;
@@ -2482,13 +2475,13 @@ function stopGenTimerSuccess(){
 function resetGenTimer(){
   if(genTimerInterval){clearInterval(genTimerInterval);genTimerInterval=null;}
   genTimerStart=null;
-  const el=document.getElementById('genTimerDisplay');
+  const el=document.getElementById('genTimerDisplayNeedles');
   el.style.display='none';
   el.textContent='';
 }
 
 function setStatus(msg,isError){
-  const el=document.getElementById('status');
+  const el=document.getElementById('statusNeedles');
   if(isError){
     showBigAlert(msg);
     el.className='status';
@@ -2499,7 +2492,7 @@ function setStatus(msg,isError){
 }
 
 function clearStatus(){
-  document.getElementById('status').className='status';
+  document.getElementById('statusNeedles').className='status';
 }
 
 function scrollToFinishedImage(elementId,block){
