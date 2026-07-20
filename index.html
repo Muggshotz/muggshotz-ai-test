@@ -119,6 +119,56 @@
 @keyframes mugSelectFlash{0%,100%{color:#fff;background:#ff6a00;text-shadow:0 0 10px rgba(255,106,0,.9)}50%{color:#ff6a00;background:#2a1200;text-shadow:0 0 10px rgba(255,106,0,.6)}}
 .mug-available-flash{font-size:16px!important;font-weight:800!important;letter-spacing:.5px!important;text-transform:uppercase;padding:10px 8px;border-radius:8px;animation:mugSelectFlash 1s ease-in-out infinite;text-align:center;margin-top:1rem}
 #wraparoundStandbyPrompt{margin-top:1rem;text-align:center}
+
+/* ===== Ported from Needles' Studio: Easel stage (Alyx's request) ===== */
+.needles-stage-wrap{margin-top:1rem;display:none}
+.needles-stage-wrap.visible{display:block}
+.needles-stage{position:relative;width:100%;aspect-ratio:1448/1086;border-radius:12px;overflow:hidden;background:#000;box-shadow:0 4px 16px rgba(0,0,0,0.5)}
+.needles-stage-bg{position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;display:block;z-index:0}
+.needles-reference-photo{
+  position:absolute;
+  left:65.95%;
+  top:29.83%;
+  width:5.46%;
+  height:9.21%;
+  object-fit:cover;
+  object-position:center;
+  display:none;
+  z-index:1;
+  pointer-events:none;
+  background:#d8d0c5;
+  border-radius:1px;
+}
+.needles-easel-art{
+  position:absolute;
+  left:33.56%;
+  top:17.50%;
+  width:32.04%;
+  height:39.41%;
+  object-fit:cover;
+  object-position:center;
+  display:none;
+  z-index:1;
+  pointer-events:none;
+  border-radius:7.5%;
+  box-shadow:0 0 0 1px rgba(255,255,255,.18);
+  transition:left 2.6s ease-in-out,top 2.6s ease-in-out,width 2.6s ease-in-out,height 2.6s ease-in-out,border-radius 2.6s ease-in-out,box-shadow 2.6s ease-in-out,background-color 2.6s ease-in-out;
+  transform:translateZ(0);
+}
+.needles-easel-art.needles-final-zoom{
+  left:0;
+  top:0;
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  object-position:center;
+  border-radius:0;
+  box-shadow:none;
+  background:#000;
+  z-index:4;
+}
+#needlesProgressCluster{display:block}
+.needles-stage-layer{position:absolute;top:10.59%;left:15.19%;width:78.25%;height:78.27%;object-fit:contain;opacity:0;pointer-events:none;z-index:2}
 </style>
 </head>
 <body>
@@ -177,6 +227,20 @@
 <div class="card" id="uploadPhotoCard"><div class="card-title">📸 Upload Photo</div>
 <div style="font-size:11px;color:#777;letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px;text-align:center">Photo 1</div>
 <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()"><div style="font-size:32px;color:#555;margin-bottom:8px">👤</div><div class="upload-text">Tap here to upload a photo</div><div class="upload-sub">Clear face photo works best</div></div>
+<div class="needles-stage-wrap" id="needlesStageWrap">
+<div class="needles-stage">
+<img class="needles-stage-bg" src="Easel_with_reference_photo.png" alt="Needles' studio"/>
+<img class="needles-reference-photo" id="needlesReferencePhoto" alt="Customer reference photo"/>
+<img class="needles-easel-art" id="needlesEaselArt" alt="Finished artwork on the easel"/>
+<video class="needles-stage-layer" id="needlesLayerA" muted playsinline></video>
+<video class="needles-stage-layer" id="needlesLayerB" muted playsinline></video>
+</div>
+<div class="note" id="needlesStageNote" style="text-align:center;margin-top:.5rem">Needles is working on it...</div>
+<div id="needlesProgressCluster">
+  <div id="genTimerDisplayNeedles" style="display:none;text-align:center;font-size:13px;color:#ff9a4d;font-weight:600;margin-top:.45rem;letter-spacing:.3px"></div>
+  <div class="status" id="statusNeedles" style="margin-top:.45rem"></div>
+</div>
+</div>
 <input type="file" id="fileInput" accept="image/*" style="display:none"/><img id="previewImg" class="preview-img" style="display:none"/>
 <div id="approveRow" style="display:none">
 <div class="note" style="margin-top:.9rem;text-align:center;font-size:13px;color:#ccc">Are you satisfied with this design?</div>
@@ -497,6 +561,363 @@
 
 <script>
 let product='mug',style='Muggshotz Classic: premium professional caricature, expressive face, rich detail, painterly shading, funny gift-art scene',likeness='0.15',uploadedImageData=null,resultUrl=null;
+
+// ===== Needles' Easel — five-group presentation engine (ported from
+// Needles' Studio, Alyx's request) =====
+// One generation session is one complete presentation cycle. Clip files
+// and NEEDLES_CLIP_OVERRIDES are shared assets with needles-studio.html;
+// see the note delivered alongside this file about keeping calibration
+// data in sync between the two pages going forward.
+const NEEDLES_BEGINNING_SEQUENCE = [
+  'A_final.webm',
+  'B_final.webm',
+  'C_final.webm'
+];
+
+const NEEDLES_CLIP_OVERRIDES = {
+  "A": { scale: 1.26, offsetX: -9.8, offsetY: 11.2 },
+  "J": { scale: 1.4, offsetX: -3.1, offsetY: 19.2 },
+  "G": { scale: 1.73, offsetX: 3.6, offsetY: 29.7 },
+  "H": { scale: 1.19, offsetX: 21.2, offsetY: 29.7 },
+  "Q": { scale: 1.58, offsetX: 20.1, offsetY: 11.6 },
+  "R": { scale: 1.72, offsetX: 36.4, offsetY: 31 },
+  "M": { scale: 1.72, offsetX: -0.9, offsetY: 11.8 },
+  "N": { scale: 1.85, offsetX: -0.9, offsetY: 45.8 },
+  "P": { scale: 1.85, offsetX: -0.9, offsetY: 45.8 },
+  "O": { scale: 1.99, offsetX: 13.6, offsetY: 38.6 },
+  "K": { scale: 1.87, offsetX: -16.1, offsetY: 30.6 },
+  "L": { scale: 1.19, offsetX: 13.6, offsetY: 18.5 },
+  "S": { scale: 1.34, offsetX: 8.2, offsetY: 15.4 }
+};
+
+const NEEDLES_ENDING_TEMPLATE = [
+  'J_final.webm',
+  'S_final.webm',
+  'T_final.webm'
+];
+
+const NEEDLES_ONE_TIME_PAIRS = [
+  ['M_transparent.webm', 'N_transparent.webm'],
+  ['Q_transparent.webm', 'R_transparent.webm']
+];
+
+const NEEDLES_RANDOM_POOL = [
+  'D_final.webm',
+  'E_final.webm',
+  'F_final.webm',
+  'G_final.webm',
+  'H_final.webm',
+  'I_final.webm',
+  'K_final.webm',
+  'L_final.webm',
+  'O_final.webm',
+  'P_final.webm'
+];
+
+const NEEDLES_FADE_IN_DURATION = 0.35;
+const NEEDLES_FADE_OUT_DURATION = 0.55;
+
+let needlesActiveLayer = null;
+let needlesIdleLayer = null;
+let needlesPlaying = false;
+let needlesFinalePlaying = false;
+let needlesGenerationComplete = false;
+let needlesPhase = 'stopped';
+let needlesBeginningQueue = [];
+let needlesEndingQueue = [];
+let needlesPairQueue = [];
+let needlesPairPlan = [];
+let needlesMainClipCount = 0;
+let needlesLastRandomClip = null;
+let needlesFinishedImageUrl = null;
+let needlesPresentationDone = null;
+let needlesSafetyTimer = null;
+let needlesOriginalReferenceImage = null;
+
+function needlesInitLayers(){
+  if(needlesActiveLayer && needlesIdleLayer)return;
+  needlesActiveLayer=document.getElementById('needlesLayerA');
+  needlesIdleLayer=document.getElementById('needlesLayerB');
+}
+
+function needlesRandomInt(min,max){
+  return Math.floor(Math.random()*(max-min+1))+min;
+}
+
+function needlesShuffle(items){
+  const copy=items.slice();
+  for(let i=copy.length-1;i>0;i--){
+    const j=Math.floor(Math.random()*(i+1));
+    [copy[i],copy[j]]=[copy[j],copy[i]];
+  }
+  return copy;
+}
+
+function needlesBuildPairPlan(){
+  const shuffledPairs=needlesShuffle(NEEDLES_ONE_TIME_PAIRS);
+  let trigger=needlesRandomInt(1,3);
+  needlesPairPlan=shuffledPairs.map((pair,index)=>{
+    if(index>0)trigger+=needlesRandomInt(2,5);
+    return {pair:pair.slice(),trigger,used:false};
+  });
+}
+
+function needlesPickRandomMainClip(){
+  let choices=NEEDLES_RANDOM_POOL;
+  if(choices.length>1 && needlesLastRandomClip){
+    choices=choices.filter(file=>file!==needlesLastRandomClip);
+  }
+  const file=choices[Math.floor(Math.random()*choices.length)];
+  needlesLastRandomClip=file;
+  return file;
+}
+
+function needlesResetSession(){
+  needlesGenerationComplete=false;
+  needlesFinalePlaying=false;
+  needlesPhase='beginning';
+  needlesBeginningQueue=NEEDLES_BEGINNING_SEQUENCE.slice();
+  needlesEndingQueue=NEEDLES_ENDING_TEMPLATE.slice();
+  needlesPairQueue=[];
+  needlesMainClipCount=0;
+  needlesLastRandomClip=null;
+  needlesFinishedImageUrl=null;
+  needlesPresentationDone=null;
+  clearTimeout(needlesSafetyTimer);
+  needlesSafetyTimer=null;
+  needlesBuildPairPlan();
+}
+
+function restoreNeedlesOriginalReferencePhoto(){
+  const referencePhoto=document.getElementById('needlesReferencePhoto');
+  if(referencePhoto && needlesOriginalReferenceImage){
+    referencePhoto.src=needlesOriginalReferenceImage;
+    referencePhoto.style.display='block';
+  }
+}
+
+function needlesRevealFinishedArt(){
+  restoreNeedlesOriginalReferencePhoto();
+  const easelArt=document.getElementById('needlesEaselArt');
+  const note=document.getElementById('needlesStageNote');
+  if(easelArt && needlesFinishedImageUrl){
+    easelArt.classList.remove('needles-final-zoom');
+    easelArt.src=needlesFinishedImageUrl;
+    easelArt.style.display='block';
+  }
+  if(note)note.textContent='Needles presents your finished design.';
+}
+
+function needlesFinishPresentation(){
+  if(needlesPhase==='stopped')return;
+  needlesPhase='stopped';
+  needlesPlaying=false;
+  needlesFinalePlaying=false;
+  clearTimeout(needlesSafetyTimer);
+  needlesSafetyTimer=null;
+
+  const layers=[needlesActiveLayer,needlesIdleLayer].filter(Boolean);
+  layers.forEach(layer=>{
+    layer.oncanplay=null;
+    layer.onended=null;
+    layer.onerror=null;
+    layer.style.transition=`opacity ${NEEDLES_FADE_OUT_DURATION}s linear`;
+    layer.style.opacity=0;
+  });
+
+  const done=needlesPresentationDone;
+  needlesPresentationDone=null;
+  setTimeout(()=>{
+    layers.forEach(layer=>layer.pause());
+
+    restoreNeedlesOriginalReferencePhoto();
+
+    const easelArt=document.getElementById('needlesEaselArt');
+    if(easelArt){
+      requestAnimationFrame(()=>{
+        requestAnimationFrame(()=>{
+          easelArt.classList.add('needles-final-zoom');
+        });
+      });
+    }
+
+    setTimeout(()=>{
+      if(typeof done==='function')done();
+    },2700);
+  },Math.ceil(NEEDLES_FADE_OUT_DURATION*1000));
+}
+
+function needlesNextFile(){
+  if(!needlesPlaying)return null;
+
+  if(needlesPhase==='beginning'){
+    if(needlesBeginningQueue.length)return needlesBeginningQueue.shift();
+    needlesPhase='main';
+  }
+
+  if(needlesPhase==='main'){
+    if(needlesPairQueue.length)return needlesPairQueue.shift();
+
+    if(needlesGenerationComplete){
+      needlesPhase='finale';
+      needlesFinalePlaying=true;
+      needlesRevealFinishedArt();
+      return needlesEndingQueue.shift();
+    }
+
+    const duePair=needlesPairPlan.find(item=>!item.used && needlesMainClipCount>=item.trigger);
+    if(duePair){
+      duePair.used=true;
+      needlesPairQueue=duePair.pair.slice();
+      return needlesPairQueue.shift();
+    }
+
+    needlesMainClipCount++;
+    return needlesPickRandomMainClip();
+  }
+
+  if(needlesPhase==='finale'){
+    if(needlesEndingQueue.length)return needlesEndingQueue.shift();
+    return null;
+  }
+
+  return null;
+}
+
+function needlesGetClipLetter(filename){
+  if(!filename)return null;
+  const match=filename.match(/^([A-Za-z]+)_/);
+  return match?match[1]:null;
+}
+
+function needlesApplyClipOverride(layer,filename){
+  const letter=needlesGetClipLetter(filename);
+  const override=letter?NEEDLES_CLIP_OVERRIDES[letter]:null;
+  if(override){
+    const scale=typeof override.scale==='number'?override.scale:1;
+    const offsetX=typeof override.offsetX==='number'?override.offsetX:0;
+    const offsetY=typeof override.offsetY==='number'?override.offsetY:0;
+    layer.style.transform=`translate(${offsetX}%, ${offsetY}%) scale(${scale})`;
+  } else {
+    layer.style.transform='';
+  }
+}
+
+function needlesPlayFile(filename){
+  if(!filename){
+    needlesFinishPresentation();
+    return;
+  }
+
+  const incoming=needlesIdleLayer;
+  const outgoing=needlesActiveLayer;
+  incoming.pause();
+  incoming.oncanplay=null;
+  incoming.onended=null;
+  incoming.onerror=null;
+  incoming.src=filename;
+  incoming.load();
+  incoming.currentTime=0;
+  incoming.loop=false;
+  incoming.style.transition='none';
+  incoming.style.opacity=0;
+  needlesApplyClipOverride(incoming,filename);
+
+  let started=false;
+  incoming.oncanplay=()=>{
+    if(started)return;
+    started=true;
+    incoming.play().catch(()=>{});
+    requestAnimationFrame(()=>{
+      incoming.style.transition=`opacity ${NEEDLES_FADE_IN_DURATION}s linear`;
+      incoming.style.opacity=1;
+      if(outgoing){
+        outgoing.style.transition=`opacity ${NEEDLES_FADE_OUT_DURATION}s linear`;
+        outgoing.style.opacity=0;
+      }
+    });
+    [needlesActiveLayer,needlesIdleLayer]=[incoming,outgoing];
+  };
+
+  incoming.onended=()=>needlesAdvance();
+  incoming.onerror=()=>needlesAdvance();
+}
+
+function needlesAdvance(){
+  if(!needlesPlaying)return;
+  const filename=needlesNextFile();
+  if(!filename){
+    needlesFinishPresentation();
+    return;
+  }
+  needlesPlayFile(filename);
+}
+
+function resetNeedlesPresentationState(){
+  const easelArt=document.getElementById('needlesEaselArt');
+  if(easelArt){
+    easelArt.classList.remove('needles-final-zoom');
+    easelArt.style.display='none';
+    easelArt.removeAttribute('src');
+  }
+  const note=document.getElementById('needlesStageNote');
+  if(note)note.textContent='Needles is working on it...';
+}
+
+function startNeedlesStage(){
+  needlesInitLayers();
+  resetNeedlesPresentationState();
+  needlesResetSession();
+
+  needlesOriginalReferenceImage=uploadedImageData;
+  const referencePhoto=document.getElementById('needlesReferencePhoto');
+  if(referencePhoto && needlesOriginalReferenceImage){
+    referencePhoto.src=needlesOriginalReferenceImage;
+    referencePhoto.style.display='block';
+  }
+
+  const wrap=document.getElementById('needlesStageWrap');
+  if(wrap)wrap.classList.add('visible');
+  needlesPlaying=true;
+  needlesAdvance();
+}
+
+function stopNeedlesStage(){
+  needlesPlaying=false;
+  needlesFinalePlaying=false;
+  needlesPhase='stopped';
+  clearTimeout(needlesSafetyTimer);
+  needlesSafetyTimer=null;
+
+  const wrap=document.getElementById('needlesStageWrap');
+  if(wrap)wrap.classList.remove('visible');
+
+  [needlesActiveLayer,needlesIdleLayer].forEach(layer=>{
+    if(!layer)return;
+    layer.pause();
+    layer.oncanplay=null;
+    layer.onended=null;
+    layer.onerror=null;
+    layer.style.opacity=0;
+  });
+  resetNeedlesPresentationState();
+}
+
+function presentFinishedNeedlesArt(imageUrl,onDone){
+  needlesFinishedImageUrl=imageUrl;
+  needlesPresentationDone=onDone;
+  needlesGenerationComplete=true;
+
+  clearTimeout(needlesSafetyTimer);
+  needlesSafetyTimer=setTimeout(()=>{
+    if(needlesGenerationComplete && needlesPhase!=='finale' && needlesPhase!=='stopped'){
+      needlesPhase='finale';
+      needlesFinalePlaying=true;
+      needlesRevealFinishedArt();
+      needlesPlayFile(needlesEndingQueue.shift());
+    }
+  },30000);
+}
 let refImageAData=null, refImageBData=null;
 let previousImageData=null;
 let currentDesignId=null;
@@ -550,6 +971,14 @@ function smoothScrollToTarget(targetId,block='start',after){
   },750);
 }
 
+function suspendGuidedScrollsForGeneration(){
+  clearTimeout(openingGuideTimer);
+  clearTimeout(photoGuideTimer);
+  openingGuideDone=true;
+  photoGuideActive=false;
+  guidedScrollInProgress=false;
+}
+
 function noteRealCustomerActivity(){
   if(guidedScrollInProgress)return;
   scheduleOpeningGuide(5000);
@@ -561,17 +990,12 @@ function noteRealCustomerActivity(){
 
 function startPhotoGuide(){
   photoGuideActive=true;
-  // First frame the completed photo together with its Start Over control.
   setTimeout(()=>{
     if(photoGuideActive)smoothScrollToTarget('startOverBtn','end');
   },150);
   schedulePhotoGuideAdvance(10000);
 }
 
-// Timer 3 — description-box nudge. Starts the moment the idea card
-// actually comes into view (works whether the customer got there via
-// auto-scroll or scrolled themselves), pauses while it's off-screen,
-// and resumes if they scroll back to it. Never advances the page.
 let ideaGuideTimer=null;
 let ideaGuideHasFlashedOnce=false;
 
@@ -634,6 +1058,10 @@ window.addEventListener('DOMContentLoaded',()=>{
 
 function setMainSlotImage(dataUrl){
   uploadedImageData=dataUrl;
+  const stageReference=document.getElementById('needlesReferencePhoto');
+  if(stageReference){
+    stageReference.src=dataUrl;
+  }
   const img=document.getElementById('previewImg');
   img.src=dataUrl;
   img.style.display='block';
@@ -696,17 +1124,9 @@ let pathCanvasReady=false;
 
 let mugPrintMode='three-panel'; // 'three-panel' | 'wraparound' — coffee/travel mugs only, chosen BEFORE generation since it changes composition
 
-// ===== Mug guided review flow (July 2026, Alyx's request) =====
-// Applies ONLY when product === 'mug'. After at least one design has
-// been placed into a slot, walks the customer through: (1) pick size/
-// style/color, (2) confirm those selections or jump back up to change
-// them, (3) confirm the design itself or jump to the idea box to
-// request changes, (4) from the idea box, either go back to add more
-// reference photos or fire Generate again. Every other product keeps
-// its existing behavior untouched.
-let mugOptionsTouched=false; // true once the customer has actively picked a style/size/color (not just the pre-selected defaults)
-let mugGuidedChangesActive=false; // true once "click here to make changes" has been pressed, until the next Generate
-let mugDesignConfirmed=false; // true once "If satisfied with design, click here" has been pressed — points straight at Available Now instead of looping back to style/size/color
+let mugOptionsTouched=false;
+let mugGuidedChangesActive=false;
+let mugDesignConfirmed=false;
 
 function updateGenPreviewLabel(){
   const el=document.getElementById('genPreviewLabel');
@@ -801,19 +1221,7 @@ function handleMugGuidedGenerate(){
   generate();
 }
 
-// NEW (July 2026, Alyx's request): silent generation-prompt add-on for
-// the Wraparound/panorama print option. When on, this instruction gets
-// appended to the actual prompt sent to the AI on every generate() call
-// (including the auto left/right panel continuations) — the customer
-// never sees this text in their own idea box, it's applied purely
-// behind the scenes.
 let panoramaFadeEdges=false;
-// Panel-specific fade instructions — which edges are "outer" (should
-// fade to white) vs. "seam" (must stay sharp so panels line up) depends
-// on which panel this is. Center has no outer side edges (both sides
-// join a neighbor), Left's own left edge is the true outer edge, Right's
-// own right edge is the true outer edge — all three fade top and bottom
-// regardless, since those are never seams.
 const PANORAMA_FADE_INSTRUCTION_CENTER = "PANORAMA EDGE FADE: Fade the TOP and BOTTOM outside edges of the picture toward white, so they blend softly into a white canvas. Do NOT fade or soften the LEFT and RIGHT edges — those are the seams where this panel joins its neighbors, and must stay sharp, fully detailed, and continuous all the way to the edge so the scene lines up seamlessly across panels.";
 const PANORAMA_FADE_INSTRUCTION_LEFT = "PANORAMA EDGE FADE: Fade the TOP, BOTTOM, and LEFT outside edges of the picture toward white, so they blend softly into a white canvas — the left edge of this panel is a true outer edge, not a seam. Do NOT fade or soften the RIGHT edge — that is the seam where this panel joins the center panel, and must stay sharp, fully detailed, and continuous all the way to the edge so the scene lines up seamlessly.";
 const PANORAMA_FADE_INSTRUCTION_RIGHT = "PANORAMA EDGE FADE: Fade the TOP, BOTTOM, and RIGHT outside edges of the picture toward white, so they blend softly into a white canvas — the right edge of this panel is a true outer edge, not a seam. Do NOT fade or soften the LEFT edge — that is the seam where this panel joins the center panel, and must stay sharp, fully detailed, and continuous all the way to the edge so the scene lines up seamlessly.";
@@ -834,15 +1242,6 @@ function refreshMugPrintModeVisibility(){
   card.style.display=(product==='mug'||product==='water bottle')?'block':'none';
 }
 
-// ===== Phone Case model selection (July 2026, Alyx's request) =====
-// Required BEFORE generation, so artwork can be composed with the
-// customer's exact phone case shape in mind from the start, instead of
-// generating a generic image and letting order.html shrink-to-fit it
-// into whatever the real case shape turns out to be after the fact.
-// Model list kept in sync manually with order.html's PHONE_CASE_MODELS
-// and lib/products-catalog.js's phone-case-tough sizes (client-side
-// HTML can't import the server-only catalog file directly — same
-// pattern order.html already uses for its own copy of this list).
 const PHONE_CASE_MODELS = [
   "iPhone 11","iPhone 11 Pro","iPhone 11 Pro Max",
   "iPhone 12","iPhone 12 Mini","iPhone 12 Pro","iPhone 12 Pro Max",
@@ -862,10 +1261,6 @@ function setupPhoneModelSearchGen(){
   if(phoneSearchListenerAttachedGen)return;
   phoneSearchListenerAttachedGen=true;
   input.addEventListener('input',function(){
-    // Typing always clears any prior match/confirm state — the confirm
-    // panel only reappears after the next Enter press. A live suggestion
-    // list is still shown as a helpful reference while typing, but it's
-    // just for browsing; Enter is what actually resolves a selection.
     selectedPhoneCaseModel=null;
     pendingPhoneCaseModel=null;
     hidePhoneConfirmationGen();
@@ -893,14 +1288,8 @@ function setupPhoneModelSearchGen(){
     e.preventDefault();
     const q=input.value.trim().toLowerCase();
     const resultsEl=document.getElementById('phoneModelResultsGen');
-    // Enter always clears whatever suggestions were showing — from here
-    // on it's either the confirm panel or a not-on-file message, never
-    // both, and never the old suggestion list.
     resultsEl.innerHTML='';
     if(q.length<2)return;
-    // Prefer an exact (case-insensitive) match; otherwise fall back to the
-    // first model whose name contains what was typed. Either way, Enter
-    // resolves straight to a single model — no list to click through.
     const exact=PHONE_CASE_MODELS.find(m=>m.toLowerCase()===q);
     const match=exact||PHONE_CASE_MODELS.find(m=>m.toLowerCase().includes(q));
     if(!match){
@@ -985,12 +1374,6 @@ let posterOrientation = "Vertical";
 let posterFinish = "Glossy";
 let posterFrameColor = "Black";
 
-// NEW (July 2026, Alyx's request): tote bag has real color variety (unlike
-// suitcase/puzzle/phone case, which don't), so it needs its own lightweight
-// color picker on this page — not for composition purposes like the poster
-// options above, just so "Fade to Product Color" has an actual color to
-// match. Colors kept in sync manually with order.html's TOTE_BAG_SIZES
-// (identical color list across all three sizes).
 const TOTE_BAG_COLORS_GEN = [
   { name: "Beige", hex: "#E8DCC8" }, { name: "Black", hex: "#1c1c1c" },
   { name: "Light Blue", hex: "#A8D4E8" }, { name: "Light Pink", hex: "#F4C2D7" },
@@ -1108,15 +1491,8 @@ function pick(el,type){
     refreshPhotoPosterVisibility();
     refreshPhoneCaseModelVisibility();
     refreshToteBagColorVisibility();
-    // Switching products can change which mockup (if any) applies to
-    // the currently-placed design — refresh immediately instead of
-    // leaving the previous product's stale mockup on screen.
     updatePlacementSummary();
     updateMugGuidedFlow();
-    // NEW (July 2026, Alyx's request): the instant "Phone case" is
-    // picked, jump straight to the phone-model card and drop the
-    // cursor in the search box — don't make the customer go hunting
-    // for it further down the page.
     if(product==='phone case'){
       smoothScrollToTarget('phoneCaseModelCard','center',()=>{
         const input=document.getElementById('phoneModelSearchInputGen');
@@ -1145,16 +1521,6 @@ function pickTheme(el){
   updateDecorativeColorVisibility();
 }
 
-// NEW (July 2026, Alyx's request): "Fade to White" replaced with "Fade to
-// Product Color" — instead of picking a decorative accent color, the fade
-// automatically matches whatever color the customer already picked for
-// their actual product (mug color, travel mug color, tote color, etc.),
-// so the art's edges blend into the real material with no visible border
-// and no extra step for the customer. The decorative Color swatches don't
-// apply to this theme, so they're hidden while it's selected.
-// "Rose Crepe" was likewise replaced with "Remove All Background" — a
-// plain instruction to isolate the subject with no background at all,
-// which also has no use for the decorative color swatches.
 function updateDecorativeColorVisibility(){
   const wrap=document.getElementById('decorativeColorWrap');
   if(!wrap)return;
@@ -1172,19 +1538,13 @@ function showFadeColorInfoToast(message){
   fadeColorToastTimer=setTimeout(()=>{el.style.display='none';},4000);
 }
 
-// Returns the customer's actual selected PRODUCT color (not the decorative
-// background color) for whichever product is currently selected — this is
-// what "Fade to Product Color" matches against. Only Mug and Travel Cups
-// have their own color pickers on this page today; every other product
-// falls back to null (handled as a plain white fade in
-// buildProductColorFadeDescription below).
 function getSelectedProductColorName(){
   if(product==='mug')return selectedGenColor||null;
   if(product==='water bottle')return selectedTravelColor||null;
-  if(product==='suitcase')return 'Black'; // only color Printify offers for this blueprint
+  if(product==='suitcase')return 'Black';
   if(product==='tote bag')return selectedToteColorGen||null;
-  if(product==='photo poster')return posterFramed ? (posterFrameColor||null) : null; // unframed posters have no color
-  return null; // puzzle and phone case have no color options at all
+  if(product==='photo poster')return posterFramed ? (posterFrameColor||null) : null;
+  return null;
 }
 
 function buildProductColorFadeDescription(colorName){
@@ -2035,13 +2395,6 @@ function approveDesign(allThree){
   document.getElementById('approveRow').style.display='none';
   document.getElementById('keepTweakingBtn').style.display='none';
   document.getElementById('downloadDesignBtn').style.display='none';
-  // UPDATED (July 2026, Alyx's request): no longer clearing the top
-  // photo/workshop on approve. The generated image — along with the
-  // Toggle Between Previous & New Image option — should stay visible up
-  // top so the customer can keep tweaking or change their mind, even
-  // after a design has already been placed into a slot below. It should
-  // only actually clear when they explicitly tap "Start Over," or once
-  // they've completed a purchase, not automatically here.
   saveMugState();
   renderRecentDesigns();
   renderPositionHolder();
@@ -2068,6 +2421,7 @@ function startOver(){
 }
 
 function resetMainSlot(){
+  stopNeedlesStage();
   uploadedImageData=null;
   previousImageData=null;
   document.getElementById('toggleImageBtn').style.display='none';
@@ -2095,13 +2449,6 @@ function closeBigAlert(){
   document.getElementById('bigAlertOverlay').classList.remove('visible');
 }
 
-// NEW (July 2026, Alyx's request): live generation timer. Starts the
-// moment a real generation kicks off, updates every 100ms while it
-// runs, and freezes on a final "Done in X.Xs" readout once the image
-// actually finishes — separate from the status/spinner text so it
-// keeps counting through multi-step flows like the wraparound
-// three-panel sequence (center, then left, then right all count as one
-// total wait, since that's what the customer is actually experiencing).
 let genTimerInterval=null;
 let genTimerStart=null;
 
@@ -2138,8 +2485,6 @@ function resetGenTimer(){
 function setStatus(msg,isError){
   const el=document.getElementById('status');
   if(isError){
-    // Big, centered, dismissible alert — not a small line at the
-    // bottom of the screen the person may never have scrolled to.
     showBigAlert(msg);
     el.className='status';
     return;
@@ -2158,15 +2503,6 @@ function scrollToFinishedImage(elementId,block){
   el.scrollIntoView({behavior:'smooth',block:block||'center'});
 }
 
-// The post-generation scroll targets an element whose on-page position
-// depends on the height of the freshly swapped-in result image above it.
-// If we scroll before that image has actually finished decoding and been
-// laid out, the browser calculates the scroll target using the OLD page
-// height, landing too high — then the image finishes rendering a moment
-// later and the page grows underneath the customer with no re-scroll.
-// This waits for the image to be genuinely ready (decoded, or loaded, or
-// already complete) plus one extra animation frame for layout to settle,
-// before the scroll is allowed to fire.
 function waitForImageReady(img){
   if(!img)return Promise.resolve();
   const ready = img.complete && img.naturalWidth>0
@@ -2197,14 +2533,6 @@ function getImageSizeParam(){
     return posterOrientation==='Horizontal' ? '1536x1024' : '1024x1536';
   }
   if (product==='phone case'){
-    // Real phone case print areas run tall and narrow (confirmed via
-    // Printify's own template download — iPhone 15 Pro measures
-    // 1201x2080px, roughly a 0.577 width:height ratio). gpt-image-2
-    // only supports a fixed set of size presets, so 1024x1536 (0.667
-    // ratio) is the closest available match — much closer to the real
-    // shape than the old default square, meaningfully reducing the
-    // letterboxing that came from shrinking a square image into a tall
-    // case.
     return '1024x1536';
   }
   return '1024x1024';
@@ -2271,50 +2599,30 @@ async function generate(){
   const refBSnapshot=refImageBData;
   startGenTimer();
   showGenerationInProgress();
+  startNeedlesStage();
   clearReferenceSlots();
   document.getElementById('approveRow').style.display='none';
   document.getElementById('keepTweakingBtn').style.display='none';
   document.getElementById('downloadDesignBtn').style.display='none';
 setStatus('Generating your image... this can take several minutes, especially on busier or more detailed requests. Please stay on this screen until it finishes.');
 document.getElementById('cancelBtn').style.display='block';
-  // NEW (July 2026, Alyx's request): the moment Generate is tapped, bring
-  // the whole in-progress area — spinner, status text, AND the elapsed-time
-  // counter below the Generate button — into view together. The counter
-  // lives much further down the page than the spinner at the top of the
-  // photo card, so a plain scrollIntoView on just one of them left the
-  // other one off-screen. Wait one frame so the freshly-shown spinner/
-  // timer have actually been laid out before measuring where to land.
+  suspendGuidedScrollsForGeneration();
+
+  // Lock the viewport to the Easel stage while it plays, matching
+  // needles-studio.html's behavior — the stage sits right where the
+  // spinner used to be.
+  const snapNeedlesStageToApprovedFrame=()=>{
+    const stage=document.querySelector('#needlesStageWrap .needles-stage');
+    if(!stage)return;
+    const target=(stage.getBoundingClientRect().top+window.scrollY)-14;
+    window.scrollTo(0,Math.max(0,target));
+  };
   requestAnimationFrame(()=>{
     requestAnimationFrame(()=>{
-      const spinnerEl=document.getElementById('uploadZone');
-      const timerEl=document.getElementById('genTimerDisplay');
-      const statusEl=document.getElementById('status');
-      if(spinnerEl&&timerEl){
-        const spinnerTop=spinnerEl.getBoundingClientRect().top+window.scrollY;
-        // The status message ("Generating your image...") sits right
-        // after the timer and was getting left just out of view when only
-        // the timer's own bottom edge was used. Measure down through
-        // whichever of the two actually extends further, so the message
-        // text lands on screen together with the timer, not just the
-        // timer by itself.
-        const timerRectBottom=timerEl.getBoundingClientRect().bottom;
-        const statusRectBottom=statusEl?statusEl.getBoundingClientRect().bottom:timerRectBottom;
-        const timerBottom=Math.max(timerRectBottom,statusRectBottom)+window.scrollY;
-        const viewportHeight=window.innerHeight;
-        const totalSpan=timerBottom-spinnerTop;
-        // Center the whole span if it fits on screen; otherwise anchor so
-        // the bottom of that span (the part that was getting missed) is
-        // guaranteed visible.
-        let target;
-        if(totalSpan<viewportHeight){
-          target=spinnerTop-((viewportHeight-totalSpan)/2);
-        } else {
-          target=timerBottom-viewportHeight+24;
-        }
-        window.scrollTo({top:Math.max(0,target),behavior:'smooth'});
-      } else if(timerEl){
-        timerEl.scrollIntoView({behavior:'smooth',block:'center'});
-      }
+      snapNeedlesStageToApprovedFrame();
+      [80,180,350,600,900].forEach(delay=>{
+        setTimeout(snapNeedlesStageToApprovedFrame,delay);
+      });
     });
   });
   try{
@@ -2492,6 +2800,7 @@ Use rich environmental storytelling while keeping the face as the primary focal 
       clearReferenceSlots();
       clearWorkshopStorage();
       refreshTokenMeter();
+      stopNeedlesStage();
       setStatus('✅ All three wraparound panels are ready!');
       stopGenTimerSuccess();
       scrollToFinishedImage('positionHolderCard');
@@ -2500,12 +2809,10 @@ Use rich environmental storytelling while keeping the face as the primary focal 
 
     document.getElementById('captionCard').className='card caption-card visible';
     document.getElementById('captionText').value='';
-  document.getElementById('verifyCard').style.display='block';
-    document.getElementById('approveRow').style.display='block';
-    document.getElementById('keepTweakingBtn').style.display='block';
-    document.getElementById('downloadDesignBtn').style.display='block';
-    refreshApproveRowForMode();
+    document.getElementById('verifyCard').style.display='block';
+
     await loadBaseImageForCaption(resultUrl);
+
     try{
       const newWorkingRaw=await urlToDataURL(resultUrl);
       const newWorking=await resizeDataUrl(newWorkingRaw, 1280);
@@ -2517,14 +2824,23 @@ Use rich environmental storytelling while keeping the face as the primary focal 
       console.error('Could not recycle result into the main slot:',recycleErr);
       setMainSlotImage(workingImage);
     }
-    await waitForImageReady(document.getElementById('previewImg'));
-    scrollToFinishedImage('approveRow','end');
+
     refreshTokenMeter();
     clearStatus();
     stopGenTimerSuccess();
 
+    presentFinishedNeedlesArt(resultUrl, async ()=>{
+      document.getElementById('approveRow').style.display='block';
+      document.getElementById('keepTweakingBtn').style.display='block';
+      document.getElementById('downloadDesignBtn').style.display='block';
+      refreshApproveRowForMode();
+      await waitForImageReady(document.getElementById('previewImg'));
+      scrollToFinishedImage('approveRow','end');
+    });
+
   }catch(err){
     document.getElementById('wraparoundStandbyPrompt').style.display='none';
+    stopNeedlesStage();
     setStatus(err.message,true);
     resetGenTimer();
     if(workingImage)setMainSlotImage(workingImage);
@@ -2835,17 +3151,11 @@ let selectedGenStyle='Classic White';
 let selectedGenSize='11oz';
 let selectedGenColor=null;
 
-// Travel mug catalog — kept in sync manually with lib/products-catalog.js
-// (this is client-side HTML, can't import that server-only file
-// directly), same pattern order.html already uses for the same reason.
 const TRAVEL_MUG_CATALOG = {
   "travel-mug-20oz": {
     displayName: "Travel Mug, 20oz",
     layoutType: "single-image",
     sizeLabel: "20oz",
-    // UPDATED (July 2026): swapped print provider (see products-catalog.js
-    // for why) — this blueprint comes in white only, no color picker,
-    // and prints as one continuous wrap image instead of front/back.
     colors: null
   },
   "travel-mug-14oz-handle": {
@@ -2998,28 +3308,10 @@ function pickGenTravelColor(el,colorName){
   maybeAutoFetchMockup();
 }
 
-// ===== Automatic real-photo mockup engine =====
-// Replaces the old manual "See a Real Photo Preview" button. The moment
-// a design is placed into a slot (or the customer changes style/size/
-// color), this fires on its own — no click required, since by that
-// point the customer has already approved the design and told us what
-// they want to buy. We already have everything needed to show them
-// exactly what it'll look like.
-//
-// autoMockupRequestId guards against race conditions: if the customer
-// changes color again while an older fetch is still in flight, the
-// stale response is discarded instead of overwriting the newer choice.
-// autoMockupDebounceTimer prevents spamming Printify if someone taps
-// through several colors quickly — only the last selection within a
-// short window actually triggers a real fetch.
 let autoMockupRequestId = 0;
 let autoMockupDebounceTimer = null;
 
 function maybeAutoFetchMockup(){
-  // Supports Coffee Mug and Travel Cups today. Every other product still
-  // needs its own style/size/color picker built into this page before
-  // it can get the same automatic treatment — extending this later
-  // means adding another branch here, not rewriting the engine below.
   const assignedCount = ['left','front','right'].filter(p=>placements[p]).length;
   if (assignedCount === 0) {
     hideAutoMockup();
@@ -3043,7 +3335,6 @@ function maybeAutoFetchMockup(){
       return;
     }
   } else {
-    // Not wired up for this product yet.
     hideAutoMockup();
     return;
   }
@@ -3063,7 +3354,7 @@ function hideAutoMockup(){
   if (imgEl) imgEl.style.display = 'none';
   if (galleryEl) { galleryEl.style.display = 'none'; galleryEl.innerHTML = ''; }
   if (galleryHintEl) galleryHintEl.style.display = 'none';
-  autoMockupRequestId++; // invalidate any in-flight fetch so it can't pop back in
+  autoMockupRequestId++;
 }
 
 function showAutoMockupNote(msg){
@@ -3081,13 +3372,9 @@ function showAutoMockupNote(msg){
     noteEl.className = 'note';
     noteEl.style.display = 'block';
   }
-  autoMockupRequestId++; // invalidate any in-flight fetch
+  autoMockupRequestId++;
 }
 
-// Builds the request body /api/start-mockup needs, branching by which
-// product is currently selected. Each product's layoutType (three-slot-
-// wrap, front-back, single-image) determines which fields it expects —
-// see api/start-mockup.js's handleStart for the matching logic.
 function buildMockupRequestBody(){
   if (product === 'mug') {
     return {
@@ -3153,7 +3440,7 @@ async function runAutoMockupFetch(){
     });
     const startData = await startResp.json();
     if (!startResp.ok) throw new Error(startData.error || 'Could not start the real photo preview.');
-    if (thisRequestId !== autoMockupRequestId) return; // a newer request has since taken over
+    if (thisRequestId !== autoMockupRequestId) return;
 
     const productId = startData.productId;
     let mockupUrl = null;
@@ -3162,7 +3449,7 @@ async function runAutoMockupFetch(){
 
     for (let i = 0; i < maxTries; i++) {
       await new Promise(r => setTimeout(r, 1500));
-      if (thisRequestId !== autoMockupRequestId) return; // superseded mid-poll
+      if (thisRequestId !== autoMockupRequestId) return;
 
       const checkResp = await fetch('/api/start-mockup', {
         method: 'POST',
@@ -3183,12 +3470,6 @@ async function runAutoMockupFetch(){
 
     loadingEl.style.display = 'none';
 
-    // Printify typically photographs a design from a few different
-    // angles — show all of them the customer got instead of just the
-    // first shot, whatever the product (coffee mug, travel cup, etc.).
-    // Fixed-width scrollable thumbnails instead of squeezing 5 into one
-    // row, which would make each one too small to see anything on a
-    // phone.
     if (mockupUrls.length > 1) {
       mockupUrls.slice(0, 5).forEach(url => {
         const img = document.createElement('img');
@@ -3251,6 +3532,7 @@ function cancelGeneration(){
   document.getElementById('generateBtn').disabled=false;
   resetGenTimer();
   clearStatus();
+  stopNeedlesStage();
 }
   
   function downloadImage(){
@@ -3344,17 +3626,10 @@ refreshPhoneCaseModelVisibility();
 refreshToteBagColorVisibility();
 updateMugGuidedFlow();
 
-// ===== Full reset (July 2026, Alyx's request) =====
-// Entirely optional — a customer happy with their in-progress work never
-// has to touch this. Clears every photo, description, and selection back
-// to a first-visit state. Deliberately does NOT touch the device ID
-// (muggshotz_device_id) so the token balance tied to this device is
-// preserved — this only clears creative work in progress, not credits.
 function resetEverythingFreshStart(){
   const confirmed=window.confirm('Reset everything? This clears your photo, description, and all selections and designs — it cannot be undone.');
   if(!confirmed)return;
 
-  // Photo + reference slots + in-progress design state
   currentDesignId=null;
   pendingSlotTarget=null;
   document.getElementById('approveRow').style.display='none';
@@ -3364,7 +3639,6 @@ function resetEverythingFreshStart(){
   clearReferenceSlots();
   clearWorkshopStorage();
 
-  // All generated designs + slot placements
   recentDesigns=[];
   placements={left:null,right:null,front:null};
   try{localStorage.removeItem('muggshotz_mug_state');}catch(e){}
@@ -3375,10 +3649,8 @@ function resetEverythingFreshStart(){
   renderPositionHolder();
   updateLibraryToggleLabel();
 
-  // Idea description
   document.getElementById('ideaDesc').value='';
 
-  // Product, style, likeness — back to defaults (first option in each grid)
   document.querySelectorAll('#productCard .btn-select').forEach((b,i)=>b.classList.toggle('selected',i===0));
   product='mug';
   document.querySelectorAll('.card').forEach(card=>{
@@ -3395,20 +3667,17 @@ function resetEverythingFreshStart(){
     }
   });
 
-  // Mug print mode
   pickMugPrintMode('three-panel');
   panoramaFadeEdges=false;
   const fadeToggle=document.getElementById('panoramaFadeToggle');
   if(fadeToggle)fadeToggle.checked=false;
 
-  // Background theme + color
   document.getElementById('themeGrid').querySelectorAll('.theme-btn').forEach(b=>b.classList.remove('selected'));
   document.getElementById('colorGrid').querySelectorAll('.color-btn').forEach(b=>b.classList.remove('selected'));
   selectedTheme=null;
   selectedColor=null;
   updateDecorativeColorVisibility();
 
-  // Phone case + photo/poster selections
   selectedPhoneCaseModel=null;
   pendingPhoneCaseModel=null;
   const phoneInput=document.getElementById('phoneModelSearchInputGen');
@@ -3423,7 +3692,6 @@ function resetEverythingFreshStart(){
   pickPosterFinish('Glossy');
   pickPosterFrameColor('Black');
 
-  // Mug/travel product option pickers used by the auto-mockup engine
   selectedGenStyle='Classic White';
   selectedGenSize='11oz';
   selectedGenColor=null;
@@ -3441,11 +3709,9 @@ function resetEverythingFreshStart(){
   document.getElementById('genSize11Btn').classList.add('selected');
   document.getElementById('genSize15Btn').classList.remove('selected');
 
-  // Caption settings
   resetCaptionSettings();
   document.getElementById('captionCard').className='card caption-card';
 
-  // Verify card + status + timer
   document.getElementById('verifyCard').style.display='none';
   const verifyStatus=document.getElementById('verifyStatus');
   if(verifyStatus)verifyStatus.textContent='';
