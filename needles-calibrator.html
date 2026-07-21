@@ -668,14 +668,29 @@ function parseOverridesFromContent(fileContent){
   }
 }
 
+// FIXED: previously only matched filenames ending in exactly
+// "_final.webm" or "_transparent.webm", so any clip with an extra
+// suffix word (e.g. "X_transparent_verified.webm") was silently
+// missed entirely, or picked up with the wrong key downstream. Now
+// matches any .webm file with an underscore-separated name.
 function extractClipFilenames(fileContent){
-  const matches = fileContent.match(/\b[A-Za-z0-9]+_(?:final|transparent)\.webm\b/g) || [];
+  const matches = fileContent.match(/\b[A-Za-z0-9]+(?:_[A-Za-z0-9]+)*\.webm\b/g) || [];
   return Array.from(new Set(matches));
 }
 
+// FIXED: previously only stripped an exact trailing "_final" or
+// "_transparent" suffix. Any filename with something else tacked on
+// the end (e.g. "D_final_v2.webm", "X_transparent_verified.webm")
+// fell through untouched, so the save got keyed under the whole messy
+// filename stem instead of the clean single letter the playback engine
+// actually looks up — which is why saves for those clips silently
+// wrote to the wrong entry and never appeared to "stick." Now takes
+// everything before the FIRST underscore, which is always just the
+// letter for every clip filename in this project.
 function deriveClipKeyFromFilename(name){
   let key = name.replace(/\.[^/.]+$/, '');
-  key = key.replace(/_final$/i, '').replace(/_transparent$/i, '');
+  const underscoreIndex = key.indexOf('_');
+  if(underscoreIndex > 0) key = key.slice(0, underscoreIndex);
   return key;
 }
 
@@ -871,9 +886,7 @@ clipInput.addEventListener('change', e => {
   clipLoaded = true;
   updatePlaceholder();
 
-  let key = f.name.replace(/\.[^/.]+$/, '');
-  key = key.replace(/_final$/i, '').replace(/_transparent$/i, '');
-  clipLabel.value = key;
+  clipLabel.value = deriveClipKeyFromFilename(f.name);
   applyTransform();
 });
 
