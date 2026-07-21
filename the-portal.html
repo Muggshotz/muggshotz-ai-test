@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>The Portal — MuggsHotz Product Finder</title>
+<style>
+  :root{
+    --bg:#0d1117; --panel:#151b24; --border:#24344a;
+    --blue:#3d8bff; --blue-soft:#8ec4ff; --text:#e8edf5; --dim:#8a97a8;
+  }
+  *{box-sizing:border-box}
+  html, body{height:100%; margin:0}
+  body{
+    font-family:system-ui,-apple-system,Segoe UI,sans-serif;
+    background:var(--bg); color:var(--text); display:flex; height:100vh; overflow:hidden;
+  }
+  .main-col{
+    flex:1; height:100vh; overflow-y:auto; padding:24px 32px;
+  }
+  h1{font-size:20px; margin:0 0 4px}
+  .sub{font-size:13px; color:var(--dim); margin:0 0 20px; line-height:1.5; max-width:700px}
+  .search-row{display:flex; gap:10px; margin-bottom:20px; max-width:700px}
+  input[type=text], input[type=password]{
+    flex:1; font-size:14px; color:var(--text);
+    background:#0d0d0d; border:1px solid #333; border-radius:6px; padding:10px 12px;
+  }
+  button{
+    background:linear-gradient(180deg,#6fb3ff,#3d8bff 55%,#2266cc);
+    border:1px solid #7ec4ff; border-radius:8px; padding:.6rem 1.2rem;
+    color:#fff; font-size:14px; font-weight:600; cursor:pointer; white-space:nowrap;
+  }
+  button.ghost{background:#0d0d0d; border:1px solid #444; color:var(--dim)}
+  button.small{padding:.4rem .8rem; font-size:12px}
+  button:disabled{background:#333; border-color:#444; color:#666; cursor:not-allowed}
+  button:active:not(:disabled){transform:translateY(1px)}
+  .status{font-size:12px; margin:6px 0 0; line-height:1.5}
+  .status.ok{color:#4ade80}
+  .status.err{color:#f87171}
+  .status.pending{color:var(--blue-soft)}
+  details.settings{margin-bottom:20px; max-width:700px}
+  summary{font-size:12px; color:var(--dim); cursor:pointer; letter-spacing:.5px; text-transform:uppercase; margin-bottom:10px}
+  .settings-body{background:var(--panel); border:1px solid var(--border); border-radius:8px; padding:16px; margin-top:8px}
+  .settings-body p{font-size:12px; color:var(--dim); line-height:1.5; margin:8px 0 0}
+  .results-grid{
+    display:grid; grid-template-columns:repeat(auto-fill, minmax(240px, 1fr)); gap:16px; margin-bottom:32px;
+  }
+  .result-card{
+    background:var(--panel); border:1px solid var(--border); border-radius:10px; overflow:hidden;
+    display:flex; flex-direction:column;
+  }
+  .result-card img{width:100%; height:160px; object-fit:cover; background:#000; display:block}
+  .result-card .no-img{
+    width:100%; height:160px; background:#0d0d0d; display:flex; align-items:center; justify-content:center;
+    color:var(--dim); font-size:12px; text-align:center; padding:1rem;
+  }
+  .result-body{padding:12px; display:flex; flex-direction:column; gap:6px; flex:1}
+  .result-title{font-size:14px; font-weight:600; line-height:1.3}
+  .result-meta{font-size:11px; color:var(--dim); line-height:1.5}
+  .result-providers{font-size:11px; color:var(--blue-soft); line-height:1.5}
+  .catalog-section{border-top:1px solid var(--border); padding-top:20px; max-width:900px}
+  .catalog-list{display:flex; flex-direction:column; gap:8px; margin:14px 0}
+  .catalog-item{
+    display:flex; align-items:center; gap:12px; background:var(--panel); border:1px solid var(--border);
+    border-radius:8px; padding:8px 12px;
+  }
+  .catalog-item img{width:44px; height:44px; object-fit:cover; border-radius:4px; background:#000; flex:0 0 auto}
+  .catalog-item .ci-info{flex:1; font-size:13px}
+  .catalog-item .ci-meta{font-size:11px; color:var(--dim)}
+  .catalog-item .ci-remove{
+    flex:0 0 auto; width:auto; margin:0; padding:4px 10px; font-size:11px;
+    background:#2a1010; border:1px solid #5a2a2a; color:#ff8a7a;
+  }
+  .export-box{
+    background:#0d0d0d; border:1px solid var(--border); border-radius:8px; padding:12px;
+    font-family:ui-monospace,Menlo,Consolas,monospace; font-size:11px; color:var(--blue-soft);
+    white-space:pre-wrap; max-height:260px; overflow-y:auto; margin-top:10px;
+  }
+  .empty-note{font-size:12px; color:var(--dim); font-style:italic}
+</style>
+</head>
+<body>
+
+<div class="main-col">
+  <h1>The Portal</h1>
+  <p class="sub">Type any product idea below and this pulls real blueprint data straight from Printify's catalog — name, estimated base cost, available print providers, and a real product photo where Printify has one. Click "Add to catalog" on anything worth pursuing, and it collects into a running list you can export at the bottom.</p>
+
+  <details class="settings">
+    <summary>Printify connection settings</summary>
+    <div class="settings-body">
+      <label style="font-size:11px; color:var(--dim); display:block; margin-bottom:6px">Printify API token</label>
+      <input type="password" id="pfToken" placeholder="paste your Printify API token">
+      <p>Your token is only ever stored in this browser (localStorage) and sent directly to api.printify.com — never anywhere else. Find it in Printify under My Account &rarr; Connections &rarr; API token.</p>
+      <button class="ghost small" id="saveTokenBtn" type="button" style="margin-top:10px">Remember this token</button>
+    </div>
+  </details>
+
+  <div class="search-row">
+    <input type="text" id="searchInput" placeholder="e.g. coasters, throw pillow, beach towel...">
+    <button id="searchBtn" type="button">Search Printify</button>
+  </div>
+  <div class="status" id="searchStatus"></div>
+
+  <div class="results-grid" id="resultsGrid"></div>
+
+  <div class="catalog-section">
+    <h2 style="font-size:14px; margin:0 0 4px">Your running product matrix (<span id="catalogCount">0</span>)</h2>
+    <p class="sub" style="margin-bottom:0">Everything you've added below. Export it as JSON whenever you're ready to hand it to Claude for wiring into products-catalog.js.</p>
+    <div class="catalog-list" id="catalogList"></div>
+    <div id="emptyNote" class="empty-note">Nothing added yet — search above and click "Add to catalog" on anything you want to keep.</div>
+    <button class="ghost small" id="exportBtn" type="button" style="width:auto">Export as JSON</button>
+    <div class="export-box" id="exportBox" style="display:none"></div>
+  </div>
+</div>
+
+<script>
+const pfToken = document.getElementById('pfToken');
+const saveTokenBtn = document.getElementById('saveTokenBtn');
+const searchInput = document.getElementById('searchInput');
+const searchBtn = document.getElementById('searchBtn');
+const searchStatus = document.getElementById('searchStatus');
+const resultsGrid = document.getElementById('resultsGrid');
+const catalogList = document.getElementById('catalogList');
+const catalogCount = document.getElementById('catalogCount');
+const emptyNote = document.getElementById('emptyNote');
+const exportBtn = document.getElementById('exportBtn');
+const exportBox = document.getElementById('exportBox');
+
+// ---- restore remembered token (this browser only) ----
+try{
+  const saved = localStorage.getItem('productHunterToken');
+  if(saved) pfToken.value = saved;
+}catch(e){}
+
+saveTokenBtn.addEventListener('click', () => {
+  localStorage.setItem('productHunterToken', pfToken.value);
+  saveTokenBtn.textContent = 'Saved \u2713';
+  setTimeout(()=> saveTokenBtn.textContent = 'Remember this token', 1500);
+});
+
+// ---- catalog (running list), persisted per-browser ----
+let CATALOG = [];
+try{
+  const savedCatalog = JSON.parse(localStorage.getItem('productHunterCatalog') || '[]');
+  CATALOG = Array.isArray(savedCatalog) ? savedCatalog : [];
+}catch(e){ CATALOG = []; }
+
+function saveCatalog(){
+  localStorage.setItem('productHunterCatalog', JSON.stringify(CATALOG));
+}
+
+function setStatus(el, msg, kind){
+  el.textContent = msg;
+  el.className = 'status ' + (kind || '');
+}
+
+function renderCatalog(){
+  catalogList.innerHTML = '';
+  catalogCount.textContent = CATALOG.length;
+  emptyNote.style.display = CATALOG.length ? 'none' : 'block';
+  CATALOG.forEach((item, i) => {
+    const row = document.createElement('div');
+    row.className = 'catalog-item';
+
+    if(item.image){
+      const img = document.createElement('img');
+      img.src = item.image;
+      row.appendChild(img);
+    } else {
+      const spacer = document.createElement('div');
+      spacer.style.width = '44px'; spacer.style.height = '44px';
+      row.appendChild(spacer);
+    }
+
+    const info = document.createElement('div');
+    info.className = 'ci-info';
+    info.innerHTML = '<div>' + item.title + '</div><div class="ci-meta">Blueprint #' + item.id + (item.baseCost ? ' &middot; from $' + item.baseCost : '') + '</div>';
+    row.appendChild(info);
+
+    const removeBtn = document.createElement('button');
+    removeBtn.type = 'button';
+    removeBtn.className = 'ci-remove';
+    removeBtn.textContent = '\u2715';
+    removeBtn.addEventListener('click', () => {
+      CATALOG.splice(i, 1);
+      saveCatalog();
+      renderCatalog();
+    });
+    row.appendChild(removeBtn);
+
+    catalogList.appendChild(row);
+  });
+  exportBox.style.display = 'none';
+}
+renderCatalog();
+
+exportBtn.addEventListener('click', () => {
+  exportBox.style.display = CATALOG.length ? 'block' : 'none';
+  exportBox.textContent = JSON.stringify(CATALOG, null, 2);
+});
+
+// ---- Printify catalog search ----
+// Printify's catalog is one big list of blueprints (a few hundred), not
+// individually searchable server-side — so this pulls the full list
+// once, caches it in memory for this page load, and filters client-side
+// by title match. Much faster on repeat searches within the same visit.
+let blueprintCache = null;
+
+async function fetchAllBlueprints(){
+  if(blueprintCache) return blueprintCache;
+  const res = await fetch('https://api.printify.com/v1/catalog/blueprints.json', {
+    headers: { 'Authorization': 'Bearer ' + pfToken.value.trim() }
+  });
+  if(!res.ok){
+    const body = await res.text();
+    throw new Error('Printify returned ' + res.status + ': ' + body.slice(0,200));
+  }
+  blueprintCache = await res.json();
+  return blueprintCache;
+}
+
+async function fetchPrintProviders(blueprintId){
+  const res = await fetch('https://api.printify.com/v1/catalog/blueprints/' + blueprintId + '/print_providers.json', {
+    headers: { 'Authorization': 'Bearer ' + pfToken.value.trim() }
+  });
+  if(!res.ok) return [];
+  return res.json();
+}
+
+async function fetchVariants(blueprintId, providerId){
+  const res = await fetch('https://api.printify.com/v1/catalog/blueprints/' + blueprintId + '/print_providers/' + providerId + '/variants.json', {
+    headers: { 'Authorization': 'Bearer ' + pfToken.value.trim() }
+  });
+  if(!res.ok) return null;
+  return res.json();
+}
+
+function cheapestPrice(variantsResponse){
+  if(!variantsResponse || !Array.isArray(variantsResponse.variants)) return null;
+  let min = null;
+  for(const v of variantsResponse.variants){
+    if(typeof v.price === 'number'){
+      if(min === null || v.price < min) min = v.price;
+    }
+  }
+  return min !== null ? (min / 100).toFixed(2) : null;
+}
+
+async function runSearch(){
+  const term = searchInput.value.trim().toLowerCase();
+  if(!term){ setStatus(searchStatus, 'Type a product name first.', 'err'); return; }
+  if(!pfToken.value.trim()){ setStatus(searchStatus, 'Paste your Printify API token above first.', 'err'); return; }
+
+  setStatus(searchStatus, 'Fetching Printify\u2019s full catalog\u2026', 'pending');
+  searchBtn.disabled = true;
+  resultsGrid.innerHTML = '';
+
+  try{
+    const all = await fetchAllBlueprints();
+    const matches = all.filter(bp =>
+      (bp.title || '').toLowerCase().includes(term) ||
+      (bp.description || '').toLowerCase().includes(term)
+    );
+
+    if(!matches.length){
+      setStatus(searchStatus, 'No Printify blueprints matched "' + term + '". Try a broader or different word.', 'pending');
+      searchBtn.disabled = false;
+      return;
+    }
+
+    setStatus(searchStatus, 'Found ' + matches.length + ' match(es). Loading details\u2026', 'pending');
+
+    for(const bp of matches.slice(0, 12)){ // cap at 12 per search to stay gentle on the API
+      const card = document.createElement('div');
+      card.className = 'result-card';
+
+      const imgUrl = (bp.images && bp.images[0]) || null;
+      if(imgUrl){
+        const img = document.createElement('img');
+        img.src = imgUrl;
+        card.appendChild(img);
+      } else {
+        const noImg = document.createElement('div');
+        noImg.className = 'no-img';
+        noImg.textContent = 'No image available from Printify';
+        card.appendChild(noImg);
+      }
+
+      const body = document.createElement('div');
+      body.className = 'result-body';
+
+      const title = document.createElement('div');
+      title.className = 'result-title';
+      title.textContent = bp.title;
+      body.appendChild(title);
+
+      const meta = document.createElement('div');
+      meta.className = 'result-meta';
+      meta.textContent = 'Blueprint #' + bp.id + (bp.brand ? ' \u00b7 ' + bp.brand : '');
+      body.appendChild(meta);
+
+      const providersLine = document.createElement('div');
+      providersLine.className = 'result-providers';
+      providersLine.textContent = 'Checking print providers\u2026';
+      body.appendChild(providersLine);
+
+      const addBtn = document.createElement('button');
+      addBtn.className = 'small';
+      addBtn.textContent = 'Add to catalog';
+      addBtn.style.marginTop = 'auto';
+      addBtn.addEventListener('click', () => {
+        CATALOG.push({
+          id: bp.id,
+          title: bp.title,
+          image: imgUrl,
+          baseCost: card.dataset.baseCost || null
+        });
+        saveCatalog();
+        renderCatalog();
+        addBtn.textContent = 'Added \u2713';
+        addBtn.disabled = true;
+      });
+      body.appendChild(addBtn);
+
+      card.appendChild(body);
+      resultsGrid.appendChild(card);
+
+      // Fill in provider/price info async, per card, so the grid renders
+      // immediately and details fill in as they arrive.
+      (async () => {
+        try{
+          const providers = await fetchPrintProviders(bp.id);
+          if(!providers.length){
+            providersLine.textContent = 'No print providers listed.';
+            return;
+          }
+          providersLine.textContent = providers.slice(0,3).map(p => p.title).join(', ') + (providers.length > 3 ? ' +' + (providers.length - 3) + ' more' : '');
+
+          const firstPrice = await fetchVariants(bp.id, providers[0].id);
+          const price = cheapestPrice(firstPrice);
+          if(price){
+            card.dataset.baseCost = price;
+            meta.textContent += ' \u00b7 from $' + price;
+          }
+        }catch(err){
+          providersLine.textContent = 'Could not load provider details.';
+        }
+      })();
+    }
+
+    setStatus(searchStatus, 'Showing ' + Math.min(matches.length, 12) + ' of ' + matches.length + ' match(es).', 'ok');
+  }catch(err){
+    setStatus(searchStatus, 'Error: ' + err.message + ' \u2014 if this is a CORS/network error, Printify\u2019s API may be blocking direct browser requests, and a small server-side relay function would be needed instead.', 'err');
+  }finally{
+    searchBtn.disabled = false;
+  }
+}
+
+searchBtn.addEventListener('click', runSearch);
+searchInput.addEventListener('keydown', (e) => { if(e.key === 'Enter') runSearch(); });
+</script>
+
+</body>
+</html>
