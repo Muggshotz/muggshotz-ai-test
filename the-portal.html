@@ -85,12 +85,9 @@
   <p class="sub">Type any product idea below and this pulls real blueprint data straight from Printify's catalog — name, estimated base cost, available print providers, and a real product photo where Printify has one. Click "Add to catalog" on anything worth pursuing, and it collects into a running list you can export at the bottom.</p>
 
   <details class="settings">
-    <summary>Printify connection settings</summary>
+    <summary>Connection status</summary>
     <div class="settings-body">
-      <label style="font-size:11px; color:var(--dim); display:block; margin-bottom:6px">Printify API token</label>
-      <input type="password" id="pfToken" placeholder="paste your Printify API token">
-      <p>Your token is only ever stored in this browser (localStorage) and sent directly to api.printify.com — never anywhere else. Find it in Printify under My Account &rarr; Connections &rarr; API token.</p>
-      <button class="ghost small" id="saveTokenBtn" type="button" style="margin-top:10px">Remember this token</button>
+      <p>The Portal now talks to Printify through a small server-side relay (api/printify-proxy.js) rather than calling Printify directly from your browser — Printify blocks direct browser requests for security reasons, so this relay was added to work around that. It uses the Printify API token already stored in your Vercel project's environment variables. Nothing to paste in here anymore.</p>
     </div>
   </details>
 
@@ -113,8 +110,6 @@
 </div>
 
 <script>
-const pfToken = document.getElementById('pfToken');
-const saveTokenBtn = document.getElementById('saveTokenBtn');
 const searchInput = document.getElementById('searchInput');
 const searchBtn = document.getElementById('searchBtn');
 const searchStatus = document.getElementById('searchStatus');
@@ -124,18 +119,6 @@ const catalogCount = document.getElementById('catalogCount');
 const emptyNote = document.getElementById('emptyNote');
 const exportBtn = document.getElementById('exportBtn');
 const exportBox = document.getElementById('exportBox');
-
-// ---- restore remembered token (this browser only) ----
-try{
-  const saved = localStorage.getItem('productHunterToken');
-  if(saved) pfToken.value = saved;
-}catch(e){}
-
-saveTokenBtn.addEventListener('click', () => {
-  localStorage.setItem('productHunterToken', pfToken.value);
-  saveTokenBtn.textContent = 'Saved \u2713';
-  setTimeout(()=> saveTokenBtn.textContent = 'Remember this token', 1500);
-});
 
 // ---- catalog (running list), persisted per-browser ----
 let CATALOG = [];
@@ -207,29 +190,23 @@ let blueprintCache = null;
 
 async function fetchAllBlueprints(){
   if(blueprintCache) return blueprintCache;
-  const res = await fetch('https://api.printify.com/v1/catalog/blueprints.json', {
-    headers: { 'Authorization': 'Bearer ' + pfToken.value.trim() }
-  });
+  const res = await fetch('/api/printify-proxy?path=' + encodeURIComponent('catalog/blueprints.json'));
   if(!res.ok){
     const body = await res.text();
-    throw new Error('Printify returned ' + res.status + ': ' + body.slice(0,200));
+    throw new Error('Relay returned ' + res.status + ': ' + body.slice(0,200));
   }
   blueprintCache = await res.json();
   return blueprintCache;
 }
 
 async function fetchPrintProviders(blueprintId){
-  const res = await fetch('https://api.printify.com/v1/catalog/blueprints/' + blueprintId + '/print_providers.json', {
-    headers: { 'Authorization': 'Bearer ' + pfToken.value.trim() }
-  });
+  const res = await fetch('/api/printify-proxy?path=' + encodeURIComponent('catalog/blueprints/' + blueprintId + '/print_providers.json'));
   if(!res.ok) return [];
   return res.json();
 }
 
 async function fetchVariants(blueprintId, providerId){
-  const res = await fetch('https://api.printify.com/v1/catalog/blueprints/' + blueprintId + '/print_providers/' + providerId + '/variants.json', {
-    headers: { 'Authorization': 'Bearer ' + pfToken.value.trim() }
-  });
+  const res = await fetch('/api/printify-proxy?path=' + encodeURIComponent('catalog/blueprints/' + blueprintId + '/print_providers/' + providerId + '/variants.json'));
   if(!res.ok) return null;
   return res.json();
 }
@@ -248,7 +225,6 @@ function cheapestPrice(variantsResponse){
 async function runSearch(){
   const term = searchInput.value.trim().toLowerCase();
   if(!term){ setStatus(searchStatus, 'Type a product name first.', 'err'); return; }
-  if(!pfToken.value.trim()){ setStatus(searchStatus, 'Paste your Printify API token above first.', 'err'); return; }
 
   setStatus(searchStatus, 'Fetching Printify\u2019s full catalog\u2026', 'pending');
   searchBtn.disabled = true;
@@ -349,7 +325,7 @@ async function runSearch(){
 
     setStatus(searchStatus, 'Showing ' + Math.min(matches.length, 12) + ' of ' + matches.length + ' match(es).', 'ok');
   }catch(err){
-    setStatus(searchStatus, 'Error: ' + err.message + ' \u2014 if this is a CORS/network error, Printify\u2019s API may be blocking direct browser requests, and a small server-side relay function would be needed instead.', 'err');
+    setStatus(searchStatus, 'Error: ' + err.message, 'err');
   }finally{
     searchBtn.disabled = false;
   }
