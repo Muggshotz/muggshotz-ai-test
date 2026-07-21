@@ -718,6 +718,20 @@ document.getElementById('loadValuesBtn').addEventListener('click', async () => {
 });
 
 // ---- browse-backdrops thumbnail gallery ----
+// Auto-collapse behavior: the panel collapses automatically after the
+// FIRST selection (background rarely changes mid-session). If Alyx
+// manually reopens it after that, auto-collapse disarms for the rest
+// of this page load — a plain in-memory flag, not localStorage, so a
+// fresh page load tomorrow starts armed again.
+let backdropAutoCollapseArmed = true;
+let backdropHasAutoCollapsedOnce = false;
+const backdropDetailsEl = document.getElementById('loadBackdropsBtn').closest('details');
+backdropDetailsEl.addEventListener('toggle', () => {
+  if(backdropDetailsEl.open && backdropHasAutoCollapsedOnce){
+    backdropAutoCollapseArmed = false;
+  }
+});
+
 document.getElementById('loadBackdropsBtn').addEventListener('click', async () => {
   const backdropsStatus = document.getElementById('backdropsStatus');
   const grid = document.getElementById('backdropGrid');
@@ -757,6 +771,10 @@ document.getElementById('loadBackdropsBtn').addEventListener('click', async () =
           bgLoaded = true;
           updatePlaceholder();
           setStatus(backdropsStatus, 'Loaded ' + filename + ' onto the stage.', 'ok');
+          if(backdropAutoCollapseArmed){
+            backdropDetailsEl.open = false;
+            backdropHasAutoCollapsedOnce = true;
+          }
         }catch(err){
           setStatus(backdropsStatus, 'Error loading ' + filename + ': ' + err.message, 'err');
         }
