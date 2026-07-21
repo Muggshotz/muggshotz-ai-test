@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>The File Cabinet</title>
+<style>
+  :root{
+    --bg:#0d1117; --panel:#151b24; --border:#24344a;
+    --blue:#3d8bff; --blue-soft:#8ec4ff; --text:#e8edf5; --dim:#8a97a8;
+  }
+  *{box-sizing:border-box}
+  html, body{height:100%; margin:0}
+  body{
+    font-family:system-ui,-apple-system,Segoe UI,sans-serif;
+    background:var(--bg); color:var(--text); display:flex; justify-content:center;
+    min-height:100vh; padding:2.5rem 1.5rem;
+  }
+  .panel{width:100%; max-width:560px}
+  h1{font-size:22px; margin:0 0 4px; letter-spacing:.3px; display:flex; align-items:center; gap:10px}
+  h1 .icon{font-size:26px}
+  h2{font-size:12px; margin:0 0 .75rem; letter-spacing:.5px; text-transform:uppercase; color:var(--blue-soft)}
+  .sub{font-size:12px; color:var(--dim); margin:0 0 1.5rem; line-height:1.55}
+  .card{background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:1.5rem; margin-bottom:1.25rem}
+  .field{margin-bottom:1.1rem}
+  .field label{
+    display:block; font-size:11px; color:var(--dim); text-transform:uppercase;
+    letter-spacing:.5px; margin-bottom:6px;
+  }
+  input[type=file], input[type=text], input[type=password]{
+    width:100%; font-size:13px; color:var(--text);
+    background:#0d0d0d; border:1px solid #333; border-radius:6px; padding:10px;
+  }
+  input[type=text]::placeholder, input[type=password]::placeholder{color:#555}
+  .row2{display:grid; grid-template-columns:1fr 1fr; gap:8px}
+  .divider{height:1px; background:var(--border); margin:1.25rem 0}
+  .file-info{
+    background:#0d0d0d; border:1px solid var(--border); border-radius:8px;
+    padding:12px; font-family:ui-monospace,Menlo,Consolas,monospace;
+    font-size:12px; color:var(--blue-soft); white-space:pre-wrap; line-height:1.6;
+    display:none; margin-top:.75rem;
+  }
+  .file-info.visible{display:block}
+  button{
+    width:100%; margin-top:10px; background:linear-gradient(180deg,#6fb3ff,#3d8bff 55%,#2266cc);
+    border:1px solid #7ec4ff; border-radius:8px; padding:.8rem;
+    color:#fff; font-size:14px; font-weight:600; cursor:pointer;
+  }
+  button.ghost{background:#0d0d0d; border:1px solid #444; color:var(--dim)}
+  button.confirm{background:linear-gradient(180deg,#4ade80,#22c55e 55%,#16a34a); border-color:#86efac}
+  button:disabled{background:#333; border-color:#444; color:#666; cursor:not-allowed}
+  button:active:not(:disabled){transform:translateY(1px)}
+  .status{font-size:12px; margin-top:10px; line-height:1.5; display:none}
+  .status.visible{display:block}
+  .status.ok{color:#4ade80}
+  .status.err{color:#f87171}
+  .status.pending{color:var(--blue-soft)}
+  details{margin-bottom:0}
+  summary{font-size:11px; color:var(--dim); cursor:pointer; letter-spacing:.5px; text-transform:uppercase; margin-bottom:.75rem}
+  .history{margin-top:1.5rem}
+  .history-item{
+    font-size:11px; color:var(--dim); padding:8px 0; border-top:1px solid var(--border);
+    display:flex; justify-content:space-between; gap:10px;
+  }
+  .history-item .path{color:var(--blue-soft); font-family:ui-monospace,Menlo,Consolas,monospace}
+  .history-item.ok .sha{color:#4ade80}
+  .history-item.err .sha{color:#f87171}
+</style>
+</head>
+<body>
+<div class="panel">
+  <h1><span class="icon">🗄️</span> The File Cabinet</h1>
+  <p class="sub">Drop a file in, tell it where it lives in the repo, and it goes straight there — no upload page, no dragging, no clicking commit. Talks directly to GitHub's API, the same way the Clipibrator saves clip calibrations.</p>
+
+  <div class="card">
+    <details>
+      <summary>GitHub connection settings</summary>
+      <div class="field">
+        <label>Personal access token</label>
+        <input type="password" id="ghToken" placeholder="ghp_...">
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label>Owner</label>
+          <input type="text" id="ghOwner" value="Muggshotz">
+        </div>
+        <div class="field">
+          <label>Repo</label>
+          <input type="text" id="ghRepo" value="muggshotz-ai-test">
+        </div>
+      </div>
+      <div class="field">
+        <label>Branch</label>
+        <input type="text" id="ghBranch" value="main">
+      </div>
+      <p class="sub" style="margin-top:0">Same connection this browser already remembers from the Clipibrator, if you've used it — token only ever goes to this browser's storage and straight to api.github.com.</p>
+      <button class="ghost" id="saveConnBtn" type="button">Remember these settings</button>
+    </details>
+  </div>
+
+  <div class="card">
+    <h2>File to send</h2>
+    <div class="field">
+      <label>Pick a file from your device</label>
+      <input type="file" id="fileInput">
+    </div>
+    <div class="field">
+      <label>Destination path in the repo (auto-filled — edit for a subfolder, e.g. lib/products-catalog.js)</label>
+      <input type="text" id="destPath" placeholder="load a file to auto-fill">
+    </div>
+    <div class="field">
+      <label>Commit message</label>
+      <input type="text" id="commitMsg" placeholder="File Cabinet: update &lt;filename&gt;">
+    </div>
+    <div class="file-info" id="fileInfo"></div>
+  </div>
+
+  <button id="previewBtn" type="button">1. Check destination &amp; preview</button>
+  <div class="status" id="statusMsg"></div>
+  <button class="confirm" id="commitBtn" type="button" disabled>2. Confirm &amp; send to the repo</button>
+  <div class="status" id="commitStatusMsg"></div>
+
+  <div class="history" id="history"></div>
+</div>
+
+<script>
+const ghToken = document.getElementById('ghToken');
+const ghOwner = document.getElementById('ghOwner');
+const ghRepo = document.getElementById('ghRepo');
+const ghBranch = document.getElementById('ghBranch');
+const saveConnBtn = document.getElementById('saveConnBtn');
+const fileInput = document.getElementById('fileInput');
+const destPath = document.getElementById('destPath');
+const commitMsg = document.getElementById('commitMsg');
+const fileInfo = document.getElementById('fileInfo');
+const previewBtn = document.getElementById('previewBtn');
+const commitBtn = document.getElementById('commitBtn');
+const statusMsg = document.getElementById('statusMsg');
+const commitStatusMsg = document.getElementById('commitStatusMsg');
+const historyEl = document.getElementById('history');
+
+// Shares the exact same connection storage key as the Clipibrator, so a
+// token saved in one tool is already there in the other — no re-entering it.
+try{
+  const saved = JSON.parse(localStorage.getItem('needlesCalibratorConn') || '{}');
+  if(saved.token) ghToken.value = saved.token;
+  if(saved.owner) ghOwner.value = saved.owner;
+  if(saved.repo) ghRepo.value = saved.repo;
+  if(saved.branch) ghBranch.value = saved.branch;
+}catch(e){}
+
+saveConnBtn.addEventListener('click', () => {
+  localStorage.setItem('needlesCalibratorConn', JSON.stringify({
+    token: ghToken.value, owner: ghOwner.value, repo: ghRepo.value, branch: ghBranch.value
+  }));
+  saveConnBtn.textContent = 'Saved \u2713';
+  setTimeout(()=> saveConnBtn.textContent = 'Remember these settings', 1500);
+});
+
+let selectedFile = null;
+let selectedFileBytes = null;
+
+fileInput.addEventListener('change', async (e) => {
+  const f = e.target.files[0];
+  if(!f) return;
+  selectedFile = f;
+  destPath.value = f.name;
+  commitMsg.value = 'File Cabinet: update ' + f.name;
+  const buf = await f.arrayBuffer();
+  selectedFileBytes = new Uint8Array(buf);
+  fileInfo.classList.add('visible');
+  fileInfo.textContent = f.name + '\n' + (f.type || 'unknown type') + '\n' + formatBytes(f.size);
+  commitBtn.disabled = true;
+});
+
+function formatBytes(n){
+  if(n < 1024) return n + ' B';
+  if(n < 1024*1024) return (n/1024).toFixed(1) + ' KB';
+  return (n/(1024*1024)).toFixed(2) + ' MB';
+}
+
+function setStatus(el, msg, kind){
+  el.textContent = msg;
+  el.className = 'status visible ' + (kind || '');
+}
+
+function bytesToBase64(bytes){
+  const CHUNK = 0x8000;
+  let binary = '';
+  for(let i = 0; i < bytes.length; i += CHUNK){
+    binary += String.fromCharCode.apply(null, bytes.subarray(i, i + CHUNK));
+  }
+  return btoa(binary);
+}
+
+function apiBase(path){
+  return 'https://api.github.com/repos/' + ghOwner.value.trim() + '/' + ghRepo.value.trim() + '/contents/' + path;
+}
+
+let pendingCommit = null; // { path, sha (or null if new), base64Content }
+
+previewBtn.addEventListener('click', async () => {
+  if(!selectedFile){ setStatus(statusMsg, 'Pick a file first.', 'err'); return; }
+  const path = destPath.value.trim();
+  if(!path){ setStatus(statusMsg, 'Type or confirm a destination path first.', 'err'); return; }
+  if(!ghToken.value.trim()){ setStatus(statusMsg, 'Paste your GitHub token in "GitHub connection settings" first.', 'err'); return; }
+
+  setStatus(statusMsg, 'Checking ' + path + ' in the repo\u2026', 'pending');
+  previewBtn.disabled = true;
+  try{
+    const res = await fetch(apiBase(path) + '?ref=' + encodeURIComponent(ghBranch.value.trim()), {
+      headers: { 'Authorization': 'Bearer ' + ghToken.value.trim(), 'Accept': 'application/vnd.github+json' }
+    });
+
+    let sha = null;
+    let existsNote = 'This will create a brand new file at that path.';
+    if(res.status === 200){
+      const meta = await res.json();
+      sha = meta.sha;
+      existsNote = 'A file already exists there — this will replace it. Old size: ' + formatBytes(meta.size || 0) + '.';
+    }else if(res.status !== 404){
+      const body = await res.text();
+      throw new Error('GitHub returned ' + res.status + ': ' + body.slice(0,200));
+    }
+
+    const base64Content = bytesToBase64(selectedFileBytes);
+    pendingCommit = { path, sha, base64Content };
+
+    fileInfo.textContent =
+      selectedFile.name + ' \u2192 ' + path + '\n' +
+      formatBytes(selectedFile.size) + '\n\n' + existsNote + '\n\nReady to send \u2014 nothing has been committed yet.';
+
+    commitBtn.disabled = false;
+    setStatus(statusMsg, 'Checked OK. Review above, then send it.', 'ok');
+  }catch(err){
+    setStatus(statusMsg, 'Error: ' + err.message, 'err');
+    pendingCommit = null;
+    commitBtn.disabled = true;
+  }finally{
+    previewBtn.disabled = false;
+  }
+});
+
+commitBtn.addEventListener('click', async () => {
+  if(!pendingCommit) return;
+  commitBtn.disabled = true;
+  setStatus(commitStatusMsg, 'Sending ' + pendingCommit.path + ' to the repo\u2026', 'pending');
+  try{
+    const body = {
+      message: commitMsg.value.trim() || ('File Cabinet: update ' + pendingCommit.path),
+      content: pendingCommit.base64Content,
+      branch: ghBranch.value.trim()
+    };
+    if(pendingCommit.sha) body.sha = pendingCommit.sha;
+
+    const res = await fetch(apiBase(pendingCommit.path), {
+      method: 'PUT',
+      headers: { 'Authorization': 'Bearer ' + ghToken.value.trim(), 'Accept': 'application/vnd.github+json' },
+      body: JSON.stringify(body)
+    });
+    if(!res.ok){
+      const errBody = await res.text();
+      throw new Error('GitHub returned ' + res.status + ': ' + errBody.slice(0,300));
+    }
+    const data = await res.json();
+    const shortSha = (data.commit && data.commit.sha) ? data.commit.sha.slice(0,7) : 'ok';
+    setStatus(commitStatusMsg, 'Committed \u2713 (' + shortSha + '). Live site will update on next deploy.', 'ok');
+    addHistory(pendingCommit.path, shortSha, true);
+    pendingCommit = null;
+  }catch(err){
+    setStatus(commitStatusMsg, 'Error: ' + err.message, 'err');
+    addHistory(pendingCommit ? pendingCommit.path : (destPath.value || 'unknown'), null, false);
+  }
+});
+
+function addHistory(path, shortSha, ok){
+  const item = document.createElement('div');
+  item.className = 'history-item ' + (ok ? 'ok' : 'err');
+  const time = new Date().toLocaleTimeString();
+  item.innerHTML =
+    '<span class="path">' + path + '</span>' +
+    '<span class="sha">' + (ok ? ('\u2713 ' + shortSha) : '\u2717 failed') + ' \u2014 ' + time + '</span>';
+  historyEl.prepend(item);
+}
+</script>
+</body>
+</html>
