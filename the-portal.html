@@ -190,7 +190,7 @@ let blueprintCache = null;
 
 async function fetchAllBlueprints(){
   if(blueprintCache) return blueprintCache;
-  const res = await fetch('/api/printify-proxy?path=' + encodeURIComponent('catalog/blueprints.json'));
+  const res = await fetch('/api/admin?action=printify-catalog&path=' + encodeURIComponent('catalog/blueprints.json'));
   if(!res.ok){
     const body = await res.text();
     throw new Error('Relay returned ' + res.status + ': ' + body.slice(0,200));
@@ -200,13 +200,13 @@ async function fetchAllBlueprints(){
 }
 
 async function fetchPrintProviders(blueprintId){
-  const res = await fetch('/api/printify-proxy?path=' + encodeURIComponent('catalog/blueprints/' + blueprintId + '/print_providers.json'));
+  const res = await fetch('/api/admin?action=printify-catalog&path=' + encodeURIComponent('catalog/blueprints/' + blueprintId + '/print_providers.json'));
   if(!res.ok) return [];
   return res.json();
 }
 
 async function fetchVariants(blueprintId, providerId){
-  const res = await fetch('/api/printify-proxy?path=' + encodeURIComponent('catalog/blueprints/' + blueprintId + '/print_providers/' + providerId + '/variants.json'));
+  const res = await fetch('/api/admin?action=printify-catalog&path=' + encodeURIComponent('catalog/blueprints/' + blueprintId + '/print_providers/' + providerId + '/variants.json'));
   if(!res.ok) return null;
   return res.json();
 }
