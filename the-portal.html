@@ -7,6 +7,7 @@
   :root{
     --bg:#0d1117; --panel:#151b24; --border:#24344a;
     --blue:#3d8bff; --blue-soft:#8ec4ff; --text:#e8edf5; --dim:#8a97a8;
+    --purple:#8b5cf6; --purple-soft:#d8c8ff;
   }
   *{box-sizing:border-box}
   html, body{height:100%; margin:0}
@@ -23,6 +24,9 @@
   input[type=text], input[type=password]{
     flex:1; font-size:14px; color:var(--text);
     background:#0d0d0d; border:1px solid #333; border-radius:6px; padding:10px 12px;
+  }
+  input[type=file]{
+    font-size:12px; color:var(--dim);
   }
   button{
     background:linear-gradient(180deg,#6fb3ff,#3d8bff 55%,#2266cc);
@@ -41,22 +45,30 @@
   summary{font-size:12px; color:var(--dim); cursor:pointer; letter-spacing:.5px; text-transform:uppercase; margin-bottom:10px}
   .settings-body{background:var(--panel); border:1px solid var(--border); border-radius:8px; padding:16px; margin-top:8px}
   .settings-body p{font-size:12px; color:var(--dim); line-height:1.5; margin:8px 0 0}
+  .prodigi-summary{font-size:12px; color:var(--dim); margin-top:10px; line-height:1.6}
+  .prodigi-summary strong{color:var(--purple-soft)}
   .results-grid{
     display:grid; grid-template-columns:repeat(auto-fill, minmax(240px, 1fr)); gap:16px; margin-bottom:32px;
   }
   .result-card{
     background:var(--panel); border:1px solid var(--border); border-radius:10px; overflow:hidden;
-    display:flex; flex-direction:column;
+    display:flex; flex-direction:column; position:relative;
   }
   .result-card img{width:100%; height:160px; object-fit:cover; background:#000; display:block}
   .result-card .no-img{
     width:100%; height:160px; background:#0d0d0d; display:flex; align-items:center; justify-content:center;
     color:var(--dim); font-size:12px; text-align:center; padding:1rem;
   }
+  .source-badge{
+    position:absolute; top:8px; left:8px; font-size:10px; font-weight:700; letter-spacing:.5px;
+    text-transform:uppercase; padding:3px 7px; border-radius:5px; z-index:2;
+  }
+  .source-badge.prodigi{background:rgba(139,92,246,.9); color:#fff}
   .result-body{padding:12px; display:flex; flex-direction:column; gap:6px; flex:1}
   .result-title{font-size:14px; font-weight:600; line-height:1.3}
   .result-meta{font-size:11px; color:var(--dim); line-height:1.5}
   .result-providers{font-size:11px; color:var(--blue-soft); line-height:1.5}
+  .result-providers.prodigi{color:var(--purple-soft)}
   .catalog-section{border-top:1px solid var(--border); padding-top:20px; max-width:900px}
   .catalog-list{display:flex; flex-direction:column; gap:8px; margin:14px 0}
   .catalog-item{
@@ -82,7 +94,7 @@
 
 <div class="main-col">
   <h1>The Portal</h1>
-  <p class="sub">Type any product idea below and this pulls real blueprint data straight from Printify's catalog — name, estimated base cost, available print providers, and a real product photo where Printify has one. Click "Add to catalog" on anything worth pursuing, and it collects into a running list you can export at the bottom.</p>
+  <p class="sub">Type any product idea below and this pulls real blueprint data straight from Printify's catalog — name, estimated base cost, available print providers, and a real product photo where Printify has one — combined with anything you've uploaded from Prodigi's CSV exports. Click "Add to catalog" on anything worth pursuing, and it collects into a running list you can export at the bottom.</p>
 
   <details class="settings">
     <summary>Connection status</summary>
@@ -91,9 +103,23 @@
     </div>
   </details>
 
+  <details class="settings" id="prodigiUpload">
+    <summary>Upload Prodigi catalog (CSV)</summary>
+    <div class="settings-body">
+      <p>Prodigi doesn't offer live search, so download a category CSV from their site and upload it here. It gets parsed and stored in this browser only (localStorage) — re-uploading a CSV for a category you've already loaded replaces just that category, so it's safe to re-upload after Prodigi updates their export.</p>
+      <div style="display:flex; gap:10px; align-items:center; margin-top:10px; flex-wrap:wrap">
+        <input type="file" id="prodigiFileInput" accept=".csv">
+        <button id="prodigiUploadBtn" type="button" class="small">Upload &amp; Parse</button>
+        <button id="prodigiClearBtn" type="button" class="small ghost">Clear all Prodigi data</button>
+      </div>
+      <div class="status" id="prodigiStatus"></div>
+      <div class="prodigi-summary" id="prodigiSummary"></div>
+    </div>
+  </details>
+
   <div class="search-row">
     <input type="text" id="searchInput" placeholder="e.g. coasters, throw pillow, beach towel...">
-    <button id="searchBtn" type="button">Search Printify</button>
+    <button id="searchBtn" type="button">Search</button>
   </div>
   <div class="status" id="searchStatus"></div>
 
@@ -119,6 +145,12 @@ const catalogCount = document.getElementById('catalogCount');
 const emptyNote = document.getElementById('emptyNote');
 const exportBtn = document.getElementById('exportBtn');
 const exportBox = document.getElementById('exportBox');
+
+const prodigiFileInput = document.getElementById('prodigiFileInput');
+const prodigiUploadBtn = document.getElementById('prodigiUploadBtn');
+const prodigiClearBtn = document.getElementById('prodigiClearBtn');
+const prodigiStatus = document.getElementById('prodigiStatus');
+const prodigiSummary = document.getElementById('prodigiSummary');
 
 // ---- catalog (running list), persisted per-browser ----
 let CATALOG = [];
@@ -156,7 +188,11 @@ function renderCatalog(){
 
     const info = document.createElement('div');
     info.className = 'ci-info';
-    info.innerHTML = '<div>' + item.title + '</div><div class="ci-meta">Blueprint #' + item.id + (item.baseCost ? ' &middot; from $' + item.baseCost : '') + '</div>';
+    const sourceTag = item.source === 'prodigi' ? ' &middot; Prodigi' : '';
+    info.innerHTML = '<div>' + item.title + '</div><div class="ci-meta">' +
+      (item.source === 'prodigi' ? 'SKU ' + item.id : 'Blueprint #' + item.id) +
+      (item.baseCost ? ' &middot; from ' + (item.source === 'prodigi' ? '' : '$') + item.baseCost : '') +
+      sourceTag + '</div>';
     row.appendChild(info);
 
     const removeBtn = document.createElement('button');
@@ -180,6 +216,243 @@ exportBtn.addEventListener('click', () => {
   exportBox.style.display = CATALOG.length ? 'block' : 'none';
   exportBox.textContent = JSON.stringify(CATALOG, null, 2);
 });
+
+// ---- Prodigi catalog (CSV upload, stored locally) ----
+const PRODIGI_STORAGE_KEY = 'prodigiCatalog';
+
+// Maps Prodigi's real CSV header names (trimmed, lowercased) to our field keys.
+// Only columns we actually use are mapped; shipping-method columns are ignored.
+const PRODIGI_HEADER_MAP = {
+  'category': 'category',
+  'product type': 'productType',
+  'sku': 'sku',
+  'product description': 'description',
+  'size (cm)': 'sizeCm',
+  'size (inches)': 'sizeIn',
+  'product price': 'price',
+  'product currency': 'currency',
+  'source country': 'sourceCountry',
+  'destination country': 'destinationCountry'
+};
+
+function loadProdigiCatalog(){
+  try{
+    const saved = JSON.parse(localStorage.getItem(PRODIGI_STORAGE_KEY) || '[]');
+    return Array.isArray(saved) ? saved : [];
+  }catch(e){ return []; }
+}
+
+function saveProdigiCatalog(arr){
+  localStorage.setItem(PRODIGI_STORAGE_KEY, JSON.stringify(arr));
+}
+
+// Standard CSV parser that handles quoted fields containing commas,
+// escaped quotes (""), and both \n and \r\n line endings.
+function parseCSV(text){
+  const rows = [];
+  let row = [];
+  let field = '';
+  let inQuotes = false;
+
+  for(let i = 0; i < text.length; i++){
+    const c = text[i];
+    if(inQuotes){
+      if(c === '"'){
+        if(text[i+1] === '"'){ field += '"'; i++; }
+        else { inQuotes = false; }
+      } else {
+        field += c;
+      }
+    } else {
+      if(c === '"'){
+        inQuotes = true;
+      } else if(c === ','){
+        row.push(field); field = '';
+      } else if(c === '\n' || c === '\r'){
+        if(c === '\r' && text[i+1] === '\n') i++;
+        row.push(field); field = '';
+        if(row.length > 1 || row[0] !== ''){ rows.push(row); }
+        row = [];
+      } else {
+        field += c;
+      }
+    }
+  }
+  if(field.length || row.length){ row.push(field); rows.push(row); }
+  return rows;
+}
+
+function renderProdigiSummary(){
+  const all = loadProdigiCatalog();
+  if(!all.length){
+    prodigiSummary.textContent = 'No Prodigi categories uploaded yet.';
+    return;
+  }
+  const byCategory = {};
+  all.forEach(p => {
+    const cat = p.category || 'Uncategorized';
+    byCategory[cat] = (byCategory[cat] || 0) + 1;
+  });
+  const parts = Object.keys(byCategory).sort().map(cat => '<strong>' + cat + '</strong> (' + byCategory[cat] + ')');
+  prodigiSummary.innerHTML = 'Loaded: ' + parts.join(', ') + ' &mdash; ' + all.length + ' product(s) total.';
+}
+renderProdigiSummary();
+
+function parseProdigiCSV(text){
+  const rows = parseCSV(text).filter(r => r.some(cell => cell.trim() !== ''));
+  if(!rows.length) throw new Error('The CSV appears to be empty.');
+
+  const headerRow = rows[0].map(h => h.trim().toLowerCase());
+  const indexOf = {};
+  headerRow.forEach((h, i) => {
+    if(PRODIGI_HEADER_MAP[h]) indexOf[PRODIGI_HEADER_MAP[h]] = i;
+  });
+
+  // Require at minimum sku, description, price and category — everything
+  // else is optional context.
+  const required = ['sku', 'description', 'price', 'category'];
+  const missing = required.filter(key => !(key in indexOf));
+  if(missing.length){
+    throw new Error('CSV is missing expected column(s): ' + missing.join(', ') + '. Check this file matches Prodigi\u2019s standard export format.');
+  }
+
+  const seenSkus = new Set();
+  const products = [];
+
+  for(let i = 1; i < rows.length; i++){
+    const r = rows[i];
+    const sku = (r[indexOf.sku] || '').trim();
+    if(!sku || seenSkus.has(sku)) continue; // same SKU repeats once per shipping method/destination row
+    seenSkus.add(sku);
+
+    const priceRaw = (r[indexOf.price] || '').trim();
+    const price = parseFloat(priceRaw);
+
+    products.push({
+      id: sku,
+      sku: sku,
+      category: (r[indexOf.category] || '').trim(),
+      productType: indexOf.productType !== undefined ? (r[indexOf.productType] || '').trim() : '',
+      description: (r[indexOf.description] || '').trim(),
+      sizeCm: indexOf.sizeCm !== undefined ? (r[indexOf.sizeCm] || '').trim() : '',
+      sizeIn: indexOf.sizeIn !== undefined ? (r[indexOf.sizeIn] || '').trim() : '',
+      price: isNaN(price) ? null : price,
+      currency: indexOf.currency !== undefined ? (r[indexOf.currency] || '').trim() : '',
+      title: (r[indexOf.description] || '').trim() || sku,
+      source: 'prodigi'
+    });
+  }
+
+  if(!products.length) throw new Error('No usable product rows found in this CSV.');
+  return products;
+}
+
+function mergeProdigiProducts(newProducts){
+  const existing = loadProdigiCatalog();
+  const categoriesInFile = new Set(newProducts.map(p => p.category));
+  const kept = existing.filter(p => !categoriesInFile.has(p.category));
+  const merged = kept.concat(newProducts);
+  saveProdigiCatalog(merged);
+  return merged;
+}
+
+prodigiUploadBtn.addEventListener('click', () => {
+  const file = prodigiFileInput.files && prodigiFileInput.files[0];
+  if(!file){ setStatus(prodigiStatus, 'Choose a CSV file first.', 'err'); return; }
+
+  setStatus(prodigiStatus, 'Reading ' + file.name + '\u2026', 'pending');
+  const reader = new FileReader();
+  reader.onload = () => {
+    try{
+      const products = parseProdigiCSV(reader.result);
+      mergeProdigiProducts(products);
+      const categories = [...new Set(products.map(p => p.category))].join(', ');
+      setStatus(prodigiStatus, 'Loaded ' + products.length + ' product(s) for: ' + categories + '.', 'ok');
+      renderProdigiSummary();
+      prodigiFileInput.value = '';
+    }catch(err){
+      setStatus(prodigiStatus, 'Error: ' + err.message, 'err');
+    }
+  };
+  reader.onerror = () => setStatus(prodigiStatus, 'Could not read that file.', 'err');
+  reader.readAsText(file);
+});
+
+prodigiClearBtn.addEventListener('click', () => {
+  if(!confirm('Clear all uploaded Prodigi data from this browser?')) return;
+  localStorage.removeItem(PRODIGI_STORAGE_KEY);
+  renderProdigiSummary();
+  setStatus(prodigiStatus, 'Cleared.', 'ok');
+});
+
+function searchProdigi(term){
+  return loadProdigiCatalog().filter(p =>
+    (p.title || '').toLowerCase().includes(term) ||
+    (p.description || '').toLowerCase().includes(term) ||
+    (p.category || '').toLowerCase().includes(term) ||
+    (p.productType || '').toLowerCase().includes(term) ||
+    (p.sku || '').toLowerCase().includes(term)
+  );
+}
+
+function buildProdigiCard(p){
+  const card = document.createElement('div');
+  card.className = 'result-card';
+
+  const badge = document.createElement('div');
+  badge.className = 'source-badge prodigi';
+  badge.textContent = 'Prodigi';
+  card.appendChild(badge);
+
+  const noImg = document.createElement('div');
+  noImg.className = 'no-img';
+  noImg.textContent = 'No image in Prodigi export';
+  card.appendChild(noImg);
+
+  const body = document.createElement('div');
+  body.className = 'result-body';
+
+  const title = document.createElement('div');
+  title.className = 'result-title';
+  title.textContent = p.title;
+  body.appendChild(title);
+
+  const meta = document.createElement('div');
+  meta.className = 'result-meta';
+  const metaParts = ['SKU ' + p.sku];
+  if(p.category) metaParts.push(p.category);
+  if(p.sizeCm) metaParts.push(p.sizeCm);
+  if(p.price !== null) metaParts.push('from ' + p.price + ' ' + (p.currency || ''));
+  meta.textContent = metaParts.join(' \u00b7 ');
+  body.appendChild(meta);
+
+  const providersLine = document.createElement('div');
+  providersLine.className = 'result-providers prodigi';
+  providersLine.textContent = p.productType ? p.productType : 'Prodigi print-on-demand';
+  body.appendChild(providersLine);
+
+  const addBtn = document.createElement('button');
+  addBtn.className = 'small';
+  addBtn.textContent = 'Add to catalog';
+  addBtn.style.marginTop = 'auto';
+  addBtn.addEventListener('click', () => {
+    CATALOG.push({
+      id: p.sku,
+      title: p.title,
+      image: null,
+      baseCost: p.price !== null ? (p.price + ' ' + (p.currency || '')) : null,
+      source: 'prodigi'
+    });
+    saveCatalog();
+    renderCatalog();
+    addBtn.textContent = 'Added \u2713';
+    addBtn.disabled = true;
+  });
+  body.appendChild(addBtn);
+
+  card.appendChild(body);
+  return card;
+}
 
 // ---- Printify catalog search ----
 // Printify's catalog is one big list of blueprints (a few hundred), not
@@ -222,110 +495,120 @@ function cheapestPrice(variantsResponse){
   return min !== null ? (min / 100).toFixed(2) : null;
 }
 
+function buildPrintifyCard(bp){
+  const card = document.createElement('div');
+  card.className = 'result-card';
+
+  const imgUrl = (bp.images && bp.images[0]) || null;
+  if(imgUrl){
+    const img = document.createElement('img');
+    img.src = imgUrl;
+    card.appendChild(img);
+  } else {
+    const noImg = document.createElement('div');
+    noImg.className = 'no-img';
+    noImg.textContent = 'No image available from Printify';
+    card.appendChild(noImg);
+  }
+
+  const body = document.createElement('div');
+  body.className = 'result-body';
+
+  const title = document.createElement('div');
+  title.className = 'result-title';
+  title.textContent = bp.title;
+  body.appendChild(title);
+
+  const meta = document.createElement('div');
+  meta.className = 'result-meta';
+  meta.textContent = 'Blueprint #' + bp.id + (bp.brand ? ' \u00b7 ' + bp.brand : '');
+  body.appendChild(meta);
+
+  const providersLine = document.createElement('div');
+  providersLine.className = 'result-providers';
+  providersLine.textContent = 'Checking print providers\u2026';
+  body.appendChild(providersLine);
+
+  const addBtn = document.createElement('button');
+  addBtn.className = 'small';
+  addBtn.textContent = 'Add to catalog';
+  addBtn.style.marginTop = 'auto';
+  addBtn.addEventListener('click', () => {
+    CATALOG.push({
+      id: bp.id,
+      title: bp.title,
+      image: imgUrl,
+      baseCost: card.dataset.baseCost || null,
+      source: 'printify'
+    });
+    saveCatalog();
+    renderCatalog();
+    addBtn.textContent = 'Added \u2713';
+    addBtn.disabled = true;
+  });
+  body.appendChild(addBtn);
+
+  card.appendChild(body);
+
+  // Fill in provider/price info async, per card, so the grid renders
+  // immediately and details fill in as they arrive.
+  (async () => {
+    try{
+      const providers = await fetchPrintProviders(bp.id);
+      if(!providers.length){
+        providersLine.textContent = 'No print providers listed.';
+        return;
+      }
+      providersLine.textContent = providers.slice(0,3).map(p => p.title).join(', ') + (providers.length > 3 ? ' +' + (providers.length - 3) + ' more' : '');
+
+      const firstPrice = await fetchVariants(bp.id, providers[0].id);
+      const price = cheapestPrice(firstPrice);
+      if(price){
+        card.dataset.baseCost = price;
+        meta.textContent += ' \u00b7 from $' + price;
+      }
+    }catch(err){
+      providersLine.textContent = 'Could not load provider details.';
+    }
+  })();
+
+  return card;
+}
+
 async function runSearch(){
   const term = searchInput.value.trim().toLowerCase();
   if(!term){ setStatus(searchStatus, 'Type a product name first.', 'err'); return; }
 
-  setStatus(searchStatus, 'Fetching Printify\u2019s full catalog\u2026', 'pending');
+  setStatus(searchStatus, 'Searching\u2026', 'pending');
   searchBtn.disabled = true;
   resultsGrid.innerHTML = '';
 
+  // Prodigi results are local, so these render immediately.
+  const prodigiMatches = searchProdigi(term).slice(0, 12);
+  prodigiMatches.forEach(p => resultsGrid.appendChild(buildProdigiCard(p)));
+
   try{
+    setStatus(searchStatus, 'Fetching Printify\u2019s full catalog\u2026', 'pending');
     const all = await fetchAllBlueprints();
-    const matches = all.filter(bp =>
+    const printifyMatches = all.filter(bp =>
       (bp.title || '').toLowerCase().includes(term) ||
       (bp.description || '').toLowerCase().includes(term)
-    );
+    ).slice(0, 12); // cap at 12 per search to stay gentle on the API
 
-    if(!matches.length){
-      setStatus(searchStatus, 'No Printify blueprints matched "' + term + '". Try a broader or different word.', 'pending');
-      searchBtn.disabled = false;
-      return;
+    printifyMatches.forEach(bp => resultsGrid.appendChild(buildPrintifyCard(bp)));
+
+    const totalShown = prodigiMatches.length + printifyMatches.length;
+    if(!totalShown){
+      setStatus(searchStatus, 'No matches for "' + term + '" in Printify or your uploaded Prodigi catalog. Try a broader or different word.', 'pending');
+    } else {
+      setStatus(searchStatus, 'Showing ' + printifyMatches.length + ' Printify match(es) and ' + prodigiMatches.length + ' Prodigi match(es).', 'ok');
     }
-
-    setStatus(searchStatus, 'Found ' + matches.length + ' match(es). Loading details\u2026', 'pending');
-
-    for(const bp of matches.slice(0, 12)){ // cap at 12 per search to stay gentle on the API
-      const card = document.createElement('div');
-      card.className = 'result-card';
-
-      const imgUrl = (bp.images && bp.images[0]) || null;
-      if(imgUrl){
-        const img = document.createElement('img');
-        img.src = imgUrl;
-        card.appendChild(img);
-      } else {
-        const noImg = document.createElement('div');
-        noImg.className = 'no-img';
-        noImg.textContent = 'No image available from Printify';
-        card.appendChild(noImg);
-      }
-
-      const body = document.createElement('div');
-      body.className = 'result-body';
-
-      const title = document.createElement('div');
-      title.className = 'result-title';
-      title.textContent = bp.title;
-      body.appendChild(title);
-
-      const meta = document.createElement('div');
-      meta.className = 'result-meta';
-      meta.textContent = 'Blueprint #' + bp.id + (bp.brand ? ' \u00b7 ' + bp.brand : '');
-      body.appendChild(meta);
-
-      const providersLine = document.createElement('div');
-      providersLine.className = 'result-providers';
-      providersLine.textContent = 'Checking print providers\u2026';
-      body.appendChild(providersLine);
-
-      const addBtn = document.createElement('button');
-      addBtn.className = 'small';
-      addBtn.textContent = 'Add to catalog';
-      addBtn.style.marginTop = 'auto';
-      addBtn.addEventListener('click', () => {
-        CATALOG.push({
-          id: bp.id,
-          title: bp.title,
-          image: imgUrl,
-          baseCost: card.dataset.baseCost || null
-        });
-        saveCatalog();
-        renderCatalog();
-        addBtn.textContent = 'Added \u2713';
-        addBtn.disabled = true;
-      });
-      body.appendChild(addBtn);
-
-      card.appendChild(body);
-      resultsGrid.appendChild(card);
-
-      // Fill in provider/price info async, per card, so the grid renders
-      // immediately and details fill in as they arrive.
-      (async () => {
-        try{
-          const providers = await fetchPrintProviders(bp.id);
-          if(!providers.length){
-            providersLine.textContent = 'No print providers listed.';
-            return;
-          }
-          providersLine.textContent = providers.slice(0,3).map(p => p.title).join(', ') + (providers.length > 3 ? ' +' + (providers.length - 3) + ' more' : '');
-
-          const firstPrice = await fetchVariants(bp.id, providers[0].id);
-          const price = cheapestPrice(firstPrice);
-          if(price){
-            card.dataset.baseCost = price;
-            meta.textContent += ' \u00b7 from $' + price;
-          }
-        }catch(err){
-          providersLine.textContent = 'Could not load provider details.';
-        }
-      })();
-    }
-
-    setStatus(searchStatus, 'Showing ' + Math.min(matches.length, 12) + ' of ' + matches.length + ' match(es).', 'ok');
   }catch(err){
-    setStatus(searchStatus, 'Error: ' + err.message, 'err');
+    if(prodigiMatches.length){
+      setStatus(searchStatus, 'Printify error: ' + err.message + ' (still showing ' + prodigiMatches.length + ' Prodigi match(es) above).', 'err');
+    } else {
+      setStatus(searchStatus, 'Error: ' + err.message, 'err');
+    }
   }finally{
     searchBtn.disabled = false;
   }
