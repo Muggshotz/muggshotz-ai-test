@@ -559,6 +559,11 @@
 
 <script>
 let product='mug',style='Muggshotz Classic: premium professional caricature, expressive face, rich detail, painterly shading, funny gift-art scene',likeness='0.15',uploadedImageData=null,resultUrl=null;
+// Tracks the most recent generated result (as a base64 data URL) so the
+// NEXT generate() call can send it back as a "current design" reference,
+// enabling true iterative refinement instead of always restarting from
+// the original photo. Reset to null on a new photo upload or Start Over.
+let lastGeneratedImageData=null;
 
 // ===== Needles' Easel — five-group presentation engine (ported from
 // Needles' Studio, Alyx's request) =====
@@ -2427,6 +2432,7 @@ function resetMainSlot(){
   stopNeedlesStage();
   uploadedImageData=null;
   previousImageData=null;
+  lastGeneratedImageData=null;
   document.getElementById('toggleImageBtn').style.display='none';
   document.getElementById('startOverBtn').style.display='none';
   const z=document.getElementById('uploadZone');
@@ -2739,7 +2745,7 @@ Use rich environmental storytelling while keeping the face as the primary focal 
     const resp=await fetch('/api/generate',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({image:workingImage,prompt,theme:selectedTheme,deviceId,refImageA:refASnapshot,refImageB:refBSnapshot,currentDesign:null,size:getImageSizeParam()}),
+      body:JSON.stringify({image:workingImage,prompt,theme:selectedTheme,deviceId,refImageA:refASnapshot,refImageB:refBSnapshot,currentDesign:lastGeneratedImageData,size:getImageSizeParam()}),
       signal:currentGenerationController.signal
     });
 
@@ -2815,6 +2821,12 @@ Use rich environmental storytelling while keeping the face as the primary focal 
     document.getElementById('verifyCard').style.display='block';
 
     await loadBaseImageForCaption(resultUrl);
+
+    try{
+      lastGeneratedImageData = await urlToDataURL(resultUrl);
+    }catch(cacheErr){
+      console.error('Could not cache result for refinement:',cacheErr);
+    }
 
     try{
       const newWorkingRaw=await urlToDataURL(resultUrl);
