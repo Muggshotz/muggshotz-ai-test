@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Needles' Easel — Clip Calibrator</title>
+<title>The Clipper — Multi-Clip Calibrator</title>
 <style>
   :root{
     --bg:#0d1117; --panel:#151b24; --border:#24344a;
@@ -26,12 +26,17 @@
     background:#000; border:1px solid var(--border); border-radius:8px;
     overflow:hidden; box-shadow:0 8px 30px rgba(0,0,0,.5);
   }
-  .stage-bg, .stage-clip{
+  .stage-bg{
     position:absolute; top:0; left:0; width:100%; height:100%;
-    object-fit:contain; display:none;
+    object-fit:cover; display:none;
   }
-  .stage-bg.loaded, .stage-clip.loaded{display:block}
-  .stage-bg{object-fit:cover}
+  .stage-bg.loaded{display:block}
+  .stage-clip-layer{
+    position:absolute; display:none; pointer-events:none;
+  }
+  .stage-clip-layer.loaded{display:block}
+  .stage-clip-layer video{ width:100%; height:100%; object-fit:contain; display:block }
+  .stage-clip-layer.active-layer{ outline:2px solid var(--blue); outline-offset:2px }
   .box-outline{
     position:absolute; border:1px dashed rgba(61,139,255,.5);
     pointer-events:none;
@@ -39,7 +44,7 @@
   .placeholder{
     position:absolute; inset:0; display:flex; align-items:center;
     justify-content:center; color:var(--dim); font-size:14px; text-align:center;
-    padding:2rem; line-height:1.5;
+    padding:2rem; line-height:1.5; z-index:0;
   }
   .playback-readout{
     width:100%; max-width:1000px; margin-top:10px; font-size:11px; color:var(--dim);
@@ -51,7 +56,7 @@
   .badge.slow{color:#a78bfa}
   .badge.drift{color:#4ade80}
   .panel{
-    width:420px; height:100vh; background:var(--panel); border-left:1px solid var(--border);
+    width:440px; height:100vh; background:var(--panel); border-left:1px solid var(--border);
     padding:1.5rem; overflow-y:auto; flex-shrink:0;
   }
   h1{font-size:16px; margin:0 0 4px; letter-spacing:.5px}
@@ -125,19 +130,35 @@
   .thumb-cell .thumb-label{font-size:10px; color:var(--dim); padding:3px 2px; letter-spacing:.3px}
   .thumb-cell.thumb-pending .thumb-label{color:#555}
   .thumb-cell.thumb-has-override .thumb-label{color:var(--blue-soft)}
+
+  /* ---- Layers panel (new) ---- */
+  .layer-row{display:flex; align-items:center; gap:8px; margin-bottom:8px; padding:8px; background:#0d0d0d; border:1px solid #333; border-radius:6px; cursor:pointer}
+  .layer-row.active{border-color:var(--blue); box-shadow:0 0 0 1px var(--blue)}
+  .layer-row .layer-swatch{width:36px; height:24px; border-radius:4px; background:#111 center/cover no-repeat; flex:0 0 auto; border:1px solid #333}
+  .layer-row .layer-info{flex:1; min-width:0}
+  .layer-row .layer-key{font-size:12px; color:var(--text); font-family:ui-monospace,Menlo,Consolas,monospace}
+  .layer-row .layer-hint{font-size:10px; color:var(--dim)}
+  .layer-row .layer-remove{flex:0 0 auto; width:auto; margin:0; padding:2px 8px; font-size:11px; background:#2a1010; border:1px solid #5a2a2a; color:#ff8a7a}
+  .empty-layers-note{font-size:11px; color:var(--dim); padding:10px; text-align:center; border:1px dashed #333; border-radius:6px}
+
+  /* ---- Audio & Voice section (new) ---- */
+  .audio-transport{display:flex; gap:8px}
+  .audio-transport button{margin-top:0; flex:1}
+  .audio-attached-name{font-size:11px; color:var(--blue-soft); margin-top:6px; word-break:break-all}
+  .audio-note{font-size:10px; color:var(--dim); margin-top:4px; line-height:1.4}
 </style>
 </head>
 <body>
 
 <div class="stage-col">
   <div class="stage-wrap" id="stageWrap">
-    <div class="placeholder" id="placeholder">Load the stage background and a clip to begin.</div>
+    <div class="placeholder" id="placeholder">Load the stage background, then add one or more clips.</div>
     <img class="stage-bg" id="stageBg">
     <div class="box-outline" id="boxOutline"></div>
-    <video class="stage-clip" id="stageClip" autoplay muted loop playsinline></video>
+    <!-- Clip layers are inserted here dynamically, one <div class="stage-clip-layer"> per clip on stage -->
   </div>
   <div class="playback-readout">
-    <span>t = <span id="playbackTime">0.00</span>s / <span id="playbackDuration">?</span>s</span>
+    <span>active clip t = <span id="playbackTime">0.00</span>s / <span id="playbackDuration">?</span>s</span>
     <span>
       <span class="badge frozen" id="frozenBadge">❄ FROZEN</span>
       <span class="badge slow" id="slowBadge">🐢 SLOW</span>
@@ -147,8 +168,8 @@
 </div>
 
 <div class="panel">
-  <h1>NEEDLES' EASEL — CLIP CALIBRATOR · UNIFIED REPAIR</h1>
-  <p class="sub">Load a clip and background, dial everything in, then save straight to your chosen platforms below on GitHub. Unified Repair automatically adds a missing override block, repairs older unquoted clip keys, and safely quotes every future clip key.</p>
+  <h1>THE CLIPPER — MULTI-CLIP CALIBRATOR</h1>
+  <p class="sub">Works with any platform you've added as a sync target below — Excelsior, Needles' Studio, the Intro Page, or anything new. Load a stage background, then add as many clips to it as you like — position and calibrate each one independently, and save all of them together. Click a clip in the "Clips on stage" list below to make it the active one; every slider and setting below acts on whichever clip is currently active.</p>
 
   <details>
     <summary>GitHub connection settings</summary>
@@ -176,28 +197,25 @@
 
   <details open>
     <summary>Sync targets — which platforms get this save</summary>
-    <p class="sub" style="margin-top:0">Every save below (per-clip, global fade, global freeze) applies to whichever platforms are checked here. Add a new platform any time — it's just a file path in the same repo, no code changes needed.</p>
+    <p class="sub" style="margin-top:0">Every save below applies to whichever platforms are checked here. Add a new platform any time — it's just a file path in the same repo, no code changes needed.</p>
     <div id="targetsList"></div>
     <div class="add-target-row">
       <div class="field" style="margin-bottom:0">
         <label>Platform name</label>
-        <input type="text" id="newTargetLabel" placeholder="e.g. Kiosk Mode">
+        <input type="text" id="newTargetLabel" placeholder="e.g. Intro Page">
       </div>
       <div class="field" style="margin-bottom:0">
         <label>File path</label>
-        <input type="text" id="newTargetPath" placeholder="e.g. kiosk.html">
+        <input type="text" id="newTargetPath" placeholder="e.g. intro-page.html">
       </div>
       <button class="ghost small" id="addTargetBtn" type="button">+ Add</button>
     </div>
   </details>
 
-  <details open>
-    <summary>Browse clips — pick one visually</summary>
-    <p class="sub" style="margin-top:0">Pulls the list of clip files straight out of the live file, grabs a real frame from each one as a thumbnail, and loads whichever one you click — already populated with its own currently saved values, not blank defaults.</p>
-    <button class="ghost small" id="loadThumbsBtn" type="button" style="margin-top:0">Load clip thumbnails</button>
-    <div class="status" id="thumbsStatus"></div>
-    <div class="thumb-grid" id="thumbGrid"></div>
-  </details>
+  <div class="field">
+    <label>Stage background image</label>
+    <input type="file" id="bgInput" accept="image/*">
+  </div>
 
   <details open>
     <summary>Browse backdrops — pick one visually</summary>
@@ -207,21 +225,33 @@
     <div class="thumb-grid" id="backdropGrid"></div>
   </details>
 
-  <div class="field">
-    <label>Stage background image — or pick one above instead</label>
-    <input type="file" id="bgInput" accept="image/*">
-  </div>
+  <div class="divider"></div>
+  <h2>Clips on stage</h2>
+  <p class="sub" style="margin-top:0">Every clip listed here plays together, simultaneously, on the stage to the left. Click one to select it for editing below. Add more any time — nothing already on stage gets removed when you add another.</p>
+  <div id="layersList"></div>
+  <div id="emptyLayersNote" class="empty-layers-note">No clips on stage yet — add one below.</div>
 
-  <div class="field">
-    <label>Clip (video file) — or pick one above instead</label>
+  <div class="field" style="margin-top:1rem">
+    <label>Add a clip from your computer</label>
     <input type="file" id="clipInput" accept="video/*">
   </div>
 
+  <details open>
+    <summary>Browse clips — pick one visually (adds to stage)</summary>
+    <p class="sub" style="margin-top:0">Pulls the list of clip files straight out of the live file, grabs a real frame from each one as a thumbnail. Clicking one adds it to the stage alongside whatever's already there — already populated with its own currently saved values, not blank defaults.</p>
+    <button class="ghost small" id="loadThumbsBtn" type="button" style="margin-top:0">Load clip thumbnails</button>
+    <div class="status" id="thumbsStatus"></div>
+    <div class="thumb-grid" id="thumbGrid"></div>
+  </details>
+
+  <div class="divider"></div>
+  <h2>Editing: <span id="activeClipLabel" style="color:var(--text)">(none selected)</span></h2>
+
   <div class="field">
     <label>Clip key (auto-filled from filename — edit if needed)</label>
-    <input type="text" id="clipLabel" placeholder="load a clip to auto-fill">
+    <input type="text" id="clipLabel" placeholder="select a clip on stage first" disabled>
   </div>
-  <button class="ghost small" id="loadValuesBtn" type="button">Load this clip's currently saved values</button>
+  <button class="ghost small" id="loadValuesBtn" type="button">Reload this clip's currently saved values</button>
   <div class="status" id="loadValuesStatus"></div>
 
   <div class="divider"></div>
@@ -230,7 +260,7 @@
   <div class="field">
     <label>Scale</label>
     <div class="slider-row">
-      <input type="range" id="scale" min="0.3" max="3" step="0.01" value="1">
+      <input type="range" id="scale" min="0.3" max="3" step="0.01" value="1" disabled>
       <span class="val" id="scaleVal">1.00</span>
     </div>
   </div>
@@ -238,7 +268,7 @@
   <div class="field">
     <label>Horizontal offset (%)</label>
     <div class="slider-row">
-      <input type="range" id="offsetX" min="-50" max="50" step="0.1" value="0">
+      <input type="range" id="offsetX" min="-50" max="50" step="0.1" value="0" disabled>
       <span class="val" id="offsetXVal">0.0</span>
     </div>
   </div>
@@ -246,132 +276,184 @@
   <div class="field">
     <label>Vertical offset (%)</label>
     <div class="slider-row">
-      <input type="range" id="offsetY" min="-50" max="50" step="0.1" value="0">
+      <input type="range" id="offsetY" min="-50" max="50" step="0.1" value="0" disabled>
       <span class="val" id="offsetYVal">0.0</span>
     </div>
   </div>
 
   <div class="field">
-    <label><input type="checkbox" id="showBox" checked style="accent-color:var(--blue); margin-right:6px">Show bounding box outline</label>
+    <label><input type="checkbox" id="showBox" checked style="accent-color:var(--blue); margin-right:6px">Show bounding box outline (active clip)</label>
   </div>
 
   <div class="divider"></div>
-  <h2>Fade timing (this clip only)</h2>
+  <h2>Fade timing (active clip only)</h2>
 
   <div class="override-row">
-    <input type="checkbox" id="fadeInOverride">
+    <input type="checkbox" id="fadeInOverride" disabled>
     <label class="inline" for="fadeInOverride">Override fade-IN duration (s)</label>
   </div>
   <input type="number" id="fadeInVal" min="0" max="5" step="0.1" value="1.0" disabled>
 
   <div class="override-row" style="margin-top:12px">
-    <input type="checkbox" id="fadeOutOverride">
+    <input type="checkbox" id="fadeOutOverride" disabled>
     <label class="inline" for="fadeOutOverride">Override fade-OUT lead (s)</label>
   </div>
   <input type="number" id="fadeOutVal" min="0" max="5" step="0.1" value="2.0" disabled>
   <p class="sub" style="margin-top:6px">Leave unchecked to use the rotation's global default.</p>
 
   <div class="divider"></div>
-  <h2>Freeze (this clip only)</h2>
+  <h2>Freeze (active clip only)</h2>
   <p class="sub">Pick any point in the clip, hold it for a set duration, then release automatically. Overrides the global freeze default below, if one's set.</p>
 
   <div class="field">
     <label>Freeze at (seconds into clip)</label>
     <div class="capture-row">
-      <input type="number" id="freezeAt" min="0" step="0.1" placeholder="unset">
-      <button class="ghost small" id="captureFreezeBtn" type="button">Capture time</button>
+      <input type="number" id="freezeAt" min="0" step="0.1" placeholder="unset" disabled>
+      <button class="ghost small" id="captureFreezeBtn" type="button" disabled>Capture time</button>
     </div>
   </div>
   <div class="field">
     <label>Freeze duration (seconds, up to 5)</label>
-    <input type="number" id="freezeDuration" min="0" max="5" step="0.1" value="1.0">
+    <input type="number" id="freezeDuration" min="0" max="5" step="0.1" value="1.0" disabled>
   </div>
   <div class="override-row">
-    <input type="checkbox" id="freezePreview">
-    <label class="inline" for="freezePreview">Preview freeze live above</label>
+    <input type="checkbox" id="freezePreview" disabled>
+    <label class="inline" for="freezePreview">Preview freeze live above (active clip)</label>
   </div>
-  <button class="ghost small" id="clearFreezeBtn" type="button">Clear freeze point</button>
+  <button class="ghost small" id="clearFreezeBtn" type="button" disabled>Clear freeze point</button>
 
   <div class="divider"></div>
-  <h2>Slow motion (this clip only)</h2>
+  <h2>Slow motion (active clip only)</h2>
   <p class="sub">Plays at a reduced rate between two points in the clip, then returns to normal speed automatically.</p>
 
   <div class="row2">
     <div class="field">
       <label>Slow-motion start (s)</label>
       <div class="capture-row">
-        <input type="number" id="slowStart" min="0" step="0.1" placeholder="unset">
-        <button class="ghost small" id="captureSlowStartBtn" type="button">Capture</button>
+        <input type="number" id="slowStart" min="0" step="0.1" placeholder="unset" disabled>
+        <button class="ghost small" id="captureSlowStartBtn" type="button" disabled>Capture</button>
       </div>
     </div>
     <div class="field">
       <label>Slow-motion end (s)</label>
       <div class="capture-row">
-        <input type="number" id="slowEnd" min="0" step="0.1" placeholder="unset">
-        <button class="ghost small" id="captureSlowEndBtn" type="button">Capture</button>
+        <input type="number" id="slowEnd" min="0" step="0.1" placeholder="unset" disabled>
+        <button class="ghost small" id="captureSlowEndBtn" type="button" disabled>Capture</button>
       </div>
     </div>
   </div>
   <div class="field">
     <label>Playback rate during slow motion</label>
     <div class="slider-row">
-      <input type="range" id="slowRate" min="0.05" max="1" step="0.05" value="0.4">
+      <input type="range" id="slowRate" min="0.05" max="1" step="0.05" value="0.4" disabled>
       <span class="val" id="slowRateVal">0.40x</span>
     </div>
   </div>
   <div class="override-row">
-    <input type="checkbox" id="slowPreview">
-    <label class="inline" for="slowPreview">Preview slow motion live above</label>
+    <input type="checkbox" id="slowPreview" disabled>
+    <label class="inline" for="slowPreview">Preview slow motion live above (active clip)</label>
   </div>
-  <button class="ghost small" id="clearSlowBtn" type="button">Clear slow motion</button>
+  <button class="ghost small" id="clearSlowBtn" type="button" disabled>Clear slow motion</button>
 
   <div class="divider"></div>
-  <h2>Drift (this clip only)</h2>
-  <p class="sub">Holds the position above steady until a chosen moment, then smoothly eases to a new target offset over a set duration, and holds there. Good for correcting a clip that starts right but drifts off by the end (e.g. climbing too high while walking).</p>
+  <h2>Drift (active clip only)</h2>
+  <p class="sub">Holds the position above steady until a chosen moment, then smoothly eases to a new target offset over a set duration, and holds there. Good for correcting a clip that starts right but drifts off by the end.</p>
 
   <div class="field">
     <label>Drift begins at (s)</label>
     <div class="capture-row">
-      <input type="number" id="driftStart" min="0" step="0.1" placeholder="unset">
-      <button class="ghost small" id="captureDriftBtn" type="button">Capture</button>
+      <input type="number" id="driftStart" min="0" step="0.1" placeholder="unset" disabled>
+      <button class="ghost small" id="captureDriftBtn" type="button" disabled>Capture</button>
     </div>
   </div>
   <div class="field">
     <label>Drift duration (s) — how long the ease takes</label>
-    <input type="number" id="driftDuration" min="0.1" step="0.1" value="1.0">
+    <input type="number" id="driftDuration" min="0.1" step="0.1" value="1.0" disabled>
   </div>
   <div class="field">
     <label>Target horizontal offset after drift (%)</label>
     <div class="slider-row">
-      <input type="range" id="driftToX" min="-50" max="50" step="0.1" value="0">
+      <input type="range" id="driftToX" min="-50" max="50" step="0.1" value="0" disabled>
       <span class="val" id="driftToXVal">0.0</span>
     </div>
   </div>
   <div class="field">
     <label>Target vertical offset after drift (%)</label>
     <div class="slider-row">
-      <input type="range" id="driftToY" min="-50" max="50" step="0.1" value="0">
+      <input type="range" id="driftToY" min="-50" max="50" step="0.1" value="0" disabled>
       <span class="val" id="driftToYVal">0.0</span>
     </div>
   </div>
   <div class="override-row">
-    <input type="checkbox" id="driftPreview">
-    <label class="inline" for="driftPreview">Preview drift live above</label>
+    <input type="checkbox" id="driftPreview" disabled>
+    <label class="inline" for="driftPreview">Preview drift live above (active clip)</label>
   </div>
-  <button class="ghost small" id="clearDriftBtn" type="button">Clear drift</button>
+  <button class="ghost small" id="clearDriftBtn" type="button" disabled>Clear drift</button>
+
+  <div class="divider"></div>
+  <h2>Audio &amp; voice (active clip)</h2>
+  <p class="sub">Attach a voice line to this clip, then audition tweaks — pitch, tone, rasp, pace — before deciding whether to keep them. Nothing here changes the original audio file; every tweak plays live through the preview and only gets remembered for this clip once you click "Apply."</p>
+
+  <div class="field">
+    <label>Attach audio file</label>
+    <input type="file" id="audioInput" accept="audio/*" disabled>
+    <div class="audio-attached-name" id="audioAttachedName"></div>
+  </div>
+
+  <div class="audio-transport">
+    <button class="ghost small" id="audioPlayDryBtn" type="button" disabled>▶ Play original</button>
+    <button class="ghost small" id="audioPlayWetBtn" type="button" disabled>▶ Preview with tweaks</button>
+    <button class="ghost small" id="audioStopBtn" type="button" disabled>■ Stop</button>
+  </div>
+
+  <div class="field" style="margin-top:1rem">
+    <label>Pitch (semitones)</label>
+    <div class="slider-row">
+      <input type="range" id="audioPitch" min="-12" max="12" step="0.5" value="0" disabled>
+      <span class="val" id="audioPitchVal">0.0</span>
+    </div>
+  </div>
+
+  <div class="field">
+    <label>Pace (playback speed)</label>
+    <div class="slider-row">
+      <input type="range" id="audioPace" min="0.7" max="1.3" step="0.01" value="1" disabled>
+      <span class="val" id="audioPaceVal">1.00x</span>
+    </div>
+    <div class="audio-note">Large pace changes will noticeably shift pitch too, the way a tape does when sped up or slowed down — small nudges (0.9x–1.1x) stay fairly natural.</div>
+  </div>
+
+  <div class="field">
+    <label>Tone (dark ↔ bright)</label>
+    <div class="slider-row">
+      <input type="range" id="audioTone" min="-1" max="1" step="0.05" value="0" disabled>
+      <span class="val" id="audioToneVal">0.00</span>
+    </div>
+  </div>
+
+  <div class="field">
+    <label>Rasp / grit</label>
+    <div class="slider-row">
+      <input type="range" id="audioRasp" min="0" max="1" step="0.02" value="0" disabled>
+      <span class="val" id="audioRaspVal">0.00</span>
+    </div>
+  </div>
+
+  <button id="audioApplyBtn" type="button" disabled>Apply these tweaks to this clip</button>
+  <button class="ghost small" id="audioResetBtn" type="button" disabled>Reset tweaks to none</button>
+  <div class="status" id="audioStatus"></div>
+  <div class="audio-note" style="margin-top:10px">Note: saving writes these tweak values alongside this clip's position data, but whether the live site actually plays synced audio per clip depends on Needles' Studio / Excelsior's own playback code — worth confirming with Bud before relying on this going live, since the original player was built for silent looping clips.</div>
 
   <div class="divider"></div>
 
-  <div class="readout" id="readout">clip: &lt;letter&gt;
-scale: 1.00
-offsetX: 0.0%
-offsetY: 0.0%</div>
+  <div class="readout" id="readout">(select a clip on stage to see its values)</div>
 
-  <button class="ghost" id="copyBtn" type="button">Copy values</button>
-  <button class="ghost" id="resetBtn" type="button">Reset to default</button>
+  <button class="ghost" id="copyBtn" type="button">Copy active clip's values</button>
+  <button class="ghost" id="resetBtn" type="button">Reset active clip to default</button>
 
   <div class="divider"></div>
-  <h2>Save this clip to the live site(s)</h2>
+  <h2>Save ALL clips on stage to the live site(s)</h2>
+  <p class="sub" style="margin-top:0">This saves every clip currently on stage in one pass — not just the active one — so the whole scene you've built here goes live together.</p>
   <button id="previewBtn" type="button">1. Fetch current file(s) &amp; preview change</button>
   <div class="readout" id="diffReadout" style="display:none; margin-top:10px"></div>
   <button class="confirm" id="commitBtn" type="button" disabled>2. Confirm &amp; commit to GitHub</button>
@@ -423,8 +505,8 @@ offsetY: 0.0%</div>
 <script>
 const DEFAULT_BOX = { top: 10.59, left: 15.19, width: 78.25, height: 78.27 };
 
+const stageWrap = document.getElementById('stageWrap');
 const stageBg = document.getElementById('stageBg');
-const stageClip = document.getElementById('stageClip');
 const boxOutline = document.getElementById('boxOutline');
 const placeholder = document.getElementById('placeholder');
 const bgInput = document.getElementById('bgInput');
@@ -444,6 +526,9 @@ const previewBtn = document.getElementById('previewBtn');
 const commitBtn = document.getElementById('commitBtn');
 const diffReadout = document.getElementById('diffReadout');
 const statusMsg = document.getElementById('statusMsg');
+const activeClipLabel = document.getElementById('activeClipLabel');
+const layersList = document.getElementById('layersList');
+const emptyLayersNote = document.getElementById('emptyLayersNote');
 
 const playbackTime = document.getElementById('playbackTime');
 const playbackDuration = document.getElementById('playbackDuration');
@@ -495,6 +580,24 @@ const globalDiffReadout = document.getElementById('globalDiffReadout');
 const globalCommitBtn = document.getElementById('globalCommitBtn');
 const globalStatusMsg = document.getElementById('globalStatusMsg');
 
+const audioInput = document.getElementById('audioInput');
+const audioAttachedName = document.getElementById('audioAttachedName');
+const audioPlayDryBtn = document.getElementById('audioPlayDryBtn');
+const audioPlayWetBtn = document.getElementById('audioPlayWetBtn');
+const audioStopBtn = document.getElementById('audioStopBtn');
+const audioPitch = document.getElementById('audioPitch');
+const audioPace = document.getElementById('audioPace');
+const audioTone = document.getElementById('audioTone');
+const audioRasp = document.getElementById('audioRasp');
+const audioPitchVal = document.getElementById('audioPitchVal');
+const audioPaceVal = document.getElementById('audioPaceVal');
+const audioToneVal = document.getElementById('audioToneVal');
+const audioRaspVal = document.getElementById('audioRaspVal');
+const audioApplyBtn = document.getElementById('audioApplyBtn');
+const audioResetBtn = document.getElementById('audioResetBtn');
+const audioStatus = document.getElementById('audioStatus');
+const audioControlsAll = [audioInput, audioPlayDryBtn, audioPlayWetBtn, audioStopBtn, audioPitch, audioPace, audioTone, audioRasp, audioApplyBtn, audioResetBtn];
+
 const fetchGlobalFreezeBtn = document.getElementById('fetchGlobalFreezeBtn');
 const globalFreezeEnabled = document.getElementById('globalFreezeEnabled');
 const globalFreezeAt = document.getElementById('globalFreezeAt');
@@ -521,15 +624,7 @@ saveConnBtn.addEventListener('click', () => {
   setTimeout(()=> saveConnBtn.textContent = 'Remember these settings', 1500);
 });
 
-// ===== Sync targets registry (Alyx's request) =====
-// A small, expandable list of {key, label, path, enabled} — every save
-// flow below (per-clip override, global fade, global freeze) loops over
-// whichever of these are checked and applies the identical change to
-// each one independently. Adding a new platform later (a kiosk build, a
-// tablet-only version, anything not invented yet) is just adding a row
-// here — filename + label — never a code change. Persisted per-browser
-// in localStorage so the list and each checkbox's on/off state survive
-// a reload.
+// ===== Sync targets registry (unchanged from single-clip version) =====
 const DEFAULT_TARGETS = [
   { key: 'needles-studio', label: "Needles' Studio", path: 'needles-studio.html', enabled: true },
   { key: 'excelsior', label: 'Excelsior', path: 'index.html', enabled: true }
@@ -609,46 +704,681 @@ function getEnabledTargets(){
   return TARGETS.filter(t => t.enabled !== false);
 }
 
-// ===== Retweak an already-loaded clip (Alyx's request) =====
-// Populates every slider/field from a saved override object — or resets
-// to plain defaults if none exists yet — so editing an existing clip
-// starts from where it actually sits instead of from scale 1 / offset 0.
-function applyLoadedOverrideValues(obj){
-  if(!obj){
-    scaleSlider.value = 1; offsetXSlider.value = 0; offsetYSlider.value = 0;
-    fadeInOverride.checked = false; fadeInVal.disabled = true; fadeInVal.value = 1.0;
-    fadeOutOverride.checked = false; fadeOutVal.disabled = true; fadeOutVal.value = 2.0;
-    freezeAtInput.value = ''; freezeDurationInput.value = 1.0;
-    slowStartInput.value = ''; slowEndInput.value = ''; slowRateSlider.value = 0.4;
-    driftStartInput.value = ''; driftDurationInput.value = 1.0; driftToXSlider.value = 0; driftToYSlider.value = 0;
-    applyTransform();
+// ================================================================
+// ===== NEW: multi-layer stage model =====
+// Each layer is one clip positioned on the stage. Any number of
+// layers can exist at once; the "active" one is whichever the panel
+// below is currently editing. Every layer keeps its own full set of
+// values (scale/offset/fade/freeze/slow-motion/drift), independent
+// of every other layer.
+// ================================================================
+let layers = [];        // array of layer objects, in add order
+let activeLayerId = null;
+let nextLayerId = 1;
+
+function makeDefaultLayerValues(){
+  return {
+    scale: 1, offsetX: 0, offsetY: 0,
+    fadeIn: null, fadeOut: null,
+    freezeAt: null, freezeDuration: 1.0,
+    slowStart: null, slowEnd: null, slowRate: 0.4,
+    driftStart: null, driftDuration: 1.0, driftToOffsetX: 0, driftToOffsetY: 0
+  };
+}
+
+function getActiveLayer(){
+  return layers.find(l => l.id === activeLayerId) || null;
+}
+
+function addLayer(blobUrl, key, savedValues){
+  const id = nextLayerId++;
+  const wrapEl = document.createElement('div');
+  wrapEl.className = 'stage-clip-layer';
+  const videoEl = document.createElement('video');
+  videoEl.autoplay = true;
+  videoEl.muted = true;
+  videoEl.loop = true;
+  videoEl.playsInline = true;
+  videoEl.src = blobUrl;
+  wrapEl.appendChild(videoEl);
+  stageWrap.appendChild(wrapEl);
+
+  const layer = {
+    id, key, blobUrl, wrapEl, videoEl,
+    values: savedValues ? Object.assign(makeDefaultLayerValues(), savedValues) : makeDefaultLayerValues(),
+    previewFrozenOnce: false,
+    // Independent per-clip audio state: the raw attached file, its
+    // decoded buffer (for the Web Audio effect chain), the tweak
+    // settings, and a filename for anyone who attached one already.
+    audio: { fileName: null, buffer: null, pitch: 0, pace: 1, tone: 0, rasp: 0 }
+  };
+
+  videoEl.addEventListener('loadeddata', () => {
+    wrapEl.classList.add('loaded');
+    videoEl.play().catch(()=>{});
+    updatePlaceholder();
+    applyLayerTransform(layer);
+  });
+
+  videoEl.addEventListener('timeupdate', () => onLayerTimeUpdate(layer));
+  videoEl.addEventListener('seeked', () => { layer.previewFrozenOnce = false; });
+  videoEl.addEventListener('play', () => { if(videoEl.currentTime < 0.05) layer.previewFrozenOnce = false; });
+
+  layers.push(layer);
+  selectLayer(id);
+  renderLayersList();
+  return layer;
+}
+
+function removeLayer(id){
+  const idx = layers.findIndex(l => l.id === id);
+  if(idx === -1) return;
+  const layer = layers[idx];
+  layer.wrapEl.remove();
+  layers.splice(idx, 1);
+  if(activeLayerId === id){
+    activeLayerId = layers.length ? layers[layers.length - 1].id : null;
+  }
+  renderLayersList();
+  syncPanelToActiveLayer();
+  updatePlaceholder();
+}
+
+function selectLayer(id){
+  activeLayerId = id;
+  layers.forEach(l => l.wrapEl.classList.toggle('active-layer', l.id === id));
+  renderLayersList();
+  syncPanelToActiveLayer();
+}
+
+function renderLayersList(){
+  layersList.innerHTML = '';
+  emptyLayersNote.style.display = layers.length ? 'none' : 'block';
+  layers.forEach(layer => {
+    const row = document.createElement('div');
+    row.className = 'layer-row' + (layer.id === activeLayerId ? ' active' : '');
+    row.addEventListener('click', (e) => {
+      if(e.target.closest('.layer-remove')) return;
+      selectLayer(layer.id);
+    });
+
+    const swatch = document.createElement('div');
+    swatch.className = 'layer-swatch';
+    row.appendChild(swatch);
+
+    const info = document.createElement('div');
+    info.className = 'layer-info';
+    const keyEl = document.createElement('div');
+    keyEl.className = 'layer-key';
+    keyEl.textContent = layer.key || '(untitled)';
+    const hintEl = document.createElement('div');
+    hintEl.className = 'layer-hint';
+    hintEl.textContent = layer.id === activeLayerId ? 'currently editing' : 'click to edit';
+    info.appendChild(keyEl);
+    info.appendChild(hintEl);
+    row.appendChild(info);
+
+    const removeBtn = document.createElement('button');
+    removeBtn.type = 'button';
+    removeBtn.className = 'layer-remove';
+    removeBtn.textContent = '\u2715';
+    removeBtn.title = 'Remove this clip from the stage';
+    removeBtn.addEventListener('click', () => removeLayer(layer.id));
+    row.appendChild(removeBtn);
+
+    layersList.appendChild(row);
+  });
+}
+
+let bgLoaded = false;
+
+function updatePlaceholder(){
+  placeholder.style.display = (bgLoaded || layers.length) ? 'none' : 'flex';
+}
+
+bgInput.addEventListener('change', e => {
+  const f = e.target.files[0];
+  if(!f) return;
+  stageBg.src = URL.createObjectURL(f);
+  stageBg.classList.add('loaded');
+  bgLoaded = true;
+  updatePlaceholder();
+});
+
+clipInput.addEventListener('change', e => {
+  const f = e.target.files[0];
+  if(!f) return;
+  const key = deriveClipKeyFromFilename(f.name);
+  addLayer(URL.createObjectURL(f), key, null);
+  clipInput.value = '';
+});
+
+function positionBox(){
+  boxOutline.style.top = DEFAULT_BOX.top + '%';
+  boxOutline.style.left = DEFAULT_BOX.left + '%';
+  boxOutline.style.width = DEFAULT_BOX.width + '%';
+  boxOutline.style.height = DEFAULT_BOX.height + '%';
+}
+positionBox();
+
+function smoothstep(p){ return p*p*(3-2*p); }
+
+// Applies one layer's own scale/offset to its own video element —
+// exactly the same transform math as the single-clip version had,
+// just scoped to `layer` instead of one shared global clip.
+function applyLayerTransform(layer){
+  const v = layer.values;
+  layer.wrapEl.style.top = (DEFAULT_BOX.top + v.offsetY) + '%';
+  layer.wrapEl.style.left = (DEFAULT_BOX.left + v.offsetX) + '%';
+  layer.wrapEl.style.width = DEFAULT_BOX.width + '%';
+  layer.wrapEl.style.height = DEFAULT_BOX.height + '%';
+  layer.wrapEl.style.transformOrigin = 'center bottom';
+  layer.wrapEl.style.transform = 'scale(' + v.scale + ')';
+}
+
+// ---- panel <-> active layer sync ----
+function syncPanelToActiveLayer(){
+  const layer = getActiveLayer();
+  const controlsEnabled = !!layer;
+
+  [clipLabel, scaleSlider, offsetXSlider, offsetYSlider,
+   fadeInOverride, fadeOutOverride,
+   freezeAtInput, freezeDurationInput, captureFreezeBtn, clearFreezeBtn, freezePreview,
+   slowStartInput, slowEndInput, slowRateSlider, captureSlowStartBtn, captureSlowEndBtn, clearSlowBtn, slowPreview,
+   driftStartInput, driftDurationInput, driftToXSlider, driftToYSlider, captureDriftBtn, clearDriftBtn, driftPreview
+  ].forEach(el => { el.disabled = !controlsEnabled; });
+
+  if(!layer){
+    activeClipLabel.textContent = '(none selected)';
+    readout.textContent = '(select a clip on stage to see its values)';
     return;
   }
-  scaleSlider.value = obj.scale != null ? obj.scale : 1;
-  offsetXSlider.value = obj.offsetX != null ? obj.offsetX : 0;
-  offsetYSlider.value = obj.offsetY != null ? obj.offsetY : 0;
 
-  fadeInOverride.checked = obj.fadeIn != null;
+  activeClipLabel.textContent = layer.key || '(untitled)';
+  clipLabel.value = layer.key || '';
+
+  const v = layer.values;
+  scaleSlider.value = v.scale;
+  offsetXSlider.value = v.offsetX;
+  offsetYSlider.value = v.offsetY;
+
+  fadeInOverride.checked = v.fadeIn != null;
   fadeInVal.disabled = !fadeInOverride.checked;
-  fadeInVal.value = obj.fadeIn != null ? obj.fadeIn : 1.0;
+  fadeInVal.value = v.fadeIn != null ? v.fadeIn : 1.0;
 
-  fadeOutOverride.checked = obj.fadeOut != null;
+  fadeOutOverride.checked = v.fadeOut != null;
   fadeOutVal.disabled = !fadeOutOverride.checked;
-  fadeOutVal.value = obj.fadeOut != null ? obj.fadeOut : 2.0;
+  fadeOutVal.value = v.fadeOut != null ? v.fadeOut : 2.0;
 
-  freezeAtInput.value = obj.freezeAt != null ? obj.freezeAt : '';
-  freezeDurationInput.value = obj.freezeDuration != null ? obj.freezeDuration : 1.0;
+  freezeAtInput.value = v.freezeAt != null ? v.freezeAt : '';
+  freezeDurationInput.value = v.freezeDuration != null ? v.freezeDuration : 1.0;
 
-  slowStartInput.value = obj.slowStart != null ? obj.slowStart : '';
-  slowEndInput.value = obj.slowEnd != null ? obj.slowEnd : '';
-  slowRateSlider.value = obj.slowRate != null ? obj.slowRate : 0.4;
+  slowStartInput.value = v.slowStart != null ? v.slowStart : '';
+  slowEndInput.value = v.slowEnd != null ? v.slowEnd : '';
+  slowRateSlider.value = v.slowRate != null ? v.slowRate : 0.4;
 
-  driftStartInput.value = obj.driftStart != null ? obj.driftStart : '';
-  driftDurationInput.value = obj.driftDuration != null ? obj.driftDuration : 1.0;
-  driftToXSlider.value = obj.driftToOffsetX != null ? obj.driftToOffsetX : 0;
-  driftToYSlider.value = obj.driftToOffsetY != null ? obj.driftToOffsetY : 0;
+  driftStartInput.value = v.driftStart != null ? v.driftStart : '';
+  driftDurationInput.value = v.driftDuration != null ? v.driftDuration : 1.0;
+  driftToXSlider.value = v.driftToOffsetX != null ? v.driftToOffsetX : 0;
+  driftToYSlider.value = v.driftToOffsetY != null ? v.driftToOffsetY : 0;
 
-  applyTransform();
+  applyLayerTransform(layer);
+  updateReadoutText();
+  commitBtn.disabled = true;
+  diffReadout.style.display = 'none';
+  syncAudioPanelToActiveLayer();
+}
+
+function syncAudioPanelToActiveLayer(){
+  const layer = getActiveLayer();
+  stopAudioPreview();
+  if(!layer){
+    audioControlsAll.forEach(el => el.disabled = true);
+    audioAttachedName.textContent = '';
+    return;
+  }
+  audioInput.disabled = false;
+  const hasAudio = !!layer.audio.buffer;
+  [audioPlayDryBtn, audioPlayWetBtn, audioStopBtn, audioPitch, audioPace, audioTone, audioRasp, audioApplyBtn, audioResetBtn]
+    .forEach(el => el.disabled = !hasAudio);
+  audioAttachedName.textContent = layer.audio.fileName ? ('Attached: ' + layer.audio.fileName) : '(no audio attached to this clip yet)';
+  audioPitch.value = layer.audio.pitch;
+  audioPace.value = layer.audio.pace;
+  audioTone.value = layer.audio.tone;
+  audioRasp.value = layer.audio.rasp;
+  refreshAudioValLabels();
+}
+
+function refreshAudioValLabels(){
+  audioPitchVal.textContent = parseFloat(audioPitch.value).toFixed(1);
+  audioPaceVal.textContent = parseFloat(audioPace.value).toFixed(2) + 'x';
+  audioToneVal.textContent = parseFloat(audioTone.value).toFixed(2);
+  audioRaspVal.textContent = parseFloat(audioRasp.value).toFixed(2);
+}
+[audioPitch, audioPace, audioTone, audioRasp].forEach(el => el.addEventListener('input', refreshAudioValLabels));
+
+// Pulls whatever's currently in the panel's controls back into the
+// active layer's own stored values object. Called on every slider/
+// input change so the layer always reflects what's shown.
+function pullPanelIntoActiveLayer(){
+  const layer = getActiveLayer();
+  if(!layer) return;
+  const v = layer.values;
+  v.scale = parseFloat(scaleSlider.value);
+  v.offsetX = parseFloat(offsetXSlider.value);
+  v.offsetY = parseFloat(offsetYSlider.value);
+  v.fadeIn = fadeInOverride.checked ? parseFloat(fadeInVal.value) : null;
+  v.fadeOut = fadeOutOverride.checked ? parseFloat(fadeOutVal.value) : null;
+  v.freezeAt = freezeAtInput.value !== '' ? parseFloat(freezeAtInput.value) : null;
+  v.freezeDuration = parseFloat(freezeDurationInput.value || '0');
+  v.slowStart = slowStartInput.value !== '' ? parseFloat(slowStartInput.value) : null;
+  v.slowEnd = slowEndInput.value !== '' ? parseFloat(slowEndInput.value) : null;
+  v.slowRate = parseFloat(slowRateSlider.value);
+  v.driftStart = driftStartInput.value !== '' ? parseFloat(driftStartInput.value) : null;
+  v.driftDuration = parseFloat(driftDurationInput.value || '1');
+  v.driftToOffsetX = parseFloat(driftToXSlider.value);
+  v.driftToOffsetY = parseFloat(driftToYSlider.value);
+
+  layer.key = clipLabel.value.trim();
+
+  applyLayerTransform(layer);
+  updateReadoutText();
+  commitBtn.disabled = true;
+  diffReadout.style.display = 'none';
+  renderLayersList();
+}
+
+function buildOverrideObjectForLayer(layer){
+  const v = layer.values;
+  const obj = { scale: v.scale, offsetX: v.offsetX, offsetY: v.offsetY };
+  if(v.fadeIn != null) obj.fadeIn = v.fadeIn;
+  if(v.fadeOut != null) obj.fadeOut = v.fadeOut;
+  if(v.freezeAt != null){ obj.freezeAt = v.freezeAt; obj.freezeDuration = v.freezeDuration; }
+  if(v.slowStart != null && v.slowEnd != null){ obj.slowStart = v.slowStart; obj.slowEnd = v.slowEnd; obj.slowRate = v.slowRate; }
+  if(v.driftStart != null){ obj.driftStart = v.driftStart; obj.driftDuration = v.driftDuration; obj.driftToOffsetX = v.driftToOffsetX; obj.driftToOffsetY = v.driftToOffsetY; }
+  if(layer.audio && layer.audio.fileName){
+    obj.audio = {
+      file: layer.audio.fileName,
+      pitch: layer.audio.pitch,
+      pace: layer.audio.pace,
+      tone: layer.audio.tone,
+      rasp: layer.audio.rasp
+    };
+  }
+  return obj;
+}
+
+function updateReadoutText(){
+  const layer = getActiveLayer();
+  if(!layer){ readout.textContent = '(select a clip on stage to see its values)'; return; }
+  const label = layer.key || '<letter>';
+  const obj = buildOverrideObjectForLayer(layer);
+  let text = 'clip: ' + label + '\n' +
+    'scale: ' + obj.scale.toFixed(2) + '\n' +
+    'offsetX: ' + obj.offsetX.toFixed(1) + '%\n' +
+    'offsetY: ' + obj.offsetY.toFixed(1) + '%';
+  if(obj.fadeIn != null) text += '\nfadeIn: ' + obj.fadeIn + 's (override)';
+  if(obj.fadeOut != null) text += '\nfadeOut: ' + obj.fadeOut + 's (override)';
+  if(obj.freezeAt != null) text += '\nfreezeAt: ' + obj.freezeAt + 's, freezeDuration: ' + obj.freezeDuration + 's';
+  if(obj.slowStart != null) text += '\nslowStart: ' + obj.slowStart + 's, slowEnd: ' + obj.slowEnd + 's, slowRate: ' + obj.slowRate + 'x';
+  if(obj.driftStart != null) text += '\ndriftStart: ' + obj.driftStart + 's, driftDuration: ' + obj.driftDuration + 's, driftTo: (' + obj.driftToOffsetX + '%, ' + obj.driftToOffsetY + '%)';
+  if(obj.audio) text += '\naudio: ' + obj.audio.file + ' (pitch ' + obj.audio.pitch + 'st, pace ' + obj.audio.pace + 'x, tone ' + obj.audio.tone + ', rasp ' + obj.audio.rasp + ')';
+  text += '\n\n(' + layers.length + ' clip' + (layers.length === 1 ? '' : 's') + ' total on stage — saving writes all of them)';
+  readout.textContent = text;
+}
+
+(function(){
+  function refreshVals(){
+    scaleVal.textContent = parseFloat(scaleSlider.value).toFixed(2);
+    offsetXVal.textContent = parseFloat(offsetXSlider.value).toFixed(1);
+    offsetYVal.textContent = parseFloat(offsetYSlider.value).toFixed(1);
+    slowRateVal.textContent = parseFloat(slowRateSlider.value).toFixed(2) + 'x';
+    driftToXVal.textContent = parseFloat(driftToXSlider.value).toFixed(1);
+    driftToYVal.textContent = parseFloat(driftToYSlider.value).toFixed(1);
+  }
+  [scaleSlider, offsetXSlider, offsetYSlider, slowRateSlider, driftToXSlider, driftToYSlider].forEach(el => {
+    el.addEventListener('input', refreshVals);
+  });
+  refreshVals();
+})();
+
+[scaleSlider, offsetXSlider, offsetYSlider, clipLabel].forEach(el => el.addEventListener('input', pullPanelIntoActiveLayer));
+
+showBox.addEventListener('change', () => { boxOutline.style.display = showBox.checked ? 'block' : 'none'; });
+
+resetBtn.addEventListener('click', () => {
+  const layer = getActiveLayer();
+  if(!layer) return;
+  layer.values = makeDefaultLayerValues();
+  syncPanelToActiveLayer();
+});
+
+copyBtn.addEventListener('click', () => {
+  navigator.clipboard.writeText(readout.textContent);
+  copyBtn.textContent = 'Copied \u2713';
+  setTimeout(()=> copyBtn.textContent = "Copy active clip's values", 1200);
+});
+
+fadeInOverride.addEventListener('change', () => { fadeInVal.disabled = !fadeInOverride.checked; pullPanelIntoActiveLayer(); });
+fadeOutOverride.addEventListener('change', () => { fadeOutVal.disabled = !fadeOutOverride.checked; pullPanelIntoActiveLayer(); });
+[fadeInVal, fadeOutVal].forEach(el => el.addEventListener('input', pullPanelIntoActiveLayer));
+
+captureFreezeBtn.addEventListener('click', () => {
+  const layer = getActiveLayer();
+  if(!layer) return;
+  freezeAtInput.value = layer.videoEl.currentTime.toFixed(2);
+  pullPanelIntoActiveLayer();
+});
+clearFreezeBtn.addEventListener('click', () => { freezeAtInput.value = ''; pullPanelIntoActiveLayer(); });
+[freezeAtInput, freezeDurationInput].forEach(el => el.addEventListener('input', pullPanelIntoActiveLayer));
+
+captureSlowStartBtn.addEventListener('click', () => {
+  const layer = getActiveLayer();
+  if(!layer) return;
+  slowStartInput.value = layer.videoEl.currentTime.toFixed(2);
+  pullPanelIntoActiveLayer();
+});
+captureSlowEndBtn.addEventListener('click', () => {
+  const layer = getActiveLayer();
+  if(!layer) return;
+  slowEndInput.value = layer.videoEl.currentTime.toFixed(2);
+  pullPanelIntoActiveLayer();
+});
+clearSlowBtn.addEventListener('click', () => {
+  const layer = getActiveLayer();
+  slowStartInput.value = ''; slowEndInput.value = '';
+  if(layer) layer.videoEl.playbackRate = 1;
+  pullPanelIntoActiveLayer();
+});
+[slowStartInput, slowEndInput, slowRateSlider].forEach(el => el.addEventListener('input', pullPanelIntoActiveLayer));
+
+captureDriftBtn.addEventListener('click', () => {
+  const layer = getActiveLayer();
+  if(!layer) return;
+  driftStartInput.value = layer.videoEl.currentTime.toFixed(2);
+  pullPanelIntoActiveLayer();
+});
+clearDriftBtn.addEventListener('click', () => { driftStartInput.value = ''; pullPanelIntoActiveLayer(); });
+[driftStartInput, driftDurationInput, driftToXSlider, driftToYSlider].forEach(el => el.addEventListener('input', pullPanelIntoActiveLayer));
+
+// ---- per-layer freeze / slow-motion preview (active layer only) ----
+// NOTE: live preview of freeze/slow-motion/drift only runs for
+// whichever layer is currently selected as active, to keep this
+// simple — but the SAVED values apply to every clip regardless of
+// whether you were watching it live when you set them.
+function onLayerTimeUpdate(layer){
+  if(layer.id !== activeLayerId) return;
+  playbackTime.textContent = layer.videoEl.currentTime.toFixed(2);
+  playbackDuration.textContent = isNaN(layer.videoEl.duration) ? '?' : layer.videoEl.duration.toFixed(2);
+
+  const v = layer.values;
+
+  if(freezePreview.checked && v.freezeAt != null){
+    if(!layer.previewFrozenOnce && layer.videoEl.currentTime >= v.freezeAt){
+      layer.previewFrozenOnce = true;
+      layer.videoEl.pause();
+      frozenBadge.classList.add('active');
+      setTimeout(() => { frozenBadge.classList.remove('active'); layer.videoEl.play().catch(()=>{}); }, v.freezeDuration * 1000);
+    }
+  }
+
+  if(slowPreview.checked && v.slowStart != null && v.slowEnd != null){
+    const inRange = layer.videoEl.currentTime >= v.slowStart && layer.videoEl.currentTime < v.slowEnd;
+    const wantRate = inRange ? v.slowRate : 1;
+    if(layer.videoEl.playbackRate !== wantRate) layer.videoEl.playbackRate = wantRate;
+    slowBadge.classList.toggle('active', inRange);
+  } else {
+    if(layer.videoEl.playbackRate !== 1) layer.videoEl.playbackRate = 1;
+    slowBadge.classList.remove('active');
+  }
+}
+
+function driftPreviewTick(){
+  const layer = getActiveLayer();
+  if(layer && driftPreview.checked && layer.values.driftStart != null){
+    const v = layer.values;
+    const start = v.driftStart;
+    const dur = v.driftDuration || 1;
+    const t = layer.videoEl.currentTime;
+    const progress = t <= start ? 0 : (dur > 0 ? Math.min(1, (t - start) / dur) : 1);
+    const eased = smoothstep(progress);
+    const curX = v.offsetX + (v.driftToOffsetX - v.offsetX) * eased;
+    const curY = v.offsetY + (v.driftToOffsetY - v.offsetY) * eased;
+    layer.wrapEl.style.top = (DEFAULT_BOX.top + curY) + '%';
+    layer.wrapEl.style.left = (DEFAULT_BOX.left + curX) + '%';
+    driftBadge.classList.toggle('active', progress > 0 && progress < 1);
+  } else {
+    driftBadge.classList.remove('active');
+  }
+  requestAnimationFrame(driftPreviewTick);
+}
+requestAnimationFrame(driftPreviewTick);
+
+// ================================================================
+// ===== Audio & Voice: attach, live-preview modulation, apply =====
+// Real Web Audio effects, not a mockup: pitch via detune, pace via
+// playbackRate, tone via a shelving-filter pair, rasp via a waveshaper
+// with a dry/wet mix so it adds grit without turning into full fuzz.
+// Honest limitation, stated plainly in the UI too: pitch and pace are
+// NOT fully independent with this approach -- large pace changes will
+// audibly shift pitch too, same as changing a tape's speed. True
+// independent pitch/time control needs a heavier granular or
+// phase-vocoder algorithm, which isn't what this build attempts.
+// ================================================================
+let audioCtx = null;
+let activePreviewSource = null;
+let activePreviewNodes = [];
+
+function getAudioCtx(){
+  if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  return audioCtx;
+}
+
+audioInput.addEventListener('change', async (e) => {
+  const layer = getActiveLayer();
+  const f = e.target.files[0];
+  if(!f || !layer) return;
+  setStatus(audioStatus, 'Decoding audio\u2026', 'pending');
+  try{
+    const arrayBuf = await f.arrayBuffer();
+    const buffer = await getAudioCtx().decodeAudioData(arrayBuf);
+    layer.audio.buffer = buffer;
+    layer.audio.fileName = f.name;
+    syncAudioPanelToActiveLayer();
+    setStatus(audioStatus, 'Attached "' + f.name + '" (' + buffer.duration.toFixed(2) + 's). Adjust the sliders, preview, then Apply when it sounds right.', 'ok');
+  }catch(err){
+    setStatus(audioStatus, 'Could not decode that file: ' + err.message, 'err');
+  }
+  audioInput.value = '';
+});
+
+// Simple, reliable waveshaper curve for rasp/grit -- a soft-clip curve
+// whose intensity scales with `amount` (0..1).
+function makeDistortionCurve(amount){
+  const n = 44100;
+  const curve = new Float32Array(n);
+  const k = amount * 50; // drive
+  for(let i = 0; i < n; i++){
+    const x = (i * 2) / n - 1;
+    curve[i] = k > 0 ? Math.tanh(k * x) / Math.tanh(k) : x;
+  }
+  return curve;
+}
+
+function stopAudioPreview(){
+  if(activePreviewSource){
+    try{ activePreviewSource.stop(); }catch(e){}
+    activePreviewSource.disconnect();
+    activePreviewSource = null;
+  }
+  activePreviewNodes.forEach(n => { try{ n.disconnect(); }catch(e){} });
+  activePreviewNodes = [];
+}
+
+function playAudioPreview(withTweaks){
+  const layer = getActiveLayer();
+  if(!layer || !layer.audio.buffer) return;
+  stopAudioPreview();
+
+  const ctx = getAudioCtx();
+  const source = ctx.createBufferSource();
+  source.buffer = layer.audio.buffer;
+
+  let lastNode = source;
+  const nodes = [source];
+
+  if(withTweaks){
+    const a = layer.audio;
+    source.playbackRate.value = a.pace;
+    source.detune.value = a.pitch * 100; // semitones -> cents
+
+    // Tone: a low-shelf + high-shelf pair driven by one -1..+1 "tilt"
+    // value -- negative warms/darkens, positive brightens.
+    const lowShelf = ctx.createBiquadFilter();
+    lowShelf.type = 'lowshelf';
+    lowShelf.frequency.value = 400;
+    lowShelf.gain.value = a.tone * -6; // brighter => cut lows a bit
+    const highShelf = ctx.createBiquadFilter();
+    highShelf.type = 'highshelf';
+    highShelf.frequency.value = 2500;
+    highShelf.gain.value = a.tone * 6; // brighter => boost highs
+
+    lastNode.connect(lowShelf);
+    lowShelf.connect(highShelf);
+    nodes.push(lowShelf, highShelf);
+    lastNode = highShelf;
+
+    if(a.rasp > 0){
+      const shaper = ctx.createWaveShaper();
+      shaper.curve = makeDistortionCurve(a.rasp);
+      shaper.oversample = '2x';
+      const dryGain = ctx.createGain();
+      const wetGain = ctx.createGain();
+      dryGain.gain.value = 1 - a.rasp * 0.7;
+      wetGain.gain.value = a.rasp * 0.7;
+      const mixOut = ctx.createGain();
+
+      lastNode.connect(dryGain);
+      lastNode.connect(shaper);
+      shaper.connect(wetGain);
+      dryGain.connect(mixOut);
+      wetGain.connect(mixOut);
+      nodes.push(shaper, dryGain, wetGain, mixOut);
+      lastNode = mixOut;
+    }
+  }
+
+  lastNode.connect(ctx.destination);
+  source.start(0);
+  activePreviewSource = source;
+  activePreviewNodes = nodes;
+  source.addEventListener('ended', () => { if(activePreviewSource === source) activePreviewSource = null; });
+}
+
+audioPlayDryBtn.addEventListener('click', () => playAudioPreview(false));
+audioPlayWetBtn.addEventListener('click', () => playAudioPreview(true));
+audioStopBtn.addEventListener('click', stopAudioPreview);
+
+audioApplyBtn.addEventListener('click', () => {
+  const layer = getActiveLayer();
+  if(!layer) return;
+  layer.audio.pitch = parseFloat(audioPitch.value);
+  layer.audio.pace = parseFloat(audioPace.value);
+  layer.audio.tone = parseFloat(audioTone.value);
+  layer.audio.rasp = parseFloat(audioRasp.value);
+  updateReadoutText();
+  setStatus(audioStatus, 'Applied \u2014 these tweaks are now saved to this clip\u2019s data whenever you commit.', 'ok');
+});
+
+audioResetBtn.addEventListener('click', () => {
+  const layer = getActiveLayer();
+  if(!layer) return;
+  layer.audio.pitch = 0; layer.audio.pace = 1; layer.audio.tone = 0; layer.audio.rasp = 0;
+  syncAudioPanelToActiveLayer();
+  setStatus(audioStatus, 'Tweaks reset to none.', 'ok');
+});
+
+function setStatus(el, msg, kind){
+  el.textContent = msg;
+  el.className = 'status visible ' + (kind || '');
+}
+function b64EncodeUnicode(str){ return btoa(unicodeToLatin1(str)); }
+function unicodeToLatin1(str){
+  return encodeURIComponent(str).replace(/%([0-9A-F]{2})/g, (m, p1) => String.fromCharCode(parseInt(p1, 16)));
+}
+function b64DecodeUnicode(str){
+  return decodeURIComponent(atob(str).split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join(''));
+}
+function apiBase(path){
+  return 'https://api.github.com/repos/' + ghOwner.value.trim() + '/' + ghRepo.value.trim() + '/contents/' + path;
+}
+async function fetchFile(path){
+  const res = await fetch(apiBase(path) + '?ref=' + encodeURIComponent(ghBranch.value.trim()), {
+    headers: { 'Authorization': 'Bearer ' + ghToken.value.trim(), 'Accept': 'application/vnd.github+json' }
+  });
+  if(!res.ok){
+    const body = await res.text();
+    throw new Error('GitHub returned ' + res.status + ' for ' + path + ': ' + body.slice(0,200));
+  }
+  const meta = await res.json();
+  const sha = meta.sha;
+
+  const blobUrl = 'https://api.github.com/repos/' + ghOwner.value.trim() + '/' + ghRepo.value.trim() + '/git/blobs/' + sha;
+  const blobRes = await fetch(blobUrl, {
+    headers: { 'Authorization': 'Bearer ' + ghToken.value.trim(), 'Accept': 'application/vnd.github+json' }
+  });
+  if(!blobRes.ok){
+    const body = await blobRes.text();
+    throw new Error('GitHub blob fetch returned ' + blobRes.status + ' for ' + path + ': ' + body.slice(0,200));
+  }
+  const blob = await blobRes.json();
+  const content = b64DecodeUnicode(blob.content.replace(/\n/g,''));
+  return { sha, content };
+}
+async function commitFile(newContent, sha, message, path){
+  const res = await fetch(apiBase(path), {
+    method: 'PUT',
+    headers: { 'Authorization': 'Bearer ' + ghToken.value.trim(), 'Accept': 'application/vnd.github+json' },
+    body: JSON.stringify({ message: message, content: b64EncodeUnicode(newContent), sha: sha, branch: ghBranch.value.trim() })
+  });
+  if(!res.ok){ const body = await res.text(); throw new Error('GitHub returned ' + res.status + ' for ' + path + ': ' + body.slice(0,300)); }
+  return res.json();
+}
+
+async function fetchBinaryBlobUrl(filename, mimeType){
+  const metaRes = await fetch(apiBase(filename) + '?ref=' + encodeURIComponent(ghBranch.value.trim()), {
+    headers: { 'Authorization': 'Bearer ' + ghToken.value.trim(), 'Accept': 'application/vnd.github+json' }
+  });
+  if(!metaRes.ok) throw new Error('Could not find ' + filename + ' in the repo (' + metaRes.status + ').');
+  const meta = await metaRes.json();
+  const blobRes = await fetch('https://api.github.com/repos/' + ghOwner.value.trim() + '/' + ghRepo.value.trim() + '/git/blobs/' + meta.sha, {
+    headers: { 'Authorization': 'Bearer ' + ghToken.value.trim(), 'Accept': 'application/vnd.github+json' }
+  });
+  if(!blobRes.ok) throw new Error('Could not fetch blob for ' + filename + '.');
+  const blobMeta = await blobRes.json();
+  const binary = atob(blobMeta.content.replace(/\n/g,''));
+  const bytes = new Uint8Array(binary.length);
+  for(let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  const blob = new Blob([bytes], { type: mimeType });
+  return URL.createObjectURL(blob);
+}
+function fetchClipBlobUrl(filename){ return fetchBinaryBlobUrl(filename, 'video/webm'); }
+function guessImageMime(filename){
+  const ext = filename.split('.').pop().toLowerCase();
+  if(ext === 'png') return 'image/png';
+  if(ext === 'webp') return 'image/webp';
+  if(ext === 'gif') return 'image/gif';
+  return 'image/jpeg';
+}
+function fetchImageBlobUrl(filename){ return fetchBinaryBlobUrl(filename, guessImageMime(filename)); }
+
+async function fetchRepoRootListing(){
+  const url = 'https://api.github.com/repos/' + ghOwner.value.trim() + '/' + ghRepo.value.trim() + '/contents?ref=' + encodeURIComponent(ghBranch.value.trim());
+  const res = await fetch(url, {
+    headers: { 'Authorization': 'Bearer ' + ghToken.value.trim(), 'Accept': 'application/vnd.github+json' }
+  });
+  if(!res.ok){ const body = await res.text(); throw new Error('GitHub returned ' + res.status + ' listing the repo root: ' + body.slice(0,200)); }
+  return res.json();
 }
 
 function parseOverridesFromContent(fileContent){
@@ -668,25 +1398,11 @@ function parseOverridesFromContent(fileContent){
   }
 }
 
-// FIXED: previously only matched filenames ending in exactly
-// "_final.webm" or "_transparent.webm", so any clip with an extra
-// suffix word (e.g. "X_transparent_verified.webm") was silently
-// missed entirely, or picked up with the wrong key downstream. Now
-// matches any .webm file with an underscore-separated name.
 function extractClipFilenames(fileContent){
   const matches = fileContent.match(/\b[A-Za-z0-9]+(?:_[A-Za-z0-9]+)*\.webm\b/g) || [];
   return Array.from(new Set(matches));
 }
 
-// FIXED: previously only stripped an exact trailing "_final" or
-// "_transparent" suffix. Any filename with something else tacked on
-// the end (e.g. "D_final_v2.webm", "X_transparent_verified.webm")
-// fell through untouched, so the save got keyed under the whole messy
-// filename stem instead of the clean single letter the playback engine
-// actually looks up — which is why saves for those clips silently
-// wrote to the wrong entry and never appeared to "stick." Now takes
-// everything before the FIRST underscore, which is always just the
-// letter for every clip filename in this project.
 function deriveClipKeyFromFilename(name){
   let key = name.replace(/\.[^/.]+$/, '');
   const underscoreIndex = key.indexOf('_');
@@ -694,10 +1410,12 @@ function deriveClipKeyFromFilename(name){
   return key;
 }
 
-// ---- manual "load this clip's saved values" button ----
+// ---- manual "reload this clip's saved values" button (active layer) ----
 document.getElementById('loadValuesBtn').addEventListener('click', async () => {
-  const key = clipLabel.value.trim();
+  const layer = getActiveLayer();
   const statusEl = document.getElementById('loadValuesStatus');
+  if(!layer){ setStatus(statusEl, 'Select a clip on stage first.', 'err'); return; }
+  const key = clipLabel.value.trim();
   if(!key){ setStatus(statusEl, 'Type or select a clip key first.', 'err'); return; }
   if(!ghToken.value.trim()){ setStatus(statusEl, 'Paste your GitHub token first.', 'err'); return; }
   const targets = getEnabledTargets();
@@ -707,22 +1425,18 @@ document.getElementById('loadValuesBtn').addEventListener('click', async () => {
     const file = await fetchFile(targets[0].path);
     const obj = parseOverridesFromContent(file.content);
     if(obj[key]){
-      applyLoadedOverrideValues(obj[key]);
+      layer.values = Object.assign(makeDefaultLayerValues(), obj[key]);
+      syncPanelToActiveLayer();
       setStatus(statusEl, 'Loaded saved values for "' + key + '" from ' + targets[0].label + '.', 'ok');
     } else {
-      setStatus(statusEl, 'No saved values found for "' + key + '" on ' + targets[0].label + ' \u2014 sliders left as-is.', 'pending');
+      setStatus(statusEl, 'No saved values found for "' + key + '" on ' + targets[0].label + ' \u2014 left as-is.', 'pending');
     }
   }catch(err){
     setStatus(statusEl, 'Error: ' + err.message, 'err');
   }
 });
 
-// ---- browse-backdrops thumbnail gallery ----
-// Auto-collapse behavior: the panel collapses automatically after the
-// FIRST selection (background rarely changes mid-session). If Alyx
-// manually reopens it after that, auto-collapse disarms for the rest
-// of this page load — a plain in-memory flag, not localStorage, so a
-// fresh page load tomorrow starts armed again.
+// ---- browse-backdrops thumbnail gallery (unchanged behavior) ----
 let backdropAutoCollapseArmed = true;
 let backdropHasAutoCollapsedOnce = false;
 const backdropDetailsEl = document.getElementById('loadBackdropsBtn').closest('details');
@@ -797,7 +1511,7 @@ document.getElementById('loadBackdropsBtn').addEventListener('click', async () =
   }
 });
 
-// ---- browse-clips thumbnail gallery ----
+// ---- browse-clips thumbnail gallery — now ADDS to stage instead of replacing ----
 document.getElementById('loadThumbsBtn').addEventListener('click', async () => {
   const thumbsStatus = document.getElementById('thumbsStatus');
   const grid = document.getElementById('thumbGrid');
@@ -825,33 +1539,22 @@ document.getElementById('loadThumbsBtn').addEventListener('click', async () => {
       canvas.width = 160; canvas.height = 90;
       const labelEl = document.createElement('div');
       labelEl.className = 'thumb-label';
-      labelEl.textContent = key + (overridesObj[key] ? ' \u2713' : '');
+      labelEl.textContent = key + (overridesObj[key] ? ' \u2713' : '') + ' (+ add)';
       cell.appendChild(canvas);
       cell.appendChild(labelEl);
       grid.appendChild(cell);
 
       cell.addEventListener('click', async () => {
-        document.querySelectorAll('.thumb-cell').forEach(c => c.classList.remove('selected'));
-        cell.classList.add('selected');
-        setStatus(thumbsStatus, 'Loading ' + filename + '\u2026', 'pending');
+        setStatus(thumbsStatus, 'Adding ' + filename + ' to the stage\u2026', 'pending');
         try{
           const url = await fetchClipBlobUrl(filename);
-          stageClip.src = url;
-          stageClip.classList.add('loaded');
-          stageClip.play().catch(()=>{});
-          clipLoaded = true;
-          updatePlaceholder();
-          clipLabel.value = key;
-          applyLoadedOverrideValues(overridesObj[key] || null);
-          setStatus(thumbsStatus, 'Loaded ' + filename + (overridesObj[key] ? ' with its saved values.' : ' \u2014 no saved values yet, starting from default.'), 'ok');
+          addLayer(url, key, overridesObj[key] || null);
+          setStatus(thumbsStatus, 'Added ' + filename + (overridesObj[key] ? ' with its saved values.' : ' \u2014 no saved values yet, starting from default.') + ' It\u2019s now the active clip.', 'ok');
         }catch(err){
           setStatus(thumbsStatus, 'Error loading ' + filename + ': ' + err.message, 'err');
         }
       });
 
-      // Generate the actual preview frame — sequential, one clip at a
-      // time, to stay gentle on GitHub's API rather than firing 20+
-      // parallel blob fetches at once.
       try{
         const url = await fetchClipBlobUrl(filename);
         await new Promise((resolve) => {
@@ -872,299 +1575,13 @@ document.getElementById('loadThumbsBtn').addEventListener('click', async () => {
         cell.classList.remove('thumb-pending');
       }
     }
-    setStatus(thumbsStatus, 'Loaded ' + filenames.length + ' clip thumbnails from ' + targets[0].label + '. Click one to select it.', 'ok');
+    setStatus(thumbsStatus, 'Loaded ' + filenames.length + ' clip thumbnails from ' + targets[0].label + '. Click one to add it to the stage.', 'ok');
   }catch(err){
     setStatus(thumbsStatus, 'Error: ' + err.message, 'err');
   }finally{
     btn.disabled = false;
   }
 });
-
-let bgLoaded = false, clipLoaded = false;
-
-function updatePlaceholder(){
-  placeholder.style.display = (bgLoaded || clipLoaded) ? 'none' : 'flex';
-}
-
-bgInput.addEventListener('change', e => {
-  const f = e.target.files[0];
-  if(!f) return;
-  stageBg.src = URL.createObjectURL(f);
-  stageBg.classList.add('loaded');
-  bgLoaded = true;
-  updatePlaceholder();
-});
-
-clipInput.addEventListener('change', e => {
-  const f = e.target.files[0];
-  if(!f) return;
-  stageClip.src = URL.createObjectURL(f);
-  stageClip.classList.add('loaded');
-  stageClip.play().catch(()=>{});
-  clipLoaded = true;
-  updatePlaceholder();
-
-  clipLabel.value = deriveClipKeyFromFilename(f.name);
-  applyTransform();
-});
-
-function positionBox(){
-  boxOutline.style.top = DEFAULT_BOX.top + '%';
-  boxOutline.style.left = DEFAULT_BOX.left + '%';
-  boxOutline.style.width = DEFAULT_BOX.width + '%';
-  boxOutline.style.height = DEFAULT_BOX.height + '%';
-}
-positionBox();
-
-function currentValues(){
-  return {
-    scale: parseFloat(scaleSlider.value),
-    offsetX: parseFloat(offsetXSlider.value),
-    offsetY: parseFloat(offsetYSlider.value)
-  };
-}
-
-function buildReadoutObject(){
-  const v = currentValues();
-  const obj = { scale: v.scale, offsetX: v.offsetX, offsetY: v.offsetY };
-  if(fadeInOverride.checked) obj.fadeIn = parseFloat(fadeInVal.value);
-  if(fadeOutOverride.checked) obj.fadeOut = parseFloat(fadeOutVal.value);
-  if(freezeAtInput.value !== ''){
-    obj.freezeAt = parseFloat(freezeAtInput.value);
-    obj.freezeDuration = parseFloat(freezeDurationInput.value || '0');
-  }
-  if(slowStartInput.value !== '' && slowEndInput.value !== ''){
-    obj.slowStart = parseFloat(slowStartInput.value);
-    obj.slowEnd = parseFloat(slowEndInput.value);
-    obj.slowRate = parseFloat(slowRateSlider.value);
-  }
-  if(driftStartInput.value !== ''){
-    obj.driftStart = parseFloat(driftStartInput.value);
-    obj.driftDuration = parseFloat(driftDurationInput.value || '1');
-    obj.driftToOffsetX = parseFloat(driftToXSlider.value);
-    obj.driftToOffsetY = parseFloat(driftToYSlider.value);
-  }
-  return obj;
-}
-
-function smoothstep(p){ return p*p*(3-2*p); }
-
-function applyTransform(){
-  const v = currentValues();
-  scaleVal.textContent = v.scale.toFixed(2);
-  offsetXVal.textContent = v.offsetX.toFixed(1);
-  offsetYVal.textContent = v.offsetY.toFixed(1);
-  slowRateVal.textContent = parseFloat(slowRateSlider.value).toFixed(2) + 'x';
-  driftToXVal.textContent = parseFloat(driftToXSlider.value).toFixed(1);
-  driftToYVal.textContent = parseFloat(driftToYSlider.value).toFixed(1);
-
-  stageClip.style.top = (DEFAULT_BOX.top + v.offsetY) + '%';
-  stageClip.style.left = (DEFAULT_BOX.left + v.offsetX) + '%';
-  stageClip.style.width = DEFAULT_BOX.width + '%';
-  stageClip.style.height = DEFAULT_BOX.height + '%';
-  stageClip.style.transformOrigin = 'center bottom';
-  stageClip.style.transform = 'scale(' + v.scale + ')';
-
-  updateReadoutText();
-  commitBtn.disabled = true;
-  diffReadout.style.display = 'none';
-}
-
-function updateReadoutText(){
-  const label = clipLabel.value ? clipLabel.value : '<letter>';
-  const obj = buildReadoutObject();
-  let text = 'clip: ' + label + '\n' +
-    'scale: ' + obj.scale.toFixed(2) + '\n' +
-    'offsetX: ' + obj.offsetX.toFixed(1) + '%\n' +
-    'offsetY: ' + obj.offsetY.toFixed(1) + '%';
-  if(obj.fadeIn != null) text += '\nfadeIn: ' + obj.fadeIn + 's (override)';
-  if(obj.fadeOut != null) text += '\nfadeOut: ' + obj.fadeOut + 's (override)';
-  if(obj.freezeAt != null) text += '\nfreezeAt: ' + obj.freezeAt + 's, freezeDuration: ' + obj.freezeDuration + 's';
-  if(obj.slowStart != null) text += '\nslowStart: ' + obj.slowStart + 's, slowEnd: ' + obj.slowEnd + 's, slowRate: ' + obj.slowRate + 'x';
-  if(obj.driftStart != null) text += '\ndriftStart: ' + obj.driftStart + 's, driftDuration: ' + obj.driftDuration + 's, driftTo: (' + obj.driftToOffsetX + '%, ' + obj.driftToOffsetY + '%)';
-  readout.textContent = text;
-}
-
-[scaleSlider, offsetXSlider, offsetYSlider, clipLabel].forEach(el => el.addEventListener('input', applyTransform));
-
-showBox.addEventListener('change', () => { boxOutline.style.display = showBox.checked ? 'block' : 'none'; });
-
-resetBtn.addEventListener('click', () => {
-  scaleSlider.value = 1; offsetXSlider.value = 0; offsetYSlider.value = 0;
-  applyTransform();
-});
-
-copyBtn.addEventListener('click', () => {
-  navigator.clipboard.writeText(readout.textContent);
-  copyBtn.textContent = 'Copied \u2713';
-  setTimeout(()=> copyBtn.textContent = 'Copy values', 1200);
-});
-
-fadeInOverride.addEventListener('change', () => { fadeInVal.disabled = !fadeInOverride.checked; updateReadoutText(); commitBtn.disabled = true; diffReadout.style.display='none'; });
-fadeOutOverride.addEventListener('change', () => { fadeOutVal.disabled = !fadeOutOverride.checked; updateReadoutText(); commitBtn.disabled = true; diffReadout.style.display='none'; });
-[fadeInVal, fadeOutVal].forEach(el => el.addEventListener('input', () => { updateReadoutText(); commitBtn.disabled = true; diffReadout.style.display='none'; }));
-
-function invalidatePending(){ updateReadoutText(); commitBtn.disabled = true; diffReadout.style.display = 'none'; }
-
-captureFreezeBtn.addEventListener('click', () => { freezeAtInput.value = stageClip.currentTime.toFixed(2); invalidatePending(); });
-clearFreezeBtn.addEventListener('click', () => { freezeAtInput.value = ''; invalidatePending(); });
-[freezeAtInput, freezeDurationInput].forEach(el => el.addEventListener('input', invalidatePending));
-
-captureSlowStartBtn.addEventListener('click', () => { slowStartInput.value = stageClip.currentTime.toFixed(2); invalidatePending(); });
-captureSlowEndBtn.addEventListener('click', () => { slowEndInput.value = stageClip.currentTime.toFixed(2); invalidatePending(); });
-clearSlowBtn.addEventListener('click', () => { slowStartInput.value = ''; slowEndInput.value = ''; stageClip.playbackRate = 1; invalidatePending(); });
-[slowStartInput, slowEndInput, slowRateSlider].forEach(el => el.addEventListener('input', invalidatePending));
-
-captureDriftBtn.addEventListener('click', () => { driftStartInput.value = stageClip.currentTime.toFixed(2); invalidatePending(); });
-clearDriftBtn.addEventListener('click', () => { driftStartInput.value = ''; invalidatePending(); });
-[driftStartInput, driftDurationInput, driftToXSlider, driftToYSlider].forEach(el => el.addEventListener('input', invalidatePending));
-
-let previewFrozenOnce = false;
-stageClip.addEventListener('timeupdate', () => {
-  playbackTime.textContent = stageClip.currentTime.toFixed(2);
-  playbackDuration.textContent = isNaN(stageClip.duration) ? '?' : stageClip.duration.toFixed(2);
-
-  if(freezePreview.checked && freezeAtInput.value !== ''){
-    const freezeAt = parseFloat(freezeAtInput.value);
-    const freezeDur = parseFloat(freezeDurationInput.value || '0');
-    if(!previewFrozenOnce && stageClip.currentTime >= freezeAt){
-      previewFrozenOnce = true;
-      stageClip.pause();
-      frozenBadge.classList.add('active');
-      setTimeout(() => { frozenBadge.classList.remove('active'); stageClip.play().catch(()=>{}); }, freezeDur * 1000);
-    }
-  }
-
-  if(slowPreview.checked && slowStartInput.value !== '' && slowEndInput.value !== ''){
-    const s = parseFloat(slowStartInput.value), e = parseFloat(slowEndInput.value), rate = parseFloat(slowRateSlider.value);
-    const inRange = stageClip.currentTime >= s && stageClip.currentTime < e;
-    const wantRate = inRange ? rate : 1;
-    if(stageClip.playbackRate !== wantRate) stageClip.playbackRate = wantRate;
-    slowBadge.classList.toggle('active', inRange);
-  } else {
-    if(stageClip.playbackRate !== 1) stageClip.playbackRate = 1;
-    slowBadge.classList.remove('active');
-  }
-});
-stageClip.addEventListener('seeked', () => { previewFrozenOnce = false; });
-stageClip.addEventListener('play', () => { if(stageClip.currentTime < 0.05) previewFrozenOnce = false; });
-
-function driftPreviewTick(){
-  if(driftPreview.checked && driftStartInput.value !== '' && clipLoaded){
-    const v = currentValues();
-    const start = parseFloat(driftStartInput.value);
-    const dur = parseFloat(driftDurationInput.value || '1');
-    const targetX = parseFloat(driftToXSlider.value);
-    const targetY = parseFloat(driftToYSlider.value);
-    const t = stageClip.currentTime;
-    const progress = t <= start ? 0 : (dur > 0 ? Math.min(1, (t - start) / dur) : 1);
-    const eased = smoothstep(progress);
-    const curX = v.offsetX + (targetX - v.offsetX) * eased;
-    const curY = v.offsetY + (targetY - v.offsetY) * eased;
-    stageClip.style.top = (DEFAULT_BOX.top + curY) + '%';
-    stageClip.style.left = (DEFAULT_BOX.left + curX) + '%';
-    driftBadge.classList.toggle('active', progress > 0 && progress < 1);
-  } else {
-    driftBadge.classList.remove('active');
-  }
-  requestAnimationFrame(driftPreviewTick);
-}
-requestAnimationFrame(driftPreviewTick);
-
-applyTransform();
-
-function setStatus(el, msg, kind){
-  el.textContent = msg;
-  el.className = 'status visible ' + (kind || '');
-}
-function b64EncodeUnicode(str){ return btoa(unicodeToLatin1(str)); }
-function unicodeToLatin1(str){
-  return encodeURIComponent(str).replace(/%([0-9A-F]{2})/g, (m, p1) => String.fromCharCode(parseInt(p1, 16)));
-}
-function b64DecodeUnicode(str){
-  return decodeURIComponent(atob(str).split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join(''));
-}
-function apiBase(path){
-  return 'https://api.github.com/repos/' + ghOwner.value.trim() + '/' + ghRepo.value.trim() + '/contents/' + path;
-}
-async function fetchFile(path){
-  const res = await fetch(apiBase(path) + '?ref=' + encodeURIComponent(ghBranch.value.trim()), {
-    headers: { 'Authorization': 'Bearer ' + ghToken.value.trim(), 'Accept': 'application/vnd.github+json' }
-  });
-  if(!res.ok){
-    const body = await res.text();
-    throw new Error('GitHub returned ' + res.status + ' for ' + path + ': ' + body.slice(0,200));
-  }
-  const meta = await res.json();
-  const sha = meta.sha;
-
-  const blobUrl = 'https://api.github.com/repos/' + ghOwner.value.trim() + '/' + ghRepo.value.trim() + '/git/blobs/' + sha;
-  const blobRes = await fetch(blobUrl, {
-    headers: { 'Authorization': 'Bearer ' + ghToken.value.trim(), 'Accept': 'application/vnd.github+json' }
-  });
-  if(!blobRes.ok){
-    const body = await blobRes.text();
-    throw new Error('GitHub blob fetch returned ' + blobRes.status + ' for ' + path + ': ' + body.slice(0,200));
-  }
-  const blob = await blobRes.json();
-  const content = b64DecodeUnicode(blob.content.replace(/\n/g,''));
-  return { sha, content };
-}
-async function commitFile(newContent, sha, message, path){
-  const res = await fetch(apiBase(path), {
-    method: 'PUT',
-    headers: { 'Authorization': 'Bearer ' + ghToken.value.trim(), 'Accept': 'application/vnd.github+json' },
-    body: JSON.stringify({ message: message, content: b64EncodeUnicode(newContent), sha: sha, branch: ghBranch.value.trim() })
-  });
-  if(!res.ok){ const body = await res.text(); throw new Error('GitHub returned ' + res.status + ' for ' + path + ': ' + body.slice(0,300)); }
-  return res.json();
-}
-
-// Binary-safe fetch, shared by the clip and backdrop browsers below —
-// same Contents-API-then-blobs-API pattern as fetchFile(), but decodes
-// to raw bytes instead of unicode text, since these are media files,
-// not source code. Works for private repos and any file size up to the
-// blobs API's 100MB limit, unlike a plain raw.githubusercontent.com
-// fetch which can't reliably carry the auth token for a private repo.
-async function fetchBinaryBlobUrl(filename, mimeType){
-  const metaRes = await fetch(apiBase(filename) + '?ref=' + encodeURIComponent(ghBranch.value.trim()), {
-    headers: { 'Authorization': 'Bearer ' + ghToken.value.trim(), 'Accept': 'application/vnd.github+json' }
-  });
-  if(!metaRes.ok) throw new Error('Could not find ' + filename + ' in the repo (' + metaRes.status + ').');
-  const meta = await metaRes.json();
-  const blobRes = await fetch('https://api.github.com/repos/' + ghOwner.value.trim() + '/' + ghRepo.value.trim() + '/git/blobs/' + meta.sha, {
-    headers: { 'Authorization': 'Bearer ' + ghToken.value.trim(), 'Accept': 'application/vnd.github+json' }
-  });
-  if(!blobRes.ok) throw new Error('Could not fetch blob for ' + filename + '.');
-  const blobMeta = await blobRes.json();
-  const binary = atob(blobMeta.content.replace(/\n/g,''));
-  const bytes = new Uint8Array(binary.length);
-  for(let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-  const blob = new Blob([bytes], { type: mimeType });
-  return URL.createObjectURL(blob);
-}
-function fetchClipBlobUrl(filename){ return fetchBinaryBlobUrl(filename, 'video/webm'); }
-function guessImageMime(filename){
-  const ext = filename.split('.').pop().toLowerCase();
-  if(ext === 'png') return 'image/png';
-  if(ext === 'webp') return 'image/webp';
-  if(ext === 'gif') return 'image/gif';
-  return 'image/jpeg';
-}
-function fetchImageBlobUrl(filename){ return fetchBinaryBlobUrl(filename, guessImageMime(filename)); }
-
-// Lists every file at the repo root (unlike fetchFile, this hits the
-// Contents API on the directory itself, not one specific file) — used
-// to find every candidate backdrop image, whether or not it's currently
-// wired into the live HTML.
-async function fetchRepoRootListing(){
-  const url = 'https://api.github.com/repos/' + ghOwner.value.trim() + '/' + ghRepo.value.trim() + '/contents?ref=' + encodeURIComponent(ghBranch.value.trim());
-  const res = await fetch(url, {
-    headers: { 'Authorization': 'Bearer ' + ghToken.value.trim(), 'Accept': 'application/vnd.github+json' }
-  });
-  if(!res.ok){ const body = await res.text(); throw new Error('GitHub returned ' + res.status + ' listing the repo root: ' + body.slice(0,200)); }
-  return res.json();
-}
 
 function formatOverridesObject(obj){
   const lines = Object.keys(obj).map(letter => {
@@ -1180,18 +1597,21 @@ function formatOverridesObject(obj){
   return 'const NEEDLES_CLIP_OVERRIDES = {\n' + lines.join(',\n') + '\n};';
 }
 
-function computeOverrideNewContent(fileContent, letter, newValue){
+// ===== NEW: writes MULTIPLE clip entries into the overrides object in
+// one pass, instead of just one. Same repair/insertion logic as the
+// single-clip version for finding or creating the override block. =====
+function computeMultiOverrideNewContent(fileContent, entries){
+  // entries: array of { key, value }
   const blockRegex = /const\s+NEEDLES_CLIP_OVERRIDES\s*=\s*\{[\s\S]*?\}\s*;/;
   const match = fileContent.match(blockRegex);
 
   let existingObj = {};
-  let oldEntry = '(none yet)';
-  let newFileContent;
   let repairNote = '';
+  let newFileContent;
+  const diffLines = [];
 
   if(match){
     const inner = match[0].replace(/^const\s+NEEDLES_CLIP_OVERRIDES\s*=\s*/, '').replace(/;\s*$/, '');
-
     try{
       existingObj = new Function('return ' + inner)();
     }catch(firstError){
@@ -1199,7 +1619,6 @@ function computeOverrideNewContent(fileContent, letter, newValue){
         /(^|[{,]\s*)([A-Za-z_$][A-Za-z0-9_$-]*)\s*:/gm,
         (full, prefix, key) => prefix + JSON.stringify(key) + ':'
       );
-
       try{
         existingObj = new Function('return ' + repairedInner)();
         repairNote = '\n\nRepair applied: older unquoted clip keys were corrected automatically.';
@@ -1208,8 +1627,11 @@ function computeOverrideNewContent(fileContent, letter, newValue){
       }
     }
 
-    oldEntry = existingObj[letter] ? JSON.stringify(existingObj[letter]) : '(none yet)';
-    existingObj[letter] = newValue;
+    entries.forEach(({key, value}) => {
+      const oldEntry = existingObj[key] ? JSON.stringify(existingObj[key]) : '(none yet)';
+      existingObj[key] = value;
+      diffLines.push('  ' + key + ':\n    before: ' + oldEntry + '\n    after:  ' + JSON.stringify(value));
+    });
 
     const newBlock = formatOverridesObject(existingObj);
     newFileContent =
@@ -1217,7 +1639,10 @@ function computeOverrideNewContent(fileContent, letter, newValue){
       newBlock +
       fileContent.slice(match.index + match[0].length);
   }else{
-    existingObj[letter] = newValue;
+    entries.forEach(({key, value}) => {
+      existingObj[key] = value;
+      diffLines.push('  ' + key + ':\n    before: (none yet)\n    after:  ' + JSON.stringify(value));
+    });
     const newBlock = formatOverridesObject(existingObj);
 
     const preferredAnchors = [
@@ -1243,9 +1668,8 @@ function computeOverrideNewContent(fileContent, letter, newValue){
     }else{
       const scriptMatch = fileContent.match(/<script(?:\s[^>]*)?>/i);
       if(!scriptMatch){
-        throw new Error('Could not find a safe JavaScript insertion point.');
+        throw new Error('Could not find a safe JavaScript insertion point. This file may need at least an empty <script></script> tag before the calibrator can write to it.');
       }
-
       const insertAt = scriptMatch.index + scriptMatch[0].length;
       newFileContent =
         fileContent.slice(0, insertAt) +
@@ -1258,15 +1682,15 @@ function computeOverrideNewContent(fileContent, letter, newValue){
     repairNote = '\n\nCompatibility repair: NEEDLES_CLIP_OVERRIDES was missing, so it will be added automatically.';
   }
 
-  const newEntry = JSON.stringify(existingObj[letter]);
-  return { newFileContent, oldEntry, newEntry, repairNote };
+  return { newFileContent, diffText: diffLines.join('\n') + repairNote };
 }
 
 let pendingCommits = null;
 
 previewBtn.addEventListener('click', async () => {
-  const letter = clipLabel.value;
-  if(!letter){ setStatus(statusMsg, 'Load a clip first (or type a key manually) \u2014 that\u2019s what the save gets keyed under.', 'err'); return; }
+  if(!layers.length){ setStatus(statusMsg, 'No clips are on stage \u2014 add at least one first.', 'err'); return; }
+  const missingKey = layers.find(l => !l.key || !l.key.trim());
+  if(missingKey){ setStatus(statusMsg, 'Every clip on stage needs a key \u2014 select it and fill in "Clip key".', 'err'); return; }
   if(!ghToken.value.trim()){ setStatus(statusMsg, 'Paste your GitHub token in "GitHub connection settings" first.', 'err'); return; }
   const targets = getEnabledTargets();
   if(!targets.length){ setStatus(statusMsg, 'No sync targets are checked \u2014 pick at least one platform above.', 'err'); return; }
@@ -1274,22 +1698,19 @@ previewBtn.addEventListener('click', async () => {
   setStatus(statusMsg, 'Fetching current file(s) from GitHub for ' + targets.length + ' target(s)\u2026', 'pending');
   previewBtn.disabled = true;
   try{
-    const newValue = buildReadoutObject();
+    const entries = layers.map(l => ({ key: l.key.trim(), value: buildOverrideObjectForLayer(l) }));
     const results = [];
     for(const target of targets){
       const file = await fetchFile(target.path);
-      const { newFileContent, oldEntry, newEntry, repairNote } = computeOverrideNewContent(file.content, letter, newValue);
-      results.push({ target, newFileContent, sha: file.sha, oldEntry, newEntry, repairNote });
+      const { newFileContent, diffText } = computeMultiOverrideNewContent(file.content, entries);
+      results.push({ target, newFileContent, sha: file.sha, diffText });
     }
     pendingCommits = results;
 
     diffReadout.style.display = 'block';
     diffReadout.textContent = results.map(r =>
-      r.target.label + ' (' + r.target.path + ')' +
-      '\n  before: ' + r.oldEntry +
-      '\n  after:  ' + r.newEntry +
-      r.repairNote
-    ).join('\n\n') + '\n\nReady to commit to all ' + results.length + ' target(s) \u2014 nothing has been saved yet.';
+      r.target.label + ' (' + r.target.path + ')' + '\n' + r.diffText
+    ).join('\n\n') + '\n\nReady to commit ' + entries.length + ' clip(s) to all ' + results.length + ' target(s) \u2014 nothing has been saved yet.';
     commitBtn.disabled = false;
     setStatus(statusMsg, 'Fetched OK from ' + results.length + ' target(s). Review the change above, then commit.', 'ok');
   }catch(err){
@@ -1302,12 +1723,11 @@ previewBtn.addEventListener('click', async () => {
 commitBtn.addEventListener('click', async () => {
   if(!pendingCommits || !pendingCommits.length) return;
   commitBtn.disabled = true;
-  const letter = clipLabel.value;
   const results = [];
   for(const pc of pendingCommits){
     setStatus(statusMsg, 'Committing to ' + pc.target.label + '\u2026', 'pending');
     try{
-      const data = await commitFile(pc.newFileContent, pc.sha, 'Calibrator: update clip ' + letter + ' override', pc.target.path);
+      const data = await commitFile(pc.newFileContent, pc.sha, 'Calibrator: update ' + layers.length + ' clip(s) on stage', pc.target.path);
       const shortSha = (data.commit && data.commit.sha) ? data.commit.sha.slice(0,7) : 'ok';
       results.push(pc.target.label + ': committed \u2713 (' + shortSha + ')');
     }catch(err){
@@ -1498,6 +1918,8 @@ globalFreezeCommitBtn.addEventListener('click', async () => {
   globalFreezeDiffReadout.style.display = 'none';
   pendingGlobalFreezeCommits = null;
 });
+
+syncPanelToActiveLayer();
 </script>
 
 </body>
