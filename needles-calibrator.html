@@ -1668,7 +1668,7 @@ function computeMultiOverrideNewContent(fileContent, entries){
     }else{
       const scriptMatch = fileContent.match(/<script(?:\s[^>]*)?>/i);
       if(!scriptMatch){
-        throw new Error('Could not find a safe JavaScript insertion point. This file may need at least an empty <script></script> tag before the calibrator can write to it.');
+        throw new Error('Could not find a safe JavaScript insertion point. This file may need at least an empty <script><\/script> tag before the calibrator can write to it.');
       }
       const insertAt = scriptMatch.index + scriptMatch[0].length;
       newFileContent =
