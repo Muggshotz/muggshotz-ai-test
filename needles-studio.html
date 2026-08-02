@@ -620,11 +620,11 @@
 </div>
 
 <div class="card" id="panoramaFadeCard">
-<div class="card-title">🌀 Panorama Edge Fade</div>
-<div class="note" style="margin-top:0;margin-bottom:.75rem">For the Wraparound (panorama) print option only — fades every true outer edge of the design toward white (top, bottom, and the outermost left/right sides), while keeping the seams where Left, Center, and Right join each other sharp and continuous. Doesn't change anything you see or type below; it's applied automatically behind the scenes whenever you generate with this switched on.</div>
+<div class="card-title">🖌️ Edge Fade</div>
+<div class="note" id="panoramaFadeCardNote" style="margin-top:0;margin-bottom:.75rem">By default, every design's outer edges automatically fade into white so it blends into the mug instead of looking like a hard-edged sticker. In Wraparound mode, the seams where Left, Center, and Right join stay sharp and continuous — only the true outer edges (top/bottom, plus the far-left and far-right ends) fade. In the standard three-panel mode, each panel is independent, so all four of its edges fade. Doesn't change anything you see or type below; it's applied automatically behind the scenes.</div>
 <div style="display:flex;align-items:center;gap:10px">
 <input type="checkbox" id="panoramaFadeToggle" onchange="togglePanoramaFadeEdges()" style="width:20px;height:20px;cursor:pointer"/>
-<label style="margin:0;text-transform:none;font-size:14px;color:#fff;cursor:pointer" onclick="document.getElementById('panoramaFadeToggle').click()">Yes, fade all outer edges to white for a panorama</label>
+<label style="margin:0;text-transform:none;font-size:14px;color:#fff;cursor:pointer" onclick="document.getElementById('panoramaFadeToggle').click()">No — I want hard, full-bleed edges instead</label>
 </div>
 </div>
 
@@ -1500,6 +1500,21 @@ let mugOptionsTouched=false; // true once the customer has actively picked a sty
 let mugGuidedChangesActive=false; // true once "click here to make changes" has been pressed, until the next Generate
 let mugDesignConfirmed=false; // true once "If satisfied with design, click here" has been pressed — points straight at Available Now instead of looping back to style/size/color
 
+// NEW (Alyx's request, Aug 2026): the preview shouldn't auto-scroll into
+// view the instant a customer clicks just ONE of size/style — that felt
+// like the page jumping before they'd had a chance to make both real
+// choices. These track each pick independently so the scroll only fires
+// once, the first time BOTH have been explicitly clicked.
+let mugStyleClicked=false;
+let mugSizeClicked=false;
+let mugPreviewAutoScrolled=false;
+function maybeScrollToGenPreviewOnceBothPicked(){
+  if(mugStyleClicked && mugSizeClicked && !mugPreviewAutoScrolled){
+    mugPreviewAutoScrolled=true;
+    smoothScrollToTarget('genPreviewSection','start');
+  }
+}
+
 function updateGenPreviewLabel(){
   const el=document.getElementById('genPreviewLabel');
   if(!el)return;
@@ -1588,30 +1603,44 @@ function handleReturnToPhotos(){
 function handleMugGuidedGenerate(){
   mugGuidedChangesActive=false;
   mugOptionsTouched=false;
+  mugStyleClicked=false;
+  mugSizeClicked=false;
+  mugPreviewAutoScrolled=false;
   mugDesignConfirmed=false;
   updateMugGuidedFlow();
   generate();
 }
 
-// NEW (July 2026, Alyx's request): silent generation-prompt add-on for
-// the Wraparound/panorama print option. When on, this instruction gets
-// appended to the actual prompt sent to the AI on every generate() call
-// (including the auto left/right panel continuations) — the customer
-// never sees this text in their own idea box, it's applied purely
-// behind the scenes.
-let panoramaFadeEdges=false;
+// UPDATED (Alyx's request, Aug 2026): edge fade is now AUTOMATIC BY
+// DEFAULT rather than opt-in — hardEdgesEnabled tracks the opt-OUT
+// (checking the box means "give me hard, full-bleed edges instead").
+// This instruction gets appended to the actual prompt sent to the AI on
+// every generate() call (including the auto left/right panel
+// continuations) — the customer never sees this text in their own idea
+// box, it's applied purely behind the scenes. Fades to white for now,
+// since every mug is currently white; if/when colored mugs are added,
+// this is the mechanism that would fade into the product's actual color
+// instead (see buildProductColorFadeDescription).
+let hardEdgesEnabled=false;
 // Panel-specific fade instructions — which edges are "outer" (should
 // fade to white) vs. "seam" (must stay sharp so panels line up) depends
 // on which panel this is. Center has no outer side edges (both sides
 // join a neighbor), Left's own left edge is the true outer edge, Right's
 // own right edge is the true outer edge — all three fade top and bottom
-// regardless, since those are never seams.
+// regardless, since those are never seams. These apply to Wraparound
+// mode only, where the three panels form one continuous scene.
 const PANORAMA_FADE_INSTRUCTION_CENTER = "PANORAMA EDGE FADE: Fade the TOP and BOTTOM outside edges of the picture toward white, so they blend softly into a white canvas. Do NOT fade or soften the LEFT and RIGHT edges — those are the seams where this panel joins its neighbors, and must stay sharp, fully detailed, and continuous all the way to the edge so the scene lines up seamlessly across panels.";
 const PANORAMA_FADE_INSTRUCTION_LEFT = "PANORAMA EDGE FADE: Fade the TOP, BOTTOM, and LEFT outside edges of the picture toward white, so they blend softly into a white canvas — the left edge of this panel is a true outer edge, not a seam. Do NOT fade or soften the RIGHT edge — that is the seam where this panel joins the center panel, and must stay sharp, fully detailed, and continuous all the way to the edge so the scene lines up seamlessly.";
 const PANORAMA_FADE_INSTRUCTION_RIGHT = "PANORAMA EDGE FADE: Fade the TOP, BOTTOM, and RIGHT outside edges of the picture toward white, so they blend softly into a white canvas — the right edge of this panel is a true outer edge, not a seam. Do NOT fade or soften the LEFT edge — that is the seam where this panel joins the center panel, and must stay sharp, fully detailed, and continuous all the way to the edge so the scene lines up seamlessly.";
+// Used for every product/mode where panels (if any) are fully decoupled
+// from each other — the standard three-panel mug (each of Left/Center/
+// Right can be a totally different design), travel mug front/back, and
+// every single-design product (phone case, tote, puzzle, poster,
+// suitcase, etc.). There's no seam concept here, so all four edges fade.
+const UNIFORM_EDGE_FADE_INSTRUCTION = "EDGE FADE: Fade all four outside edges of the picture (top, bottom, left, and right) smoothly and completely toward white, so there is no hard rectangular border or sticker-cutout look. The artwork should blend naturally into the product's white surface at every edge.";
 
 function togglePanoramaFadeEdges(){
-  panoramaFadeEdges=document.getElementById('panoramaFadeToggle').checked;
+  hardEdgesEnabled=document.getElementById('panoramaFadeToggle').checked;
 }
 
 function pickMugPrintMode(mode){
@@ -1627,23 +1656,21 @@ function refreshMugPrintModeVisibility(){
   card.style.display=(product==='mug'||product==='water bottle')?'block':'none';
 }
 
-// NEW (Alyx's request, Aug 2026): the Panorama Edge Fade instruction only
-// makes sense for the Wraparound print option — it deliberately tells the
-// AI to keep left/right edges SHARP (they're the seam), which produces a
-// hard rectangular "sticker" edge if it's accidentally left on while a
-// customer is using the standard three-panel mug (fighting against a
-// background theme like "Fade to Product Color" that wants ALL edges
-// soft). This card is now only shown, and the toggle only takes effect,
-// when Wraparound is actually selected — switching away from Wraparound
-// automatically unchecks it and resets state so a stale selection can't
-// leak into a differently-composed generation.
+// UPDATED (Alyx's request, Aug 2026): the Edge Fade card now applies to
+// BOTH Wraparound and the standard three-panel/front-back modes (only
+// the underlying edge logic differs between them — see
+// PANORAMA_FADE_INSTRUCTION_* vs UNIFORM_EDGE_FADE_INSTRUCTION below),
+// so it's shown whenever the product is a mug or travel cup, in any
+// print mode. Switching away from mug/water bottle entirely hides it
+// and resets the opt-out so a stale "hard edges" choice can't leak into
+// a differently-composed generation.
 function refreshPanoramaFadeCardVisibility(){
   const card=document.getElementById('panoramaFadeCard');
   if(!card)return;
-  const isWraparoundActive=(product==='mug'||product==='water bottle')&&mugPrintMode==='wraparound';
-  card.style.display=isWraparoundActive?'block':'none';
-  if(!isWraparoundActive){
-    panoramaFadeEdges=false;
+  const isMugOrTravel=(product==='mug'||product==='water bottle');
+  card.style.display=isMugOrTravel?'block':'none';
+  if(!isMugOrTravel){
+    hardEdgesEnabled=false;
     const toggle=document.getElementById('panoramaFadeToggle');
     if(toggle)toggle.checked=false;
   }
@@ -3140,15 +3167,18 @@ document.getElementById('cancelBtn').style.display='block';
         ? 'Caricature strength: BALANCED. Use moderate exaggeration, but identity must remain unmistakable.'
         : 'Caricature strength: WILD. Use bold exaggeration only on the person\u2019s real existing features. Do not invent new facial features.';
 
+    const isWraparoundActive = (product==='mug'||product==='water bottle') && mugPrintMode==='wraparound';
+    const skipAutoEdgeFade = hardEdgesEnabled || selectedTheme==='Fade to Product Color' || selectedTheme==='Remove All Background';
+
     const backgroundDesc=getBackgroundDescription();
     const backgroundLine=backgroundDesc
       ? `Background option selected: ${backgroundDesc}. No hard edges or sticker-cutout look — all edges should fade or blend softly.`
       : '';
 
     const wrapCompositionLine = (product==='mug'||product==='water bottle')
-      ? (mugPrintMode==='wraparound'
-          ? (panoramaFadeEdges
-              ? 'COMPOSITION: This design will be printed as ONE CONTINUOUS WRAPAROUND image around a curved surface, including past a handle. The LEFT and RIGHT edges are the seam where this panel joins the next one — keep detail extended sharply all the way to those edges, exactly as normal, so nothing is lost at the seam or the handle gap. The TOP and BOTTOM edges should fade to white instead (see the Panorama Edge Fade instruction below) — keep the main subject and detail away from the very top and bottom so that fade has room to happen naturally.'
+      ? (isWraparoundActive
+          ? (!skipAutoEdgeFade
+              ? 'COMPOSITION: This design will be printed as ONE CONTINUOUS WRAPAROUND image around a curved surface, including past a handle. The LEFT and RIGHT edges are the seam where this panel joins the next one — keep detail extended sharply all the way to those edges, exactly as normal, so nothing is lost at the seam or the handle gap. The TOP and BOTTOM edges should fade to white instead (see the Edge Fade instruction below) — keep the main subject and detail away from the very top and bottom so that fade has room to happen naturally.'
               : 'COMPOSITION: This design will be printed as ONE CONTINUOUS WRAPAROUND image around a curved surface, including past a handle. Compose with detail extended toward the edges rather than tightly centered, so nothing important is lost at the seam or the handle gap.')
           : 'COMPOSITION: This design will be printed as a single self-contained panel viewed from one flat angle. Keep the subject centered with clean, safe margins on all sides.')
       : (product==='photo poster'
@@ -3157,8 +3187,16 @@ document.getElementById('cancelBtn').style.display='block';
               ? `COMPOSITION: This will be printed on a ${selectedPhoneCaseModel} phone case — a tall, narrow vertical shape. Keep the main subject and any caption centered in the lower two-thirds of the frame, since the upper portion sits near the camera cutout area on the real case and shouldn't carry essential detail.`
               : ''));
 
-    const isWraparoundActive = (product==='mug'||product==='water bottle') && mugPrintMode==='wraparound';
-    const panoramaFadeLine = (panoramaFadeEdges && isWraparoundActive) ? PANORAMA_FADE_INSTRUCTION_CENTER : '';
+    // UPDATED (Alyx's request, Aug 2026): edge fade is automatic by
+    // default now. Wraparound keeps the seam-aware top/bottom-only fade
+    // (PANORAMA_FADE_INSTRUCTION_CENTER); every other case — the
+    // decoupled three-panel mug, travel mug front/back, and every
+    // single-design product — gets a uniform four-side fade instead,
+    // since there's no seam to protect. Both are skipped if the customer
+    // opted into hard edges, or if the background theme already handles
+    // edge blending itself (Fade to Product Color / Remove All Background).
+    const panoramaFadeLine = (!skipAutoEdgeFade && isWraparoundActive) ? PANORAMA_FADE_INSTRUCTION_CENTER : '';
+    const uniformEdgeFadeLine = (!skipAutoEdgeFade && !isWraparoundActive) ? UNIFORM_EDGE_FADE_INSTRUCTION : '';
 
     const referenceLine = (refASnapshot || refBSnapshot)
       ? `
@@ -3209,6 +3247,7 @@ Product target: ${getProductRules(product)}.
 ${backgroundLine}
 ${wrapCompositionLine}
 ${panoramaFadeLine}
+${uniformEdgeFadeLine}
 ${referenceLine}
 
 PRIORITY ORDER: The customer idea above is the primary instruction for what the scene contains.
@@ -3271,8 +3310,8 @@ Use rich environmental storytelling while keeping the face as the primary focal 
 
       const centerRaw = await urlToDataURL(resultUrl);
       const centerForApi = await resizeDataUrl(centerRaw, 1280);
-      const panoramaFadeSuffixLeft = panoramaFadeEdges ? ' ' + PANORAMA_FADE_INSTRUCTION_LEFT : '';
-      const panoramaFadeSuffixRight = panoramaFadeEdges ? ' ' + PANORAMA_FADE_INSTRUCTION_RIGHT : '';
+      const panoramaFadeSuffixLeft = !skipAutoEdgeFade ? ' ' + PANORAMA_FADE_INSTRUCTION_LEFT : '';
+      const panoramaFadeSuffixRight = !skipAutoEdgeFade ? ' ' + PANORAMA_FADE_INSTRUCTION_RIGHT : '';
 
       const leftUrl = await callGenerateAPI({
         workingImage: centerForApi,
@@ -3551,6 +3590,9 @@ function clearAllDesigns(){
   currentDesignId=null;
   pendingSlotTarget=null;
   mugOptionsTouched=false;
+  mugStyleClicked=false;
+  mugSizeClicked=false;
+  mugPreviewAutoScrolled=false;
   mugGuidedChangesActive=false;
   mugDesignConfirmed=false;
   try{localStorage.removeItem('muggshotz_mug_state');}catch(e){}
@@ -3712,9 +3754,10 @@ function pickGenMugStyle(styleName){
   selectedGenColor=null;
   renderGenMugColorGrid();
   mugOptionsTouched=true;
+  mugStyleClicked=true;
   updateMugGuidedFlow();
   maybeAutoFetchMockup();
-  if(!wasTouched)smoothScrollToTarget('genPreviewSection','start');
+  maybeScrollToGenPreviewOnceBothPicked();
 }
 
 function pickGenMugSize(size){
@@ -3725,9 +3768,10 @@ function pickGenMugSize(size){
   selectedGenColor=null;
   renderGenMugColorGrid();
   mugOptionsTouched=true;
+  mugSizeClicked=true;
   updateMugGuidedFlow();
   maybeAutoFetchMockup();
-  if(!wasTouched)smoothScrollToTarget('genPreviewSection','start');
+  maybeScrollToGenPreviewOnceBothPicked();
 }
 
 function renderGenMugColorGrid(){
@@ -3761,7 +3805,7 @@ function pickGenMugColor(el,colorName){
   mugOptionsTouched=true;
   updateMugGuidedFlow();
   maybeAutoFetchMockup();
-  if(!wasTouched)smoothScrollToTarget('genPreviewSection','start');
+  maybeScrollToGenPreviewOnceBothPicked();
 }
 
 function renderGenTravelStyleGrid(){
@@ -3847,7 +3891,7 @@ function maybeAutoFetchMockup(){
   }
 
   if (product === 'mug') {
-    if (!mugOptionsTouched) {
+    if (!mugStyleClicked || !mugSizeClicked) {
       showAutoMockupNote('You must select size, style, and color (where applicable) in order to proceed.');
       return;
     }
@@ -4276,7 +4320,7 @@ function resetEverythingFreshStart(){
 
   // Mug print mode
   pickMugPrintMode('three-panel');
-  panoramaFadeEdges=false;
+  hardEdgesEnabled=false;
   const fadeToggle=document.getElementById('panoramaFadeToggle');
   if(fadeToggle)fadeToggle.checked=false;
 
@@ -4311,6 +4355,9 @@ function resetEverythingFreshStart(){
   selectedToteColorGen=null;
   document.querySelectorAll('#toteBagColorGridGen .color-btn').forEach(b=>b.classList.remove('selected'));
   mugOptionsTouched=false;
+  mugStyleClicked=false;
+  mugSizeClicked=false;
+  mugPreviewAutoScrolled=false;
   mugGuidedChangesActive=false;
   mugDesignConfirmed=false;
   const genMugGrid=document.getElementById('genMugStyleGrid');
