@@ -196,6 +196,7 @@
 .reset-everything-btn:hover{background:#220c0c;border-color:#7a3a3a}
 .mug-select-flash{font-size:15px!important;font-weight:800!important;letter-spacing:.5px!important;text-transform:uppercase;padding:8px 6px;border-radius:8px;animation:mugSelectFlash 1s ease-in-out infinite}
 @keyframes mugSelectFlash{0%,100%{color:#fff;background:#3d8bff;text-shadow:0 0 10px rgba(61,139,255,.9)}50%{color:#3d8bff;background:#2a1200;text-shadow:0 0 10px rgba(61,139,255,.6)}}
+.cta-flash{animation:mugSelectFlash 1s ease-in-out infinite}
 .mug-available-flash{font-size:16px!important;font-weight:800!important;letter-spacing:.5px!important;text-transform:uppercase;padding:10px 8px;border-radius:8px;animation:mugSelectFlash 1s ease-in-out infinite;text-align:center;margin-top:1rem}
 #wraparoundStandbyPrompt{margin-top:1rem;text-align:center}
 
@@ -754,7 +755,7 @@
 <button class="generate-btn" style="flex:1;padding:.7rem .5rem;font-size:12px" onclick="handleMugDesignSatisfied()">✅ If satisfied with design, click here</button>
 <button class="download-btn" style="flex:1;margin-top:0;padding:.7rem .5rem;font-size:12px" onclick="handleMugDesignChanges()">🔧 Click here to make changes</button>
 </div>
-<div class="note" id="mugDesignConfirmedNote" style="display:none;margin-top:0;margin-bottom:.6rem;color:#3d8bff;font-weight:700;text-align:center">If all desired changes have been made, click Available Now button below.</div>
+<div class="note" id="mugDesignConfirmedNote" style="display:none;margin-top:0;margin-bottom:.6rem;color:#3d8bff;font-weight:700;text-align:center">If all desired changes have been made, click Continue to Order button below.</div>
 <div class="note" style="margin-bottom:6px">Style</div>
 <div class="grid2" id="genMugStyleGrid"></div>
 <div class="note" style="margin:.75rem 0 6px">Size</div>
@@ -785,7 +786,6 @@
 <img id="genPreviewImg" style="display:none;width:100%;border-radius:12px;border:1px solid #3d8bff"/>
 <div id="genPreviewGallery" style="display:none;gap:8px;overflow-x:auto;padding-bottom:4px"></div>
 <div class="note" id="genPreviewGalleryHint" style="display:none;margin-top:4px;text-align:center">Swipe to see all angles Printify photographed — one may show a blank side if your design doesn't cover it.</div>
-<div class="mug-available-flash" id="mugAvailableNowPrompt" style="display:none">⚠️ Click The "Available Now" Button To See Final Mockups</div>
 </div>
 <button class="quick-btn" id="libraryToggleBtn" onclick="toggleLibrary()" style="margin-top:1.1rem;width:100%;text-align:center;padding:.65rem;border-radius:8px">📚 My Designs (0)</button>
 <button class="quick-btn" onclick="clearAllDesigns()" style="margin-top:.5rem;width:100%;text-align:center;padding:.65rem;border-radius:8px;border-color:#5a2a2a;color:#ff8a7a">🧹 Clear All Designs — Fresh Start</button>
@@ -793,7 +793,7 @@
 <div class="note" style="margin-top:0;margin-bottom:.6rem">Tap Left, Center, or Right under a design to place it.</div>
 <div id="recentDesignsStrip" style="display:flex;gap:10px;overflow-x:auto;padding-bottom:6px"></div>
 </div>
-<button class="generate-btn" id="orderMugBtn" onclick="goToOrder()" style="display:none;margin-top:.9rem">✅ Available Now</button>
+<button class="generate-btn cta-flash" id="orderMugBtn" onclick="goToOrder()" style="display:none;margin-top:.9rem">✅ Continue to Order</button>
 </div>
 <div class="card" id="verifyCard" style="display:none">
 <div class="card-title">🎁 Get a Second Free Token</div>
@@ -1580,7 +1580,7 @@ let mugPrintMode='three-panel'; // 'three-panel' | 'wraparound' — coffee/trave
 // its existing behavior untouched.
 let mugOptionsTouched=false; // true once the customer has actively picked a style/size/color (not just the pre-selected defaults)
 let mugGuidedChangesActive=false; // true once "click here to make changes" has been pressed, until the next Generate
-let mugDesignConfirmed=false; // true once "If satisfied with design, click here" has been pressed — points straight at Available Now instead of looping back to style/size/color
+let mugDesignConfirmed=false; // true once "If satisfied with design, click here" has been pressed — points straight at Continue to Order instead of looping back to style/size/color
 
 // NEW (Alyx's request, Aug 2026): the preview shouldn't auto-scroll into
 // view the instant a customer clicks just ONE of size/style — that felt
@@ -1623,12 +1623,6 @@ function updateGenPreviewLabel(){
   }
 }
 
-function updateMugAvailableNowPrompt(){
-  const el=document.getElementById('mugAvailableNowPrompt');
-  if(!el)return;
-  el.style.display=(product==='mug'&&mugOptionsTouched)?'block':'none';
-}
-
 function updateIdeaCardNote(){
   const defaultNote=document.getElementById('ideaDefaultNote');
   const artistNote=document.getElementById('ideaArtistNote');
@@ -1642,7 +1636,6 @@ function updateIdeaCardNote(){
 
 function updateMugGuidedFlow(){
   updateGenPreviewLabel();
-  updateMugAvailableNowPrompt();
   const pickNote=document.getElementById('genMugPickStyleNote');
   const confirmRow=document.getElementById('mugStyleConfirmRow');
   const confirmedNote=document.getElementById('mugDesignConfirmedNote');
