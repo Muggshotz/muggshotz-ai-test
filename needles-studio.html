@@ -1618,12 +1618,35 @@ function pickMugPrintMode(mode){
   mugPrintMode=mode;
   document.getElementById('printModeThreeBtn').classList.toggle('selected',mode==='three-panel');
   document.getElementById('printModeWrapBtn').classList.toggle('selected',mode==='wraparound');
+  refreshPanoramaFadeCardVisibility();
 }
 
 function refreshMugPrintModeVisibility(){
   const card=document.getElementById('mugPrintModeCard');
   if(!card)return;
   card.style.display=(product==='mug'||product==='water bottle')?'block':'none';
+}
+
+// NEW (Alyx's request, Aug 2026): the Panorama Edge Fade instruction only
+// makes sense for the Wraparound print option — it deliberately tells the
+// AI to keep left/right edges SHARP (they're the seam), which produces a
+// hard rectangular "sticker" edge if it's accidentally left on while a
+// customer is using the standard three-panel mug (fighting against a
+// background theme like "Fade to Product Color" that wants ALL edges
+// soft). This card is now only shown, and the toggle only takes effect,
+// when Wraparound is actually selected — switching away from Wraparound
+// automatically unchecks it and resets state so a stale selection can't
+// leak into a differently-composed generation.
+function refreshPanoramaFadeCardVisibility(){
+  const card=document.getElementById('panoramaFadeCard');
+  if(!card)return;
+  const isWraparoundActive=(product==='mug'||product==='water bottle')&&mugPrintMode==='wraparound';
+  card.style.display=isWraparoundActive?'block':'none';
+  if(!isWraparoundActive){
+    panoramaFadeEdges=false;
+    const toggle=document.getElementById('panoramaFadeToggle');
+    if(toggle)toggle.checked=false;
+  }
 }
 
 // ===== Phone Case model selection (July 2026, Alyx's request) =====
@@ -1897,6 +1920,7 @@ function pick(el,type){
     if(finalGuide)finalGuide.classList.toggle('visible',product==='phone case'&&!!selectedPhoneCaseModel);
     refreshApproveRowForMode();
     refreshMugPrintModeVisibility();
+    refreshPanoramaFadeCardVisibility();
     refreshPhotoPosterVisibility();
     refreshPhoneCaseModelVisibility();
     refreshToteBagColorVisibility();
@@ -3133,7 +3157,8 @@ document.getElementById('cancelBtn').style.display='block';
               ? `COMPOSITION: This will be printed on a ${selectedPhoneCaseModel} phone case — a tall, narrow vertical shape. Keep the main subject and any caption centered in the lower two-thirds of the frame, since the upper portion sits near the camera cutout area on the real case and shouldn't carry essential detail.`
               : ''));
 
-    const panoramaFadeLine = panoramaFadeEdges ? PANORAMA_FADE_INSTRUCTION_CENTER : '';
+    const isWraparoundActive = (product==='mug'||product==='water bottle') && mugPrintMode==='wraparound';
+    const panoramaFadeLine = (panoramaFadeEdges && isWraparoundActive) ? PANORAMA_FADE_INSTRUCTION_CENTER : '';
 
     const referenceLine = (refASnapshot || refBSnapshot)
       ? `
@@ -4185,6 +4210,7 @@ restoreMugLibrary();
 checkForWorkshopRecall();
 refreshApproveRowForMode();
 refreshMugPrintModeVisibility();
+refreshPanoramaFadeCardVisibility();
 refreshPhotoPosterVisibility();
 refreshPhoneCaseModelVisibility();
 refreshToteBagColorVisibility();
@@ -4303,6 +4329,7 @@ function resetEverythingFreshStart(){
 
   refreshApproveRowForMode();
   refreshMugPrintModeVisibility();
+  refreshPanoramaFadeCardVisibility();
   refreshPhotoPosterVisibility();
   refreshPhoneCaseModelVisibility();
   refreshToteBagColorVisibility();
