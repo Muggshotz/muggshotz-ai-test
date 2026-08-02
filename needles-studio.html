@@ -3002,6 +3002,9 @@ function getImageSizeParam(){
 
     return '1024x1536';
   }
+  if (product==='water bottle'){
+    return '1024x1536';
+  }
   return '1024x1024';
 }
 
@@ -3190,7 +3193,9 @@ document.getElementById('cancelBtn').style.display='block';
           ? (!skipEdgeFade
               ? 'COMPOSITION: This design will be printed as ONE CONTINUOUS WRAPAROUND image around a curved surface, including past a handle. The LEFT and RIGHT edges are the seam where this panel joins the next one — keep detail extended sharply all the way to those edges, exactly as normal, so nothing is lost at the seam or the handle gap. The TOP and BOTTOM edges should fade to white instead (see the Edge Fade instruction below) — keep the main subject and detail away from the very top and bottom so that fade has room to happen naturally.'
               : 'COMPOSITION: This design will be printed as ONE CONTINUOUS WRAPAROUND image around a curved surface, including past a handle. Compose with detail extended toward the edges rather than tightly centered, so nothing important is lost at the seam or the handle gap.')
-          : 'COMPOSITION: This design will be printed as a single self-contained panel viewed from one flat angle. Keep the subject centered with clean, safe margins on all sides.')
+          : (product==='water bottle'
+              ? 'COMPOSITION: This will be printed on a tall, narrow travel mug panel — a vertical shape, not square. Compose the subject to fill that tall frame top-to-bottom with clean, safe margins on the sides, rather than centering a square-style composition that leaves empty space above and below.'
+              : 'COMPOSITION: This design will be printed as a single self-contained panel viewed from one flat angle. Keep the subject centered with clean, safe margins on all sides.'))
       : (product==='photo poster'
           ? `COMPOSITION: This will be printed at a fixed aspect ratio of approximately ${getPosterAspectRatio().toFixed(2)}:1 in ${posterOrientation} orientation. Compose the subject to work within that exact shape — do not treat this as a standard square or default photo ratio.`
           : (product==='phone case'
