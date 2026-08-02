@@ -1512,7 +1512,7 @@ function updateGenPreviewLabel(){
     return;
   }
   if(!mugOptionsTouched){
-    el.textContent='⚠️ Please Select Size / Style / Color';
+    el.textContent='⚠️ You must select size, style, and color (where applicable) in order to proceed.';
     el.classList.add('mug-select-flash');
     el.style.color='';
     el.style.cursor='default';
@@ -3847,6 +3847,10 @@ function maybeAutoFetchMockup(){
   }
 
   if (product === 'mug') {
+    if (!mugOptionsTouched) {
+      showAutoMockupNote('You must select size, style, and color (where applicable) in order to proceed.');
+      return;
+    }
     const requiresColor = !!(GEN_MUG_STYLES[selectedGenStyle]?.colors?.[selectedGenSize]);
     if (requiresColor && !selectedGenColor) {
       hideAutoMockup();
