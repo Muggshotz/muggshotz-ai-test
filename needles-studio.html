@@ -4168,6 +4168,20 @@ function buildMockupRequestBody(){
   return null;
 }
 
+// NEW (Alyx's request, Aug 2026): the mockup start/check requests below
+// previously had no timeout at all — a stuck serverless cold-start, a
+// slow Printify call, or a flaky connection could leave the spinner
+// running indefinitely with no error ever surfacing, since a bare
+// fetch() just waits forever for a response that may never come. This
+// aborts the request after a reasonable ceiling so it always resolves
+// one way or another.
+function fetchWithTimeout(url, options, timeoutMs){
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  return fetch(url, { ...options, signal: controller.signal })
+    .finally(() => clearTimeout(timer));
+}
+
 async function runAutoMockupFetch(){
   const thisRequestId = ++autoMockupRequestId;
   const loadingEl = document.getElementById('genPreviewLoading');
@@ -4187,12 +4201,12 @@ async function runAutoMockupFetch(){
   if (!body) { loadingEl.style.display = 'none'; return; }
 
   try {
-    const startResp = await fetch('/api/start-mockup', {
+    const startResp = await fetchWithTimeout('/api/start-mockup', {
 
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ...body, action: 'start' })
-    });
+    }, 30000);
     const startData = await startResp.json();
     if (!startResp.ok) throw new Error(startData.error || 'Could not start the real photo preview.');
     if (thisRequestId !== autoMockupRequestId) return; // a newer request has since taken over
@@ -4206,11 +4220,11 @@ async function runAutoMockupFetch(){
       await new Promise(r => setTimeout(r, 1500));
       if (thisRequestId !== autoMockupRequestId) return; // superseded mid-poll
 
-      const checkResp = await fetch('/api/start-mockup', {
+      const checkResp = await fetchWithTimeout('/api/start-mockup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'check', productId })
-      });
+      }, 15000);
       const checkData = await checkResp.json();
       if (!checkResp.ok) throw new Error(checkData.error || 'Could not check on the real photo preview.');
       if (checkData.ready) {
@@ -4255,7 +4269,9 @@ async function runAutoMockupFetch(){
   } catch (err) {
     if (thisRequestId !== autoMockupRequestId) return;
     loadingEl.style.display = 'none';
-    noteEl.textContent = err.message;
+    noteEl.textContent = (err.name === 'AbortError')
+      ? "The mockup service took too long to respond — please try again."
+      : err.message;
     noteEl.className = 'note error';
     noteEl.style.display = 'block';
   }
