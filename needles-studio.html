@@ -531,12 +531,7 @@
   </video>
 </div>
 <script>
-// Hero video no longer loops (per Alyx's request) — it plays once and
-// freezes on its final frame. 3 seconds after it actually finishes,
-// the page auto-scrolls down to the upload section, so the customer
-// isn't just left staring at a frozen banner with nothing happening.
-// Guarded so this can only fire once per page load, even if the
-// browser somehow fires 'ended' more than once.
+
 (function(){
   var heroVideo = document.getElementById('heroVideo');
   if (!heroVideo) return;
@@ -898,15 +893,12 @@
 <script>
 let product='mug',style='Muggshotz Classic: premium professional caricature, expressive face, rich detail, painterly shading, funny gift-art scene',likeness='0.15',uploadedImageData=null,resultUrl=null;
 
-// ===== Needles' Easel — five-group presentation engine =====
-// One generation session is one complete presentation cycle.
 const NEEDLES_BEGINNING_SEQUENCE = [
   'A_final.webm',
   'B_final.webm',
   'C_final.webm'
 ];
 
-// Added automatically by Needles Calibrator Unified Repair.
 const NEEDLES_CLIP_OVERRIDES = {
   "A": { scale: 1.26, offsetX: -9.8, offsetY: 11.2 },
   "J": { scale: 1.4, offsetX: -3.1, offsetY: 19.2 },
@@ -1094,8 +1086,7 @@ function needlesNextFile(){
   }
 
   if(needlesPhase==='main'){
-    // A one-time pair is indivisible. If generation completes during its
-    // first clip, its second clip still follows immediately before finale.
+
     if(needlesPairQueue.length)return needlesPairQueue.shift();
 
     if(needlesGenerationComplete){
@@ -1124,13 +1115,6 @@ function needlesNextFile(){
   return null;
 }
 
-// Added with the override-playback fix: NEEDLES_CLIP_OVERRIDES was being
-// populated correctly by the Clipibrator, but nothing here ever read it —
-// every clip rendered at the one fixed default box size regardless of what
-// had been calibrated, which is what was cropping legs/feet on clips that
-// needed to be scaled or repositioned. This pulls the clip's letter out of
-// its filename (e.g. "A_final.webm" -> "A", "M_transparent.webm" -> "M")
-// and looks it up in NEEDLES_CLIP_OVERRIDES.
 function needlesGetClipLetter(filename){
   if(!filename)return null;
   const match=filename.match(/^([A-Za-z]+)_/);
@@ -1186,8 +1170,7 @@ function needlesPlayFile(filename){
     [needlesActiveLayer,needlesIdleLayer]=[incoming,outgoing];
   };
 
-  // The current clip always reaches its natural end. Only then is the
-  // next ordinary clip, paired companion, or first finale clip selected.
+
   incoming.onended=()=>needlesAdvance();
   incoming.onerror=()=>needlesAdvance();
 }
@@ -1257,9 +1240,8 @@ function presentFinishedNeedlesArt(imageUrl,onDone){
   needlesPresentationDone=onDone;
   needlesGenerationComplete=true;
 
-  // Do not interrupt the clip already in progress. needlesAdvance() will
-  // detect completion at that clip's natural end and begin J, S, then T.
-  // Safety fallback only covers a browser that fails to dispatch ended.
+
+
   clearTimeout(needlesSafetyTimer);
   needlesSafetyTimer=setTimeout(()=>{
     if(needlesGenerationComplete && needlesPhase!=='finale' && needlesPhase!=='stopped'){
@@ -1274,14 +1256,6 @@ let refImageAData=null, refImageBData=null;
 let previousImageData=null;
 let currentDesignId=null;
 
-// Guided customer journey.
-// Timer 1 (12s) and Timer 2 (10s) auto-scroll, but ANY real interaction
-// never hard-cancels them — it just resets to a rolling 5-second "quiet
-// window." The scroll only fires once 5 full seconds pass with no
-// further interaction, no matter how many times it got pushed back.
-// Timer 3 (30s) never auto-scrolls — it only flashes a nudge, first at
-// full strength, then every 30s after that at a softer, less intrusive
-// level, forever, for as long as the customer stays on that section.
 let guidedScrollInProgress=false;
 
 let openingGuideTimer=null;
@@ -1342,17 +1316,13 @@ function noteRealCustomerActivity(){
 
 function startPhotoGuide(){
   photoGuideActive=true;
-  // First frame the completed photo together with its Start Over control.
+
   setTimeout(()=>{
     if(photoGuideActive)smoothScrollToTarget('startOverBtn','end');
   },150);
   schedulePhotoGuideAdvance(10000);
 }
 
-// Timer 3 — description-box nudge. Starts the moment the idea card
-// actually comes into view (works whether the customer got there via
-// auto-scroll or scrolled themselves), pauses while it's off-screen,
-// and resumes if they scroll back to it. Never advances the page.
 let ideaGuideTimer=null;
 let ideaGuideHasFlashedOnce=false;
 
@@ -1469,9 +1439,9 @@ function getDeviceId(){
 const deviceId=getDeviceId();
 {const el=document.getElementById('deviceIdDisplay');if(el)el.textContent='Device: '+deviceId;}
 
-let hasPurchased=false; // set by refreshTokenMeter() below — gates the Wraparound option (+$3, more real API usage) behind having made at least one real payment
-let isAdminDevice=false; // admin devices bypass the Wraparound purchase gate the same way they already bypass the token-balance block
-let currentTokenBalance=null; // NEW (Alyx's request, Aug 2026): tracked client-side so the Generate button's hover/tap popup and pre-flight check know the balance without an extra round trip
+let hasPurchased=false;
+let isAdminDevice=false;
+let currentTokenBalance=null;
 
 async function refreshTokenMeter(){
   const meterEl=document.getElementById('tokenMeterNumber');
@@ -1491,10 +1461,6 @@ async function refreshTokenMeter(){
 }
 refreshTokenMeter();
 
-// ===== Token info popup (Alyx's request, Aug 2026) =====
-// Shared popup shown on hover (desktop) or tap (mobile) over the
-// Credits & Extras button, the chip counter, and — only when the
-// customer is at zero tokens — the Generate button itself.
 function showTokenInfoPopup(anchorEl){
   const popup=document.getElementById('tokenInfoPopup');
   if(!popup||!anchorEl)return;
@@ -1533,8 +1499,7 @@ function setupTokenInfoTriggers(){
   if(meterWrap){
     meterWrap.addEventListener('mouseenter',()=>showTokenInfoPopup(meterWrap));
     meterWrap.addEventListener('mouseleave',hideTokenInfoPopup);
-    // Chip counter has no other click action, so tapping it toggles the
-    // popup directly — this is the practical mobile equivalent of hover.
+
     meterWrap.addEventListener('click',(e)=>{
       e.stopPropagation();
       const popup=document.getElementById('tokenInfoPopup');
@@ -1544,8 +1509,7 @@ function setupTokenInfoTriggers(){
   }
 
   if(generateBtn){
-    // Only surfaces on hover when the customer is actually out of
-    // tokens — otherwise hovering Generate does nothing extra.
+
     generateBtn.addEventListener('mouseenter',()=>{
       if(currentTokenBalance!==null&&currentTokenBalance<=0&&!isAdminDevice)showTokenInfoPopup(generateBtn);
     });
@@ -1570,25 +1534,12 @@ let currentStroke=[];
 let isDrawingPath=false;
 let pathCanvasReady=false;
 
-let mugPrintMode='three-panel'; // 'three-panel' | 'wraparound' — coffee/travel mugs only, chosen BEFORE generation since it changes composition
+let mugPrintMode='three-panel';
 
-// ===== Mug guided review flow (July 2026, Alyx's request) =====
-// Applies ONLY when product === 'mug'. After at least one design has
-// been placed into a slot, walks the customer through: (1) pick size/
-// style/color, (2) confirm those selections or jump back up to change
-// them, (3) confirm the design itself or jump to the idea box to
-// request changes, (4) from the idea box, either go back to add more
-// reference photos or fire Generate again. Every other product keeps
-// its existing behavior untouched.
-let mugOptionsTouched=false; // true once the customer has actively picked a style/size/color (not just the pre-selected defaults)
-let mugGuidedChangesActive=false; // true once "click here to make changes" has been pressed, until the next Generate
-let mugDesignConfirmed=false; // true once "If satisfied with design, click here" has been pressed — points straight at Continue to Order instead of looping back to style/size/color
+let mugOptionsTouched=false;
+let mugGuidedChangesActive=false;
+let mugDesignConfirmed=false;
 
-// NEW (Alyx's request, Aug 2026): the preview shouldn't auto-scroll into
-// view the instant a customer clicks just ONE of size/style — that felt
-// like the page jumping before they'd had a chance to make both real
-// choices. These track each pick independently so the scroll only fires
-// once, the first time BOTH have been explicitly clicked.
 let mugStyleClicked=false;
 let mugSizeClicked=false;
 let mugPreviewAutoScrolled=false;
@@ -1688,32 +1639,12 @@ function handleMugGuidedGenerate(){
   generate();
 }
 
-// UPDATED (Alyx's request, Aug 2026): edge fade is now AUTOMATIC BY
-// DEFAULT rather than opt-in — hardEdgesEnabled tracks the opt-OUT
-// (checking the box means "give me hard, sharp edges instead").
-// This instruction gets appended to the actual prompt sent to the AI on
-// every generate() call (including the auto left/right panel
-// continuations) — the customer never sees this text in their own idea
-// box, it's applied purely behind the scenes. Fades to white for now,
-// since every mug is currently white; if/when colored mugs are added,
-// this is the mechanism that would fade into the product's actual color
-// instead (see buildProductColorFadeDescription).
 let hardEdgesEnabled=false;
-// Panel-specific fade instructions — which edges are "outer" (should
-// fade to white) vs. "seam" (must stay sharp so panels line up) depends
-// on which panel this is. Center has no outer side edges (both sides
-// join a neighbor), Left's own left edge is the true outer edge, Right's
-// own right edge is the true outer edge — all three fade top and bottom
-// regardless, since those are never seams. These apply to Wraparound
-// mode only, where the three panels form one continuous scene.
+
 const PANORAMA_FADE_INSTRUCTION_CENTER = "PANORAMA EDGE FADE: Fade the TOP and BOTTOM outside edges of the picture toward white, so they blend softly into a white canvas. Do NOT fade or soften the LEFT and RIGHT edges — those are the seams where this panel joins its neighbors, and must stay sharp, fully detailed, and continuous all the way to the edge so the scene lines up seamlessly across panels.";
 const PANORAMA_FADE_INSTRUCTION_LEFT = "PANORAMA EDGE FADE: Fade the TOP, BOTTOM, and LEFT outside edges of the picture toward white, so they blend softly into a white canvas — the left edge of this panel is a true outer edge, not a seam. Do NOT fade or soften the RIGHT edge — that is the seam where this panel joins the center panel, and must stay sharp, fully detailed, and continuous all the way to the edge so the scene lines up seamlessly.";
 const PANORAMA_FADE_INSTRUCTION_RIGHT = "PANORAMA EDGE FADE: Fade the TOP, BOTTOM, and RIGHT outside edges of the picture toward white, so they blend softly into a white canvas — the right edge of this panel is a true outer edge, not a seam. Do NOT fade or soften the LEFT edge — that is the seam where this panel joins the center panel, and must stay sharp, fully detailed, and continuous all the way to the edge so the scene lines up seamlessly.";
-// Used for every product/mode where panels (if any) are fully decoupled
-// from each other — the standard three-panel mug (each of Left/Center/
-// Right can be a totally different design), travel mug front/back, and
-// every single-design product (phone case, tote, puzzle, poster,
-// suitcase, etc.). There's no seam concept here, so all four edges fade.
+
 const UNIFORM_EDGE_FADE_INSTRUCTION = "EDGE FADE: Fade all four outside edges of the picture (top, bottom, left, and right) smoothly and completely toward white, so there is no hard rectangular border or sticker-cutout look. The artwork should blend naturally into the product's white surface at every edge.";
 
 function togglePanoramaFadeEdges(){
@@ -1733,14 +1664,6 @@ function refreshMugPrintModeVisibility(){
   card.style.display=(product==='mug'||product==='water bottle')?'block':'none';
 }
 
-// UPDATED (Alyx's request, Aug 2026): the Edge Fade card now applies to
-// BOTH Wraparound and the standard three-panel/front-back modes (only
-// the underlying edge logic differs between them — see
-// PANORAMA_FADE_INSTRUCTION_* vs UNIFORM_EDGE_FADE_INSTRUCTION below),
-// so it's shown whenever the product is a mug or travel cup, in any
-// print mode. Switching away from mug/water bottle entirely hides it
-// and resets the opt-out so a stale "hard edges" choice can't leak into
-// a differently-composed generation.
 function refreshPanoramaFadeCardVisibility(){
   const card=document.getElementById('panoramaFadeCard');
   if(!card)return;
@@ -1753,15 +1676,6 @@ function refreshPanoramaFadeCardVisibility(){
   }
 }
 
-// ===== Phone Case model selection (July 2026, Alyx's request) =====
-// Required BEFORE generation, so artwork can be composed with the
-// customer's exact phone case shape in mind from the start, instead of
-// generating a generic image and letting order.html shrink-to-fit it
-// into whatever the real case shape turns out to be after the fact.
-// Model list kept in sync manually with order.html's PHONE_CASE_MODELS
-// and lib/products-catalog.js's phone-case-tough sizes (client-side
-// HTML can't import the server-only catalog file directly — same
-// pattern order.html already uses for its own copy of this list).
 const PHONE_CASE_MODELS = [
   "iPhone 11","iPhone 11 Pro","iPhone 11 Pro Max",
   "iPhone 12","iPhone 12 Mini","iPhone 12 Pro","iPhone 12 Pro Max",
@@ -1781,10 +1695,9 @@ function setupPhoneModelSearchGen(){
   if(phoneSearchListenerAttachedGen)return;
   phoneSearchListenerAttachedGen=true;
   input.addEventListener('input',function(){
-    // Typing always clears any prior match/confirm state — the confirm
-    // panel only reappears after the next Enter press. A live suggestion
-    // list is still shown as a helpful reference while typing, but it's
-    // just for browsing; Enter is what actually resolves a selection.
+
+
+
     selectedPhoneCaseModel=null;
     pendingPhoneCaseModel=null;
     hidePhoneConfirmationGen();
@@ -1812,9 +1725,8 @@ function setupPhoneModelSearchGen(){
     e.preventDefault();
     const q=input.value.trim().toLowerCase();
     const resultsEl=document.getElementById('phoneModelResultsGen');
-    // Enter always clears whatever suggestions were showing — from here
-    // on it's either the confirm panel or a not-on-file message, never
-    // both, and never the old suggestion list.
+
+
     resultsEl.innerHTML='';
     if(q.length<2)return;
     // Prefer an exact (case-insensitive) match; otherwise fall back to the
@@ -1904,12 +1816,6 @@ let posterOrientation = "Vertical";
 let posterFinish = "Glossy";
 let posterFrameColor = "Black";
 
-// NEW (July 2026, Alyx's request): tote bag has real color variety (unlike
-// suitcase/puzzle/phone case, which don't), so it needs its own lightweight
-// color picker on this page — not for composition purposes like the poster
-// options above, just so "Fade to Product Color" has an actual color to
-// match. Colors kept in sync manually with order.html's TOTE_BAG_SIZES
-// (identical color list across all three sizes).
 const TOTE_BAG_COLORS_GEN = [
   { name: "Beige", hex: "#E8DCC8" }, { name: "Black", hex: "#1c1c1c" },
   { name: "Light Blue", hex: "#A8D4E8" }, { name: "Light Pink", hex: "#F4C2D7" },
@@ -2028,15 +1934,13 @@ function pick(el,type){
     refreshPhotoPosterVisibility();
     refreshPhoneCaseModelVisibility();
     refreshToteBagColorVisibility();
-    // Switching products can change which mockup (if any) applies to
-    // the currently-placed design — refresh immediately instead of
-    // leaving the previous product's stale mockup on screen.
+
+
     updatePlacementSummary();
     updateMugGuidedFlow();
-    // NEW (July 2026, Alyx's request): the instant "Phone case" is
-    // picked, jump straight to the phone-model card and drop the
-    // cursor in the search box — don't make the customer go hunting
-    // for it further down the page.
+
+
+
     if(product==='phone case'){
       smoothScrollToTarget('phoneCaseModelCard','center',()=>{
         const input=document.getElementById('phoneModelSearchInputGen');
@@ -2065,16 +1969,6 @@ function pickTheme(el){
   updateDecorativeColorVisibility();
 }
 
-// NEW (July 2026, Alyx's request): "Fade to White" replaced with "Fade to
-// Product Color" — instead of picking a decorative accent color, the fade
-// automatically matches whatever color the customer already picked for
-// their actual product (mug color, travel mug color, tote color, etc.),
-// so the art's edges blend into the real material with no visible border
-// and no extra step for the customer. The decorative Color swatches don't
-// apply to this theme, so they're hidden while it's selected.
-// "Rose Crepe" was likewise replaced with "Remove All Background" — a
-// plain instruction to isolate the subject with no background at all,
-// which also has no use for the decorative color swatches.
 function updateDecorativeColorVisibility(){
   const wrap=document.getElementById('decorativeColorWrap');
   if(!wrap)return;
@@ -2092,19 +1986,13 @@ function showFadeColorInfoToast(message){
   fadeColorToastTimer=setTimeout(()=>{el.style.display='none';},4000);
 }
 
-// Returns the customer's actual selected PRODUCT color (not the decorative
-// background color) for whichever product is currently selected — this is
-// what "Fade to Product Color" matches against. Only Mug and Travel Cups
-// have their own color pickers on this page today; every other product
-// falls back to null (handled as a plain white fade in
-// buildProductColorFadeDescription below).
 function getSelectedProductColorName(){
   if(product==='mug')return selectedGenColor||null;
   if(product==='water bottle')return selectedTravelColor||null;
-  if(product==='suitcase')return 'Black'; // only color Printify offers for this blueprint
+  if(product==='suitcase')return 'Black';
   if(product==='tote bag')return selectedToteColorGen||null;
-  if(product==='photo poster')return posterFramed ? (posterFrameColor||null) : null; // unframed posters have no color
-  return null; // puzzle and phone case have no color options at all
+  if(product==='photo poster')return posterFramed ? (posterFrameColor||null) : null;
+  return null;
 }
 
 function buildProductColorFadeDescription(colorName){
@@ -2956,13 +2844,11 @@ function approveDesign(allThree){
   document.getElementById('approveRow').style.display='none';
   document.getElementById('keepTweakingBtn').style.display='none';
   document.getElementById('downloadDesignBtn').style.display='none';
-  // UPDATED (July 2026, Alyx's request): no longer clearing the top
-  // photo/workshop on approve. The generated image — along with the
-  // Toggle Between Previous & New Image option — should stay visible up
-  // top so the customer can keep tweaking or change their mind, even
-  // after a design has already been placed into a slot below. It should
-  // only actually clear when they explicitly tap "Start Over," or once
-  // they've completed a purchase, not automatically here.
+
+
+
+
+
   saveMugState();
   renderRecentDesigns();
   renderPositionHolder();
@@ -3021,13 +2907,6 @@ function closeBigAlert(){
   document.getElementById('bigAlertOverlay').classList.remove('visible');
 }
 
-// NEW (July 2026, Alyx's request): live generation timer. Starts the
-// moment a real generation kicks off, updates every 100ms while it
-// runs, and freezes on a final "Done in X.Xs" readout once the image
-// actually finishes — separate from the status/spinner text so it
-// keeps counting through multi-step flows like the wraparound
-// three-panel sequence (center, then left, then right all count as one
-// total wait, since that's what the customer is actually experiencing).
 let genTimerInterval=null;
 let genTimerStart=null;
 
@@ -3064,8 +2943,7 @@ function resetGenTimer(){
 function setStatus(msg,isError){
   const el=document.getElementById('needlesGenOverlayStatus');
   if(isError){
-    // Big, centered, dismissible alert — not a small line the person
-    // may never have scrolled to.
+
     showBigAlert(msg);
     if(el)el.className='needles-gen-overlay-status';
     return;
@@ -3087,15 +2965,6 @@ function scrollToFinishedImage(elementId,block){
   el.scrollIntoView({behavior:'smooth',block:block||'center'});
 }
 
-// The post-generation scroll targets an element whose on-page position
-// depends on the height of the freshly swapped-in result image above it.
-// If we scroll before that image has actually finished decoding and been
-// laid out, the browser calculates the scroll target using the OLD page
-// height, landing too high — then the image finishes rendering a moment
-// later and the page grows underneath the customer with no re-scroll.
-// This waits for the image to be genuinely ready (decoded, or loaded, or
-// already complete) plus one extra animation frame for layout to settle,
-// before the scroll is allowed to fire.
 function waitForImageReady(img){
   if(!img)return Promise.resolve();
   const ready = img.complete && img.naturalWidth>0
@@ -3126,14 +2995,11 @@ function getImageSizeParam(){
     return posterOrientation==='Horizontal' ? '1536x1024' : '1024x1536';
   }
   if (product==='phone case'){
-    // Real phone case print areas run tall and narrow (confirmed via
-    // Printify's own template download — iPhone 15 Pro measures
-    // 1201x2080px, roughly a 0.577 width:height ratio). gpt-image-2
-    // only supports a fixed set of size presets, so 1024x1536 (0.667
-    // ratio) is the closest available match — much closer to the real
-    // shape than the old default square, meaningfully reducing the
-    // letterboxing that came from shrinking a square image into a tall
-    // case.
+
+
+
+
+
     return '1024x1536';
   }
   return '1024x1024';
@@ -3150,16 +3016,6 @@ function urlToDataURL(url){
     }));
 }
 
-// ===== Guaranteed edge fade (Alyx's request, Aug 2026) =====
-// The AI doesn't always fully obey the text-based fade instruction sent
-// in the prompt — sometimes it fades every edge cleanly, sometimes it
-// leaves the top/bottom (or another edge) hard. This applies a real,
-// deterministic fade-to-white directly on the pixels of the finished
-// image, so the blend is guaranteed every time regardless of what the
-// AI actually drew near the border. Fetches the image as a blob first
-// (same pattern already used by urlToDataURL) so the resulting
-// object-URL is same-origin and canvas.toDataURL() won't be blocked by
-// a tainted-canvas CORS error.
 async function applyEdgeFadeToImageUrl(url, edges){
   try{
     const resp=await fetch(url);
@@ -3285,10 +3141,8 @@ setStatus('Generating your image... this can take several minutes, especially on
 document.getElementById('cancelBtn').style.display='block';
   suspendGuidedScrollsForGeneration();
 
-  // Lock the viewport to the exact approved studio framing. The top of
-  // the studio image sits 14px below the webpage viewport, matching the
-  // supplied screenshot. Re-apply briefly while the newly visible
-  // timer, status text, and video layers finish settling.
+
+
   const snapNeedlesStageToApprovedFrame=()=>{
     const stage=document.querySelector('#needlesStageWrap .needles-stage');
     if(!stage)return;
@@ -3318,15 +3172,12 @@ document.getElementById('cancelBtn').style.display='block';
         : 'Caricature strength: WILD. Use bold exaggeration only on the person\u2019s real existing features. Do not invent new facial features.';
 
     const isWraparoundActive = (product==='mug'||product==='water bottle') && mugPrintMode==='wraparound';
-    // UPDATED (Alyx's request, Aug 2026): previously this skipped the
-    // edge-fade prompt line whenever a background theme (Fade to Product
-    // Color / Remove All Background) already described its own edge
-    // treatment, to avoid "redundancy." Alyx wants the redundancy kept —
-    // if a customer picked one of those themes, they really want that
-    // effect, and repeating the instruction in two places reinforces it
-    // rather than working against it. So the only thing that skips the
-    // fade now, for both the prompt text and the guaranteed pixel-level
-    // post-process, is the explicit hard-edges opt-out.
+
+
+
+
+
+
     const skipEdgeFade = hardEdgesEnabled;
 
     const backgroundDesc=getBackgroundDescription();
@@ -3347,13 +3198,11 @@ document.getElementById('cancelBtn').style.display='block';
               : ''));
 
     // UPDATED (Alyx's request, Aug 2026): edge fade is automatic by
-    // default now. Wraparound keeps the seam-aware top/bottom-only fade
-    // (PANORAMA_FADE_INSTRUCTION_CENTER); every other case — the
-    // decoupled three-panel mug, travel mug front/back, and every
-    // single-design product — gets a uniform four-side fade instead,
-    // since there's no seam to protect. Both are skipped if the customer
-    // opted into hard edges, or if the background theme already handles
-    // edge blending itself (Fade to Product Color / Remove All Background).
+
+
+
+
+
     const panoramaFadeLine = (!skipEdgeFade && isWraparoundActive) ? PANORAMA_FADE_INSTRUCTION_CENTER : '';
     const uniformEdgeFadeLine = (!skipEdgeFade && !isWraparoundActive) ? UNIFORM_EDGE_FADE_INSTRUCTION : '';
 
@@ -3365,7 +3214,6 @@ ${refBSnapshot ? 'This image is "Photo 3" — when the customer idea above menti
 Only use these reference images for the specific elements the customer idea calls out. Do not blend in unrelated details from a reference photo.
 `
       : '';
-
 
     const prompt=`
 Transform the uploaded person into a premium professional Muggshotz caricature.
@@ -3871,17 +3719,13 @@ let selectedGenStyle='Classic White';
 let selectedGenSize='11oz';
 let selectedGenColor=null;
 
-// Travel mug catalog — kept in sync manually with lib/products-catalog.js
-// (this is client-side HTML, can't import that server-only file
-// directly), same pattern order.html already uses for the same reason.
 const TRAVEL_MUG_CATALOG = {
   "travel-mug-20oz": {
     displayName: "Travel Mug, 20oz",
     layoutType: "single-image",
     sizeLabel: "20oz",
-    // UPDATED (July 2026): swapped print provider (see products-catalog.js
-    // for why) — this blueprint comes in white only, no color picker,
-    // and prints as one continuous wrap image instead of front/back.
+
+
     colors: null
   },
   "travel-mug-14oz-handle": {
@@ -4036,28 +3880,13 @@ function pickGenTravelColor(el,colorName){
   maybeAutoFetchMockup();
 }
 
-// ===== Automatic real-photo mockup engine =====
-// Replaces the old manual "See a Real Photo Preview" button. The moment
-// a design is placed into a slot (or the customer changes style/size/
-// color), this fires on its own — no click required, since by that
-// point the customer has already approved the design and told us what
-// they want to buy. We already have everything needed to show them
-// exactly what it'll look like.
-//
-// autoMockupRequestId guards against race conditions: if the customer
-// changes color again while an older fetch is still in flight, the
-// stale response is discarded instead of overwriting the newer choice.
-// autoMockupDebounceTimer prevents spamming Printify if someone taps
-// through several colors quickly — only the last selection within a
-// short window actually triggers a real fetch.
 let autoMockupRequestId = 0;
 let autoMockupDebounceTimer = null;
 
 function maybeAutoFetchMockup(){
-  // Supports Coffee Mug and Travel Cups today. Every other product still
-  // needs its own style/size/color picker built into this page before
-  // it can get the same automatic treatment — extending this later
-  // means adding another branch here, not rewriting the engine below.
+
+
+
   const assignedCount = ['left','front','right'].filter(p=>placements[p]).length;
   if (assignedCount === 0) {
     hideAutoMockup();
@@ -4085,7 +3914,7 @@ function maybeAutoFetchMockup(){
       return;
     }
   } else {
-    // Not wired up for this product yet.
+
     hideAutoMockup();
     return;
   }
@@ -4105,7 +3934,7 @@ function hideAutoMockup(){
   if (imgEl) imgEl.style.display = 'none';
   if (galleryEl) { galleryEl.style.display = 'none'; galleryEl.innerHTML = ''; }
   if (galleryHintEl) galleryHintEl.style.display = 'none';
-  autoMockupRequestId++; // invalidate any in-flight fetch so it can't pop back in
+  autoMockupRequestId++;
 }
 
 function showAutoMockupNote(msg){
@@ -4123,13 +3952,9 @@ function showAutoMockupNote(msg){
     noteEl.className = 'note';
     noteEl.style.display = 'block';
   }
-  autoMockupRequestId++; // invalidate any in-flight fetch
+  autoMockupRequestId++;
 }
 
-// Builds the request body /api/start-mockup needs, branching by which
-// product is currently selected. Each product's layoutType (three-slot-
-// wrap, front-back, single-image) determines which fields it expects —
-// see api/start-mockup.js's handleStart for the matching logic.
 function buildMockupRequestBody(){
   if (product === 'mug') {
     return {
@@ -4168,13 +3993,6 @@ function buildMockupRequestBody(){
   return null;
 }
 
-// NEW (Alyx's request, Aug 2026): the mockup start/check requests below
-// previously had no timeout at all — a stuck serverless cold-start, a
-// slow Printify call, or a flaky connection could leave the spinner
-// running indefinitely with no error ever surfacing, since a bare
-// fetch() just waits forever for a response that may never come. This
-// aborts the request after a reasonable ceiling so it always resolves
-// one way or another.
 function fetchWithTimeout(url, options, timeoutMs){
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -4209,7 +4027,7 @@ async function runAutoMockupFetch(){
     }, 30000);
     const startData = await startResp.json();
     if (!startResp.ok) throw new Error(startData.error || 'Could not start the real photo preview.');
-    if (thisRequestId !== autoMockupRequestId) return; // a newer request has since taken over
+    if (thisRequestId !== autoMockupRequestId) return;
 
     const productId = startData.productId;
     let mockupUrl = null;
@@ -4218,7 +4036,7 @@ async function runAutoMockupFetch(){
 
     for (let i = 0; i < maxTries; i++) {
       await new Promise(r => setTimeout(r, 1500));
-      if (thisRequestId !== autoMockupRequestId) return; // superseded mid-poll
+      if (thisRequestId !== autoMockupRequestId) return;
 
       const checkResp = await fetchWithTimeout('/api/start-mockup', {
         method: 'POST',
@@ -4239,12 +4057,10 @@ async function runAutoMockupFetch(){
 
     loadingEl.style.display = 'none';
 
-    // Printify typically photographs a design from a few different
-    // angles — show all of them the customer got instead of just the
-    // first shot, whatever the product (coffee mug, travel cup, etc.).
-    // Fixed-width scrollable thumbnails instead of squeezing 5 into one
-    // row, which would make each one too small to see anything on a
-    // phone.
+
+
+
+
     if (mockupUrls.length > 1) {
       mockupUrls.slice(0, 5).forEach(url => {
         const img = document.createElement('img');
@@ -4311,7 +4127,7 @@ function cancelGeneration(){
   clearStatus();
   stopNeedlesStage();
 }
-  
+
   function downloadImage(){
   if(!finalImageUrl)return;
   const a=document.createElement('a');
@@ -4368,17 +4184,6 @@ function saveMugState(){
   }catch(e){console.error('Could not save mug state:',e);}
 }
 
-// UPDATED (per Alyx's request, July 2026): the generator no longer
-// auto-restores the last-used photo or last-generated design when it
-// opens — every fresh visit now starts on a completely blank upload
-// zone, exactly like a first-time visitor. If there's still recall
-// data sitting in localStorage from a previous session,
-// checkForWorkshopRecall() below just surfaces two buttons so the
-// customer can deliberately pull it back if they want it; nothing
-// restores automatically anymore. The "My Designs" library
-// (placed/positioned designs) still restores automatically, since that
-// wasn't part of the reported problem — only the top photo/workshop
-// slot was reloading unexpectedly.
 function restoreMugLibrary(){
   try{
     const mug=JSON.parse(localStorage.getItem('muggshotz_mug_state')||'null');
@@ -4406,7 +4211,7 @@ function checkForWorkshopRecall(){
     const row=document.getElementById('workshopRecallRow');
     const genBtn=document.getElementById('recallGeneratedBtn');
     if(!row||!genBtn)return;
-    const hasGenerated=!!saved.previous; // 'previous' is only ever set once a generation has completed
+    const hasGenerated=!!saved.previous;
     genBtn.style.display=hasGenerated?'block':'none';
     row.style.display='flex';
   }catch(e){console.error('Workshop recall check failed:',e);}
@@ -4454,17 +4259,10 @@ refreshPhoneCaseModelVisibility();
 refreshToteBagColorVisibility();
 updateMugGuidedFlow();
 
-// ===== Full reset (July 2026, Alyx's request) =====
-// Entirely optional — a customer happy with their in-progress work never
-// has to touch this. Clears every photo, description, and selection back
-// to a first-visit state. Deliberately does NOT touch the device ID
-// (muggshotz_device_id) so the token balance tied to this device is
-// preserved — this only clears creative work in progress, not credits.
 function resetEverythingFreshStart(){
   const confirmed=window.confirm('Reset everything? This clears your photo, description, and all selections and designs — it cannot be undone.');
   if(!confirmed)return;
 
-  // Photo + reference slots + in-progress design state
   currentDesignId=null;
   pendingSlotTarget=null;
   document.getElementById('approveRow').style.display='none';
@@ -4477,7 +4275,6 @@ function resetEverythingFreshStart(){
   clearWorkshopStorage();
   hideWorkshopRecallRow();
 
-  // All generated designs + slot placements
   recentDesigns=[];
   placements={left:null,right:null,front:null};
   try{localStorage.removeItem('muggshotz_mug_state');}catch(e){}
@@ -4488,7 +4285,6 @@ function resetEverythingFreshStart(){
   renderPositionHolder();
   updateLibraryToggleLabel();
 
-  // Idea description
   document.getElementById('ideaDesc').value='';
 
   // Product, style, likeness — back to defaults (first option in each grid)
@@ -4508,20 +4304,17 @@ function resetEverythingFreshStart(){
     }
   });
 
-  // Mug print mode
   pickMugPrintMode('three-panel');
   hardEdgesEnabled=false;
   const fadeToggle=document.getElementById('panoramaFadeToggle');
   if(fadeToggle)fadeToggle.checked=false;
 
-  // Background theme + color
   document.getElementById('themeGrid').querySelectorAll('.theme-btn').forEach(b=>b.classList.remove('selected'));
   document.getElementById('colorGrid').querySelectorAll('.color-btn').forEach(b=>b.classList.remove('selected'));
   selectedTheme=null;
   selectedColor=null;
   updateDecorativeColorVisibility();
 
-  // Phone case + photo/poster selections
   selectedPhoneCaseModel=null;
   pendingPhoneCaseModel=null;
   const phoneInput=document.getElementById('phoneModelSearchInputGen');
@@ -4536,7 +4329,6 @@ function resetEverythingFreshStart(){
   pickPosterFinish('Glossy');
   pickPosterFrameColor('Black');
 
-  // Mug/travel product option pickers used by the auto-mockup engine
   selectedGenStyle='Classic White';
   selectedGenSize='11oz';
   selectedGenColor=null;
@@ -4557,11 +4349,9 @@ function resetEverythingFreshStart(){
   document.getElementById('genSize11Btn').classList.add('selected');
   document.getElementById('genSize15Btn').classList.remove('selected');
 
-  // Caption settings
   resetCaptionSettings();
   document.getElementById('captionCard').className='card caption-card';
 
-  // Verify card + status + timer
   document.getElementById('verifyCard').style.display='none';
   const verifyStatus=document.getElementById('verifyStatus');
   if(verifyStatus)verifyStatus.textContent='';
