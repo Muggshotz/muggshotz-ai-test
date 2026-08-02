@@ -624,7 +624,7 @@
 <div class="note" id="panoramaFadeCardNote" style="margin-top:0;margin-bottom:.75rem">By default, every design's outer edges automatically fade into white so it blends into the mug instead of looking like a hard-edged sticker. In Wraparound mode, the seams where Left, Center, and Right join stay sharp and continuous — only the true outer edges (top/bottom, plus the far-left and far-right ends) fade. In the standard three-panel mode, each panel is independent, so all four of its edges fade. Doesn't change anything you see or type below; it's applied automatically behind the scenes.</div>
 <div style="display:flex;align-items:center;gap:10px">
 <input type="checkbox" id="panoramaFadeToggle" onchange="togglePanoramaFadeEdges()" style="width:20px;height:20px;cursor:pointer"/>
-<label style="margin:0;text-transform:none;font-size:14px;color:#fff;cursor:pointer" onclick="document.getElementById('panoramaFadeToggle').click()">No — I want hard, full-bleed edges instead</label>
+<label style="margin:0;text-transform:none;font-size:14px;color:#fff;cursor:pointer" onclick="document.getElementById('panoramaFadeToggle').click()">No — I want hard, sharp edges instead</label>
 </div>
 </div>
 
@@ -1613,7 +1613,7 @@ function handleMugGuidedGenerate(){
 
 // UPDATED (Alyx's request, Aug 2026): edge fade is now AUTOMATIC BY
 // DEFAULT rather than opt-in — hardEdgesEnabled tracks the opt-OUT
-// (checking the box means "give me hard, full-bleed edges instead").
+// (checking the box means "give me hard, sharp edges instead").
 // This instruction gets appended to the actual prompt sent to the AI on
 // every generate() call (including the auto left/right panel
 // continuations) — the customer never sees this text in their own idea
