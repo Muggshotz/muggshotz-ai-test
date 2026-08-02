@@ -661,6 +661,12 @@
 <div class="grid3" id="travelMugVariantGrid"></div>
 </div>
 
+<div class="card" id="travelMugColorCard" style="display:none">
+<div class="card-title">🎨 Travel Mug Color</div>
+<div class="note" style="margin-top:0;margin-bottom:.75rem">Optional — pick your mug color now so "Fade to Product Color" (and the automatic edge fade) can match it exactly, instead of assuming white. You can still change this later.</div>
+<div class="color-grid" id="travelMugColorGridGen"></div>
+</div>
+
 <div class="card" id="photoPosterOptionsCard" style="display:none">
 <div class="card-title">🖼️ Photo/Poster Options</div>
 <div class="note" style="margin-top:0;margin-bottom:.9rem">This is the one product where you pick everything BEFORE generating — the exact shape of your print determines how the artwork gets composed, so getting this locked in first means no cropping surprises later.</div>
@@ -773,9 +779,7 @@
 </div>
 
 <div id="genTravelOptionsWrap" style="display:none;margin-top:1.1rem">
-<div class="note-action-flash" id="genTravelPickStyleNote" style="margin-bottom:.6rem">Pick which travel mug below — the real photo preview updates to match.</div>
-<div class="note" style="margin-bottom:6px">Style</div>
-<div class="grid3" id="genTravelStyleGrid"></div>
+<div class="note" id="genTravelConfirmedNote" style="margin-bottom:.6rem;color:#3d8bff;font-weight:700"></div>
 <div id="genTravelColorWrap" style="display:none;margin-top:.75rem">
 <div class="note" style="margin-bottom:6px">Color</div>
 <div class="color-grid" id="genTravelColorGrid"></div>
@@ -1690,8 +1694,10 @@ function renderTravelMugVariantGrid(){
 }
 
 function pickPreGenTravelVariant(key){
+  if(key!==preGenTravelVariant)preGenTravelColor=null;
   preGenTravelVariant=key;
   renderTravelMugVariantGrid();
+  refreshTravelMugColorVisibility();
 }
 
 function refreshTravelMugVariantVisibility(){
@@ -1729,6 +1735,47 @@ const PHONE_CASE_MODELS = [
 ];
 let selectedPhoneCaseModel=null;
 let preGenTravelVariant=null;
+let preGenTravelColor=null;
+
+function renderTravelMugColorGridGen(){
+  const grid=document.getElementById('travelMugColorGridGen');
+  if(!grid)return;
+  grid.innerHTML='';
+  const prod=preGenTravelVariant ? TRAVEL_MUG_CATALOG[preGenTravelVariant] : null;
+  const colors=prod?.colors || null;
+  if(!colors)return;
+  colors.forEach(c=>{
+    const btn=document.createElement('div');
+    btn.className='color-btn'+(c.name===preGenTravelColor?' selected':'');
+    btn.dataset.color=c.name;
+    btn.onclick=()=>pickTravelMugColorGen(btn,c.name);
+    const ball=document.createElement('div');
+    ball.className='ball';
+    ball.style.background=c.hex;
+    btn.appendChild(ball);
+    grid.appendChild(btn);
+  });
+}
+
+function pickTravelMugColorGen(el,colorName){
+  const wasSelected=el.classList.contains('selected');
+  document.querySelectorAll('#travelMugColorGridGen .color-btn').forEach(b=>b.classList.remove('selected'));
+  if(wasSelected){
+    preGenTravelColor=null;
+  } else {
+    el.classList.add('selected');
+    preGenTravelColor=colorName;
+  }
+}
+
+function refreshTravelMugColorVisibility(){
+  const card=document.getElementById('travelMugColorCard');
+  if(!card)return;
+  const prod=preGenTravelVariant ? TRAVEL_MUG_CATALOG[preGenTravelVariant] : null;
+  const show=product==='water bottle' && !!(prod?.colors);
+  card.style.display=show?'block':'none';
+  if(show)renderTravelMugColorGridGen();
+}
 let phoneSearchListenerAttachedGen=false;
 
 function setupPhoneModelSearchGen(){
@@ -1975,6 +2022,7 @@ function pick(el,type){
     refreshPhotoPosterVisibility();
     refreshPhoneCaseModelVisibility();
     refreshTravelMugVariantVisibility();
+    refreshTravelMugColorVisibility();
     refreshToteBagColorVisibility();
 
 
@@ -2030,11 +2078,33 @@ function showFadeColorInfoToast(message){
 
 function getSelectedProductColorName(){
   if(product==='mug')return selectedGenColor||null;
-  if(product==='water bottle')return selectedTravelColor||null;
+  if(product==='water bottle')return preGenTravelColor||selectedTravelColor||null;
   if(product==='suitcase')return 'Black';
   if(product==='tote bag')return selectedToteColorGen||null;
   if(product==='photo poster')return posterFramed ? (posterFrameColor||null) : null;
   return null;
+}
+
+function hexToRgbTriple(hex){
+  const h=(hex||'#FFFFFF').replace('#','');
+  const full=h.length===3 ? h.split('').map(c=>c+c).join('') : h;
+  const n=parseInt(full,16);
+  return isNaN(n) ? '255,255,255' : `${(n>>16)&255},${(n>>8)&255},${n&255}`;
+}
+
+// Finds the real hex value behind whatever product color is currently
+// chosen, so the guaranteed pixel-level edge fade can blend into the
+// mug's ACTUAL body color instead of always assuming white.
+function getSelectedProductColorHex(){
+  if(product==='water bottle' && preGenTravelVariant && preGenTravelColor){
+    const match=TRAVEL_MUG_CATALOG[preGenTravelVariant]?.colors?.find(c=>c.name===preGenTravelColor);
+    if(match)return match.hex;
+  }
+  if(product==='tote bag' && selectedToteColorGen){
+    const match=TOTE_BAG_COLORS_GEN.find(c=>c.name===selectedToteColorGen);
+    if(match)return match.hex;
+  }
+  return '#FFFFFF';
 }
 
 function buildProductColorFadeDescription(colorName){
@@ -3066,7 +3136,7 @@ function urlToDataURL(url){
     }));
 }
 
-async function applyEdgeFadeToImageUrl(url, edges){
+async function applyEdgeFadeToImageUrl(url, edges, fadeColorHex='#FFFFFF'){
   try{
     const resp=await fetch(url);
     const blob=await resp.blob();
@@ -3088,32 +3158,33 @@ async function applyEdgeFadeToImageUrl(url, edges){
     const w=canvas.width, h=canvas.height;
     const fadePxX=Math.round(w*0.12);
     const fadePxY=Math.round(h*0.12);
+    const rgb=hexToRgbTriple(fadeColorHex);
 
     if(edges.top){
       const g=ctx.createLinearGradient(0,0,0,fadePxY);
-      g.addColorStop(0,'rgba(255,255,255,1)');
-      g.addColorStop(1,'rgba(255,255,255,0)');
+      g.addColorStop(0,`rgba(${rgb},1)`);
+      g.addColorStop(1,`rgba(${rgb},0)`);
       ctx.fillStyle=g;
       ctx.fillRect(0,0,w,fadePxY);
     }
     if(edges.bottom){
       const g=ctx.createLinearGradient(0,h-fadePxY,0,h);
-      g.addColorStop(0,'rgba(255,255,255,0)');
-      g.addColorStop(1,'rgba(255,255,255,1)');
+      g.addColorStop(0,`rgba(${rgb},0)`);
+      g.addColorStop(1,`rgba(${rgb},1)`);
       ctx.fillStyle=g;
       ctx.fillRect(0,h-fadePxY,w,fadePxY);
     }
     if(edges.left){
       const g=ctx.createLinearGradient(0,0,fadePxX,0);
-      g.addColorStop(0,'rgba(255,255,255,1)');
-      g.addColorStop(1,'rgba(255,255,255,0)');
+      g.addColorStop(0,`rgba(${rgb},1)`);
+      g.addColorStop(1,`rgba(${rgb},0)`);
       ctx.fillStyle=g;
       ctx.fillRect(0,0,fadePxX,h);
     }
     if(edges.right){
       const g=ctx.createLinearGradient(w-fadePxX,0,w,0);
-      g.addColorStop(0,'rgba(255,255,255,0)');
-      g.addColorStop(1,'rgba(255,255,255,1)');
+      g.addColorStop(0,`rgba(${rgb},0)`);
+      g.addColorStop(1,`rgba(${rgb},1)`);
       ctx.fillStyle=g;
       ctx.fillRect(w-fadePxX,0,fadePxX,h);
     }
@@ -3416,7 +3487,7 @@ Use rich environmental storytelling while keeping the face as the primary focal 
       const centerEdges=(isWraparoundActive && !is40ozWraparoundSplit)
         ? {top:true,bottom:true,left:false,right:false}
         : {top:true,bottom:true,left:true,right:true};
-      resultUrl=await applyEdgeFadeToImageUrl(resultUrl,centerEdges);
+      resultUrl=await applyEdgeFadeToImageUrl(resultUrl,centerEdges,getSelectedProductColorHex());
     }
 
     if (is40ozWraparoundSplit){
@@ -3425,6 +3496,7 @@ Use rich environmental storytelling while keeping the face as the primary focal 
       placements.front = addToRecentDesigns(leftHalf);
       placements.right = addToRecentDesigns(rightHalf);
       selectedTravelProductKey = preGenTravelVariant;
+      selectedTravelColor = preGenTravelColor;
       renderRecentDesigns();
       renderPositionHolder();
       updatePlacementSummary();
@@ -3443,7 +3515,7 @@ Use rich environmental storytelling while keeping the face as the primary focal 
     }
 
     currentDesignId=addToRecentDesigns(resultUrl);
-    if(product==='water bottle') selectedTravelProductKey=preGenTravelVariant;
+    if(product==='water bottle'){ selectedTravelProductKey=preGenTravelVariant; selectedTravelColor=preGenTravelColor; }
 
     if (product==='mug' && mugPrintMode==='wraparound'){
       placements.front = currentDesignId;
@@ -3785,7 +3857,8 @@ function updatePlacementSummary(){
     renderGenMugColorGrid();
   }
   if(showTravelOptions){
-    renderGenTravelStyleGrid();
+    renderGenTravelStyleConfirmed();
+    renderGenTravelColorGrid();
   }
   maybeAutoFetchMockup();
   updateMugGuidedFlow();
@@ -3952,29 +4025,11 @@ function pickGenMugColor(el,colorName){
   maybeScrollToGenPreviewOnceBothPicked();
 }
 
-function renderGenTravelStyleGrid(){
-  const grid=document.getElementById('genTravelStyleGrid');
-  if(!grid || grid.childElementCount)return;
-  Object.entries(TRAVEL_MUG_CATALOG).forEach(([key, prod])=>{
-    const btn=document.createElement('div');
-    btn.className='btn-select'+(key===selectedTravelProductKey?' selected':'');
-    btn.dataset.key=key;
-    btn.textContent=prod.displayName;
-    btn.onclick=()=>pickGenTravelStyle(key);
-    grid.appendChild(btn);
-  });
-}
-
-function pickGenTravelStyle(key){
-  selectedTravelProductKey=key;
-  selectedTravelColor=null;
-  document.querySelectorAll('#genTravelStyleGrid .btn-select').forEach(b=>{
-    b.classList.toggle('selected', b.dataset.key===key);
-  });
-  const pickNote=document.getElementById('genTravelPickStyleNote');
-  if(pickNote)pickNote.style.display='none';
-  renderGenTravelColorGrid();
-  maybeAutoFetchMockup();
+function renderGenTravelStyleConfirmed(){
+  const note=document.getElementById('genTravelConfirmedNote');
+  if(!note)return;
+  const prod=selectedTravelProductKey ? TRAVEL_MUG_CATALOG[selectedTravelProductKey] : null;
+  note.textContent = prod ? `✓ Travel Mug: ${prod.displayName} — chosen before generating.` : '';
 }
 
 function renderGenTravelColorGrid(){
@@ -3987,17 +4042,19 @@ function renderGenTravelColorGrid(){
     return;
   }
   wrap.style.display='block';
+  if(grid.childElementCount)return;
   grid.innerHTML='';
   colors.forEach((c,i)=>{
     const btn=document.createElement('div');
-    btn.className='color-btn'+(i===0?' selected':'');
+    const isSelected = selectedTravelColor ? (c.name===selectedTravelColor) : (i===0);
+    btn.className='color-btn'+(isSelected?' selected':'');
     btn.onclick=()=>pickGenTravelColor(btn,c.name);
     const ball=document.createElement('div');
     ball.className='ball';
     ball.style.background=c.hex;
     btn.appendChild(ball);
     grid.appendChild(btn);
-    if(i===0) selectedTravelColor=c.name;
+    if(!selectedTravelColor && i===0) selectedTravelColor=c.name;
   });
 }
 
@@ -4385,6 +4442,7 @@ refreshPanoramaFadeCardVisibility();
 refreshPhotoPosterVisibility();
 refreshPhoneCaseModelVisibility();
 refreshTravelMugVariantVisibility();
+refreshTravelMugColorVisibility();
 refreshToteBagColorVisibility();
 updateMugGuidedFlow();
 
@@ -4464,6 +4522,9 @@ function resetEverythingFreshStart(){
   selectedTravelProductKey=null;
   selectedTravelColor=null;
   preGenTravelVariant=null;
+  preGenTravelColor=null;
+  const travelColorGridGen=document.getElementById('travelMugColorGridGen');
+  if(travelColorGridGen)travelColorGridGen.innerHTML='';
   selectedToteColorGen=null;
   document.querySelectorAll('#toteBagColorGridGen .color-btn').forEach(b=>b.classList.remove('selected'));
   mugOptionsTouched=false;
@@ -4474,8 +4535,10 @@ function resetEverythingFreshStart(){
   mugDesignConfirmed=false;
   const genMugGrid=document.getElementById('genMugStyleGrid');
   if(genMugGrid)genMugGrid.innerHTML='';
-  const genTravelGrid=document.getElementById('genTravelStyleGrid');
-  if(genTravelGrid)genTravelGrid.innerHTML='';
+  const genTravelNote=document.getElementById('genTravelConfirmedNote');
+  if(genTravelNote)genTravelNote.textContent='';
+  const genTravelColorGrid=document.getElementById('genTravelColorGrid');
+  if(genTravelColorGrid)genTravelColorGrid.innerHTML='';
   document.getElementById('genSize11Btn').classList.add('selected');
   document.getElementById('genSize15Btn').classList.remove('selected');
 
@@ -4494,6 +4557,7 @@ function resetEverythingFreshStart(){
   refreshPhotoPosterVisibility();
   refreshPhoneCaseModelVisibility();
   refreshTravelMugVariantVisibility();
+  refreshTravelMugColorVisibility();
   refreshToteBagColorVisibility();
   updatePlacementSummary();
   updateMugGuidedFlow();
