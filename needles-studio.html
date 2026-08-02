@@ -243,10 +243,9 @@
     inset 0 0 22px rgba(46,143,226,.22),
     0 0 0 1px rgba(220,240,255,.18),
     0 0 18px rgba(50,150,255,.28);
-  pointer-events:none;
+  pointer-events:auto;
+  cursor:pointer;
 }
-#tokenMeterWrap::before{
-  content:"NEEDLES STUDIO CURRENCY";
   position:absolute;
   left:9px;
   right:9px;
@@ -3154,6 +3153,75 @@ function urlToDataURL(url){
     }));
 }
 
+// ===== Guaranteed edge fade (Alyx's request, Aug 2026) =====
+// The AI doesn't always fully obey the text-based fade instruction sent
+// in the prompt — sometimes it fades every edge cleanly, sometimes it
+// leaves the top/bottom (or another edge) hard. This applies a real,
+// deterministic fade-to-white directly on the pixels of the finished
+// image, so the blend is guaranteed every time regardless of what the
+// AI actually drew near the border. Fetches the image as a blob first
+// (same pattern already used by urlToDataURL) so the resulting
+// object-URL is same-origin and canvas.toDataURL() won't be blocked by
+// a tainted-canvas CORS error.
+async function applyEdgeFadeToImageUrl(url, edges){
+  try{
+    const resp=await fetch(url);
+    const blob=await resp.blob();
+    const objectUrl=URL.createObjectURL(blob);
+    const img=await new Promise((resolve,reject)=>{
+      const im=new Image();
+      im.onload=()=>resolve(im);
+      im.onerror=reject;
+      im.src=objectUrl;
+    });
+
+    const canvas=document.createElement('canvas');
+    canvas.width=img.naturalWidth;
+    canvas.height=img.naturalHeight;
+    const ctx=canvas.getContext('2d');
+    ctx.drawImage(img,0,0);
+    URL.revokeObjectURL(objectUrl);
+
+    const w=canvas.width, h=canvas.height;
+    const fadePxX=Math.round(w*0.12);
+    const fadePxY=Math.round(h*0.12);
+
+    if(edges.top){
+      const g=ctx.createLinearGradient(0,0,0,fadePxY);
+      g.addColorStop(0,'rgba(255,255,255,1)');
+      g.addColorStop(1,'rgba(255,255,255,0)');
+      ctx.fillStyle=g;
+      ctx.fillRect(0,0,w,fadePxY);
+    }
+    if(edges.bottom){
+      const g=ctx.createLinearGradient(0,h-fadePxY,0,h);
+      g.addColorStop(0,'rgba(255,255,255,0)');
+      g.addColorStop(1,'rgba(255,255,255,1)');
+      ctx.fillStyle=g;
+      ctx.fillRect(0,h-fadePxY,w,fadePxY);
+    }
+    if(edges.left){
+      const g=ctx.createLinearGradient(0,0,fadePxX,0);
+      g.addColorStop(0,'rgba(255,255,255,1)');
+      g.addColorStop(1,'rgba(255,255,255,0)');
+      ctx.fillStyle=g;
+      ctx.fillRect(0,0,fadePxX,h);
+    }
+    if(edges.right){
+      const g=ctx.createLinearGradient(w-fadePxX,0,w,0);
+      g.addColorStop(0,'rgba(255,255,255,0)');
+      g.addColorStop(1,'rgba(255,255,255,1)');
+      ctx.fillStyle=g;
+      ctx.fillRect(w-fadePxX,0,fadePxX,h);
+    }
+
+    return canvas.toDataURL('image/png');
+  }catch(err){
+    console.error('Edge fade post-process failed, using the AI-generated image as-is:',err);
+    return url;
+  }
+}
+
 async function callGenerateAPI({ workingImage, prompt, refImageA, refImageB, panelRole, signal }){
   const resp=await fetch('/api/generate',{
     method:'POST',
@@ -3382,6 +3450,19 @@ Use rich environmental storytelling while keeping the face as the primary focal 
 
     if(!resultUrl)throw new Error('No image returned.');
 
+    // Guaranteed edge fade: post-process the AI's result so the fade is
+    // reliable, but keep the untouched raw image around to seed the
+    // wraparound left/right continuations — feeding those a
+    // pre-faded center panel would show up as a fake white band the
+    // "continue this scene" generation might mistake for real content.
+    const rawResultUrl=resultUrl;
+    if(!skipAutoEdgeFade){
+      const centerEdges=isWraparoundActive
+        ? {top:true,bottom:true,left:false,right:false}
+        : {top:true,bottom:true,left:true,right:true};
+      resultUrl=await applyEdgeFadeToImageUrl(resultUrl,centerEdges);
+    }
+
     currentDesignId=addToRecentDesigns(resultUrl);
 
     if (product==='mug' && mugPrintMode==='wraparound'){
@@ -3393,26 +3474,28 @@ Use rich environmental storytelling while keeping the face as the primary focal 
       smoothScrollToTarget('positionHolderCard','start');
       document.getElementById('wraparoundStandbyPrompt').style.display='block';
 
-      const centerRaw = await urlToDataURL(resultUrl);
+      const centerRaw = await urlToDataURL(rawResultUrl);
       const centerForApi = await resizeDataUrl(centerRaw, 1280);
       const panoramaFadeSuffixLeft = !skipAutoEdgeFade ? ' ' + PANORAMA_FADE_INSTRUCTION_LEFT : '';
       const panoramaFadeSuffixRight = !skipAutoEdgeFade ? ' ' + PANORAMA_FADE_INSTRUCTION_RIGHT : '';
 
-      const leftUrl = await callGenerateAPI({
+      let leftUrl = await callGenerateAPI({
         workingImage: centerForApi,
         prompt: 'Continue this scene to the left.' + panoramaFadeSuffixLeft,
         panelRole: 'left',
         signal: currentGenerationController.signal
       });
+      if(!skipAutoEdgeFade) leftUrl = await applyEdgeFadeToImageUrl(leftUrl, {top:true,bottom:true,left:true,right:false});
       placements.left = addToRecentDesigns(leftUrl);
 
       setStatus('Left panel done. Generating the right panel...');
-      const rightUrl = await callGenerateAPI({
+      let rightUrl = await callGenerateAPI({
         workingImage: centerForApi,
         prompt: 'Continue this scene to the right.' + panoramaFadeSuffixRight,
         panelRole: 'right',
         signal: currentGenerationController.signal
       });
+      if(!skipAutoEdgeFade) rightUrl = await applyEdgeFadeToImageUrl(rightUrl, {top:true,bottom:true,left:false,right:true});
       placements.right = addToRecentDesigns(rightUrl);
 
       document.getElementById('wraparoundStandbyPrompt').style.display='none';
