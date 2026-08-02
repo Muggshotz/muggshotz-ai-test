@@ -65,6 +65,26 @@ label{font-size:11px;color:#888;letter-spacing:.5px;text-transform:uppercase;dis
 .select-flash-prompt{display:none;position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:2100;max-width:92vw;width:360px;text-align:center;padding:.9rem 1.1rem;border-radius:12px;background:#1a0a00;border:2px solid #ff6a00;color:#ffb27a;font-size:14px;font-weight:800;letter-spacing:.2px;box-shadow:0 8px 24px rgba(0,0,0,0.6);animation:selectFlashPulse 1s ease-in-out infinite}
 .select-flash-prompt.visible{display:block}
 @keyframes selectFlashPulse{0%,100%{opacity:1;box-shadow:0 0 0 rgba(255,106,0,0)}50%{opacity:.85;box-shadow:0 0 18px rgba(255,106,0,.4)}}
+
+/* NEW (Alyx's request, Aug 2026): in-page lightbox so mockup images can
+   be enlarged AND browsed left/right without leaving order.html — the
+   old behavior opened a raw Printify image URL in a brand new tab,
+   which had no way to add navigation since it wasn't even our page. */
+.mockup-lightbox-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:3000;align-items:center;justify-content:center;padding:2rem}
+.mockup-lightbox-overlay.visible{display:flex}
+.lightbox-img{max-width:90vw;max-height:80vh;border-radius:12px;box-shadow:0 10px 40px rgba(0,0,0,0.6);background:#fff;object-fit:contain}
+.lightbox-close{position:absolute;top:18px;right:18px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.3);color:#fff;width:40px;height:40px;border-radius:50%;font-size:18px;cursor:pointer;z-index:3001}
+.lightbox-close:hover{background:rgba(255,255,255,0.2)}
+.lightbox-nav{position:absolute;top:50%;transform:translateY(-50%);background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.3);color:#fff;width:52px;height:52px;border-radius:50%;font-size:26px;cursor:pointer;z-index:3001;display:flex;align-items:center;justify-content:center;line-height:1}
+.lightbox-nav:hover{background:rgba(255,255,255,0.24)}
+.lightbox-prev{left:18px}
+.lightbox-next{right:18px}
+.lightbox-counter{position:absolute;bottom:18px;left:50%;transform:translateX(-50%);color:#ccc;font-size:13px;font-weight:600;letter-spacing:.3px;background:rgba(0,0,0,0.45);padding:4px 12px;border-radius:20px}
+@media (max-width:520px){
+  .lightbox-nav{width:44px;height:44px;font-size:22px}
+  .lightbox-prev{left:8px}
+  .lightbox-next{right:8px}
+}
 </style>
 </head>
 <body>
@@ -304,6 +324,14 @@ label{font-size:11px;color:#888;letter-spacing:.5px;text-transform:uppercase;dis
 <div class="mockup-side-cta cta-right" id="mockupCtaRight" onclick="returnToOptionsFromMockup(event)">Not yet — I'd still like to make changes</div>
 <div class="select-flash-prompt" id="selectFlashPrompt"></div>
 
+<div class="mockup-lightbox-overlay" id="mockupLightboxOverlay" onclick="if(event.target===this)closeLightbox()">
+  <button class="lightbox-close" id="lightboxCloseBtn" onclick="closeLightbox()">✖</button>
+  <button class="lightbox-nav lightbox-prev" id="lightboxPrevBtn" onclick="navigateLightbox(-1)">‹</button>
+  <img class="lightbox-img" id="lightboxImg" src="" alt="Mockup preview, enlarged"/>
+  <button class="lightbox-nav lightbox-next" id="lightboxNextBtn" onclick="navigateLightbox(1)">›</button>
+  <div class="lightbox-counter" id="lightboxCounter"></div>
+</div>
+
 <script>
 const MUG_STYLES = {
   "Classic White": {
@@ -467,6 +495,58 @@ function validateMugSelectionsAndFlash(){
     return false;
   }
   return true;
+}
+
+// ===== In-page mockup lightbox (Alyx's request, Aug 2026) =====
+// Replaces window.open(url,'_blank') for every mockup image and gallery
+// thumbnail across every product card. Because all mockups already flow
+// through the shared runMockupJob() function below, wiring the lightbox
+// in there covers mug, travel mug, suitcase, tote, puzzle, phone case,
+// and poster mockups in one place.
+let lightboxImages = [];
+let lightboxIndex = 0;
+
+function openLightbox(images, startIndex){
+  if (!images || !images.length) return;
+  lightboxImages = images;
+  lightboxIndex = Math.min(Math.max(startIndex || 0, 0), images.length - 1);
+  renderLightboxImage();
+  const overlay = document.getElementById('mockupLightboxOverlay');
+  if (overlay) overlay.classList.add('visible');
+  document.addEventListener('keydown', handleLightboxKeydown);
+}
+
+function closeLightbox(){
+  const overlay = document.getElementById('mockupLightboxOverlay');
+  if (overlay) overlay.classList.remove('visible');
+  document.removeEventListener('keydown', handleLightboxKeydown);
+}
+
+function navigateLightbox(delta){
+  if (!lightboxImages.length) return;
+  lightboxIndex = (lightboxIndex + delta + lightboxImages.length) % lightboxImages.length;
+  renderLightboxImage();
+}
+
+function renderLightboxImage(){
+  const img = document.getElementById('lightboxImg');
+  const counter = document.getElementById('lightboxCounter');
+  const prevBtn = document.getElementById('lightboxPrevBtn');
+  const nextBtn = document.getElementById('lightboxNextBtn');
+  const showNav = lightboxImages.length > 1;
+  if (img) img.src = lightboxImages[lightboxIndex];
+  if (counter) {
+    counter.style.display = showNav ? 'block' : 'none';
+    counter.textContent = (lightboxIndex + 1) + ' / ' + lightboxImages.length;
+  }
+  if (prevBtn) prevBtn.style.display = showNav ? 'flex' : 'none';
+  if (nextBtn) nextBtn.style.display = showNav ? 'flex' : 'none';
+}
+
+function handleLightboxKeydown(e){
+  if (e.key === 'Escape') closeLightbox();
+  else if (e.key === 'ArrowLeft') navigateLightbox(-1);
+  else if (e.key === 'ArrowRight') navigateLightbox(1);
 }
 
 // ===== Shared real-photo mockup job runner (two-step start/check flow) =====
@@ -635,15 +715,19 @@ async function runMockupJob(body, btn, noteEl, imgEl){
     if (!mockupUrl) throw new Error("Printify didn't return a mockup photo in time — try again in a moment.");
 
     let anchorEl = imgEl;
+    // Full set of angles for this mockup, used by the lightbox so left/
+    // right navigation always has every photo available, regardless of
+    // whether the thumbnail gallery or the single-image view is shown.
+    const allImagesForLightbox = mockupUrls.length ? mockupUrls.slice(0, 5) : [mockupUrl];
 
     // Show every angle Printify photographed instead of just the first
     // shot, same treatment as the generator's own auto-preview gallery.
     if (mockupUrls.length > 1) {
-      mockupUrls.slice(0, 5).forEach(url => {
+      allImagesForLightbox.forEach((url, idx) => {
         const thumb = document.createElement('img');
         thumb.src = url;
         thumb.style.cssText = 'flex:0 0 150px;width:150px;height:150px;border-radius:12px;border:1px solid #ff6a00;object-fit:contain;background:#fff;cursor:pointer';
-        thumb.onclick = () => window.open(url, '_blank');
+        thumb.onclick = () => openLightbox(allImagesForLightbox, idx);
         galleryEl.appendChild(thumb);
       });
       galleryEl.style.display = 'flex';
@@ -653,7 +737,7 @@ async function runMockupJob(body, btn, noteEl, imgEl){
       imgEl.src = mockupUrl;
       imgEl.style.display = 'block';
       imgEl.style.cursor = 'pointer';
-      imgEl.onclick = () => window.open(mockupUrl, '_blank');
+      imgEl.onclick = () => openLightbox(allImagesForLightbox, 0);
       await waitForImageReady(imgEl);
       anchorEl = imgEl;
     }
