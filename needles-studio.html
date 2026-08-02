@@ -3212,7 +3212,7 @@ async function applyEdgeFadeToImageUrl(url, edges){
       ctx.fillRect(w-fadePxX,0,fadePxX,h);
     }
 
-    return canvas.toDataURL('image/png');
+    return canvas.toDataURL('image/jpeg', 0.9);
   }catch(err){
     console.error('Edge fade post-process failed, using the AI-generated image as-is:',err);
     return url;
