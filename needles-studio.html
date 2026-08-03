@@ -92,6 +92,11 @@
 }
 .needles-gen-overlay-status.visible{display:block}
 .token-info-popup{display:none;position:fixed;z-index:2200;width:280px;max-width:88vw;background:#0e1622;border:1px solid #3d8bff;border-radius:12px;padding:14px 16px;color:#dceaff;font-size:12.5px;line-height:1.5;box-shadow:0 10px 30px rgba(0,0,0,0.6),0 0 18px rgba(61,139,255,.25)}
+.fade-color-arrow-callout{position:fixed;z-index:2150;width:270px;max-width:86vw;background:#12233a;border:1.5px solid #3d8bff;border-radius:12px;padding:12px 14px;color:#dceaff;font-size:13px;font-weight:600;line-height:1.45;text-align:center;box-shadow:0 10px 26px rgba(0,0,0,0.6),0 0 20px rgba(61,139,255,.4);animation:fadeColorCalloutPulse 1s ease-in-out infinite}
+.fade-color-arrow-callout::after{content:'';position:absolute;left:50%;transform:translateX(-50%);width:0;height:0;border-left:9px solid transparent;border-right:9px solid transparent}
+.fade-color-arrow-callout.arrow-down::after{bottom:-9px;border-top:9px solid #3d8bff}
+.fade-color-arrow-callout.arrow-up::after{top:-9px;border-bottom:9px solid #3d8bff}
+@keyframes fadeColorCalloutPulse{0%,100%{box-shadow:0 10px 26px rgba(0,0,0,0.6),0 0 20px rgba(61,139,255,.4)}50%{box-shadow:0 10px 26px rgba(0,0,0,0.6),0 0 32px rgba(61,139,255,.85)}}
 .token-info-popup.visible{display:block}
 .token-info-popup strong{color:#8ec4ff}
 .generate-token-note{text-align:center;font-size:11px;color:#7ab8ff;margin-top:.4rem}
@@ -198,6 +203,8 @@
 .mug-select-flash{font-size:15px!important;font-weight:800!important;letter-spacing:.5px!important;text-transform:uppercase;padding:8px 6px;border-radius:8px;animation:mugSelectFlash 1s ease-in-out infinite}
 @keyframes mugSelectFlash{0%,100%{color:#fff;background:#3d8bff;text-shadow:0 0 10px rgba(61,139,255,.9)}50%{color:#3d8bff;background:#2a1200;text-shadow:0 0 10px rgba(61,139,255,.6)}}
 .cta-flash{animation:mugSelectFlash 1s ease-in-out infinite}
+.theme-btn-flash{animation:themeBtnFlash 1s ease-in-out infinite}
+@keyframes themeBtnFlash{0%,100%{border-color:#3d8bff;box-shadow:0 0 0 2px #3d8bff,0 0 10px 1px rgba(61,139,255,0.6)}50%{border-color:#8ec4ff;box-shadow:0 0 0 3px #8ec4ff,0 0 20px 4px rgba(61,139,255,0.9)}}
 .mug-available-flash{font-size:16px!important;font-weight:800!important;letter-spacing:.5px!important;text-transform:uppercase;padding:10px 8px;border-radius:8px;animation:mugSelectFlash 1s ease-in-out infinite;text-align:center;margin-top:1rem}
 #wraparoundStandbyPrompt{margin-top:1rem;text-align:center}
 
@@ -728,8 +735,9 @@
 <div class="theme-btn" data-val="Frosted Glass" onclick="pickTheme(this)"><img src="frosted mirror.png"/><div class="theme-label">Frosted Glass</div></div>
 <div class="theme-btn" data-val="Bubble Drift" onclick="pickTheme(this)"><img src="bubble drift.png"/><div class="theme-label">Bubble Drift</div></div>
 <div class="theme-btn" data-val="Remove All Background" onclick="pickTheme(this)"><img src="rose crepe.png"/><div class="theme-label">Remove All Background</div></div>
-<div class="theme-btn" data-val="Fade to Product Color" onclick="pickTheme(this)"><img src="fade to white.png"/><div class="theme-label">Fade to Product Color</div></div>
+<div class="theme-btn" id="fadeToProductColorBtn" data-val="Fade to Product Color" onclick="pickTheme(this)"><img src="fade to white.png"/><div class="theme-label">Fade to Product Color</div></div>
 </div>
+<div id="fadeColorArrowCallout" class="fade-color-arrow-callout" style="display:none" role="status"></div>
 <div id="fadeColorInfoToast" class="mug-select-flash" style="display:none;position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:2100;max-width:92vw;width:340px;text-align:center;box-shadow:0 8px 24px rgba(0,0,0,0.5)"></div>
 <div id="decorativeColorWrap">
 <div class="note" style="margin-bottom:6px">Color</div>
@@ -1770,7 +1778,56 @@ function pickTravelMugColorGen(el,colorName){
   } else {
     el.classList.add('selected');
     preGenTravelColor=colorName;
+    maybeShowFadeColorPrompt();
   }
+}
+
+// Nudges the customer toward "Fade to Product Color" right after they pick
+// a mug color, since that pairing is what actually blends their edges into
+// that color instead of white. Only shows for the first 5 times a color is
+// picked in this session — by then they've had ample opportunity to notice
+// it, so it stops appearing rather than nagging indefinitely.
+let fadeColorPromptShownCount=0;
+let fadeColorCalloutHideTimer=null;
+let fadeColorBtnFlashTimer=null;
+
+function maybeShowFadeColorPrompt(){
+  if(fadeColorPromptShownCount>=5)return;
+  fadeColorPromptShownCount++;
+
+  smoothScrollToTarget('fadeToProductColorBtn','center',()=>{
+    positionFadeColorCallout();
+  });
+}
+
+function positionFadeColorCallout(){
+  const btn=document.getElementById('fadeToProductColorBtn');
+  const callout=document.getElementById('fadeColorArrowCallout');
+  if(!btn||!callout)return;
+
+  callout.textContent="👇 We recommend turning this on — it blends your edges perfectly into your mug's color. Didn't want that? Just tap it again to turn it off.";
+
+  const rect=btn.getBoundingClientRect();
+  const calloutWidth=Math.min(270,window.innerWidth*0.86);
+  let left=rect.left+rect.width/2-calloutWidth/2;
+  if(left+calloutWidth>window.innerWidth-10)left=window.innerWidth-calloutWidth-10;
+  if(left<10)left=10;
+
+  const spaceAbove=rect.top;
+  const placeAbove=spaceAbove>140;
+  callout.classList.toggle('arrow-down',placeAbove);
+  callout.classList.toggle('arrow-up',!placeAbove);
+  callout.style.left=left+'px';
+  callout.style.top=placeAbove ? (rect.top-14)+'px' : (rect.bottom+14)+'px';
+  callout.style.transform=placeAbove ? 'translateY(-100%)' : 'none';
+  callout.style.display='block';
+
+  btn.classList.add('theme-btn-flash');
+
+  clearTimeout(fadeColorCalloutHideTimer);
+  clearTimeout(fadeColorBtnFlashTimer);
+  fadeColorCalloutHideTimer=setTimeout(()=>{callout.style.display='none';},4500);
+  fadeColorBtnFlashTimer=setTimeout(()=>{btn.classList.remove('theme-btn-flash');},4500);
 }
 
 function refreshTravelMugColorVisibility(){
