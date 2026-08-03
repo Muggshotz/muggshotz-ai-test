@@ -215,6 +215,7 @@
   <div class="field">
     <label>Stage background image</label>
     <input type="file" id="bgInput" accept="image/*">
+    <button class="ghost small" id="clearBgBtn" type="button" disabled>✕ Clear background</button>
   </div>
 
   <details open>
@@ -510,6 +511,7 @@ const stageBg = document.getElementById('stageBg');
 const boxOutline = document.getElementById('boxOutline');
 const placeholder = document.getElementById('placeholder');
 const bgInput = document.getElementById('bgInput');
+const clearBgBtn = document.getElementById('clearBgBtn');
 const clipInput = document.getElementById('clipInput');
 const clipLabel = document.getElementById('clipLabel');
 const scaleSlider = document.getElementById('scale');
@@ -836,13 +838,26 @@ function updatePlaceholder(){
   placeholder.style.display = (bgLoaded || layers.length) ? 'none' : 'flex';
 }
 
+function setBackgroundLoadedState(loaded){
+  bgLoaded = loaded;
+  clearBgBtn.disabled = !loaded;
+  updatePlaceholder();
+}
+
 bgInput.addEventListener('change', e => {
   const f = e.target.files[0];
   if(!f) return;
   stageBg.src = URL.createObjectURL(f);
   stageBg.classList.add('loaded');
-  bgLoaded = true;
-  updatePlaceholder();
+  setBackgroundLoadedState(true);
+});
+
+clearBgBtn.addEventListener('click', () => {
+  stageBg.removeAttribute('src');
+  stageBg.classList.remove('loaded');
+  bgInput.value = '';
+  document.querySelectorAll('#backdropGrid .thumb-cell').forEach(c => c.classList.remove('selected'));
+  setBackgroundLoadedState(false);
 });
 
 clipInput.addEventListener('change', e => {
@@ -1482,8 +1497,7 @@ document.getElementById('loadBackdropsBtn').addEventListener('click', async () =
           const url = img.src && img.src.startsWith('blob:') ? img.src : await fetchImageBlobUrl(filename);
           stageBg.src = url;
           stageBg.classList.add('loaded');
-          bgLoaded = true;
-          updatePlaceholder();
+          setBackgroundLoadedState(true);
           setStatus(backdropsStatus, 'Loaded ' + filename + ' onto the stage.', 'ok');
           if(backdropAutoCollapseArmed){
             backdropDetailsEl.open = false;
