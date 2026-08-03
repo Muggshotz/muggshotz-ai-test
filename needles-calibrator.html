@@ -31,6 +31,16 @@
     object-fit:cover; display:none;
   }
   .stage-bg.loaded{display:block}
+  #bgLayersContainer{ position:absolute; inset:0; z-index:0 }
+  .stage-bg-layer{ position:absolute; }
+  .stage-bg-layer img{ width:100%; height:100%; object-fit:fill; display:block; pointer-events:none }
+  .stage-bg-layer.active-layer{ outline:2px dashed var(--blue); outline-offset:2px }
+  .bg-resize-handle{
+    position:absolute; right:-7px; bottom:-7px; width:14px; height:14px;
+    background:var(--blue); border:2px solid #fff; border-radius:3px;
+    cursor:nwse-resize; display:none; z-index:5;
+  }
+  .stage-bg-layer.active-layer .bg-resize-handle{ display:block }
   .stage-clip-layer{
     position:absolute; display:none; pointer-events:none;
   }
@@ -152,8 +162,8 @@
 
 <div class="stage-col">
   <div class="stage-wrap" id="stageWrap">
-    <div class="placeholder" id="placeholder">Load the stage background, then add one or more clips.</div>
-    <img class="stage-bg" id="stageBg">
+    <div class="placeholder" id="placeholder">Add a background (or several — they'll stack), then add one or more clips.</div>
+    <div id="bgLayersContainer"></div>
     <div class="box-outline" id="boxOutline"></div>
     <!-- Clip layers are inserted here dynamically, one <div class="stage-clip-layer"> per clip on stage -->
   </div>
@@ -213,18 +223,56 @@
   </details>
 
   <div class="field">
-    <label>Stage background image</label>
+    <label>Add a background from your computer</label>
     <input type="file" id="bgInput" accept="image/*">
-    <button class="ghost small" id="clearBgBtn" type="button" disabled>✕ Clear background</button>
   </div>
 
   <details open>
     <summary>Browse backdrops — pick one visually</summary>
-    <p class="sub" style="margin-top:0">Scans the repo for every image file so you can see and compare all the candidate backdrops side by side, and click one to load it onto the stage.</p>
+    <p class="sub" style="margin-top:0">Scans the repo for every image file so you can see and compare all the candidate backdrops side by side, and click one to add it to the stage — you can add more than one, they'll stack.</p>
     <button class="ghost small" id="loadBackdropsBtn" type="button" style="margin-top:0">Load backdrop thumbnails</button>
     <div class="status" id="backdropsStatus"></div>
     <div class="thumb-grid" id="backdropGrid"></div>
   </details>
+
+  <div class="divider"></div>
+  <h2>Backgrounds on stage</h2>
+  <p class="sub" style="margin-top:0">Every background listed here stacks on the stage together — whichever one was added last sits on top. Click one to select it for editing below.</p>
+  <div id="bgLayersList"></div>
+  <div id="emptyBgLayersNote" class="empty-layers-note">No backgrounds on stage yet — add one above.</div>
+
+  <div class="divider"></div>
+  <h2>Editing background: <span id="activeBgLayerLabel" style="color:var(--text)">(none selected)</span></h2>
+
+  <div class="field">
+    <label>Width (%)</label>
+    <div class="slider-row">
+      <input type="range" id="bgWidth" min="5" max="250" step="0.5" value="100" disabled>
+      <span class="val" id="bgWidthVal">100.0</span>
+    </div>
+  </div>
+  <div class="field">
+    <label>Height (%)</label>
+    <div class="slider-row">
+      <input type="range" id="bgHeight" min="5" max="250" step="0.5" value="100" disabled>
+      <span class="val" id="bgHeightVal">100.0</span>
+    </div>
+  </div>
+  <div class="field">
+    <label>Horizontal offset (%)</label>
+    <div class="slider-row">
+      <input type="range" id="bgOffsetX" min="-100" max="100" step="0.5" value="0" disabled>
+      <span class="val" id="bgOffsetXVal">0.0</span>
+    </div>
+  </div>
+  <div class="field">
+    <label>Vertical offset (%)</label>
+    <div class="slider-row">
+      <input type="range" id="bgOffsetY" min="-100" max="100" step="0.5" value="0" disabled>
+      <span class="val" id="bgOffsetYVal">0.0</span>
+    </div>
+  </div>
+  <p class="sub" style="margin-top:6px">You can also drag the small blue handle in the bottom-right corner of the selected background, right on the stage, to resize it freely — width and height adjust independently based on the angle you pull.</p>
 
   <div class="divider"></div>
   <h2>Clips on stage</h2>
@@ -507,11 +555,21 @@
 const DEFAULT_BOX = { top: 10.59, left: 15.19, width: 78.25, height: 78.27 };
 
 const stageWrap = document.getElementById('stageWrap');
-const stageBg = document.getElementById('stageBg');
+const bgLayersContainer = document.getElementById('bgLayersContainer');
 const boxOutline = document.getElementById('boxOutline');
 const placeholder = document.getElementById('placeholder');
 const bgInput = document.getElementById('bgInput');
-const clearBgBtn = document.getElementById('clearBgBtn');
+const bgLayersList = document.getElementById('bgLayersList');
+const emptyBgLayersNote = document.getElementById('emptyBgLayersNote');
+const activeBgLayerLabel = document.getElementById('activeBgLayerLabel');
+const bgWidthSlider = document.getElementById('bgWidth');
+const bgHeightSlider = document.getElementById('bgHeight');
+const bgOffsetXSlider = document.getElementById('bgOffsetX');
+const bgOffsetYSlider = document.getElementById('bgOffsetY');
+const bgWidthVal = document.getElementById('bgWidthVal');
+const bgHeightVal = document.getElementById('bgHeightVal');
+const bgOffsetXVal = document.getElementById('bgOffsetXVal');
+const bgOffsetYVal = document.getElementById('bgOffsetYVal');
 const clipInput = document.getElementById('clipInput');
 const clipLabel = document.getElementById('clipLabel');
 const scaleSlider = document.getElementById('scale');
@@ -832,32 +890,219 @@ function renderLayersList(){
   });
 }
 
-let bgLoaded = false;
+// ================================================================
+// ===== Background layers: same stacking/selection idea as clips,
+// but images with independent width/height instead of one uniform
+// scale — plus a drag handle on the stage for freeform corner
+// resize. Stacking order follows add order (later = on top), same
+// as clip layers, via plain DOM append order.
+// ================================================================
+let bgLayers = [];
+let activeBgLayerId = null;
+let nextBgLayerId = 1;
 
-function updatePlaceholder(){
-  placeholder.style.display = (bgLoaded || layers.length) ? 'none' : 'flex';
+function makeDefaultBgLayerValues(){
+  return { offsetX: 0, offsetY: 0, width: 100, height: 100 };
 }
 
-function setBackgroundLoadedState(loaded){
-  bgLoaded = loaded;
-  clearBgBtn.disabled = !loaded;
+function getActiveBgLayer(){
+  return bgLayers.find(l => l.id === activeBgLayerId) || null;
+}
+
+function applyBgLayerTransform(layer){
+  const v = layer.values;
+  layer.wrapEl.style.left = (50 - v.width / 2 + v.offsetX) + '%';
+  layer.wrapEl.style.top = (50 - v.height / 2 + v.offsetY) + '%';
+  layer.wrapEl.style.width = v.width + '%';
+  layer.wrapEl.style.height = v.height + '%';
+}
+
+function addBgLayer(blobUrl, key){
+  const id = nextBgLayerId++;
+  const wrapEl = document.createElement('div');
+  wrapEl.className = 'stage-bg-layer';
+  const imgEl = document.createElement('img');
+  imgEl.src = blobUrl;
+  wrapEl.appendChild(imgEl);
+  const handle = document.createElement('div');
+  handle.className = 'bg-resize-handle';
+  wrapEl.appendChild(handle);
+  bgLayersContainer.appendChild(wrapEl);
+
+  const layer = { id, key: key || ('background-' + id), blobUrl, wrapEl, imgEl, values: makeDefaultBgLayerValues() };
+
+  handle.addEventListener('mousedown', (e) => startBgResizeDrag(e, layer));
+  handle.addEventListener('touchstart', (e) => startBgResizeDrag(e, layer), { passive: false });
+
+  bgLayers.push(layer);
+  selectBgLayer(id);
+  renderBgLayersList();
+  applyBgLayerTransform(layer);
   updatePlaceholder();
+  return layer;
+}
+
+function removeBgLayer(id){
+  const idx = bgLayers.findIndex(l => l.id === id);
+  if(idx === -1) return;
+  const layer = bgLayers[idx];
+  layer.wrapEl.remove();
+  bgLayers.splice(idx, 1);
+  if(activeBgLayerId === id){
+    activeBgLayerId = bgLayers.length ? bgLayers[bgLayers.length - 1].id : null;
+  }
+  renderBgLayersList();
+  syncBgPanelToActiveLayer();
+  updatePlaceholder();
+}
+
+function selectBgLayer(id){
+  activeBgLayerId = id;
+  bgLayers.forEach(l => l.wrapEl.classList.toggle('active-layer', l.id === id));
+  renderBgLayersList();
+  syncBgPanelToActiveLayer();
+}
+
+function renderBgLayersList(){
+  bgLayersList.innerHTML = '';
+  emptyBgLayersNote.style.display = bgLayers.length ? 'none' : 'block';
+  bgLayers.forEach(layer => {
+    const row = document.createElement('div');
+    row.className = 'layer-row' + (layer.id === activeBgLayerId ? ' active' : '');
+    row.addEventListener('click', (e) => {
+      if(e.target.closest('.layer-remove')) return;
+      selectBgLayer(layer.id);
+    });
+
+    const swatch = document.createElement('div');
+    swatch.className = 'layer-swatch';
+    swatch.style.backgroundImage = "url('" + layer.blobUrl + "')";
+    row.appendChild(swatch);
+
+    const info = document.createElement('div');
+    info.className = 'layer-info';
+    const keyEl = document.createElement('div');
+    keyEl.className = 'layer-key';
+    keyEl.textContent = layer.key;
+    const hintEl = document.createElement('div');
+    hintEl.className = 'layer-hint';
+    hintEl.textContent = layer.id === activeBgLayerId ? 'currently editing' : 'click to edit';
+    info.appendChild(keyEl);
+    info.appendChild(hintEl);
+    row.appendChild(info);
+
+    const removeBtn = document.createElement('button');
+    removeBtn.type = 'button';
+    removeBtn.className = 'layer-remove';
+    removeBtn.textContent = '\u2715';
+    removeBtn.title = 'Remove this background from the stage';
+    removeBtn.addEventListener('click', () => removeBgLayer(layer.id));
+    row.appendChild(removeBtn);
+
+    bgLayersList.appendChild(row);
+  });
+}
+
+function syncBgPanelToActiveLayer(){
+  const layer = getActiveBgLayer();
+  const controlsEnabled = !!layer;
+  [bgWidthSlider, bgHeightSlider, bgOffsetXSlider, bgOffsetYSlider].forEach(el => { el.disabled = !controlsEnabled; });
+  if(!layer){
+    activeBgLayerLabel.textContent = '(none selected)';
+    return;
+  }
+  activeBgLayerLabel.textContent = layer.key;
+  const v = layer.values;
+  bgWidthSlider.value = v.width;
+  bgHeightSlider.value = v.height;
+  bgOffsetXSlider.value = v.offsetX;
+  bgOffsetYSlider.value = v.offsetY;
+  refreshBgVals();
+  applyBgLayerTransform(layer);
+}
+
+function pullBgPanelIntoActiveLayer(){
+  const layer = getActiveBgLayer();
+  if(!layer) return;
+  const v = layer.values;
+  v.width = parseFloat(bgWidthSlider.value);
+  v.height = parseFloat(bgHeightSlider.value);
+  v.offsetX = parseFloat(bgOffsetXSlider.value);
+  v.offsetY = parseFloat(bgOffsetYSlider.value);
+  applyBgLayerTransform(layer);
+  refreshBgVals();
+}
+
+function refreshBgVals(){
+  bgWidthVal.textContent = parseFloat(bgWidthSlider.value).toFixed(1);
+  bgHeightVal.textContent = parseFloat(bgHeightSlider.value).toFixed(1);
+  bgOffsetXVal.textContent = parseFloat(bgOffsetXSlider.value).toFixed(1);
+  bgOffsetYVal.textContent = parseFloat(bgOffsetYSlider.value).toFixed(1);
+}
+[bgWidthSlider, bgHeightSlider, bgOffsetXSlider, bgOffsetYSlider].forEach(el => el.addEventListener('input', pullBgPanelIntoActiveLayer));
+
+// Drag the corner handle on the stage to resize freely — pulling right/down
+// grows the box, pulling left/up shrinks it, width and height independently
+// based on the actual angle dragged.
+let activeBgDrag = null;
+
+function startBgResizeDrag(e, layer){
+  e.preventDefault();
+  e.stopPropagation();
+  selectBgLayer(layer.id);
+  const point = (e.touches && e.touches[0]) ? e.touches[0] : e;
+  activeBgDrag = {
+    layer,
+    startX: point.clientX,
+    startY: point.clientY,
+    startWidth: layer.values.width,
+    startHeight: layer.values.height,
+    stageRect: stageWrap.getBoundingClientRect()
+  };
+  window.addEventListener('mousemove', onBgResizeDragMove);
+  window.addEventListener('mouseup', endBgResizeDrag);
+  window.addEventListener('touchmove', onBgResizeDragMove, { passive: false });
+  window.addEventListener('touchend', endBgResizeDrag);
+}
+
+function onBgResizeDragMove(e){
+  if(!activeBgDrag) return;
+  e.preventDefault();
+  const point = (e.touches && e.touches[0]) ? e.touches[0] : e;
+  const dxPct = ((point.clientX - activeBgDrag.startX) / activeBgDrag.stageRect.width) * 100;
+  const dyPct = ((point.clientY - activeBgDrag.startY) / activeBgDrag.stageRect.height) * 100;
+  // Box is center-anchored, so growing the visible corner by d needs the
+  // total width/height to grow by 2d to keep the opposite edge in place.
+  const newWidth = Math.max(5, activeBgDrag.startWidth + dxPct * 2);
+  const newHeight = Math.max(5, activeBgDrag.startHeight + dyPct * 2);
+  activeBgDrag.layer.values.width = newWidth;
+  activeBgDrag.layer.values.height = newHeight;
+  applyBgLayerTransform(activeBgDrag.layer);
+  if(activeBgDrag.layer.id === activeBgLayerId){
+    bgWidthSlider.value = newWidth;
+    bgHeightSlider.value = newHeight;
+    refreshBgVals();
+  }
+}
+
+function endBgResizeDrag(){
+  activeBgDrag = null;
+  window.removeEventListener('mousemove', onBgResizeDragMove);
+  window.removeEventListener('mouseup', endBgResizeDrag);
+  window.removeEventListener('touchmove', onBgResizeDragMove);
+  window.removeEventListener('touchend', endBgResizeDrag);
+}
+
+function updatePlaceholder(){
+  placeholder.style.display = (bgLayers.length || layers.length) ? 'none' : 'flex';
 }
 
 bgInput.addEventListener('change', e => {
   const f = e.target.files[0];
   if(!f) return;
-  stageBg.src = URL.createObjectURL(f);
-  stageBg.classList.add('loaded');
-  setBackgroundLoadedState(true);
-});
-
-clearBgBtn.addEventListener('click', () => {
-  stageBg.removeAttribute('src');
-  stageBg.classList.remove('loaded');
+  const key = f.name.replace(/\.[^/.]+$/, '');
+  addBgLayer(URL.createObjectURL(f), key);
   bgInput.value = '';
-  document.querySelectorAll('#backdropGrid .thumb-cell').forEach(c => c.classList.remove('selected'));
-  setBackgroundLoadedState(false);
 });
 
 clipInput.addEventListener('change', e => {
@@ -867,6 +1112,7 @@ clipInput.addEventListener('change', e => {
   addLayer(URL.createObjectURL(f), key, null);
   clipInput.value = '';
 });
+
 
 function positionBox(){
   boxOutline.style.top = DEFAULT_BOX.top + '%';
@@ -1490,15 +1736,11 @@ document.getElementById('loadBackdropsBtn').addEventListener('click', async () =
       grid.appendChild(cell);
 
       cell.addEventListener('click', async () => {
-        document.querySelectorAll('#backdropGrid .thumb-cell').forEach(c => c.classList.remove('selected'));
-        cell.classList.add('selected');
-        setStatus(backdropsStatus, 'Loading ' + filename + ' onto the stage\u2026', 'pending');
+        setStatus(backdropsStatus, 'Adding ' + filename + ' to the stage\u2026', 'pending');
         try{
           const url = img.src && img.src.startsWith('blob:') ? img.src : await fetchImageBlobUrl(filename);
-          stageBg.src = url;
-          stageBg.classList.add('loaded');
-          setBackgroundLoadedState(true);
-          setStatus(backdropsStatus, 'Loaded ' + filename + ' onto the stage.', 'ok');
+          addBgLayer(url, filename.replace(/\.[^/.]+$/, ''));
+          setStatus(backdropsStatus, 'Added ' + filename + ' to the stage.', 'ok');
           if(backdropAutoCollapseArmed){
             backdropDetailsEl.open = false;
             backdropHasAutoCollapsedOnce = true;
