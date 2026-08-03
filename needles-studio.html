@@ -1700,6 +1700,9 @@ function pickPreGenTravelVariant(key){
   preGenTravelVariant=key;
   renderTravelMugVariantGrid();
   refreshTravelMugColorVisibility();
+  const colorCard=document.getElementById('travelMugColorCard');
+  const scrollTarget=(colorCard && colorCard.style.display!=='none') ? 'travelMugColorCard' : 'travelMugVariantCard';
+  smoothScrollToTarget(scrollTarget,'start');
 }
 
 function refreshTravelMugVariantVisibility(){
