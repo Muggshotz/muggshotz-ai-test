@@ -1701,8 +1701,10 @@ function pickPreGenTravelVariant(key){
   renderTravelMugVariantGrid();
   refreshTravelMugColorVisibility();
   const colorCard=document.getElementById('travelMugColorCard');
-  const scrollTarget=(colorCard && colorCard.style.display!=='none') ? 'travelMugColorCard' : 'travelMugVariantCard';
-  smoothScrollToTarget(scrollTarget,'start');
+  const scrollTarget=(colorCard && colorCard.style.display!=='none') ? 'travelMugColorCard' : 'finalGenerateGuidance';
+  const finalGuide=document.getElementById('finalGenerateGuidance');
+  if(scrollTarget==='finalGenerateGuidance' && finalGuide)finalGuide.classList.add('visible');
+  smoothScrollToTarget(scrollTarget,'center');
 }
 
 function refreshTravelMugVariantVisibility(){
