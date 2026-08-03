@@ -207,6 +207,8 @@
 @keyframes themeBtnFlash{0%,100%{border-color:#3d8bff;box-shadow:0 0 0 2px #3d8bff,0 0 10px 1px rgba(61,139,255,0.6)}50%{border-color:#8ec4ff;box-shadow:0 0 0 3px #8ec4ff,0 0 20px 4px rgba(61,139,255,0.9)}}
 .mug-available-flash{font-size:16px!important;font-weight:800!important;letter-spacing:.5px!important;text-transform:uppercase;padding:10px 8px;border-radius:8px;animation:mugSelectFlash 1s ease-in-out infinite;text-align:center;margin-top:1rem}
 #wraparoundStandbyPrompt{margin-top:1rem;text-align:center}
+.frame-btn.coming-soon{opacity:.45;cursor:default;pointer-events:none}
+.frame-color-panel-row{margin-top:10px}
 
 /* ============================================================
    NEEDLES STUDIO — ICE, SILVER & BLACK CREDIT SYSTEM
@@ -671,9 +673,8 @@
 
 <div class="card" id="travelMugColorCard" style="display:none">
 <div class="card-title">🎨 Travel Mug Color</div>
-<div class="note" style="margin-top:0;margin-bottom:.75rem">Optional — pick your mug color now so "Fade to Product Color" (and the automatic edge fade) can match it exactly, instead of assuming white. You can still change this later.</div>
+<div class="note" style="margin-top:0;margin-bottom:.75rem">Optional — pick your mug color now so the automatic edge fade can match it exactly, instead of assuming white. You can still change this later.</div>
 <div class="color-grid" id="travelMugColorGridGen"></div>
-<div class="note-prominent" style="margin-top:.9rem">💡 If you picked a color above, we recommend also selecting "Fade to Product Color" in the Background section below — it makes your design's edges blend perfectly into that exact color instead of white.</div>
 </div>
 
 <div class="card" id="photoPosterOptionsCard" style="display:none">
@@ -717,7 +718,7 @@
 
 <div class="card" id="toteBagColorCard" style="display:none">
 <div class="card-title">👜 Tote Bag Color</div>
-<div class="note" style="margin-top:0;margin-bottom:.75rem">Optional — pick your tote color now so "Fade to Product Color" can match it exactly. You can still change this later.</div>
+<div class="note" style="margin-top:0;margin-bottom:.75rem">Optional — pick your tote color now so the automatic edge fade can match it exactly. You can still change this later.</div>
 <div class="color-grid" id="toteBagColorGridGen"></div>
 </div>
 
@@ -725,36 +726,10 @@
 
 <div class="card"><div class="card-title">🎭 Degree of Caricature</div><div class="grid3"><div class="btn-select selected" data-val="0.15" onclick="pick(this,'likeness')"><span class="icon">😊</span>Lifelike</div><div class="btn-select" data-val="0.25" onclick="pick(this,'likeness')"><span class="icon">😄</span>Balanced</div><div class="btn-select" data-val="0.35" onclick="pick(this,'likeness')"><span class="icon">🤪</span>Wild</div></div></div>
 
-<div class="card"><div class="card-title">🖼️ Background</div>
-<div class="note" style="margin-top:0;margin-bottom:.75rem">Optional — pick a theme and a color, or leave blank and just describe it above.</div>
-<div class="theme-grid" id="themeGrid">
-<div class="theme-btn" data-val="Marbling" onclick="pickTheme(this)"><img src="laced marble.png"/><div class="theme-label">Marbling</div></div>
-<div class="theme-btn" data-val="Cloud Mist" onclick="pickTheme(this)"><img src="clouds.png"/><div class="theme-label">Cloud Mist</div></div>
-<div class="theme-btn" data-val="Pastel Leaf" onclick="pickTheme(this)"><img src="pastel leaf.png"/><div class="theme-label">Pastel Leaf</div></div>
-<div class="theme-btn" data-val="Satin Sheets" onclick="pickTheme(this)"><img src="satin sheets.png"/><div class="theme-label">Satin Sheets</div></div>
-<div class="theme-btn" data-val="Frosted Glass" onclick="pickTheme(this)"><img src="frosted mirror.png"/><div class="theme-label">Frosted Glass</div></div>
-<div class="theme-btn" data-val="Bubble Drift" onclick="pickTheme(this)"><img src="bubble drift.png"/><div class="theme-label">Bubble Drift</div></div>
-<div class="theme-btn" data-val="Remove All Background" onclick="pickTheme(this)"><img src="rose crepe.png"/><div class="theme-label">Remove All Background</div></div>
-<div class="theme-btn" id="fadeToProductColorBtn" data-val="Fade to Product Color" onclick="pickTheme(this)"><img src="fade to white.png"/><div class="theme-label">Fade to Product Color</div></div>
-</div>
-<div id="fadeColorArrowCallout" class="fade-color-arrow-callout" style="display:none" role="status"></div>
-<div id="fadeColorInfoToast" class="mug-select-flash" style="display:none;position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:2100;max-width:92vw;width:340px;text-align:center;box-shadow:0 8px 24px rgba(0,0,0,0.5)"></div>
-<div id="decorativeColorWrap">
-<div class="note" style="margin-bottom:6px">Color</div>
-<div class="color-grid" id="colorGrid" style="margin-bottom:18px">
-<div class="color-btn" data-val="Lavender" onclick="pickColor(this)"><div class="ball" style="background:#8B5FBF"></div></div>
-<div class="color-btn" data-val="Rose" onclick="pickColor(this)"><div class="ball" style="background:#E0457B"></div></div>
-<div class="color-btn" data-val="Light Green" onclick="pickColor(this)"><div class="ball" style="background:#5FBF5F"></div></div>
-<div class="color-btn" data-val="Dark Green" onclick="pickColor(this)"><div class="ball" style="background:#1F7A45"></div></div>
-<div class="color-btn" data-val="Red" onclick="pickColor(this)"><div class="ball" style="background:#D62828"></div></div>
-<div class="color-btn" data-val="Orange" onclick="pickColor(this)"><div class="ball" style="background:#F0701A"></div></div>
-<div class="color-btn" data-val="Light Blue" onclick="pickColor(this)"><div class="ball" style="background:#5FA8DE"></div></div>
-<div class="color-btn" data-val="Navy Blue" onclick="pickColor(this)"><div class="ball" style="background:#1B3D7A"></div></div>
-<div class="color-btn" data-val="Black" onclick="pickColor(this)"><div class="ball" style="background:#1c1c1c"></div></div>
-<div class="color-btn" data-val="Yellow" onclick="pickColor(this)"><div class="ball" style="background:#F0D43A"></div></div>
-<div class="color-btn" data-val="Teal" onclick="pickColor(this)"><div class="ball" style="background:#1F9E8E"></div></div>
-<div class="color-btn" data-val="Purple" onclick="pickColor(this)"><div class="ball" style="background:#8E3FC9"></div></div>
-</div>
+<div class="card"><div class="card-title">🖼️ Frame</div>
+<div class="note" style="margin-top:0;margin-bottom:.75rem">Optional — pick a frame to add around your finished artwork, applied after your design is generated. Leave blank for a clean, unframed look.</div>
+<div class="theme-grid frame-grid" id="frameGrid"></div>
+<div id="frameColorPanel" style="display:none;margin-top:14px"></div>
 </div>
 
 <div id="finalGenerateGuidance" class="guidance-prompt" role="status">If satisfied with all selections, press "Generate." If not, feel free to scroll back up and make any additional changes.</div>
@@ -1543,8 +1518,277 @@ function setupTokenInfoTriggers(){
 setupTokenInfoTriggers();
 
 let captionFont="Anton",captionPos="bottom-left",baseImg=null,finalImageUrl=null;
-let selectedTheme=null,selectedColor=null;
 let captionBold=false,captionItalic=false,captionEffect="none";
+
+// ================= FRAME SYSTEM =================
+// Frame overlays are composited onto the finished, edge-faded artwork —
+// drawn during drawCaption(), same pattern as the caption text below.
+const FRAME_CATALOG = {
+  "Ornate Gold": { type:"image", asset:"frame-ornate-gold.png", defaultColor:"#D4AF37" },
+  "Walnut Gold": { type:"image", asset:"frame-walnut-gold.png", defaultColor:"#D4AF37" },
+  "Brushed Silver": { type:"image", asset:"frame-brushed-silver.png", defaultColor:"#C0C0C0" },
+  "Black Champagne": { type:"image", asset:"frame-black-champagne.png", defaultColor:"#D9C89E" },
+  "Air Mail": { type:"image", asset:"frame-air-mail.png", defaultColor:"#3d8bff" },
+  "Neon Celebration": { type:"image", asset:"frame-neon-celebration.png", defaultColor:"#ff2ee0" },
+  "Retro Arcade": { type:"image", asset:"frame-retro-arcade.png", defaultColor:"#ffcc00" },
+  "Neon Dreams": { type:"image", asset:"frame-neon-dreams.png", defaultColor:"#00eaff" },
+  "Comic Panel": { type:"procedural", draw:"comic", defaultColor:"#1c1c1c" },
+  "Wanted Poster": { type:"procedural", draw:"wanted", defaultColor:"#c9a05a" },
+  "Trophy Plaque": { type:"procedural", draw:"plaque", defaultColor:"#d4a017" },
+  "Trading Card": { type:"procedural", draw:"card", defaultColor:"#3d8bff" },
+  "Thin Line": { type:"procedural", draw:"thin", defaultColor:"#ffffff" },
+  "Vintage Postage Stamp": { type:"procedural", draw:"stamp", defaultColor:"#ffffff" },
+  "Window Sill": { type:"comingSoon" },
+  "Double Mat": { type:"proceduralMulti", draw:"doubleMat", layers:["Outer Frame","Upper Mat","Lower Mat"], defaultColors:["#8a5a34","#f5f0e6","#2a2a2a"] }
+};
+
+const FRAME_COLOR_SWATCHES = [
+  { name:"Gold", hex:"#D4AF37" }, { name:"Silver", hex:"#C0C0C0" }, { name:"Champagne", hex:"#D9C89E" },
+  { name:"Bronze", hex:"#B08D57" }, { name:"Black", hex:"#1c1c1c" }, { name:"White", hex:"#ffffff" },
+  { name:"Red", hex:"#D62828" }, { name:"Blue", hex:"#3d8bff" }, { name:"Navy", hex:"#1B3D7A" },
+  { name:"Green", hex:"#1F7A45" }, { name:"Pink", hex:"#E0457B" }, { name:"Purple", hex:"#8E3FC9" },
+  { name:"Orange", hex:"#F0701A" }, { name:"Yellow", hex:"#F0D43A" }, { name:"Teal", hex:"#1F9E8E" }, { name:"Tan", hex:"#c9a05a" }
+];
+
+let selectedFrame = null;
+let frameColors = {};
+
+function hexToHue(hex){
+  const h=(hex||'#ffffff').replace('#','');
+  const full=h.length===3?h.split('').map(c=>c+c).join(''):h;
+  const n=parseInt(full,16);
+  const r=((n>>16)&255)/255, g=((n>>8)&255)/255, b=(n&255)/255;
+  const max=Math.max(r,g,b), min=Math.min(r,g,b);
+  let hDeg=0;
+  const d=max-min;
+  if(d!==0){
+    if(max===r)hDeg=((g-b)/d)%6;
+    else if(max===g)hDeg=(b-r)/d+2;
+    else hDeg=(r-g)/d+4;
+    hDeg*=60;
+    if(hDeg<0)hDeg+=360;
+  }
+  return hDeg;
+}
+
+function renderFrameGrid(){
+  const grid=document.getElementById('frameGrid');
+  if(!grid)return;
+  grid.innerHTML='';
+  Object.entries(FRAME_CATALOG).forEach(([name,data])=>{
+    const btn=document.createElement('div');
+    btn.className='theme-btn frame-btn'+(selectedFrame===name?' selected':'')+(data.type==='comingSoon'?' coming-soon':'');
+    const swatch=document.createElement('div');
+    swatch.style.cssText='width:100%;aspect-ratio:1;display:flex;align-items:center;justify-content:center;background:#0d0d0d';
+    if(data.type==='image'){
+      const img=document.createElement('img');
+      img.src=data.asset;
+      img.style.cssText='width:100%;height:100%;object-fit:cover';
+      swatch.appendChild(img);
+    } else if(data.type==='comingSoon'){
+      swatch.textContent='🔜';
+      swatch.style.fontSize='22px';
+      swatch.style.opacity='0.6';
+    } else {
+      const preview=document.createElement('div');
+      const previewColor=data.defaultColor||(data.defaultColors?data.defaultColors[0]:'#888');
+      preview.style.cssText='width:80%;height:80%;border:6px solid '+previewColor+';border-radius:4px;background:transparent';
+      swatch.appendChild(preview);
+    }
+    btn.appendChild(swatch);
+    const label=document.createElement('div');
+    label.className='theme-label';
+    label.textContent=(data.type==='comingSoon' ? name+' (Soon)' : name);
+    btn.appendChild(label);
+    if(data.type!=='comingSoon'){
+      btn.onclick=()=>pickFrame(name);
+    }
+    grid.appendChild(btn);
+  });
+}
+
+function pickFrame(name){
+  const wasSelected=(selectedFrame===name);
+  selectedFrame=wasSelected?null:name;
+  renderFrameGrid();
+  renderFrameColorPanel();
+  drawCaption();
+}
+
+function renderFrameColorPanel(){
+  const panel=document.getElementById('frameColorPanel');
+  if(!panel)return;
+  if(!selectedFrame){
+    panel.style.display='none';
+    panel.innerHTML='';
+    return;
+  }
+  const data=FRAME_CATALOG[selectedFrame];
+  panel.style.display='block';
+  panel.innerHTML='';
+
+  function makeRow(label,key,defaultHex){
+    if(!frameColors[key])frameColors[key]=defaultHex;
+    const wrap=document.createElement('div');
+    wrap.className='frame-color-panel-row';
+    const lab=document.createElement('div');
+    lab.className='note';
+    lab.style.marginBottom='6px';
+    lab.textContent=label;
+    wrap.appendChild(lab);
+    const cgrid=document.createElement('div');
+    cgrid.className='color-grid';
+    FRAME_COLOR_SWATCHES.forEach(c=>{
+      const b=document.createElement('div');
+      b.className='color-btn'+(frameColors[key]===c.hex?' selected':'');
+      b.onclick=()=>{ frameColors[key]=c.hex; renderFrameColorPanel(); drawCaption(); };
+      const ball=document.createElement('div');
+      ball.className='ball';
+      ball.style.background=c.hex;
+      b.appendChild(ball);
+      cgrid.appendChild(b);
+    });
+    wrap.appendChild(cgrid);
+    panel.appendChild(wrap);
+  }
+
+  if(data.type==='proceduralMulti'){
+    data.layers.forEach((layerLabel,i)=>{
+      makeRow(layerLabel, selectedFrame+':'+i, data.defaultColors[i]);
+    });
+  } else {
+    makeRow('Frame Color', selectedFrame, data.defaultColor);
+  }
+}
+
+function drawFrameOnCanvas(ctx,canvas){
+  if(!selectedFrame)return Promise.resolve();
+  const data=FRAME_CATALOG[selectedFrame];
+  if(!data)return Promise.resolve();
+
+  if(data.type==='image'){
+    return new Promise((resolve)=>{
+      const img=new Image();
+      img.crossOrigin='anonymous';
+      img.onload=()=>{
+        const hex=frameColors[selectedFrame]||data.defaultColor;
+        const rotate=Math.round(hexToHue(hex)-hexToHue(data.defaultColor));
+        ctx.save();
+        ctx.filter='hue-rotate('+rotate+'deg) saturate(1.15)';
+        ctx.drawImage(img,0,0,canvas.width,canvas.height);
+        ctx.filter='none';
+        ctx.restore();
+        resolve();
+      };
+      img.onerror=()=>resolve();
+      img.src=data.asset;
+    });
+  }
+
+  if(data.type==='proceduralMulti'){
+    drawDoubleMat(ctx,canvas);
+    return Promise.resolve();
+  }
+
+  const hex=frameColors[selectedFrame]||data.defaultColor;
+  drawProceduralFrame(ctx,canvas,data.draw,hex);
+  return Promise.resolve();
+}
+
+function drawProceduralFrame(ctx,canvas,kind,hex){
+  const w=canvas.width,h=canvas.height;
+  ctx.save();
+  if(kind==='thin'){
+    const t=Math.round(w*0.012);
+    ctx.strokeStyle=hex;
+    ctx.lineWidth=t;
+    ctx.strokeRect(t/2,t/2,w-t,h-t);
+  } else if(kind==='comic'){
+    const t=Math.round(w*0.045);
+    ctx.strokeStyle=hex;
+    ctx.lineWidth=t;
+    ctx.strokeRect(t/2,t/2,w-t,h-t);
+    ctx.fillStyle=hex;
+    const dot=Math.round(w*0.018);
+    [[t,t],[w-t,t],[t,h-t],[w-t,h-t]].forEach(function(pt){
+      ctx.beginPath();
+      ctx.arc(pt[0],pt[1],dot,0,Math.PI*2);
+      ctx.fill();
+    });
+  } else if(kind==='wanted'){
+    const t=Math.round(w*0.06);
+    ctx.strokeStyle=hex;
+    ctx.lineWidth=t;
+    ctx.strokeRect(t/2,t/2,w-t,h-t);
+    ctx.fillStyle='rgba(0,0,0,0.35)';
+    const r=Math.round(w*0.014);
+    const pad=Math.round(t*0.55);
+    [[pad,pad],[w-pad,pad],[pad,h-pad],[w-pad,h-pad]].forEach(function(pt){
+      ctx.beginPath();
+      ctx.arc(pt[0],pt[1],r,0,Math.PI*2);
+      ctx.fill();
+    });
+  } else if(kind==='plaque'){
+    const t=Math.round(w*0.035);
+    ctx.strokeStyle=hex;
+    ctx.lineWidth=t;
+    ctx.strokeRect(t/2,t/2,w-t,h-t);
+    ctx.strokeStyle='rgba(0,0,0,0.5)';
+    ctx.lineWidth=Math.max(2,Math.round(t*0.18));
+    ctx.strokeRect(t*1.35,t*1.35,w-t*2.7,h-t*2.7);
+    const plateW=Math.round(w*0.34), plateH=Math.round(h*0.055);
+    const px=(w-plateW)/2, py=h-t*0.85-plateH/2;
+    ctx.fillStyle=hex;
+    ctx.fillRect(px,py,plateW,plateH);
+  } else if(kind==='card'){
+    const t=Math.round(w*0.032);
+    ctx.strokeStyle=hex;
+    ctx.lineWidth=t;
+    ctx.strokeRect(t/2,t/2,w-t,h-t);
+    ctx.strokeStyle='#D4AF37';
+    ctx.lineWidth=Math.max(2,Math.round(t*0.16));
+    ctx.strokeRect(t*1.3,t*1.3,w-t*2.6,h-t*2.6);
+  } else if(kind==='stamp'){
+    const t=Math.round(w*0.05);
+    ctx.fillStyle=(hex==='#ffffff') ? '#f4f4f4' : hex;
+    ctx.fillRect(0,0,w,t);
+    ctx.fillRect(0,h-t,w,t);
+    ctx.fillRect(0,0,t,h);
+    ctx.fillRect(w-t,0,t,h);
+    const step=Math.round(t*0.9);
+    const bite=Math.round(t*0.42);
+    let x;
+    for(x=step/2;x<w;x+=step){
+      ctx.globalCompositeOperation='destination-out';
+      ctx.beginPath(); ctx.arc(x,t,bite,0,Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(x,h-t,bite,0,Math.PI*2); ctx.fill();
+      ctx.globalCompositeOperation='source-over';
+    }
+    let y;
+    for(y=step/2;y<h;y+=step){
+      ctx.globalCompositeOperation='destination-out';
+      ctx.beginPath(); ctx.arc(t,y,bite,0,Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(w-t,y,bite,0,Math.PI*2); ctx.fill();
+      ctx.globalCompositeOperation='source-over';
+    }
+  }
+  ctx.restore();
+}
+
+function drawDoubleMat(ctx,canvas){
+  const w=canvas.width,h=canvas.height;
+  const outerHex=frameColors['Double Mat:0']||'#8a5a34';
+  const upperHex=frameColors['Double Mat:1']||'#f5f0e6';
+  const lowerHex=frameColors['Double Mat:2']||'#2a2a2a';
+  const t1=Math.round(w*0.045), t2=Math.round(w*0.03), t3=Math.round(w*0.012);
+  ctx.save();
+  ctx.strokeStyle=outerHex; ctx.lineWidth=t1; ctx.strokeRect(t1/2,t1/2,w-t1,h-t1);
+  ctx.strokeStyle=upperHex; ctx.lineWidth=t2; ctx.strokeRect(t1+t2/2,t1+t2/2,w-2*t1-t2,h-2*t1-t2);
+  ctx.strokeStyle=lowerHex; ctx.lineWidth=t3; ctx.strokeRect(t1+t2+t3/2,t1+t2+t3/2,w-2*(t1+t2)-t3,h-2*(t1+t2)-t3);
+  ctx.restore();
+}
+// ================= END FRAME SYSTEM =================
+
 let curveMode="straight";
 let drawnStrokes=[];
 let currentStroke=[];
@@ -1772,52 +2016,7 @@ function pickTravelMugColorGen(el,colorName){
   } else {
     el.classList.add('selected');
     preGenTravelColor=colorName;
-    maybeShowFadeColorPrompt();
   }
-}
-
-// Nudges toward "Fade to Product Color" after a color pick; caps at 5 shows per session.
-let fadeColorPromptShownCount=0;
-let fadeColorCalloutHideTimer=null;
-let fadeColorBtnFlashTimer=null;
-
-function maybeShowFadeColorPrompt(){
-  if(fadeColorPromptShownCount>=5)return;
-  fadeColorPromptShownCount++;
-
-  smoothScrollToTarget('fadeToProductColorBtn','center',()=>{
-    positionFadeColorCallout();
-  });
-}
-
-function positionFadeColorCallout(){
-  const btn=document.getElementById('fadeToProductColorBtn');
-  const callout=document.getElementById('fadeColorArrowCallout');
-  if(!btn||!callout)return;
-
-  callout.textContent="👇 We recommend turning this on — it blends your edges perfectly into your mug's color. Didn't want that? Just tap it again to turn it off.";
-
-  const rect=btn.getBoundingClientRect();
-  const calloutWidth=Math.min(270,window.innerWidth*0.86);
-  let left=rect.left+rect.width/2-calloutWidth/2;
-  if(left+calloutWidth>window.innerWidth-10)left=window.innerWidth-calloutWidth-10;
-  if(left<10)left=10;
-
-  const spaceAbove=rect.top;
-  const placeAbove=spaceAbove>140;
-  callout.classList.toggle('arrow-down',placeAbove);
-  callout.classList.toggle('arrow-up',!placeAbove);
-  callout.style.left=left+'px';
-  callout.style.top=placeAbove ? (rect.top-14)+'px' : (rect.bottom+14)+'px';
-  callout.style.transform=placeAbove ? 'translateY(-100%)' : 'none';
-  callout.style.display='block';
-
-  btn.classList.add('theme-btn-flash');
-
-  clearTimeout(fadeColorCalloutHideTimer);
-  clearTimeout(fadeColorBtnFlashTimer);
-  fadeColorCalloutHideTimer=setTimeout(()=>{callout.style.display='none';},4500);
-  fadeColorBtnFlashTimer=setTimeout(()=>{btn.classList.remove('theme-btn-flash');},4500);
 }
 
 function refreshTravelMugColorVisibility(){
@@ -2088,49 +2287,6 @@ function pick(el,type){
   else if(type==='likeness')likeness=el.dataset.val;
 }
 
-function pickTheme(el){
-  const wasSelected=el.classList.contains('selected');
-  document.getElementById('themeGrid').querySelectorAll('.theme-btn').forEach(b=>b.classList.remove('selected'));
-  if(wasSelected){
-    selectedTheme=null;
-  } else {
-    el.classList.add('selected');
-    selectedTheme=el.dataset.val;
-    if(selectedTheme==='Fade to Product Color'){
-      showFadeColorInfoToast("Fades your art's edges into whatever color you pick for your product — no visible border, no need to match colors yourself.");
-    } else if(selectedTheme==='Remove All Background'){
-      showFadeColorInfoToast("Removes the background entirely — just your subject, isolated and clean, with no scene or texture behind them.");
-    }
-  }
-  updateDecorativeColorVisibility();
-}
-
-function updateDecorativeColorVisibility(){
-  const wrap=document.getElementById('decorativeColorWrap');
-  if(!wrap)return;
-  const noColorNeeded=(selectedTheme==='Fade to Product Color'||selectedTheme==='Remove All Background');
-  wrap.style.display=noColorNeeded?'none':'block';
-}
-
-let fadeColorToastTimer=null;
-function showFadeColorInfoToast(message){
-  const el=document.getElementById('fadeColorInfoToast');
-  if(!el)return;
-  el.textContent=message;
-  el.style.display='block';
-  clearTimeout(fadeColorToastTimer);
-  fadeColorToastTimer=setTimeout(()=>{el.style.display='none';},4000);
-}
-
-function getSelectedProductColorName(){
-  if(product==='mug')return selectedGenColor||null;
-  if(product==='water bottle')return preGenTravelColor||selectedTravelColor||null;
-  if(product==='suitcase')return 'Black';
-  if(product==='tote bag')return selectedToteColorGen||null;
-  if(product==='photo poster')return posterFramed ? (posterFrameColor||null) : null;
-  return null;
-}
-
 function hexToRgbTriple(hex){
   const h=(hex||'#FFFFFF').replace('#','');
   const full=h.length===3 ? h.split('').map(c=>c+c).join('') : h;
@@ -2149,46 +2305,6 @@ function getSelectedProductColorHex(){
     if(match)return match.hex;
   }
   return '#FFFFFF';
-}
-
-function buildProductColorFadeDescription(colorName){
-  if(!colorName){
-    return "the artwork's outer edges fade smoothly and completely into a soft, clean white, blending naturally into the product with no visible border";
-  }
-  return `the artwork's outer edges fade smoothly and completely into solid ${colorName.toLowerCase()}, exactly matching the product's own color, so there is no visible border between the design and the material`;
-}
-
-function pickColor(el){
-  const wasSelected=el.classList.contains('selected');
-  document.getElementById('colorGrid').querySelectorAll('.color-btn').forEach(b=>b.classList.remove('selected'));
-  if(wasSelected){
-    selectedColor=null;
-  } else {
-    el.classList.add('selected');
-    selectedColor=el.dataset.val;
-  }
-}
-
-const BACKGROUND_DESCRIPTIONS={
-"Marbling":{"Lavender":"pale lavender marble with soft dusty-purple veining, gentle watercolor blending, edges fading to white","Rose":"soft pink marble with delicate rose-gold veining, gentle watercolor blending, edges fading to white","Light Green":"soft sage-green marble with faint pale veining, gentle watercolor blending, edges fading to white","Dark Green":"deep forest-green marble with darker emerald veining, richer watercolor blending, edges fading to white","Red":"soft warm red marble with fine coral-red veining, gentle watercolor blending, edges fading to white","Orange":"warm peachy-orange marble with soft amber veining, gentle watercolor blending, edges fading to white","Light Blue":"soft sky-blue marble with pale silvery veining, gentle watercolor blending, edges fading to white","Navy Blue":"deep navy marble with fine silver-blue veining, richer watercolor blending, edges fading to white","Black":"soft charcoal-gray marble with fine pale-gray veining, moody watercolor blending, edges fading to white","Yellow":"soft golden-yellow marble with warm honey veining, gentle watercolor blending, edges fading to white","Teal":"soft teal marble with pale aqua veining, gentle watercolor blending, edges fading to white","Purple":"rich violet-purple marble with deeper plum veining, richer watercolor blending, edges fading to white"},
-"Cloud Mist":{"Lavender":"soft lavender-tinted clouds, puffy and three-dimensional, gentle dreamy sky light","Rose":"soft rose-pink clouds, puffy and three-dimensional, gentle warm sky light","Light Green":"soft mint-green clouds, puffy and three-dimensional, gentle fresh sky light","Dark Green":"deeper emerald-tinted clouds, puffy and three-dimensional, moodier forest-sky light","Red":"soft warm red-tinted clouds, puffy and three-dimensional, gentle sunset-glow light","Orange":"soft peachy-orange clouds, puffy and three-dimensional, warm sunset sky light","Light Blue":"soft classic sky-blue clouds, puffy and three-dimensional, bright airy daylight","Navy Blue":"deep twilight-blue clouds, puffy and three-dimensional, moody dusk light","Black":"soft charcoal-gray storm-tinted clouds, puffy and three-dimensional, dramatic soft light","Yellow":"soft golden sunlit clouds, puffy and three-dimensional, warm glowing light","Teal":"soft teal-tinted clouds, puffy and three-dimensional, cool fresh light","Purple":"soft violet twilight clouds, puffy and three-dimensional, dreamy dusk light"},
-"Pastel Leaf":{"Lavender":"soft lavender watercolor blooms with faint pale leaf and branch silhouettes","Rose":"soft rose-pink watercolor blooms with faint leaf and branch silhouettes","Light Green":"soft pale green watercolor blooms with faint leaf and branch silhouettes","Dark Green":"deeper forest-green watercolor blooms with bolder leaf and branch silhouettes","Red":"soft warm red watercolor blooms with faint leaf and branch silhouettes","Orange":"soft peachy-orange watercolor blooms with faint leaf and branch silhouettes","Light Blue":"soft pale blue watercolor blooms with faint leaf and branch silhouettes","Navy Blue":"deeper indigo-blue watercolor blooms with bolder leaf and branch silhouettes","Black":"soft muted charcoal watercolor blooms with faint dark leaf and branch silhouettes","Yellow":"soft golden-yellow watercolor blooms with faint leaf and branch silhouettes","Teal":"soft teal watercolor blooms with faint leaf and branch silhouettes","Purple":"rich violet watercolor blooms with bolder leaf and branch silhouettes"},
-"Satin Sheets":{"Lavender":"soft lavender satin fabric, flowing folds defined by gentle highlight and shadow","Rose":"soft rose-pink satin fabric, flowing folds defined by gentle highlight and shadow","Light Green":"soft pale-green satin fabric, flowing folds defined by gentle highlight and shadow","Dark Green":"rich deep-green satin fabric, flowing folds defined by bold highlight and shadow","Red":"rich warm-red satin fabric, flowing folds defined by bold highlight and shadow","Orange":"warm soft-orange satin fabric, flowing folds defined by gentle highlight and shadow","Light Blue":"soft pale-blue satin fabric, flowing folds defined by gentle highlight and shadow","Navy Blue":"rich deep-navy satin fabric, flowing folds defined by bold highlight and shadow","Black":"deep black satin fabric, flowing folds defined by sharp highlight and soft shadow","Yellow":"pale golden satin fabric, flowing folds defined by warm highlight and soft shadow","Teal":"rich teal satin fabric, flowing folds defined by cool highlight and soft shadow","Purple":"rich violet satin fabric, flowing folds defined by bold highlight and shadow"},
-"Frosted Glass":{"Lavender":"frosted glass with a cool lavender sheen, fern-like ice crystals framing the edges, soft light glowing through","Rose":"frosted glass with a soft rose-pink sheen, fern-like ice crystals framing the edges, soft light glowing through","Light Green":"frosted glass with a cool mint-green sheen, fern-like ice crystals framing the edges, soft light glowing through","Dark Green":"frosted glass with a deep emerald sheen, fern-like ice crystals framing the edges, soft light glowing through","Red":"frosted glass with a warm ember-red sheen, fern-like ice crystals framing the edges, soft light glowing through","Orange":"frosted glass with a warm amber-orange sheen, fern-like ice crystals framing the edges, soft light glowing through","Light Blue":"frosted glass with a cool icy-blue sheen, fern-like ice crystals framing the edges, soft light glowing through","Navy Blue":"frosted glass with a deep moonlit-blue sheen, fern-like ice crystals framing the edges, soft light glowing through","Black":"frosted glass with a cool silvery sheen, fern-like ice crystals framing the edges, soft light glowing through","Yellow":"frosted glass with a warm golden sheen, fern-like ice crystals framing the edges, soft light glowing through","Teal":"frosted glass with a cool teal sheen, fern-like ice crystals framing the edges, soft light glowing through","Purple":"frosted glass with a rich violet sheen, fern-like ice crystals framing the edges, soft light glowing through"},
-"Bubble Drift":{"Lavender":"soft iridescent bubbles drifting against a pale lavender glow, gentle sparkle highlights","Rose":"soft iridescent bubbles drifting against a pale rose-pink glow, gentle sparkle highlights","Light Green":"soft iridescent bubbles drifting against a pale mint-green glow, gentle sparkle highlights","Dark Green":"soft iridescent bubbles drifting against a deeper emerald glow, gentle sparkle highlights","Red":"soft iridescent bubbles drifting against a warm soft-red glow, gentle sparkle highlights","Orange":"soft iridescent bubbles drifting against a warm peachy-orange glow, gentle sparkle highlights","Light Blue":"soft iridescent bubbles drifting against a pale sky-blue glow, gentle sparkle highlights","Navy Blue":"soft iridescent bubbles drifting against a deeper twilight-blue glow, gentle sparkle highlights","Black":"soft iridescent bubbles drifting against a soft charcoal-gray glow, gentle sparkle highlights","Yellow":"soft iridescent bubbles drifting against a warm golden glow, gentle sparkle highlights","Teal":"soft iridescent bubbles drifting against a pale teal glow, gentle sparkle highlights","Purple":"soft iridescent bubbles drifting against a rich violet glow, gentle sparkle highlights"}
-};
-
-function getBackgroundDescription(){
-  if(!selectedTheme)return null;
-  if(selectedTheme==='Fade to Product Color'){
-    return buildProductColorFadeDescription(getSelectedProductColorName());
-  }
-  if(selectedTheme==='Remove All Background'){
-    return "no background at all — completely remove any scene, texture, color, or setting behind the subject, isolating them cleanly against a plain, empty white surface with nothing else visible";
-  }
-  const colorKey=selectedColor||"Light Blue";
-  const themeData=BACKGROUND_DESCRIPTIONS[selectedTheme];
-  return themeData ? themeData[colorKey] : null;
 }
 
 function pickFont(el){
@@ -2646,13 +2762,15 @@ function drawTextOnPath(ctx,text,pathPointsCanvasSpace,spacing,drawFn){
   ctx.textBaseline=prevBaseline;
 }
 
-function drawCaption(){
+async function drawCaption(){
   if(!baseImg)return;
   const canvas=document.getElementById('captionCanvas');
   canvas.width=baseImg.naturalWidth;
   canvas.height=baseImg.naturalHeight;
   const ctx=canvas.getContext('2d');
   ctx.drawImage(baseImg,0,0,canvas.width,canvas.height);
+
+  await drawFrameOnCanvas(ctx,canvas);
 
   const text=document.getElementById('captionText').value.trim();
   if(text){
@@ -3270,7 +3388,7 @@ async function callGenerateAPI({ workingImage, prompt, refImageA, refImageB, pan
     body:JSON.stringify({
       image:workingImage,
       prompt,
-      theme:selectedTheme,
+      theme:null,
       deviceId,
       refImageA:refImageA||null,
       refImageB:refImageB||null,
@@ -3368,11 +3486,6 @@ document.getElementById('cancelBtn').style.display='block';
 
     const skipEdgeFade = hardEdgesEnabled;
 
-    const backgroundDesc=getBackgroundDescription();
-    const backgroundLine=backgroundDesc
-      ? `Background option selected: ${backgroundDesc}. No hard edges or sticker-cutout look — all edges should fade or blend softly.`
-      : '';
-
     const wrapCompositionLine = (product==='mug'||product==='water bottle')
       ? (is40ozWraparoundSplit
           ? 'COMPOSITION: This design will be printed as a WIDE PANORAMIC SCENE that gets cut exactly in half down the middle and applied as two separate front and back panels on a travel mug. The exact vertical center of this image is the most visible point (directly opposite the handle) — compose the main subject centered on or spanning across that middle point, since that is also precisely where the image will be cut. The far LEFT and far RIGHT edges of the image sit hidden behind the handle — keep important detail away from those two outer edges so the edge fade there looks natural.'
@@ -3437,7 +3550,6 @@ ${customerIdea}
 
 Selected style: ${style}.
 Product target: ${getProductRules(product)}.
-${backgroundLine}
 ${wrapCompositionLine}
 ${panoramaFadeLine}
 ${uniformEdgeFadeLine}
@@ -3470,7 +3582,7 @@ Use rich environmental storytelling while keeping the face as the primary focal 
     const resp=await fetch('/api/generate',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({image:workingImage,prompt,theme:selectedTheme,deviceId,refImageA:refASnapshot,refImageB:refBSnapshot,currentDesign:null,size:getImageSizeParam()}),
+      body:JSON.stringify({image:workingImage,prompt,theme:null,deviceId,refImageA:refASnapshot,refImageB:refBSnapshot,currentDesign:null,size:getImageSizeParam()}),
       signal:currentGenerationController.signal
     });
 
@@ -4467,6 +4579,7 @@ refreshPhoneCaseModelVisibility();
 refreshTravelMugVariantVisibility();
 refreshTravelMugColorVisibility();
 refreshToteBagColorVisibility();
+renderFrameGrid();
 updateMugGuidedFlow();
 
 function resetEverythingFreshStart(){
@@ -4519,11 +4632,10 @@ function resetEverythingFreshStart(){
   const fadeToggle=document.getElementById('panoramaFadeToggle');
   if(fadeToggle)fadeToggle.checked=false;
 
-  document.getElementById('themeGrid').querySelectorAll('.theme-btn').forEach(b=>b.classList.remove('selected'));
-  document.getElementById('colorGrid').querySelectorAll('.color-btn').forEach(b=>b.classList.remove('selected'));
-  selectedTheme=null;
-  selectedColor=null;
-  updateDecorativeColorVisibility();
+  selectedFrame=null;
+  frameColors={};
+  renderFrameGrid();
+  renderFrameColorPanel();
 
   selectedPhoneCaseModel=null;
   pendingPhoneCaseModel=null;
