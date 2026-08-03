@@ -666,7 +666,7 @@
 <div class="card" id="travelMugVariantCard" style="display:none">
 <div class="card-title">🍶 Which Travel Mug?</div>
 <div class="note" style="margin-top:0;margin-bottom:.9rem">Pick which travel mug you're getting before generating — the shape and print layout differ enough between them that we need this locked in first.</div>
-<div class="grid3" id="travelMugVariantGrid"></div>
+<div class="grid2" id="travelMugVariantGrid"></div>
 </div>
 
 <div class="card" id="travelMugColorCard" style="display:none">
@@ -1190,7 +1190,6 @@ function needlesPlayFile(filename){
     [needlesActiveLayer,needlesIdleLayer]=[incoming,outgoing];
   };
 
-
   incoming.onended=()=>needlesAdvance();
   incoming.onerror=()=>needlesAdvance();
 }
@@ -1259,8 +1258,6 @@ function presentFinishedNeedlesArt(imageUrl,onDone){
   needlesFinishedImageUrl=imageUrl;
   needlesPresentationDone=onDone;
   needlesGenerationComplete=true;
-
-
 
   clearTimeout(needlesSafetyTimer);
   needlesSafetyTimer=setTimeout(()=>{
@@ -1684,12 +1681,7 @@ function refreshMugPrintModeVisibility(){
   card.style.display=(product==='mug'||product==='water bottle')?'block':'none';
 }
 
-// NEW (Alyx's request, Aug 2026): which travel mug the customer wants
-// now has to be known BEFORE generating, not just at the mockup step —
-// the 40oz Insulated needs a different generation strategy (one wide
-// panorama split into front/back) than the 20oz/14oz (a single stretched
-// image), so the generator needs this choice locked in first, same
-// reasoning as the phone case model picker.
+// Variant must be known before generating — 40oz uses a different strategy than 20oz/14oz.
 function renderTravelMugVariantGrid(){
   const grid=document.getElementById('travelMugVariantGrid');
   if(!grid)return;
@@ -1782,11 +1774,7 @@ function pickTravelMugColorGen(el,colorName){
   }
 }
 
-// Nudges the customer toward "Fade to Product Color" right after they pick
-// a mug color, since that pairing is what actually blends their edges into
-// that color instead of white. Only shows for the first 5 times a color is
-// picked in this session — by then they've had ample opportunity to notice
-// it, so it stops appearing rather than nagging indefinitely.
+// Nudges toward "Fade to Product Color" after a color pick; caps at 5 shows per session.
 let fadeColorPromptShownCount=0;
 let fadeColorCalloutHideTimer=null;
 let fadeColorBtnFlashTimer=null;
@@ -1846,8 +1834,6 @@ function setupPhoneModelSearchGen(){
   phoneSearchListenerAttachedGen=true;
   input.addEventListener('input',function(){
 
-
-
     selectedPhoneCaseModel=null;
     pendingPhoneCaseModel=null;
     hidePhoneConfirmationGen();
@@ -1875,7 +1861,6 @@ function setupPhoneModelSearchGen(){
     e.preventDefault();
     const q=input.value.trim().toLowerCase();
     const resultsEl=document.getElementById('phoneModelResultsGen');
-
 
     resultsEl.innerHTML='';
     if(q.length<2)return;
@@ -2087,11 +2072,8 @@ function pick(el,type){
     refreshTravelMugColorVisibility();
     refreshToteBagColorVisibility();
 
-
     updatePlacementSummary();
     updateMugGuidedFlow();
-
-
 
     if(product==='phone case'){
       smoothScrollToTarget('phoneCaseModelCard','center',()=>{
@@ -2154,9 +2136,7 @@ function hexToRgbTriple(hex){
   return isNaN(n) ? '255,255,255' : `${(n>>16)&255},${(n>>8)&255},${n&255}`;
 }
 
-// Finds the real hex value behind whatever product color is currently
-// chosen, so the guaranteed pixel-level edge fade can blend into the
-// mug's ACTUAL body color instead of always assuming white.
+// Real hex behind the chosen product color, so the pixel-level edge fade matches it instead of white.
 function getSelectedProductColorHex(){
   if(product==='water bottle' && preGenTravelVariant && preGenTravelColor){
     const match=TRAVEL_MUG_CATALOG[preGenTravelVariant]?.colors?.find(c=>c.name===preGenTravelColor);
@@ -3024,10 +3004,6 @@ function approveDesign(allThree){
   document.getElementById('keepTweakingBtn').style.display='none';
   document.getElementById('downloadDesignBtn').style.display='none';
 
-
-
-
-
   saveMugState();
   renderRecentDesigns();
   renderPositionHolder();
@@ -3175,10 +3151,6 @@ function getImageSizeParam(){
   }
   if (product==='phone case'){
 
-
-
-
-
     return '1024x1536';
   }
   if (product==='water bottle'){
@@ -3258,10 +3230,7 @@ async function applyEdgeFadeToImageUrl(url, edges, fadeColorHex='#FFFFFF'){
   }
 }
 
-// Splits one wide image into two exact halves down its true center column
-// (real pixel math, not two separate AI generations) — used for the 40oz
-// insulated travel mug's front+back panorama panels, so the one visible
-// seam (opposite the handle) is a guaranteed perfect match.
+// Splits one wide image at its true center column (real pixel math) into 40oz front/back panels.
 async function splitImageAtCenterVertical(url){
   const resp=await fetch(url);
   const blob=await resp.blob();
@@ -3363,8 +3332,6 @@ setStatus('Generating your image... this can take several minutes, especially on
 document.getElementById('cancelBtn').style.display='block';
   suspendGuidedScrollsForGeneration();
 
-
-
   const snapNeedlesStageToApprovedFrame=()=>{
     const stage=document.querySelector('#needlesStageWrap .needles-stage');
     if(!stage)return;
@@ -3394,20 +3361,8 @@ document.getElementById('cancelBtn').style.display='block';
         : 'Caricature strength: WILD. Use bold exaggeration only on the person\u2019s real existing features. Do not invent new facial features.';
 
     const isWraparoundActive = (product==='mug'||product==='water bottle') && mugPrintMode==='wraparound';
-    // NEW (Alyx's request, Aug 2026): the Insulated 40oz travel mug is a
-    // front+back print (2 zones), not a single continuous wrap. Rather
-    // than generating 2 separate "continue the scene" images (which can
-    // drift from each other), this generates ONE wide panoramic scene
-    // and then splits it by exact pixel math down its true center column
-    // into the front and back panels — guaranteeing the one visible seam
-    // (opposite the handle) is a perfect match, since it's literally the
-    // same pixels on both sides of the cut.
+    // 40oz is front+back (2 zones) — generate one wide scene, split at true center instead of 2 separate generations.
     const is40ozWraparoundSplit = product==='water bottle' && mugPrintMode==='wraparound' && preGenTravelVariant==='travel-mug-40oz-insulated';
-
-
-
-
-
 
     const skipEdgeFade = hardEdgesEnabled;
 
@@ -3431,12 +3386,6 @@ document.getElementById('cancelBtn').style.display='block';
           : (product==='phone case'
               ? `COMPOSITION: This will be printed on a ${selectedPhoneCaseModel} phone case — a tall, narrow vertical shape. Keep the main subject and any caption centered in the lower two-thirds of the frame, since the upper portion sits near the camera cutout area on the real case and shouldn't carry essential detail.`
               : ''));
-
-    // UPDATED (Alyx's request, Aug 2026): edge fade is automatic by
-
-
-
-
 
     const panoramaFadeLine = (!skipEdgeFade && isWraparoundActive && !is40ozWraparoundSplit) ? PANORAMA_FADE_INSTRUCTION_CENTER : '';
     const uniformEdgeFadeLine = (!skipEdgeFade && (!isWraparoundActive || is40ozWraparoundSplit)) ? UNIFORM_EDGE_FADE_INSTRUCTION : '';
@@ -3986,7 +3935,6 @@ const TRAVEL_MUG_CATALOG = {
     layoutType: "single-image",
     sizeLabel: "20oz",
 
-
     colors: null
   },
   "travel-mug-14oz-handle": {
@@ -4001,10 +3949,16 @@ const TRAVEL_MUG_CATALOG = {
     sizeLabel: "40oz",
     colors: [
       { name: "White", hex: "#FFFFFF" }, { name: "Black", hex: "#1c1c1c" },
-      { name: "Navy Blue", hex: "#1B3D7A" }, { name: "Royal Blue", hex: "#2255A4" },
-      { name: "Teal", hex: "#BAE5DE" }, { name: "Olive Green", hex: "#6B8E23" },
-      { name: "Dark Gray", hex: "#4a4a4a" }, { name: "Red", hex: "#D62828" }
+      { name: "Navy Blue", hex: "#2E4E7E" }, { name: "Royal Blue", hex: "#3B6FC4" },
+      { name: "Teal", hex: "#BAE5DE" }, { name: "Olive Green", hex: "#8A9A5B" },
+      { name: "Dark Gray", hex: "#5A5A5A" }, { name: "Red", hex: "#C94F4F" }
     ]
+  },
+  "travel-mug-32oz-gator": {
+    displayName: "Gator Tumbler, 32oz",
+    layoutType: "single-image",
+    sizeLabel: "32oz",
+    colors: null
   }
 };
 
@@ -4131,8 +4085,6 @@ let autoMockupRequestId = 0;
 let autoMockupDebounceTimer = null;
 
 function maybeAutoFetchMockup(){
-
-
 
   const assignedCount = ['left','front','right'].filter(p=>placements[p]).length;
   if (assignedCount === 0) {
@@ -4303,10 +4255,6 @@ async function runAutoMockupFetch(){
     if (!mockupUrl) throw new Error("Printify didn't return a mockup photo in time — it'll retry automatically the next time you change something.");
 
     loadingEl.style.display = 'none';
-
-
-
-
 
     if (mockupUrls.length > 1) {
       mockupUrls.slice(0, 5).forEach(url => {
