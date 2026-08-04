@@ -603,6 +603,7 @@
 <button class="generate-btn" style="flex:1;width:auto;padding:.8rem .4rem;font-size:13px" onclick="approveDesign(false)">✅ Yes — Use This Design</button>
 <button class="generate-btn" id="allSidesBtn" style="flex:1;width:auto;padding:.8rem .4rem;font-size:13px" onclick="approveDesign(true)">✅ Yes — All 3 Sides</button>
 </div>
+<div class="note" id="approveSavingNote" style="display:none;margin-top:.5rem;text-align:center;color:#7888b4"><span class="spinner"></span>Saving your finished design...</div>
 <div class="note" id="approveRowHint" style="margin-top:.5rem">Want it on exactly two sides? Press Yes first, then tap Left / Center / Right under the design in "My Designs" to add or remove spots.</div>
 </div>
 <button class="download-btn" id="toggleImageBtn" onclick="toggleWorkingImage()" style="display:none;margin-top:.6rem">↔️ Toggle Between Previous & New Image</button>
@@ -3312,7 +3313,7 @@ function refreshApproveRowForMode(){
   }
 }
 
-function approveDesign(allThree){
+async function approveDesign(allThree){
   if(!currentDesignId)return;
 
   // The frame/caption compositing (drawCaption -> finalImageUrl) only ever
@@ -3321,9 +3322,41 @@ function approveDesign(allThree){
   // That's why a selected Frame never showed up on the finished product.
   // Bake it in here, at the moment of approval, so what gets placed matches
   // what was actually shown and approved.
-  if(finalImageUrl){
-    const design=findDesignById(currentDesignId);
-    if(design)design.url=finalImageUrl;
+  //
+  // finalImageUrl is a giant inline base64 canvas export — sending that
+  // straight into placements/Printify broke the mockup request (too large,
+  // server rejected it, front end couldn't parse the rejection as JSON).
+  // So when there's actually something composited on top of the raw photo
+  // (a Frame, a Window Sill, or caption text), upload it through
+  // /api/generate (action:"uploadComposite") to get back a small real URL,
+  // same way the raw AI output already gets hosted — folded into the
+  // existing endpoint rather than a new file, since this project is
+  // already at Vercel's 12-function Hobby-plan cap. If nothing was added,
+  // skip this entirely and keep the original small hosted URL as-is.
+  const captionTextEl=document.getElementById('captionText');
+  const hasCaption=!!(captionTextEl && captionTextEl.value.trim().length>0);
+  const hasOverlay=!!selectedFrame || !!windowSillChoice || hasCaption;
+
+  if(hasOverlay && finalImageUrl){
+    const savingNote=document.getElementById('approveSavingNote');
+    if(savingNote)savingNote.style.display='block';
+    try{
+      const resp=await fetch('/api/generate',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({action:'uploadComposite',image:finalImageUrl,deviceId})
+      });
+      const data=await resp.json();
+      if(resp.ok && data.imageUrl){
+        const design=findDesignById(currentDesignId);
+        if(design)design.url=data.imageUrl;
+      } else {
+        console.error('Could not save composited design, keeping the unframed version:',data.error);
+      }
+    }catch(err){
+      console.error('Could not save composited design, keeping the unframed version:',err);
+    }
+    if(savingNote)savingNote.style.display='none';
   }
 
   const order = getSlotOrder();
