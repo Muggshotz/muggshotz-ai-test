@@ -2407,7 +2407,10 @@ function pick(el,type){
 
     if((product==='mug'||product==='water bottle') && !printFormatPopupShown){
       printFormatPopupShown=true;
-      showBigAlert('Before generating, scroll down and pick your print format — "Three Separate Designs" or "Wraparound." This changes how your artwork gets composed, so it needs to be chosen first.');
+      showBigAlert(
+        'Pick your print format — "Three Separate Designs" or "Wraparound." This changes how your artwork gets composed, so it needs to be chosen first.',
+        ()=>{ smoothScrollToTarget('mugPrintModeCard','center'); }
+      );
     }
   }
   else if(type==='style')style=el.dataset.val;
@@ -3300,13 +3303,19 @@ function resetMainSlot(){
   document.getElementById('fileInput').value='';
 }
 
-function showBigAlert(msg){
+let bigAlertOnClose=null;
+
+function showBigAlert(msg,onClose){
   document.getElementById('bigAlertMsg').textContent=msg;
   document.getElementById('bigAlertOverlay').classList.add('visible');
+  bigAlertOnClose=(typeof onClose==='function')?onClose:null;
 }
 
 function closeBigAlert(){
   document.getElementById('bigAlertOverlay').classList.remove('visible');
+  const cb=bigAlertOnClose;
+  bigAlertOnClose=null;
+  if(cb)cb();
 }
 
 let genTimerInterval=null;
