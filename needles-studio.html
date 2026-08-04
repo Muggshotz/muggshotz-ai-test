@@ -1538,7 +1538,12 @@ const FRAME_CATALOG = {
   "Trading Card": { type:"procedural", draw:"card", defaultColor:"#3d8bff" },
   "Thin Line": { type:"procedural", draw:"thin", defaultColor:"#ffffff" },
   "Vintage Postage Stamp": { type:"procedural", draw:"stamp", defaultColor:"#ffffff" },
-  "Window Sill": { type:"comingSoon" },
+  "Window Sill": { type:"imageMulti", colorable:false, options:[
+    { name:"Rustic Farmhouse", asset:"frame-window-sill-a.png" },
+    { name:"Parisian Balcony", asset:"frame-window-sill-b.png" },
+    { name:"Rose Garden", asset:"frame-window-sill-c.png" },
+    { name:"Coastal Cottage", asset:"frame-window-sill-d.png" }
+  ] },
   "Double Mat": { type:"proceduralMulti", draw:"doubleMat", layers:["Outer Frame","Upper Mat","Lower Mat"], defaultColors:["#8a5a34","#f5f0e6","#2a2a2a"] }
 };
 
@@ -1551,6 +1556,7 @@ const FRAME_COLOR_SWATCHES = [
 ];
 
 let selectedFrame = null;
+let windowSillChoice = null;
 let frameColors = {};
 
 function hexToHue(hex){
@@ -1585,6 +1591,12 @@ function renderFrameGrid(){
       img.src=data.asset;
       img.style.cssText='width:100%;height:100%;object-fit:cover';
       swatch.appendChild(img);
+    } else if(data.type==='imageMulti'){
+      const chosen=data.options.find(o=>o.name===windowSillChoice)||data.options[0];
+      const img=document.createElement('img');
+      img.src=chosen.asset;
+      img.style.cssText='width:100%;height:100%;object-fit:cover';
+      swatch.appendChild(img);
     } else if(data.type==='comingSoon'){
       swatch.textContent='🔜';
       swatch.style.fontSize='22px';
@@ -1598,7 +1610,7 @@ function renderFrameGrid(){
     btn.appendChild(swatch);
     const label=document.createElement('div');
     label.className='theme-label';
-    label.textContent=(data.type==='comingSoon' ? name+' (Soon)' : name);
+    label.textContent=name;
     btn.appendChild(label);
     if(data.type!=='comingSoon'){
       btn.onclick=()=>pickFrame(name);
@@ -1624,6 +1636,44 @@ function renderFrameColorPanel(){
     return;
   }
   const data=FRAME_CATALOG[selectedFrame];
+
+  if(data.type==='imageMulti'){
+    panel.style.display='block';
+    panel.innerHTML='';
+    if(!windowSillChoice)windowSillChoice=data.options[0].name;
+    const lab=document.createElement('div');
+    lab.className='note';
+    lab.style.marginBottom='6px';
+    lab.textContent='Choose a design';
+    panel.appendChild(lab);
+    const pgrid=document.createElement('div');
+    pgrid.className='theme-grid frame-grid';
+    data.options.forEach(opt=>{
+      const btn=document.createElement('div');
+      btn.className='theme-btn frame-btn'+(windowSillChoice===opt.name?' selected':'');
+      const swatch=document.createElement('div');
+      swatch.style.cssText='width:100%;aspect-ratio:1;display:flex;align-items:center;justify-content:center;background:#0d0d0d';
+      const img=document.createElement('img');
+      img.src=opt.asset;
+      img.style.cssText='width:100%;height:100%;object-fit:cover';
+      swatch.appendChild(img);
+      btn.appendChild(swatch);
+      const label=document.createElement('div');
+      label.className='theme-label';
+      label.textContent=opt.name;
+      btn.appendChild(label);
+      btn.onclick=()=>{ windowSillChoice=opt.name; renderFrameGrid(); renderFrameColorPanel(); drawCaption(); };
+      pgrid.appendChild(btn);
+    });
+    panel.appendChild(pgrid);
+    return;
+  }
+
+  if(data.colorable===false){
+    panel.style.display='none';
+    panel.innerHTML='';
+    return;
+  }
   panel.style.display='block';
   panel.innerHTML='';
 
@@ -1666,15 +1716,31 @@ function drawFrameOnCanvas(ctx,canvas){
   const data=FRAME_CATALOG[selectedFrame];
   if(!data)return Promise.resolve();
 
+  if(data.type==='imageMulti'){
+    const opt=data.options.find(o=>o.name===windowSillChoice)||data.options[0];
+    return new Promise((resolve)=>{
+      const img=new Image();
+      img.crossOrigin='anonymous';
+      img.onload=()=>{
+        ctx.drawImage(img,0,0,canvas.width,canvas.height);
+        resolve();
+      };
+      img.onerror=()=>resolve();
+      img.src=opt.asset;
+    });
+  }
+
   if(data.type==='image'){
     return new Promise((resolve)=>{
       const img=new Image();
       img.crossOrigin='anonymous';
       img.onload=()=>{
-        const hex=frameColors[selectedFrame]||data.defaultColor;
-        const rotate=Math.round(hexToHue(hex)-hexToHue(data.defaultColor));
         ctx.save();
-        ctx.filter='hue-rotate('+rotate+'deg) saturate(1.15)';
+        if(data.colorable!==false){
+          const hex=frameColors[selectedFrame]||data.defaultColor;
+          const rotate=Math.round(hexToHue(hex)-hexToHue(data.defaultColor));
+          ctx.filter='hue-rotate('+rotate+'deg) saturate(1.15)';
+        }
         ctx.drawImage(img,0,0,canvas.width,canvas.height);
         ctx.filter='none';
         ctx.restore();
@@ -4634,6 +4700,7 @@ function resetEverythingFreshStart(){
 
   selectedFrame=null;
   frameColors={};
+  windowSillChoice=null;
   renderFrameGrid();
   renderFrameColorPanel();
 
