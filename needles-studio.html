@@ -3041,7 +3041,7 @@ async function drawCaption(){
     ctx.restore();
   }
 
-  finalImageUrl=canvas.toDataURL('image/png');
+  finalImageUrl=canvas.toDataURL('image/jpeg', 0.92);
   const mainPreview=document.getElementById('previewImg');
   if(mainPreview&&mainPreview.style.display!=='none')mainPreview.src=finalImageUrl;
 
