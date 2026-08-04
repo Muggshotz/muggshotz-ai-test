@@ -1567,6 +1567,7 @@ const FRAME_CATALOG = {
   "Blue Floral": { type:"image", asset:"frame-blue-floral.png", defaultColor:"#1B3D7A" },
   "Crystal Champagne": { type:"image", asset:"frame-crystal-champagne.png", defaultColor:"#D9C89E" },
   "Pressed Flowers": { type:"image", asset:"frame-pressed-flowers.png", defaultColor:"#ffffff" },
+  "Celestial Deco": { type:"image", asset:"frame-celestial-deco.png", defaultColor:"#D4AF37" },
   "Double Mat": { type:"proceduralMulti", draw:"doubleMat", layers:["Outer Frame","Upper Mat","Lower Mat"], defaultColors:["#8a5a34","#f5f0e6","#2a2a2a"] }
 };
 
@@ -3633,6 +3634,32 @@ async function applyEdgeFadeToImageUrl(url, edges, fadeColorHex='#FFFFFF'){
   }
 }
 
+// Composites the selected Frame/Window Sill onto a full image before it gets
+// split for the 40oz. Every frame in the catalog is a four-sided border, so
+// applying it AFTER the split would draw a border along the artificial cut
+// line on each half. Framing the full panorama first keeps the cut landing
+// in open, unbordered space, same as every other product already does.
+async function compositeFrameOntoImageUrl(url){
+  const resp=await fetch(url);
+  const blob=await resp.blob();
+  const objectUrl=URL.createObjectURL(blob);
+  const img=await new Promise((resolve,reject)=>{
+    const im=new Image();
+    im.onload=()=>resolve(im);
+    im.onerror=reject;
+    im.src=objectUrl;
+  });
+  const canvas=document.createElement('canvas');
+  canvas.width=img.naturalWidth;
+  canvas.height=img.naturalHeight;
+  const ctx=canvas.getContext('2d');
+  ctx.drawImage(img,0,0);
+  URL.revokeObjectURL(objectUrl);
+  await drawFrameOnCanvas(ctx,canvas);
+  await drawWindowSillOnCanvas(ctx,canvas);
+  return canvas.toDataURL('image/jpeg',0.92);
+}
+
 // Splits one wide image at its true center column (real pixel math) into 40oz front/back panels.
 async function splitImageAtCenterVertical(url){
   const resp=await fetch(url);
@@ -3899,8 +3926,13 @@ Use rich environmental storytelling while keeping the face as the primary focal 
     }
 
     if (is40ozWraparoundSplit){
+      let panoramaForSplit = resultUrl;
+      if (selectedFrame || windowSillChoice){
+        setStatus('Applying your frame to the full panorama...');
+        panoramaForSplit = await compositeFrameOntoImageUrl(resultUrl);
+      }
       setStatus('Splitting your panorama into front and back panels...');
-      const { leftHalf, rightHalf } = await splitImageAtCenterVertical(resultUrl);
+      const { leftHalf, rightHalf } = await splitImageAtCenterVertical(panoramaForSplit);
       placements.front = addToRecentDesigns(leftHalf);
       placements.right = addToRecentDesigns(rightHalf);
       selectedTravelProductKey = preGenTravelVariant;
