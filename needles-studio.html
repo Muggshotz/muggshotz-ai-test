@@ -3314,6 +3314,18 @@ function refreshApproveRowForMode(){
 
 function approveDesign(allThree){
   if(!currentDesignId)return;
+
+  // The frame/caption compositing (drawCaption -> finalImageUrl) only ever
+  // updated the live on-screen preview — it was never saved back into the
+  // actual design record used for the Printify mockup and the real order.
+  // That's why a selected Frame never showed up on the finished product.
+  // Bake it in here, at the moment of approval, so what gets placed matches
+  // what was actually shown and approved.
+  if(finalImageUrl){
+    const design=findDesignById(currentDesignId);
+    if(design)design.url=finalImageUrl;
+  }
+
   const order = getSlotOrder();
   if(allThree){
     order.forEach(pos => { placements[pos] = currentDesignId; });
