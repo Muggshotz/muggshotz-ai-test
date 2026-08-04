@@ -632,6 +632,17 @@
 
 </div>
 
+<div class="card" id="frameSectionCard"><div class="card-title">🖼️ Frame</div>
+<div class="note" style="margin-top:0;margin-bottom:.75rem">Optional — pick a frame to add around your finished artwork now, before you generate, so you don't lose track of it later. Applied automatically once your design is ready. Leave blank for a clean, unframed look.</div>
+<div class="theme-grid frame-grid" id="frameGrid"></div>
+<div id="frameColorPanel" style="display:none;margin-top:14px"></div>
+</div>
+
+<div class="card" id="windowSillSectionCard"><div class="card-title">🪟 Window Sill Portrait</div>
+<div class="note" style="margin-top:0;margin-bottom:.75rem">A specialty option, separate from Frame — this is one specific pose: you (or someone you choose) standing at a window, coffee mug in hand. Not for action shots, landscapes, or general artwork — just that one cozy scene, in the style below. Optional, and can't be combined with a Frame.</div>
+<div class="theme-grid frame-grid" id="windowSillGrid"></div>
+</div>
+
 <div class="card" id="phoneCaseModelCard" style="display:none">
 <div class="card-title">📱 Which Phone Model?</div>
 <div class="note" style="margin-top:0;margin-bottom:.75rem">We need this before generating, so your art gets composed to fit your exact phone case shape — no cropping surprises later.</div>
@@ -740,17 +751,6 @@
 <div class="card"><div class="card-title">🎨 Style</div><div class="grid2"><div class="btn-select selected" data-val="Muggshotz Classic: premium professional caricature, expressive face, rich detail, painterly shading, funny gift-art scene" onclick="pick(this,'style')">🦝 Muggshotz Classic</div><div class="btn-select" data-val="photorealistic rendering, natural skin texture and lighting like a real photograph, shot on camera — not illustrated, not painted, not stylized" onclick="pick(this,'style')">📷 Photorealistic</div><div class="btn-select" data-val="flat cel-shaded comic strip illustration, bold black outlines, flat solid color fills, no gradients or painterly shading" onclick="pick(this,'style')">💥 Comic Strip</div><div class="btn-select" data-val="black and white pen-and-ink line drawing, clean linework only, no color, no shading fills — cross-hatching for shadow only" onclick="pick(this,'style')">✏️ Line Art</div></div></div>
 
 <div class="card"><div class="card-title">🎭 Degree of Caricature</div><div class="grid3"><div class="btn-select selected" data-val="0.15" onclick="pick(this,'likeness')"><span class="icon">😊</span>Lifelike</div><div class="btn-select" data-val="0.25" onclick="pick(this,'likeness')"><span class="icon">😄</span>Balanced</div><div class="btn-select" data-val="0.35" onclick="pick(this,'likeness')"><span class="icon">🤪</span>Wild</div></div></div>
-
-<div class="card" id="frameSectionCard"><div class="card-title">🖼️ Frame</div>
-<div class="note" style="margin-top:0;margin-bottom:.75rem">Optional — pick a frame to add around your finished artwork, applied after your design is generated. Leave blank for a clean, unframed look.</div>
-<div class="theme-grid frame-grid" id="frameGrid"></div>
-<div id="frameColorPanel" style="display:none;margin-top:14px"></div>
-</div>
-
-<div class="card" id="windowSillSectionCard"><div class="card-title">🪟 Window Sill Portrait</div>
-<div class="note" style="margin-top:0;margin-bottom:.75rem">A specialty option, separate from Frame — this is one specific pose: you (or someone you choose) standing at a window, coffee mug in hand. Not for action shots, landscapes, or general artwork — just that one cozy scene, in the style below. Optional, and can't be combined with a Frame.</div>
-<div class="theme-grid frame-grid" id="windowSillGrid"></div>
-</div>
 
 <div id="finalGenerateGuidance" class="guidance-prompt" role="status">If satisfied with all selections, press "Generate." If not, feel free to scroll back up and make any additional changes.</div>
 <button class="generate-btn" id="generateBtn" onclick="generate()">🎨 GENERATE IMAGE</button>
@@ -2087,8 +2087,6 @@ function pickMugPrintMode(mode){
   refreshPanoramaFadeCardVisibility();
   if(product==='water bottle'){
     smoothScrollToTarget('travelMugVariantCard','center');
-  } else if(product==='mug'){
-    triggerFrameGuidance();
   }
 }
 
@@ -2133,11 +2131,8 @@ function pickPreGenTravelVariant(key){
   renderTravelMugVariantGrid();
   refreshTravelMugColorVisibility();
   const colorCard=document.getElementById('travelMugColorCard');
-  if(colorCard && colorCard.style.display!=='none'){
-    smoothScrollToTarget('travelMugColorCard','center');
-  } else {
-    triggerFrameGuidance();
-  }
+  const scrollTarget=(colorCard && colorCard.style.display!=='none') ? 'travelMugColorCard' : 'panoramaFadeCard';
+  smoothScrollToTarget(scrollTarget,'center');
 }
 
 function refreshTravelMugVariantVisibility(){
@@ -2205,7 +2200,6 @@ function pickTravelMugColorGen(el,colorName){
   } else {
     el.classList.add('selected');
     preGenTravelColor=colorName;
-    triggerFrameGuidance();
   }
 }
 
@@ -3315,6 +3309,19 @@ function refreshApproveRowForMode(){
 
 async function approveDesign(allThree){
   if(!currentDesignId)return;
+
+  // Safety net: Frame lives much earlier in the flow now (right after
+  // Upload Photo), so most people will have already made this choice —
+  // but if someone reaches approval with nothing picked, give them one
+  // more chance to catch it before it's locked in, since a frame can't
+  // be added retroactively to an already-approved design.
+  if(!selectedFrame && !windowSillChoice){
+    const proceedWithoutFrame=window.confirm('No Frame or Window Sill selected yet. Once you approve, it can\'t be added to this design later. Continue without one?');
+    if(!proceedWithoutFrame){
+      smoothScrollToTarget('frameSectionCard','center');
+      return;
+    }
+  }
 
   // The frame/caption compositing (drawCaption -> finalImageUrl) only ever
   // updated the live on-screen preview — it was never saved back into the
@@ -4995,4 +5002,4 @@ window.addEventListener('scroll',function(){
 },{passive:true});
 </script>
 </body>
-</html>
+</html>v
