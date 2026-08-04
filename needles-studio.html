@@ -1628,7 +1628,24 @@ function pickFrame(name){
   selectedFrame=wasSelected?null:name;
   renderFrameGrid();
   renderFrameColorPanel();
+  syncEdgeFadeWithFrameSelection();
   drawCaption();
+}
+
+// A frame needs full-bleed artwork right up to its inner edge — a soft
+// white fade there would leave a visible gap between the photo and the
+// frame art. So picking any frame forces sharp edges; clearing the frame
+// selection restores the default white fade-out.
+function syncEdgeFadeWithFrameSelection(){
+  const toggle=document.getElementById('panoramaFadeToggle');
+  if(!toggle)return;
+  if(selectedFrame){
+    hardEdgesEnabled=true;
+    toggle.checked=true;
+  } else {
+    hardEdgesEnabled=false;
+    toggle.checked=false;
+  }
 }
 
 function renderFrameColorPanel(){
@@ -1889,6 +1906,7 @@ let isDrawingPath=false;
 let pathCanvasReady=false;
 
 let mugPrintMode='three-panel';
+let printFormatPopupShown=false;
 
 let mugOptionsTouched=false;
 let mugGuidedChangesActive=false;
@@ -2049,9 +2067,7 @@ function pickPreGenTravelVariant(key){
   renderTravelMugVariantGrid();
   refreshTravelMugColorVisibility();
   const colorCard=document.getElementById('travelMugColorCard');
-  const scrollTarget=(colorCard && colorCard.style.display!=='none') ? 'travelMugColorCard' : 'finalGenerateGuidance';
-  const finalGuide=document.getElementById('finalGenerateGuidance');
-  if(scrollTarget==='finalGenerateGuidance' && finalGuide)finalGuide.classList.add('visible');
+  const scrollTarget=(colorCard && colorCard.style.display!=='none') ? 'travelMugColorCard' : 'panoramaFadeCard';
   smoothScrollToTarget(scrollTarget,'center');
 }
 
@@ -2387,6 +2403,11 @@ function pick(el,type){
       });
     } else if(product==='water bottle'){
       smoothScrollToTarget('travelMugVariantCard','center');
+    }
+
+    if((product==='mug'||product==='water bottle') && !printFormatPopupShown){
+      printFormatPopupShown=true;
+      showBigAlert('Before generating, scroll down and pick your print format — "Three Separate Designs" or "Wraparound." This changes how your artwork gets composed, so it needs to be chosen first.');
     }
   }
   else if(type==='style')style=el.dataset.val;
