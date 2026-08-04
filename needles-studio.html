@@ -207,6 +207,7 @@
 .reset-everything-btn{width:100%;background:#160808;border:1px solid #5a2a2a;border-radius:10px;padding:1rem;color:#ff8a7a;font-size:13px;font-weight:700;cursor:pointer;letter-spacing:.5px;text-align:center}
 .reset-everything-btn:hover{background:#220c0c;border-color:#7a3a3a}
 .mug-select-flash{font-size:15px!important;font-weight:800!important;letter-spacing:.5px!important;text-transform:uppercase;padding:8px 6px;border-radius:8px;animation:mugSelectFlash 1s ease-in-out infinite}
+.stock-badge{position:absolute;top:4px;right:4px;font-size:9px;font-weight:800;letter-spacing:.3px;text-transform:uppercase;padding:3px 6px;border-radius:6px;color:#fff;z-index:2;animation:mugSelectFlash 1s ease-in-out infinite}
 @keyframes mugSelectFlash{0%,100%{color:#fff;background:#003c8c;text-shadow:0 0 10px rgba(0,60,140,.9)}50%{color:#003c8c;background:#2a1200;text-shadow:0 0 10px rgba(0,60,140,.6)}}
 .cta-flash{animation:mugSelectFlash 1s ease-in-out infinite}
 .theme-btn-flash{animation:themeBtnFlash 1s ease-in-out infinite}
@@ -743,6 +744,11 @@
 <div class="note" style="margin-top:0;margin-bottom:.75rem">Optional — pick a frame to add around your finished artwork, applied after your design is generated. Leave blank for a clean, unframed look.</div>
 <div class="theme-grid frame-grid" id="frameGrid"></div>
 <div id="frameColorPanel" style="display:none;margin-top:14px"></div>
+</div>
+
+<div class="card" id="windowSillSectionCard"><div class="card-title">🪟 Window Sill Portrait</div>
+<div class="note" style="margin-top:0;margin-bottom:.75rem">A specialty option, separate from Frame — this is one specific pose: you (or someone you choose) standing at a window, coffee mug in hand. Not for action shots, landscapes, or general artwork — just that one cozy scene, in the style below. Optional, and can't be combined with a Frame.</div>
+<div class="theme-grid frame-grid" id="windowSillGrid"></div>
 </div>
 
 <div id="finalGenerateGuidance" class="guidance-prompt" role="status">If satisfied with all selections, press "Generate." If not, feel free to scroll back up and make any additional changes.</div>
@@ -1551,18 +1557,28 @@ const FRAME_CATALOG = {
   "Trading Card": { type:"procedural", draw:"card", defaultColor:"#003c8c" },
   "Thin Line": { type:"procedural", draw:"thin", defaultColor:"#ffffff" },
   "Vintage Postage Stamp": { type:"procedural", draw:"stamp", defaultColor:"#ffffff" },
-  "Window Sill": { type:"imageMulti", colorable:false, options:[
-    { name:"Rustic Farmhouse", asset:"frame-window-sill-a.png" },
-    { name:"Parisian Balcony", asset:"frame-window-sill-b.png" },
-    { name:"Stained Glass Garden", asset:"frame-window-sill-c.png" },
-    { name:"Coastal Cottage", asset:"frame-window-sill-d.png" },
-    { name:"English Cottage", asset:"frame-window-sill-e.png" },
-    { name:"Southwest Adobe", asset:"frame-window-sill-f.png" },
-    { name:"Alpine Chalet", asset:"frame-window-sill-g.png" },
-    { name:"Diner Service", asset:"frame-window-sill-h.png" }
-  ] },
+  // Window Sill lived here as a 16th tile — decoupled per Alyx: it only
+  // fits one specific pose (someone at a window holding a coffee mug),
+  // not general artwork like every other frame here. See WINDOW_SILL_OPTIONS
+  // below and its own standalone card. This leaves 15 tiles — a 16th
+  // replacement design is still needed here.
   "Double Mat": { type:"proceduralMulti", draw:"doubleMat", layers:["Outer Frame","Upper Mat","Lower Mat"], defaultColors:["#8a5a34","#f5f0e6","#2a2a2a"] }
 };
+
+// ================= WINDOW SILL (standalone, decoupled from Frame) =================
+// Not a general-purpose frame — this is a specialty pose: the subject
+// standing at a window holding a coffee mug, same motif every time.
+// Kept mutually exclusive with Frame (see pickFrame/pickWindowSill).
+const WINDOW_SILL_OPTIONS = [
+  { name:"Rustic Farmhouse", asset:"frame-window-sill-a.png" },
+  { name:"Parisian Balcony", asset:"frame-window-sill-b.png" },
+  { name:"Stained Glass Garden", asset:"frame-window-sill-c.png" },
+  { name:"Coastal Cottage", asset:"frame-window-sill-d.png" },
+  { name:"English Cottage", asset:"frame-window-sill-e.png" },
+  { name:"Southwest Adobe", asset:"frame-window-sill-f.png" },
+  { name:"Alpine Chalet", asset:"frame-window-sill-g.png" },
+  { name:"Diner Service", asset:"frame-window-sill-h.png" }
+];
 
 const FRAME_COLOR_SWATCHES = [
   { name:"Gold", hex:"#D4AF37" }, { name:"Silver", hex:"#C0C0C0" }, { name:"Champagne", hex:"#D9C89E" },
@@ -1608,12 +1624,6 @@ function renderFrameGrid(){
       img.src=data.asset;
       img.style.cssText='width:100%;height:100%;object-fit:cover';
       swatch.appendChild(img);
-    } else if(data.type==='imageMulti'){
-      const chosen=data.options.find(o=>o.name===windowSillChoice)||data.options[0];
-      const img=document.createElement('img');
-      img.src=chosen.asset;
-      img.style.cssText='width:100%;height:100%;object-fit:cover';
-      swatch.appendChild(img);
     } else if(data.type==='comingSoon'){
       swatch.textContent='🔜';
       swatch.style.fontSize='22px';
@@ -1639,10 +1649,17 @@ function renderFrameGrid(){
 function pickFrame(name){
   const wasSelected=(selectedFrame===name);
   selectedFrame=wasSelected?null:name;
+  if(selectedFrame){
+    windowSillChoice=null;
+    renderWindowSillGrid();
+  }
   renderFrameGrid();
   renderFrameColorPanel();
   syncEdgeFadeWithFrameSelection();
   drawCaption();
+  if(selectedFrame){
+    smoothScrollToTarget('finalGenerateGuidance','center');
+  }
 }
 
 // A frame needs full-bleed artwork right up to its inner edge — a soft
@@ -1652,12 +1669,51 @@ function pickFrame(name){
 function syncEdgeFadeWithFrameSelection(){
   const toggle=document.getElementById('panoramaFadeToggle');
   if(!toggle)return;
-  if(selectedFrame){
+  if(selectedFrame||windowSillChoice){
     hardEdgesEnabled=true;
     toggle.checked=true;
   } else {
     hardEdgesEnabled=false;
     toggle.checked=false;
+  }
+}
+
+function renderWindowSillGrid(){
+  const grid=document.getElementById('windowSillGrid');
+  if(!grid)return;
+  grid.innerHTML='';
+  WINDOW_SILL_OPTIONS.forEach(opt=>{
+    const btn=document.createElement('div');
+    btn.className='theme-btn frame-btn'+(windowSillChoice===opt.name?' selected':'');
+    const swatch=document.createElement('div');
+    swatch.style.cssText='width:100%;aspect-ratio:1;display:flex;align-items:center;justify-content:center;background:#0d0d0d';
+    const img=document.createElement('img');
+    img.src=opt.asset;
+    img.style.cssText='width:100%;height:100%;object-fit:cover';
+    swatch.appendChild(img);
+    btn.appendChild(swatch);
+    const label=document.createElement('div');
+    label.className='theme-label';
+    label.textContent=opt.name;
+    btn.appendChild(label);
+    btn.onclick=()=>pickWindowSill(opt.name);
+    grid.appendChild(btn);
+  });
+}
+
+function pickWindowSill(name){
+  const wasSelected=(windowSillChoice===name);
+  windowSillChoice=wasSelected?null:name;
+  if(windowSillChoice){
+    selectedFrame=null;
+    renderFrameGrid();
+    renderFrameColorPanel();
+  }
+  renderWindowSillGrid();
+  syncEdgeFadeWithFrameSelection();
+  drawCaption();
+  if(windowSillChoice){
+    smoothScrollToTarget('finalGenerateGuidance','center');
   }
 }
 
@@ -1670,38 +1726,6 @@ function renderFrameColorPanel(){
     return;
   }
   const data=FRAME_CATALOG[selectedFrame];
-
-  if(data.type==='imageMulti'){
-    panel.style.display='block';
-    panel.innerHTML='';
-    if(!windowSillChoice)windowSillChoice=data.options[0].name;
-    const lab=document.createElement('div');
-    lab.className='note';
-    lab.style.marginBottom='6px';
-    lab.textContent='Choose a design';
-    panel.appendChild(lab);
-    const pgrid=document.createElement('div');
-    pgrid.className='theme-grid frame-grid';
-    data.options.forEach(opt=>{
-      const btn=document.createElement('div');
-      btn.className='theme-btn frame-btn'+(windowSillChoice===opt.name?' selected':'');
-      const swatch=document.createElement('div');
-      swatch.style.cssText='width:100%;aspect-ratio:1;display:flex;align-items:center;justify-content:center;background:#0d0d0d';
-      const img=document.createElement('img');
-      img.src=opt.asset;
-      img.style.cssText='width:100%;height:100%;object-fit:cover';
-      swatch.appendChild(img);
-      btn.appendChild(swatch);
-      const label=document.createElement('div');
-      label.className='theme-label';
-      label.textContent=opt.name;
-      btn.appendChild(label);
-      btn.onclick=()=>{ windowSillChoice=opt.name; renderFrameGrid(); renderFrameColorPanel(); drawCaption(); };
-      pgrid.appendChild(btn);
-    });
-    panel.appendChild(pgrid);
-    return;
-  }
 
   if(data.colorable===false){
     panel.style.display='none';
@@ -1768,24 +1792,26 @@ function updateDoubleMatPreview(){
   preview.innerHTML='<div style="width:100%;height:100%;box-sizing:border-box;border:8px solid '+upper+';background:#fff"></div>';
 }
 
+function drawWindowSillOnCanvas(ctx,canvas){
+  if(!windowSillChoice)return Promise.resolve();
+  const opt=WINDOW_SILL_OPTIONS.find(o=>o.name===windowSillChoice);
+  if(!opt)return Promise.resolve();
+  return new Promise((resolve)=>{
+    const img=new Image();
+    img.crossOrigin='anonymous';
+    img.onload=()=>{
+      ctx.drawImage(img,0,0,canvas.width,canvas.height);
+      resolve();
+    };
+    img.onerror=()=>resolve();
+    img.src=opt.asset;
+  });
+}
+
 function drawFrameOnCanvas(ctx,canvas){
   if(!selectedFrame)return Promise.resolve();
   const data=FRAME_CATALOG[selectedFrame];
   if(!data)return Promise.resolve();
-
-  if(data.type==='imageMulti'){
-    const opt=data.options.find(o=>o.name===windowSillChoice)||data.options[0];
-    return new Promise((resolve)=>{
-      const img=new Image();
-      img.crossOrigin='anonymous';
-      img.onload=()=>{
-        ctx.drawImage(img,0,0,canvas.width,canvas.height);
-        resolve();
-      };
-      img.onerror=()=>resolve();
-      img.src=opt.asset;
-    });
-  }
 
   if(data.type==='image'){
     return new Promise((resolve)=>{
@@ -1929,7 +1955,7 @@ function triggerFrameGuidance(){
   if(frameGuidancePopupShown)return;
   frameGuidancePopupShown=true;
   showGuidanceAlert(
-    'One more thing before you generate — scroll down and check out Frame. You can pick a decorative frame for your finished artwork, or choose whether the edges fade softly or stay sharp. Both are optional, but worth a look.',
+    'One more thing — take a look at the frames we offer below. A nice border can really help your picture pop. There\'s also a separate window-sill portrait option if that fits what you have in mind. Both are completely optional.',
     ()=>{ smoothScrollToTarget('frameSectionCard','center'); }
   );
 }
@@ -2075,11 +2101,18 @@ function renderTravelMugVariantGrid(){
   Object.entries(TRAVEL_MUG_CATALOG).forEach(([key,prod])=>{
     const btn=document.createElement('div');
     btn.className='theme-btn'+(key===preGenTravelVariant?' selected':'');
+    btn.style.position='relative';
     const img=document.createElement('img');
     img.src=prod.thumbnail;
     img.alt=prod.displayName;
     img.style.background='#fff';
     btn.appendChild(img);
+    if(prod.whiteOnly){
+      const badge=document.createElement('div');
+      badge.className='stock-badge';
+      badge.textContent='Only White In Stock';
+      btn.appendChild(badge);
+    }
     const label=document.createElement('div');
     label.className='theme-label';
     label.textContent=prod.displayName;
@@ -2933,6 +2966,7 @@ async function drawCaption(){
   ctx.drawImage(baseImg,0,0,canvas.width,canvas.height);
 
   await drawFrameOnCanvas(ctx,canvas);
+  await drawWindowSillOnCanvas(ctx,canvas);
 
   const text=document.getElementById('captionText').value.trim();
   if(text){
@@ -3011,6 +3045,14 @@ async function drawCaption(){
   finalImageUrl=canvas.toDataURL('image/png');
   const mainPreview=document.getElementById('previewImg');
   if(mainPreview&&mainPreview.style.display!=='none')mainPreview.src=finalImageUrl;
+
+  // The big "finished artwork" image on the easel stage is what customers
+  // actually look at — it was frozen to the raw AI output and never
+  // updated when a frame or caption got added. Keep it in sync too.
+  const easelArt=document.getElementById('needlesEaselArt');
+  if(easelArt && easelArt.style.display!=='none' && easelArt.src){
+    easelArt.src=finalImageUrl;
+  }
 }
 
 function loadBaseImageForCaption(url){
@@ -4267,6 +4309,7 @@ const TRAVEL_MUG_CATALOG = {
     layoutType: "single-image",
     sizeLabel: "30oz",
     thumbnail: "https://images.printify.com/6a6a0b3a6d82be4de2023450",
+    whiteOnly: true,
     // White only, on purpose — the stainless-steel color options on this
     // blueprint are most likely laser-engraving-only (same pattern as the
     // 40oz BrüMate dead end), while white is confirmed sublimation-safe
@@ -4769,6 +4812,7 @@ refreshTravelMugVariantVisibility();
 refreshTravelMugColorVisibility();
 refreshToteBagColorVisibility();
 renderFrameGrid();
+renderWindowSillGrid();
 updateMugGuidedFlow();
 
 function resetEverythingFreshStart(){
@@ -4826,6 +4870,7 @@ function resetEverythingFreshStart(){
   windowSillChoice=null;
   renderFrameGrid();
   renderFrameColorPanel();
+  renderWindowSillGrid();
 
   selectedPhoneCaseModel=null;
   pendingPhoneCaseModel=null;
