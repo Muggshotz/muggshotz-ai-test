@@ -145,7 +145,27 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: "Method not allowed" });
   }
   try {
-    const { image, prompt, theme, deviceId, refImageA, refImageB, currentDesign, size, panelRole } = req.body;
+    const { image, prompt, theme, deviceId, refImageA, refImageB, currentDesign, size, panelRole, action } = req.body;
+
+    // Lightweight path: upload an already-composited image (a Frame or
+    // caption baked onto the finished art in the browser via canvas) to
+    // storage and hand back a small real URL. No OpenAI call, no token
+    // cost — reuses uploadGenerationToStorage below instead of needing a
+    // whole separate serverless function, since this project is already
+    // right at Vercel's 12-function Hobby-plan cap.
+    if (action === "uploadComposite") {
+      if (!image) {
+        return res.status(400).json({ error: "Missing image." });
+      }
+      const compositeMatch = image.match(/^data:(image\/\w+);base64,(.+)$/);
+      if (!compositeMatch) {
+        return res.status(400).json({ error: "Image must be a base64 data URL." });
+      }
+      const compositeBuffer = Buffer.from(compositeMatch[2], "base64");
+      const compositeUrl = await uploadGenerationToStorage(compositeBuffer, deviceId);
+      return res.status(200).json({ imageUrl: compositeUrl });
+    }
+
     if (!image || !prompt) {
       return res.status(400).json({ error: "Missing image or prompt." });
     }
