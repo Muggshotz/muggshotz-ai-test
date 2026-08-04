@@ -668,7 +668,7 @@
 <div class="card" id="travelMugVariantCard" style="display:none">
 <div class="card-title">🍶 Which Travel Mug?</div>
 <div class="note" style="margin-top:0;margin-bottom:.9rem">Pick which travel mug you're getting before generating — the shape and print layout differ enough between them that we need this locked in first.</div>
-<div class="grid3" id="travelMugVariantGrid"></div>
+<div class="theme-grid" id="travelMugVariantGrid"></div>
 </div>
 
 <div class="card" id="travelMugColorCard" style="display:none">
@@ -2025,8 +2025,16 @@ function renderTravelMugVariantGrid(){
   grid.innerHTML='';
   Object.entries(TRAVEL_MUG_CATALOG).forEach(([key,prod])=>{
     const btn=document.createElement('div');
-    btn.className='btn-select'+(key===preGenTravelVariant?' selected':'');
-    btn.textContent=prod.displayName;
+    btn.className='theme-btn'+(key===preGenTravelVariant?' selected':'');
+    const img=document.createElement('img');
+    img.src=prod.thumbnail;
+    img.alt=prod.displayName;
+    img.style.background='#fff';
+    btn.appendChild(img);
+    const label=document.createElement('div');
+    label.className='theme-label';
+    label.textContent=prod.displayName;
+    btn.appendChild(label);
     btn.onclick=()=>pickPreGenTravelVariant(key);
     grid.appendChild(btn);
   });
@@ -4141,19 +4149,21 @@ const TRAVEL_MUG_CATALOG = {
     displayName: "Travel Mug, 20oz",
     layoutType: "single-image",
     sizeLabel: "20oz",
-
+    thumbnail: "https://images.printify.com/66f2ad200cdcc23cc80b1256",
     colors: null
   },
   "travel-mug-14oz-handle": {
     displayName: "Travel Mug with Handle, 14oz",
     layoutType: "single-image",
     sizeLabel: "14oz",
+    thumbnail: "https://images.printify.com/66d0a2db4db1673db404b666",
     colors: null
   },
   "travel-mug-40oz-insulated": {
     displayName: "Insulated Travel Mug, 40oz",
     layoutType: "front-back",
     sizeLabel: "40oz",
+    thumbnail: "https://images.printify.com/6a294f3f24f367a2b3044281",
     colors: [
       { name: "White", hex: "#FFFFFF" }, { name: "Black", hex: "#1c1c1c" },
       { name: "Navy Blue", hex: "#2E4E7E" }, { name: "Royal Blue", hex: "#3B6FC4" },
@@ -4165,12 +4175,14 @@ const TRAVEL_MUG_CATALOG = {
     displayName: "Gator Tumbler, 32oz",
     layoutType: "single-image",
     sizeLabel: "32oz",
+    thumbnail: "https://images.printify.com/66d0605a799b6a8b1a0758a5",
     colors: null
   },
   "travel-mug-30oz-tundra": {
     displayName: "Tundra Tumbler, 30oz",
     layoutType: "single-image",
     sizeLabel: "30oz",
+    thumbnail: "https://images.printify.com/6a6a0b3a6d82be4de2023450",
     // White only, on purpose — the stainless-steel color options on this
     // blueprint are most likely laser-engraving-only (same pattern as the
     // 40oz BrüMate dead end), while white is confirmed sublimation-safe
