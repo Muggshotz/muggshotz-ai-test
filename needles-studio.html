@@ -2010,6 +2010,9 @@ function pickMugPrintMode(mode){
   document.getElementById('printModeThreeBtn').classList.toggle('selected',mode==='three-panel');
   document.getElementById('printModeWrapBtn').classList.toggle('selected',mode==='wraparound');
   refreshPanoramaFadeCardVisibility();
+  if(product==='water bottle'){
+    smoothScrollToTarget('travelMugVariantCard','center');
+  }
 }
 
 function refreshMugPrintModeVisibility(){
@@ -2382,6 +2385,8 @@ function pick(el,type){
         const input=document.getElementById('phoneModelSearchInputGen');
         if(input)input.focus();
       });
+    } else if(product==='water bottle'){
+      smoothScrollToTarget('travelMugVariantCard','center');
     }
   }
   else if(type==='style')style=el.dataset.val;
