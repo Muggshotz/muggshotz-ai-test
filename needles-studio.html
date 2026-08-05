@@ -1814,6 +1814,42 @@ function drawWindowSillOnCanvas(ctx,canvas){
   });
 }
 
+// Frame source files often have transparent padding baked in around the
+// actual border art (verified: ~6-10% on Ornate Gold, for example). Drawing
+// a frame stretched to the full canvas assumes the border touches the
+// file's true edges -- when it doesn't, the visible border ends up smaller
+// than the photo, and anything the photo has near its own edges (like the
+// top of a head) appears to float outside the frame instead of inside it.
+// This scans for the real opaque bounding box so we can crop out that
+// padding and scale ONLY the actual border art to fill the canvas -- one
+// fix that self-adjusts correctly no matter how much padding any given
+// frame file happens to have.
+function getOpaqueBBox(img){
+  const c=document.createElement('canvas');
+  c.width=img.naturalWidth;
+  c.height=img.naturalHeight;
+  const cx=c.getContext('2d');
+  cx.drawImage(img,0,0);
+  const data=cx.getImageData(0,0,c.width,c.height).data;
+  const threshold=10;
+  let minX=c.width,minY=c.height,maxX=0,maxY=0,found=false;
+  for(let y=0;y<c.height;y++){
+    const rowStart=y*c.width;
+    for(let x=0;x<c.width;x++){
+      const a=data[(rowStart+x)*4+3];
+      if(a>threshold){
+        found=true;
+        if(x<minX)minX=x;
+        if(x>maxX)maxX=x;
+        if(y<minY)minY=y;
+        if(y>maxY)maxY=y;
+      }
+    }
+  }
+  if(!found)return {x:0,y:0,w:c.width,h:c.height};
+  return {x:minX,y:minY,w:(maxX-minX+1),h:(maxY-minY+1)};
+}
+
 function drawFrameOnCanvas(ctx,canvas){
   if(!selectedFrame)return Promise.resolve();
   const data=FRAME_CATALOG[selectedFrame];
@@ -1824,13 +1860,14 @@ function drawFrameOnCanvas(ctx,canvas){
       const img=new Image();
       img.crossOrigin='anonymous';
       img.onload=()=>{
+        const bbox=getOpaqueBBox(img);
         ctx.save();
         if(data.colorable!==false){
           const hex=frameColors[selectedFrame]||data.defaultColor;
           const rotate=Math.round(hexToHue(hex)-hexToHue(data.defaultColor));
           ctx.filter='hue-rotate('+rotate+'deg) saturate(1.15)';
         }
-        ctx.drawImage(img,0,0,canvas.width,canvas.height);
+        ctx.drawImage(img,bbox.x,bbox.y,bbox.w,bbox.h,0,0,canvas.width,canvas.height);
         ctx.filter='none';
         ctx.restore();
         resolve();
