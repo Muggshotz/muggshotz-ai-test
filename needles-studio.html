@@ -3910,7 +3910,43 @@ Use rich environmental storytelling while keeping the face as the primary focal 
 
     resultUrl=data.imageUrl;
 
+// TEMPORARY diagnostic helper -- draws an unmistakable red/blue split so we
+// can verify, with zero ambiguity, which half (left vs right) Printify
+// actually places on which physical side of the 40oz. Triggered only by
+// typing the exact phrase "TESTORIENTATION" in the idea box. Safe to remove
+// once the real front/back mapping is confirmed.
+async function makeTestOrientationPanorama(){
+  const w=1536, h=1024;
+  const canvas=document.createElement('canvas');
+  canvas.width=w; canvas.height=h;
+  const ctx=canvas.getContext('2d');
+  ctx.fillStyle='#D62828';
+  ctx.fillRect(0,0,w/2,h);
+  ctx.fillStyle='#2255A4';
+  ctx.fillRect(w/2,0,w/2,h);
+  ctx.fillStyle='#ffffff';
+  ctx.textAlign='center';
+  ctx.textBaseline='middle';
+  ctx.font='bold 90px Arial';
+  ctx.fillText('LEFT HALF (RED)',w*0.25,h/2-60);
+  ctx.fillText('LEFT HALF (RED)',w*0.25,h/2+60);
+  ctx.fillText('RIGHT HALF (BLUE)',w*0.75,h/2-60);
+  ctx.fillText('RIGHT HALF (BLUE)',w*0.75,h/2+60);
+  ctx.font='bold 50px Arial';
+  ctx.fillText('<< OUTER EDGE',w*0.06,h*0.12);
+  ctx.fillText('OUTER EDGE >>',w*0.94,h*0.12);
+  ctx.textAlign='left';
+  ctx.fillText('CENTER SEAM >',w*0.5-260,h*0.9);
+  ctx.textAlign='right';
+  ctx.fillText('< CENTER SEAM',w*0.5+260,h*0.9);
+  return canvas.toDataURL('image/jpeg',0.92);
+}
+
     if(!resultUrl)throw new Error('No image returned.');
+
+    if (is40ozWraparoundSplit && idea.trim().toUpperCase()==='TESTORIENTATION'){
+      resultUrl = await makeTestOrientationPanorama();
+    }
 
     // Guaranteed edge fade: post-process the AI's result so the fade is
     // reliable, but keep the untouched raw image around to seed the
