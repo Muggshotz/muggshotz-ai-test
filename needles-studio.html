@@ -763,6 +763,16 @@
 <div id="positionHolderRow" style="display:flex;align-items:flex-start;gap:6px;justify-content:center;flex-wrap:nowrap"></div>
 <div id="wraparoundStandbyPrompt" class="note mug-select-flash" style="display:none">⏳ Please Stand By While Panoramic Panels Are Being Completed</div>
 
+<div class="card" id="accessorizeCard" style="display:none">
+<div class="card-title">🖼️ Add a Frame?</div>
+<div class="note" style="margin-top:0;margin-bottom:.75rem">Pick a frame or window sill above and you'll see it applied right here instantly — nothing is saved until you press Apply. Leave it blank and press Skip for a clean, unframed look.</div>
+<div id="accessorizePreviewStrip" style="display:flex;gap:8px"></div>
+<div class="bi-row">
+<button class="generate-btn" id="accessorizeApplyBtn" style="flex:1;width:auto;padding:.8rem .4rem;font-size:13px" onclick="applyAccessorizeFrame()">✅ Apply Frame</button>
+<button class="download-btn" style="flex:1;margin-top:0;padding:.8rem .4rem;font-size:13px" onclick="skipAccessorizeFrame()">⏭️ Skip — No Frame</button>
+</div>
+</div>
+
 <div id="genMugOptionsWrap" style="display:none;margin-top:1.1rem">
 <div class="note-action-flash" id="genMugPickStyleNote" style="margin-bottom:.6rem">Pick a style below — the real photo preview updates to match, so you can see exactly what you're getting before you decide.</div>
 <div id="mugStyleConfirmRow" style="display:none;gap:8px;margin-top:0;margin-bottom:.6rem">
@@ -1595,6 +1605,11 @@ const FRAME_COLOR_SWATCHES = [
 ];
 
 let selectedFrame = null;
+// Raw, unframed panels waiting on the post-generation Frame accessorize
+// step -- only one of these is set at a time, whichever product just
+// finished generating. Cleared once the user applies or skips.
+let pendingWraparoundRaw = null; // { left, center, right }
+let pending40ozRaw = null; // { panorama }
 let windowSillChoice = null;
 let frameColors = {};
 
@@ -1663,7 +1678,9 @@ function pickFrame(name){
   renderFrameColorPanel();
   syncEdgeFadeWithFrameSelection();
   drawCaption();
-  if(selectedFrame){
+  if(pendingWraparoundRaw||pending40ozRaw){
+    updateAccessorizePreview();
+  } else if(selectedFrame){
     smoothScrollToTarget('finalGenerateGuidance','center');
   }
 }
@@ -1718,7 +1735,9 @@ function pickWindowSill(name){
   renderWindowSillGrid();
   syncEdgeFadeWithFrameSelection();
   drawCaption();
-  if(windowSillChoice){
+  if(pendingWraparoundRaw||pending40ozRaw){
+    updateAccessorizePreview();
+  } else if(windowSillChoice){
     smoothScrollToTarget('finalGenerateGuidance','center');
   }
 }
@@ -1755,7 +1774,7 @@ function renderFrameColorPanel(){
     FRAME_COLOR_SWATCHES.forEach(c=>{
       const b=document.createElement('div');
       b.className='color-btn'+(frameColors[key]===c.hex?' selected':'');
-      b.onclick=()=>{ frameColors[key]=c.hex; renderFrameColorPanel(); drawCaption(); };
+      b.onclick=()=>{ frameColors[key]=c.hex; renderFrameColorPanel(); drawCaption(); if(pendingWraparoundRaw||pending40ozRaw)updateAccessorizePreview(); };
       const ball=document.createElement('div');
       ball.className='ball';
       ball.style.background=c.hex;
@@ -3747,6 +3766,111 @@ async function compositeFrameAcrossThreePanels(centerUrl,leftUrl,rightUrl){
   return { left: sliceThird(0), center: sliceThird(1), right: sliceThird(2) };
 }
 
+// ================= FRAME ACCESSORIZE STEP =================
+// Multi-panel products (3-panel wraparound mug, 40oz travel mug) finish
+// generating unframed. This step lets the customer browse frames against
+// the actual finished artwork -- live preview, nothing saved until they
+// press Apply -- instead of a frame getting silently baked in (or not)
+// before they've even seen the result.
+
+function renderAccessorizeStrip(urls){
+  const strip=document.getElementById('accessorizePreviewStrip');
+  if(!strip)return;
+  strip.innerHTML='';
+  urls.forEach(u=>{
+    const img=document.createElement('img');
+    img.src=u;
+    img.style.cssText='flex:1;min-width:0;border-radius:8px;border:1px solid #003c8c;object-fit:cover;max-height:170px';
+    strip.appendChild(img);
+  });
+}
+
+async function updateAccessorizePreview(){
+  const strip=document.getElementById('accessorizePreviewStrip');
+  if(!strip)return;
+  if(!pendingWraparoundRaw && !pending40ozRaw)return;
+  strip.innerHTML='<div class="note" style="width:100%;text-align:center"><span class="spinner"></span>Updating preview...</div>';
+  try{
+    if(pendingWraparoundRaw){
+      if(selectedFrame||windowSillChoice){
+        const framed=await compositeFrameAcrossThreePanels(pendingWraparoundRaw.center,pendingWraparoundRaw.left,pendingWraparoundRaw.right);
+        renderAccessorizeStrip([framed.left,framed.center,framed.right]);
+      } else {
+        renderAccessorizeStrip([pendingWraparoundRaw.left,pendingWraparoundRaw.center,pendingWraparoundRaw.right]);
+      }
+    } else if(pending40ozRaw){
+      if(selectedFrame||windowSillChoice){
+        const framedPanorama=await compositeFrameOntoImageUrl(pending40ozRaw.panorama);
+        const {leftHalf,rightHalf}=await splitImageAtCenterVertical(framedPanorama);
+        renderAccessorizeStrip([leftHalf,rightHalf]);
+      } else {
+        const {leftHalf,rightHalf}=await splitImageAtCenterVertical(pending40ozRaw.panorama);
+        renderAccessorizeStrip([leftHalf,rightHalf]);
+      }
+    }
+  }catch(err){
+    strip.innerHTML='<div class="note error" style="width:100%;text-align:center">Preview failed to update.</div>';
+    console.error('Accessorize preview failed:',err);
+  }
+}
+
+function showAccessorizeStep(){
+  const card=document.getElementById('accessorizeCard');
+  if(!card)return;
+  card.style.display='block';
+  const frameCard=document.getElementById('frameSectionCard');
+  const sillCard=document.getElementById('windowSillSectionCard');
+  if(frameCard && sillCard && card.parentNode){
+    card.parentNode.insertBefore(frameCard,card);
+    card.parentNode.insertBefore(sillCard,card);
+  }
+  updateAccessorizePreview();
+  smoothScrollToTarget('frameSectionCard','center');
+}
+
+function hideAccessorizeStep(){
+  pendingWraparoundRaw=null;
+  pending40ozRaw=null;
+  const card=document.getElementById('accessorizeCard');
+  if(card)card.style.display='none';
+}
+
+async function applyAccessorizeFrame(){
+  const btn=document.getElementById('accessorizeApplyBtn');
+  if(btn)btn.disabled=true;
+  try{
+    if(pendingWraparoundRaw && (selectedFrame||windowSillChoice)){
+      const framed=await compositeFrameAcrossThreePanels(pendingWraparoundRaw.center,pendingWraparoundRaw.left,pendingWraparoundRaw.right);
+      const centerDesign=findDesignById(placements.front);
+      if(centerDesign)centerDesign.url=framed.center;
+      const leftDesign=findDesignById(placements.left);
+      if(leftDesign)leftDesign.url=framed.left;
+      const rightDesign=findDesignById(placements.right);
+      if(rightDesign)rightDesign.url=framed.right;
+    } else if(pending40ozRaw && (selectedFrame||windowSillChoice)){
+      const framedPanorama=await compositeFrameOntoImageUrl(pending40ozRaw.panorama);
+      const {leftHalf,rightHalf}=await splitImageAtCenterVertical(framedPanorama);
+      const frontDesign=findDesignById(placements.front);
+      if(frontDesign)frontDesign.url=leftHalf;
+      const rightDesign=findDesignById(placements.right);
+      if(rightDesign)rightDesign.url=rightHalf;
+    }
+    renderRecentDesigns();
+    renderPositionHolder();
+    updatePlacementSummary();
+    saveMugState();
+  }catch(err){
+    console.error('Could not apply the frame, keeping the design unframed:',err);
+  }
+  hideAccessorizeStep();
+  if(btn)btn.disabled=false;
+}
+
+function skipAccessorizeFrame(){
+  hideAccessorizeStep();
+}
+// ================= END FRAME ACCESSORIZE STEP =================
+
 // Splits one wide image at its true center column (real pixel math) into 40oz front/back panels.
 async function splitImageAtCenterVertical(url){
   const resp=await fetch(url);
@@ -4087,13 +4211,9 @@ async function makeTestSingleZonePanorama(side){
     }
 
     if (is40ozWraparoundSplit){
-      let panoramaForSplit = resultUrl;
-      if (selectedFrame || windowSillChoice){
-        setStatus('Applying your frame to the full panorama...');
-        panoramaForSplit = await compositeFrameOntoImageUrl(resultUrl);
-      }
+      pending40ozRaw = { panorama: resultUrl };
       setStatus('Splitting your panorama into front and back panels...');
-      const { leftHalf, rightHalf } = await splitImageAtCenterVertical(panoramaForSplit);
+      const { leftHalf, rightHalf } = await splitImageAtCenterVertical(resultUrl);
       placements.front = addToRecentDesigns(leftHalf);
       placements.right = addToRecentDesigns(rightHalf);
       selectedTravelProductKey = preGenTravelVariant;
@@ -4111,9 +4231,10 @@ async function makeTestSingleZonePanorama(side){
       stopNeedlesStage();
       setStatus('✅ Both panorama panels are ready!');
       stopGenTimerSuccess();
-      scrollToFinishedImage('positionHolderCard');
+      showAccessorizeStep();
       return;
     }
+
 
     currentDesignId=addToRecentDesigns(resultUrl);
     if(product==='water bottle'){ selectedTravelProductKey=preGenTravelVariant; selectedTravelColor=preGenTravelColor; }
@@ -4151,20 +4272,7 @@ async function makeTestSingleZonePanorama(side){
       if(!skipEdgeFade) rightUrl = await applyEdgeFadeToImageUrl(rightUrl, {top:true,bottom:true,left:false,right:true});
       placements.right = addToRecentDesigns(rightUrl);
 
-      if (selectedFrame || windowSillChoice){
-        setStatus('Applying your frame across all three panels...');
-        try{
-          const framed = await compositeFrameAcrossThreePanels(resultUrl, leftUrl, rightUrl);
-          const centerDesign=findDesignById(currentDesignId);
-          if(centerDesign)centerDesign.url=framed.center;
-          const leftDesign=findDesignById(placements.left);
-          if(leftDesign)leftDesign.url=framed.left;
-          const rightDesign=findDesignById(placements.right);
-          if(rightDesign)rightDesign.url=framed.right;
-        }catch(frameErr){
-          console.error('Could not apply frame across the three wraparound panels, keeping them unframed:',frameErr);
-        }
-      }
+      pendingWraparoundRaw = { left: leftUrl, center: resultUrl, right: rightUrl };
 
       document.getElementById('wraparoundStandbyPrompt').style.display='none';
       renderRecentDesigns();
@@ -4180,7 +4288,7 @@ async function makeTestSingleZonePanorama(side){
       stopNeedlesStage();
       setStatus('✅ All three wraparound panels are ready!');
       stopGenTimerSuccess();
-      scrollToFinishedImage('positionHolderCard');
+      showAccessorizeStep();
       return;
     }
 
