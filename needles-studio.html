@@ -3697,6 +3697,56 @@ async function compositeFrameOntoImageUrl(url){
   return canvas.toDataURL('image/jpeg',0.92);
 }
 
+function loadImageFromUrl(url){
+  return new Promise((resolve,reject)=>{
+    const img=new Image();
+    img.crossOrigin='anonymous';
+    img.onload=()=>resolve(img);
+    img.onerror=reject;
+    img.src=url;
+  });
+}
+
+// Same "frame the whole thing, then cut it apart" pattern as the 40oz --
+// Left/Center/Right are really one continuous wraparound image, just
+// generated as three separate calls. Combining them into one wide canvas
+// first means the border only lands on the true outer top/bottom/left/right
+// edges, never on the two internal seams between panels, and every
+// procedural frame's stroke-width math (which scales off canvas.width)
+// comes out correct since it's applied once at full combined width instead
+// of three times at a third of it.
+async function compositeFrameAcrossThreePanels(centerUrl,leftUrl,rightUrl){
+  const [leftImg,centerImg,rightImg]=await Promise.all([
+    loadImageFromUrl(leftUrl),
+    loadImageFromUrl(centerUrl),
+    loadImageFromUrl(rightUrl)
+  ]);
+  const h=centerImg.naturalHeight;
+  const panelW=centerImg.naturalWidth;
+
+  const combined=document.createElement('canvas');
+  combined.width=panelW*3;
+  combined.height=h;
+  const ctx=combined.getContext('2d');
+  [leftImg,centerImg,rightImg].forEach((img,i)=>{
+    const scale=h/img.naturalHeight;
+    const drawW=img.naturalWidth*scale;
+    ctx.drawImage(img,0,0,img.naturalWidth,img.naturalHeight,i*panelW,0,drawW,h);
+  });
+
+  await drawFrameOnCanvas(ctx,combined);
+  await drawWindowSillOnCanvas(ctx,combined);
+
+  function sliceThird(i){
+    const c=document.createElement('canvas');
+    c.width=panelW;
+    c.height=h;
+    c.getContext('2d').drawImage(combined,i*panelW,0,panelW,h,0,0,panelW,h);
+    return c.toDataURL('image/jpeg',0.92);
+  }
+  return { left: sliceThird(0), center: sliceThird(1), right: sliceThird(2) };
+}
+
 // Splits one wide image at its true center column (real pixel math) into 40oz front/back panels.
 async function splitImageAtCenterVertical(url){
   const resp=await fetch(url);
@@ -3979,10 +4029,48 @@ async function makeTestOrientationPanorama(){
   return canvas.toDataURL('image/jpeg',0.92);
 }
 
+// Follow-up diagnostic -- colors ONLY one half, leaves the other pure white,
+// so we can see exactly where that Printify zone's boundary physically
+// falls on the real mug (does it span handle-to-front, or something else)
+// without a second color's edge to potentially confuse the read.
+// "TESTLEFTONLY" colors the left half red; "TESTRIGHTONLY" colors the
+// right half blue. Both keep the same seam/outer-edge markers as above.
+async function makeTestSingleZonePanorama(side){
+  const w=1536, h=1024;
+  const canvas=document.createElement('canvas');
+  canvas.width=w; canvas.height=h;
+  const ctx=canvas.getContext('2d');
+  ctx.fillStyle='#ffffff';
+  ctx.fillRect(0,0,w,h);
+  const isLeft=(side==='left');
+  ctx.fillStyle=isLeft?'#D62828':'#2255A4';
+  ctx.fillRect(isLeft?0:w/2,0,w/2,h);
+  ctx.fillStyle='#ffffff';
+  ctx.textAlign='center';
+  ctx.textBaseline='middle';
+  ctx.font='bold 80px Arial';
+  const label=isLeft?'LEFT HALF (RED)':'RIGHT HALF (BLUE)';
+  const cx=isLeft?w*0.25:w*0.75;
+  ctx.fillText(label,cx,h/2-50);
+  ctx.fillText(label,cx,h/2+50);
+  ctx.font='bold 44px Arial';
+  ctx.fillStyle='#000000';
+  ctx.fillText(isLeft?'OUTER EDGE >':'< OUTER EDGE',isLeft?w*0.06:w*0.94,h*0.15);
+  ctx.textAlign=isLeft?'right':'left';
+  ctx.fillText(isLeft?'SEAM >':'< SEAM',w*0.5+(isLeft?-40:40),h*0.85);
+  return canvas.toDataURL('image/jpeg',0.92);
+}
+
     if(!resultUrl)throw new Error('No image returned.');
 
     if (is40ozWraparoundSplit && idea.trim().toUpperCase()==='TESTORIENTATION'){
       resultUrl = await makeTestOrientationPanorama();
+    }
+    if (is40ozWraparoundSplit && idea.trim().toUpperCase()==='TESTLEFTONLY'){
+      resultUrl = await makeTestSingleZonePanorama('left');
+    }
+    if (is40ozWraparoundSplit && idea.trim().toUpperCase()==='TESTRIGHTONLY'){
+      resultUrl = await makeTestSingleZonePanorama('right');
     }
 
     // Guaranteed edge fade: post-process the AI's result so the fade is
@@ -4062,6 +4150,21 @@ async function makeTestOrientationPanorama(){
       });
       if(!skipEdgeFade) rightUrl = await applyEdgeFadeToImageUrl(rightUrl, {top:true,bottom:true,left:false,right:true});
       placements.right = addToRecentDesigns(rightUrl);
+
+      if (selectedFrame || windowSillChoice){
+        setStatus('Applying your frame across all three panels...');
+        try{
+          const framed = await compositeFrameAcrossThreePanels(resultUrl, leftUrl, rightUrl);
+          const centerDesign=findDesignById(currentDesignId);
+          if(centerDesign)centerDesign.url=framed.center;
+          const leftDesign=findDesignById(placements.left);
+          if(leftDesign)leftDesign.url=framed.left;
+          const rightDesign=findDesignById(placements.right);
+          if(rightDesign)rightDesign.url=framed.right;
+        }catch(frameErr){
+          console.error('Could not apply frame across the three wraparound panels, keeping them unframed:',frameErr);
+        }
+      }
 
       document.getElementById('wraparoundStandbyPrompt').style.display='none';
       renderRecentDesigns();
