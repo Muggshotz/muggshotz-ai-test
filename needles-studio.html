@@ -3814,6 +3814,9 @@ async function updateAccessorizePreview(){
   }
 }
 
+let frameCardHomeParent=null, frameCardHomeNext=null;
+let sillCardHomeParent=null, sillCardHomeNext=null;
+
 function showAccessorizeStep(){
   const card=document.getElementById('accessorizeCard');
   if(!card)return;
@@ -3821,6 +3824,17 @@ function showAccessorizeStep(){
   const frameCard=document.getElementById('frameSectionCard');
   const sillCard=document.getElementById('windowSillSectionCard');
   if(frameCard && sillCard && card.parentNode){
+    // Remember the true original spot the very first time only -- every
+    // later show/hide cycle must restore back to THIS location, not
+    // wherever the card last happened to be.
+    if(!frameCardHomeParent){
+      frameCardHomeParent=frameCard.parentNode;
+      frameCardHomeNext=frameCard.nextSibling;
+    }
+    if(!sillCardHomeParent){
+      sillCardHomeParent=sillCard.parentNode;
+      sillCardHomeNext=sillCard.nextSibling;
+    }
     card.parentNode.insertBefore(frameCard,card);
     card.parentNode.insertBefore(sillCard,card);
   }
@@ -3828,11 +3842,31 @@ function showAccessorizeStep(){
   smoothScrollToTarget('frameSectionCard','center');
 }
 
+function restoreFrameCardsToHome(){
+  const frameCard=document.getElementById('frameSectionCard');
+  const sillCard=document.getElementById('windowSillSectionCard');
+  if(frameCard && frameCardHomeParent){
+    if(frameCardHomeNext && frameCardHomeNext.parentNode===frameCardHomeParent){
+      frameCardHomeParent.insertBefore(frameCard,frameCardHomeNext);
+    } else {
+      frameCardHomeParent.appendChild(frameCard);
+    }
+  }
+  if(sillCard && sillCardHomeParent){
+    if(sillCardHomeNext && sillCardHomeNext.parentNode===sillCardHomeParent){
+      sillCardHomeParent.insertBefore(sillCard,sillCardHomeNext);
+    } else {
+      sillCardHomeParent.appendChild(sillCard);
+    }
+  }
+}
+
 function hideAccessorizeStep(){
   pendingWraparoundRaw=null;
   pending40ozRaw=null;
   const card=document.getElementById('accessorizeCard');
   if(card)card.style.display='none';
+  restoreFrameCardsToHome();
 }
 
 async function applyAccessorizeFrame(){
@@ -5228,6 +5262,7 @@ function resetEverythingFreshStart(){
 
   currentDesignId=null;
   pendingSlotTarget=null;
+  hideAccessorizeStep();
   document.getElementById('approveRow').style.display='none';
   document.getElementById('keepTweakingBtn').style.display='none';
   document.getElementById('downloadDesignBtn').style.display='none';
