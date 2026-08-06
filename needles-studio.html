@@ -3838,22 +3838,34 @@ function hideAccessorizeStep(){
 async function applyAccessorizeFrame(){
   const btn=document.getElementById('accessorizeApplyBtn');
   if(btn)btn.disabled=true;
+  const strip=document.getElementById('accessorizePreviewStrip');
   try{
     if(pendingWraparoundRaw && (selectedFrame||windowSillChoice)){
+      if(strip)strip.innerHTML='<div class="note" style="width:100%;text-align:center"><span class="spinner"></span>Saving your framed design...</div>';
       const framed=await compositeFrameAcrossThreePanels(pendingWraparoundRaw.center,pendingWraparoundRaw.left,pendingWraparoundRaw.right);
+      const [centerUrl,leftUrl,rightUrl]=await Promise.all([
+        uploadCompositedImage(framed.center),
+        uploadCompositedImage(framed.left),
+        uploadCompositedImage(framed.right)
+      ]);
       const centerDesign=findDesignById(placements.front);
-      if(centerDesign)centerDesign.url=framed.center;
+      if(centerDesign)centerDesign.url=centerUrl;
       const leftDesign=findDesignById(placements.left);
-      if(leftDesign)leftDesign.url=framed.left;
+      if(leftDesign)leftDesign.url=leftUrl;
       const rightDesign=findDesignById(placements.right);
-      if(rightDesign)rightDesign.url=framed.right;
+      if(rightDesign)rightDesign.url=rightUrl;
     } else if(pending40ozRaw && (selectedFrame||windowSillChoice)){
+      if(strip)strip.innerHTML='<div class="note" style="width:100%;text-align:center"><span class="spinner"></span>Saving your framed design...</div>';
       const framedPanorama=await compositeFrameOntoImageUrl(pending40ozRaw.panorama);
       const {leftHalf,rightHalf}=await splitImageAtCenterVertical(framedPanorama);
+      const [frontUrl,rightUrl]=await Promise.all([
+        uploadCompositedImage(leftHalf),
+        uploadCompositedImage(rightHalf)
+      ]);
       const frontDesign=findDesignById(placements.front);
-      if(frontDesign)frontDesign.url=leftHalf;
+      if(frontDesign)frontDesign.url=frontUrl;
       const rightDesign=findDesignById(placements.right);
-      if(rightDesign)rightDesign.url=rightHalf;
+      if(rightDesign)rightDesign.url=rightUrl;
     }
     renderRecentDesigns();
     renderPositionHolder();
@@ -3868,6 +3880,29 @@ async function applyAccessorizeFrame(){
 
 function skipAccessorizeFrame(){
   hideAccessorizeStep();
+}
+
+// Same fix as the single-image caption/frame approval flow: a composited
+// canvas export is a large raw base64 string, and sending that straight
+// into a Printify mockup request is what was choking/timing out the
+// mockup fetch for the accessorize step. Upload it through the existing
+// api/generate uploadComposite branch to get back a small real hosted URL
+// instead. Falls back to the raw dataUrl (old behavior) if the upload
+// itself fails, rather than breaking Apply entirely.
+async function uploadCompositedImage(dataUrl){
+  try{
+    const resp=await fetch('/api/generate',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({action:'uploadComposite',image:dataUrl,deviceId})
+    });
+    const data=await resp.json();
+    if(resp.ok && data.imageUrl)return data.imageUrl;
+    console.error('Could not upload composited image, using the raw data URL instead:',data.error);
+  }catch(err){
+    console.error('Could not upload composited image, using the raw data URL instead:',err);
+  }
+  return dataUrl;
 }
 // ================= END FRAME ACCESSORIZE STEP =================
 
@@ -4960,7 +4995,7 @@ async function runAutoMockupFetch(){
     const productId = startData.productId;
     let mockupUrl = null;
     let mockupUrls = [];
-    const maxTries = 20;
+    const maxTries = 40;
 
     for (let i = 0; i < maxTries; i++) {
       await new Promise(r => setTimeout(r, 1500));
