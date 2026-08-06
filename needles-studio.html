@@ -1959,20 +1959,26 @@ async function getFrameInsetFraction(assetPath){
 async function drawPhotoInsetForFrame(ctx,canvas,source,sourceW,sourceH){
   // Same containment problem Frame had, applies here too: a Window Sill
   // scene has its own real opening (the window cutout), smaller than the
-  // full canvas, with real padding around it in the source file (verified:
-  // ~10-12% on Stained Glass Garden and English Cottage, for example).
-  // Drawing the photo full-canvas ignored that, so anything near a true
-  // edge got hidden behind opaque scenery instead of sitting in the
-  // window. Resolve whichever asset is actually selected -- Frame or
-  // Window Sill, they're mutually exclusive -- and shrink-to-fit into its
-  // real opening the same way.
+  // full canvas, with real padding around it in the source file. Drawing
+  // the photo full-canvas ignored that. Resolve whichever asset is
+  // actually selected -- Frame or Window Sill, they're mutually exclusive.
+  //
+  // Frame and Window Sill deliberately fit differently (Alyx's call):
+  // Frame shrinks the photo to fit fully inside the border with nothing
+  // ever cropped, since a border shouldn't cut off part of a portrait.
+  // Window Sill fills the opening completely and lets the edges crop,
+  // same as a real window -- if you're too tall to see out without
+  // ducking, that's the window's perspective, not the photo being cut off.
   let asset=null;
+  let fitMode='contain';
   if(selectedFrame){
     const data=FRAME_CATALOG[selectedFrame];
     if(data && data.type==='image')asset=data.asset;
+    fitMode='contain';
   } else if(windowSillChoice){
     const opt=WINDOW_SILL_OPTIONS.find(o=>o.name===windowSillChoice);
     if(opt)asset=opt.asset;
+    fitMode='cover';
   }
   if(!asset){
     ctx.drawImage(source,0,0,sourceW,sourceH,0,0,canvas.width,canvas.height);
@@ -1985,7 +1991,9 @@ async function drawPhotoInsetForFrame(ctx,canvas,source,sourceW,sourceH){
   const insetY=frac.y*canvas.height;
   const insetW=frac.w*canvas.width;
   const insetH=frac.h*canvas.height;
-  const scale=Math.min(insetW/sourceW, insetH/sourceH);
+  const scale=fitMode==='cover'
+    ? Math.max(insetW/sourceW, insetH/sourceH)
+    : Math.min(insetW/sourceW, insetH/sourceH);
   const drawW=sourceW*scale;
   const drawH=sourceH*scale;
   const drawX=insetX+(insetW-drawW)/2;
