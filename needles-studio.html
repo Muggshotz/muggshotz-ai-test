@@ -4341,9 +4341,11 @@ document.getElementById('cancelBtn').style.display='block';
     // tells the AI our overlay already owns all of that, and deliberately
     // avoids implying any pose that requires a surface to lean/rest on,
     // since some Window Sill designs are standing-room balcony-door style
-    // with nothing to prop elbows on.
+    // with nothing to prop elbows on. Also adds a close/large framing rule
+    // so subjects don't render small and distant, like figures behind
+    // glass in a dollhouse, once composited into the window graphic.
     const windowSillCompositionLine = windowSillChoice
-      ? 'COMPOSITION: This will be composited into a window-sill graphic automatically after generation — do NOT include any window, sill, shutters, glass, balcony railing, or architectural framing in this image. Just the subject, warm and candid: standing naturally, holding a coffee mug, looking toward the viewer with a warm smile as if greeting a neighbor. Keep the background simple and unobstructed — no windows, no ledges or surfaces to lean on, no framing devices of any kind. Do not add any text, signage, chalkboard, or slogan anywhere in the scene — the background should read like a plain, uncluttered portrait backdrop, not a decorated storefront.'
+      ? 'COMPOSITION: This will be composited into a window-sill graphic automatically after generation — do NOT include any window, sill, shutters, glass, balcony railing, or architectural framing in this image. Just the subject, warm and candid: standing naturally, holding a coffee mug, looking toward the viewer with a warm smile as if greeting a neighbor. Keep the background simple and unobstructed — no windows, no ledges or surfaces to lean on, no framing devices of any kind. Do not add any text, signage, chalkboard, or slogan anywhere in the scene — the background should read like a plain, uncluttered portrait backdrop, not a decorated storefront. Frame the subject close and large, as if they are standing right at the window glass looking out — head and shoulders (or upper body for two people) should fill most of the frame, with minimal empty space above or around them. Avoid full-body or wide-angle framing entirely; this is a tight, intimate window-view shot, not a room photograph.'
       : '';
 
     const referenceLine = (refASnapshot || refBSnapshot)
@@ -5010,11 +5012,6 @@ const TRAVEL_MUG_CATALOG = {
     sizeLabel: "30oz",
     thumbnail: "https://images.printify.com/6a6a0b3a6d82be4de2023450",
     whiteOnly: true,
-    // White only, on purpose — the stainless-steel color options on this
-    // blueprint are most likely laser-engraving-only (same pattern as the
-    // 40oz BrüMate dead end), while white is confirmed sublimation-safe
-    // for full-color prints. Not offering colors here avoids exposing an
-    // option that might silently fail.
     colors: null
   }
 };
