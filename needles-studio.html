@@ -1836,7 +1836,8 @@ function drawWindowSillOnCanvas(ctx,canvas){
     const img=new Image();
     img.crossOrigin='anonymous';
     img.onload=()=>{
-      ctx.drawImage(img,0,0,canvas.width,canvas.height);
+      const bbox=getOpaqueBBox(img);
+      ctx.drawImage(img,bbox.x,bbox.y,bbox.w,bbox.h,0,0,canvas.width,canvas.height);
       resolve();
     };
     img.onerror=()=>resolve();
@@ -1949,12 +1950,28 @@ async function getFrameInsetFraction(assetPath){
 // frames already account for their own thickness analytically and
 // Window Sill is a full-bleed scene, not a border.
 async function drawPhotoInsetForFrame(ctx,canvas,source,sourceW,sourceH){
-  const data=selectedFrame?FRAME_CATALOG[selectedFrame]:null;
-  if(!data || data.type!=='image'){
+  // Same containment problem Frame had, applies here too: a Window Sill
+  // scene has its own real opening (the window cutout), smaller than the
+  // full canvas, with real padding around it in the source file (verified:
+  // ~10-12% on Stained Glass Garden and English Cottage, for example).
+  // Drawing the photo full-canvas ignored that, so anything near a true
+  // edge got hidden behind opaque scenery instead of sitting in the
+  // window. Resolve whichever asset is actually selected -- Frame or
+  // Window Sill, they're mutually exclusive -- and shrink-to-fit into its
+  // real opening the same way.
+  let asset=null;
+  if(selectedFrame){
+    const data=FRAME_CATALOG[selectedFrame];
+    if(data && data.type==='image')asset=data.asset;
+  } else if(windowSillChoice){
+    const opt=WINDOW_SILL_OPTIONS.find(o=>o.name===windowSillChoice);
+    if(opt)asset=opt.asset;
+  }
+  if(!asset){
     ctx.drawImage(source,0,0,sourceW,sourceH,0,0,canvas.width,canvas.height);
     return;
   }
-  const frac=await getFrameInsetFraction(data.asset);
+  const frac=await getFrameInsetFraction(asset);
   ctx.fillStyle='#ffffff';
   ctx.fillRect(0,0,canvas.width,canvas.height);
   const insetX=frac.x*canvas.width;
@@ -2172,7 +2189,8 @@ function showIdeaBoxIntroIfNeeded(){
   if(ideaBoxIntroShown)return;
   ideaBoxIntroShown=true;
   showGuidanceAlert(
-    "Make it yours — describe any hairstyle, clothing, costume, eye color, hair color, or scene you want. Let your imagination run wild!\n\nNote: Muggshotz reserves the right to decline requests that violate our content guidelines or applicable law."
+    "Type it right in the \"Tell Us Your Idea\" box below — describe any hairstyle, clothing, costume, eye color, hair color, or scene you want. Let your imagination run wild!\n\nNote: Muggshotz reserves the right to decline requests that violate our content guidelines or applicable law.",
+    ()=>{ smoothScrollToTarget('ideaCard','center'); }
   );
 }
 
