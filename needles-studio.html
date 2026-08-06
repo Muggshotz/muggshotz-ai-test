@@ -1862,7 +1862,13 @@ function getOpaqueBBox(img){
   const cx=c.getContext('2d');
   cx.drawImage(img,0,0);
   const data=cx.getImageData(0,0,c.width,c.height).data;
-  const threshold=10;
+  // A faint anti-aliased fringe right at the true edge of the artwork
+  // (normal, invisible-looking blend pixels) was being counted as "real
+  // content" at threshold 10, making the detected box slightly larger
+  // than where the artwork is actually solid -- leaving a sliver of true
+  // background exposed once that oversized box got stretched to fill the
+  // canvas. Requiring near-full opacity trims that fringe out.
+  const threshold=200;
   let minX=c.width,minY=c.height,maxX=0,maxY=0,found=false;
   for(let y=0;y<c.height;y++){
     const rowStart=y*c.width;
@@ -1896,7 +1902,8 @@ function getInnerOpeningBBox(img,outerBBox){
   const cx=c.getContext('2d');
   cx.drawImage(img,0,0);
   const data=cx.getImageData(0,0,c.width,c.height).data;
-  const threshold=10;
+  // Same fringe issue as the outer detector above -- keep this in sync.
+  const threshold=200;
   const midY=Math.round(outerBBox.y+outerBBox.h/2);
   const midX=Math.round(outerBBox.x+outerBBox.w/2);
   function alphaAt(x,y){
