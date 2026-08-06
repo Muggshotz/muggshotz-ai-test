@@ -4018,7 +4018,13 @@ function showSingleImageAccessorizeStep(){
   if(previewCard)captionCard.parentNode.insertBefore(previewCard,captionCard);
   captionCard.parentNode.insertBefore(frameCard,captionCard);
   captionCard.parentNode.insertBefore(sillCard,captionCard);
-  smoothScrollToTarget('frameSectionCard','center');
+  // If they already decided before generating, show them the finished
+  // result they just waited for -- don't yank them away to a decision
+  // that's already made. Only steer them to the picker if there's
+  // actually still a choice to make.
+  if(!selectedFrame && !windowSillChoice){
+    smoothScrollToTarget('frameSectionCard','center');
+  }
 }
 
 function showAccessorizeStep(){
