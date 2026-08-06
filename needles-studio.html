@@ -4318,8 +4318,18 @@ document.getElementById('cancelBtn').style.display='block';
     // never shown to the customer, same as the Wraparound/panel lines
     // above. Fires whenever a Window Sill design is selected, regardless
     // of what (if anything) the customer typed in the idea box.
+    //
+    // REVISED (Alyx's request): the original wording described a pose
+    // ("leaning on a windowsill, elbows propped") -- the AI took that
+    // literally and rendered its own window/sill/shutters INTO the photo,
+    // which then got composited a second time inside our actual Window
+    // Sill graphic (a window inside a window). This version explicitly
+    // tells the AI our overlay already owns all of that, and deliberately
+    // avoids implying any pose that requires a surface to lean/rest on,
+    // since some Window Sill designs are standing-room balcony-door style
+    // with nothing to prop elbows on.
     const windowSillCompositionLine = windowSillChoice
-      ? 'COMPOSITION: This is a Window Sill Portrait. Pose the subject leaning on a windowsill, elbows propped up, holding a coffee mug, looking out toward the viewer as if mid-conversation with a neighbor — warm, candid, unposed. Compose them to fit naturally within a window opening, not a full-body or wide shot.'
+      ? 'COMPOSITION: This will be composited into a window-sill graphic automatically after generation — do NOT include any window, sill, shutters, glass, balcony railing, or architectural framing in this image. Just the subject, warm and candid: standing naturally, holding a coffee mug, looking toward the viewer with a warm smile as if greeting a neighbor. Keep the background simple and unobstructed — no windows, no ledges or surfaces to lean on, no framing devices of any kind.'
       : '';
 
     const referenceLine = (refASnapshot || refBSnapshot)
