@@ -188,7 +188,7 @@
 
 .guidance-alert-box{background:#0d1b33;border:2px solid #003c8c;border-radius:16px;padding:1.9rem 1.6rem;max-width:380px;width:100%;text-align:center;box-shadow:0 0 34px rgba(0,60,140,0.55);animation:bigAlertPop .25s ease}
 .guidance-alert-icon{font-size:36px;margin-bottom:10px}
-.guidance-alert-msg{color:#eaf0fb;font-size:16px;font-weight:600;line-height:1.45;margin-bottom:1.2rem}
+.guidance-alert-msg{color:#eaf0fb;font-size:16px;font-weight:600;line-height:1.45;margin-bottom:1.2rem;white-space:pre-line}
 .guidance-alert-close{background:#003c8c;border:1px solid #7888b4;border-radius:10px;padding:.75rem 1.5rem;color:#fff;font-size:14px;font-weight:700;cursor:pointer;letter-spacing:.3px}
 .guidance-alert-close:hover{background:#0850ab}
 
@@ -670,7 +670,7 @@
 </div>
 </div>
 
-<div class="card" id="ideaCard"><div class="card-title">💬 Tell Us Your Idea</div><textarea id="ideaDesc" placeholder="Example: Put me on a tiny red tricycle wearing a firefighter helmet and full firefighter outfit, racing through a parade with smoke and sirens behind me."></textarea><div class="quick-btns" id="quickBtns"></div><div class="note" id="ideaDefaultNote">Paint us a clear picture — the more detail you give us, the better our chances of getting your exact idea right.</div><div class="note" id="ideaArtistNote" style="display:none">Tell the artist what you have in mind.</div><div id="mugIdeaActionRow" style="display:none;gap:8px;margin-top:.75rem"><button class="download-btn" style="flex:1;margin-top:0" onclick="handleReturnToPhotos()">📸 Return to select additional photos</button><button class="generate-btn" style="flex:1" onclick="handleMugGuidedGenerate()">🎨 Generate</button></div></div>
+<div class="card" id="ideaCard"><div class="card-title">💬 Tell Us Your Idea</div><textarea id="ideaDesc" placeholder="Example: Put me on a tiny red tricycle wearing a firefighter helmet and full firefighter outfit, racing through a parade with smoke and sirens behind me."></textarea><div class="quick-btns" id="quickBtns"></div><div class="note" id="ideaDefaultNote">Paint us a clear picture — the more detail you give us, the better our chances of getting your exact idea right.</div><div class="note" id="ideaArtistNote" style="display:none">Tell the artist what you have in mind.</div><div class="note" id="ideaWindowSillNote" style="display:none">(Optional) Add a costume, outfit, hair, or companion — or just upload your photo and we'll take it from there.</div><div id="mugIdeaActionRow" style="display:none;gap:8px;margin-top:.75rem"><button class="download-btn" style="flex:1;margin-top:0" onclick="handleReturnToPhotos()">📸 Return to select additional photos</button><button class="generate-btn" style="flex:1" onclick="handleMugGuidedGenerate()">🎨 Generate</button></div></div>
 <div id="ideaGuidancePrompt" class="guidance-prompt" role="status">Scroll to the next section when ready to select your desired product.</div>
 
 <div class="card" id="productCard"><div class="card-title">🎁 Product</div><div class="grid3"><div class="btn-select selected" data-val="mug" onclick="pick(this,'product')"><span class="icon">☕</span>Mug</div><div class="btn-select" data-val="greeting card" onclick="pick(this,'product')"><span class="icon">💌</span>Card</div><div class="btn-select" data-val="water bottle" onclick="pick(this,'product')"><span class="icon">🍶</span>Travel Cups</div><div class="btn-select" data-val="post-it note" onclick="pick(this,'product')"><span class="icon">📝</span>Post-it</div><div class="btn-select" data-val="phone case" onclick="pick(this,'product')"><span class="icon">📱</span>Phone case</div><div class="btn-select" data-val="tote bag" onclick="pick(this,'product')"><span class="icon">👜</span>Tote bag</div><div class="btn-select" data-val="suitcase" onclick="pick(this,'product')"><span class="icon">🧳</span>Suitcase</div><div class="btn-select" data-val="puzzle" onclick="pick(this,'product')"><span class="icon">🧩</span>Puzzle</div><div class="btn-select" data-val="photo poster" onclick="pick(this,'product')"><span class="icon">🖼️</span>Photo/Poster</div></div></div>
@@ -1397,6 +1397,9 @@ window.addEventListener('DOMContentLoaded',()=>{
   if(ideaCardEl)ideaCardObserver.observe(ideaCardEl);
   const idea=document.getElementById('ideaDesc');
   if(idea){
+    idea.addEventListener('focus',()=>{
+      showIdeaBoxIntroIfNeeded();
+    });
     idea.addEventListener('input',()=>{
       const prompt=document.getElementById('ideaGuidancePrompt');
       if(prompt)prompt.classList.remove('visible');
@@ -1678,6 +1681,7 @@ function pickFrame(name){
   renderFrameColorPanel();
   syncEdgeFadeWithFrameSelection();
   drawCaption();
+  updateIdeaCardNote();
   if(pendingWraparoundRaw||pending40ozRaw){
     updateAccessorizePreview();
   } else if(selectedFrame){
@@ -1735,6 +1739,7 @@ function pickWindowSill(name){
   renderWindowSillGrid();
   syncEdgeFadeWithFrameSelection();
   drawCaption();
+  updateIdeaCardNote();
   if(pendingWraparoundRaw||pending40ozRaw){
     updateAccessorizePreview();
   } else if(windowSillChoice){
@@ -2098,6 +2103,7 @@ let pathCanvasReady=false;
 let mugPrintMode='three-panel';
 let printFormatPopupShown=false;
 let frameGuidancePopupShown=false;
+let ideaBoxIntroShown=false;
 
 // Fires once the prerequisite choices for a mug-type product are locked in
 // (print format, and — for travel mugs — the variant/color) to point the
@@ -2151,14 +2157,35 @@ function updateGenPreviewLabel(){
   }
 }
 
+// Fires once per session, the first time the customer clicks into the
+// idea box for ANY product (Window Sill included, since it shares the
+// same box) -- lets them know they aren't limited to the default pose:
+// hairstyle, clothing, costume, eye color, hair color, companions, all
+// of it is theirs to describe. Never repeats after the first time.
+function showIdeaBoxIntroIfNeeded(){
+  if(ideaBoxIntroShown)return;
+  ideaBoxIntroShown=true;
+  showGuidanceAlert(
+    "Make it yours — describe any hairstyle, clothing, costume, eye color, hair color, or scene you want. Let your imagination run wild!\n\nNote: Muggshotz reserves the right to decline requests that violate our content guidelines or applicable law."
+  );
+}
+
 function updateIdeaCardNote(){
   const defaultNote=document.getElementById('ideaDefaultNote');
   const artistNote=document.getElementById('ideaArtistNote');
+  const sillNote=document.getElementById('ideaWindowSillNote');
   const actionRow=document.getElementById('mugIdeaActionRow');
-  if(!defaultNote||!artistNote||!actionRow)return;
+  if(!defaultNote||!artistNote||!sillNote||!actionRow)return;
   const active=product==='mug'&&mugGuidedChangesActive;
-  defaultNote.style.display=active?'none':'block';
-  artistNote.style.display=active?'block':'none';
+  if(windowSillChoice && !active){
+    defaultNote.style.display='none';
+    artistNote.style.display='none';
+    sillNote.style.display='block';
+  } else {
+    defaultNote.style.display=active?'none':'block';
+    artistNote.style.display=active?'block':'none';
+    sillNote.style.display='none';
+  }
   actionRow.style.display=active?'flex':'none';
 }
 
@@ -4226,6 +4253,14 @@ document.getElementById('cancelBtn').style.display='block';
     const panoramaFadeLine = (!skipEdgeFade && isWraparoundActive && !is40ozWraparoundSplit) ? PANORAMA_FADE_INSTRUCTION_CENTER : '';
     const uniformEdgeFadeLine = (!skipEdgeFade && (!isWraparoundActive || is40ozWraparoundSplit)) ? UNIFORM_EDGE_FADE_INSTRUCTION : '';
 
+    // Silent, non-optional composition instruction for Window Sill --
+    // never shown to the customer, same as the Wraparound/panel lines
+    // above. Fires whenever a Window Sill design is selected, regardless
+    // of what (if anything) the customer typed in the idea box.
+    const windowSillCompositionLine = windowSillChoice
+      ? 'COMPOSITION: This is a Window Sill Portrait. Pose the subject leaning on a windowsill, elbows propped up, holding a coffee mug, looking out toward the viewer as if mid-conversation with a neighbor — warm, candid, unposed. Compose them to fit naturally within a window opening, not a full-body or wide shot.'
+      : '';
+
     const referenceLine = (refASnapshot || refBSnapshot)
       ? `
 REFERENCE IMAGES: Additional photos have been provided beyond Photo 1 (the main photo).
@@ -4272,6 +4307,7 @@ ${customerIdea}
 Selected style: ${style}.
 Product target: ${getProductRules(product)}.
 ${wrapCompositionLine}
+${windowSillCompositionLine}
 ${panoramaFadeLine}
 ${uniformEdgeFadeLine}
 ${referenceLine}
