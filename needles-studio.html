@@ -3534,6 +3534,7 @@ async function approveDesign(allThree){
   renderRecentDesigns();
   renderPositionHolder();
   updatePlacementSummary();
+  restoreFrameCardsToHome();
   document.getElementById('positionHolderCard').scrollIntoView({behavior:'smooth',block:'start'});
 }
 
@@ -3554,6 +3555,7 @@ function startOver(){
   document.getElementById('downloadDesignBtn').style.display='none';
   const keepTweakingReminder=document.getElementById('keepTweakingReminder');
   if(keepTweakingReminder)keepTweakingReminder.classList.remove('visible');
+  restoreFrameCardsToHome();
   resetMainSlot();
   clearReferenceSlots();
   clearWorkshopStorage();
@@ -3915,6 +3917,31 @@ async function updateAccessorizePreview(){
 
 let frameCardHomeParent=null, frameCardHomeNext=null;
 let sillCardHomeParent=null, sillCardHomeNext=null;
+
+// Single-image products already had a live preview mechanism (drawCaption
+// re-composites on every frame click, since baseImg is already loaded by
+// this point) -- what was missing was making that moment obvious and
+// consistent with the same "decide after you see it" pattern the
+// multi-panel products now use. This relocates the picker to sit right
+// above the caption card (which already shows the live frame preview),
+// the instant the finished art and approve prompt appear.
+function showSingleImageAccessorizeStep(){
+  const captionCard=document.getElementById('captionCard');
+  const frameCard=document.getElementById('frameSectionCard');
+  const sillCard=document.getElementById('windowSillSectionCard');
+  if(!captionCard || !frameCard || !sillCard || !captionCard.parentNode)return;
+  if(!frameCardHomeParent){
+    frameCardHomeParent=frameCard.parentNode;
+    frameCardHomeNext=frameCard.nextSibling;
+  }
+  if(!sillCardHomeParent){
+    sillCardHomeParent=sillCard.parentNode;
+    sillCardHomeNext=sillCard.nextSibling;
+  }
+  captionCard.parentNode.insertBefore(frameCard,captionCard);
+  captionCard.parentNode.insertBefore(sillCard,captionCard);
+  smoothScrollToTarget('frameSectionCard','center');
+}
 
 function showAccessorizeStep(){
   const card=document.getElementById('accessorizeCard');
@@ -4496,6 +4523,7 @@ async function makeTestSingleZonePanorama(side){
       document.getElementById('startOverBtn').style.display='block';
       document.getElementById('toggleImageBtn').style.display='none';
       refreshApproveRowForMode();
+      showSingleImageAccessorizeStep();
     });
 
   }catch(err){
