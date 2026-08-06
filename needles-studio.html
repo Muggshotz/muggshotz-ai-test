@@ -632,6 +632,12 @@
 
 </div>
 
+<div class="card" id="framePreviewThumbCard" style="display:none;text-align:center">
+<div class="card-title">👀 Live Preview</div>
+<img id="framePreviewThumb" style="width:100%;max-width:260px;display:block;margin:0 auto;border-radius:10px;border:1px solid #003c8c"/>
+<div class="note" style="margin-top:.5rem">Updates instantly as you click through frames and window sills below.</div>
+</div>
+
 <div class="card" id="frameSectionCard"><div class="card-title">🖼️ Frame</div>
 <div class="note" style="margin-top:0;margin-bottom:.75rem">Optional — pick a frame to add around your finished artwork now, before you generate, so you don't lose track of it later. Applied automatically once your design is ready. Leave blank for a clean, unframed look.</div>
 <div class="theme-grid frame-grid" id="frameGrid"></div>
@@ -3218,6 +3224,16 @@ async function drawCaption(){
   const mainPreview=document.getElementById('previewImg');
   if(mainPreview&&mainPreview.style.display!=='none')mainPreview.src=finalImageUrl;
 
+  // Compact preview that's always glued directly to the Frame/Window Sill
+  // picker itself (see relocateFramePreviewPair) -- lets the customer see
+  // the effect of a click without scrolling anywhere to find it.
+  const thumbCard=document.getElementById('framePreviewThumbCard');
+  const thumb=document.getElementById('framePreviewThumb');
+  if(thumbCard && thumb){
+    thumb.src=finalImageUrl;
+    thumbCard.style.display='block';
+  }
+
   // The big "finished artwork" image on the easel stage is what customers
   // actually look at — it was frozen to the raw AI output and never
   // updated when a frame or caption got added. Keep it in sync too.
@@ -3956,6 +3972,7 @@ function showSingleImageAccessorizeStep(){
   const captionCard=document.getElementById('captionCard');
   const frameCard=document.getElementById('frameSectionCard');
   const sillCard=document.getElementById('windowSillSectionCard');
+  const previewCard=document.getElementById('framePreviewThumbCard');
   if(!captionCard || !frameCard || !sillCard || !captionCard.parentNode)return;
   if(!frameCardHomeParent){
     frameCardHomeParent=frameCard.parentNode;
@@ -3965,6 +3982,7 @@ function showSingleImageAccessorizeStep(){
     sillCardHomeParent=sillCard.parentNode;
     sillCardHomeNext=sillCard.nextSibling;
   }
+  if(previewCard)captionCard.parentNode.insertBefore(previewCard,captionCard);
   captionCard.parentNode.insertBefore(frameCard,captionCard);
   captionCard.parentNode.insertBefore(sillCard,captionCard);
   smoothScrollToTarget('frameSectionCard','center');
@@ -3976,6 +3994,7 @@ function showAccessorizeStep(){
   card.style.display='block';
   const frameCard=document.getElementById('frameSectionCard');
   const sillCard=document.getElementById('windowSillSectionCard');
+  const previewCard=document.getElementById('framePreviewThumbCard');
   if(frameCard && sillCard && card.parentNode){
     // Remember the true original spot the very first time only -- every
     // later show/hide cycle must restore back to THIS location, not
@@ -3988,6 +4007,7 @@ function showAccessorizeStep(){
       sillCardHomeParent=sillCard.parentNode;
       sillCardHomeNext=sillCard.nextSibling;
     }
+    if(previewCard)card.parentNode.insertBefore(previewCard,card);
     card.parentNode.insertBefore(frameCard,card);
     card.parentNode.insertBefore(sillCard,card);
   }
@@ -3998,7 +4018,9 @@ function showAccessorizeStep(){
 function restoreFrameCardsToHome(){
   const frameCard=document.getElementById('frameSectionCard');
   const sillCard=document.getElementById('windowSillSectionCard');
+  const previewCard=document.getElementById('framePreviewThumbCard');
   if(frameCard && frameCardHomeParent){
+    if(previewCard)frameCardHomeParent.insertBefore(previewCard,frameCard);
     if(frameCardHomeNext && frameCardHomeNext.parentNode===frameCardHomeParent){
       frameCardHomeParent.insertBefore(frameCard,frameCardHomeNext);
     } else {
