@@ -3966,6 +3966,11 @@ function hideAccessorizeStep(){
   const card=document.getElementById('accessorizeCard');
   if(card)card.style.display='none';
   restoreFrameCardsToHome();
+  // The frame cards just got yanked out from under whatever the customer
+  // was looking at (back to their page-top home) -- send them straight
+  // to the actual next step (picking style/size/color) instead of
+  // leaving them stranded wherever that used to be.
+  smoothScrollToTarget('positionHolderRow','center');
 }
 
 async function applyAccessorizeFrame(){
@@ -4526,6 +4531,12 @@ function addToRecentDesigns(url){
 
 function generateForSlot(slotName){
   pendingSlotTarget=slotName;
+  // Alyx's rule: wherever the action is actually happening, take the
+  // customer there directly -- don't leave them to go find it. This is
+  // an immediate jump; generate() also has its own delayed snap as a
+  // second layer, but a slot's "New" button can be clicked from far down
+  // the page, so don't wait on that alone.
+  smoothScrollToTarget('uploadPhotoCard','start');
   generate();
 }
 
