@@ -1605,6 +1605,24 @@ const WINDOW_SILL_OPTIONS = [
   { name:"Diner Service", asset:"frame-window-sill-h.png" }
 ];
 
+// ================= WINDOW SILL CALIBRATION =================
+// Filling the whole canvas (old behavior) let the photo's own background
+// leak past the real edges of the artwork wherever a Window Sill file had
+// any unpainted/transparent margin outside the window+railing area (seen
+// on Parisian Balcony: pink test background showing along the bottom and
+// corners). Alyx proved by hand on the Clipibrator tool that a precisely
+// sized+offset rectangle -- matching the art's real footprint instead of
+// the full canvas -- eliminates the leak entirely, no art file changes
+// needed. This table holds those tuned numbers per design, same pattern
+// as NEEDLES_CLIP_OVERRIDES above. widthPct/heightPct size the photo
+// rectangle as a percentage of the canvas; offsetXPct/offsetYPct shift it
+// from dead-center, also as a percentage of canvas width/height.
+// Any Window Sill asset NOT in this table falls back to the old
+// full-canvas behavior until it gets calibrated the same way.
+const WINDOW_SILL_CALIBRATION = {
+  "frame-window-sill-b.png": { widthPct: 68.5, heightPct: 111.0, offsetXPct: 3.0, offsetYPct: 0.0 } // Parisian Balcony
+};
+
 const FRAME_COLOR_SWATCHES = [
   { name:"Gold", hex:"#D4AF37" }, { name:"Silver", hex:"#C0C0C0" }, { name:"Champagne", hex:"#D9C89E" },
   { name:"Bronze", hex:"#B08D57" }, { name:"Black", hex:"#1c1c1c" }, { name:"White", hex:"#ffffff" },
@@ -1995,9 +2013,26 @@ async function drawPhotoInsetForFrame(ctx,canvas,source,sourceW,sourceH){
     // getFrameInsetFraction's inner-opening walk stops at the very first
     // solid pixel it hits (the top of the railing), so using that here
     // left nothing behind the railing's gaps for the customer's photo to
-    // show through. The full outer bbox already maps 1:1 to the canvas
-    // (see getOpaqueBBox's own stretch), so just fill the whole canvas.
-    insetX=0; insetY=0; insetW=canvas.width; insetH=canvas.height;
+    // show through.
+    //
+    // Filling the FULL canvas (old behavior) fixed that but introduced a
+    // new leak: any unpainted/transparent margin in the art file outside
+    // the real window+railing footprint let the photo's own background
+    // show through there too. A calibrated rectangle (see
+    // WINDOW_SILL_CALIBRATION above) sizes/positions the photo to match
+    // the art's real bounds instead of the raw canvas edges, so it still
+    // covers every real gap (railing bars included) without overshooting
+    // into margin that was never meant to be see-through. Uncalibrated
+    // assets fall back to the old full-canvas fill until they're tuned.
+    const calib=WINDOW_SILL_CALIBRATION[asset];
+    if(calib){
+      insetW=canvas.width*(calib.widthPct/100);
+      insetH=canvas.height*(calib.heightPct/100);
+      insetX=(canvas.width-insetW)/2+canvas.width*(calib.offsetXPct/100);
+      insetY=(canvas.height-insetH)/2+canvas.height*(calib.offsetYPct/100);
+    } else {
+      insetX=0; insetY=0; insetW=canvas.width; insetH=canvas.height;
+    }
   } else {
     const frac=await getFrameInsetFraction(asset);
     insetX=frac.x*canvas.width;
