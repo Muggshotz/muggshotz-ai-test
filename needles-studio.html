@@ -1869,6 +1869,95 @@ function getOpaqueBBox(img){
   return {x:minX,y:minY,w:(maxX-minX+1),h:(maxY-minY+1)};
 }
 
+// The outer edge of a frame gets stretched to the canvas edges (above),
+// but a real frame has thickness -- its INNER opening (the actual
+// see-through hole) is smaller than its outer edge. Drawing the photo at
+// full canvas size ignores that thickness, so anything near a true edge
+// (a head, a hand) ends up hidden behind opaque border instead of sitting
+// inside the opening. This measures the real hole by walking outward from
+// the frame's center along its middle row/column until it hits opaque
+// border in each direction.
+function getInnerOpeningBBox(img,outerBBox){
+  const c=document.createElement('canvas');
+  c.width=img.naturalWidth;
+  c.height=img.naturalHeight;
+  const cx=c.getContext('2d');
+  cx.drawImage(img,0,0);
+  const data=cx.getImageData(0,0,c.width,c.height).data;
+  const threshold=10;
+  const midY=Math.round(outerBBox.y+outerBBox.h/2);
+  const midX=Math.round(outerBBox.x+outerBBox.w/2);
+  function alphaAt(x,y){
+    x=Math.max(0,Math.min(c.width-1,x));
+    y=Math.max(0,Math.min(c.height-1,y));
+    return data[(y*c.width+x)*4+3];
+  }
+  // Safety fallback: if the exact center isn't transparent (shouldn't
+  // happen for a real frame), use a generous default inset rather than
+  // failing to shrink the photo at all.
+  if(alphaAt(midX,midY)>threshold){
+    const padX=outerBBox.w*0.12, padY=outerBBox.h*0.12;
+    return {x:outerBBox.x+padX,y:outerBBox.y+padY,w:outerBBox.w-2*padX,h:outerBBox.h-2*padY};
+  }
+  let left=midX,right=midX;
+  while(left>outerBBox.x && alphaAt(left-1,midY)<=threshold)left--;
+  while(right<outerBBox.x+outerBBox.w-1 && alphaAt(right+1,midY)<=threshold)right++;
+  let top=midY,bottom=midY;
+  while(top>outerBBox.y && alphaAt(midX,top-1)<=threshold)top--;
+  while(bottom<outerBBox.y+outerBBox.h-1 && alphaAt(midX,bottom+1)<=threshold)bottom++;
+  return {x:left,y:top,w:(right-left+1),h:(bottom-top+1)};
+}
+
+const frameInsetCache={};
+
+// Fraction (0-1) of the OUTER bbox that the inner opening occupies --
+// stays valid regardless of final canvas size, and is the same coordinate
+// space the outer-bbox-to-canvas stretch already uses, so it maps
+// directly onto canvas pixels with no extra conversion. Cached per asset
+// since this involves a full pixel scan and drawCaption() can run on
+// every keystroke.
+async function getFrameInsetFraction(assetPath){
+  if(frameInsetCache[assetPath])return frameInsetCache[assetPath];
+  const img=await loadImageFromUrl(assetPath);
+  const outer=getOpaqueBBox(img);
+  const inner=getInnerOpeningBBox(img,outer);
+  const frac={
+    x:(inner.x-outer.x)/outer.w,
+    y:(inner.y-outer.y)/outer.h,
+    w:inner.w/outer.w,
+    h:inner.h/outer.h
+  };
+  frameInsetCache[assetPath]=frac;
+  return frac;
+}
+
+// Draws the photo shrunk to fit fully inside the selected frame's real
+// opening (never cropped -- per Alyx, shrinking the image is preferred
+// over cutting any of it off). No-ops through to a normal full-canvas
+// draw when no real image-type frame is selected, since procedural
+// frames already account for their own thickness analytically and
+// Window Sill is a full-bleed scene, not a border.
+async function drawPhotoInsetForFrame(ctx,canvas,source,sourceW,sourceH){
+  const data=selectedFrame?FRAME_CATALOG[selectedFrame]:null;
+  if(!data || data.type!=='image'){
+    ctx.drawImage(source,0,0,sourceW,sourceH,0,0,canvas.width,canvas.height);
+    return;
+  }
+  const frac=await getFrameInsetFraction(data.asset);
+  ctx.fillStyle='#ffffff';
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+  const insetX=frac.x*canvas.width;
+  const insetY=frac.y*canvas.height;
+  const insetW=frac.w*canvas.width;
+  const insetH=frac.h*canvas.height;
+  const scale=Math.min(insetW/sourceW, insetH/sourceH);
+  const drawW=sourceW*scale;
+  const drawH=sourceH*scale;
+  const drawX=insetX+(insetW-drawW)/2;
+  const drawY=insetY+(insetH-drawH)/2;
+  ctx.drawImage(source,0,0,sourceW,sourceH,drawX,drawY,drawW,drawH);
+}
+
 function drawFrameOnCanvas(ctx,canvas){
   if(!selectedFrame)return Promise.resolve();
   const data=FRAME_CATALOG[selectedFrame];
@@ -3019,7 +3108,7 @@ async function drawCaption(){
   canvas.width=baseImg.naturalWidth;
   canvas.height=baseImg.naturalHeight;
   const ctx=canvas.getContext('2d');
-  ctx.drawImage(baseImg,0,0,canvas.width,canvas.height);
+  await drawPhotoInsetForFrame(ctx,canvas,baseImg,baseImg.naturalWidth,baseImg.naturalHeight);
 
   await drawFrameOnCanvas(ctx,canvas);
   await drawWindowSillOnCanvas(ctx,canvas);
@@ -3709,8 +3798,8 @@ async function compositeFrameOntoImageUrl(url){
   canvas.width=img.naturalWidth;
   canvas.height=img.naturalHeight;
   const ctx=canvas.getContext('2d');
-  ctx.drawImage(img,0,0);
   URL.revokeObjectURL(objectUrl);
+  await drawPhotoInsetForFrame(ctx,canvas,img,img.naturalWidth,img.naturalHeight);
   await drawFrameOnCanvas(ctx,canvas);
   await drawWindowSillOnCanvas(ctx,canvas);
   return canvas.toDataURL('image/jpeg',0.92);
@@ -3742,16 +3831,26 @@ async function compositeFrameAcrossThreePanels(centerUrl,leftUrl,rightUrl){
   ]);
   const h=centerImg.naturalHeight;
   const panelW=centerImg.naturalWidth;
+  const stripW=panelW*3;
 
-  const combined=document.createElement('canvas');
-  combined.width=panelW*3;
-  combined.height=h;
-  const ctx=combined.getContext('2d');
+  // Build the flat, unframed photo strip first so drawPhotoInsetForFrame
+  // has one single source to shrink-to-fit as a whole, same as it does
+  // for a single photo -- the three panels never get framed independently.
+  const photoStrip=document.createElement('canvas');
+  photoStrip.width=stripW;
+  photoStrip.height=h;
+  const pctx=photoStrip.getContext('2d');
   [leftImg,centerImg,rightImg].forEach((img,i)=>{
     const scale=h/img.naturalHeight;
     const drawW=img.naturalWidth*scale;
-    ctx.drawImage(img,0,0,img.naturalWidth,img.naturalHeight,i*panelW,0,drawW,h);
+    pctx.drawImage(img,0,0,img.naturalWidth,img.naturalHeight,i*panelW,0,drawW,h);
   });
+
+  const combined=document.createElement('canvas');
+  combined.width=stripW;
+  combined.height=h;
+  const ctx=combined.getContext('2d');
+  await drawPhotoInsetForFrame(ctx,combined,photoStrip,stripW,h);
 
   await drawFrameOnCanvas(ctx,combined);
   await drawWindowSillOnCanvas(ctx,combined);
