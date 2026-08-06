@@ -1984,13 +1984,27 @@ async function drawPhotoInsetForFrame(ctx,canvas,source,sourceW,sourceH){
     ctx.drawImage(source,0,0,sourceW,sourceH,0,0,canvas.width,canvas.height);
     return;
   }
-  const frac=await getFrameInsetFraction(asset);
   ctx.fillStyle='#ffffff';
   ctx.fillRect(0,0,canvas.width,canvas.height);
-  const insetX=frac.x*canvas.width;
-  const insetY=frac.y*canvas.height;
-  const insetW=frac.w*canvas.width;
-  const insetH=frac.h*canvas.height;
+
+  let insetX,insetY,insetW,insetH;
+  if(fitMode==='cover'){
+    // Window Sill needs the photo to extend behind EVERYTHING the scene
+    // draws on top of -- the window, the railing, all of it -- not just
+    // the single fully-transparent hole immediately visible from center.
+    // getFrameInsetFraction's inner-opening walk stops at the very first
+    // solid pixel it hits (the top of the railing), so using that here
+    // left nothing behind the railing's gaps for the customer's photo to
+    // show through. The full outer bbox already maps 1:1 to the canvas
+    // (see getOpaqueBBox's own stretch), so just fill the whole canvas.
+    insetX=0; insetY=0; insetW=canvas.width; insetH=canvas.height;
+  } else {
+    const frac=await getFrameInsetFraction(asset);
+    insetX=frac.x*canvas.width;
+    insetY=frac.y*canvas.height;
+    insetW=frac.w*canvas.width;
+    insetH=frac.h*canvas.height;
+  }
   const scale=fitMode==='cover'
     ? Math.max(insetW/sourceW, insetH/sourceH)
     : Math.min(insetW/sourceW, insetH/sourceH);
