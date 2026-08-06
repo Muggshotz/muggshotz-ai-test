@@ -486,7 +486,7 @@ export async function placeProductOrder({
   // coming out correctly.
   const isTravelMug20oz = productKey === "travel-mug-20oz";
   const imageScale = isCoffeeMug ? 1 : 1;
-  const imageY = isCoffeeMug ? 0.54 : 0.5;
+  const imageY = isCoffeeMug ? 0.5 : 0.5;
 
   const productTitle = `Muggshotz ${product.displayName}${customerName ? " - " + customerName : ""}`;
   const { productId } = await createPrintifyProduct(
