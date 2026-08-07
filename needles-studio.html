@@ -657,6 +657,9 @@
 <div class="cap-row"><label style="min-width:110px">Height</label><input type="range" id="wsPreviewHeight" min="10" max="150" step="0.5" oninput="handleWindowSillSliderChange()"/></div>
 <div class="cap-row"><label style="min-width:110px">Left/Right</label><input type="range" id="wsPreviewOffsetX" min="-50" max="50" step="0.5" oninput="handleWindowSillSliderChange()"/></div>
 <div class="cap-row"><label style="min-width:110px">Up/Down</label><input type="range" id="wsPreviewOffsetY" min="-50" max="50" step="0.5" oninput="handleWindowSillSliderChange()"/></div>
+<div class="sub-section-label" style="margin-top:1rem">Window Frame Size (adjusts the balcony artwork itself, not your photo)</div>
+<div class="cap-row"><label style="min-width:110px">Window Width</label><input type="range" id="wsSillWidth" min="80" max="160" step="0.5" oninput="handleWindowSillSliderChange()"/></div>
+<div class="cap-row"><label style="min-width:110px">Window Height</label><input type="range" id="wsSillHeight" min="80" max="160" step="0.5" oninput="handleWindowSillSliderChange()"/></div>
 <button class="download-btn" onclick="resetWindowSillSliders()">↺ Reset to Default Fit</button>
 </div>
 
@@ -1804,7 +1807,7 @@ function pickWindowSill(name){
 // calibration to work for every photo.
 
 function getWindowSillDefaultCalibration(asset){
-  return WINDOW_SILL_CALIBRATION[asset]||{widthPct:100,heightPct:100,offsetXPct:0,offsetYPct:0};
+  return WINDOW_SILL_CALIBRATION[asset]||{widthPct:100,heightPct:100,offsetXPct:0,offsetYPct:0,sillWidthPct:WINDOW_SILL_OVERSCAN*100,sillHeightPct:WINDOW_SILL_OVERSCAN*100};
 }
 
 // Card only makes sense once there's both a photo to preview AND a
@@ -1825,6 +1828,8 @@ function renderWindowSillPreviewCard(){
   document.getElementById('wsPreviewHeight').value=active.heightPct;
   document.getElementById('wsPreviewOffsetX').value=active.offsetXPct;
   document.getElementById('wsPreviewOffsetY').value=active.offsetYPct;
+  document.getElementById('wsSillWidth').value=active.sillWidthPct;
+  document.getElementById('wsSillHeight').value=active.sillHeightPct;
   updateWindowSillLivePreview();
 }
 
@@ -1840,7 +1845,9 @@ function handleWindowSillSliderChange(){
     widthPct:parseFloat(document.getElementById('wsPreviewWidth').value),
     heightPct:parseFloat(document.getElementById('wsPreviewHeight').value),
     offsetXPct:parseFloat(document.getElementById('wsPreviewOffsetX').value),
-    offsetYPct:parseFloat(document.getElementById('wsPreviewOffsetY').value)
+    offsetYPct:parseFloat(document.getElementById('wsPreviewOffsetY').value),
+    sillWidthPct:parseFloat(document.getElementById('wsSillWidth').value),
+    sillHeightPct:parseFloat(document.getElementById('wsSillHeight').value)
   };
   updateWindowSillLivePreview();
 }
@@ -1953,20 +1960,24 @@ function updateDoubleMatPreview(){
 // the canvas rectangle, but a curved edge doesn't reach every corner of
 // that rectangle. Overscanning slightly -- drawing a bit larger than the
 // canvas and centering the overflow off all four sides -- guarantees full
-// coverage regardless of how a given design's outline curves.
+// coverage regardless of how a given design's outline curves. 106% is
+// just the starting default now -- the Window Width/Height sliders on
+// the Preview & Fit card let the customer (or Alyx, calibrating) adjust
+// this per design, same override mechanism as the photo-fit sliders.
 const WINDOW_SILL_OVERSCAN = 1.06;
 
 function drawWindowSillOnCanvas(ctx,canvas){
   if(!windowSillChoice)return Promise.resolve();
   const opt=WINDOW_SILL_OPTIONS.find(o=>o.name===windowSillChoice);
   if(!opt)return Promise.resolve();
+  const calib=customWindowSillCalibration[opt.asset]||getWindowSillDefaultCalibration(opt.asset);
   return new Promise((resolve)=>{
     const img=new Image();
     img.crossOrigin='anonymous';
     img.onload=()=>{
       const bbox=getOpaqueBBox(img);
-      const destW=canvas.width*WINDOW_SILL_OVERSCAN;
-      const destH=canvas.height*WINDOW_SILL_OVERSCAN;
+      const destW=canvas.width*(calib.sillWidthPct/100);
+      const destH=canvas.height*(calib.sillHeightPct/100);
       const destX=-(destW-canvas.width)/2;
       const destY=-(destH-canvas.height)/2;
       ctx.drawImage(img,bbox.x,bbox.y,bbox.w,bbox.h,destX,destY,destW,destH);
