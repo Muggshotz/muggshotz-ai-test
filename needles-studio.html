@@ -1816,7 +1816,18 @@ async function pickWindowSill(name){
 // calibration to work for every photo.
 
 function getWindowSillDefaultCalibration(asset){
-  return WINDOW_SILL_CALIBRATION[asset]||{widthPct:100,heightPct:100,offsetXPct:0,offsetYPct:0,sillWidthPct:WINDOW_SILL_OVERSCAN*100,sillHeightPct:WINDOW_SILL_OVERSCAN*100};
+  // BUG FIX: this used to be a straight OR-fallback -- if an asset
+  // already had a WINDOW_SILL_CALIBRATION entry (like Parisian Balcony,
+  // calibrated before the sillWidthPct/sillHeightPct fields existed),
+  // that whole branch short-circuited and skipped the defaults entirely,
+  // leaving those two fields undefined. undefined/100 = NaN, and NaN fed
+  // into ctx.drawImage's destination coordinates makes the browser
+  // silently skip the draw -- no error, nothing rendered, exactly what
+  // was happening. Merging defaults UNDER any existing partial entry
+  // guarantees every field is always a real number, regardless of when
+  // an asset was first calibrated.
+  const DEFAULTS={widthPct:100,heightPct:100,offsetXPct:0,offsetYPct:0,sillWidthPct:WINDOW_SILL_OVERSCAN*100,sillHeightPct:WINDOW_SILL_OVERSCAN*100};
+  return Object.assign({},DEFAULTS,WINDOW_SILL_CALIBRATION[asset]||{});
 }
 
 // Card only makes sense once there's both a photo to preview AND a
