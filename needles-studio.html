@@ -649,6 +649,17 @@
 <div class="theme-grid frame-grid" id="windowSillGrid"></div>
 </div>
 
+<div class="card" id="windowSillPreviewCard" style="display:none">
+<div class="card-title">🪟 Preview &amp; Fit Your Photo</div>
+<div class="note" style="margin-top:0;margin-bottom:.75rem">This is your actual uploaded photo, not a generated design — use it to see roughly how you'll sit inside the window before spending a token. Drag the sliders to adjust the size and position; Generate will use these settings.</div>
+<img id="windowSillPreviewImg" style="width:100%;border-radius:10px;border:1px solid #003c8c;margin-bottom:.9rem"/>
+<div class="cap-row"><label style="min-width:110px">Width</label><input type="range" id="wsPreviewWidth" min="10" max="150" step="0.5" oninput="handleWindowSillSliderChange()"/></div>
+<div class="cap-row"><label style="min-width:110px">Height</label><input type="range" id="wsPreviewHeight" min="10" max="150" step="0.5" oninput="handleWindowSillSliderChange()"/></div>
+<div class="cap-row"><label style="min-width:110px">Left/Right</label><input type="range" id="wsPreviewOffsetX" min="-50" max="50" step="0.5" oninput="handleWindowSillSliderChange()"/></div>
+<div class="cap-row"><label style="min-width:110px">Up/Down</label><input type="range" id="wsPreviewOffsetY" min="-50" max="50" step="0.5" oninput="handleWindowSillSliderChange()"/></div>
+<button class="download-btn" onclick="resetWindowSillSliders()">↺ Reset to Default Fit</button>
+</div>
+
 <div class="card" id="phoneCaseModelCard" style="display:none">
 <div class="card-title">📱 Which Phone Model?</div>
 <div class="note" style="margin-top:0;margin-bottom:.75rem">We need this before generating, so your art gets composed to fit your exact phone case shape — no cropping surprises later.</div>
@@ -1430,6 +1441,7 @@ function setMainSlotImage(dataUrl){
   z.innerHTML='';
   z.appendChild(img);
   document.getElementById('startOverBtn').style.display='block';
+  renderWindowSillPreviewCard();
 }
 
 function setWorkingImageDataOnly(dataUrl){
@@ -1638,6 +1650,12 @@ let selectedFrame = null;
 let pendingWraparoundRaw = null; // { left, center, right }
 let pending40ozRaw = null; // { panorama }
 let windowSillChoice = null;
+// Per-session customer overrides for Window Sill fit, keyed by asset path
+// same as WINDOW_SILL_CALIBRATION. Set live via the Preview & Fit Your
+// Photo sliders. When present for the selected asset, these take priority
+// over the baked-in calibration -- this is what makes the sliders actually
+// affect the real generation, not just the pre-gen preview.
+let customWindowSillCalibration = {};
 let frameColors = {};
 
 function hexToHue(hex){
@@ -1700,6 +1718,7 @@ function pickFrame(name){
   if(selectedFrame){
     windowSillChoice=null;
     renderWindowSillGrid();
+    renderWindowSillPreviewCard();
   }
   renderFrameGrid();
   renderFrameColorPanel();
@@ -1764,11 +1783,92 @@ function pickWindowSill(name){
   syncEdgeFadeWithFrameSelection();
   drawCaption();
   updateIdeaCardNote();
+  renderWindowSillPreviewCard();
   if(pendingWraparoundRaw||pending40ozRaw){
     updateAccessorizePreview();
   } else if(windowSillChoice){
-    smoothScrollToTarget('finalGenerateGuidance','center');
+    // Standing rule: whenever a click starts a next step, take the
+    // customer there directly. The Preview & Fit card is now the real
+    // next step once a photo exists -- jumping straight to Generate
+    // skipped right past it, which is why it felt like it didn't exist.
+    smoothScrollToTarget(uploadedImageData?'windowSillPreviewCard':'finalGenerateGuidance','center');
   }
+}
+
+// ================= WINDOW SILL PRE-GENERATION PREVIEW & FIT =================
+// Lets the customer see their actual uploaded photo composited into the
+// selected Window Sill design BEFORE generating (no token spent), and
+// adjust the same width/height/offset numbers Alyx calibrates with in the
+// Clipper -- so a photo with an unusual crop or aspect ratio can be
+// nudged to fit right, per-customer, instead of relying on one fixed
+// calibration to work for every photo.
+
+function getWindowSillDefaultCalibration(asset){
+  return WINDOW_SILL_CALIBRATION[asset]||{widthPct:100,heightPct:100,offsetXPct:0,offsetYPct:0};
+}
+
+// Card only makes sense once there's both a photo to preview AND a
+// Window Sill design selected -- hidden otherwise rather than showing
+// sliders with nothing to act on.
+function renderWindowSillPreviewCard(){
+  const card=document.getElementById('windowSillPreviewCard');
+  if(!card)return;
+  if(!windowSillChoice||!uploadedImageData){
+    card.style.display='none';
+    return;
+  }
+  card.style.display='block';
+  const opt=WINDOW_SILL_OPTIONS.find(o=>o.name===windowSillChoice);
+  const asset=opt?opt.asset:null;
+  const active=(asset&&customWindowSillCalibration[asset])||getWindowSillDefaultCalibration(asset);
+  document.getElementById('wsPreviewWidth').value=active.widthPct;
+  document.getElementById('wsPreviewHeight').value=active.heightPct;
+  document.getElementById('wsPreviewOffsetX').value=active.offsetXPct;
+  document.getElementById('wsPreviewOffsetY').value=active.offsetYPct;
+  updateWindowSillLivePreview();
+}
+
+// Sliders write directly into customWindowSillCalibration, keyed by the
+// same asset path drawPhotoInsetForFrame already checks -- this is the
+// entire mechanism that makes a customer's adjustment carry through to
+// their real generation later, with no separate code path to keep in sync.
+function handleWindowSillSliderChange(){
+  if(!windowSillChoice)return;
+  const opt=WINDOW_SILL_OPTIONS.find(o=>o.name===windowSillChoice);
+  if(!opt)return;
+  customWindowSillCalibration[opt.asset]={
+    widthPct:parseFloat(document.getElementById('wsPreviewWidth').value),
+    heightPct:parseFloat(document.getElementById('wsPreviewHeight').value),
+    offsetXPct:parseFloat(document.getElementById('wsPreviewOffsetX').value),
+    offsetYPct:parseFloat(document.getElementById('wsPreviewOffsetY').value)
+  };
+  updateWindowSillLivePreview();
+}
+
+function resetWindowSillSliders(){
+  if(!windowSillChoice)return;
+  const opt=WINDOW_SILL_OPTIONS.find(o=>o.name===windowSillChoice);
+  if(!opt)return;
+  delete customWindowSillCalibration[opt.asset];
+  renderWindowSillPreviewCard();
+}
+
+// Draws the customer's actual uploaded reference photo through the same
+// compositing functions the real generation uses (drawPhotoInsetForFrame
+// + drawWindowSillOnCanvas) -- so what they see here is a true preview of
+// the fit, not a rough approximation, and it automatically stays correct
+// if either of those functions changes later.
+async function updateWindowSillLivePreview(){
+  const previewImgEl=document.getElementById('windowSillPreviewImg');
+  if(!previewImgEl||!uploadedImageData||!windowSillChoice)return;
+  const photo=await loadImageFromUrl(uploadedImageData);
+  const canvas=document.createElement('canvas');
+  canvas.width=photo.naturalWidth;
+  canvas.height=photo.naturalHeight;
+  const ctx=canvas.getContext('2d');
+  await drawPhotoInsetForFrame(ctx,canvas,photo,photo.naturalWidth,photo.naturalHeight);
+  await drawWindowSillOnCanvas(ctx,canvas);
+  previewImgEl.src=canvas.toDataURL('image/jpeg',0.9);
 }
 
 function renderFrameColorPanel(){
@@ -2038,7 +2138,7 @@ async function drawPhotoInsetForFrame(ctx,canvas,source,sourceW,sourceH){
     // covers every real gap (railing bars included) without overshooting
     // into margin that was never meant to be see-through. Uncalibrated
     // assets fall back to the old full-canvas fill until they're tuned.
-    const calib=WINDOW_SILL_CALIBRATION[asset];
+    const calib=customWindowSillCalibration[asset]||WINDOW_SILL_CALIBRATION[asset];
     if(calib){
       insetW=canvas.width*(calib.widthPct/100);
       insetH=canvas.height*(calib.heightPct/100);
@@ -3732,7 +3832,7 @@ function resetMainSlot(){
   fresh.style.display='none';
   z.insertAdjacentElement('afterend',fresh);
   document.getElementById('fileInput').value='';
-}
+  renderWindowSillPreviewCard();}
 
 let bigAlertOnClose=null;
 
@@ -5637,9 +5737,11 @@ function resetEverythingFreshStart(){
   selectedFrame=null;
   frameColors={};
   windowSillChoice=null;
+  customWindowSillCalibration={};
   renderFrameGrid();
   renderFrameColorPanel();
   renderWindowSillGrid();
+  renderWindowSillPreviewCard();
 
   selectedPhoneCaseModel=null;
   pendingPhoneCaseModel=null;
