@@ -664,8 +664,9 @@
 <div class="cap-row"><label style="min-width:110px">Window Width</label><input type="range" id="wsSillWidth" min="80" max="160" step="0.5" oninput="handleWindowSillSliderChange()"/></div>
 <div class="cap-row"><label style="min-width:110px">Window Height</label><input type="range" id="wsSillHeight" min="80" max="160" step="0.5" oninput="handleWindowSillSliderChange()"/></div>
 <button class="download-btn" onclick="resetWindowSillSliders()">↺ Reset to Default Fit</button>
-<button class="generate-btn" style="margin-top:.6rem" onclick="confirmWindowSillFit()">✅ Happy with the fit? Click here</button>
 </div>
+<button class="generate-btn" id="confirmDesignPreviewBtn" style="margin-top:.6rem" onclick="confirmWindowSillFit()">✅ Happy with your selection? Click here</button>
+<button class="download-btn" style="margin-top:.6rem" onclick="changeDesignSelection()">🔄 If you wish to change your selection</button>
 </div>
 
 <div class="card" id="phoneCaseModelCard" style="display:none">
@@ -1944,6 +1945,14 @@ function confirmWindowSillFit(){
     const idea=document.getElementById('ideaDesc');
     if(idea)idea.focus({preventScroll:true});
   });
+}
+
+// Button 2 on the Preview & Fit card -- takes the customer back to
+// whichever picker (Frame or Window Sill) is currently selected, so
+// they can browse and pick something different instead of hunting for
+// the grid themselves.
+function changeDesignSelection(){
+  smoothScrollToTarget(selectedFrame?'frameSectionCard':'windowSillSectionCard','start');
 }
 
 // Draws the customer's actual uploaded reference photo through the same
