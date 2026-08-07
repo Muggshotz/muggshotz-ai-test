@@ -2668,7 +2668,12 @@ function pickPreGenTravelVariant(key){
   // Now continues straight to Style, matching the same "next real
   // decision point" pattern already used for the Product picker.
   const scrollTarget=(colorCard && colorCard.style.display!=='none') ? 'travelMugColorCard' : 'styleSectionCard';
-  smoothScrollToTarget(scrollTarget,'center');
+  // BUG FIX: 'center' block left Style vertically centered, pushing
+  // Degree of Caricature and the Generate button below the fold --
+  // 'start' (already used for the Product picker's identical scroll)
+  // puts Style at the top instead, so everything through Generate
+  // actually fits on screen.
+  smoothScrollToTarget(scrollTarget,scrollTarget==='styleSectionCard'?'start':'center');
 }
 
 function refreshTravelMugVariantVisibility(){
@@ -2741,7 +2746,7 @@ function pickTravelMugColorGen(el,colorName){
     // stranded with no next-step guidance once they'd made their
     // choice. Style is the next real decision point.
     suspendGuidedScrollsForGeneration();
-    smoothScrollToTarget('styleSectionCard','center');
+    smoothScrollToTarget('styleSectionCard','start');
   }
 }
 
