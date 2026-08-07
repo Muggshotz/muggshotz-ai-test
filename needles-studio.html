@@ -652,7 +652,7 @@
 <div class="card" id="windowSillPreviewCard" style="display:none">
 <div class="card-title">🪟 Preview &amp; Fit Your Photo</div>
 <div class="note" style="margin-top:0;margin-bottom:.75rem">This is your actual uploaded photo, not a generated design — use it to see roughly how you'll sit inside the window before spending a token. Drag the sliders to adjust the size and position; Generate will use these settings.</div>
-<img id="windowSillPreviewImg" style="width:100%;border-radius:10px;border:1px solid #003c8c;margin-bottom:.9rem"/>
+<img id="windowSillPreviewImg" style="width:100%;max-height:300px;object-fit:contain;display:block;margin:0 auto .9rem;border-radius:10px;border:1px solid #003c8c;background:#0d0d0d;position:sticky;top:70px;z-index:5"/>
 <div class="cap-row"><label style="min-width:110px">Width</label><input type="range" id="wsPreviewWidth" min="10" max="150" step="0.5" oninput="handleWindowSillSliderChange()"/></div>
 <div class="cap-row"><label style="min-width:110px">Height</label><input type="range" id="wsPreviewHeight" min="10" max="150" step="0.5" oninput="handleWindowSillSliderChange()"/></div>
 <div class="cap-row"><label style="min-width:110px">Left/Right</label><input type="range" id="wsPreviewOffsetX" min="-50" max="50" step="0.5" oninput="handleWindowSillSliderChange()"/></div>
