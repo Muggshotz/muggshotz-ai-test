@@ -1601,8 +1601,10 @@ const FRAME_CATALOG = {
   // Window Sill lived here as a 16th tile — decoupled per Alyx: it only
   // fits one specific pose (someone at a window holding a coffee mug),
   // not general artwork like every other frame here. See WINDOW_SILL_OPTIONS
-  // below and its own standalone card. This leaves 15 tiles — a 16th
-  // replacement design is still needed here.
+  // below and its own standalone card. The catalog below has since grown
+  // past that original 15-tile count (Blue Floral, Crystal Champagne,
+  // Pressed Flowers, Celestial Deco, and Double Mat were added after this
+  // note was written) — no replacement design is still needed here.
   "Wrought Iron": { type:"image", asset:"frame-wrought-iron.png", colorable:false },
   "Blue Floral": { type:"image", asset:"frame-blue-floral.png", defaultColor:"#1B3D7A" },
   "Crystal Champagne": { type:"image", asset:"frame-crystal-champagne.png", defaultColor:"#D9C89E" },
@@ -2622,6 +2624,10 @@ function togglePanoramaFadeEdges(){
 }
 
 function pickMugPrintMode(mode){
+  if(mode==='wraparound' && product==='water bottle' && preGenTravelVariant==='travel-mug-40oz-insulated'){
+    showGuidanceAlert('The 40oz Insulated Travel Mug doesn\'t support Wraparound — the front-facing area is too broken up by the handle for one continuous scene to work. Use Three Separate Designs instead, which gives you two independent Left and Right images.');
+    return;
+  }
   mugPrintMode=mode;
   document.getElementById('printModeThreeBtn').classList.toggle('selected',mode==='three-panel');
   document.getElementById('printModeWrapBtn').classList.toggle('selected',mode==='wraparound');
@@ -2676,6 +2682,12 @@ function renderTravelMugVariantGrid(){
 function pickPreGenTravelVariant(key){
   if(key!==preGenTravelVariant)preGenTravelColor=null;
   preGenTravelVariant=key;
+  if(key==='travel-mug-40oz-insulated' && mugPrintMode==='wraparound'){
+    mugPrintMode='three-panel';
+    document.getElementById('printModeThreeBtn').classList.add('selected');
+    document.getElementById('printModeWrapBtn').classList.remove('selected');
+    refreshPanoramaFadeCardVisibility();
+  }
   renderTravelMugVariantGrid();
   refreshTravelMugColorVisibility();
   suspendGuidedScrollsForGeneration();
@@ -4698,29 +4710,30 @@ document.getElementById('cancelBtn').style.display='block';
         : 'Caricature strength: WILD. Use bold exaggeration only on the person\u2019s real existing features. Do not invent new facial features.';
 
     const isWraparoundActive = (product==='mug'||product==='water bottle') && mugPrintMode==='wraparound';
-    // 40oz is front+back (2 zones) — generate one wide scene, split at true center instead of 2 separate generations.
+    // 40oz is front+back (2 zones) — Wraparound is disabled for the 40oz
+    // (see pickMugPrintMode/pickPreGenTravelVariant above), so this stays
+    // false in practice; kept as a named flag in case that restriction
+    // is ever revisited.
     const is40ozWraparoundSplit = product==='water bottle' && mugPrintMode==='wraparound' && preGenTravelVariant==='travel-mug-40oz-insulated';
 
     const skipEdgeFade = hardEdgesEnabled;
 
     const wrapCompositionLine = (product==='mug'||product==='water bottle')
-      ? (is40ozWraparoundSplit
-          ? 'COMPOSITION: This design will be printed as a WIDE PANORAMIC SCENE that gets cut exactly in half down the middle and applied as two separate front and back panels on a travel mug. The exact vertical center of this image is the most visible point (directly opposite the handle) — compose the main subject centered on or spanning across that middle point, since that is also precisely where the image will be cut. The far LEFT and far RIGHT edges of the image sit hidden behind the handle — keep important detail away from those two outer edges so the edge fade there looks natural.'
-          : (isWraparoundActive
+      ? (isWraparoundActive
               ? (!skipEdgeFade
                   ? 'COMPOSITION: This design will be printed as ONE CONTINUOUS WRAPAROUND image around a curved surface, including past a handle. The LEFT and RIGHT edges are the seam where this panel joins the next one — keep detail extended sharply all the way to those edges, exactly as normal, so nothing is lost at the seam or the handle gap. The TOP and BOTTOM edges should fade to white instead (see the Edge Fade instruction below) — keep the main subject and detail away from the very top and bottom so that fade has room to happen naturally.'
                   : 'COMPOSITION: This design will be printed as ONE CONTINUOUS WRAPAROUND image around a curved surface, including past a handle. Compose with detail extended toward the edges rather than tightly centered, so nothing important is lost at the seam or the handle gap.')
               : (product==='water bottle'
                   ? 'COMPOSITION: This will be printed on a tall, narrow travel mug panel — a vertical shape, not square. Compose the subject to fill that tall frame top-to-bottom with clean, safe margins on the sides, rather than centering a square-style composition that leaves empty space above and below.'
-                  : 'COMPOSITION: This design will be printed as a single self-contained panel viewed from one flat angle. Keep the subject centered with clean, safe margins on all sides.')))
+                  : 'COMPOSITION: This design will be printed as a single self-contained panel viewed from one flat angle. Keep the subject centered with clean, safe margins on all sides.'))
       : (product==='photo poster'
           ? `COMPOSITION: This will be printed at a fixed aspect ratio of approximately ${getPosterAspectRatio().toFixed(2)}:1 in ${posterOrientation} orientation. Compose the subject to work within that exact shape — do not treat this as a standard square or default photo ratio.`
           : (product==='phone case'
               ? `COMPOSITION: This will be printed on a ${selectedPhoneCaseModel} phone case — a tall, narrow vertical shape. Keep the main subject and any caption centered in the lower two-thirds of the frame, since the upper portion sits near the camera cutout area on the real case and shouldn't carry essential detail.`
               : ''));
 
-    const panoramaFadeLine = (!skipEdgeFade && isWraparoundActive && !is40ozWraparoundSplit) ? PANORAMA_FADE_INSTRUCTION_CENTER : '';
-    const uniformEdgeFadeLine = (!skipEdgeFade && (!isWraparoundActive || is40ozWraparoundSplit)) ? UNIFORM_EDGE_FADE_INSTRUCTION : '';
+    const panoramaFadeLine = (!skipEdgeFade && isWraparoundActive) ? PANORAMA_FADE_INSTRUCTION_CENTER : '';
+    const uniformEdgeFadeLine = (!skipEdgeFade && !isWraparoundActive) ? UNIFORM_EDGE_FADE_INSTRUCTION : '';
 
     // Silent, non-optional composition instruction for Window Sill --
     // never shown to the customer, same as the Wraparound/panel lines
