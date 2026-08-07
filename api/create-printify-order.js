@@ -281,8 +281,20 @@ export async function resolveVariant(product, sizeLabel, colorName) {
     return { variantId, price: sizeEntry.price };
   }
 
-  if (!sizeEntry.variantId) throw new Error(`No variantId configured for size "${sizeLabel}".`);
-  return { variantId: sizeEntry.variantId, price: sizeEntry.price };
+  // UPDATED (Aug 2026): this branch previously threw immediately if a
+  // size-only product (no colors at all, like the Gator Tumbler and
+  // Tundra Tumbler) was missing a hardcoded variantId. The two color
+  // branches above already had a live-lookup fallback for exactly this
+  // situation -- a product confirmed to genuinely exist on Printify
+  // whose numeric variant ID just hasn't been manually looked up yet --
+  // this branch simply never got the same treatment, which is why the
+  // 32oz Gator Tumbler's real-photo preview failed with "No variantId
+  // configured for size '32oz'" the first time it was used. Brought in
+  // line with the same resolveVariantIdByTitleMatch() fallback already
+  // used for Trimmed's 15oz Black, Accented's Black, and travel-mug-20oz.
+  if (sizeEntry.variantId) return { variantId: sizeEntry.variantId, price: sizeEntry.price };
+  const variantId = await resolveVariantIdByTitleMatch(product.blueprintId, product.printProviderId, [sizeLabel]);
+  return { variantId, price: sizeEntry.price };
 }
 
 // UPDATED (July 2026, Alyx's request): added optional imageScale and
