@@ -662,6 +662,7 @@
 <div class="cap-row"><label style="min-width:110px">Window Width</label><input type="range" id="wsSillWidth" min="80" max="160" step="0.5" oninput="handleWindowSillSliderChange()"/></div>
 <div class="cap-row"><label style="min-width:110px">Window Height</label><input type="range" id="wsSillHeight" min="80" max="160" step="0.5" oninput="handleWindowSillSliderChange()"/></div>
 <button class="download-btn" onclick="resetWindowSillSliders()">↺ Reset to Default Fit</button>
+<button class="generate-btn" style="margin-top:.6rem" onclick="confirmWindowSillFit()">✅ Happy with the fit? Click here</button>
 </div>
 </div>
 
@@ -770,7 +771,7 @@
 <div class="color-grid" id="toteBagColorGridGen"></div>
 </div>
 
-<div class="card"><div class="card-title">🎨 Style</div><div class="grid2"><div class="btn-select selected" data-val="Muggshotz Classic: premium professional caricature, expressive face, rich detail, painterly shading, funny gift-art scene" onclick="pick(this,'style')">🦝 Muggshotz Classic</div><div class="btn-select" data-val="photorealistic rendering, natural skin texture and lighting like a real photograph, shot on camera — not illustrated, not painted, not stylized" onclick="pick(this,'style')">📷 Photorealistic</div><div class="btn-select" data-val="flat cel-shaded comic strip illustration, bold black outlines, flat solid color fills, no gradients or painterly shading" onclick="pick(this,'style')">💥 Comic Strip</div><div class="btn-select" data-val="black and white pen-and-ink line drawing, clean linework only, no color, no shading fills — cross-hatching for shadow only" onclick="pick(this,'style')">✏️ Line Art</div></div></div>
+<div class="card" id="styleSectionCard"><div class="card-title">🎨 Style</div><div class="grid2"><div class="btn-select selected" data-val="Muggshotz Classic: premium professional caricature, expressive face, rich detail, painterly shading, funny gift-art scene" onclick="pick(this,'style')">🦝 Muggshotz Classic</div><div class="btn-select" data-val="photorealistic rendering, natural skin texture and lighting like a real photograph, shot on camera — not illustrated, not painted, not stylized" onclick="pick(this,'style')">📷 Photorealistic</div><div class="btn-select" data-val="flat cel-shaded comic strip illustration, bold black outlines, flat solid color fills, no gradients or painterly shading" onclick="pick(this,'style')">💥 Comic Strip</div><div class="btn-select" data-val="black and white pen-and-ink line drawing, clean linework only, no color, no shading fills — cross-hatching for shadow only" onclick="pick(this,'style')">✏️ Line Art</div></div></div>
 
 <div class="card"><div class="card-title">🎭 Degree of Caricature</div><div class="grid3"><div class="btn-select selected" data-val="0.15" onclick="pick(this,'likeness')"><span class="icon">😊</span>Lifelike</div><div class="btn-select" data-val="0.25" onclick="pick(this,'likeness')"><span class="icon">😄</span>Balanced</div><div class="btn-select" data-val="0.35" onclick="pick(this,'likeness')"><span class="icon">🤪</span>Wild</div></div></div>
 
@@ -1929,6 +1930,20 @@ function resetWindowSillSliders(){
   renderWindowSillPreviewCard();
 }
 
+// Explicit "I'm done adjusting" action for the Preview & Fit card --
+// there was previously no signal telling the customer what to do once
+// they'd finished dragging sliders, so they were left to scroll
+// themselves and find the idea box on their own. Same idle-timer-cancel
+// as the pick handlers, since this is just as much a deliberate
+// next-step action as picking a design in the first place.
+function confirmWindowSillFit(){
+  suspendGuidedScrollsForGeneration();
+  smoothScrollToTarget('ideaCard','center',()=>{
+    const idea=document.getElementById('ideaDesc');
+    if(idea)idea.focus({preventScroll:true});
+  });
+}
+
 // Draws the customer's actual uploaded reference photo through the same
 // compositing functions the real generation uses (drawPhotoInsetForFrame
 // + drawWindowSillOnCanvas) -- so what they see here is a true preview of
@@ -2970,6 +2985,13 @@ function pick(el,type){
       });
     } else if(product==='water bottle'){
       smoothScrollToTarget('travelMugVariantCard','center');
+    } else {
+      // BUG FIX: every other product (Mug included) had no auto-scroll
+      // at all after picking -- violated the standing rule that a
+      // click starting a next step should take the customer there
+      // directly. Style is the next real decision point for these
+      // products, so land there.
+      smoothScrollToTarget('styleSectionCard','start');
     }
 
     if((product==='mug'||product==='water bottle') && !printFormatPopupShown){
