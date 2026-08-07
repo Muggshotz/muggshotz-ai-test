@@ -1740,6 +1740,18 @@ async function pickFrame(name){
   if(pendingWraparoundRaw||pending40ozRaw){
     updateAccessorizePreview();
   } else if(selectedFrame){
+    // BUG FIX: the old first-time-visitor "guided tour" timer
+    // (schedulePhotoGuideAdvance, started when a photo is uploaded)
+    // stays armed until Generate is clicked, and ANY scroll/click/touch
+    // on the page re-arms it for another 5 seconds (see
+    // noteRealCustomerActivity). That meant even after this deliberate
+    // scroll landed correctly, a stray touch (like scrolling the Frame
+    // grid itself) could re-trigger the old timer, which would then
+    // silently yank the customer back to the idea box a few seconds
+    // later -- exactly what Alyx saw. Canceling it here, the same way
+    // Generate already does, so a deliberate selection can't get
+    // overridden by a leftover idle nudge.
+    suspendGuidedScrollsForGeneration();
     smoothScrollToTarget(uploadedImageData?'windowSillPreviewCard':'finalGenerateGuidance',uploadedImageData?'end':'center');
   } else {
     // Cleared the frame selection -- hide the shared preview card if
@@ -1816,6 +1828,13 @@ async function pickWindowSill(name){
     // Awaiting renderWindowSillPreviewCard() above (which now awaits
     // the image load itself) means the card is already at full height
     // by the time this scroll runs.
+    //
+    // SECOND BUG FIX: also cancel the old idle-nudge timer here, same
+    // reasoning and same fix as pickFrame() above -- without this, a
+    // stray scroll/touch anywhere on the page (even just browsing the
+    // Window Sill grid) could re-arm it and yank the customer back to
+    // the idea box a few seconds after this scroll correctly landed.
+    suspendGuidedScrollsForGeneration();
     smoothScrollToTarget(uploadedImageData?'windowSillPreviewCard':'finalGenerateGuidance',uploadedImageData?'end':'center');
   }
 }
