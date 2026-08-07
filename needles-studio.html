@@ -1989,9 +1989,28 @@ function drawWindowSillOnCanvas(ctx,canvas){
   const calib=customWindowSillCalibration[opt.asset]||getWindowSillDefaultCalibration(opt.asset);
   return new Promise((resolve)=>{
     const img=new Image();
-    img.crossOrigin='anonymous';
+    // BUG FIX: this is a same-origin local asset file, same as the ones
+    // the picker grid loads with plain <img> tags (no CORS mode at all).
+    // Setting crossOrigin='anonymous' here made this SPECIFIC load of
+    // the exact same file request it in CORS mode, while the grid's
+    // earlier load of that file did not -- browsers can silently treat
+    // that mismatch as a tainted image on the CORS-mode request, which
+    // breaks getImageData (used below to find the art's real edges)
+    // without throwing any visible error. Dropping crossOrigin here
+    // makes every load of this file consistent (plain, same-origin,
+    // no CORS mode), which removes the tainting risk entirely.
     img.onload=()=>{
-      const bbox=getOpaqueBBox(img);
+      let bbox;
+      try{
+        bbox=getOpaqueBBox(img);
+      }catch(err){
+        // Safety net: if a tainted-canvas edge case ever recurs for any
+        // reason, fall back to the untrimmed full image instead of
+        // drawing nothing -- a slightly padded window still beats an
+        // invisible one.
+        console.error('Window Sill bbox detection failed, using untrimmed image:',err);
+        bbox={x:0,y:0,w:img.naturalWidth,h:img.naturalHeight};
+      }
       const destW=canvas.width*(calib.sillWidthPct/100);
       const destH=canvas.height*(calib.sillHeightPct/100);
       const destX=-(destW-canvas.width)/2;
@@ -2097,14 +2116,23 @@ const frameInsetCache={};
 async function getFrameInsetFraction(assetPath){
   if(frameInsetCache[assetPath])return frameInsetCache[assetPath];
   const img=await loadImageFromUrl(assetPath);
-  const outer=getOpaqueBBox(img);
-  const inner=getInnerOpeningBBox(img,outer);
-  const frac={
-    x:(inner.x-outer.x)/outer.w,
-    y:(inner.y-outer.y)/outer.h,
-    w:inner.w/outer.w,
-    h:inner.h/outer.h
-  };
+  let frac;
+  try{
+    const outer=getOpaqueBBox(img);
+    const inner=getInnerOpeningBBox(img,outer);
+    frac={
+      x:(inner.x-outer.x)/outer.w,
+      y:(inner.y-outer.y)/outer.h,
+      w:inner.w/outer.w,
+      h:inner.h/outer.h
+    };
+  }catch(err){
+    // Same tainted-canvas safety net as drawWindowSillOnCanvas/
+    // drawFrameOnCanvas -- fall back to no inset trimming (full canvas)
+    // rather than breaking Frame's shrink-to-fit entirely.
+    console.error('Frame inset detection failed, using full canvas as fallback:',err);
+    frac={x:0,y:0,w:1,h:1};
+  }
   frameInsetCache[assetPath]=frac;
   return frac;
 }
@@ -2199,9 +2227,18 @@ function drawFrameOnCanvas(ctx,canvas){
   if(data.type==='image'){
     return new Promise((resolve)=>{
       const img=new Image();
-      img.crossOrigin='anonymous';
+      // Same fix as drawWindowSillOnCanvas above -- same-origin local
+      // asset, no CORS mode needed, and mixing it with the grid's plain
+      // (non-CORS) load of the same file risked a silently tainted
+      // canvas breaking getImageData below.
       img.onload=()=>{
-        const bbox=getOpaqueBBox(img);
+        let bbox;
+        try{
+          bbox=getOpaqueBBox(img);
+        }catch(err){
+          console.error('Frame bbox detection failed, using untrimmed image:',err);
+          bbox={x:0,y:0,w:img.naturalWidth,h:img.naturalHeight};
+        }
         ctx.save();
         if(data.colorable!==false){
           const hex=frameColors[selectedFrame]||data.defaultColor;
