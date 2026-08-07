@@ -2614,8 +2614,15 @@ function pickMugPrintMode(mode){
   document.getElementById('printModeThreeBtn').classList.toggle('selected',mode==='three-panel');
   document.getElementById('printModeWrapBtn').classList.toggle('selected',mode==='wraparound');
   refreshPanoramaFadeCardVisibility();
+  suspendGuidedScrollsForGeneration();
   if(product==='water bottle'){
     smoothScrollToTarget('travelMugVariantCard','center');
+  } else {
+    // BUG FIX: regular mug (Three Separate Designs / Wraparound) had no
+    // auto-scroll at all after picking -- left the customer stranded on
+    // the same card with no next-step guidance. Style is the next real
+    // decision point.
+    smoothScrollToTarget('styleSectionCard','start');
   }
 }
 
