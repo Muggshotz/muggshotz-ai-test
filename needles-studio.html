@@ -1774,7 +1774,7 @@ function renderWindowSillGrid(){
   });
 }
 
-function pickWindowSill(name){
+async function pickWindowSill(name){
   const wasSelected=(windowSillChoice===name);
   windowSillChoice=wasSelected?null:name;
   if(windowSillChoice){
@@ -1786,7 +1786,7 @@ function pickWindowSill(name){
   syncEdgeFadeWithFrameSelection();
   drawCaption();
   updateIdeaCardNote();
-  renderWindowSillPreviewCard();
+  await renderWindowSillPreviewCard();
   if(pendingWraparoundRaw||pending40ozRaw){
     updateAccessorizePreview();
   } else if(windowSillChoice){
@@ -1794,6 +1794,15 @@ function pickWindowSill(name){
     // customer there directly. The Preview & Fit card is now the real
     // next step once a photo exists -- jumping straight to Generate
     // skipped right past it, which is why it felt like it didn't exist.
+    //
+    // BUG FIX: this used to fire the scroll immediately, before the
+    // preview image (loaded/composited asynchronously) had actually
+    // finished and expanded the card to its real height -- so it
+    // landed correctly on a card that was still short, then the image
+    // popped in afterward and pushed the sliders back out of view.
+    // Awaiting renderWindowSillPreviewCard() above (which now awaits
+    // the image load itself) means the card is already at full height
+    // by the time this scroll runs.
     smoothScrollToTarget(uploadedImageData?'windowSillPreviewCard':'finalGenerateGuidance',uploadedImageData?'end':'center');
   }
 }
@@ -1815,10 +1824,10 @@ function getWindowSillDefaultCalibration(asset){
 // sliders with nothing to act on.
 function renderWindowSillPreviewCard(){
   const card=document.getElementById('windowSillPreviewCard');
-  if(!card)return;
+  if(!card)return Promise.resolve();
   if(!windowSillChoice||!uploadedImageData){
     card.style.display='none';
-    return;
+    return Promise.resolve();
   }
   card.style.display='block';
   const opt=WINDOW_SILL_OPTIONS.find(o=>o.name===windowSillChoice);
@@ -1830,7 +1839,7 @@ function renderWindowSillPreviewCard(){
   document.getElementById('wsPreviewOffsetY').value=active.offsetYPct;
   document.getElementById('wsSillWidth').value=active.sillWidthPct;
   document.getElementById('wsSillHeight').value=active.sillHeightPct;
-  updateWindowSillLivePreview();
+  return updateWindowSillLivePreview();
 }
 
 // Sliders write directly into customWindowSillCalibration, keyed by the
@@ -1876,6 +1885,13 @@ async function updateWindowSillLivePreview(){
   await drawPhotoInsetForFrame(ctx,canvas,photo,photo.naturalWidth,photo.naturalHeight);
   await drawWindowSillOnCanvas(ctx,canvas);
   previewImgEl.src=canvas.toDataURL('image/jpeg',0.9);
+  // Setting .src starts an async load -- waitForImageReady (used
+  // elsewhere for the mockup gallery) resolves once the browser has
+  // actually decoded and laid out the new image, not just once we've
+  // handed it a data URL. Callers awaiting this function now get a
+  // promise that only resolves once the card is genuinely at its
+  // final height.
+  await waitForImageReady(previewImgEl);
 }
 
 function renderFrameColorPanel(){
