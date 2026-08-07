@@ -2659,8 +2659,15 @@ function pickPreGenTravelVariant(key){
   preGenTravelVariant=key;
   renderTravelMugVariantGrid();
   refreshTravelMugColorVisibility();
+  suspendGuidedScrollsForGeneration();
   const colorCard=document.getElementById('travelMugColorCard');
-  const scrollTarget=(colorCard && colorCard.style.display!=='none') ? 'travelMugColorCard' : 'panoramaFadeCard';
+  // BUG FIX: this used to stop at Edge Fade (panoramaFadeCard) for any
+  // tumbler with no color options, like the Gator Tumbler -- Edge Fade
+  // is just an automatic behind-the-scenes toggle, not a real decision
+  // point, so a customer landed there had nowhere obvious to go next.
+  // Now continues straight to Style, matching the same "next real
+  // decision point" pattern already used for the Product picker.
+  const scrollTarget=(colorCard && colorCard.style.display!=='none') ? 'travelMugColorCard' : 'styleSectionCard';
   smoothScrollToTarget(scrollTarget,'center');
 }
 
@@ -2729,6 +2736,12 @@ function pickTravelMugColorGen(el,colorName){
   } else {
     el.classList.add('selected');
     preGenTravelColor=colorName;
+    // BUG FIX: this never scrolled anywhere after picking a color --
+    // a tumbler with color options (like the 40oz) left the customer
+    // stranded with no next-step guidance once they'd made their
+    // choice. Style is the next real decision point.
+    suspendGuidedScrollsForGeneration();
+    smoothScrollToTarget('styleSectionCard','center');
   }
 }
 
