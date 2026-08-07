@@ -650,9 +650,10 @@
 </div>
 
 <div class="card" id="windowSillPreviewCard" style="display:none">
-<div class="card-title">🪟 Preview &amp; Fit Your Photo</div>
-<div class="note" style="margin-top:0;margin-bottom:.75rem">This is your actual uploaded photo, not a generated design — use it to see roughly how you'll sit inside the window before spending a token. Drag the sliders to adjust the size and position; Generate will use these settings.</div>
+<div class="card-title" id="designPreviewTitle">🪟 Preview &amp; Fit Your Photo</div>
+<div class="note" id="designPreviewNote" style="margin-top:0;margin-bottom:.75rem">This is your actual uploaded photo, not a generated design — use it to see roughly how you'll sit inside the window before spending a token. Drag the sliders to adjust the size and position; Generate will use these settings.</div>
 <img id="windowSillPreviewImg" style="width:100%;max-height:170px;object-fit:contain;display:block;margin:0 auto .9rem;border-radius:10px;border:1px solid #003c8c;background:#0d0d0d;position:sticky;top:70px;z-index:5"/>
+<div id="windowSillPreviewSliders">
 <div class="cap-row"><label style="min-width:110px">Width</label><input type="range" id="wsPreviewWidth" min="10" max="150" step="0.5" oninput="handleWindowSillSliderChange()"/></div>
 <div class="cap-row"><label style="min-width:110px">Height</label><input type="range" id="wsPreviewHeight" min="10" max="150" step="0.5" oninput="handleWindowSillSliderChange()"/></div>
 <div class="cap-row"><label style="min-width:110px">Left/Right</label><input type="range" id="wsPreviewOffsetX" min="-50" max="50" step="0.5" oninput="handleWindowSillSliderChange()"/></div>
@@ -661,6 +662,7 @@
 <div class="cap-row"><label style="min-width:110px">Window Width</label><input type="range" id="wsSillWidth" min="80" max="160" step="0.5" oninput="handleWindowSillSliderChange()"/></div>
 <div class="cap-row"><label style="min-width:110px">Window Height</label><input type="range" id="wsSillHeight" min="80" max="160" step="0.5" oninput="handleWindowSillSliderChange()"/></div>
 <button class="download-btn" onclick="resetWindowSillSliders()">↺ Reset to Default Fit</button>
+</div>
 </div>
 
 <div class="card" id="phoneCaseModelCard" style="display:none">
@@ -1722,23 +1724,27 @@ function renderFrameGrid(){
   });
 }
 
-function pickFrame(name){
+async function pickFrame(name){
   const wasSelected=(selectedFrame===name);
   selectedFrame=wasSelected?null:name;
   if(selectedFrame){
     windowSillChoice=null;
     renderWindowSillGrid();
-    renderWindowSillPreviewCard();
   }
   renderFrameGrid();
   renderFrameColorPanel();
   syncEdgeFadeWithFrameSelection();
   drawCaption();
   updateIdeaCardNote();
+  await renderWindowSillPreviewCard();
   if(pendingWraparoundRaw||pending40ozRaw){
     updateAccessorizePreview();
   } else if(selectedFrame){
-    smoothScrollToTarget('finalGenerateGuidance','center');
+    smoothScrollToTarget(uploadedImageData?'windowSillPreviewCard':'finalGenerateGuidance',uploadedImageData?'end':'center');
+  } else {
+    // Cleared the frame selection -- hide the shared preview card if
+    // nothing else (Window Sill) is active to show in it.
+    renderWindowSillPreviewCard();
   }
 }
 
@@ -1842,21 +1848,38 @@ function getWindowSillDefaultCalibration(asset){
 // sliders with nothing to act on.
 function renderWindowSillPreviewCard(){
   const card=document.getElementById('windowSillPreviewCard');
+  const slidersWrap=document.getElementById('windowSillPreviewSliders');
+  const title=document.getElementById('designPreviewTitle');
+  const note=document.getElementById('designPreviewNote');
   if(!card)return Promise.resolve();
-  if(!windowSillChoice||!uploadedImageData){
+  // Now shared between Frame and Window Sill -- either one, plus a
+  // photo, is enough to show the card. Frame doesn't get the sliders:
+  // it always shrinks the photo to fit fully inside the border with
+  // nothing cropped, so there's no per-photo fit problem for sliders
+  // to solve here, unlike Window Sill's cover-mode.
+  if((!windowSillChoice&&!selectedFrame)||!uploadedImageData){
     card.style.display='none';
     return Promise.resolve();
   }
   card.style.display='block';
-  const opt=WINDOW_SILL_OPTIONS.find(o=>o.name===windowSillChoice);
-  const asset=opt?opt.asset:null;
-  const active=(asset&&customWindowSillCalibration[asset])||getWindowSillDefaultCalibration(asset);
-  document.getElementById('wsPreviewWidth').value=active.widthPct;
-  document.getElementById('wsPreviewHeight').value=active.heightPct;
-  document.getElementById('wsPreviewOffsetX').value=active.offsetXPct;
-  document.getElementById('wsPreviewOffsetY').value=active.offsetYPct;
-  document.getElementById('wsSillWidth').value=active.sillWidthPct;
-  document.getElementById('wsSillHeight').value=active.sillHeightPct;
+  if(windowSillChoice){
+    if(title)title.textContent='🪟 Preview & Fit Your Photo';
+    if(note)note.textContent="This is your actual uploaded photo, not a generated design — use it to see roughly how you'll sit inside the window before spending a token. Drag the sliders to adjust the size and position; Generate will use these settings.";
+    if(slidersWrap)slidersWrap.style.display='block';
+    const opt=WINDOW_SILL_OPTIONS.find(o=>o.name===windowSillChoice);
+    const asset=opt?opt.asset:null;
+    const active=(asset&&customWindowSillCalibration[asset])||getWindowSillDefaultCalibration(asset);
+    document.getElementById('wsPreviewWidth').value=active.widthPct;
+    document.getElementById('wsPreviewHeight').value=active.heightPct;
+    document.getElementById('wsPreviewOffsetX').value=active.offsetXPct;
+    document.getElementById('wsPreviewOffsetY').value=active.offsetYPct;
+    document.getElementById('wsSillWidth').value=active.sillWidthPct;
+    document.getElementById('wsSillHeight').value=active.sillHeightPct;
+  } else {
+    if(title)title.textContent='🖼️ Preview Your Frame';
+    if(note)note.textContent="This is your actual uploaded photo, not a generated design — use it to see this frame on your photo before spending a token. Frame automatically fits your whole photo inside the border, so there's nothing to adjust here.";
+    if(slidersWrap)slidersWrap.style.display='none';
+  }
   return updateWindowSillLivePreview();
 }
 
@@ -1894,14 +1917,18 @@ function resetWindowSillSliders(){
 // if either of those functions changes later.
 async function updateWindowSillLivePreview(){
   const previewImgEl=document.getElementById('windowSillPreviewImg');
-  if(!previewImgEl||!uploadedImageData||!windowSillChoice)return;
+  if(!previewImgEl||!uploadedImageData||(!windowSillChoice&&!selectedFrame))return;
   const photo=await loadImageFromUrl(uploadedImageData);
   const canvas=document.createElement('canvas');
   canvas.width=photo.naturalWidth;
   canvas.height=photo.naturalHeight;
   const ctx=canvas.getContext('2d');
   await drawPhotoInsetForFrame(ctx,canvas,photo,photo.naturalWidth,photo.naturalHeight);
-  await drawWindowSillOnCanvas(ctx,canvas);
+  if(selectedFrame){
+    await drawFrameOnCanvas(ctx,canvas);
+  } else {
+    await drawWindowSillOnCanvas(ctx,canvas);
+  }
   previewImgEl.src=canvas.toDataURL('image/jpeg',0.9);
   // Setting .src starts an async load -- waitForImageReady (used
   // elsewhere for the mockup gallery) resolves once the browser has
