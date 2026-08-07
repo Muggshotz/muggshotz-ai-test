@@ -2989,6 +2989,15 @@ function pick(el,type){
     updatePlacementSummary();
     updateMugGuidedFlow();
 
+    // BUG FIX: same idle-nudge-timer issue already fixed for
+    // pickFrame/pickWindowSill/confirmWindowSillFit -- a stray touch
+    // while browsing the Product grid (even just scrolling to find
+    // "Mug") could re-arm the old first-time-visitor guide timer, which
+    // would then silently override this deliberate scroll a few seconds
+    // later and land the customer back at the idea box instead. Missed
+    // this one when the others got fixed.
+    suspendGuidedScrollsForGeneration();
+
     if(product==='phone case'){
       smoothScrollToTarget('phoneCaseModelCard','center',()=>{
         const input=document.getElementById('phoneModelSearchInputGen');
