@@ -1794,7 +1794,7 @@ function pickWindowSill(name){
     // customer there directly. The Preview & Fit card is now the real
     // next step once a photo exists -- jumping straight to Generate
     // skipped right past it, which is why it felt like it didn't exist.
-    smoothScrollToTarget(uploadedImageData?'windowSillPreviewCard':'finalGenerateGuidance','center');
+    smoothScrollToTarget(uploadedImageData?'windowSillPreviewCard':'finalGenerateGuidance',uploadedImageData?'end':'center');
   }
 }
 
