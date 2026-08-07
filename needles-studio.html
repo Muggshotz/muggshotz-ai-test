@@ -1620,7 +1620,7 @@ const WINDOW_SILL_OPTIONS = [
 // Any Window Sill asset NOT in this table falls back to the old
 // full-canvas behavior until it gets calibrated the same way.
 const WINDOW_SILL_CALIBRATION = {
-  "frame-window-sill-b.png": { widthPct: 68.5, heightPct: 111.0, offsetXPct: 3.0, offsetYPct: 0.0 } // Parisian Balcony
+  "frame-window-sill-b.png": { widthPct: 41.1, heightPct: 66.6, offsetXPct: 3.0, offsetYPct: 0.0 } // Parisian Balcony -- reduced another 40% (0.6x) from the first calibration pass after the real test still showed the photo too large/cropped
 };
 
 const FRAME_COLOR_SWATCHES = [
@@ -1846,6 +1846,16 @@ function updateDoubleMatPreview(){
   preview.innerHTML='<div style="width:100%;height:100%;box-sizing:border-box;border:8px solid '+upper+';background:#fff"></div>';
 }
 
+// Window Sill artwork drawn stretched exactly flush to the canvas edges
+// (old behavior) can leave a thin uncovered sliver at the corners on any
+// design whose real silhouette curves inward near its edges (e.g. the
+// rounded stone alcove on Parisian Balcony) -- the opaque bbox maps to
+// the canvas rectangle, but a curved edge doesn't reach every corner of
+// that rectangle. Overscanning slightly -- drawing a bit larger than the
+// canvas and centering the overflow off all four sides -- guarantees full
+// coverage regardless of how a given design's outline curves.
+const WINDOW_SILL_OVERSCAN = 1.06;
+
 function drawWindowSillOnCanvas(ctx,canvas){
   if(!windowSillChoice)return Promise.resolve();
   const opt=WINDOW_SILL_OPTIONS.find(o=>o.name===windowSillChoice);
@@ -1855,7 +1865,11 @@ function drawWindowSillOnCanvas(ctx,canvas){
     img.crossOrigin='anonymous';
     img.onload=()=>{
       const bbox=getOpaqueBBox(img);
-      ctx.drawImage(img,bbox.x,bbox.y,bbox.w,bbox.h,0,0,canvas.width,canvas.height);
+      const destW=canvas.width*WINDOW_SILL_OVERSCAN;
+      const destH=canvas.height*WINDOW_SILL_OVERSCAN;
+      const destX=-(destW-canvas.width)/2;
+      const destY=-(destH-canvas.height)/2;
+      ctx.drawImage(img,bbox.x,bbox.y,bbox.w,bbox.h,destX,destY,destW,destH);
       resolve();
     };
     img.onerror=()=>resolve();
@@ -3303,8 +3317,13 @@ async function drawCaption(){
   }
 
   finalImageUrl=canvas.toDataURL('image/jpeg', 0.92);
-  const mainPreview=document.getElementById('previewImg');
-  if(mainPreview&&mainPreview.style.display!=='none')mainPreview.src=finalImageUrl;
+  // NOTE: this used to also overwrite the clipboard/reference-photo
+  // preview (#previewImg, in the Upload Photo card) with the composited
+  // frame result every time this ran -- that's why the balcony scene was
+  // showing up there instead of the customer's plain reference photo.
+  // The clipboard should always keep the reference photo; the finished,
+  // framed design belongs on the easel (see needlesEaselArt below) and
+  // in the dedicated Live Preview thumbnail, not here.
 
   // Compact preview that's always glued directly to the Frame/Window Sill
   // picker itself (see relocateFramePreviewPair) -- lets the customer see
@@ -3329,10 +3348,19 @@ function loadBaseImageForCaption(url){
   return new Promise((resolve)=>{
     const img=new Image();
     img.crossOrigin='anonymous';
-    img.onload=function(){
+    img.onload=async function(){
       baseImg=img;
       finalImageUrl=url;
-      drawCaption();
+      // BUG FIX: drawCaption() is async (it loads the frame/window-sill
+      // image and composites it onto a canvas) but was previously called
+      // without awaiting it -- resolve() fired immediately after, before
+      // the compositing actually finished. That race is why the easel
+      // stage kept showing the raw, unframed photo: whatever called
+      // loadBaseImageForCaption() moved on and read finalImageUrl before
+      // drawCaption() had a chance to update it to the real composited
+      // result. Awaiting it here guarantees finalImageUrl is the finished,
+      // framed image by the time this promise resolves.
+      await drawCaption();
       resolve();
     };
     img.src=url;
