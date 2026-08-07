@@ -193,6 +193,8 @@
 .guidance-alert-close:hover{background:#0850ab}
 
 .guidance-prompt{display:none;margin:14px 0;padding:12px 14px;border:1px solid #003c8c;border-radius:10px;background:#211006;color:#cfe6ff;text-align:center;font-size:13px;font-weight:700;line-height:1.4;box-shadow:0 0 0 rgba(0,60,140,0)}
+.quote-text-reminder{margin:0 0 14px;padding:10px 14px;border:1px solid rgba(226,75,74,0.55);border-radius:10px;background:rgba(226,75,74,0.12);color:#ff6b6b;text-align:center;font-size:12.5px;font-weight:800;letter-spacing:.3px;line-height:1.45;animation:quoteReminderBlink 1.6s ease-in-out infinite}
+@keyframes quoteReminderBlink{0%,100%{opacity:1}50%{opacity:.45}}
 .guidance-prompt.visible{display:block;animation:gentlePulse 1.8s ease-in-out infinite}
 @keyframes gentlePulse{0%,100%{opacity:.72;box-shadow:0 0 0 rgba(0,60,140,0)}50%{opacity:1;box-shadow:0 0 16px rgba(0,60,140,.25)}}
 .guidance-prompt.soft.visible{animation:gentlePulseSoft 2.6s ease-in-out infinite;font-size:12px;padding:8px 10px;box-shadow:none}
@@ -693,7 +695,7 @@
 </div>
 </div>
 
-<div class="card" id="ideaCard"><div class="card-title">💬 Tell Us Your Idea</div><textarea id="ideaDesc" placeholder="Example: Put me on a tiny red tricycle wearing a firefighter helmet and full firefighter outfit, racing through a parade with smoke and sirens behind me."></textarea><div class="quick-btns" id="quickBtns"></div><div class="note" id="ideaDefaultNote">Paint us a clear picture — the more detail you give us, the better our chances of getting your exact idea right.</div><div class="note" id="ideaArtistNote" style="display:none">Tell the artist what you have in mind.</div><div class="note" id="ideaWindowSillNote" style="display:none">(Optional) Add a costume, outfit, hair, or companion — or just upload your photo and we'll take it from there.</div><div id="mugIdeaActionRow" style="display:none;gap:8px;margin-top:.75rem"><button class="download-btn" style="flex:1;margin-top:0" onclick="handleReturnToPhotos()">📸 Return to select additional photos</button><button class="generate-btn" style="flex:1" onclick="handleMugGuidedGenerate()">🎨 Generate</button></div></div>
+<div class="card" id="ideaCard"><div class="card-title">💬 Tell Us Your Idea</div><div class="quote-text-reminder">⚠️ PLEASE REMEMBER TO SHOW ALL TEXT AND/OR CAPTIONS YOU WISH TO HAVE INCLUDED WITH YOUR IMAGE INSIDE QUOTES " "!</div><textarea id="ideaDesc" placeholder="Example: Put me on a tiny red tricycle wearing a firefighter helmet and full firefighter outfit, racing through a parade with smoke and sirens behind me."></textarea><div class="quick-btns" id="quickBtns"></div><div class="note" id="ideaDefaultNote">Paint us a clear picture — the more detail you give us, the better our chances of getting your exact idea right.</div><div class="note" id="ideaArtistNote" style="display:none">Tell the artist what you have in mind.</div><div class="note" id="ideaWindowSillNote" style="display:none">(Optional) Add a costume, outfit, hair, or companion — or just upload your photo and we'll take it from there.</div><div id="mugIdeaActionRow" style="display:none;gap:8px;margin-top:.75rem"><button class="download-btn" style="flex:1;margin-top:0" onclick="handleReturnToPhotos()">📸 Return to select additional photos</button><button class="generate-btn" style="flex:1" onclick="handleMugGuidedGenerate()">🎨 Generate</button></div></div>
 <div id="ideaGuidancePrompt" class="guidance-prompt" role="status">Scroll to the next section when ready to select your desired product.</div>
 
 <div class="card" id="productCard"><div class="card-title">🎁 Product</div><div class="grid3"><div class="btn-select selected" data-val="mug" onclick="pick(this,'product')"><span class="icon">☕</span>Mug</div><div class="btn-select" data-val="greeting card" onclick="pick(this,'product')"><span class="icon">💌</span>Card</div><div class="btn-select" data-val="water bottle" onclick="pick(this,'product')"><span class="icon">🍶</span>Travel Cups</div><div class="btn-select" data-val="post-it note" onclick="pick(this,'product')"><span class="icon">📝</span>Post-it</div><div class="btn-select" data-val="phone case" onclick="pick(this,'product')"><span class="icon">📱</span>Phone case</div><div class="btn-select" data-val="tote bag" onclick="pick(this,'product')"><span class="icon">👜</span>Tote bag</div><div class="btn-select" data-val="suitcase" onclick="pick(this,'product')"><span class="icon">🧳</span>Suitcase</div><div class="btn-select" data-val="puzzle" onclick="pick(this,'product')"><span class="icon">🧩</span>Puzzle</div><div class="btn-select" data-val="photo poster" onclick="pick(this,'product')"><span class="icon">🖼️</span>Photo/Poster</div></div></div>
@@ -4609,6 +4611,21 @@ document.getElementById('cancelBtn').style.display='block';
       ? `Customer idea: ${idea}.`
       : `Customer idea: Create a funny, polished, product-ready caricature of the uploaded person.`;
 
+    // Silent, non-optional text-control instruction -- never shown to
+    // the customer, same pattern as the Window Sill/panorama instructions
+    // below. The AI was prone to inventing its own captions, slogans, or
+    // signage to fill empty space in a scene (same root issue already
+    // fixed for Window Sill's background specifically) -- this makes the
+    // rule universal, for every product: the ONLY text that should ever
+    // appear is text the customer explicitly wrote inside quotation
+    // marks in their idea description. Checked dynamically against the
+    // actual idea text each time, so the instruction is always accurate
+    // to what was really typed.
+    const ideaHasQuotedText = /["\u201c][^"\u201d]+["\u201d]/.test(idea);
+    const noUnrequestedTextInstruction = ideaHasQuotedText
+      ? 'TEXT RULE: The customer idea above includes text inside quotation marks -- render that exact quoted text in the scene, spelled exactly as written, and do not add any other caption, slogan, sign, or lettering beyond what is quoted.'
+      : 'TEXT RULE: Do not add any caption, slogan, sign, lettering, or text of any kind anywhere in this image unless the customer explicitly wrote it inside quotation marks in their idea description above. No quoted text was provided here, so this scene should contain no text or lettering at all.';
+
     const likenessDesc =
       likeness==='0.15'
         ? 'Caricature strength: LIGHT. Preserve identity very strongly. Use only mild exaggeration.'
@@ -4710,6 +4727,7 @@ ${wrapCompositionLine}
 ${windowSillCompositionLine}
 ${panoramaFadeLine}
 ${uniformEdgeFadeLine}
+${noUnrequestedTextInstruction}
 ${referenceLine}
 
 PRIORITY ORDER: The customer idea above is the primary instruction for what the scene contains.
