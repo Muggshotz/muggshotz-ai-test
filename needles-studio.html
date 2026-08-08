@@ -1395,7 +1395,11 @@ function startPhotoGuide(){
   setTimeout(()=>{
     if(photoGuideActive)smoothScrollToTarget('startOverBtn','end');
   },150);
-  schedulePhotoGuideAdvance(10000);
+  // UPDATED (Aug 2026, Alyx's request): reduced from 10000ms to 4000ms --
+  // once a photo is uploaded, the customer has already made a deliberate
+  // choice; there's no need to sit on that screen for a full 10 seconds
+  // before the guide nudges them toward the idea box.
+  schedulePhotoGuideAdvance(4000);
 }
 
 let ideaGuideTimer=null;
