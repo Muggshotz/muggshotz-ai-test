@@ -723,7 +723,7 @@
 <div class="card" id="ideaCard"><div class="card-title">💬 Tell Us Your Idea</div><div class="quote-text-reminder">⚠️ PLEASE REMEMBER TO SHOW ALL TEXT AND/OR CAPTIONS YOU WISH TO HAVE INCLUDED WITH YOUR IMAGE INSIDE QUOTES " "!</div><textarea id="ideaDesc" placeholder="Example: Put me on a tiny red tricycle wearing a firefighter helmet and full firefighter outfit, racing through a parade with smoke and sirens behind me."></textarea><div class="quick-btns" id="quickBtns"></div><div class="note" id="ideaDefaultNote">Paint us a clear picture — the more detail you give us, the better our chances of getting your exact idea right.</div><div class="note" id="ideaArtistNote" style="display:none">Tell the artist what you have in mind.</div><div class="note" id="ideaWindowSillNote" style="display:none">(Optional) Add a costume, outfit, hair, or companion — or just upload your photo and we'll take it from there.</div><div id="mugIdeaActionRow" style="display:none;gap:8px;margin-top:.75rem"><button class="download-btn" style="flex:1;margin-top:0" onclick="handleReturnToPhotos()">📸 Return to select additional photos</button><button class="generate-btn" style="flex:1" onclick="handleMugGuidedGenerate()">🎨 Generate</button></div></div>
 <div id="ideaGuidancePrompt" class="guidance-prompt" role="status">Scroll to the next section when ready to select your desired product.</div>
 
-<div class="card" id="productCard"><div class="card-title">🎁 Product</div><div class="grid3"><div class="btn-select selected" data-val="mug" onclick="pick(this,'product')"><span class="icon">☕</span>Mug</div><div class="btn-select" data-val="greeting card" onclick="pick(this,'product')"><span class="icon">💌</span>Card</div><div class="btn-select" data-val="water bottle" onclick="pick(this,'product')"><span class="icon">🍶</span>Travel Cups</div><div class="btn-select" data-val="post-it note" onclick="pick(this,'product')"><span class="icon">📝</span>Post-it</div><div class="btn-select" data-val="phone case" onclick="pick(this,'product')"><span class="icon">📱</span>Phone case</div><div class="btn-select" data-val="tote bag" onclick="pick(this,'product')"><span class="icon">👜</span>Tote bag</div><div class="btn-select" data-val="suitcase" onclick="pick(this,'product')"><span class="icon">🧳</span>Suitcase</div><div class="btn-select" data-val="puzzle" onclick="pick(this,'product')"><span class="icon">🧩</span>Puzzle</div><div class="btn-select" data-val="photo poster" onclick="pick(this,'product')"><span class="icon">🖼️</span>Photo/Poster</div></div></div>
+<div class="card" id="productCard"><div class="card-title">🎁 Product</div><div class="guidance-prompt soft visible" id="productGuidancePrompt" role="status" style="margin-top:0;margin-bottom:.9rem">Please select your desired product below when ready.</div><div class="grid3"><div class="btn-select selected" data-val="mug" onclick="pick(this,'product')"><span class="icon">☕</span>Mug</div><div class="btn-select" data-val="greeting card" onclick="pick(this,'product')"><span class="icon">💌</span>Card</div><div class="btn-select" data-val="water bottle" onclick="pick(this,'product')"><span class="icon">🍶</span>Travel Cups</div><div class="btn-select" data-val="post-it note" onclick="pick(this,'product')"><span class="icon">📝</span>Post-it</div><div class="btn-select" data-val="phone case" onclick="pick(this,'product')"><span class="icon">📱</span>Phone case</div><div class="btn-select" data-val="tote bag" onclick="pick(this,'product')"><span class="icon">👜</span>Tote bag</div><div class="btn-select" data-val="suitcase" onclick="pick(this,'product')"><span class="icon">🧳</span>Suitcase</div><div class="btn-select" data-val="puzzle" onclick="pick(this,'product')"><span class="icon">🧩</span>Puzzle</div><div class="btn-select" data-val="photo poster" onclick="pick(this,'product')"><span class="icon">🖼️</span>Photo/Poster</div></div></div>
 
 <div class="card" id="mugPrintModeCard">
 <div class="card-title">☕ Mug Print Style</div>
@@ -2067,6 +2067,13 @@ function resetWindowSillSliders(){
 // (Style card, or the token note right above the button if Style
 // doesn't exist for some reason) -- the actual next actionable step
 // regardless of what order the customer reached this card in.
+// REVERTED (Aug 2026, per Alyx's explicit instruction): the conditional
+// idea-box-empty check that was here got built without waiting for a
+// go-ahead, which broke the standing rule. Restored to the last version
+// Alyx actually authorized. Note: this does bring back the bug where
+// picking Frame/Window Sill before ever reaching the idea box jumps
+// straight to Style, skipping the idea box and Product picker -- known,
+// left as-is pending explicit reauthorization to fix it again.
 function confirmWindowSillFit(){
   suspendGuidedScrollsForGeneration();
   const styleCard=document.getElementById('styleSectionCard');
@@ -3210,6 +3217,12 @@ function pick(el,type){
   el.classList.add('selected');
   if(type==='product'){
     product=el.dataset.val;
+    // NEW (Aug 2026, Alyx's request): a conscious click means the
+    // customer has now made a real choice (Mug being pre-selected by
+    // default doesn't count as one) -- the gentle nudge has served its
+    // purpose and shouldn't keep pulsing after that.
+    const productGuide=document.getElementById('productGuidancePrompt');
+    if(productGuide)productGuide.classList.remove('visible');
     const finalGuide=document.getElementById('finalGenerateGuidance');
     if(finalGuide)finalGuide.classList.toggle('visible',product==='phone case'&&!!selectedPhoneCaseModel);
     refreshApproveRowForMode();
