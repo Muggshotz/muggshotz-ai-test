@@ -5960,7 +5960,7 @@ async function runAutoMockupFetch(){
   const galleryEl = document.getElementById('genPreviewGallery');
   const galleryHintEl = document.getElementById('genPreviewGalleryHint');
 
-  loadingEl.style.display = 'block';
+  loadingEl.style.display = 'block'; loadingEl.scrollIntoView({behavior:'smooth',block:'center'});
   noteEl.style.display = 'none';
   imgEl.style.display = 'none';
   galleryEl.style.display = 'none';
