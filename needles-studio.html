@@ -192,6 +192,22 @@
 .guidance-alert-close{background:#003c8c;border:1px solid #7888b4;border-radius:10px;padding:.75rem 1.5rem;color:#fff;font-size:14px;font-weight:700;cursor:pointer;letter-spacing:.3px}
 .guidance-alert-close:hover{background:#0850ab}
 
+.mockup-lightbox-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:1700;align-items:center;justify-content:center}
+.mockup-lightbox-overlay.visible{display:flex}
+.mockup-lightbox-img{max-width:88vw;max-height:82vh;object-fit:contain;border-radius:10px;background:#fff}
+.mockup-lightbox-close{position:fixed;top:16px;right:16px;width:40px;height:40px;border-radius:50%;background:#151b24;border:1px solid #003c8c;color:#fff;font-size:18px;cursor:pointer;z-index:1701;display:flex;align-items:center;justify-content:center}
+.mockup-lightbox-arrow{position:fixed;top:50%;transform:translateY(-50%);width:52px;height:52px;border-radius:50%;background:#151b24;border:1px solid #003c8c;color:#fff;font-size:30px;line-height:1;cursor:pointer;z-index:1701;align-items:center;justify-content:center;display:flex}
+.mockup-lightbox-arrow-left{left:16px}
+.mockup-lightbox-arrow-right{right:16px}
+.mockup-lightbox-arrow:hover,.mockup-lightbox-close:hover{border-color:#7888b4;background:#1c2636}
+.mockup-lightbox-counter{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#151b24;border:1px solid #003c8c;border-radius:20px;padding:6px 16px;color:#7ab8ff;font-size:13px;font-weight:700;z-index:1701;display:none}
+@media (max-width:520px){
+  .mockup-lightbox-arrow{width:42px;height:42px;font-size:24px}
+  .mockup-lightbox-arrow-left{left:6px}
+  .mockup-lightbox-arrow-right{right:6px}
+  .mockup-lightbox-close{top:8px;right:8px;width:36px;height:36px}
+}
+
 .guidance-prompt{display:none;margin:14px 0;padding:12px 14px;border:1px solid #003c8c;border-radius:10px;background:#211006;color:#cfe6ff;text-align:center;font-size:13px;font-weight:700;line-height:1.4;box-shadow:0 0 0 rgba(0,60,140,0)}
 .quote-text-reminder{margin:0 0 14px;padding:10px 14px;border:1px solid rgba(226,75,74,0.55);border-radius:10px;background:rgba(226,75,74,0.12);color:#ff6b6b;text-align:center;font-size:12.5px;font-weight:800;letter-spacing:.3px;line-height:1.45;animation:quoteReminderBlink 1.6s ease-in-out infinite}
 @keyframes quoteReminderBlink{0%,100%{opacity:1}50%{opacity:.45}}
@@ -550,6 +566,13 @@
     <button class="guidance-alert-close" onclick="closeGuidanceAlert()">Got It</button>
   </div>
 </div>
+<div id="mockupLightboxOverlay" class="mockup-lightbox-overlay" onclick="if(event.target===this)closeMockupLightbox()">
+  <button class="mockup-lightbox-close" onclick="closeMockupLightbox()" aria-label="Close">✖</button>
+  <button class="mockup-lightbox-arrow mockup-lightbox-arrow-left" id="mockupLightboxPrev" onclick="mockupLightboxPrev()" aria-label="Previous angle">‹</button>
+  <img id="mockupLightboxImg" class="mockup-lightbox-img" alt="Enlarged mockup"/>
+  <button class="mockup-lightbox-arrow mockup-lightbox-arrow-right" id="mockupLightboxNext" onclick="mockupLightboxNext()" aria-label="Next angle">›</button>
+  <div class="mockup-lightbox-counter" id="mockupLightboxCounter"></div>
+</div>
 <div class="header">
   <video class="header-video" id="heroVideo" autoplay muted playsinline preload="auto" aria-label="Needles Studio hero banner">
     <source src="needles-hero.mp4" type="video/mp4">
@@ -791,11 +814,15 @@
 
 <div class="card" id="accessorizeCard" style="display:none">
 <div class="card-title">🖼️ Add a Frame?</div>
-<div class="note" style="margin-top:0;margin-bottom:.75rem">Pick a frame or window sill above and you'll see it applied right here instantly — nothing is saved until you press Apply. Leave it blank and press Skip for a clean, unframed look.</div>
+<div class="note-prominent" style="margin-top:0;margin-bottom:.75rem">Three ways to finish this: pick a Frame above, pick a Window Sill above, or use just the photo as-is below. Pick a Frame or Window Sill and you'll see it applied right here instantly — nothing is saved until you press Apply. Edge style (sharp vs. soft/blended) only matters if you go with just the photo — a Frame or Window Sill always uses sharp edges automatically.</div>
 <div id="accessorizePreviewStrip" style="display:flex;gap:8px"></div>
 <div class="bi-row">
 <button class="generate-btn" id="accessorizeApplyBtn" style="flex:1;width:auto;padding:.8rem .4rem;font-size:13px" onclick="applyAccessorizeFrame()">✅ Apply Frame</button>
-<button class="download-btn" style="flex:1;margin-top:0;padding:.8rem .4rem;font-size:13px" onclick="skipAccessorizeFrame()">⏭️ Skip — No Frame</button>
+<button class="download-btn" style="flex:1;margin-top:0;padding:.8rem .4rem;font-size:13px" onclick="skipAccessorizeFrame()">⏭️ Use Just the Photo — No Frame</button>
+</div>
+<div style="margin-top:.9rem;padding-top:.9rem;border-top:1px dashed #333;display:flex;align-items:center;gap:10px">
+<input type="checkbox" id="accessorizeEdgeToggle" onchange="toggleAccessorizeEdgeStyle()" style="width:20px;height:20px;cursor:pointer;flex-shrink:0"/>
+<label style="margin:0;text-transform:none;font-size:13px;color:#ccc;cursor:pointer" onclick="document.getElementById('accessorizeEdgeToggle').click()">Only matters if you pick "Use Just the Photo" — check this for hard, sharp edges instead of the default soft fade.</label>
 </div>
 </div>
 
@@ -1781,6 +1808,7 @@ async function pickFrame(name){
 // white surface instead of looking like a mismatched sticker cutout.
 function syncEdgeFadeWithFrameSelection(){
   const toggle=document.getElementById('panoramaFadeToggle');
+  const accessorizeToggle=document.getElementById('accessorizeEdgeToggle');
   if(!toggle)return;
   if(selectedFrame==='Wrought Iron'){
     hardEdgesEnabled=false;
@@ -1792,6 +1820,7 @@ function syncEdgeFadeWithFrameSelection(){
     hardEdgesEnabled=false;
     toggle.checked=false;
   }
+  if(accessorizeToggle)accessorizeToggle.checked=toggle.checked;
 }
 
 function renderWindowSillGrid(){
@@ -1953,12 +1982,19 @@ function resetWindowSillSliders(){
 // themselves and find the idea box on their own. Same idle-timer-cancel
 // as the pick handlers, since this is just as much a deliberate
 // next-step action as picking a design in the first place.
+//
+// BUG FIX (Aug 2026, Alyx's request): this always scrolled back to the
+// idea box, even when the customer had already written their idea text
+// before reaching this step -- landing them somewhere they'd already
+// finished instead of the real next step. Now scrolls toward Generate
+// (Style card, or the token note right above the button if Style
+// doesn't exist for some reason) -- the actual next actionable step
+// regardless of what order the customer reached this card in.
 function confirmWindowSillFit(){
   suspendGuidedScrollsForGeneration();
-  smoothScrollToTarget('ideaCard','center',()=>{
-    const idea=document.getElementById('ideaDesc');
-    if(idea)idea.focus({preventScroll:true});
-  });
+  const styleCard=document.getElementById('styleSectionCard');
+  const target=styleCard?'styleSectionCard':'generateTokenNote';
+  smoothScrollToTarget(target, styleCard?'start':'end');
 }
 
 // Button 2 on the Preview & Fit card -- takes the customer back to
@@ -2621,20 +2657,47 @@ const UNIFORM_EDGE_FADE_INSTRUCTION = "EDGE FADE: Fade all four outside edges of
 
 function togglePanoramaFadeEdges(){
   hardEdgesEnabled=document.getElementById('panoramaFadeToggle').checked;
+  const accessorizeToggle=document.getElementById('accessorizeEdgeToggle');
+  if(accessorizeToggle)accessorizeToggle.checked=hardEdgesEnabled;
 }
 
+// Second checkbox, scoped to the accessorize step's "Use Just the
+// Photo" path -- edge style only genuinely matters there (a Frame or
+// Window Sill always forces sharp edges via syncEdgeFadeWithFrameSelection
+// regardless of this setting). Kept in sync with the original
+// panoramaFadeToggle elsewhere on the page so there's only ever one
+// real hardEdgesEnabled value, never two contradictory checkboxes.
+function toggleAccessorizeEdgeStyle(){
+  hardEdgesEnabled=document.getElementById('accessorizeEdgeToggle').checked;
+  const mainToggle=document.getElementById('panoramaFadeToggle');
+  if(mainToggle)mainToggle.checked=hardEdgesEnabled;
+}
+
+// UPDATED (Aug 2026, Alyx's request): reordered the travel-cups flow so
+// variant is picked BEFORE print style (see pickPreGenTravelVariant and
+// refreshMugPrintModeVisibility below) -- the 40oz never shows this card
+// at all now, since Wraparound was never a real option for it (the
+// front-facing area is broken up by the handle). That makes the old
+// "block wraparound + explain why" guard here dead code: the card this
+// function's buttons live on simply isn't visible/clickable for the
+// 40oz anymore, so there's nothing to guard against. Removed the guard
+// entirely rather than leaving unreachable code behind.
 function pickMugPrintMode(mode){
-  if(mode==='wraparound' && product==='water bottle' && preGenTravelVariant==='travel-mug-40oz-insulated'){
-    showGuidanceAlert('The 40oz Insulated Travel Mug doesn\'t support Wraparound — the front-facing area is too broken up by the handle for one continuous scene to work. Use Three Separate Designs instead, which gives you two independent Left and Right images.');
-    return;
-  }
   mugPrintMode=mode;
   document.getElementById('printModeThreeBtn').classList.toggle('selected',mode==='three-panel');
   document.getElementById('printModeWrapBtn').classList.toggle('selected',mode==='wraparound');
   refreshPanoramaFadeCardVisibility();
   suspendGuidedScrollsForGeneration();
   if(product==='water bottle'){
-    smoothScrollToTarget('travelMugVariantCard','center');
+    // Variant is already chosen by the time this card is even visible
+    // (see the reorder above) -- so the next real decision point is
+    // color (if this variant has one) or Style, not back to the variant
+    // picker. Same scroll-target logic pickPreGenTravelVariant already
+    // uses for the 40oz's skip-this-card path, reused here for
+    // consistency across both routes into Style.
+    const colorCard=document.getElementById('travelMugColorCard');
+    const scrollTarget=(colorCard && colorCard.style.display!=='none') ? 'travelMugColorCard' : 'styleSectionCard';
+    smoothScrollToTarget(scrollTarget,scrollTarget==='styleSectionCard'?'start':'center');
   } else {
     // BUG FIX: regular mug (Three Separate Designs / Wraparound) had no
     // auto-scroll at all after picking -- left the customer stranded on
@@ -2644,10 +2707,25 @@ function pickMugPrintMode(mode){
   }
 }
 
+// UPDATED (Aug 2026, Alyx's request): reordered so travel cups pick
+// their variant BEFORE print style -- the 40oz's variant determines that
+// Wraparound was never actually a valid option for it, so instead of
+// showing the choice and blocking it after the fact, the card simply
+// never appears for the 40oz. Regular coffee mugs are unaffected (no
+// variant step exists for them, so the card still shows right after
+// picking "Mug").
 function refreshMugPrintModeVisibility(){
   const card=document.getElementById('mugPrintModeCard');
   if(!card)return;
-  card.style.display=(product==='mug'||product==='water bottle')?'block':'none';
+  let show;
+  if(product==='mug'){
+    show=true;
+  } else if(product==='water bottle'){
+    show=!!preGenTravelVariant && preGenTravelVariant!=='travel-mug-40oz-insulated';
+  } else {
+    show=false;
+  }
+  card.style.display=show?'block':'none';
 }
 
 // Variant must be known before generating — 40oz uses a different strategy than 20oz/14oz.
@@ -2679,32 +2757,55 @@ function renderTravelMugVariantGrid(){
   });
 }
 
+// UPDATED (Aug 2026, Alyx's request): variant is now picked BEFORE
+// print style (was the reverse before). Rationale: the variant is what
+// actually determines whether Wraparound is even a valid option (the
+// 40oz's front-facing area is broken up by the handle, so it never
+// really had one) -- deciding the variant first means the print-style
+// card can just not exist for the 40oz, instead of showing Wraparound
+// as clickable and then blocking it with an explanation after the fact.
 function pickPreGenTravelVariant(key){
   if(key!==preGenTravelVariant)preGenTravelColor=null;
   preGenTravelVariant=key;
-  if(key==='travel-mug-40oz-insulated' && mugPrintMode==='wraparound'){
+  const is40oz=key==='travel-mug-40oz-insulated';
+  if(is40oz){
+    // Silently locked to the only real option for this variant -- no
+    // card, no click, no explanation needed since there's nothing to
+    // choose between.
     mugPrintMode='three-panel';
     document.getElementById('printModeThreeBtn').classList.add('selected');
     document.getElementById('printModeWrapBtn').classList.remove('selected');
-    refreshPanoramaFadeCardVisibility();
   }
   renderTravelMugVariantGrid();
+  refreshMugPrintModeVisibility();
   refreshTravelMugColorVisibility();
+  refreshPanoramaFadeCardVisibility();
   suspendGuidedScrollsForGeneration();
-  const colorCard=document.getElementById('travelMugColorCard');
-  // BUG FIX: this used to stop at Edge Fade (panoramaFadeCard) for any
-  // tumbler with no color options, like the Gator Tumbler -- Edge Fade
-  // is just an automatic behind-the-scenes toggle, not a real decision
-  // point, so a customer landed there had nowhere obvious to go next.
-  // Now continues straight to Style, matching the same "next real
-  // decision point" pattern already used for the Product picker.
-  const scrollTarget=(colorCard && colorCard.style.display!=='none') ? 'travelMugColorCard' : 'styleSectionCard';
-  // BUG FIX: 'center' block left Style vertically centered, pushing
-  // Degree of Caricature and the Generate button below the fold --
-  // 'start' (already used for the Product picker's identical scroll)
-  // puts Style at the top instead, so everything through Generate
-  // actually fits on screen.
-  smoothScrollToTarget(scrollTarget,scrollTarget==='styleSectionCard'?'start':'center');
+
+  if(is40oz){
+    // Print style is skipped entirely for this variant -- go straight to
+    // color (if this variant has one) or Style, same "next real decision
+    // point" pattern used elsewhere.
+    const colorCard=document.getElementById('travelMugColorCard');
+    const scrollTarget=(colorCard && colorCard.style.display!=='none') ? 'travelMugColorCard' : 'styleSectionCard';
+    smoothScrollToTarget(scrollTarget,scrollTarget==='styleSectionCard'?'start':'center');
+  } else {
+    // Every other variant still has a real Three Separate Designs vs.
+    // Wraparound choice to make -- that card is now the next real
+    // decision point instead of color/Style. Same one-time explainer
+    // popup that used to fire at product-pick time now fires here,
+    // where it's actually still needed (see pick() below, which no
+    // longer triggers it for water bottle at all).
+    if(!printFormatPopupShown){
+      printFormatPopupShown=true;
+      showGuidanceAlert(
+        'Pick your print format — "Three Separate Designs" or "Wraparound." This changes how your artwork gets composed, so it needs to be chosen first.',
+        ()=>{ smoothScrollToTarget('mugPrintModeCard','center'); }
+      );
+    } else {
+      smoothScrollToTarget('mugPrintModeCard','center');
+    }
+  }
 }
 
 function refreshTravelMugVariantVisibility(){
@@ -3072,7 +3173,13 @@ function pick(el,type){
       smoothScrollToTarget('generateTokenNote','end');
     }
 
-    if((product==='mug'||product==='water bottle') && !printFormatPopupShown){
+    // UPDATED (Aug 2026, Alyx's request): water bottle no longer
+    // triggers this popup here -- print style is now chosen AFTER the
+    // travel mug variant (see pickPreGenTravelVariant), since the 40oz
+    // never had a real Wraparound option and shouldn't show the card at
+    // all. The popup now fires there instead, once it's actually known
+    // whether print style is a relevant choice for the chosen variant.
+    if(product==='mug' && !printFormatPopupShown){
       printFormatPopupShown=true;
       showGuidanceAlert(
         'Pick your print format — "Three Separate Designs" or "Wraparound." This changes how your artwork gets composed, so it needs to be chosen first.',
@@ -4151,6 +4258,61 @@ function scrollToFinishedImage(elementId,block){
   if(!el)return;
   el.scrollIntoView({behavior:'smooth',block:block||'center'});
 }
+
+// ================= MOCKUP LIGHTBOX =================
+// Enlarged real-photo-mockup images used to just window.open() the raw
+// Printify URL in a new tab -- no way to see another angle without
+// closing that tab and going back to the small thumbnail strip first.
+// This keeps the customer on-page with left/right arrows cycling
+// through whatever Printify actually photographed (currentMockupUrls,
+// populated by runAutoMockupFetch for both the single-image and
+// multi-angle-gallery cases).
+let currentMockupUrls=[];
+let currentMockupIndex=0;
+
+function openMockupLightbox(index){
+  if(!currentMockupUrls.length)return;
+  currentMockupIndex=((index%currentMockupUrls.length)+currentMockupUrls.length)%currentMockupUrls.length;
+  const overlay=document.getElementById('mockupLightboxOverlay');
+  const img=document.getElementById('mockupLightboxImg');
+  const counter=document.getElementById('mockupLightboxCounter');
+  const prevBtn=document.getElementById('mockupLightboxPrev');
+  const nextBtn=document.getElementById('mockupLightboxNext');
+  if(!overlay||!img)return;
+  img.src=currentMockupUrls[currentMockupIndex];
+  if(counter){
+    counter.textContent=(currentMockupIndex+1)+' / '+currentMockupUrls.length;
+    counter.style.display=currentMockupUrls.length>1?'block':'none';
+  }
+  const showArrows=currentMockupUrls.length>1;
+  if(prevBtn)prevBtn.style.display=showArrows?'flex':'none';
+  if(nextBtn)nextBtn.style.display=showArrows?'flex':'none';
+  overlay.classList.add('visible');
+}
+
+function closeMockupLightbox(){
+  const overlay=document.getElementById('mockupLightboxOverlay');
+  if(overlay)overlay.classList.remove('visible');
+}
+
+function mockupLightboxPrev(){
+  if(!currentMockupUrls.length)return;
+  openMockupLightbox(currentMockupIndex-1);
+}
+
+function mockupLightboxNext(){
+  if(!currentMockupUrls.length)return;
+  openMockupLightbox(currentMockupIndex+1);
+}
+
+document.addEventListener('keydown',(e)=>{
+  const overlay=document.getElementById('mockupLightboxOverlay');
+  if(!overlay||!overlay.classList.contains('visible'))return;
+  if(e.key==='Escape')closeMockupLightbox();
+  else if(e.key==='ArrowLeft')mockupLightboxPrev();
+  else if(e.key==='ArrowRight')mockupLightboxNext();
+});
+// ================= END MOCKUP LIGHTBOX =================
 
 function waitForImageReady(img){
   if(!img)return Promise.resolve();
@@ -5726,12 +5888,17 @@ async function runAutoMockupFetch(){
 
     loadingEl.style.display = 'none';
 
+    // Both branches feed the same lightbox array now -- a single mockup
+    // is just a one-item list, so openMockupLightbox() works identically
+    // either way instead of needing two separate enlarge mechanisms.
+    currentMockupUrls = mockupUrls.length ? mockupUrls : [mockupUrl];
+
     if (mockupUrls.length > 1) {
-      mockupUrls.slice(0, 5).forEach(url => {
+      mockupUrls.slice(0, 5).forEach((url, i) => {
         const img = document.createElement('img');
         img.src = url;
         img.style.cssText = 'flex:0 0 150px;width:150px;height:150px;border-radius:12px;border:1px solid #003c8c;object-fit:contain;background:#fff;cursor:pointer';
-        img.onclick = () => window.open(url, '_blank');
+        img.onclick = () => openMockupLightbox(i);
         galleryEl.appendChild(img);
       });
       galleryEl.style.display = 'flex';
@@ -5742,7 +5909,7 @@ async function runAutoMockupFetch(){
       imgEl.src = mockupUrl;
       imgEl.style.display = 'block';
       imgEl.style.cursor = 'pointer';
-      imgEl.onclick = () => window.open(mockupUrl, '_blank');
+      imgEl.onclick = () => openMockupLightbox(0);
       await waitForImageReady(imgEl);
       imgEl.scrollIntoView({behavior:'smooth',block:'center'});
     }
