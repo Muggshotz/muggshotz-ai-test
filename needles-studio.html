@@ -679,13 +679,13 @@
 <div class="note" id="designPreviewNote" style="margin-top:0;margin-bottom:.75rem">This is your actual uploaded photo, not a generated design — use it to see roughly how you'll sit inside the window before spending a token. Drag the sliders to adjust the size and position; Generate will use these settings.</div>
 <img id="windowSillPreviewImg" style="width:100%;max-height:170px;object-fit:contain;display:block;margin:0 auto .9rem;border-radius:10px;border:1px solid #003c8c;background:#0d0d0d;position:sticky;top:70px;z-index:5"/>
 <div id="windowSillPreviewSliders">
-<div class="cap-row"><label style="min-width:110px">Width</label><input type="range" id="wsPreviewWidth" min="10" max="150" step="0.5" oninput="handleWindowSillSliderChange()"/></div>
-<div class="cap-row"><label style="min-width:110px">Height</label><input type="range" id="wsPreviewHeight" min="10" max="150" step="0.5" oninput="handleWindowSillSliderChange()"/></div>
-<div class="cap-row"><label style="min-width:110px">Left/Right</label><input type="range" id="wsPreviewOffsetX" min="-50" max="50" step="0.5" oninput="handleWindowSillSliderChange()"/></div>
-<div class="cap-row"><label style="min-width:110px">Up/Down</label><input type="range" id="wsPreviewOffsetY" min="-50" max="50" step="0.5" oninput="handleWindowSillSliderChange()"/></div>
+<div class="cap-row"><label style="min-width:110px">Width</label><input type="range" id="wsPreviewWidth" min="10" max="150" step="0.5" oninput="handleWindowSillSliderChange()"/><span class="ws-slider-value" id="wsPreviewWidthVal" style="min-width:52px;text-align:right;color:#7ab8ff;font-size:12px;font-weight:700">—</span></div>
+<div class="cap-row"><label style="min-width:110px">Height</label><input type="range" id="wsPreviewHeight" min="10" max="150" step="0.5" oninput="handleWindowSillSliderChange()"/><span class="ws-slider-value" id="wsPreviewHeightVal" style="min-width:52px;text-align:right;color:#7ab8ff;font-size:12px;font-weight:700">—</span></div>
+<div class="cap-row"><label style="min-width:110px">Left/Right</label><input type="range" id="wsPreviewOffsetX" min="-50" max="50" step="0.5" oninput="handleWindowSillSliderChange()"/><span class="ws-slider-value" id="wsPreviewOffsetXVal" style="min-width:52px;text-align:right;color:#7ab8ff;font-size:12px;font-weight:700">—</span></div>
+<div class="cap-row"><label style="min-width:110px">Up/Down</label><input type="range" id="wsPreviewOffsetY" min="-50" max="50" step="0.5" oninput="handleWindowSillSliderChange()"/><span class="ws-slider-value" id="wsPreviewOffsetYVal" style="min-width:52px;text-align:right;color:#7ab8ff;font-size:12px;font-weight:700">—</span></div>
 <div class="sub-section-label" style="margin-top:1rem">Window Frame Size (adjusts the balcony artwork itself, not your photo)</div>
-<div class="cap-row"><label style="min-width:110px">Window Width</label><input type="range" id="wsSillWidth" min="80" max="160" step="0.5" oninput="handleWindowSillSliderChange()"/></div>
-<div class="cap-row"><label style="min-width:110px">Window Height</label><input type="range" id="wsSillHeight" min="80" max="160" step="0.5" oninput="handleWindowSillSliderChange()"/></div>
+<div class="cap-row"><label style="min-width:110px">Window Width</label><input type="range" id="wsSillWidth" min="80" max="160" step="0.5" oninput="handleWindowSillSliderChange()"/><span class="ws-slider-value" id="wsSillWidthVal" style="min-width:52px;text-align:right;color:#7ab8ff;font-size:12px;font-weight:700">—</span></div>
+<div class="cap-row"><label style="min-width:110px">Window Height</label><input type="range" id="wsSillHeight" min="80" max="160" step="0.5" oninput="handleWindowSillSliderChange()"/><span class="ws-slider-value" id="wsSillHeightVal" style="min-width:52px;text-align:right;color:#7ab8ff;font-size:12px;font-weight:700">—</span></div>
 <button class="download-btn" onclick="resetWindowSillSliders()">↺ Reset to Default Fit</button>
 </div>
 <button class="generate-btn" id="confirmDesignPreviewBtn" style="margin-top:.6rem" onclick="confirmWindowSillFit()">✅ Happy with your selection? Click here</button>
@@ -1945,12 +1945,29 @@ function renderWindowSillPreviewCard(){
     document.getElementById('wsPreviewOffsetY').value=active.offsetYPct;
     document.getElementById('wsSillWidth').value=active.sillWidthPct;
     document.getElementById('wsSillHeight').value=active.sillHeightPct;
+    updateWindowSillSliderReadouts();
   } else {
     if(title)title.textContent='🖼️ Preview Your Frame';
     if(note)note.textContent="This is your actual uploaded photo, not a generated design — use it to see this frame on your photo before spending a token. Frame automatically fits your whole photo inside the border, so there's nothing to adjust here.";
     if(slidersWrap)slidersWrap.style.display='none';
   }
   return updateWindowSillLivePreview();
+}
+
+// NEW (Aug 2026, Alyx's request): shows the real percentage next to each
+// slider handle -- these values were always used internally (drives the
+// live preview and the real generation), but there was previously no
+// way to read them back out, so a fit dialed in by eye could only ever
+// be roughly guessed at from a screenshot rather than reproduced exactly.
+function updateWindowSillSliderReadouts(){
+  const ids=['wsPreviewWidth','wsPreviewHeight','wsPreviewOffsetX','wsPreviewOffsetY','wsSillWidth','wsSillHeight'];
+  ids.forEach(id=>{
+    const slider=document.getElementById(id);
+    const readout=document.getElementById(id+'Val');
+    if(!slider||!readout)return;
+    const num=parseFloat(slider.value);
+    readout.textContent=(isNaN(num)?'—':num)+'%';
+  });
 }
 
 // Sliders write directly into customWindowSillCalibration, keyed by the
@@ -1969,6 +1986,7 @@ function handleWindowSillSliderChange(){
     sillWidthPct:parseFloat(document.getElementById('wsSillWidth').value),
     sillHeightPct:parseFloat(document.getElementById('wsSillHeight').value)
   };
+  updateWindowSillSliderReadouts();
   updateWindowSillLivePreview();
 }
 
