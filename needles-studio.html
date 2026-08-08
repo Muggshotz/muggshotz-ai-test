@@ -2060,22 +2060,29 @@ function resetWindowSillSliders(){
 // as the pick handlers, since this is just as much a deliberate
 // next-step action as picking a design in the first place.
 //
-// BUG FIX (Aug 2026, Alyx's request): this always scrolled back to the
-// idea box, even when the customer had already written their idea text
-// before reaching this step -- landing them somewhere they'd already
-// finished instead of the real next step. Now scrolls toward Generate
-// (Style card, or the token note right above the button if Style
-// doesn't exist for some reason) -- the actual next actionable step
-// regardless of what order the customer reached this card in.
-// REVERTED (Aug 2026, per Alyx's explicit instruction): the conditional
-// idea-box-empty check that was here got built without waiting for a
-// go-ahead, which broke the standing rule. Restored to the last version
-// Alyx actually authorized. Note: this does bring back the bug where
-// picking Frame/Window Sill before ever reaching the idea box jumps
-// straight to Style, skipping the idea box and Product picker -- known,
-// left as-is pending explicit reauthorization to fix it again.
+// (Aug 2026) Went through a few iterations: originally always scrolled
+// to the idea box, which stranded customers who'd already written their
+// idea before reaching this step; then always jumped to Style, which
+// broke the real intended order (Frame/Window Sill picked right after
+// photo upload, before the idea box is ever reached) by skipping both
+// the idea box and Product picker; now checks each real step in order
+// and sends the customer to whichever one is still genuinely
+// unaddressed -- idea box (if empty), then Product (if never explicitly
+// clicked -- Mug's default selection doesn't count), only falling
+// through to Style once both are actually done.
 function confirmWindowSillFit(){
   suspendGuidedScrollsForGeneration();
+  const idea=document.getElementById('ideaDesc');
+  if(idea && !idea.value.trim()){
+    smoothScrollToTarget('ideaCard','center',()=>{
+      idea.focus({preventScroll:true});
+    });
+    return;
+  }
+  if(!productExplicitlyChosen){
+    smoothScrollToTarget('productCard','start');
+    return;
+  }
   const styleCard=document.getElementById('styleSectionCard');
   const target=styleCard?'styleSectionCard':'generateTokenNote';
   smoothScrollToTarget(target, styleCard?'start':'end');
@@ -2593,6 +2600,11 @@ let mugPrintMode='three-panel';
 let printFormatPopupShown=false;
 let frameGuidancePopupShown=false;
 let ideaBoxIntroShown=false;
+// NEW (Aug 2026, Alyx's request): Mug is pre-selected by default, but
+// that's not the same as the customer actually making a real choice --
+// this only flips true on an explicit click, so confirmWindowSillFit()
+// below can tell whether Product genuinely still needs a visit.
+let productExplicitlyChosen=false;
 
 // UPDATED (Aug 2026, Alyx's request): repurposed -- this was originally
 // written to fire once print format/variant/color were locked in
@@ -3221,6 +3233,7 @@ function pick(el,type){
     // customer has now made a real choice (Mug being pre-selected by
     // default doesn't count as one) -- the gentle nudge has served its
     // purpose and shouldn't keep pulsing after that.
+    productExplicitlyChosen=true;
     const productGuide=document.getElementById('productGuidancePrompt');
     if(productGuide)productGuide.classList.remove('visible');
     const finalGuide=document.getElementById('finalGenerateGuidance');
