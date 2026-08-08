@@ -2402,7 +2402,17 @@ async function drawPhotoInsetForFrame(ctx,canvas,source,sourceW,sourceH){
     ctx.drawImage(source,0,0,sourceW,sourceH,0,0,canvas.width,canvas.height);
     return;
   }
-  ctx.fillStyle='#ffffff';
+  // UPDATED (Aug 2026, Alyx's request): this base fill used to be
+  // hardcoded white, always -- fine for most frames (solid enough to
+  // cover it completely), but Wrought Iron's open scrollwork has real
+  // gaps that don't reach every edge of the canvas, letting this base
+  // color peek through. On a colored product (e.g. Teal, #1F9E8E),
+  // that peek-through looked like a mismatched white sliver instead of
+  // blending into the actual mug/product color. Now pulls the real hex
+  // for whatever color the customer actually picked (same helper
+  // already used elsewhere for edge-fade color matching), falling back
+  // to white only for products with no color selection to draw from.
+  ctx.fillStyle=getSelectedProductColorHex();
   ctx.fillRect(0,0,canvas.width,canvas.height);
 
   let insetX,insetY,insetW,insetH;
