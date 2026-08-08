@@ -1643,7 +1643,7 @@ const WINDOW_SILL_OPTIONS = [
 // Any Window Sill asset NOT in this table falls back to the old
 // full-canvas behavior until it gets calibrated the same way.
 const WINDOW_SILL_CALIBRATION = {
-  "frame-window-sill-b.png": { widthPct: 38, heightPct: 61, offsetXPct: -1, offsetYPct: 2, sillWidthPct: 90, sillHeightPct: 95 }, // Parisian Balcony -- re-calibrated via the shared Preview & Fit sliders after the Frame/Window Sill preview merge
+  "frame-window-sill-b.png": { widthPct: 38, heightPct: 61, offsetXPct: -1, offsetYPct: 2, sillWidthPct: 104, sillHeightPct: 104 }, // Parisian Balcony -- sillWidthPct/sillHeightPct raised from 90/95 to 104/104 (Aug 2026): the undersized values were leaving a visible white margin around the artwork on real print/mockup output, since the overlay wasn't reaching the canvas edges. Brought in line with every other calibrated design's 96-106% range.
   "frame-window-sill-c.png": { widthPct: 42, heightPct: 78, offsetXPct: 0, offsetYPct: 0, sillWidthPct: 104, sillHeightPct: 101 }, // Stained Glass Garden -- calibrated via the on-page Preview & Fit sliders
   "frame-window-sill-a.png": { widthPct: 93, heightPct: 150, offsetXPct: -4, offsetYPct: 19, sillWidthPct: 100, sillHeightPct: 99 }, // Rustic Farmhouse -- calibrated via the on-page Preview & Fit sliders
   "frame-window-sill-f.png": { widthPct: 40, heightPct: 73, offsetXPct: 50, offsetYPct: 14, sillWidthPct: 101, sillHeightPct: 99 }, // Southwest Adobe -- calibrated via the on-page Preview & Fit sliders
