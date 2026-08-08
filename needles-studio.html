@@ -1395,6 +1395,13 @@ function startPhotoGuide(){
   setTimeout(()=>{
     if(photoGuideActive)smoothScrollToTarget('startOverBtn','end');
   },150);
+  // NEW (Aug 2026, Alyx's request): the Frame/Window Sill section lives
+  // right here, directly below Upload Photo -- but a customer scrolling
+  // straight from photo to idea box never sees it, since it's easy to
+  // scroll straight past without noticing. This one-time popup points
+  // it out right after the photo reveal, before the auto-advance to the
+  // idea box would otherwise carry them past it.
+  setTimeout(triggerFrameGuidance,800);
   // UPDATED (Aug 2026, Alyx's request): reduced from 10000ms to 4000ms --
   // once a photo is uploaded, the customer has already made a deliberate
   // choice; there's no need to sit on that screen for a full 10 seconds
@@ -2539,14 +2546,22 @@ let printFormatPopupShown=false;
 let frameGuidancePopupShown=false;
 let ideaBoxIntroShown=false;
 
-// Fires once the prerequisite choices for a mug-type product are locked in
-// (print format, and — for travel mugs — the variant/color) to point the
-// customer at Frame next, since it's easy to miss scrolling that far.
+// UPDATED (Aug 2026, Alyx's request): repurposed -- this was originally
+// written to fire once print format/variant/color were locked in
+// (pointing "at Frame next"), but was never actually wired up anywhere
+// and sat unused. Now fires once, shortly after a photo uploads (see
+// startPhotoGuide), since that's the real moment a customer is most
+// likely to scroll straight past the Frame/Window Sill section without
+// ever noticing it -- confirmed happening live, twice, in testing.
+// Also suspends the competing auto-advance-to-idea-box timer so it
+// can't yank the customer away mid-read or immediately after they
+// close this popup and start browsing frames.
 function triggerFrameGuidance(){
   if(frameGuidancePopupShown)return;
   frameGuidancePopupShown=true;
+  suspendGuidedScrollsForGeneration();
   showGuidanceAlert(
-    'One more thing — take a look at the frames we offer below. A nice border can really help your picture pop. There\'s also a separate window-sill portrait option if that fits what you have in mind. Both are completely optional.',
+    'Before you continue — take a look at the frames and window sill styles below. A nice border can really help your picture pop. Both are completely optional, and if you skip this for now, you\'ll get another chance to add one right after your design is generated.',
     ()=>{ smoothScrollToTarget('frameSectionCard','center'); }
   );
 }
