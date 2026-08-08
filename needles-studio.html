@@ -676,9 +676,10 @@
 
 <div class="card" id="windowSillPreviewCard" style="display:none">
 <div class="card-title" id="designPreviewTitle">🪟 Preview &amp; Fit Your Photo</div>
-<div class="note" id="designPreviewNote" style="margin-top:0;margin-bottom:.75rem">This is your actual uploaded photo, not a generated design — use it to see roughly how you'll sit inside the window before spending a token. Drag the sliders to adjust the size and position; Generate will use these settings.</div>
+<div class="note" id="designPreviewNote" style="margin-top:0;margin-bottom:.75rem">This is your actual uploaded photo, not a generated design — use it to see roughly how you'll sit inside the window before spending a token. The size and position shown are already dialed in and ready to go — only touch the sliders if this specific photo needs a nudge.</div>
 <img id="windowSillPreviewImg" style="width:100%;max-height:170px;object-fit:contain;display:block;margin:0 auto .9rem;border-radius:10px;border:1px solid #003c8c;background:#0d0d0d;position:sticky;top:70px;z-index:5"/>
-<div id="windowSillPreviewSliders">
+<button class="download-btn" id="windowSillSlidersToggleBtn" style="margin-top:0;margin-bottom:.6rem" onclick="toggleWindowSillSliders()">🎚️ Adjust Manually</button>
+<div id="windowSillPreviewSliders" style="display:none">
 <div class="cap-row"><label style="min-width:110px">Width</label><input type="range" id="wsPreviewWidth" min="10" max="150" step="0.5" oninput="handleWindowSillSliderChange()"/><span class="ws-slider-value" id="wsPreviewWidthVal" style="min-width:52px;text-align:right;color:#7ab8ff;font-size:12px;font-weight:700">—</span></div>
 <div class="cap-row"><label style="min-width:110px">Height</label><input type="range" id="wsPreviewHeight" min="10" max="150" step="0.5" oninput="handleWindowSillSliderChange()"/><span class="ws-slider-value" id="wsPreviewHeightVal" style="min-width:52px;text-align:right;color:#7ab8ff;font-size:12px;font-weight:700">—</span></div>
 <div class="cap-row"><label style="min-width:110px">Left/Right</label><input type="range" id="wsPreviewOffsetX" min="-50" max="50" step="0.5" oninput="handleWindowSillSliderChange()"/><span class="ws-slider-value" id="wsPreviewOffsetXVal" style="min-width:52px;text-align:right;color:#7ab8ff;font-size:12px;font-weight:700">—</span></div>
@@ -1946,6 +1947,7 @@ function getWindowSillDefaultCalibration(asset){
 function renderWindowSillPreviewCard(){
   const card=document.getElementById('windowSillPreviewCard');
   const slidersWrap=document.getElementById('windowSillPreviewSliders');
+  const toggleBtn=document.getElementById('windowSillSlidersToggleBtn');
   const title=document.getElementById('designPreviewTitle');
   const note=document.getElementById('designPreviewNote');
   if(!card)return Promise.resolve();
@@ -1959,10 +1961,20 @@ function renderWindowSillPreviewCard(){
     return Promise.resolve();
   }
   card.style.display='block';
+  // UPDATED (Aug 2026, Alyx's request): sliders now start collapsed
+  // every time this card renders, regardless of Frame vs Window Sill --
+  // the calibrated defaults are correct for most photos now (see the
+  // Parisian Balcony fix), so leaving the sliders expanded by default
+  // just invited fiddling with a fit that's usually already right.
+  // Manual adjustment is still one tap away via the toggle button below.
+  if(slidersWrap)slidersWrap.style.display='none';
   if(windowSillChoice){
     if(title)title.textContent='🪟 Preview & Fit Your Photo';
-    if(note)note.textContent="This is your actual uploaded photo, not a generated design — use it to see roughly how you'll sit inside the window before spending a token. Drag the sliders to adjust the size and position; Generate will use these settings.";
-    if(slidersWrap)slidersWrap.style.display='block';
+    if(note)note.textContent="This is your actual uploaded photo, not a generated design — use it to see roughly how you'll sit inside the window before spending a token. The size and position shown are already dialed in and ready to go — only touch the sliders if this specific photo needs a nudge.";
+    if(toggleBtn){
+      toggleBtn.style.display='block';
+      toggleBtn.textContent='🎚️ Adjust Manually';
+    }
     const opt=WINDOW_SILL_OPTIONS.find(o=>o.name===windowSillChoice);
     const asset=opt?opt.asset:null;
     const active=(asset&&customWindowSillCalibration[asset])||getWindowSillDefaultCalibration(asset);
@@ -1976,9 +1988,25 @@ function renderWindowSillPreviewCard(){
   } else {
     if(title)title.textContent='🖼️ Preview Your Frame';
     if(note)note.textContent="This is your actual uploaded photo, not a generated design — use it to see this frame on your photo before spending a token. Frame automatically fits your whole photo inside the border, so there's nothing to adjust here.";
-    if(slidersWrap)slidersWrap.style.display='none';
+    // Frame never had a real per-photo fit problem for sliders to solve
+    // (see the comment above) -- no point offering a toggle for
+    // controls that don't do anything meaningful here.
+    if(toggleBtn)toggleBtn.style.display='none';
   }
   return updateWindowSillLivePreview();
+}
+
+// NEW (Aug 2026, Alyx's request): the Preview & Fit sliders now start
+// collapsed by default -- this toggles them open for the rare photo
+// that actually needs a manual nudge, without inviting fiddling on
+// every design when the calibrated defaults are already correct.
+function toggleWindowSillSliders(){
+  const slidersWrap=document.getElementById('windowSillPreviewSliders');
+  const toggleBtn=document.getElementById('windowSillSlidersToggleBtn');
+  if(!slidersWrap)return;
+  const nowOpen=slidersWrap.style.display==='none';
+  slidersWrap.style.display=nowOpen?'block':'none';
+  if(toggleBtn)toggleBtn.textContent=nowOpen?'🎚️ Hide Manual Adjustment':'🎚️ Adjust Manually';
 }
 
 // NEW (Aug 2026, Alyx's request): shows the real percentage next to each
