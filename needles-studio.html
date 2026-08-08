@@ -1440,7 +1440,15 @@ function pauseIdeaGuideCycle(){
 
 const ideaCardObserver=new IntersectionObserver((entries)=>{
   entries.forEach(entry=>{
-    if(entry.isIntersecting)scheduleNextIdeaFlash(ideaGuideHasFlashedOnce?30000:500);
+    // UPDATED (Aug 2026, Alyx's request): this was still conditionally
+    // falling back to the 30-second cadence any time ideaGuideHasFlashedOnce
+    // was already true -- which meant only the very first-ever appearance
+    // was fast; scrolling back into view a second time (or typing, see
+    // below) still got stuck waiting the full 30s. Deliberate engagement
+    // (the card coming into view) should always be fast -- the slow
+    // cadence is reserved for genuinely passive idling only, handled by
+    // scheduleNextIdeaFlash's own internal self-reschedule.
+    if(entry.isIntersecting)scheduleNextIdeaFlash(500);
     else pauseIdeaGuideCycle();
   });
 },{threshold:0.4});
@@ -1474,7 +1482,12 @@ window.addEventListener('DOMContentLoaded',()=>{
     idea.addEventListener('input',()=>{
       const prompt=document.getElementById('ideaGuidancePrompt');
       if(prompt)prompt.classList.remove('visible');
-      scheduleNextIdeaFlash(ideaGuideHasFlashedOnce?30000:500);
+      // UPDATED (Aug 2026, Alyx's request): same fix as above -- actively
+      // typing is deliberate engagement, not idling, so it should always
+      // bring the prompt back quickly once you pause, not wait the full
+      // 30-second ambient cadence just because it had already shown once
+      // before you started typing.
+      scheduleNextIdeaFlash(500);
     });
   }
 });
