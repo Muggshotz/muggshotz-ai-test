@@ -155,8 +155,8 @@ export async function buildWraparoundImage(placements, canvasWidth, canvasHeight
   // that design was correctly anchored to its own third but looked
   // small against two-thirds of blank mug. Since the neighboring space
   // really is blank ceramic with nothing to conflict with, widen that
-  // one design's box symmetrically around its slot's original center —
-  // bigger, but still anchored on the correct side of the mug — capped
+  // one design's box symmetrically around its slot's original center --
+  // bigger, but still anchored on the correct side of the mug -- capped
   // so it can't run off either edge of the canvas. This ONLY applies
   // when exactly one slot is filled; two- or three-filled placements
   // keep the exact fixed thirds as before, unaffected.
@@ -205,13 +205,13 @@ export async function buildFullBleedImage(imageSource, canvasWidth, canvasHeight
 
 // NEW (July 2026, Alyx's request): the customer-facing "Wraparound"
 // print mode (auto-generated three-panel continuous scene) was sharing
-// buildFullBleedImage's cover-fit crop — same head-cropping bug as the
+// buildFullBleedImage's cover-fit crop -- same head-cropping bug as the
 // three-slot-wrap fix, just reached through a different code path
 // (printMode === "fullBleed"), which is why lowering the Printify
 // placement scale didn't help: the crop was already baked into the
 // print file before it ever reached Printify. This function uses
 // contain-fit instead, so nothing gets cropped away. Deliberately kept
-// SEPARATE from buildFullBleedImage — that one's cover-fit crop-to-fill
+// SEPARATE from buildFullBleedImage -- that one's cover-fit crop-to-fill
 // behavior is reserved for the future Ewww Stew line, where designs are
 // supposed to intentionally overflow past the print margins. Only
 // printMode === "allCup" should ever call buildFullBleedImage going
@@ -233,12 +233,26 @@ export async function buildSingleImage(imageSource, canvasWidth, canvasHeight) {
     .toBuffer();
 }
 
+// UPDATED (Aug 2026, Alyx's request): switched from "contain" (shrink
+// the whole composited image to fit inside the print area, padding the
+// leftover space with white) to "cover" (fill the print area completely,
+// cropping only what doesn't fit). Root cause: the AI-generated canvas
+// for front-back products (1024x1536, a tall 0.667 aspect ratio) never
+// matches the real Printify print area (900x1200 for the 40oz, a
+// squarer 0.75 ratio) -- "contain" was shrinking the whole design down
+// and padding it with a visible white border on the real printed/
+// mockup output, confirmed live on a 40oz Parisian Balcony Window Sill
+// test. "cover" is also consistent with how Window Sill already treats
+// photo-fit elsewhere in the app (fills the opening completely, crops
+// like a real window, never pads with white) -- this just applies the
+// same philosophy at the final Printify-placement layer. Only affects
+// front-back layoutType products (currently just the 40oz); every other
+// layoutType (three-slot-wrap, single-image, full-bleed) is untouched.
 export async function buildFrontBackImages(frontSource, backSource, frontDims, backDims) {
-  const WHITE = { r: 255, g: 255, b: 255 };
   async function build(source, dims) {
     if (!source || !dims) return null;
     return await sharp(await resolveImageBuffer(source))
-      .resize(dims.width, dims.height, { fit: "contain", background: WHITE })
+      .resize(dims.width, dims.height, { fit: "cover", position: "centre" })
       .png()
       .toBuffer();
   }
@@ -251,14 +265,14 @@ export async function buildFrontBackImages(frontSource, backSource, frontDims, b
 
 // UPDATED (July 2026, Alyx's request): now ASYNC. A color entry in the
 // catalog can be added with variantId left out (null/undefined) the
-// moment it's confirmed to exist on Printify — this function then
+// moment it's confirmed to exist on Printify -- this function then
 // resolves the real numeric variant ID live, by matching the size and
 // color name against Printify's own variant titles for that blueprint/
 // provider (same resolveVariantIdByTitleMatch() helper travel-mug-20oz
 // already relies on). This means a newly-confirmed color can go live
 // immediately from just its name, with no manual ID lookup required.
 // Every color that already has a real variantId hardcoded is completely
-// unaffected — this fallback only ever runs when one is missing.
+// unaffected -- this fallback only ever runs when one is missing.
 export async function resolveVariant(product, sizeLabel, colorName) {
   const sizeEntry = product.sizes?.[sizeLabel];
   if (!sizeEntry) throw new Error(`Unknown size "${sizeLabel}" for this product.`);
@@ -298,14 +312,14 @@ export async function resolveVariant(product, sizeLabel, colorName) {
 }
 
 // UPDATED (July 2026, Alyx's request): added optional imageScale and
-// imageY parameters (default 1 / 0.5 — both unchanged from before)
+// imageY parameters (default 1 / 0.5 -- both unchanged from before)
 // instead of hardcoding one value for every product. Coffee mugs
-// specifically were coming out too tightly cropped — text and faces
-// running edge-to-edge with zero margin — so placeProductOrder/
+// specifically were coming out too tightly cropped -- text and faces
+// running edge-to-edge with zero margin -- so placeProductOrder/
 // start-mockup.js pass 0.8 (80%) scale only for three-slot-wrap
 // (coffee mug) products. After fixing the crop, the design still sat
 // too high on the mug (centered vertically leaves it looking too close
-// to the rim) — imageY nudges it down toward center-lower instead.
+// to the rim) -- imageY nudges it down toward center-lower instead.
 // Travel mugs, suitcases, and everything else keep the original
 // full-size, centered placement, since those were already coming out
 // correctly. This is the exact same x/y/scale placement control
@@ -412,7 +426,7 @@ export async function placeProductOrder({
     // UPDATED (July 2026): this blueprint (SPOKE Custom Products, swapped
     // in after the previous Polar Camel blueprint turned out to be
     // Printify "Early Access" with no real mockup support) has exactly
-    // one orderable variant and no hardcoded ID in the catalog — same
+    // one orderable variant and no hardcoded ID in the catalog -- same
     // reasoning as photo-poster's not-yet-looked-up sizes. Resolved live
     // by name match instead.
     effectiveBlueprintId = product.blueprintId;
@@ -435,7 +449,7 @@ export async function placeProductOrder({
     // "fullBleed" = customer-facing Wraparound scene-continuation mode
     // (no cropping). "allCup" = reserved for the future Ewww Stew line,
     // which deliberately wants overflow/crop. Do NOT collapse these
-    // back into one branch — see buildSeamlessWrapImage's comment above.
+    // back into one branch -- see buildSeamlessWrapImage's comment above.
     const isSeamlessWrap = printMode === "fullBleed";
     const isFullBleed = printMode === "allCup";
     const { width, height, position } = await getPlaceholderDimensions(
@@ -484,7 +498,7 @@ export async function placeProductOrder({
   }
 
   // RESOLVED (July 2026): the calibration test confirmed scale/position
-  // was never the real problem — the actual bug was buildFullBleedImage
+  // was never the real problem -- the actual bug was buildFullBleedImage
   // still cropping, reached only through the Wraparound auto-continuation
   // path. Now that buildSeamlessWrapImage fixes the crop at the source,
   // restoring the values already validated as correct for the manual
@@ -492,7 +506,7 @@ export async function placeProductOrder({
   const isCoffeeMug = product.layoutType === "three-slot-wrap";
   // UPDATED (July 2026, Alyx's request): the 20oz travel mug (SPOKE
   // Custom Products, single-image) was printing too large on some
-  // designs depending on how the source image happened to be framed —
+  // designs depending on how the source image happened to be framed --
   // scoped narrowly to ONLY this product key so it can't accidentally
   // affect the suitcase, phone case, or anything else that was already
   // coming out correctly.
