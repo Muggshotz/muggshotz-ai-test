@@ -1405,7 +1405,14 @@ function startPhotoGuide(){
 let ideaGuideTimer=null;
 let ideaGuideHasFlashedOnce=false;
 
-function scheduleNextIdeaFlash(){
+// UPDATED (Aug 2026, Alyx's request): added a delay parameter -- this
+// prompt has no urgency to it ("scroll when ready," not a countdown),
+// so making the customer wait a full 30 seconds before ever seeing it
+// the first time served no purpose. First-time triggers below now pass
+// a near-instant delay; the RECURRING gentle reminder (if the customer
+// is still sitting on this card after that) still cycles every 30s,
+// unchanged -- only the very first appearance was the problem.
+function scheduleNextIdeaFlash(delay=30000){
   clearTimeout(ideaGuideTimer);
   ideaGuideTimer=setTimeout(()=>{
     const prompt=document.getElementById('ideaGuidancePrompt');
@@ -1414,8 +1421,8 @@ function scheduleNextIdeaFlash(){
       prompt.classList.toggle('soft',ideaGuideHasFlashedOnce);
     }
     ideaGuideHasFlashedOnce=true;
-    scheduleNextIdeaFlash();
-  },30000);
+    scheduleNextIdeaFlash(30000);
+  },delay);
 }
 
 function pauseIdeaGuideCycle(){
@@ -1426,7 +1433,7 @@ function pauseIdeaGuideCycle(){
 
 const ideaCardObserver=new IntersectionObserver((entries)=>{
   entries.forEach(entry=>{
-    if(entry.isIntersecting)scheduleNextIdeaFlash();
+    if(entry.isIntersecting)scheduleNextIdeaFlash(ideaGuideHasFlashedOnce?30000:500);
     else pauseIdeaGuideCycle();
   });
 },{threshold:0.4});
@@ -1460,7 +1467,7 @@ window.addEventListener('DOMContentLoaded',()=>{
     idea.addEventListener('input',()=>{
       const prompt=document.getElementById('ideaGuidancePrompt');
       if(prompt)prompt.classList.remove('visible');
-      scheduleNextIdeaFlash();
+      scheduleNextIdeaFlash(ideaGuideHasFlashedOnce?30000:500);
     });
   }
 });
