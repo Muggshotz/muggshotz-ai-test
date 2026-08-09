@@ -529,6 +529,39 @@ function buildPrintifyCard(bp){
   providersLine.className = 'result-providers';
   providersLine.textContent = 'Checking print providers\u2026';
   body.appendChild(providersLine);
+  const modelsBtn = document.createElement('button');
+  modelsBtn.className = 'small ghost';
+  modelsBtn.textContent = 'View compatible models';
+  modelsBtn.type = 'button';
+  body.appendChild(modelsBtn);
+
+  const modelsBox = document.createElement('div');
+  modelsBox.className = 'export-box';
+  modelsBox.style.display = 'none';
+  modelsBox.style.maxHeight = '160px';
+  body.appendChild(modelsBox);
+
+  modelsBtn.addEventListener('click', async () => {
+    if(modelsBox.style.display === 'block'){
+      modelsBox.style.display = 'none';
+      return;
+    }
+    modelsBox.style.display = 'block';
+    modelsBox.textContent = 'Loading compatible models\u2026';
+    try{
+      const providers = await fetchPrintProviders(bp.id);
+      if(!providers.length){ modelsBox.textContent = 'No print providers listed.'; return; }
+      const variantsResp = await fetchVariants(bp.id, providers[0].id);
+      if(!variantsResp || !variantsResp.variants || !variantsResp.variants.length){
+        modelsBox.textContent = 'No variant/model data available.';
+        return;
+      }
+      const names = variantsResp.variants.map(v => v.title).filter(Boolean);
+      modelsBox.textContent = names.join('\n');
+    }catch(err){
+      modelsBox.textContent = 'Could not load models: ' + err.message;
+    }
+  });
 
   const addBtn = document.createElement('button');
   addBtn.className = 'small';
