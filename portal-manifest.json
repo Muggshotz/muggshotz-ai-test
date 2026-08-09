@@ -1,0 +1,25 @@
+{
+  "name": "The Portal",
+  "short_name": "Portal",
+  "description": "MuggsHotz product catalog search tool.",
+  "start_url": "/the-portal.html",
+  "id": "/the-portal.html",
+  "scope": "/the-portal.html",
+  "display": "standalone",
+  "background_color": "#0d1117",
+  "theme_color": "#3d8bff",
+  "icons": [
+    {
+      "src": "the-portal-icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "the-portal-icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
