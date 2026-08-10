@@ -752,6 +752,7 @@
 <div class="note" style="margin-bottom:6px">Color</div>
 <div class="color-grid" id="preGenMugColorGrid"></div>
 <img id="preGenMugMockupImg" style="display:none;width:100%;max-width:280px;margin:.9rem auto 0;border-radius:10px;border:1px solid #003c8c;background:#fff"/>
+<button type="button" id="preGenMugColorFinishBtn" class="generate-btn" style="display:none;margin-top:.9rem;max-width:280px" onclick="finishPreGenMugColorPick()">✅ Satisfied — Continue</button>
 </div>
 </div>
 
@@ -1906,6 +1907,11 @@ async function pickFrame(name){
   }
   renderFrameGrid();
   renderFrameColorPanel();
+  if(selectedFrame && FRAME_CATALOG[selectedFrame]?.colorable!==false){
+    showGuidanceAlert(
+      'After you change color for your frame, please reselect your frame again to apply the color you\'ve just selected.'
+    );
+  }
   syncEdgeFadeWithFrameSelection();
   drawCaption();
   updateIdeaCardNote();
@@ -2944,8 +2950,12 @@ function refreshMugPrintModeVisibility(){
     // UPDATED (Aug 2026, Alyx's request): Size, then Style, then Color
     // are now mandatory before Three Panels/Wraparound is even shown --
     // same "variant determines everything downstream" pattern water
-    // bottle already uses via preGenTravelVariant.
-    show=mugColorChosenPreGen;
+    // bottle already uses via preGenTravelVariant. Color specifically
+    // gates on mugColorFinishedPreGen (pressing the Finish button),
+    // not mugColorChosenPreGen (just tapping a color) -- otherwise the
+    // page would yank the customer forward the instant they tap their
+    // first color, before they've had a chance to try a few others.
+    show=mugColorFinishedPreGen;
   } else if(product==='water bottle'){
     show=!!preGenTravelVariant && preGenTravelVariant!=='travel-mug-40oz-insulated';
   } else {
@@ -3073,6 +3083,7 @@ let preGenTravelColor=null;
 let mugSizeChosenPreGen=false;
 let mugStyleChosenPreGen=false;
 let mugColorChosenPreGen=false;
+let mugColorFinishedPreGen=false;
 // Real prices confirmed from lib/products-catalog.js, 11oz/15oz — Classic
 // White deliberately excluded from this picker per Alyx's spec (only
 // Trimmed/Accented/Color Pop are offered here).
@@ -3190,10 +3201,24 @@ function pickPreGenMugSize(size){
   mugSizeChosenPreGen=true;
   document.getElementById('preGenSize11Btn').classList.toggle('selected',size==='11oz');
   document.getElementById('preGenSize15Btn').classList.toggle('selected',size==='15oz');
+  mugColorFinishedPreGen=false;
   updatePreGenMugMockupImg();
   refreshMugStyleCardVisibility();
+  refreshMugPrintModeVisibility();
   smoothScrollToTarget('mugStyleCard','center');
 }
+
+// Representative photo per style, always shown in Cambridge Blue since
+// all three styles offer it -- a consistent point of comparison
+// regardless of which color the customer ends up picking later. Not
+// tied to the selected size (Accented only actually sells Cambridge
+// Blue at 11oz), since this thumbnail's job is showing the style's
+// general look, not a size-accurate color availability.
+const PRE_GEN_MUG_STYLE_THUMBNAILS = {
+  "Trimmed": "mug-trimmed-15oz-cambridge-blue.png",
+  "Accented": "mug-accented-11oz-cambridge-blue.png",
+  "Color Pop": "mug-colorpop-cambridge-blue.png"
+};
 
 function renderPreGenMugStyleGrid(){
   const grid=document.getElementById('preGenMugStyleGrid');
@@ -3205,8 +3230,14 @@ function renderPreGenMugStyleGrid(){
     const price=PRE_GEN_MUG_STYLE_PRICES[styleName][selectedGenSize];
     const btn=document.createElement('div');
     btn.className='btn-select'+(styleName===selectedGenStyle && mugStyleChosenPreGen?' selected':'');
+    btn.style.padding='8px';
     btn.dataset.style=styleName;
     btn.onclick=()=>pickPreGenMugStyle(styleName);
+    const thumb=document.createElement('img');
+    thumb.src=PRE_GEN_MUG_STYLE_THUMBNAILS[styleName];
+    thumb.alt=styleName;
+    thumb.style.cssText='width:100%;border-radius:8px;background:#fff;margin-bottom:6px';
+    btn.appendChild(thumb);
     const label=document.createElement('div');
     label.textContent=styleName;
     btn.appendChild(label);
@@ -3227,6 +3258,9 @@ function pickPreGenMugStyle(styleName){
   });
   selectedGenColor=null;
   mugColorChosenPreGen=false;
+  mugColorFinishedPreGen=false;
+  const finishBtnReset=document.getElementById('preGenMugColorFinishBtn');
+  if(finishBtnReset)finishBtnReset.style.display='none';
   renderPreGenMugColorGrid();
   updatePreGenMugMockupImg();
   refreshMugPrintModeVisibility();
@@ -3262,6 +3296,15 @@ function pickPreGenMugColor(el,colorName){
   selectedGenColor=colorName;
   mugColorChosenPreGen=true;
   updatePreGenMugMockupImg();
+  const finishBtn=document.getElementById('preGenMugColorFinishBtn');
+  if(finishBtn)finishBtn.style.display='block';
+}
+
+// Only fires when the customer presses the Finish/Satisfied button below
+// the mockup, NOT on every color tap -- lets them freely cycle through
+// colors and watch the mockup update before committing to move on.
+function finishPreGenMugColorPick(){
+  mugColorFinishedPreGen=true;
   refreshMugPrintModeVisibility();
   suspendGuidedScrollsForGeneration();
   // Size, Style, and Color are now all locked in -- this is the actual
@@ -6636,6 +6679,7 @@ function resetEverythingFreshStart(){
   mugSizeChosenPreGen=false;
   mugStyleChosenPreGen=false;
   mugColorChosenPreGen=false;
+  mugColorFinishedPreGen=false;
   document.getElementById('preGenSize11Btn').classList.remove('selected');
   document.getElementById('preGenSize15Btn').classList.remove('selected');
   document.getElementById('preGenMugStyleGrid').innerHTML='';
@@ -6643,6 +6687,8 @@ function resetEverythingFreshStart(){
   document.getElementById('preGenMugColorWrap').style.display='none';
   const mockupImgReset=document.getElementById('preGenMugMockupImg');
   if(mockupImgReset){mockupImgReset.style.display='none';mockupImgReset.src='';}
+  const finishBtnFullReset=document.getElementById('preGenMugColorFinishBtn');
+  if(finishBtnFullReset)finishBtnFullReset.style.display='none';
   refreshMugSizeCardVisibility();
   refreshMugStyleCardVisibility();
   refreshMugPrintModeVisibility();
