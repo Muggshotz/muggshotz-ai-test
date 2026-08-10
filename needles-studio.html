@@ -236,6 +236,19 @@
 .frame-color-panel-row{margin-top:10px}
 
 /* ============================================================
+   ONE-SCREEN COLLAPSIBLE SECTIONS
+   Upload Photo / Frame / Window Sill / Edge Fade / Idea each
+   fill one screen height. Only the current section is visible;
+   down arrow reveals+scrolls to the next, up arrow collapses
+   this section (and anything after it) and scrolls back.
+   ============================================================ */
+.snap-section{min-height:100dvh;box-sizing:border-box;display:flex;flex-direction:column;justify-content:center}
+.snap-section.snap-collapsed{display:none}
+.snap-arrow-btn{display:none;width:52px;height:52px;border-radius:50%;background:#0d0d0d;border:1px solid #003c8c;color:#7ab8ff;font-size:22px;line-height:1;cursor:pointer;align-items:center;justify-content:center;margin:1rem auto 0;box-shadow:0 0 10px rgba(0,60,140,.35)}
+.snap-arrow-btn:active{background:#003c8c;color:#fff}
+.snap-arrow-up{margin:0 auto 1rem}
+
+/* ============================================================
    NEEDLES STUDIO — ICE, SILVER & BLACK CREDIT SYSTEM
    Visual redesign only. Existing IDs, clicks, token logic,
    checkout links, and JavaScript behavior remain unchanged.
@@ -600,7 +613,7 @@
 
 <button class="reset-everything-btn" id="resetEverythingBtnTop" onclick="resetEverythingFreshStart()">🔄 Reset All Settings & Images — Return to Fresh Start</button>
 
-<div class="card" id="uploadPhotoCard"><div class="card-title">📸 Upload Photo</div>
+<div class="card snap-section" id="uploadPhotoCard" data-snap-index="0"><div class="card-title">📸 Upload Photo</div>
 <div style="font-size:11px;color:#777;letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px;text-align:center">Photo 1</div>
 <div class="needles-clipboard"><div class="needles-clip"></div><div class="upload-zone needles-polaroid" id="uploadZone" onclick="document.getElementById('fileInput').click()"><div style="font-size:32px;color:#555;margin-bottom:8px">👤</div><div class="upload-text">Tap here to upload a photo</div><div class="upload-sub">Clear face photo works best</div></div></div>
 <div id="workshopRecallRow" style="display:none;gap:8px;margin-top:.6rem">
@@ -655,6 +668,7 @@
 </div>
 </div>
 
+<button type="button" class="snap-arrow-btn snap-arrow-down" id="snapDown0" onclick="snapExpand(1)">⌄</button>
 </div>
 
 <div class="card" id="framePreviewThumbCard" style="display:none;text-align:center">
@@ -663,15 +677,21 @@
 <div class="note" style="margin-top:.5rem">Updates instantly as you click through frames and window sills below.</div>
 </div>
 
-<div class="card" id="frameSectionCard"><div class="card-title">🖼️ Frame</div>
+<div class="card snap-section snap-collapsed" id="frameSectionCard" data-snap-index="1">
+<button type="button" class="snap-arrow-btn snap-arrow-up" id="snapUp1" onclick="snapCollapseFrom(1)">⌃</button>
+<div class="card-title">🖼️ Frame</div>
 <div class="note" style="margin-top:0;margin-bottom:.75rem">Optional — pick a frame to add around your finished artwork now, before you generate, so you don't lose track of it later. Applied automatically once your design is ready. Leave blank for a clean, unframed look.</div>
 <div class="theme-grid frame-grid" id="frameGrid"></div>
 <div id="frameColorPanel" style="display:none;margin-top:14px"></div>
+<button type="button" class="snap-arrow-btn snap-arrow-down" id="snapDown1" onclick="snapExpand(2)">⌄</button>
 </div>
 
-<div class="card" id="windowSillSectionCard"><div class="card-title">🪟 Window Sill Portrait</div>
+<div class="card snap-section snap-collapsed" id="windowSillSectionCard" data-snap-index="2">
+<button type="button" class="snap-arrow-btn snap-arrow-up" id="snapUp2" onclick="snapCollapseFrom(2)">⌃</button>
+<div class="card-title">🪟 Window Sill Portrait</div>
 <div class="note" style="margin-top:0;margin-bottom:.75rem">A specialty option, separate from Frame — this is one specific pose: you (or someone you choose) standing at a window, coffee mug in hand. Not for action shots, landscapes, or general artwork — just that one cozy scene, in the style below. Optional, and can't be combined with a Frame.</div>
 <div class="theme-grid frame-grid" id="windowSillGrid"></div>
+<button type="button" class="snap-arrow-btn snap-arrow-down" id="snapDown2" onclick="snapExpand(3)">⌄</button>
 </div>
 
 <div class="card" id="windowSillPreviewCard" style="display:none">
@@ -711,16 +731,18 @@
 <div class="note" id="phoneModelSelectedNoteGen" style="margin-top:.6rem"></div>
 </div>
 
-<div class="card" id="panoramaFadeCard">
+<div class="card snap-section snap-collapsed" id="panoramaFadeCard" data-snap-index="3">
+<button type="button" class="snap-arrow-btn snap-arrow-up" id="snapUp3" onclick="snapCollapseFrom(3)">⌃</button>
 <div class="card-title">🖌️ Edge Fade</div>
 <div class="note" id="panoramaFadeCardNote" style="margin-top:0;margin-bottom:.75rem">By default, every design's outer edges automatically fade into white so it blends into the mug instead of looking like a hard-edged sticker. In Wraparound mode, the seams where Left, Center, and Right join stay sharp and continuous — only the true outer edges (top/bottom, plus the far-left and far-right ends) fade. In the standard three-panel mode, each panel is independent, so all four of its edges fade. Doesn't change anything you see or type below; it's applied automatically behind the scenes.</div>
 <div style="display:flex;align-items:center;gap:10px">
 <input type="checkbox" id="panoramaFadeToggle" onchange="togglePanoramaFadeEdges()" style="width:20px;height:20px;cursor:pointer"/>
 <label style="margin:0;text-transform:none;font-size:14px;color:#fff;cursor:pointer" onclick="document.getElementById('panoramaFadeToggle').click()">No — I want hard, sharp edges instead</label>
 </div>
+<button type="button" class="snap-arrow-btn snap-arrow-down" id="snapDown3" onclick="snapExpand(4)">⌄</button>
 </div>
 
-<div class="card" id="ideaCard"><div class="card-title">💬 Tell Us Your Idea</div><div class="quote-text-reminder">⚠️ PLEASE REMEMBER TO SHOW ALL TEXT AND/OR CAPTIONS YOU WISH TO HAVE INCLUDED WITH YOUR IMAGE INSIDE QUOTES " "!</div><textarea id="ideaDesc" placeholder="Example: Put me on a tiny red tricycle wearing a firefighter helmet and full firefighter outfit, racing through a parade with smoke and sirens behind me."></textarea><div class="quick-btns" id="quickBtns"></div><div class="note" id="ideaDefaultNote">Paint us a clear picture — the more detail you give us, the better our chances of getting your exact idea right.</div><div class="note" id="ideaArtistNote" style="display:none">Tell the artist what you have in mind.</div><div class="note" id="ideaWindowSillNote" style="display:none">(Optional) Add a costume, outfit, hair, or companion — or just upload your photo and we'll take it from there.</div><div id="mugIdeaActionRow" style="display:none;gap:8px;margin-top:.75rem"><button class="download-btn" style="flex:1;margin-top:0" onclick="handleReturnToPhotos()">📸 Return to select additional photos</button><button class="generate-btn" style="flex:1" onclick="handleMugGuidedGenerate()">🎨 Generate</button></div></div>
+<div class="card snap-section snap-collapsed" id="ideaCard" data-snap-index="4"><button type="button" class="snap-arrow-btn snap-arrow-up" id="snapUp4" onclick="snapCollapseFrom(4)">⌃</button><div class="card-title">💬 Tell Us Your Idea</div><div class="quote-text-reminder">⚠️ PLEASE REMEMBER TO SHOW ALL TEXT AND/OR CAPTIONS YOU WISH TO HAVE INCLUDED WITH YOUR IMAGE INSIDE QUOTES " "!</div><textarea id="ideaDesc" placeholder="Example: Put me on a tiny red tricycle wearing a firefighter helmet and full firefighter outfit, racing through a parade with smoke and sirens behind me."></textarea><div class="quick-btns" id="quickBtns"></div><div class="note" id="ideaDefaultNote">Paint us a clear picture — the more detail you give us, the better our chances of getting your exact idea right.</div><div class="note" id="ideaArtistNote" style="display:none">Tell the artist what you have in mind.</div><div class="note" id="ideaWindowSillNote" style="display:none">(Optional) Add a costume, outfit, hair, or companion — or just upload your photo and we'll take it from there.</div><div id="mugIdeaActionRow" style="display:none;gap:8px;margin-top:.75rem"><button class="download-btn" style="flex:1;margin-top:0" onclick="handleReturnToPhotos()">📸 Return to select additional photos</button><button class="generate-btn" style="flex:1" onclick="handleMugGuidedGenerate()">🎨 Generate</button></div></div>
 <div id="ideaGuidancePrompt" class="guidance-prompt" role="status">Scroll to the next section when ready to select your desired product.</div>
 
 <div class="card" id="productCard"><div class="card-title">🎁 Product</div><div class="guidance-prompt soft visible" id="productGuidancePrompt" role="status" style="margin-top:0;margin-bottom:.9rem">Please select your desired product below when ready.</div><div class="grid3"><div class="btn-select selected" data-val="mug" onclick="pick(this,'product')"><span class="icon">☕</span>Mug</div><div class="btn-select" data-val="greeting card" onclick="pick(this,'product')"><span class="icon">💌</span>Card</div><div class="btn-select" data-val="water bottle" onclick="pick(this,'product')"><span class="icon">🍶</span>Travel Cups</div><div class="btn-select" data-val="post-it note" onclick="pick(this,'product')"><span class="icon">📝</span>Post-it</div><div class="btn-select" data-val="phone case" onclick="pick(this,'product')"><span class="icon">📱</span>Phone case</div><div class="btn-select" data-val="tote bag" onclick="pick(this,'product')"><span class="icon">👜</span>Tote bag</div><div class="btn-select" data-val="suitcase" onclick="pick(this,'product')"><span class="icon">🧳</span>Suitcase</div><div class="btn-select" data-val="puzzle" onclick="pick(this,'product')"><span class="icon">🧩</span>Puzzle</div><div class="btn-select" data-val="photo poster" onclick="pick(this,'product')"><span class="icon">🖼️</span>Photo/Poster</div></div></div>
@@ -1365,6 +1387,7 @@ function schedulePhotoGuideAdvance(delay){
 function smoothScrollToTarget(targetId,block='start',after){
   const target=document.getElementById(targetId);
   if(!target)return;
+  snapExpandThrough(targetId);
   guidedScrollInProgress=true;
   target.scrollIntoView({behavior:'smooth',block});
   setTimeout(()=>{
@@ -1454,7 +1477,63 @@ const ideaCardObserver=new IntersectionObserver((entries)=>{
   });
 },{threshold:0.4});
 
+/* ============================================================
+   ONE-SCREEN COLLAPSIBLE SECTIONS — expand/collapse engine
+   ============================================================ */
+const SNAP_ORDER=['uploadPhotoCard','frameSectionCard','windowSillSectionCard','panoramaFadeCard','ideaCard'];
+
+function updateSnapArrows(){
+  SNAP_ORDER.forEach((id,i)=>{
+    const sec=document.getElementById(id);
+    if(!sec)return;
+    const collapsed=sec.classList.contains('snap-collapsed');
+    const down=document.getElementById('snapDown'+i);
+    const up=document.getElementById('snapUp'+i);
+    if(down)down.style.display=(!collapsed && i<SNAP_ORDER.length-1)?'flex':'none';
+    if(up)up.style.display=(!collapsed && i>0)?'flex':'none';
+  });
+}
+
+// Expands section index idx and smooth-scrolls to it (used by each
+// section's own down arrow, which always passes idx = its own index + 1).
+function snapExpand(idx){
+  const id=SNAP_ORDER[idx];
+  const sec=id&&document.getElementById(id);
+  if(!sec)return;
+  sec.classList.remove('snap-collapsed');
+  updateSnapArrows();
+  requestAnimationFrame(()=>sec.scrollIntoView({behavior:'smooth',block:'start'}));
+}
+
+// Collapses section idx and everything after it (so nothing is left
+// expanded below a section the user just closed), then scrolls back
+// up to the section before it. Used by each section's own up arrow.
+function snapCollapseFrom(idx){
+  for(let i=idx;i<SNAP_ORDER.length;i++){
+    const sec=document.getElementById(SNAP_ORDER[i]);
+    if(sec)sec.classList.add('snap-collapsed');
+  }
+  updateSnapArrows();
+  const prev=document.getElementById(SNAP_ORDER[idx-1]);
+  if(prev)requestAnimationFrame(()=>prev.scrollIntoView({behavior:'smooth',block:'start'}));
+}
+
+// Used by the site's existing guided-scroll calls (smoothScrollToTarget)
+// so any pre-existing jump into Frame/Window Sill/Edge Fade/Idea keeps
+// working exactly as before — it just expands whatever section it needs
+// to land on first, rather than scrolling to a hidden element.
+function snapExpandThrough(targetId){
+  const idx=SNAP_ORDER.indexOf(targetId);
+  if(idx<0)return;
+  for(let i=0;i<=idx;i++){
+    const sec=document.getElementById(SNAP_ORDER[i]);
+    if(sec)sec.classList.remove('snap-collapsed');
+  }
+  updateSnapArrows();
+}
+
 window.addEventListener('DOMContentLoaded',()=>{
+  updateSnapArrows();
   let returningToIdea=false;
   try{
     if(localStorage.getItem('muggshotz_return_to_idea')==='1'){
@@ -1669,7 +1748,11 @@ const FRAME_CATALOG = {
   "Crystal Champagne": { type:"image", asset:"frame-crystal-champagne.png", defaultColor:"#D9C89E" },
   "Pressed Flowers": { type:"image", asset:"frame-pressed-flowers.png", defaultColor:"#ffffff" },
   "Celestial Deco": { type:"image", asset:"frame-celestial-deco.png", defaultColor:"#D4AF37" },
-  "Double Mat": { type:"proceduralMulti", draw:"doubleMat", layers:["Outer Frame","Upper Mat","Lower Mat"], defaultColors:["#8a5a34","#f5f0e6","#2a2a2a"] }
+  "Double Mat": { type:"proceduralMulti", draw:"doubleMat", layers:["Outer Frame","Upper Mat","Lower Mat"], defaultColors:["#8a5a34","#f5f0e6","#2a2a2a"] },
+  "Moonlit Ivy": { type:"image", asset:"frame-moonlit-ivy.png", colorable:false },
+  "Enchanted Grove": { type:"image", asset:"frame-enchanted-grove.png", colorable:false },
+  "Lantern Vine": { type:"image", asset:"frame-lantern-vine.png", colorable:false },
+  "Trailblazer": { type:"image", asset:"frame-biker-native.png", colorable:false }
 };
 
 // ================= WINDOW SILL (standalone, decoupled from Frame) =================
@@ -1684,7 +1767,15 @@ const WINDOW_SILL_OPTIONS = [
   { name:"English Cottage", asset:"frame-window-sill-e.png" },
   { name:"Southwest Adobe", asset:"frame-window-sill-f.png" },
   { name:"Alpine Chalet", asset:"frame-window-sill-g.png" },
-  { name:"Diner Service", asset:"frame-window-sill-h.png" }
+  { name:"Diner Service", asset:"frame-window-sill-h.png" },
+  { name:"Art Nouveau Conservatory", asset:"frame-window-sill-i.png" },
+  { name:"Brass Porthole", asset:"frame-window-sill-j.png" },
+  { name:"Coastal Porthole", asset:"frame-window-sill-k.png" },
+  { name:"Submarine Curiosity", asset:"frame-window-sill-l.png" },
+  { name:"Moroccan Mosaic", asset:"frame-window-sill-m.png" },
+  { name:"Japanese Bonsai", asset:"frame-window-sill-n.png" },
+  { name:"Fairytale Castle", asset:"frame-window-sill-o.png" },
+  { name:"Tropical Bamboo", asset:"frame-window-sill-p.png" }
 ];
 
 // ================= WINDOW SILL CALIBRATION =================
@@ -4706,6 +4797,11 @@ function showSingleImageAccessorizeStep(){
   if(previewCard)captionCard.parentNode.insertBefore(previewCard,captionCard);
   captionCard.parentNode.insertBefore(frameCard,captionCard);
   captionCard.parentNode.insertBefore(sillCard,captionCard);
+  // Relocated here, these are no longer the pre-generation one-screen
+  // Frame/Window Sill sections -- always make sure they're expanded
+  // (not left collapsed from earlier), regardless of whether we're
+  // about to auto-scroll to them.
+  snapExpandThrough('windowSillSectionCard');
   // If they already decided before generating, show them the finished
   // result they just waited for -- don't yank them away to a decision
   // that's already made. Only steer them to the picker if there's
