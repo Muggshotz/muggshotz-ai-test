@@ -3,6 +3,7 @@
 <head><link rel="icon" type="image/png" href="the-portal-icon.png">
 <link rel="apple-touch-icon" href="the-portal-icon.png">
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>The Portal — MuggsHotz Product Finder</title>
 <style>
   :root{
@@ -119,7 +120,7 @@
   </details>
 
   <div class="search-row">
-    <input type="text" id="searchInput" placeholder="e.g. coasters, throw pillow, beach towel...">
+    <input type="text" id="searchInput" placeholder="e.g. coasters, throw pillow, beach towel... or an exact blueprint ID like 2692">
     <button id="searchBtn" type="button">Search</button>
   </div>
   <div class="status" id="searchStatus"></div>
@@ -624,10 +625,16 @@ async function runSearch(){
   try{
     setStatus(searchStatus, 'Fetching Printify\u2019s full catalog\u2026', 'pending');
     const all = await fetchAllBlueprints();
+    // A pure-number search (e.g. "2692") is almost certainly a known
+    // blueprint ID, not a word to text-match -- check that first for an
+    // exact hit, since Printify's own catalog names rarely match Alyx's
+    // internal product names (e.g. "Trimmed" is our name, not theirs).
+    const asId = /^\d+$/.test(term) ? Number(term) : null;
     const printifyMatches = all.filter(bp =>
+      (asId !== null && bp.id === asId) ||
       (bp.title || '').toLowerCase().includes(term) ||
       (bp.description || '').toLowerCase().includes(term)
-    ).slice(0, 12); // cap at 12 per search to stay gentle on the API
+    ).sort((a,b) => (b.id===asId?1:0) - (a.id===asId?1:0)).slice(0, 12); // exact ID match always first; cap at 12 per search to stay gentle on the API
 
     printifyMatches.forEach(bp => resultsGrid.appendChild(buildPrintifyCard(bp)));
 
