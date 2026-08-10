@@ -242,7 +242,8 @@
    down arrow reveals+scrolls to the next, up arrow collapses
    this section (and anything after it) and scrolls back.
    ============================================================ */
-.snap-section{min-height:100dvh;box-sizing:border-box;display:flex;flex-direction:column;justify-content:flex-start}
+.snap-section{box-sizing:border-box;display:flex;flex-direction:column}
+#frameSectionCard,#windowSillSectionCard,#edgeFadeIdeaSection{min-height:100dvh;justify-content:flex-start}
 .snap-section.snap-collapsed{display:none}
 .snap-arrow-btn{display:none;width:52px;height:52px;border-radius:50%;background:#0d0d0d;border:1px solid #003c8c;color:#7ab8ff;font-size:22px;line-height:1;cursor:pointer;align-items:center;justify-content:center;margin:1rem auto 0;box-shadow:0 0 10px rgba(0,60,140,.35)}
 .snap-arrow-btn:active{background:#003c8c;color:#fff}
@@ -592,22 +593,6 @@
     Your browser does not support the video tag.
   </video>
 </div>
-<script>
-
-(function(){
-  var heroVideo = document.getElementById('heroVideo');
-  if (!heroVideo) return;
-  var heroAutoScrollFired = false;
-  heroVideo.addEventListener('ended', function(){
-    if (heroAutoScrollFired) return;
-    heroAutoScrollFired = true;
-    setTimeout(function(){
-      var target = document.getElementById('uploadPhotoCard');
-      if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }, 3000);
-  });
-})();
-</script>
 <div class="tagline">YOUR HONEY. OUR FUNNY.</div>
 <div class="main">
 
@@ -731,18 +716,19 @@
 <div class="note" id="phoneModelSelectedNoteGen" style="margin-top:.6rem"></div>
 </div>
 
-<div class="card snap-section snap-collapsed" id="panoramaFadeCard" data-snap-index="3">
+<div class="snap-section snap-collapsed" id="edgeFadeIdeaSection" data-snap-index="3">
 <button type="button" class="snap-arrow-btn snap-arrow-up" id="snapUp3" onclick="snapCollapseFrom(3)">⌃</button>
+<div class="card" id="panoramaFadeCard">
 <div class="card-title">🖌️ Edge Fade</div>
 <div class="note" id="panoramaFadeCardNote" style="margin-top:0;margin-bottom:.75rem">By default, every design's outer edges automatically fade into white so it blends into the mug instead of looking like a hard-edged sticker. In Wraparound mode, the seams where Left, Center, and Right join stay sharp and continuous — only the true outer edges (top/bottom, plus the far-left and far-right ends) fade. In the standard three-panel mode, each panel is independent, so all four of its edges fade. Doesn't change anything you see or type below; it's applied automatically behind the scenes.</div>
 <div style="display:flex;align-items:center;gap:10px">
 <input type="checkbox" id="panoramaFadeToggle" onchange="togglePanoramaFadeEdges()" style="width:20px;height:20px;cursor:pointer"/>
 <label style="margin:0;text-transform:none;font-size:14px;color:#fff;cursor:pointer" onclick="document.getElementById('panoramaFadeToggle').click()">No — I want hard, sharp edges instead</label>
 </div>
-<button type="button" class="snap-arrow-btn snap-arrow-down" id="snapDown3" onclick="snapExpand(4)">⌄</button>
 </div>
 
-<div class="card snap-section snap-collapsed" id="ideaCard" data-snap-index="4"><button type="button" class="snap-arrow-btn snap-arrow-up" id="snapUp4" onclick="snapCollapseFrom(4)">⌃</button><div class="card-title">💬 Tell Us Your Idea</div><div class="quote-text-reminder">⚠️ PLEASE REMEMBER TO SHOW ALL TEXT AND/OR CAPTIONS YOU WISH TO HAVE INCLUDED WITH YOUR IMAGE INSIDE QUOTES " "!</div><textarea id="ideaDesc" placeholder="Example: Put me on a tiny red tricycle wearing a firefighter helmet and full firefighter outfit, racing through a parade with smoke and sirens behind me."></textarea><div class="quick-btns" id="quickBtns"></div><div class="note" id="ideaDefaultNote">Paint us a clear picture — the more detail you give us, the better our chances of getting your exact idea right.</div><div class="note" id="ideaArtistNote" style="display:none">Tell the artist what you have in mind.</div><div class="note" id="ideaWindowSillNote" style="display:none">(Optional) Add a costume, outfit, hair, or companion — or just upload your photo and we'll take it from there.</div><div id="mugIdeaActionRow" style="display:none;gap:8px;margin-top:.75rem"><button class="download-btn" style="flex:1;margin-top:0" onclick="handleReturnToPhotos()">📸 Return to select additional photos</button><button class="generate-btn" style="flex:1" onclick="handleMugGuidedGenerate()">🎨 Generate</button></div></div>
+<div class="card" id="ideaCard"><div class="card-title">💬 Tell Us Your Idea</div><div class="quote-text-reminder">⚠️ PLEASE REMEMBER TO SHOW ALL TEXT AND/OR CAPTIONS YOU WISH TO HAVE INCLUDED WITH YOUR IMAGE INSIDE QUOTES " "!</div><textarea id="ideaDesc" placeholder="Example: Put me on a tiny red tricycle wearing a firefighter helmet and full firefighter outfit, racing through a parade with smoke and sirens behind me."></textarea><div class="quick-btns" id="quickBtns"></div><div class="note" id="ideaDefaultNote">Paint us a clear picture — the more detail you give us, the better our chances of getting your exact idea right.</div><div class="note" id="ideaArtistNote" style="display:none">Tell the artist what you have in mind.</div><div class="note" id="ideaWindowSillNote" style="display:none">(Optional) Add a costume, outfit, hair, or companion — or just upload your photo and we'll take it from there.</div><div id="mugIdeaActionRow" style="display:none;gap:8px;margin-top:.75rem"><button class="download-btn" style="flex:1;margin-top:0" onclick="handleReturnToPhotos()">📸 Return to select additional photos</button><button class="generate-btn" style="flex:1" onclick="handleMugGuidedGenerate()">🎨 Generate</button></div></div>
+</div>
 <div id="ideaGuidancePrompt" class="guidance-prompt" role="status">Scroll to the next section when ready to select your desired product.</div>
 
 <div class="card" id="productCard"><div class="card-title">🎁 Product</div><div class="guidance-prompt soft visible" id="productGuidancePrompt" role="status" style="margin-top:0;margin-bottom:.9rem">Please select your desired product below when ready.</div><div class="grid3"><div class="btn-select selected" data-val="mug" onclick="pick(this,'product')"><span class="icon">☕</span>Mug</div><div class="btn-select" data-val="greeting card" onclick="pick(this,'product')"><span class="icon">💌</span>Card</div><div class="btn-select" data-val="water bottle" onclick="pick(this,'product')"><span class="icon">🍶</span>Travel Cups</div><div class="btn-select" data-val="post-it note" onclick="pick(this,'product')"><span class="icon">📝</span>Post-it</div><div class="btn-select" data-val="phone case" onclick="pick(this,'product')"><span class="icon">📱</span>Phone case</div><div class="btn-select" data-val="tote bag" onclick="pick(this,'product')"><span class="icon">👜</span>Tote bag</div><div class="btn-select" data-val="suitcase" onclick="pick(this,'product')"><span class="icon">🧳</span>Suitcase</div><div class="btn-select" data-val="puzzle" onclick="pick(this,'product')"><span class="icon">🧩</span>Puzzle</div><div class="btn-select" data-val="photo poster" onclick="pick(this,'product')"><span class="icon">🖼️</span>Photo/Poster</div></div></div>
@@ -1480,7 +1466,15 @@ const ideaCardObserver=new IntersectionObserver((entries)=>{
 /* ============================================================
    ONE-SCREEN COLLAPSIBLE SECTIONS — expand/collapse engine
    ============================================================ */
-const SNAP_ORDER=['uploadPhotoCard','frameSectionCard','windowSillSectionCard','panoramaFadeCard','ideaCard'];
+const SNAP_ORDER=['uploadPhotoCard','frameSectionCard','windowSillSectionCard','edgeFadeIdeaSection'];
+// panoramaFadeCard and ideaCard used to each be their own top-level
+// section; they're now both nested inside edgeFadeIdeaSection (Edge
+// Fade was too short on its own to fill a screen). Existing code still
+// calls smoothScrollToTarget with those two original IDs -- this lets
+// snapExpandThrough resolve either one to the section that actually
+// needs expanding, while the scroll itself still lands precisely on
+// the specific inner card, not just the top of the merged section.
+const SNAP_ALIASES={panoramaFadeCard:'edgeFadeIdeaSection',ideaCard:'edgeFadeIdeaSection'};
 
 function updateSnapArrows(){
   SNAP_ORDER.forEach((id,i)=>{
@@ -1523,6 +1517,7 @@ function snapCollapseFrom(idx){
 // working exactly as before — it just expands whatever section it needs
 // to land on first, rather than scrolling to a hidden element.
 function snapExpandThrough(targetId){
+  targetId=SNAP_ALIASES[targetId]||targetId;
   const idx=SNAP_ORDER.indexOf(targetId);
   if(idx<0)return;
   for(let i=0;i<=idx;i++){
@@ -1531,6 +1526,24 @@ function snapExpandThrough(targetId){
   }
   updateSnapArrows();
 }
+
+// The hero video + tagline + reset button live outside Upload Photo's own
+// card (full-bleed, not constrained to .main's 600px width), so they can't
+// be wrapped into the same box as Upload Photo without breaking that
+// width. Instead, this measures how much vertical space they already take
+// up and stretches Upload Photo's own min-height to make up the rest --
+// so hero+tagline+reset+Upload Photo together land at exactly one screen,
+// same effect as if they were one physical block.
+function syncFirstScreenHeight(){
+  const card=document.getElementById('uploadPhotoCard');
+  if(!card)return;
+  const topOffset=card.getBoundingClientRect().top+window.scrollY;
+  const target=window.innerHeight-topOffset;
+  card.style.minHeight=Math.max(target,200)+'px';
+}
+window.addEventListener('load',syncFirstScreenHeight);
+window.addEventListener('resize',syncFirstScreenHeight);
+document.getElementById('heroVideo')&&document.getElementById('heroVideo').addEventListener('loadedmetadata',syncFirstScreenHeight);
 
 window.addEventListener('DOMContentLoaded',()=>{
   updateSnapArrows();
