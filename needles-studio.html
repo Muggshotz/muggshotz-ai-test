@@ -243,7 +243,6 @@
    this section (and anything after it) and scrolls back.
    ============================================================ */
 .snap-section{box-sizing:border-box;display:flex;flex-direction:column}
-#frameSectionCard,#windowSillSectionCard,#edgeFadeIdeaSection{min-height:100dvh;justify-content:flex-start}
 .snap-section.snap-collapsed{display:none}
 .snap-arrow-btn{display:none;width:52px;height:52px;border-radius:50%;background:#0d0d0d;border:1px solid #003c8c;color:#7ab8ff;font-size:22px;line-height:1;cursor:pointer;align-items:center;justify-content:center;margin:1rem auto 0;box-shadow:0 0 10px rgba(0,60,140,.35)}
 .snap-arrow-btn:active{background:#003c8c;color:#fff}
@@ -727,10 +726,10 @@
 </div>
 </div>
 
-<div class="card" id="ideaCard"><div class="card-title">💬 Tell Us Your Idea</div><div class="quote-text-reminder">⚠️ PLEASE REMEMBER TO SHOW ALL TEXT AND/OR CAPTIONS YOU WISH TO HAVE INCLUDED WITH YOUR IMAGE INSIDE QUOTES " "!</div><textarea id="ideaDesc" placeholder="Example: Put me on a tiny red tricycle wearing a firefighter helmet and full firefighter outfit, racing through a parade with smoke and sirens behind me."></textarea><div class="quick-btns" id="quickBtns"></div><div class="note" id="ideaDefaultNote">Paint us a clear picture — the more detail you give us, the better our chances of getting your exact idea right.</div><div class="note" id="ideaArtistNote" style="display:none">Tell the artist what you have in mind.</div><div class="note" id="ideaWindowSillNote" style="display:none">(Optional) Add a costume, outfit, hair, or companion — or just upload your photo and we'll take it from there.</div><div id="mugIdeaActionRow" style="display:none;gap:8px;margin-top:.75rem"><button class="download-btn" style="flex:1;margin-top:0" onclick="handleReturnToPhotos()">📸 Return to select additional photos</button><button class="generate-btn" style="flex:1" onclick="handleMugGuidedGenerate()">🎨 Generate</button></div></div>
+<div class="card" id="ideaCard"><div class="card-title">💬 Tell Us Your Idea</div><div class="quote-text-reminder">⚠️ PLEASE REMEMBER TO SHOW ALL TEXT AND/OR CAPTIONS YOU WISH TO HAVE INCLUDED WITH YOUR IMAGE INSIDE QUOTES " "!</div><textarea id="ideaDesc" placeholder="Example: Put me on a tiny red tricycle wearing a firefighter helmet and full firefighter outfit, racing through a parade with smoke and sirens behind me."></textarea><div class="quick-btns" id="quickBtns"></div><div class="note" id="ideaDefaultNote">Paint us a clear picture — the more detail you give us, the better our chances of getting your exact idea right.</div><div class="note" id="ideaArtistNote" style="display:none">Tell the artist what you have in mind.</div><div class="note" id="ideaWindowSillNote" style="display:none">(Optional) Add a costume, outfit, hair, or companion — or just upload your photo and we'll take it from there.</div><div id="mugIdeaActionRow" style="display:none;gap:8px;margin-top:.75rem"><button class="download-btn" style="flex:1;margin-top:0" onclick="handleReturnToPhotos()">📸 Return to select additional photos</button><button class="generate-btn" style="flex:1" onclick="handleMugGuidedGenerate()">🎨 Generate</button></div>
+<div id="ideaGuidancePrompt" class="guidance-prompt" role="status" style="margin-top:8px;margin-bottom:0">Scroll to the next section when ready to select your desired product.</div>
 </div>
-<div id="ideaGuidancePrompt" class="guidance-prompt" role="status">Scroll to the next section when ready to select your desired product.</div>
-
+</div>
 <div class="card" id="productCard"><div class="card-title">🎁 Product</div><div class="guidance-prompt soft visible" id="productGuidancePrompt" role="status" style="margin-top:0;margin-bottom:.9rem">Please select your desired product below when ready.</div><div class="grid3"><div class="btn-select selected" data-val="mug" onclick="pick(this,'product')"><span class="icon">☕</span>Mug</div><div class="btn-select" data-val="greeting card" onclick="pick(this,'product')"><span class="icon">💌</span>Card</div><div class="btn-select" data-val="water bottle" onclick="pick(this,'product')"><span class="icon">🍶</span>Travel Cups</div><div class="btn-select" data-val="post-it note" onclick="pick(this,'product')"><span class="icon">📝</span>Post-it</div><div class="btn-select" data-val="phone case" onclick="pick(this,'product')"><span class="icon">📱</span>Phone case</div><div class="btn-select" data-val="tote bag" onclick="pick(this,'product')"><span class="icon">👜</span>Tote bag</div><div class="btn-select" data-val="suitcase" onclick="pick(this,'product')"><span class="icon">🧳</span>Suitcase</div><div class="btn-select" data-val="puzzle" onclick="pick(this,'product')"><span class="icon">🧩</span>Puzzle</div><div class="btn-select" data-val="photo poster" onclick="pick(this,'product')"><span class="icon">🖼️</span>Photo/Poster</div></div></div>
 
 <div class="card" id="mugPrintModeCard">
@@ -1526,24 +1525,6 @@ function snapExpandThrough(targetId){
   }
   updateSnapArrows();
 }
-
-// The hero video + tagline + reset button live outside Upload Photo's own
-// card (full-bleed, not constrained to .main's 600px width), so they can't
-// be wrapped into the same box as Upload Photo without breaking that
-// width. Instead, this measures how much vertical space they already take
-// up and stretches Upload Photo's own min-height to make up the rest --
-// so hero+tagline+reset+Upload Photo together land at exactly one screen,
-// same effect as if they were one physical block.
-function syncFirstScreenHeight(){
-  const card=document.getElementById('uploadPhotoCard');
-  if(!card)return;
-  const topOffset=card.getBoundingClientRect().top+window.scrollY;
-  const target=window.innerHeight-topOffset;
-  card.style.minHeight=Math.max(target,200)+'px';
-}
-window.addEventListener('load',syncFirstScreenHeight);
-window.addEventListener('resize',syncFirstScreenHeight);
-document.getElementById('heroVideo')&&document.getElementById('heroVideo').addEventListener('loadedmetadata',syncFirstScreenHeight);
 
 window.addEventListener('DOMContentLoaded',()=>{
   updateSnapArrows();
