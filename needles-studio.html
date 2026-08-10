@@ -737,8 +737,8 @@
 <div class="note" style="margin-top:0;margin-bottom:.9rem">Coffee mugs (and travel mugs) can be printed two ways — pick before you generate, since it changes how the artwork is composed.</div>
 <div style="display:flex;align-items:stretch;gap:10px">
 <div class="btn-select selected" id="printModeThreeBtn" style="flex:1;padding:1rem .6rem" onclick="pickMugPrintMode('three-panel')">
-<span class="icon">🔲🔲🔲</span>Three Separate Designs
-<div class="note" style="margin-top:6px;color:#888">Left, Center, and Right can each be a completely different picture.</div>
+<span class="icon">🔲🔲🔲</span>Up to Three Panels
+<div class="note" style="margin-top:6px;color:#888">Left, Center, and Right can each be a completely different picture — use as many or as few as you like.</div>
 </div>
 <div style="display:flex;align-items:center;color:#666;font-size:12px;font-weight:700">or</div>
 <div class="btn-select" id="printModeWrapBtn" style="flex:1;padding:1rem .6rem" onclick="pickMugPrintMode('wraparound')">
@@ -2998,7 +2998,7 @@ function pickPreGenTravelVariant(key){
     if(!printFormatPopupShown){
       printFormatPopupShown=true;
       showGuidanceAlert(
-        'Pick your print format — "Three Separate Designs" or "Wraparound." This changes how your artwork gets composed, so it needs to be chosen first.',
+        'Pick your print format — "Up to Three Panels" or "Wraparound." This changes how your artwork gets composed, so it needs to be chosen first.',
         ()=>{ smoothScrollToTarget('mugPrintModeCard','center'); }
       );
     } else {
@@ -3388,7 +3388,7 @@ function pick(el,type){
     if(product==='mug' && !printFormatPopupShown){
       printFormatPopupShown=true;
       showGuidanceAlert(
-        'Pick your print format — "Three Separate Designs" or "Wraparound." This changes how your artwork gets composed, so it needs to be chosen first.',
+        'Pick your print format — "Up to Three Panels" or "Wraparound." This changes how your artwork gets composed, so it needs to be chosen first.',
         ()=>{ smoothScrollToTarget('mugPrintModeCard','center'); }
       );
     }
