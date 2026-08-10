@@ -751,6 +751,7 @@
 <div id="preGenMugColorWrap" style="display:none;margin-top:1rem">
 <div class="note" style="margin-bottom:6px">Color</div>
 <div class="color-grid" id="preGenMugColorGrid"></div>
+<img id="preGenMugMockupImg" style="display:none;width:100%;max-width:280px;margin:.9rem auto 0;border-radius:10px;border:1px solid #003c8c;background:#fff"/>
 </div>
 </div>
 
@@ -3081,6 +3082,95 @@ const PRE_GEN_MUG_STYLE_PRICES = {
   "Color Pop": { "11oz": 19.95, "15oz": 21.95 }
 };
 
+// Real per-color mockup photos, keyed style -> size -> color name.
+// Printify's catalog only exposes one generic photo per blueprint, not
+// one per color, so these are real photos matched to the same hex codes
+// used everywhere else on the site -- Bud's originals for 15oz Trimmed,
+// Claude-generated (HSV pixel recolor from a real base photo, verified
+// against the target hex) for everything else. A mug's photo doesn't
+// actually differ by size, only by which colors that size offers, so
+// colors shared between 11oz/15oz reuse the same file rather than
+// duplicating it. Any combo NOT in this table falls back to the plain
+// color-swatch dot, same as before this existed.
+const MUG_MOCKUP_PHOTOS = {
+  "Trimmed": {
+    "15oz": {
+      "Black": "mug-trimmed-15oz-black.png",
+      "Blue": "mug-trimmed-15oz-blue.png",
+      "Cambridge Blue": "mug-trimmed-15oz-cambridge-blue.png",
+      "Green": "mug-trimmed-15oz-green.png",
+      "Maroon": "mug-trimmed-15oz-maroon.png",
+      "Yellow": "mug-trimmed-15oz-yellow.png"
+    },
+    "11oz": {
+      "Black": "mug-trimmed-15oz-black.png",
+      "Blue": "mug-trimmed-15oz-blue.png",
+      "Maroon": "mug-trimmed-15oz-maroon.png",
+      "Green": "mug-trimmed-15oz-green.png",
+      "Yellow": "mug-trimmed-15oz-yellow.png",
+      "Red": "mug-trimmed-11oz-red.png",
+      "Cambridge Blue": "mug-trimmed-15oz-cambridge-blue.png",
+      "Light Blue": "mug-trimmed-11oz-light-blue.png",
+      "Orange": "mug-trimmed-11oz-orange.png",
+      "Light Green": "mug-trimmed-11oz-light-green.png",
+      "Pink": "mug-trimmed-11oz-pink.png"
+    }
+  },
+  "Accented": {
+    "15oz": {
+      "Blue": "mug-accented-15oz-blue.png",
+      "Maroon": "mug-accented-15oz-maroon.png",
+      "Green": "mug-accented-15oz-green.png",
+      "Yellow": "mug-accented-15oz-yellow.png",
+      "Pink": "mug-accented-15oz-pink.png",
+      "Light Blue": "mug-accented-15oz-light-blue.png",
+      "Black": "mug-accented-15oz-black.png"
+    },
+    "11oz": {
+      "Blue": "mug-accented-15oz-blue.png",
+      "Maroon": "mug-accented-15oz-maroon.png",
+      "Green": "mug-accented-15oz-green.png",
+      "Yellow": "mug-accented-15oz-yellow.png",
+      "Pink": "mug-accented-15oz-pink.png",
+      "Orange": "mug-accented-11oz-orange.png",
+      "Cambridge Blue": "mug-accented-11oz-cambridge-blue.png",
+      "Light Green": "mug-accented-11oz-light-green.png",
+      "Red": "mug-accented-11oz-red.png",
+      "Light Blue": "mug-accented-15oz-light-blue.png",
+      "Black": "mug-accented-15oz-black.png"
+    }
+  },
+  "Color Pop": {
+    "11oz": {
+      "Black": "mug-colorpop-black.png",
+      "Blue": "mug-colorpop-blue.png",
+      "Cambridge Blue": "mug-colorpop-cambridge-blue.png",
+      "Golden Yellow": "mug-colorpop-golden-yellow.png",
+      "Green": "mug-colorpop-green.png",
+      "Light Blue": "mug-colorpop-light-blue.png",
+      "Light Green": "mug-colorpop-light-green.png",
+      "Maroon": "mug-colorpop-maroon.png",
+      "Orange": "mug-colorpop-orange.png",
+      "Pink": "mug-colorpop-pink.png",
+      "Red": "mug-colorpop-red.png",
+      "Yellow": "mug-colorpop-yellow.png"
+    },
+    "15oz": {
+      "Black": "mug-colorpop-black.png",
+      "Blue": "mug-colorpop-blue.png",
+      "Cambridge Blue": "mug-colorpop-cambridge-blue.png",
+      "Green": "mug-colorpop-green.png",
+      "Light Blue": "mug-colorpop-light-blue.png",
+      "Light Green": "mug-colorpop-light-green.png",
+      "Maroon": "mug-colorpop-maroon.png",
+      "Orange": "mug-colorpop-orange.png",
+      "Pink": "mug-colorpop-pink.png",
+      "Red": "mug-colorpop-red.png",
+      "Yellow": "mug-colorpop-yellow.png"
+    }
+  }
+};
+
 function refreshMugSizeCardVisibility(){
   const card=document.getElementById('mugSizeCard');
   if(!card)return;
@@ -3100,6 +3190,7 @@ function pickPreGenMugSize(size){
   mugSizeChosenPreGen=true;
   document.getElementById('preGenSize11Btn').classList.toggle('selected',size==='11oz');
   document.getElementById('preGenSize15Btn').classList.toggle('selected',size==='15oz');
+  updatePreGenMugMockupImg();
   refreshMugStyleCardVisibility();
   smoothScrollToTarget('mugStyleCard','center');
 }
@@ -3137,6 +3228,7 @@ function pickPreGenMugStyle(styleName){
   selectedGenColor=null;
   mugColorChosenPreGen=false;
   renderPreGenMugColorGrid();
+  updatePreGenMugMockupImg();
   refreshMugPrintModeVisibility();
   smoothScrollToTarget('preGenMugColorWrap','center');
 }
@@ -3169,6 +3261,7 @@ function pickPreGenMugColor(el,colorName){
   el.classList.add('selected');
   selectedGenColor=colorName;
   mugColorChosenPreGen=true;
+  updatePreGenMugMockupImg();
   refreshMugPrintModeVisibility();
   suspendGuidedScrollsForGeneration();
   // Size, Style, and Color are now all locked in -- this is the actual
@@ -3182,6 +3275,18 @@ function pickPreGenMugColor(el,colorName){
     );
   } else {
     smoothScrollToTarget('mugPrintModeCard','center');
+  }
+}
+
+function updatePreGenMugMockupImg(){
+  const img=document.getElementById('preGenMugMockupImg');
+  if(!img)return;
+  const filename=MUG_MOCKUP_PHOTOS[selectedGenStyle]?.[selectedGenSize]?.[selectedGenColor];
+  if(filename){
+    img.src=filename;
+    img.style.display='block';
+  } else {
+    img.style.display='none';
   }
 }
 
@@ -6536,6 +6641,8 @@ function resetEverythingFreshStart(){
   document.getElementById('preGenMugStyleGrid').innerHTML='';
   document.getElementById('preGenMugColorGrid').innerHTML='';
   document.getElementById('preGenMugColorWrap').style.display='none';
+  const mockupImgReset=document.getElementById('preGenMugMockupImg');
+  if(mockupImgReset){mockupImgReset.style.display='none';mockupImgReset.src='';}
   refreshMugSizeCardVisibility();
   refreshMugStyleCardVisibility();
   refreshMugPrintModeVisibility();
