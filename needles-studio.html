@@ -555,8 +555,10 @@
     <div id="priceTablePanel" style="display:none;margin-top:.85rem">
       <table style="width:100%;border-collapse:collapse;font-size:12px">
         <tr style="color:#003c8c;text-align:left"><th style="padding:4px 0">Style</th><th style="padding:4px 0;text-align:right">11oz</th><th style="padding:4px 0;text-align:right">15oz</th></tr>
-        <tr style="border-top:1px solid #333"><td style="padding:6px 0;color:#ccc">Classic White</td><td style="padding:6px 0;text-align:right;color:#ccc">$14.95</td><td style="padding:6px 0;text-align:right;color:#ccc">$19.95</td></tr>
-        <tr style="border-top:1px solid #333"><td style="padding:6px 0;color:#ccc">Color Pop</td><td style="padding:6px 0;text-align:right;color:#ccc">$29.95</td><td style="padding:6px 0;text-align:right;color:#ccc">$34.95</td></tr>
+        <tr style="border-top:1px solid #333"><td style="padding:6px 0;color:#ccc">Classic White</td><td style="padding:6px 0;text-align:right;color:#ccc">$14.95</td><td style="padding:6px 0;text-align:right;color:#ccc">$16.95</td></tr>
+        <tr style="border-top:1px solid #333"><td style="padding:6px 0;color:#ccc">Trimmed</td><td style="padding:6px 0;text-align:right;color:#ccc">$17.95</td><td style="padding:6px 0;text-align:right;color:#ccc">$19.95</td></tr>
+        <tr style="border-top:1px solid #333"><td style="padding:6px 0;color:#ccc">Accented</td><td style="padding:6px 0;text-align:right;color:#ccc">$17.95</td><td style="padding:6px 0;text-align:right;color:#ccc">$19.95</td></tr>
+        <tr style="border-top:1px solid #333"><td style="padding:6px 0;color:#ccc">Color Pop</td><td style="padding:6px 0;text-align:right;color:#ccc">$19.95</td><td style="padding:6px 0;text-align:right;color:#ccc">$21.95</td></tr>
       </table>
       <div class="note" style="margin-top:.6rem">Prices shown are for the mug itself — shipping and handling is calculated and added at checkout.</div>
     </div>
@@ -667,6 +669,7 @@
 <div class="note" style="margin-top:0;margin-bottom:.75rem">Optional — pick a frame to add around your finished artwork now, before you generate, so you don't lose track of it later. Applied automatically once your design is ready. Leave blank for a clean, unframed look.</div>
 <div class="theme-grid frame-grid" id="frameGrid"></div>
 <div id="frameColorPanel" style="display:none;margin-top:14px"></div>
+<div class="note mug-select-flash" style="margin-top:14px;text-align:center">🪟 Don't see what you're looking for? Window Sill Portrait is also available — just below!</div>
 <button type="button" class="snap-arrow-btn snap-arrow-down" id="snapDown1" onclick="snapExpand(2)">⌄</button>
 </div>
 
@@ -731,6 +734,25 @@
 </div>
 </div>
 <div class="card" id="productCard"><div class="card-title">🎁 Product</div><div class="guidance-prompt soft visible" id="productGuidancePrompt" role="status" style="margin-top:0;margin-bottom:.9rem">Please select your desired product below when ready.</div><div class="grid3"><div class="btn-select selected" data-val="mug" onclick="pick(this,'product')"><span class="icon">☕</span>Mug</div><div class="btn-select" data-val="greeting card" onclick="pick(this,'product')"><span class="icon">💌</span>Card</div><div class="btn-select" data-val="water bottle" onclick="pick(this,'product')"><span class="icon">🍶</span>Travel Cups</div><div class="btn-select" data-val="post-it note" onclick="pick(this,'product')"><span class="icon">📝</span>Post-it</div><div class="btn-select" data-val="phone case" onclick="pick(this,'product')"><span class="icon">📱</span>Phone case</div><div class="btn-select" data-val="tote bag" onclick="pick(this,'product')"><span class="icon">👜</span>Tote bag</div><div class="btn-select" data-val="suitcase" onclick="pick(this,'product')"><span class="icon">🧳</span>Suitcase</div><div class="btn-select" data-val="puzzle" onclick="pick(this,'product')"><span class="icon">🧩</span>Puzzle</div><div class="btn-select" data-val="photo poster" onclick="pick(this,'product')"><span class="icon">🖼️</span>Photo/Poster</div></div></div>
+
+<div class="card" id="mugSizeCard" style="display:none">
+<div class="card-title">☕ Coffee Mug Size</div>
+<div class="note-prominent" style="margin-top:0;margin-bottom:.9rem">Pick your size first — this determines the price for every style below.</div>
+<div class="grid2">
+<div class="btn-select" id="preGenSize11Btn" onclick="pickPreGenMugSize('11oz')">11oz</div>
+<div class="btn-select" id="preGenSize15Btn" onclick="pickPreGenMugSize('15oz')">15oz</div>
+</div>
+</div>
+
+<div class="card" id="mugStyleCard" style="display:none">
+<div class="card-title">🎨 Coffee Mug Style &amp; Color</div>
+<div class="note-prominent" id="mugStyleCardNote" style="margin-top:0;margin-bottom:.9rem">Pick a size above to see pricing for each style.</div>
+<div class="grid3" id="preGenMugStyleGrid"></div>
+<div id="preGenMugColorWrap" style="display:none;margin-top:1rem">
+<div class="note" style="margin-bottom:6px">Color</div>
+<div class="color-grid" id="preGenMugColorGrid"></div>
+</div>
+</div>
 
 <div class="card" id="mugPrintModeCard">
 <div class="card-title">☕ Mug Print Style</div>
@@ -2918,7 +2940,11 @@ function refreshMugPrintModeVisibility(){
   if(!card)return;
   let show;
   if(product==='mug'){
-    show=true;
+    // UPDATED (Aug 2026, Alyx's request): Size, then Style, then Color
+    // are now mandatory before Three Panels/Wraparound is even shown --
+    // same "variant determines everything downstream" pattern water
+    // bottle already uses via preGenTravelVariant.
+    show=mugColorChosenPreGen;
   } else if(product==='water bottle'){
     show=!!preGenTravelVariant && preGenTravelVariant!=='travel-mug-40oz-insulated';
   } else {
@@ -3043,6 +3069,121 @@ const PHONE_CASE_MODELS = [
 let selectedPhoneCaseModel=null;
 let preGenTravelVariant=null;
 let preGenTravelColor=null;
+let mugSizeChosenPreGen=false;
+let mugStyleChosenPreGen=false;
+let mugColorChosenPreGen=false;
+// Real prices confirmed from lib/products-catalog.js, 11oz/15oz — Classic
+// White deliberately excluded from this picker per Alyx's spec (only
+// Trimmed/Accented/Color Pop are offered here).
+const PRE_GEN_MUG_STYLE_PRICES = {
+  "Trimmed": { "11oz": 17.95, "15oz": 19.95 },
+  "Accented": { "11oz": 17.95, "15oz": 19.95 },
+  "Color Pop": { "11oz": 19.95, "15oz": 21.95 }
+};
+
+function refreshMugSizeCardVisibility(){
+  const card=document.getElementById('mugSizeCard');
+  if(!card)return;
+  card.style.display=(product==='mug')?'block':'none';
+}
+
+function refreshMugStyleCardVisibility(){
+  const card=document.getElementById('mugStyleCard');
+  if(!card)return;
+  const show=(product==='mug' && mugSizeChosenPreGen);
+  card.style.display=show?'block':'none';
+  if(show)renderPreGenMugStyleGrid();
+}
+
+function pickPreGenMugSize(size){
+  selectedGenSize=size;
+  mugSizeChosenPreGen=true;
+  document.getElementById('preGenSize11Btn').classList.toggle('selected',size==='11oz');
+  document.getElementById('preGenSize15Btn').classList.toggle('selected',size==='15oz');
+  refreshMugStyleCardVisibility();
+  smoothScrollToTarget('mugStyleCard','center');
+}
+
+function renderPreGenMugStyleGrid(){
+  const grid=document.getElementById('preGenMugStyleGrid');
+  const note=document.getElementById('mugStyleCardNote');
+  if(!grid)return;
+  if(note)note.textContent='Pick a style — real price for '+selectedGenSize+' shown under each.';
+  grid.innerHTML='';
+  Object.keys(PRE_GEN_MUG_STYLE_PRICES).forEach(styleName=>{
+    const price=PRE_GEN_MUG_STYLE_PRICES[styleName][selectedGenSize];
+    const btn=document.createElement('div');
+    btn.className='btn-select'+(styleName===selectedGenStyle && mugStyleChosenPreGen?' selected':'');
+    btn.dataset.style=styleName;
+    btn.onclick=()=>pickPreGenMugStyle(styleName);
+    const label=document.createElement('div');
+    label.textContent=styleName;
+    btn.appendChild(label);
+    const priceNote=document.createElement('div');
+    priceNote.className='note';
+    priceNote.style.cssText='margin-top:6px;color:#7ab8ff;font-weight:700';
+    priceNote.textContent='$'+price.toFixed(2);
+    btn.appendChild(priceNote);
+    grid.appendChild(btn);
+  });
+}
+
+function pickPreGenMugStyle(styleName){
+  selectedGenStyle=styleName;
+  mugStyleChosenPreGen=true;
+  document.querySelectorAll('#preGenMugStyleGrid .btn-select').forEach(b=>{
+    b.classList.toggle('selected',b.dataset.style===styleName);
+  });
+  selectedGenColor=null;
+  mugColorChosenPreGen=false;
+  renderPreGenMugColorGrid();
+  refreshMugPrintModeVisibility();
+  smoothScrollToTarget('preGenMugColorWrap','center');
+}
+
+function renderPreGenMugColorGrid(){
+  const wrap=document.getElementById('preGenMugColorWrap');
+  const grid=document.getElementById('preGenMugColorGrid');
+  if(!wrap||!grid)return;
+  const colors=GEN_MUG_STYLES[selectedGenStyle]?.colors?.[selectedGenSize] || null;
+  if(!colors){
+    wrap.style.display='none';
+    return;
+  }
+  wrap.style.display='block';
+  grid.innerHTML='';
+  colors.forEach(c=>{
+    const btn=document.createElement('div');
+    btn.className='color-btn'+(c.name===selectedGenColor?' selected':'');
+    btn.onclick=()=>pickPreGenMugColor(btn,c.name);
+    const ball=document.createElement('div');
+    ball.className='ball';
+    ball.style.background=c.hex;
+    btn.appendChild(ball);
+    grid.appendChild(btn);
+  });
+}
+
+function pickPreGenMugColor(el,colorName){
+  document.querySelectorAll('#preGenMugColorGrid .color-btn').forEach(b=>b.classList.remove('selected'));
+  el.classList.add('selected');
+  selectedGenColor=colorName;
+  mugColorChosenPreGen=true;
+  refreshMugPrintModeVisibility();
+  suspendGuidedScrollsForGeneration();
+  // Size, Style, and Color are now all locked in -- this is the actual
+  // moment Three Panels/Wraparound becomes the next real decision, same
+  // spot the water-bottle flow fires its version of this popup.
+  if(!printFormatPopupShown){
+    printFormatPopupShown=true;
+    showGuidanceAlert(
+      'Pick your print format — "Up to Three Panels" or "Wraparound." This changes how your artwork gets composed, so it needs to be chosen first.',
+      ()=>{ smoothScrollToTarget('mugPrintModeCard','center'); }
+    );
+  } else {
+    smoothScrollToTarget('mugPrintModeCard','center');
+  }
+}
 
 function renderTravelMugColorGridGen(){
   const grid=document.getElementById('travelMugColorGridGen');
@@ -3334,6 +3475,8 @@ function pick(el,type){
     const finalGuide=document.getElementById('finalGenerateGuidance');
     if(finalGuide)finalGuide.classList.toggle('visible',product==='phone case'&&!!selectedPhoneCaseModel);
     refreshApproveRowForMode();
+    refreshMugSizeCardVisibility();
+    refreshMugStyleCardVisibility();
     refreshMugPrintModeVisibility();
     refreshPanoramaFadeCardVisibility();
     refreshPhotoPosterVisibility();
@@ -3361,12 +3504,18 @@ function pick(el,type){
       });
     } else if(product==='water bottle'){
       smoothScrollToTarget('travelMugVariantCard','center');
+    } else if(product==='mug'){
+      // UPDATED (Aug 2026, Alyx's request): coffee mugs now follow the
+      // same "pick the thing that determines everything else first"
+      // pattern water bottles already use -- Size is mandatory before
+      // anything else about a mug can be chosen, so land there instead
+      // of jumping straight past it.
+      smoothScrollToTarget('mugSizeCard','center');
     } else {
-      // BUG FIX: every other product (Mug included) had no auto-scroll
-      // at all after picking -- violated the standing rule that a
-      // click starting a next step should take the customer there
-      // directly. Style is the next real decision point for these
-      // products, so land there.
+      // BUG FIX: every other product had no auto-scroll at all after
+      // picking -- violated the standing rule that a click starting a
+      // next step should take the customer there directly. Style is the
+      // next real decision point for these products, so land there.
       //
       // UPDATED: anchored to the bottom-most content (the token-
       // requirement note under Generate) with block:'end' instead of
@@ -3379,19 +3528,11 @@ function pick(el,type){
       smoothScrollToTarget('generateTokenNote','end');
     }
 
-    // UPDATED (Aug 2026, Alyx's request): water bottle no longer
-    // triggers this popup here -- print style is now chosen AFTER the
-    // travel mug variant (see pickPreGenTravelVariant), since the 40oz
-    // never had a real Wraparound option and shouldn't show the card at
-    // all. The popup now fires there instead, once it's actually known
-    // whether print style is a relevant choice for the chosen variant.
-    if(product==='mug' && !printFormatPopupShown){
-      printFormatPopupShown=true;
-      showGuidanceAlert(
-        'Pick your print format — "Up to Three Panels" or "Wraparound." This changes how your artwork gets composed, so it needs to be chosen first.',
-        ()=>{ smoothScrollToTarget('mugPrintModeCard','center'); }
-      );
-    }
+    // UPDATED (Aug 2026, Alyx's request): the "Up to Three Panels" vs.
+    // "Wraparound" popup no longer fires here for mug -- Size and
+    // Style/Color are now mandatory first, so this fires once those are
+    // actually done (see pickPreGenMugColor). Water bottle already
+    // worked this way (see pickPreGenTravelVariant).
   }
   else if(type==='style')style=el.dataset.val;
   else if(type==='likeness')likeness=el.dataset.val;
@@ -6383,6 +6524,17 @@ function resetEverythingFreshStart(){
   selectedGenStyle='Classic White';
   selectedGenSize='11oz';
   selectedGenColor=null;
+  mugSizeChosenPreGen=false;
+  mugStyleChosenPreGen=false;
+  mugColorChosenPreGen=false;
+  document.getElementById('preGenSize11Btn').classList.remove('selected');
+  document.getElementById('preGenSize15Btn').classList.remove('selected');
+  document.getElementById('preGenMugStyleGrid').innerHTML='';
+  document.getElementById('preGenMugColorGrid').innerHTML='';
+  document.getElementById('preGenMugColorWrap').style.display='none';
+  refreshMugSizeCardVisibility();
+  refreshMugStyleCardVisibility();
+  refreshMugPrintModeVisibility();
   selectedTravelProductKey=null;
   selectedTravelColor=null;
   preGenTravelVariant=null;
