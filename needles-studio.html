@@ -861,6 +861,7 @@ body.generation-active #creditsModalOverlay .card{opacity:1!important;filter:non
 
 <div class="card" id="accessorizeCard" style="display:none">
 <div class="card-title">🖼️ Add a Frame?</div>
+<div class="note" style="margin-top:0;margin-bottom:.9rem;text-align:center;font-style:italic;color:#7ab8ff;line-height:1.5">It's not too late to change your mind,<br/>If you think you'd like a new design,<br/>just go and try another kind,<br/>and let Needles fix it up just fine.</div>
 <div class="note-prominent" style="margin-top:0;margin-bottom:.75rem">Three ways to finish this: pick a Frame above, pick a Window Sill above, or use just the photo as-is below. Pick a Frame or Window Sill and you'll see it applied right here instantly — nothing is saved until you press Apply. Edge style (sharp vs. soft/blended) only matters if you go with just the photo — a Frame or Window Sill always uses sharp edges automatically.</div>
 <div id="accessorizePreviewStrip" style="display:flex;gap:8px"></div>
 <div class="bi-row">
@@ -3464,6 +3465,8 @@ function pickPreGenMugColor(el,colorName){
   updatePreGenMugMockupImg();
   const finishBtn=document.getElementById('preGenMugColorFinishBtn');
   if(finishBtn)finishBtn.style.display='block';
+  const mockupImg=document.getElementById('preGenMugMockupImg');
+  if(mockupImg)mockupImg.scrollIntoView({behavior:'smooth',block:'center'});
 }
 
 // Only fires when the customer presses the Finish/Satisfied button below
@@ -5292,7 +5295,13 @@ function showAccessorizeStep(){
     card.parentNode.insertBefore(sillCard,card);
   }
   updateAccessorizePreview();
-  smoothScrollToTarget('frameSectionCard','center');
+  // If they already decided before generating, don't yank them back to a
+  // decision that's already made -- only steer them to the picker if
+  // there's still a real choice to make (see showSingleImageAccessorizeStep,
+  // which has always had this same guard).
+  if(!selectedFrame && !windowSillChoice){
+    smoothScrollToTarget('frameSectionCard','center');
+  }
 }
 
 function restoreFrameCardsToHome(){
@@ -6165,7 +6174,7 @@ function updatePlacementSummary(){
   const orderBtn=document.getElementById('orderMugBtn');
   orderBtn.style.display=assignedCount>0?'block':'none';
 
-  const showMugOptions = (assignedCount>0 && product==='mug');
+  const showMugOptions = false; // Size/Style/Color are locked in pre-generation now (step-lock-overlay flow) -- re-showing this panel post-gen is redundant
   const showTravelOptions = (assignedCount>0 && product==='water bottle');
   const mugOptionsWrap=document.getElementById('genMugOptionsWrap');
   const travelOptionsWrap=document.getElementById('genTravelOptionsWrap');
