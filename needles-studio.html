@@ -397,6 +397,7 @@
 body.generation-active .card:not(#uploadPhotoCard){opacity:.28;filter:brightness(.55) saturate(.7);pointer-events:none;transition:opacity .5s,filter .5s}
 body.generation-active #uploadPhotoCard{position:relative;z-index:5}
 body.generation-active #creditsModalOverlay .card{opacity:1!important;filter:none!important;pointer-events:auto!important}
+body.print-mode-focus .card:not(#mugPrintModeCard){opacity:.28;filter:brightness(.55) saturate(.7);pointer-events:none;transition:opacity .5s,filter .5s}
 .generation-reminder-banner{font-size:14px;font-weight:800;letter-spacing:.3px;text-align:center;padding:14px 10px;margin:1rem 0;border-radius:10px;background:#0d0d0d;border:1px solid #003c8c;animation:mugSelectFlash 1s ease-in-out infinite}
 #creditsModalOverlay{
   background:rgba(2,5,9,.9)!important;
@@ -2850,6 +2851,7 @@ let isDrawingPath=false;
 let pathCanvasReady=false;
 
 let mugPrintMode='three-panel';
+let mugPrintModeTouched=false;
 let printFormatPopupShown=false;
 let frameGuidancePopupShown=false;
 let ideaBoxIntroShown=false;
@@ -3041,6 +3043,8 @@ function toggleAccessorizeEdgeStyle(){
 // entirely rather than leaving unreachable code behind.
 function pickMugPrintMode(mode){
   mugPrintMode=mode;
+  mugPrintModeTouched=true;
+  document.body.classList.remove('print-mode-focus');
   document.getElementById('printModeThreeBtn').classList.toggle('selected',mode==='three-panel');
   document.getElementById('printModeWrapBtn').classList.toggle('selected',mode==='wraparound');
   // Window Sill is a fixed illustrated scene -- stretching it all the way
@@ -3101,6 +3105,7 @@ function refreshMugPrintModeVisibility(){
     show=false;
   }
   card.style.display=show?'block':'none';
+  document.body.classList.toggle('print-mode-focus', show && !mugPrintModeTouched);
 }
 
 // Variant must be known before generating — 40oz uses a different strategy than 20oz/14oz.
@@ -6450,10 +6455,6 @@ function maybeAutoFetchMockup(){
   }
 
   if (product === 'mug') {
-    if (!mugSizeChosenPreGen || !mugStyleChosenPreGen) {
-      showAutoMockupNote('You must select size, style, and color (where applicable) in order to proceed.');
-      return;
-    }
     const requiresColor = !!(GEN_MUG_STYLES[selectedGenStyle]?.colors?.[selectedGenSize]);
     if (requiresColor && !selectedGenColor) {
       hideAutoMockup();
@@ -6874,6 +6875,8 @@ function resetEverythingFreshStart(){
   });
 
   pickMugPrintMode('three-panel');
+  mugPrintModeTouched=false;
+  document.body.classList.remove('print-mode-focus');
   hardEdgesEnabled=false;
   const fadeToggle=document.getElementById('panoramaFadeToggle');
   if(fadeToggle)fadeToggle.checked=false;
