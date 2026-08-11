@@ -734,7 +734,7 @@
 <div id="ideaGuidancePrompt" class="guidance-prompt" role="status" style="margin-top:8px;margin-bottom:0">Scroll to the next section when ready to select your desired product.</div>
 </div>
 </div>
-<div class="card" id="productCard"><div class="card-title">🎁 Product</div><div class="guidance-prompt soft visible" id="productGuidancePrompt" role="status" style="margin-top:0;margin-bottom:.9rem">Please select your desired product below when ready.</div><div class="grid3"><div class="btn-select selected" data-val="mug" onclick="pick(this,'product')"><span class="icon">☕</span>Mug</div><div class="btn-select" data-val="greeting card" onclick="pick(this,'product')"><span class="icon">💌</span>Card</div><div class="btn-select" data-val="water bottle" onclick="pick(this,'product')"><span class="icon">🍶</span>Travel Cups</div><div class="btn-select" data-val="post-it note" onclick="pick(this,'product')"><span class="icon">📝</span>Post-it</div><div class="btn-select" data-val="phone case" onclick="pick(this,'product')"><span class="icon">📱</span>Phone case</div><div class="btn-select" data-val="tote bag" onclick="pick(this,'product')"><span class="icon">👜</span>Tote bag</div><div class="btn-select" data-val="suitcase" onclick="pick(this,'product')"><span class="icon">🧳</span>Suitcase</div><div class="btn-select" data-val="puzzle" onclick="pick(this,'product')"><span class="icon">🧩</span>Puzzle</div><div class="btn-select" data-val="photo poster" onclick="pick(this,'product')"><span class="icon">🖼️</span>Photo/Poster</div></div></div>
+<div class="card" id="productCard"><div class="card-title">🎁 Product</div><div class="guidance-prompt soft visible" id="productGuidancePrompt" role="status" style="margin-top:0;margin-bottom:.9rem">Please select your desired product below when ready.</div><div class="grid3"><div class="btn-select" data-val="mug" onclick="pick(this,'product')"><span class="icon">☕</span>Mug</div><div class="btn-select" data-val="greeting card" onclick="pick(this,'product')"><span class="icon">💌</span>Card</div><div class="btn-select" data-val="water bottle" onclick="pick(this,'product')"><span class="icon">🍶</span>Travel Cups</div><div class="btn-select" data-val="post-it note" onclick="pick(this,'product')"><span class="icon">📝</span>Post-it</div><div class="btn-select" data-val="phone case" onclick="pick(this,'product')"><span class="icon">📱</span>Phone case</div><div class="btn-select" data-val="tote bag" onclick="pick(this,'product')"><span class="icon">👜</span>Tote bag</div><div class="btn-select" data-val="suitcase" onclick="pick(this,'product')"><span class="icon">🧳</span>Suitcase</div><div class="btn-select" data-val="puzzle" onclick="pick(this,'product')"><span class="icon">🧩</span>Puzzle</div><div class="btn-select" data-val="photo poster" onclick="pick(this,'product')"><span class="icon">🖼️</span>Photo/Poster</div></div></div>
 
 <div class="card" id="mugSizeCard" style="display:none">
 <div class="card-title">☕ Coffee Mug Size</div>
@@ -1002,7 +1002,7 @@
 </div>
 
 <script>
-let product='mug',style='Muggshotz Classic: premium professional caricature, expressive face, rich detail, painterly shading, funny gift-art scene',likeness='0.15',uploadedImageData=null,resultUrl=null;
+let product=null,style='Muggshotz Classic: premium professional caricature, expressive face, rich detail, painterly shading, funny gift-art scene',likeness='0.15',uploadedImageData=null,resultUrl=null;
 
 const NEEDLES_BEGINNING_SEQUENCE = [
   'A_final.webm',
@@ -1306,7 +1306,36 @@ function resetNeedlesPresentationState(){
   if(note)note.textContent='Needles is working on it...';
 }
 
+let needlesWakeLock=null;
+async function requestNeedlesWakeLock(){
+  try{
+    if('wakeLock' in navigator){
+      needlesWakeLock=await navigator.wakeLock.request('screen');
+    }
+  }catch(err){
+    // Not fatal -- some browsers deny this (e.g. low battery, unsupported
+    // context) and generation should proceed normally either way.
+    console.warn('Wake lock request failed:',err);
+  }
+}
+function releaseNeedlesWakeLock(){
+  if(needlesWakeLock){
+    needlesWakeLock.release().catch(()=>{});
+    needlesWakeLock=null;
+  }
+}
+// Re-acquire on returning to the tab -- a wake lock is automatically
+// released by the browser whenever the tab is hidden, so simply
+// backgrounding the app once already silently drops it for the rest of
+// the generation unless it's re-requested here.
+document.addEventListener('visibilitychange',()=>{
+  if(document.visibilityState==='visible' && needlesPlaying && !needlesWakeLock){
+    requestNeedlesWakeLock();
+  }
+});
+
 function startNeedlesStage(){
+  requestNeedlesWakeLock();
   needlesInitLayers();
   resetNeedlesPresentationState();
   needlesResetSession();
@@ -1325,6 +1354,7 @@ function startNeedlesStage(){
 }
 
 function stopNeedlesStage(){
+  releaseNeedlesWakeLock();
   needlesPlaying=false;
   needlesFinalePlaying=false;
   needlesPhase='stopped';
@@ -5353,6 +5383,11 @@ async function generate(){
     document.getElementById('uploadZone').scrollIntoView({behavior:'smooth',block:'center'});
     return;
   }
+  if(!product){
+    setStatus('Please select a product above first.',true);
+    document.getElementById('productCard').scrollIntoView({behavior:'smooth',block:'center'});
+    return;
+  }
   if(product==='photo poster' && !posterSize){
     setStatus('Please pick your Photo/Poster size and options above first.',true);
     return;
@@ -6686,9 +6721,16 @@ function resetEverythingFreshStart(){
 
   document.getElementById('ideaDesc').value='';
 
-  // Product, style, likeness — back to defaults (first option in each grid)
-  document.querySelectorAll('#productCard .btn-select').forEach((b,i)=>b.classList.toggle('selected',i===0));
-  product='mug';
+  // Product -- deliberately left UNSELECTED (not defaulted back to Mug).
+  // Auto-selecting a tile here only flips its CSS class and the product
+  // variable directly, bypassing pick()'s real setup logic entirely (mug
+  // size card, mockup popups, guided scroll, etc never ran). A genuine
+  // tap is required so that logic actually fires.
+  document.querySelectorAll('#productCard .btn-select').forEach(b=>b.classList.remove('selected'));
+  product=null;
+  productExplicitlyChosen=false;
+  const productGuideReset=document.getElementById('productGuidancePrompt');
+  if(productGuideReset)productGuideReset.classList.add('visible');
   document.querySelectorAll('.card').forEach(card=>{
     const title=card.querySelector('.card-title');
     if(title&&title.textContent.includes('🎨 Style')){
