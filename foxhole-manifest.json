@@ -1,0 +1,16 @@
+{
+  "name": "The Foxhole",
+  "short_name": "Foxhole",
+  "start_url": "./admin.html",
+  "display": "standalone",
+  "background_color": "#2b2b2b",
+  "theme_color": "#2b2b2b",
+  "icons": [
+    {
+      "src": "foxhole-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
