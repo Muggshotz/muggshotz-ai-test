@@ -398,6 +398,7 @@ body.generation-active .card:not(#uploadPhotoCard){opacity:.28;filter:brightness
 body.generation-active #uploadPhotoCard{position:relative;z-index:5}
 body.generation-active #creditsModalOverlay .card{opacity:1!important;filter:none!important;pointer-events:auto!important}
 body.print-mode-focus .card:not(#mugPrintModeCard){opacity:.28;filter:brightness(.55) saturate(.7);pointer-events:none;transition:opacity .5s,filter .5s}
+body.final-generate-focus .card{opacity:.35;filter:brightness(.6) saturate(.75);transition:opacity .5s,filter .5s}
 .generation-reminder-banner{font-size:14px;font-weight:800;letter-spacing:.3px;text-align:center;padding:14px 10px;margin:1rem 0;border-radius:10px;background:#0d0d0d;border:1px solid #003c8c;animation:mugSelectFlash 1s ease-in-out infinite}
 #creditsModalOverlay{
   background:rgba(2,5,9,.9)!important;
@@ -3045,6 +3046,7 @@ function pickMugPrintMode(mode){
   mugPrintMode=mode;
   mugPrintModeTouched=true;
   document.body.classList.remove('print-mode-focus');
+  document.body.classList.add('final-generate-focus');
   document.getElementById('printModeThreeBtn').classList.toggle('selected',mode==='three-panel');
   document.getElementById('printModeWrapBtn').classList.toggle('selected',mode==='wraparound');
   // Window Sill is a fixed illustrated scene -- stretching it all the way
@@ -3353,6 +3355,7 @@ function mugSizeLockBack(){
   document.querySelectorAll('#productCard .btn-select').forEach(b=>b.classList.remove('selected'));
   product=null;
   productExplicitlyChosen=false;
+  document.body.classList.remove('final-generate-focus');
   const productGuide=document.getElementById('productGuidancePrompt');
   if(productGuide)productGuide.classList.add('visible');
   refreshMugSizeCardVisibility();
@@ -6877,6 +6880,7 @@ function resetEverythingFreshStart(){
   pickMugPrintMode('three-panel');
   mugPrintModeTouched=false;
   document.body.classList.remove('print-mode-focus');
+  document.body.classList.remove('final-generate-focus');
   hardEdgesEnabled=false;
   const fadeToggle=document.getElementById('panoramaFadeToggle');
   if(fadeToggle)fadeToggle.checked=false;
