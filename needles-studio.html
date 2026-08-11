@@ -5174,6 +5174,8 @@ async function compositeFrameAcrossThreePanels(centerUrl,leftUrl,rightUrl){
   await drawFrameOnCanvas(ctx,combined);
   await drawWindowSillOnCanvas(ctx,combined);
 
+  const combinedDataUrl=combined.toDataURL('image/jpeg',0.92);
+
   function sliceThird(i){
     const c=document.createElement('canvas');
     c.width=panelW;
@@ -5181,7 +5183,32 @@ async function compositeFrameAcrossThreePanels(centerUrl,leftUrl,rightUrl){
     c.getContext('2d').drawImage(combined,i*panelW,0,panelW,h,0,0,panelW,h);
     return c.toDataURL('image/jpeg',0.92);
   }
-  return { left: sliceThird(0), center: sliceThird(1), right: sliceThird(2) };
+  return { left: sliceThird(0), center: sliceThird(1), right: sliceThird(2), combined: combinedDataUrl };
+}
+
+// Same left+center+right stitch, but no frame/window-sill compositing --
+// used for the live preview before a frame has been chosen yet, so even
+// the "no frame" state shows one continuous panorama rather than three
+// separate boxes with gaps between them.
+async function stitchThreePanelsRaw(centerUrl,leftUrl,rightUrl){
+  const [leftImg,centerImg,rightImg]=await Promise.all([
+    loadImageFromUrl(leftUrl),
+    loadImageFromUrl(centerUrl),
+    loadImageFromUrl(rightUrl)
+  ]);
+  const h=centerImg.naturalHeight;
+  const panelW=centerImg.naturalWidth;
+  const stripW=panelW*3;
+  const canvas=document.createElement('canvas');
+  canvas.width=stripW;
+  canvas.height=h;
+  const ctx=canvas.getContext('2d');
+  [leftImg,centerImg,rightImg].forEach((img,i)=>{
+    const scale=h/img.naturalHeight;
+    const drawW=img.naturalWidth*scale;
+    ctx.drawImage(img,0,0,img.naturalWidth,img.naturalHeight,i*panelW,0,drawW,h);
+  });
+  return canvas.toDataURL('image/jpeg',0.92);
 }
 
 // ================= FRAME ACCESSORIZE STEP =================
@@ -5191,16 +5218,14 @@ async function compositeFrameAcrossThreePanels(centerUrl,leftUrl,rightUrl){
 // press Apply -- instead of a frame getting silently baked in (or not)
 // before they've even seen the result.
 
-function renderAccessorizeStrip(urls){
+function renderAccessorizeStrip(url){
   const strip=document.getElementById('accessorizePreviewStrip');
   if(!strip)return;
   strip.innerHTML='';
-  urls.forEach(u=>{
-    const img=document.createElement('img');
-    img.src=u;
-    img.style.cssText='flex:1;min-width:0;border-radius:8px;border:1px solid #003c8c;object-fit:cover;max-height:170px';
-    strip.appendChild(img);
-  });
+  const img=document.createElement('img');
+  img.src=url;
+  img.style.cssText='width:100%;border-radius:8px;border:1px solid #003c8c;max-height:220px;object-fit:contain;background:#0d0d0d';
+  strip.appendChild(img);
 }
 
 async function updateAccessorizePreview(){
@@ -5212,18 +5237,17 @@ async function updateAccessorizePreview(){
     if(pendingWraparoundRaw){
       if(selectedFrame||windowSillChoice){
         const framed=await compositeFrameAcrossThreePanels(pendingWraparoundRaw.center,pendingWraparoundRaw.left,pendingWraparoundRaw.right);
-        renderAccessorizeStrip([framed.left,framed.center,framed.right]);
+        renderAccessorizeStrip(framed.combined);
       } else {
-        renderAccessorizeStrip([pendingWraparoundRaw.left,pendingWraparoundRaw.center,pendingWraparoundRaw.right]);
+        const raw=await stitchThreePanelsRaw(pendingWraparoundRaw.center,pendingWraparoundRaw.left,pendingWraparoundRaw.right);
+        renderAccessorizeStrip(raw);
       }
     } else if(pending40ozRaw){
       if(selectedFrame||windowSillChoice){
         const framedPanorama=await compositeFrameOntoImageUrl(pending40ozRaw.panorama);
-        const {leftHalf,rightHalf}=await splitImageAtCenterVertical(framedPanorama);
-        renderAccessorizeStrip([leftHalf,rightHalf]);
+        renderAccessorizeStrip(framedPanorama);
       } else {
-        const {leftHalf,rightHalf}=await splitImageAtCenterVertical(pending40ozRaw.panorama);
-        renderAccessorizeStrip([leftHalf,rightHalf]);
+        renderAccessorizeStrip(pending40ozRaw.panorama);
       }
     }
   }catch(err){
