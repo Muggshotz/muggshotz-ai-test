@@ -2298,7 +2298,7 @@ function renderFrameColorPanel(){
     FRAME_COLOR_SWATCHES.forEach(c=>{
       const b=document.createElement('div');
       b.className='color-btn'+(frameColors[key]===c.hex?' selected':'');
-      b.onclick=()=>{ frameColors[key]=c.hex; renderFrameColorPanel(); drawCaption(); if(pendingWraparoundRaw||pending40ozRaw)updateAccessorizePreview(); };
+      b.onclick=()=>{ frameColors[key]=c.hex; renderFrameColorPanel(); drawCaption(); updateWindowSillLivePreview(); if(pendingWraparoundRaw||pending40ozRaw)updateAccessorizePreview(); };
       const ball=document.createElement('div');
       ball.className='ball';
       ball.style.background=c.hex;
