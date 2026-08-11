@@ -394,11 +394,11 @@
 .step-lock-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:900;align-items:center;justify-content:center;padding:1.5rem;overflow-y:auto}
 .step-lock-back{position:absolute;top:8px;left:8px;background:#1a1a1a;border:1px solid #333;border-radius:8px;color:#ccc;font-size:12px;font-weight:700;padding:.4rem .7rem;cursor:pointer}
 .step-lock-back:hover{color:#fff;border-color:#555}
-body.generation-active .card:not(#uploadPhotoCard){opacity:.28;filter:brightness(.55) saturate(.7);pointer-events:none;transition:opacity .5s,filter .5s}
+body.generation-active .card:not(#uploadPhotoCard){opacity:.55;filter:brightness(.75) saturate(.85);pointer-events:none;transition:opacity .5s,filter .5s}
 body.generation-active #uploadPhotoCard{position:relative;z-index:5}
 body.generation-active #creditsModalOverlay .card{opacity:1!important;filter:none!important;pointer-events:auto!important}
 body.print-mode-focus .card:not(#mugPrintModeCard){opacity:.28;filter:brightness(.55) saturate(.7);pointer-events:none;transition:opacity .5s,filter .5s}
-body.final-generate-focus .card{opacity:.35;filter:brightness(.6) saturate(.75);transition:opacity .5s,filter .5s}
+body.final-generate-focus .card:not(#uploadPhotoCard){opacity:.35;filter:brightness(.6) saturate(.75);transition:opacity .5s,filter .5s}
 .generation-reminder-banner{font-size:14px;font-weight:800;letter-spacing:.3px;text-align:center;padding:14px 10px;margin:1rem 0;border-radius:10px;background:#0d0d0d;border:1px solid #003c8c;animation:mugSelectFlash 1s ease-in-out infinite}
 #creditsModalOverlay{
   background:rgba(2,5,9,.9)!important;
@@ -1390,6 +1390,7 @@ window.addEventListener('scroll',()=>{
 
 function startNeedlesStage(){
   requestNeedlesWakeLock();
+  document.body.classList.remove('final-generate-focus');
   document.body.classList.add('generation-active');
   insertGenerationReminders();
   generationBottomSnapArmed=true;
@@ -2899,27 +2900,11 @@ function maybeScrollToGenPreviewOnceBothPicked(){
 function updateGenPreviewLabel(){
   const el=document.getElementById('genPreviewLabel');
   if(!el)return;
-  if(product!=='mug'){
-    el.textContent='🖼️ Real Photo Preview';
-    el.classList.remove('mug-select-flash');
-    el.style.color='#888';
-    el.style.cursor='default';
-    el.onclick=null;
-    return;
-  }
-  if(!mugOptionsTouched){
-    el.textContent='⚠️ You must select size, style, and color (where applicable) in order to proceed.';
-    el.classList.add('mug-select-flash');
-    el.style.color='';
-    el.style.cursor='default';
-    el.onclick=null;
-  } else {
-    el.textContent='🖼️ Real Photo Preview';
-    el.classList.remove('mug-select-flash');
-    el.style.color='#888';
-    el.style.cursor='default';
-    el.onclick=null;
-  }
+  el.textContent='🖼️ Real Photo Preview';
+  el.classList.remove('mug-select-flash');
+  el.style.color='#888';
+  el.style.cursor='default';
+  el.onclick=null;
 }
 
 // Fires once per session, the first time the customer clicks into the
