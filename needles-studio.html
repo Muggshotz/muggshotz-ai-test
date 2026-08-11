@@ -1844,6 +1844,16 @@ let windowSillChoice = null;
 // affect the real generation, not just the pre-gen preview.
 let customWindowSillCalibration = {};
 let frameColors = {};
+// UPDATED (Aug 2026, Alyx's request): single-layer colorable frames used
+// to each remember their own color independently (keyed by frame name),
+// so switching frames could show a stale/different color than what was
+// just picked -- took several back-and-forth clicks to line up. All
+// single-layer frames now share ONE color slot instead, so whichever
+// color was picked last is what shows immediately on whichever frame is
+// picked next, with zero extra clicks. Double Mat keeps its own 3
+// independent layer slots (Outer/Upper/Lower) since those are genuinely
+// different simultaneous colors on one frame, not competing state.
+const SINGLE_FRAME_COLOR_KEY = '__currentSingleFrameColor__';
 
 function hexToHue(hex){
   const h=(hex||'#ffffff').replace('#','');
@@ -1908,11 +1918,6 @@ async function pickFrame(name){
   }
   renderFrameGrid();
   renderFrameColorPanel();
-  if(selectedFrame && FRAME_CATALOG[selectedFrame]?.colorable!==false){
-    showGuidanceAlert(
-      'After you change color for your frame, please reselect your frame again to apply the color you\'ve just selected.'
-    );
-  }
   syncEdgeFadeWithFrameSelection();
   drawCaption();
   updateIdeaCardNote();
@@ -1932,7 +1937,16 @@ async function pickFrame(name){
     // Generate already does, so a deliberate selection can't get
     // overridden by a leftover idle nudge.
     suspendGuidedScrollsForGeneration();
-    smoothScrollToTarget(uploadedImageData?'windowSillPreviewCard':'finalGenerateGuidance',uploadedImageData?'end':'center');
+    // Double Mat needs three colors chosen (Outer/Upper/Lower) before a
+    // preview means anything -- jumping straight to the photo preview
+    // showed default/leftover colors and confused the actual next step.
+    // Every other colorable frame already has a sensible single default,
+    // so those still go straight to the preview as before.
+    if(FRAME_CATALOG[name]?.type==='proceduralMulti'){
+      smoothScrollToTarget('frameColorPanel','center');
+    } else {
+      smoothScrollToTarget(uploadedImageData?'windowSillPreviewCard':'finalGenerateGuidance',uploadedImageData?'end':'center');
+    }
   } else {
     // Cleared the frame selection -- hide the shared preview card if
     // nothing else (Window Sill) is active to show in it.
@@ -2309,7 +2323,7 @@ function renderFrameColorPanel(){
     });
     updateDoubleMatPreview();
   } else {
-    makeRow('Frame Color', selectedFrame, data.defaultColor);
+    makeRow('Frame Color', SINGLE_FRAME_COLOR_KEY, data.defaultColor);
   }
 }
 
@@ -2319,12 +2333,17 @@ function updateDoubleMatPreview(){
   const outer=frameColors['Double Mat:0']||'#8a5a34';
   const upper=frameColors['Double Mat:1']||'#f5f0e6';
   const lower=frameColors['Double Mat:2']||'#2a2a2a';
+  // UPDATED (Aug 2026, Alyx's request): this swatch had Upper Mat and
+  // Lower Mat backwards compared to drawDoubleMat() -- the real render
+  // used for the actual photo preview and finished artwork. Real
+  // order (outer to inner): Outer Frame, then Upper Mat, then Lower
+  // Mat closest to the photo. This swatch now matches that.
   preview.style.cssText=
     'width:140px;height:140px;box-sizing:border-box;'+
     'border:14px solid '+outer+';'+
-    'background:'+lower+';'+
+    'background:'+upper+';'+
     'padding:10px';
-  preview.innerHTML='<div style="width:100%;height:100%;box-sizing:border-box;border:8px solid '+upper+';background:#fff"></div>';
+  preview.innerHTML='<div style="width:100%;height:100%;box-sizing:border-box;border:8px solid '+lower+';background:#fff"></div>';
 }
 
 // Window Sill artwork drawn stretched exactly flush to the canvas edges
@@ -2609,7 +2628,7 @@ function drawFrameOnCanvas(ctx,canvas){
         }
         ctx.save();
         if(data.colorable!==false){
-          const hex=frameColors[selectedFrame]||data.defaultColor;
+          const hex=frameColors[SINGLE_FRAME_COLOR_KEY]||data.defaultColor;
           const rotate=Math.round(hexToHue(hex)-hexToHue(data.defaultColor));
           ctx.filter='hue-rotate('+rotate+'deg) saturate(1.15)';
         }
@@ -2628,7 +2647,7 @@ function drawFrameOnCanvas(ctx,canvas){
     return Promise.resolve();
   }
 
-  const hex=frameColors[selectedFrame]||data.defaultColor;
+  const hex=frameColors[SINGLE_FRAME_COLOR_KEY]||data.defaultColor;
   drawProceduralFrame(ctx,canvas,data.draw,hex);
   return Promise.resolve();
 }
