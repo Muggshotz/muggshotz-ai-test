@@ -118,4 +118,26 @@ export default async function handler(req, res) {
     const resp = await fetch(url, {
       headers: {
         "apikey": SUPABASE_SERVICE_ROLE_KEY,
-        "Authorization":
+        "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`
+      }
+    });
+    const rows = await resp.json();
+    if (!resp.ok) throw new Error("Supabase lookup failed: " + JSON.stringify(rows));
+
+    if (rows.length === 0) {
+      // No customer row yet means this device hasn't generated anything --
+      // report 0 rather than creating a row here (the first real generate()
+      // call handles creation, per the comment at the top of this file).
+      return res.status(200).json({ tokenBalance: 0, isAdmin: false, hasPurchased: false });
+    }
+
+    const customer = rows[0];
+    return res.status(200).json({
+      tokenBalance: customer.token_balance,
+      isAdmin: customer.role === "admin",
+      hasPurchased: !!customer.has_purchased
+    });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+}
