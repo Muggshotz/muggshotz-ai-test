@@ -393,7 +393,9 @@
 .step-lock-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:900;align-items:center;justify-content:center;padding:1.5rem;overflow-y:auto}
 .step-lock-back{position:absolute;top:8px;left:8px;background:#1a1a1a;border:1px solid #333;border-radius:8px;color:#ccc;font-size:12px;font-weight:700;padding:.4rem .7rem;cursor:pointer}
 .step-lock-back:hover{color:#fff;border-color:#555}
-body.step-locked{overflow:hidden}
+body.generation-active .card:not(#uploadPhotoCard){opacity:.28;filter:brightness(.55) saturate(.7);pointer-events:none;transition:opacity .5s,filter .5s}
+body.generation-active #uploadPhotoCard{position:relative;z-index:5}
+.generation-reminder-banner{font-size:14px;font-weight:800;letter-spacing:.3px;text-align:center;padding:14px 10px;margin:1rem 0;border-radius:10px;background:#0d0d0d;border:1px solid #003c8c;animation:mugSelectFlash 1s ease-in-out infinite}
 #creditsModalOverlay{
   background:rgba(2,5,9,.9)!important;
   backdrop-filter:blur(4px);
@@ -1344,8 +1346,48 @@ document.addEventListener('visibilitychange',()=>{
   }
 });
 
+function insertGenerationReminders(){
+  removeGenerationReminders();
+  const cards=Array.from(document.querySelectorAll('.card')).filter(c=>c.offsetParent!==null && c.id!=='uploadPhotoCard');
+  cards.forEach((card,i)=>{
+    if((i+1)%3===0){
+      const banner=document.createElement('div');
+      banner.className='generation-reminder-banner';
+      banner.textContent='💬 Thank you for your patience, your selection will be ready soon.';
+      card.insertAdjacentElement('afterend',banner);
+    }
+  });
+}
+function removeGenerationReminders(){
+  document.querySelectorAll('.generation-reminder-banner').forEach(b=>b.remove());
+}
+
+// If curiosity gets the better of someone and they scroll all the way to
+// the bottom during a generation (where, dimmed-out, there's genuinely
+// nothing to see), snap them back to the easel instead of leaving them
+// stranded down there wondering what happened.
+let generationBottomSnapArmed=true;
+let generationScrollDebounce=null;
+function handleGenerationScrollSnap(){
+  if(!document.body.classList.contains('generation-active') || !generationBottomSnapArmed)return;
+  const nearBottom=(window.innerHeight+window.scrollY)>=(document.documentElement.scrollHeight-40);
+  if(nearBottom){
+    generationBottomSnapArmed=false;
+    const wrap=document.getElementById('needlesStageWrap');
+    if(wrap)wrap.scrollIntoView({behavior:'smooth',block:'center'});
+    setTimeout(()=>{generationBottomSnapArmed=true;},4000);
+  }
+}
+window.addEventListener('scroll',()=>{
+  clearTimeout(generationScrollDebounce);
+  generationScrollDebounce=setTimeout(handleGenerationScrollSnap,150);
+});
+
 function startNeedlesStage(){
   requestNeedlesWakeLock();
+  document.body.classList.add('generation-active');
+  insertGenerationReminders();
+  generationBottomSnapArmed=true;
   needlesInitLayers();
   resetNeedlesPresentationState();
   needlesResetSession();
@@ -1365,6 +1407,8 @@ function startNeedlesStage(){
 
 function stopNeedlesStage(){
   releaseNeedlesWakeLock();
+  document.body.classList.remove('generation-active');
+  removeGenerationReminders();
   needlesPlaying=false;
   needlesFinalePlaying=false;
   needlesPhase='stopped';
