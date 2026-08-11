@@ -1945,7 +1945,7 @@ async function pickFrame(name){
     if(FRAME_CATALOG[name]?.type==='proceduralMulti'){
       smoothScrollToTarget('frameColorPanel','center');
     } else {
-      smoothScrollToTarget(uploadedImageData?'windowSillPreviewImg':'finalGenerateGuidance',uploadedImageData?'end':'center');
+      smoothScrollToTarget(uploadedImageData?'windowSillPreviewCard':'finalGenerateGuidance',uploadedImageData?'end':'center');
     }
   } else {
     // Cleared the frame selection -- hide the shared preview card if
@@ -2055,7 +2055,7 @@ async function pickWindowSill(name){
     // Window Sill grid) could re-arm it and yank the customer back to
     // the idea box a few seconds after this scroll correctly landed.
     suspendGuidedScrollsForGeneration();
-    smoothScrollToTarget(uploadedImageData?'windowSillPreviewImg':'finalGenerateGuidance',uploadedImageData?'end':'center');
+    smoothScrollToTarget(uploadedImageData?'windowSillPreviewCard':'finalGenerateGuidance',uploadedImageData?'end':'center');
   }
 }
 
@@ -5701,7 +5701,6 @@ async function makeTestSingleZonePanorama(side){
       document.getElementById('keepTweakingBtn').style.display='none';
       document.getElementById('downloadDesignBtn').style.display='none';
       setStatus('Center panel done. Generating the left panel — continuing the same scene...');
-      smoothScrollToTarget('positionHolderCard','start');
       document.getElementById('wraparoundStandbyPrompt').style.display='block';
 
       const centerRaw = await urlToDataURL(rawResultUrl);
