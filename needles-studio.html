@@ -2747,6 +2747,16 @@ function drawDoubleMat(ctx,canvas){
 // ================= END FRAME SYSTEM =================
 
 let curveMode="straight";
+// UPDATED (Aug 2026, Alyx's request): drawCaption() is async (waits on
+// image loads for the frame/window sill) but its callers never await
+// it -- clicking colors or frames quickly launched several overlapping
+// calls at once. Whichever call's image happened to finish loading
+// LAST would win and overwrite the canvas, regardless of which color
+// was actually clicked last -- exactly the "stops keeping up with me"
+// symptom during rapid switching. This token lets a stale call detect
+// it's been superseded and bail out silently instead of clobbering a
+// newer, correct result.
+let drawCaptionToken=0;
 let drawnStrokes=[];
 let currentStroke=[];
 let isDrawingPath=false;
@@ -4205,6 +4215,7 @@ function drawTextOnPath(ctx,text,pathPointsCanvasSpace,spacing,drawFn){
 
 async function drawCaption(){
   if(!baseImg)return;
+  const myDrawToken=++drawCaptionToken;
   const canvas=document.getElementById('captionCanvas');
   canvas.width=baseImg.naturalWidth;
   canvas.height=baseImg.naturalHeight;
@@ -4287,6 +4298,12 @@ async function drawCaption(){
 
     ctx.restore();
   }
+
+  // A newer click (color, frame, window sill, whatever) may have
+  // started its own drawCaption() call while this one was still
+  // waiting on image loads above -- if so, that newer call is the one
+  // that should win. Bail out here instead of overwriting it.
+  if(myDrawToken!==drawCaptionToken)return;
 
   finalImageUrl=canvas.toDataURL('image/jpeg', 0.92);
   // NOTE: this used to also overwrite the clipboard/reference-photo
