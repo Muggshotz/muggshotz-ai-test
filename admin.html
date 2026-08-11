@@ -118,10 +118,186 @@ input:focus{outline:none;border-color:#ff6a00}
 </div>
 
 <script>
+// UPDATED (Aug 2026, Alyx's request): togglePasswordVisibility() was
+// called by the eye icon but never actually defined anywhere -- the
+// icon did nothing when tapped. What looked like "the password flashes
+// each character then hides" was just Android's own default behavior
+// for password fields, unrelated to this button. This defines the real
+// toggle: holds the full password visible in plain text while active
+// (single user, own phone -- no need to hide it from himself), switches
+// back to masked on a second tap.
+function togglePasswordVisibility(){
+  const input=document.getElementById('pwInput');
+  const icon=document.getElementById('pwToggleIcon');
+  if(!input||!icon)return;
+  if(input.type==='password'){
+    input.type='text';
+    icon.textContent='🙈';
+  } else {
+    input.type='password';
+    icon.textContent='👁️';
+  }
+}
+
 // HARDENED (July 2026): no password or Supabase key lives in this file.
 // The password the person types below is only ever sent to the server
 // where /api/admin checks it against an environment variable that
 // never ships to the browser.
 //
-// MERGED (July 2026): this used to call two separate endpoints,
-//
+// Remembering a password in localStorage after it's been verified by the
+// server is a real convenience/security tradeoff -- anyone who later uses the
+// same device would also get in without typing a password. Fine for a
+// personal admin tool on your own device, worth knowing regardless.
+const REMEMBER_KEY = 'muggshotz_admin_pw';
+
+// Pings the server with a harmless "lookup" call carrying no
+// deviceId/email — the password gets checked first no matter what, so
+// a 403 means wrong password, and anything else (even a 400 asking for
+// a device ID) means the password was right.
+async function verifyPasswordWithServer(pw){
+  try{
+    const resp = await fetch('/api/admin', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'lookup', password: pw })
+    });
+    return resp.status !== 403;
+  }catch(err){
+    return false;
+  }
+}
+
+async function checkPw(){
+  const val = document.getElementById('pwInput').value;
+  if(!val){
+    document.getElementById('pwError').textContent = 'Enter a password.';
+    return;
+  }
+
+  const unlockBtn = document.getElementById('unlockBtn');
+  unlockBtn.disabled = true;
+  unlockBtn.textContent = 'Checking...';
+
+  const ok = await verifyPasswordWithServer(val);
+
+  unlockBtn.disabled = false;
+  unlockBtn.textContent = 'Unlock';
+
+  if(!ok){
+    document.getElementById('pwError').textContent = 'Wrong password.';
+    return;
+  }
+
+  enteredPassword = val;
+  const remember = document.getElementById('rememberDeviceCheckbox').checked;
+  if(remember){
+    try{ localStorage.setItem(REMEMBER_KEY, val); }catch(e){}
+  } else {
+    try{ localStorage.removeItem(REMEMBER_KEY); }catch(e){}
+  }
+  document.getElementById('lockScreen').style.display = 'none';
+}
+
+// On page load, if a password was previously remembered on this
+// device, re-verify it with the server (in case it's since been
+// changed in Vercel) and skip straight past the lock screen if it
+// still checks out.
+(async function tryAutoUnlock(){
+  let saved = null;
+  try{ saved = localStorage.getItem(REMEMBER_KEY); }catch(e){}
+  if(!saved) return;
+
+  const ok = await verifyPasswordWithServer(saved);
+  if(ok){
+    enteredPassword = saved;
+    document.getElementById('lockScreen').style.display = 'none';
+  } else {
+    try{ localStorage.removeItem(REMEMBER_KEY); }catch(e){}
+  }
+})();
+
+async function lookupBalance(){
+  const deviceId = document.getElementById('deviceId').value.trim();
+  const email    = document.getElementById('lookupEmail').value.trim();
+  if(!deviceId && !email){ showResult('Enter a device ID or email to look up.','error'); return; }
+
+  try{
+    const resp = await fetch('/api/admin', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'lookup', password: enteredPassword, deviceId: deviceId || undefined, email: email || undefined })
+    });
+    const data = await resp.json();
+    if (resp.status === 403) { relockWithError('Wrong password.'); return; }
+    if(!resp.ok) throw new Error(data.error || 'Lookup failed.');
+
+    const badge = document.getElementById('balanceBadge');
+    badge.textContent = `${data.tokenBalance} tokens`;
+    badge.style.display = 'inline-block';
+    if(!deviceId && data.deviceId) document.getElementById('deviceId').value = data.deviceId;
+    showResult(`Found: ${data.email || '(no email)'} — Balance: ${data.tokenBalance} tokens`,'success');
+  }catch(err){
+    showResult('Lookup failed: ' + err.message,'error');
+  }
+}
+
+async function adjustTokens(action){
+  const deviceId = document.getElementById('deviceId').value.trim();
+  const count    = parseInt(document.getElementById('tokenCount').value);
+  const reason   = document.getElementById('reason').value.trim();
+
+  if(!deviceId){ showResult('Device ID is required.','error'); return; }
+  if(!count || count < 1){ showResult('Enter a valid token count.','error'); return; }
+  if(!reason){ showResult('Reason is required.','error'); return; }
+
+  try{
+    const resp = await fetch('/api/admin', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action, password: enteredPassword, deviceId, count, reason })
+    });
+    const data = await resp.json();
+    if (resp.status === 403) { relockWithError('Wrong password.'); return; }
+    if(!resp.ok) throw new Error(data.error || 'Request failed.');
+
+    const verb = action === 'grant' ? 'Granted' : 'Deducted';
+    showResult(`${verb} ${count} token${count>1?'s':''} — New balance: ${data.newBalance}`,'success');
+
+    const badge = document.getElementById('balanceBadge');
+    badge.textContent = `${data.newBalance} tokens`;
+    badge.style.display = 'inline-block';
+
+    addLog(`${verb} ${count} to ${deviceId.slice(0,20)}... — "${reason}" — New balance: ${data.newBalance}`);
+    document.getElementById('tokenCount').value = '';
+    document.getElementById('reason').value = '';
+  }catch(err){
+    showResult('Error: ' + err.message,'error');
+  }
+}
+
+function relockWithError(msg){
+  enteredPassword = '';
+  try{ localStorage.removeItem(REMEMBER_KEY); }catch(e){}
+  document.getElementById('pwInput').value = '';
+  document.getElementById('pwError').textContent = msg;
+  document.getElementById('lockScreen').style.display = 'flex';
+}
+
+function showResult(msg, type){
+  const el = document.getElementById('result');
+  el.textContent = msg;
+  el.className = 'result ' + type;
+  el.style.display = 'block';
+}
+
+function addLog(text){
+  const list = document.getElementById('logList');
+  if(list.children[0].style.color === 'rgb(68, 68, 68)') list.innerHTML = '';
+  const item = document.createElement('div');
+  item.className = 'log-item';
+  item.innerHTML = `<span>${new Date().toLocaleTimeString()}</span> — ${text}`;
+  list.prepend(item);
+}
+</script>
+</body>
+</html>
