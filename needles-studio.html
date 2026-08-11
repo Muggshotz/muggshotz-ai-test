@@ -80,12 +80,13 @@
   right:9%;
   transform:translateY(-50%);
   padding:20px 16px;
-  background:linear-gradient(180deg,rgba(0,0,0,0) 0%,rgba(0,0,0,0.7) 16%,rgba(0,0,0,0.82) 50%,rgba(0,0,0,0.7) 84%,rgba(0,0,0,0) 100%);
+  background:transparent;
   color:#7888b4;
-  font-size:17px;
+  font-size:13px;
   font-weight:700;
   text-align:center;
-  line-height:1.55;
+  line-height:1.45;
+  text-shadow:0 1px 3px rgba(0,0,0,.9),0 0 10px rgba(0,0,0,.9),0 0 20px rgba(0,0,0,.7);
   z-index:5;
   display:none;
   pointer-events:none;
@@ -729,7 +730,7 @@
 </div>
 </div>
 
-<div class="card" id="ideaCard"><div class="card-title">💬 Tell Us Your Idea</div><div class="quote-text-reminder">⚠️ PLEASE REMEMBER TO SHOW ALL TEXT AND/OR CAPTIONS YOU WISH TO HAVE INCLUDED WITH YOUR IMAGE INSIDE QUOTES " "!</div><textarea id="ideaDesc" placeholder="Example: Put me on a tiny red tricycle wearing a firefighter helmet and full firefighter outfit, racing through a parade with smoke and sirens behind me."></textarea><div class="quick-btns" id="quickBtns"></div><div class="note" id="ideaDefaultNote">Paint us a clear picture — the more detail you give us, the better our chances of getting your exact idea right.</div><div class="note" id="ideaArtistNote" style="display:none">Tell the artist what you have in mind.</div><div class="note" id="ideaWindowSillNote" style="display:none">(Optional) Add a costume, outfit, hair, or companion — or just upload your photo and we'll take it from there.</div><div id="mugIdeaActionRow" style="display:none;gap:8px;margin-top:.75rem"><button class="download-btn" style="flex:1;margin-top:0" onclick="handleReturnToPhotos()">📸 Return to select additional photos</button><button class="generate-btn" style="flex:1" onclick="handleMugGuidedGenerate()">🎨 Generate</button></div>
+<div class="card" id="ideaCard"><div class="card-title">💬 Tell Us Your Idea</div><div class="quote-text-reminder">⚠️ PLEASE REMEMBER TO SHOW ALL TEXT AND/OR CAPTIONS YOU WISH TO HAVE INCLUDED WITH YOUR IMAGE INSIDE QUOTES " "!</div><textarea id="ideaDesc" placeholder="Example: Put me on a tiny red tricycle wearing a firefighter helmet, shouting &quot;Out of my way!&quot; as I race through a parade with smoke and sirens behind me, under a banner that reads &quot;World's Fastest Firefighter.&quot;"></textarea><div class="quick-btns" id="quickBtns"></div><div class="note" id="ideaDefaultNote">Paint us a clear picture — the more detail you give us, the better our chances of getting your exact idea right.</div><div class="note" id="ideaArtistNote" style="display:none">Tell the artist what you have in mind.</div><div class="note" id="ideaWindowSillNote" style="display:none">(Optional) Add a costume, outfit, hair, or companion — or just upload your photo and we'll take it from there.</div><div id="mugIdeaActionRow" style="display:none;gap:8px;margin-top:.75rem"><button class="download-btn" style="flex:1;margin-top:0" onclick="handleReturnToPhotos()">📸 Return to select additional photos</button><button class="generate-btn" style="flex:1" onclick="handleMugGuidedGenerate()">🎨 Generate</button></div>
 <div id="ideaGuidancePrompt" class="guidance-prompt" role="status" style="margin-top:8px;margin-bottom:0">Scroll to the next section when ready to select your desired product.</div>
 </div>
 </div>
@@ -1999,6 +2000,18 @@ async function pickWindowSill(name){
     selectedFrame=null;
     renderFrameGrid();
     renderFrameColorPanel();
+    // Same exclusion in reverse -- if Wraparound is currently active,
+    // picking a Window Sill isn't a valid combination, so fall back to
+    // Three Panels instead of leaving an invalid state.
+    if(mugPrintMode==='wraparound'){
+      mugPrintMode='three-panel';
+      const threeBtn=document.getElementById('printModeThreeBtn');
+      const wrapBtn=document.getElementById('printModeWrapBtn');
+      if(threeBtn)threeBtn.classList.add('selected');
+      if(wrapBtn)wrapBtn.classList.remove('selected');
+      refreshPanoramaFadeCardVisibility();
+      showGuidanceAlert('Window Sill Portrait can\'t be combined with Wraparound (it\'s a fixed scene, and stretching it all the way around would distort it) — switched your print format back to Up to Three Panels.');
+    }
   }
   renderWindowSillGrid();
   syncEdgeFadeWithFrameSelection();
@@ -2914,6 +2927,16 @@ function pickMugPrintMode(mode){
   mugPrintMode=mode;
   document.getElementById('printModeThreeBtn').classList.toggle('selected',mode==='three-panel');
   document.getElementById('printModeWrapBtn').classList.toggle('selected',mode==='wraparound');
+  // Window Sill is a fixed illustrated scene -- stretching it all the way
+  // around a wraparound product distorts it, same problem regardless of
+  // which product it is. The two can never coexist, so picking
+  // Wraparound clears any active Window Sill choice.
+  if(mode==='wraparound' && windowSillChoice){
+    windowSillChoice=null;
+    renderWindowSillGrid();
+    renderWindowSillPreviewCard();
+    showGuidanceAlert('Window Sill Portrait can\'t be combined with Wraparound (it\'s a fixed scene, and stretching it all the way around would distort it) — your Window Sill selection has been cleared.');
+  }
   refreshPanoramaFadeCardVisibility();
   suspendGuidedScrollsForGeneration();
   if(product==='water bottle'){
