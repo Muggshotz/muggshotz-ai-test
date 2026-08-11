@@ -859,7 +859,7 @@ body.generation-active #creditsModalOverlay .card{opacity:1!important;filter:non
 <div id="positionHolderRow" style="display:flex;align-items:flex-start;gap:6px;justify-content:center;flex-wrap:nowrap"></div>
 <div id="wraparoundStandbyPrompt" class="note mug-select-flash" style="display:none">⏳ Please Stand By While Panoramic Panels Are Being Completed</div>
 
-<div class="card" id="accessorizeCard" style="display:none">
+<div id="accessorizeCard" style="display:none;margin-top:1.1rem;padding-top:1.1rem;border-top:1px dashed #333">
 <div class="card-title">🖼️ Add a Frame?</div>
 <div class="note" style="margin-top:0;margin-bottom:.9rem;text-align:center;font-style:italic;color:#7ab8ff;line-height:1.5">It's not too late to change your mind,<br/>If you think you'd like a new design,<br/>just go and try another kind,<br/>and let Needles fix it up just fine.</div>
 <div class="note-prominent" style="margin-top:0;margin-bottom:.75rem">Three ways to finish this: pick a Frame above, pick a Window Sill above, or use just the photo as-is below. Pick a Frame or Window Sill and you'll see it applied right here instantly — nothing is saved until you press Apply. Edge style (sharp vs. soft/blended) only matters if you go with just the photo — a Frame or Window Sill always uses sharp edges automatically.</div>
@@ -6202,12 +6202,13 @@ function updatePlacementSummary(){
 
   const showMugOptions = false; // Size/Style/Color are locked in pre-generation now (step-lock-overlay flow) -- re-showing this panel post-gen is redundant
   const showTravelOptions = (assignedCount>0 && product==='water bottle');
+  const showMugPreview = (assignedCount>0 && product==='mug');
   const mugOptionsWrap=document.getElementById('genMugOptionsWrap');
   const travelOptionsWrap=document.getElementById('genTravelOptionsWrap');
   const previewSection=document.getElementById('genPreviewSection');
   if(mugOptionsWrap) mugOptionsWrap.style.display = showMugOptions ? 'block' : 'none';
   if(travelOptionsWrap) travelOptionsWrap.style.display = showTravelOptions ? 'block' : 'none';
-  if(previewSection) previewSection.style.display = (showMugOptions || showTravelOptions) ? 'block' : 'none';
+  if(previewSection) previewSection.style.display = (showMugPreview || showTravelOptions) ? 'block' : 'none';
   if(showMugOptions){
     renderGenMugStyleGrid();
     renderGenMugColorGrid();
@@ -6449,7 +6450,7 @@ function maybeAutoFetchMockup(){
   }
 
   if (product === 'mug') {
-    if (!mugStyleClicked || !mugSizeClicked) {
+    if (!mugSizeChosenPreGen || !mugStyleChosenPreGen) {
       showAutoMockupNote('You must select size, style, and color (where applicable) in order to proceed.');
       return;
     }
