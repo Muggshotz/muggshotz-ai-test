@@ -390,6 +390,10 @@
 }
 #creditsBtn:active{transform:translateY(1px)}
 
+.step-lock-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:900;align-items:center;justify-content:center;padding:1.5rem;overflow-y:auto}
+.step-lock-back{position:absolute;top:8px;left:8px;background:#1a1a1a;border:1px solid #333;border-radius:8px;color:#ccc;font-size:12px;font-weight:700;padding:.4rem .7rem;cursor:pointer}
+.step-lock-back:hover{color:#fff;border-color:#555}
+body.step-locked{overflow:hidden}
 #creditsModalOverlay{
   background:rgba(2,5,9,.9)!important;
   backdrop-filter:blur(4px);
@@ -736,7 +740,9 @@
 </div>
 <div class="card" id="productCard"><div class="card-title">🎁 Product</div><div class="guidance-prompt soft visible" id="productGuidancePrompt" role="status" style="margin-top:0;margin-bottom:.9rem">Please select your desired product below when ready.</div><div class="grid3"><div class="btn-select" data-val="mug" onclick="pick(this,'product')"><span class="icon">☕</span>Mug</div><div class="btn-select" data-val="greeting card" onclick="pick(this,'product')"><span class="icon">💌</span>Card</div><div class="btn-select" data-val="water bottle" onclick="pick(this,'product')"><span class="icon">🍶</span>Travel Cups</div><div class="btn-select" data-val="post-it note" onclick="pick(this,'product')"><span class="icon">📝</span>Post-it</div><div class="btn-select" data-val="phone case" onclick="pick(this,'product')"><span class="icon">📱</span>Phone case</div><div class="btn-select" data-val="tote bag" onclick="pick(this,'product')"><span class="icon">👜</span>Tote bag</div><div class="btn-select" data-val="suitcase" onclick="pick(this,'product')"><span class="icon">🧳</span>Suitcase</div><div class="btn-select" data-val="puzzle" onclick="pick(this,'product')"><span class="icon">🧩</span>Puzzle</div><div class="btn-select" data-val="photo poster" onclick="pick(this,'product')"><span class="icon">🖼️</span>Photo/Poster</div></div></div>
 
-<div class="card" id="mugSizeCard" style="display:none">
+<div id="mugSizeLockOverlay" class="step-lock-overlay" style="display:none">
+<div class="card" id="mugSizeCard" style="max-width:420px;width:100%;margin:auto;position:relative">
+<button type="button" class="step-lock-back" onclick="mugSizeLockBack()">← Back</button>
 <div class="card-title">☕ Coffee Mug Size</div>
 <div class="note-prominent" style="margin-top:0;margin-bottom:.9rem">Pick your size first — this determines the price for every style below.</div>
 <div class="grid2">
@@ -744,8 +750,11 @@
 <div class="btn-select" id="preGenSize15Btn" onclick="pickPreGenMugSize('15oz')">15oz</div>
 </div>
 </div>
+</div>
 
-<div class="card" id="mugStyleCard" style="display:none">
+<div id="mugStyleLockOverlay" class="step-lock-overlay" style="display:none">
+<div class="card" id="mugStyleCard" style="max-width:420px;width:100%;margin:auto;position:relative;max-height:90vh;overflow-y:auto">
+<button type="button" class="step-lock-back" onclick="mugStyleLockBack()">← Back</button>
 <div class="card-title">🎨 Coffee Mug Style &amp; Color</div>
 <div class="note-prominent" id="mugStyleCardNote" style="margin-top:0;margin-bottom:.9rem">Pick a size above to see pricing for each style.</div>
 <div class="grid3" id="preGenMugStyleGrid"></div>
@@ -754,6 +763,7 @@
 <div class="color-grid" id="preGenMugColorGrid"></div>
 <img id="preGenMugMockupImg" style="display:none;width:100%;max-width:280px;margin:.9rem auto 0;border-radius:10px;border:1px solid #003c8c;background:#fff"/>
 <button type="button" id="preGenMugColorFinishBtn" class="generate-btn" style="display:none;margin-top:.9rem;max-width:280px" onclick="finishPreGenMugColorPick()">✅ Satisfied — Continue</button>
+</div>
 </div>
 </div>
 
@@ -3265,17 +3275,46 @@ const MUG_MOCKUP_PHOTOS = {
 };
 
 function refreshMugSizeCardVisibility(){
-  const card=document.getElementById('mugSizeCard');
-  if(!card)return;
-  card.style.display=(product==='mug')?'block':'none';
+  const overlay=document.getElementById('mugSizeLockOverlay');
+  if(!overlay)return;
+  // Locked open only while a mug is chosen and size isn't picked yet --
+  // once size is picked, refreshMugStyleCardVisibility takes over and
+  // this overlay closes on its own via pickPreGenMugSize.
+  const show=(product==='mug' && !mugSizeChosenPreGen);
+  overlay.style.display=show?'flex':'none';
+  document.body.classList.toggle('step-locked',show || (product==='mug' && mugSizeChosenPreGen && !mugColorFinishedPreGen));
 }
 
 function refreshMugStyleCardVisibility(){
-  const card=document.getElementById('mugStyleCard');
-  if(!card)return;
-  const show=(product==='mug' && mugSizeChosenPreGen);
-  card.style.display=show?'block':'none';
+  const overlay=document.getElementById('mugStyleLockOverlay');
+  if(!overlay)return;
+  const show=(product==='mug' && mugSizeChosenPreGen && !mugColorFinishedPreGen);
+  overlay.style.display=show?'flex':'none';
   if(show)renderPreGenMugStyleGrid();
+  document.body.classList.toggle('step-locked',show);
+}
+
+// Size step's back arrow -- nothing to go back TO within the mug flow
+// itself (Size is the first locked step), so this backs all the way out
+// to Product selection, same as if the customer had never picked Mug.
+function mugSizeLockBack(){
+  document.querySelectorAll('#productCard .btn-select').forEach(b=>b.classList.remove('selected'));
+  product=null;
+  productExplicitlyChosen=false;
+  const productGuide=document.getElementById('productGuidancePrompt');
+  if(productGuide)productGuide.classList.add('visible');
+  refreshMugSizeCardVisibility();
+  refreshMugStyleCardVisibility();
+  smoothScrollToTarget('productCard','center');
+}
+
+// Style/Color step's back arrow -- returns to Size, keeping the
+// previously chosen size highlighted so re-confirming it (or picking the
+// other one) both work naturally without losing their place.
+function mugStyleLockBack(){
+  mugSizeChosenPreGen=false;
+  refreshMugStyleCardVisibility();
+  refreshMugSizeCardVisibility();
 }
 
 function pickPreGenMugSize(size){
@@ -3285,9 +3324,9 @@ function pickPreGenMugSize(size){
   document.getElementById('preGenSize15Btn').classList.toggle('selected',size==='15oz');
   mugColorFinishedPreGen=false;
   updatePreGenMugMockupImg();
+  refreshMugSizeCardVisibility();
   refreshMugStyleCardVisibility();
   refreshMugPrintModeVisibility();
-  smoothScrollToTarget('mugStyleCard','center');
 }
 
 // Representative photo per style, always shown in Cambridge Blue since
@@ -3346,7 +3385,6 @@ function pickPreGenMugStyle(styleName){
   renderPreGenMugColorGrid();
   updatePreGenMugMockupImg();
   refreshMugPrintModeVisibility();
-  smoothScrollToTarget('preGenMugColorWrap','center');
 }
 
 function renderPreGenMugColorGrid(){
@@ -3387,6 +3425,7 @@ function pickPreGenMugColor(el,colorName){
 // colors and watch the mockup update before committing to move on.
 function finishPreGenMugColorPick(){
   mugColorFinishedPreGen=true;
+  refreshMugStyleCardVisibility();
   refreshMugPrintModeVisibility();
   suspendGuidedScrollsForGeneration();
   // Size, Style, and Color are now all locked in -- this is the actual
@@ -5395,6 +5434,12 @@ async function generate(){
   if(product==='phone case' && !selectedPhoneCaseModel){
     setStatus('Please select your phone model above first — we need it before generating so your art fits your exact case.',true);
     document.getElementById('phoneCaseModelCard').scrollIntoView({behavior:'smooth',block:'center'});
+    return;
+  }
+  if(product==='mug' && (!mugSizeChosenPreGen || !mugColorFinishedPreGen)){
+    setStatus('Please finish picking your mug size, style, and color above first.',true);
+    refreshMugSizeCardVisibility();
+    refreshMugStyleCardVisibility();
     return;
   }
   if(product==='water bottle' && !preGenTravelVariant){
