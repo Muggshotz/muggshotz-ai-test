@@ -3392,7 +3392,7 @@ function renderPreGenMugStyleGrid(){
   const grid=document.getElementById('preGenMugStyleGrid');
   const note=document.getElementById('mugStyleCardNote');
   if(!grid)return;
-  if(note)note.textContent='Pick a style — real price for '+selectedGenSize+' shown under each.';
+  if(note){note.textContent='Pick a style — real price for '+selectedGenSize+' shown under each.';note.style.display='block';}
   grid.innerHTML='';
   Object.keys(PRE_GEN_MUG_STYLE_PRICES).forEach(styleName=>{
     const price=PRE_GEN_MUG_STYLE_PRICES[styleName][selectedGenSize];
@@ -3432,6 +3432,8 @@ function pickPreGenMugStyle(styleName){
   renderPreGenMugColorGrid();
   updatePreGenMugMockupImg();
   refreshMugPrintModeVisibility();
+  const styleNote=document.getElementById('mugStyleCardNote');
+  if(styleNote)styleNote.style.display='none';
 }
 
 function renderPreGenMugColorGrid(){
