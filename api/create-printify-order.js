@@ -218,31 +218,30 @@ export async function buildFullBleedImage(imageSource, canvasWidth, canvasHeight
 // forward; printMode === "fullBleed" (the Wraparound scene-continuation
 // customers actually use today) calls this one instead.
 export async function buildSeamlessWrapImage(imageSource, canvasWidth, canvasHeight) {
-  const WHITE = { r: 255, g: 255, b: 255 };
-  // UPDATED (Aug 2026, Alyx's request): a real single-angle photo of a
-  // wraparound mug can only ever show roughly 85-90% of its true
-  // circumference -- the outer few percent on each side always curves
-  // out of camera view, no matter how the print itself is composed.
-  // Since the frame border was previously drawn flush to the true
-  // left/right edges of the full print, that border fell almost
-  // entirely into the always-invisible wrap zone in real photos. Inset
-  // the whole image horizontally so its content -- frame border
-  // included -- sits further inward, safely within the zone a
-  // front-facing photo can actually see. The margin lands on the far
-  // left/right, which wraps out of camera view anyway either way, so
-  // nothing meaningful is lost there. Starting value chosen as a
-  // reasonable estimate -- may need a small adjustment after seeing a
-  // real printed/photographed result.
-  const SAFE_ZONE_FACTOR = 0.86;
-  const insetWidth = Math.round(canvasWidth * SAFE_ZONE_FACTOR);
-  const resized = await sharp(await resolveImageBuffer(imageSource))
-    .resize(insetWidth, canvasHeight, { fit: "contain", background: WHITE })
-    .toBuffer();
-  const offsetX = Math.round((canvasWidth - insetWidth) / 2);
-  return await sharp({
-    create: { width: canvasWidth, height: canvasHeight, channels: 3, background: WHITE }
-  })
-    .composite([{ input: resized, left: offsetX, top: 0 }])
+  // UPDATED (Aug 2026, Alyx's request/correction): a real single-angle
+  // photo of a wraparound mug can only ever show roughly 85-90% of its
+  // true circumference -- the outer few percent on each side always
+  // curves out of camera view, no matter how the print itself is
+  // composed. An earlier attempt shrank the whole framed image and
+  // padded the edges white -- but that scales frame and photo down
+  // together, so the frame's proportion of the visible area never
+  // actually changes (confirmed by Alyx as no visible difference).
+  // This instead crops the outer edges off the already-framed image
+  // and stretches what remains back out to fill the full true width --
+  // removes the always-invisible sliver entirely, and whatever frame
+  // border material was just inside it now reaches the true edge with
+  // no white gap and no bare unframed edge. 10% total (5% each side)
+  // chosen as a reasonable starting estimate -- may need a small
+  // adjustment up or down after seeing a real printed/photographed
+  // result.
+  const CROP_FRACTION = 0.10;
+  const buffer = await resolveImageBuffer(imageSource);
+  const meta = await sharp(buffer).metadata();
+  const cropWidth = Math.round(meta.width * (1 - CROP_FRACTION));
+  const cropLeft = Math.round((meta.width - cropWidth) / 2);
+  return await sharp(buffer)
+    .extract({ left: cropLeft, top: 0, width: cropWidth, height: meta.height })
+    .resize(canvasWidth, canvasHeight, { fit: "fill" })
     .png()
     .toBuffer();
 }
