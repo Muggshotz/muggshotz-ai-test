@@ -870,22 +870,25 @@ body.product-focus .card:not(#productCard){opacity:.35;filter:brightness(.6) sat
 <div style="text-align:center;font-size:20px;font-weight:800;color:#2196ff;animation:mugSelectFlash 1s ease-in-out infinite">Please wait while your mock-up is being generated...</div>
 </div>
 
-<div id="frameOfferOverlay" class="step-lock-overlay" style="display:none">
-<div class="card" id="frameOfferCard" style="max-width:520px;width:100%;margin:auto;position:relative;max-height:92vh;overflow-y:auto;text-align:center">
-<div class="card-title">🖼️ Add a Frame or Window Sill?</div>
-<div class="note" style="margin-top:0;margin-bottom:1rem">A nice border can really help your picture pop — totally optional.</div>
-<div class="bi-row" style="align-items:stretch">
-<div style="flex:1;cursor:pointer" onclick="chooseFrameOffer('frame')">
+<div id="revealChoiceOverlay" class="step-lock-overlay" style="display:none;background:#000;flex-direction:column;overflow-y:auto;padding:20px 16px">
+<button type="button" onclick="revealChoiceGoBack()" aria-label="Back" style="position:absolute;top:12px;left:12px;background:#1a1a1a;border:1px solid #333;border-radius:50%;width:40px;height:40px;color:#ccc;font-size:20px;cursor:pointer;z-index:2">‹</button>
+<img id="revealChoiceArtworkImg" style="width:100%;max-width:520px;margin:36px auto 0;border-radius:10px;opacity:0;transition:opacity 1.2s ease-in;display:block"/>
+<div id="revealChoiceThreePanelRow" style="display:none;gap:8px;width:100%;max-width:520px;margin:36px auto 0;opacity:0;transition:opacity 1.2s ease-in">
+<img id="revealChoiceThreePanelLeft" style="flex:1;min-width:0;border-radius:8px;object-fit:contain;max-height:180px;background:#0d0d0d"/>
+<img id="revealChoiceThreePanelCenter" style="flex:1;min-width:0;border-radius:8px;object-fit:contain;max-height:180px;background:#0d0d0d"/>
+<img id="revealChoiceThreePanelRight" style="flex:1;min-width:0;border-radius:8px;object-fit:contain;max-height:180px;background:#0d0d0d"/>
+</div>
+<div style="text-align:center;color:#cfe6ff;font-weight:700;font-size:16px;margin:28px 0 14px">Would you like to select</div>
+<div style="max-width:420px;width:100%;margin:0 auto;cursor:pointer;position:relative" onclick="chooseRevealPath('frame')">
 <img src="frame-crystal-champagne.png" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:10px;border:1px solid #003c8c;background:#0d0d0d"/>
-<div style="margin-top:.4rem;font-weight:700;color:#7ab8ff">Frame</div>
+<div style="position:absolute;bottom:10px;left:0;right:0;text-align:center;background:rgba(0,0,0,.72);color:#fff;font-weight:800;padding:.5rem;border-radius:0 0 10px 10px">Select to See Frames</div>
 </div>
-<div style="flex:1;cursor:pointer" onclick="chooseFrameOffer('sill')">
+<div style="text-align:center;color:#888;font-weight:700;margin:14px 0">or</div>
+<div style="max-width:420px;width:100%;margin:0 auto;cursor:pointer;position:relative" onclick="chooseRevealPath('sill')">
 <img src="frame-window-sill-b.png" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:10px;border:1px solid #003c8c;background:#0d0d0d"/>
-<div style="margin-top:.4rem;font-weight:700;color:#7ab8ff">Window Sill</div>
+<div style="position:absolute;bottom:10px;left:0;right:0;text-align:center;background:rgba(0,0,0,.72);color:#fff;font-weight:800;padding:.5rem;border-radius:0 0 10px 10px">Select to See Window Sills</div>
 </div>
-</div>
-<button type="button" class="download-btn" style="margin-top:1.1rem" onclick="chooseFrameOffer('none')">No Thank You</button>
-</div>
+<button type="button" class="download-btn" style="margin:20px auto 24px;max-width:420px;width:100%;display:block" onclick="chooseRevealPath('none')">No Thank You — Just the Picture</button>
 </div>
 
 <div id="revealOverlay" class="step-lock-overlay" style="display:none">
@@ -911,6 +914,22 @@ body.product-focus .card:not(#productCard){opacity:.35;filter:brightness(.6) sat
 </div>
 </div>
 
+<div id="frameFadeOverlay" class="step-lock-overlay" style="display:none">
+<div class="card" id="frameFadeCard" style="max-width:520px;width:100%;margin:auto;position:relative;max-height:92vh;overflow-y:auto;text-align:center">
+<div class="card-title">🌫️ Fade the Edges?</div>
+<img id="frameFadeArtworkImg" style="width:100%;border-radius:10px;border:1px solid #003c8c;margin:.9rem 0;background:#0d0d0d"/>
+<div id="frameFadeThreePanelRow" style="display:none;gap:8px;margin:.9rem 0">
+<img id="frameFadeThreePanelLeft" style="flex:1;min-width:0;border-radius:8px;border:1px solid #003c8c;object-fit:contain;max-height:200px;background:#0d0d0d"/>
+<img id="frameFadeThreePanelCenter" style="flex:1;min-width:0;border-radius:8px;border:1px solid #003c8c;object-fit:contain;max-height:200px;background:#0d0d0d"/>
+<img id="frameFadeThreePanelRight" style="flex:1;min-width:0;border-radius:8px;border:1px solid #003c8c;object-fit:contain;max-height:200px;background:#0d0d0d"/>
+</div>
+<div class="note" style="margin-top:0;margin-bottom:.5rem">Drag all the way left for sharp edges, or right for however much fade you'd like.</div>
+<input type="range" id="frameFadeAmountSlider" min="0" max="80" step="1" value="20" oninput="updateFrameFadePreview()" style="width:100%"/>
+<div class="note" style="margin-top:.25rem;margin-bottom:0;text-align:center"><span id="frameFadeAmountVal">20%</span></div>
+<button type="button" class="generate-btn" style="margin-top:.9rem" onclick="confirmFrameFadeAndContinue()">✅ Continue</button>
+</div>
+</div>
+
   <div class="card" id="positionHolderCard" style="display:none">
 <div class="card-title">🖼️ Design Your Product</div>
 <div class="note-prominent" style="margin-top:0;margin-bottom:.9rem">Happy with just this one picture? We'll gladly take you to checkout. Want to try a few more designs first? If you're out of free tokens, a $5 Preview Reservation unlocks more tokens to keep creating — that $5 isn't an extra charge, it comes straight off your product's price at checkout. Whatever you end up with, your exact total (including any charge for extra printed designs, or an image on both sides) is always shown before you pay.</div>
@@ -920,7 +939,7 @@ body.product-focus .card:not(#productCard){opacity:.35;filter:brightness(.6) sat
 <div id="accessorizeCard" style="display:none;margin-top:1.1rem;padding-top:1.1rem;border-top:1px dashed #333">
 <div class="card-title">🖼️ Add a Frame?</div>
 <div class="note" style="margin-top:0;margin-bottom:.9rem;text-align:center;font-style:italic;color:#7ab8ff;line-height:1.5">It's not too late to change your mind,<br/>If you think you'd like a new design,<br/>just go and try another kind,<br/>and let Needles fix it up just fine.</div>
-<div class="note-prominent" style="margin-top:0;margin-bottom:.75rem">Three ways to finish this: pick a Frame above, pick a Window Sill above, or use just the photo as-is below. Pick a Frame or Window Sill and you'll see it applied right here instantly — nothing is saved until you press Apply. Edge style (sharp vs. soft/blended) only matters if you go with just the photo — a Frame or Window Sill always uses sharp edges automatically.</div>
+<div class="note-prominent" style="margin-top:0;margin-bottom:.75rem">Pick a Frame or Window Sill above and you'll see it applied right here instantly, saved automatically as soon as you pick one.</div>
 <div id="accessorizePreviewStrip" style="display:flex;gap:8px"></div>
 <div id="frameFitSlidersWrap" style="display:none;margin-top:.9rem">
 <button type="button" class="download-btn" id="frameFitSlidersToggleBtn" style="margin-top:0" onclick="toggleFrameFitSliders()">🎚️ Adjust Frame Fit</button>
@@ -937,15 +956,7 @@ body.product-focus .card:not(#productCard){opacity:.35;filter:brightness(.6) sat
 <button type="button" class="download-btn" style="margin-top:.6rem" onclick="resetFrameFitSliders()">↺ Reset to Default Fit</button>
 </div>
 </div>
-<div class="bi-row">
-<button class="generate-btn cta-flash" id="accessorizeApplyBtn" style="flex:1;width:auto;padding:.8rem .4rem;font-size:13px" onclick="applyAccessorizeFrame()">✅ Apply Frame</button>
-<button class="download-btn" style="flex:1;margin-top:0;padding:.8rem .4rem;font-size:13px" onclick="skipAccessorizeFrame()">⏭️ Use Just the Photo — No Frame</button>
-</div>
-<button class="download-btn" id="accessorizeCancelBtn" style="display:none;margin-top:.6rem;border-color:#5a2a2a;color:#ff8a7a" onclick="cancelAccessorizeToOffer()">↩️ Cancel — Go Back</button>
-<div style="margin-top:.9rem;padding-top:.9rem;border-top:1px dashed #333;display:flex;align-items:center;gap:10px">
-<input type="checkbox" id="accessorizeEdgeToggle" onchange="toggleAccessorizeEdgeStyle()" style="width:20px;height:20px;cursor:pointer;flex-shrink:0"/>
-<label style="margin:0;text-transform:none;font-size:13px;color:#ccc;cursor:pointer" onclick="document.getElementById('accessorizeEdgeToggle').click()">Only matters if you pick "Use Just the Photo" — check this for hard, sharp edges instead of the default soft fade.</label>
-</div>
+<button class="download-btn" id="accessorizeCancelBtn" style="display:none;margin-top:.9rem;border-color:#5a2a2a;color:#ff8a7a" onclick="cancelAccessorizeToOffer()">↩️ Cancel — Go Back</button>
 </div>
 
 <div id="genMugOptionsWrap" style="display:none;margin-top:1.1rem">
@@ -2094,6 +2105,7 @@ async function pickFrame(name){
   await renderWindowSillPreviewCard();
   if(pendingWraparoundRaw||pending40ozRaw){
     updateAccessorizePreview();
+    scheduleRevealAutoApply();
   } else if(selectedFrame){
     // BUG FIX: the old first-time-visitor "guided tour" timer
     // (schedulePhotoGuideAdvance, started when a photo is uploaded)
@@ -2187,7 +2199,7 @@ async function pickWindowSill(name){
     // Same exclusion in reverse -- if Wraparound is currently active,
     // picking a Window Sill isn't a valid combination, so fall back to
     // Three Panels instead of leaving an invalid state.
-    if(mugPrintMode==='wraparound'){
+    if(mugPrintMode==='wraparound' && !revealFlowActive){
       mugPrintMode='three-panel';
       const threeBtn=document.getElementById('printModeThreeBtn');
       const wrapBtn=document.getElementById('printModeWrapBtn');
@@ -2204,6 +2216,7 @@ async function pickWindowSill(name){
   await renderWindowSillPreviewCard();
   if(pendingWraparoundRaw||pending40ozRaw){
     updateAccessorizePreview();
+    scheduleRevealAutoApply();
   } else if(windowSillChoice){
     // Standing rule: whenever a click starts a next step, take the
     // customer there directly. The Preview & Fit card is now the real
@@ -2535,7 +2548,7 @@ function renderFrameColorPanel(){
     FRAME_COLOR_SWATCHES.forEach(c=>{
       const b=document.createElement('div');
       b.className='color-btn'+(frameColors[key]===c.hex?' selected':'');
-      b.onclick=()=>{ frameColors[key]=c.hex; renderFrameColorPanel(); drawCaption(); updateWindowSillLivePreview(); if(pendingWraparoundRaw||pending40ozRaw)updateAccessorizePreview(); };
+      b.onclick=()=>{ frameColors[key]=c.hex; renderFrameColorPanel(); drawCaption(); updateWindowSillLivePreview(); if(pendingWraparoundRaw||pending40ozRaw){updateAccessorizePreview();scheduleRevealAutoApply();} };
       const ball=document.createElement('div');
       ball.className='ball';
       ball.style.background=c.hex;
@@ -4929,10 +4942,10 @@ async function approveDesign(allThree){
 }
 
 async function enterRevealStage(){
-  const overlay=document.getElementById('revealOverlay');
-  const img=document.getElementById('revealArtworkImg');
-  const threePanelRow=document.getElementById('revealThreePanelRow');
-  if(!overlay||!img)return;
+  const choiceOverlay=document.getElementById('revealChoiceOverlay');
+  const img=document.getElementById('revealChoiceArtworkImg');
+  const threePanelRow=document.getElementById('revealChoiceThreePanelRow');
+  if(!choiceOverlay||!img)return;
 
   const leftDesign=findDesignById(placements.left);
   const centerDesign=findDesignById(placements.front);
@@ -4940,18 +4953,20 @@ async function enterRevealStage(){
   if(!leftDesign||!centerDesign||!rightDesign)return;
 
   document.body.classList.add('step-locked');
-  overlay.style.display='flex';
+  choiceOverlay.style.display='flex';
   img.src='';
+  img.style.opacity='0';
 
   revealFlowThreePanel=(mugPrintMode==='three-panel');
 
   if(revealFlowThreePanel){
     img.style.display='none';
-    if(threePanelRow)threePanelRow.style.display='flex';
+    if(threePanelRow){threePanelRow.style.display='flex';threePanelRow.style.opacity='0';}
     revealOriginalArtworkUrls=[leftDesign.url,centerDesign.url,rightDesign.url];
-    document.getElementById('revealThreePanelLeft').src=leftDesign.url;
-    document.getElementById('revealThreePanelCenter').src=centerDesign.url;
-    document.getElementById('revealThreePanelRight').src=rightDesign.url;
+    document.getElementById('revealChoiceThreePanelLeft').src=leftDesign.url;
+    document.getElementById('revealChoiceThreePanelCenter').src=centerDesign.url;
+    document.getElementById('revealChoiceThreePanelRight').src=rightDesign.url;
+    requestAnimationFrame(()=>requestAnimationFrame(()=>{threePanelRow.style.opacity='1';}));
   } else {
     if(threePanelRow)threePanelRow.style.display='none';
     img.style.display='block';
@@ -4959,40 +4974,102 @@ async function enterRevealStage(){
       const stitched=await stitchThreePanelsRaw(centerDesign.url,leftDesign.url,rightDesign.url);
       revealOriginalArtworkUrls=[stitched];
       img.src=stitched;
+      requestAnimationFrame(()=>requestAnimationFrame(()=>{img.style.opacity='1';}));
     }catch(err){
       console.error('Could not stitch the panorama for Reveal:',err);
-      overlay.style.display='none';
+      choiceOverlay.style.display='none';
       document.body.classList.remove('step-locked');
       document.getElementById('positionHolderCard').scrollIntoView({behavior:'smooth',block:'start'});
       return;
     }
   }
-
-  // Reset back to the initial Hard/Fade choice each time this screen is
-  // freshly entered, in case a previous design left the slider panel open.
-  const buttonsRow=document.getElementById('revealEdgeButtonsRow');
-  const fadePanel=document.getElementById('revealFadeSliderPanel');
-  if(buttonsRow)buttonsRow.style.display='flex';
-  if(fadePanel)fadePanel.style.display='none';
 }
 
 let revealOriginalArtworkUrls=[];
 let revealFadeAmountPct=30;
 
-function finishRevealAndOpenFrameOffer(){
-  const overlay=document.getElementById('revealOverlay');
-  if(overlay)overlay.style.display='none';
-  const offerOverlay=document.getElementById('frameOfferOverlay');
-  if(offerOverlay)offerOverlay.style.display='flex';
-  // body.step-locked stays on -- the offer overlay is still a locked
-  // full-screen step, no page content should be interactable behind it.
+// Back arrow on the black choice screen -- nothing meaningful to
+// literally "go back" to at this exact point (this is the first screen
+// of the whole post-generation segment), so this returns to the
+// approved-design view they just came from.
+function revealChoiceGoBack(){
+  const choiceOverlay=document.getElementById('revealChoiceOverlay');
+  if(choiceOverlay)choiceOverlay.style.display='none';
+  document.body.classList.remove('step-locked');
+  document.getElementById('positionHolderCard').scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+// The three-way branch from the black choice screen.
+function chooseRevealPath(choice){
+  const choiceOverlay=document.getElementById('revealChoiceOverlay');
+  if(choiceOverlay)choiceOverlay.style.display='none';
+
+  if(choice==='sill'){
+    // Hard edges apply automatically -- no fade offer at all for
+    // Window Sill, straight into the catalog.
+    hardEdgesEnabled=true;
+    const mainToggle=document.getElementById('panoramaFadeToggle');
+    if(mainToggle)mainToggle.checked=true;
+    openAccessorizeForRevealFlow();
+    return;
+  }
+
+  if(choice==='frame'){
+    openFrameFadeOverlay();
+    return;
+  }
+
+  // 'none' -- just the picture, no frame/sill. Show the already-built
+  // Hard/Fade choice screen for the plain unframed artwork.
+  const revealOverlay=document.getElementById('revealOverlay');
+  const revealImg=document.getElementById('revealArtworkImg');
+  const revealThreeRow=document.getElementById('revealThreePanelRow');
+  if(revealOverlay){
+    document.body.classList.add('step-locked');
+    revealOverlay.style.display='flex';
+    if(revealFlowThreePanel){
+      if(revealImg)revealImg.style.display='none';
+      if(revealThreeRow){
+        revealThreeRow.style.display='flex';
+        document.getElementById('revealThreePanelLeft').src=revealOriginalArtworkUrls[0];
+        document.getElementById('revealThreePanelCenter').src=revealOriginalArtworkUrls[1];
+        document.getElementById('revealThreePanelRight').src=revealOriginalArtworkUrls[2];
+      }
+    } else {
+      if(revealThreeRow)revealThreeRow.style.display='none';
+      if(revealImg){revealImg.style.display='block';revealImg.src=revealOriginalArtworkUrls[0];}
+    }
+    const buttonsRow=document.getElementById('revealEdgeButtonsRow');
+    const fadePanel=document.getElementById('revealFadeSliderPanel');
+    if(buttonsRow)buttonsRow.style.display='flex';
+    if(fadePanel)fadePanel.style.display='none';
+  }
+}
+
+// Sets up the shared reveal-flow state (used by both the Window Sill
+// and Frame paths) and opens the existing accessorizeCard screen, which
+// already shows both catalogs and the live preview.
+function openAccessorizeForRevealFlow(){
+  revealFlowActive=true;
+  const cancelBtn=document.getElementById('accessorizeCancelBtn');
+  if(cancelBtn)cancelBtn.style.display='block';
+  pendingWraparoundRaw={
+    center:findDesignById(placements.front).url,
+    left:findDesignById(placements.left).url,
+    right:findDesignById(placements.right).url
+  };
+  document.body.classList.add('step-locked');
+  showAccessorizeStep();
 }
 
 function chooseEdgeStyleAndContinue(isHard){
   hardEdgesEnabled=isHard;
   const mainToggle=document.getElementById('panoramaFadeToggle');
   if(mainToggle)mainToggle.checked=isHard;
-  finishRevealAndOpenFrameOffer();
+  const overlay=document.getElementById('revealOverlay');
+  if(overlay)overlay.style.display='none';
+  document.body.classList.remove('step-locked');
+  beginFinalMockupFetch();
 }
 
 function chooseFadeEdges(){
@@ -5077,46 +5154,120 @@ async function sliceStitchedIntoThirds(dataUrl){
   return {left:slice(0),center:slice(1),right:slice(2)};
 }
 
-async function confirmFadeAndContinue(){
+async function bakeFadeIntoDesigns(fadeAmountPct){
   const hex=getSelectedProductColorHex();
+  if(revealFlowThreePanel){
+    const [leftFaded,centerFaded,rightFaded]=await Promise.all(
+      revealOriginalArtworkUrls.map(u=>renderFadedArtwork(u,hex,fadeAmountPct))
+    );
+    const [leftUrl,centerUrl,rightUrl]=await Promise.all([
+      uploadCompositedImage(leftFaded),
+      uploadCompositedImage(centerFaded),
+      uploadCompositedImage(rightFaded)
+    ]);
+    const leftDesign=findDesignById(placements.left);
+    if(leftDesign)leftDesign.url=leftUrl;
+    const centerDesign=findDesignById(placements.front);
+    if(centerDesign)centerDesign.url=centerUrl;
+    const rightDesign=findDesignById(placements.right);
+    if(rightDesign)rightDesign.url=rightUrl;
+  } else {
+    const faded=await renderFadedArtwork(revealOriginalArtworkUrls[0],hex,fadeAmountPct);
+    const slices=await sliceStitchedIntoThirds(faded);
+    const [leftUrl,centerUrl,rightUrl]=await Promise.all([
+      uploadCompositedImage(slices.left),
+      uploadCompositedImage(slices.center),
+      uploadCompositedImage(slices.right)
+    ]);
+    const leftDesign=findDesignById(placements.left);
+    if(leftDesign)leftDesign.url=leftUrl;
+    const centerDesign=findDesignById(placements.front);
+    if(centerDesign)centerDesign.url=centerUrl;
+    const rightDesign=findDesignById(placements.right);
+    if(rightDesign)rightDesign.url=rightUrl;
+  }
+}
+
+async function confirmFadeAndContinue(){
   try{
-    if(revealFlowThreePanel){
-      const [leftFaded,centerFaded,rightFaded]=await Promise.all(
-        revealOriginalArtworkUrls.map(u=>renderFadedArtwork(u,hex,revealFadeAmountPct))
-      );
-      const [leftUrl,centerUrl,rightUrl]=await Promise.all([
-        uploadCompositedImage(leftFaded),
-        uploadCompositedImage(centerFaded),
-        uploadCompositedImage(rightFaded)
-      ]);
-      const leftDesign=findDesignById(placements.left);
-      if(leftDesign)leftDesign.url=leftUrl;
-      const centerDesign=findDesignById(placements.front);
-      if(centerDesign)centerDesign.url=centerUrl;
-      const rightDesign=findDesignById(placements.right);
-      if(rightDesign)rightDesign.url=rightUrl;
-    } else {
-      const faded=await renderFadedArtwork(revealOriginalArtworkUrls[0],hex,revealFadeAmountPct);
-      const slices=await sliceStitchedIntoThirds(faded);
-      const [leftUrl,centerUrl,rightUrl]=await Promise.all([
-        uploadCompositedImage(slices.left),
-        uploadCompositedImage(slices.center),
-        uploadCompositedImage(slices.right)
-      ]);
-      const leftDesign=findDesignById(placements.left);
-      if(leftDesign)leftDesign.url=leftUrl;
-      const centerDesign=findDesignById(placements.front);
-      if(centerDesign)centerDesign.url=centerUrl;
-      const rightDesign=findDesignById(placements.right);
-      if(rightDesign)rightDesign.url=rightUrl;
-    }
+    await bakeFadeIntoDesigns(revealFadeAmountPct);
   }catch(err){
     console.error('Could not save the faded artwork, continuing with the unfaded version:',err);
   }
   hardEdgesEnabled=false;
   const mainToggle=document.getElementById('panoramaFadeToggle');
   if(mainToggle)mainToggle.checked=false;
-  finishRevealAndOpenFrameOffer();
+  const overlay=document.getElementById('revealOverlay');
+  if(overlay)overlay.style.display='none';
+  document.body.classList.remove('step-locked');
+  beginFinalMockupFetch();
+}
+
+// The Frame path's own fade offer: same slider mechanism, but jumps
+// straight to the slider (no separate Hard/Fade button choice, since
+// dragging to 0% already gives hard edges), and continues into the
+// Frame/Window Sill catalog afterward instead of the final mockup fetch.
+let frameFadeAmountPct=20;
+
+function openFrameFadeOverlay(){
+  const overlay=document.getElementById('frameFadeOverlay');
+  const img=document.getElementById('frameFadeArtworkImg');
+  const threeRow=document.getElementById('frameFadeThreePanelRow');
+  if(!overlay)return;
+  document.body.classList.add('step-locked');
+  overlay.style.display='flex';
+  frameFadeAmountPct=20;
+  document.getElementById('frameFadeAmountSlider').value=20;
+  document.getElementById('frameFadeAmountVal').textContent='20%';
+  if(revealFlowThreePanel){
+    if(img)img.style.display='none';
+    if(threeRow){
+      threeRow.style.display='flex';
+      document.getElementById('frameFadeThreePanelLeft').src=revealOriginalArtworkUrls[0];
+      document.getElementById('frameFadeThreePanelCenter').src=revealOriginalArtworkUrls[1];
+      document.getElementById('frameFadeThreePanelRight').src=revealOriginalArtworkUrls[2];
+    }
+  } else {
+    if(threeRow)threeRow.style.display='none';
+    if(img){img.style.display='block';img.src=revealOriginalArtworkUrls[0];}
+  }
+  updateFrameFadePreview();
+}
+
+async function updateFrameFadePreview(){
+  const slider=document.getElementById('frameFadeAmountSlider');
+  const readout=document.getElementById('frameFadeAmountVal');
+  frameFadeAmountPct=slider?parseFloat(slider.value):20;
+  if(readout)readout.textContent=frameFadeAmountPct+'%';
+  if(!revealOriginalArtworkUrls.length)return;
+  const hex=getSelectedProductColorHex();
+  if(revealFlowThreePanel){
+    const targetIds=['frameFadeThreePanelLeft','frameFadeThreePanelCenter','frameFadeThreePanelRight'];
+    await Promise.all(revealOriginalArtworkUrls.map(async(url,i)=>{
+      const faded=await renderFadedArtwork(url,hex,frameFadeAmountPct);
+      const el=document.getElementById(targetIds[i]);
+      if(el)el.src=faded;
+    }));
+  } else {
+    const img=document.getElementById('frameFadeArtworkImg');
+    if(!img)return;
+    const faded=await renderFadedArtwork(revealOriginalArtworkUrls[0],hex,frameFadeAmountPct);
+    img.src=faded;
+  }
+}
+
+async function confirmFrameFadeAndContinue(){
+  try{
+    await bakeFadeIntoDesigns(frameFadeAmountPct);
+  }catch(err){
+    console.error('Could not save the faded artwork, continuing with the unfaded version:',err);
+  }
+  hardEdgesEnabled=(frameFadeAmountPct===0);
+  const mainToggle=document.getElementById('panoramaFadeToggle');
+  if(mainToggle)mainToggle.checked=hardEdgesEnabled;
+  const overlay=document.getElementById('frameFadeOverlay');
+  if(overlay)overlay.style.display='none';
+  openAccessorizeForRevealFlow();
 }
 
 let revealFlowActive=false;
@@ -5176,35 +5327,12 @@ async function beginFinalMockupFetch(){
   }
 }
 
-function chooseFrameOffer(choice){
-  const offerOverlay=document.getElementById('frameOfferOverlay');
-  if(offerOverlay)offerOverlay.style.display='none';
-  document.body.classList.remove('step-locked');
-  if(choice==='none'){
-    beginFinalMockupFetch();
-    return;
-  }
-  // Frame and Window Sill both lead to the same combined screen --
-  // accessorizeCard already shows both catalogs relocated above it
-  // (see showAccessorizeStep), so there's no need for separate
-  // destinations here; the customer can pick either one once there.
-  revealFlowActive=true;
-  revealFlowThreePanel=(mugPrintMode==='three-panel');
-  const cancelBtn=document.getElementById('accessorizeCancelBtn');
-  if(cancelBtn)cancelBtn.style.display='block';
-  pendingWraparoundRaw={
-    center:findDesignById(placements.front).url,
-    left:findDesignById(placements.left).url,
-    right:findDesignById(placements.right).url
-  };
-  showAccessorizeStep();
-}
-
 function cancelAccessorizeToOffer(){
   revealFlowActive=false;
+  clearTimeout(revealAutoApplyTimer);
   hideAccessorizeStep();
-  const offerOverlay=document.getElementById('frameOfferOverlay');
-  if(offerOverlay)offerOverlay.style.display='flex';
+  const choiceOverlay=document.getElementById('revealChoiceOverlay');
+  if(choiceOverlay)choiceOverlay.style.display='flex';
   document.body.classList.add('step-locked');
 }
 
@@ -5818,6 +5946,15 @@ function hideAccessorizeStep(){
   // to the actual next step (picking style/size/color) instead of
   // leaving them stranded wherever that used to be.
   smoothScrollToTarget('positionHolderRow','center');
+}
+
+let revealAutoApplyTimer=null;
+function scheduleRevealAutoApply(){
+  if(!revealFlowActive)return;
+  clearTimeout(revealAutoApplyTimer);
+  revealAutoApplyTimer=setTimeout(()=>{
+    applyAccessorizeFrame();
+  },900);
 }
 
 async function applyAccessorizeFrame(){
