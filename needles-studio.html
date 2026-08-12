@@ -600,6 +600,7 @@ body.product-focus .card:not(#productCard){opacity:.35;filter:brightness(.6) sat
   <img id="mockupLightboxImg" class="mockup-lightbox-img" alt="Enlarged mockup"/>
   <button class="mockup-lightbox-arrow mockup-lightbox-arrow-right" id="mockupLightboxNext" onclick="mockupLightboxNext()" aria-label="Next angle">›</button>
   <div class="mockup-lightbox-counter" id="mockupLightboxCounter"></div>
+  <button type="button" id="mockupLightboxReturn" class="generate-btn" style="display:none;position:absolute;left:50%;bottom:24px;transform:translateX(-50%);width:auto;padding:.8rem 1.6rem" onclick="returnFromFinalMockup()">↩️ Return</button>
 </div>
 <div class="header">
   <video class="header-video" id="heroVideo" autoplay muted playsinline preload="auto" aria-label="Needles Studio hero banner">
@@ -857,6 +858,49 @@ body.product-focus .card:not(#productCard){opacity:.35;filter:brightness(.6) sat
 <div class="generate-token-note" id="generateTokenNote">Requires at least 1 token to generate.</div>
 <button class="download-btn" id="cancelBtn" onclick="cancelGeneration()" style="display:none;margin-top:.5rem">✖ Cancel & Try a Different Photo</button>
 
+<div id="finalChoiceOverlay" class="step-lock-overlay" style="display:none">
+<div class="card" id="finalChoiceCard" style="max-width:420px;width:100%;margin:auto;position:relative;text-align:center">
+<div class="card-title">🎉 What's Next?</div>
+<button type="button" class="generate-btn" style="margin-top:.9rem" onclick="goToOrder()">✅ Checkout</button>
+<button type="button" class="download-btn" style="margin-top:.75rem" onclick="returnToUploadForNewPhoto()">📸 Upload a Different Photo</button>
+</div>
+</div>
+
+<div id="mockupLoadingOverlay" class="step-lock-overlay" style="display:none;background:#000">
+<div style="text-align:center;font-size:20px;font-weight:800;color:#2196ff;animation:mugSelectFlash 1s ease-in-out infinite">Please wait while your mock-up is being generated...</div>
+</div>
+
+<div id="frameOfferOverlay" class="step-lock-overlay" style="display:none">
+<div class="card" id="frameOfferCard" style="max-width:520px;width:100%;margin:auto;position:relative;max-height:92vh;overflow-y:auto;text-align:center">
+<div class="card-title">🖼️ Add a Frame or Window Sill?</div>
+<div class="note" style="margin-top:0;margin-bottom:1rem">A nice border can really help your picture pop — totally optional.</div>
+<div class="bi-row" style="align-items:stretch">
+<div style="flex:1;cursor:pointer" onclick="chooseFrameOffer('frame')">
+<img src="frame-crystal-champagne.png" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:10px;border:1px solid #003c8c;background:#0d0d0d"/>
+<div style="margin-top:.4rem;font-weight:700;color:#7ab8ff">Frame</div>
+</div>
+<div style="flex:1;cursor:pointer" onclick="chooseFrameOffer('sill')">
+<img src="frame-window-sill-b.png" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:10px;border:1px solid #003c8c;background:#0d0d0d"/>
+<div style="margin-top:.4rem;font-weight:700;color:#7ab8ff">Window Sill</div>
+</div>
+</div>
+<button type="button" class="download-btn" style="margin-top:1.1rem" onclick="chooseFrameOffer('none')">No Thank You</button>
+</div>
+</div>
+
+<div id="revealOverlay" class="step-lock-overlay" style="display:none">
+<div class="card" id="revealCard" style="max-width:520px;width:100%;margin:auto;position:relative;max-height:92vh;overflow-y:auto;text-align:center">
+<div class="card-title">🎉 Your Finished Artwork</div>
+<img id="revealArtworkImg" style="width:100%;border-radius:10px;border:1px solid #003c8c;margin:.9rem 0;background:#0d0d0d"/>
+<div class="note" style="margin-top:0;margin-bottom:.9rem">One more choice before we add any frame — how should the edges look?</div>
+<div class="bi-row">
+<button type="button" class="generate-btn" style="flex:1;width:auto;padding:.9rem .4rem" onclick="chooseEdgeStyleAndContinue(true)">◻️ Hard Edges</button>
+<button type="button" class="generate-btn" style="flex:1;width:auto;padding:.9rem .4rem" onclick="chooseEdgeStyleAndContinue(false)">🌫️ Fade Edges</button>
+</div>
+<div class="note" id="revealFadeUnavailableNote" style="display:none;margin-top:.75rem;color:#ff8a7a">Fade isn't available for this product's color — Hard Edges only.</div>
+</div>
+</div>
+
   <div class="card" id="positionHolderCard" style="display:none">
 <div class="card-title">🖼️ Design Your Product</div>
 <div class="note-prominent" style="margin-top:0;margin-bottom:.9rem">Happy with just this one picture? We'll gladly take you to checkout. Want to try a few more designs first? If you're out of free tokens, a $5 Preview Reservation unlocks more tokens to keep creating — that $5 isn't an extra charge, it comes straight off your product's price at checkout. Whatever you end up with, your exact total (including any charge for extra printed designs, or an image on both sides) is always shown before you pay.</div>
@@ -872,6 +916,7 @@ body.product-focus .card:not(#productCard){opacity:.35;filter:brightness(.6) sat
 <button class="generate-btn cta-flash" id="accessorizeApplyBtn" style="flex:1;width:auto;padding:.8rem .4rem;font-size:13px" onclick="applyAccessorizeFrame()">✅ Apply Frame</button>
 <button class="download-btn" style="flex:1;margin-top:0;padding:.8rem .4rem;font-size:13px" onclick="skipAccessorizeFrame()">⏭️ Use Just the Photo — No Frame</button>
 </div>
+<button class="download-btn" id="accessorizeCancelBtn" style="display:none;margin-top:.6rem;border-color:#5a2a2a;color:#ff8a7a" onclick="cancelAccessorizeToOffer()">↩️ Cancel — Go Back</button>
 <div style="margin-top:.9rem;padding-top:.9rem;border-top:1px dashed #333;display:flex;align-items:center;gap:10px">
 <input type="checkbox" id="accessorizeEdgeToggle" onchange="toggleAccessorizeEdgeStyle()" style="width:20px;height:20px;cursor:pointer;flex-shrink:0"/>
 <label style="margin:0;text-transform:none;font-size:13px;color:#ccc;cursor:pointer" onclick="document.getElementById('accessorizeEdgeToggle').click()">Only matters if you pick "Use Just the Photo" — check this for hard, sharp edges instead of the default soft fade.</label>
@@ -4720,61 +4765,10 @@ function refreshApproveRowForMode(){
 async function approveDesign(allThree){
   if(!currentDesignId)return;
 
-  // Safety net: Frame lives much earlier in the flow now (right after
-  // Upload Photo), so most people will have already made this choice —
-  // but if someone reaches approval with nothing picked, give them one
-  // more chance to catch it before it's locked in, since a frame can't
-  // be added retroactively to an already-approved design.
-  if(!selectedFrame && !windowSillChoice){
-    const proceedWithoutFrame=window.confirm('No Frame or Window Sill selected yet. Once you approve, it can\'t be added to this design later. Continue without one?');
-    if(!proceedWithoutFrame){
-      smoothScrollToTarget('frameSectionCard','center');
-      return;
-    }
-  }
-
-  // The frame/caption compositing (drawCaption -> finalImageUrl) only ever
-  // updated the live on-screen preview — it was never saved back into the
-  // actual design record used for the Printify mockup and the real order.
-  // That's why a selected Frame never showed up on the finished product.
-  // Bake it in here, at the moment of approval, so what gets placed matches
-  // what was actually shown and approved.
-  //
-  // finalImageUrl is a giant inline base64 canvas export — sending that
-  // straight into placements/Printify broke the mockup request (too large,
-  // server rejected it, front end couldn't parse the rejection as JSON).
-  // So when there's actually something composited on top of the raw photo
-  // (a Frame, a Window Sill, or caption text), upload it through
-  // /api/generate (action:"uploadComposite") to get back a small real URL,
-  // same way the raw AI output already gets hosted — folded into the
-  // existing endpoint rather than a new file, since this project is
-  // already at Vercel's 12-function Hobby-plan cap. If nothing was added,
-  // skip this entirely and keep the original small hosted URL as-is.
-  const captionTextEl=document.getElementById('captionText');
-  const hasCaption=!!(captionTextEl && captionTextEl.value.trim().length>0);
-  const hasOverlay=!!selectedFrame || !!windowSillChoice || hasCaption;
-
-  if(hasOverlay && finalImageUrl){
-    const savingNote=document.getElementById('approveSavingNote');
-    if(savingNote)savingNote.style.display='block';
-    try{
-      const resp=await fetch('/api/generate',{
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({action:'uploadComposite',image:finalImageUrl,deviceId})
-      });
-      const data=await resp.json();
-      if(resp.ok && data.imageUrl){
-        const design=findDesignById(currentDesignId);
-        if(design)design.url=data.imageUrl;
-      } else {
-        console.error('Could not save composited design, keeping the unframed version:',data.error);
-      }
-    }catch(err){
-      console.error('Could not save composited design, keeping the unframed version:',err);
-    }
-    if(savingNote)savingNote.style.display='none';
-  }
+  // UPDATED (Aug 2026, Alyx's flow redesign): Frame/Window Sill no
+  // longer happen at this point in the flow at all -- they're offered
+  // on their own dedicated screen later, after Reveal and the Fade/Edge
+  // choice. Nothing to warn about or composite here anymore.
 
   const order = getSlotOrder();
   if(allThree){
@@ -4799,7 +4793,158 @@ async function approveDesign(allThree){
   renderPositionHolder();
   updatePlacementSummary();
   restoreFrameCardsToHome();
-  document.getElementById('positionHolderCard').scrollIntoView({behavior:'smooth',block:'start'});
+
+  // NEW (Aug 2026, Alyx's flow redesign): coffee mug wraparound is the
+  // first product moved onto the new post-generation flow -- once all
+  // three panels are approved, stitch them into the actual finished
+  // artwork (one continuous panorama) and move to the new Reveal stage
+  // instead of the old "Design Your Product" panel view. Three-panel
+  // mode and every other product are untouched for now -- they still
+  // land on positionHolderCard exactly as before, pending their own
+  // migration to this new flow in a later pass.
+  const slotsNowFilled=getSlotOrder().every(pos=>placements[pos]);
+  if(product==='mug' && mugPrintMode==='wraparound' && slotsNowFilled){
+    enterRevealStage();
+  } else {
+    document.getElementById('positionHolderCard').scrollIntoView({behavior:'smooth',block:'start'});
+  }
+}
+
+async function enterRevealStage(){
+  const overlay=document.getElementById('revealOverlay');
+  const img=document.getElementById('revealArtworkImg');
+  if(!overlay||!img)return;
+
+  const leftDesign=findDesignById(placements.left);
+  const centerDesign=findDesignById(placements.front);
+  const rightDesign=findDesignById(placements.right);
+  if(!leftDesign||!centerDesign||!rightDesign)return;
+
+  document.body.classList.add('step-locked');
+  overlay.style.display='flex';
+  img.src='';
+
+  try{
+    const stitched=await stitchThreePanelsRaw(centerDesign.url,leftDesign.url,rightDesign.url);
+    img.src=stitched;
+  }catch(err){
+    console.error('Could not stitch the panorama for Reveal:',err);
+    overlay.style.display='none';
+    document.body.classList.remove('step-locked');
+    document.getElementById('positionHolderCard').scrollIntoView({behavior:'smooth',block:'start'});
+    return;
+  }
+
+  // TODO (next stage): fade is currently a plain on/off flag, not the
+  // exact-hex live color match + adjustable-amount slider Alyx described
+  // -- that's a genuinely separate, larger feature to build. For now,
+  // fade is only offered when the mug's chosen color is white (or no
+  // color was needed), since a mismatched fade color would look worse
+  // than no fade at all until the real color-matching feature exists.
+  const colorIsWhiteSafe=!selectedGenColor || /white/i.test(selectedGenColor);
+  const fadeBtn=overlay.querySelector('button[onclick="chooseEdgeStyleAndContinue(false)"]');
+  const unavailableNote=document.getElementById('revealFadeUnavailableNote');
+  if(fadeBtn)fadeBtn.style.display=colorIsWhiteSafe?'block':'none';
+  if(unavailableNote)unavailableNote.style.display=colorIsWhiteSafe?'none':'block';
+}
+
+function chooseEdgeStyleAndContinue(isHard){
+  hardEdgesEnabled=isHard;
+  const mainToggle=document.getElementById('panoramaFadeToggle');
+  if(mainToggle)mainToggle.checked=isHard;
+  const overlay=document.getElementById('revealOverlay');
+  if(overlay)overlay.style.display='none';
+  const offerOverlay=document.getElementById('frameOfferOverlay');
+  if(offerOverlay)offerOverlay.style.display='flex';
+  // body.step-locked stays on -- the offer overlay is still a locked
+  // full-screen step, no page content should be interactable behind it.
+}
+
+let revealFlowActive=false;
+
+async function beginFinalMockupFetch(){
+  const overlay=document.getElementById('mockupLoadingOverlay');
+  if(overlay){overlay.style.display='flex';document.body.classList.add('step-locked');}
+
+  const body=buildMockupRequestBody();
+  if(!body){
+    if(overlay){overlay.style.display='none';document.body.classList.remove('step-locked');}
+    return;
+  }
+
+  try{
+    const startResp=await fetchWithTimeout('/api/start-mockup',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({...body,action:'start'})
+    },30000);
+    const startData=await startResp.json();
+    if(!startResp.ok)throw new Error(startData.error||'Could not generate the real mockup.');
+
+    const productId=startData.productId;
+    let mockupUrl=null;
+    let mockupUrls=[];
+    const maxTries=40;
+
+    for(let i=0;i<maxTries;i++){
+      await new Promise(r=>setTimeout(r,1500));
+      const checkResp=await fetchWithTimeout('/api/start-mockup',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({action:'check',productId})
+      },15000);
+      const checkData=await checkResp.json();
+      if(!checkResp.ok)throw new Error(checkData.error||'Could not check on the real mockup.');
+      if(checkData.ready){
+        mockupUrl=checkData.mockupUrl;
+        mockupUrls=Array.isArray(checkData.mockupUrls)?checkData.mockupUrls:[];
+        break;
+      }
+    }
+
+    if(!mockupUrl)throw new Error("Printify didn't return a mockup photo in time.");
+
+    currentMockupUrls=mockupUrls.length?mockupUrls:[mockupUrl];
+    if(overlay){overlay.style.display='none';document.body.classList.remove('step-locked');}
+    openMockupLightbox(0);
+    const returnBtn=document.getElementById('mockupLightboxReturn');
+    if(returnBtn)returnBtn.style.display='block';
+  }catch(err){
+    console.error('Final mockup fetch failed:',err);
+    if(overlay){overlay.style.display='none';document.body.classList.remove('step-locked');}
+    document.getElementById('positionHolderCard').scrollIntoView({behavior:'smooth',block:'start'});
+  }
+}
+
+function chooseFrameOffer(choice){
+  const offerOverlay=document.getElementById('frameOfferOverlay');
+  if(offerOverlay)offerOverlay.style.display='none';
+  document.body.classList.remove('step-locked');
+  if(choice==='none'){
+    beginFinalMockupFetch();
+    return;
+  }
+  // Frame and Window Sill both lead to the same combined screen --
+  // accessorizeCard already shows both catalogs relocated above it
+  // (see showAccessorizeStep), so there's no need for separate
+  // destinations here; the customer can pick either one once there.
+  revealFlowActive=true;
+  const cancelBtn=document.getElementById('accessorizeCancelBtn');
+  if(cancelBtn)cancelBtn.style.display='block';
+  pendingWraparoundRaw={
+    center:findDesignById(placements.front).url,
+    left:findDesignById(placements.left).url,
+    right:findDesignById(placements.right).url
+  };
+  showAccessorizeStep();
+}
+
+function cancelAccessorizeToOffer(){
+  revealFlowActive=false;
+  hideAccessorizeStep();
+  const offerOverlay=document.getElementById('frameOfferOverlay');
+  if(offerOverlay)offerOverlay.style.display='flex';
+  document.body.classList.add('step-locked');
 }
 
 function keepTweaking(){
@@ -4969,6 +5114,24 @@ function openMockupLightbox(index){
 function closeMockupLightbox(){
   const overlay=document.getElementById('mockupLightboxOverlay');
   if(overlay)overlay.classList.remove('visible');
+}
+
+function returnFromFinalMockup(){
+  closeMockupLightbox();
+  const returnBtn=document.getElementById('mockupLightboxReturn');
+  if(returnBtn)returnBtn.style.display='none';
+  const finalOverlay=document.getElementById('finalChoiceOverlay');
+  if(finalOverlay){finalOverlay.style.display='flex';document.body.classList.add('step-locked');}
+}
+
+function returnToUploadForNewPhoto(){
+  const finalOverlay=document.getElementById('finalChoiceOverlay');
+  if(finalOverlay)finalOverlay.style.display='none';
+  document.body.classList.remove('step-locked');
+  // Their original photo stays selected in the upload slot exactly as
+  // it is -- this just takes them back there in case they want to swap
+  // it for a different one, per Alyx's description.
+  document.getElementById('uploadPhotoCard').scrollIntoView({behavior:'smooth',block:'start'});
 }
 
 function mockupLightboxPrev(){
@@ -5343,12 +5506,12 @@ function restoreFrameCardsToHome(){
   const sillCard=document.getElementById('windowSillSectionCard');
   const previewCard=document.getElementById('framePreviewThumbCard');
   if(frameCard && frameCardHomeParent){
-    if(previewCard)frameCardHomeParent.insertBefore(previewCard,frameCard);
     if(frameCardHomeNext && frameCardHomeNext.parentNode===frameCardHomeParent){
       frameCardHomeParent.insertBefore(frameCard,frameCardHomeNext);
     } else {
       frameCardHomeParent.appendChild(frameCard);
     }
+    if(previewCard)frameCardHomeParent.insertBefore(previewCard,frameCard);
   }
   if(sillCard && sillCardHomeParent){
     if(sillCardHomeNext && sillCardHomeNext.parentNode===sillCardHomeParent){
@@ -5364,7 +5527,10 @@ function hideAccessorizeStep(){
   pending40ozRaw=null;
   const card=document.getElementById('accessorizeCard');
   if(card)card.style.display='none';
+  const cancelBtn=document.getElementById('accessorizeCancelBtn');
+  if(cancelBtn)cancelBtn.style.display='none';
   restoreFrameCardsToHome();
+  if(revealFlowActive)return;
   // The frame cards just got yanked out from under whatever the customer
   // was looking at (back to their page-top home) -- send them straight
   // to the actual next step (picking style/size/color) instead of
@@ -5417,6 +5583,10 @@ async function applyAccessorizeFrame(){
   if(orderBtnEmphasis){orderBtnEmphasis.classList.remove('cta-muted');orderBtnEmphasis.classList.add('cta-flash');}
   hideAccessorizeStep();
   if(btn)btn.disabled=false;
+  if(revealFlowActive){
+    revealFlowActive=false;
+    beginFinalMockupFetch();
+  }
 }
 
 function skipAccessorizeFrame(){
@@ -5425,6 +5595,10 @@ function skipAccessorizeFrame(){
   const orderBtnEmphasis=document.getElementById('orderMugBtn');
   if(orderBtnEmphasis){orderBtnEmphasis.classList.remove('cta-muted');orderBtnEmphasis.classList.add('cta-flash');}
   hideAccessorizeStep();
+  if(revealFlowActive){
+    revealFlowActive=false;
+    beginFinalMockupFetch();
+  }
 }
 
 // Same fix as the single-image caption/frame approval flow: a composited
