@@ -230,6 +230,7 @@
 .stock-badge{position:absolute;top:4px;right:4px;font-size:9px;font-weight:800;letter-spacing:.3px;text-transform:uppercase;padding:3px 6px;border-radius:6px;color:#fff;z-index:2;animation:mugSelectFlash 1s ease-in-out infinite}
 @keyframes mugSelectFlash{0%,100%{color:#fff;background:#003c8c;text-shadow:0 0 10px rgba(0,60,140,.9)}50%{color:#003c8c;background:#2a1200;text-shadow:0 0 10px rgba(0,60,140,.6)}}
 .cta-flash{animation:mugSelectFlash 1s ease-in-out infinite}
+.cta-muted{opacity:.45;filter:grayscale(.3)}
 .theme-btn-flash{animation:themeBtnFlash 1s ease-in-out infinite}
 @keyframes themeBtnFlash{0%,100%{border-color:#003c8c;box-shadow:0 0 0 2px #003c8c,0 0 10px 1px rgba(0,60,140,0.6)}50%{border-color:#7888b4;box-shadow:0 0 0 3px #7888b4,0 0 20px 4px rgba(0,60,140,0.9)}}
 .mug-available-flash{font-size:16px!important;font-weight:800!important;letter-spacing:.5px!important;text-transform:uppercase;padding:10px 8px;border-radius:8px;animation:mugSelectFlash 1s ease-in-out infinite;text-align:center;margin-top:1rem}
@@ -867,7 +868,7 @@ body.final-generate-focus .card:not(#uploadPhotoCard){opacity:.35;filter:brightn
 <div class="note-prominent" style="margin-top:0;margin-bottom:.75rem">Three ways to finish this: pick a Frame above, pick a Window Sill above, or use just the photo as-is below. Pick a Frame or Window Sill and you'll see it applied right here instantly — nothing is saved until you press Apply. Edge style (sharp vs. soft/blended) only matters if you go with just the photo — a Frame or Window Sill always uses sharp edges automatically.</div>
 <div id="accessorizePreviewStrip" style="display:flex;gap:8px"></div>
 <div class="bi-row">
-<button class="generate-btn" id="accessorizeApplyBtn" style="flex:1;width:auto;padding:.8rem .4rem;font-size:13px" onclick="applyAccessorizeFrame()">✅ Apply Frame</button>
+<button class="generate-btn cta-flash" id="accessorizeApplyBtn" style="flex:1;width:auto;padding:.8rem .4rem;font-size:13px" onclick="applyAccessorizeFrame()">✅ Apply Frame</button>
 <button class="download-btn" style="flex:1;margin-top:0;padding:.8rem .4rem;font-size:13px" onclick="skipAccessorizeFrame()">⏭️ Use Just the Photo — No Frame</button>
 </div>
 <div style="margin-top:.9rem;padding-top:.9rem;border-top:1px dashed #333;display:flex;align-items:center;gap:10px">
@@ -918,7 +919,7 @@ body.final-generate-focus .card:not(#uploadPhotoCard){opacity:.35;filter:brightn
 <div class="note" style="margin-top:0;margin-bottom:.6rem">Tap Left, Center, or Right under a design to place it.</div>
 <div id="recentDesignsStrip" style="display:flex;gap:10px;overflow-x:auto;padding-bottom:6px"></div>
 </div>
-<button class="generate-btn cta-flash" id="orderMugBtn" onclick="goToOrder()" style="display:none;margin-top:.9rem">✅ Continue to Order</button>
+<button class="generate-btn cta-muted" id="orderMugBtn" onclick="goToOrder()" style="display:none;margin-top:.9rem">✅ Continue to Order</button>
 </div>
 <div class="card" id="verifyCard" style="display:none">
 <div class="card-title">🎁 Get a Second Free Token</div>
@@ -5294,6 +5295,10 @@ function showAccessorizeStep(){
   const card=document.getElementById('accessorizeCard');
   if(!card)return;
   card.style.display='block';
+  const applyBtnReset=document.getElementById('accessorizeApplyBtn');
+  if(applyBtnReset)applyBtnReset.classList.add('cta-flash');
+  const orderBtnReset=document.getElementById('orderMugBtn');
+  if(orderBtnReset){orderBtnReset.classList.add('cta-muted');orderBtnReset.classList.remove('cta-flash');}
   const frameCard=document.getElementById('frameSectionCard');
   const sillCard=document.getElementById('windowSillSectionCard');
   const previewCard=document.getElementById('framePreviewThumbCard');
@@ -5320,6 +5325,8 @@ function showAccessorizeStep(){
   // which has always had this same guard).
   if(!selectedFrame && !windowSillChoice){
     smoothScrollToTarget('frameSectionCard','center');
+  } else {
+    smoothScrollToTarget('accessorizeCard','start');
   }
 }
 
@@ -5396,11 +5403,19 @@ async function applyAccessorizeFrame(){
   }catch(err){
     console.error('Could not apply the frame, keeping the design unframed:',err);
   }
+  const applyBtnEmphasis=document.getElementById('accessorizeApplyBtn');
+  if(applyBtnEmphasis)applyBtnEmphasis.classList.remove('cta-flash');
+  const orderBtnEmphasis=document.getElementById('orderMugBtn');
+  if(orderBtnEmphasis){orderBtnEmphasis.classList.remove('cta-muted');orderBtnEmphasis.classList.add('cta-flash');}
   hideAccessorizeStep();
   if(btn)btn.disabled=false;
 }
 
 function skipAccessorizeFrame(){
+  const applyBtnEmphasis=document.getElementById('accessorizeApplyBtn');
+  if(applyBtnEmphasis)applyBtnEmphasis.classList.remove('cta-flash');
+  const orderBtnEmphasis=document.getElementById('orderMugBtn');
+  if(orderBtnEmphasis){orderBtnEmphasis.classList.remove('cta-muted');orderBtnEmphasis.classList.add('cta-flash');}
   hideAccessorizeStep();
 }
 
