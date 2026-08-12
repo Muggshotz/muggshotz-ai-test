@@ -400,6 +400,7 @@ body.generation-active #uploadPhotoCard{position:relative;z-index:5}
 body.generation-active #creditsModalOverlay .card{opacity:1!important;filter:none!important;pointer-events:auto!important}
 body.print-mode-focus .card:not(#mugPrintModeCard){opacity:.28;filter:brightness(.55) saturate(.7);pointer-events:none;transition:opacity .5s,filter .5s}
 body.final-generate-focus .card:not(#uploadPhotoCard){opacity:.35;filter:brightness(.6) saturate(.75);transition:opacity .5s,filter .5s}
+body.product-focus .card:not(#productCard){opacity:.35;filter:brightness(.6) saturate(.75);transition:opacity .5s,filter .5s}
 .generation-reminder-banner{font-size:14px;font-weight:800;letter-spacing:.3px;text-align:center;padding:14px 10px;margin:1rem 0;border-radius:10px;background:#0d0d0d;border:1px solid #003c8c;animation:mugSelectFlash 1s ease-in-out infinite}
 #creditsModalOverlay{
   background:rgba(2,5,9,.9)!important;
@@ -742,7 +743,7 @@ body.final-generate-focus .card:not(#uploadPhotoCard){opacity:.35;filter:brightn
 </div>
 
 <div class="card" id="ideaCard"><div class="card-title">💬 Tell Us Your Idea</div><div class="quote-text-reminder">⚠️ PLEASE REMEMBER TO SHOW ALL TEXT AND/OR CAPTIONS YOU WISH TO HAVE INCLUDED WITH YOUR IMAGE INSIDE QUOTES " "!</div><textarea id="ideaDesc" placeholder="Example: Put me on a tiny red tricycle wearing a firefighter helmet, shouting &quot;Out of my way!&quot; as I race through a parade with smoke and sirens behind me, under a banner that reads &quot;World's Fastest Firefighter.&quot;"></textarea><div class="quick-btns" id="quickBtns"></div><div class="note" id="ideaDefaultNote">Paint us a clear picture — the more detail you give us, the better our chances of getting your exact idea right.</div><div class="note" id="ideaArtistNote" style="display:none">Tell the artist what you have in mind.</div><div class="note" id="ideaWindowSillNote" style="display:none">(Optional) Add a costume, outfit, hair, or companion — or just upload your photo and we'll take it from there.</div><div id="mugIdeaActionRow" style="display:none;gap:8px;margin-top:.75rem"><button class="download-btn" style="flex:1;margin-top:0" onclick="handleReturnToPhotos()">📸 Return to select additional photos</button><button class="generate-btn" style="flex:1" onclick="handleMugGuidedGenerate()">🎨 Generate</button></div>
-<div id="ideaGuidancePrompt" class="guidance-prompt" role="status" style="margin-top:8px;margin-bottom:0">Scroll to the next section when ready to select your desired product.</div>
+<div id="ideaGuidancePrompt" class="guidance-prompt" role="status" style="margin-top:8px;margin-bottom:0;cursor:pointer" onclick="confirmIdeaSatisfied()">Click here when you are satisfied with your descriptive requests for the image.</div>
 </div>
 </div>
 <div class="card" id="productCard"><div class="card-title">🎁 Product</div><div class="guidance-prompt soft visible" id="productGuidancePrompt" role="status" style="margin-top:0;margin-bottom:.9rem">Please select your desired product below when ready.</div><div class="grid3"><div class="btn-select" data-val="mug" onclick="pick(this,'product')"><span class="icon">☕</span>Mug</div><div class="btn-select" data-val="greeting card" onclick="pick(this,'product')"><span class="icon">💌</span>Card</div><div class="btn-select" data-val="water bottle" onclick="pick(this,'product')"><span class="icon">🍶</span>Travel Cups</div><div class="btn-select" data-val="post-it note" onclick="pick(this,'product')"><span class="icon">📝</span>Post-it</div><div class="btn-select" data-val="phone case" onclick="pick(this,'product')"><span class="icon">📱</span>Phone case</div><div class="btn-select" data-val="tote bag" onclick="pick(this,'product')"><span class="icon">👜</span>Tote bag</div><div class="btn-select" data-val="suitcase" onclick="pick(this,'product')"><span class="icon">🧳</span>Suitcase</div><div class="btn-select" data-val="puzzle" onclick="pick(this,'product')"><span class="icon">🧩</span>Puzzle</div><div class="btn-select" data-val="photo poster" onclick="pick(this,'product')"><span class="icon">🖼️</span>Photo/Poster</div></div></div>
@@ -1520,18 +1521,24 @@ function startPhotoGuide(){
   setTimeout(()=>{
     if(photoGuideActive)smoothScrollToTarget('startOverBtn','end');
   },150);
-  // NEW (Aug 2026, Alyx's request): the Frame/Window Sill section lives
-  // right here, directly below Upload Photo -- but a customer scrolling
-  // straight from photo to idea box never sees it, since it's easy to
-  // scroll straight past without noticing. This one-time popup points
-  // it out right after the photo reveal, before the auto-advance to the
-  // idea box would otherwise carry them past it.
-  setTimeout(triggerFrameGuidance,800);
+  // UPDATED (Aug 2026, Alyx's flow redesign): Frame/Window Sill are no
+  // longer offered at this point in the flow at all -- they move to
+  // their own dedicated screens after generation. In its place, this is
+  // now where the idea-description guidance popup fires, since guiding
+  // the customer toward describing their idea is the very next real
+  // step in the new flow, right after the photo itself.
+  setTimeout(showIdeaBoxIntroIfNeeded,800);
   // UPDATED (Aug 2026, Alyx's request): reduced from 10000ms to 4000ms --
   // once a photo is uploaded, the customer has already made a deliberate
   // choice; there's no need to sit on that screen for a full 10 seconds
   // before the guide nudges them toward the idea box.
   schedulePhotoGuideAdvance(4000);
+}
+
+function confirmIdeaSatisfied(){
+  pauseIdeaGuideCycle();
+  document.body.classList.add('product-focus');
+  smoothScrollToTarget('productCard','center');
 }
 
 let ideaGuideTimer=null;
@@ -3784,6 +3791,7 @@ function pick(el,type){
     // default doesn't count as one) -- the gentle nudge has served its
     // purpose and shouldn't keep pulsing after that.
     productExplicitlyChosen=true;
+    document.body.classList.remove('product-focus');
     const productGuide=document.getElementById('productGuidancePrompt');
     if(productGuide)productGuide.classList.remove('visible');
     const finalGuide=document.getElementById('finalGenerateGuidance');
@@ -6881,7 +6889,7 @@ function resetEverythingFreshStart(){
   mugPrintModeTouched=false;
   document.body.classList.remove('print-mode-focus');
   document.body.classList.remove('final-generate-focus');
-  hardEdgesEnabled=false;
+  document.body.classList.remove('product-focus');
   const fadeToggle=document.getElementById('panoramaFadeToggle');
   if(fadeToggle)fadeToggle.checked=false;
 
