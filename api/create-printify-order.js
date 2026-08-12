@@ -219,8 +219,30 @@ export async function buildFullBleedImage(imageSource, canvasWidth, canvasHeight
 // customers actually use today) calls this one instead.
 export async function buildSeamlessWrapImage(imageSource, canvasWidth, canvasHeight) {
   const WHITE = { r: 255, g: 255, b: 255 };
-  return await sharp(await resolveImageBuffer(imageSource))
-    .resize(canvasWidth, canvasHeight, { fit: "contain", background: WHITE })
+  // UPDATED (Aug 2026, Alyx's request): a real single-angle photo of a
+  // wraparound mug can only ever show roughly 85-90% of its true
+  // circumference -- the outer few percent on each side always curves
+  // out of camera view, no matter how the print itself is composed.
+  // Since the frame border was previously drawn flush to the true
+  // left/right edges of the full print, that border fell almost
+  // entirely into the always-invisible wrap zone in real photos. Inset
+  // the whole image horizontally so its content -- frame border
+  // included -- sits further inward, safely within the zone a
+  // front-facing photo can actually see. The margin lands on the far
+  // left/right, which wraps out of camera view anyway either way, so
+  // nothing meaningful is lost there. Starting value chosen as a
+  // reasonable estimate -- may need a small adjustment after seeing a
+  // real printed/photographed result.
+  const SAFE_ZONE_FACTOR = 0.86;
+  const insetWidth = Math.round(canvasWidth * SAFE_ZONE_FACTOR);
+  const resized = await sharp(await resolveImageBuffer(imageSource))
+    .resize(insetWidth, canvasHeight, { fit: "contain", background: WHITE })
+    .toBuffer();
+  const offsetX = Math.round((canvasWidth - insetWidth) / 2);
+  return await sharp({
+    create: { width: canvasWidth, height: canvasHeight, channels: 3, background: WHITE }
+  })
+    .composite([{ input: resized, left: offsetX, top: 0 }])
     .png()
     .toBuffer();
 }
