@@ -400,6 +400,7 @@ body.generation-active #uploadPhotoCard{position:relative;z-index:5}
 body.generation-active #creditsModalOverlay .card{opacity:1!important;filter:none!important;pointer-events:auto!important}
 body.print-mode-focus .card:not(#mugPrintModeCard){opacity:.28;filter:brightness(.55) saturate(.7);pointer-events:none;transition:opacity .5s,filter .5s}
 body.final-generate-focus .card:not(#uploadPhotoCard){opacity:.35;filter:brightness(.6) saturate(.75);transition:opacity .5s,filter .5s}
+body.initial-upload-focus .card:not(#uploadPhotoCard){opacity:.35;filter:brightness(.6) saturate(.75);pointer-events:none;transition:opacity .5s,filter .5s}
 body.product-focus .card:not(#productCard){opacity:.35;filter:brightness(.6) saturate(.75);transition:opacity .5s,filter .5s}
 .generation-reminder-banner{font-size:14px;font-weight:800;letter-spacing:.3px;text-align:center;padding:14px 10px;margin:1rem 0;border-radius:10px;background:#0d0d0d;border:1px solid #003c8c;animation:mugSelectFlash 1s ease-in-out infinite}
 #creditsModalOverlay{
@@ -533,7 +534,7 @@ body.product-focus .card:not(#productCard){opacity:.35;filter:brightness(.6) sat
 
 </style>
 </head>
-<body>
+<body class="initial-upload-focus">
 <div id="deviceIdDisplay" style="position:fixed;bottom:2px;left:2px;font-size:9px;color:#444;z-index:998;pointer-events:none"></div>
 <div class="token-credits-row">
   <div id="tokenMeterWrap" style="position:relative;width:210px;flex-shrink:0">
@@ -870,25 +871,8 @@ body.product-focus .card:not(#productCard){opacity:.35;filter:brightness(.6) sat
 <div style="text-align:center;font-size:20px;font-weight:800;color:#2196ff;animation:mugSelectFlash 1s ease-in-out infinite">Please wait while your mock-up is being generated...</div>
 </div>
 
-<div id="revealChoiceOverlay" class="step-lock-overlay" style="display:none;background:#000;flex-direction:column;overflow-y:auto;padding:20px 16px">
-<button type="button" onclick="revealChoiceGoBack()" aria-label="Back" style="position:absolute;top:12px;left:12px;background:#1a1a1a;border:1px solid #333;border-radius:50%;width:40px;height:40px;color:#ccc;font-size:20px;cursor:pointer;z-index:2">‹</button>
-<img id="revealChoiceArtworkImg" style="width:100%;max-width:520px;margin:36px auto 0;border-radius:10px;opacity:0;transition:opacity 1.2s ease-in;display:block"/>
-<div id="revealChoiceThreePanelRow" style="display:none;gap:8px;width:100%;max-width:520px;margin:36px auto 0;opacity:0;transition:opacity 1.2s ease-in">
-<img id="revealChoiceThreePanelLeft" style="flex:1;min-width:0;border-radius:8px;object-fit:contain;max-height:180px;background:#0d0d0d"/>
-<img id="revealChoiceThreePanelCenter" style="flex:1;min-width:0;border-radius:8px;object-fit:contain;max-height:180px;background:#0d0d0d"/>
-<img id="revealChoiceThreePanelRight" style="flex:1;min-width:0;border-radius:8px;object-fit:contain;max-height:180px;background:#0d0d0d"/>
-</div>
-<div style="text-align:center;color:#cfe6ff;font-weight:700;font-size:16px;margin:28px 0 14px">Would you like to select</div>
-<div style="max-width:420px;width:100%;margin:0 auto;cursor:pointer;position:relative" onclick="chooseRevealPath('frame')">
-<img src="frame-crystal-champagne.png" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:10px;border:1px solid #003c8c;background:#0d0d0d"/>
-<div style="position:absolute;bottom:10px;left:0;right:0;text-align:center;background:rgba(0,0,0,.72);color:#fff;font-weight:800;padding:.5rem;border-radius:0 0 10px 10px">Select to See Frames</div>
-</div>
-<div style="text-align:center;color:#888;font-weight:700;margin:14px 0">or</div>
-<div style="max-width:420px;width:100%;margin:0 auto;cursor:pointer;position:relative" onclick="chooseRevealPath('sill')">
-<img src="frame-window-sill-b.png" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:10px;border:1px solid #003c8c;background:#0d0d0d"/>
-<div style="position:absolute;bottom:10px;left:0;right:0;text-align:center;background:rgba(0,0,0,.72);color:#fff;font-weight:800;padding:.5rem;border-radius:0 0 10px 10px">Select to See Window Sills</div>
-</div>
-<button type="button" class="download-btn" style="margin:20px auto 24px;max-width:420px;width:100%;display:block" onclick="chooseRevealPath('none')">No Thank You — Just the Picture</button>
+<div id="revealChoiceOverlay" class="step-lock-overlay" style="display:none;background:#000">
+<div style="text-align:center;font-size:20px;font-weight:800;color:#2196ff;animation:mugSelectFlash 1s ease-in-out infinite">Please wait while your panoramic image is being assembled...</div>
 </div>
 
 <div id="revealOverlay" class="step-lock-overlay" style="display:none">
@@ -938,7 +922,21 @@ body.product-focus .card:not(#productCard){opacity:.35;filter:brightness(.6) sat
 
 <div id="accessorizeCard" style="display:none;margin-top:1.1rem;padding-top:1.1rem;border-top:1px dashed #333">
 <div class="card-title">🖼️ Add a Frame?</div>
-<div class="note" style="margin-top:0;margin-bottom:.9rem;text-align:center;font-style:italic;color:#7ab8ff;line-height:1.5">It's not too late to change your mind,<br/>If you think you'd like a new design,<br/>just go and try another kind,<br/>and let Needles fix it up just fine.</div>
+
+<div id="accessorizeChoicePanel">
+<div style="max-width:420px;width:100%;margin:0 auto;cursor:pointer;position:relative" onclick="chooseRevealPath('frame')">
+<img src="frame-crystal-champagne.png" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:10px;border:1px solid #003c8c;background:#0d0d0d;opacity:.55"/>
+<div style="position:absolute;top:0;left:0;right:0;bottom:0;display:flex;align-items:center;justify-content:center;text-align:center;color:#fff;font-weight:800;font-size:16px;padding:.5rem;animation:mugSelectFlash 1s ease-in-out infinite">Select a Frame</div>
+</div>
+<div style="text-align:center;color:#888;font-weight:700;margin:14px 0">or</div>
+<div style="max-width:420px;width:100%;margin:0 auto;cursor:pointer;position:relative" onclick="chooseRevealPath('sill')">
+<img src="frame-window-sill-b.png" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:10px;border:1px solid #003c8c;background:#0d0d0d;opacity:.55"/>
+<div style="position:absolute;top:0;left:0;right:0;bottom:0;display:flex;align-items:center;justify-content:center;text-align:center;color:#fff;font-weight:800;font-size:16px;padding:.5rem;animation:mugSelectFlash 1s ease-in-out infinite">Select a Window Sill</div>
+</div>
+<button type="button" class="download-btn" style="margin:20px auto 0;max-width:420px;width:100%;display:block" onclick="chooseRevealPath('none')">No Thank You</button>
+</div>
+
+<div id="accessorizeCommittedContent" style="display:none">
 <div class="note-prominent" style="margin-top:0;margin-bottom:.75rem">Pick a Frame or Window Sill above and you'll see it applied right here instantly, saved automatically as soon as you pick one.</div>
 <div id="accessorizePreviewStrip" style="display:flex;gap:8px"></div>
 <div id="frameFitSlidersWrap" style="display:none;margin-top:.9rem">
@@ -956,7 +954,8 @@ body.product-focus .card:not(#productCard){opacity:.35;filter:brightness(.6) sat
 <button type="button" class="download-btn" style="margin-top:.6rem" onclick="resetFrameFitSliders()">↺ Reset to Default Fit</button>
 </div>
 </div>
-<button class="download-btn" id="accessorizeCancelBtn" style="display:none;margin-top:.9rem;border-color:#5a2a2a;color:#ff8a7a" onclick="cancelAccessorizeToOffer()">↩️ Cancel — Go Back</button>
+<button class="download-btn" id="accessorizeCancelBtn" style="display:block;margin-top:.9rem;border-color:#5a2a2a;color:#ff8a7a" onclick="cancelAccessorizeToOffer()">↩️ Cancel — Go Back</button>
+</div>
 </div>
 
 <div id="genMugOptionsWrap" style="display:none;margin-top:1.1rem">
@@ -1618,6 +1617,7 @@ function startPhotoGuide(){
 
 function confirmIdeaSatisfied(){
   pauseIdeaGuideCycle();
+  document.body.classList.remove('initial-upload-focus');
   document.body.classList.add('product-focus');
   smoothScrollToTarget('productCard','center');
 }
@@ -4943,9 +4943,7 @@ async function approveDesign(allThree){
 
 async function enterRevealStage(){
   const choiceOverlay=document.getElementById('revealChoiceOverlay');
-  const img=document.getElementById('revealChoiceArtworkImg');
-  const threePanelRow=document.getElementById('revealChoiceThreePanelRow');
-  if(!choiceOverlay||!img)return;
+  if(!choiceOverlay)return;
 
   const leftDesign=findDesignById(placements.left);
   const centerDesign=findDesignById(placements.front);
@@ -4954,27 +4952,15 @@ async function enterRevealStage(){
 
   document.body.classList.add('step-locked');
   choiceOverlay.style.display='flex';
-  img.src='';
-  img.style.opacity='0';
 
   revealFlowThreePanel=(mugPrintMode==='three-panel');
 
   if(revealFlowThreePanel){
-    img.style.display='none';
-    if(threePanelRow){threePanelRow.style.display='flex';threePanelRow.style.opacity='0';}
     revealOriginalArtworkUrls=[leftDesign.url,centerDesign.url,rightDesign.url];
-    document.getElementById('revealChoiceThreePanelLeft').src=leftDesign.url;
-    document.getElementById('revealChoiceThreePanelCenter').src=centerDesign.url;
-    document.getElementById('revealChoiceThreePanelRight').src=rightDesign.url;
-    requestAnimationFrame(()=>requestAnimationFrame(()=>{threePanelRow.style.opacity='1';}));
   } else {
-    if(threePanelRow)threePanelRow.style.display='none';
-    img.style.display='block';
     try{
       const stitched=await stitchThreePanelsRaw(centerDesign.url,leftDesign.url,rightDesign.url);
       revealOriginalArtworkUrls=[stitched];
-      img.src=stitched;
-      requestAnimationFrame(()=>requestAnimationFrame(()=>{img.style.opacity='1';}));
     }catch(err){
       console.error('Could not stitch the panorama for Reveal:',err);
       choiceOverlay.style.display='none';
@@ -4983,27 +4969,32 @@ async function enterRevealStage(){
       return;
     }
   }
+
+  choiceOverlay.style.display='none';
+  document.body.classList.remove('step-locked');
+  showAccessorizeChoiceState();
 }
 
 let revealOriginalArtworkUrls=[];
 let revealFadeAmountPct=30;
 
-// Back arrow on the black choice screen -- nothing meaningful to
-// literally "go back" to at this exact point (this is the first screen
-// of the whole post-generation segment), so this returns to the
-// approved-design view they just came from.
-function revealChoiceGoBack(){
-  const choiceOverlay=document.getElementById('revealChoiceOverlay');
-  if(choiceOverlay)choiceOverlay.style.display='none';
-  document.body.classList.remove('step-locked');
+// Shows accessorizeCard in its initial "choice" state -- the two
+// labeled mockups + No Thank You, with the browsable-rows/preview
+// content hidden until an actual choice is made.
+function showAccessorizeChoiceState(){
+  const card=document.getElementById('accessorizeCard');
+  const choicePanel=document.getElementById('accessorizeChoicePanel');
+  const committed=document.getElementById('accessorizeCommittedContent');
+  if(!card)return;
+  card.style.display='block';
+  if(choicePanel)choicePanel.style.display='block';
+  if(committed)committed.style.display='none';
   document.getElementById('positionHolderCard').scrollIntoView({behavior:'smooth',block:'start'});
 }
 
-// The three-way branch from the black choice screen.
+// The three-way branch, now triggered from within accessorizeCard
+// itself rather than a separate preceding screen.
 function chooseRevealPath(choice){
-  const choiceOverlay=document.getElementById('revealChoiceOverlay');
-  if(choiceOverlay)choiceOverlay.style.display='none';
-
   if(choice==='sill'){
     // Hard edges apply automatically -- no fade offer at all for
     // Window Sill, straight into the catalog.
@@ -5047,18 +5038,20 @@ function chooseRevealPath(choice){
 }
 
 // Sets up the shared reveal-flow state (used by both the Window Sill
-// and Frame paths) and opens the existing accessorizeCard screen, which
-// already shows both catalogs and the live preview.
+// and Frame paths) and swaps accessorizeCard from its choice state to
+// its committed state (browsable rows + live preview), which already
+// shows both catalogs relocated above it.
 function openAccessorizeForRevealFlow(){
   revealFlowActive=true;
-  const cancelBtn=document.getElementById('accessorizeCancelBtn');
-  if(cancelBtn)cancelBtn.style.display='block';
+  const choicePanel=document.getElementById('accessorizeChoicePanel');
+  const committed=document.getElementById('accessorizeCommittedContent');
+  if(choicePanel)choicePanel.style.display='none';
+  if(committed)committed.style.display='block';
   pendingWraparoundRaw={
     center:findDesignById(placements.front).url,
     left:findDesignById(placements.left).url,
     right:findDesignById(placements.right).url
   };
-  document.body.classList.add('step-locked');
   showAccessorizeStep();
 }
 
@@ -5330,10 +5323,10 @@ async function beginFinalMockupFetch(){
 function cancelAccessorizeToOffer(){
   revealFlowActive=false;
   clearTimeout(revealAutoApplyTimer);
-  hideAccessorizeStep();
-  const choiceOverlay=document.getElementById('revealChoiceOverlay');
-  if(choiceOverlay)choiceOverlay.style.display='flex';
-  document.body.classList.add('step-locked');
+  pendingWraparoundRaw=null;
+  pending40ozRaw=null;
+  restoreFrameCardsToHome();
+  showAccessorizeChoiceState();
 }
 
 function keepTweaking(){
@@ -5782,11 +5775,13 @@ function renderAccessorizeStrip(url){
   strip.appendChild(img);
 }
 
+let accessorizePreviewInFlight=null;
 async function updateAccessorizePreview(){
   const strip=document.getElementById('accessorizePreviewStrip');
   if(!strip)return;
   if(!pendingWraparoundRaw && !pending40ozRaw)return;
   strip.innerHTML='<div class="note" style="width:100%;text-align:center"><span class="spinner"></span>Updating preview...</div>';
+  accessorizePreviewInFlight=(async()=>{
   try{
     if(pendingWraparoundRaw && revealFlowThreePanel){
       // Three-panel mode: each panel is its own independent design, never
@@ -5817,6 +5812,8 @@ async function updateAccessorizePreview(){
     strip.innerHTML='<div class="note error" style="width:100%;text-align:center">Preview failed to update.</div>';
     console.error('Accessorize preview failed:',err);
   }
+  })();
+  await accessorizePreviewInFlight;
 }
 
 function renderAccessorizeStripThree(urls){
@@ -5937,8 +5934,6 @@ function hideAccessorizeStep(){
   pending40ozRaw=null;
   const card=document.getElementById('accessorizeCard');
   if(card)card.style.display='none';
-  const cancelBtn=document.getElementById('accessorizeCancelBtn');
-  if(cancelBtn)cancelBtn.style.display='none';
   restoreFrameCardsToHome();
   if(revealFlowActive)return;
   // The frame cards just got yanked out from under whatever the customer
@@ -5952,7 +5947,8 @@ let revealAutoApplyTimer=null;
 function scheduleRevealAutoApply(){
   if(!revealFlowActive)return;
   clearTimeout(revealAutoApplyTimer);
-  revealAutoApplyTimer=setTimeout(()=>{
+  revealAutoApplyTimer=setTimeout(async()=>{
+    if(accessorizePreviewInFlight)await accessorizePreviewInFlight;
     applyAccessorizeFrame();
   },900);
 }
@@ -6829,13 +6825,12 @@ function updatePlacementSummary(){
 
   const showMugOptions = false; // Size/Style/Color are locked in pre-generation now (step-lock-overlay flow) -- re-showing this panel post-gen is redundant
   const showTravelOptions = (assignedCount>0 && product==='water bottle');
-  const showMugPreview = (assignedCount>0 && product==='mug');
   const mugOptionsWrap=document.getElementById('genMugOptionsWrap');
   const travelOptionsWrap=document.getElementById('genTravelOptionsWrap');
   const previewSection=document.getElementById('genPreviewSection');
   if(mugOptionsWrap) mugOptionsWrap.style.display = showMugOptions ? 'block' : 'none';
   if(travelOptionsWrap) travelOptionsWrap.style.display = showTravelOptions ? 'block' : 'none';
-  if(previewSection) previewSection.style.display = (showMugPreview || showTravelOptions) ? 'block' : 'none';
+  if(previewSection) previewSection.style.display = showTravelOptions ? 'block' : 'none';
   if(showMugOptions){
     renderGenMugStyleGrid();
     renderGenMugColorGrid();
@@ -7077,11 +7072,8 @@ function maybeAutoFetchMockup(){
   }
 
   if (product === 'mug') {
-    const requiresColor = !!(GEN_MUG_STYLES[selectedGenStyle]?.colors?.[selectedGenSize]);
-    if (requiresColor && !selectedGenColor) {
-      hideAutoMockup();
-      return;
-    }
+    hideAutoMockup();
+    return;
   } else if (product === 'water bottle') {
     if (!selectedTravelProductKey) {
       showAutoMockupNote('Pick a travel mug style above to see a real preview.');
@@ -7501,6 +7493,7 @@ function resetEverythingFreshStart(){
   document.body.classList.remove('print-mode-focus');
   document.body.classList.remove('final-generate-focus');
   document.body.classList.remove('product-focus');
+  document.body.classList.add('initial-upload-focus');
   const fadeToggle=document.getElementById('panoramaFadeToggle');
   if(fadeToggle)fadeToggle.checked=false;
 
