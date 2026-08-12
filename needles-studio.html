@@ -892,12 +892,22 @@ body.product-focus .card:not(#productCard){opacity:.35;filter:brightness(.6) sat
 <div class="card" id="revealCard" style="max-width:520px;width:100%;margin:auto;position:relative;max-height:92vh;overflow-y:auto;text-align:center">
 <div class="card-title">🎉 Your Finished Artwork</div>
 <img id="revealArtworkImg" style="width:100%;border-radius:10px;border:1px solid #003c8c;margin:.9rem 0;background:#0d0d0d"/>
-<div class="note" style="margin-top:0;margin-bottom:.9rem">One more choice before we add any frame — how should the edges look?</div>
-<div class="bi-row">
-<button type="button" class="generate-btn" style="flex:1;width:auto;padding:.9rem .4rem" onclick="chooseEdgeStyleAndContinue(true)">◻️ Hard Edges</button>
-<button type="button" class="generate-btn" style="flex:1;width:auto;padding:.9rem .4rem" onclick="chooseEdgeStyleAndContinue(false)">🌫️ Fade Edges</button>
+<div id="revealThreePanelRow" style="display:none;gap:8px;margin:.9rem 0">
+<img id="revealThreePanelLeft" style="flex:1;min-width:0;border-radius:8px;border:1px solid #003c8c;object-fit:contain;max-height:200px;background:#0d0d0d"/>
+<img id="revealThreePanelCenter" style="flex:1;min-width:0;border-radius:8px;border:1px solid #003c8c;object-fit:contain;max-height:200px;background:#0d0d0d"/>
+<img id="revealThreePanelRight" style="flex:1;min-width:0;border-radius:8px;border:1px solid #003c8c;object-fit:contain;max-height:200px;background:#0d0d0d"/>
 </div>
-<div class="note" id="revealFadeUnavailableNote" style="display:none;margin-top:.75rem;color:#ff8a7a">Fade isn't available for this product's color — Hard Edges only.</div>
+<div class="note" style="margin-top:0;margin-bottom:.9rem">One more choice before we add any frame — how should the edges look?</div>
+<div class="bi-row" id="revealEdgeButtonsRow">
+<button type="button" class="generate-btn" style="flex:1;width:auto;padding:.9rem .4rem" onclick="chooseEdgeStyleAndContinue(true)">◻️ Hard Edges</button>
+<button type="button" class="generate-btn" style="flex:1;width:auto;padding:.9rem .4rem" onclick="chooseFadeEdges()">🌫️ Fade Edges</button>
+</div>
+<div id="revealFadeSliderPanel" style="display:none;margin-top:.9rem">
+<div class="note" style="margin-top:0;margin-bottom:.5rem">How far should the fade reach in from the edges?</div>
+<input type="range" id="revealFadeAmountSlider" min="0" max="80" step="1" value="30" oninput="updateRevealFadePreview()" style="width:100%"/>
+<div class="note" style="margin-top:.25rem;margin-bottom:0;text-align:center"><span id="revealFadeAmountVal">30%</span></div>
+<button type="button" class="generate-btn" style="margin-top:.75rem" onclick="confirmFadeAndContinue()">✅ Continue</button>
+</div>
 </div>
 </div>
 
@@ -912,6 +922,21 @@ body.product-focus .card:not(#productCard){opacity:.35;filter:brightness(.6) sat
 <div class="note" style="margin-top:0;margin-bottom:.9rem;text-align:center;font-style:italic;color:#7ab8ff;line-height:1.5">It's not too late to change your mind,<br/>If you think you'd like a new design,<br/>just go and try another kind,<br/>and let Needles fix it up just fine.</div>
 <div class="note-prominent" style="margin-top:0;margin-bottom:.75rem">Three ways to finish this: pick a Frame above, pick a Window Sill above, or use just the photo as-is below. Pick a Frame or Window Sill and you'll see it applied right here instantly — nothing is saved until you press Apply. Edge style (sharp vs. soft/blended) only matters if you go with just the photo — a Frame or Window Sill always uses sharp edges automatically.</div>
 <div id="accessorizePreviewStrip" style="display:flex;gap:8px"></div>
+<div id="frameFitSlidersWrap" style="display:none;margin-top:.9rem">
+<button type="button" class="download-btn" id="frameFitSlidersToggleBtn" style="margin-top:0" onclick="toggleFrameFitSliders()">🎚️ Adjust Frame Fit</button>
+<div id="frameFitSliders" style="display:none;margin-top:.75rem">
+<div class="note" style="margin-top:0;margin-bottom:.5rem">Stretch or reposition the frame's opening to fit your picture exactly how you want.</div>
+<label style="display:block;margin-bottom:2px">Width <span id="frameFitWidthVal"></span></label>
+<input type="range" id="frameFitWidth" min="20" max="150" step="1" oninput="handleFrameFitSliderChange()" style="width:100%"/>
+<label style="display:block;margin:8px 0 2px">Height <span id="frameFitHeightVal"></span></label>
+<input type="range" id="frameFitHeight" min="20" max="150" step="1" oninput="handleFrameFitSliderChange()" style="width:100%"/>
+<label style="display:block;margin:8px 0 2px">Left/Right Position <span id="frameFitOffsetXVal"></span></label>
+<input type="range" id="frameFitOffsetX" min="-50" max="50" step="1" oninput="handleFrameFitSliderChange()" style="width:100%"/>
+<label style="display:block;margin:8px 0 2px">Up/Down Position <span id="frameFitOffsetYVal"></span></label>
+<input type="range" id="frameFitOffsetY" min="-50" max="50" step="1" oninput="handleFrameFitSliderChange()" style="width:100%"/>
+<button type="button" class="download-btn" style="margin-top:.6rem" onclick="resetFrameFitSliders()">↺ Reset to Default Fit</button>
+</div>
+</div>
 <div class="bi-row">
 <button class="generate-btn cta-flash" id="accessorizeApplyBtn" style="flex:1;width:auto;padding:.8rem .4rem;font-size:13px" onclick="applyAccessorizeFrame()">✅ Apply Frame</button>
 <button class="download-btn" style="flex:1;margin-top:0;padding:.8rem .4rem;font-size:13px" onclick="skipAccessorizeFrame()">⏭️ Use Just the Photo — No Frame</button>
@@ -1986,6 +2011,7 @@ let windowSillChoice = null;
 // over the baked-in calibration -- this is what makes the sliders actually
 // affect the real generation, not just the pre-gen preview.
 let customWindowSillCalibration = {};
+let customFrameCalibration = {};
 let frameColors = {};
 // UPDATED (Aug 2026, Alyx's request): single-layer colorable frames used
 // to each remember their own color independently (keyed by frame name),
@@ -2062,6 +2088,7 @@ async function pickFrame(name){
   renderFrameGrid();
   renderFrameColorPanel();
   syncEdgeFadeWithFrameSelection();
+  refreshFrameFitSliders();
   drawCaption();
   updateIdeaCardNote();
   await renderWindowSillPreviewCard();
@@ -2278,6 +2305,73 @@ function renderWindowSillPreviewCard(){
     if(toggleBtn)toggleBtn.style.display='none';
   }
   return updateWindowSillLivePreview();
+}
+
+// NEW (Aug 2026, Alyx's request): the Preview & Fit sliders now start
+// collapsed by default -- this toggles them open for the rare photo
+// that actually needs a manual nudge, without inviting fiddling on
+// every design when the calibrated defaults are already correct.
+function toggleFrameFitSliders(){
+  const sliders=document.getElementById('frameFitSliders');
+  const toggleBtn=document.getElementById('frameFitSlidersToggleBtn');
+  if(!sliders)return;
+  const nowOpen=sliders.style.display==='none';
+  sliders.style.display=nowOpen?'block':'none';
+  if(toggleBtn)toggleBtn.textContent=nowOpen?'🎚️ Hide Frame Fit Adjustment':'🎚️ Adjust Frame Fit';
+}
+
+async function refreshFrameFitSliders(){
+  const wrap=document.getElementById('frameFitSlidersWrap');
+  if(!wrap)return;
+  if(!selectedFrame){
+    wrap.style.display='none';
+    return;
+  }
+  const data=FRAME_CATALOG[selectedFrame];
+  if(!data||data.type!=='image'){
+    wrap.style.display='none';
+    return;
+  }
+  wrap.style.display='block';
+  const active=customFrameCalibration[data.asset]||await getFrameDefaultCalibrationPct(data.asset);
+  document.getElementById('frameFitWidth').value=active.widthPct;
+  document.getElementById('frameFitHeight').value=active.heightPct;
+  document.getElementById('frameFitOffsetX').value=active.offsetXPct;
+  document.getElementById('frameFitOffsetY').value=active.offsetYPct;
+  updateFrameFitSliderReadouts();
+}
+
+function updateFrameFitSliderReadouts(){
+  ['frameFitWidth','frameFitHeight','frameFitOffsetX','frameFitOffsetY'].forEach(id=>{
+    const slider=document.getElementById(id);
+    const readout=document.getElementById(id+'Val');
+    if(!slider||!readout)return;
+    const num=parseFloat(slider.value);
+    readout.textContent=(isNaN(num)?'—':num)+'%';
+  });
+}
+
+function handleFrameFitSliderChange(){
+  if(!selectedFrame)return;
+  const data=FRAME_CATALOG[selectedFrame];
+  if(!data||data.type!=='image')return;
+  customFrameCalibration[data.asset]={
+    widthPct:parseFloat(document.getElementById('frameFitWidth').value),
+    heightPct:parseFloat(document.getElementById('frameFitHeight').value),
+    offsetXPct:parseFloat(document.getElementById('frameFitOffsetX').value),
+    offsetYPct:parseFloat(document.getElementById('frameFitOffsetY').value)
+  };
+  updateFrameFitSliderReadouts();
+  if(pendingWraparoundRaw||pending40ozRaw)updateAccessorizePreview();
+}
+
+function resetFrameFitSliders(){
+  if(!selectedFrame)return;
+  const data=FRAME_CATALOG[selectedFrame];
+  if(!data||data.type!=='image')return;
+  delete customFrameCalibration[data.asset];
+  refreshFrameFitSliders();
+  if(pendingWraparoundRaw||pending40ozRaw)updateAccessorizePreview();
 }
 
 // NEW (Aug 2026, Alyx's request): the Preview & Fit sliders now start
@@ -2627,6 +2721,16 @@ function getInnerOpeningBBox(img,outerBBox){
 
 const frameInsetCache={};
 
+async function getFrameDefaultCalibrationPct(asset){
+  const frac=await getFrameInsetFraction(asset);
+  return {
+    widthPct: frac.w*100,
+    heightPct: frac.h*100,
+    offsetXPct: ((frac.x+frac.w/2)-0.5)*100,
+    offsetYPct: ((frac.y+frac.h/2)-0.5)*100
+  };
+}
+
 // Fraction (0-1) of the OUTER bbox that the inner opening occupies --
 // stays valid regardless of final canvas size, and is the same coordinate
 // space the outer-bbox-to-canvas stretch already uses, so it maps
@@ -2635,9 +2739,9 @@ const frameInsetCache={};
 // every keystroke.
 async function getFrameInsetFraction(assetPath){
   if(frameInsetCache[assetPath])return frameInsetCache[assetPath];
-  const img=await loadImageFromUrl(assetPath);
   let frac;
   try{
+    const img=await loadImageFromUrl(assetPath);
     const outer=getOpaqueBBox(img);
     const inner=getInnerOpeningBBox(img,outer);
     frac={
@@ -2649,7 +2753,10 @@ async function getFrameInsetFraction(assetPath){
   }catch(err){
     // Same tainted-canvas safety net as drawWindowSillOnCanvas/
     // drawFrameOnCanvas -- fall back to no inset trimming (full canvas)
-    // rather than breaking Frame's shrink-to-fit entirely.
+    // rather than breaking Frame's shrink-to-fit entirely. Now also
+    // covers the image failing to load in the first place (a network
+    // hiccup, a renamed/moved asset), not just a successful load that
+    // then failed bbox detection.
     console.error('Frame inset detection failed, using full canvas as fallback:',err);
     frac={x:0,y:0,w:1,h:1};
   }
@@ -2733,11 +2840,19 @@ async function drawPhotoInsetForFrame(ctx,canvas,source,sourceW,sourceH){
       insetX=0; insetY=0; insetW=canvas.width; insetH=canvas.height;
     }
   } else {
-    const frac=await getFrameInsetFraction(asset);
-    insetX=frac.x*canvas.width;
-    insetY=frac.y*canvas.height;
-    insetW=frac.w*canvas.width;
-    insetH=frac.h*canvas.height;
+    const calib=customFrameCalibration[asset];
+    if(calib){
+      insetW=canvas.width*(calib.widthPct/100);
+      insetH=canvas.height*(calib.heightPct/100);
+      insetX=(canvas.width-insetW)/2+canvas.width*(calib.offsetXPct/100);
+      insetY=(canvas.height-insetH)/2+canvas.height*(calib.offsetYPct/100);
+    } else {
+      const frac=await getFrameInsetFraction(asset);
+      insetX=frac.x*canvas.width;
+      insetY=frac.y*canvas.height;
+      insetW=frac.w*canvas.width;
+      insetH=frac.h*canvas.height;
+    }
   }
   const scale=fitMode==='cover'
     ? Math.max(insetW/sourceW, insetH/sourceH)
@@ -3914,6 +4029,11 @@ function hexToRgbTriple(hex){
 
 // Real hex behind the chosen product color, so the pixel-level edge fade matches it instead of white.
 function getSelectedProductColorHex(){
+  if(product==='mug' && selectedGenColor){
+    const colorList=GEN_MUG_STYLES[selectedGenStyle]?.colors?.[selectedGenSize];
+    const match=Array.isArray(colorList)?colorList.find(c=>c.name===selectedGenColor):null;
+    if(match)return match.hex;
+  }
   if(product==='water bottle' && preGenTravelVariant && preGenTravelColor){
     const match=TRAVEL_MUG_CATALOG[preGenTravelVariant]?.colors?.find(c=>c.name===preGenTravelColor);
     if(match)return match.hex;
@@ -4794,16 +4914,14 @@ async function approveDesign(allThree){
   updatePlacementSummary();
   restoreFrameCardsToHome();
 
-  // NEW (Aug 2026, Alyx's flow redesign): coffee mug wraparound is the
-  // first product moved onto the new post-generation flow -- once all
-  // three panels are approved, stitch them into the actual finished
-  // artwork (one continuous panorama) and move to the new Reveal stage
-  // instead of the old "Design Your Product" panel view. Three-panel
-  // mode and every other product are untouched for now -- they still
-  // land on positionHolderCard exactly as before, pending their own
-  // migration to this new flow in a later pass.
+  // NEW (Aug 2026, Alyx's flow redesign): coffee mug (both wraparound
+  // and three-panel) is now on the new post-generation flow -- once all
+  // required panels are approved, move to the new Reveal stage instead
+  // of the old "Design Your Product" panel view. Every other product is
+  // untouched for now, still landing on positionHolderCard as before,
+  // pending its own migration to this new flow in a later pass.
   const slotsNowFilled=getSlotOrder().every(pos=>placements[pos]);
-  if(product==='mug' && mugPrintMode==='wraparound' && slotsNowFilled){
+  if(product==='mug' && slotsNowFilled){
     enterRevealStage();
   } else {
     document.getElementById('positionHolderCard').scrollIntoView({behavior:'smooth',block:'start'});
@@ -4813,6 +4931,7 @@ async function approveDesign(allThree){
 async function enterRevealStage(){
   const overlay=document.getElementById('revealOverlay');
   const img=document.getElementById('revealArtworkImg');
+  const threePanelRow=document.getElementById('revealThreePanelRow');
   if(!overlay||!img)return;
 
   const leftDesign=findDesignById(placements.left);
@@ -4824,34 +4943,43 @@ async function enterRevealStage(){
   overlay.style.display='flex';
   img.src='';
 
-  try{
-    const stitched=await stitchThreePanelsRaw(centerDesign.url,leftDesign.url,rightDesign.url);
-    img.src=stitched;
-  }catch(err){
-    console.error('Could not stitch the panorama for Reveal:',err);
-    overlay.style.display='none';
-    document.body.classList.remove('step-locked');
-    document.getElementById('positionHolderCard').scrollIntoView({behavior:'smooth',block:'start'});
-    return;
+  revealFlowThreePanel=(mugPrintMode==='three-panel');
+
+  if(revealFlowThreePanel){
+    img.style.display='none';
+    if(threePanelRow)threePanelRow.style.display='flex';
+    revealOriginalArtworkUrls=[leftDesign.url,centerDesign.url,rightDesign.url];
+    document.getElementById('revealThreePanelLeft').src=leftDesign.url;
+    document.getElementById('revealThreePanelCenter').src=centerDesign.url;
+    document.getElementById('revealThreePanelRight').src=rightDesign.url;
+  } else {
+    if(threePanelRow)threePanelRow.style.display='none';
+    img.style.display='block';
+    try{
+      const stitched=await stitchThreePanelsRaw(centerDesign.url,leftDesign.url,rightDesign.url);
+      revealOriginalArtworkUrls=[stitched];
+      img.src=stitched;
+    }catch(err){
+      console.error('Could not stitch the panorama for Reveal:',err);
+      overlay.style.display='none';
+      document.body.classList.remove('step-locked');
+      document.getElementById('positionHolderCard').scrollIntoView({behavior:'smooth',block:'start'});
+      return;
+    }
   }
 
-  // TODO (next stage): fade is currently a plain on/off flag, not the
-  // exact-hex live color match + adjustable-amount slider Alyx described
-  // -- that's a genuinely separate, larger feature to build. For now,
-  // fade is only offered when the mug's chosen color is white (or no
-  // color was needed), since a mismatched fade color would look worse
-  // than no fade at all until the real color-matching feature exists.
-  const colorIsWhiteSafe=!selectedGenColor || /white/i.test(selectedGenColor);
-  const fadeBtn=overlay.querySelector('button[onclick="chooseEdgeStyleAndContinue(false)"]');
-  const unavailableNote=document.getElementById('revealFadeUnavailableNote');
-  if(fadeBtn)fadeBtn.style.display=colorIsWhiteSafe?'block':'none';
-  if(unavailableNote)unavailableNote.style.display=colorIsWhiteSafe?'none':'block';
+  // Reset back to the initial Hard/Fade choice each time this screen is
+  // freshly entered, in case a previous design left the slider panel open.
+  const buttonsRow=document.getElementById('revealEdgeButtonsRow');
+  const fadePanel=document.getElementById('revealFadeSliderPanel');
+  if(buttonsRow)buttonsRow.style.display='flex';
+  if(fadePanel)fadePanel.style.display='none';
 }
 
-function chooseEdgeStyleAndContinue(isHard){
-  hardEdgesEnabled=isHard;
-  const mainToggle=document.getElementById('panoramaFadeToggle');
-  if(mainToggle)mainToggle.checked=isHard;
+let revealOriginalArtworkUrls=[];
+let revealFadeAmountPct=30;
+
+function finishRevealAndOpenFrameOffer(){
   const overlay=document.getElementById('revealOverlay');
   if(overlay)overlay.style.display='none';
   const offerOverlay=document.getElementById('frameOfferOverlay');
@@ -4860,7 +4988,139 @@ function chooseEdgeStyleAndContinue(isHard){
   // full-screen step, no page content should be interactable behind it.
 }
 
+function chooseEdgeStyleAndContinue(isHard){
+  hardEdgesEnabled=isHard;
+  const mainToggle=document.getElementById('panoramaFadeToggle');
+  if(mainToggle)mainToggle.checked=isHard;
+  finishRevealAndOpenFrameOffer();
+}
+
+function chooseFadeEdges(){
+  const buttonsRow=document.getElementById('revealEdgeButtonsRow');
+  const fadePanel=document.getElementById('revealFadeSliderPanel');
+  if(buttonsRow)buttonsRow.style.display='none';
+  if(fadePanel)fadePanel.style.display='block';
+  const slider=document.getElementById('revealFadeAmountSlider');
+  if(slider)slider.value=revealFadeAmountPct;
+  updateRevealFadePreview();
+}
+
+// Renders a color fade in from all four edges of an image, using real
+// alpha-aware hex color stops (8-digit hex, e.g. #7A1F2BFF -> #7A1F2B00)
+// so the fade genuinely reaches full transparency rather than an
+// approximated blend. fadeAmountPct controls how far the fade reaches
+// in from each edge, as a percentage of the shorter image dimension.
+async function renderFadedArtwork(sourceUrl,hexColor,fadeAmountPct){
+  const img=await loadImageFromUrl(sourceUrl);
+  const canvas=document.createElement('canvas');
+  canvas.width=img.naturalWidth;
+  canvas.height=img.naturalHeight;
+  const ctx=canvas.getContext('2d');
+  ctx.drawImage(img,0,0);
+  if(fadeAmountPct>0){
+    const w=canvas.width,h=canvas.height;
+    const fadeDist=(fadeAmountPct/100)*Math.min(w,h)*0.5;
+    const full=hexColor+'FF';
+    const clear=hexColor+'00';
+    let g=ctx.createLinearGradient(0,0,fadeDist,0);
+    g.addColorStop(0,full);g.addColorStop(1,clear);
+    ctx.fillStyle=g;ctx.fillRect(0,0,fadeDist,h);
+    g=ctx.createLinearGradient(w,0,w-fadeDist,0);
+    g.addColorStop(0,full);g.addColorStop(1,clear);
+    ctx.fillStyle=g;ctx.fillRect(w-fadeDist,0,fadeDist,h);
+    g=ctx.createLinearGradient(0,0,0,fadeDist);
+    g.addColorStop(0,full);g.addColorStop(1,clear);
+    ctx.fillStyle=g;ctx.fillRect(0,0,w,fadeDist);
+    g=ctx.createLinearGradient(0,h,0,h-fadeDist);
+    g.addColorStop(0,full);g.addColorStop(1,clear);
+    ctx.fillStyle=g;ctx.fillRect(0,h-fadeDist,w,fadeDist);
+  }
+  return canvas.toDataURL('image/jpeg',0.92);
+}
+
+async function updateRevealFadePreview(){
+  const slider=document.getElementById('revealFadeAmountSlider');
+  const readout=document.getElementById('revealFadeAmountVal');
+  revealFadeAmountPct=slider?parseFloat(slider.value):30;
+  if(readout)readout.textContent=revealFadeAmountPct+'%';
+  if(!revealOriginalArtworkUrls.length)return;
+  const hex=getSelectedProductColorHex();
+  if(revealFlowThreePanel){
+    const targetIds=['revealThreePanelLeft','revealThreePanelCenter','revealThreePanelRight'];
+    await Promise.all(revealOriginalArtworkUrls.map(async(url,i)=>{
+      const faded=await renderFadedArtwork(url,hex,revealFadeAmountPct);
+      const el=document.getElementById(targetIds[i]);
+      if(el)el.src=faded;
+    }));
+  } else {
+    const img=document.getElementById('revealArtworkImg');
+    if(!img)return;
+    const faded=await renderFadedArtwork(revealOriginalArtworkUrls[0],hex,revealFadeAmountPct);
+    img.src=faded;
+  }
+}
+
+// Slices a stitched three-panel-wide panorama back into its three equal
+// thirds -- same technique compositeFrameAcrossThreePanels already uses
+// for Frame, reused here so a baked-in fade updates the real per-panel
+// designs instead of only ever existing as a Reveal-screen preview.
+async function sliceStitchedIntoThirds(dataUrl){
+  const img=await loadImageFromUrl(dataUrl);
+  const panelW=Math.round(img.naturalWidth/3);
+  const h=img.naturalHeight;
+  function slice(i){
+    const c=document.createElement('canvas');
+    c.width=panelW;c.height=h;
+    c.getContext('2d').drawImage(img,i*panelW,0,panelW,h,0,0,panelW,h);
+    return c.toDataURL('image/jpeg',0.92);
+  }
+  return {left:slice(0),center:slice(1),right:slice(2)};
+}
+
+async function confirmFadeAndContinue(){
+  const hex=getSelectedProductColorHex();
+  try{
+    if(revealFlowThreePanel){
+      const [leftFaded,centerFaded,rightFaded]=await Promise.all(
+        revealOriginalArtworkUrls.map(u=>renderFadedArtwork(u,hex,revealFadeAmountPct))
+      );
+      const [leftUrl,centerUrl,rightUrl]=await Promise.all([
+        uploadCompositedImage(leftFaded),
+        uploadCompositedImage(centerFaded),
+        uploadCompositedImage(rightFaded)
+      ]);
+      const leftDesign=findDesignById(placements.left);
+      if(leftDesign)leftDesign.url=leftUrl;
+      const centerDesign=findDesignById(placements.front);
+      if(centerDesign)centerDesign.url=centerUrl;
+      const rightDesign=findDesignById(placements.right);
+      if(rightDesign)rightDesign.url=rightUrl;
+    } else {
+      const faded=await renderFadedArtwork(revealOriginalArtworkUrls[0],hex,revealFadeAmountPct);
+      const slices=await sliceStitchedIntoThirds(faded);
+      const [leftUrl,centerUrl,rightUrl]=await Promise.all([
+        uploadCompositedImage(slices.left),
+        uploadCompositedImage(slices.center),
+        uploadCompositedImage(slices.right)
+      ]);
+      const leftDesign=findDesignById(placements.left);
+      if(leftDesign)leftDesign.url=leftUrl;
+      const centerDesign=findDesignById(placements.front);
+      if(centerDesign)centerDesign.url=centerUrl;
+      const rightDesign=findDesignById(placements.right);
+      if(rightDesign)rightDesign.url=rightUrl;
+    }
+  }catch(err){
+    console.error('Could not save the faded artwork, continuing with the unfaded version:',err);
+  }
+  hardEdgesEnabled=false;
+  const mainToggle=document.getElementById('panoramaFadeToggle');
+  if(mainToggle)mainToggle.checked=false;
+  finishRevealAndOpenFrameOffer();
+}
+
 let revealFlowActive=false;
+let revealFlowThreePanel=false;
 
 async function beginFinalMockupFetch(){
   const overlay=document.getElementById('mockupLoadingOverlay');
@@ -4929,6 +5189,7 @@ function chooseFrameOffer(choice){
   // (see showAccessorizeStep), so there's no need for separate
   // destinations here; the customer can pick either one once there.
   revealFlowActive=true;
+  revealFlowThreePanel=(mugPrintMode==='three-panel');
   const cancelBtn=document.getElementById('accessorizeCancelBtn');
   if(cancelBtn)cancelBtn.style.display='block';
   pendingWraparoundRaw={
@@ -5399,7 +5660,16 @@ async function updateAccessorizePreview(){
   if(!pendingWraparoundRaw && !pending40ozRaw)return;
   strip.innerHTML='<div class="note" style="width:100%;text-align:center"><span class="spinner"></span>Updating preview...</div>';
   try{
-    if(pendingWraparoundRaw){
+    if(pendingWraparoundRaw && revealFlowThreePanel){
+      // Three-panel mode: each panel is its own independent design, never
+      // meant to blend into one continuous scene -- frame (or no frame)
+      // gets applied to each one separately, shown side by side.
+      const urls=[pendingWraparoundRaw.left,pendingWraparoundRaw.center,pendingWraparoundRaw.right];
+      const framed=(selectedFrame||windowSillChoice)
+        ? await Promise.all(urls.map(u=>compositeFrameOntoImageUrl(u)))
+        : urls;
+      renderAccessorizeStripThree(framed);
+    } else if(pendingWraparoundRaw){
       if(selectedFrame||windowSillChoice){
         const framed=await compositeFrameAcrossThreePanels(pendingWraparoundRaw.center,pendingWraparoundRaw.left,pendingWraparoundRaw.right);
         renderAccessorizeStrip(framed.combined);
@@ -5419,6 +5689,18 @@ async function updateAccessorizePreview(){
     strip.innerHTML='<div class="note error" style="width:100%;text-align:center">Preview failed to update.</div>';
     console.error('Accessorize preview failed:',err);
   }
+}
+
+function renderAccessorizeStripThree(urls){
+  const strip=document.getElementById('accessorizePreviewStrip');
+  if(!strip)return;
+  strip.innerHTML='';
+  urls.forEach(u=>{
+    const img=document.createElement('img');
+    img.src=u;
+    img.style.cssText='flex:1;min-width:0;border-radius:8px;border:1px solid #003c8c;object-fit:contain;max-height:170px;background:#0d0d0d';
+    strip.appendChild(img);
+  });
 }
 
 let frameCardHomeParent=null, frameCardHomeNext=null;
@@ -5543,7 +5825,25 @@ async function applyAccessorizeFrame(){
   if(btn)btn.disabled=true;
   const strip=document.getElementById('accessorizePreviewStrip');
   try{
-    if(pendingWraparoundRaw && (selectedFrame||windowSillChoice)){
+    if(pendingWraparoundRaw && revealFlowThreePanel && (selectedFrame||windowSillChoice)){
+      if(strip)strip.innerHTML='<div class="note" style="width:100%;text-align:center"><span class="spinner"></span>Saving your framed designs...</div>';
+      const [leftFramed,centerFramed,rightFramed]=await Promise.all([
+        compositeFrameOntoImageUrl(pendingWraparoundRaw.left),
+        compositeFrameOntoImageUrl(pendingWraparoundRaw.center),
+        compositeFrameOntoImageUrl(pendingWraparoundRaw.right)
+      ]);
+      const [leftUrl,centerUrl,rightUrl]=await Promise.all([
+        uploadCompositedImage(leftFramed),
+        uploadCompositedImage(centerFramed),
+        uploadCompositedImage(rightFramed)
+      ]);
+      const leftDesign=findDesignById(placements.left);
+      if(leftDesign)leftDesign.url=leftUrl;
+      const centerDesign=findDesignById(placements.front);
+      if(centerDesign)centerDesign.url=centerUrl;
+      const rightDesign=findDesignById(placements.right);
+      if(rightDesign)rightDesign.url=rightUrl;
+    } else if(pendingWraparoundRaw && (selectedFrame||windowSillChoice)){
       if(strip)strip.innerHTML='<div class="note" style="width:100%;text-align:center"><span class="spinner"></span>Saving your framed design...</div>';
       const framed=await compositeFrameAcrossThreePanels(pendingWraparoundRaw.center,pendingWraparoundRaw.left,pendingWraparoundRaw.right);
       const [centerUrl,leftUrl,rightUrl]=await Promise.all([
@@ -7071,6 +7371,9 @@ function resetEverythingFreshStart(){
   frameColors={};
   windowSillChoice=null;
   customWindowSillCalibration={};
+  customFrameCalibration={};
+  revealFlowThreePanel=false;
+  revealOriginalArtworkUrls=[];
   renderFrameGrid();
   renderFrameColorPanel();
   renderWindowSillGrid();
