@@ -241,11 +241,17 @@ export async function buildSeamlessWrapImage(imageSource, canvasWidth, canvasHei
   const cropLeft = Math.round((meta.width - cropWidth) / 2);
   return await sharp(buffer)
     .extract({ left: cropLeft, top: 0, width: cropWidth, height: meta.height })
-    .resize(canvasWidth, canvasHeight, { fit: "fill" })
+    // UPDATED (Aug 2026, Alyx's request): "fill" was stretching both
+    // dimensions independently to force an exact match, squashing the
+    // height down whenever the cropped image's natural proportions
+    // didn't already match the print area's aspect ratio. "cover"
+    // preserves the real proportions and only trims whatever doesn't
+    // fit, instead of distorting it -- uses the full available height
+    // rather than squeezing everything down to make the width fit.
+    .resize(canvasWidth, canvasHeight, { fit: "cover", position: "centre" })
     .png()
     .toBuffer();
 }
-
 export async function buildSingleImage(imageSource, canvasWidth, canvasHeight) {
   const WHITE = { r: 255, g: 255, b: 255 };
   return await sharp(await resolveImageBuffer(imageSource))
