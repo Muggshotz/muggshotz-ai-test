@@ -401,6 +401,7 @@ body.generation-active #creditsModalOverlay .card{opacity:1!important;filter:non
 body.print-mode-focus .card:not(#mugPrintModeCard){opacity:.28;filter:brightness(.55) saturate(.7);pointer-events:none;transition:opacity .5s,filter .5s}
 body.final-generate-focus .card:not(#uploadPhotoCard){opacity:.35;filter:brightness(.6) saturate(.75);transition:opacity .5s,filter .5s}
 body.initial-upload-focus .card:not(#uploadPhotoCard){opacity:.35;filter:brightness(.6) saturate(.75);pointer-events:none;transition:opacity .5s,filter .5s}
+body.idea-focus .card:not(#ideaCard){opacity:.35;filter:brightness(.6) saturate(.75);pointer-events:none;transition:opacity .5s,filter .5s}
 body.product-focus .card:not(#productCard){opacity:.35;filter:brightness(.6) saturate(.75);transition:opacity .5s,filter .5s}
 .generation-reminder-banner{font-size:14px;font-weight:800;letter-spacing:.3px;text-align:center;padding:14px 10px;margin:1rem 0;border-radius:10px;background:#0d0d0d;border:1px solid #003c8c;animation:mugSelectFlash 1s ease-in-out infinite}
 #creditsModalOverlay{
@@ -1618,6 +1619,7 @@ function startPhotoGuide(){
 function confirmIdeaSatisfied(){
   pauseIdeaGuideCycle();
   document.body.classList.remove('initial-upload-focus');
+  document.body.classList.remove('idea-focus');
   document.body.classList.add('product-focus');
   smoothScrollToTarget('productCard','center');
 }
@@ -1772,6 +1774,8 @@ window.addEventListener('DOMContentLoaded',()=>{
 
 function setMainSlotImage(dataUrl){
   uploadedImageData=dataUrl;
+  document.body.classList.remove('initial-upload-focus');
+  document.body.classList.add('idea-focus');
   const stageReference=document.getElementById('needlesReferencePhoto');
   if(stageReference){
     stageReference.src=dataUrl;
@@ -7493,6 +7497,7 @@ function resetEverythingFreshStart(){
   document.body.classList.remove('print-mode-focus');
   document.body.classList.remove('final-generate-focus');
   document.body.classList.remove('product-focus');
+  document.body.classList.remove('idea-focus');
   document.body.classList.add('initial-upload-focus');
   const fadeToggle=document.getElementById('panoramaFadeToggle');
   if(fadeToggle)fadeToggle.checked=false;
