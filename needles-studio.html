@@ -901,16 +901,16 @@ body.product-focus .card:not(#productCard){opacity:.35;filter:brightness(.6) sat
 
 <div id="frameFadeOverlay" class="step-lock-overlay" style="display:none">
 <div class="card" id="frameFadeCard" style="max-width:520px;width:100%;margin:auto;position:relative;max-height:92vh;overflow-y:auto;text-align:center">
-<div class="card-title">🌫️ Fade the Edges?</div>
+<div class="card-title">◻️ Sharp or Faded Edges?</div>
 <img id="frameFadeArtworkImg" style="width:100%;border-radius:10px;border:1px solid #003c8c;margin:.9rem 0;background:#0d0d0d"/>
 <div id="frameFadeThreePanelRow" style="display:none;gap:8px;margin:.9rem 0">
 <img id="frameFadeThreePanelLeft" style="flex:1;min-width:0;border-radius:8px;border:1px solid #003c8c;object-fit:contain;max-height:200px;background:#0d0d0d"/>
 <img id="frameFadeThreePanelCenter" style="flex:1;min-width:0;border-radius:8px;border:1px solid #003c8c;object-fit:contain;max-height:200px;background:#0d0d0d"/>
 <img id="frameFadeThreePanelRight" style="flex:1;min-width:0;border-radius:8px;border:1px solid #003c8c;object-fit:contain;max-height:200px;background:#0d0d0d"/>
 </div>
-<div class="note" style="margin-top:0;margin-bottom:.5rem">Drag all the way left for sharp edges, or right for however much fade you'd like.</div>
-<input type="range" id="frameFadeAmountSlider" min="0" max="80" step="1" value="20" oninput="updateFrameFadePreview()" style="width:100%"/>
-<div class="note" style="margin-top:.25rem;margin-bottom:0;text-align:center"><span id="frameFadeAmountVal">20%</span></div>
+<div class="note" style="margin-top:0;margin-bottom:.5rem">Give me all sharp edges — or drag right if you'd like some fade instead.</div>
+<input type="range" id="frameFadeAmountSlider" min="0" max="80" step="1" value="0" oninput="updateFrameFadePreview()" style="width:100%"/>
+<div class="note" style="margin-top:.25rem;margin-bottom:0;text-align:center"><span id="frameFadeAmountVal">0%</span></div>
 <button type="button" class="generate-btn" style="margin-top:.9rem" onclick="confirmFrameFadeAndContinue()">✅ Continue</button>
 </div>
 </div>
@@ -4049,17 +4049,13 @@ function hexToRgbTriple(hex){
 
 // Real hex behind the chosen product color, so the pixel-level edge fade matches it instead of white.
 function getSelectedProductColorHex(){
-  if(product==='mug' && selectedGenColor){
-    const colorList=GEN_MUG_STYLES[selectedGenStyle]?.colors?.[selectedGenSize];
-    const match=Array.isArray(colorList)?colorList.find(c=>c.name===selectedGenColor):null;
-    if(match)return match.hex;
-  }
-  if(product==='water bottle' && preGenTravelVariant && preGenTravelColor){
+  // Coffee mugs (any size/style) always fade to white -- never sample
+  // the mug's own selected color. Alyx's rule: color-sampled fade only
+  // applies to the 40oz travel mug, certain phone cases, and suitcases
+  // -- every other product (including regular coffee mugs and tote
+  // bags) always fades to white, no exceptions.
+  if(product==='water bottle' && preGenTravelVariant==='travel-mug-40oz-insulated' && preGenTravelColor){
     const match=TRAVEL_MUG_CATALOG[preGenTravelVariant]?.colors?.find(c=>c.name===preGenTravelColor);
-    if(match)return match.hex;
-  }
-  if(product==='tote bag' && selectedToteColorGen){
-    const match=TOTE_BAG_COLORS_GEN.find(c=>c.name===selectedToteColorGen);
     if(match)return match.hex;
   }
   return '#FFFFFF';
@@ -5227,7 +5223,7 @@ async function confirmFadeAndContinue(){
 // straight to the slider (no separate Hard/Fade button choice, since
 // dragging to 0% already gives hard edges), and continues into the
 // Frame/Window Sill catalog afterward instead of the final mockup fetch.
-let frameFadeAmountPct=20;
+let frameFadeAmountPct=0;
 
 function openFrameFadeOverlay(){
   const overlay=document.getElementById('frameFadeOverlay');
@@ -5236,9 +5232,9 @@ function openFrameFadeOverlay(){
   if(!overlay)return;
   document.body.classList.add('step-locked');
   overlay.style.display='flex';
-  frameFadeAmountPct=20;
-  document.getElementById('frameFadeAmountSlider').value=20;
-  document.getElementById('frameFadeAmountVal').textContent='20%';
+  frameFadeAmountPct=0;
+  document.getElementById('frameFadeAmountSlider').value=0;
+  document.getElementById('frameFadeAmountVal').textContent='0%';
   if(revealFlowThreePanel){
     if(img)img.style.display='none';
     if(threeRow){
