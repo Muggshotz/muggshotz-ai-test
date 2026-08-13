@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head><link rel="manifest" href="needles-manifest.json">
-<!-- BUILD-MARKER: manual-seam-slider-tool-v11 -->
+<!-- BUILD-MARKER: wider-seam-slider-range-v12 -->
 <!-- If you can see this comment on GitHub, this exact paste landed. -->
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
@@ -882,9 +882,9 @@ body.product-focus .card:not(#productCard){opacity:.35;filter:brightness(.6) sat
 <div class="note" style="margin-top:0;margin-bottom:.9rem">If you see a thin line where the panels meet, drag these until it disappears.</div>
 <img id="seamFixPreviewImg" style="width:100%;border-radius:10px;border:1px solid #003c8c;margin-bottom:.9rem;background:#0d0d0d"/>
 <label style="display:block;margin-bottom:2px">Left Seam <span id="seamLeftVal">0px</span></label>
-<input type="range" id="seamLeftSlider" min="0" max="80" step="1" value="0" oninput="updateSeamFixPreview()" style="width:100%"/>
+<input type="range" id="seamLeftSlider" min="0" max="300" step="1" value="0" oninput="updateSeamFixPreview()" style="width:100%"/>
 <label style="display:block;margin:10px 0 2px">Right Seam <span id="seamRightVal">0px</span></label>
-<input type="range" id="seamRightSlider" min="0" max="80" step="1" value="0" oninput="updateSeamFixPreview()" style="width:100%"/>
+<input type="range" id="seamRightSlider" min="0" max="300" step="1" value="0" oninput="updateSeamFixPreview()" style="width:100%"/>
 <button type="button" class="generate-btn" style="margin-top:.9rem" onclick="confirmSeamFix()">✅ Satisfied?</button>
 </div>
 </div>
