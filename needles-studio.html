@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head><link rel="manifest" href="needles-manifest.json">
-<!-- BUILD-MARKER: no-autocommit-satisfied-btn-v8 -->
+<!-- BUILD-MARKER: duplicate-seam-fix-scroll-v10 -->
 <!-- If you can see this comment on GitHub, this exact paste landed. -->
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
@@ -689,6 +689,7 @@ body.product-focus .card:not(#productCard){opacity:.35;filter:brightness(.6) sat
 <div id="frameColorPanel" style="display:none;margin-top:14px"></div>
 <div id="frameSillCrossPromoBanner" class="note mug-select-flash" style="margin-top:14px;text-align:center">🪟 Don't see what you're looking for? Window Sill Portrait is also available — just below!</div>
 <div id="frameCatalogInlinePreview" style="display:none;margin-top:14px"></div>
+<button type="button" id="frameCatalogSatisfiedBtn" class="download-btn" style="display:none;margin-top:.6rem;border-color:#2e7d32;color:#7ed957" onclick="applyAccessorizeFrame()">✅ Satisfied?</button>
 <button type="button" class="snap-arrow-btn snap-arrow-down" id="snapDown1" onclick="snapExpand(2)">⌄</button>
 </div>
 
@@ -5033,6 +5034,7 @@ function chooseRevealPath(choice){
 
   if(choice==='frame'){
     openAccessorizeForRevealFlow();
+    smoothScrollToTarget('frameCatalogSatisfiedBtn','end');
     return;
   }
 
@@ -5732,10 +5734,18 @@ async function compositeFrameAcrossThreePanels(centerUrl,leftUrl,rightUrl){
   photoStrip.width=stripW;
   photoStrip.height=h;
   const pctx=photoStrip.getContext('2d');
+  const dstAspect=panelW/h;
   [leftImg,centerImg,rightImg].forEach((img,i)=>{
-    const scale=h/img.naturalHeight;
-    const drawW=img.naturalWidth*scale;
-    pctx.drawImage(img,0,0,img.naturalWidth,img.naturalHeight,i*panelW,0,drawW,h);
+    const srcAspect=img.naturalWidth/img.naturalHeight;
+    let sx=0,sy=0,sw=img.naturalWidth,sh=img.naturalHeight;
+    if(srcAspect>dstAspect){
+      sw=img.naturalHeight*dstAspect;
+      sx=(img.naturalWidth-sw)/2;
+    } else if(srcAspect<dstAspect){
+      sh=img.naturalWidth/dstAspect;
+      sy=(img.naturalHeight-sh)/2;
+    }
+    pctx.drawImage(img,sx,sy,sw,sh,i*panelW,0,panelW,h);
   });
 
   const combined=document.createElement('canvas');
@@ -5944,12 +5954,19 @@ function showAccessorizeStep(){
     if(previewCard)card.parentNode.insertBefore(previewCard,card);
     card.parentNode.insertBefore(frameCard,card);
     card.parentNode.insertBefore(sillCard,card);
+    frameCard.classList.remove('snap-collapsed');
+    sillCard.classList.remove('snap-collapsed');
   }
   const crossPromo=document.getElementById('frameSillCrossPromoBanner');
   const inlinePreview=document.getElementById('frameCatalogInlinePreview');
+  const inlineSatisfiedBtn=document.getElementById('frameCatalogSatisfiedBtn');
   const isWraparoundReveal=(revealFlowActive && !revealFlowThreePanel);
   if(crossPromo)crossPromo.style.display=isWraparoundReveal?'none':'block';
   if(inlinePreview)inlinePreview.style.display=isWraparoundReveal?'block':'none';
+  if(inlineSatisfiedBtn)inlineSatisfiedBtn.style.display=isWraparoundReveal?'block':'none';
+  const sharedSatisfiedBtn=document.getElementById('accessorizeSatisfiedBtn');
+  if(sharedSatisfiedBtn)sharedSatisfiedBtn.style.display=isWraparoundReveal?'none':'block';
+  if(isWraparoundReveal && sillCard)sillCard.style.display='none';
   updateAccessorizePreview();
   // If they already decided before generating, don't yank them back to a
   // decision that's already made -- only steer them to the picker if
