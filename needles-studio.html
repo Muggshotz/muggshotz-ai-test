@@ -885,6 +885,10 @@ body.product-focus .card:not(#productCard){opacity:.35;filter:brightness(.6) sat
 <input type="range" id="seamLeftSlider" min="0" max="300" step="1" value="0" oninput="updateSeamFixPreview()" style="width:100%"/>
 <label style="display:block;margin:10px 0 2px">Right Seam <span id="seamRightVal">0px</span></label>
 <input type="range" id="seamRightSlider" min="0" max="300" step="1" value="0" oninput="updateSeamFixPreview()" style="width:100%"/>
+<label style="display:block;margin:10px 0 2px">Left Vertical <span id="seamLeftVertVal">0px</span></label>
+<input type="range" id="seamLeftVertSlider" min="-100" max="100" step="1" value="0" oninput="updateSeamFixPreview()" style="width:100%"/>
+<label style="display:block;margin:10px 0 2px">Right Vertical <span id="seamRightVertVal">0px</span></label>
+<input type="range" id="seamRightVertSlider" min="-100" max="100" step="1" value="0" oninput="updateSeamFixPreview()" style="width:100%"/>
 <button type="button" class="generate-btn" style="margin-top:.9rem" onclick="confirmSeamFix()">✅ Satisfied?</button>
 </div>
 </div>
@@ -5005,6 +5009,7 @@ async function enterRevealStage(){
 
 let seamRawLeftUrl=null,seamRawCenterUrl=null,seamRawRightUrl=null;
 let seamLeftOverlapPx=0,seamRightOverlapPx=0;
+let seamLeftVertPx=0,seamRightVertPx=0;
 
 async function openSeamFixOverlay(){
   const overlay=document.getElementById('seamFixOverlay');
@@ -5015,15 +5020,25 @@ async function openSeamFixOverlay(){
   document.getElementById('seamRightSlider').value=0;
   document.getElementById('seamLeftVal').textContent='0px';
   document.getElementById('seamRightVal').textContent='0px';
+  document.getElementById('seamLeftVertSlider').value=0;
+  document.getElementById('seamRightVertSlider').value=0;
+  document.getElementById('seamLeftVertVal').textContent='0px';
+  document.getElementById('seamRightVertVal').textContent='0px';
+  seamLeftVertPx=0;
+  seamRightVertPx=0;
   document.getElementById('seamFixPreviewImg').src=revealOriginalArtworkUrls[0];
 }
 
 async function updateSeamFixPreview(){
   seamLeftOverlapPx=parseFloat(document.getElementById('seamLeftSlider').value);
   seamRightOverlapPx=parseFloat(document.getElementById('seamRightSlider').value);
+  seamLeftVertPx=parseFloat(document.getElementById('seamLeftVertSlider').value);
+  seamRightVertPx=parseFloat(document.getElementById('seamRightVertSlider').value);
   document.getElementById('seamLeftVal').textContent=seamLeftOverlapPx+'px';
   document.getElementById('seamRightVal').textContent=seamRightOverlapPx+'px';
-  const stitched=await stitchThreePanelsRaw(seamRawCenterUrl,seamRawLeftUrl,seamRawRightUrl,seamLeftOverlapPx,seamRightOverlapPx);
+  document.getElementById('seamLeftVertVal').textContent=seamLeftVertPx+'px';
+  document.getElementById('seamRightVertVal').textContent=seamRightVertPx+'px';
+  const stitched=await stitchThreePanelsRaw(seamRawCenterUrl,seamRawLeftUrl,seamRawRightUrl,seamLeftOverlapPx,seamRightOverlapPx,seamLeftVertPx,seamRightVertPx);
   document.getElementById('seamFixPreviewImg').src=stitched;
   revealOriginalArtworkUrls=[stitched];
 }
@@ -5806,6 +5821,15 @@ async function compositeFrameAcrossThreePanels(centerUrl,leftUrl,rightUrl){
     if(i===2)trimLeftSrc=seamRightOverlapPx*srcPerDestPx;
     sx+=trimLeftSrc;
     sw-=(trimLeftSrc+trimRightSrc);
+    // Left/right panel vertical nudge -- lets the customer slide the outer
+    // panels up or down against the fixed center panel to fix cases where
+    // the seam trim alone (horizontal only) can't fully align a feature
+    // that crosses the seam (e.g. a purse handle sitting slightly higher
+    // on one panel than the other). Center panel never moves vertically --
+    // it's the fixed reference the other two align to.
+    const srcPerDestPy=sh/h;
+    if(i===0)sy=Math.max(0,Math.min(img.naturalHeight-sh,sy+seamLeftVertPx*srcPerDestPy));
+    if(i===2)sy=Math.max(0,Math.min(img.naturalHeight-sh,sy+seamRightVertPx*srcPerDestPy));
     pctx.drawImage(img,sx,sy,sw,sh,i*panelW,0,panelW,h);
   });
 
@@ -5834,9 +5858,11 @@ async function compositeFrameAcrossThreePanels(centerUrl,leftUrl,rightUrl){
 // used for the live preview before a frame has been chosen yet, so even
 // the "no frame" state shows one continuous panorama rather than three
 // separate boxes with gaps between them.
-async function stitchThreePanelsRaw(centerUrl,leftUrl,rightUrl,leftOverlapPx,rightOverlapPx){
+async function stitchThreePanelsRaw(centerUrl,leftUrl,rightUrl,leftOverlapPx,rightOverlapPx,leftVertPx,rightVertPx){
   leftOverlapPx=leftOverlapPx||0;
   rightOverlapPx=rightOverlapPx||0;
+  leftVertPx=leftVertPx||0;
+  rightVertPx=rightVertPx||0;
   const [leftImg,centerImg,rightImg]=await Promise.all([
     loadImageFromUrl(leftUrl),
     loadImageFromUrl(centerUrl),
@@ -5881,6 +5907,11 @@ async function stitchThreePanelsRaw(centerUrl,leftUrl,rightUrl,leftOverlapPx,rig
     if(i===2)trimLeftSrc=rightOverlapPx*srcPerDestPx;
     sx+=trimLeftSrc;
     sw-=(trimLeftSrc+trimRightSrc);
+    // Same left/right-only vertical nudge as compositeFrameAcrossThreePanels
+    // -- kept in sync since these two stitch implementations are independent.
+    const srcPerDestPy=sh/h;
+    if(i===0)sy=Math.max(0,Math.min(img.naturalHeight-sh,sy+leftVertPx*srcPerDestPy));
+    if(i===2)sy=Math.max(0,Math.min(img.naturalHeight-sh,sy+rightVertPx*srcPerDestPy));
     ctx.drawImage(img,sx,sy,sw,sh,i*panelW,0,panelW,h);
   });
   return canvas.toDataURL('image/jpeg',0.92);
