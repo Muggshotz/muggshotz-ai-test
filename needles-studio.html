@@ -2039,6 +2039,12 @@ const FRAME_COLOR_SWATCHES = [
 ];
 
 let selectedFrame = null;
+// Tracks whether the post-generation Frame catalog has already
+// auto-scrolled down to reveal the Frame Color bank + Satisfied button
+// once during this visit to the accessorize step. Only the FIRST frame
+// selection should trigger the jump -- reset to false every time the
+// accessorize step is (re)opened.
+let accessorizeFrameScrolledOnce = false;
 // Raw, unframed panels waiting on the post-generation Frame accessorize
 // step -- only one of these is set at a time, whichever product just
 // finished generating. Cleared once the user applies or skips.
@@ -2133,7 +2139,16 @@ async function pickFrame(name){
   updateIdeaCardNote();
   await renderWindowSillPreviewCard();
   if(pendingWraparoundRaw||pending40ozRaw){
-    updateAccessorizePreview();
+    await updateAccessorizePreview();
+    // First frame pick on the post-generation accessorize screen: jump
+    // down to reveal the Frame Color bank + Satisfied button together,
+    // same target the initial "Select a Frame?" landing already uses.
+    // Only fires once per visit to this step -- later frame swaps leave
+    // the scroll position alone since the customer is already there.
+    if(selectedFrame && !accessorizeFrameScrolledOnce){
+      accessorizeFrameScrolledOnce=true;
+      smoothScrollToTarget('frameCatalogSatisfiedBtn','end');
+    }
   } else if(selectedFrame){
     // BUG FIX: the old first-time-visitor "guided tour" timer
     // (schedulePhotoGuideAdvance, started when a photo is uploaded)
@@ -5064,6 +5079,7 @@ function showAccessorizeChoiceState(){
   card.style.display='block';
   if(choicePanel)choicePanel.style.display='block';
   if(committed)committed.style.display='none';
+  accessorizeFrameScrolledOnce=false;
 
   // Window Sill was never actually available for Wraparound (it's a
   // fixed scene that distorts if stretched around the seam) -- only
@@ -5140,6 +5156,7 @@ function chooseRevealPath(choice){
 // shows both catalogs relocated above it.
 function openAccessorizeForRevealFlow(){
   revealFlowActive=true;
+  accessorizeFrameScrolledOnce=false;
   const choicePanel=document.getElementById('accessorizeChoicePanel');
   const committed=document.getElementById('accessorizeCommittedContent');
   if(choicePanel)choicePanel.style.display='none';
