@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head><link rel="manifest" href="needles-manifest.json">
-<!-- BUILD-MARKER: sill-scroll-fix-v7 -->
+<!-- BUILD-MARKER: no-autocommit-satisfied-btn-v8 -->
 <!-- If you can see this comment on GitHub, this exact paste landed. -->
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
@@ -928,14 +928,14 @@ body.product-focus .card:not(#productCard){opacity:.35;filter:brightness(.6) sat
 <div class="card-title">🖼️ Add a Frame?</div>
 
 <div id="accessorizeChoicePanel">
-<div style="max-width:200px;width:100%;margin:0 auto;cursor:pointer;position:relative;border-radius:10px;overflow:hidden;border:1px solid #003c8c" onclick="chooseRevealPath('frame')">
-<img src="frame-crystal-champagne.png" style="width:100%;aspect-ratio:1;object-fit:cover;display:block;background:#0d1b33"/>
+<div style="max-width:200px;width:100%;margin:0 auto;cursor:pointer;position:relative;border-radius:10px;overflow:hidden;border:1px solid #003c8c;aspect-ratio:1;background:#0d0d0d" onclick="chooseRevealPath('frame')">
+<img src="frame-crystal-champagne.png" style="width:100%;height:100%;object-fit:cover;display:block"/>
 <div style="position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(255,255,255,.3)"></div>
 <div style="position:absolute;top:0;left:0;right:0;bottom:0;display:flex;align-items:center;justify-content:center;text-align:center;color:#003c8c;font-weight:800;font-size:15px;padding:.5rem;text-shadow:0 0 6px rgba(255,255,255,.9),0 0 2px rgba(255,255,255,.9);animation:mugSelectFlash 1s ease-in-out infinite">Select a Frame?</div>
 </div>
 <div id="accessorizeSillChoiceOr" style="text-align:center;color:#888;font-weight:700;margin:10px 0">or</div>
-<div id="accessorizeSillChoiceBox" style="max-width:200px;width:100%;margin:0 auto;cursor:pointer;position:relative;border-radius:10px;overflow:hidden;border:1px solid #003c8c" onclick="chooseRevealPath('sill')">
-<img src="frame-window-sill-b.png" style="width:100%;aspect-ratio:1;object-fit:cover;display:block;background:#0d1b33"/>
+<div id="accessorizeSillChoiceBox" style="max-width:200px;width:100%;margin:0 auto;cursor:pointer;position:relative;border-radius:10px;overflow:hidden;border:1px solid #003c8c;aspect-ratio:1;background:#0d0d0d" onclick="chooseRevealPath('sill')">
+<img src="frame-window-sill-b.png" style="width:100%;height:100%;object-fit:cover;display:block"/>
 <div style="position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(255,255,255,.3)"></div>
 <div style="position:absolute;top:0;left:0;right:0;bottom:0;display:flex;align-items:center;justify-content:center;text-align:center;color:#003c8c;font-weight:800;font-size:15px;padding:.5rem;text-shadow:0 0 6px rgba(255,255,255,.9),0 0 2px rgba(255,255,255,.9);animation:mugSelectFlash 1s ease-in-out infinite">Select a Window Sill?</div>
 </div>
@@ -945,7 +945,7 @@ body.product-focus .card:not(#productCard){opacity:.35;filter:brightness(.6) sat
 <div id="accessorizePreviewStrip" style="display:flex;gap:8px;margin-top:1rem"></div>
 
 <div id="accessorizeCommittedContent" style="display:none">
-<div class="note-prominent" style="margin-top:.9rem;margin-bottom:.75rem">Pick a Frame or Window Sill above and you'll see it applied right here instantly, saved automatically as soon as you pick one.</div>
+<div class="note-prominent" style="margin-top:.9rem;margin-bottom:.75rem">Pick a Frame or Window Sill above and try as many combinations as you like — nothing is saved until you tap Satisfied below.</div>
 <div id="frameFitSlidersWrap" style="display:none;margin-top:.9rem">
 <button type="button" class="download-btn" id="frameFitSlidersToggleBtn" style="margin-top:0" onclick="toggleFrameFitSliders()">🎚️ Adjust Frame Fit</button>
 <div id="frameFitSliders" style="display:none;margin-top:.75rem">
@@ -961,7 +961,8 @@ body.product-focus .card:not(#productCard){opacity:.35;filter:brightness(.6) sat
 <button type="button" class="download-btn" style="margin-top:.6rem" onclick="resetFrameFitSliders()">↺ Reset to Default Fit</button>
 </div>
 </div>
-<button class="download-btn" id="accessorizeCancelBtn" style="display:block;margin-top:.9rem;border-color:#5a2a2a;color:#ff8a7a" onclick="cancelAccessorizeToOffer()">↩️ Cancel — Go Back</button>
+<button type="button" class="generate-btn" id="accessorizeSatisfiedBtn" style="margin-top:.9rem" onclick="applyAccessorizeFrame()">✅ Satisfied?</button>
+<button class="download-btn" id="accessorizeCancelBtn" style="display:block;margin-top:.6rem;border-color:#5a2a2a;color:#ff8a7a" onclick="cancelAccessorizeToOffer()">↩️ Cancel — Go Back</button>
 </div>
 </div>
 
@@ -2115,7 +2116,6 @@ async function pickFrame(name){
   await renderWindowSillPreviewCard();
   if(pendingWraparoundRaw||pending40ozRaw){
     updateAccessorizePreview();
-    scheduleRevealAutoApply();
   } else if(selectedFrame){
     // BUG FIX: the old first-time-visitor "guided tour" timer
     // (schedulePhotoGuideAdvance, started when a photo is uploaded)
@@ -2226,7 +2226,6 @@ async function pickWindowSill(name){
   await renderWindowSillPreviewCard();
   if(pendingWraparoundRaw||pending40ozRaw){
     updateAccessorizePreview();
-    scheduleRevealAutoApply();
   } else if(windowSillChoice){
     // Standing rule: whenever a click starts a next step, take the
     // customer there directly. The Preview & Fit card is now the real
@@ -2558,7 +2557,7 @@ function renderFrameColorPanel(){
     FRAME_COLOR_SWATCHES.forEach(c=>{
       const b=document.createElement('div');
       b.className='color-btn'+(frameColors[key]===c.hex?' selected':'');
-      b.onclick=()=>{ frameColors[key]=c.hex; renderFrameColorPanel(); drawCaption(); updateWindowSillLivePreview(); if(pendingWraparoundRaw||pending40ozRaw){updateAccessorizePreview();scheduleRevealAutoApply();} };
+      b.onclick=()=>{ frameColors[key]=c.hex; renderFrameColorPanel(); drawCaption(); updateWindowSillLivePreview(); if(pendingWraparoundRaw||pending40ozRaw){updateAccessorizePreview();} };
       const ball=document.createElement('div');
       ball.className='ball';
       ball.style.background=c.hex;
@@ -5778,7 +5777,6 @@ async function stitchThreePanelsRaw(centerUrl,leftUrl,rightUrl){
   canvas.height=h;
   const ctx=canvas.getContext('2d');
   const dstAspect=panelW/h;
-  const OVERLAP=2; // px of deliberate overlap into each neighboring panel, to cover any sub-pixel anti-aliasing seam at the boundary itself (separate from, and in addition to, the dimension-mismatch gap fixed above)
   [leftImg,centerImg,rightImg].forEach((img,i)=>{
     // Force this panel to fill its exact panelW x h slot (cover-crop,
     // centered) regardless of its own natural aspect ratio -- the three
@@ -5795,9 +5793,7 @@ async function stitchThreePanelsRaw(centerUrl,leftUrl,rightUrl){
       sh=img.naturalWidth/dstAspect;
       sy=(img.naturalHeight-sh)/2;
     }
-    const dx=(i===0)?0:i*panelW-OVERLAP;
-    const dw=(i===0||i===2)?panelW+OVERLAP:panelW+OVERLAP*2;
-    ctx.drawImage(img,sx,sy,sw,sh,dx,0,dw,h);
+    ctx.drawImage(img,sx,sy,sw,sh,i*panelW,0,panelW,h);
   });
   return canvas.toDataURL('image/jpeg',0.92);
 }
@@ -6002,14 +5998,6 @@ function hideAccessorizeStep(){
 }
 
 let revealAutoApplyTimer=null;
-function scheduleRevealAutoApply(){
-  if(!revealFlowActive)return;
-  clearTimeout(revealAutoApplyTimer);
-  revealAutoApplyTimer=setTimeout(async()=>{
-    if(accessorizePreviewInFlight)await accessorizePreviewInFlight;
-    applyAccessorizeFrame();
-  },900);
-}
 
 async function applyAccessorizeFrame(){
   const btn=document.getElementById('accessorizeApplyBtn');
