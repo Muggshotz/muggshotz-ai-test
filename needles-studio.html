@@ -1,7 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head><link rel="manifest" href="needles-manifest.json">
-<!-- BUILD-MARKER: stopNeedlesStage-403-fix-v2 -->
+<!-- BUILD-MARKER: flash-fix-recheck-v3 -->
+<!-- If you can see this comment on GitHub, this exact paste landed. -->
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Needles' Studio</title>
@@ -211,9 +212,10 @@
 }
 
 .guidance-prompt{display:none;margin:14px 0;padding:12px 14px;border:1px solid #003c8c;border-radius:10px;background:#211006;color:#cfe6ff;text-align:center;font-size:13px;font-weight:700;line-height:1.4;box-shadow:0 0 0 rgba(0,60,140,0)}
-.quote-text-reminder{margin:0 0 14px;padding:10px 14px;border:1px solid rgba(226,75,74,0.55);border-radius:10px;background:rgba(226,75,74,0.12);color:#ff6b6b;text-align:center;font-size:12.5px;font-weight:800;letter-spacing:.3px;line-height:1.45;animation:quoteReminderBlink 1.6s ease-in-out infinite}
+.quote-text-reminder{margin:0 0 14px;padding:10px 14px;border:1px solid rgba(226,75,74,0.55);border-radius:10px;background:rgba(226,75,74,0.12);color:#ff6b6b;text-align:center;font-size:12.5px;font-weight:800;letter-spacing:.3px;line-height:1.45}
 @keyframes quoteReminderBlink{0%,100%{opacity:1}50%{opacity:.45}}
 .guidance-prompt.visible{display:block;animation:gentlePulse 1.8s ease-in-out infinite}
+#ideaGuidancePrompt.visible{animation:mugSelectFlash 1s ease-in-out infinite;border-color:#2196ff}
 @keyframes gentlePulse{0%,100%{opacity:.72;box-shadow:0 0 0 rgba(0,60,140,0)}50%{opacity:1;box-shadow:0 0 16px rgba(0,60,140,.25)}}
 .guidance-prompt.soft.visible{animation:gentlePulseSoft 2.6s ease-in-out infinite;font-size:12px;padding:8px 10px;box-shadow:none}
 @keyframes gentlePulseSoft{0%,100%{opacity:.45}50%{opacity:.7}}
