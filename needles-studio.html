@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head><link rel="manifest" href="needles-manifest.json">
-<!-- BUILD-MARKER: duplicate-seam-fix-scroll-v10 -->
+<!-- BUILD-MARKER: manual-seam-slider-tool-v11 -->
 <!-- If you can see this comment on GitHub, this exact paste landed. -->
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
@@ -874,6 +874,19 @@ body.product-focus .card:not(#productCard){opacity:.35;filter:brightness(.6) sat
 
 <div id="mockupLoadingOverlay" class="step-lock-overlay" style="display:none;background:#000">
 <div style="text-align:center;font-size:20px;font-weight:800;color:#2196ff;animation:mugSelectFlash 1s ease-in-out infinite">Please wait while your mock-up is being generated...</div>
+</div>
+
+<div id="seamFixOverlay" class="step-lock-overlay" style="display:none">
+<div class="card" id="seamFixCard" style="max-width:520px;width:100%;margin:auto;position:relative;max-height:92vh;overflow-y:auto;text-align:center">
+<div class="card-title">🧵 Fix the Seams?</div>
+<div class="note" style="margin-top:0;margin-bottom:.9rem">If you see a thin line where the panels meet, drag these until it disappears.</div>
+<img id="seamFixPreviewImg" style="width:100%;border-radius:10px;border:1px solid #003c8c;margin-bottom:.9rem;background:#0d0d0d"/>
+<label style="display:block;margin-bottom:2px">Left Seam <span id="seamLeftVal">0px</span></label>
+<input type="range" id="seamLeftSlider" min="0" max="80" step="1" value="0" oninput="updateSeamFixPreview()" style="width:100%"/>
+<label style="display:block;margin:10px 0 2px">Right Seam <span id="seamRightVal">0px</span></label>
+<input type="range" id="seamRightSlider" min="0" max="80" step="1" value="0" oninput="updateSeamFixPreview()" style="width:100%"/>
+<button type="button" class="generate-btn" style="margin-top:.9rem" onclick="confirmSeamFix()">✅ Satisfied?</button>
+</div>
 </div>
 
 <div id="revealChoiceOverlay" class="step-lock-overlay" style="display:none;background:#000">
@@ -4965,6 +4978,11 @@ async function enterRevealStage(){
     revealOriginalArtworkUrls=[leftDesign.url,centerDesign.url,rightDesign.url];
   } else {
     try{
+      seamRawLeftUrl=leftDesign.url;
+      seamRawCenterUrl=centerDesign.url;
+      seamRawRightUrl=rightDesign.url;
+      seamLeftOverlapPx=0;
+      seamRightOverlapPx=0;
       const stitched=await stitchThreePanelsRaw(centerDesign.url,leftDesign.url,rightDesign.url);
       revealOriginalArtworkUrls=[stitched];
     }catch(err){
@@ -4977,6 +4995,42 @@ async function enterRevealStage(){
   }
 
   choiceOverlay.style.display='none';
+  document.body.classList.remove('step-locked');
+  if(revealFlowThreePanel){
+    showAccessorizeChoiceState();
+  } else {
+    openSeamFixOverlay();
+  }
+}
+
+let seamRawLeftUrl=null,seamRawCenterUrl=null,seamRawRightUrl=null;
+let seamLeftOverlapPx=0,seamRightOverlapPx=0;
+
+async function openSeamFixOverlay(){
+  const overlay=document.getElementById('seamFixOverlay');
+  if(!overlay)return;
+  document.body.classList.add('step-locked');
+  overlay.style.display='flex';
+  document.getElementById('seamLeftSlider').value=0;
+  document.getElementById('seamRightSlider').value=0;
+  document.getElementById('seamLeftVal').textContent='0px';
+  document.getElementById('seamRightVal').textContent='0px';
+  document.getElementById('seamFixPreviewImg').src=revealOriginalArtworkUrls[0];
+}
+
+async function updateSeamFixPreview(){
+  seamLeftOverlapPx=parseFloat(document.getElementById('seamLeftSlider').value);
+  seamRightOverlapPx=parseFloat(document.getElementById('seamRightSlider').value);
+  document.getElementById('seamLeftVal').textContent=seamLeftOverlapPx+'px';
+  document.getElementById('seamRightVal').textContent=seamRightOverlapPx+'px';
+  const stitched=await stitchThreePanelsRaw(seamRawCenterUrl,seamRawLeftUrl,seamRawRightUrl,seamLeftOverlapPx,seamRightOverlapPx);
+  document.getElementById('seamFixPreviewImg').src=stitched;
+  revealOriginalArtworkUrls=[stitched];
+}
+
+function confirmSeamFix(){
+  const overlay=document.getElementById('seamFixOverlay');
+  if(overlay)overlay.style.display='none';
   document.body.classList.remove('step-locked');
   showAccessorizeChoiceState();
 }
@@ -5745,6 +5799,13 @@ async function compositeFrameAcrossThreePanels(centerUrl,leftUrl,rightUrl){
       sh=img.naturalWidth/dstAspect;
       sy=(img.naturalHeight-sh)/2;
     }
+    const srcPerDestPx=sw/panelW;
+    let trimLeftSrc=0,trimRightSrc=0;
+    if(i===0)trimRightSrc=seamLeftOverlapPx*srcPerDestPx;
+    if(i===1){trimLeftSrc=seamLeftOverlapPx*srcPerDestPx;trimRightSrc=seamRightOverlapPx*srcPerDestPx;}
+    if(i===2)trimLeftSrc=seamRightOverlapPx*srcPerDestPx;
+    sx+=trimLeftSrc;
+    sw-=(trimLeftSrc+trimRightSrc);
     pctx.drawImage(img,sx,sy,sw,sh,i*panelW,0,panelW,h);
   });
 
@@ -5773,7 +5834,9 @@ async function compositeFrameAcrossThreePanels(centerUrl,leftUrl,rightUrl){
 // used for the live preview before a frame has been chosen yet, so even
 // the "no frame" state shows one continuous panorama rather than three
 // separate boxes with gaps between them.
-async function stitchThreePanelsRaw(centerUrl,leftUrl,rightUrl){
+async function stitchThreePanelsRaw(centerUrl,leftUrl,rightUrl,leftOverlapPx,rightOverlapPx){
+  leftOverlapPx=leftOverlapPx||0;
+  rightOverlapPx=rightOverlapPx||0;
   const [leftImg,centerImg,rightImg]=await Promise.all([
     loadImageFromUrl(leftUrl),
     loadImageFromUrl(centerUrl),
@@ -5803,6 +5866,21 @@ async function stitchThreePanelsRaw(centerUrl,leftUrl,rightUrl){
       sh=img.naturalWidth/dstAspect;
       sy=(img.naturalHeight-sh)/2;
     }
+    // sw here is the cover-crop's source width, which maps to this
+    // panel's full panelW destination width. Trimming a seam means
+    // cropping away some of that source region at the relevant edge
+    // (so the removed content is simply never drawn), while every
+    // panel still fills its exact panelW slot -- guarantees no gaps,
+    // and the remaining content stretches only slightly to refill that
+    // same slot (an intentional minor zoom, not a squish), since the
+    // customer is choosing the trim amount while watching it live.
+    const srcPerDestPx=sw/panelW;
+    let trimLeftSrc=0,trimRightSrc=0;
+    if(i===0)trimRightSrc=leftOverlapPx*srcPerDestPx;
+    if(i===1){trimLeftSrc=leftOverlapPx*srcPerDestPx;trimRightSrc=rightOverlapPx*srcPerDestPx;}
+    if(i===2)trimLeftSrc=rightOverlapPx*srcPerDestPx;
+    sx+=trimLeftSrc;
+    sw-=(trimLeftSrc+trimRightSrc);
     ctx.drawImage(img,sx,sy,sw,sh,i*panelW,0,panelW,h);
   });
   return canvas.toDataURL('image/jpeg',0.92);
