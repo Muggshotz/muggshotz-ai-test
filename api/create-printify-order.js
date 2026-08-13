@@ -217,7 +217,7 @@ export async function buildFullBleedImage(imageSource, canvasWidth, canvasHeight
 // printMode === "allCup" should ever call buildFullBleedImage going
 // forward; printMode === "fullBleed" (the Wraparound scene-continuation
 // customers actually use today) calls this one instead.
-export async function buildSeamlessWrapImage(imageSource, canvasWidth, canvasHeight) {
+export async function buildSeamlessWrapImage(placements, canvasWidth, canvasHeight) {
   // UPDATED (Aug 2026, Alyx's request/correction): a real single-angle
   // photo of a wraparound mug can only ever show roughly 85-90% of its
   // true circumference -- the outer few percent on each side always
@@ -234,12 +234,49 @@ export async function buildSeamlessWrapImage(imageSource, canvasWidth, canvasHei
   // chosen as a reasonable starting estimate -- may need a small
   // adjustment up or down after seeing a real printed/photographed
   // result.
+  //
+  // FIXED (Aug 2026): this used to take a single imageSource (just
+  // placements.front, falling back to left/right) and crop/resize that
+  // one panel alone. But compositeFrameAcrossThreePanels on the client
+  // only draws the frame border on each panel's TRUE outer edge (left
+  // panel's left edge, right panel's right edge, and top/bottom on
+  // all three) -- the seams between panels are deliberately left
+  // unframed so the wraparound scene reads as continuous. Using only
+  // the center panel meant its only real edges (left+right) were both
+  // unframed internal seams, so the frame never appeared in the final
+  // Printify mockup at all -- root cause of "the frame disappears."
+  // Fix: take the full `placements` object and reassemble left+front+
+  // right back into one continuous strip before cropping/resizing.
+  // Since the client slices the true combined+framed panorama into
+  // these exact three same-height, same-width thirds with zero
+  // overlap, placing them back edge-to-edge reconstructs that same
+  // original combined image -- frame and all.
+  const WHITE = { r: 255, g: 255, b: 255 };
   const CROP_FRACTION = 0.10;
-  const buffer = await resolveImageBuffer(imageSource);
-  const meta = await sharp(buffer).metadata();
+  const { left, front, right } = placements;
+  const sources = [left, front, right].filter(Boolean);
+  if (sources.length === 0) throw new Error("No design provided for seamless wrap.");
+
+  const buffers = await Promise.all(sources.map(s => resolveImageBuffer(s)));
+  const metas = await Promise.all(buffers.map(b => sharp(b).metadata()));
+  const panelHeight = metas[0].height;
+  let x = 0;
+  const composites = buffers.map((buf, i) => {
+    const c = { input: buf, left: x, top: 0 };
+    x += metas[i].width;
+    return c;
+  });
+  const stripBuffer = await sharp({
+    create: { width: x, height: panelHeight, channels: 3, background: WHITE }
+  })
+    .composite(composites)
+    .png()
+    .toBuffer();
+
+  const meta = await sharp(stripBuffer).metadata();
   const cropWidth = Math.round(meta.width * (1 - CROP_FRACTION));
   const cropLeft = Math.round((meta.width - cropWidth) / 2);
-  return await sharp(buffer)
+  return await sharp(stripBuffer)
     .extract({ left: cropLeft, top: 0, width: cropWidth, height: meta.height })
     // UPDATED (Aug 2026, Alyx's request): "fill" was stretching both
     // dimensions independently to force an exact match, squashing the
@@ -485,7 +522,7 @@ export async function placeProductOrder({
     const buffer = isFullBleed
       ? await buildFullBleedImage(placements.front || placements.left || placements.right, width, height)
       : isSeamlessWrap
-      ? await buildSeamlessWrapImage(placements.front || placements.left || placements.right, width, height)
+      ? await buildSeamlessWrapImage(placements, width, height)
       : await buildWraparoundImage(placements, width, height);
     const imageId = await uploadImageToPrintify(buffer, `muggshotz-${Date.now()}.png`);
     printifyImages[position] = imageId;
