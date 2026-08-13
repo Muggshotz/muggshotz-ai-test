@@ -925,14 +925,16 @@ body.product-focus .card:not(#productCard){opacity:.35;filter:brightness(.6) sat
 <div class="card-title">🖼️ Add a Frame?</div>
 
 <div id="accessorizeChoicePanel">
-<div style="max-width:240px;width:100%;margin:0 auto;cursor:pointer;position:relative" onclick="chooseRevealPath('frame')">
-<img src="frame-crystal-champagne.png" style="width:100%;aspect-ratio:1.6;object-fit:cover;border-radius:10px;border:1px solid #003c8c;background:#0d1b33"/>
-<div style="position:absolute;bottom:0;left:0;right:0;text-align:center;background:rgba(0,0,0,.72);color:#fff;font-weight:800;font-size:14px;padding:.5rem;border-radius:0 0 10px 10px;animation:mugSelectFlash 1s ease-in-out infinite">Select a Frame</div>
+<div style="max-width:240px;width:100%;margin:0 auto;cursor:pointer;position:relative;border-radius:10px;overflow:hidden;border:1px solid #003c8c" onclick="chooseRevealPath('frame')">
+<img src="frame-crystal-champagne.png" style="width:100%;aspect-ratio:1.6;object-fit:cover;display:block;background:#0d1b33"/>
+<div style="position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(255,255,255,.45)"></div>
+<div style="position:absolute;top:0;left:0;right:0;bottom:0;display:flex;align-items:center;justify-content:center;text-align:center;color:#003c8c;font-weight:800;font-size:15px;padding:.5rem;text-shadow:0 0 6px rgba(255,255,255,.9),0 0 2px rgba(255,255,255,.9);animation:mugSelectFlash 1s ease-in-out infinite">Select a Frame</div>
 </div>
 <div id="accessorizeSillChoiceOr" style="text-align:center;color:#888;font-weight:700;margin:10px 0">or</div>
-<div id="accessorizeSillChoiceBox" style="max-width:240px;width:100%;margin:0 auto;cursor:pointer;position:relative" onclick="chooseRevealPath('sill')">
-<img src="frame-window-sill-b.png" style="width:100%;aspect-ratio:1.6;object-fit:cover;border-radius:10px;border:1px solid #003c8c;background:#0d1b33"/>
-<div style="position:absolute;bottom:0;left:0;right:0;text-align:center;background:rgba(0,0,0,.72);color:#fff;font-weight:800;font-size:14px;padding:.5rem;border-radius:0 0 10px 10px;animation:mugSelectFlash 1s ease-in-out infinite">Select a Window Sill</div>
+<div id="accessorizeSillChoiceBox" style="max-width:240px;width:100%;margin:0 auto;cursor:pointer;position:relative;border-radius:10px;overflow:hidden;border:1px solid #003c8c" onclick="chooseRevealPath('sill')">
+<img src="frame-window-sill-b.png" style="width:100%;aspect-ratio:1.6;object-fit:cover;display:block;background:#0d1b33"/>
+<div style="position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(255,255,255,.45)"></div>
+<div style="position:absolute;top:0;left:0;right:0;bottom:0;display:flex;align-items:center;justify-content:center;text-align:center;color:#003c8c;font-weight:800;font-size:15px;padding:.5rem;text-shadow:0 0 6px rgba(255,255,255,.9),0 0 2px rgba(255,255,255,.9);animation:mugSelectFlash 1s ease-in-out infinite">Select a Window Sill</div>
 </div>
 <button type="button" class="download-btn" style="margin:12px auto 0;max-width:240px;width:100%;display:block" onclick="chooseRevealPath('none')">No Thank You</button>
 </div>
