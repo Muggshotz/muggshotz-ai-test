@@ -5965,7 +5965,12 @@ async function updateAccessorizePreview(){
         const framed=await compositeFrameAcrossThreePanels(pendingWraparoundRaw.center,pendingWraparoundRaw.left,pendingWraparoundRaw.right);
         renderAccessorizeStrip(framed.combined);
       } else {
-        const raw=await stitchThreePanelsRaw(pendingWraparoundRaw.center,pendingWraparoundRaw.left,pendingWraparoundRaw.right);
+        // Must pass the seam/vertical alignment the customer just set on
+        // the Fix the Seams screen -- this preview re-stitches from the
+        // raw un-stitched panels from scratch, so leaving these out
+        // silently reverted every alignment choice back to 0 the moment
+        // this screen rendered (the bug that surfaced this fix).
+        const raw=await stitchThreePanelsRaw(pendingWraparoundRaw.center,pendingWraparoundRaw.left,pendingWraparoundRaw.right,seamLeftOverlapPx,seamRightOverlapPx,seamLeftVertPx,seamRightVertPx);
         renderAccessorizeStrip(raw);
       }
     } else if(pending40ozRaw){
