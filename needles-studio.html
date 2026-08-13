@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head><link rel="manifest" href="needles-manifest.json">
-<!-- BUILD-MARKER: seam-and-click-fixes-v5 -->
+<!-- BUILD-MARKER: sill-scroll-fix-v7 -->
 <!-- If you can see this comment on GitHub, this exact paste landed. -->
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
@@ -687,7 +687,8 @@ body.product-focus .card:not(#productCard){opacity:.35;filter:brightness(.6) sat
 <div class="note" style="margin-top:0;margin-bottom:.75rem">Optional — pick a frame to add around your finished artwork now, before you generate, so you don't lose track of it later. Applied automatically once your design is ready. Leave blank for a clean, unframed look.</div>
 <div class="theme-grid frame-grid" id="frameGrid"></div>
 <div id="frameColorPanel" style="display:none;margin-top:14px"></div>
-<div class="note mug-select-flash" style="margin-top:14px;text-align:center">🪟 Don't see what you're looking for? Window Sill Portrait is also available — just below!</div>
+<div id="frameSillCrossPromoBanner" class="note mug-select-flash" style="margin-top:14px;text-align:center">🪟 Don't see what you're looking for? Window Sill Portrait is also available — just below!</div>
+<div id="frameCatalogInlinePreview" style="display:none;margin-top:14px"></div>
 <button type="button" class="snap-arrow-btn snap-arrow-down" id="snapDown1" onclick="snapExpand(2)">⌄</button>
 </div>
 
@@ -927,18 +928,18 @@ body.product-focus .card:not(#productCard){opacity:.35;filter:brightness(.6) sat
 <div class="card-title">🖼️ Add a Frame?</div>
 
 <div id="accessorizeChoicePanel">
-<div style="max-width:240px;width:100%;margin:0 auto;cursor:pointer;position:relative;border-radius:10px;overflow:hidden;border:1px solid #003c8c" onclick="chooseRevealPath('frame')">
-<img src="frame-crystal-champagne.png" style="width:100%;aspect-ratio:1.6;object-fit:cover;display:block;background:#0d1b33"/>
-<div style="position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(255,255,255,.45)"></div>
+<div style="max-width:200px;width:100%;margin:0 auto;cursor:pointer;position:relative;border-radius:10px;overflow:hidden;border:1px solid #003c8c" onclick="chooseRevealPath('frame')">
+<img src="frame-crystal-champagne.png" style="width:100%;aspect-ratio:1;object-fit:cover;display:block;background:#0d1b33"/>
+<div style="position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(255,255,255,.3)"></div>
 <div style="position:absolute;top:0;left:0;right:0;bottom:0;display:flex;align-items:center;justify-content:center;text-align:center;color:#003c8c;font-weight:800;font-size:15px;padding:.5rem;text-shadow:0 0 6px rgba(255,255,255,.9),0 0 2px rgba(255,255,255,.9);animation:mugSelectFlash 1s ease-in-out infinite">Select a Frame?</div>
 </div>
 <div id="accessorizeSillChoiceOr" style="text-align:center;color:#888;font-weight:700;margin:10px 0">or</div>
-<div id="accessorizeSillChoiceBox" style="max-width:240px;width:100%;margin:0 auto;cursor:pointer;position:relative;border-radius:10px;overflow:hidden;border:1px solid #003c8c" onclick="chooseRevealPath('sill')">
-<img src="frame-window-sill-b.png" style="width:100%;aspect-ratio:1.6;object-fit:cover;display:block;background:#0d1b33"/>
-<div style="position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(255,255,255,.45)"></div>
+<div id="accessorizeSillChoiceBox" style="max-width:200px;width:100%;margin:0 auto;cursor:pointer;position:relative;border-radius:10px;overflow:hidden;border:1px solid #003c8c" onclick="chooseRevealPath('sill')">
+<img src="frame-window-sill-b.png" style="width:100%;aspect-ratio:1;object-fit:cover;display:block;background:#0d1b33"/>
+<div style="position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(255,255,255,.3)"></div>
 <div style="position:absolute;top:0;left:0;right:0;bottom:0;display:flex;align-items:center;justify-content:center;text-align:center;color:#003c8c;font-weight:800;font-size:15px;padding:.5rem;text-shadow:0 0 6px rgba(255,255,255,.9),0 0 2px rgba(255,255,255,.9);animation:mugSelectFlash 1s ease-in-out infinite">Select a Window Sill?</div>
 </div>
-<button type="button" class="download-btn" style="margin:12px auto 0;max-width:240px;width:100%;display:block" onclick="chooseRevealPath('none')">No Thank You</button>
+<button type="button" class="download-btn" style="margin:12px auto 0;max-width:200px;width:100%;display:block" onclick="chooseRevealPath('none')">No Thank You</button>
 </div>
 
 <div id="accessorizePreviewStrip" style="display:flex;gap:8px;margin-top:1rem"></div>
@@ -5027,11 +5028,12 @@ function chooseRevealPath(choice){
     const mainToggle=document.getElementById('panoramaFadeToggle');
     if(mainToggle)mainToggle.checked=true;
     openAccessorizeForRevealFlow();
+    smoothScrollToTarget('windowSillSectionCard','start');
     return;
   }
 
   if(choice==='frame'){
-    openFrameFadeOverlay();
+    openAccessorizeForRevealFlow();
     return;
   }
 
@@ -5776,6 +5778,7 @@ async function stitchThreePanelsRaw(centerUrl,leftUrl,rightUrl){
   canvas.height=h;
   const ctx=canvas.getContext('2d');
   const dstAspect=panelW/h;
+  const OVERLAP=2; // px of deliberate overlap into each neighboring panel, to cover any sub-pixel anti-aliasing seam at the boundary itself (separate from, and in addition to, the dimension-mismatch gap fixed above)
   [leftImg,centerImg,rightImg].forEach((img,i)=>{
     // Force this panel to fill its exact panelW x h slot (cover-crop,
     // centered) regardless of its own natural aspect ratio -- the three
@@ -5792,7 +5795,9 @@ async function stitchThreePanelsRaw(centerUrl,leftUrl,rightUrl){
       sh=img.naturalWidth/dstAspect;
       sy=(img.naturalHeight-sh)/2;
     }
-    ctx.drawImage(img,sx,sy,sw,sh,i*panelW,0,panelW,h);
+    const dx=(i===0)?0:i*panelW-OVERLAP;
+    const dw=(i===0||i===2)?panelW+OVERLAP:panelW+OVERLAP*2;
+    ctx.drawImage(img,sx,sy,sw,sh,dx,0,dw,h);
   });
   return canvas.toDataURL('image/jpeg',0.92);
 }
@@ -5806,12 +5811,21 @@ async function stitchThreePanelsRaw(centerUrl,leftUrl,rightUrl){
 
 function renderAccessorizeStrip(url){
   const strip=document.getElementById('accessorizePreviewStrip');
-  if(!strip)return;
-  strip.innerHTML='';
-  const img=document.createElement('img');
-  img.src=url;
-  img.style.cssText='width:100%;border-radius:8px;border:1px solid #003c8c;max-height:340px;object-fit:contain;background:#0d0d0d';
-  strip.appendChild(img);
+  if(strip){
+    strip.innerHTML='';
+    const img=document.createElement('img');
+    img.src=url;
+    img.style.cssText='width:100%;border-radius:8px;border:1px solid #003c8c;max-height:340px;object-fit:contain;background:#0d0d0d';
+    strip.appendChild(img);
+  }
+  const inlinePreview=document.getElementById('frameCatalogInlinePreview');
+  if(inlinePreview && inlinePreview.style.display==='block'){
+    inlinePreview.innerHTML='';
+    const img2=document.createElement('img');
+    img2.src=url;
+    img2.style.cssText='width:100%;border-radius:8px;border:1px solid #003c8c;max-height:280px;object-fit:contain;background:#0d0d0d';
+    inlinePreview.appendChild(img2);
+  }
 }
 
 let accessorizePreviewInFlight=null;
@@ -5935,6 +5949,11 @@ function showAccessorizeStep(){
     card.parentNode.insertBefore(frameCard,card);
     card.parentNode.insertBefore(sillCard,card);
   }
+  const crossPromo=document.getElementById('frameSillCrossPromoBanner');
+  const inlinePreview=document.getElementById('frameCatalogInlinePreview');
+  const isWraparoundReveal=(revealFlowActive && !revealFlowThreePanel);
+  if(crossPromo)crossPromo.style.display=isWraparoundReveal?'none':'block';
+  if(inlinePreview)inlinePreview.style.display=isWraparoundReveal?'block':'none';
   updateAccessorizePreview();
   // If they already decided before generating, don't yank them back to a
   // decision that's already made -- only steer them to the picker if
