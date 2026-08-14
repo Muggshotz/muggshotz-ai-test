@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
 <head><link rel="manifest" href="needles-manifest.json">
-<!-- BUILD-MARKER: FADE-KILLSWITCH-v19 -->
+<!-- BUILD-MARKER: TWO-PIECE-FRAME-TEST-v22 -->
 <!-- If you can see this comment on GitHub, this exact paste landed. -->
 <!-- If your live site's page source does NOT say -->
-<!-- "FADE-KILLSWITCH-v19" right here, the upload/deploy did -->
+<!-- "TWO-PIECE-FRAME-TEST-v22" right here, the upload/deploy did -->
 <!-- not take -- re-upload before testing. -->
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
@@ -738,8 +738,8 @@ body.product-focus .card:not(#productCard){opacity:.35;filter:brightness(.6) sat
   <button type="button" class="download-btn" style="border-color:#1976d2;color:#64b5f6;font-size:.85rem;padding:.5rem .9rem" onclick="toggleFrameManualFit()">🔧 Frame ends not fitting right? Adjust manually</button>
 </div>
 <div id="frameManualFitPanel" style="display:none;margin-top:10px">
-  <label style="display:block;margin-bottom:2px">Frame Fit <span id="frameInsetVal">5%</span></label>
-  <input type="range" id="frameInsetSlider" min="0" max="15" step="0.5" value="5" oninput="updateFrameInsetPreview()" style="width:100%"/>
+  <label style="display:block;margin-bottom:2px">Frame Fit <span id="frameInsetVal">0%</span></label>
+  <input type="range" id="frameInsetSlider" min="0" max="49" step="0.1" value="0" oninput="updateFrameInsetPreview()" style="width:100%"/>
   <div class="note" style="margin-top:6px">Drag right if the frame's ends are still getting cut off in the final mockup; drag left if there's a visible gap before the frame reaches the edge.</div>
 </div>
 <button type="button" id="frameCatalogSatisfiedBtn" class="download-btn" style="display:none;margin-top:.6rem;border-color:#2e7d32;color:#7ed957" onclick="applyAccessorizeFrame()">✅ Satisfied?</button>
@@ -2035,7 +2035,15 @@ const FRAME_CATALOG = {
   // note was written) — no replacement design is still needed here.
   "Wrought Iron": { type:"image", asset:"frame-wrought-iron.png", colorable:false },
   "Blue Floral": { type:"image", asset:"frame-blue-floral.png", defaultColor:"#1B3D7A" },
-  "Crystal Champagne": { type:"image", asset:"frame-crystal-champagne.png", defaultColor:"#D9C89E" },
+  // TEST (Aug 2026, Alyx's request): switched to the new two-piece
+  // "fixed corner + extended rail" architecture as a real end-to-end
+  // test of the concept -- see drawTwoPieceFrameOnCanvas below. These
+  // specific corner/rail files are Bud's first proof-of-concept pass,
+  // not necessarily final -- if they turn out wrong, only these two
+  // asset filenames need replacing, the rendering logic stays the same.
+  // The old single-image frame-crystal-champagne.png stays untouched
+  // on GitHub as a fallback in case this needs reverting.
+  "Crystal Champagne": { type:"twoPiece", cornerAsset:"frame-crystal-champagne-corner.png", railAsset:"frame-crystal-champagne-rail.png", cornerMode:"mirror", defaultColor:"#D9C89E" },
   "Pressed Flowers": { type:"image", asset:"frame-pressed-flowers.png", defaultColor:"#ffffff" },
   "Celestial Deco": { type:"image", asset:"frame-celestial-deco.png", defaultColor:"#D4AF37" },
   "Double Mat": { type:"proceduralMulti", draw:"doubleMat", layers:["Outer Frame","Upper Mat","Lower Mat"], defaultColors:["#8a5a34","#f5f0e6","#2a2a2a"] },
@@ -2988,10 +2996,133 @@ async function drawPhotoInsetForFrame(ctx,canvas,source,sourceW,sourceH){
   ctx.drawImage(source,0,0,sourceW,sourceH,drawX,drawY,drawW,drawH);
 }
 
+// Loads a same-origin local asset as an Image. Plain Image(), no
+// crossOrigin mode -- matches the pattern already established for
+// frame/window-sill assets elsewhere in this file (see
+// drawWindowSillOnCanvas's comment on why CORS mode isn't needed here).
+function loadLocalImage(src){
+  return new Promise((resolve)=>{
+    const img=new Image();
+    img.onload=()=>resolve(img);
+    img.onerror=()=>resolve(null);
+    img.src=src;
+  });
+}
+
+// NEW (Aug 2026, Alyx's request): renders a "two-piece" frame -- one
+// fixed corner asset (mirrored into all 4 corners) plus one extendable
+// rail asset (tiled to fill however much horizontal/vertical span the
+// frame needs). This is the real payoff of the two-piece architecture:
+// it makes the whole "guess the exact crop percentage" problem that
+// plagued single-image frames all night simply not apply anymore.
+// Rails are drawn FULL edge-to-edge on purpose -- their artwork is
+// designed to repeat/extend indefinitely, so it's always safe for a
+// later server-side crop to eat into. Corners are drawn ON TOP,
+// afterward, inset from the true edge by a generous safety margin --
+// protecting the one-of-a-kind detail (the butterfly, the facets) no
+// matter what the actual crop percentage turns out to be, without
+// needing to know that percentage in advance.
+async function drawTwoPieceFrameOnCanvas(ctx,canvas,data,insetFractionX=0){
+  const [cornerImg,railImg]=await Promise.all([loadLocalImage(data.cornerAsset),loadLocalImage(data.railAsset)]);
+  if(!cornerImg||!railImg)return;
+
+  // 15% built-in floor regardless of the manual Frame Fit slider --
+  // unlike single-image frames (which used insetFractionX directly),
+  // a two-piece frame with insetFractionX=0 would put the corner's
+  // real artwork right at the true edge with zero protection. The
+  // manual slider still adds ON TOP of this floor for fine-tuning.
+  const TWO_PIECE_BASE_MARGIN=0.15;
+  const totalInsetX=TWO_PIECE_BASE_MARGIN+insetFractionX;
+
+  const cornerSize=Math.min(canvas.width,canvas.height)*0.22;
+  const cScale=cornerSize/cornerImg.naturalWidth;
+  const cW=cornerSize, cH=cornerImg.naturalHeight*cScale;
+  const railScale=(cH*0.55)/railImg.naturalHeight;
+  const railH=Math.max(1,railImg.naturalHeight*railScale);
+  const railW=railImg.naturalWidth*railScale;
+
+  function drawHorizRail(x,y,targetW){
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(x,y,targetW,railH);
+    ctx.clip();
+    let drawn=0;
+    while(drawn<targetW){
+      ctx.drawImage(railImg,x+drawn,y,railW,railH);
+      drawn+=railW;
+    }
+    ctx.restore();
+  }
+  function drawVertRail(x,y,targetH){
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(x,y,railH,targetH);
+    ctx.clip();
+    let drawn=0;
+    while(drawn<targetH){
+      ctx.save();
+      ctx.translate(x,y+drawn);
+      ctx.rotate(Math.PI/2);
+      ctx.drawImage(railImg,0,-railH,railW,railH);
+      ctx.restore();
+      drawn+=railW;
+    }
+    ctx.restore();
+  }
+
+  drawHorizRail(0,0,canvas.width);
+  drawHorizRail(0,canvas.height-railH,canvas.width);
+  drawVertRail(0,0,canvas.height);
+  drawVertRail(canvas.width-railH,0,canvas.height);
+
+  const insetX=canvas.width*totalInsetX;
+  const insetY=canvas.height*totalInsetX;
+
+  function drawCorner(x,y,mode){
+    ctx.save();
+    ctx.translate(x,y);
+    if(mode==='tl'){
+      ctx.drawImage(cornerImg,0,0,cW,cH);
+    } else if(mode==='tr-mirror'){
+      ctx.translate(cW,0); ctx.scale(-1,1);
+      ctx.drawImage(cornerImg,0,0,cW,cH);
+    } else if(mode==='bl-mirror'){
+      ctx.translate(0,cH); ctx.scale(1,-1);
+      ctx.drawImage(cornerImg,0,0,cW,cH);
+    } else if(mode==='br-mirror'){
+      ctx.translate(cW,cH); ctx.scale(-1,-1);
+      ctx.drawImage(cornerImg,0,0,cW,cH);
+    } else if(mode==='tr-rotate'){
+      ctx.translate(cW,0); ctx.rotate(Math.PI/2);
+      ctx.drawImage(cornerImg,0,0,cH,cW);
+    } else if(mode==='bl-rotate'){
+      ctx.translate(0,cH); ctx.rotate(-Math.PI/2);
+      ctx.drawImage(cornerImg,0,-cW,cH,cW);
+    } else if(mode==='br-rotate'){
+      ctx.translate(cW,cH); ctx.rotate(Math.PI);
+      ctx.drawImage(cornerImg,0,0,cW,cH);
+    }
+    ctx.restore();
+  }
+
+  // "mirror" confirmed cleaner in testing (Aug 2026) -- the butterfly
+  // stays visually "right side up" in every corner instead of appearing
+  // to hang upside-down at the bottom the way plain rotation produced.
+  // data.cornerMode is a per-frame setting in case a future two-piece
+  // frame's artwork is fully symmetric and looks fine either way.
+  const useRotate=data.cornerMode==='rotate';
+  drawCorner(insetX,insetY,'tl');
+  drawCorner(canvas.width-insetX-cW,insetY, useRotate?'tr-rotate':'tr-mirror');
+  drawCorner(insetX,canvas.height-insetY-cH, useRotate?'bl-rotate':'bl-mirror');
+  drawCorner(canvas.width-insetX-cW,canvas.height-insetY-cH, useRotate?'br-rotate':'br-mirror');
+}
+
 function drawFrameOnCanvas(ctx,canvas,insetFractionX=0){
   if(!selectedFrame)return Promise.resolve();
   const data=FRAME_CATALOG[selectedFrame];
   if(!data)return Promise.resolve();
+
+  if(data.type==='twoPiece')return drawTwoPieceFrameOnCanvas(ctx,canvas,data,insetFractionX);
 
   if(data.type==='image'){
     return new Promise((resolve)=>{
@@ -6032,7 +6163,7 @@ async function compositeFrameAcrossThreePanels(centerUrl,leftUrl,rightUrl){
   // insetFractionX comment for why. If that server-side crop percentage
   // ever changes, this must change to match or the frame will drift
   // out of alignment with the final crop again.
-  await drawFrameOnCanvas(ctx,combined,(frameInsetOverridePct!=null?frameInsetOverridePct:5)/100);
+  await drawFrameOnCanvas(ctx,combined,(frameInsetOverridePct!=null?frameInsetOverridePct:0)/100);
   await drawWindowSillOnCanvas(ctx,combined);
 
   const combinedDataUrl=combined.toDataURL('image/jpeg',0.92);
@@ -6225,7 +6356,7 @@ function toggleFrameManualFit(){
   const showing=panel.style.display==='block';
   panel.style.display=showing?'none':'block';
   if(!showing){
-    const current=frameInsetOverridePct!=null?frameInsetOverridePct:5;
+    const current=frameInsetOverridePct!=null?frameInsetOverridePct:0;
     const slider=document.getElementById('frameInsetSlider');
     if(slider)slider.value=current;
     const val=document.getElementById('frameInsetVal');
