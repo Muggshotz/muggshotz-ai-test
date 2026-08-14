@@ -1,3 +1,5 @@
+// BUILD-MARKER: ADMIN-GRANT-AUTOCREATE-v2
+// If you can see this comment on GitHub, this exact paste landed.
 // Merged admin endpoint (July 2026): combines what used to be two
 // separate files — admin-lookup.js and admin-tokens.js — into one,
 // because Vercel's Hobby plan caps a project at 12 serverless
