@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
 <head><link rel="manifest" href="needles-manifest.json">
-<!-- BUILD-MARKER: FRAME-MANUAL-FIT-v17 -->
+<!-- BUILD-MARKER: SHARP-EDGES-TRUE-DEFAULT-v18 -->
 <!-- If you can see this comment on GitHub, this exact paste landed. -->
 <!-- If your live site's page source does NOT say -->
-<!-- "FRAME-MANUAL-FIT-v17" right here, the upload/deploy did -->
+<!-- "SHARP-EDGES-TRUE-DEFAULT-v18" right here, the upload/deploy did -->
 <!-- not take -- re-upload before testing. -->
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
@@ -2266,8 +2266,14 @@ function syncEdgeFadeWithFrameSelection(){
     hardEdgesEnabled=true;
     toggle.checked=true;
   } else {
-    hardEdgesEnabled=false;
-    toggle.checked=false;
+    // FIXED (Aug 2026, Alyx's repeated request): this used to force
+    // hardEdgesEnabled back to false whenever no frame or Window Sill
+    // was pre-selected -- which is the common case, since Wraparound
+    // framing happens AFTER generation, not before. That silently
+    // undid the sharp-by-default fix above every time this ran. Sharp
+    // is the real default now; nothing here should turn fade back on.
+    hardEdgesEnabled=true;
+    toggle.checked=true;
   }
   if(accessorizeToggle)accessorizeToggle.checked=toggle.checked;
 }
@@ -3298,7 +3304,18 @@ function handleMugGuidedGenerate(){
   generate();
 }
 
-let hardEdgesEnabled=false;
+// FIXED (Aug 2026, Alyx's repeated request -- finally addressed):
+// this used to default to false, meaning the "guaranteed" edge fade
+// baked itself into every panel automatically at generation time
+// unless the customer pre-emptively opted out BEFORE they'd even seen
+// their design, let alone chosen a frame. Alyx wants sharp edges as
+// the true default, with fade only ever an explicit choice made AFTER
+// alignment/framing (via the existing Hard/Fade slider screen) --
+// never something baked in automatically first. Flipping this default
+// to true means no panel gets an automatic fade unless the customer
+// actively turns the pre-gen toggle off, which nothing in the current
+// flow encourages -- fade is effectively opt-in only now.
+let hardEdgesEnabled=true;
 
 const PANORAMA_FADE_INSTRUCTION_CENTER = "PANORAMA EDGE FADE: Fade the TOP and BOTTOM outside edges of the picture toward white, so they blend softly into a white canvas. Do NOT fade or soften the LEFT and RIGHT edges — those are the seams where this panel joins its neighbors, and must stay sharp, fully detailed, and continuous all the way to the edge so the scene lines up seamlessly across panels.";
 const PANORAMA_FADE_INSTRUCTION_LEFT = "PANORAMA EDGE FADE: Fade the TOP, BOTTOM, and LEFT outside edges of the picture toward white, so they blend softly into a white canvas — the left edge of this panel is a true outer edge, not a seam. Do NOT fade or soften the RIGHT edge — that is the seam where this panel joins the center panel, and must stay sharp, fully detailed, and continuous all the way to the edge so the scene lines up seamlessly.";
