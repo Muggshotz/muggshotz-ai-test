@@ -5430,7 +5430,15 @@ async function beginFinalMockupFetch(){
   }catch(err){
     console.error('Final mockup fetch failed:',err);
     if(overlay){overlay.style.display='none';document.body.classList.remove('step-locked');}
-    document.getElementById('positionHolderCard').scrollIntoView({behavior:'smooth',block:'start'});
+    // FIXED (Aug 2026): this used to fail completely silently -- just
+    // scroll back to the design screen with zero indication anything
+    // went wrong, which looked like the app had randomly reverted to
+    // an earlier step for no reason. Now shows the real error message
+    // via the existing showBigAlert() so the actual cause is visible
+    // instead of a mystery bounce-back.
+    showBigAlert(err.message||"Something went wrong generating the real mockup. Please try again.",()=>{
+      document.getElementById('positionHolderCard').scrollIntoView({behavior:'smooth',block:'start'});
+    });
   }
 }
 
