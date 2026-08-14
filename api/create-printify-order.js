@@ -1,3 +1,5 @@
+// BUILD-MARKER: SEAMLESS-WRAP-CROP-FIX-v3
+// If you can see this comment on GitHub, this exact paste landed.
 import sharp from "sharp";
 import { getProduct } from "../lib/products-catalog.js";
 
@@ -151,6 +153,15 @@ export async function buildWraparoundImage(placements, canvasWidth, canvasHeight
 
   const filledCount = [left, front, right].filter(Boolean).length;
 
+  // UPDATED (July 2026, Alyx's request): when only ONE slot is filled,
+  // that design was correctly anchored to its own third but looked
+  // small against two-thirds of blank mug. Since the neighboring space
+  // really is blank ceramic with nothing to conflict with, widen that
+  // one design's box symmetrically around its slot's original center --
+  // bigger, but still anchored on the correct side of the mug -- capped
+  // so it can't run off either edge of the canvas. This ONLY applies
+  // when exactly one slot is filled; two- or three-filled placements
+  // keep the exact fixed thirds as before, unaffected.
   function boxFor(startX, width) {
     if (filledCount !== 1) return { x: startX, width };
     const centerX = startX + width / 2;
@@ -194,7 +205,54 @@ export async function buildFullBleedImage(imageSource, canvasWidth, canvasHeight
     .toBuffer();
 }
 
+// NEW (July 2026, Alyx's request): the customer-facing "Wraparound"
+// print mode (auto-generated three-panel continuous scene) was sharing
+// buildFullBleedImage's cover-fit crop -- same head-cropping bug as the
+// three-slot-wrap fix, just reached through a different code path
+// (printMode === "fullBleed"), which is why lowering the Printify
+// placement scale didn't help: the crop was already baked into the
+// print file before it ever reached Printify. This function uses
+// contain-fit instead, so nothing gets cropped away. Deliberately kept
+// SEPARATE from buildFullBleedImage -- that one's cover-fit crop-to-fill
+// behavior is reserved for the future Ewww Stew line, where designs are
+// supposed to intentionally overflow past the print margins. Only
+// printMode === "allCup" should ever call buildFullBleedImage going
+// forward; printMode === "fullBleed" (the Wraparound scene-continuation
+// customers actually use today) calls this one instead.
 export async function buildSeamlessWrapImage(placements, canvasWidth, canvasHeight) {
+  // UPDATED (Aug 2026, Alyx's request/correction): a real single-angle
+  // photo of a wraparound mug can only ever show roughly 85-90% of its
+  // true circumference -- the outer few percent on each side always
+  // curves out of camera view, no matter how the print itself is
+  // composed. An earlier attempt shrank the whole framed image and
+  // padded the edges white -- but that scales frame and photo down
+  // together, so the frame's proportion of the visible area never
+  // actually changes (confirmed by Alyx as no visible difference).
+  // This instead crops the outer edges off the already-framed image
+  // and stretches what remains back out to fill the full true width --
+  // removes the always-invisible sliver entirely, and whatever frame
+  // border material was just inside it now reaches the true edge with
+  // no white gap and no bare unframed edge. 10% total (5% each side)
+  // chosen as a reasonable starting estimate -- may need a small
+  // adjustment up or down after seeing a real printed/photographed
+  // result.
+  //
+  // FIXED (Aug 2026): this used to take a single imageSource (just
+  // placements.front, falling back to left/right) and crop/resize that
+  // one panel alone. But compositeFrameAcrossThreePanels on the client
+  // only draws the frame border on each panel's TRUE outer edge (left
+  // panel's left edge, right panel's right edge, and top/bottom on
+  // all three) -- the seams between panels are deliberately left
+  // unframed so the wraparound scene reads as continuous. Using only
+  // the center panel meant its only real edges (left+right) were both
+  // unframed internal seams, so the frame never appeared in the final
+  // Printify mockup at all -- root cause of "the frame disappears."
+  // Fix: take the full `placements` object and reassemble left+front+
+  // right back into one continuous strip before cropping/resizing.
+  // Since the client slices the true combined+framed panorama into
+  // these exact three same-height, same-width thirds with zero
+  // overlap, placing them back edge-to-edge reconstructs that same
+  // original combined image -- frame and all.
   const WHITE = { r: 255, g: 255, b: 255 };
   const CROP_FRACTION = 0.10;
   const { left, front, right } = placements;
@@ -218,15 +276,42 @@ export async function buildSeamlessWrapImage(placements, canvasWidth, canvasHeig
     .toBuffer();
 
   const meta = await sharp(stripBuffer).metadata();
-  const cropWidth = Math.round(meta.width * (1 - CROP_FRACTION));
-  const cropLeft = Math.round((meta.width - cropWidth) / 2);
+  // Intentional circumference-compensation crop (10% total, 5% each side).
+  const preCropWidth = Math.round(meta.width * (1 - CROP_FRACTION));
+  const preCropLeft = Math.round((meta.width - preCropWidth) / 2);
+
+  // FIXED (Aug 2026, found via Alyx watching the actual pre-mockup image):
+  // this used to hand the 10%-cropped strip straight to .resize(...,
+  // {fit:"cover"}) -- but "cover" is allowed to crop AGAIN, silently,
+  // whenever the cropped strip's aspect ratio doesn't already exactly
+  // match the target print canvas (which it essentially never does --
+  // a 3-panel panorama is far wider than almost any mug print area).
+  // That silent second crop undid part of the 5%-per-side compensation
+  // we'd already carefully accounted for client-side (see
+  // drawFrameOnCanvas's insetFractionX), re-cutting into the frame
+  // border a second time in a spot nothing upstream could see or
+  // predict. Fix: explicitly crop the REST of the way to the target
+  // aspect ratio ourselves, evenly from both sides, so the final
+  // .resize() is a pure stretch with zero cropping left for it to do.
+  const targetAspect = canvasWidth / canvasHeight;
+  const preCropAspect = preCropWidth / meta.height;
+  let cropLeft = preCropLeft, cropWidth = preCropWidth, cropTop = 0, cropHeight = meta.height;
+  if (preCropAspect > targetAspect) {
+    cropWidth = Math.round(meta.height * targetAspect);
+    cropLeft = preCropLeft + Math.round((preCropWidth - cropWidth) / 2);
+  } else if (preCropAspect < targetAspect) {
+    cropHeight = Math.round(preCropWidth / targetAspect);
+    cropTop = Math.round((meta.height - cropHeight) / 2);
+  }
   return await sharp(stripBuffer)
-    .extract({ left: cropLeft, top: 0, width: cropWidth, height: meta.height })
-    .resize(canvasWidth, canvasHeight, { fit: "cover", position: "centre" })
+    .extract({ left: cropLeft, top: cropTop, width: cropWidth, height: cropHeight })
+    // "fill" is now safe (no distortion) since the extract above already
+    // matches canvasWidth/canvasHeight's exact aspect ratio -- this is
+    // purely a scale, not a second crop.
+    .resize(canvasWidth, canvasHeight, { fit: "fill" })
     .png()
     .toBuffer();
 }
-
 export async function buildSingleImage(imageSource, canvasWidth, canvasHeight) {
   const WHITE = { r: 255, g: 255, b: 255 };
   return await sharp(await resolveImageBuffer(imageSource))
@@ -235,6 +320,21 @@ export async function buildSingleImage(imageSource, canvasWidth, canvasHeight) {
     .toBuffer();
 }
 
+// UPDATED (Aug 2026, Alyx's request): switched from "contain" (shrink
+// the whole composited image to fit inside the print area, padding the
+// leftover space with white) to "cover" (fill the print area completely,
+// cropping only what doesn't fit). Root cause: the AI-generated canvas
+// for front-back products (1024x1536, a tall 0.667 aspect ratio) never
+// matches the real Printify print area (900x1200 for the 40oz, a
+// squarer 0.75 ratio) -- "contain" was shrinking the whole design down
+// and padding it with a visible white border on the real printed/
+// mockup output, confirmed live on a 40oz Parisian Balcony Window Sill
+// test. "cover" is also consistent with how Window Sill already treats
+// photo-fit elsewhere in the app (fills the opening completely, crops
+// like a real window, never pads with white) -- this just applies the
+// same philosophy at the final Printify-placement layer. Only affects
+// front-back layoutType products (currently just the 40oz); every other
+// layoutType (three-slot-wrap, single-image, full-bleed) is untouched.
 export async function buildFrontBackImages(frontSource, backSource, frontDims, backDims) {
   async function build(source, dims) {
     if (!source || !dims) return null;
@@ -250,6 +350,16 @@ export async function buildFrontBackImages(frontSource, backSource, frontDims, b
   return { frontBuf, backBuf };
 }
 
+// UPDATED (July 2026, Alyx's request): now ASYNC. A color entry in the
+// catalog can be added with variantId left out (null/undefined) the
+// moment it's confirmed to exist on Printify -- this function then
+// resolves the real numeric variant ID live, by matching the size and
+// color name against Printify's own variant titles for that blueprint/
+// provider (same resolveVariantIdByTitleMatch() helper travel-mug-20oz
+// already relies on). This means a newly-confirmed color can go live
+// immediately from just its name, with no manual ID lookup required.
+// Every color that already has a real variantId hardcoded is completely
+// unaffected -- this fallback only ever runs when one is missing.
 export async function resolveVariant(product, sizeLabel, colorName) {
   const sizeEntry = product.sizes?.[sizeLabel];
   if (!sizeEntry) throw new Error(`Unknown size "${sizeLabel}" for this product.`);
@@ -272,11 +382,36 @@ export async function resolveVariant(product, sizeLabel, colorName) {
     return { variantId, price: sizeEntry.price };
   }
 
+  // UPDATED (Aug 2026): this branch previously threw immediately if a
+  // size-only product (no colors at all, like the Gator Tumbler and
+  // Tundra Tumbler) was missing a hardcoded variantId. The two color
+  // branches above already had a live-lookup fallback for exactly this
+  // situation -- a product confirmed to genuinely exist on Printify
+  // whose numeric variant ID just hasn't been manually looked up yet --
+  // this branch simply never got the same treatment, which is why the
+  // 32oz Gator Tumbler's real-photo preview failed with "No variantId
+  // configured for size '32oz'" the first time it was used. Brought in
+  // line with the same resolveVariantIdByTitleMatch() fallback already
+  // used for Trimmed's 15oz Black, Accented's Black, and travel-mug-20oz.
   if (sizeEntry.variantId) return { variantId: sizeEntry.variantId, price: sizeEntry.price };
   const variantId = await resolveVariantIdByTitleMatch(product.blueprintId, product.printProviderId, [sizeLabel]);
   return { variantId, price: sizeEntry.price };
 }
 
+// UPDATED (July 2026, Alyx's request): added optional imageScale and
+// imageY parameters (default 1 / 0.5 -- both unchanged from before)
+// instead of hardcoding one value for every product. Coffee mugs
+// specifically were coming out too tightly cropped -- text and faces
+// running edge-to-edge with zero margin -- so placeProductOrder/
+// start-mockup.js pass 0.8 (80%) scale only for three-slot-wrap
+// (coffee mug) products. After fixing the crop, the design still sat
+// too high on the mug (centered vertically leaves it looking too close
+// to the rim) -- imageY nudges it down toward center-lower instead.
+// Travel mugs, suitcases, and everything else keep the original
+// full-size, centered placement, since those were already coming out
+// correctly. This is the exact same x/y/scale placement control
+// Printify's own manual editor exposes when a person resizes/repositions
+// a design by hand.
 export async function createPrintifyProduct(images, { blueprintId, printProviderId, displayName }, variantId, title, imageScale = 1, imageY = 0.5) {
   const placeholders = Object.entries(images).map(([position, imageId]) => ({
     position,
@@ -375,6 +510,12 @@ export async function placeProductOrder({
     effectiveBlueprintId = resolved.blueprintId;
     effectivePrintProviderId = resolved.printProviderId;
   } else if (productKey === "travel-mug-20oz") {
+    // UPDATED (July 2026): this blueprint (SPOKE Custom Products, swapped
+    // in after the previous Polar Camel blueprint turned out to be
+    // Printify "Early Access" with no real mockup support) has exactly
+    // one orderable variant and no hardcoded ID in the catalog -- same
+    // reasoning as photo-poster's not-yet-looked-up sizes. Resolved live
+    // by name match instead.
     effectiveBlueprintId = product.blueprintId;
     effectivePrintProviderId = product.printProviderId;
     variantId = await resolveVariantIdByTitleMatch(effectiveBlueprintId, effectivePrintProviderId, [sizeLabel]);
@@ -392,6 +533,10 @@ export async function placeProductOrder({
     if (!placements || !(placements.left || placements.front || placements.right)) {
       throw new Error("At least one design is required, in any slot.");
     }
+    // "fullBleed" = customer-facing Wraparound scene-continuation mode
+    // (no cropping). "allCup" = reserved for the future Ewww Stew line,
+    // which deliberately wants overflow/crop. Do NOT collapse these
+    // back into one branch -- see buildSeamlessWrapImage's comment above.
     const isSeamlessWrap = printMode === "fullBleed";
     const isFullBleed = printMode === "allCup";
     const { width, height, position } = await getPlaceholderDimensions(
@@ -439,7 +584,19 @@ export async function placeProductOrder({
     throw new Error(`Unknown layoutType "${product.layoutType}" for product "${productKey}".`);
   }
 
+  // RESOLVED (July 2026): the calibration test confirmed scale/position
+  // was never the real problem -- the actual bug was buildFullBleedImage
+  // still cropping, reached only through the Wraparound auto-continuation
+  // path. Now that buildSeamlessWrapImage fixes the crop at the source,
+  // restoring the values already validated as correct for the manual
+  // three-slot-wrap mode.
   const isCoffeeMug = product.layoutType === "three-slot-wrap";
+  // UPDATED (July 2026, Alyx's request): the 20oz travel mug (SPOKE
+  // Custom Products, single-image) was printing too large on some
+  // designs depending on how the source image happened to be framed --
+  // scoped narrowly to ONLY this product key so it can't accidentally
+  // affect the suitcase, phone case, or anything else that was already
+  // coming out correctly.
   const isTravelMug20oz = productKey === "travel-mug-20oz";
   const imageScale = isCoffeeMug ? 1 : 1;
   const imageY = isCoffeeMug ? 0.5 : 0.5;
