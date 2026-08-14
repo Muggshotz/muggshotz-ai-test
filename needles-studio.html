@@ -535,6 +535,34 @@ body.product-focus .card:not(#productCard){opacity:.35;filter:brightness(.6) sat
   }
 }
 
+/* True up/down sliders for the Left/Right Vertical seam-nudge controls --
+   a sideways slider for an up/down adjustment was confusing to operate
+   (Alyx's report: values changed but the physical drag direction didn't
+   match "up" or "down" at all). writing-mode+direction gives min at the
+   bottom, max at the top, matching a real vertical fader: drag up to
+   raise the value, drag down to lower it. -webkit-appearance covers
+   older Safari/Chrome that don't yet honor writing-mode on range inputs. */
+.vertical-slider{
+  writing-mode:vertical-lr;
+  direction:rtl;
+  -webkit-appearance:slider-vertical;
+  width:36px;
+  height:150px;
+  margin:0 auto;
+}
+.vertical-slider-row{
+  display:flex;
+  justify-content:center;
+  gap:2.2rem;
+  margin:10px 0 2px;
+}
+.vertical-slider-col{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:6px;
+}
+
 </style>
 </head>
 <body class="initial-upload-focus">
@@ -885,10 +913,16 @@ body.product-focus .card:not(#productCard){opacity:.35;filter:brightness(.6) sat
 <input type="range" id="seamLeftSlider" min="0" max="300" step="1" value="0" oninput="updateSeamFixPreview()" style="width:100%"/>
 <label style="display:block;margin:10px 0 2px">Right Seam <span id="seamRightVal">0px</span></label>
 <input type="range" id="seamRightSlider" min="0" max="300" step="1" value="0" oninput="updateSeamFixPreview()" style="width:100%"/>
-<label style="display:block;margin:10px 0 2px">Left Vertical <span id="seamLeftVertVal">0px</span></label>
-<input type="range" id="seamLeftVertSlider" min="-100" max="100" step="1" value="0" oninput="updateSeamFixPreview()" style="width:100%"/>
-<label style="display:block;margin:10px 0 2px">Right Vertical <span id="seamRightVertVal">0px</span></label>
-<input type="range" id="seamRightVertSlider" min="-100" max="100" step="1" value="0" oninput="updateSeamFixPreview()" style="width:100%"/>
+<div class="vertical-slider-row">
+  <div class="vertical-slider-col">
+    <label>Left Vertical <span id="seamLeftVertVal">0px</span></label>
+    <input type="range" class="vertical-slider" id="seamLeftVertSlider" min="-100" max="100" step="1" value="0" oninput="updateSeamFixPreview()"/>
+  </div>
+  <div class="vertical-slider-col">
+    <label>Right Vertical <span id="seamRightVertVal">0px</span></label>
+    <input type="range" class="vertical-slider" id="seamRightVertSlider" min="-100" max="100" step="1" value="0" oninput="updateSeamFixPreview()"/>
+  </div>
+</div>
 <button type="button" class="generate-btn" style="margin-top:.9rem" onclick="confirmSeamFix()">✅ Satisfied?</button>
 </div>
 </div>
@@ -5873,9 +5907,24 @@ async function compositeFrameAcrossThreePanels(centerUrl,leftUrl,rightUrl){
     // that crosses the seam (e.g. a purse handle sitting slightly higher
     // on one panel than the other). Center panel never moves vertically --
     // it's the fixed reference the other two align to.
-    const srcPerDestPy=sh/h;
-    if(i===0)sy=Math.max(0,Math.min(img.naturalHeight-sh,sy+seamLeftVertPx*srcPerDestPy));
-    if(i===2)sy=Math.max(0,Math.min(img.naturalHeight-sh,sy+seamRightVertPx*srcPerDestPy));
+    // FIXED (Aug 2026): this used to shift sy directly, then clamp it to
+    // [0, naturalHeight-sh] -- but sh is usually almost exactly
+    // naturalHeight already (the cover-crop rarely needs much vertical
+    // trim to begin with), so that clamp range was often only a pixel or
+    // two wide regardless of the slider's true -100..100 range: the
+    // slider looked wired in but had nowhere to actually go. Fix:
+    // reserve a fixed 20% vertical zoom-in margin on these two panels
+    // specifically (10% top + 10% bottom) so there's always real room
+    // to pan within, then map the full slider range across that margin.
+    if(i===0||i===2){
+      const vertPx=i===0?seamLeftVertPx:seamRightVertPx;
+      const zoomedSh=sh*0.8;
+      const headroom=sh-zoomedSh;
+      const centeredSy=sy+headroom/2;
+      const offsetFrac=Math.max(-1,Math.min(1,vertPx/100));
+      sy=Math.max(0,Math.min(img.naturalHeight-zoomedSh,centeredSy+offsetFrac*(headroom/2)));
+      sh=zoomedSh;
+    }
     pctx.drawImage(img,sx,sy,sw,sh,i*panelW,0,panelW,h);
   });
 
@@ -5955,9 +6004,18 @@ async function stitchThreePanelsRaw(centerUrl,leftUrl,rightUrl,leftOverlapPx,rig
     sw-=(trimLeftSrc+trimRightSrc);
     // Same left/right-only vertical nudge as compositeFrameAcrossThreePanels
     // -- kept in sync since these two stitch implementations are independent.
-    const srcPerDestPy=sh/h;
-    if(i===0)sy=Math.max(0,Math.min(img.naturalHeight-sh,sy+leftVertPx*srcPerDestPy));
-    if(i===2)sy=Math.max(0,Math.min(img.naturalHeight-sh,sy+rightVertPx*srcPerDestPy));
+    // Same headroom fix as compositeFrameAcrossThreePanels -- see the
+    // comment there for why the old direct-clamp approach never actually
+    // moved anything.
+    if(i===0||i===2){
+      const vertPx=i===0?leftVertPx:rightVertPx;
+      const zoomedSh=sh*0.8;
+      const headroom=sh-zoomedSh;
+      const centeredSy=sy+headroom/2;
+      const offsetFrac=Math.max(-1,Math.min(1,vertPx/100));
+      sy=Math.max(0,Math.min(img.naturalHeight-zoomedSh,centeredSy+offsetFrac*(headroom/2)));
+      sh=zoomedSh;
+    }
     ctx.drawImage(img,sx,sy,sw,sh,i*panelW,0,panelW,h);
   });
   return canvas.toDataURL('image/jpeg',0.92);
