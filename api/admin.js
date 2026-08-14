@@ -72,8 +72,41 @@ async function handleAdjust(req, res) {
       { headers: { apikey: SUPABASE_SERVICE_ROLE_KEY, Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}` } }
     );
     const rows = await lookupResp.json();
-    if (!rows.length) return res.status(404).json({ error: `No customer found for device ID: ${deviceId}` });
-    const customer  = rows[0];
+
+    let customer;
+    if (rows.length) {
+      customer = rows[0];
+    } else {
+      // FIXED (Aug 2026, found during real-device testing): Grant Tokens
+      // used to hard-require an existing customer row, failing with
+      // "No customer found" for any device that hasn't purchased or
+      // generated yet -- meaning tokens could never be proactively
+      // granted to a brand-new device (testing, or gifting credit to
+      // someone before they've used the app at all). Deduct still
+      // requires an existing customer -- nothing sensible to deduct
+      // from a record that doesn't exist -- but Grant now creates the
+      // customer row on the spot when none is found.
+      if (action !== 'grant') {
+        return res.status(404).json({ error: `No customer found for device ID: ${deviceId}` });
+      }
+      const createResp = await fetch(
+        `${SUPABASE_URL}/rest/v1/customers`,
+        {
+          method: 'POST',
+          headers: {
+            apikey: SUPABASE_SERVICE_ROLE_KEY,
+            Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+            'Content-Type': 'application/json',
+            Prefer: 'return=representation'
+          },
+          body: JSON.stringify({ device_id: deviceId, token_balance: 0 })
+        }
+      );
+      const created = await createResp.json();
+      if (!createResp.ok || !created.length) throw new Error('Supabase customer creation failed: ' + JSON.stringify(created));
+      customer = created[0];
+    }
+
     const delta     = action === 'grant' ? count : -count;
     const newBalance = Math.max(0, customer.token_balance + delta);
 
