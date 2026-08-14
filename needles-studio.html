@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
 <head><link rel="manifest" href="needles-manifest.json">
-<!-- BUILD-MARKER: WITH VERTICAL SLIDERS v13 -->
+<!-- BUILD-MARKER: WITH VERTICAL SLIDERS v14 (rotate-transform fix) -->
 <!-- If you can see this comment on GitHub, this exact paste landed. -->
-<!-- If your live site's page source does NOT say "WITH VERTICAL SLIDERS v13" -->
+<!-- If your live site's page source does NOT say "WITH VERTICAL SLIDERS v14" -->
 <!-- right here, the upload/deploy did not take -- re-upload before testing. -->
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
@@ -540,17 +540,31 @@ body.product-focus .card:not(#productCard){opacity:.35;filter:brightness(.6) sat
 /* True up/down sliders for the Left/Right Vertical seam-nudge controls --
    a sideways slider for an up/down adjustment was confusing to operate
    (Alyx's report: values changed but the physical drag direction didn't
-   match "up" or "down" at all). writing-mode+direction gives min at the
-   bottom, max at the top, matching a real vertical fader: drag up to
-   raise the value, drag down to lower it. -webkit-appearance covers
-   older Safari/Chrome that don't yet honor writing-mode on range inputs. */
-.vertical-slider{
-  writing-mode:vertical-lr;
-  direction:rtl;
-  -webkit-appearance:slider-vertical;
+   match "up" or "down" at all).
+   FIXED (Aug 2026): the first attempt used writing-mode+direction with a
+   -webkit-appearance fallback -- confirmed by Alyx to render as a normal
+   horizontal slider on Chrome for Android (writing-mode support on range
+   inputs is inconsistent across engines). Replaced with a plain CSS
+   rotate transform instead: this just visually rotates an ordinary
+   horizontal slider 90 degrees, which works identically on every
+   browser since it isn't relying on any special vertical-slider
+   support at all. rotate(-90deg) maps the slider's normal "right = max"
+   direction to "up = max" on screen, so dragging up still raises the
+   value and dragging down still lowers it. */
+.vertical-slider-wrap{
   width:36px;
   height:150px;
+  position:relative;
   margin:0 auto;
+}
+.vertical-slider{
+  position:absolute;
+  top:50%;
+  left:50%;
+  width:150px;
+  height:36px;
+  transform:translate(-50%,-50%) rotate(-90deg);
+  margin:0;
 }
 .vertical-slider-row{
   display:flex;
@@ -918,11 +932,15 @@ body.product-focus .card:not(#productCard){opacity:.35;filter:brightness(.6) sat
 <div class="vertical-slider-row">
   <div class="vertical-slider-col">
     <label>Left Vertical <span id="seamLeftVertVal">0px</span></label>
-    <input type="range" class="vertical-slider" id="seamLeftVertSlider" min="-100" max="100" step="1" value="0" oninput="updateSeamFixPreview()"/>
+    <div class="vertical-slider-wrap">
+      <input type="range" class="vertical-slider" id="seamLeftVertSlider" min="-100" max="100" step="1" value="0" oninput="updateSeamFixPreview()"/>
+    </div>
   </div>
   <div class="vertical-slider-col">
     <label>Right Vertical <span id="seamRightVertVal">0px</span></label>
-    <input type="range" class="vertical-slider" id="seamRightVertSlider" min="-100" max="100" step="1" value="0" oninput="updateSeamFixPreview()"/>
+    <div class="vertical-slider-wrap">
+      <input type="range" class="vertical-slider" id="seamRightVertSlider" min="-100" max="100" step="1" value="0" oninput="updateSeamFixPreview()"/>
+    </div>
   </div>
 </div>
 <button type="button" class="generate-btn" style="margin-top:.9rem" onclick="confirmSeamFix()">✅ Satisfied?</button>
