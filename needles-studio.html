@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
 <head><link rel="manifest" href="needles-manifest.json">
-<!-- BUILD-MARKER: SHARP-PANELS-FOR-ALIGNMENT-v15 -->
+<!-- BUILD-MARKER: FRAME-INSET-FOR-CROP-v16 -->
 <!-- If you can see this comment on GitHub, this exact paste landed. -->
 <!-- If your live site's page source does NOT say -->
-<!-- "SHARP-PANELS-FOR-ALIGNMENT-v15" right here, the upload/deploy did -->
+<!-- "FRAME-INSET-FOR-CROP-v16" right here, the upload/deploy did -->
 <!-- not take -- re-upload before testing. -->
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
@@ -2974,7 +2974,7 @@ async function drawPhotoInsetForFrame(ctx,canvas,source,sourceW,sourceH){
   ctx.drawImage(source,0,0,sourceW,sourceH,drawX,drawY,drawW,drawH);
 }
 
-function drawFrameOnCanvas(ctx,canvas){
+function drawFrameOnCanvas(ctx,canvas,insetFractionX=0){
   if(!selectedFrame)return Promise.resolve();
   const data=FRAME_CATALOG[selectedFrame];
   if(!data)return Promise.resolve();
@@ -3000,7 +3000,27 @@ function drawFrameOnCanvas(ctx,canvas){
           const rotate=Math.round(hexToHue(hex)-hexToHue(data.defaultColor));
           ctx.filter='hue-rotate('+rotate+'deg) saturate(1.15)';
         }
-        ctx.drawImage(img,bbox.x,bbox.y,bbox.w,bbox.h,0,0,canvas.width,canvas.height);
+        // FIXED (Aug 2026, Alyx's find): insetFractionX lets a caller
+        // draw the frame narrower than the full canvas width, inset
+        // equally from both sides. Needed specifically by
+        // compositeFrameAcrossThreePanels for the Wraparound seamless-
+        // wrap path -- buildSeamlessWrapImage (server-side) crops 5% off
+        // EACH side of the assembled panorama afterward to compensate
+        // for a real photo never showing a mug's full curved
+        // circumference, then stretches what remains back out to full
+        // width. Drawing the frame full-bleed to this canvas meant that
+        // server-side crop sliced directly through the outer 5% of the
+        // frame border on both sides every time -- root cause of the
+        // frame's ends never appearing in the real mockup. Insetting by
+        // the same 5% here means the frame's true outer edge sits right
+        // at the boundary the server crop preserves, so once that crop
+        // strips the outer sliver and stretches the rest back to full
+        // width, the frame's edge lands exactly at the final image's
+        // true edge instead of getting cut mid-border. Every other
+        // caller (single-photo frames, which never go through that
+        // crop) passes 0 and is completely unaffected.
+        const insetX=canvas.width*insetFractionX;
+        ctx.drawImage(img,bbox.x,bbox.y,bbox.w,bbox.h,insetX,0,canvas.width-insetX*2,canvas.height);
         ctx.filter='none';
         ctx.restore();
         resolve();
@@ -5967,7 +5987,12 @@ async function compositeFrameAcrossThreePanels(centerUrl,leftUrl,rightUrl){
   const ctx=combined.getContext('2d');
   await drawPhotoInsetForFrame(ctx,combined,photoStrip,stripW,h);
 
-  await drawFrameOnCanvas(ctx,combined);
+  // 0.05 must match buildSeamlessWrapImage's CROP_FRACTION/2 in
+  // create-printify-order.js (server-side) -- see drawFrameOnCanvas's
+  // insetFractionX comment for why. If that server-side crop percentage
+  // ever changes, this must change to match or the frame will drift
+  // out of alignment with the final crop again.
+  await drawFrameOnCanvas(ctx,combined,0.05);
   await drawWindowSillOnCanvas(ctx,combined);
 
   const combinedDataUrl=combined.toDataURL('image/jpeg',0.92);
