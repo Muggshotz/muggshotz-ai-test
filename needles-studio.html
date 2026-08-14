@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
 <head><link rel="manifest" href="needles-manifest.json">
-<!-- BUILD-MARKER: TWO-PIECE-FRAME-TEST-v22 -->
+<!-- BUILD-MARKER: TWO-PIECE-ERROR-VISIBILITY-v23 -->
 <!-- If you can see this comment on GitHub, this exact paste landed. -->
 <!-- If your live site's page source does NOT say -->
-<!-- "TWO-PIECE-FRAME-TEST-v22" right here, the upload/deploy did -->
+<!-- "TWO-PIECE-ERROR-VISIBILITY-v23" right here, the upload/deploy did -->
 <!-- not take -- re-upload before testing. -->
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
@@ -3004,7 +3004,11 @@ function loadLocalImage(src){
   return new Promise((resolve)=>{
     const img=new Image();
     img.onload=()=>resolve(img);
-    img.onerror=()=>resolve(null);
+    // FIXED (Aug 2026): this used to resolve(null) with zero indication
+    // anything went wrong -- a missing or misnamed asset just silently
+    // produced no frame at all, no error, no console message, nothing
+    // to diagnose. Now at least visible in the console.
+    img.onerror=()=>{console.error('Failed to load image asset:',src);resolve(null);};
     img.src=src;
   });
 }
@@ -3024,7 +3028,11 @@ function loadLocalImage(src){
 // needing to know that percentage in advance.
 async function drawTwoPieceFrameOnCanvas(ctx,canvas,data,insetFractionX=0){
   const [cornerImg,railImg]=await Promise.all([loadLocalImage(data.cornerAsset),loadLocalImage(data.railAsset)]);
-  if(!cornerImg||!railImg)return;
+  if(!cornerImg||!railImg){
+    console.error('drawTwoPieceFrameOnCanvas: aborting, missing asset(s) --',
+      !cornerImg?data.cornerAsset:null, !railImg?data.railAsset:null);
+    return;
+  }
 
   // 15% built-in floor regardless of the manual Frame Fit slider --
   // unlike single-image frames (which used insetFractionX directly),
