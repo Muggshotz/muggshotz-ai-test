@@ -51,19 +51,10 @@ async function handleStart(req, res) {
     effectiveBlueprintId = resolved.blueprintId;
     effectivePrintProviderId = resolved.printProviderId;
   } else if (productKey === "travel-mug-20oz") {
-    // UPDATED (July 2026): matches the same special-case in
-    // create-printify-order.js — this blueprint has one orderable
-    // variant with no hardcoded ID in the catalog, resolved live by name.
     effectiveBlueprintId = product.blueprintId;
     effectivePrintProviderId = product.printProviderId;
     variantId = await resolveVariantIdByTitleMatch(effectiveBlueprintId, effectivePrintProviderId, [sizeLabel]);
   } else {
-    // FIXED (July 2026): resolveVariant() became async when it gained
-    // the live-lookup fallback for colors missing a hardcoded variantId
-    // (see create-printify-order.js). This call was missing the await,
-    // so variantId came back as an unresolved Promise instead of a real
-    // ID — breaking the mockup preview for every color, not just the
-    // newly-added ones without a hardcoded ID.
     ({ variantId } = await resolveVariant(product, sizeLabel, colorName));
     effectiveBlueprintId = product.blueprintId;
     effectivePrintProviderId = product.printProviderId;
@@ -75,10 +66,6 @@ async function handleStart(req, res) {
     if (!placements || !(placements.left || placements.front || placements.right)) {
       throw new Error("At least one design is required to generate a mockup.");
     }
-    // Matches create-printify-order.js's split — "fullBleed" (Wraparound
-    // scene-continuation, no cropping) vs "allCup" (reserved for the
-    // future Ewww Stew overflow line). See buildSeamlessWrapImage's
-    // comment there for why these must stay separate.
     const isSeamlessWrap = printMode === "fullBleed";
     const isFullBleed = printMode === "allCup";
     const { width, height, position } = await getPlaceholderDimensions(
@@ -87,7 +74,7 @@ async function handleStart(req, res) {
     const buffer = isFullBleed
       ? await buildFullBleedImage(placements.front || placements.left || placements.right, width, height)
       : isSeamlessWrap
-      ? await buildSeamlessWrapImage(placements.front || placements.left || placements.right, width, height)
+      ? await buildSeamlessWrapImage(placements, width, height)
       : await buildWraparoundImage(placements, width, height);
     const imageId = await uploadImageToPrintify(buffer, `muggshotz-mockup-preview-${Date.now()}.png`);
     printifyImages[position] = imageId;
@@ -113,9 +100,6 @@ async function handleStart(req, res) {
     throw new Error("Real-photo mockups aren't available for this product type yet.");
   }
 
-  // RESOLVED — matches placeProductOrder's logic in
-  // create-printify-order.js, so the preview accurately reflects what a
-  // real order would actually look like.
   const isCoffeeMug = product.layoutType === "three-slot-wrap";
   const isTravelMug20oz = productKey === "travel-mug-20oz";
   const imageScale = isCoffeeMug ? 1 : 1;
@@ -143,10 +127,6 @@ async function handleCheck(req, res) {
   const data = await response.json();
 
   const hasImages = response.ok && Array.isArray(data.images) && data.images.length > 0;
-  // Printify often photographs a single wraparound print from several
-  // camera angles (front, and a couple of side/turned views) — return
-  // all of them so a multi-angle product (coffee mugs) can show more
-  // than just the first shot instead of throwing the rest away.
   const mockupUrls = hasImages ? data.images.map(img => img.src) : [];
   const mockupUrl = mockupUrls[0] || null;
 
