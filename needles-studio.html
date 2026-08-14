@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
 <head><link rel="manifest" href="needles-manifest.json">
-<!-- BUILD-MARKER: FRAME-INSET-FOR-CROP-v16 -->
+<!-- BUILD-MARKER: FRAME-MANUAL-FIT-v17 -->
 <!-- If you can see this comment on GitHub, this exact paste landed. -->
 <!-- If your live site's page source does NOT say -->
-<!-- "FRAME-INSET-FOR-CROP-v16" right here, the upload/deploy did -->
+<!-- "FRAME-MANUAL-FIT-v17" right here, the upload/deploy did -->
 <!-- not take -- re-upload before testing. -->
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
@@ -734,6 +734,14 @@ body.product-focus .card:not(#productCard){opacity:.35;filter:brightness(.6) sat
 <div id="frameColorPanel" style="display:none;margin-top:14px"></div>
 <div id="frameSillCrossPromoBanner" class="note mug-select-flash" style="margin-top:14px;text-align:center">🪟 Don't see what you're looking for? Window Sill Portrait is also available — just below!</div>
 <div id="frameCatalogInlinePreview" style="display:none;margin-top:14px"></div>
+<div id="frameManualFitToggleRow" style="display:none;margin-top:10px;text-align:center">
+  <button type="button" class="download-btn" style="border-color:#1976d2;color:#64b5f6;font-size:.85rem;padding:.5rem .9rem" onclick="toggleFrameManualFit()">🔧 Frame ends not fitting right? Adjust manually</button>
+</div>
+<div id="frameManualFitPanel" style="display:none;margin-top:10px">
+  <label style="display:block;margin-bottom:2px">Frame Fit <span id="frameInsetVal">5%</span></label>
+  <input type="range" id="frameInsetSlider" min="0" max="15" step="0.5" value="5" oninput="updateFrameInsetPreview()" style="width:100%"/>
+  <div class="note" style="margin-top:6px">Drag right if the frame's ends are still getting cut off in the final mockup; drag left if there's a visible gap before the frame reaches the edge.</div>
+</div>
 <button type="button" id="frameCatalogSatisfiedBtn" class="download-btn" style="display:none;margin-top:.6rem;border-color:#2e7d32;color:#7ed957" onclick="applyAccessorizeFrame()">✅ Satisfied?</button>
 <button type="button" class="snap-arrow-btn snap-arrow-down" id="snapDown1" onclick="snapExpand(2)">⌄</button>
 </div>
@@ -929,7 +937,7 @@ body.product-focus .card:not(#productCard){opacity:.35;filter:brightness(.6) sat
 <label style="display:block;margin-bottom:2px">Left Seam <span id="seamLeftVal">0px</span></label>
 <input type="range" id="seamLeftSlider" min="0" max="600" step="1" value="0" oninput="updateSeamFixPreview()" style="width:100%"/>
 <label style="display:block;margin:10px 0 2px">Right Seam <span id="seamRightVal">0px</span></label>
-<input type="range" id="seamRightSlider" min="0" max="300" step="1" value="0" oninput="updateSeamFixPreview()" style="width:100%"/>
+<input type="range" id="seamRightSlider" min="0" max="600" step="1" value="0" oninput="updateSeamFixPreview()" style="width:100%"/>
 <div class="vertical-slider-row">
   <div class="vertical-slider-col">
     <label>Left Vertical <span id="seamLeftVertVal">0px</span></label>
@@ -5155,6 +5163,8 @@ function showAccessorizeChoiceState(){
   if(choicePanel)choicePanel.style.display='block';
   if(committed)committed.style.display='none';
   accessorizeFrameScrolledOnce=false;
+  frameInsetOverridePct=null;
+  hideFrameManualFitControls();
 
   // Window Sill was never actually available for Wraparound (it's a
   // fixed scene that distorts if stretched around the seam) -- only
@@ -5232,6 +5242,8 @@ function chooseRevealPath(choice){
 function openAccessorizeForRevealFlow(){
   revealFlowActive=true;
   accessorizeFrameScrolledOnce=false;
+  frameInsetOverridePct=null;
+  hideFrameManualFitControls();
   const choicePanel=document.getElementById('accessorizeChoicePanel');
   const committed=document.getElementById('accessorizeCommittedContent');
   if(choicePanel)choicePanel.style.display='none';
@@ -5907,6 +5919,17 @@ function loadImageFromUrl(url){
 // procedural frame's stroke-width math (which scales off canvas.width)
 // comes out correct since it's applied once at full combined width instead
 // of three times at a third of it.
+// Manual override for the frame's horizontal inset percentage (see
+// drawFrameOnCanvas's insetFractionX comment). Alyx's compromise (Aug
+// 2026): the calculated 5%-per-side default should be correct in the
+// common case now that buildSeamlessWrapImage's double-crop bug is
+// fixed, but since the exact required crop can still vary by product/
+// size, this lets the customer manually dial it in and see the result
+// live instead of trusting the math blindly. null = use the calculated
+// default; a customer-set value always wins once they've touched the
+// slider.
+let frameInsetOverridePct=null;
+
 async function compositeFrameAcrossThreePanels(centerUrl,leftUrl,rightUrl){
   const [leftImg,centerImg,rightImg]=await Promise.all([
     loadImageFromUrl(leftUrl),
@@ -5992,7 +6015,7 @@ async function compositeFrameAcrossThreePanels(centerUrl,leftUrl,rightUrl){
   // insetFractionX comment for why. If that server-side crop percentage
   // ever changes, this must change to match or the frame will drift
   // out of alignment with the final crop again.
-  await drawFrameOnCanvas(ctx,combined,0.05);
+  await drawFrameOnCanvas(ctx,combined,(frameInsetOverridePct!=null?frameInsetOverridePct:5)/100);
   await drawWindowSillOnCanvas(ctx,combined);
 
   const combinedDataUrl=combined.toDataURL('image/jpeg',0.92);
@@ -6125,6 +6148,7 @@ async function updateAccessorizePreview(){
       // Three-panel mode: each panel is its own independent design, never
       // meant to blend into one continuous scene -- frame (or no frame)
       // gets applied to each one separately, shown side by side.
+      hideFrameManualFitControls();
       const urls=[pendingWraparoundRaw.left,pendingWraparoundRaw.center,pendingWraparoundRaw.right];
       const framed=(selectedFrame||windowSillChoice)
         ? await Promise.all(urls.map(u=>compositeFrameOntoImageUrl(u)))
@@ -6134,7 +6158,14 @@ async function updateAccessorizePreview(){
       if(selectedFrame||windowSillChoice){
         const framed=await compositeFrameAcrossThreePanels(pendingWraparoundRaw.center,pendingWraparoundRaw.left,pendingWraparoundRaw.right);
         renderAccessorizeStrip(framed.combined);
+        // Only the seamless-wrap path (Wraparound, frame selected) is
+        // ever subject to the server-side circumference-compensation
+        // crop that can shift the frame's true edge -- so this is the
+        // only case where the manual override is offered at all.
+        const toggleRow=document.getElementById('frameManualFitToggleRow');
+        if(toggleRow)toggleRow.style.display=(mugPrintMode==='wraparound'&&selectedFrame)?'block':'none';
       } else {
+        hideFrameManualFitControls();
         // Must pass the seam/vertical alignment the customer just set on
         // the Fix the Seams screen -- this preview re-stitches from the
         // raw un-stitched panels from scratch, so leaving these out
@@ -6144,6 +6175,7 @@ async function updateAccessorizePreview(){
         renderAccessorizeStrip(raw);
       }
     } else if(pending40ozRaw){
+      hideFrameManualFitControls();
       if(selectedFrame||windowSillChoice){
         const framedPanorama=await compositeFrameOntoImageUrl(pending40ozRaw.panorama);
         renderAccessorizeStrip(framedPanorama);
@@ -6157,6 +6189,41 @@ async function updateAccessorizePreview(){
   }
   })();
   await accessorizePreviewInFlight;
+}
+
+// Manual Frame Fit toggle -- only meaningful for the Wraparound
+// seamless-wrap path (the one case where a server-side crop can still
+// shift the frame's true edge after the calculated 5% inset). See
+// updateAccessorizePreview for where this row is shown/hidden.
+function hideFrameManualFitControls(){
+  const toggleRow=document.getElementById('frameManualFitToggleRow');
+  const panel=document.getElementById('frameManualFitPanel');
+  if(toggleRow)toggleRow.style.display='none';
+  if(panel)panel.style.display='none';
+}
+
+function toggleFrameManualFit(){
+  const panel=document.getElementById('frameManualFitPanel');
+  if(!panel)return;
+  const showing=panel.style.display==='block';
+  panel.style.display=showing?'none':'block';
+  if(!showing){
+    const current=frameInsetOverridePct!=null?frameInsetOverridePct:5;
+    const slider=document.getElementById('frameInsetSlider');
+    if(slider)slider.value=current;
+    const val=document.getElementById('frameInsetVal');
+    if(val)val.textContent=current+'%';
+  }
+}
+
+async function updateFrameInsetPreview(){
+  const slider=document.getElementById('frameInsetSlider');
+  frameInsetOverridePct=slider?parseFloat(slider.value):5;
+  const val=document.getElementById('frameInsetVal');
+  if(val)val.textContent=frameInsetOverridePct+'%';
+  if(pendingWraparoundRaw||pending40ozRaw){
+    await updateAccessorizePreview();
+  }
 }
 
 function renderAccessorizeStripThree(urls){
