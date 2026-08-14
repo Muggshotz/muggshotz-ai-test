@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
 <head><link rel="manifest" href="needles-manifest.json">
-<!-- BUILD-MARKER: TWO-PIECE-ERROR-VISIBILITY-v23 -->
+<!-- BUILD-MARKER: FRAMED-REFERENCE-TEST-v25 -->
 <!-- If you can see this comment on GitHub, this exact paste landed. -->
 <!-- If your live site's page source does NOT say -->
-<!-- "TWO-PIECE-ERROR-VISIBILITY-v23" right here, the upload/deploy did -->
+<!-- "FRAMED-REFERENCE-TEST-v25" right here, the upload/deploy did -->
 <!-- not take -- re-upload before testing. -->
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
@@ -6527,6 +6527,16 @@ async function applyAccessorizeFrame(){
   const btn=document.getElementById('accessorizeApplyBtn');
   if(btn)btn.disabled=true;
   const strip=document.getElementById('accessorizePreviewStrip');
+  // NEW (Aug 2026, Alyx's request): this used to show a small in-strip
+  // spinner during frame compositing/uploading, then only switch to the
+  // full black "please wait" overlay later once beginFinalMockupFetch()
+  // started -- a visible gap in feedback between those two stages, right
+  // after tapping Satisfied. Now the same full-screen overlay used for
+  // the final mockup fetch shows immediately, covering the whole
+  // process end to end as one continuous wait instead of two different
+  // loading states back to back.
+  const earlyOverlay=document.getElementById('mockupLoadingOverlay');
+  if(earlyOverlay){earlyOverlay.style.display='flex';document.body.classList.add('step-locked');}
   try{
     if(pendingWraparoundRaw && revealFlowThreePanel && (selectedFrame||windowSillChoice)){
       if(strip)strip.innerHTML='<div class="note" style="width:100%;text-align:center"><span class="spinner"></span>Saving your framed designs...</div>';
@@ -6589,6 +6599,13 @@ async function applyAccessorizeFrame(){
   if(revealFlowActive){
     revealFlowActive=false;
     beginFinalMockupFetch();
+  } else if(earlyOverlay){
+    // Safety hide: if this path was reached outside the normal reveal
+    // flow (no final mockup fetch waiting to take over and manage this
+    // same overlay itself), nothing else would ever hide it -- would
+    // trap the customer on a black screen with no way out.
+    earlyOverlay.style.display='none';
+    document.body.classList.remove('step-locked');
   }
 }
 
@@ -7067,7 +7084,21 @@ async function makeTestSingleZonePanorama(side){
       document.getElementById('wraparoundStandbyPrompt').style.display='block';
 
       const centerRaw = await urlToDataURL(rawResultUrl);
-      const centerForApi = await resizeDataUrl(centerRaw, 1280);
+      // TEST (Aug 2026, Alyx's idea): if a frame was pre-selected before
+      // generating, feed the AI a framed reference for the left/right
+      // "continue this scene" calls instead of the plain unframed
+      // center panel. The theory: since these calls already lean on the
+      // model visually continuing whatever it sees in the reference
+      // image, it may naturally extend the frame's border into the new
+      // panels too, the same way it already continues room/scene detail
+      // -- something composited-after-the-fact framing can never
+      // achieve, since it has no way to know what's "supposed" to
+      // continue past each panel's edge. Genuinely untested until now;
+      // this is intentionally the ONLY thing this test changes -- the
+      // seam-fix/vertical-align/frame-reapply pipeline downstream still
+      // runs exactly as before regardless of what the AI returns here.
+      const centerForFrameTest = selectedFrame ? await compositeFrameOntoImageUrl(rawResultUrl) : centerRaw;
+      const centerForApi = await resizeDataUrl(centerForFrameTest, 1280);
       const panoramaFadeSuffixLeft = !skipEdgeFade ? ' ' + PANORAMA_FADE_INSTRUCTION_LEFT : '';
       const panoramaFadeSuffixRight = !skipEdgeFade ? ' ' + PANORAMA_FADE_INSTRUCTION_RIGHT : '';
 
