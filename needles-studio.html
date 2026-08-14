@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
 <head><link rel="manifest" href="needles-manifest.json">
-<!-- BUILD-MARKER: SHARP-EDGES-TRUE-DEFAULT-v18 -->
+<!-- BUILD-MARKER: FADE-KILLSWITCH-v19 -->
 <!-- If you can see this comment on GitHub, this exact paste landed. -->
 <!-- If your live site's page source does NOT say -->
-<!-- "SHARP-EDGES-TRUE-DEFAULT-v18" right here, the upload/deploy did -->
+<!-- "FADE-KILLSWITCH-v19" right here, the upload/deploy did -->
 <!-- not take -- re-upload before testing. -->
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
@@ -6656,7 +6656,15 @@ document.getElementById('cancelBtn').style.display='block';
     // is ever revisited.
     const is40ozWraparoundSplit = product==='water bottle' && mugPrintMode==='wraparound' && preGenTravelVariant==='travel-mug-40oz-insulated';
 
-    const skipEdgeFade = hardEdgesEnabled;
+    // TEMPORARY (Aug 2026, Alyx's explicit request): hardcoded to true
+    // regardless of hardEdgesEnabled's actual value or any toggle state
+    // anywhere in the app -- fade kept sneaking back in through paths
+    // that reset hardEdgesEnabled to false, so this is a blunt full
+    // kill-switch until the fade-after-framing flow is properly rebuilt.
+    // No automatic fade can happen anywhere while this line reads
+    // `= true`. Revert to `= hardEdgesEnabled;` once that rebuild is
+    // done and fade is a deliberate customer choice again.
+    const skipEdgeFade = true;
 
     const wrapCompositionLine = (product==='mug'||product==='water bottle')
       ? (isWraparoundActive
