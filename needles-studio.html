@@ -1,10 +1,11 @@
 <!DOCTYPE html>
 <html lang="en">
 <head><link rel="manifest" href="needles-manifest.json">
-<!-- BUILD-MARKER: WITH VERTICAL SLIDERS v14 (rotate-transform fix) -->
+<!-- BUILD-MARKER: SHARP-PANELS-FOR-ALIGNMENT-v15 -->
 <!-- If you can see this comment on GitHub, this exact paste landed. -->
-<!-- If your live site's page source does NOT say "WITH VERTICAL SLIDERS v14" -->
-<!-- right here, the upload/deploy did not take -- re-upload before testing. -->
+<!-- If your live site's page source does NOT say -->
+<!-- "SHARP-PANELS-FOR-ALIGNMENT-v15" right here, the upload/deploy did -->
+<!-- not take -- re-upload before testing. -->
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Needles' Studio</title>
@@ -6820,6 +6821,9 @@ async function makeTestSingleZonePanorama(side){
         panelRole: 'left',
         signal: currentGenerationController.signal
       });
+      // Sharp, unfaded copy kept specifically for pendingWraparoundRaw --
+      // see the matching comment on rawRightUrl below for why.
+      const rawLeftUrl = leftUrl;
       if(!skipEdgeFade) leftUrl = await applyEdgeFadeToImageUrl(leftUrl, {top:true,bottom:true,left:true,right:false});
       placements.left = addToRecentDesigns(leftUrl);
 
@@ -6830,10 +6834,30 @@ async function makeTestSingleZonePanorama(side){
         panelRole: 'right',
         signal: currentGenerationController.signal
       });
+      // FIXED (Aug 2026, Alyx's find): pendingWraparoundRaw used to be
+      // built from these same already-edge-faded leftUrl/rightUrl (and
+      // the faded resultUrl for center) -- but the Fix the Seams screen's
+      // horizontal trim and vertical nudge sliders pan/crop a window
+      // across each panel, and the guaranteed edge fade above is baked
+      // in at each panel's own TRUE edge. Pan away from that exact spot
+      // even slightly and the crop window shows sharp, unfaded interior
+      // instead -- no fade at the new visible edge at all. Root cause of
+      // "the border moves when I move the sliders, and goes missing in
+      // spots." Fix: feed the seam-fix/vertical-alignment/frame pipeline
+      // genuinely sharp, unfaded copies of all three panels instead, kept
+      // separately here (rawLeftUrl, rawResultUrl for center, rawRightUrl)
+      // -- the guaranteed fade above still applies to placements.left/
+      // front/right themselves (the individually saved designs), just no
+      // longer to what Fix the Seams and the frame system actually work
+      // with. The existing Hard/Fade choice screen already fades the
+      // FINAL aligned panorama's true outer edges correctly once you're
+      // done aligning -- it just needed sharp input to fade correctly,
+      // not a rewrite.
+      const rawRightUrl = rightUrl;
       if(!skipEdgeFade) rightUrl = await applyEdgeFadeToImageUrl(rightUrl, {top:true,bottom:true,left:false,right:true});
       placements.right = addToRecentDesigns(rightUrl);
 
-      pendingWraparoundRaw = { left: leftUrl, center: resultUrl, right: rightUrl };
+      pendingWraparoundRaw = { left: rawLeftUrl, center: rawResultUrl, right: rawRightUrl };
 
       document.getElementById('wraparoundStandbyPrompt').style.display='none';
       renderRecentDesigns();
