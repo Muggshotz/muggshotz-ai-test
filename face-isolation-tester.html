@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Let's Just Face It — Isolation Tester</title>
+<style>
+  body{background:#0d0d12;color:#eee;font-family:-apple-system,Segoe UI,Roboto,sans-serif;margin:0;padding:16px;}
+  h1{font-size:1.25rem;margin:0 0 4px;color:#f0d98a;}
+  h2{font-size:1rem;margin:20px 0 8px;color:#c9a05a;border-bottom:1px solid #333;padding-bottom:4px;}
+  .sub{color:#999;font-size:.85rem;margin-bottom:14px;line-height:1.4;}
+  .card{background:#17171f;border:1px solid #2a2a35;border-radius:10px;padding:14px;margin-bottom:16px;}
+  .upload-zone{border:2px dashed #444;border-radius:10px;padding:2rem 1rem;text-align:center;cursor:pointer;background:#0d0d0d;}
+  .upload-zone.has-image{border-style:solid;border-color:#4a7dbf;}
+  #statusLine{color:#7ab8ff;font-size:.9rem;margin:10px 0;min-height:1.2em;}
+  #statusLine.error{color:#e24b4a;}
+  #statusLine.ready{color:#7ed957;}
+  .spinner{display:inline-block;width:14px;height:14px;border:2px solid #4a7dbf;border-top-color:transparent;border-radius:50%;animation:spin .8s linear infinite;vertical-align:middle;margin-right:8px;}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  #sourceWrap{position:relative;display:inline-block;max-width:100%;}
+  #sourceImg{max-width:100%;display:block;border-radius:8px;}
+  .face-box{position:absolute;border:3px solid #7ed957;border-radius:4px;cursor:pointer;box-sizing:border-box;background:rgba(126,217,87,.12);}
+  .face-box:hover{background:rgba(126,217,87,.28);}
+  .face-box .tag{position:absolute;top:-24px;left:0;background:#7ed957;color:#0d0d12;font-size:11px;font-weight:700;padding:2px 6px;border-radius:4px;white-space:nowrap;}
+  .checker-bg{background-image:linear-gradient(45deg,#333 25%,transparent 25%),linear-gradient(-45deg,#333 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#333 75%),linear-gradient(-45deg,transparent 75%,#333 75%);background-size:20px 20px;background-position:0 0,0 10px,10px -10px,-10px 0px;background-color:#555;border-radius:8px;}
+  #resultCanvas{max-width:100%;display:block;margin:0 auto;}
+  label{display:block;margin:10px 0 4px;font-size:.9rem;color:#ccc;}
+  input[type=range]{width:100%;}
+  .val{color:#f0d98a;font-weight:600;}
+  button{background:#2a3a52;color:#9ecbff;border:1px solid #3d5578;border-radius:8px;padding:.6rem 1rem;font-size:.9rem;cursor:pointer;}
+  button:disabled{opacity:.4;cursor:not-allowed;}
+  .note{color:#888;font-size:.8rem;margin-top:8px;line-height:1.4;}
+  .step-locked{opacity:.4;pointer-events:none;}
+</style>
+</head>
+<body>
+
+<h1>👤 Let's Just Face It — Isolation Tester</h1>
+<div class="sub">Proving the real mechanism: find a face, isolate it with true alpha transparency, and preview a complexion adjustment. Standalone test only — nothing here touches the main app.</div>
+
+<div class="card">
+  <h2 style="margin-top:0">1. Upload a photo</h2>
+  <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()">
+    <div id="uploadPrompt">📷 Tap to choose a photo<br><span style="color:#666;font-size:.8rem">Works best with one or more clear, front-facing faces</span></div>
+  </div>
+  <input type="file" id="fileInput" accept="image/*" style="display:none" onchange="handleFileSelect(event)"/>
+  <div id="statusLine"></div>
+</div>
+
+<div class="card" id="detectCard" style="display:none">
+  <h2 style="margin-top:0">2. Detected faces — tap the one you want</h2>
+  <div id="sourceWrap"><img id="sourceImg"/></div>
+  <div class="note" id="detectNote"></div>
+</div>
+
+<div class="card" id="resultCard" style="display:none">
+  <h2 style="margin-top:0">3. Isolated result</h2>
+  <div class="checker-bg" style="padding:10px">
+    <canvas id="resultCanvas"></canvas>
+  </div>
+  <label>Complexion <span class="val" id="complexionVal">Match (no shift)</span></label>
+  <input type="range" id="complexionSlider" min="-60" max="60" step="1" value="0" oninput="updateComplexion()"/>
+  <div class="note">This is a simple hue/warmth shift for demo purposes -- proving the slider mechanism now. The real version needs actual template art with a proper separated skin layer to blend into, which doesn't exist yet.</div>
+  <div style="margin-top:12px"><button id="downloadBtn" onclick="downloadResult()">⬇️ Download isolated PNG</button></div>
+</div>
+
+<script type="module">
+import { FaceDetector, ImageSegmenter, FilesetResolver } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/vision_bundle.mjs";
+
+const statusLine = document.getElementById('statusLine');
+const uploadZone = document.getElementById('uploadZone');
+const detectCard = document.getElementById('detectCard');
+const resultCard = document.getElementById('resultCard');
+const sourceImg = document.getElementById('sourceImg');
+const sourceWrap = document.getElementById('sourceWrap');
+const detectNote = document.getElementById('detectNote');
+const resultCanvas = document.getElementById('resultCanvas');
+
+let faceDetector = null;
+let imageSegmenter = null;
+let originalIsolatedCanvas = null; // full-res isolated cutout before any complexion shift
+
+function setStatus(msg, cls) {
+  statusLine.textContent = msg;
+  statusLine.className = cls || '';
+}
+
+async function initModels() {
+  setStatus('⏳ Loading face detection + segmentation tools (one-time download, ~1MB total)...');
+  try {
+    const vision = await FilesetResolver.forVisionTasks(
+      "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm"
+    );
+    faceDetector = await FaceDetector.createFromOptions(vision, {
+      baseOptions: {
+        modelAssetPath: "https://storage.googleapis.com/mediapipe-models/face_detector/blaze_face_short_range/float16/1/blaze_face_short_range.tflite"
+      },
+      runningMode: "IMAGE"
+    });
+    imageSegmenter = await ImageSegmenter.createFromOptions(vision, {
+      baseOptions: {
+        modelAssetPath: "https://storage.googleapis.com/mediapipe-models/image_segmenter/selfie_segmenter/float16/1/selfie_segmenter.tflite"
+      },
+      runningMode: "IMAGE",
+      outputCategoryMask: false,
+      outputConfidenceMasks: true
+    });
+    setStatus('✅ Ready — tap above to choose a photo.', 'ready');
+  } catch (err) {
+    console.error('Model load failed:', err);
+    setStatus('❌ Could not load the detection tools: ' + err.message, 'error');
+  }
+}
+initModels();
+
+window.handleFileSelect = function(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    sourceImg.src = e.target.result;
+    sourceImg.onload = () => runDetection();
+    uploadZone.classList.add('has-image');
+  };
+  reader.readAsDataURL(file);
+};
+
+async function runDetection() {
+  if (!faceDetector) {
+    setStatus('❌ Detection tool not ready yet -- wait a moment and try again.', 'error');
+    return;
+  }
+  setStatus('⏳ Scanning for faces...');
+  document.querySelectorAll('.face-box').forEach(b => b.remove());
+
+  const result = faceDetector.detect(sourceImg);
+  detectCard.style.display = 'block';
+  resultCard.style.display = 'none';
+
+  if (!result.detections || result.detections.length === 0) {
+    setStatus('⚠️ No faces found in this photo. Try a clearer, more front-facing shot.', 'error');
+    detectNote.textContent = 'No faces detected.';
+    return;
+  }
+
+  const displayW = sourceImg.clientWidth;
+  const displayH = sourceImg.clientHeight;
+  const naturalW = sourceImg.naturalWidth;
+  const naturalH = sourceImg.naturalHeight;
+  const scaleX = displayW / naturalW;
+  const scaleY = displayH / naturalH;
+
+  result.detections.forEach((det, i) => {
+    const box = det.boundingBox;
+    const el = document.createElement('div');
+    el.className = 'face-box';
+    el.style.left = (box.originX * scaleX) + 'px';
+    el.style.top = (box.originY * scaleY) + 'px';
+    el.style.width = (box.width * scaleX) + 'px';
+    el.style.height = (box.height * scaleY) + 'px';
+    const tag = document.createElement('div');
+    tag.className = 'tag';
+    tag.textContent = 'Face ' + (i + 1);
+    el.appendChild(tag);
+    el.onclick = () => isolateFace(det, i + 1);
+    sourceWrap.appendChild(el);
+  });
+
+  if (result.detections.length === 1) {
+    detectNote.textContent = '1 face found -- isolating it automatically since there is only one.';
+    isolateFace(result.detections[0], 1);
+  } else {
+    detectNote.textContent = result.detections.length + ' faces found -- tap the one you want.';
+    setStatus('✅ Tap the face you want to isolate.', 'ready');
+  }
+}
+
+async function isolateFace(detection, label) {
+  setStatus('⏳ Isolating Face ' + label + ' with real alpha transparency...');
+
+  // Crop generously around the detected face box to include the full head/hair,
+  // not just the tight facial-feature box the detector itself returns.
+  const box = detection.boundingBox;
+  const marginX = box.width * 0.6;
+  const marginTop = box.height * 0.9; // more headroom above for hair
+  const marginBottom = box.height * 0.5;
+
+  const cropX = Math.max(0, box.originX - marginX);
+  const cropY = Math.max(0, box.originY - marginTop);
+  const cropW = Math.min(sourceImg.naturalWidth - cropX, box.width + marginX * 2);
+  const cropH = Math.min(sourceImg.naturalHeight - cropY, box.height + marginTop + marginBottom);
+
+  const cropCanvas = document.createElement('canvas');
+  cropCanvas.width = cropW;
+  cropCanvas.height = cropH;
+  const cropCtx = cropCanvas.getContext('2d');
+  cropCtx.drawImage(sourceImg, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
+
+  try {
+    const segResult = imageSegmenter.segment(cropCanvas);
+    const mask = segResult.confidenceMasks[0]; // foreground/person confidence, 0-1 per pixel
+    const maskData = mask.getAsFloat32Array();
+    const maskW = mask.width, maskH = mask.height;
+
+    const outCanvas = document.createElement('canvas');
+    outCanvas.width = cropW;
+    outCanvas.height = cropH;
+    const outCtx = outCanvas.getContext('2d');
+    outCtx.drawImage(cropCanvas, 0, 0);
+    const imgData = outCtx.getImageData(0, 0, cropW, cropH);
+    const pixels = imgData.data;
+
+    // Mask resolution may differ from the crop's own resolution -- sample
+    // proportionally rather than assuming a 1:1 pixel match.
+    for (let y = 0; y < cropH; y++) {
+      for (let x = 0; x < cropW; x++) {
+        const mx = Math.floor((x / cropW) * maskW);
+        const my = Math.floor((y / cropH) * maskH);
+        const confidence = maskData[my * maskW + mx];
+        const idx = (y * cropW + x) * 4;
+        pixels[idx + 3] = Math.round(confidence * 255);
+      }
+    }
+    outCtx.putImageData(imgData, 0, 0);
+
+    originalIsolatedCanvas = outCanvas;
+    mask.close();
+    segResult.close();
+
+    renderResult(0);
+    resultCard.style.display = 'block';
+    resultCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    setStatus('✅ Face ' + label + ' isolated with real transparency.', 'ready');
+  } catch (err) {
+    console.error('Segmentation failed:', err);
+    setStatus('❌ Could not isolate this face: ' + err.message, 'error');
+  }
+}
+
+function renderResult(shiftDeg) {
+  if (!originalIsolatedCanvas) return;
+  resultCanvas.width = originalIsolatedCanvas.width;
+  resultCanvas.height = originalIsolatedCanvas.height;
+  const ctx = resultCanvas.getContext('2d');
+  ctx.clearRect(0, 0, resultCanvas.width, resultCanvas.height);
+  ctx.filter = shiftDeg !== 0 ? `hue-rotate(${shiftDeg}deg) saturate(${1 + Math.abs(shiftDeg) / 200})` : 'none';
+  ctx.drawImage(originalIsolatedCanvas, 0, 0);
+  ctx.filter = 'none';
+}
+
+window.updateComplexion = function() {
+  const slider = document.getElementById('complexionSlider');
+  const val = parseInt(slider.value);
+  document.getElementById('complexionVal').textContent = val === 0 ? 'Match (no shift)' : (val > 0 ? '+' + val : val) + '°';
+  renderResult(val);
+};
+
+window.downloadResult = function() {
+  const link = document.createElement('a');
+  link.download = 'isolated-face.png';
+  link.href = resultCanvas.toDataURL('image/png');
+  link.click();
+};
+</script>
+</body>
+</html>
