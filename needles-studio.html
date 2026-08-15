@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
 <head><link rel="manifest" href="needles-manifest.json">
-<!-- BUILD-MARKER: FRAMED-REFERENCE-TEST-v25 -->
+<!-- BUILD-MARKER: PRE-GEN-FRAME-CLICKABLE-v26 -->
 <!-- If you can see this comment on GitHub, this exact paste landed. -->
 <!-- If your live site's page source does NOT say -->
-<!-- "FRAMED-REFERENCE-TEST-v25" right here, the upload/deploy did -->
+<!-- "PRE-GEN-FRAME-CLICKABLE-v26" right here, the upload/deploy did -->
 <!-- not take -- re-upload before testing. -->
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
@@ -403,6 +403,15 @@ body.generation-active #uploadPhotoCard{position:relative;z-index:5}
 body.generation-active #creditsModalOverlay .card{opacity:1!important;filter:none!important;pointer-events:auto!important}
 body .step-lock-overlay .card{opacity:1!important;filter:none!important;pointer-events:auto!important}
 body #accessorizeCard{opacity:1!important;filter:none!important;pointer-events:auto!important}
+/* FIXED (Aug 2026, Alyx's find): the pre-generation Frame section's own
+   text says "pick a frame to add... before you generate" -- but it was
+   never added to the exemption list any of the three guided-focus
+   states below apply to, so it was dimmed AND pointer-events:none
+   (genuinely unclickable, not just visually faint) at every stage of
+   the flow before Generate. Exempted here the same way uploadPhotoCard,
+   ideaCard, mugPrintModeCard, and productCard already are for their
+   own focus stages -- frame selection now works throughout. */
+body #frameSectionCard{opacity:1!important;filter:none!important;pointer-events:auto!important}
 body.print-mode-focus .card:not(#mugPrintModeCard){opacity:.28;filter:brightness(.55) saturate(.7);pointer-events:none;transition:opacity .5s,filter .5s}
 body.final-generate-focus .card:not(#uploadPhotoCard){opacity:.35;filter:brightness(.6) saturate(.75);transition:opacity .5s,filter .5s}
 body.initial-upload-focus .card:not(#uploadPhotoCard){opacity:.35;filter:brightness(.6) saturate(.75);pointer-events:none;transition:opacity .5s,filter .5s}
