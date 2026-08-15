@@ -77,6 +77,9 @@
   <label style="margin-top:10px">Hair match sensitivity <span class="val" id="hairSensitivityVal">45</span></label>
   <input type="range" id="hairSensitivitySlider" min="0" max="100" step="1" value="45" oninput="applyJawAndHairCutoff()"/>
   <div class="note">Raise this if real hair (in shadow or a stray strand) is getting cut off; lower it if a sliver of skin is being kept because it happened to be a similar tone to the hair.</div>
+  <div style="margin-top:14px"><button onclick="refineAgain()">🔁 Refine edges again</button> <button id="autoRefineBtn" onclick="autoRefineUntilStable()">⏩ Run until stable</button></div>
+  <div class="val" id="liveRoundCounter" style="margin-top:8px;font-size:1.1rem"></div>
+  <div class="note" id="refineAgainNote" style="margin-top:6px"></div>
 </div>
 
 <div class="card" id="matchCard" style="display:none">
@@ -466,6 +469,47 @@ function jawCurveYAtX(jawCurve, x) {
   return jawCurve[jawCurve.length - 1].y;
 }
 
+function refinementRound(clippedKeep, cropCanvas, cropW, cropH, maskW, maskH, jawCurve, fixedThreshold) {
+  const ctx = cropCanvas.getContext('2d');
+  const fullImg = ctx.getImageData(0, 0, cropW, cropH).data;
+  let sumR = 0, sumG = 0, sumB = 0, keptCount = 0;
+  for (let my = 0; my < maskH; my++) {
+    for (let mx = 0; mx < maskW; mx++) {
+      const idx = my * maskW + mx;
+      if (!clippedKeep[idx]) continue;
+      const px = Math.round((mx / maskW) * cropW);
+      const py = Math.round((my / maskH) * cropH);
+      const jawY = jawCurve ? jawCurveYAtX(jawCurve, px) : null;
+      if (jawY === null || py <= jawY) continue; // only the below-jaw (hair) region
+      const pIdx = (py * cropW + px) * 4;
+      sumR += fullImg[pIdx]; sumG += fullImg[pIdx + 1]; sumB += fullImg[pIdx + 2];
+      keptCount++;
+    }
+  }
+  if (keptCount <= 50) return { result: clippedKeep, removedCount: 0 };
+
+  const refinedHairColor = { r: sumR / keptCount, g: sumG / keptCount, b: sumB / keptCount };
+  const next = new Uint8Array(clippedKeep);
+  let removedCount = 0;
+  for (let my = 0; my < maskH; my++) {
+    for (let mx = 0; mx < maskW; mx++) {
+      const idx = my * maskW + mx;
+      if (!next[idx]) continue;
+      const px = Math.round((mx / maskW) * cropW);
+      const py = Math.round((my / maskH) * cropH);
+      const jawY = jawCurve ? jawCurveYAtX(jawCurve, px) : null;
+      if (jawY === null || py <= jawY) continue; // face area untouched, always
+      const pIdx = (py * cropW + px) * 4;
+      const dr = fullImg[pIdx] - refinedHairColor.r;
+      const dg = fullImg[pIdx + 1] - refinedHairColor.g;
+      const db = fullImg[pIdx + 2] - refinedHairColor.b;
+      const dist = Math.sqrt(dr * dr + dg * dg + db * db);
+      if (dist >= fixedThreshold) { next[idx] = 0; removedCount++; }
+    }
+  }
+  return { result: next, removedCount };
+}
+
 function applyJawAndHairCutoff(sensitivityVal) {
   if (!segState) return;
   const { cropCanvas, keep, maskData, maskW, maskH, cropW, cropH, jawCurve, hairColor } = segState;
@@ -477,7 +521,7 @@ function applyJawAndHairCutoff(sensitivityVal) {
   // keeping a sliver of skin that happens to be a similar tone).
   const colorThreshold = 20 + (sensitivityVal / 100) * 120;
 
-  const clippedKeep = new Uint8Array(keep.length);
+  let clippedKeep = new Uint8Array(keep.length);
   const ctx = cropCanvas.getContext('2d');
   const fullImg = ctx.getImageData(0, 0, cropW, cropH).data;
 
@@ -519,43 +563,21 @@ function applyJawAndHairCutoff(sensitivityVal) {
   // patch of neck skin that was just close enough to the original
   // rough sample to sneak past) without needing to touch the face area
   // at all -- this only ever reconsiders pixels below the jaw line.
-  let sumR = 0, sumG = 0, sumB = 0, keptCount = 0;
-  for (let my = 0; my < maskH; my++) {
-    for (let mx = 0; mx < maskW; mx++) {
-      const idx = my * maskW + mx;
-      if (!clippedKeep[idx]) continue;
-      const px = Math.round((mx / maskW) * cropW);
-      const py = Math.round((my / maskH) * cropH);
-      const jawY = jawCurve ? jawCurveYAtX(jawCurve, px) : null;
-      if (jawY === null || py <= jawY) continue; // only the below-jaw (hair) region
-      const pIdx = (py * cropW + px) * 4;
-      sumR += fullImg[pIdx]; sumG += fullImg[pIdx + 1]; sumB += fullImg[pIdx + 2];
-      keptCount++;
-    }
-  }
-  if (keptCount > 50 && hairColor) {
-    const refinedHairColor = { r: sumR / keptCount, g: sumG / keptCount, b: sumB / keptCount };
-    // Tighter threshold for this pass -- it's a spot-check against a
-    // now-trustworthy reference, not the original rough first guess.
-    const refinedThreshold = colorThreshold * 0.6;
-    for (let my = 0; my < maskH; my++) {
-      for (let mx = 0; mx < maskW; mx++) {
-        const idx = my * maskW + mx;
-        const px = Math.round((mx / maskW) * cropW);
-        const py = Math.round((my / maskH) * cropH);
-        const jawY = jawCurve ? jawCurveYAtX(jawCurve, px) : null;
-        if (jawY === null || py <= jawY) continue; // face area untouched, exactly as intended
-        if (!clippedKeep[idx]) continue; // only re-examine what the first pass already kept
-        const pIdx = (py * cropW + px) * 4;
-        const dr = fullImg[pIdx] - refinedHairColor.r;
-        const dg = fullImg[pIdx + 1] - refinedHairColor.g;
-        const db = fullImg[pIdx + 2] - refinedHairColor.b;
-        const dist = Math.sqrt(dr * dr + dg * dg + db * db);
-        if (dist >= refinedThreshold) clippedKeep[idx] = 0;
-      }
-    }
-  }
+  // FIXED threshold (colorThreshold * 0.6) that never shrinks further on
+  // repeated rounds -- see runRefinementRound and the Refine Again
+  // button below for why that matters.
+  segState.lastFixedThreshold = colorThreshold * 0.6;
+  const round = refinementRound(clippedKeep, cropCanvas, cropW, cropH, maskW, maskH, jawCurve, segState.lastFixedThreshold);
+  clippedKeep = round.result;
+  segState.currentClippedKeep = clippedKeep;
+  segState.refineRoundCount = 1;
+  updateRefineButtonNote(round.removedCount);
 
+  renderFromClippedKeep(clippedKeep);
+}
+
+function renderFromClippedKeep(clippedKeep) {
+  const { cropCanvas, maskData, maskW, maskH, cropW, cropH } = segState;
   let minMX = maskW, minMY = maskH, maxMX = 0, maxMY = 0;
   for (let my = 0; my < maskH; my++) {
     for (let mx = 0; mx < maskW; mx++) {
@@ -614,6 +636,86 @@ function applyJawAndHairCutoff(sensitivityVal) {
   }
   if (templateImg) updateTemplateComposite();
 }
+
+// NEW (Aug 2026, Alyx's request): a repeatable button for the refinement
+// step above -- each click recomputes the "true hair color" average from
+// whatever the LAST round kept, then re-checks against that. This can
+// genuinely improve things over a few rounds (each round's reference
+// gets purer as outliers get removed), but it converges -- the fixed
+// comparison threshold never shrinks further round to round, so once a
+// round removes nothing, every click after that is a safe no-op, not a
+// risk of eventually eating into real hair.
+window.refineAgain = function() {
+  if (!segState || !segState.currentClippedKeep) return;
+  const round = refinementRound(
+    segState.currentClippedKeep, segState.cropCanvas, segState.cropW, segState.cropH,
+    segState.maskW, segState.maskH, segState.jawCurve, segState.lastFixedThreshold
+  );
+  segState.currentClippedKeep = round.result;
+  segState.refineRoundCount = (segState.refineRoundCount || 1) + 1;
+  updateRefineButtonNote(round.removedCount);
+  renderFromClippedKeep(segState.currentClippedKeep);
+};
+
+// NEW (Aug 2026, Alyx's request): this is the actual mechanism that
+// belongs in the real embedded generator later -- not a fixed number of
+// rounds hardcoded from a one-time test on one photo, but genuinely
+// looping until a round removes nothing, since real customer photos
+// will vary in how many rounds they actually need. A safety cap (20)
+// exists only to guarantee this can never hang forever on some
+// unexpected edge case -- ordinary photos should converge in a small
+// handful of rounds, per everything tested tonight.
+window.autoRefineUntilStable = async function() {
+  if (!segState || !segState.currentClippedKeep) return;
+  const btn = document.getElementById('autoRefineBtn');
+  if (btn) btn.disabled = true;
+  const counter = document.getElementById('liveRoundCounter');
+  const SAFETY_CAP = 20;
+  let rounds = 0;
+  let removedCount = -1;
+  while (removedCount !== 0 && rounds < SAFETY_CAP) {
+    rounds++;
+    // Live counter update BEFORE the round runs, so it's visibly moving
+    // rather than only reporting a final summary you have to take on
+    // faith. A small deliberate pause (200ms) is added here purely so
+    // this is actually watchable on a real photo -- this pause is for
+    // visibility in the TESTER only, and should be removed in the real
+    // embedded generator, where speed matters and no one's watching it.
+    if (counter) counter.textContent = `Running pass ${rounds}...`;
+    await new Promise(r => setTimeout(r, 200));
+
+    const round = refinementRound(
+      segState.currentClippedKeep, segState.cropCanvas, segState.cropW, segState.cropH,
+      segState.maskW, segState.maskH, segState.jawCurve, segState.lastFixedThreshold
+    );
+    segState.currentClippedKeep = round.result;
+    removedCount = round.removedCount;
+    segState.refineRoundCount = (segState.refineRoundCount || 1) + 1;
+    if (counter) counter.textContent = `Pass ${rounds}: removed ${removedCount} pixel${removedCount === 1 ? '' : 's'}.`;
+    renderFromClippedKeep(segState.currentClippedKeep);
+    await new Promise(r => setTimeout(r, 200));
+  }
+  const note = document.getElementById('refineAgainNote');
+  if (note) {
+    note.textContent = rounds >= SAFETY_CAP
+      ? `Stopped at the ${SAFETY_CAP}-round safety cap without fully stabilizing -- unusual for a real photo, worth a closer look at this one.`
+      : `Stabilized after ${rounds} round${rounds === 1 ? '' : 's'} -- this is the real number to use for the production generator.`;
+  }
+  if (counter) counter.textContent = `Finished -- ${rounds} total pass${rounds === 1 ? '' : 'es'} ran.`;
+  if (btn) btn.disabled = false;
+};
+
+function updateRefineButtonNote(removedCount) {
+  const note = document.getElementById('refineAgainNote');
+  if (!note) return;
+  const round = segState ? (segState.refineRoundCount || 1) : 1;
+  if (removedCount === 0 && round > 1) {
+    note.textContent = `Round ${round}: no change -- already as clean as this method can get. More clicks won't do anything further.`;
+  } else {
+    note.textContent = `Round ${round}: removed ${removedCount} stray pixel${removedCount === 1 ? '' : 's'}.`;
+  }
+}
+
 window.applyJawAndHairCutoff = function() {
   const val = parseInt(document.getElementById('hairSensitivitySlider').value);
   document.getElementById('hairSensitivityVal').textContent = val;
