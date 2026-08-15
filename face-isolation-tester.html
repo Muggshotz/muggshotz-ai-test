@@ -72,11 +72,11 @@
 </div>
 
 <div class="card" id="neckCutoffCard" style="display:none">
-  <h2 style="margin-top:0">Neck cutoff</h2>
-  <div class="note" style="margin-top:0">Templates need this to end at the base of the neck -- shoulders/chest/collarbone should never show. The starting position is estimated from face proportions; drag if it's cutting off too much or too little.</div>
-  <label style="margin-top:10px">Cutoff position <span class="val" id="neckCutoffVal">+0</span></label>
-  <input type="range" id="neckCutoffSlider" min="-50" max="50" step="1" value="0" oninput="applyNeckCutoffAndRender()"/>
-  <div class="note">Drag right to include more (lower, toward the shoulders); drag left to cut higher (toward the chin).</div>
+  <h2 style="margin-top:0">Face/hair boundary</h2>
+  <div class="note" style="margin-top:0">Everything above the real jaw contour (traced from this exact face) is always kept -- that's unambiguously face. Below it, only pixels that genuinely match this person's real hair color count as hair (so it can hang past the chin without skin below it getting kept too); everything else below the jaw -- neck, shoulders, chest -- gets cut regardless of connectivity.</div>
+  <label style="margin-top:10px">Hair match sensitivity <span class="val" id="hairSensitivityVal">45</span></label>
+  <input type="range" id="hairSensitivitySlider" min="0" max="100" step="1" value="45" oninput="applyJawAndHairCutoff()"/>
+  <div class="note">Raise this if real hair (in shadow or a stray strand) is getting cut off; lower it if a sliver of skin is being kept because it happened to be a similar tone to the hair.</div>
 </div>
 
 <div class="card" id="matchCard" style="display:none">
@@ -117,7 +117,7 @@
 </div>
 
 <script type="module">
-import { FaceDetector, ImageSegmenter, FilesetResolver } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/vision_bundle.mjs";
+import { FaceDetector, FaceLandmarker, ImageSegmenter, FilesetResolver } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/vision_bundle.mjs";
 
 const statusLine = document.getElementById('statusLine');
 const uploadZone = document.getElementById('uploadZone');
@@ -130,6 +130,7 @@ const resultCanvas = document.getElementById('resultCanvas');
 
 let faceDetector = null;
 let imageSegmenter = null;
+let faceLandmarker = null;
 let originalIsolatedCanvas = null; // full-res isolated cutout before any complexion shift
 
 function setStatus(msg, cls) {
@@ -138,7 +139,7 @@ function setStatus(msg, cls) {
 }
 
 async function initModels() {
-  setStatus('⏳ Loading face detection + segmentation tools (one-time download, ~1MB total)...');
+  setStatus('⏳ Loading face detection + segmentation + landmark tools (one-time download)...');
   try {
     const vision = await FilesetResolver.forVisionTasks(
       "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm"
@@ -156,6 +157,17 @@ async function initModels() {
       runningMode: "IMAGE",
       outputCategoryMask: false,
       outputConfidenceMasks: true
+    });
+    // NEW (Aug 2026, Alyx's correction): gives the real jaw/chin contour
+    // (478 precise points on the actual face in the actual photo) instead
+    // of a guessed flat line -- naturally follows a tilted head or an
+    // uneven jaw since it's tracing the real shape, not assuming level.
+    faceLandmarker = await FaceLandmarker.createFromOptions(vision, {
+      baseOptions: {
+        modelAssetPath: "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task"
+      },
+      runningMode: "IMAGE",
+      numFaces: 1
     });
     setStatus('✅ Ready — tap above to choose a photo.', 'ready');
   } catch (err) {
@@ -274,8 +286,8 @@ async function isolateFace(detection, label) {
     // physically connected to the face) while excluding anyone else
     // nearby who isn't physically touching them in the photo. This does
     // NOT stop at the neck by itself, though -- shoulders/chest are also
-    // physically connected with no gap, so a separate explicit cutoff
-    // line (below) handles that part.
+    // physically connected with no gap, so the jaw-curve + hair-match
+    // logic below handles that part properly instead of a flat line.
     const faceMx = Math.floor(((box.originX + box.width / 2 - cropX) / cropW) * maskW);
     const faceMy = Math.floor(((box.originY + box.height / 2 - cropY) / cropH) * maskH);
     const keep = new Uint8Array(maskW * maskH);
@@ -295,22 +307,55 @@ async function isolateFace(detection, label) {
     mask.close();
     segResult.close();
 
-    // NEW (Aug 2026, Alyx's correction): face+hair connects to the neck,
-    // shoulders, and chest with no gap for flood-fill to stop at on its
-    // own -- an explicit horizontal cutoff line is the only way to end
-    // the result at the base of the neck like the templates need.
-    // Estimated from face proportions (real neck length varies with
-    // camera angle and the individual), so it's a starting point, not a
-    // guarantee -- the slider lets it be corrected per-photo.
-    const faceBottomY = box.originY + box.height; // roughly the chin
-    const estimatedNeckY = faceBottomY + box.height * 0.6;
-    const neckMaskYFraction = ((estimatedNeckY - cropY) / cropH);
+    // NEW (Aug 2026, Alyx's correction): a single line -- flat OR curved
+    // to the jaw -- can't tell "hair hanging past this point" apart from
+    // "neck/shoulder skin at this same height," and long hair routinely
+    // hangs well past chin level. Real fix, three signals combined:
+    // (1) the REAL jaw contour (from Face Landmarker's actual points on
+    // this actual face -- not a flat guess) draws the line between
+    // "definitely face" and "below the chin";
+    // (2) above that line is always kept -- unambiguously face;
+    // (3) below that line, a pixel is only kept if its color matches a
+    // sample taken from the person's real hair -- so hair gets to hang
+    // as low as it actually does, while skin at that same height still
+    // gets cut.
+    let jawCurve = null;
+    let hairColor = null;
+    if (faceLandmarker) {
+      const landmarkResult = faceLandmarker.detect(cropCanvas);
+      if (landmarkResult.faceLandmarks && landmarkResult.faceLandmarks.length > 0) {
+        const lm = landmarkResult.faceLandmarks[0];
+        // Real connector data straight from the library -- not a
+        // hand-typed index list that could be subtly wrong.
+        const ovalEdges = FaceLandmarker.FACE_LANDMARKS_FACE_OVAL;
+        const ovalIndices = new Set();
+        ovalEdges.forEach(edge => { ovalIndices.add(edge.start); ovalIndices.add(edge.end); });
+        // Eye-level reference (landmarks 33 / 263 are the outer corners
+        // of each eye -- well past the standard reference set) to split
+        // the oval into "upper half" (temples/forehead, not needed) vs
+        // "lower half" (the actual jaw/chin contour we want).
+        const eyeLevelY = (lm[33].y + lm[263].y) / 2;
+        const jawPoints = [...ovalIndices]
+          .map(i => lm[i])
+          .filter(p => p.y > eyeLevelY)
+          .map(p => ({ x: p.x * cropW, y: p.y * cropH }))
+          .sort((a, b) => a.x - b.x);
+        if (jawPoints.length >= 3) jawCurve = jawPoints;
+      }
+    }
 
-    segState = { cropCanvas, keep, maskData, maskW, maskH, cropW, cropH, neckMaskYFraction };
+    // Hair sample: a small patch well above the face box (safely inside
+    // hair territory for essentially any hairstyle/length), centered
+    // horizontally on the detected face.
+    const hairSampleX = Math.round(((box.originX + box.width / 2) - cropX));
+    const hairSampleY = Math.max(4, Math.round((box.originY - cropY) - box.height * 0.5));
+    hairColor = sampleColorPatch(cropCanvas, hairSampleX, hairSampleY, Math.max(6, Math.round(box.width * 0.12)));
 
-    document.getElementById('neckCutoffSlider').value = 0;
-    document.getElementById('neckCutoffVal').textContent = '+0';
-    applyNeckCutoffAndRender(0);
+    segState = { cropCanvas, keep, maskData, maskW, maskH, cropW, cropH, jawCurve, hairColor };
+
+    document.getElementById('hairSensitivitySlider').value = 45;
+    document.getElementById('hairSensitivityVal').textContent = '45';
+    applyJawAndHairCutoff(45);
 
     resultCard.style.display = 'block';
     document.getElementById('neckCutoffCard').style.display = 'block';
@@ -321,6 +366,21 @@ async function isolateFace(detection, label) {
     console.error('Segmentation failed:', err);
     setStatus('❌ Could not isolate this face: ' + err.message, 'error');
   }
+}
+
+function sampleColorPatch(canvas, cx, cy, radius) {
+  const ctx = canvas.getContext('2d');
+  const x0 = Math.max(0, cx - radius), x1 = Math.min(canvas.width, cx + radius);
+  const y0 = Math.max(0, cy - radius), y1 = Math.min(canvas.height, cy + radius);
+  if (x1 <= x0 || y1 <= y0) return null;
+  const data = ctx.getImageData(x0, y0, x1 - x0, y1 - y0).data;
+  let r = 0, g = 0, b = 0, count = 0;
+  for (let i = 0; i < data.length; i += 4) {
+    r += data[i]; g += data[i + 1]; b += data[i + 2];
+    count++;
+  }
+  if (count === 0) return null;
+  return { r: r / count, g: g / count, b: b / count };
 }
 
 // Real melanin gradient stops -- pale through beige, tan, light brown, dark
@@ -392,23 +452,58 @@ let matchBasePct = 50;
 // Cheap, synchronous re-render from the already-computed segmentation --
 // only re-derives the final trimmed canvas at a new neck-cutoff line,
 // never re-runs the AI. Safe to call on every slider drag tick.
-function applyNeckCutoffAndRender(sliderVal) {
-  if (!segState) return;
-  const { cropCanvas, keep, maskData, maskW, maskH, cropW, cropH, neckMaskYFraction } = segState;
+function jawCurveYAtX(jawCurve, x) {
+  if (!jawCurve || jawCurve.length < 2) return null;
+  if (x <= jawCurve[0].x) return jawCurve[0].y;
+  if (x >= jawCurve[jawCurve.length - 1].x) return jawCurve[jawCurve.length - 1].y;
+  for (let i = 0; i < jawCurve.length - 1; i++) {
+    const a = jawCurve[i], b = jawCurve[i + 1];
+    if (x >= a.x && x <= b.x) {
+      const t = (b.x - a.x) === 0 ? 0 : (x - a.x) / (b.x - a.x);
+      return a.y + (b.y - a.y) * t;
+    }
+  }
+  return jawCurve[jawCurve.length - 1].y;
+}
 
-  // Slider range -50..50 nudges the cutoff line up or down by up to
-  // roughly a third of the mask's height in either direction -- wide
-  // enough to correct for camera angle/proportions being off in either
-  // direction, not just a small tweak.
-  const adjustedFraction = Math.max(0, Math.min(1, neckMaskYFraction + (sliderVal / 100) * 0.6));
-  const cutoffMaskY = Math.round(adjustedFraction * maskH);
+function applyJawAndHairCutoff(sensitivityVal) {
+  if (!segState) return;
+  const { cropCanvas, keep, maskData, maskW, maskH, cropW, cropH, jawCurve, hairColor } = segState;
+
+  // Sensitivity 0..100 -- how far a pixel's color can drift from the
+  // sampled hair color and still count as hair. Low = only very close
+  // matches (may lose some hair in shadow/highlight); high = looser
+  // matching (safer against losing real hair, but slightly more risk of
+  // keeping a sliver of skin that happens to be a similar tone).
+  const colorThreshold = 20 + (sensitivityVal / 100) * 120;
 
   const clippedKeep = new Uint8Array(keep.length);
+  const ctx = cropCanvas.getContext('2d');
+  const fullImg = ctx.getImageData(0, 0, cropW, cropH).data;
+
   for (let my = 0; my < maskH; my++) {
-    if (my >= cutoffMaskY) continue; // below the neck line -- discard regardless of connectivity
     for (let mx = 0; mx < maskW; mx++) {
       const idx = my * maskW + mx;
-      clippedKeep[idx] = keep[idx];
+      if (!keep[idx]) continue;
+      const px = Math.round((mx / maskW) * cropW);
+      const py = Math.round((my / maskH) * cropH);
+      const jawY = jawCurve ? jawCurveYAtX(jawCurve, px) : null;
+
+      if (jawY === null || py <= jawY) {
+        // Above (or no landmark data at all -- fall back to keeping
+        // everything the segmentation+flood-fill already found) --
+        // unambiguously face/head, always kept.
+        clippedKeep[idx] = 1;
+      } else if (hairColor) {
+        // Below the jaw line -- only keep if it genuinely matches the
+        // sampled hair color (hanging hair), not skin at the same height.
+        const pIdx = (py * cropW + px) * 4;
+        const dr = fullImg[pIdx] - hairColor.r;
+        const dg = fullImg[pIdx + 1] - hairColor.g;
+        const db = fullImg[pIdx + 2] - hairColor.b;
+        const dist = Math.sqrt(dr * dr + dg * dg + db * db);
+        clippedKeep[idx] = dist < colorThreshold ? 1 : 0;
+      }
     }
   }
 
@@ -424,14 +519,14 @@ function applyNeckCutoffAndRender(sliderVal) {
     }
   }
   if (maxMX < minMX) {
-    setStatus('⚠️ Neck cutoff is set too high -- nothing left above it. Drag it back down.', 'error');
+    setStatus('⚠️ Nothing matched -- try raising Hair Sensitivity.', 'error');
     return;
   }
   const pad = 0.04;
   const padX = Math.round((maxMX - minMX) * pad) + 2;
+  const padY = Math.round((maxMY - minMY) * pad) + 2;
   minMX = Math.max(0, minMX - padX); maxMX = Math.min(maskW - 1, maxMX + padX);
-  minMY = Math.max(0, minMY - 2);
-  // No bottom pad -- the neck line IS the intended bottom edge.
+  minMY = Math.max(0, minMY - padY); maxMY = Math.min(maskH - 1, maxMY + padY);
 
   const outX = Math.floor((minMX / maskW) * cropW);
   const outY = Math.floor((minMY / maskH) * cropH);
@@ -446,9 +541,6 @@ function applyNeckCutoffAndRender(sliderVal) {
   const imgData = outCtx.getImageData(0, 0, outW, outH);
   const pixels = imgData.data;
 
-  // Real confidence values (not hard on/off) for smooth, anti-aliased
-  // edges -- same as the original single-pass version, just re-derived
-  // here per slider position instead of once at segmentation time.
   for (let y = 0; y < outH; y++) {
     for (let x = 0; x < outW; x++) {
       const mx = minMX + Math.floor((x / outW) * (maxMX - minMX));
@@ -473,10 +565,10 @@ function applyNeckCutoffAndRender(sliderVal) {
   }
   if (templateImg) updateTemplateComposite();
 }
-window.applyNeckCutoffAndRender = function() {
-  const val = parseInt(document.getElementById('neckCutoffSlider').value);
-  document.getElementById('neckCutoffVal').textContent = (val > 0 ? '+' : '') + val;
-  applyNeckCutoffAndRender(val);
+window.applyJawAndHairCutoff = function() {
+  const val = parseInt(document.getElementById('hairSensitivitySlider').value);
+  document.getElementById('hairSensitivityVal').textContent = val;
+  applyJawAndHairCutoff(val);
 };
 
 function renderResult() {
