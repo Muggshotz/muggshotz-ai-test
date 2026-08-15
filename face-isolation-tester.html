@@ -216,9 +216,16 @@ async function isolateFace(detection, label) {
   // Crop generously around the detected face box to include the full head/hair,
   // not just the tight facial-feature box the detector itself returns.
   const box = detection.boundingBox;
-  const marginX = box.width * 0.6;
-  const marginTop = box.height * 0.9; // more headroom above for hair
-  const marginBottom = box.height * 0.5;
+  // FIXED (Aug 2026, Alyx's correction): margins here used to be a rough
+  // guess sized off the DETECTOR's box -- which is a tight facial-features
+  // box, not the true head extent, so voluminous or longer hair routinely
+  // got cropped away entirely before segmentation ever got a chance to
+  // include it. Widened substantially, especially above (hair volume) and
+  // to the sides (hair width) -- generous is safe here since the next
+  // step below trims back to the real content automatically.
+  const marginX = box.width * 1.1;
+  const marginTop = box.height * 1.6;
+  const marginBottom = box.height * 0.8;
 
   const cropX = Math.max(0, box.originX - marginX);
   const cropY = Math.max(0, box.originY - marginTop);
@@ -236,24 +243,76 @@ async function isolateFace(detection, label) {
     const mask = segResult.confidenceMasks[0]; // foreground/person confidence, 0-1 per pixel
     const maskData = mask.getAsFloat32Array();
     const maskW = mask.width, maskH = mask.height;
+    const CONF_THRESHOLD = 0.5;
+
+    // NEW (Aug 2026, Alyx's correction): with margins this generous, a
+    // second nearby person's hair/shoulder can end up inside the same
+    // crop -- a plain confidence threshold alone can't tell them apart.
+    // Flood-fill (BFS) outward from the SELECTED face's own position,
+    // only through connected foreground pixels, keeps just the one
+    // continuous blob that's actually attached to the chosen face --
+    // this is what correctly captures full head + hair (they're always
+    // physically connected to the face) while excluding anyone else
+    // nearby who isn't physically touching them in the photo.
+    const faceMx = Math.floor(((box.originX + box.width / 2 - cropX) / cropW) * maskW);
+    const faceMy = Math.floor(((box.originY + box.height / 2 - cropY) / cropH) * maskH);
+    const keep = new Uint8Array(maskW * maskH);
+    const stack = [[faceMx, faceMy]];
+    const visited = new Uint8Array(maskW * maskH);
+    while (stack.length) {
+      const [mx, my] = stack.pop();
+      if (mx < 0 || my < 0 || mx >= maskW || my >= maskH) continue;
+      const idx = my * maskW + mx;
+      if (visited[idx]) continue;
+      visited[idx] = 1;
+      if (maskData[idx] < CONF_THRESHOLD) continue;
+      keep[idx] = 1;
+      stack.push([mx + 1, my], [mx - 1, my], [mx, my + 1], [mx, my - 1]);
+    }
+
+    // Trim to the real bounding box of the kept region (plus a small
+    // pad) -- the crop above was deliberately oversized, so this pulls
+    // the final result back to just the actual head+hair, not a mostly-
+    // empty canvas.
+    let minMX = maskW, minMY = maskH, maxMX = 0, maxMY = 0;
+    for (let my = 0; my < maskH; my++) {
+      for (let mx = 0; mx < maskW; mx++) {
+        if (keep[my * maskW + mx]) {
+          if (mx < minMX) minMX = mx;
+          if (mx > maxMX) maxMX = mx;
+          if (my < minMY) minMY = my;
+          if (my > maxMY) maxMY = my;
+        }
+      }
+    }
+    if (maxMX < minMX) throw new Error('No connected foreground region found around this face.');
+    const pad = 0.04; // small pad in mask-space fraction so edges don't clip tight
+    const padX = Math.round((maxMX - minMX) * pad) + 2;
+    const padY = Math.round((maxMY - minMY) * pad) + 2;
+    minMX = Math.max(0, minMX - padX); maxMX = Math.min(maskW - 1, maxMX + padX);
+    minMY = Math.max(0, minMY - padY); maxMY = Math.min(maskH - 1, maxMY + padY);
+
+    const outX = Math.floor((minMX / maskW) * cropW);
+    const outY = Math.floor((minMY / maskH) * cropH);
+    const outW = Math.ceil(((maxMX - minMX) / maskW) * cropW);
+    const outH = Math.ceil(((maxMY - minMY) / maskH) * cropH);
 
     const outCanvas = document.createElement('canvas');
-    outCanvas.width = cropW;
-    outCanvas.height = cropH;
+    outCanvas.width = outW;
+    outCanvas.height = outH;
     const outCtx = outCanvas.getContext('2d');
-    outCtx.drawImage(cropCanvas, 0, 0);
-    const imgData = outCtx.getImageData(0, 0, cropW, cropH);
+    outCtx.drawImage(cropCanvas, outX, outY, outW, outH, 0, 0, outW, outH);
+    const imgData = outCtx.getImageData(0, 0, outW, outH);
     const pixels = imgData.data;
 
-    // Mask resolution may differ from the crop's own resolution -- sample
-    // proportionally rather than assuming a 1:1 pixel match.
-    for (let y = 0; y < cropH; y++) {
-      for (let x = 0; x < cropW; x++) {
-        const mx = Math.floor((x / cropW) * maskW);
-        const my = Math.floor((y / cropH) * maskH);
-        const confidence = maskData[my * maskW + mx];
-        const idx = (y * cropW + x) * 4;
-        pixels[idx + 3] = Math.round(confidence * 255);
+    for (let y = 0; y < outH; y++) {
+      for (let x = 0; x < outW; x++) {
+        const mx = minMX + Math.floor((x / outW) * (maxMX - minMX));
+        const my = minMY + Math.floor((y / outH) * (maxMY - minMY));
+        const idx = my * maskW + mx;
+        const confidence = keep[idx] ? maskData[idx] : 0;
+        const pIdx = (y * outW + x) * 4;
+        pixels[pIdx + 3] = Math.round(confidence * 255);
       }
     }
     outCtx.putImageData(imgData, 0, 0);
