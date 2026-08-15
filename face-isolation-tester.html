@@ -507,6 +507,55 @@ function applyJawAndHairCutoff(sensitivityVal) {
     }
   }
 
+  // NEW (Aug 2026, Alyx's idea): the first pass above only ever compared
+  // against ONE small sample patch taken near the top of the head --
+  // real hair has natural variation (highlights, shadowed strands), so
+  // a single sample is a rough description of "what this hair actually
+  // looks like," not the most accurate one. Now that the pass above has
+  // already identified a real, large region of genuine hair, THAT
+  // region's true average color is a far better reference than the
+  // original single patch. Re-checking edge pixels against this refined
+  // color catches exactly the stray off-color slivers (like a shadowed
+  // patch of neck skin that was just close enough to the original
+  // rough sample to sneak past) without needing to touch the face area
+  // at all -- this only ever reconsiders pixels below the jaw line.
+  let sumR = 0, sumG = 0, sumB = 0, keptCount = 0;
+  for (let my = 0; my < maskH; my++) {
+    for (let mx = 0; mx < maskW; mx++) {
+      const idx = my * maskW + mx;
+      if (!clippedKeep[idx]) continue;
+      const px = Math.round((mx / maskW) * cropW);
+      const py = Math.round((my / maskH) * cropH);
+      const jawY = jawCurve ? jawCurveYAtX(jawCurve, px) : null;
+      if (jawY === null || py <= jawY) continue; // only the below-jaw (hair) region
+      const pIdx = (py * cropW + px) * 4;
+      sumR += fullImg[pIdx]; sumG += fullImg[pIdx + 1]; sumB += fullImg[pIdx + 2];
+      keptCount++;
+    }
+  }
+  if (keptCount > 50 && hairColor) {
+    const refinedHairColor = { r: sumR / keptCount, g: sumG / keptCount, b: sumB / keptCount };
+    // Tighter threshold for this pass -- it's a spot-check against a
+    // now-trustworthy reference, not the original rough first guess.
+    const refinedThreshold = colorThreshold * 0.6;
+    for (let my = 0; my < maskH; my++) {
+      for (let mx = 0; mx < maskW; mx++) {
+        const idx = my * maskW + mx;
+        const px = Math.round((mx / maskW) * cropW);
+        const py = Math.round((my / maskH) * cropH);
+        const jawY = jawCurve ? jawCurveYAtX(jawCurve, px) : null;
+        if (jawY === null || py <= jawY) continue; // face area untouched, exactly as intended
+        if (!clippedKeep[idx]) continue; // only re-examine what the first pass already kept
+        const pIdx = (py * cropW + px) * 4;
+        const dr = fullImg[pIdx] - refinedHairColor.r;
+        const dg = fullImg[pIdx + 1] - refinedHairColor.g;
+        const db = fullImg[pIdx + 2] - refinedHairColor.b;
+        const dist = Math.sqrt(dr * dr + dg * dg + db * db);
+        if (dist >= refinedThreshold) clippedKeep[idx] = 0;
+      }
+    }
+  }
+
   let minMX = maskW, minMY = maskH, maxMX = 0, maxMY = 0;
   for (let my = 0; my < maskH; my++) {
     for (let mx = 0; mx < maskW; mx++) {
