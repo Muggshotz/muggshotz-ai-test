@@ -1,9 +1,18 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<link rel="manifest" href="faceit-manifest.json">
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Let's Just Face It — Isolation Tester</title>
+<link rel="icon" type="image/x-icon" href="faceit-favicon.ico"/>
+<link rel="icon" type="image/png" sizes="16x16" href="faceit-favicon-16.png"/>
+<link rel="icon" type="image/png" sizes="32x32" href="faceit-favicon-32.png"/>
+<link rel="icon" type="image/png" sizes="48x48" href="faceit-favicon-48.png"/>
+<link rel="icon" type="image/png" sizes="192x192" href="faceit-icon-192.png"/>
+<link rel="icon" type="image/png" sizes="512x512" href="faceit-icon-512.png"/>
+<link rel="apple-touch-icon" sizes="180x180" href="faceit-touch-icon-180.png"/>
+<meta name="theme-color" content="#0d0d12"/>
 <style>
   body{background:#0d0d12;color:#eee;font-family:-apple-system,Segoe UI,Roboto,sans-serif;margin:0;padding:16px;}
   h1{font-size:1.25rem;margin:0 0 4px;color:#f0d98a;}
@@ -60,6 +69,14 @@
   </div>
   <div class="note">This is the customer's real face -- it never gets recolored by anything on this page. This is the one true, known skin tone in the whole composite.</div>
   <div style="margin-top:12px"><button id="downloadBtn" onclick="downloadResult()">⬇️ Download isolated PNG</button></div>
+</div>
+
+<div class="card" id="neckCutoffCard" style="display:none">
+  <h2 style="margin-top:0">Neck cutoff</h2>
+  <div class="note" style="margin-top:0">Templates need this to end at the base of the neck -- shoulders/chest/collarbone should never show. The starting position is estimated from face proportions; drag if it's cutting off too much or too little.</div>
+  <label style="margin-top:10px">Cutoff position <span class="val" id="neckCutoffVal">+0</span></label>
+  <input type="range" id="neckCutoffSlider" min="-50" max="50" step="1" value="0" oninput="applyNeckCutoffAndRender()"/>
+  <div class="note">Drag right to include more (lower, toward the shoulders); drag left to cut higher (toward the chin).</div>
 </div>
 
 <div class="card" id="matchCard" style="display:none">
@@ -210,6 +227,11 @@ async function runDetection() {
   }
 }
 
+// Segmentation state kept around after the one expensive AI pass, so the
+// neck-cutoff slider below can re-render instantly on every drag instead
+// of re-running detection/segmentation each time.
+let segState = null;
+
 async function isolateFace(detection, label) {
   setStatus('⏳ Isolating Face ' + label + ' with real alpha transparency...');
 
@@ -245,15 +267,15 @@ async function isolateFace(detection, label) {
     const maskW = mask.width, maskH = mask.height;
     const CONF_THRESHOLD = 0.5;
 
-    // NEW (Aug 2026, Alyx's correction): with margins this generous, a
-    // second nearby person's hair/shoulder can end up inside the same
-    // crop -- a plain confidence threshold alone can't tell them apart.
     // Flood-fill (BFS) outward from the SELECTED face's own position,
     // only through connected foreground pixels, keeps just the one
     // continuous blob that's actually attached to the chosen face --
     // this is what correctly captures full head + hair (they're always
     // physically connected to the face) while excluding anyone else
-    // nearby who isn't physically touching them in the photo.
+    // nearby who isn't physically touching them in the photo. This does
+    // NOT stop at the neck by itself, though -- shoulders/chest are also
+    // physically connected with no gap, so a separate explicit cutoff
+    // line (below) handles that part.
     const faceMx = Math.floor(((box.originX + box.width / 2 - cropX) / cropW) * maskW);
     const faceMy = Math.floor(((box.originY + box.height / 2 - cropY) / cropH) * maskH);
     const keep = new Uint8Array(maskW * maskH);
@@ -270,73 +292,28 @@ async function isolateFace(detection, label) {
       stack.push([mx + 1, my], [mx - 1, my], [mx, my + 1], [mx, my - 1]);
     }
 
-    // Trim to the real bounding box of the kept region (plus a small
-    // pad) -- the crop above was deliberately oversized, so this pulls
-    // the final result back to just the actual head+hair, not a mostly-
-    // empty canvas.
-    let minMX = maskW, minMY = maskH, maxMX = 0, maxMY = 0;
-    for (let my = 0; my < maskH; my++) {
-      for (let mx = 0; mx < maskW; mx++) {
-        if (keep[my * maskW + mx]) {
-          if (mx < minMX) minMX = mx;
-          if (mx > maxMX) maxMX = mx;
-          if (my < minMY) minMY = my;
-          if (my > maxMY) maxMY = my;
-        }
-      }
-    }
-    if (maxMX < minMX) throw new Error('No connected foreground region found around this face.');
-    const pad = 0.04; // small pad in mask-space fraction so edges don't clip tight
-    const padX = Math.round((maxMX - minMX) * pad) + 2;
-    const padY = Math.round((maxMY - minMY) * pad) + 2;
-    minMX = Math.max(0, minMX - padX); maxMX = Math.min(maskW - 1, maxMX + padX);
-    minMY = Math.max(0, minMY - padY); maxMY = Math.min(maskH - 1, maxMY + padY);
-
-    const outX = Math.floor((minMX / maskW) * cropW);
-    const outY = Math.floor((minMY / maskH) * cropH);
-    const outW = Math.ceil(((maxMX - minMX) / maskW) * cropW);
-    const outH = Math.ceil(((maxMY - minMY) / maskH) * cropH);
-
-    const outCanvas = document.createElement('canvas');
-    outCanvas.width = outW;
-    outCanvas.height = outH;
-    const outCtx = outCanvas.getContext('2d');
-    outCtx.drawImage(cropCanvas, outX, outY, outW, outH, 0, 0, outW, outH);
-    const imgData = outCtx.getImageData(0, 0, outW, outH);
-    const pixels = imgData.data;
-
-    for (let y = 0; y < outH; y++) {
-      for (let x = 0; x < outW; x++) {
-        const mx = minMX + Math.floor((x / outW) * (maxMX - minMX));
-        const my = minMY + Math.floor((y / outH) * (maxMY - minMY));
-        const idx = my * maskW + mx;
-        const confidence = keep[idx] ? maskData[idx] : 0;
-        const pIdx = (y * outW + x) * 4;
-        pixels[pIdx + 3] = Math.round(confidence * 255);
-      }
-    }
-    outCtx.putImageData(imgData, 0, 0);
-
-    originalIsolatedCanvas = outCanvas;
     mask.close();
     segResult.close();
 
-    renderResult();
+    // NEW (Aug 2026, Alyx's correction): face+hair connects to the neck,
+    // shoulders, and chest with no gap for flood-fill to stop at on its
+    // own -- an explicit horizontal cutoff line is the only way to end
+    // the result at the base of the neck like the templates need.
+    // Estimated from face proportions (real neck length varies with
+    // camera angle and the individual), so it's a starting point, not a
+    // guarantee -- the slider lets it be corrected per-photo.
+    const faceBottomY = box.originY + box.height; // roughly the chin
+    const estimatedNeckY = faceBottomY + box.height * 0.6;
+    const neckMaskYFraction = ((estimatedNeckY - cropY) / cropH);
+
+    segState = { cropCanvas, keep, maskData, maskW, maskH, cropW, cropH, neckMaskYFraction };
+
+    document.getElementById('neckCutoffSlider').value = 0;
+    document.getElementById('neckCutoffVal').textContent = '+0';
+    applyNeckCutoffAndRender(0);
+
     resultCard.style.display = 'block';
-
-    // Sample the face's real average tone and use it (not a manual guess)
-    // as the starting point for matching the template's simulated skin.
-    detectedFaceColor = sampleFaceAverageColor(originalIsolatedCanvas);
-    if (detectedFaceColor) {
-      document.getElementById('faceToneSwatch').style.background =
-        `rgb(${detectedFaceColor.r},${detectedFaceColor.g},${detectedFaceColor.b})`;
-      matchBasePct = closestComplexionPct(detectedFaceColor);
-      document.getElementById('fineTuneSlider').value = 0;
-      document.getElementById('fineTuneVal').textContent = '+0';
-      updateBodySkinMatch();
-      document.getElementById('matchCard').style.display = 'block';
-    }
-
+    document.getElementById('neckCutoffCard').style.display = 'block';
     document.getElementById('templateCard').style.display = 'block';
     resultCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
     setStatus('✅ Face ' + label + ' isolated with real transparency.', 'ready');
@@ -411,6 +388,96 @@ function closestComplexionPct(color) {
 
 let detectedFaceColor = null;
 let matchBasePct = 50;
+
+// Cheap, synchronous re-render from the already-computed segmentation --
+// only re-derives the final trimmed canvas at a new neck-cutoff line,
+// never re-runs the AI. Safe to call on every slider drag tick.
+function applyNeckCutoffAndRender(sliderVal) {
+  if (!segState) return;
+  const { cropCanvas, keep, maskData, maskW, maskH, cropW, cropH, neckMaskYFraction } = segState;
+
+  // Slider range -50..50 nudges the cutoff line up or down by up to
+  // roughly a third of the mask's height in either direction -- wide
+  // enough to correct for camera angle/proportions being off in either
+  // direction, not just a small tweak.
+  const adjustedFraction = Math.max(0, Math.min(1, neckMaskYFraction + (sliderVal / 100) * 0.6));
+  const cutoffMaskY = Math.round(adjustedFraction * maskH);
+
+  const clippedKeep = new Uint8Array(keep.length);
+  for (let my = 0; my < maskH; my++) {
+    if (my >= cutoffMaskY) continue; // below the neck line -- discard regardless of connectivity
+    for (let mx = 0; mx < maskW; mx++) {
+      const idx = my * maskW + mx;
+      clippedKeep[idx] = keep[idx];
+    }
+  }
+
+  let minMX = maskW, minMY = maskH, maxMX = 0, maxMY = 0;
+  for (let my = 0; my < maskH; my++) {
+    for (let mx = 0; mx < maskW; mx++) {
+      if (clippedKeep[my * maskW + mx]) {
+        if (mx < minMX) minMX = mx;
+        if (mx > maxMX) maxMX = mx;
+        if (my < minMY) minMY = my;
+        if (my > maxMY) maxMY = my;
+      }
+    }
+  }
+  if (maxMX < minMX) {
+    setStatus('⚠️ Neck cutoff is set too high -- nothing left above it. Drag it back down.', 'error');
+    return;
+  }
+  const pad = 0.04;
+  const padX = Math.round((maxMX - minMX) * pad) + 2;
+  minMX = Math.max(0, minMX - padX); maxMX = Math.min(maskW - 1, maxMX + padX);
+  minMY = Math.max(0, minMY - 2);
+  // No bottom pad -- the neck line IS the intended bottom edge.
+
+  const outX = Math.floor((minMX / maskW) * cropW);
+  const outY = Math.floor((minMY / maskH) * cropH);
+  const outW = Math.ceil(((maxMX - minMX) / maskW) * cropW);
+  const outH = Math.ceil(((maxMY - minMY) / maskH) * cropH);
+
+  const outCanvas = document.createElement('canvas');
+  outCanvas.width = outW;
+  outCanvas.height = outH;
+  const outCtx = outCanvas.getContext('2d');
+  outCtx.drawImage(cropCanvas, outX, outY, outW, outH, 0, 0, outW, outH);
+  const imgData = outCtx.getImageData(0, 0, outW, outH);
+  const pixels = imgData.data;
+
+  // Real confidence values (not hard on/off) for smooth, anti-aliased
+  // edges -- same as the original single-pass version, just re-derived
+  // here per slider position instead of once at segmentation time.
+  for (let y = 0; y < outH; y++) {
+    for (let x = 0; x < outW; x++) {
+      const mx = minMX + Math.floor((x / outW) * (maxMX - minMX));
+      const my = minMY + Math.floor((y / outH) * (maxMY - minMY));
+      const idx = my * maskW + mx;
+      const pIdx = (y * outW + x) * 4;
+      pixels[pIdx + 3] = clippedKeep[idx] ? Math.round(maskData[idx] * 255) : 0;
+    }
+  }
+  outCtx.putImageData(imgData, 0, 0);
+
+  originalIsolatedCanvas = outCanvas;
+  renderResult();
+
+  detectedFaceColor = sampleFaceAverageColor(originalIsolatedCanvas);
+  if (detectedFaceColor) {
+    document.getElementById('faceToneSwatch').style.background =
+      `rgb(${detectedFaceColor.r},${detectedFaceColor.g},${detectedFaceColor.b})`;
+    matchBasePct = closestComplexionPct(detectedFaceColor);
+    updateBodySkinMatch();
+    document.getElementById('matchCard').style.display = 'block';
+  }
+  if (templateImg) updateTemplateComposite();
+}
+window.applyNeckCutoffAndRender = function() {
+  const val = parseInt(document.getElementById('neckCutoffSlider').value);
+  document.getElementById('neckCutoffVal').textContent = (val > 0 ? '+' : '') + val;
+  applyNeckCutoffAndRender(val);
+};
 
 function renderResult() {
   // The face is never recolored -- this just displays the isolated
