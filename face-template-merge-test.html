@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Face-on-Template — Real Generation Test</title>
+<style>
+  body{background:#0d0d12;color:#eee;font-family:-apple-system,Segoe UI,Roboto,sans-serif;margin:0;padding:16px;}
+  h1{font-size:1.25rem;margin:0 0 4px;color:#f0d98a;}
+  h2{font-size:1rem;margin:20px 0 8px;color:#c9a05a;border-bottom:1px solid #333;padding-bottom:4px;}
+  .sub{color:#999;font-size:.85rem;margin-bottom:14px;line-height:1.4;}
+  .warn{background:#3a1a1a;border:1px solid #7a3030;border-radius:8px;padding:10px 12px;font-size:.85rem;color:#ffb3b3;margin-bottom:16px;line-height:1.4;}
+  .card{background:#17171f;border:1px solid #2a2a35;border-radius:10px;padding:14px;margin-bottom:16px;}
+  .upload-zone{border:2px dashed #444;border-radius:10px;padding:1.5rem 1rem;text-align:center;cursor:pointer;background:#0d0d0d;}
+  .upload-zone.has-image{border-style:solid;border-color:#4a7dbf;}
+  .checker-bg{background-image:linear-gradient(45deg,#333 25%,transparent 25%),linear-gradient(-45deg,#333 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#333 75%),linear-gradient(-45deg,transparent 75%,#333 75%);background-size:20px 20px;background-position:0 0,0 10px,10px -10px,-10px 0px;background-color:#555;border-radius:8px;}
+  .preview-row{display:flex;gap:12px;margin-top:10px;flex-wrap:wrap;}
+  .preview-row>div{flex:1;min-width:120px;text-align:center}
+  .preview-row img{max-width:100%;max-height:160px;border-radius:6px;}
+  label{display:block;margin:10px 0 4px;font-size:.9rem;color:#ccc;}
+  input[type=text],select,textarea{width:100%;background:#0d0d0d;color:#eee;border:1px solid #333;border-radius:6px;padding:8px;font-size:.9rem;box-sizing:border-box;font-family:inherit;}
+  textarea{min-height:140px;resize:vertical;line-height:1.4;}
+  button{background:#2a3a52;color:#9ecbff;border:1px solid #3d5578;border-radius:8px;padding:.7rem 1.1rem;font-size:.95rem;cursor:pointer;width:100%;}
+  button:disabled{opacity:.4;cursor:not-allowed;}
+  button.danger{background:#4a2020;color:#ffb3b3;border-color:#7a3030;}
+  #statusLine{margin:10px 0;font-size:.9rem;min-height:1.2em;}
+  #statusLine.error{color:#e24b4a;}
+  #statusLine.ready{color:#7ed957;}
+  #statusLine.working{color:#7ab8ff;}
+  .spinner{display:inline-block;width:14px;height:14px;border:2px solid #4a7dbf;border-top-color:transparent;border-radius:50%;animation:spin .8s linear infinite;vertical-align:middle;margin-right:8px;}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  #resultImg{max-width:100%;border-radius:8px;display:block;margin:0 auto;}
+  .note{color:#888;font-size:.8rem;margin-top:8px;line-height:1.4;}
+  details{margin-top:12px;}
+  summary{color:#7ab8ff;cursor:pointer;font-size:.85rem;}
+  pre{background:#0a0a0e;padding:10px;border-radius:6px;overflow-x:auto;font-size:.75rem;color:#aaa;white-space:pre-wrap;word-break:break-word;}
+  #lockScreen{position:fixed;inset:0;background:#0d0d12;z-index:1000;display:flex;align-items:center;justify-content:center;padding:20px}
+  #lockScreen.hidden{display:none}
+  #lockCard{max-width:340px;width:100%;background:#17171f;border:1px solid #2a2a35;border-radius:14px;padding:24px;text-align:center}
+  #lockCard h2{border:none;margin:0 0 6px;color:#f0d98a;font-size:1.1rem}
+  .lock-icon{font-size:2.2rem;margin-bottom:8px}
+  .checkbox-row{display:flex;align-items:center;gap:8px;margin-top:12px;font-size:.85rem;color:#ccc;justify-content:center}
+  .checkbox-row input{width:auto}
+  #lockError{color:#e24b4a;font-size:.85rem;min-height:1.2em;margin-top:8px}
+  .fp-btn{background:#1f3a2a;border-color:#3d7855;color:#9ecbb0;margin-top:10px}
+  body.locked{overflow:hidden}
+</style>
+</head>
+<body>
+
+<div id="lockScreen">
+  <div id="lockCard">
+    <div id="lockSetupView">
+      <div class="lock-icon">🔒</div>
+      <h2>Set a password</h2>
+      <div class="note" style="margin-top:0">First time here — choose a password for this tool. A lightweight local gate, not bank-grade security, but enough to keep casual visitors out.</div>
+      <input type="text" id="newPasswordInput" placeholder="New password" style="margin-top:12px" autocomplete="new-password"/>
+      <input type="text" id="confirmPasswordInput" placeholder="Confirm password" style="margin-top:8px" autocomplete="new-password"/>
+      <button onclick="setNewPassword()" style="margin-top:12px">Set Password</button>
+      <div id="setupError" style="color:#e24b4a;font-size:.85rem;min-height:1.2em;margin-top:8px"></div>
+    </div>
+    <div id="lockUnlockView" style="display:none">
+      <div class="lock-icon">🔒</div>
+      <h2>Locked</h2>
+      <input type="text" id="unlockPasswordInput" placeholder="Password" style="margin-top:12px" autocomplete="current-password"/>
+      <button onclick="tryUnlock()" style="margin-top:10px">Unlock</button>
+      <button id="fingerprintBtn" class="fp-btn" onclick="unlockWithFingerprint()" style="display:none">👆 Unlock with Fingerprint</button>
+      <div class="checkbox-row">
+        <input type="checkbox" id="rememberDeviceCheckbox"/>
+        <label for="rememberDeviceCheckbox" style="margin:0">Remember on this device</label>
+      </div>
+      <div id="lockError"></div>
+    </div>
+    <div id="fingerprintOfferView" style="display:none">
+      <div class="lock-icon">👆</div>
+      <h2>Set up fingerprint unlock?</h2>
+      <div class="note" style="margin-top:0">Use your phone's real fingerprint sensor to unlock next time instead of typing a password.</div>
+      <button onclick="setupFingerprint()" style="margin-top:12px">Set Up Fingerprint</button>
+      <button onclick="skipFingerprintSetup()" style="margin-top:8px;background:transparent;border-color:#333;color:#888">Skip for now</button>
+    </div>
+  </div>
+</div>
+
+<h1>🧪 Face-on-Template — Real Generation Test</h1>
+<div class="sub">Sends one real request to the live /api/generate endpoint to test whether the AI can merge an isolated face onto a template design while leaving the rest of the template alone.</div>
+<div class="warn">⚠️ This calls the real, live production endpoint. It WILL charge one real token from the device ID you enter below, exactly like a real customer generation. There is no mock/test mode.</div>
+
+<div class="card">
+  <h2 style="margin-top:0">1. Isolated face</h2>
+  <div class="note" style="margin-top:0">The transparent PNG downloaded from the Face It tool.</div>
+  <div class="upload-zone" id="faceZone" onclick="document.getElementById('faceInput').click()">
+    <div id="facePrompt">👤 Tap to choose the isolated face PNG</div>
+  </div>
+  <input type="file" id="faceInput" accept="image/*" style="display:none" onchange="handleFile(event,'face')"/>
+</div>
+
+<div class="card">
+  <h2 style="margin-top:0">2. Template</h2>
+  <div class="note" style="margin-top:0">The design to merge the face onto (e.g. the angel).</div>
+  <div class="upload-zone" id="templateZone" onclick="document.getElementById('templateInput').click()">
+    <div id="templatePrompt">🖼️ Tap to choose the template image</div>
+  </div>
+  <input type="file" id="templateInput" accept="image/*" style="display:none" onchange="handleFile(event,'template')"/>
+</div>
+
+<div class="preview-row" id="previewRow" style="display:none">
+  <div><div class="note">Face</div><div class="checker-bg"><img id="facePreview"/></div></div>
+  <div><div class="note">Template</div><div class="checker-bg"><img id="templatePreview"/></div></div>
+</div>
+
+<div class="card">
+  <h2 style="margin-top:0">3. Device ID</h2>
+  <div class="note" style="margin-top:0">Whichever device gets charged the 1 token for this test.</div>
+  <input type="text" id="deviceIdInput" value="dev-1786704009373-3gtvox1z"/>
+</div>
+
+<div class="card">
+  <h2 style="margin-top:0">4. Instructions sent to the AI</h2>
+  <div class="note" style="margin-top:0">Editable — this becomes the "customer request" portion of the real prompt. The endpoint automatically wraps this in its own caricature-likeness instructions first (can't be turned off, and shouldn't be — that's the part responsible for getting facial features right), since the Face image is being sent through the same slot a real customer photo normally goes in. Everything below only ever adds to those base rules; it never overrides how the face itself gets rendered.</div>
+  <textarea id="promptInput">A second reference image (labeled reference-a) shows a template design with an empty area meant for a person's face. Merge the person's face from the main uploaded image into that empty area of the template, blending the edges naturally so it looks like one cohesive image. Do NOT alter, redraw, or change anything else about the template -- keep its background, clothing, colors, and composition exactly as they are. If the template has visible skin (arms, neck, hands, legs), adjust that skin's color tone to naturally match the real skin tone of the person's face, so the whole image reads as one consistent person. Do not add any text, captions, quotes, watermarks, signatures, or decorative props that are not already present in the template -- replicate the template exactly as given, with only the face merged in.</textarea>
+</div>
+
+<div class="card">
+  <h2 style="margin-top:0">5. Run it</h2>
+  <button id="runBtn" onclick="runTest()" disabled>▶️ Run Real Generation Test (charges 1 token)</button>
+  <div id="statusLine"></div>
+</div>
+
+<div class="card" id="resultCard" style="display:none">
+  <h2 style="margin-top:0">Result</h2>
+  <img id="resultImg"/>
+  <details>
+    <summary>Raw response</summary>
+    <pre id="rawResponse"></pre>
+  </details>
+</div>
+
+<script>
+// ===== Lock screen / auth =====
+// Lightweight, single-device gate -- not a full server-backed security
+// system. Password is hashed (SHA-256) before storing, so it's not sitting
+// in localStorage as plain text, but this is still a client-side check
+// someone with real technical access to the device could bypass. Right
+// tradeoff for "keep casual visitors out," not for anything high-stakes.
+const LS_PW_HASH = 'faceTestPasswordHash';
+const LS_REMEMBER = 'faceTestRemembered';
+const LS_FP_CRED_ID = 'faceTestFingerprintCredId';
+const LS_FP_OFFERED = 'faceTestFingerprintOffered';
+
+async function sha256(text) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+function showLockView(view) {
+  document.getElementById('lockSetupView').style.display = view === 'setup' ? 'block' : 'none';
+  document.getElementById('lockUnlockView').style.display = view === 'unlock' ? 'block' : 'none';
+  document.getElementById('fingerprintOfferView').style.display = view === 'fpOffer' ? 'block' : 'none';
+}
+
+async function initLockScreen() {
+  document.body.classList.add('locked');
+  const storedHash = localStorage.getItem(LS_PW_HASH);
+
+  if (!storedHash) {
+    showLockView('setup');
+    return;
+  }
+  if (localStorage.getItem(LS_REMEMBER) === '1') {
+    unlockPage();
+    return;
+  }
+  showLockView('unlock');
+  const fpCredId = localStorage.getItem(LS_FP_CRED_ID);
+  if (fpCredId && window.PublicKeyCredential) {
+    document.getElementById('fingerprintBtn').style.display = 'block';
+  }
+}
+
+window.setNewPassword = async function() {
+  const pw = document.getElementById('newPasswordInput').value;
+  const confirm = document.getElementById('confirmPasswordInput').value;
+  const err = document.getElementById('setupError');
+  if (!pw || pw.length < 4) { err.textContent = 'Password must be at least 4 characters.'; return; }
+  if (pw !== confirm) { err.textContent = 'Passwords do not match.'; return; }
+  localStorage.setItem(LS_PW_HASH, await sha256(pw));
+  err.textContent = '';
+  unlockPage(true);
+};
+
+window.tryUnlock = async function() {
+  const pw = document.getElementById('unlockPasswordInput').value;
+  const err = document.getElementById('lockError');
+  const storedHash = localStorage.getItem(LS_PW_HASH);
+  if (await sha256(pw) !== storedHash) {
+    err.textContent = 'Wrong password.';
+    return;
+  }
+  err.textContent = '';
+  if (document.getElementById('rememberDeviceCheckbox').checked) {
+    localStorage.setItem(LS_REMEMBER, '1');
+  }
+  unlockPage(true);
+};
+
+function unlockPage(justAuthenticated) {
+  document.body.classList.remove('locked');
+  const fpCredId = localStorage.getItem(LS_FP_CRED_ID);
+  const fpOffered = localStorage.getItem(LS_FP_OFFERED);
+  if (justAuthenticated && !fpCredId && !fpOffered && window.PublicKeyCredential) {
+    PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable().then(available => {
+      if (available) {
+        showLockView('fpOffer');
+      } else {
+        document.getElementById('lockScreen').classList.add('hidden');
+      }
+    });
+  } else {
+    document.getElementById('lockScreen').classList.add('hidden');
+  }
+}
+
+window.setupFingerprint = async function() {
+  try {
+    const challenge = crypto.getRandomValues(new Uint8Array(32));
+    const userId = crypto.getRandomValues(new Uint8Array(16));
+    const credential = await navigator.credentials.create({
+      publicKey: {
+        challenge,
+        rp: { name: "Face-on-Template Test Tool" },
+        user: { id: userId, name: "device-owner", displayName: "Device Owner" },
+        pubKeyCredParams: [{ type: "public-key", alg: -7 }, { type: "public-key", alg: -257 }],
+        authenticatorSelection: { authenticatorAttachment: "platform", userVerification: "required" },
+        timeout: 60000
+      }
+    });
+    localStorage.setItem(LS_FP_CRED_ID, credential.id);
+    localStorage.setItem(LS_FP_OFFERED, '1');
+    document.getElementById('lockScreen').classList.add('hidden');
+  } catch (err) {
+    console.error('Fingerprint setup failed or was cancelled:', err);
+    localStorage.setItem(LS_FP_OFFERED, '1');
+    document.getElementById('lockScreen').classList.add('hidden');
+  }
+};
+
+window.skipFingerprintSetup = function() {
+  localStorage.setItem(LS_FP_OFFERED, '1');
+  document.getElementById('lockScreen').classList.add('hidden');
+};
+
+window.unlockWithFingerprint = async function() {
+  const err = document.getElementById('lockError');
+  const credId = localStorage.getItem(LS_FP_CRED_ID);
+  try {
+    const challenge = crypto.getRandomValues(new Uint8Array(32));
+    await navigator.credentials.get({
+      publicKey: {
+        challenge,
+        allowCredentials: [{ id: Uint8Array.from(atob(credId.replace(/-/g,'+').replace(/_/g,'/')), c => c.charCodeAt(0)), type: 'public-key' }],
+        userVerification: "required",
+        timeout: 60000
+      }
+    });
+    if (document.getElementById('rememberDeviceCheckbox').checked) {
+      localStorage.setItem(LS_REMEMBER, '1');
+    }
+    unlockPage(false);
+  } catch (fpErr) {
+    console.error('Fingerprint unlock failed:', fpErr);
+    err.textContent = 'Fingerprint not recognized -- use your password instead.';
+  }
+};
+
+initLockScreen();
+
+let faceDataUrl = null;
+let templateDataUrl = null;
+
+function handleFile(event, which) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const dataUrl = e.target.result;
+    if (which === 'face') {
+      faceDataUrl = dataUrl;
+      document.getElementById('faceZone').classList.add('has-image');
+      document.getElementById('facePreview').src = dataUrl;
+    } else {
+      templateDataUrl = dataUrl;
+      document.getElementById('templateZone').classList.add('has-image');
+      document.getElementById('templatePreview').src = dataUrl;
+    }
+    if (faceDataUrl && templateDataUrl) {
+      document.getElementById('previewRow').style.display = 'flex';
+      document.getElementById('runBtn').disabled = false;
+    }
+  };
+  reader.readAsDataURL(file);
+}
+
+function setStatus(msg, cls) {
+  const el = document.getElementById('statusLine');
+  el.innerHTML = msg;
+  el.className = cls || '';
+}
+
+async function runTest() {
+  if (!faceDataUrl || !templateDataUrl) return;
+  const btn = document.getElementById('runBtn');
+  btn.disabled = true;
+  setStatus('<span class="spinner"></span>Sending to the real generator -- this can take a couple minutes...', 'working');
+  document.getElementById('resultCard').style.display = 'none';
+
+  const body = {
+    image: faceDataUrl,
+    refImageA: templateDataUrl,
+    prompt: document.getElementById('promptInput').value,
+    deviceId: document.getElementById('deviceIdInput').value,
+    size: "1024x1024"
+    // Deliberately no "theme" (skips the built-in background-template
+    // system, since we're supplying our own template as refImageA
+    // instead) and no "panelRole" (so this goes through the REAL
+    // customer-generation prompt path, token gate, and pricing --
+    // not the free/no-charge left-right panel continuation path,
+    // which has a completely different, mismatched prompt anyway).
+  };
+
+  try {
+    const resp = await fetch('/api/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    const data = await resp.json();
+    document.getElementById('rawResponse').textContent = JSON.stringify(data, null, 2);
+    document.getElementById('resultCard').style.display = 'block';
+
+    if (!resp.ok) {
+      setStatus('❌ ' + (data.error || 'Request failed with status ' + resp.status), 'error');
+      document.getElementById('resultImg').style.display = 'none';
+    } else if (data.imageUrl) {
+      document.getElementById('resultImg').style.display = 'block';
+      document.getElementById('resultImg').src = data.imageUrl;
+      setStatus('✅ Generation complete.', 'ready');
+    } else {
+      setStatus('⚠️ Got a response but no image URL -- check the raw response below.', 'error');
+    }
+  } catch (err) {
+    console.error(err);
+    setStatus('❌ Request failed: ' + err.message, 'error');
+  } finally {
+    btn.disabled = false;
+  }
+}
+</script>
+</body>
+</html>
