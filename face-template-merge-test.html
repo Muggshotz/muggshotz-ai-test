@@ -121,6 +121,13 @@
 </div>
 
 <div class="card">
+  <h2 style="margin-top:0">Face size adjustment</h2>
+  <div class="note" style="margin-top:0">This works differently from every other slider in tonight's tools -- there's no real pixel-level scaling happening here, this just adds a sentence to the prompt asking the AI to render the face slightly larger or smaller than its own default judgment. It's a hint, not a guaranteed exact percentage -- the AI should follow it reasonably well, but won't be pixel-precise the way a real crop/scale tool would be.</div>
+  <label style="margin-top:10px">Adjustment <span class="val" id="sizeAdjustVal">+0%</span></label>
+  <input type="range" id="sizeAdjustSlider" min="-10" max="10" step="1" value="0" oninput="updateSizeAdjustLabel()"/>
+</div>
+
+<div class="card">
   <h2 style="margin-top:0">5. Run it</h2>
   <button id="runBtn" onclick="runTest()" disabled>▶️ Run Real Generation Test (charges 1 token)</button>
   <div id="statusLine"></div>
@@ -339,6 +346,18 @@ function setStatus(msg, cls) {
   el.className = cls || '';
 }
 
+window.updateSizeAdjustLabel = function() {
+  const val = parseInt(document.getElementById('sizeAdjustSlider').value);
+  document.getElementById('sizeAdjustVal').textContent = (val > 0 ? '+' : '') + val + '%';
+};
+
+function buildSizeAdjustInstruction() {
+  const val = parseInt(document.getElementById('sizeAdjustSlider').value);
+  if (val === 0) return '';
+  const direction = val > 0 ? 'larger' : 'smaller';
+  return ` Render the merged face approximately ${Math.abs(val)}% ${direction} than would naturally and proportionally fit the template's intended face area.`;
+}
+
 async function runTest() {
   if (!faceDataUrl || !templateDataUrl) return;
   const btn = document.getElementById('runBtn');
@@ -349,7 +368,7 @@ async function runTest() {
   const body = {
     image: faceDataUrl,
     refImageA: templateDataUrl,
-    prompt: document.getElementById('promptInput').value,
+    prompt: document.getElementById('promptInput').value + buildSizeAdjustInstruction(),
     deviceId: document.getElementById('deviceIdInput').value,
     size: "1024x1024"
     // Deliberately no "theme" (skips the built-in background-template
