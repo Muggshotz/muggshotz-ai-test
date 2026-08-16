@@ -60,6 +60,17 @@
   <h2 style="margin-top:0">2. Detected faces — tap the one you want</h2>
   <div id="sourceWrap"><img id="sourceImg"/></div>
   <div class="note" id="detectNote"></div>
+  <div style="margin-top:14px"><button onclick="toggleManualBox()" id="manualBoxToggleBtn">✋ Automatic isolation not working right? Select manually instead</button></div>
+  <div id="manualBoxSection" style="display:none;margin-top:12px">
+    <div class="note" style="margin-top:0">Drag the box to move it, drag the corner handle to resize it. This is a plain rectangular crop -- guaranteed to work regardless of art style, no AI involved, but won't hug the exact silhouette of the head the way automatic isolation does.</div>
+    <div id="manualBoxWrap" style="position:relative;max-width:100%;touch-action:none;margin-top:8px">
+      <img id="manualBoxImg" style="max-width:100%;display:block;border-radius:8px"/>
+      <div id="manualBoxRect" style="position:absolute;border:3px solid #7ed957;background:rgba(126,217,87,.12);box-sizing:border-box">
+        <div id="manualBoxHandle" style="position:absolute;right:-12px;bottom:-12px;width:26px;height:26px;background:#7ed957;border-radius:50%;border:2px solid #0d0d12;cursor:nwse-resize"></div>
+      </div>
+    </div>
+    <button onclick="useManualSelection()" style="margin-top:12px">✅ Use This Selection</button>
+  </div>
 </div>
 
 <div class="card" id="resultCard" style="display:none">
@@ -192,6 +203,124 @@ window.handleFileSelect = function(event) {
   reader.readAsDataURL(file);
 };
 
+// ===== Manual box selection -- guaranteed fallback when automatic
+// isolation misses (unusual art styles, illustrated faces, low-
+// confidence segmentation gaps) regardless of the underlying cause.
+// Plain rectangular crop, no AI involved, so it always works.
+let manualBox = { xPct: 0.25, yPct: 0.1, wPct: 0.5, hPct: 0.6 };
+let manualDragMode = null; // 'move' | 'resize' | null
+let manualDragStart = null;
+
+window.toggleManualBox = function() {
+  const section = document.getElementById('manualBoxSection');
+  const showing = section.style.display === 'block';
+  section.style.display = showing ? 'none' : 'block';
+  if (!showing) {
+    document.getElementById('manualBoxImg').src = sourceImg.src;
+    document.getElementById('manualBoxImg').onload = renderManualBox;
+    if (document.getElementById('manualBoxImg').complete) renderManualBox();
+  }
+};
+
+function renderManualBox() {
+  const wrap = document.getElementById('manualBoxWrap');
+  const img = document.getElementById('manualBoxImg');
+  const rect = document.getElementById('manualBoxRect');
+  const w = img.clientWidth, h = img.clientHeight;
+  rect.style.left = (manualBox.xPct * w) + 'px';
+  rect.style.top = (manualBox.yPct * h) + 'px';
+  rect.style.width = (manualBox.wPct * w) + 'px';
+  rect.style.height = (manualBox.hPct * h) + 'px';
+}
+
+function setupManualBoxDrag() {
+  const wrap = document.getElementById('manualBoxWrap');
+  const rectEl = document.getElementById('manualBoxRect');
+  const handle = document.getElementById('manualBoxHandle');
+
+  function posFromEvent(e) {
+    const r = wrap.getBoundingClientRect();
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    return { x: clientX - r.left, y: clientY - r.top };
+  }
+
+  function startMove(e) {
+    manualDragMode = 'move';
+    manualDragStart = posFromEvent(e);
+    manualDragStart.origX = manualBox.xPct;
+    manualDragStart.origY = manualBox.yPct;
+    e.stopPropagation();
+    e.preventDefault();
+  }
+  function startResize(e) {
+    manualDragMode = 'resize';
+    manualDragStart = posFromEvent(e);
+    manualDragStart.origW = manualBox.wPct;
+    manualDragStart.origH = manualBox.hPct;
+    e.stopPropagation();
+    e.preventDefault();
+  }
+  function onMove(e) {
+    if (!manualDragMode) return;
+    const img = document.getElementById('manualBoxImg');
+    const w = img.clientWidth, h = img.clientHeight;
+    const p = posFromEvent(e);
+    if (manualDragMode === 'move') {
+      const dxPct = (p.x - manualDragStart.x) / w;
+      const dyPct = (p.y - manualDragStart.y) / h;
+      manualBox.xPct = Math.max(0, Math.min(1 - manualBox.wPct, manualDragStart.origX + dxPct));
+      manualBox.yPct = Math.max(0, Math.min(1 - manualBox.hPct, manualDragStart.origY + dyPct));
+    } else if (manualDragMode === 'resize') {
+      const dxPct = (p.x - manualDragStart.x) / w;
+      const dyPct = (p.y - manualDragStart.y) / h;
+      manualBox.wPct = Math.max(0.05, Math.min(1 - manualBox.xPct, manualDragStart.origW + dxPct));
+      manualBox.hPct = Math.max(0.05, Math.min(1 - manualBox.yPct, manualDragStart.origH + dyPct));
+    }
+    renderManualBox();
+    e.preventDefault();
+  }
+  function endDrag() { manualDragMode = null; }
+
+  rectEl.addEventListener('mousedown', startMove);
+  rectEl.addEventListener('touchstart', startMove, { passive: false });
+  handle.addEventListener('mousedown', startResize);
+  handle.addEventListener('touchstart', startResize, { passive: false });
+  window.addEventListener('mousemove', onMove);
+  window.addEventListener('touchmove', onMove, { passive: false });
+  window.addEventListener('mouseup', endDrag);
+  window.addEventListener('touchend', endDrag);
+  window.addEventListener('resize', renderManualBox);
+}
+setupManualBoxDrag();
+
+window.useManualSelection = async function() {
+  const nw = sourceImg.naturalWidth, nh = sourceImg.naturalHeight;
+  const cropX = Math.round(manualBox.xPct * nw);
+  const cropY = Math.round(manualBox.yPct * nh);
+  const cropW = Math.round(manualBox.wPct * nw);
+  const cropH = Math.round(manualBox.hPct * nh);
+
+  const outCanvas = document.createElement('canvas');
+  outCanvas.width = cropW;
+  outCanvas.height = cropH;
+  const ctx = outCanvas.getContext('2d');
+  ctx.drawImage(sourceImg, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
+
+  // NEW (Aug 2026, Alyx's request): run the manually-selected region back
+  // through the SAME real segmentation + jaw-curve + hair-matching
+  // pipeline automatic detection uses -- not just a flat rectangular
+  // crop. Since the customer deliberately boxed the face themselves,
+  // its center should reliably land on real face/skin -- used here as
+  // the flood-fill seed point and hair-sample anchor, the same role the
+  // detector's own box plays in the automatic path.
+  setStatus('⏳ Running your selection through the same real isolation pipeline...', 'working');
+  const assumedFaceBox = {
+    x: cropW * 0.3, y: cropH * 0.35, width: cropW * 0.4, height: cropH * 0.3
+  };
+  await runSegmentationPipeline(outCanvas, assumedFaceBox, 'Manual selection isolated');
+};
+
 async function runDetection() {
   if (!faceDetector) {
     setStatus('❌ Detection tool not ready yet -- wait a moment and try again.', 'error');
@@ -275,6 +404,25 @@ async function isolateFace(detection, label) {
   const cropCtx = cropCanvas.getContext('2d');
   cropCtx.drawImage(sourceImg, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
 
+  // Face position IN CROP-LOCAL coordinates, for the shared pipeline below.
+  const faceBoxInCrop = {
+    x: box.originX - cropX,
+    y: box.originY - cropY,
+    width: box.width,
+    height: box.height
+  };
+
+  await runSegmentationPipeline(cropCanvas, faceBoxInCrop, `Face ${label} isolated`);
+}
+
+// NEW (Aug 2026, Alyx's request): shared core so the manual box selection
+// gets the SAME real alpha/jaw/hair treatment as automatic detection,
+// instead of falling back to a flat rectangular crop with no refinement.
+// Only the SOURCE of the crop + assumed face position differs between the
+// two callers -- everything downstream (segmentation, flood-fill, jaw
+// curve, hair matching) is identical either way.
+async function runSegmentationPipeline(cropCanvas, faceBoxInCrop, readyMessage) {
+  const cropW = cropCanvas.width, cropH = cropCanvas.height;
   try {
     const segResult = imageSegmenter.segment(cropCanvas);
     const mask = segResult.confidenceMasks[0]; // foreground/person confidence, 0-1 per pixel
@@ -291,8 +439,8 @@ async function isolateFace(detection, label) {
     // NOT stop at the neck by itself, though -- shoulders/chest are also
     // physically connected with no gap, so the jaw-curve + hair-match
     // logic below handles that part properly instead of a flat line.
-    const faceMx = Math.floor(((box.originX + box.width / 2 - cropX) / cropW) * maskW);
-    const faceMy = Math.floor(((box.originY + box.height / 2 - cropY) / cropH) * maskH);
+    const faceMx = Math.floor(((faceBoxInCrop.x + faceBoxInCrop.width / 2) / cropW) * maskW);
+    const faceMy = Math.floor(((faceBoxInCrop.y + faceBoxInCrop.height / 2) / cropH) * maskH);
     const keep = new Uint8Array(maskW * maskH);
     const stack = [[faceMx, faceMy]];
     const visited = new Uint8Array(maskW * maskH);
@@ -346,13 +494,33 @@ async function isolateFace(detection, label) {
         if (jawPoints.length >= 3) jawCurve = jawPoints;
       }
     }
+    // NOTE: if faceLandmarker finds nothing (a real possibility on
+    // heavily stylized/illustrated art -- see the earlier isolation
+    // attempt on the painted "I DON'T KNOW" image), jawCurve stays null.
+    // applyJawAndHairCutoff already handles that gracefully -- everything
+    // the flood-fill found gets kept, same as before jaw detection existed.
 
-    // Hair sample: a small patch well above the face box (safely inside
-    // hair territory for essentially any hairstyle/length), centered
-    // horizontally on the detected face.
-    const hairSampleX = Math.round(((box.originX + box.width / 2) - cropX));
-    const hairSampleY = Math.max(4, Math.round((box.originY - cropY) - box.height * 0.5));
-    hairColor = sampleColorPatch(cropCanvas, hairSampleX, hairSampleY, Math.max(6, Math.round(box.width * 0.12)));
+    // NEW (Aug 2026, Alyx's idea): the old approach guessed a FIXED
+    // distance above the face and hoped it landed on real hair -- fails
+    // for a receding hairline, very short hair, or hair pulled back
+    // tight, where that guessed distance lands on bare forehead or
+    // background instead. Real fix: SCAN outward from known-skin points
+    // (between the eyebrows, and beside the nose toward each temple)
+    // watching for the first place color shifts sharply rather than
+    // gradually -- that jump IS the real hairline/hair-boundary,
+    // discovered from the actual photo rather than assumed from
+    // proportions. Same philosophy as using the real jaw contour
+    // instead of a guessed line, just finding the top/sides of hair
+    // instead of the bottom of the face.
+    hairColor = findHairColorViaGradientScan(cropCanvas, faceBoxInCrop);
+    if (!hairColor) {
+      // Safety net: gradient scan found no clear boundary anywhere
+      // (unusual, but possible on very low-contrast photos) -- fall
+      // back to the old fixed-offset guess rather than having nothing.
+      const hairSampleX = Math.round(faceBoxInCrop.x + faceBoxInCrop.width / 2);
+      const hairSampleY = Math.max(4, Math.round(faceBoxInCrop.y - faceBoxInCrop.height * 0.5));
+      hairColor = sampleColorPatch(cropCanvas, hairSampleX, hairSampleY, Math.max(6, Math.round(faceBoxInCrop.width * 0.12)));
+    }
 
     segState = { cropCanvas, keep, maskData, maskW, maskH, cropW, cropH, jawCurve, hairColor };
 
@@ -364,10 +532,10 @@ async function isolateFace(detection, label) {
     document.getElementById('neckCutoffCard').style.display = 'block';
     document.getElementById('templateCard').style.display = 'block';
     resultCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    setStatus('✅ Face ' + label + ' isolated with real transparency.', 'ready');
+    setStatus('✅ ' + readyMessage + ' with real transparency.' + (jawCurve ? '' : ' (No face landmarks found in this region -- jaw/hair boundary skipped, kept everything the segmentation found.)'), 'ready');
   } catch (err) {
     console.error('Segmentation failed:', err);
-    setStatus('❌ Could not isolate this face: ' + err.message, 'error');
+    setStatus('❌ Could not isolate this: ' + err.message, 'error');
   }
 }
 
@@ -384,6 +552,74 @@ function sampleColorPatch(canvas, cx, cy, radius) {
   }
   if (count === 0) return null;
   return { r: r / count, g: g / count, b: b / count };
+}
+
+// NEW (Aug 2026, Alyx's idea): walks pixel-by-pixel from a known-skin
+// starting point in one direction, comparing each new sample against a
+// short ROLLING AVERAGE of the last few samples (not just the single
+// previous pixel -- that would be too noisy, catching ordinary skin
+// texture/compression artifacts as false "shifts"). The first point
+// where a sample departs sharply from that rolling average is treated
+// as a genuine material change (skin -> hair), not a guessed distance.
+function scanForRadicalShift(canvas, startX, startY, dirX, dirY, maxSteps, threshold) {
+  const ctx = canvas.getContext('2d');
+  const recent = [];
+  let x = startX, y = startY;
+  for (let step = 0; step < maxSteps; step++) {
+    x += dirX; y += dirY;
+    if (x < 0 || y < 0 || x >= canvas.width || y >= canvas.height) return null;
+    const d = ctx.getImageData(Math.round(x), Math.round(y), 1, 1).data;
+    const color = { r: d[0], g: d[1], b: d[2] };
+    if (recent.length >= 3) {
+      const avg = {
+        r: recent.reduce((s, c) => s + c.r, 0) / recent.length,
+        g: recent.reduce((s, c) => s + c.g, 0) / recent.length,
+        b: recent.reduce((s, c) => s + c.b, 0) / recent.length
+      };
+      const dist = Math.sqrt((color.r - avg.r) ** 2 + (color.g - avg.g) ** 2 + (color.b - avg.b) ** 2);
+      if (dist > threshold) return { x: Math.round(x), y: Math.round(y) };
+    }
+    recent.push(color);
+    if (recent.length > 4) recent.shift();
+  }
+  return null;
+}
+
+// Combines three scans (up from between the eyebrows, left and right
+// from beside the nose) into one robust hair-color reference. Alyx's
+// point on averaging: even if hair isn't perfectly uniform (natural
+// highlights, lighting falloff), several samples from genuinely the
+// same material should still cluster in a non-radical range -- so this
+// takes a small patch just past EACH discovered boundary and averages
+// all of them together, rather than trusting any single sample alone.
+// Any direction that never finds a real shift (e.g. hair pulled back
+// tight on the sides) is simply skipped, not forced.
+function findHairColorViaGradientScan(cropCanvas, faceBoxInCrop) {
+  const eyeMidX = faceBoxInCrop.x + faceBoxInCrop.width / 2;
+  const eyeLevelY = faceBoxInCrop.y + faceBoxInCrop.height * 0.35;
+  const noseLevelY = faceBoxInCrop.y + faceBoxInCrop.height * 0.55;
+  const maxVerticalSteps = Math.round(faceBoxInCrop.height * 1.2);
+  const maxHorizontalSteps = Math.round(faceBoxInCrop.width * 0.9);
+  const THRESHOLD = 38;
+
+  const patches = [];
+  const up = scanForRadicalShift(cropCanvas, eyeMidX, eyeLevelY, 0, -1, maxVerticalSteps, THRESHOLD);
+  if (up) patches.push(sampleColorPatch(cropCanvas, up.x, up.y - 4, 5));
+
+  const left = scanForRadicalShift(cropCanvas, faceBoxInCrop.x + faceBoxInCrop.width * 0.15, noseLevelY, -1, 0, maxHorizontalSteps, THRESHOLD);
+  if (left) patches.push(sampleColorPatch(cropCanvas, left.x - 4, left.y, 5));
+
+  const right = scanForRadicalShift(cropCanvas, faceBoxInCrop.x + faceBoxInCrop.width * 0.85, noseLevelY, 1, 0, maxHorizontalSteps, THRESHOLD);
+  if (right) patches.push(sampleColorPatch(cropCanvas, right.x + 4, right.y, 5));
+
+  const validPatches = patches.filter(p => p !== null);
+  if (validPatches.length === 0) return null;
+
+  return {
+    r: validPatches.reduce((s, c) => s + c.r, 0) / validPatches.length,
+    g: validPatches.reduce((s, c) => s + c.g, 0) / validPatches.length,
+    b: validPatches.reduce((s, c) => s + c.b, 0) / validPatches.length
+  };
 }
 
 // Real melanin gradient stops -- pale through beige, tan, light brown, dark
