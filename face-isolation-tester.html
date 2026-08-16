@@ -513,7 +513,11 @@ async function runSegmentationPipeline(cropCanvas, faceBoxInCrop, readyMessage) 
     // instead of a guessed line, just finding the top/sides of hair
     // instead of the bottom of the face.
     hairColor = findHairColorViaGradientScan(cropCanvas, faceBoxInCrop);
-    if (!hairColor) {
+    let hairSeedPoints = null;
+    if (hairColor) {
+      hairSeedPoints = hairColor.seedPoints;
+      hairColor = hairColor.color;
+    } else {
       // Safety net: gradient scan found no clear boundary anywhere
       // (unusual, but possible on very low-contrast photos) -- fall
       // back to the old fixed-offset guess rather than having nothing.
@@ -522,7 +526,7 @@ async function runSegmentationPipeline(cropCanvas, faceBoxInCrop, readyMessage) 
       hairColor = sampleColorPatch(cropCanvas, hairSampleX, hairSampleY, Math.max(6, Math.round(faceBoxInCrop.width * 0.12)));
     }
 
-    segState = { cropCanvas, keep, maskData, maskW, maskH, cropW, cropH, jawCurve, hairColor };
+    segState = { cropCanvas, keep, maskData, maskW, maskH, cropW, cropH, jawCurve, hairColor, hairSeedPoints };
 
     document.getElementById('hairSensitivitySlider').value = 45;
     document.getElementById('hairSensitivityVal').textContent = '45';
@@ -603,22 +607,29 @@ function findHairColorViaGradientScan(cropCanvas, faceBoxInCrop) {
   const THRESHOLD = 38;
 
   const patches = [];
+  const seedPoints = [];
   const up = scanForRadicalShift(cropCanvas, eyeMidX, eyeLevelY, 0, -1, maxVerticalSteps, THRESHOLD);
-  if (up) patches.push(sampleColorPatch(cropCanvas, up.x, up.y - 4, 5));
+  if (up) { patches.push(sampleColorPatch(cropCanvas, up.x, up.y - 4, 5)); seedPoints.push({ x: up.x, y: up.y - 4 }); }
 
   const left = scanForRadicalShift(cropCanvas, faceBoxInCrop.x + faceBoxInCrop.width * 0.15, noseLevelY, -1, 0, maxHorizontalSteps, THRESHOLD);
-  if (left) patches.push(sampleColorPatch(cropCanvas, left.x - 4, left.y, 5));
+  if (left) { patches.push(sampleColorPatch(cropCanvas, left.x - 4, left.y, 5)); seedPoints.push({ x: left.x - 4, y: left.y }); }
 
   const right = scanForRadicalShift(cropCanvas, faceBoxInCrop.x + faceBoxInCrop.width * 0.85, noseLevelY, 1, 0, maxHorizontalSteps, THRESHOLD);
-  if (right) patches.push(sampleColorPatch(cropCanvas, right.x + 4, right.y, 5));
+  if (right) { patches.push(sampleColorPatch(cropCanvas, right.x + 4, right.y, 5)); seedPoints.push({ x: right.x + 4, y: right.y }); }
 
   const validPatches = patches.filter(p => p !== null);
   if (validPatches.length === 0) return null;
 
   return {
-    r: validPatches.reduce((s, c) => s + c.r, 0) / validPatches.length,
-    g: validPatches.reduce((s, c) => s + c.g, 0) / validPatches.length,
-    b: validPatches.reduce((s, c) => s + c.b, 0) / validPatches.length
+    color: {
+      r: validPatches.reduce((s, c) => s + c.r, 0) / validPatches.length,
+      g: validPatches.reduce((s, c) => s + c.g, 0) / validPatches.length,
+      b: validPatches.reduce((s, c) => s + c.b, 0) / validPatches.length
+    },
+    // NEW (Aug 2026, Alyx's request): the real discovered boundary
+    // points, kept as SEEDS for region-growing below -- not just used
+    // to compute one flat averaged reference color anymore.
+    seedPoints
   };
 }
 
@@ -705,6 +716,103 @@ function jawCurveYAtX(jawCurve, x) {
   return jawCurve[jawCurve.length - 1].y;
 }
 
+// NEW (Aug 2026, Alyx's idea): region-grows outward from confirmed real
+// hair (the seedPoints found by the gradient scan), through the
+// segmentation's own foreground pixels, below the jaw line only. Each
+// step only requires similarity to its IMMEDIATE PREDECESSOR -- not the
+// original seed -- so gradual tonal drift along a braid or strand
+// (lighting falloff, natural highlights) can accumulate across the
+// whole hair mass without ever needing to match one fixed reference.
+// A genuinely different material (skin) won't get pulled in, since its
+// neighboring pixels don't chain together the same continuous way hair's
+// own shading does.
+function growHairRegion(clippedKeep, keep, cropCanvas, maskW, maskH, cropW, cropH, jawCurve, seedPointsCropSpace, localThreshold) {
+  const ctx = cropCanvas.getContext('2d');
+  const fullImg = ctx.getImageData(0, 0, cropW, cropH).data;
+  function colorAt(mx, my) {
+    const px = Math.round((mx / maskW) * cropW);
+    const py = Math.round((my / maskH) * cropH);
+    const pIdx = (Math.min(cropH - 1, py) * cropW + Math.min(cropW - 1, px)) * 4;
+    return { r: fullImg[pIdx], g: fullImg[pIdx + 1], b: fullImg[pIdx + 2] };
+  }
+  const visited = new Uint8Array(maskW * maskH);
+  const stack = [];
+  seedPointsCropSpace.forEach(p => {
+    const mx = Math.floor((p.x / cropW) * maskW);
+    const my = Math.floor((p.y / cropH) * maskH);
+    if (mx >= 0 && my >= 0 && mx < maskW && my < maskH) stack.push([mx, my]);
+  });
+  while (stack.length) {
+    const [mx, my] = stack.pop();
+    const idx = my * maskW + mx;
+    if (visited[idx]) continue;
+    visited[idx] = 1;
+    if (!keep[idx]) continue; // must be real foreground per segmentation
+    const px = Math.round((mx / maskW) * cropW);
+    const py = Math.round((my / maskH) * cropH);
+    const jawY = jawCurve ? jawCurveYAtX(jawCurve, px) : null;
+    if (jawY !== null && py <= jawY) continue; // face zone handled separately, don't grow upward into it
+    clippedKeep[idx] = 1;
+    const curColor = colorAt(mx, my);
+    const neighbors = [[mx + 1, my], [mx - 1, my], [mx, my + 1], [mx, my - 1]];
+    for (const [nx, ny] of neighbors) {
+      if (nx < 0 || ny < 0 || nx >= maskW || ny >= maskH) continue;
+      const nIdx = ny * maskW + nx;
+      if (visited[nIdx] || !keep[nIdx]) continue;
+      const nColor = colorAt(nx, ny);
+      const dist = Math.sqrt((nColor.r - curColor.r) ** 2 + (nColor.g - curColor.g) ** 2 + (nColor.b - curColor.b) ** 2);
+      if (dist < localThreshold) stack.push([nx, ny]);
+    }
+  }
+}
+
+// NEW (Aug 2026, Alyx's find): fills small gaps that are fully enclosed
+// within the always-keep face zone (above the jaw line) -- a shadow
+// under the chin, or any other small isolated spot where the
+// segmentation model's own confidence dipped, reads as an island
+// completely surrounded by "definitely face" and is filled back in.
+// Any hole that touches the crop's outer edge is left alone, since that
+// could genuinely be an edge of the face rather than an enclosed gap.
+function fillEnclosedFaceGaps(clippedKeep, keep, maskW, maskH, cropW, cropH, jawCurve) {
+  const visited = new Uint8Array(maskW * maskH);
+  const maxGapSize = Math.max(20, Math.round(maskW * maskH * 0.04));
+  for (let startIdx = 0; startIdx < maskW * maskH; startIdx++) {
+    if (clippedKeep[startIdx] || visited[startIdx]) continue;
+    const startMy = Math.floor(startIdx / maskW), startMx = startIdx % maskW;
+    const startPx = Math.round((startMx / maskW) * cropW);
+    const startPy = Math.round((startMy / maskH) * cropH);
+    const startJawY = jawCurve ? jawCurveYAtX(jawCurve, startPx) : null;
+    if (startJawY !== null && startPy > startJawY) { visited[startIdx] = 1; continue; } // only ever fill gaps above the jaw
+
+    const group = [];
+    const stack = [startIdx];
+    let touchesBorder = false, allAboveJaw = true, tooBig = false;
+    visited[startIdx] = 1;
+    while (stack.length) {
+      const idx = stack.pop();
+      const my = Math.floor(idx / maskW), mx = idx % maskW;
+      group.push(idx);
+      if (mx === 0 || mx === maskW - 1 || my === 0 || my === maskH - 1) touchesBorder = true;
+      if (group.length > maxGapSize) { tooBig = true; break; }
+      const neighbors = [[mx + 1, my], [mx - 1, my], [mx, my + 1], [mx, my - 1]];
+      for (const [nx, ny] of neighbors) {
+        if (nx < 0 || ny < 0 || nx >= maskW || ny >= maskH) continue;
+        const nIdx = ny * maskW + nx;
+        if (clippedKeep[nIdx] || visited[nIdx]) continue;
+        const npx = Math.round((nx / maskW) * cropW);
+        const npy = Math.round((ny / maskH) * cropH);
+        const nJawY = jawCurve ? jawCurveYAtX(jawCurve, npx) : null;
+        if (nJawY !== null && npy > nJawY) allAboveJaw = false;
+        visited[nIdx] = 1;
+        stack.push(nIdx);
+      }
+    }
+    if (!touchesBorder && allAboveJaw && !tooBig && group.length > 0) {
+      group.forEach(idx => { clippedKeep[idx] = 1; });
+    }
+  }
+}
+
 function refinementRound(clippedKeep, cropCanvas, cropW, cropH, maskW, maskH, jawCurve, fixedThreshold) {
   const ctx = cropCanvas.getContext('2d');
   const fullImg = ctx.getImageData(0, 0, cropW, cropH).data;
@@ -748,19 +856,24 @@ function refinementRound(clippedKeep, cropCanvas, cropW, cropH, maskW, maskH, ja
 
 function applyJawAndHairCutoff(sensitivityVal) {
   if (!segState) return;
-  const { cropCanvas, keep, maskData, maskW, maskH, cropW, cropH, jawCurve, hairColor } = segState;
+  const { cropCanvas, keep, maskData, maskW, maskH, cropW, cropH, jawCurve, hairColor, hairSeedPoints } = segState;
 
-  // Sensitivity 0..100 -- how far a pixel's color can drift from the
-  // sampled hair color and still count as hair. Low = only very close
-  // matches (may lose some hair in shadow/highlight); high = looser
-  // matching (safer against losing real hair, but slightly more risk of
-  // keeping a sliver of skin that happens to be a similar tone).
+  // Sensitivity 0..100 -- now controls how far a pixel's color can drift
+  // from its IMMEDIATE NEIGHBOR (not a single fixed reference anymore --
+  // see growHairRegion below) and still count as a continuation of the
+  // same hair. Low = only very close local steps allowed; high = looser,
+  // more tolerant of shading/highlight variation along the way.
+  const localThreshold = 12 + (sensitivityVal / 100) * 55;
+  // Separate, looser threshold still used by the later outlier-cleanup
+  // pass (refinementRound) below -- that pass compares against a whole
+  // averaged region rather than one local neighbor step, so it warrants
+  // its own, more forgiving number.
   const colorThreshold = 20 + (sensitivityVal / 100) * 120;
 
   let clippedKeep = new Uint8Array(keep.length);
-  const ctx = cropCanvas.getContext('2d');
-  const fullImg = ctx.getImageData(0, 0, cropW, cropH).data;
 
+  // Pass 1: everything above the jaw curve (or everywhere, if no jaw
+  // data at all) is unambiguously face/head -- always kept, full stop.
   for (let my = 0; my < maskH; my++) {
     for (let mx = 0; mx < maskW; mx++) {
       const idx = my * maskW + mx;
@@ -768,24 +881,55 @@ function applyJawAndHairCutoff(sensitivityVal) {
       const px = Math.round((mx / maskW) * cropW);
       const py = Math.round((my / maskH) * cropH);
       const jawY = jawCurve ? jawCurveYAtX(jawCurve, px) : null;
+      if (jawY === null || py <= jawY) clippedKeep[idx] = 1;
+    }
+  }
 
-      if (jawY === null || py <= jawY) {
-        // Above (or no landmark data at all -- fall back to keeping
-        // everything the segmentation+flood-fill already found) --
-        // unambiguously face/head, always kept.
-        clippedKeep[idx] = 1;
-      } else if (hairColor) {
-        // Below the jaw line -- only keep if it genuinely matches the
-        // sampled hair color (hanging hair), not skin at the same height.
+  // NEW (Aug 2026, Alyx's idea): the old approach compared every
+  // below-jaw pixel against ONE FIXED reference color -- correctly
+  // rejects skin, but also rejects real hair once natural shading along
+  // a braid or strand drifts far enough from that one original sample,
+  // even though each step along the way was a gradual, continuous
+  // change. Real fix: REGION-GROW outward from confirmed real hair
+  // (the boundary points the gradient scan actually found), where each
+  // new pixel only needs to be close to its immediate neighbor already
+  // confirmed as hair -- not the original distant sample. This lets
+  // gradual tonal drift accumulate across a whole braid or strand
+  // (exactly like water finding its way through connected terrain)
+  // while a genuinely different material (skin) still won't get pulled
+  // in, since neighboring pixels there don't chain together the same way.
+  if (hairSeedPoints && hairSeedPoints.length > 0) {
+    growHairRegion(clippedKeep, keep, cropCanvas, maskW, maskH, cropW, cropH, jawCurve, hairSeedPoints, localThreshold);
+  } else if (hairColor) {
+    // Fallback for when no real seed points were ever found (e.g. a
+    // manual selection where the scan came up empty) -- same
+    // fixed-reference method as before, better than nothing.
+    const ctx = cropCanvas.getContext('2d');
+    const fullImg = ctx.getImageData(0, 0, cropW, cropH).data;
+    for (let my = 0; my < maskH; my++) {
+      for (let mx = 0; mx < maskW; mx++) {
+        const idx = my * maskW + mx;
+        if (!keep[idx] || clippedKeep[idx]) continue;
+        const px = Math.round((mx / maskW) * cropW);
+        const py = Math.round((my / maskH) * cropH);
+        const jawY = jawCurve ? jawCurveYAtX(jawCurve, px) : null;
+        if (jawY !== null && py <= jawY) continue;
         const pIdx = (py * cropW + px) * 4;
         const dr = fullImg[pIdx] - hairColor.r;
         const dg = fullImg[pIdx + 1] - hairColor.g;
         const db = fullImg[pIdx + 2] - hairColor.b;
         const dist = Math.sqrt(dr * dr + dg * dg + db * db);
-        clippedKeep[idx] = dist < colorThreshold ? 1 : 0;
+        if (dist < colorThreshold) clippedKeep[idx] = 1;
       }
     }
   }
+
+  // NEW (Aug 2026, Alyx's find): a small isolated gap fully enclosed
+  // within the always-keep face zone (e.g. a shadow under the chin that
+  // confused the segmentation model's own confidence) is almost
+  // certainly noise, not real background -- fill any such small,
+  // fully-surrounded hole back in.
+  fillEnclosedFaceGaps(clippedKeep, keep, maskW, maskH, cropW, cropH, jawCurve);
 
   // NEW (Aug 2026, Alyx's idea): the first pass above only ever compared
   // against ONE small sample patch taken near the top of the head --
