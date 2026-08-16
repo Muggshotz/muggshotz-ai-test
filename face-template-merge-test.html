@@ -96,6 +96,11 @@
     <div id="facePrompt">👤 Tap to choose the isolated face PNG</div>
   </div>
   <input type="file" id="faceInput" accept="image/*" style="display:none" onchange="handleFile(event,'face')"/>
+  <div id="facePreviewWrap" style="display:none;margin-top:10px;text-align:center">
+    <div class="note" style="margin-top:0">Selected:</div>
+    <div class="checker-bg" style="display:inline-block;padding:6px"><img id="facePreview" style="max-height:160px;border-radius:6px"/></div>
+    <div style="margin-top:6px"><a href="#" onclick="document.getElementById('faceInput').click();return false" style="color:#7ab8ff;font-size:.85rem">🔄 Change</a></div>
+  </div>
 </div>
 
 <div class="card">
@@ -105,11 +110,11 @@
     <div id="templatePrompt">🖼️ Tap to choose the template image</div>
   </div>
   <input type="file" id="templateInput" accept="image/*" style="display:none" onchange="handleFile(event,'template')"/>
-</div>
-
-<div class="preview-row" id="previewRow" style="display:none">
-  <div><div class="note">Face</div><div class="checker-bg"><img id="facePreview"/></div></div>
-  <div><div class="note">Template</div><div class="checker-bg"><img id="templatePreview"/></div></div>
+  <div id="templatePreviewWrap" style="display:none;margin-top:10px;text-align:center">
+    <div class="note" style="margin-top:0">Selected:</div>
+    <div class="checker-bg" style="display:inline-block;padding:6px"><img id="templatePreview" style="max-height:160px;border-radius:6px"/></div>
+    <div style="margin-top:6px"><a href="#" onclick="document.getElementById('templateInput').click();return false" style="color:#7ab8ff;font-size:.85rem">🔄 Change</a></div>
+  </div>
 </div>
 
 <div class="card">
@@ -331,15 +336,14 @@ function handleFile(event, which) {
       faceDataUrl = dataUrl;
       document.getElementById('faceZone').classList.add('has-image');
       document.getElementById('facePreview').src = dataUrl;
+      document.getElementById('facePreviewWrap').style.display = 'block';
     } else {
       templateDataUrl = dataUrl;
       document.getElementById('templateZone').classList.add('has-image');
       document.getElementById('templatePreview').src = dataUrl;
+      document.getElementById('templatePreviewWrap').style.display = 'block';
     }
-    if (faceDataUrl && templateDataUrl) {
-      document.getElementById('previewRow').style.display = 'flex';
-      document.getElementById('runBtn').disabled = false;
-    }
+    document.getElementById('runBtn').disabled = !(faceDataUrl && templateDataUrl);
   };
   reader.readAsDataURL(file);
 }
