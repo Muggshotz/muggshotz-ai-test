@@ -3852,9 +3852,9 @@ function pickPreGenMugSize(size){
 // Blue at 11oz), since this thumbnail's job is showing the style's
 // general look, not a size-accurate color availability.
 const PRE_GEN_MUG_STYLE_THUMBNAILS = {
-  "Trimmed": "mug-trimmed-15oz-cambridge-blue.png",
-  "Accented": "mug-accented-11oz-cambridge-blue.png",
-  "Color Pop": "mug-colorpop-cambridge-blue.png"
+  "Trimmed": "style-trimmed.jpg",
+  "Accented": "style-accented.jpg",
+  "Color Pop": "style-color-pop.jpg"
 };
 
 function renderPreGenMugStyleGrid(){
@@ -3873,7 +3873,7 @@ function renderPreGenMugStyleGrid(){
     const thumb=document.createElement('img');
     thumb.src=PRE_GEN_MUG_STYLE_THUMBNAILS[styleName];
     thumb.alt=styleName;
-    thumb.style.cssText='width:100%;border-radius:8px;background:#fff;margin-bottom:6px;filter:brightness(1.15) contrast(1.12) saturate(1.2);box-shadow:0 2px 10px rgba(0,0,0,.45)';
+    thumb.style.cssText='width:100%;border-radius:8px;background:#fff;margin-bottom:6px;box-shadow:0 2px 10px rgba(0,0,0,.45)';
     btn.appendChild(thumb);
     const label=document.createElement('div');
     label.textContent=styleName;
