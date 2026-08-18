@@ -4118,7 +4118,7 @@ function finishPreGenMugColorPick(){
 function showDesignMethodCard(){
   const card=document.getElementById('designMethodCard');
   if(card)card.style.display='block';
-  smoothScrollToTarget('designMethodCard','center');
+  smoothScrollToTarget('designMethodCard','start');
 }
 
 // Tapping a prop tile. If Design By Description is checked, the
@@ -4303,6 +4303,7 @@ async function generateCoverMe(){
     return;
   }
 
+  document.body.classList.remove('covermegen-focus');
   document.getElementById('coverMeGenerateBtn').disabled=true;
   startGenTimer();
   showGenerationInProgress();
