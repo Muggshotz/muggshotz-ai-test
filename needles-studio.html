@@ -4233,12 +4233,10 @@ function triggerCoverMePhotoChange(){
 function handleCoverMePhotoChange(event){
   const file=event.target.files[0];
   if(!file)return;
-  const reader=new FileReader();
-  reader.onload=(e)=>{
-    coverMeOverridePhoto=e.target.result;
+  resizeImageFile(file,1280).then((dataUrl)=>{
+    coverMeOverridePhoto=dataUrl;
     updateCoverMePreviewImg();
-  };
-  reader.readAsDataURL(file);
+  });
 }
 
 function toggleCoverMeDescriptionBox(){
@@ -4303,7 +4301,7 @@ async function generateCoverMe(){
 
   try{
     currentGenerationController=new AbortController();
-    const magazineDataUrl=await urlToDataURL(selectedMagazine);
+    const magazineDataUrl=await magazineAssetToJpegDataURL(selectedMagazine,1024);
     const descBox=document.getElementById('coverMeDescriptionBox');
     const faceNote=(descBox && descBox.value.trim())
       ? ` The customer notes: "${descBox.value.trim()}" -- use this to identify which face in the photo to use if there is more than one.`
@@ -6739,6 +6737,35 @@ function urlToDataURL(url){
       reader.onerror=reject;
       reader.readAsDataURL(blob);
     }));
+}
+
+// Static assets like the Got You Covered magazine files are .webp --
+// unlike urlToDataURL() (used elsewhere for already-generated PNG/JPEG
+// AI output, left untouched), this one re-encodes to JPEG via canvas
+// before sending to the real generation API, in case webp reference
+// images aren't handled the same way server-side. Also caps the
+// dimension, the same safeguard the standalone Face It test tool
+// already needed after hitting Vercel's request-size limit.
+function magazineAssetToJpegDataURL(url,maxDimension){
+  return fetch(url)
+    .then(r=>r.blob())
+    .then(blob=>createImageBitmap(blob))
+    .then(bitmap=>{
+      let {width,height}=bitmap;
+      if(width>height && width>maxDimension){
+        height=Math.round(height*(maxDimension/width));
+        width=maxDimension;
+      } else if(height>maxDimension){
+        width=Math.round(width*(maxDimension/height));
+        height=maxDimension;
+      }
+      const canvas=document.createElement('canvas');
+      canvas.width=width;
+      canvas.height=height;
+      const ctx=canvas.getContext('2d');
+      ctx.drawImage(bitmap,0,0,width,height);
+      return canvas.toDataURL('image/jpeg',0.9);
+    });
 }
 
 async function applyEdgeFadeToImageUrl(url, edges, fadeColorHex='#FFFFFF'){
