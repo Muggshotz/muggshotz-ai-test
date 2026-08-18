@@ -860,7 +860,41 @@ body.product-focus .card:not(#productCard){opacity:.35;filter:brightness(.6) sat
 </div>
 </div>
 
-<div class="card" id="travelMugVariantCard" style="display:none">
+<div class="card" id="designMethodCard" style="display:none">
+<div class="card-title">✨ Cover Me · Let's Just Face It · Home Sweet Home</div>
+<div class="note" style="margin-top:0;margin-bottom:.9rem">Would you like to try out some of our fun props? Click on one for more options.</div>
+<div style="display:flex;flex-direction:column;gap:10px">
+<div class="btn-select" id="designMethodCoverMeBtn" style="padding:1rem .8rem;text-align:left" onclick="pickDesignMethod('coverMe')">
+<span class="icon">📰</span><b>Cover Me</b>
+<div class="note" style="margin-top:4px;color:#888">Your face, on the cover of a real magazine.</div>
+</div>
+<div class="btn-select" id="designMethodFaceItBtn" style="padding:1rem .8rem;text-align:left" onclick="pickDesignMethod('faceIt')">
+<span class="icon">🎭</span><b>Let's Just Face It</b>
+<div class="note" style="margin-top:4px;color:#888">It was always just a matter of time.</div>
+</div>
+<div class="btn-select" id="designMethodHomeBtn" style="padding:1rem .8rem;text-align:left" onclick="pickDesignMethod('homeSweetHome')">
+<span class="icon">🪟</span><b>Home Sweet Home</b>
+<div class="note" style="margin-top:4px;color:#888">Coffee in hand, greeting the neighbors.</div>
+</div>
+</div>
+<div style="margin-top:1rem;padding-top:1rem;border-top:1px solid #333">
+<label style="display:flex;align-items:center;gap:8px;cursor:pointer" onclick="event.stopPropagation()">
+<input type="checkbox" id="designByDescriptionCheck" onchange="toggleDesignByDescription()" style="width:18px;height:18px">
+<span>Design By Description</span>
+<span class="info-toggle" onclick="event.stopPropagation();toggleDesignByDescriptionInfo()" style="cursor:pointer;color:#7ab8ff">ⓘ</span>
+</label>
+<div class="note" id="designByDescriptionInfo" style="display:none;margin-top:.6rem">You may, if you wish, also include this to add any text or special instructions for our artist, Needles. You can select this option along with any of the props above, or select it by itself without choosing a prop. After you provide your description and click Satisfied, we'll create a custom design just for you.</div>
+<button type="button" class="generate-btn" id="designByDescriptionContinueBtn" style="display:none;margin-top:.9rem" onclick="continueWithDescriptionOnly()">Continue</button>
+</div>
+<button type="button" class="download-btn" style="margin-top:1rem" onclick="designMethodBack()">← Return</button>
+</div>
+
+<div class="card" id="designMethodComingSoonCard" style="display:none">
+<div class="card-title" id="designMethodComingSoonTitle"></div>
+<div class="note" style="margin-top:0">This design method is still being built — check back soon! In the meantime, try Cover Me or Design By Description.</div>
+<button type="button" class="download-btn" style="margin-top:1rem" onclick="designMethodComingSoonBack()">← Back</button>
+</div>
+
 <div class="card-title">🍶 Which Travel Mug?</div>
 <div class="note" style="margin-top:0;margin-bottom:.9rem">Pick which travel mug you're getting before generating — the shape and print layout differ enough between them that we need this locked in first.</div>
 <div class="theme-grid" id="travelMugVariantGrid"></div>
@@ -1722,6 +1756,21 @@ function confirmIdeaSatisfied(){
   pauseIdeaGuideCycle();
   document.body.classList.remove('initial-upload-focus');
   document.body.classList.remove('idea-focus');
+  // NEW: if the customer reached the description panel via the Design
+  // Method screen (either "prop + description" or "description alone"),
+  // send them back to wherever THAT flow needs them next instead of the
+  // old default (Product selection) -- this only applies to that new
+  // entry point; every other existing path into ideaCard is unaffected.
+  if(ideaReturnTarget){
+    const target=ideaReturnTarget;
+    ideaReturnTarget=null;
+    if(target==='descriptionOnly'){
+      smoothScrollToTarget('panoramaFadeCard','center');
+    } else {
+      goToDesignMethodScreen(target);
+    }
+    return;
+  }
   document.body.classList.add('product-focus');
   smoothScrollToTarget('productCard','center');
 }
@@ -3320,6 +3369,16 @@ let pathCanvasReady=false;
 let mugPrintMode='three-panel';
 let mugPrintModeTouched=false;
 let printFormatPopupShown=false;
+// Design Method screen (Cover Me / Let's Just Face It / Home Sweet Home
+// / Design By Description) -- replaces the old Three Panels/Wraparound
+// popup as the next decision after Color for coffee mugs specifically.
+// selectedDesignMethod is null until a prop tile is tapped; ideaReturnTarget
+// tells confirmIdeaSatisfied() where to send the customer back to when
+// they finish the description panel via this screen's re-offered
+// checkbox, instead of its old hardcoded productCard destination.
+let selectedDesignMethod=null;
+let designByDescriptionChecked=false;
+let ideaReturnTarget=null;
 let frameGuidancePopupShown=false;
 let ideaBoxIntroShown=false;
 // NEW (Aug 2026, Alyx's request): Mug is pre-selected by default, but
@@ -3553,15 +3612,11 @@ function refreshMugPrintModeVisibility(){
   if(!card)return;
   let show;
   if(product==='mug'){
-    // UPDATED (Aug 2026, Alyx's request): Size, then Style, then Color
-    // are now mandatory before Three Panels/Wraparound is even shown --
-    // same "variant determines everything downstream" pattern water
-    // bottle already uses via preGenTravelVariant. Color specifically
-    // gates on mugColorFinishedPreGen (pressing the Finish button),
-    // not mugColorChosenPreGen (just tapping a color) -- otherwise the
-    // page would yank the customer forward the instant they tap their
-    // first color, before they've had a chance to try a few others.
-    show=mugColorFinishedPreGen;
+    // UPDATED: coffee mugs no longer use this Three Panels/Wraparound
+    // card at all -- that decision moved post-generation (see
+    // designMethodCard / finishPreGenMugColorPick). Water bottle is
+    // untouched below and still uses this card as before.
+    show=false;
   } else if(product==='water bottle'){
     show=!!preGenTravelVariant && preGenTravelVariant!=='travel-mug-40oz-insulated';
   } else {
@@ -3948,18 +4003,98 @@ function finishPreGenMugColorPick(){
   refreshMugStyleCardVisibility();
   refreshMugPrintModeVisibility();
   suspendGuidedScrollsForGeneration();
-  // Size, Style, and Color are now all locked in -- this is the actual
-  // moment Three Panels/Wraparound becomes the next real decision, same
-  // spot the water-bottle flow fires its version of this popup.
-  if(!printFormatPopupShown){
-    printFormatPopupShown=true;
-    showGuidanceAlert(
-      'Pick your print format — "Up to Three Panels" or "Wraparound." This changes how your artwork gets composed, so it needs to be chosen first.',
-      ()=>{ smoothScrollToTarget('mugPrintModeCard','center'); }
-    );
+  // Size, Style, and Color are now all locked in. UPDATED: the old
+  // "Three Panels/Wraparound" popup no longer fires here for coffee
+  // mugs -- what the image actually IS (Cover Me / Let's Just Face It
+  // / Home Sweet Home / plain description) has to be decided before
+  // where it goes on the mug, so that choice now moves post-generation
+  // instead. This card is shown/scrolled to directly.
+  showDesignMethodCard();
+}
+
+function showDesignMethodCard(){
+  const card=document.getElementById('designMethodCard');
+  if(card)card.style.display='block';
+  smoothScrollToTarget('designMethodCard','center');
+}
+
+// Tapping a prop tile. If Design By Description is checked, the
+// customer goes through the description panel FIRST, then lands on
+// the chosen method's screen; ideaReturnTarget tells
+// confirmIdeaSatisfied() where "Satisfied" should send them instead
+// of its old default (productCard). If unchecked, they go straight
+// to the method's screen.
+function pickDesignMethod(method){
+  selectedDesignMethod=method;
+  document.querySelectorAll('#designMethodCard .btn-select').forEach(b=>b.classList.remove('selected'));
+  const btnId={coverMe:'designMethodCoverMeBtn',faceIt:'designMethodFaceItBtn',homeSweetHome:'designMethodHomeBtn'}[method];
+  const btn=document.getElementById(btnId);
+  if(btn)btn.classList.add('selected');
+  if(designByDescriptionChecked){
+    ideaReturnTarget=method;
+    document.getElementById('designMethodCard').style.display='none';
+    smoothScrollToTarget('ideaCard','center',()=>{
+      document.getElementById('ideaDesc')?.focus();
+    });
   } else {
-    smoothScrollToTarget('mugPrintModeCard','center');
+    goToDesignMethodScreen(method);
   }
+}
+
+function toggleDesignByDescription(){
+  designByDescriptionChecked=document.getElementById('designByDescriptionCheck').checked;
+  const continueBtn=document.getElementById('designByDescriptionContinueBtn');
+  if(continueBtn)continueBtn.style.display=designByDescriptionChecked?'block':'none';
+}
+
+function toggleDesignByDescriptionInfo(){
+  const info=document.getElementById('designByDescriptionInfo');
+  if(info)info.style.display=(info.style.display==='none')?'block':'none';
+}
+
+// Checkbox checked with no prop tile picked -- description-only path,
+// ends at the Edge-Treatment step rather than any prop screen.
+function continueWithDescriptionOnly(){
+  ideaReturnTarget='descriptionOnly';
+  document.getElementById('designMethodCard').style.display='none';
+  smoothScrollToTarget('ideaCard','center',()=>{
+    document.getElementById('ideaDesc')?.focus();
+  });
+}
+
+function designMethodBack(){
+  document.getElementById('designMethodCard').style.display='none';
+  mugColorFinishedPreGen=false;
+  refreshMugStyleCardVisibility();
+  smoothScrollToTarget('preGenMugMockupImg','center');
+}
+
+function designMethodComingSoonBack(){
+  document.getElementById('designMethodComingSoonCard').style.display='none';
+  showDesignMethodCard();
+}
+
+// Routes to each method's actual screen. Only Cover Me is real this
+// pass -- Let's Just Face It and Home Sweet Home show a Coming Soon
+// placeholder until their own screens are built.
+function goToDesignMethodScreen(method){
+  document.getElementById('designMethodCard').style.display='none';
+  if(method==='coverMe'){
+    showCoverMeCard();
+  } else {
+    const titleEl=document.getElementById('designMethodComingSoonTitle');
+    if(titleEl)titleEl.textContent=(method==='faceIt')?'🎭 Let\'s Just Face It':'🪟 Home Sweet Home';
+    document.getElementById('designMethodComingSoonCard').style.display='block';
+    smoothScrollToTarget('designMethodComingSoonCard','center');
+  }
+}
+
+// Placeholder until Phase 3 builds the real Cover Me screen.
+function showCoverMeCard(){
+  const titleEl=document.getElementById('designMethodComingSoonTitle');
+  if(titleEl)titleEl.textContent='📰 Cover Me';
+  document.getElementById('designMethodComingSoonCard').style.display='block';
+  smoothScrollToTarget('designMethodComingSoonCard','center');
 }
 
 function updatePreGenMugMockupImg(){
