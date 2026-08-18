@@ -674,6 +674,10 @@ body.product-focus .card:not(#productCard){opacity:.35;filter:brightness(.6) sat
 <div class="card snap-section" id="uploadPhotoCard" data-snap-index="0"><div class="card-title">📸 Upload Photo</div>
 <div style="font-size:11px;color:#777;letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px;text-align:center">Photo 1</div>
 <div class="needles-clipboard"><div class="needles-clip"></div><div class="upload-zone needles-polaroid" id="uploadZone" onclick="document.getElementById('fileInput').click()"><div style="font-size:32px;color:#555;margin-bottom:8px">👤</div><div class="upload-text">Tap here to upload a photo</div><div class="upload-sub">Clear face photo works best</div></div></div>
+<div id="postUploadForkRow" style="display:none;gap:8px;margin-top:.9rem">
+<button type="button" class="btn-select" style="flex:1;padding:1rem .6rem" onclick="pickTrackProduct()">🛒 Select Your Product</button>
+<button type="button" class="btn-select" style="flex:1;padding:1rem .6rem" onclick="pickTrackDescribe()">🖌️ Create Your Design</button>
+</div>
 <div id="workshopRecallRow" style="display:none;gap:8px;margin-top:.6rem">
 <button class="download-btn" id="recallPhotoBtn" style="flex:1;margin-top:0" onclick="recallLastPhotoUsed()">↻ Use Last Photo Uploaded</button>
 <button class="download-btn" id="recallGeneratedBtn" style="flex:1;margin-top:0" onclick="recallLastGeneratedImage()">↻ Use Last Design Generated</button>
@@ -1800,17 +1804,37 @@ function startPhotoGuide(){
   setTimeout(()=>{
     if(photoGuideActive)smoothScrollToTarget('startOverBtn','end');
   },150);
-  // UPDATED (Aug 2026, Alyx's flow redesign): Frame/Window Sill are no
-  // longer offered at this point in the flow at all -- they move to
-  // their own dedicated screens after generation. In its place, this is
-  // now where the idea-description guidance popup fires, since guiding
-  // the customer toward describing their idea is the very next real
-  // step in the new flow, right after the photo itself.
+  // Track 1/Track 2 fork -- the customer decides here whether they
+  // want to pick a product first or jump straight to describing their
+  // own idea. Neither track auto-advances on its own; both wait for an
+  // explicit tap. See pickTrackProduct()/pickTrackDescribe() below.
+  showPostUploadFork();
+}
+
+function showPostUploadFork(){
+  const row=document.getElementById('postUploadForkRow');
+  if(row)row.style.display='flex';
+}
+
+// Track 1: skip the description step entirely, go straight to
+// choosing a product -- the idea box stays empty/unused, which
+// generate() already handles fine (falls back to a default polished
+// caricature description when idea is blank).
+function pickTrackProduct(){
+  photoGuideActive=false;
+  document.getElementById('postUploadForkRow').style.display='none';
+  document.body.classList.remove('initial-upload-focus');
+  document.body.classList.remove('idea-focus');
+  document.body.classList.add('product-focus');
+  smoothScrollToTarget('productCard','center');
+}
+
+// Track 2: exactly the flow that used to fire automatically after
+// every upload -- now only fires once the customer deliberately picks
+// this path instead.
+function pickTrackDescribe(){
+  document.getElementById('postUploadForkRow').style.display='none';
   setTimeout(showIdeaBoxIntroIfNeeded,800);
-  // UPDATED (Aug 2026, Alyx's request): reduced from 10000ms to 4000ms --
-  // once a photo is uploaded, the customer has already made a deliberate
-  // choice; there's no need to sit on that screen for a full 10 seconds
-  // before the guide nudges them toward the idea box.
   schedulePhotoGuideAdvance(4000);
 }
 
