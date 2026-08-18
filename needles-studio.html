@@ -1683,7 +1683,7 @@ function startNeedlesStage(){
   resetNeedlesPresentationState();
   needlesResetSession();
 
-  needlesOriginalReferenceImage=uploadedImageData;
+  needlesOriginalReferenceImage=coverMeOverridePhoto||uploadedImageData;
   const referencePhoto=document.getElementById('needlesReferencePhoto');
   if(referencePhoto && needlesOriginalReferenceImage){
     referencePhoto.src=needlesOriginalReferenceImage;
@@ -4317,7 +4317,6 @@ async function generateCoverMe(){
       signal:currentGenerationController.signal
     });
 
-    stopNeedlesStage();
     stopGenTimerSuccess();
     clearStatus();
     document.getElementById('cancelBtn').style.display='none';
