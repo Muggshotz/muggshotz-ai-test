@@ -868,17 +868,20 @@ body.product-focus .card:not(#productCard){opacity:.35;filter:brightness(.6) sat
 <div class="card-title">✨ Cover Me · Let's Just Face It · Home Sweet Home</div>
 <div class="note" style="margin-top:0;margin-bottom:.9rem">Would you like to try out some of our fun props? Click on one for more options.</div>
 <div style="display:flex;flex-direction:column;gap:10px">
-<div class="btn-select" id="designMethodCoverMeBtn" style="padding:1rem .8rem;text-align:left" onclick="pickDesignMethod('coverMe')">
-<span class="icon">📰</span><b>Cover Me</b>
-<div class="note" style="margin-top:4px;color:#888">Your face, on the cover of a real magazine.</div>
+<div class="btn-select" id="designMethodCoverMeBtn" style="padding:0;text-align:center;overflow:hidden" onclick="pickDesignMethod('coverMe')">
+<img src="designmethod-covered.jpg" style="width:100%;display:block"/>
+<div style="padding:.8rem"><b>Cover Me</b>
+<div class="note" style="margin-top:4px;color:#888">Your face, on the cover of a real magazine.</div></div>
 </div>
-<div class="btn-select" id="designMethodFaceItBtn" style="padding:1rem .8rem;text-align:left" onclick="pickDesignMethod('faceIt')">
-<span class="icon">🎭</span><b>Let's Just Face It</b>
-<div class="note" style="margin-top:4px;color:#888">It was always just a matter of time.</div>
+<div class="btn-select" id="designMethodFaceItBtn" style="padding:0;text-align:center;overflow:hidden" onclick="pickDesignMethod('faceIt')">
+<img src="designmethod-faceit.jpg" style="width:100%;display:block"/>
+<div style="padding:.8rem"><b>Let's Just Face It</b>
+<div class="note" style="margin-top:4px;color:#888">It was always just a matter of time.</div></div>
 </div>
-<div class="btn-select" id="designMethodHomeBtn" style="padding:1rem .8rem;text-align:left" onclick="pickDesignMethod('homeSweetHome')">
-<span class="icon">🪟</span><b>Home Sweet Home</b>
-<div class="note" style="margin-top:4px;color:#888">Coffee in hand, greeting the neighbors.</div>
+<div class="btn-select" id="designMethodHomeBtn" style="padding:0;text-align:center;overflow:hidden" onclick="pickDesignMethod('homeSweetHome')">
+<img src="designmethod-home.jpg" style="width:100%;display:block"/>
+<div style="padding:.8rem"><b>Home Sweet Home</b>
+<div class="note" style="margin-top:4px;color:#888">Coffee in hand, greeting the neighbors.</div></div>
 </div>
 </div>
 <div style="margin-top:1rem;padding-top:1rem;border-top:1px solid #333">
@@ -4317,6 +4320,20 @@ async function generateCoverMe(){
       signal:currentGenerationController.signal
     });
 
+    // Three gaps found by comparing against the proven working generate()
+    // flow: (1) generation-active dims/disables every card except
+    // uploadPhotoCard (including coverMeCard, where the approve buttons
+    // live) -- it's normally cleared by stopNeedlesStage(), but that
+    // function also sets needlesPhase='stopped', which blocks
+    // presentFinishedNeedlesArt()'s reveal if called first. Clearing
+    // just this one class directly avoids both problems at once.
+    // (2) the clipboard/upload-zone was left stuck showing "Creation in
+    // progress" forever, since nothing ever reset it back to the real
+    // photo. (3) the approve buttons sit far down inside coverMeCard,
+    // away from the easel where the reveal actually happens, so the
+    // customer would never see them without an explicit scroll.
+    document.body.classList.remove('generation-active');
+    renderUploadZoneImage(photo);
     stopGenTimerSuccess();
     clearStatus();
     document.getElementById('cancelBtn').style.display='none';
@@ -4324,6 +4341,7 @@ async function generateCoverMe(){
 
     presentFinishedNeedlesArt(resultImageUrl,()=>{
       document.getElementById('coverMeApproveRow').style.display='flex';
+      smoothScrollToTarget('coverMeApproveRow','center');
     });
     coverMePendingResultUrl=resultImageUrl;
 
