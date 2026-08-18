@@ -413,6 +413,7 @@ body #accessorizeCard{opacity:1!important;filter:none!important;pointer-events:a
    own focus stages -- frame selection now works throughout. */
 body #frameSectionCard{opacity:1!important;filter:none!important;pointer-events:auto!important}
 body.print-mode-focus .card:not(#mugPrintModeCard){opacity:.28;filter:brightness(.55) saturate(.7);pointer-events:none;transition:opacity .5s,filter .5s}
+body.covermegen-focus .card:not(#coverMeCard){opacity:.28;filter:brightness(.55) saturate(.7);pointer-events:none;transition:opacity .5s,filter .5s}
 body.final-generate-focus .card:not(#uploadPhotoCard){opacity:.35;filter:brightness(.6) saturate(.75);transition:opacity .5s,filter .5s}
 body.initial-upload-focus .card:not(#uploadPhotoCard){opacity:.35;filter:brightness(.6) saturate(.75);pointer-events:none;transition:opacity .5s,filter .5s}
 body.idea-focus .card:not(#ideaCard){opacity:.35;filter:brightness(.6) saturate(.75);pointer-events:none;transition:opacity .5s,filter .5s}
@@ -826,8 +827,14 @@ body.product-focus .card:not(#productCard){opacity:.35;filter:brightness(.6) sat
 <div class="card-title">☕ Coffee Mug Size</div>
 <div class="note-prominent" style="margin-top:0;margin-bottom:.9rem">Pick your size first — this determines the price for every style below.</div>
 <div class="grid2">
-<div class="btn-select" id="preGenSize11Btn" onclick="pickPreGenMugSize('11oz')">11oz</div>
-<div class="btn-select" id="preGenSize15Btn" onclick="pickPreGenMugSize('15oz')">15oz</div>
+<div class="btn-select" id="preGenSize11Btn" style="padding:.5rem" onclick="pickPreGenMugSize('11oz')">
+<img src="size-11oz.jpg" style="width:100%;border-radius:6px;background:#fff;margin-bottom:6px"/>
+11oz
+</div>
+<div class="btn-select" id="preGenSize15Btn" style="padding:.5rem" onclick="pickPreGenMugSize('15oz')">
+<img src="size-15oz.jpg" style="width:100%;border-radius:6px;background:#fff;margin-bottom:6px"/>
+15oz
+</div>
 </div>
 <button type="button" class="download-btn" style="margin-top:1rem" onclick="mugSizeLockBack()">← Back</button>
 </div>
@@ -4229,6 +4236,8 @@ function pickMagazine(filename){
     b.classList.toggle('selected',b.dataset.magazine===filename);
   });
   document.getElementById('coverMeGenerateBtn').style.display='block';
+  document.body.classList.add('covermegen-focus');
+  smoothScrollToTarget('coverMeGenerateBtn','center');
 }
 
 function updateCoverMePreviewImg(){
@@ -4254,6 +4263,7 @@ function showCoverMeCard(){
   selectedMagazine=null;
   coverMeOverridePhoto=null;
   coverMePendingResultUrl=null;
+  document.body.classList.remove('covermegen-focus');
   document.getElementById('coverMeGenerateBtn').style.display='none';
   document.getElementById('coverMeGenerateBtn').disabled=false;
   document.getElementById('coverMeApproveRow').style.display='none';
@@ -4266,6 +4276,7 @@ function showCoverMeCard(){
 }
 
 function coverMeBack(){
+  document.body.classList.remove('covermegen-focus');
   document.getElementById('coverMeCard').style.display='none';
   showDesignMethodCard();
 }
@@ -4396,6 +4407,7 @@ const COVER_ME_PANEL_ORDER=[['left','LEFT'],['front','CENTER'],['right','RIGHT']
 let coverMePanelViewIndex=1; // start on Center, the one that already has content
 
 function showCoverMePanelCard(){
+  document.body.classList.remove('covermegen-focus');
   document.getElementById('coverMeCard').style.display='none';
   coverMePanelViewIndex=1;
   renderCoverMePanelView();
