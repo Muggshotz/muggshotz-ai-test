@@ -910,6 +910,10 @@ body.product-focus .card:not(#productCard){opacity:.35;filter:brightness(.6) sat
 </div>
 <input type="file" id="coverMePhotoInput" accept="image/*" style="display:none" onchange="handleCoverMePhotoChange(event)">
 <button type="button" id="coverMeGenerateBtn" class="generate-btn" style="display:none;margin-top:1rem" onclick="generateCoverMe()">🎨 Generate</button>
+<div id="coverMeApproveRow" style="display:none;margin-top:1rem;gap:8px">
+<button type="button" class="generate-btn" style="flex:1" onclick="approveCoverMe()">✅ Yes — Use This Cover</button>
+<button type="button" class="download-btn" style="flex:1" onclick="keepTweakingCoverMe()">🔧 No — Keep Tweaking</button>
+</div>
 <button type="button" class="download-btn" style="margin-top:1rem" onclick="coverMeBack()">← Back</button>
 </div>
 
@@ -4185,7 +4189,10 @@ function showCoverMeCard(){
   document.getElementById('designMethodComingSoonCard').style.display='none';
   selectedMagazine=null;
   coverMeOverridePhoto=null;
+  coverMePendingResultUrl=null;
   document.getElementById('coverMeGenerateBtn').style.display='none';
+  document.getElementById('coverMeGenerateBtn').disabled=false;
+  document.getElementById('coverMeApproveRow').style.display='none';
   document.getElementById('coverMeDescriptionBoxWrap').style.display='none';
   const descBox=document.getElementById('coverMeDescriptionBox');
   if(descBox)descBox.value='';
@@ -4200,11 +4207,98 @@ function coverMeBack(){
   showDesignMethodCard();
 }
 
-// PHASE 4 SCOPE -- real generation wiring (easel/Needles-painting
-// sequence reuse) not yet built. Placeholder so the button is
-// functional/testable now without silently doing nothing.
-function generateCoverMe(){
-  showGuidanceAlert('Generation for Cover Me is coming in the next build phase — not wired up yet.');
+// PHASE 4: real generation, wired into the existing easel/Needles
+// painting sequence and the existing tested mockup-fetch pipeline --
+// deliberately does NOT touch the old placements/approveRow multi-panel
+// pattern beyond setting a single placements.front slot, since that
+// whole system is being replaced by the new LEFT/CENTER/RIGHT screen
+// in Phase 5. This phase's scope is exactly: Generate -> Approve ->
+// single real mockup, full-screen, with arrows.
+async function generateCoverMe(){
+  if(!selectedMagazine){
+    showGuidanceAlert('Please pick a magazine first.');
+    return;
+  }
+  const photo=coverMeOverridePhoto||uploadedImageData;
+  if(!photo){
+    showGuidanceAlert('Please upload a photo first.');
+    return;
+  }
+  if(currentTokenBalance!==null && currentTokenBalance<=0 && !isAdminDevice){
+    showTokenInfoPopup(document.getElementById('coverMeGenerateBtn'));
+    return;
+  }
+
+  document.getElementById('coverMeGenerateBtn').disabled=true;
+  startGenTimer();
+  showGenerationInProgress();
+  startNeedlesStage();
+  setStatus('Generating your cover... this can take several minutes. Feel free to look around while you wait.');
+  document.getElementById('cancelBtn').style.display='block';
+  suspendGuidedScrollsForGeneration();
+
+  try{
+    currentGenerationController=new AbortController();
+    const magazineDataUrl=await urlToDataURL(selectedMagazine);
+    const descBox=document.getElementById('coverMeDescriptionBox');
+    const faceNote=(descBox && descBox.value.trim())
+      ? ` The customer notes: "${descBox.value.trim()}" -- use this to identify which face in the photo to use if there is more than one.`
+      : '';
+    const prompt='Merge the uploaded photo\'s face onto the provided magazine cover reference image, in the exact spot where a cover photo would go. '+
+      'Preserve the magazine\'s real masthead, headlines, layout, and styling exactly as shown -- do not alter any text or design elements on the cover itself. '+
+      'Match the lighting, pose, and photographic style of the reference so the result looks like a genuine, professionally shot cover photo, not a pasted-on face.'+faceNote;
+
+    const resultImageUrl=await callGenerateAPI({
+      workingImage:photo,
+      prompt,
+      refImageA:magazineDataUrl,
+      signal:currentGenerationController.signal
+    });
+
+    stopNeedlesStage();
+    stopGenTimerSuccess();
+    clearStatus();
+    document.getElementById('cancelBtn').style.display='none';
+    refreshTokenMeter();
+
+    presentFinishedNeedlesArt(resultImageUrl,()=>{
+      document.getElementById('coverMeApproveRow').style.display='flex';
+    });
+    coverMePendingResultUrl=resultImageUrl;
+
+  }catch(err){
+    console.error('Cover Me generation failed:',err);
+    stopNeedlesStage();
+    stopGenTimerSuccess();
+    document.getElementById('cancelBtn').style.display='none';
+    document.getElementById('coverMeGenerateBtn').disabled=false;
+    showBigAlert(err.message||'Something went wrong generating your cover. Please try again.');
+  }
+}
+
+let coverMePendingResultUrl=null;
+
+// Approve -> save as the single design, feed it through the EXISTING,
+// already-tested mockup pipeline (same one every other single-image
+// mug uses) rather than building a new one. openMockupLightbox(0)
+// inside beginFinalMockupFetch() is what shows it full-screen with
+// left/right arrows.
+async function approveCoverMe(){
+  if(!coverMePendingResultUrl)return;
+  const designId=addToRecentDesigns(coverMePendingResultUrl);
+  placements.front=designId;
+  coverMePendingResultUrl=null;
+  document.getElementById('coverMeApproveRow').style.display='none';
+  document.getElementById('coverMeGenerateBtn').disabled=false;
+  saveMugState();
+  await beginFinalMockupFetch();
+}
+
+function keepTweakingCoverMe(){
+  document.getElementById('coverMeApproveRow').style.display='none';
+  document.getElementById('coverMeGenerateBtn').disabled=false;
+  coverMePendingResultUrl=null;
+  smoothScrollToTarget('coverMeGrid','center');
 }
 
 function updatePreGenMugMockupImg(){
