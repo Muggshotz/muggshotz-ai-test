@@ -934,6 +934,29 @@ body.product-focus .card:not(#productCard){opacity:.35;filter:brightness(.6) sat
 <button type="button" class="generate-btn" id="coverMePanelDoneBtn" style="margin-top:.75rem" disabled onclick="coverMePanelDone()">✅ Done</button>
 </div>
 
+<div class="card" id="coverMeFrameOfferCard" style="display:none">
+<div class="card-title">🖼️ Would you like to select a frame to border your image?</div>
+<div class="note" style="margin-top:0;margin-bottom:.9rem">Optional — applied to your finished design(s) automatically.</div>
+<div style="display:flex;gap:10px">
+<button type="button" class="generate-btn" style="flex:1" onclick="showCoverMeFrameCatalog()">🖼️ Let's see what you got</button>
+<button type="button" class="download-btn" style="flex:1" onclick="skipCoverMeFrame()">🚫 No Thank You</button>
+</div>
+<div class="note" style="margin-top:1rem;text-align:center;color:#7ab8ff;cursor:pointer" onclick="changePropsFromCoverMe()">Change Props</div>
+</div>
+
+<div class="card" id="coverMeFrameCatalogCard" style="display:none">
+<div class="card-title">🖼️ Choose Your Frame</div>
+<div class="theme-grid" id="coverMeFrameGrid"></div>
+<div id="coverMeFrameColorRow" style="display:none;margin-top:14px">
+<div class="note" style="margin-bottom:6px">Frame Color</div>
+<div class="color-grid" id="coverMeFrameColorGrid"></div>
+</div>
+<img id="coverMeFramePreviewImg" style="display:none;width:100%;max-width:280px;margin:14px auto 0;border-radius:10px;background:#fff"/>
+<button type="button" class="generate-btn" id="coverMeFrameSatisfiedBtn" style="display:none;margin-top:14px" onclick="confirmCoverMeFrame()">✅ Satisfied</button>
+<button type="button" class="download-btn" style="margin-top:1rem" onclick="skipCoverMeFrame()">← No frame after all</button>
+</div>
+
+
 <div class="card-title">🍶 Which Travel Mug?</div>
 <div class="note" style="margin-top:0;margin-bottom:.9rem">Pick which travel mug you're getting before generating — the shape and print layout differ enough between them that we need this locked in first.</div>
 <div class="theme-grid" id="travelMugVariantGrid"></div>
@@ -4488,13 +4511,175 @@ function refreshCoverMePanelDoneState(){
   if(hint)hint.style.display=resolved?'none':'block';
 }
 
-// This IS the one real Printify mockup fetch for the whole Cover Me
-// flow -- happens once panel decisions are final. Reuses the existing,
-// already-tested pipeline (buildMockupRequestBody already reads
-// placements.left/front/right directly, no changes needed there).
-async function coverMePanelDone(){
+// Panel decisions are final -- next is the Frame offer, not the
+// mockup fetch directly (that happens once Frame is also settled).
+function coverMePanelDone(){
   document.getElementById('coverMePanelCard').style.display='none';
+  document.getElementById('coverMeFrameOfferCard').style.display='block';
+  smoothScrollToTarget('coverMeFrameOfferCard','center');
+}
+
+// Cover Me's own frame selection state -- deliberately separate from
+// the shared selectedFrame/frameColors globals the pre-generation
+// Frame system uses everywhere else in the app (that system has a lot
+// of side effects -- drawCaption, Window Sill sync, guided-scroll
+// timers -- none of which apply here). compositeFrameOntoImageUrl()
+// still reads those shared globals internally though, so they get set
+// temporarily right before each composite call and restored right
+// after, rather than left changed for the rest of the session.
+let coverMeSelectedFrame=null;
+let coverMeFrameColorHex=null;
+
+function showCoverMeFrameCatalog(){
+  document.getElementById('coverMeFrameOfferCard').style.display='none';
+  renderCoverMeFrameGrid();
+  document.getElementById('coverMeFrameCatalogCard').style.display='block';
+  smoothScrollToTarget('coverMeFrameCatalogCard','center');
+}
+
+function renderCoverMeFrameGrid(){
+  const grid=document.getElementById('coverMeFrameGrid');
+  if(!grid)return;
+  grid.innerHTML='';
+  Object.entries(FRAME_CATALOG).forEach(([name,data])=>{
+    if(data.type==='comingSoon')return; // nothing to actually apply
+    const btn=document.createElement('div');
+    btn.className='theme-btn'+(coverMeSelectedFrame===name?' selected':'');
+    const swatch=document.createElement('div');
+    swatch.style.cssText='width:100%;aspect-ratio:1;display:flex;align-items:center;justify-content:center;background:#0d0d0d';
+    if(data.type==='image'){
+      const img=document.createElement('img');
+      img.src=data.asset;
+      img.style.cssText='width:100%;height:100%;object-fit:cover';
+      swatch.appendChild(img);
+    } else {
+      const preview=document.createElement('div');
+      const previewColor=data.defaultColor||(data.defaultColors?data.defaultColors[0]:'#888');
+      preview.style.cssText='width:80%;height:80%;border:6px solid '+previewColor+';border-radius:4px;background:transparent';
+      swatch.appendChild(preview);
+    }
+    btn.appendChild(swatch);
+    const label=document.createElement('div');
+    label.className='theme-label';
+    label.textContent=name;
+    btn.appendChild(label);
+    btn.onclick=()=>coverMePickFrameTile(name);
+    grid.appendChild(btn);
+  });
+}
+
+function coverMePickFrameTile(name){
+  coverMeSelectedFrame=(coverMeSelectedFrame===name)?null:name;
+  const data=coverMeSelectedFrame?FRAME_CATALOG[coverMeSelectedFrame]:null;
+  coverMeFrameColorHex=data?(data.defaultColor||(data.defaultColors?data.defaultColors[0]:null)):null;
+  renderCoverMeFrameGrid();
+  const colorRow=document.getElementById('coverMeFrameColorRow');
+  const showColor=coverMeSelectedFrame && data && data.colorable!==false && data.type==='image';
+  if(colorRow)colorRow.style.display=showColor?'block':'none';
+  if(showColor)renderCoverMeFrameColorGrid();
+  document.getElementById('coverMeFrameSatisfiedBtn').style.display=coverMeSelectedFrame?'block':'none';
+  updateCoverMeFramePreview();
+}
+
+function renderCoverMeFrameColorGrid(){
+  const grid=document.getElementById('coverMeFrameColorGrid');
+  if(!grid)return;
+  grid.innerHTML='';
+  FRAME_COLOR_SWATCHES.forEach(c=>{
+    const btn=document.createElement('div');
+    btn.className='color-btn'+(coverMeFrameColorHex===c.hex?' selected':'');
+    btn.style.background=c.hex;
+    btn.onclick=()=>{coverMeFrameColorHex=c.hex;renderCoverMeFrameColorGrid();updateCoverMeFramePreview();};
+    grid.appendChild(btn);
+  });
+}
+
+// Live preview against the Center design specifically -- doesn't touch
+// placements[pos].url, just shows what the frame would look like.
+async function updateCoverMeFramePreview(){
+  const img=document.getElementById('coverMeFramePreviewImg');
+  if(!img)return;
+  if(!coverMeSelectedFrame || !placements.front){
+    img.style.display='none';
+    return;
+  }
+  const design=findDesignById(placements.front);
+  if(!design)return;
+  const prevFrame=selectedFrame, prevColor=frameColors[SINGLE_FRAME_COLOR_KEY];
+  selectedFrame=coverMeSelectedFrame;
+  if(coverMeFrameColorHex)frameColors[SINGLE_FRAME_COLOR_KEY]=coverMeFrameColorHex;
+  try{
+    const framed=await compositeFrameOntoImageUrl(design.url);
+    img.src=framed;
+    img.style.display='block';
+  }catch(err){
+    console.error('Cover Me frame preview failed:',err);
+  }finally{
+    selectedFrame=prevFrame;
+    frameColors[SINGLE_FRAME_COLOR_KEY]=prevColor;
+  }
+}
+
+function skipCoverMeFrame(){
+  document.getElementById('coverMeFrameOfferCard').style.display='none';
+  document.getElementById('coverMeFrameCatalogCard').style.display='none';
+  finalizeCoverMeMockup();
+}
+
+// Bakes the chosen frame into EVERY filled panel individually (not one
+// stitched panorama -- these are separate independent pictures, not a
+// continuous scene, so each gets its own border applied to its own
+// true edges). Mutates each design's stored .url in place via the same
+// object findDesignById returns, which is what placements[] ultimately
+// resolves through -- no new IDs needed.
+async function confirmCoverMeFrame(){
+  if(!coverMeSelectedFrame){
+    skipCoverMeFrame();
+    return;
+  }
+  document.getElementById('coverMeFrameCatalogCard').style.display='none';
+  const overlay=document.getElementById('mockupLoadingOverlay');
+  if(overlay){overlay.style.display='flex';document.body.classList.add('step-locked');}
+
+  const prevFrame=selectedFrame, prevColor=frameColors[SINGLE_FRAME_COLOR_KEY];
+  selectedFrame=coverMeSelectedFrame;
+  if(coverMeFrameColorHex)frameColors[SINGLE_FRAME_COLOR_KEY]=coverMeFrameColorHex;
+  try{
+    for(const pos of ['left','front','right']){
+      if(!placements[pos])continue;
+      const design=findDesignById(placements[pos]);
+      if(!design)continue;
+      design.url=await compositeFrameOntoImageUrl(design.url);
+    }
+    renderRecentDesigns();
+    renderPositionHolder();
+    saveMugState();
+  }catch(err){
+    console.error('Applying frame to Cover Me panels failed:',err);
+    if(overlay){overlay.style.display='none';document.body.classList.remove('step-locked');}
+    showBigAlert(err.message||'Something went wrong applying the frame. Please try again.');
+    selectedFrame=prevFrame;
+    frameColors[SINGLE_FRAME_COLOR_KEY]=prevColor;
+    return;
+  }
+  selectedFrame=prevFrame;
+  frameColors[SINGLE_FRAME_COLOR_KEY]=prevColor;
+  if(overlay){overlay.style.display='none';document.body.classList.remove('step-locked');}
+  await finalizeCoverMeMockup();
+}
+
+// This IS the one real Printify mockup fetch for the whole Cover Me
+// flow -- happens once panel AND frame decisions are both final.
+// Reuses the existing, already-tested pipeline (buildMockupRequestBody
+// already reads placements.left/front/right directly, no changes
+// needed there).
+async function finalizeCoverMeMockup(){
   await beginFinalMockupFetch();
+}
+
+function changePropsFromCoverMe(){
+  document.getElementById('coverMeFrameOfferCard').style.display='none';
+  showDesignMethodCard();
 }
 
 function updatePreGenMugMockupImg(){
