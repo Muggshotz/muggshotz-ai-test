@@ -1834,6 +1834,7 @@ function pickTrackProduct(){
 // this path instead.
 function pickTrackDescribe(){
   document.getElementById('postUploadForkRow').style.display='none';
+  document.body.classList.add('idea-focus');
   setTimeout(showIdeaBoxIntroIfNeeded,800);
   schedulePhotoGuideAdvance(4000);
 }
@@ -2012,7 +2013,6 @@ window.addEventListener('DOMContentLoaded',()=>{
 function setMainSlotImage(dataUrl){
   uploadedImageData=dataUrl;
   document.body.classList.remove('initial-upload-focus');
-  document.body.classList.add('idea-focus');
   const stageReference=document.getElementById('needlesReferencePhoto');
   if(stageReference){
     stageReference.src=dataUrl;
