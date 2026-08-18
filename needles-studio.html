@@ -895,6 +895,25 @@ body.product-focus .card:not(#productCard){opacity:.35;filter:brightness(.6) sat
 <button type="button" class="download-btn" style="margin-top:1rem" onclick="designMethodComingSoonBack()">← Back</button>
 </div>
 
+<div class="card" id="coverMeCard" style="display:none">
+<div class="card-title">📰 Cover Me</div>
+<div class="note" style="margin-top:0;margin-bottom:.9rem">Pick the magazine you want to make headlines on.</div>
+<div class="theme-grid" id="coverMeGrid" style="grid-template-columns:repeat(4,1fr)">
+<div class="btn-select" id="coverMePreviewSlot" style="grid-column:2/4;grid-row:2/4;padding:6px;display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative">
+<img id="coverMePreviewImg" style="width:100%;border-radius:8px;background:#fff"/>
+</div>
+</div>
+<div class="note" id="coverMeChangePhotoPrompt" style="margin-top:.75rem;text-align:center;color:#7ab8ff;cursor:pointer" onclick="triggerCoverMePhotoChange()">Not the right shot? Tap here to choose a different photo.</div>
+<div class="note" style="margin-top:.4rem;text-align:center;color:#7ab8ff;cursor:pointer" onclick="toggleCoverMeDescriptionBox()">Multiple people in your photo? Use the description box below to tell us who.</div>
+<div id="coverMeDescriptionBoxWrap" style="display:none;margin-top:.75rem">
+<textarea id="coverMeDescriptionBox" placeholder="Example: Use the face of the woman on the left."></textarea>
+</div>
+<input type="file" id="coverMePhotoInput" accept="image/*" style="display:none" onchange="handleCoverMePhotoChange(event)">
+<button type="button" id="coverMeGenerateBtn" class="generate-btn" style="display:none;margin-top:1rem" onclick="generateCoverMe()">🎨 Generate</button>
+<button type="button" class="download-btn" style="margin-top:1rem" onclick="coverMeBack()">← Back</button>
+</div>
+
+
 <div class="card-title">🍶 Which Travel Mug?</div>
 <div class="note" style="margin-top:0;margin-bottom:.9rem">Pick which travel mug you're getting before generating — the shape and print layout differ enough between them that we need this locked in first.</div>
 <div class="theme-grid" id="travelMugVariantGrid"></div>
@@ -4089,12 +4108,103 @@ function goToDesignMethodScreen(method){
   }
 }
 
-// Placeholder until Phase 3 builds the real Cover Me screen.
+// Real 20-magazine roster, exact filenames as delivered/renamed by
+// Alyx -- capitalization, spacing, and the Vanity Fair size suffix are
+// intentionally kept as-is, never assume a "cleaned up" version.
+const MAGAZINE_CATALOG = [
+  "Cosmopolitan.webp","Ebony.webp","Elle.webp","Esquire.webp","Forbes.webp",
+  "Fortune.webp","GQ.webp","Jet.webp","Life.webp","Mad.webp",
+  "National Enquirer.webp","Newsweek.webp","people.webp","Reader's Digest.webp",
+  "Rolling Stone.webp","Sports Illustrated.webp","The Atlantic.webp",
+  "The New Yorker.webp","time.webp","Vanity Fair_512x683.webp"
+];
+
+let selectedMagazine=null;
+// Cover Me can use a different photo than the one uploaded at the very
+// start of the flow (customer picked that one blind, before ever
+// seeing this screen exists) -- null means "use uploadedImageData as-is".
+let coverMeOverridePhoto=null;
+
+function renderCoverMeGrid(){
+  const grid=document.getElementById('coverMeGrid');
+  if(!grid)return;
+  grid.style.gridAutoFlow='dense';
+  grid.querySelectorAll('.magazine-tile').forEach(el=>el.remove());
+  const previewSlot=document.getElementById('coverMePreviewSlot');
+  MAGAZINE_CATALOG.forEach(filename=>{
+    const btn=document.createElement('div');
+    btn.className='btn-select magazine-tile'+(selectedMagazine===filename?' selected':'');
+    btn.style.padding='4px';
+    btn.dataset.magazine=filename;
+    btn.onclick=()=>pickMagazine(filename);
+    const img=document.createElement('img');
+    img.src=filename;
+    img.alt=filename;
+    img.style.cssText='width:100%;border-radius:6px;background:#fff';
+    btn.appendChild(img);
+    grid.insertBefore(btn,previewSlot);
+  });
+}
+
+function pickMagazine(filename){
+  selectedMagazine=filename;
+  document.querySelectorAll('#coverMeGrid .magazine-tile').forEach(b=>{
+    b.classList.toggle('selected',b.dataset.magazine===filename);
+  });
+  document.getElementById('coverMeGenerateBtn').style.display='block';
+}
+
+function updateCoverMePreviewImg(){
+  const img=document.getElementById('coverMePreviewImg');
+  if(img)img.src=coverMeOverridePhoto||uploadedImageData||'';
+}
+
+function triggerCoverMePhotoChange(){
+  document.getElementById('coverMePhotoInput').click();
+}
+
+function handleCoverMePhotoChange(event){
+  const file=event.target.files[0];
+  if(!file)return;
+  const reader=new FileReader();
+  reader.onload=(e)=>{
+    coverMeOverridePhoto=e.target.result;
+    updateCoverMePreviewImg();
+  };
+  reader.readAsDataURL(file);
+}
+
+function toggleCoverMeDescriptionBox(){
+  const wrap=document.getElementById('coverMeDescriptionBoxWrap');
+  if(!wrap)return;
+  wrap.style.display=(wrap.style.display==='none')?'block':'none';
+  if(wrap.style.display==='block')document.getElementById('coverMeDescriptionBox')?.focus();
+}
+
 function showCoverMeCard(){
-  const titleEl=document.getElementById('designMethodComingSoonTitle');
-  if(titleEl)titleEl.textContent='📰 Cover Me';
-  document.getElementById('designMethodComingSoonCard').style.display='block';
-  smoothScrollToTarget('designMethodComingSoonCard','center');
+  document.getElementById('designMethodComingSoonCard').style.display='none';
+  selectedMagazine=null;
+  coverMeOverridePhoto=null;
+  document.getElementById('coverMeGenerateBtn').style.display='none';
+  document.getElementById('coverMeDescriptionBoxWrap').style.display='none';
+  const descBox=document.getElementById('coverMeDescriptionBox');
+  if(descBox)descBox.value='';
+  renderCoverMeGrid();
+  updateCoverMePreviewImg();
+  document.getElementById('coverMeCard').style.display='block';
+  smoothScrollToTarget('coverMeCard','center');
+}
+
+function coverMeBack(){
+  document.getElementById('coverMeCard').style.display='none';
+  showDesignMethodCard();
+}
+
+// PHASE 4 SCOPE -- real generation wiring (easel/Needles-painting
+// sequence reuse) not yet built. Placeholder so the button is
+// functional/testable now without silently doing nothing.
+function generateCoverMe(){
+  showGuidanceAlert('Generation for Cover Me is coming in the next build phase — not wired up yet.');
 }
 
 function updatePreGenMugMockupImg(){
