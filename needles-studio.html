@@ -917,6 +917,22 @@ body.product-focus .card:not(#productCard){opacity:.35;filter:brightness(.6) sat
 <button type="button" class="download-btn" style="margin-top:1rem" onclick="coverMeBack()">← Back</button>
 </div>
 
+<div class="card" id="coverMePanelCard" style="display:none">
+<div class="card-title">🔲 Select the Panels You Wish to Place Your Image</div>
+<div class="note" style="margin-top:0;margin-bottom:.9rem">Your cover is already on Center. Add it to Left and/or Right too, or leave them blank — your call. Use the arrows to look at each side.</div>
+<div style="position:relative;display:flex;align-items:center;justify-content:center;gap:10px">
+<button type="button" onclick="cyclePanelView(-1)" style="flex-shrink:0;width:40px;height:40px;border-radius:50%;background:#1a1a1a;border:1px solid #444;color:#fff;font-size:20px;cursor:pointer">‹</button>
+<div style="position:relative;flex:1;max-width:420px">
+<img id="coverMePanelBgImg" style="width:100%;display:block;border-radius:10px;background:#fff"/>
+<div id="coverMePanelOverlay" style="position:absolute;top:32%;left:28%;width:34%;height:34%"></div>
+</div>
+<button type="button" onclick="cyclePanelView(1)" style="flex-shrink:0;width:40px;height:40px;border-radius:50%;background:#1a1a1a;border:1px solid #444;color:#fff;font-size:20px;cursor:pointer">›</button>
+</div>
+<div id="coverMePanelLabel" style="text-align:center;font-weight:700;color:#7ab8ff;margin-top:.6rem"></div>
+<div id="coverMePanelControls" style="margin-top:.6rem"></div>
+<div class="note" id="coverMePanelHint" style="margin-top:.9rem;text-align:center">Please choose Yes or No for each panel.</div>
+<button type="button" class="generate-btn" id="coverMePanelDoneBtn" style="margin-top:.75rem" disabled onclick="coverMePanelDone()">✅ Done</button>
+</div>
 
 <div class="card-title">🍶 Which Travel Mug?</div>
 <div class="note" style="margin-top:0;margin-bottom:.9rem">Pick which travel mug you're getting before generating — the shape and print layout differ enough between them that we need this locked in first.</div>
@@ -4278,20 +4294,24 @@ async function generateCoverMe(){
 
 let coverMePendingResultUrl=null;
 
-// Approve -> save as the single design, feed it through the EXISTING,
-// already-tested mockup pipeline (same one every other single-image
-// mug uses) rather than building a new one. openMockupLightbox(0)
-// inside beginFinalMockupFetch() is what shows it full-screen with
-// left/right arrows.
+// Approve -> save the design to whichever panel it's meant for
+// (pendingSlotTarget if this came from an "Add a different image"
+// round-trip, otherwise the default single/Center slot), then show
+// the panel-selection screen. The real mockup fetch no longer happens
+// here directly -- it happens once panel selection (and eventually
+// Frame) are settled, see coverMePanelDone().
 async function approveCoverMe(){
   if(!coverMePendingResultUrl)return;
   const designId=addToRecentDesigns(coverMePendingResultUrl);
-  placements.front=designId;
+  const validTargets=['left','front','right'];
+  const target=(pendingSlotTarget && validTargets.includes(pendingSlotTarget))?pendingSlotTarget:'front';
+  placements[target]=designId;
+  pendingSlotTarget=null;
   coverMePendingResultUrl=null;
   document.getElementById('coverMeApproveRow').style.display='none';
   document.getElementById('coverMeGenerateBtn').disabled=false;
   saveMugState();
-  await beginFinalMockupFetch();
+  showCoverMePanelCard();
 }
 
 function keepTweakingCoverMe(){
@@ -4299,6 +4319,182 @@ function keepTweakingCoverMe(){
   document.getElementById('coverMeGenerateBtn').disabled=false;
   coverMePendingResultUrl=null;
   smoothScrollToTarget('coverMeGrid','center');
+}
+
+// Explicit YES/NO per left/right panel, separate from mere absence --
+// lets Done know the difference between "hasn't decided yet" and "said
+// no." Center is never declinable (it's the just-approved design).
+let coverMePanelDeclined={left:false,right:false};
+
+// Real angle photos of a plain white mug, one per panel -- shown one
+// at a time with cycle arrows, per Alyx's explicit request (was three
+// smaller stacked cards; now one large image per panel).
+const COVER_ME_PANEL_ANGLE_IMG={left:'Cup_Left.webp',front:'Cup_Center.webp',right:'Cup_Right.webp'};
+const COVER_ME_PANEL_ORDER=[['left','LEFT'],['front','CENTER'],['right','RIGHT']];
+let coverMePanelViewIndex=1; // start on Center, the one that already has content
+
+function showCoverMePanelCard(){
+  document.getElementById('coverMeCard').style.display='none';
+  coverMePanelViewIndex=1;
+  renderCoverMePanelView();
+  document.getElementById('coverMePanelCard').style.display='block';
+  smoothScrollToTarget('coverMePanelCard','center');
+}
+
+function cyclePanelView(delta){
+  coverMePanelViewIndex=((coverMePanelViewIndex+delta)%3+3)%3;
+  renderCoverMePanelView();
+}
+
+function renderCoverMePanelView(){
+  const [pos,label]=COVER_ME_PANEL_ORDER[coverMePanelViewIndex];
+  document.getElementById('coverMePanelBgImg').src=COVER_ME_PANEL_ANGLE_IMG[pos];
+  document.getElementById('coverMePanelLabel').textContent=label;
+
+  const overlay=document.getElementById('coverMePanelOverlay');
+  const controls=document.getElementById('coverMePanelControls');
+  overlay.innerHTML='';
+  controls.innerHTML='';
+
+  const design=placements[pos]?findDesignById(placements[pos]):null;
+
+  if(design){
+    overlay.style.cssText='position:absolute;top:32%;left:28%;width:34%;height:34%;border:2px solid #d32f2f;border-radius:4px;overflow:hidden';
+    const img=document.createElement('img');
+    img.src=design.url;
+    img.style.cssText='width:100%;height:100%;object-fit:cover;display:block';
+    overlay.appendChild(img);
+
+    const removeBtn=document.createElement('button');
+    removeBtn.type='button';
+    removeBtn.className='download-btn';
+    removeBtn.style.cssText='border-color:#5a2a2a;color:#ff8a7a';
+    removeBtn.textContent='✖ Remove from this panel';
+    removeBtn.onclick=()=>removeCoverMePanelDesign(pos);
+    controls.appendChild(removeBtn);
+
+  } else if(pos!=='front' && coverMePanelDeclined[pos]){
+    overlay.style.cssText='position:absolute;top:32%;left:28%;width:34%;height:34%;border:2px dashed #666;border-radius:4px;display:flex;align-items:center;justify-content:center;color:#888;font-size:11px;text-align:center;padding:2px';
+    overlay.textContent='(none)';
+
+    const note=document.createElement('div');
+    note.className='note';
+    note.style.cssText='text-align:center;color:#888;margin-bottom:8px';
+    note.textContent='No image on this panel.';
+    controls.appendChild(note);
+    const changeBtn=document.createElement('button');
+    changeBtn.type='button';
+    changeBtn.className='download-btn';
+    changeBtn.style.cssText='width:100%';
+    changeBtn.textContent='Actually, add one';
+    changeBtn.onclick=()=>setCoverMePanelYes(pos);
+    controls.appendChild(changeBtn);
+
+  } else if(pos!=='front'){
+    overlay.style.cssText='position:absolute;top:32%;left:28%;width:34%;height:34%;border:2px dashed #d32f2f;border-radius:4px;display:flex;align-items:center;justify-content:center;color:#d32f2f;font-weight:700;font-size:11px;text-align:center;padding:2px';
+    overlay.textContent='Your Photo Here';
+
+    const btnRow=document.createElement('div');
+    btnRow.style.cssText='display:flex;gap:8px';
+    const yesBtn=document.createElement('div');
+    yesBtn.className='btn-select';
+    yesBtn.style.cssText='flex:1;padding:.6rem;text-align:center';
+    yesBtn.textContent='YES';
+    yesBtn.onclick=()=>setCoverMePanelYes(pos);
+    const noBtn=document.createElement('div');
+    noBtn.className='btn-select';
+    noBtn.style.cssText='flex:1;padding:.6rem;text-align:center';
+    noBtn.textContent='NO';
+    noBtn.onclick=()=>setCoverMePanelNo(pos);
+    btnRow.appendChild(yesBtn);
+    btnRow.appendChild(noBtn);
+    controls.appendChild(btnRow);
+
+  } else {
+    overlay.style.cssText='position:absolute;top:32%;left:28%;width:34%;height:34%;border:2px dashed #666;border-radius:4px';
+    const note=document.createElement('div');
+    note.className='note';
+    note.textContent='No design yet — go back and generate your cover first.';
+    controls.appendChild(note);
+  }
+
+  refreshCoverMePanelDoneState();
+}
+
+function setCoverMePanelYes(pos){
+  coverMePanelDeclined[pos]=false;
+  renderCoverMePanelYesChoice(pos);
+}
+
+// Same idea as renderCoverMePanelView's undecided-panel branch, but
+// shows Use-Same/Add-Different instead of Yes/No since Yes was just
+// picked and this panel still has no design assigned.
+function renderCoverMePanelYesChoice(pos){
+  const overlay=document.getElementById('coverMePanelOverlay');
+  const controls=document.getElementById('coverMePanelControls');
+  overlay.style.cssText='position:absolute;top:32%;left:28%;width:34%;height:34%;border:2px dashed #d32f2f;border-radius:4px;display:flex;align-items:center;justify-content:center;color:#d32f2f;font-weight:700;font-size:11px;text-align:center;padding:2px';
+  overlay.textContent='Your Photo Here';
+  controls.innerHTML='';
+
+  const sameBtn=document.createElement('button');
+  sameBtn.type='button';
+  sameBtn.className='generate-btn';
+  sameBtn.style.cssText='margin-bottom:8px;width:100%';
+  sameBtn.textContent='Use my current cover (free)';
+  sameBtn.onclick=()=>useCurrentDesignForCoverMePanel(pos);
+  controls.appendChild(sameBtn);
+
+  const diffBtn=document.createElement('button');
+  diffBtn.type='button';
+  diffBtn.className='download-btn';
+  diffBtn.style.cssText='width:100%';
+  diffBtn.textContent='Add a different image (one more generation)';
+  diffBtn.onclick=()=>addDifferentImageForCoverMePanel(pos);
+  controls.appendChild(diffBtn);
+
+  refreshCoverMePanelDoneState();
+}
+
+function setCoverMePanelNo(pos){
+  coverMePanelDeclined[pos]=true;
+  renderCoverMePanelView();
+}
+
+function useCurrentDesignForCoverMePanel(pos){
+  if(!placements.front)return;
+  placements[pos]=placements.front;
+  coverMePanelDeclined[pos]=false;
+  saveMugState();
+  renderCoverMePanelView();
+}
+
+function addDifferentImageForCoverMePanel(pos){
+  pendingSlotTarget=pos;
+  document.getElementById('coverMePanelCard').style.display='none';
+  showDesignMethodCard();
+}
+
+function removeCoverMePanelDesign(pos){
+  placements[pos]=null;
+  saveMugState();
+  renderCoverMePanelView();
+}
+
+function refreshCoverMePanelDoneState(){
+  const resolved=['left','right'].every(pos=>placements[pos]||coverMePanelDeclined[pos]);
+  const btn=document.getElementById('coverMePanelDoneBtn');
+  const hint=document.getElementById('coverMePanelHint');
+  if(btn)btn.disabled=!resolved;
+  if(hint)hint.style.display=resolved?'none':'block';
+}
+
+// This IS the one real Printify mockup fetch for the whole Cover Me
+// flow -- happens once panel decisions are final. Reuses the existing,
+// already-tested pipeline (buildMockupRequestBody already reads
+// placements.left/front/right directly, no changes needed there).
+async function coverMePanelDone(){
+  document.getElementById('coverMePanelCard').style.display='none';
+  await beginFinalMockupFetch();
 }
 
 function updatePreGenMugMockupImg(){
