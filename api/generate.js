@@ -328,15 +328,20 @@ Polished gift-art quality.
     // If reference images were provided, attach them as additional images
     // so the model can pull specific elements (a face, an object, a
     // setting) from them as instructed in the prompt text above.
-    function attachDataUrlImage(dataUrl, filename) {
+    // FIXED: the filename's extension now matches the image's real
+    // detected format (same logic the primary image already used above)
+    // instead of always claiming .png regardless of actual content --
+    // that mismatch could cause the upload to be rejected or mishandled.
+    function attachDataUrlImage(dataUrl, baseName){
       const m = dataUrl.match(/^data:(image\/\w+);base64,(.+)$/);
       if (!m) return;
       const buf = Buffer.from(m[2], "base64");
-      formData.append("image[]", new Blob([buf], { type: m[1] }), filename);
+      const refExtension = m[1] === "image/png" ? "png" : (m[1] === "image/webp" ? "webp" : "jpg");
+      formData.append("image[]", new Blob([buf], { type: m[1] }), `${baseName}.${refExtension}`);
     }
-    if (refImageA) attachDataUrlImage(refImageA, "reference-a.png");
-    if (refImageB) attachDataUrlImage(refImageB, "reference-b.png");
-    if (currentDesign) attachDataUrlImage(currentDesign, "current-design.png");
+    if (refImageA) attachDataUrlImage(refImageA, "reference-a");
+    if (refImageB) attachDataUrlImage(refImageB, "reference-b");
+    if (currentDesign) attachDataUrlImage(currentDesign, "current-design");
 
     const response = await fetch("https://api.openai.com/v1/images/edits", {
       method: "POST",
