@@ -26,7 +26,7 @@
 .needles-hero img{display:block;width:100%;height:100%;object-fit:contain}
 
 .needles-clipboard{position:relative;background:linear-gradient(135deg,#8a5a34,#6b4423 55%,#4f2f18);border-radius:14px;padding:28px 16px 16px;box-shadow:0 8px 20px rgba(0,0,0,0.5);margin-bottom:.25rem}
-.needles-clip{position:absolute;top:-14px;left:50%;transform:translateX(-50%);width:70px;height:28px;background:linear-gradient(180deg,#e8e8e8,#a8a8a8 55%,#7a7a7a);border-radius:6px;box-shadow:0 3px 6px rgba(0,0,0,0.5);border:1px solid #666;z-index:2}
+.needles-clip{position:absolute;top:-14px;left:50%;transform:translateX(-50%);width:70px;height:28px;background:linear-gradient(180deg,#e8e8e8,#a8a8a8 55%,#7a7a7a);border-radius:6px;box-shadow:0 3px 6px rgba(0,0,0,0.5);border:1px solid #666;z-index:2}.ref-pin-zone{position:absolute;top:34px;left:-14px;transform:rotate(-9deg);width:56px;height:56px;border-radius:8px;background:#faf8f2;border:1.5px dashed #444;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;z-index:3;box-shadow:0 3px 8px rgba(0,0,0,.5);overflow:hidden}.ref-pin-zone::before{content:'';position:absolute;top:-4px;left:50%;transform:translateX(-50%);width:9px;height:9px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#ff8a7a,#c23b2c);box-shadow:0 1px 3px rgba(0,0,0,.6);z-index:4}.ref-pin-zone.has-image{border-style:solid;border-color:#003c8c}.ref-pin-zone-b{left:auto;right:-14px;transform:rotate(9deg)}.ref-pin-zone img.preview-img{width:100%;height:100%;max-height:none;object-fit:cover}
 .needles-clip::after{content:'';position:absolute;top:50%;left:50%;width:10px;height:10px;background:#555;border-radius:50%;transform:translate(-50%,-50%);box-shadow:inset 0 1px 2px rgba(0,0,0,0.6)}
 .needles-polaroid{background:#faf8f2!important;border:none!important;padding:14px 14px 20px!important;box-shadow:0 4px 10px rgba(0,0,0,0.35)}
 .needles-polaroid .upload-text{font-family:'Caveat',cursive;font-weight:600;font-size:20px;color:#333}
@@ -676,24 +676,15 @@ body.product-focus .card:not(#productCard){opacity:.35;filter:brightness(.6) sat
 
 <div class="card snap-section" id="uploadPhotoCard" data-snap-index="0"><div class="card-title">📸 Upload Photo</div>
 <div style="font-size:11px;color:#29a3ff;letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px;text-align:center">Photo 1</div>
-<div class="needles-clipboard"><div class="needles-clip"></div><div class="upload-zone needles-polaroid" id="uploadZone" onclick="document.getElementById('fileInput').click()"><div style="font-size:32px;color:#555;margin-bottom:8px">👤</div><div class="upload-text">Tap here to upload a photo</div><div class="upload-sub">Clear face photo works best</div></div></div>
-<div style="margin-top:1.1rem;padding-top:1rem;border-top:1px dashed #333">
-<div class="note" style="margin-top:0;margin-bottom:.6rem">Optional — add more photos if you want to combine or pull elements from other pictures (e.g. "use the face from Photo 2 on the body in Photo 1").</div>
-<div class="grid2">
-<div>
-<div style="font-size:11px;color:#29a3ff;letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px;text-align:center">Photo 2</div>
-<div class="upload-zone" id="refAZone" style="padding:1rem;" onclick="document.getElementById('refAInput').click()"><div style="font-size:20px;color:#555;margin-bottom:4px">➕</div><div class="upload-text" style="font-size:12px">Tap to add</div></div>
+<div class="needles-clipboard"><div class="needles-clip"></div><div class="upload-zone needles-polaroid" id="uploadZone" onclick="document.getElementById('fileInput').click()"><div style="font-size:32px;color:#555;margin-bottom:8px">👤</div><div class="upload-text">Tap here to upload a photo</div><div class="upload-sub">Clear face photo works best</div></div>
+<div class="ref-pin-zone" id="refAZone" onclick="document.getElementById('refAInput').click()"><div style="font-size:16px;color:#555;margin-bottom:1px">➕</div><div class="upload-text" style="font-size:8px;line-height:1.1">Add ref</div></div>
 <input type="file" id="refAInput" accept="image/*" style="display:none"/>
 <img id="refAPreview" class="preview-img" style="display:none;max-height:140px"/>
-</div>
-<div>
-<div style="font-size:11px;color:#29a3ff;letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px;text-align:center">Photo 3</div>
-<div class="upload-zone" id="refBZone" style="padding:1rem;" onclick="document.getElementById('refBInput').click()"><div style="font-size:20px;color:#555;margin-bottom:4px">➕</div><div class="upload-text" style="font-size:12px">Tap to add</div></div>
+<div class="ref-pin-zone ref-pin-zone-b" id="refBZone" onclick="document.getElementById('refBInput').click()"><div style="font-size:16px;color:#555;margin-bottom:1px">➕</div><div class="upload-text" style="font-size:8px;line-height:1.1">Add ref</div></div>
 <input type="file" id="refBInput" accept="image/*" style="display:none"/>
 <img id="refBPreview" class="preview-img" style="display:none;max-height:140px"/>
 </div>
-</div>
-</div>
+<div class="note" style="margin-top:.5rem;margin-bottom:0;text-align:center;font-size:11px"><u>Optional!</u> Pin extra reference photos above if you want to combine or pull elements from other pictures (e.g. "use the face from one on the body in the other"). If not, no biggie.</div>
 <div id="postUploadForkRow" style="display:none;gap:8px;margin-top:.9rem">
 <div style="flex:1;display:flex;flex-direction:column;gap:4px">
 <div class="track-label" style="text-align:center;color:#7ab8ff;font-size:11px;font-weight:700;letter-spacing:.5px">TRACK 1</div>
@@ -901,19 +892,20 @@ Would you like to try out <span style="color:#7ab8ff">some of our fun props?</sp
 </div>
 <div style="font-size:13px;color:#7ab8ff;letter-spacing:.5px">◆ Click on one for more options. ◆</div>
 </div>
-<div style="display:flex;flex-direction:column;gap:10px">
+<button type="button" class="snap-arrow-btn snap-arrow-up" id="designMethodDownArrow" style="display:flex;margin:0 auto 1rem" onclick="document.getElementById('designMethodTiles').scrollIntoView({behavior:'smooth',block:'end'})">⌄</button>
+<div id="designMethodTiles" style="display:flex;flex-direction:column;gap:10px">
 <div class="btn-select" id="designMethodCoverMeBtn" style="padding:0;text-align:center;overflow:hidden" onclick="pickDesignMethod('coverMe')">
-<img src="designmethod-covered.jpg" style="width:100%;display:block"/>
+<img src="designmethod-covered.jpg" style="width:100%;max-height:170px;object-fit:cover;display:block"/>
 <div style="padding:.8rem"><b>Cover Me</b>
 <div class="note" style="margin-top:4px;color:#29a3ff">Your face, on the cover of a real magazine.</div></div>
 </div>
 <div class="btn-select" id="designMethodFaceItBtn" style="padding:0;text-align:center;overflow:hidden" onclick="pickDesignMethod('faceIt')">
-<img src="designmethod-faceit.jpg" style="width:100%;display:block"/>
+<img src="designmethod-faceit.jpg" style="width:100%;max-height:170px;object-fit:cover;display:block"/>
 <div style="padding:.8rem"><b>Let's Just Face It</b>
 <div class="note" style="margin-top:4px;color:#29a3ff">It was always just a matter of time.</div></div>
 </div>
 <div class="btn-select" id="designMethodHomeBtn" style="padding:0;text-align:center;overflow:hidden" onclick="pickDesignMethod('homeSweetHome')">
-<img src="designmethod-home.jpg" style="width:100%;display:block"/>
+<img src="designmethod-home.jpg" style="width:100%;max-height:170px;object-fit:cover;display:block"/>
 <div style="padding:.8rem"><b>Home Sweet Home</b>
 <div class="note" style="margin-top:4px;color:#29a3ff">Coffee in hand, greeting the neighbors.</div></div>
 </div>
@@ -1782,6 +1774,7 @@ function scheduleOpeningGuide(delay){
 let photoGuideTimer=null;
 let photoGuideActive=false;
 let forkRevealTimer=null;
+let designMethodLingerTimer=null;
 
 function schedulePhotoGuideAdvance(delay){
   clearTimeout(photoGuideTimer);
@@ -1834,6 +1827,7 @@ function suspendGuidedScrollsForGeneration(){
   clearTimeout(openingGuideTimer);
   clearTimeout(photoGuideTimer);
   clearTimeout(forkRevealTimer);
+  clearTimeout(designMethodLingerTimer);
   openingGuideDone=true;
   photoGuideActive=false;
   guidedScrollInProgress=false;
@@ -4194,13 +4188,26 @@ function showDesignMethodCard(){
   snapExpandThrough('designMethodCard');
   // Single scroll to the final, already-compensated position (offset for
   // the fixed currency bar) instead of scrolling to 'start' and then
-  // jumping again afterward -- that two-step version is what Alyx saw
-  // as an unwanted extra drop once the screen had already landed.
+  // jumping again afterward. Measuring rect.top in the SAME tick as
+  // display:block was landing short/inconsistently -- deferred with a
+  // double rAF so layout has actually settled (same class of race as
+  // the earlier mug-mockup image-load bug) before reading position.
   guidedScrollInProgress=true;
-  const rect=card.getBoundingClientRect();
-  const targetY=window.scrollY+rect.top-90;
-  window.scrollTo({top:targetY,behavior:'smooth'});
-  setTimeout(()=>{guidedScrollInProgress=false;},750);
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{
+    const rect=card.getBoundingClientRect();
+    const targetY=window.scrollY+rect.top-90;
+    window.scrollTo({top:targetY,behavior:'smooth'});
+  }));
+  setTimeout(()=>{guidedScrollInProgress=false;},900);
+  // If the customer hasn't picked a tile after ~3s, nudge the view
+  // down once to reveal more of the tile list -- cancelled the moment
+  // they tap anything (pickDesignMethod), never fires twice.
+  clearTimeout(designMethodLingerTimer);
+  designMethodLingerTimer=setTimeout(()=>{
+    const tiles=document.getElementById('designMethodTiles');
+    if(!tiles||card.style.display==='none')return;
+    tiles.scrollIntoView({behavior:'smooth',block:'end'});
+  },3000);
 }
 
 // Tapping a prop tile. If Design By Description is checked, the
@@ -4210,6 +4217,7 @@ function showDesignMethodCard(){
 // of its old default (productCard). If unchecked, they go straight
 // to the method's screen.
 function pickDesignMethod(method){
+  clearTimeout(designMethodLingerTimer);
   selectedDesignMethod=method;
   document.querySelectorAll('#designMethodCard .btn-select').forEach(b=>b.classList.remove('selected'));
   const btnId={coverMe:'designMethodCoverMeBtn',faceIt:'designMethodFaceItBtn',homeSweetHome:'designMethodHomeBtn'}[method];
@@ -4240,6 +4248,7 @@ function toggleDesignByDescriptionInfo(){
 // Checkbox checked with no prop tile picked -- description-only path,
 // ends at the Edge-Treatment step rather than any prop screen.
 function continueWithDescriptionOnly(){
+  clearTimeout(designMethodLingerTimer);
   ideaReturnTarget='descriptionOnly';
   document.getElementById('designMethodCard').style.display='none';
   smoothScrollToTarget('ideaCard','center',()=>{
@@ -4248,6 +4257,7 @@ function continueWithDescriptionOnly(){
 }
 
 function designMethodBack(){
+  clearTimeout(designMethodLingerTimer);
   document.getElementById('designMethodCard').style.display='none';
   mugColorFinishedPreGen=false;
   refreshMugStyleCardVisibility();
@@ -4372,13 +4382,18 @@ function showCoverMeCard(){
   // Was scrolling to 'center', which cut off the card's own header at
   // the top when the magazine grid is taller than the viewport. Align
   // to top instead, with the same fixed-currency-bar compensation used
-  // for showDesignMethodCard(), so the header lands fully visible.
+  // for showDesignMethodCard(). Deferred with a double rAF -- measuring
+  // in the same tick as display:block was landing short/inconsistently,
+  // since the 20 magazine tile images haven't loaded/laid out yet at
+  // that instant (same race as the mug-mockup and Design Method fixes).
   snapExpandThrough('coverMeCard');
   guidedScrollInProgress=true;
   const coverMeCardEl=document.getElementById('coverMeCard');
-  const coverMeCardRect=coverMeCardEl.getBoundingClientRect();
-  window.scrollTo({top:window.scrollY+coverMeCardRect.top-90,behavior:'smooth'});
-  setTimeout(()=>{guidedScrollInProgress=false;},750);
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{
+    const coverMeCardRect=coverMeCardEl.getBoundingClientRect();
+    window.scrollTo({top:window.scrollY+coverMeCardRect.top-90,behavior:'smooth'});
+  }));
+  setTimeout(()=>{guidedScrollInProgress=false;},900);
 }
 
 function coverMeBack(){
@@ -6036,7 +6051,6 @@ function setupRefUpload(inputId, zoneId, previewId, setter, which){
       const z = document.getElementById(zoneId);
       z.classList.add('has-image');
       z.style.padding = '0';
-      z.style.position = 'relative';
       z.innerHTML = '';
       z.appendChild(img);
       z.appendChild(makeRefRemoveBtn(which));
@@ -6050,15 +6064,14 @@ function resetRefSlot(zoneId, previewId, inputId){
   const z=document.getElementById(zoneId);
   if(!z)return;
   z.classList.remove('has-image');
-  z.style.padding='1rem';
-  z.innerHTML='<div style="font-size:20px;color:#555;margin-bottom:4px">\u2795</div><div class="upload-text" style="font-size:12px">Tap to add</div>';
+  z.style.padding='';
+  z.innerHTML='<div style="font-size:16px;color:#555;margin-bottom:1px">\u2795</div><div class="upload-text" style="font-size:8px;line-height:1.1">Add ref</div>';
   const oldImg=document.getElementById(previewId);
   if(oldImg)oldImg.remove();
   const fresh=document.createElement('img');
   fresh.id=previewId;
   fresh.className='preview-img';
   fresh.style.display='none';
-  fresh.style.maxHeight='140px';
   z.insertAdjacentElement('afterend',fresh);
   const input=document.getElementById(inputId);
   if(input)input.value='';
@@ -6096,7 +6109,6 @@ function restoreRefPreview(zoneId, previewId, inputId, dataUrl, setter, which){
   const z=document.getElementById(zoneId);
   z.classList.add('has-image');
   z.style.padding='0';
-  z.style.position='relative';
   z.innerHTML='';
   z.appendChild(img);
   if(which)z.appendChild(makeRefRemoveBtn(which));
@@ -8220,7 +8232,6 @@ async function makeTestSingleZonePanorama(side){
       document.getElementById('approveRow').style.display='block';
       document.getElementById('keepTweakingBtn').style.display='block';
       document.getElementById('downloadDesignBtn').style.display='block';
-      document.getElementById('startOverBtn').style.display='block';
       document.getElementById('toggleImageBtn').style.display='none';
       refreshApproveRowForMode();
       showSingleImageAccessorizeStep();
