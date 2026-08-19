@@ -677,6 +677,23 @@ body.product-focus .card:not(#productCard){opacity:.35;filter:brightness(.6) sat
 <div class="card snap-section" id="uploadPhotoCard" data-snap-index="0"><div class="card-title">📸 Upload Photo</div>
 <div style="font-size:11px;color:#29a3ff;letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px;text-align:center">Photo 1</div>
 <div class="needles-clipboard"><div class="needles-clip"></div><div class="upload-zone needles-polaroid" id="uploadZone" onclick="document.getElementById('fileInput').click()"><div style="font-size:32px;color:#555;margin-bottom:8px">👤</div><div class="upload-text">Tap here to upload a photo</div><div class="upload-sub">Clear face photo works best</div></div></div>
+<div style="margin-top:1.1rem;padding-top:1rem;border-top:1px dashed #333">
+<div class="note" style="margin-top:0;margin-bottom:.6rem">Optional — add more photos if you want to combine or pull elements from other pictures (e.g. "use the face from Photo 2 on the body in Photo 1").</div>
+<div class="grid2">
+<div>
+<div style="font-size:11px;color:#29a3ff;letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px;text-align:center">Photo 2</div>
+<div class="upload-zone" id="refAZone" style="padding:1rem;" onclick="document.getElementById('refAInput').click()"><div style="font-size:20px;color:#555;margin-bottom:4px">➕</div><div class="upload-text" style="font-size:12px">Tap to add</div></div>
+<input type="file" id="refAInput" accept="image/*" style="display:none"/>
+<img id="refAPreview" class="preview-img" style="display:none;max-height:140px"/>
+</div>
+<div>
+<div style="font-size:11px;color:#29a3ff;letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px;text-align:center">Photo 3</div>
+<div class="upload-zone" id="refBZone" style="padding:1rem;" onclick="document.getElementById('refBInput').click()"><div style="font-size:20px;color:#555;margin-bottom:4px">➕</div><div class="upload-text" style="font-size:12px">Tap to add</div></div>
+<input type="file" id="refBInput" accept="image/*" style="display:none"/>
+<img id="refBPreview" class="preview-img" style="display:none;max-height:140px"/>
+</div>
+</div>
+</div>
 <div id="postUploadForkRow" style="display:none;gap:8px;margin-top:.9rem">
 <div style="flex:1;display:flex;flex-direction:column;gap:4px">
 <div class="track-label" style="text-align:center;color:#7ab8ff;font-size:11px;font-weight:700;letter-spacing:.5px">TRACK 1</div>
@@ -731,24 +748,6 @@ body.product-focus .card:not(#productCard){opacity:.35;filter:brightness(.6) sat
 <div id="keepTweakingReminder" class="guidance-prompt" role="status">Made your changes? Scroll down and hit Generate again. Running low on tokens? Tap Credits &amp; Extras to top up.</div>
 <div id="startOverBtn" style="display:none;margin-top:.6rem;padding:.75rem;text-align:center;font-weight:700;color:#ff8a7a;cursor:default">PLEASE SELECT ONE OF THE ABOVE OPTIONS!</div>
 <button class="download-btn" id="downloadDesignBtn" onclick="downloadImage()" style="display:none;margin-top:.6rem">⬇️ Download for Printify</button>
-
-<div style="margin-top:1.1rem;padding-top:1rem;border-top:1px dashed #333">
-<div class="note" style="margin-top:0;margin-bottom:.6rem">Optional — add more photos if you want to combine or pull elements from other pictures (e.g. "use the face from Photo 2 on the body in Photo 1").</div>
-<div class="grid2">
-<div>
-<div style="font-size:11px;color:#29a3ff;letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px;text-align:center">Photo 2</div>
-<div class="upload-zone" id="refAZone" style="padding:1rem;" onclick="document.getElementById('refAInput').click()"><div style="font-size:20px;color:#555;margin-bottom:4px">➕</div><div class="upload-text" style="font-size:12px">Tap to add</div></div>
-<input type="file" id="refAInput" accept="image/*" style="display:none"/>
-<img id="refAPreview" class="preview-img" style="display:none;max-height:140px"/>
-</div>
-<div>
-<div style="font-size:11px;color:#29a3ff;letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px;text-align:center">Photo 3</div>
-<div class="upload-zone" id="refBZone" style="padding:1rem;" onclick="document.getElementById('refBInput').click()"><div style="font-size:20px;color:#555;margin-bottom:4px">➕</div><div class="upload-text" style="font-size:12px">Tap to add</div></div>
-<input type="file" id="refBInput" accept="image/*" style="display:none"/>
-<img id="refBPreview" class="preview-img" style="display:none;max-height:140px"/>
-</div>
-</div>
-</div>
 
 <button type="button" class="snap-arrow-btn snap-arrow-down" id="snapDown0" onclick="snapExpand(1)">⌄</button>
 </div>
@@ -872,7 +871,7 @@ body.product-focus .card:not(#productCard){opacity:.35;filter:brightness(.6) sat
 <button type="button" id="preGenMugColorFinishBtn" class="generate-btn" style="display:none;margin-top:.9rem;max-width:280px" onclick="finishPreGenMugColorPick()">✅ Satisfied — Continue</button>
 </div>
 </div>
-<button type="button" class="download-btn" style="margin-top:1rem" onclick="mugStyleLockBack()">← Back</button>
+<button type="button" id="mugStyleBackBtn" class="download-btn" style="margin-top:1rem" onclick="mugStyleLockBack()">← Back</button>
 </div>
 </div>
 
@@ -1782,6 +1781,7 @@ function scheduleOpeningGuide(delay){
 
 let photoGuideTimer=null;
 let photoGuideActive=false;
+let forkRevealTimer=null;
 
 function schedulePhotoGuideAdvance(delay){
   clearTimeout(photoGuideTimer);
@@ -1833,6 +1833,7 @@ function scrollToCoverMeRevealWhenReady(){
 function suspendGuidedScrollsForGeneration(){
   clearTimeout(openingGuideTimer);
   clearTimeout(photoGuideTimer);
+  clearTimeout(forkRevealTimer);
   openingGuideDone=true;
   photoGuideActive=false;
   guidedScrollInProgress=false;
@@ -1848,18 +1849,21 @@ function noteRealCustomerActivity(){
 
 function startPhotoGuide(){
   photoGuideActive=true;
-  // No auto-scroll here at all, on Alyx's explicit direction -- this
-  // screen should stay exactly where it lands until the customer taps
-  // Track 1 or Track 2 themselves. The opening guide's job (nudge them
-  // to upload a photo) is already done by the time we reach this point,
-  // so stop it from firing here too.
+  // No auto-scroll AWAY from the fork once it's showing, on Alyx's
+  // explicit direction -- but landing here for the first time, it's
+  // fine (wanted, even) to first show the uploaded photo, then after a
+  // few seconds scroll DOWN once to reveal the fork buttons below. The
+  // opening guide's job (nudge them to upload a photo) is already done
+  // by the time we reach this point, so stop it from firing here too.
   clearTimeout(openingGuideTimer);
   openingGuideDone=true;
-  // Track 1/Track 2 fork -- the customer decides here whether they
-  // want to pick a product first or jump straight to describing their
-  // own idea. Neither track auto-advances on its own; both wait for an
-  // explicit tap. See pickTrackProduct()/pickTrackDescribe() below.
   showPostUploadFork();
+  clearTimeout(forkRevealTimer);
+  forkRevealTimer=setTimeout(()=>{
+    const row=document.getElementById('postUploadForkRow');
+    if(!photoGuideActive||!row||row.style.display==='none')return;
+    smoothScrollToTarget('postUploadForkRow','center');
+  },5000);
 }
 
 function showPostUploadFork(){
@@ -1872,6 +1876,7 @@ function showPostUploadFork(){
 // generate() already handles fine (falls back to a default polished
 // caricature description when idea is blank).
 function pickTrackProduct(){
+  clearTimeout(forkRevealTimer);
   photoGuideActive=false;
   document.getElementById('postUploadForkRow').style.display='none';
   document.body.classList.remove('initial-upload-focus');
@@ -1884,6 +1889,7 @@ function pickTrackProduct(){
 // every upload -- now only fires once the customer deliberately picks
 // this path instead.
 function pickTrackDescribe(){
+  clearTimeout(forkRevealTimer);
   document.getElementById('postUploadForkRow').style.display='none';
   const styleCard=document.getElementById('styleSectionCard');
   if(styleCard)styleCard.style.display='';
@@ -4137,17 +4143,26 @@ function pickPreGenMugColor(el,colorName){
   scrollToMugMockupResultWhenReady();
 }
 
-// The mockup <img>'s src was just set (possibly for the first time, or
-// to a new file) -- scrolling in the same tick measures the OLD layout
-// before the browser has loaded/rendered the new image, which lands
-// the scroll short and cuts off the Satisfied button below the fold.
-// Wait for the actual load event (with a short fallback for cached
-// images, which don't always re-fire load reliably) before scrolling.
+// mugStyleCard scrolls internally (its own overflow-y:auto, not the page),
+// so this computes position within THAT container rather than the window.
+// Spans from the mockup/Satisfied button down through the Back button, so
+// Alyx can always see Back without having to scroll further himself.
 function scrollToMugMockupResultWhenReady(){
   const mockupImg=document.getElementById('preGenMugMockupImg');
   const mockupWrap=document.getElementById('preGenMugMockupResultWrap');
-  if(!mockupWrap)return;
-  const doScroll=()=>mockupWrap.scrollIntoView({behavior:'smooth',block:'nearest'});
+  const backBtn=document.getElementById('mugStyleBackBtn');
+  const scrollContainer=document.getElementById('mugStyleCard');
+  if(!mockupWrap||!scrollContainer)return;
+  const doScroll=()=>{
+    const containerRect=scrollContainer.getBoundingClientRect();
+    const bottomEl=backBtn||mockupWrap;
+    const topY=mockupWrap.getBoundingClientRect().top-containerRect.top+scrollContainer.scrollTop;
+    const bottomY=bottomEl.getBoundingClientRect().bottom-containerRect.top+scrollContainer.scrollTop;
+    const span=bottomY-topY;
+    const visibleH=scrollContainer.clientHeight;
+    const target=span<=visibleH ? topY-(visibleH-span)/2 : topY;
+    scrollContainer.scrollTo({top:target,behavior:'smooth'});
+  };
   if(mockupImg && mockupImg.style.display!=='none' && !mockupImg.complete){
     mockupImg.onload=doScroll;
     setTimeout(doScroll,400);
@@ -4354,7 +4369,16 @@ function showCoverMeCard(){
   renderCoverMeGrid();
   updateCoverMePreviewImg();
   document.getElementById('coverMeCard').style.display='block';
-  smoothScrollToTarget('coverMeCard','center');
+  // Was scrolling to 'center', which cut off the card's own header at
+  // the top when the magazine grid is taller than the viewport. Align
+  // to top instead, with the same fixed-currency-bar compensation used
+  // for showDesignMethodCard(), so the header lands fully visible.
+  snapExpandThrough('coverMeCard');
+  guidedScrollInProgress=true;
+  const coverMeCardEl=document.getElementById('coverMeCard');
+  const coverMeCardRect=coverMeCardEl.getBoundingClientRect();
+  window.scrollTo({top:window.scrollY+coverMeCardRect.top-90,behavior:'smooth'});
+  setTimeout(()=>{guidedScrollInProgress=false;},750);
 }
 
 function coverMeBack(){
@@ -4531,19 +4555,18 @@ const COVER_ME_PANEL_OVERLAY_POS={
   right:{top:30,left:22,width:40,height:40}
 };
 
-// All three panels start pre-filled with the approved design
-// automatically -- simpler and more self-explanatory than asking a
-// Yes/No per side: the customer sees exactly what they'd get by
-// default and just removes whichever panel(s) they don't want,
-// instead of having to opt in to each one individually. This also
-// sidesteps the earlier "Use my current cover" bug entirely (it broke
-// when Center was deleted before the copy happened) -- the copy now
-// happens once, atomically, right here, before any deletion is even
-// possible.
+// Keeps Left/Right in sync with whatever cover is currently approved
+// on Center, every time a new one is approved -- not just when they
+// happen to be empty. Previously this only filled a panel if it was
+// still null, so an OLD magazine cover from an earlier generation would
+// silently linger on Left/Right after regenerating a new one on Center,
+// showing mismatched covers across the three mockups. A panel is only
+// ever exempted from this resync once the customer explicitly picks a
+// different image for that specific side (coverMePanelExplicit).
 function autoFillCoverMePanels(){
   if(!placements.front)return;
-  if(!placements.left)placements.left=placements.front;
-  if(!placements.right)placements.right=placements.front;
+  if(!coverMePanelExplicit.left)placements.left=placements.front;
+  if(!coverMePanelExplicit.right)placements.right=placements.front;
   saveMugState();
 }
 
@@ -4697,6 +4720,7 @@ function useCurrentDesignForCoverMePanel(pos){
 }
 
 function addDifferentImageForCoverMePanel(pos){
+  if(pos==='left'||pos==='right')coverMePanelExplicit[pos]=true;
   pendingSlotTarget=pos;
   document.getElementById('coverMePanelCard').style.display='none';
   showDesignMethodCard();
@@ -8222,6 +8246,12 @@ let placements={left:null,right:null,front:null};
 // "Add it back (free)" restores that exact panel's own last design --
 // not a copy from Center -- with no regeneration needed.
 let coverMeLastRemoved={left:null,right:null,front:null};
+// True once the customer explicitly picks a DIFFERENT image for that
+// specific side (paid "Add a different image") -- autoFillCoverMePanels
+// must never overwrite an explicit per-panel choice like that. Any panel
+// NOT marked explicit stays in sync with whatever cover is currently
+// approved, so old/mismatched covers never linger on Left or Right.
+let coverMePanelExplicit={left:false,right:false};
 let pendingSlotTarget=null;
 let libraryOpen=false;
 
@@ -8419,6 +8449,7 @@ function clearAllDesigns(){
   recentDesigns=[];
   placements={left:null,right:null,front:null};
   coverMeLastRemoved={left:null,right:null,front:null};
+  coverMePanelExplicit={left:false,right:false};
   currentDesignId=null;
   pendingSlotTarget=null;
   mugOptionsTouched=false;
@@ -9088,6 +9119,7 @@ function resetEverythingFreshStart(){
   recentDesigns=[];
   placements={left:null,right:null,front:null};
   coverMeLastRemoved={left:null,right:null,front:null};
+  coverMePanelExplicit={left:false,right:false};
   try{localStorage.removeItem('muggshotz_mug_state');}catch(e){}
   document.getElementById('positionHolderCard').style.display='none';
   libraryOpen=false;
