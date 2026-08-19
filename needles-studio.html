@@ -4477,9 +4477,9 @@ const COVER_ME_PANEL_ORDER=[['left','LEFT'],['front','CENTER'],['right','RIGHT']
 // shift right and RIGHT's art needs to shift left to sit centered on the
 // mug in each photo. CENTER is unchanged.
 const COVER_ME_PANEL_OVERLAY_POS={
-  left:{top:30,left:34,width:40,height:40},
+  left:{top:30,left:38,width:40,height:40},
   front:{top:30,left:30,width:40,height:40},
-  right:{top:30,left:26,width:40,height:40}
+  right:{top:30,left:22,width:40,height:40}
 };
 
 // All three panels start pre-filled with the approved design
@@ -4622,10 +4622,20 @@ function renderCoverMePanelRowState(pos){
   }
 }
 
-// Snapshots whatever's currently on Center at THIS moment, not a live
-// reference re-evaluated later -- Center itself may have since been
-// removed, so this only works if Center still actually has something.
+// Restores whatever was just removed from THIS panel -- no regeneration,
+// no copying from Center. If nothing has ever been removed from this
+// panel (e.g. it started empty), falls back to copying Center's current
+// design as a convenience default, same as the original behavior.
 function useCurrentDesignForCoverMePanel(pos){
+  const restored=coverMeLastRemoved[pos];
+  if(restored){
+    placements[pos]=restored;
+    coverMeLastRemoved[pos]=null;
+    saveMugState();
+    renderCoverMePanelRowState(pos);
+    refreshCoverMePanelDoneState();
+    return;
+  }
   const source=placements.front;
   if(!source){
     showGuidanceAlert('Center doesn\'t have an image to copy right now -- add one there first, or use "Add a different image" instead.');
@@ -4644,6 +4654,7 @@ function addDifferentImageForCoverMePanel(pos){
 }
 
 function removeCoverMePanelDesign(pos){
+  coverMeLastRemoved[pos]=placements[pos];
   placements[pos]=null;
   saveMugState();
   renderCoverMePanelRowState(pos);
@@ -8154,6 +8165,10 @@ document.getElementById('cancelBtn').style.display='none';
 
 let recentDesigns=[];
 let placements={left:null,right:null,front:null};
+// Remembers whatever was just removed from EACH panel individually, so
+// "Add it back (free)" restores that exact panel's own last design --
+// not a copy from Center -- with no regeneration needed.
+let coverMeLastRemoved={left:null,right:null,front:null};
 let pendingSlotTarget=null;
 let libraryOpen=false;
 
@@ -8350,6 +8365,7 @@ function swapSlots(posA,posB){
 function clearAllDesigns(){
   recentDesigns=[];
   placements={left:null,right:null,front:null};
+  coverMeLastRemoved={left:null,right:null,front:null};
   currentDesignId=null;
   pendingSlotTarget=null;
   mugOptionsTouched=false;
@@ -9018,6 +9034,7 @@ function resetEverythingFreshStart(){
 
   recentDesigns=[];
   placements={left:null,right:null,front:null};
+  coverMeLastRemoved={left:null,right:null,front:null};
   try{localStorage.removeItem('muggshotz_mug_state');}catch(e){}
   document.getElementById('positionHolderCard').style.display='none';
   libraryOpen=false;
