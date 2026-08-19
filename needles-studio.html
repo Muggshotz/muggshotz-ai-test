@@ -1789,6 +1789,29 @@ function schedulePhotoGuideAdvance(delay){
   },delay);
 }
 
+// Some cards' true top position keeps shifting for a bit after display:block
+// -- not just from their OWN images loading, but from OTHER images
+// elsewhere on the page (e.g. product icons above them) still loading and
+// growing, pushing everything below further down. A single deferred
+// measurement (even double-rAF) can still land short if that keeps
+// happening. This polls the element's top position every 100ms and only
+// scrolls once two consecutive reads agree (or a max attempt cap is hit).
+function scrollToStableTop(el,offset,maxAttempts){
+  let lastTop=null;
+  let attempts=0;
+  function check(){
+    attempts++;
+    const top=el.getBoundingClientRect().top;
+    if(top===lastTop||attempts>=maxAttempts){
+      window.scrollTo({top:window.scrollY+top-offset,behavior:'smooth'});
+      return;
+    }
+    lastTop=top;
+    setTimeout(()=>requestAnimationFrame(check),100);
+  }
+  requestAnimationFrame(check);
+}
+
 function smoothScrollToTarget(targetId,block='start',after){
   const target=document.getElementById(targetId);
   if(!target)return;
@@ -4382,18 +4405,15 @@ function showCoverMeCard(){
   // Was scrolling to 'center', which cut off the card's own header at
   // the top when the magazine grid is taller than the viewport. Align
   // to top instead, with the same fixed-currency-bar compensation used
-  // for showDesignMethodCard(). Deferred with a double rAF -- measuring
-  // in the same tick as display:block was landing short/inconsistently,
-  // since the 20 magazine tile images haven't loaded/laid out yet at
-  // that instant (same race as the mug-mockup and Design Method fixes).
+  // for showDesignMethodCard(). Double-rAF still landed short sometimes
+  // -- switched to scrollToStableTop(), which polls until the card's
+  // position actually stops shifting (covers layout shifts from OTHER
+  // images on the page still loading, not just this card's own).
   snapExpandThrough('coverMeCard');
   guidedScrollInProgress=true;
   const coverMeCardEl=document.getElementById('coverMeCard');
-  requestAnimationFrame(()=>requestAnimationFrame(()=>{
-    const coverMeCardRect=coverMeCardEl.getBoundingClientRect();
-    window.scrollTo({top:window.scrollY+coverMeCardRect.top-90,behavior:'smooth'});
-  }));
-  setTimeout(()=>{guidedScrollInProgress=false;},900);
+  scrollToStableTop(coverMeCardEl,90,15);
+  setTimeout(()=>{guidedScrollInProgress=false;},2200);
 }
 
 function coverMeBack(){
@@ -4820,7 +4840,7 @@ function renderCoverMeFrameGrid(){
   });
 }
 
-function coverMePickFrameTile(name){
+async function coverMePickFrameTile(name){
   coverMeSelectedFrame=(coverMeSelectedFrame===name)?null:name;
   const data=coverMeSelectedFrame?FRAME_CATALOG[coverMeSelectedFrame]:null;
   coverMeFrameColorHex=data?(data.defaultColor||(data.defaultColors?data.defaultColors[0]:null)):null;
@@ -4829,8 +4849,13 @@ function coverMePickFrameTile(name){
   const showColor=coverMeSelectedFrame && data && data.colorable!==false && data.type==='image';
   if(colorRow)colorRow.style.display=showColor?'block':'none';
   if(showColor)renderCoverMeFrameColorGrid();
-  document.getElementById('coverMeFrameSatisfiedBtn').style.display=coverMeSelectedFrame?'block':'none';
-  updateCoverMeFramePreview();
+  const satisfiedBtn=document.getElementById('coverMeFrameSatisfiedBtn');
+  satisfiedBtn.style.display=coverMeSelectedFrame?'block':'none';
+  await updateCoverMeFramePreview();
+  // Bring the color swatches + Satisfied button into view now that a
+  // frame's actually selected -- previously nothing scrolled here, so it
+  // looked like tapping a frame did nothing.
+  if(coverMeSelectedFrame)scrollToStableTop(satisfiedBtn,90,10);
 }
 
 function renderCoverMeFrameColorGrid(){
