@@ -676,8 +676,14 @@ body.product-focus .card:not(#productCard){opacity:.35;filter:brightness(.6) sat
 <div style="font-size:11px;color:#777;letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px;text-align:center">Photo 1</div>
 <div class="needles-clipboard"><div class="needles-clip"></div><div class="upload-zone needles-polaroid" id="uploadZone" onclick="document.getElementById('fileInput').click()"><div style="font-size:32px;color:#555;margin-bottom:8px">👤</div><div class="upload-text">Tap here to upload a photo</div><div class="upload-sub">Clear face photo works best</div></div></div>
 <div id="postUploadForkRow" style="display:none;gap:8px;margin-top:.9rem">
-<button type="button" class="btn-select" style="flex:1;padding:1rem .6rem" onclick="pickTrackProduct()">🛒 Select Your Product</button>
-<button type="button" class="btn-select" style="flex:1;padding:1rem .6rem" onclick="pickTrackDescribe()">🖌️ Create Your Design</button>
+<div style="flex:1;display:flex;flex-direction:column;gap:4px">
+<div style="text-align:center;color:#7ab8ff;font-size:11px;font-weight:700;letter-spacing:.5px">TRACK 1</div>
+<button type="button" class="btn-select" style="padding:1rem .6rem" onclick="pickTrackProduct()">🛒 Select Your Product</button>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:4px">
+<div style="text-align:center;color:#7ab8ff;font-size:11px;font-weight:700;letter-spacing:.5px">TRACK 2</div>
+<button type="button" class="btn-select" style="padding:1rem .6rem" onclick="pickTrackDescribe()">🖌️ Create Your Design</button>
+</div>
 </div>
 <div id="workshopRecallRow" style="display:none;gap:8px;margin-top:.6rem">
 <button class="download-btn" id="recallPhotoBtn" style="flex:1;margin-top:0" onclick="recallLastPhotoUsed()">↻ Use Last Photo Uploaded</button>
@@ -978,6 +984,7 @@ Would you like to try out <span style="color:#7ab8ff">some of our fun props?</sp
 </div>
 
 
+<div class="card" id="travelMugVariantCard" style="display:none">
 <div class="card-title">🍶 Which Travel Mug?</div>
 <div class="note" style="margin-top:0;margin-bottom:.9rem">Pick which travel mug you're getting before generating — the shape and print layout differ enough between them that we need this locked in first.</div>
 <div class="theme-grid" id="travelMugVariantGrid"></div>
@@ -4118,7 +4125,9 @@ function finishPreGenMugColorPick(){
 function showDesignMethodCard(){
   const card=document.getElementById('designMethodCard');
   if(card)card.style.display='block';
-  smoothScrollToTarget('designMethodCard','start');
+  smoothScrollToTarget('designMethodCard','start',()=>{
+    window.scrollBy({top:-90,behavior:'smooth'});
+  });
 }
 
 // Tapping a prop tile. If Design By Description is checked, the
