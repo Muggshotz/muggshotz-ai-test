@@ -1857,6 +1857,8 @@ function pickTrackProduct(){
 // this path instead.
 function pickTrackDescribe(){
   document.getElementById('postUploadForkRow').style.display='none';
+  const styleCard=document.getElementById('styleSectionCard');
+  if(styleCard)styleCard.style.display='';
   document.body.classList.add('idea-focus');
   setTimeout(showIdeaBoxIntroIfNeeded,800);
   schedulePhotoGuideAdvance(4000);
@@ -4278,6 +4280,14 @@ function showCoverMeCard(){
   document.getElementById('coverMeEaselApproveRow').style.display='none';
   const clipboard=document.querySelector('.needles-clipboard');
   if(clipboard)clipboard.style.display='';
+  // The generic Style picker (Muggshotz Classic/Photorealistic/Comic
+  // Strip/Line Art) is for the plain text-prompt generator -- Cover Me
+  // determines its own visual treatment through the AI merge prompt,
+  // so this section doesn't apply here. Hidden, not removed -- the
+  // plain-generator path (pickTrackDescribe()) restores it when
+  // actually needed.
+  const styleCard=document.getElementById('styleSectionCard');
+  if(styleCard)styleCard.style.display='none';
   const descBox=document.getElementById('coverMeDescriptionBox');
   if(descBox)descBox.value='';
   renderCoverMeGrid();
@@ -4383,6 +4393,14 @@ let coverMePendingResultUrl=null;
 async function approveCoverMe(){
   if(!coverMePendingResultUrl)return;
   const designId=addToRecentDesigns(coverMePendingResultUrl);
+  // addToRecentDesigns() always reveals the generic "Design Your
+  // Product" panel (Left/Center/Right thumbnails, My Designs, Continue
+  // to Order) as a side effect -- that panel is redundant here since
+  // coverMePanelCard is Cover Me's own dedicated panel-selection screen.
+  // Hidden right back, not deleted -- the underlying data/functions
+  // stay intact for whenever this path is revisited.
+  const posHolder=document.getElementById('positionHolderCard');
+  if(posHolder)posHolder.style.display='none';
   const validTargets=['left','front','right'];
   const target=(pendingSlotTarget && validTargets.includes(pendingSlotTarget))?pendingSlotTarget:'front';
   placements[target]=designId;
@@ -4456,6 +4474,7 @@ function renderCoverMePanelRows(){
   wrap.innerHTML='';
   COVER_ME_PANEL_ORDER.forEach(([pos,label])=>{
     wrap.appendChild(buildCoverMePanelRow(pos,label));
+    renderCoverMePanelRowState(pos);
   });
   refreshCoverMePanelDoneState();
 }
@@ -4493,7 +4512,6 @@ function buildCoverMePanelRow(pos,label){
   imgWrap.appendChild(rightSide);
 
   row.appendChild(imgWrap);
-  renderCoverMePanelRowState(pos);
   return row;
 }
 
