@@ -709,6 +709,7 @@ body.product-focus .card:not(#productCard){opacity:.35;filter:brightness(.6) sat
 <button type="button" class="generate-btn" style="flex:1;padding:.7rem .5rem;font-size:14px" onclick="approveCoverMe()">✅ Yes — Use This Cover</button>
 <button type="button" class="download-btn" style="flex:1;margin-top:0;padding:.7rem .5rem;font-size:14px" onclick="keepTweakingCoverMe()">🔧 No — Start Over</button>
 </div>
+<div class="note" style="text-align:center;margin-top:.4rem;color:#888">Trying again uses one more token. <span style="color:#7ab8ff;cursor:pointer" onclick="openCreditsPanel()">Need more?</span></div>
 <div style="display:flex;gap:16px;justify-content:center;margin-top:.6rem">
 <span class="note" style="color:#7ab8ff;cursor:pointer" onclick="backToDesignMethodFromEaselReveal()">← Choose a different prop</span>
 <span class="note" style="color:#7ab8ff;cursor:pointer" onclick="backToTrackDescribeFromEaselReveal()">← Describe it instead</span>
@@ -952,19 +953,10 @@ Would you like to try out <span style="color:#7ab8ff">some of our fun props?</sp
 </div>
 
 <div class="card" id="coverMePanelCard" style="display:none">
-<div class="card-title">🔲 Select the Panels You Wish to Place Your Image</div>
-<div class="note" style="margin-top:0;margin-bottom:.9rem">Your cover is already on Center. Add it to Left and/or Right too, or leave them blank — your call. Use the arrows to look at each side.</div>
-<div style="position:relative;display:flex;align-items:center;justify-content:center;gap:10px">
-<button type="button" onclick="cyclePanelView(-1)" style="flex-shrink:0;width:40px;height:40px;border-radius:50%;background:#1a1a1a;border:1px solid #444;color:#fff;font-size:20px;cursor:pointer">‹</button>
-<div style="position:relative;flex:1;max-width:420px">
-<img id="coverMePanelBgImg" style="width:100%;display:block;border-radius:10px;background:#fff"/>
-<div id="coverMePanelOverlay" style="position:absolute;top:32%;left:28%;width:34%;height:34%"></div>
-</div>
-<button type="button" onclick="cyclePanelView(1)" style="flex-shrink:0;width:40px;height:40px;border-radius:50%;background:#1a1a1a;border:1px solid #444;color:#fff;font-size:20px;cursor:pointer">›</button>
-</div>
-<div id="coverMePanelLabel" style="text-align:center;font-weight:700;color:#7ab8ff;margin-top:.6rem"></div>
-<div id="coverMePanelControls" style="margin-top:.6rem"></div>
-<div class="note" id="coverMePanelHint" style="margin-top:.9rem;text-align:center">Please choose Yes or No for each panel.</div>
+<div class="card-title">SELECT THE PANELS</div>
+<div class="note" style="margin-top:0;margin-bottom:1rem;text-align:center;color:#7ab8ff">YOU WISH TO PLACE YOUR IMAGE</div>
+<div id="coverMePanelRows" style="display:flex;flex-direction:column;gap:12px"></div>
+<div class="note" id="coverMePanelHint" style="margin-top:.9rem;text-align:center">Please select either Yes or No.</div>
 <button type="button" class="generate-btn" id="coverMePanelDoneBtn" style="margin-top:.75rem" disabled onclick="coverMePanelDone()">✅ Done</button>
 </div>
 
@@ -4445,35 +4437,70 @@ function backToTrackDescribeFromEaselReveal(){
 // no." Center is never declinable (it's the just-approved design).
 let coverMePanelDeclined={left:false,right:false};
 
-// Real angle photos of a plain white mug, one per panel -- shown one
-// at a time with cycle arrows, per Alyx's explicit request (was three
-// smaller stacked cards; now one large image per panel).
+// Real angle photos of a plain white mug, one per panel.
 const COVER_ME_PANEL_ANGLE_IMG={left:'Cup_Left.webp',front:'Cup_Center.webp',right:'Cup_Right.webp'};
 const COVER_ME_PANEL_ORDER=[['left','LEFT'],['front','CENTER'],['right','RIGHT']];
-let coverMePanelViewIndex=1; // start on Center, the one that already has content
 
 function showCoverMePanelCard(){
   document.body.classList.remove('covermegen-focus');
   document.body.classList.remove('covermereveal-focus');
   document.getElementById('coverMeCard').style.display='none';
-  coverMePanelViewIndex=1;
-  renderCoverMePanelView();
+  renderCoverMePanelRows();
   document.getElementById('coverMePanelCard').style.display='block';
   smoothScrollToTarget('coverMePanelCard','center');
 }
 
-function cyclePanelView(delta){
-  coverMePanelViewIndex=((coverMePanelViewIndex+delta)%3+3)%3;
-  renderCoverMePanelView();
+function renderCoverMePanelRows(){
+  const wrap=document.getElementById('coverMePanelRows');
+  if(!wrap)return;
+  wrap.innerHTML='';
+  COVER_ME_PANEL_ORDER.forEach(([pos,label])=>{
+    wrap.appendChild(buildCoverMePanelRow(pos,label));
+  });
+  refreshCoverMePanelDoneState();
 }
 
-function renderCoverMePanelView(){
-  const [pos,label]=COVER_ME_PANEL_ORDER[coverMePanelViewIndex];
-  document.getElementById('coverMePanelBgImg').src=COVER_ME_PANEL_ANGLE_IMG[pos];
-  document.getElementById('coverMePanelLabel').textContent=label;
+function buildCoverMePanelRow(pos,label){
+  const row=document.createElement('div');
+  row.className='card';
+  row.style.cssText='padding:14px;margin:0';
+  row.dataset.pos=pos;
 
-  const overlay=document.getElementById('coverMePanelOverlay');
-  const controls=document.getElementById('coverMePanelControls');
+  const imgWrap=document.createElement('div');
+  imgWrap.style.cssText='position:relative;display:flex;align-items:center;gap:14px';
+
+  const bgWrap=document.createElement('div');
+  bgWrap.style.cssText='position:relative;width:110px;flex-shrink:0';
+  const bgImg=document.createElement('img');
+  bgImg.src=COVER_ME_PANEL_ANGLE_IMG[pos];
+  bgImg.style.cssText='width:100%;display:block;border-radius:8px;background:#fff';
+  bgWrap.appendChild(bgImg);
+  const overlay=document.createElement('div');
+  overlay.id='coverMeOverlay_'+pos;
+  overlay.style.cssText='position:absolute;top:32%;left:28%;width:34%;height:34%';
+  bgWrap.appendChild(overlay);
+  imgWrap.appendChild(bgWrap);
+
+  const rightSide=document.createElement('div');
+  rightSide.style.cssText='flex:1';
+  const labelEl=document.createElement('div');
+  labelEl.style.cssText='font-weight:700;margin-bottom:8px;color:#7ab8ff;text-align:center';
+  labelEl.textContent=label;
+  rightSide.appendChild(labelEl);
+  const controls=document.createElement('div');
+  controls.id='coverMeControls_'+pos;
+  rightSide.appendChild(controls);
+  imgWrap.appendChild(rightSide);
+
+  row.appendChild(imgWrap);
+  renderCoverMePanelRowState(pos);
+  return row;
+}
+
+function renderCoverMePanelRowState(pos){
+  const overlay=document.getElementById('coverMeOverlay_'+pos);
+  const controls=document.getElementById('coverMeControls_'+pos);
+  if(!overlay||!controls)return;
   overlay.innerHTML='';
   controls.innerHTML='';
 
@@ -4489,42 +4516,39 @@ function renderCoverMePanelView(){
     const removeBtn=document.createElement('button');
     removeBtn.type='button';
     removeBtn.className='download-btn';
-    removeBtn.style.cssText='border-color:#5a2a2a;color:#ff8a7a';
-    removeBtn.textContent='✖ Remove from this panel';
+    removeBtn.style.cssText='width:100%;margin-top:0;border-color:#5a2a2a;color:#ff8a7a;font-size:12px;padding:.5rem';
+    removeBtn.textContent='✖ Remove';
     removeBtn.onclick=()=>removeCoverMePanelDesign(pos);
     controls.appendChild(removeBtn);
 
   } else if(pos!=='front' && coverMePanelDeclined[pos]){
-    overlay.style.cssText='position:absolute;top:32%;left:28%;width:34%;height:34%;border:2px dashed #666;border-radius:4px;display:flex;align-items:center;justify-content:center;color:#888;font-size:11px;text-align:center;padding:2px';
-    overlay.textContent='(none)';
-
+    overlay.style.cssText='position:absolute;top:32%;left:28%;width:34%;height:34%;border:2px dashed #666;border-radius:4px';
     const note=document.createElement('div');
     note.className='note';
-    note.style.cssText='text-align:center;color:#888;margin-bottom:8px';
-    note.textContent='No image on this panel.';
+    note.style.cssText='text-align:center;color:#888;font-size:12px';
+    note.textContent='No image here.';
     controls.appendChild(note);
     const changeBtn=document.createElement('button');
     changeBtn.type='button';
     changeBtn.className='download-btn';
-    changeBtn.style.cssText='width:100%';
+    changeBtn.style.cssText='width:100%;margin-top:6px;font-size:12px;padding:.5rem';
     changeBtn.textContent='Actually, add one';
     changeBtn.onclick=()=>setCoverMePanelYes(pos);
     controls.appendChild(changeBtn);
 
   } else if(pos!=='front'){
-    overlay.style.cssText='position:absolute;top:32%;left:28%;width:34%;height:34%;border:2px dashed #d32f2f;border-radius:4px;display:flex;align-items:center;justify-content:center;color:#d32f2f;font-weight:700;font-size:11px;text-align:center;padding:2px';
+    overlay.style.cssText='position:absolute;top:32%;left:28%;width:34%;height:34%;border:2px dashed #d32f2f;border-radius:4px;display:flex;align-items:center;justify-content:center;color:#d32f2f;font-weight:700;font-size:9px;text-align:center;padding:2px';
     overlay.textContent='Your Photo Here';
-
     const btnRow=document.createElement('div');
-    btnRow.style.cssText='display:flex;gap:8px';
+    btnRow.style.cssText='display:flex;gap:6px';
     const yesBtn=document.createElement('div');
     yesBtn.className='btn-select';
-    yesBtn.style.cssText='flex:1;padding:.6rem;text-align:center';
+    yesBtn.style.cssText='flex:1;padding:.5rem;text-align:center;font-size:13px';
     yesBtn.textContent='YES';
     yesBtn.onclick=()=>setCoverMePanelYes(pos);
     const noBtn=document.createElement('div');
     noBtn.className='btn-select';
-    noBtn.style.cssText='flex:1;padding:.6rem;text-align:center';
+    noBtn.style.cssText='flex:1;padding:.5rem;text-align:center;font-size:13px';
     noBtn.textContent='NO';
     noBtn.onclick=()=>setCoverMePanelNo(pos);
     btnRow.appendChild(yesBtn);
@@ -4535,50 +4559,40 @@ function renderCoverMePanelView(){
     overlay.style.cssText='position:absolute;top:32%;left:28%;width:34%;height:34%;border:2px dashed #666;border-radius:4px';
     const note=document.createElement('div');
     note.className='note';
-    note.textContent='No design yet — go back and generate your cover first.';
+    note.style.cssText='font-size:12px';
+    note.textContent='Go back and generate your cover first.';
     controls.appendChild(note);
   }
-
-  refreshCoverMePanelDoneState();
 }
 
 function setCoverMePanelYes(pos){
   coverMePanelDeclined[pos]=false;
-  renderCoverMePanelYesChoice(pos);
-}
-
-// Same idea as renderCoverMePanelView's undecided-panel branch, but
-// shows Use-Same/Add-Different instead of Yes/No since Yes was just
-// picked and this panel still has no design assigned.
-function renderCoverMePanelYesChoice(pos){
-  const overlay=document.getElementById('coverMePanelOverlay');
-  const controls=document.getElementById('coverMePanelControls');
-  overlay.style.cssText='position:absolute;top:32%;left:28%;width:34%;height:34%;border:2px dashed #d32f2f;border-radius:4px;display:flex;align-items:center;justify-content:center;color:#d32f2f;font-weight:700;font-size:11px;text-align:center;padding:2px';
+  const controls=document.getElementById('coverMeControls_'+pos);
+  const overlay=document.getElementById('coverMeOverlay_'+pos);
+  overlay.style.cssText='position:absolute;top:32%;left:28%;width:34%;height:34%;border:2px dashed #d32f2f;border-radius:4px;display:flex;align-items:center;justify-content:center;color:#d32f2f;font-weight:700;font-size:9px;text-align:center;padding:2px';
   overlay.textContent='Your Photo Here';
   controls.innerHTML='';
-
   const sameBtn=document.createElement('button');
   sameBtn.type='button';
   sameBtn.className='generate-btn';
-  sameBtn.style.cssText='margin-bottom:8px;width:100%';
+  sameBtn.style.cssText='width:100%;margin-bottom:6px;font-size:12px;padding:.5rem';
   sameBtn.textContent='Use my current cover (free)';
   sameBtn.onclick=()=>useCurrentDesignForCoverMePanel(pos);
   controls.appendChild(sameBtn);
-
   const diffBtn=document.createElement('button');
   diffBtn.type='button';
   diffBtn.className='download-btn';
-  diffBtn.style.cssText='width:100%';
-  diffBtn.textContent='Add a different image (one more generation)';
+  diffBtn.style.cssText='width:100%;margin-top:0;font-size:12px;padding:.5rem';
+  diffBtn.textContent='Add a different image (1 more gen)';
   diffBtn.onclick=()=>addDifferentImageForCoverMePanel(pos);
   controls.appendChild(diffBtn);
-
   refreshCoverMePanelDoneState();
 }
 
 function setCoverMePanelNo(pos){
   coverMePanelDeclined[pos]=true;
-  renderCoverMePanelView();
+  renderCoverMePanelRowState(pos);
+  refreshCoverMePanelDoneState();
 }
 
 function useCurrentDesignForCoverMePanel(pos){
@@ -4586,7 +4600,8 @@ function useCurrentDesignForCoverMePanel(pos){
   placements[pos]=placements.front;
   coverMePanelDeclined[pos]=false;
   saveMugState();
-  renderCoverMePanelView();
+  renderCoverMePanelRowState(pos);
+  refreshCoverMePanelDoneState();
 }
 
 function addDifferentImageForCoverMePanel(pos){
@@ -4598,7 +4613,8 @@ function addDifferentImageForCoverMePanel(pos){
 function removeCoverMePanelDesign(pos){
   placements[pos]=null;
   saveMugState();
-  renderCoverMePanelView();
+  renderCoverMePanelRowState(pos);
+  refreshCoverMePanelDoneState();
 }
 
 function refreshCoverMePanelDoneState(){
@@ -4609,9 +4625,9 @@ function refreshCoverMePanelDoneState(){
   if(hint)hint.style.display=resolved?'none':'block';
 }
 
-// Panel decisions are final -- next is the Frame offer, not the
-// mockup fetch directly (that happens once Frame is also settled).
-function coverMePanelDone(){
+// This IS the one real Printify mockup fetch for the whole Cover Me
+// flow -- happens once panel AND frame decisions are both final.
+async function coverMePanelDone(){
   document.getElementById('coverMePanelCard').style.display='none';
   document.getElementById('coverMeFrameOfferCard').style.display='block';
   smoothScrollToTarget('coverMeFrameOfferCard','center');
