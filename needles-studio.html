@@ -414,6 +414,7 @@ body #accessorizeCard{opacity:1!important;filter:none!important;pointer-events:a
 body #frameSectionCard{opacity:1!important;filter:none!important;pointer-events:auto!important}
 body.print-mode-focus .card:not(#mugPrintModeCard){opacity:.28;filter:brightness(.55) saturate(.7);pointer-events:none;transition:opacity .5s,filter .5s}
 body.covermegen-focus .card:not(#coverMeCard){opacity:.28;filter:brightness(.55) saturate(.7);pointer-events:none;transition:opacity .5s,filter .5s}
+body.coverme-frameoffer-focus .card:not(#coverMeFrameOfferCard){opacity:.28;filter:brightness(.55) saturate(.7);pointer-events:none;transition:opacity .5s,filter .5s}
 body.covermereveal-focus .card:not(#uploadPhotoCard){opacity:.28;filter:brightness(.55) saturate(.7);pointer-events:none;transition:opacity .5s,filter .5s}
 body.final-generate-focus .card:not(#uploadPhotoCard){opacity:.35;filter:brightness(.6) saturate(.75);transition:opacity .5s,filter .5s}
 body.initial-upload-focus .card:not(#uploadPhotoCard){opacity:.35;filter:brightness(.6) saturate(.75);pointer-events:none;transition:opacity .5s,filter .5s}
@@ -967,7 +968,7 @@ Would you like to try out <span style="color:#7ab8ff">some of our fun props?</sp
 <div class="card-title">🖼️ Would you like to select a frame to border your image?</div>
 <div class="note" style="margin-top:0;margin-bottom:.9rem">Optional — applied to your finished design(s) automatically.</div>
 <div style="display:flex;gap:10px">
-<button type="button" class="generate-btn" style="flex:1" onclick="showCoverMeFrameCatalog()">🖼️ Let's see what you got</button>
+<button type="button" class="generate-btn" style="flex:1" onclick="showCoverMeFrameCatalog()">🖼️ Would you like to add a decorative frame?</button>
 <button type="button" class="download-btn" style="flex:1" onclick="skipCoverMeFrame()">🚫 No Thank You</button>
 </div>
 <div class="note" style="margin-top:1rem;text-align:center;color:#7ab8ff;cursor:pointer" onclick="changePropsFromCoverMe()">Change Props</div>
@@ -1807,6 +1808,28 @@ function smoothScrollToTarget(targetId,block='start',after){
   },750);
 }
 
+// The finished-image reveal (easel photo + "Needles presents..." caption
+// + Done timer) and the Yes/No approve buttons are two separate sibling
+// elements, not one container -- scrolling to just the button row alone
+// (the old behavior) could land short of showing the actual image.
+// Scroll to fit BOTH together: center the whole span if it fits in the
+// viewport, otherwise align to the top so the image stays visible.
+function scrollToCoverMeRevealWhenReady(){
+  const stageWrap=document.getElementById('needlesStageWrap');
+  const approveRow=document.getElementById('coverMeEaselApproveRow');
+  if(!stageWrap||!approveRow)return;
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{
+    const topY=stageWrap.getBoundingClientRect().top+window.scrollY;
+    const bottomY=approveRow.getBoundingClientRect().bottom+window.scrollY;
+    const span=bottomY-topY;
+    const vh=window.innerHeight;
+    const target=span<=vh ? topY-(vh-span)/2 : topY;
+    guidedScrollInProgress=true;
+    window.scrollTo({top:target,behavior:'smooth'});
+    setTimeout(()=>{guidedScrollInProgress=false;},750);
+  }));
+}
+
 function suspendGuidedScrollsForGeneration(){
   clearTimeout(openingGuideTimer);
   clearTimeout(photoGuideTimer);
@@ -1818,7 +1841,6 @@ function suspendGuidedScrollsForGeneration(){
 function noteRealCustomerActivity(){
   if(guidedScrollInProgress)return;
   scheduleOpeningGuide(5000);
-  if(photoGuideActive)schedulePhotoGuideAdvance(5000);
 }
 ['wheel','touchstart','pointerdown','keydown'].forEach(evt=>{
   window.addEventListener(evt,noteRealCustomerActivity,{passive:true});
@@ -1826,10 +1848,13 @@ function noteRealCustomerActivity(){
 
 function startPhotoGuide(){
   photoGuideActive=true;
-
-  setTimeout(()=>{
-    if(photoGuideActive)smoothScrollToTarget('startOverBtn','end');
-  },150);
+  // No auto-scroll here at all, on Alyx's explicit direction -- this
+  // screen should stay exactly where it lands until the customer taps
+  // Track 1 or Track 2 themselves. The opening guide's job (nudge them
+  // to upload a photo) is already done by the time we reach this point,
+  // so stop it from firing here too.
+  clearTimeout(openingGuideTimer);
+  openingGuideDone=true;
   // Track 1/Track 2 fork -- the customer decides here whether they
   // want to pick a product first or jump straight to describing their
   // own idea. Neither track auto-advances on its own; both wait for an
@@ -4109,9 +4134,26 @@ function pickPreGenMugColor(el,colorName){
   updatePreGenMugMockupImg();
   const finishBtn=document.getElementById('preGenMugColorFinishBtn');
   if(finishBtn)finishBtn.style.display='block';
+  scrollToMugMockupResultWhenReady();
+}
+
+// The mockup <img>'s src was just set (possibly for the first time, or
+// to a new file) -- scrolling in the same tick measures the OLD layout
+// before the browser has loaded/rendered the new image, which lands
+// the scroll short and cuts off the Satisfied button below the fold.
+// Wait for the actual load event (with a short fallback for cached
+// images, which don't always re-fire load reliably) before scrolling.
+function scrollToMugMockupResultWhenReady(){
   const mockupImg=document.getElementById('preGenMugMockupImg');
   const mockupWrap=document.getElementById('preGenMugMockupResultWrap');
-  if(mockupWrap)mockupWrap.scrollIntoView({behavior:'smooth',block:'nearest'});
+  if(!mockupWrap)return;
+  const doScroll=()=>mockupWrap.scrollIntoView({behavior:'smooth',block:'nearest'});
+  if(mockupImg && mockupImg.style.display!=='none' && !mockupImg.complete){
+    mockupImg.onload=doScroll;
+    setTimeout(doScroll,400);
+  } else {
+    requestAnimationFrame(()=>requestAnimationFrame(doScroll));
+  }
 }
 
 // Only fires when the customer presses the Finish/Satisfied button below
@@ -4134,9 +4176,16 @@ function finishPreGenMugColorPick(){
 function showDesignMethodCard(){
   const card=document.getElementById('designMethodCard');
   if(card)card.style.display='block';
-  smoothScrollToTarget('designMethodCard','start',()=>{
-    window.scrollBy({top:-90,behavior:'smooth'});
-  });
+  snapExpandThrough('designMethodCard');
+  // Single scroll to the final, already-compensated position (offset for
+  // the fixed currency bar) instead of scrolling to 'start' and then
+  // jumping again afterward -- that two-step version is what Alyx saw
+  // as an unwanted extra drop once the screen had already landed.
+  guidedScrollInProgress=true;
+  const rect=card.getBoundingClientRect();
+  const targetY=window.scrollY+rect.top-90;
+  window.scrollTo({top:targetY,behavior:'smooth'});
+  setTimeout(()=>{guidedScrollInProgress=false;},750);
 }
 
 // Tapping a prop tile. If Design By Description is checked, the
@@ -4381,7 +4430,7 @@ async function generateCoverMe(){
     presentFinishedNeedlesArt(resultImageUrl,()=>{
       document.body.classList.add('covermereveal-focus');
       document.getElementById('coverMeEaselApproveRow').style.display='block';
-      smoothScrollToTarget('coverMeEaselApproveRow','center');
+      scrollToCoverMeRevealWhenReady();
     });
     coverMePendingResultUrl=resultImageUrl;
 
@@ -4678,6 +4727,7 @@ function refreshCoverMePanelDoneState(){
 async function coverMePanelDone(){
   document.getElementById('coverMePanelCard').style.display='none';
   document.getElementById('coverMeFrameOfferCard').style.display='block';
+  document.body.classList.add('coverme-frameoffer-focus');
   smoothScrollToTarget('coverMeFrameOfferCard','center');
 }
 
@@ -4694,9 +4744,10 @@ let coverMeFrameColorHex=null;
 
 function showCoverMeFrameCatalog(){
   document.getElementById('coverMeFrameOfferCard').style.display='none';
+  document.body.classList.remove('coverme-frameoffer-focus');
   renderCoverMeFrameGrid();
   document.getElementById('coverMeFrameCatalogCard').style.display='block';
-  smoothScrollToTarget('coverMeFrameCatalogCard','center');
+  smoothScrollToTarget('coverMeFrameCatalogCard','start');
 }
 
 function renderCoverMeFrameGrid(){
@@ -4785,6 +4836,7 @@ async function updateCoverMeFramePreview(){
 function skipCoverMeFrame(){
   document.getElementById('coverMeFrameOfferCard').style.display='none';
   document.getElementById('coverMeFrameCatalogCard').style.display='none';
+  document.body.classList.remove('coverme-frameoffer-focus');
   finalizeCoverMeMockup();
 }
 
@@ -4841,6 +4893,7 @@ async function finalizeCoverMeMockup(){
 
 function changePropsFromCoverMe(){
   document.getElementById('coverMeFrameOfferCard').style.display='none';
+  document.body.classList.remove('coverme-frameoffer-focus');
   showDesignMethodCard();
 }
 
