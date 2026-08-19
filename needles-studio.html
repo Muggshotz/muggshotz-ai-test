@@ -414,6 +414,7 @@ body #accessorizeCard{opacity:1!important;filter:none!important;pointer-events:a
 body #frameSectionCard{opacity:1!important;filter:none!important;pointer-events:auto!important}
 body.print-mode-focus .card:not(#mugPrintModeCard){opacity:.28;filter:brightness(.55) saturate(.7);pointer-events:none;transition:opacity .5s,filter .5s}
 body.covermegen-focus .card:not(#coverMeCard){opacity:.28;filter:brightness(.55) saturate(.7);pointer-events:none;transition:opacity .5s,filter .5s}
+body.covermereveal-focus .card:not(#uploadPhotoCard){opacity:.28;filter:brightness(.55) saturate(.7);pointer-events:none;transition:opacity .5s,filter .5s}
 body.final-generate-focus .card:not(#uploadPhotoCard){opacity:.35;filter:brightness(.6) saturate(.75);transition:opacity .5s,filter .5s}
 body.initial-upload-focus .card:not(#uploadPhotoCard){opacity:.35;filter:brightness(.6) saturate(.75);pointer-events:none;transition:opacity .5s,filter .5s}
 body.idea-focus .card:not(#ideaCard){opacity:.35;filter:brightness(.6) saturate(.75);pointer-events:none;transition:opacity .5s,filter .5s}
@@ -703,6 +704,16 @@ body.product-focus .card:not(#productCard){opacity:.35;filter:brightness(.6) sat
   <div id="genTimerDisplay" style="display:none;text-align:center;font-size:13px;color:#7ab8ff;font-weight:600;margin-top:.45rem;letter-spacing:.3px"></div>
 </div>
 </div>
+<div id="coverMeEaselApproveRow" style="display:none;margin-top:.75rem">
+<div style="display:flex;gap:8px">
+<button type="button" class="generate-btn" style="flex:1;padding:.7rem .5rem;font-size:14px" onclick="approveCoverMe()">✅ Yes — Use This Cover</button>
+<button type="button" class="download-btn" style="flex:1;margin-top:0;padding:.7rem .5rem;font-size:14px" onclick="keepTweakingCoverMe()">🔧 No — Start Over</button>
+</div>
+<div style="display:flex;gap:16px;justify-content:center;margin-top:.6rem">
+<span class="note" style="color:#7ab8ff;cursor:pointer" onclick="backToDesignMethodFromEaselReveal()">← Choose a different prop</span>
+<span class="note" style="color:#7ab8ff;cursor:pointer" onclick="backToTrackDescribeFromEaselReveal()">← Describe it instead</span>
+</div>
+</div>
 <input type="file" id="fileInput" accept="image/*" style="display:none"/><img id="previewImg" class="preview-img" style="display:none"/>
 <div id="approveRow" style="display:none">
 <div class="note" style="margin-top:.9rem;text-align:center;font-size:13px;color:#ccc">Are you satisfied with this design?</div>
@@ -937,10 +948,6 @@ Would you like to try out <span style="color:#7ab8ff">some of our fun props?</sp
 </div>
 <input type="file" id="coverMePhotoInput" accept="image/*" style="display:none" onchange="handleCoverMePhotoChange(event)">
 <button type="button" id="coverMeGenerateBtn" class="generate-btn" style="display:none;margin-top:1rem" onclick="generateCoverMe()">🎨 Generate</button>
-<div id="coverMeApproveRow" style="display:none;margin-top:1rem;gap:8px">
-<button type="button" class="generate-btn" style="flex:1" onclick="approveCoverMe()">✅ Yes — Use This Cover</button>
-<button type="button" class="download-btn" style="flex:1" onclick="keepTweakingCoverMe()">🔧 No — Keep Tweaking</button>
-</div>
 <button type="button" class="download-btn" style="margin-top:1rem" onclick="coverMeBack()">← Back</button>
 </div>
 
@@ -4273,9 +4280,12 @@ function showCoverMeCard(){
   coverMeOverridePhoto=null;
   coverMePendingResultUrl=null;
   document.body.classList.remove('covermegen-focus');
+  document.body.classList.remove('covermereveal-focus');
   document.getElementById('coverMeGenerateBtn').style.display='none';
   document.getElementById('coverMeGenerateBtn').disabled=false;
-  document.getElementById('coverMeApproveRow').style.display='none';
+  document.getElementById('coverMeEaselApproveRow').style.display='none';
+  const clipboard=document.querySelector('.needles-clipboard');
+  if(clipboard)clipboard.style.display='';
   const descBox=document.getElementById('coverMeDescriptionBox');
   if(descBox)descBox.value='';
   renderCoverMeGrid();
@@ -4292,10 +4302,10 @@ function coverMeBack(){
 
 // PHASE 4: real generation, wired into the existing easel/Needles
 // painting sequence and the existing tested mockup-fetch pipeline --
-// deliberately does NOT touch the old placements/approveRow multi-panel
-// pattern beyond setting a single placements.front slot, since that
-// whole system is being replaced by the new LEFT/CENTER/RIGHT screen
-// in Phase 5. This phase's scope is exactly: Generate -> Approve ->
+// deliberately does NOT touch the old placements multi-panel pattern
+// beyond setting a single placements.front slot, since that whole
+// system is being replaced by the new LEFT/CENTER/RIGHT screen in
+// Phase 5. This phase's scope is exactly: Generate -> Approve ->
 // single real mockup, full-screen, with arrows.
 async function generateCoverMe(){
   if(!selectedMagazine){
@@ -4340,28 +4350,23 @@ async function generateCoverMe(){
       signal:currentGenerationController.signal
     });
 
-    // Three gaps found by comparing against the proven working generate()
-    // flow: (1) generation-active dims/disables every card except
-    // uploadPhotoCard (including coverMeCard, where the approve buttons
-    // live) -- it's normally cleared by stopNeedlesStage(), but that
-    // function also sets needlesPhase='stopped', which blocks
-    // presentFinishedNeedlesArt()'s reveal if called first. Clearing
-    // just this one class directly avoids both problems at once.
-    // (2) the clipboard/upload-zone was left stuck showing "Creation in
-    // progress" forever, since nothing ever reset it back to the real
-    // photo. (3) the approve buttons sit far down inside coverMeCard,
-    // away from the easel where the reveal actually happens, so the
-    // customer would never see them without an explicit scroll.
+    // The finished result appears on the actual easel (needlesEaselArt,
+    // via presentFinishedNeedlesArt below) -- the customer doesn't need
+    // to also see their original input photo blown up in the clipboard
+    // above it, so the clipboard is hidden entirely here instead of
+    // being re-rendered with the old photo (an earlier fix's mistake).
     document.body.classList.remove('generation-active');
-    renderUploadZoneImage(photo);
+    const clipboard=document.querySelector('.needles-clipboard');
+    if(clipboard)clipboard.style.display='none';
     stopGenTimerSuccess();
     clearStatus();
     document.getElementById('cancelBtn').style.display='none';
     refreshTokenMeter();
 
     presentFinishedNeedlesArt(resultImageUrl,()=>{
-      document.getElementById('coverMeApproveRow').style.display='flex';
-      smoothScrollToTarget('coverMeApproveRow','center');
+      document.body.classList.add('covermereveal-focus');
+      document.getElementById('coverMeEaselApproveRow').style.display='block';
+      smoothScrollToTarget('coverMeEaselApproveRow','center');
     });
     coverMePendingResultUrl=resultImageUrl;
 
@@ -4391,17 +4396,48 @@ async function approveCoverMe(){
   placements[target]=designId;
   pendingSlotTarget=null;
   coverMePendingResultUrl=null;
-  document.getElementById('coverMeApproveRow').style.display='none';
+  document.body.classList.remove('covermereveal-focus');
+  document.getElementById('coverMeEaselApproveRow').style.display='none';
   document.getElementById('coverMeGenerateBtn').disabled=false;
   saveMugState();
   showCoverMePanelCard();
 }
 
+// "No -- Start Over" sends them right back to the Cover Me screen they
+// were just on (magazine grid, still with their photo and description
+// intact) -- that screen already lets them pick a different magazine
+// and regenerate, so there's no reason to route anywhere else.
 function keepTweakingCoverMe(){
-  document.getElementById('coverMeApproveRow').style.display='none';
+  document.body.classList.remove('covermereveal-focus');
+  document.getElementById('coverMeEaselApproveRow').style.display='none';
   document.getElementById('coverMeGenerateBtn').disabled=false;
   coverMePendingResultUrl=null;
+  const clipboard=document.querySelector('.needles-clipboard');
+  if(clipboard)clipboard.style.display='';
+  document.getElementById('coverMeCard').style.display='block';
   smoothScrollToTarget('coverMeGrid','center');
+}
+
+// Secondary exits from the easel reveal -- further back than a simple
+// retry: either abandon Cover Me for a different prop category, or
+// abandon templates entirely for the plain text-prompt generator.
+function backToDesignMethodFromEaselReveal(){
+  document.body.classList.remove('covermereveal-focus');
+  document.getElementById('coverMeEaselApproveRow').style.display='none';
+  document.getElementById('coverMeCard').style.display='none';
+  const clipboard=document.querySelector('.needles-clipboard');
+  if(clipboard)clipboard.style.display='';
+  showDesignMethodCard();
+}
+
+function backToTrackDescribeFromEaselReveal(){
+  document.body.classList.remove('covermereveal-focus');
+  document.getElementById('coverMeEaselApproveRow').style.display='none';
+  document.getElementById('coverMeCard').style.display='none';
+  document.getElementById('designMethodCard').style.display='none';
+  const clipboard=document.querySelector('.needles-clipboard');
+  if(clipboard)clipboard.style.display='';
+  pickTrackDescribe();
 }
 
 // Explicit YES/NO per left/right panel, separate from mere absence --
@@ -4418,6 +4454,7 @@ let coverMePanelViewIndex=1; // start on Center, the one that already has conten
 
 function showCoverMePanelCard(){
   document.body.classList.remove('covermegen-focus');
+  document.body.classList.remove('covermereveal-focus');
   document.getElementById('coverMeCard').style.display='none';
   coverMePanelViewIndex=1;
   renderCoverMePanelView();
