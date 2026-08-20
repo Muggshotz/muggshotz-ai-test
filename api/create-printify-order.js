@@ -598,7 +598,16 @@ export async function placeProductOrder({
   // affect the suitcase, phone case, or anything else that was already
   // coming out correctly.
   const isTravelMug20oz = productKey === "travel-mug-20oz";
-  const imageScale = isCoffeeMug ? 1 : 1;
+  // UPDATED (Aug 2026, Alyx's request): pushed from 1 (100%) to 1.05
+  // (105%) for coffee mugs specifically -- Printify's placement API
+  // genuinely supports scale >1, zooming the design in relative to the
+  // print area (anything past the boundary gets cropped, rest renders
+  // larger). Deliberately pushing back the other direction from the
+  // July 2026 fix above, which had shrunk toward 0.8 to fix over-tight
+  // edge-to-edge cropping -- that value was never actually applied
+  // here though (this line was still hardcoded to 1/1 regardless of
+  // isCoffeeMug). Reversible if 1.05 doesn't hold up on a real print.
+  const imageScale = isCoffeeMug ? 1.05 : 1;
   const imageY = isCoffeeMug ? 0.5 : 0.5;
 
   const productTitle = `Muggshotz ${product.displayName}${customerName ? " - " + customerName : ""}`;
