@@ -1840,6 +1840,28 @@ function scrollToStableTop(el,offset,maxAttempts){
   requestAnimationFrame(check);
 }
 
+// Same stability-polling approach as scrollToStableTop, but anchors the
+// BOTTOM of the element a fixed margin above the bottom of the
+// viewport instead -- used where the important content is the last
+// thing in a tall block (e.g. the red "please select" warning under
+// the Track 1/2 buttons) and top-alignment would risk scrolling past it.
+function scrollToStableBottom(el,bottomMargin,maxAttempts){
+  let lastBottom=null;
+  let attempts=0;
+  function check(){
+    attempts++;
+    const bottom=el.getBoundingClientRect().bottom;
+    if(bottom===lastBottom||attempts>=maxAttempts){
+      const target=window.scrollY+bottom-(window.innerHeight-bottomMargin);
+      window.scrollTo({top:Math.max(0,target),behavior:'smooth'});
+      return;
+    }
+    lastBottom=bottom;
+    setTimeout(()=>requestAnimationFrame(check),100);
+  }
+  requestAnimationFrame(check);
+}
+
 function smoothScrollToTarget(targetId,block='start',after){
   const target=document.getElementById(targetId);
   if(!target)return;
@@ -1895,21 +1917,20 @@ function noteRealCustomerActivity(){
 function startPhotoGuide(){
   photoGuideActive=true;
   // No auto-scroll AWAY from the fork once it's showing, on Alyx's
-  // explicit direction -- but landing here for the first time, it's
-  // fine (wanted, even) to first show the uploaded photo, then after a
-  // few seconds scroll DOWN once to reveal the fork buttons below. The
-  // opening guide's job (nudge them to upload a photo) is already done
-  // by the time we reach this point, so stop it from firing here too.
+  // explicit direction. Was: a 5-second delay before scrolling down to
+  // reveal the fork, landing at a position that cut off the "please
+  // select" warning at the bottom. Now scrolls immediately (the
+  // stability-polling in scrollToStableBottom already waits for layout
+  // to settle, so this doesn't jump the gun), and anchors to the
+  // BOTTOM of the red warning text itself rather than the top of the
+  // card, so the full warning is guaranteed visible along with the
+  // Track 1/2 buttons above it.
   clearTimeout(openingGuideTimer);
   openingGuideDone=true;
   showPostUploadFork();
   clearTimeout(forkRevealTimer);
-  forkRevealTimer=setTimeout(()=>{
-    const row=document.getElementById('postUploadForkRow');
-    if(!photoGuideActive||!row||row.style.display==='none')return;
-    const card=document.getElementById('uploadPhotoCard');
-    if(card)scrollToStableTop(card,90,15);
-  },5000);
+  const warningEl=document.getElementById('startOverBtn');
+  if(warningEl)scrollToStableBottom(warningEl,16,15);
 }
 
 function showPostUploadFork(){
@@ -6219,31 +6240,55 @@ document.getElementById('fileInput').addEventListener('change',function(e){
   });
 });
 
+// The old version read the full-size original photo into a base64
+// string via FileReader before ever touching it, then decoded that into
+// an <img> on the main thread -- for a modern phone camera photo
+// (often several MB), that base64 round-trip alone accounts for most of
+// the visible delay between picking a photo and seeing it appear.
+// createImageBitmap() decodes the file directly (often hardware-
+// accelerated, off the main thread) with no base64 step at all, so only
+// the final DOWNSIZED image ever gets encoded to a data URL. Falls back
+// to the original FileReader approach on any browser/error where
+// createImageBitmap isn't available, so this can't break older devices.
 function resizeImageFile(file, maxDimension){
-  return new Promise((resolve)=>{
-    const reader = new FileReader();
-    reader.onload = function(ev){
-      const img = new Image();
-      img.onload = function(){
-        let { width, height } = img;
-        if (width > height && width > maxDimension) {
-          height = Math.round(height * (maxDimension / width));
-          width = maxDimension;
-        } else if (height > maxDimension) {
-          width = Math.round(width * (maxDimension / height));
-          height = maxDimension;
-        }
-        const canvas = document.createElement('canvas');
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0, width, height);
-        resolve(canvas.toDataURL('image/jpeg', 0.85));
+  function drawAndResolve(sourceWidth, sourceHeight, drawable, resolve){
+    let width=sourceWidth, height=sourceHeight;
+    if (width > height && width > maxDimension) {
+      height = Math.round(height * (maxDimension / width));
+      width = maxDimension;
+    } else if (height > maxDimension) {
+      width = Math.round(width * (maxDimension / height));
+      height = maxDimension;
+    }
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(drawable, 0, 0, width, height);
+    resolve(canvas.toDataURL('image/jpeg', 0.85));
+  }
+  function legacyResize(){
+    return new Promise((resolve)=>{
+      const reader = new FileReader();
+      reader.onload = function(ev){
+        const img = new Image();
+        img.onload = function(){
+          drawAndResolve(img.width, img.height, img, resolve);
+        };
+        img.src = ev.target.result;
       };
-      img.src = ev.target.result;
-    };
-    reader.readAsDataURL(file);
-  });
+      reader.readAsDataURL(file);
+    });
+  }
+  if (typeof createImageBitmap === 'function') {
+    return createImageBitmap(file).then((bitmap)=>{
+      return new Promise((resolve)=>{
+        drawAndResolve(bitmap.width, bitmap.height, bitmap, resolve);
+        if (bitmap.close) bitmap.close();
+      });
+    }).catch(legacyResize);
+  }
+  return legacyResize();
 }
 
 function resizeDataUrl(dataUrl, maxDimension){
