@@ -1916,6 +1916,7 @@ function pickTrackProduct(){
   clearTimeout(forkRevealTimer);
   photoGuideActive=false;
   document.getElementById('postUploadForkRow').style.display='none';
+  document.getElementById('startOverBtn').style.display='none';
   document.body.classList.remove('initial-upload-focus');
   document.body.classList.remove('idea-focus');
   document.body.classList.add('product-focus');
@@ -1928,6 +1929,7 @@ function pickTrackProduct(){
 function pickTrackDescribe(){
   clearTimeout(forkRevealTimer);
   document.getElementById('postUploadForkRow').style.display='none';
+  document.getElementById('startOverBtn').style.display='none';
   const styleCard=document.getElementById('styleSectionCard');
   if(styleCard)styleCard.style.display='';
   const likenessCard=document.getElementById('likenessSectionCard');
