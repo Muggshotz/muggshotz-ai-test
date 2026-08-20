@@ -607,7 +607,7 @@ export async function placeProductOrder({
   // edge-to-edge cropping -- that value was never actually applied
   // here though (this line was still hardcoded to 1/1 regardless of
   // isCoffeeMug). Reversible if 1.05 doesn't hold up on a real print.
-  const imageScale = isCoffeeMug ? 1.05 : 1;
+  const imageScale = isCoffeeMug ? 1.2 : 1;
   const imageY = isCoffeeMug ? 0.5 : 0.5;
 
   const productTitle = `Muggshotz ${product.displayName}${customerName ? " - " + customerName : ""}`;
