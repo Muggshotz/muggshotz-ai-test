@@ -151,6 +151,9 @@ export async function buildWraparoundImage(placements, canvasWidth, canvasHeight
   const sectionWidth = Math.round(canvasWidth / 3);
   const lastSectionWidth = canvasWidth - sectionWidth * 2;
 
+  const filledFlags = { left: !!left, front: !!front, right: !!right };
+  const filledCount = Object.values(filledFlags).filter(Boolean).length;
+
   // UPDATED (Aug 2026, Alyx's request): the zoom that used to be applied
   // uniformly to the WHOLE composited 3-panel canvas via Printify's own
   // placement scale has moved in here instead, applied per-panel. A
@@ -160,13 +163,25 @@ export async function buildWraparoundImage(placements, canvasWidth, canvasHeight
   // handle), which is exactly the truncation Alyx caught. Scaling each
   // panel independently within its own box guarantees no panel's
   // content can ever spill past its own boundary, no matter how
-  // aggressive PANEL_ZOOM gets. Printify's own imageScale for coffee
-  // mugs is back to 1 (see isCoffeeMug in the two files that call this)
-  // so the zoom only ever happens once, here, not twice.
-  const PANEL_ZOOM = 1.2;
-
-  const filledFlags = { left: !!left, front: !!front, right: !!right };
-  const filledCount = Object.values(filledFlags).filter(Boolean).length;
+  // aggressive the zoom gets. Printify's own imageScale for coffee mugs
+  // is back to 1 (see isCoffeeMug in the two files that call this) so
+  // the zoom only ever happens once, here, not twice.
+  //
+  // UPDATED again: now Center defaults OFF (customer opts in), so the
+  // zoom level itself depends on how crowded the layout actually is --
+  // exactly one panel filled gets the most room (1.1); ANY layout that
+  // includes Center gets the tightest zoom (0.9, since 3-across is the
+  // most crowded arrangement and was the original truncation risk);
+  // two panels filled WITHOUT Center (the new default look, Left+Right)
+  // sits in between (1.05).
+  let PANEL_ZOOM;
+  if (filledCount === 1) {
+    PANEL_ZOOM = 1.1;
+  } else if (filledFlags.front) {
+    PANEL_ZOOM = 0.9;
+  } else {
+    PANEL_ZOOM = 1.05;
+  }
 
   const baseSlots = {
     left: { x: 0, width: sectionWidth },
