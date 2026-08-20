@@ -111,7 +111,10 @@ async function handleStart(req, res) {
   // the July 2026 comment on createPrintifyProduct in
   // create-printify-order.js for the earlier over-tight-cropping
   // history this is deliberately pushing back against.
-  const imageScale = isCoffeeMug ? 1.2 : 1;
+  // REVERTED (Aug 2026): see the matching comment in
+  // create-printify-order.js -- zoom now lives per-panel inside
+  // buildWraparoundImage(), not as a uniform whole-canvas scale here.
+  const imageScale = 1;
   const imageY = isCoffeeMug ? 0.5 : 0.5;
 
   const { productId } = await createPrintifyProduct(

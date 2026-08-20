@@ -151,41 +151,102 @@ export async function buildWraparoundImage(placements, canvasWidth, canvasHeight
   const sectionWidth = Math.round(canvasWidth / 3);
   const lastSectionWidth = canvasWidth - sectionWidth * 2;
 
-  const filledCount = [left, front, right].filter(Boolean).length;
+  // UPDATED (Aug 2026, Alyx's request): the zoom that used to be applied
+  // uniformly to the WHOLE composited 3-panel canvas via Printify's own
+  // placement scale has moved in here instead, applied per-panel. A
+  // single whole-canvas zoom doesn't know where the panel seams are --
+  // magnifying everything around one shared center can push any one
+  // panel's own content past ITS true edge (e.g. the panel next to the
+  // handle), which is exactly the truncation Alyx caught. Scaling each
+  // panel independently within its own box guarantees no panel's
+  // content can ever spill past its own boundary, no matter how
+  // aggressive PANEL_ZOOM gets. Printify's own imageScale for coffee
+  // mugs is back to 1 (see isCoffeeMug in the two files that call this)
+  // so the zoom only ever happens once, here, not twice.
+  const PANEL_ZOOM = 1.2;
 
-  // UPDATED (July 2026, Alyx's request): when only ONE slot is filled,
-  // that design was correctly anchored to its own third but looked
-  // small against two-thirds of blank mug. Since the neighboring space
-  // really is blank ceramic with nothing to conflict with, widen that
-  // one design's box symmetrically around its slot's original center --
-  // bigger, but still anchored on the correct side of the mug -- capped
-  // so it can't run off either edge of the canvas. This ONLY applies
-  // when exactly one slot is filled; two- or three-filled placements
-  // keep the exact fixed thirds as before, unaffected.
-  function boxFor(startX, width) {
-    if (filledCount !== 1) return { x: startX, width };
-    const centerX = startX + width / 2;
-    const widenedWidth = Math.min(canvasWidth, Math.round(width * 1.8));
-    let x = Math.round(centerX - widenedWidth / 2);
-    if (x < 0) x = 0;
-    if (x + widenedWidth > canvasWidth) x = canvasWidth - widenedWidth;
-    return { x, width: widenedWidth };
+  const filledFlags = { left: !!left, front: !!front, right: !!right };
+  const filledCount = Object.values(filledFlags).filter(Boolean).length;
+
+  const baseSlots = {
+    left: { x: 0, width: sectionWidth },
+    front: { x: sectionWidth, width: sectionWidth },
+    right: { x: sectionWidth * 2, width: lastSectionWidth }
+  };
+
+  // UPDATED (July 2026, Alyx's request; extended Aug 2026): when a slot
+  // is empty, its space shouldn't just sit reserved and unused -- it
+  // should go to whichever filled neighbor(s) are actually adjacent to
+  // it. Previously this ONLY triggered when exactly one slot total was
+  // filled; a customer with two panels filled (one empty) got no extra
+  // room at all, wasting the empty third's space even though nothing
+  // was competing for it. Now handles both 1-filled (existing) and
+  // 2-filled (new) cases; 3-filled keeps the exact fixed thirds,
+  // unaffected, since there's no empty space to reclaim.
+  function computeBoxes() {
+    if (filledCount === 3 || filledCount === 0) {
+      return baseSlots;
+    }
+    if (filledCount === 1) {
+      const key = filledFlags.left ? "left" : filledFlags.front ? "front" : "right";
+      const slot = baseSlots[key];
+      const centerX = slot.x + slot.width / 2;
+      const widenedWidth = Math.min(canvasWidth, Math.round(slot.width * 1.8));
+      let x = Math.round(centerX - widenedWidth / 2);
+      if (x < 0) x = 0;
+      if (x + widenedWidth > canvasWidth) x = canvasWidth - widenedWidth;
+      return { [key]: { x, width: widenedWidth } };
+    }
+    // filledCount === 2 -- find the one empty slot and give its space
+    // to its neighbor(s).
+    if (!filledFlags.left) {
+      // left empty -- only front is adjacent to it, front absorbs it.
+      const boxes = {};
+      boxes.front = { x: 0, width: sectionWidth + sectionWidth };
+      if (filledFlags.right) boxes.right = baseSlots.right;
+      return boxes;
+    }
+    if (!filledFlags.right) {
+      // right empty -- only front is adjacent to it, front absorbs it.
+      const boxes = {};
+      boxes.left = baseSlots.left;
+      boxes.front = { x: sectionWidth, width: sectionWidth + lastSectionWidth };
+      return boxes;
+    }
+    // front empty -- it's adjacent to BOTH left and right, split its
+    // space between them down the middle.
+    const half = Math.round(sectionWidth / 2);
+    return {
+      left: { x: 0, width: sectionWidth + half },
+      right: { x: sectionWidth + half, width: canvasWidth - (sectionWidth + half) }
+    };
   }
 
-  async function renderSection(imageSource, startX, width) {
-    if (!imageSource) return null;
-    const box = boxFor(startX, width);
+  const boxes = computeBoxes();
+
+  async function renderSection(imageSource, box) {
+    if (!imageSource || !box) return null;
+    const targetW = box.width;
+    const targetH = canvasHeight;
+    const zoomedW = Math.round(targetW * PANEL_ZOOM);
+    const zoomedH = Math.round(targetH * PANEL_ZOOM);
     const buffer = await sharp(await resolveImageBuffer(imageSource))
-      .resize(box.width, canvasHeight, { fit: "contain", background: WHITE })
+      .resize(zoomedW, zoomedH, { fit: "cover", position: "centre" })
+      .extract({
+        left: Math.round((zoomedW - targetW) / 2),
+        top: Math.round((zoomedH - targetH) / 2),
+        width: targetW,
+        height: targetH
+      })
       .png()
       .toBuffer();
     return { input: buffer, left: box.x, top: 0 };
   }
 
   const [leftComposite, frontComposite, rightComposite] = await Promise.all([
-    renderSection(left, 0, sectionWidth),
-    renderSection(front, sectionWidth, sectionWidth),
-    renderSection(right, sectionWidth * 2, lastSectionWidth)
+    renderSection(left, boxes.left),
+    renderSection(front, boxes.front),
+    renderSection(right, boxes.right)
   ]);
 
   const composites = [leftComposite, frontComposite, rightComposite].filter(Boolean);
@@ -598,16 +659,14 @@ export async function placeProductOrder({
   // affect the suitcase, phone case, or anything else that was already
   // coming out correctly.
   const isTravelMug20oz = productKey === "travel-mug-20oz";
-  // UPDATED (Aug 2026, Alyx's request): pushed from 1 (100%) to 1.05
-  // (105%) for coffee mugs specifically -- Printify's placement API
-  // genuinely supports scale >1, zooming the design in relative to the
-  // print area (anything past the boundary gets cropped, rest renders
-  // larger). Deliberately pushing back the other direction from the
-  // July 2026 fix above, which had shrunk toward 0.8 to fix over-tight
-  // edge-to-edge cropping -- that value was never actually applied
-  // here though (this line was still hardcoded to 1/1 regardless of
-  // isCoffeeMug). Reversible if 1.05 doesn't hold up on a real print.
-  const imageScale = isCoffeeMug ? 1.2 : 1;
+  // REVERTED (Aug 2026): the coffee-mug zoom now happens per-panel
+  // inside buildWraparoundImage() (see PANEL_ZOOM there) instead of
+  // here as one uniform whole-canvas scale -- that uniform version was
+  // what pushed the panel next to the handle past its own true edge.
+  // Back to 1 for both so the zoom only ever applies once. (History:
+  // this went 1 -> 1.05 -> 1.2 as a Printify placement scale before
+  // moving into per-panel compositing instead.)
+  const imageScale = 1;
   const imageY = isCoffeeMug ? 0.5 : 0.5;
 
   const productTitle = `Muggshotz ${product.displayName}${customerName ? " - " + customerName : ""}`;
