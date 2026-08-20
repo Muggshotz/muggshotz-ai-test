@@ -173,14 +173,15 @@ export async function buildWraparoundImage(placements, canvasWidth, canvasHeight
   // includes Center gets the tightest zoom (0.9, since 3-across is the
   // most crowded arrangement and was the original truncation risk);
   // two panels filled WITHOUT Center (the new default look, Left+Right)
-  // sits in between (1.05).
+  // sits at 1.0 (dropped from 1.05 -- Alyx saw the design visually
+  // colliding with the handle on a real mockup at 1.05).
   let PANEL_ZOOM;
   if (filledCount === 1) {
     PANEL_ZOOM = 1.1;
   } else if (filledFlags.front) {
     PANEL_ZOOM = 0.9;
   } else {
-    PANEL_ZOOM = 1.05;
+    PANEL_ZOOM = 1.0;
   }
 
   const baseSlots = {
