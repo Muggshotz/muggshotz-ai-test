@@ -950,8 +950,7 @@ Would you like to try out <span style="color:#7ab8ff">some of our fun props?</sp
 
 <div class="card" id="coverMePanelCard" style="display:none">
 <div class="card-title">SELECT THE PANELS</div>
-<div class="note" style="margin-top:0;margin-bottom:1rem;text-align:center;color:#7ab8ff">YOU WISH TO PLACE YOUR IMAGE</div>
-<div class="note" style="margin-top:0;margin-bottom:1rem;text-align:center">Your cover is already on all three sides — remove any you don't want.</div>
+<div class="note" style="margin-top:0;margin-bottom:1rem;text-align:center;color:#7ab8ff">WHERE DO YOU WISH TO PLACE YOUR IMAGE?</div>
 <div id="coverMePanelRows" style="display:flex;flex-direction:column;gap:12px"></div>
 <div class="note" id="coverMePanelHint" style="margin-top:.9rem;text-align:center">At least one panel needs an image before you can continue.</div>
 <button type="button" class="generate-btn" id="coverMePanelDoneBtn" style="margin-top:.75rem" disabled onclick="coverMePanelDone()">✅ Done</button>
@@ -4504,14 +4503,17 @@ async function generateCoverMe(){
   // Was smoothScrollToTarget('needlesStageWrap','center') -- centering
   // just the stage let the small "Creation in progress" polaroid card
   // (right above it) scroll partly out of view, revealing the Product
-  // tiles above the fold. Same fix already proven for the other
-  // generator: anchor to the clipboard card instead, so both the small
-  // card and the big easel land together with nothing else visible.
+  // tiles above the fold. UPDATED per Alyx's exact target screenshot:
+  // was anchored flush to the clipboard itself, landing too far down
+  // (hiding the Reset button and Upload Photo header above it). Now
+  // anchors to the Reset button at the true top of the page instead, so
+  // that header content stays visible along with the clipboard and
+  // easel below it.
   {
     const snapCoverMeStageToClipboard=()=>{
-      const anchor=document.querySelector('.needles-clipboard');
+      const anchor=document.getElementById('resetEverythingBtnTop');
       if(!anchor)return;
-      const target=(anchor.getBoundingClientRect().top+window.scrollY)-14;
+      const target=(anchor.getBoundingClientRect().top+window.scrollY)-90;
       window.scrollTo(0,Math.max(0,target));
     };
     requestAnimationFrame(()=>{
