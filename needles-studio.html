@@ -2286,15 +2286,11 @@ const FRAME_CATALOG = {
   // note was written) — no replacement design is still needed here.
   "Wrought Iron": { type:"image", asset:"frame-wrought-iron.png", colorable:false },
   "Blue Floral": { type:"image", asset:"frame-blue-floral.png", defaultColor:"#1B3D7A" },
-  // TEST (Aug 2026, Alyx's request): switched to the new two-piece
-  // "fixed corner + extended rail" architecture as a real end-to-end
-  // test of the concept -- see drawTwoPieceFrameOnCanvas below. These
-  // specific corner/rail files are Bud's first proof-of-concept pass,
-  // not necessarily final -- if they turn out wrong, only these two
-  // asset filenames need replacing, the rendering logic stays the same.
-  // The old single-image frame-crystal-champagne.png stays untouched
-  // on GitHub as a fallback in case this needs reverting.
-  "Crystal Champagne": { type:"twoPiece", cornerAsset:"frame-crystal-champagne-corner.png", railAsset:"frame-crystal-champagne-rail.png", cornerMode:"mirror", defaultColor:"#D9C89E" },
+  // REVERTED (Aug 2026, Alyx's request): the two-piece corner+rail test
+  // above never once worked correctly, and was only built for
+  // Wraparound in the first place -- which isn't being pursued anymore.
+  // Back to the old single-image version, Alyx's favorite.
+  "Crystal Champagne": { type:"image", asset:"frame-crystal-champagne.png", defaultColor:"#D9C89E" },
   "Pressed Flowers": { type:"image", asset:"frame-pressed-flowers.png", defaultColor:"#ffffff" },
   "Celestial Deco": { type:"image", asset:"frame-celestial-deco.png", defaultColor:"#D4AF37" },
   "Double Mat": { type:"proceduralMulti", draw:"doubleMat", layers:["Outer Frame","Upper Mat","Lower Mat"], defaultColors:["#8a5a34","#f5f0e6","#2a2a2a"] },
