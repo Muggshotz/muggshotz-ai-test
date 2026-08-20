@@ -4517,6 +4517,7 @@ async function generateCoverMe(){
       workingImage:photo,
       prompt,
       refImageA:magazineDataUrl,
+      templateMerge:true,
       signal:currentGenerationController.signal
     });
 
@@ -7965,7 +7966,7 @@ async function splitImageAtCenterVertical(url){
   };
 }
 
-async function callGenerateAPI({ workingImage, prompt, refImageA, refImageB, panelRole, signal }){
+async function callGenerateAPI({ workingImage, prompt, refImageA, refImageB, panelRole, templateMerge, signal }){
   const resp=await fetch('/api/generate',{
     method:'POST',
     headers:{'Content-Type':'application/json'},
@@ -7978,7 +7979,8 @@ async function callGenerateAPI({ workingImage, prompt, refImageA, refImageB, pan
       refImageB:refImageB||null,
       currentDesign:null,
       size:getImageSizeParam(),
-      panelRole:panelRole||undefined
+      panelRole:panelRole||undefined,
+      templateMerge:templateMerge||false
     }),
     signal
   });
