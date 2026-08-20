@@ -167,22 +167,12 @@ export async function buildWraparoundImage(placements, canvasWidth, canvasHeight
   // is back to 1 (see isCoffeeMug in the two files that call this) so
   // the zoom only ever happens once, here, not twice.
   //
-  // UPDATED again: now Center defaults OFF (customer opts in), so the
-  // zoom level itself depends on how crowded the layout actually is --
-  // exactly one panel filled gets the most room (1.1); ANY layout that
-  // includes Center gets the tightest zoom (0.9, since 3-across is the
-  // most crowded arrangement and was the original truncation risk);
-  // two panels filled WITHOUT Center (the new default look, Left+Right)
-  // sits at 1.0 (dropped from 1.05 -- Alyx saw the design visually
-  // colliding with the handle on a real mockup at 1.05).
-  let PANEL_ZOOM;
-  if (filledCount === 1) {
-    PANEL_ZOOM = 1.1;
-  } else if (filledFlags.front) {
-    PANEL_ZOOM = 0.9;
-  } else {
-    PANEL_ZOOM = 1.0;
-  }
+  // UPDATED again: after real testing through 1.2 -> 1.05 -> 1.0 (with
+  // fill-count-dependent scaling built across two rounds), Alyx
+  // confirmed via a fresh committed test that it was STILL too big --
+  // landed back on a flat 0.8 across every fill-count case, matching
+  // what he'd already concluded before this whole tuning arc started.
+  const PANEL_ZOOM = 0.8;
 
   const baseSlots = {
     left: { x: 0, width: sectionWidth },
@@ -244,19 +234,49 @@ export async function buildWraparoundImage(placements, canvasWidth, canvasHeight
     if (!imageSource || !box) return null;
     const targetW = box.width;
     const targetH = canvasHeight;
-    const zoomedW = Math.round(targetW * PANEL_ZOOM);
-    const zoomedH = Math.round(targetH * PANEL_ZOOM);
-    const buffer = await sharp(await resolveImageBuffer(imageSource))
-      .resize(zoomedW, zoomedH, { fit: "cover", position: "centre" })
-      .extract({
-        left: Math.round((zoomedW - targetW) / 2),
-        top: Math.round((zoomedH - targetH) / 2),
-        width: targetW,
-        height: targetH
-      })
+    if (PANEL_ZOOM >= 1) {
+      // Zoom IN: resize larger than the box (cover-fit, no letterboxing),
+      // then crop back down to the box's true size from the center.
+      // Guarantees the box is always fully filled -- some excess gets
+      // cropped, by design, at any zoom above 1.
+      const zoomedW = Math.round(targetW * PANEL_ZOOM);
+      const zoomedH = Math.round(targetH * PANEL_ZOOM);
+      const buffer = await sharp(await resolveImageBuffer(imageSource))
+        .resize(zoomedW, zoomedH, { fit: "cover", position: "centre" })
+        .extract({
+          left: Math.round((zoomedW - targetW) / 2),
+          top: Math.round((zoomedH - targetH) / 2),
+          width: targetW,
+          height: targetH
+        })
+        .png()
+        .toBuffer();
+      return { input: buffer, left: box.x, top: 0 };
+    }
+    // Zoom OUT (scale < 1): shrink the image into a smaller sub-box
+    // (contain-fit, so nothing gets cropped -- the full image is
+    // preserved, just smaller), then center it within the box's true
+    // dimensions on a white background. This is genuine breathing-room
+    // padding, not a crop -- the opposite operation from the >=1 case
+    // above, which is why it needs its own branch rather than sharing
+    // the same resize+extract math.
+    const shrunkW = Math.round(targetW * PANEL_ZOOM);
+    const shrunkH = Math.round(targetH * PANEL_ZOOM);
+    const shrunkBuffer = await sharp(await resolveImageBuffer(imageSource))
+      .resize(shrunkW, shrunkH, { fit: "contain", background: WHITE })
       .png()
       .toBuffer();
-    return { input: buffer, left: box.x, top: 0 };
+    const paddedBuffer = await sharp({
+      create: { width: targetW, height: targetH, channels: 3, background: WHITE }
+    })
+      .composite([{
+        input: shrunkBuffer,
+        left: Math.round((targetW - shrunkW) / 2),
+        top: Math.round((targetH - shrunkH) / 2)
+      }])
+      .png()
+      .toBuffer();
+    return { input: paddedBuffer, left: box.x, top: 0 };
   }
 
   const [leftComposite, frontComposite, rightComposite] = await Promise.all([
