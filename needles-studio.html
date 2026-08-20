@@ -2297,7 +2297,10 @@ const FRAME_CATALOG = {
   "Moonlit Ivy": { type:"image", asset:"frame-moonlit-ivy.png", colorable:false },
   "Enchanted Grove": { type:"image", asset:"frame-enchanted-grove.png", colorable:false },
   "Lantern Vine": { type:"image", asset:"frame-lantern-vine.png", colorable:false },
-  "Trailblazer": { type:"image", asset:"frame-biker-native.png", colorable:false }
+  "Trailblazer": { type:"image", asset:"frame-biker-native.png", colorable:false },
+  "Astral": { type:"image", asset:"astral.png", colorable:false },
+  "Mirror Mirror": { type:"image", asset:"mirror mirror.png", colorable:false },
+  "Royal": { type:"image", asset:"royal.png", colorable:false }
 };
 
 // ================= WINDOW SILL (standalone, decoupled from Frame) =================
@@ -4833,22 +4836,16 @@ function showCoverMeFrameCatalog(){
   setTimeout(()=>{guidedScrollInProgress=false;},2200);
 }
 
-// The first 20 catalog entries (in FRAME_CATALOG's own order) fill the
-// diagram's 20 numbered slots. FRAME_CATALOG currently has 24 entries --
-// the last 4 (Moonlit Ivy, Enchanted Grove, Lantern Vine, Trailblazer)
-// don't have a slot in this specific 20-tile layout and are left out
-// for now; flagged to Alyx rather than silently dropped or guessed at.
 // Alyx's exact intentional 20 -- the image-based frames he actually
 // uploaded and resized, NOT "first 20 by object order" (that wrongly
 // pulled in procedural/canvas-drawn frames he never sent files for,
-// and excluded real ones he did). Last 3 slots are placeholders until
-// astral.png/mirror mirror.png/royal.png get real catalog names.
+// and excluded real ones he did).
 const COVER_ME_FULL_GRID_FRAME_ORDER=[
   "Ornate Gold","Walnut Gold","Brushed Silver","Black Champagne",
   "Air Mail","Neon Celebration","Retro Arcade","Neon Dreams",
   "Wrought Iron","Blue Floral","Crystal Champagne","Pressed Flowers",
   "Celestial Deco","Moonlit Ivy","Enchanted Grove","Lantern Vine",
-  "Trailblazer"
+  "Trailblazer","Astral","Mirror Mirror","Royal"
 ];
 
 function renderCoverMeFullFrameGrid(){
