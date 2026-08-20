@@ -415,6 +415,7 @@ body #frameSectionCard{opacity:1!important;filter:none!important;pointer-events:
 body.print-mode-focus .card:not(#mugPrintModeCard){opacity:.28;filter:brightness(.55) saturate(.7);pointer-events:none;transition:opacity .5s,filter .5s}
 body.covermegen-focus .card:not(#coverMeCard){opacity:.28;filter:brightness(.55) saturate(.7);pointer-events:none;transition:opacity .5s,filter .5s}
 body.coverme-frameoffer-focus .card:not(#coverMeFrameOfferCard){opacity:.28;filter:brightness(.55) saturate(.7);pointer-events:none;transition:opacity .5s,filter .5s}
+body.coverme-fullframegrid-focus .card:not(#coverMeFrameFullGridCard){opacity:.28;filter:brightness(.55) saturate(.7);pointer-events:none;transition:opacity .5s,filter .5s}
 body.covermereveal-focus .card:not(#uploadPhotoCard){opacity:.28;filter:brightness(.55) saturate(.7);pointer-events:none;transition:opacity .5s,filter .5s}
 body.final-generate-focus .card:not(#uploadPhotoCard){opacity:.35;filter:brightness(.6) saturate(.75);transition:opacity .5s,filter .5s}
 body.initial-upload-focus .card:not(#uploadPhotoCard){opacity:.35;filter:brightness(.6) saturate(.75);pointer-events:none;transition:opacity .5s,filter .5s}
@@ -975,6 +976,25 @@ Would you like to try out <span style="color:#7ab8ff">some of our fun props?</sp
 <img id="coverMeFramePreviewImg" style="display:none;width:100%;max-width:280px;margin:14px auto 0;border-radius:10px;background:#fff"/>
 <button type="button" class="generate-btn" id="coverMeFrameSatisfiedBtn" style="display:none;margin-top:14px" onclick="confirmCoverMeFrame()">✅ Satisfied</button>
 <button type="button" class="download-btn" style="margin-top:1rem" onclick="skipCoverMeFrame()">← No frame after all</button>
+</div>
+
+<!-- New unified full-screen frame picker (Alyx's diagram), replaces the
+     small in-card catalog above as the actual destination -- kept the
+     old card's markup in place (unused, harmless) rather than deleting
+     it, to avoid disturbing anything else that might still reference
+     its element IDs. -->
+<div class="card" id="coverMeFrameFullGridCard" style="display:none">
+<div class="card-title" style="text-align:center">🖼️ Fancy A Frame?</div>
+<div class="note" style="margin-top:0;margin-bottom:1.1rem;text-align:center">Select a frame style and color to create your masterpiece.</div>
+<div class="note" style="margin-bottom:6px">Frame Color</div>
+<div class="color-grid" id="coverMeFullFrameColorGrid"></div>
+<div id="coverMeFullFrameGrid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:14px"></div>
+<div style="display:flex;gap:8px;margin-top:1.1rem">
+<button type="button" class="download-btn" style="flex:1" onclick="coverMeFullGridChangeSource()">⬆️ Upload Photo</button>
+<button type="button" class="generate-btn" style="flex:1.6" onclick="confirmCoverMeFrame()">✨ Generate Image<div style="font-size:10px;font-weight:400;margin-top:2px">Let Needles work his magic!</div></button>
+<button type="button" class="download-btn" style="flex:1" onclick="clearCoverMeFrameSelection()">↻ Clear All</button>
+</div>
+<div class="note" style="margin-top:1rem;text-align:center;color:#7ab8ff;cursor:pointer" onclick="skipCoverMeFrame()">← No frame after all</div>
 </div>
 
 
@@ -4804,9 +4824,159 @@ let coverMeFrameColorHex=null;
 function showCoverMeFrameCatalog(){
   document.getElementById('coverMeFrameOfferCard').style.display='none';
   document.body.classList.remove('coverme-frameoffer-focus');
-  renderCoverMeFrameGrid();
-  document.getElementById('coverMeFrameCatalogCard').style.display='block';
-  smoothScrollToTarget('coverMeFrameCatalogCard','start');
+  renderCoverMeFullFrameGrid();
+  renderCoverMeFullFrameColorGrid();
+  document.body.classList.add('coverme-fullframegrid-focus');
+  document.getElementById('coverMeFrameFullGridCard').style.display='block';
+  snapExpandThrough('coverMeFrameFullGridCard');
+  guidedScrollInProgress=true;
+  const fullGridEl=document.getElementById('coverMeFrameFullGridCard');
+  scrollToStableTop(fullGridEl,90,15);
+  setTimeout(()=>{guidedScrollInProgress=false;},2200);
+}
+
+// The first 20 catalog entries (in FRAME_CATALOG's own order) fill the
+// diagram's 20 numbered slots. FRAME_CATALOG currently has 24 entries --
+// the last 4 (Moonlit Ivy, Enchanted Grove, Lantern Vine, Trailblazer)
+// don't have a slot in this specific 20-tile layout and are left out
+// for now; flagged to Alyx rather than silently dropped or guessed at.
+// Alyx's exact intentional 20 -- the image-based frames he actually
+// uploaded and resized, NOT "first 20 by object order" (that wrongly
+// pulled in procedural/canvas-drawn frames he never sent files for,
+// and excluded real ones he did). Last 3 slots are placeholders until
+// astral.png/mirror mirror.png/royal.png get real catalog names.
+const COVER_ME_FULL_GRID_FRAME_ORDER=[
+  "Ornate Gold","Walnut Gold","Brushed Silver","Black Champagne",
+  "Air Mail","Neon Celebration","Retro Arcade","Neon Dreams",
+  "Wrought Iron","Blue Floral","Crystal Champagne","Pressed Flowers",
+  "Celestial Deco","Moonlit Ivy","Enchanted Grove","Lantern Vine",
+  "Trailblazer"
+];
+
+function renderCoverMeFullFrameGrid(){
+  const grid=document.getElementById('coverMeFullFrameGrid');
+  if(!grid)return;
+  grid.innerHTML='';
+  // Reading-order grid positions (row, col), 1-indexed, matching
+  // Alyx's diagram exactly: one full row of 4, then a row where the
+  // photo sits flanked by two tiles, then a mirroring row below the
+  // photo (same two side columns), then three more full rows of 4.
+  const positions=[
+    [1,1],[1,2],[1,3],[1,4],
+    [2,1],[2,4],
+    [3,1],[3,4],
+    [4,1],[4,2],[4,3],[4,4],
+    [5,1],[5,2],[5,3],[5,4],
+    [6,1],[6,2],[6,3],[6,4]
+  ];
+  positions.forEach(([row,col],i)=>{
+    const name=COVER_ME_FULL_GRID_FRAME_ORDER[i];
+    const btn=document.createElement('div');
+    btn.style.gridRow=row;
+    btn.style.gridColumn=col;
+    if(!name){
+      // Placeholder for the 3 not-yet-named frames -- not guessed at.
+      btn.className='theme-btn';
+      btn.style.opacity='.35';
+      btn.style.pointerEvents='none';
+      const swatch=document.createElement('div');
+      swatch.style.cssText='width:100%;aspect-ratio:1;display:flex;align-items:center;justify-content:center;background:#0d0d0d;color:#7ab8ff;font-size:11px;text-align:center';
+      swatch.textContent='Coming soon';
+      btn.appendChild(swatch);
+      grid.appendChild(btn);
+      return;
+    }
+    const data=FRAME_CATALOG[name];
+    btn.className='theme-btn'+(coverMeSelectedFrame===name?' selected':'');
+    const swatch=document.createElement('div');
+    swatch.style.cssText='width:100%;aspect-ratio:1;display:flex;align-items:center;justify-content:center;background:#0d0d0d';
+    if(data.type==='image'){
+      const img=document.createElement('img');
+      img.src=data.asset;
+      img.style.cssText='width:100%;height:100%;object-fit:cover';
+      swatch.appendChild(img);
+    } else {
+      const preview=document.createElement('div');
+      const previewColor=data.defaultColor||(data.defaultColors?data.defaultColors[0]:'#888');
+      preview.style.cssText='width:80%;height:80%;border:6px solid '+previewColor+';border-radius:4px;background:transparent';
+      swatch.appendChild(preview);
+    }
+    btn.appendChild(swatch);
+    const label=document.createElement('div');
+    label.className='theme-label';
+    label.textContent=name;
+    btn.appendChild(label);
+    btn.onclick=()=>coverMeFullGridPickFrameTile(name);
+    grid.appendChild(btn);
+  });
+  // Photo cell -- spans the 2x2 block the grid reserves at rows 2-3,
+  // columns 2-3. Always shows the customer's actual finished image
+  // (unframed) -- frame/color choices only highlight a selection here;
+  // the real composite only happens once Generate Image is pressed.
+  const photoCell=document.createElement('div');
+  photoCell.id='coverMeFullGridPhotoCell';
+  photoCell.style.cssText='grid-row:2/4;grid-column:2/4;border:3px solid #d4af37;border-radius:8px;overflow:hidden;display:flex;align-items:center;justify-content:center;background:#0d0d0d';
+  const design=placements.front?findDesignById(placements.front):null;
+  if(design){
+    const img=document.createElement('img');
+    img.src=design.url;
+    img.style.cssText='width:100%;height:100%;object-fit:contain';
+    photoCell.appendChild(img);
+  } else {
+    const placeholder=document.createElement('div');
+    placeholder.style.cssText='text-align:center;color:#7ab8ff;font-size:12px;padding:1rem';
+    placeholder.textContent='Your image will appear here';
+    photoCell.appendChild(placeholder);
+  }
+  grid.appendChild(photoCell);
+}
+
+function coverMeFullGridPickFrameTile(name){
+  coverMeSelectedFrame=(coverMeSelectedFrame===name)?null:name;
+  const data=coverMeSelectedFrame?FRAME_CATALOG[coverMeSelectedFrame]:null;
+  coverMeFrameColorHex=data?(data.defaultColor||(data.defaultColors?data.defaultColors[0]:null)):null;
+  renderCoverMeFullFrameGrid();
+  renderCoverMeFullFrameColorGrid();
+}
+
+function renderCoverMeFullFrameColorGrid(){
+  const grid=document.getElementById('coverMeFullFrameColorGrid');
+  if(!grid)return;
+  grid.innerHTML='';
+  const data=coverMeSelectedFrame?FRAME_CATALOG[coverMeSelectedFrame]:null;
+  const colorable=data && data.colorable!==false && (data.type==='image'||data.type==='twoPiece');
+  FRAME_COLOR_SWATCHES.forEach(c=>{
+    const btn=document.createElement('div');
+    btn.className='color-btn'+(coverMeFrameColorHex===c.hex?' selected':'');
+    btn.style.background=c.hex;
+    if(!colorable)btn.style.opacity='.35';
+    btn.onclick=()=>{
+      if(!coverMeSelectedFrame)return;
+      coverMeFrameColorHex=c.hex;
+      renderCoverMeFullFrameColorGrid();
+    };
+    grid.appendChild(btn);
+  });
+}
+
+// "Upload Photo" here isn't a first-time upload -- there's already a
+// finished generated image by this point in the flow. Wired as "go
+// back and pick/generate a different one" (same destination as the
+// existing Change Props exit) rather than inventing new plumbing --
+// flag to Alyx if a different behavior was actually intended.
+function coverMeFullGridChangeSource(){
+  document.getElementById('coverMeFrameFullGridCard').style.display='none';
+  document.body.classList.remove('coverme-fullframegrid-focus');
+  changePropsFromCoverMe();
+}
+
+// Scoped to just this screen's own selection state -- does not touch
+// placements, panels, or anything upstream.
+function clearCoverMeFrameSelection(){
+  coverMeSelectedFrame=null;
+  coverMeFrameColorHex=null;
+  renderCoverMeFullFrameGrid();
+  renderCoverMeFullFrameColorGrid();
 }
 
 function renderCoverMeFrameGrid(){
@@ -4900,7 +5070,9 @@ async function updateCoverMeFramePreview(){
 function skipCoverMeFrame(){
   document.getElementById('coverMeFrameOfferCard').style.display='none';
   document.getElementById('coverMeFrameCatalogCard').style.display='none';
+  document.getElementById('coverMeFrameFullGridCard').style.display='none';
   document.body.classList.remove('coverme-frameoffer-focus');
+  document.body.classList.remove('coverme-fullframegrid-focus');
   finalizeCoverMeMockup();
 }
 
@@ -4916,6 +5088,8 @@ async function confirmCoverMeFrame(){
     return;
   }
   document.getElementById('coverMeFrameCatalogCard').style.display='none';
+  document.getElementById('coverMeFrameFullGridCard').style.display='none';
+  document.body.classList.remove('coverme-fullframegrid-focus');
   const overlay=document.getElementById('mockupLoadingOverlay');
   if(overlay){overlay.style.display='flex';document.body.classList.add('step-locked');}
 
