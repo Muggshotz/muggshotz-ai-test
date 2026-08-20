@@ -1,5 +1,6 @@
 import fs from "fs";
 import path from "path";
+import sharp from "sharp";
 
 // RESTORED (July 2026): this file was found genuinely truncated — cut
 // off mid-function with no closing brackets and no export default
@@ -111,6 +112,35 @@ async function uploadGenerationToStorage(imageBuffer, deviceId) {
   return `${SUPABASE_URL}/storage/v1/object/public/generations/${fileName}`;
 }
 
+// gpt-image-2 does not support a native transparent background — the
+// "background: transparent" API parameter is rejected outright for this
+// model. For template-merge generations (Cover Me, and any future
+// design method that melds a photo onto a fixed template), we work
+// around this by having the model fill everything outside the template
+// with a single flat, unmistakable color (pure magenta, #FF00FF) per an
+// explicit prompt instruction, then strip that exact color to real
+// alpha transparency ourselves here — the same principle as a film
+// green screen, just done in code. Tolerance is kept tight (close to
+// true magenta only) specifically so real magenta/pink tones that might
+// legitimately appear in a photo or magazine design are not mistaken
+// for the placeholder fill.
+async function chromaKeyMagentaToTransparent(pngBuffer) {
+  const { data, info } = await sharp(pngBuffer)
+    .ensureAlpha()
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+  const { width, height, channels } = info;
+  for (let i = 0; i < data.length; i += channels) {
+    const r = data[i], g = data[i + 1], b = data[i + 2];
+    if (r > 200 && g < 70 && b > 200) {
+      data[i + 3] = 0;
+    }
+  }
+  return sharp(data, { raw: { width, height, channels } })
+    .png()
+    .toBuffer();
+}
+
 // Saves a record of this generation so it can later be shown in the
 // "pick from your recent generations" picker for multi-placement orders.
 async function saveGenerationRecord(customerId, promptText, theme, imageUrl) {
@@ -145,7 +175,7 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: "Method not allowed" });
   }
   try {
-    const { image, prompt, theme, deviceId, refImageA, refImageB, currentDesign, size, panelRole, action } = req.body;
+    const { image, prompt, theme, deviceId, refImageA, refImageB, currentDesign, size, panelRole, action, templateMerge } = req.body;
 
     // Lightweight path: upload an already-composited image (a Frame or
     // caption baked onto the finished art in the browser via canvas) to
@@ -261,6 +291,21 @@ Apply the customer's new instruction as an edit on top of the current design, no
 `
       : "";
 
+    // gpt-image-2 can't output true transparency (see
+    // chromaKeyMagentaToTransparent above for why). For template-merge
+    // generations, tell the model to fill any canvas area outside the
+    // actual template artwork with a single flat placeholder color
+    // instead of inventing a background — we strip this color to real
+    // transparency after generation, before the customer ever sees it.
+    const chromaKeyInstruction = templateMerge
+      ? `
+CANVAS FILL REQUIREMENT (technical instruction, not visible to the customer):
+The reference template image may not fill the entire canvas exactly. Any area of the canvas that falls OUTSIDE the actual template artwork (i.e. not part of the template itself) must be filled with a single, perfectly flat, solid color: pure magenta, hex #FF00FF, RGB(255,0,255).
+Do not use white, black, gray, gradients, vignettes, shadows, textures, or any scene/background/environment in that outside area — it must be one uniform flat magenta fill only, with a clean hard edge exactly at the boundary of the template artwork.
+This magenta fill is a placeholder that will be programmatically removed after generation — it is never seen by the customer, so it must not be styled, softened, or blended in any way.
+`
+      : "";
+
 
     const finalPrompt = isPanelContinuation
       ? `${panelContinuationPrompt}
@@ -275,6 +320,7 @@ CUSTOMER REQUEST:
 ${prompt}
 ${backgroundInstruction}
 ${currentDesignInstruction}
+${chromaKeyInstruction}
 STYLE:
 Photorealistic rendering with caricature-level exaggeration of real features.
 Painted, airbrushed illustration finish — not cartoon, not vector, not anime style.
@@ -369,9 +415,25 @@ Polished gift-art quality.
       return res.status(502).json({ error: "No image returned from OpenAI.", raw: data });
     }
 
+    // For template-merge generations, strip the magenta placeholder fill
+    // to real alpha transparency now, once, right here — so every
+    // downstream consumer (mug panel compositing, easel preview, other
+    // products) inherits a genuinely transparent PNG automatically and
+    // never has to know the magenta trick happened at all.
+    let generatedBuffer = Buffer.from(b64, "base64");
+    if (templateMerge) {
+      try {
+        generatedBuffer = await chromaKeyMagentaToTransparent(generatedBuffer);
+      } catch (keyErr) {
+        // If the chroma-key pass itself fails for any reason, fall back
+        // to the raw generated image rather than losing the customer's
+        // result entirely.
+        console.error("Chroma-key transparency pass failed:", keyErr.message);
+      }
+    }
+
     // Upload the finished image to Supabase Storage and get a real,
     // permanent URL back instead of shipping raw base64 around.
-    const generatedBuffer = Buffer.from(b64, "base64");
     const publicImageUrl = await uploadGenerationToStorage(generatedBuffer, deviceId);
 
     // Record this generation so it can be picked later for multi-placement
