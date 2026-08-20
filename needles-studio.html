@@ -4855,12 +4855,14 @@ function refreshCoverMePanelDoneState(){
 }
 
 // This IS the one real Printify mockup fetch for the whole Cover Me
-// flow -- happens once panel AND frame decisions are both final.
+// flow. Frame offer is intentionally skipped here — a decorative frame
+// around a magazine cover reads as redundant/wrong in every combination
+// tested, so panel decisions go straight to the mockup. The Frame system
+// itself (card, catalog, compositing) is untouched and still fully wired
+// for reuse elsewhere (Design track, other products).
 async function coverMePanelDone(){
   document.getElementById('coverMePanelCard').style.display='none';
-  document.getElementById('coverMeFrameOfferCard').style.display='block';
-  document.body.classList.add('coverme-frameoffer-focus');
-  smoothScrollToTarget('coverMeFrameOfferCard','center');
+  finalizeCoverMeMockup();
 }
 
 // Cover Me's own frame selection state -- deliberately separate from
