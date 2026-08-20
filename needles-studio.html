@@ -398,7 +398,7 @@
 #creditsBtn:active{transform:translateY(1px)}
 
 .step-lock-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:900;align-items:flex-start;justify-content:center;padding:2.5rem 1.5rem;overflow-y:auto}
-body.generation-active .card:not(#uploadPhotoCard){opacity:.55;filter:brightness(.75) saturate(.85);pointer-events:none;transition:opacity .5s,filter .5s}
+body.generation-active .card:not(#uploadPhotoCard){opacity:.28;filter:brightness(.55) saturate(.7);pointer-events:none;transition:opacity .5s,filter .5s}
 body.generation-active #uploadPhotoCard{position:relative;z-index:5}
 body.generation-active #creditsModalOverlay .card{opacity:1!important;filter:none!important;pointer-events:auto!important}
 body .step-lock-overlay .card{opacity:1!important;filter:none!important;pointer-events:auto!important}
@@ -418,7 +418,8 @@ body.coverme-frameoffer-focus .card:not(#coverMeFrameOfferCard){opacity:.28;filt
 body.coverme-fullframegrid-focus .card:not(#coverMeFrameFullGridCard){opacity:.28;filter:brightness(.55) saturate(.7);pointer-events:none;transition:opacity .5s,filter .5s}
 body.covermereveal-focus .card:not(#uploadPhotoCard){opacity:.28;filter:brightness(.55) saturate(.7);pointer-events:none;transition:opacity .5s,filter .5s}
 body.final-generate-focus .card:not(#uploadPhotoCard){opacity:.35;filter:brightness(.6) saturate(.75);transition:opacity .5s,filter .5s}
-body.initial-upload-focus .card:not(#uploadPhotoCard){opacity:.35;filter:brightness(.6) saturate(.75);pointer-events:none;transition:opacity .5s,filter .5s}
+html:has(body.initial-upload-focus),body.initial-upload-focus{overflow:hidden}
+body.initial-upload-focus .card:not(#uploadPhotoCard){opacity:0;pointer-events:none;transition:opacity .5s}
 body.idea-focus .card:not(#ideaCard){opacity:.35;filter:brightness(.6) saturate(.75);pointer-events:none;transition:opacity .5s,filter .5s}
 body.product-focus .card:not(#productCard){opacity:.35;filter:brightness(.6) saturate(.75);transition:opacity .5s,filter .5s}
 .generation-reminder-banner{font-size:14px;font-weight:800;letter-spacing:.3px;text-align:center;padding:14px 10px;margin:1rem 0;border-radius:10px;background:#0d0d0d;border:1px solid #003c8c;animation:mugSelectFlash 1s ease-in-out infinite}
@@ -1780,8 +1781,15 @@ let currentDesignId=null;
 let guidedScrollInProgress=false;
 
 let openingGuideTimer=null;
-let openingGuideDone=false;
-
+let openingGuideDone=true;
+// GUTTED (Alyx's explicit direction): this used to auto-scroll to
+// uploadPhotoCard a few seconds after landing/after activity -- but
+// uploadPhotoCard already IS the landing screen, so this only ever
+// produced an unwanted, unexplained shift while the customer was still
+// reading. openingGuideDone starts true so neither call site below
+// can ever fire. Left in place (rather than deleted) in case a real
+// separate intro/hero screen gets added later, at which point this
+// premise would apply again.
 function scheduleOpeningGuide(delay){
   if(openingGuideDone)return;
   clearTimeout(openingGuideTimer);
@@ -4470,7 +4478,26 @@ async function generateCoverMe(){
   startGenTimer();
   showGenerationInProgress();
   startNeedlesStage();
-  smoothScrollToTarget('needlesStageWrap','center');
+  // Was smoothScrollToTarget('needlesStageWrap','center') -- centering
+  // just the stage let the small "Creation in progress" polaroid card
+  // (right above it) scroll partly out of view, revealing the Product
+  // tiles above the fold. Same fix already proven for the other
+  // generator: anchor to the clipboard card instead, so both the small
+  // card and the big easel land together with nothing else visible.
+  {
+    const snapCoverMeStageToClipboard=()=>{
+      const anchor=document.querySelector('.needles-clipboard');
+      if(!anchor)return;
+      const target=(anchor.getBoundingClientRect().top+window.scrollY)-14;
+      window.scrollTo(0,Math.max(0,target));
+    };
+    requestAnimationFrame(()=>{
+      requestAnimationFrame(()=>{
+        snapCoverMeStageToClipboard();
+        [80,180,350,600,900].forEach(delay=>setTimeout(snapCoverMeStageToClipboard,delay));
+      });
+    });
+  }
   setStatus('Generating your cover... this may take several minutes, go grab a coffee if you like.');
   document.getElementById('cancelBtn').style.display='block';
   suspendGuidedScrollsForGeneration();
@@ -4498,7 +4525,14 @@ async function generateCoverMe(){
     // to also see their original input photo blown up in the clipboard
     // above it, so the clipboard is hidden entirely here instead of
     // being re-rendered with the old photo (an earlier fix's mistake).
+    // Was: generation-active removed here, but covermereveal-focus only
+    // added later inside presentFinishedNeedlesArt's async reveal
+    // callback -- leaving a real gap with NO dimming active at all,
+    // which is exactly when Alyx saw the Product section light back up
+    // right as "Done" appeared. Add the next dimming class in the same
+    // breath as removing the first, so coverage is continuous.
     document.body.classList.remove('generation-active');
+    document.body.classList.add('covermereveal-focus');
     removeGenerationReminders();
     const clipboard=document.querySelector('.needles-clipboard');
     if(clipboard)clipboard.style.display='none';
@@ -4508,7 +4542,6 @@ async function generateCoverMe(){
     refreshTokenMeter();
 
     presentFinishedNeedlesArt(resultImageUrl,()=>{
-      document.body.classList.add('covermereveal-focus');
       document.getElementById('coverMeEaselApproveRow').style.display='block';
       scrollToCoverMeRevealWhenReady();
     });
@@ -6877,6 +6910,18 @@ async function beginFinalMockupFetch(){
     if(!mockupUrl)throw new Error("Printify didn't return a mockup photo in time.");
 
     currentMockupUrls=mockupUrls.length?mockupUrls:[mockupUrl];
+    // Printify's returned photo order for this coffee mug blueprint puts
+    // the "center" angle first -- which shows the seam/gap between the
+    // three print panels with no visible art, not a useful first
+    // impression. The right-angle photo (handle on the right, cover
+    // fully visible) was consistently last in Alyx's testing -- move it
+    // to the front so that's what the customer sees first. This assumes
+    // Printify's ordering stays consistent for this specific
+    // blueprint/variant; flag if a future mockup shows this reordering
+    // landed on the wrong photo instead.
+    if(product==='mug' && currentMockupUrls.length>1){
+      currentMockupUrls=[currentMockupUrls[currentMockupUrls.length-1],...currentMockupUrls.slice(0,-1)];
+    }
     if(overlay){overlay.style.display='none';document.body.classList.remove('step-locked');}
     openMockupLightbox(0);
     const returnBtn=document.getElementById('mockupLightboxReturn');
