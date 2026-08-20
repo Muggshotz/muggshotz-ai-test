@@ -4586,6 +4586,21 @@ async function approveCoverMe(){
   document.getElementById('coverMeGenerateBtn').disabled=false;
   saveMugState();
   showCoverMePanelCard();
+  // NEW (Alyx's request): Center now defaults OFF -- the customer has
+  // to manually turn it back on. showCoverMePanelCard() above already
+  // ran autoFillCoverMePanels(), which correctly copied this fresh
+  // design into Left/Right first. Reuses the exact same "removed"
+  // tracking the Remove button uses, so "Turn Center On (free)"
+  // already works correctly with zero new state. Only applies on a
+  // normal/default approval (target === 'front') -- if the customer
+  // explicitly regenerated one specific panel instead, leave it alone.
+  if(target==='front' && placements.front){
+    coverMeLastRemoved.front=placements.front;
+    placements.front=null;
+    saveMugState();
+    renderCoverMePanelRowState('front');
+    refreshCoverMePanelDoneState();
+  }
 }
 
 // "No -- Start Over" sends them right back to the Cover Me screen they
@@ -4762,14 +4777,17 @@ function renderCoverMePanelRowState(pos){
     const note=document.createElement('div');
     note.className='note';
     note.style.cssText='text-align:center;color:#29a3ff;font-size:12px';
-    note.textContent='No image on this panel.';
+    // Center defaults off (a deliberate choice, not an accidental
+    // removal) -- worded differently from Left/Right's empty state so
+    // it reads as "this is how it starts," not "something's missing."
+    note.textContent=(pos==='front')?'Center is off by default -- two panels looks cleaner for most photos.':'No image on this panel.';
     controls.appendChild(note);
 
     const addBackBtn=document.createElement('button');
     addBackBtn.type='button';
     addBackBtn.className='generate-btn';
     addBackBtn.style.cssText='width:100%;margin-top:6px;margin-bottom:6px;font-size:12px;padding:.5rem';
-    addBackBtn.textContent='Add it back (free)';
+    addBackBtn.textContent=(pos==='front')?'Turn Center On (free)':'Add it back (free)';
     addBackBtn.onclick=()=>useCurrentDesignForCoverMePanel(pos);
     controls.appendChild(addBackBtn);
 
