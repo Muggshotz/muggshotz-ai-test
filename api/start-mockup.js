@@ -102,7 +102,16 @@ async function handleStart(req, res) {
 
   const isCoffeeMug = product.layoutType === "three-slot-wrap";
   const isTravelMug20oz = productKey === "travel-mug-20oz";
-  const imageScale = isCoffeeMug ? 1 : 1;
+  // UPDATED (Aug 2026, Alyx's request): pushed from 1 (100%) to 1.05
+  // (105%) for coffee mugs specifically -- Printify's placement API
+  // genuinely supports scale >1, which zooms the design in relative to
+  // the print area (anything past the boundary gets cropped, rest
+  // renders larger, same mechanism as manually zooming in Printify's
+  // own placement editor). Reversible if this doesn't hold up -- see
+  // the July 2026 comment on createPrintifyProduct in
+  // create-printify-order.js for the earlier over-tight-cropping
+  // history this is deliberately pushing back against.
+  const imageScale = isCoffeeMug ? 1.05 : 1;
   const imageY = isCoffeeMug ? 0.5 : 0.5;
 
   const { productId } = await createPrintifyProduct(
