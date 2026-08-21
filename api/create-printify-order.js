@@ -172,7 +172,16 @@ export async function buildWraparoundImage(placements, canvasWidth, canvasHeight
   // confirmed via a fresh committed test that it was STILL too big --
   // landed back on a flat 0.8 across every fill-count case, matching
   // what he'd already concluded before this whole tuning arc started.
-  const PANEL_ZOOM = 0.8;
+  //
+  // UPDATED (Aug 2026, border feature): with the new colored border
+  // tracing each panel's true edge, 0.8 left a wide white gap between
+  // the art and the border -- pushed to 0.92, still safely inside the
+  // zoom<1 branch's contain-fit behavior (nothing ever gets cropped at
+  // any value below 1, only the size of the white buffer changes), so
+  // this can't reintroduce the truncation problem. Leaves a small,
+  // deliberate buffer between the art and the border -- close, not
+  // touching.
+  const PANEL_ZOOM = 0.92;
 
   const baseSlots = {
     left: { x: 0, width: sectionWidth },
