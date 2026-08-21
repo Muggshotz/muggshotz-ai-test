@@ -419,6 +419,8 @@ body.coverme-fullframegrid-focus .card:not(#coverMeFrameFullGridCard){opacity:.2
 body.covermereveal-focus .card:not(#uploadPhotoCard){opacity:.28;filter:brightness(.55) saturate(.7);pointer-events:none;transition:opacity .5s,filter .5s}
 body.faceitgen-focus .card:not(#faceItCard){opacity:.28;filter:brightness(.55) saturate(.7);pointer-events:none;transition:opacity .5s,filter .5s}
 body.faceitreveal-focus .card:not(#uploadPhotoCard){opacity:.28;filter:brightness(.55) saturate(.7);pointer-events:none;transition:opacity .5s,filter .5s}
+body.goodmorninggen-focus .card:not(#goodMorningCard){opacity:.28;filter:brightness(.55) saturate(.7);pointer-events:none;transition:opacity .5s,filter .5s}
+body.goodmorningreveal-focus .card:not(#uploadPhotoCard){opacity:.28;filter:brightness(.55) saturate(.7);pointer-events:none;transition:opacity .5s,filter .5s}
 body.final-generate-focus .card:not(#uploadPhotoCard){opacity:.35;filter:brightness(.6) saturate(.75);transition:opacity .5s,filter .5s}
 body.initial-upload-focus .card:not(#uploadPhotoCard){opacity:0;pointer-events:none;transition:opacity .5s}
 body.idea-focus .card:not(#ideaCard){opacity:.35;filter:brightness(.6) saturate(.75);pointer-events:none;transition:opacity .5s,filter .5s}
@@ -983,7 +985,31 @@ Would you like to try out <span style="color:#7ab8ff">some of our fun props?</sp
 <button type="button" class="download-btn" style="margin-top:1rem" onclick="faceItBack()">← Back</button>
 </div>
 
-<div class="card" id="coverMePanelCard" style="display:none">
+<div class="card" id="goodMorningCard" style="display:none">
+<div class="card-title">🪟 Good Morning Mugs</div>
+<div class="note" style="margin-top:0;margin-bottom:.9rem">Pick the window you want your photo looking out through.</div>
+<div class="theme-grid" id="goodMorningGrid" style="grid-template-columns:repeat(4,1fr)">
+<div class="btn-select" id="goodMorningPreviewSlot" style="grid-column:2/4;grid-row:2/4;padding:6px;display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;cursor:pointer" onclick="triggerGoodMorningPhotoChange()">
+<img id="goodMorningPreviewImg" style="width:100%;border-radius:8px;background:#fff"/>
+</div>
+</div>
+<div class="note" id="goodMorningChangePhotoPrompt" style="margin-top:.75rem;text-align:center;color:#29a3ff">Tap your photo above to use a different one.</div>
+<input type="file" id="goodMorningPhotoInput" accept="image/*" style="display:none" onchange="handleGoodMorningPhotoChange(event)">
+<button type="button" id="goodMorningGenerateBtn" class="generate-btn generate-flash" style="display:none;margin-top:1rem" onclick="generateGoodMorning()">🎨 Generate</button>
+<button type="button" class="download-btn" style="margin-top:1rem" onclick="goodMorningBack()">← Back</button>
+<div id="goodMorningEaselApproveRow" style="display:none;margin-top:.75rem">
+<div style="display:flex;gap:8px">
+<button type="button" class="generate-btn" style="flex:1;padding:.7rem .5rem;font-size:14px" onclick="approveGoodMorning()">✅ Yes — Use This Image</button>
+<button type="button" class="download-btn" style="flex:1;margin-top:0;padding:.7rem .5rem;font-size:14px" onclick="keepTweakingGoodMorning()">🔧 No — Start Over</button>
+</div>
+<div class="note" style="text-align:center;margin-top:.4rem;color:#29a3ff">Trying again uses one more token. <span style="color:#7ab8ff;cursor:pointer" onclick="openCreditsPanel()">Need more?</span></div>
+<div style="display:flex;gap:16px;justify-content:center;margin-top:.6rem">
+<span class="note" style="color:#7ab8ff;cursor:pointer" onclick="backToDesignMethodFromGoodMorningReveal()">← Choose a different prop</span>
+<span class="note" style="color:#7ab8ff;cursor:pointer" onclick="backToTrackDescribeFromGoodMorningReveal()">← Describe it instead</span>
+</div>
+</div>
+</div>
+
 <div class="card-title">SELECT THE PANELS</div>
 <div class="note" style="margin-top:0;margin-bottom:1rem;text-align:center;color:#7ab8ff">WHERE DO YOU WISH TO PLACE YOUR IMAGE?</div>
 <div id="coverMePanelRows" style="display:flex;flex-direction:column;gap:12px"></div>
@@ -4397,6 +4423,8 @@ function goToDesignMethodScreen(method){
     showCoverMeCard();
   } else if(method==='faceIt'){
     showFaceItCard();
+  } else if(method==='homeSweetHome'){
+    showGoodMorningCard();
   } else {
     const titleEl=document.getElementById('designMethodComingSoonTitle');
     if(titleEl)titleEl.textContent='🪟 Home Sweet Home';
@@ -4761,6 +4789,272 @@ function backToTrackDescribeFromFaceItReveal(){
   const clipboard=document.querySelector('.needles-clipboard');
   if(clipboard)clipboard.style.display='';
   pickTrackDescribe();
+}
+
+// GOOD MORNING MUGS -- mirrors the Face It build closely, but instead of
+// merging a face onto a reference figure, the customer's own photo gets
+// composited into the blank window opening left in each scene. 20 total
+// slots planned; only the first 10 have real art from Bud so far, the
+// remaining 10 render as non-clickable "Coming Soon" tiles until Bud
+// delivers the rest -- same organic-growth pattern as Ewww Stew and the
+// original Good Morning Mugs concept (see good-morning-mugs.md).
+const GOOD_MORNING_CATALOG = [
+  "Parisian_balcony.jpg","Diner_window.jpg","Chocolate_chalet.jpg","Ivy_window.jpg",
+  "Adobe_grotto.jpg","Ventana.jpg","Villa_hideaway.jpg","Coastal_cottage.jpg",
+  "Home_sweet_home.jpg","Country_cottage.jpg"
+];
+const GOOD_MORNING_COMING_SOON_COUNT=10; // 20 total slots - 10 real above
+
+let selectedGoodMorningTemplate=null;
+// Mirrors faceItOverridePhoto -- lets the customer swap in a different
+// photo than the one uploaded at the very start of the flow.
+let goodMorningOverridePhoto=null;
+
+function renderGoodMorningGrid(){
+  const grid=document.getElementById('goodMorningGrid');
+  if(!grid)return;
+  grid.style.gridAutoFlow='dense';
+  grid.querySelectorAll('.goodmorning-tile').forEach(el=>el.remove());
+  const previewSlot=document.getElementById('goodMorningPreviewSlot');
+  GOOD_MORNING_CATALOG.forEach(filename=>{
+    const btn=document.createElement('div');
+    btn.className='btn-select goodmorning-tile'+(selectedGoodMorningTemplate===filename?' selected':'');
+    btn.style.padding='4px';
+    btn.dataset.goodmorning=filename;
+    btn.onclick=()=>pickGoodMorningTemplate(filename);
+    const img=document.createElement('img');
+    img.src=filename;
+    img.alt=filename;
+    img.style.cssText='width:100%;border-radius:6px;background:#fff';
+    btn.appendChild(img);
+    grid.insertBefore(btn,previewSlot);
+  });
+  for(let i=0;i<GOOD_MORNING_COMING_SOON_COUNT;i++){
+    const placeholder=document.createElement('div');
+    placeholder.className='btn-select goodmorning-tile';
+    placeholder.style.cssText='padding:4px;display:flex;align-items:center;justify-content:center;opacity:.4;cursor:default;aspect-ratio:1/1;background:#0a0a1a;border-radius:6px';
+    placeholder.textContent='Coming Soon';
+    placeholder.style.fontSize='12px';
+    placeholder.style.textAlign='center';
+    grid.insertBefore(placeholder,previewSlot);
+  }
+}
+
+function pickGoodMorningTemplate(filename){
+  selectedGoodMorningTemplate=filename;
+  document.querySelectorAll('#goodMorningGrid .goodmorning-tile').forEach(b=>{
+    b.classList.toggle('selected',b.dataset.goodmorning===filename);
+  });
+  document.getElementById('goodMorningGenerateBtn').style.display='block';
+  document.body.classList.add('goodmorninggen-focus');
+  const genBtn=document.getElementById('goodMorningGenerateBtn');
+  if(genBtn)scrollToStableBottom(genBtn,16,15);
+}
+
+function updateGoodMorningPreviewImg(){
+  const img=document.getElementById('goodMorningPreviewImg');
+  if(img)img.src=goodMorningOverridePhoto||uploadedImageData||'';
+}
+
+function triggerGoodMorningPhotoChange(){
+  document.getElementById('goodMorningPhotoInput').click();
+}
+
+function handleGoodMorningPhotoChange(event){
+  const file=event.target.files[0];
+  if(!file)return;
+  resizeImageFile(file,1280).then((dataUrl)=>{
+    goodMorningOverridePhoto=dataUrl;
+    updateGoodMorningPreviewImg();
+  });
+}
+
+function showGoodMorningCard(){
+  document.getElementById('designMethodComingSoonCard').style.display='none';
+  selectedGoodMorningTemplate=null;
+  goodMorningOverridePhoto=null;
+  goodMorningPendingResultUrl=null;
+  document.body.classList.remove('goodmorninggen-focus');
+  document.body.classList.remove('goodmorningreveal-focus');
+  document.getElementById('goodMorningGenerateBtn').style.display='none';
+  document.getElementById('goodMorningGenerateBtn').disabled=false;
+  document.getElementById('goodMorningEaselApproveRow').style.display='none';
+  const clipboard=document.querySelector('.needles-clipboard');
+  if(clipboard)clipboard.style.display='';
+  const styleCard=document.getElementById('styleSectionCard');
+  if(styleCard)styleCard.style.display='none';
+  const likenessCard=document.getElementById('likenessSectionCard');
+  if(likenessCard)likenessCard.style.display='none';
+  const plainGenBtn=document.getElementById('generateBtn');
+  if(plainGenBtn)plainGenBtn.style.display='none';
+  renderGoodMorningGrid();
+  updateGoodMorningPreviewImg();
+  document.getElementById('goodMorningCard').style.display='block';
+  snapExpandThrough('goodMorningCard');
+  guidedScrollInProgress=true;
+  const goodMorningCardEl=document.getElementById('goodMorningCard');
+  scrollToStableTop(goodMorningCardEl,90,15);
+  setTimeout(()=>{guidedScrollInProgress=false;},2200);
+}
+
+function goodMorningBack(){
+  document.body.classList.remove('goodmorninggen-focus');
+  document.getElementById('goodMorningCard').style.display='none';
+  showDesignMethodCard();
+}
+
+async function generateGoodMorning(){
+  if(!selectedGoodMorningTemplate){
+    showGuidanceAlert('Please pick a window first.');
+    return;
+  }
+  const photo=goodMorningOverridePhoto||uploadedImageData;
+  if(!photo){
+    showGuidanceAlert('Please upload a photo first.');
+    return;
+  }
+  if(currentTokenBalance!==null && currentTokenBalance<=0 && !isAdminDevice){
+    showTokenInfoPopup(document.getElementById('goodMorningGenerateBtn'));
+    return;
+  }
+
+  document.body.classList.remove('goodmorninggen-focus');
+  document.getElementById('goodMorningGenerateBtn').disabled=true;
+  startGenTimer();
+  showGenerationInProgress();
+  startNeedlesStage();
+  {
+    const snapGoodMorningStageToClipboard=()=>{
+      const anchor=document.getElementById('resetEverythingBtnTop');
+      if(!anchor)return;
+      const target=(anchor.getBoundingClientRect().top+window.scrollY)-90;
+      window.scrollTo(0,Math.max(0,target));
+    };
+    requestAnimationFrame(()=>{
+      requestAnimationFrame(()=>{
+        snapGoodMorningStageToClipboard();
+        [80,180,350,600,900].forEach(delay=>setTimeout(snapGoodMorningStageToClipboard,delay));
+      });
+    });
+  }
+  setStatus('Generating your piece... this may take several minutes, go grab a coffee if you like.');
+  document.getElementById('cancelBtn').style.display='block';
+  suspendGuidedScrollsForGeneration();
+
+  try{
+    currentGenerationController=new AbortController();
+    const templateDataUrl=await magazineAssetToJpegDataURL(selectedGoodMorningTemplate,1024);
+
+    const prompt='Composite the uploaded photo into the blank window/doorway opening shown in the reference image, as if the person is standing just inside looking out through it. '+
+      'Match the perspective, scale, and lighting of the reference scene so the photo reads as genuinely framed by the window, not pasted flat on top. '+
+      'Preserve every other element of the reference exactly as shown -- the frame, shutters, flowers, and any props -- do not alter anything outside the window opening itself.';
+
+    const resultImageUrl=await callGenerateAPI({
+      workingImage:photo,
+      prompt,
+      refImageA:templateDataUrl,
+      templateMerge:true,
+      signal:currentGenerationController.signal
+    });
+
+    document.body.classList.remove('generation-active');
+    document.body.classList.add('goodmorningreveal-focus');
+    removeGenerationReminders();
+    const clipboard=document.querySelector('.needles-clipboard');
+    if(clipboard)clipboard.style.display='none';
+    stopGenTimerSuccess();
+    clearStatus();
+    document.getElementById('cancelBtn').style.display='none';
+    refreshTokenMeter();
+
+    presentFinishedNeedlesArt(resultImageUrl,()=>{
+      document.getElementById('goodMorningEaselApproveRow').style.display='block';
+      scrollToGoodMorningRevealWhenReady();
+    });
+    goodMorningPendingResultUrl=resultImageUrl;
+
+  }catch(err){
+    console.error('Good Morning Mugs generation failed:',err);
+    stopNeedlesStage();
+    stopGenTimerSuccess();
+    document.getElementById('cancelBtn').style.display='none';
+    document.getElementById('goodMorningGenerateBtn').disabled=false;
+    showBigAlert(err.message||'Something went wrong generating your piece. Please try again.');
+  }
+}
+
+let goodMorningPendingResultUrl=null;
+
+// Mirrors approveFaceIt() exactly -- hands off to the same shared
+// panel-selection and mockup-finalize screens Cover Me/Face It use.
+async function approveGoodMorning(){
+  if(!goodMorningPendingResultUrl)return;
+  const designId=addToRecentDesigns(goodMorningPendingResultUrl);
+  const posHolder=document.getElementById('positionHolderCard');
+  if(posHolder)posHolder.style.display='none';
+  const validTargets=['left','front','right'];
+  const target=(pendingSlotTarget && validTargets.includes(pendingSlotTarget))?pendingSlotTarget:'front';
+  placements[target]=designId;
+  pendingSlotTarget=null;
+  goodMorningPendingResultUrl=null;
+  document.body.classList.remove('goodmorningreveal-focus');
+  document.getElementById('goodMorningEaselApproveRow').style.display='none';
+  document.getElementById('goodMorningGenerateBtn').disabled=false;
+  saveMugState();
+  showCoverMePanelCard();
+  if(target==='front' && placements.front){
+    coverMeLastRemoved.front=placements.front;
+    placements.front=null;
+    saveMugState();
+    renderCoverMePanelRowState('front');
+    refreshCoverMePanelDoneState();
+  }
+}
+
+function keepTweakingGoodMorning(){
+  document.body.classList.remove('goodmorningreveal-focus');
+  document.getElementById('goodMorningEaselApproveRow').style.display='none';
+  document.getElementById('goodMorningGenerateBtn').disabled=false;
+  goodMorningPendingResultUrl=null;
+  const clipboard=document.querySelector('.needles-clipboard');
+  if(clipboard)clipboard.style.display='';
+  document.getElementById('goodMorningCard').style.display='block';
+  smoothScrollToTarget('goodMorningGrid','center');
+}
+
+function backToDesignMethodFromGoodMorningReveal(){
+  document.body.classList.remove('goodmorningreveal-focus');
+  document.getElementById('goodMorningEaselApproveRow').style.display='none';
+  document.getElementById('goodMorningCard').style.display='none';
+  const clipboard=document.querySelector('.needles-clipboard');
+  if(clipboard)clipboard.style.display='';
+  showDesignMethodCard();
+}
+
+function backToTrackDescribeFromGoodMorningReveal(){
+  document.body.classList.remove('goodmorningreveal-focus');
+  document.getElementById('goodMorningEaselApproveRow').style.display='none';
+  document.getElementById('goodMorningCard').style.display='none';
+  document.getElementById('designMethodCard').style.display='none';
+  const clipboard=document.querySelector('.needles-clipboard');
+  if(clipboard)clipboard.style.display='';
+  pickTrackDescribe();
+}
+
+function scrollToGoodMorningRevealWhenReady(){
+  const stageWrap=document.getElementById('needlesStageWrap');
+  const approveRow=document.getElementById('goodMorningEaselApproveRow');
+  if(!stageWrap||!approveRow)return;
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{
+    const topY=stageWrap.getBoundingClientRect().top+window.scrollY;
+    const bottomY=approveRow.getBoundingClientRect().bottom+window.scrollY;
+    const span=bottomY-topY;
+    const vh=window.innerHeight;
+    const target=span<=vh ? topY-(vh-span)/2 : topY;
+    guidedScrollInProgress=true;
+    window.scrollTo({top:target,behavior:'smooth'});
+    setTimeout(()=>{guidedScrollInProgress=false;},750);
+  }));
 }
 
 function showCoverMeCard(){
