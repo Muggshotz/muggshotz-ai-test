@@ -7295,6 +7295,7 @@ async function beginFinalMockupFetch(){
     if(!startResp.ok)throw new Error(startData.error||'Could not generate the real mockup.');
 
     const productId=startData.productId;
+    const variantId=startData.variantId;
     let mockupUrl=null;
     let mockupUrls=[];
     const maxTries=40;
@@ -7304,7 +7305,7 @@ async function beginFinalMockupFetch(){
       const checkResp=await fetchWithTimeout('/api/start-mockup',{
         method:'POST',
         headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({action:'check',productId})
+        body:JSON.stringify({action:'check',productId,variantId})
       },15000);
       const checkData=await checkResp.json();
       if(!checkResp.ok)throw new Error(checkData.error||'Could not check on the real mockup.');
@@ -9524,6 +9525,7 @@ async function runAutoMockupFetch(){
     if (thisRequestId !== autoMockupRequestId) return;
 
     const productId = startData.productId;
+    const variantId = startData.variantId;
     let mockupUrl = null;
     let mockupUrls = [];
     const maxTries = 40;
@@ -9535,7 +9537,7 @@ async function runAutoMockupFetch(){
       const checkResp = await fetchWithTimeout('/api/start-mockup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'check', productId })
+        body: JSON.stringify({ action: 'check', productId, variantId })
       }, 15000);
       const checkData = await checkResp.json();
       if (!checkResp.ok) throw new Error(checkData.error || 'Could not check on the real photo preview.');
@@ -9685,7 +9687,17 @@ function restoreMugLibrary(){
     if(mug&&Array.isArray(mug.designs)&&mug.designs.length){
       recentDesigns=mug.designs;
       placements=mug.placements||{left:null,right:null,front:null};
-      document.getElementById('positionHolderCard').style.display='block';
+      // FIXED: this used to force positionHolderCard visible on every
+      // page load whenever any saved design history existed, regardless
+      // of which screen/flow was actually active -- it would just sit
+      // there, reachable by scroll, on the hero page, on Cover Me, on
+      // Face It, anywhere. Visibility now comes ONLY from an active
+      // flow's own approve step (addToRecentDesigns(), called from
+      // within Cover Me/Face It/Design By Description while that
+      // screen is actually the one in focus) -- restoring the
+      // underlying data here is still useful (so the library isn't
+      // empty if that panel legitimately gets shown later), but a page
+      // reload should never by itself pop this panel open.
       renderRecentDesigns();
       renderPositionHolder();
       updateLibraryToggleLabel();
