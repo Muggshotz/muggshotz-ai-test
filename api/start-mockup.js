@@ -157,9 +157,19 @@ async function handleCheck(req, res) {
   const mockupUrls = relevantImages.map(img => img.src);
   const mockupUrl = mockupUrls[0] || null;
 
+  // TEMPORARY DEBUG (Aug 2026): for diagnosing the Cambridge Blue
+  // mismatch -- shows exactly what variant_ids Printify actually tagged
+  // each returned image with, next to the variantId we requested, so we
+  // can tell whether Printify never sends a real Cambridge Blue photo at
+  // all vs. sends one mislabeled. Remove once that's confirmed.
+  const debugImages = allImages.map(img => ({
+    src: img.src,
+    variant_ids: Array.isArray(img.variant_ids) ? img.variant_ids : []
+  }));
+
   if (mockupUrl) {
     deletePrintifyProduct(productId).catch(() => {});
-    return res.status(200).json({ ready: true, mockupUrl, mockupUrls });
+    return res.status(200).json({ ready: true, mockupUrl, mockupUrls, requestedVariantId: variantId || null, debugImages });
   }
 
   return res.status(200).json({ ready: false });
