@@ -126,11 +126,11 @@ async function handleStart(req, res) {
     imageY
   );
 
-  return res.status(200).json({ productId });
+  return res.status(200).json({ productId, variantId });
 }
 
 async function handleCheck(req, res) {
-  const { productId } = req.body;
+  const { productId, variantId } = req.body;
   if (!productId) throw new Error("productId is required.");
 
   const response = await fetch(`https://api.printify.com/v1/shops/${SHOP_ID}/products/${productId}.json`, {
@@ -139,7 +139,22 @@ async function handleCheck(req, res) {
   const data = await response.json();
 
   const hasImages = response.ok && Array.isArray(data.images) && data.images.length > 0;
-  const mockupUrls = hasImages ? data.images.map(img => img.src) : [];
+  const allImages = hasImages ? data.images : [];
+  // FIXED (Aug 2026): previously took allImages[0] unconditionally, with
+  // no check that the returned image was actually generated for the
+  // variant (color) the customer picked. Printify's images array isn't
+  // guaranteed to put the requested variant's mockup first, so this
+  // could silently hand back a mismatched-color photo (found via a real
+  // Cambridge Blue order showing a solid-blue physical mug). Now: if we
+  // know which variantId we asked for, only accept an image that lists
+  // it in that image's own variant_ids. Falls back to the old
+  // take-the-first behavior only if we have no variantId to check
+  // against, or nothing matches (better to show something than nothing).
+  const matchedImages = variantId
+    ? allImages.filter(img => Array.isArray(img.variant_ids) && img.variant_ids.includes(variantId))
+    : [];
+  const relevantImages = matchedImages.length ? matchedImages : allImages;
+  const mockupUrls = relevantImages.map(img => img.src);
   const mockupUrl = mockupUrls[0] || null;
 
   if (mockupUrl) {
