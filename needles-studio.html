@@ -4480,11 +4480,17 @@ function handleCoverMePhotoChange(event){
 // Real 20-scene roster for Let's Just Face It, exact filenames as
 // delivered -- lowercase, underscore-separated, all standardized to
 // the same 3:4 template shape Cover Me uses.
+// UPDATED (Aug 2026, Alyx's request): switched from .png to .jpg --
+// none of these 20 templates use transparency (all flattened to solid
+// backgrounds when originally prepped), so JPEG gives the same visual
+// result at roughly half to a third the file size. Original .png files
+// left in the repo untouched as a fallback, just no longer referenced
+// here.
 const FACE_IT_CATALOG = [
-  "king.png","queen.png","emperor.png","empress.png","the_don.png","the_donna.png",
-  "hero_him.png","hero_her.png","home_him.png","home_her.png","its_alive.png",
-  "aww_hell.png","your_future.png","all_hail.png","cloud_9_her.png","cloud_9_him.png",
-  "heavenly_host.png","heavenly_hostess.png","on_my_mind.png","come_to_think_of_it.png"
+  "king.jpg","queen.jpg","emperor.jpg","empress.jpg","the_don.jpg","the_donna.jpg",
+  "hero_him.jpg","hero_her.jpg","home_him.jpg","home_her.jpg","its_alive.jpg",
+  "aww_hell.jpg","your_future.jpg","all_hail.jpg","cloud_9_her.jpg","cloud_9_him.jpg",
+  "heavenly_host.jpg","heavenly_hostess.jpg","on_my_mind.jpg","come_to_think_of_it.jpg"
 ];
 
 // These two are not simple face-swaps -- picking either one opens a
@@ -4492,7 +4498,7 @@ const FACE_IT_CATALOG = [
 // the AI in the reference's watercolor/caption style) and shows the
 // 3/4-angle pose guidance, since a straight-on photo reads flat once
 // faded. Every other template in the catalog is a plain face-merge.
-const FACE_IT_TEXT_TEMPLATES = new Set(["on_my_mind.png","come_to_think_of_it.png"]);
+const FACE_IT_TEXT_TEMPLATES = new Set(["on_my_mind.jpg","come_to_think_of_it.jpg"]);
 
 let selectedFaceItTemplate=null;
 // Mirrors coverMeOverridePhoto -- lets the customer swap in a
@@ -7487,6 +7493,9 @@ function scrollToFinishedImage(elementId,block){
 // populated by runAutoMockupFetch for both the single-image and
 // multi-angle-gallery cases).
 let currentMockupUrls=[];
+// TEMPORARY DEBUG (Aug 2026): see matching comment in start-mockup.js --
+// remove alongside it once the Cambridge Blue diagnosis is confirmed.
+let lastMockupDebugData=null;
 let currentMockupIndex=0;
 
 function openMockupLightbox(index){
@@ -9544,6 +9553,10 @@ async function runAutoMockupFetch(){
       if (checkData.ready) {
         mockupUrl = checkData.mockupUrl;
         mockupUrls = Array.isArray(checkData.mockupUrls) ? checkData.mockupUrls : [];
+        lastMockupDebugData = {
+          requestedVariantId: checkData.requestedVariantId,
+          debugImages: Array.isArray(checkData.debugImages) ? checkData.debugImages : []
+        };
         break;
       }
     }
@@ -9577,6 +9590,24 @@ async function runAutoMockupFetch(){
       imgEl.onclick = () => openMockupLightbox(0);
       await waitForImageReady(imgEl);
       imgEl.scrollIntoView({behavior:'smooth',block:'center'});
+    }
+
+    // TEMPORARY DEBUG (Aug 2026): see matching comment in
+    // start-mockup.js -- shows what variant_ids Printify actually
+    // tagged each returned photo with, next to the variant we asked
+    // for, so we can see directly whether Printify ever sends a
+    // correctly-tagged photo for this color at all. Remove once
+    // confirmed.
+    if (lastMockupDebugData) {
+      const dbg = document.createElement('div');
+      dbg.style.cssText = 'margin-top:10px;padding:8px;background:#0a0a1a;border:1px solid #444;border-radius:8px;font-family:monospace;font-size:11px;color:#9fd;white-space:pre-wrap;word-break:break-all';
+      const lines = [`Requested variantId: ${lastMockupDebugData.requestedVariantId}`, ''];
+      lastMockupDebugData.debugImages.forEach((img, i) => {
+        const matched = img.variant_ids.includes(lastMockupDebugData.requestedVariantId);
+        lines.push(`Image ${i+1}: variant_ids=[${img.variant_ids.join(', ')}] ${matched ? '✅ MATCHES' : '❌ no match'}`);
+      });
+      dbg.textContent = lines.join('\n');
+      galleryEl.insertAdjacentElement('afterend', dbg);
     }
 
   } catch (err) {
