@@ -4037,7 +4037,6 @@ const MUG_MOCKUP_PHOTOS = {
     "15oz": {
       "Black": "mug-trimmed-15oz-black.png",
       "Blue": "mug-trimmed-15oz-blue.png",
-      "Cambridge Blue": "mug-trimmed-15oz-cambridge-blue.png",
       "Green": "mug-trimmed-15oz-green.png",
       "Maroon": "mug-trimmed-15oz-maroon.png",
       "Yellow": "mug-trimmed-15oz-yellow.png"
@@ -4049,7 +4048,6 @@ const MUG_MOCKUP_PHOTOS = {
       "Green": "mug-trimmed-15oz-green.png",
       "Yellow": "mug-trimmed-15oz-yellow.png",
       "Red": "mug-trimmed-11oz-red.png",
-      "Cambridge Blue": "mug-trimmed-15oz-cambridge-blue.png",
       "Light Blue": "mug-trimmed-11oz-light-blue.png",
       "Orange": "mug-trimmed-11oz-orange.png",
       "Light Green": "mug-trimmed-11oz-light-green.png",
@@ -4073,7 +4071,6 @@ const MUG_MOCKUP_PHOTOS = {
       "Yellow": "mug-accented-15oz-yellow.png",
       "Pink": "mug-accented-15oz-pink.png",
       "Orange": "mug-accented-11oz-orange.png",
-      "Cambridge Blue": "mug-accented-11oz-cambridge-blue.png",
       "Light Green": "mug-accented-11oz-light-green.png",
       "Red": "mug-accented-11oz-red.png",
       "Light Blue": "mug-accented-15oz-light-blue.png",
@@ -4084,7 +4081,6 @@ const MUG_MOCKUP_PHOTOS = {
     "11oz": {
       "Black": "mug-colorpop-black.png",
       "Blue": "mug-colorpop-blue.png",
-      "Cambridge Blue": "mug-colorpop-cambridge-blue.png",
       "Golden Yellow": "mug-colorpop-golden-yellow.png",
       "Green": "mug-colorpop-green.png",
       "Light Blue": "mug-colorpop-light-blue.png",
@@ -4098,7 +4094,6 @@ const MUG_MOCKUP_PHOTOS = {
     "15oz": {
       "Black": "mug-colorpop-black.png",
       "Blue": "mug-colorpop-blue.png",
-      "Cambridge Blue": "mug-colorpop-cambridge-blue.png",
       "Green": "mug-colorpop-green.png",
       "Light Blue": "mug-colorpop-light-blue.png",
       "Light Green": "mug-colorpop-light-green.png",
@@ -9178,16 +9173,19 @@ function updatePlacementSummary(){
 
 const GEN_MUG_STYLES = {
   "Classic White": { colors: { "11oz": null, "15oz": null } },
+  // REMOVED (Aug 2026): Cambridge Blue pulled from every style/size
+  // combo below -- Alyx found the color/mockup mismatch wasn't unique
+  // to Color Pop 15oz, it recurs across every combination he tried.
   "Color Pop": { colors: { "11oz": [
     { name: "Black", hex: "#1c1c1c" }, { name: "Blue", hex: "#2255A4" },
-    { name: "Cambridge Blue", hex: "#A3C1AD" }, { name: "Golden Yellow", hex: "#D4A017" },
+    { name: "Golden Yellow", hex: "#D4A017" },
     { name: "Green", hex: "#1F7A45" }, { name: "Light Blue", hex: "#5FA8DE" },
     { name: "Light Green", hex: "#5FBF5F" }, { name: "Maroon", hex: "#7A1F2B" },
     { name: "Orange", hex: "#F0701A" }, { name: "Pink", hex: "#E0457B" },
     { name: "Red", hex: "#D62828" }, { name: "Yellow", hex: "#F0D43A" }
   ], "15oz": [
     { name: "Black", hex: "#1c1c1c" }, { name: "Blue", hex: "#2255A4" },
-    { name: "Cambridge Blue", hex: "#A3C1AD" }, { name: "Green", hex: "#1F7A45" },
+    { name: "Green", hex: "#1F7A45" },
     { name: "Light Blue", hex: "#5FA8DE" }, { name: "Light Green", hex: "#5FBF5F" },
     { name: "Maroon", hex: "#7A1F2B" }, { name: "Orange", hex: "#F0701A" },
     { name: "Pink", hex: "#E0457B" }, { name: "Red", hex: "#D62828" },
@@ -9197,19 +9195,19 @@ const GEN_MUG_STYLES = {
     { name: "Black", hex: "#1c1c1c" }, { name: "Blue", hex: "#2255A4" },
     { name: "Maroon", hex: "#7A1F2B" }, { name: "Green", hex: "#1F7A45" },
     { name: "Yellow", hex: "#F0D43A" }, { name: "Red", hex: "#D62828" },
-    { name: "Cambridge Blue", hex: "#A3C1AD" }, { name: "Light Blue", hex: "#5FA8DE" },
+    { name: "Light Blue", hex: "#5FA8DE" },
     { name: "Orange", hex: "#F0701A" }, { name: "Light Green", hex: "#5FBF5F" },
     { name: "Pink", hex: "#E0457B" }
   ], "15oz": [
     { name: "Black", hex: "#1c1c1c" }, { name: "Blue", hex: "#2255A4" },
     { name: "Maroon", hex: "#7A1F2B" }, { name: "Green", hex: "#1F7A45" },
-    { name: "Cambridge Blue", hex: "#A3C1AD" }, { name: "Yellow", hex: "#F0D43A" }
+    { name: "Yellow", hex: "#F0D43A" }
   ]}},
   "Accented": { colors: { "11oz": [
     { name: "Black", hex: "#1c1c1c" }, { name: "Blue", hex: "#2255A4" },
     { name: "Maroon", hex: "#7A1F2B" }, { name: "Green", hex: "#1F7A45" },
     { name: "Yellow", hex: "#F0D43A" }, { name: "Pink", hex: "#E0457B" },
-    { name: "Orange", hex: "#F0701A" }, { name: "Cambridge Blue", hex: "#A3C1AD" },
+    { name: "Orange", hex: "#F0701A" },
     { name: "Light Green", hex: "#5FBF5F" }, { name: "Red", hex: "#D62828" },
     { name: "Light Blue", hex: "#5FA8DE" }
   ], "15oz": [
