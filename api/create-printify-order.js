@@ -145,7 +145,7 @@ export async function resolvePhotoPosterSelection(product, { framed, sizeLabel, 
   };
 }
 
-export async function buildWraparoundImage(placements, canvasWidth, canvasHeight) {
+export async function buildWraparoundImage(placements, canvasWidth, canvasHeight, borderHex = null) {
   const { left, front, right } = placements;
   const WHITE = { r: 255, g: 255, b: 255 };
   const sectionWidth = Math.round(canvasWidth / 3);
@@ -230,6 +230,30 @@ export async function buildWraparoundImage(placements, canvasWidth, canvasHeight
 
   const boxes = computeBoxes();
 
+  // Alyx's request: a thin single-color border traced around each
+  // filled panel's own content, in whatever color the customer picked
+  // for the mug's trim/accent -- gives the art a clean, definite edge
+  // instead of just sitting as a bare rectangle on the mug. No color
+  // selected (e.g. Classic White, which has no trim/accent option) ->
+  // no border at all, borderHex stays null and this is skipped
+  // entirely. Deliberately plain: a solid stroke, no ornamentation,
+  // sized as a small fraction of the panel so it reads as a clean line
+  // regardless of the print's actual resolution.
+  function buildBorderSvg(width, height, hex, strokeWidth) {
+    return Buffer.from(
+      `<svg width="${width}" height="${height}"><rect x="${strokeWidth / 2}" y="${strokeWidth / 2}" width="${width - strokeWidth}" height="${height - strokeWidth}" fill="none" stroke="${hex}" stroke-width="${strokeWidth}"/></svg>`
+    );
+  }
+
+  async function applyBorderIfNeeded(buffer, width, height) {
+    if (!borderHex) return buffer;
+    const strokeWidth = Math.max(6, Math.round(Math.min(width, height) * 0.008));
+    return await sharp(buffer)
+      .composite([{ input: buildBorderSvg(width, height, borderHex, strokeWidth), top: 0, left: 0 }])
+      .png()
+      .toBuffer();
+  }
+
   async function renderSection(imageSource, box) {
     if (!imageSource || !box) return null;
     const targetW = box.width;
@@ -251,7 +275,7 @@ export async function buildWraparoundImage(placements, canvasWidth, canvasHeight
         })
         .png()
         .toBuffer();
-      return { input: buffer, left: box.x, top: 0 };
+      return { input: await applyBorderIfNeeded(buffer, targetW, targetH), left: box.x, top: 0 };
     }
     // Zoom OUT (scale < 1): shrink the image into a smaller sub-box
     // (contain-fit, so nothing gets cropped -- the full image is
@@ -276,7 +300,7 @@ export async function buildWraparoundImage(placements, canvasWidth, canvasHeight
       }])
       .png()
       .toBuffer();
-    return { input: paddedBuffer, left: box.x, top: 0 };
+    return { input: await applyBorderIfNeeded(paddedBuffer, targetW, targetH), left: box.x, top: 0 };
   }
 
   const [leftComposite, frontComposite, rightComposite] = await Promise.all([
@@ -465,18 +489,18 @@ export async function resolveVariant(product, sizeLabel, colorName) {
     if (!colorName) throw new Error("A color selection is required for this product.");
     const colorEntry = sizeEntry.colors.find(c => c.name === colorName);
     if (!colorEntry) throw new Error(`Unknown color "${colorName}" for size "${sizeLabel}".`);
-    if (colorEntry.variantId) return { variantId: colorEntry.variantId, price: sizeEntry.price };
+    if (colorEntry.variantId) return { variantId: colorEntry.variantId, price: sizeEntry.price, hex: colorEntry.hex || null };
     const variantId = await resolveVariantIdByTitleMatch(product.blueprintId, product.printProviderId, [sizeLabel, colorName]);
-    return { variantId, price: sizeEntry.price };
+    return { variantId, price: sizeEntry.price, hex: colorEntry.hex || null };
   }
 
   if (product.colors) {
     if (!colorName) throw new Error("A color selection is required for this product.");
     const colorEntry = product.colors.find(c => c.name === colorName);
     if (!colorEntry) throw new Error(`Unknown color "${colorName}".`);
-    if (colorEntry.variantId) return { variantId: colorEntry.variantId, price: sizeEntry.price };
+    if (colorEntry.variantId) return { variantId: colorEntry.variantId, price: sizeEntry.price, hex: colorEntry.hex || null };
     const variantId = await resolveVariantIdByTitleMatch(product.blueprintId, product.printProviderId, [sizeLabel, colorName]);
-    return { variantId, price: sizeEntry.price };
+    return { variantId, price: sizeEntry.price, hex: colorEntry.hex || null };
   }
 
   // UPDATED (Aug 2026): this branch previously threw immediately if a
@@ -490,9 +514,9 @@ export async function resolveVariant(product, sizeLabel, colorName) {
   // configured for size '32oz'" the first time it was used. Brought in
   // line with the same resolveVariantIdByTitleMatch() fallback already
   // used for Trimmed's 15oz Black, Accented's Black, and travel-mug-20oz.
-  if (sizeEntry.variantId) return { variantId: sizeEntry.variantId, price: sizeEntry.price };
+  if (sizeEntry.variantId) return { variantId: sizeEntry.variantId, price: sizeEntry.price, hex: null };
   const variantId = await resolveVariantIdByTitleMatch(product.blueprintId, product.printProviderId, [sizeLabel]);
-  return { variantId, price: sizeEntry.price };
+  return { variantId, price: sizeEntry.price, hex: null };
 }
 
 // UPDATED (July 2026, Alyx's request): added optional imageScale and
@@ -592,7 +616,7 @@ export async function placeProductOrder({
   if (!product) throw new Error(`Unknown product: "${productKey}"`);
   if (!shippingAddress) throw new Error("shippingAddress is required.");
 
-  let variantId, price, effectiveBlueprintId, effectivePrintProviderId;
+  let variantId, price, hex, effectiveBlueprintId, effectivePrintProviderId;
 
   if (productKey === "photo-poster") {
     const resolved = await resolvePhotoPosterSelection(product, {
@@ -618,7 +642,7 @@ export async function placeProductOrder({
     variantId = await resolveVariantIdByTitleMatch(effectiveBlueprintId, effectivePrintProviderId, [sizeLabel]);
     price = product.sizes[sizeLabel].price;
   } else {
-    ({ variantId, price } = await resolveVariant(product, sizeLabel, colorName));
+    ({ variantId, price, hex } = await resolveVariant(product, sizeLabel, colorName));
     effectiveBlueprintId = product.blueprintId;
     effectivePrintProviderId = product.printProviderId;
   }
@@ -643,7 +667,7 @@ export async function placeProductOrder({
       ? await buildFullBleedImage(placements.front || placements.left || placements.right, width, height)
       : isSeamlessWrap
       ? await buildSeamlessWrapImage(placements, width, height)
-      : await buildWraparoundImage(placements, width, height);
+      : await buildWraparoundImage(placements, width, height, hex || null);
     const imageId = await uploadImageToPrintify(buffer, `muggshotz-${Date.now()}.png`);
     printifyImages[position] = imageId;
     pricing = isFullBleed

@@ -41,7 +41,7 @@ async function handleStart(req, res) {
   const product = getProduct(productKey);
   if (!product) throw new Error(`Unknown product: "${productKey}"`);
 
-  let variantId, effectiveBlueprintId, effectivePrintProviderId;
+  let variantId, hex, effectiveBlueprintId, effectivePrintProviderId;
 
   if (productKey === "photo-poster") {
     const resolved = await resolvePhotoPosterSelection(product, {
@@ -55,7 +55,7 @@ async function handleStart(req, res) {
     effectivePrintProviderId = product.printProviderId;
     variantId = await resolveVariantIdByTitleMatch(effectiveBlueprintId, effectivePrintProviderId, [sizeLabel]);
   } else {
-    ({ variantId } = await resolveVariant(product, sizeLabel, colorName));
+    ({ variantId, hex } = await resolveVariant(product, sizeLabel, colorName));
     effectiveBlueprintId = product.blueprintId;
     effectivePrintProviderId = product.printProviderId;
   }
@@ -75,7 +75,7 @@ async function handleStart(req, res) {
       ? await buildFullBleedImage(placements.front || placements.left || placements.right, width, height)
       : isSeamlessWrap
       ? await buildSeamlessWrapImage(placements, width, height)
-      : await buildWraparoundImage(placements, width, height);
+      : await buildWraparoundImage(placements, width, height, hex || null);
     const imageId = await uploadImageToPrintify(buffer, `muggshotz-mockup-preview-${Date.now()}.png`);
     printifyImages[position] = imageId;
 
