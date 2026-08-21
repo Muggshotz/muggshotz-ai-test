@@ -417,6 +417,8 @@ body.covermegen-focus .card:not(#coverMeCard){opacity:.28;filter:brightness(.55)
 body.coverme-frameoffer-focus .card:not(#coverMeFrameOfferCard){opacity:.28;filter:brightness(.55) saturate(.7);pointer-events:none;transition:opacity .5s,filter .5s}
 body.coverme-fullframegrid-focus .card:not(#coverMeFrameFullGridCard){opacity:.28;filter:brightness(.55) saturate(.7);pointer-events:none;transition:opacity .5s,filter .5s}
 body.covermereveal-focus .card:not(#uploadPhotoCard){opacity:.28;filter:brightness(.55) saturate(.7);pointer-events:none;transition:opacity .5s,filter .5s}
+body.faceitgen-focus .card:not(#faceItCard){opacity:.28;filter:brightness(.55) saturate(.7);pointer-events:none;transition:opacity .5s,filter .5s}
+body.faceitreveal-focus .card:not(#uploadPhotoCard){opacity:.28;filter:brightness(.55) saturate(.7);pointer-events:none;transition:opacity .5s,filter .5s}
 body.final-generate-focus .card:not(#uploadPhotoCard){opacity:.35;filter:brightness(.6) saturate(.75);transition:opacity .5s,filter .5s}
 html:has(body.initial-upload-focus),body.initial-upload-focus{overflow:hidden}
 body.initial-upload-focus .card:not(#uploadPhotoCard){opacity:0;pointer-events:none;transition:opacity .5s}
@@ -726,6 +728,17 @@ body.product-focus .card:not(#productCard){opacity:.35;filter:brightness(.6) sat
 <span class="note" style="color:#7ab8ff;cursor:pointer" onclick="backToTrackDescribeFromEaselReveal()">← Describe it instead</span>
 </div>
 </div>
+<div id="faceItEaselApproveRow" style="display:none;margin-top:.75rem">
+<div style="display:flex;gap:8px">
+<button type="button" class="generate-btn" style="flex:1;padding:.7rem .5rem;font-size:14px" onclick="approveFaceIt()">✅ Yes — Use This Image</button>
+<button type="button" class="download-btn" style="flex:1;margin-top:0;padding:.7rem .5rem;font-size:14px" onclick="keepTweakingFaceIt()">🔧 No — Start Over</button>
+</div>
+<div class="note" style="text-align:center;margin-top:.4rem;color:#29a3ff">Trying again uses one more token. <span style="color:#7ab8ff;cursor:pointer" onclick="openCreditsPanel()">Need more?</span></div>
+<div style="display:flex;gap:16px;justify-content:center;margin-top:.6rem">
+<span class="note" style="color:#7ab8ff;cursor:pointer" onclick="backToDesignMethodFromFaceItReveal()">← Choose a different prop</span>
+<span class="note" style="color:#7ab8ff;cursor:pointer" onclick="backToTrackDescribeFromFaceItReveal()">← Describe it instead</span>
+</div>
+</div>
 <input type="file" id="fileInput" accept="image/*" style="display:none"/><img id="previewImg" class="preview-img" style="display:none"/>
 <div id="approveRow" style="display:none">
 <div class="note" style="margin-top:.9rem;text-align:center;font-size:13px;color:#29a3ff">Are you satisfied with this design?</div>
@@ -946,6 +959,29 @@ Would you like to try out <span style="color:#7ab8ff">some of our fun props?</sp
 <input type="file" id="coverMePhotoInput" accept="image/*" style="display:none" onchange="handleCoverMePhotoChange(event)">
 <button type="button" id="coverMeGenerateBtn" class="generate-btn generate-flash" style="display:none;margin-top:1rem" onclick="generateCoverMe()">🎨 Generate</button>
 <button type="button" class="download-btn" style="margin-top:1rem" onclick="coverMeBack()">← Back</button>
+</div>
+
+<div class="card" id="faceItCard" style="display:none">
+<div class="card-title">🎭 Let's Just Face It</div>
+<div class="note" style="margin-top:0;margin-bottom:.9rem">Pick the scene you want your face on.</div>
+<div class="theme-grid" id="faceItGrid" style="grid-template-columns:repeat(4,1fr)">
+<div class="btn-select" id="faceItPreviewSlot" style="grid-column:2/4;grid-row:2/4;padding:6px;display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;cursor:pointer" onclick="triggerFaceItPhotoChange()">
+<img id="faceItPreviewImg" style="width:100%;border-radius:8px;background:#fff"/>
+</div>
+</div>
+<div class="note" id="faceItChangePhotoPrompt" style="margin-top:.75rem;text-align:center;color:#29a3ff">Tap your photo above to use a different one.</div>
+<div class="note" style="margin-top:.4rem;text-align:center;color:#29a3ff">If there's more than one person in your photo, describe below which one you want us to replicate.</div>
+<div id="faceItDescriptionBoxWrap" style="margin-top:.75rem">
+<textarea id="faceItDescriptionBox" placeholder="Example: Use the face of the woman on the left."></textarea>
+</div>
+<div class="note" id="faceItPoseNote" style="display:none;margin-top:.75rem;text-align:center;color:#29a3ff">For best results, use a photo where you're turned slightly to the side (a 3/4 angle) rather than facing the camera head-on — it gives the artist's rendering the most natural depth and light.</div>
+<div id="faceItTextBoxWrap" style="display:none;margin-top:.9rem">
+<div class="note" style="margin-top:0;margin-bottom:.4rem;color:#7ab8ff;font-weight:700">Your words</div>
+<textarea id="faceItTextBox" placeholder="Share something that means something to you — a favorite line, a quiet mantra, a tribute to someone, or just how you want to be remembered. These are the words you'd want the world to know."></textarea>
+</div>
+<input type="file" id="faceItPhotoInput" accept="image/*" style="display:none" onchange="handleFaceItPhotoChange(event)">
+<button type="button" id="faceItGenerateBtn" class="generate-btn generate-flash" style="display:none;margin-top:1rem" onclick="generateFaceIt()">🎨 Generate</button>
+<button type="button" class="download-btn" style="margin-top:1rem" onclick="faceItBack()">← Back</button>
 </div>
 
 <div class="card" id="coverMePanelCard" style="display:none">
@@ -1882,6 +1918,22 @@ function smoothScrollToTarget(targetId,block='start',after){
 function scrollToCoverMeRevealWhenReady(){
   const stageWrap=document.getElementById('needlesStageWrap');
   const approveRow=document.getElementById('coverMeEaselApproveRow');
+  if(!stageWrap||!approveRow)return;
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{
+    const topY=stageWrap.getBoundingClientRect().top+window.scrollY;
+    const bottomY=approveRow.getBoundingClientRect().bottom+window.scrollY;
+    const span=bottomY-topY;
+    const vh=window.innerHeight;
+    const target=span<=vh ? topY-(vh-span)/2 : topY;
+    guidedScrollInProgress=true;
+    window.scrollTo({top:target,behavior:'smooth'});
+    setTimeout(()=>{guidedScrollInProgress=false;},750);
+  }));
+}
+
+function scrollToFaceItRevealWhenReady(){
+  const stageWrap=document.getElementById('needlesStageWrap');
+  const approveRow=document.getElementById('faceItEaselApproveRow');
   if(!stageWrap||!approveRow)return;
   requestAnimationFrame(()=>requestAnimationFrame(()=>{
     const topY=stageWrap.getBoundingClientRect().top+window.scrollY;
@@ -4342,16 +4394,18 @@ function designMethodComingSoonBack(){
   showDesignMethodCard();
 }
 
-// Routes to each method's actual screen. Only Cover Me is real this
-// pass -- Let's Just Face It and Home Sweet Home show a Coming Soon
-// placeholder until their own screens are built.
+// Routes to each method's actual screen. Cover Me and Let's Just Face
+// It are both real -- Home Sweet Home still shows a Coming Soon
+// placeholder until its own screen is built.
 function goToDesignMethodScreen(method){
   document.getElementById('designMethodCard').style.display='none';
   if(method==='coverMe'){
     showCoverMeCard();
+  } else if(method==='faceIt'){
+    showFaceItCard();
   } else {
     const titleEl=document.getElementById('designMethodComingSoonTitle');
-    if(titleEl)titleEl.textContent=(method==='faceIt')?'🎭 Let\'s Just Face It':'🪟 Home Sweet Home';
+    if(titleEl)titleEl.textContent='🪟 Home Sweet Home';
     document.getElementById('designMethodComingSoonCard').style.display='block';
     smoothScrollToTarget('designMethodComingSoonCard','center');
   }
@@ -4422,6 +4476,291 @@ function handleCoverMePhotoChange(event){
     coverMeOverridePhoto=dataUrl;
     updateCoverMePreviewImg();
   });
+}
+
+// Real 20-scene roster for Let's Just Face It, exact filenames as
+// delivered -- lowercase, underscore-separated, all standardized to
+// the same 3:4 template shape Cover Me uses.
+const FACE_IT_CATALOG = [
+  "king.png","queen.png","emperor.png","empress.png","the_don.png","the_donna.png",
+  "hero_him.png","hero_her.png","home_him.png","home_her.png","its_alive.png",
+  "aww_hell.png","your_future.png","all_hail.png","cloud_9_her.png","cloud_9_him.png",
+  "heavenly_host.png","heavenly_hostess.png","on_my_mind.png","come_to_think_of_it.png"
+];
+
+// These two are not simple face-swaps -- picking either one opens a
+// free-text box (the customer's own words, rendered into the piece by
+// the AI in the reference's watercolor/caption style) and shows the
+// 3/4-angle pose guidance, since a straight-on photo reads flat once
+// faded. Every other template in the catalog is a plain face-merge.
+const FACE_IT_TEXT_TEMPLATES = new Set(["on_my_mind.png","come_to_think_of_it.png"]);
+
+let selectedFaceItTemplate=null;
+// Mirrors coverMeOverridePhoto -- lets the customer swap in a
+// different photo than the one uploaded at the very start of the flow.
+let faceItOverridePhoto=null;
+
+function renderFaceItGrid(){
+  const grid=document.getElementById('faceItGrid');
+  if(!grid)return;
+  grid.style.gridAutoFlow='dense';
+  grid.querySelectorAll('.faceit-tile').forEach(el=>el.remove());
+  const previewSlot=document.getElementById('faceItPreviewSlot');
+  FACE_IT_CATALOG.forEach(filename=>{
+    const btn=document.createElement('div');
+    btn.className='btn-select faceit-tile'+(selectedFaceItTemplate===filename?' selected':'');
+    btn.style.padding='4px';
+    btn.dataset.faceit=filename;
+    btn.onclick=()=>pickFaceItTemplate(filename);
+    const img=document.createElement('img');
+    img.src=filename;
+    img.alt=filename;
+    img.style.cssText='width:100%;border-radius:6px;background:#fff';
+    btn.appendChild(img);
+    grid.insertBefore(btn,previewSlot);
+  });
+}
+
+function pickFaceItTemplate(filename){
+  selectedFaceItTemplate=filename;
+  document.querySelectorAll('#faceItGrid .faceit-tile').forEach(b=>{
+    b.classList.toggle('selected',b.dataset.faceit===filename);
+  });
+  const isTextTemplate=FACE_IT_TEXT_TEMPLATES.has(filename);
+  const poseNote=document.getElementById('faceItPoseNote');
+  const textWrap=document.getElementById('faceItTextBoxWrap');
+  if(poseNote)poseNote.style.display=isTextTemplate?'block':'none';
+  if(textWrap)textWrap.style.display=isTextTemplate?'block':'none';
+  document.getElementById('faceItGenerateBtn').style.display='block';
+  document.body.classList.add('faceitgen-focus');
+  const genBtn=document.getElementById('faceItGenerateBtn');
+  if(genBtn)scrollToStableBottom(genBtn,16,15);
+}
+
+function updateFaceItPreviewImg(){
+  const img=document.getElementById('faceItPreviewImg');
+  if(img)img.src=faceItOverridePhoto||uploadedImageData||'';
+}
+
+function triggerFaceItPhotoChange(){
+  document.getElementById('faceItPhotoInput').click();
+}
+
+function handleFaceItPhotoChange(event){
+  const file=event.target.files[0];
+  if(!file)return;
+  resizeImageFile(file,1280).then((dataUrl)=>{
+    faceItOverridePhoto=dataUrl;
+    updateFaceItPreviewImg();
+  });
+}
+
+function showFaceItCard(){
+  document.getElementById('designMethodComingSoonCard').style.display='none';
+  selectedFaceItTemplate=null;
+  faceItOverridePhoto=null;
+  faceItPendingResultUrl=null;
+  document.body.classList.remove('faceitgen-focus');
+  document.body.classList.remove('faceitreveal-focus');
+  document.getElementById('faceItGenerateBtn').style.display='none';
+  document.getElementById('faceItGenerateBtn').disabled=false;
+  document.getElementById('faceItEaselApproveRow').style.display='none';
+  document.getElementById('faceItPoseNote').style.display='none';
+  document.getElementById('faceItTextBoxWrap').style.display='none';
+  const clipboard=document.querySelector('.needles-clipboard');
+  if(clipboard)clipboard.style.display='';
+  // Same reasoning as showCoverMeCard(): the generic Style picker and
+  // plain-generator button don't apply here -- Face It determines its
+  // own visual treatment through the AI merge prompt.
+  const styleCard=document.getElementById('styleSectionCard');
+  if(styleCard)styleCard.style.display='none';
+  const likenessCard=document.getElementById('likenessSectionCard');
+  if(likenessCard)likenessCard.style.display='none';
+  const plainGenBtn=document.getElementById('generateBtn');
+  if(plainGenBtn)plainGenBtn.style.display='none';
+  const descBox=document.getElementById('faceItDescriptionBox');
+  if(descBox)descBox.value='';
+  const textBox=document.getElementById('faceItTextBox');
+  if(textBox)textBox.value='';
+  renderFaceItGrid();
+  updateFaceItPreviewImg();
+  document.getElementById('faceItCard').style.display='block';
+  snapExpandThrough('faceItCard');
+  guidedScrollInProgress=true;
+  const faceItCardEl=document.getElementById('faceItCard');
+  scrollToStableTop(faceItCardEl,90,15);
+  setTimeout(()=>{guidedScrollInProgress=false;},2200);
+}
+
+function faceItBack(){
+  document.body.classList.remove('faceitgen-focus');
+  document.getElementById('faceItCard').style.display='none';
+  showDesignMethodCard();
+}
+
+// Mirrors generateCoverMe() exactly in shape -- same easel sequence,
+// same callGenerateAPI/templateMerge mechanism -- but branches the
+// prompt for the two text templates (On My Mind / Come to Think of
+// It), which need the fade/wash treatment plus the customer's own
+// words rendered into the piece instead of a plain face-merge.
+async function generateFaceIt(){
+  if(!selectedFaceItTemplate){
+    showGuidanceAlert('Please pick a scene first.');
+    return;
+  }
+  const photo=faceItOverridePhoto||uploadedImageData;
+  if(!photo){
+    showGuidanceAlert('Please upload a photo first.');
+    return;
+  }
+  const isTextTemplate=FACE_IT_TEXT_TEMPLATES.has(selectedFaceItTemplate);
+  const textBox=document.getElementById('faceItTextBox');
+  const customerWords=(textBox && textBox.value.trim())||'';
+  if(isTextTemplate && !customerWords){
+    showGuidanceAlert('Please share a few words for this one first — that\'s what makes it yours.');
+    return;
+  }
+  if(currentTokenBalance!==null && currentTokenBalance<=0 && !isAdminDevice){
+    showTokenInfoPopup(document.getElementById('faceItGenerateBtn'));
+    return;
+  }
+
+  document.body.classList.remove('faceitgen-focus');
+  document.getElementById('faceItGenerateBtn').disabled=true;
+  startGenTimer();
+  showGenerationInProgress();
+  startNeedlesStage();
+  {
+    const snapFaceItStageToClipboard=()=>{
+      const anchor=document.getElementById('resetEverythingBtnTop');
+      if(!anchor)return;
+      const target=(anchor.getBoundingClientRect().top+window.scrollY)-90;
+      window.scrollTo(0,Math.max(0,target));
+    };
+    requestAnimationFrame(()=>{
+      requestAnimationFrame(()=>{
+        snapFaceItStageToClipboard();
+        [80,180,350,600,900].forEach(delay=>setTimeout(snapFaceItStageToClipboard,delay));
+      });
+    });
+  }
+  setStatus('Generating your piece... this may take several minutes, go grab a coffee if you like.');
+  document.getElementById('cancelBtn').style.display='block';
+  suspendGuidedScrollsForGeneration();
+
+  try{
+    currentGenerationController=new AbortController();
+    const templateDataUrl=await magazineAssetToJpegDataURL(selectedFaceItTemplate,1024);
+    const descBox=document.getElementById('faceItDescriptionBox');
+    const faceNote=(descBox && descBox.value.trim())
+      ? ` The customer notes: "${descBox.value.trim()}" -- use this to identify which face in the photo to use if there is more than one.`
+      : '';
+
+    let prompt;
+    if(isTextTemplate){
+      prompt='Merge the uploaded photo\'s face onto the provided reference image in the exact spot indicated, applying the same soft, faded watercolor/sepia wash shown in the reference -- render the face with that same delicate, translucent treatment rather than a sharp photographic look, and give the subject a thoughtful, distance-gazing expression matching the reference\'s mood. '+
+        'Preserve the reference\'s overall composition, color palette, and decorative flourishes exactly as shown. '+
+        'Replace the reference\'s sample text with the following words, rendered in the same elegant hand-lettered style, size, and placement as the reference text -- render this text exactly as written, verbatim, with no changes or additions: "'+customerWords.replace(/"/g,'\'')+'"'+faceNote;
+    } else {
+      prompt='Merge the uploaded photo\'s face onto the provided reference image, in the exact spot where a face would go. '+
+        'Preserve the reference\'s pose, composition, lighting, and every other visual element exactly as shown -- do not alter anything except the face. '+
+        'Match the lighting and photographic style of the reference so the result looks like a genuine, seamlessly composited portrait, not a pasted-on face.'+faceNote;
+    }
+
+    const resultImageUrl=await callGenerateAPI({
+      workingImage:photo,
+      prompt,
+      refImageA:templateDataUrl,
+      templateMerge:true,
+      signal:currentGenerationController.signal
+    });
+
+    document.body.classList.remove('generation-active');
+    document.body.classList.add('faceitreveal-focus');
+    removeGenerationReminders();
+    const clipboard=document.querySelector('.needles-clipboard');
+    if(clipboard)clipboard.style.display='none';
+    stopGenTimerSuccess();
+    clearStatus();
+    document.getElementById('cancelBtn').style.display='none';
+    refreshTokenMeter();
+
+    presentFinishedNeedlesArt(resultImageUrl,()=>{
+      document.getElementById('faceItEaselApproveRow').style.display='block';
+      scrollToFaceItRevealWhenReady();
+    });
+    faceItPendingResultUrl=resultImageUrl;
+
+  }catch(err){
+    console.error('Face It generation failed:',err);
+    stopNeedlesStage();
+    stopGenTimerSuccess();
+    document.getElementById('cancelBtn').style.display='none';
+    document.getElementById('faceItGenerateBtn').disabled=false;
+    showBigAlert(err.message||'Something went wrong generating your piece. Please try again.');
+  }
+}
+
+let faceItPendingResultUrl=null;
+
+// Mirrors approveCoverMe() exactly -- including the same
+// Center-defaults-off behavior on a normal approval -- then hands off
+// to the SAME shared panel-selection and mockup-finalize screens Cover
+// Me uses, since that whole downstream system (placements, panel
+// picker, frame, mockup fetch) has nothing magazine- or Face-It-
+// specific about it.
+async function approveFaceIt(){
+  if(!faceItPendingResultUrl)return;
+  const designId=addToRecentDesigns(faceItPendingResultUrl);
+  const posHolder=document.getElementById('positionHolderCard');
+  if(posHolder)posHolder.style.display='none';
+  const validTargets=['left','front','right'];
+  const target=(pendingSlotTarget && validTargets.includes(pendingSlotTarget))?pendingSlotTarget:'front';
+  placements[target]=designId;
+  pendingSlotTarget=null;
+  faceItPendingResultUrl=null;
+  document.body.classList.remove('faceitreveal-focus');
+  document.getElementById('faceItEaselApproveRow').style.display='none';
+  document.getElementById('faceItGenerateBtn').disabled=false;
+  saveMugState();
+  showCoverMePanelCard();
+  if(target==='front' && placements.front){
+    coverMeLastRemoved.front=placements.front;
+    placements.front=null;
+    saveMugState();
+    renderCoverMePanelRowState('front');
+    refreshCoverMePanelDoneState();
+  }
+}
+
+function keepTweakingFaceIt(){
+  document.body.classList.remove('faceitreveal-focus');
+  document.getElementById('faceItEaselApproveRow').style.display='none';
+  document.getElementById('faceItGenerateBtn').disabled=false;
+  faceItPendingResultUrl=null;
+  const clipboard=document.querySelector('.needles-clipboard');
+  if(clipboard)clipboard.style.display='';
+  document.getElementById('faceItCard').style.display='block';
+  smoothScrollToTarget('faceItGrid','center');
+}
+
+function backToDesignMethodFromFaceItReveal(){
+  document.body.classList.remove('faceitreveal-focus');
+  document.getElementById('faceItEaselApproveRow').style.display='none';
+  document.getElementById('faceItCard').style.display='none';
+  const clipboard=document.querySelector('.needles-clipboard');
+  if(clipboard)clipboard.style.display='';
+  showDesignMethodCard();
+}
+
+function backToTrackDescribeFromFaceItReveal(){
+  document.body.classList.remove('faceitreveal-focus');
+  document.getElementById('faceItEaselApproveRow').style.display='none';
+  document.getElementById('faceItCard').style.display='none';
+  document.getElementById('designMethodCard').style.display='none';
+  const clipboard=document.querySelector('.needles-clipboard');
+  if(clipboard)clipboard.style.display='';
+  pickTrackDescribe();
 }
 
 function showCoverMeCard(){
