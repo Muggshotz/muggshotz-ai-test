@@ -153,7 +153,13 @@ async function handleCheck(req, res) {
   const matchedImages = variantId
     ? allImages.filter(img => Array.isArray(img.variant_ids) && img.variant_ids.includes(variantId))
     : [];
-  const relevantImages = matchedImages.length ? matchedImages : allImages;
+  // UNIVERSAL COLOR-SAFETY FIX (Aug 2026): when a requested variant is
+  // known, NEVER fall back to an unrelated Printify image just because it
+  // arrived first. That fallback was capable of showing a purple/other-color
+  // mug even though the customer selected Blue/Green/etc. If Printify has not
+  // produced an image explicitly tagged for our requested variant yet, keep
+  // polling instead. A timeout/error is safer than showing the wrong product.
+  const relevantImages = variantId ? matchedImages : allImages;
   const mockupUrls = relevantImages.map(img => img.src);
   const mockupUrl = mockupUrls[0] || null;
 
@@ -172,7 +178,7 @@ async function handleCheck(req, res) {
     return res.status(200).json({ ready: true, mockupUrl, mockupUrls, requestedVariantId: variantId || null, debugImages });
   }
 
-  return res.status(200).json({ ready: false });
+  return res.status(200).json({ ready: false, requestedVariantId: variantId || null, debugImages });
 }
 
 export default async function handler(req, res) {
