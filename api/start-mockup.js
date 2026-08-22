@@ -19,6 +19,24 @@ import {
 
 const SHOP_ID = "27439202";
 
+// TEMPORARY VARIANT DIAGNOSTIC (Aug 2026): resolve the exact title Printify
+// currently associates with the variant ID we are about to use. This is
+// intentionally independent of our own catalog labels so Cambridge Blue can
+// be diagnosed from Printify's live data rather than inferred from swatches.
+async function getPrintifyVariantDebugInfo(blueprintId, printProviderId, variantId) {
+  const response = await fetch(
+    `https://api.printify.com/v1/catalog/blueprints/${blueprintId}/print_providers/${printProviderId}/variants.json`,
+    { headers: { "Authorization": `Bearer ${process.env.PRINTIFY_API_TOKEN}` } }
+  );
+  const data = await response.json();
+  if (!response.ok) throw new Error("Failed to fetch live Printify variant title: " + JSON.stringify(data));
+  const variant = (data.variants || []).find(v => v.id === variantId);
+  return {
+    title: variant?.title || null,
+    isEnabled: variant?.is_enabled ?? null
+  };
+}
+
 async function deletePrintifyProduct(productId) {
   const response = await fetch(`https://api.printify.com/v1/shops/${SHOP_ID}/products/${productId}.json`, {
     method: "DELETE",
@@ -117,6 +135,14 @@ async function handleStart(req, res) {
   const imageScale = 1;
   const imageY = isCoffeeMug ? 0.5 : 0.5;
 
+  // Capture Printify's own CURRENT title for the exact numeric variant we
+  // resolved. This is diagnostic-only metadata returned to Needles Studio.
+  const variantDebug = await getPrintifyVariantDebugInfo(
+    effectiveBlueprintId,
+    effectivePrintProviderId,
+    variantId
+  );
+
   const { productId } = await createPrintifyProduct(
     printifyImages,
     { blueprintId: effectiveBlueprintId, printProviderId: effectivePrintProviderId, displayName: product.displayName },
@@ -126,7 +152,20 @@ async function handleStart(req, res) {
     imageY
   );
 
-  return res.status(200).json({ productId, variantId });
+  return res.status(200).json({
+    productId,
+    variantId,
+    diagnostic: {
+      selectedProductKey: productKey || null,
+      selectedSize: sizeLabel || null,
+      selectedColor: colorName || null,
+      blueprintId: effectiveBlueprintId || null,
+      printProviderId: effectivePrintProviderId || null,
+      resolvedVariantId: variantId || null,
+      resolvedVariantTitle: variantDebug.title,
+      resolvedVariantEnabled: variantDebug.isEnabled
+    }
+  });
 }
 
 async function handleCheck(req, res) {
