@@ -126,7 +126,37 @@ async function handleStart(req, res) {
     imageY
   );
 
-  return res.status(200).json({ productId, variantId });
+  // TEMPORARY DEEP DIAGNOSTIC (Aug 2026): preserve exactly what the picker
+  // asked us to create so the browser can compare REQUESTED state against
+  // the product object Printify actually stores and returns on the next poll.
+  // This is intentionally diagnostic-only; it does not change product creation.
+  let resolvedVariantTitle = null;
+  let resolvedVariantEnabled = null;
+  try {
+    const vr = await fetch(
+      `https://api.printify.com/v1/catalog/blueprints/${effectiveBlueprintId}/print_providers/${effectivePrintProviderId}/variants.json`,
+      { headers: { "Authorization": `Bearer ${process.env.PRINTIFY_API_TOKEN}` } }
+    );
+    const vd = await vr.json();
+    const vv = Array.isArray(vd?.variants) ? vd.variants.find(v => v.id === variantId) : null;
+    resolvedVariantTitle = vv?.title || null;
+    resolvedVariantEnabled = vv?.is_enabled ?? vv?.is_available ?? null;
+  } catch (_) {}
+
+  return res.status(200).json({
+    productId,
+    variantId,
+    diagnostic: {
+      selectedProductKey: productKey || null,
+      selectedSize: sizeLabel || null,
+      selectedColor: colorName || null,
+      blueprintId: effectiveBlueprintId || null,
+      printProviderId: effectivePrintProviderId || null,
+      resolvedVariantId: variantId || null,
+      resolvedVariantTitle,
+      resolvedVariantEnabled
+    }
+  });
 }
 
 async function handleCheck(req, res) {
@@ -194,6 +224,39 @@ async function handleCheck(req, res) {
     ? allBlankViews.filter(v => v.variant_ids.includes(variantId))
     : allBlankViews;
 
+  // TEMPORARY DEEP DIAGNOSTIC (Aug 2026): snapshot the ACTUAL temporary
+  // product object returned by Printify after creation. This tells us whether
+  // Printify stored the blueprint/provider/variant we requested, or whether
+  // some other product/variant entered the pipeline before mockup rendering.
+  const storedVariants = Array.isArray(data.variants) ? data.variants.map(v => ({
+    id: v.id ?? null,
+    title: v.title || '',
+    is_enabled: v.is_enabled ?? null,
+    is_default: v.is_default ?? null,
+    options: v.options ?? null
+  })) : [];
+  const storedRequestedVariant = variantId
+    ? storedVariants.find(v => v.id === variantId) || null
+    : null;
+  const storedPrintAreas = Array.isArray(data.print_areas) ? data.print_areas.map(pa => ({
+    variant_ids: Array.isArray(pa.variant_ids) ? pa.variant_ids : [],
+    placeholders: Array.isArray(pa.placeholders) ? pa.placeholders.map(ph => ({
+      position: ph.position || '',
+      image_ids: Array.isArray(ph.images) ? ph.images.map(im => im.id).filter(Boolean) : []
+    })) : []
+  })) : [];
+  const temporaryProduct = {
+    id: data.id || productId,
+    title: data.title || '',
+    blueprint_id: data.blueprint_id ?? null,
+    print_provider_id: data.print_provider_id ?? null,
+    requested_variant_id: variantId || null,
+    requested_variant_found: !!storedRequestedVariant,
+    requested_variant: storedRequestedVariant,
+    variants: storedVariants,
+    print_areas: storedPrintAreas
+  };
+
   if (mockupUrl) {
     deletePrintifyProduct(productId).catch(() => {});
     return res.status(200).json({
@@ -202,7 +265,8 @@ async function handleCheck(req, res) {
       mockupUrls,
       requestedVariantId: variantId || null,
       debugImages,
-      blankViews
+      blankViews,
+      temporaryProduct
     });
   }
 
@@ -210,7 +274,8 @@ async function handleCheck(req, res) {
     ready: false,
     requestedVariantId: variantId || null,
     debugImages,
-    blankViews
+    blankViews,
+    temporaryProduct
   });
 }
 
