@@ -4,7 +4,7 @@
 <!-- BUILD-MARKER: GOOD-MORNING-APPROVAL-PLUS-LIVE-MUG-COLORS-v30
 <!-- If you can see this comment on GitHub, this exact paste landed. -->
 <!-- If your live site's page source does NOT say -->
-<!-- "OVERLAY-TEXT-CENTERED-v28" right here, the upload/deploy did -->
+<!-- "CAMBRIDGE-VARIANT-DIAGNOSTIC-v30" right here, the upload/deploy did -->
 <!-- not take -- re-upload before testing. -->
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
@@ -666,6 +666,7 @@ body.product-focus .card:not(#productCard){opacity:.35;filter:brightness(.6) sat
   <img id="mockupLightboxImg" class="mockup-lightbox-img" alt="Enlarged mockup"/>
   <button class="mockup-lightbox-arrow mockup-lightbox-arrow-right" id="mockupLightboxNext" onclick="mockupLightboxNext()" aria-label="Next angle">›</button>
   <div class="mockup-lightbox-counter" id="mockupLightboxCounter"></div>
+  <div id="mockupVariantDiagnostic" style="display:none;position:absolute;left:50%;bottom:92px;transform:translateX(-50%);z-index:5;width:min(92vw,720px);max-height:28vh;overflow:auto;padding:10px 12px;border-radius:10px;border:2px solid #29a3ff;background:rgba(5,10,18,.96);color:#dff6ff;font:12px/1.35 monospace;white-space:pre-wrap;text-align:left;box-shadow:0 4px 20px rgba(0,0,0,.65)"></div>
   <button type="button" id="mockupLightboxReturn" class="generate-btn" style="display:none;position:absolute;left:50%;bottom:24px;transform:translateX(-50%);width:auto;padding:.8rem 1.6rem" onclick="returnFromFinalMockup()">↩️ Return</button>
 </div>
 <div class="header">
@@ -7601,6 +7602,12 @@ async function beginFinalMockupFetch(){
 
     const productId=startData.productId;
     const variantId=startData.variantId;
+    const startDiagnostic=startData.diagnostic || {};
+    lastMockupDebugData={
+      ...startDiagnostic,
+      requestedVariantId:variantId,
+      debugImages:[]
+    };
     let mockupUrl=null;
     let mockupUrls=[];
     const maxTries=40;
@@ -7617,6 +7624,11 @@ async function beginFinalMockupFetch(){
       if(checkData.ready){
         mockupUrl=checkData.mockupUrl;
         mockupUrls=Array.isArray(checkData.mockupUrls)?checkData.mockupUrls:[];
+        lastMockupDebugData={
+          ...lastMockupDebugData,
+          requestedVariantId:checkData.requestedVariantId ?? variantId,
+          debugImages:Array.isArray(checkData.debugImages)?checkData.debugImages:[]
+        };
         break;
       }
     }
@@ -7797,6 +7809,39 @@ let currentMockupUrls=[];
 let lastMockupDebugData=null;
 let currentMockupIndex=0;
 
+function renderMockupVariantDiagnostic(){
+  const box=document.getElementById('mockupVariantDiagnostic');
+  if(!box)return;
+  const d=lastMockupDebugData;
+  if(!d){box.style.display='none';box.textContent='';return;}
+
+  const lines=[
+    'TEMP DIAGNOSTIC — PRINTIFY VARIANT TRACE',
+    `Picker selected: ${d.selectedColor ?? '—'}`,
+    `Selected size: ${d.selectedSize ?? '—'}`,
+    `Product key: ${d.selectedProductKey ?? '—'}`,
+    `Blueprint / provider: ${d.blueprintId ?? '—'} / ${d.printProviderId ?? '—'}`,
+    `Resolved variant ID: ${d.resolvedVariantId ?? d.requestedVariantId ?? '—'}`,
+    `Printify variant title: ${d.resolvedVariantTitle ?? '—'}`,
+    `Printify variant enabled: ${d.resolvedVariantEnabled == null ? '—' : String(d.resolvedVariantEnabled)}`,
+    '',
+    'Returned mockup image variant_ids:'
+  ];
+  const requested=d.resolvedVariantId ?? d.requestedVariantId;
+  const imgs=Array.isArray(d.debugImages)?d.debugImages:[];
+  if(!imgs.length){
+    lines.push('(none reported)');
+  } else {
+    imgs.forEach((img,i)=>{
+      const ids=Array.isArray(img.variant_ids)?img.variant_ids:[];
+      const matched=requested!=null && ids.includes(requested);
+      lines.push(`Image ${i+1}: [${ids.join(', ')}] ${matched?'✅ MATCHES RESOLVED VARIANT':'❌ different variant'}`);
+    });
+  }
+  box.textContent=lines.join('\n');
+  box.style.display='block';
+}
+
 function openMockupLightbox(index){
   if(!currentMockupUrls.length)return;
   currentMockupIndex=((index%currentMockupUrls.length)+currentMockupUrls.length)%currentMockupUrls.length;
@@ -7814,6 +7859,7 @@ function openMockupLightbox(index){
   const showArrows=currentMockupUrls.length>1;
   if(prevBtn)prevBtn.style.display=showArrows?'flex':'none';
   if(nextBtn)nextBtn.style.display=showArrows?'flex':'none';
+  renderMockupVariantDiagnostic();
   overlay.classList.add('visible');
 }
 
@@ -9841,6 +9887,12 @@ async function runAutoMockupFetch(){
 
     const productId = startData.productId;
     const variantId = startData.variantId;
+    const startDiagnostic = startData.diagnostic || {};
+    lastMockupDebugData = {
+      ...startDiagnostic,
+      requestedVariantId: variantId,
+      debugImages: []
+    };
     let mockupUrl = null;
     let mockupUrls = [];
     const maxTries = 40;
@@ -9860,7 +9912,8 @@ async function runAutoMockupFetch(){
         mockupUrl = checkData.mockupUrl;
         mockupUrls = Array.isArray(checkData.mockupUrls) ? checkData.mockupUrls : [];
         lastMockupDebugData = {
-          requestedVariantId: checkData.requestedVariantId,
+          ...lastMockupDebugData,
+          requestedVariantId: checkData.requestedVariantId ?? variantId,
           debugImages: Array.isArray(checkData.debugImages) ? checkData.debugImages : []
         };
         break;
@@ -9907,7 +9960,13 @@ async function runAutoMockupFetch(){
     if (lastMockupDebugData) {
       const dbg = document.createElement('div');
       dbg.style.cssText = 'margin-top:10px;padding:8px;background:#0a0a1a;border:1px solid #444;border-radius:8px;font-family:monospace;font-size:11px;color:#9fd;white-space:pre-wrap;word-break:break-all';
-      const lines = [`Requested variantId: ${lastMockupDebugData.requestedVariantId}`, ''];
+      const lines = [
+        `Picker selected: ${lastMockupDebugData.selectedColor ?? '—'}`,
+        `Selected size: ${lastMockupDebugData.selectedSize ?? '—'}`,
+        `Resolved variantId: ${lastMockupDebugData.resolvedVariantId ?? lastMockupDebugData.requestedVariantId ?? '—'}`,
+        `Printify title: ${lastMockupDebugData.resolvedVariantTitle ?? '—'}`,
+        ''
+      ];
       lastMockupDebugData.debugImages.forEach((img, i) => {
         const matched = img.variant_ids.includes(lastMockupDebugData.requestedVariantId);
         lines.push(`Image ${i+1}: variant_ids=[${img.variant_ids.join(', ')}] ${matched ? '✅ MATCHES' : '❌ no match'}`);
