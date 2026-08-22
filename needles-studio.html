@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head><link rel="manifest" href="needles-manifest.json">
-<!-- BUILD-MARKER: GOOD-MORNING-APPROVAL-FLOW-v29 -->
+<!-- BUILD-MARKER: GOOD-MORNING-APPROVAL-PLUS-LIVE-MUG-COLORS-v30
 <!-- If you can see this comment on GitHub, this exact paste landed. -->
 <!-- If your live site's page source does NOT say -->
 <!-- "OVERLAY-TEXT-CENTERED-v28" right here, the upload/deploy did -->
@@ -4065,6 +4065,7 @@ const MUG_MOCKUP_PHOTOS = {
     "15oz": {
       "Black": "mug-trimmed-15oz-black.png",
       "Blue": "mug-trimmed-15oz-blue.png",
+      "Cambridge Blue": "style-trimmed.jpg",
       "Green": "mug-trimmed-15oz-green.png",
       "Maroon": "mug-trimmed-15oz-maroon.png",
       "Yellow": "mug-trimmed-15oz-yellow.png"
@@ -4072,6 +4073,7 @@ const MUG_MOCKUP_PHOTOS = {
     "11oz": {
       "Black": "mug-trimmed-15oz-black.png",
       "Blue": "mug-trimmed-15oz-blue.png",
+      "Cambridge Blue": "style-trimmed.jpg",
       "Maroon": "mug-trimmed-15oz-maroon.png",
       "Green": "mug-trimmed-15oz-green.png",
       "Yellow": "mug-trimmed-15oz-yellow.png",
@@ -4094,6 +4096,7 @@ const MUG_MOCKUP_PHOTOS = {
     },
     "11oz": {
       "Blue": "mug-accented-15oz-blue.png",
+      "Cambridge Blue": "style-accented.jpg",
       "Maroon": "mug-accented-15oz-maroon.png",
       "Green": "mug-accented-15oz-green.png",
       "Yellow": "mug-accented-15oz-yellow.png",
@@ -4109,6 +4112,7 @@ const MUG_MOCKUP_PHOTOS = {
     "11oz": {
       "Black": "mug-colorpop-black.png",
       "Blue": "mug-colorpop-blue.png",
+      "Cambridge Blue": "style-color-pop.jpg",
       "Golden Yellow": "mug-colorpop-golden-yellow.png",
       "Green": "mug-colorpop-green.png",
       "Light Blue": "mug-colorpop-light-blue.png",
@@ -4122,6 +4126,7 @@ const MUG_MOCKUP_PHOTOS = {
     "15oz": {
       "Black": "mug-colorpop-black.png",
       "Blue": "mug-colorpop-blue.png",
+      "Cambridge Blue": "style-color-pop.jpg",
       "Green": "mug-colorpop-green.png",
       "Light Blue": "mug-colorpop-light-blue.png",
       "Light Green": "mug-colorpop-light-green.png",
@@ -9472,19 +9477,23 @@ function updatePlacementSummary(){
 
 const GEN_MUG_STYLES = {
   "Classic White": { colors: { "11oz": null, "15oz": null } },
-  // REMOVED (Aug 2026): Cambridge Blue pulled from every style/size
-  // combo below -- Alyx found the color/mockup mismatch wasn't unique
-  // to Color Pop 15oz, it recurs across every combination he tried.
+  // RESTORED (Aug 2026): Cambridge Blue is offered again wherever the
+  // product catalog says the exact blueprint/provider has that option.
+  // The backend now verifies every colored coffee-mug selection against
+  // Printify's LIVE variant catalog by exact size + exact color before any
+  // mockup/order is created. If Cambridge Blue (or any other color) is not
+  // genuinely available, the request fails explicitly rather than silently
+  // substituting another mug color.
   "Color Pop": { colors: { "11oz": [
     { name: "Black", hex: "#1c1c1c" }, { name: "Blue", hex: "#2255A4" },
-    { name: "Golden Yellow", hex: "#D4A017" },
+    { name: "Cambridge Blue", hex: "#A3C1AD" }, { name: "Golden Yellow", hex: "#D4A017" },
     { name: "Green", hex: "#1F7A45" }, { name: "Light Blue", hex: "#5FA8DE" },
     { name: "Light Green", hex: "#5FBF5F" }, { name: "Maroon", hex: "#7A1F2B" },
     { name: "Orange", hex: "#F0701A" }, { name: "Pink", hex: "#E0457B" },
     { name: "Red", hex: "#D62828" }, { name: "Yellow", hex: "#F0D43A" }
   ], "15oz": [
     { name: "Black", hex: "#1c1c1c" }, { name: "Blue", hex: "#2255A4" },
-    { name: "Green", hex: "#1F7A45" },
+    { name: "Cambridge Blue", hex: "#A3C1AD" }, { name: "Green", hex: "#1F7A45" },
     { name: "Light Blue", hex: "#5FA8DE" }, { name: "Light Green", hex: "#5FBF5F" },
     { name: "Maroon", hex: "#7A1F2B" }, { name: "Orange", hex: "#F0701A" },
     { name: "Pink", hex: "#E0457B" }, { name: "Red", hex: "#D62828" },
@@ -9494,19 +9503,19 @@ const GEN_MUG_STYLES = {
     { name: "Black", hex: "#1c1c1c" }, { name: "Blue", hex: "#2255A4" },
     { name: "Maroon", hex: "#7A1F2B" }, { name: "Green", hex: "#1F7A45" },
     { name: "Yellow", hex: "#F0D43A" }, { name: "Red", hex: "#D62828" },
-    { name: "Light Blue", hex: "#5FA8DE" },
+    { name: "Cambridge Blue", hex: "#A3C1AD" }, { name: "Light Blue", hex: "#5FA8DE" },
     { name: "Orange", hex: "#F0701A" }, { name: "Light Green", hex: "#5FBF5F" },
     { name: "Pink", hex: "#E0457B" }
   ], "15oz": [
     { name: "Black", hex: "#1c1c1c" }, { name: "Blue", hex: "#2255A4" },
     { name: "Maroon", hex: "#7A1F2B" }, { name: "Green", hex: "#1F7A45" },
-    { name: "Yellow", hex: "#F0D43A" }
+    { name: "Cambridge Blue", hex: "#A3C1AD" }, { name: "Yellow", hex: "#F0D43A" }
   ]}},
   "Accented": { colors: { "11oz": [
     { name: "Black", hex: "#1c1c1c" }, { name: "Blue", hex: "#2255A4" },
     { name: "Maroon", hex: "#7A1F2B" }, { name: "Green", hex: "#1F7A45" },
     { name: "Yellow", hex: "#F0D43A" }, { name: "Pink", hex: "#E0457B" },
-    { name: "Orange", hex: "#F0701A" },
+    { name: "Orange", hex: "#F0701A" }, { name: "Cambridge Blue", hex: "#A3C1AD" },
     { name: "Light Green", hex: "#5FBF5F" }, { name: "Red", hex: "#D62828" },
     { name: "Light Blue", hex: "#5FA8DE" }
   ], "15oz": [
