@@ -1,4 +1,4 @@
-// BUILD-MARKER: SEAMLESS-WRAP-CROP-FIX-v3
+// BUILD-MARKER: LIVE-EXACT-MUG-VARIANT-RESOLUTION-v4
 // If you can see this comment on GitHub, this exact paste landed.
 import sharp from "sharp";
 import { getProduct } from "../lib/products-catalog.js";
@@ -96,6 +96,59 @@ export async function resolveVariantIdByTitleMatch(blueprintId, printProviderId,
   );
   if (!variant) throw new Error(`No Printify variant matched [${matchTerms.join(", ")}] for blueprint ${blueprintId}`);
   return variant.id;
+}
+
+// NEW (Aug 2026): exact live resolver for colored coffee mugs. The older
+// title matcher above intentionally uses substring matching because several
+// non-mug callers need that flexibility. That is unsafe for mug colors:
+// "Blue" is a substring of "Light Blue" / "Cambridge Blue", and "Green"
+// is a substring of "Light Green". This helper treats Printify's slash/pipe/
+// comma-separated variant title options as discrete values and requires an
+// EXACT option match for both size and color. It is deliberately used only
+// by colored coffee mugs below.
+const EXACT_VARIANT_CACHE = new Map();
+
+function normalizeVariantOption(value) {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/(\d+)\s*oz\b/g, '$1oz')
+    .replace(/\s+/g, ' ');
+}
+
+function splitVariantTitleOptions(title) {
+  return String(title || '')
+    .split(/\s*(?:\/|\||,|;)\s*/g)
+    .map(normalizeVariantOption)
+    .filter(Boolean);
+}
+
+export async function resolveVariantIdByExactOptions(blueprintId, printProviderId, optionTerms) {
+  const normalizedTerms = optionTerms.map(normalizeVariantOption);
+  const cacheKey = `${blueprintId}:${printProviderId}:${normalizedTerms.join('|')}`;
+  if (EXACT_VARIANT_CACHE.has(cacheKey)) return EXACT_VARIANT_CACHE.get(cacheKey);
+
+  const response = await fetch(
+    `https://api.printify.com/v1/catalog/blueprints/${blueprintId}/print_providers/${printProviderId}/variants.json`,
+    { headers: { "Authorization": `Bearer ${process.env.PRINTIFY_API_TOKEN}` } }
+  );
+  const data = await response.json();
+  if (!response.ok) throw new Error("Failed to fetch blueprint variants: " + JSON.stringify(data));
+
+  const matches = (data.variants || []).filter(v => {
+    const parts = splitVariantTitleOptions(v.title);
+    return normalizedTerms.every(term => parts.includes(term));
+  });
+
+  if (matches.length === 0) {
+    throw new Error(`Printify does not currently list an exact ${optionTerms.join(' / ')} variant for blueprint ${blueprintId}. No substitute color was used.`);
+  }
+  if (matches.length > 1) {
+    throw new Error(`Printify returned more than one exact ${optionTerms.join(' / ')} variant for blueprint ${blueprintId}; refusing to guess.`);
+  }
+
+  EXACT_VARIANT_CACHE.set(cacheKey, matches[0].id);
+  return matches[0].id;
 }
 
 export async function resolvePhotoPosterSelection(product, { framed, sizeLabel, orientation, finish, frameColor }) {
@@ -498,6 +551,24 @@ export async function resolveVariant(product, sizeLabel, colorName) {
     if (!colorName) throw new Error("A color selection is required for this product.");
     const colorEntry = sizeEntry.colors.find(c => c.name === colorName);
     if (!colorEntry) throw new Error(`Unknown color "${colorName}" for size "${sizeLabel}".`);
+
+    // UNIVERSAL COLORED-COFFEE-MUG FIX (Aug 2026): never trust the old
+    // hardcoded numeric variant IDs for these mugs. Resolve the CURRENT
+    // Printify variant live from the exact size + exact color option every
+    // time (cached after the first lookup in this server instance). This
+    // simultaneously eliminates stale IDs and prevents ambiguous substring
+    // matches such as Blue -> Light Blue/Cambridge Blue or Green -> Light
+    // Green. If Printify does not genuinely offer the requested combination,
+    // fail explicitly instead of silently showing/ordering a different color.
+    if (product.layoutType === "three-slot-wrap") {
+      const variantId = await resolveVariantIdByExactOptions(
+        product.blueprintId,
+        product.printProviderId,
+        [sizeLabel, colorName]
+      );
+      return { variantId, price: sizeEntry.price, hex: colorEntry.hex || null };
+    }
+
     if (colorEntry.variantId) return { variantId: colorEntry.variantId, price: sizeEntry.price, hex: colorEntry.hex || null };
     const variantId = await resolveVariantIdByTitleMatch(product.blueprintId, product.printProviderId, [sizeLabel, colorName]);
     return { variantId, price: sizeEntry.price, hex: colorEntry.hex || null };
