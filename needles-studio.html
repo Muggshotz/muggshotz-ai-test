@@ -667,7 +667,7 @@ body.product-focus .card:not(#productCard){opacity:.35;filter:brightness(.6) sat
   <button class="mockup-lightbox-arrow mockup-lightbox-arrow-right" id="mockupLightboxNext" onclick="mockupLightboxNext()" aria-label="Next angle">›</button>
   <div class="mockup-lightbox-counter" id="mockupLightboxCounter"></div>
   <div id="mockupBlankVariantPanel" style="display:none;position:absolute;left:18px;top:18px;z-index:6;width:min(30vw,260px);max-width:260px;padding:8px;border-radius:10px;border:2px solid #7ee0b8;background:rgba(5,10,18,.96);box-shadow:0 4px 20px rgba(0,0,0,.65)">
-    <div style="color:#baf7df;font:700 11px/1.25 monospace;margin-bottom:6px;text-align:center">PRE-ART BLANK VIEW FOR REQUESTED VARIANT</div>
+    <div style="color:#baf7df;font:700 11px/1.25 monospace;margin-bottom:6px;text-align:center">PRINTIFY PRINT-AREA VIEW (NOT PHYSICAL MUG PHOTO)</div>
     <img id="mockupBlankVariantImg" alt="Printify blank variant view before artwork" style="display:block;width:100%;max-height:34vh;object-fit:contain;background:#fff;border-radius:7px"/>
     <div id="mockupBlankVariantMeta" style="margin-top:6px;color:#baf7df;font:10px/1.3 monospace;word-break:break-all"></div>
   </div>
@@ -7633,7 +7633,8 @@ async function beginFinalMockupFetch(){
           ...lastMockupDebugData,
           requestedVariantId:checkData.requestedVariantId ?? variantId,
           debugImages:Array.isArray(checkData.debugImages)?checkData.debugImages:[],
-          blankViews:Array.isArray(checkData.blankViews)?checkData.blankViews:[]
+          blankViews:Array.isArray(checkData.blankViews)?checkData.blankViews:[],
+          temporaryProduct:checkData.temporaryProduct || null
         };
         break;
       }
@@ -7854,6 +7855,33 @@ function renderMockupVariantDiagnostic(){
     blanks.forEach((v,i)=>{
       lines.push(`Blank ${i+1}: ${v.label || '—'} / ${v.position || '—'} / variants=[${(v.variant_ids||[]).join(', ')}]`);
       lines.push(`  src=${v.src || '—'}`);
+    });
+  }
+  const tp=d.temporaryProduct || null;
+  lines.push('', 'ACTUAL TEMPORARY PRODUCT STORED BY PRINTIFY:');
+  if(!tp){
+    lines.push('(not reported)');
+  } else {
+    lines.push(`Product ID: ${tp.id ?? '—'}`);
+    lines.push(`Product title: ${tp.title || '—'}`);
+    lines.push(`Stored blueprint / provider: ${tp.blueprint_id ?? '—'} / ${tp.print_provider_id ?? '—'}`);
+    lines.push(`Requested variant: ${tp.requested_variant_id ?? '—'} | found in stored product: ${tp.requested_variant_found ? 'YES' : 'NO'}`);
+    const rv=tp.requested_variant;
+    if(rv){
+      lines.push(`Stored requested variant title: ${rv.title || '—'}`);
+      lines.push(`Stored requested variant enabled: ${rv.is_enabled == null ? '—' : String(rv.is_enabled)}`);
+      lines.push(`Stored requested variant options: ${rv.options == null ? '—' : JSON.stringify(rv.options)}`);
+    }
+    const vars=Array.isArray(tp.variants)?tp.variants:[];
+    lines.push(`Stored variants (${vars.length}):`);
+    vars.forEach((v,i)=>{
+      lines.push(`  ${i+1}. id=${v.id ?? '—'} title=${v.title || '—'} enabled=${v.is_enabled == null ? '—' : String(v.is_enabled)} options=${v.options == null ? '—' : JSON.stringify(v.options)}`);
+    });
+    const pas=Array.isArray(tp.print_areas)?tp.print_areas:[];
+    lines.push(`Stored print areas (${pas.length}):`);
+    pas.forEach((pa,i)=>{
+      lines.push(`  ${i+1}. variant_ids=[${(pa.variant_ids||[]).join(', ')}]`);
+      (pa.placeholders||[]).forEach(ph=>lines.push(`     position=${ph.position || '—'} image_ids=[${(ph.image_ids||[]).join(', ')}]`));
     });
   }
   box.textContent=lines.join('\n');
@@ -9952,7 +9980,8 @@ async function runAutoMockupFetch(){
           ...lastMockupDebugData,
           requestedVariantId: checkData.requestedVariantId ?? variantId,
           debugImages: Array.isArray(checkData.debugImages) ? checkData.debugImages : [],
-          blankViews: Array.isArray(checkData.blankViews) ? checkData.blankViews : []
+          blankViews: Array.isArray(checkData.blankViews) ? checkData.blankViews : [],
+          temporaryProduct: checkData.temporaryProduct || null
         };
         break;
       }
