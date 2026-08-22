@@ -19,24 +19,6 @@ import {
 
 const SHOP_ID = "27439202";
 
-// TEMPORARY VARIANT DIAGNOSTIC (Aug 2026): resolve the exact title Printify
-// currently associates with the variant ID we are about to use. This is
-// intentionally independent of our own catalog labels so Cambridge Blue can
-// be diagnosed from Printify's live data rather than inferred from swatches.
-async function getPrintifyVariantDebugInfo(blueprintId, printProviderId, variantId) {
-  const response = await fetch(
-    `https://api.printify.com/v1/catalog/blueprints/${blueprintId}/print_providers/${printProviderId}/variants.json`,
-    { headers: { "Authorization": `Bearer ${process.env.PRINTIFY_API_TOKEN}` } }
-  );
-  const data = await response.json();
-  if (!response.ok) throw new Error("Failed to fetch live Printify variant title: " + JSON.stringify(data));
-  const variant = (data.variants || []).find(v => v.id === variantId);
-  return {
-    title: variant?.title || null,
-    isEnabled: variant?.is_enabled ?? null
-  };
-}
-
 async function deletePrintifyProduct(productId) {
   const response = await fetch(`https://api.printify.com/v1/shops/${SHOP_ID}/products/${productId}.json`, {
     method: "DELETE",
@@ -135,14 +117,6 @@ async function handleStart(req, res) {
   const imageScale = 1;
   const imageY = isCoffeeMug ? 0.5 : 0.5;
 
-  // Capture Printify's own CURRENT title for the exact numeric variant we
-  // resolved. This is diagnostic-only metadata returned to Needles Studio.
-  const variantDebug = await getPrintifyVariantDebugInfo(
-    effectiveBlueprintId,
-    effectivePrintProviderId,
-    variantId
-  );
-
   const { productId } = await createPrintifyProduct(
     printifyImages,
     { blueprintId: effectiveBlueprintId, printProviderId: effectivePrintProviderId, displayName: product.displayName },
@@ -152,20 +126,7 @@ async function handleStart(req, res) {
     imageY
   );
 
-  return res.status(200).json({
-    productId,
-    variantId,
-    diagnostic: {
-      selectedProductKey: productKey || null,
-      selectedSize: sizeLabel || null,
-      selectedColor: colorName || null,
-      blueprintId: effectiveBlueprintId || null,
-      printProviderId: effectivePrintProviderId || null,
-      resolvedVariantId: variantId || null,
-      resolvedVariantTitle: variantDebug.title,
-      resolvedVariantEnabled: variantDebug.isEnabled
-    }
-  });
+  return res.status(200).json({ productId, variantId });
 }
 
 async function handleCheck(req, res) {
@@ -209,15 +170,48 @@ async function handleCheck(req, res) {
   // all vs. sends one mislabeled. Remove once that's confirmed.
   const debugImages = allImages.map(img => ({
     src: img.src,
-    variant_ids: Array.isArray(img.variant_ids) ? img.variant_ids : []
+    variant_ids: Array.isArray(img.variant_ids) ? img.variant_ids : [],
+    position: img.position || null,
+    is_default: !!img.is_default
   }));
+
+  // TEMPORARY PRE-ART DIAGNOSTIC (Aug 2026): Printify's product resource
+  // exposes `views`, documented as blank blueprint images with dedicated
+  // print areas. Capture ONLY the blank view files explicitly associated
+  // with the exact variant we requested. This lets us compare the physical
+  // mug Printify associates with the variant BEFORE artwork against the
+  // finished generated mockup after artwork is applied.
+  const allBlankViews = Array.isArray(data.views) ? data.views.flatMap(view =>
+    (Array.isArray(view.files) ? view.files : []).map(file => ({
+      src: file.src || null,
+      variant_ids: Array.isArray(file.variant_ids) ? file.variant_ids : [],
+      view_id: view.id ?? null,
+      label: view.label || '',
+      position: view.position || ''
+    }))
+  ).filter(v => v.src) : [];
+  const blankViews = variantId
+    ? allBlankViews.filter(v => v.variant_ids.includes(variantId))
+    : allBlankViews;
 
   if (mockupUrl) {
     deletePrintifyProduct(productId).catch(() => {});
-    return res.status(200).json({ ready: true, mockupUrl, mockupUrls, requestedVariantId: variantId || null, debugImages });
+    return res.status(200).json({
+      ready: true,
+      mockupUrl,
+      mockupUrls,
+      requestedVariantId: variantId || null,
+      debugImages,
+      blankViews
+    });
   }
 
-  return res.status(200).json({ ready: false, requestedVariantId: variantId || null, debugImages });
+  return res.status(200).json({
+    ready: false,
+    requestedVariantId: variantId || null,
+    debugImages,
+    blankViews
+  });
 }
 
 export default async function handler(req, res) {
