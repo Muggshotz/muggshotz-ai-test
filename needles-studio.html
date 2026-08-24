@@ -1,10 +1,11 @@
+<!-- BUILD MARKER: scroll-landing-fix-aug24-2026 -->
 <!DOCTYPE html>
 <html lang="en">
 <head><link rel="manifest" href="needles-manifest.json">
-<!-- BUILD-MARKER: GOOD-MORNING-APPROVAL-PLUS-LIVE-MUG-COLORS-v30
+<!-- BUILD-MARKER: OVERLAY-TEXT-CENTERED-v28 -->
 <!-- If you can see this comment on GitHub, this exact paste landed. -->
 <!-- If your live site's page source does NOT say -->
-<!-- "CAMBRIDGE-VARIANT-DIAGNOSTIC-v30" right here, the upload/deploy did -->
+<!-- "OVERLAY-TEXT-CENTERED-v28" right here, the upload/deploy did -->
 <!-- not take -- re-upload before testing. -->
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
@@ -740,17 +741,6 @@ body.product-focus .card:not(#productCard){opacity:.35;filter:brightness(.6) sat
 <span class="note" style="color:#7ab8ff;cursor:pointer" onclick="backToTrackDescribeFromFaceItReveal()">← Describe it instead</span>
 </div>
 </div>
-<div id="goodMorningEaselApproveRow" style="display:none;margin-top:.75rem">
-<div style="display:flex;gap:8px">
-<button type="button" class="generate-btn" style="flex:1;padding:.7rem .5rem;font-size:14px" onclick="approveGoodMorning()">✅ Yes — Use This Image</button>
-<button type="button" class="download-btn" style="flex:1;margin-top:0;padding:.7rem .5rem;font-size:14px" onclick="keepTweakingGoodMorning()">🔧 No — Start Over</button>
-</div>
-<div class="note" style="text-align:center;margin-top:.4rem;color:#29a3ff">Trying again uses one more token. <span style="color:#7ab8ff;cursor:pointer" onclick="openCreditsPanel()">Need more?</span></div>
-<div style="display:flex;gap:16px;justify-content:center;margin-top:.6rem">
-<span class="note" style="color:#7ab8ff;cursor:pointer" onclick="backToDesignMethodFromGoodMorningReveal()">← Choose a different prop</span>
-<span class="note" style="color:#7ab8ff;cursor:pointer" onclick="backToTrackDescribeFromGoodMorningReveal()">← Describe it instead</span>
-</div>
-</div>
 <input type="file" id="fileInput" accept="image/*" style="display:none"/><img id="previewImg" class="preview-img" style="display:none"/>
 <div id="approveRow" style="display:none">
 <div class="note" style="margin-top:.9rem;text-align:center;font-size:13px;color:#29a3ff">Are you satisfied with this design?</div>
@@ -1008,10 +998,19 @@ Would you like to try out <span style="color:#7ab8ff">some of our fun props?</sp
 <input type="file" id="goodMorningPhotoInput" accept="image/*" style="display:none" onchange="handleGoodMorningPhotoChange(event)">
 <button type="button" id="goodMorningGenerateBtn" class="generate-btn generate-flash" style="display:none;margin-top:1rem" onclick="generateGoodMorning()">🎨 Generate</button>
 <button type="button" class="download-btn" style="margin-top:1rem" onclick="goodMorningBack()">← Back</button>
-
+<div id="goodMorningEaselApproveRow" style="display:none;margin-top:.75rem">
+<div style="display:flex;gap:8px">
+<button type="button" class="generate-btn" style="flex:1;padding:.7rem .5rem;font-size:14px" onclick="approveGoodMorning()">✅ Yes — Use This Image</button>
+<button type="button" class="download-btn" style="flex:1;margin-top:0;padding:.7rem .5rem;font-size:14px" onclick="keepTweakingGoodMorning()">🔧 No — Start Over</button>
+</div>
+<div class="note" style="text-align:center;margin-top:.4rem;color:#29a3ff">Trying again uses one more token. <span style="color:#7ab8ff;cursor:pointer" onclick="openCreditsPanel()">Need more?</span></div>
+<div style="display:flex;gap:16px;justify-content:center;margin-top:.6rem">
+<span class="note" style="color:#7ab8ff;cursor:pointer" onclick="backToDesignMethodFromGoodMorningReveal()">← Choose a different prop</span>
+<span class="note" style="color:#7ab8ff;cursor:pointer" onclick="backToTrackDescribeFromGoodMorningReveal()">← Describe it instead</span>
+</div>
+</div>
 </div>
 
-<div class="card" id="coverMePanelCard" style="display:none">
 <div class="card-title">SELECT THE PANELS</div>
 <div class="note" style="margin-top:0;margin-bottom:1rem;text-align:center;color:#7ab8ff">WHERE DO YOU WISH TO PLACE YOUR IMAGE?</div>
 <div id="coverMePanelRows" style="display:flex;flex-direction:column;gap:12px"></div>
@@ -4065,7 +4064,6 @@ const MUG_MOCKUP_PHOTOS = {
     "15oz": {
       "Black": "mug-trimmed-15oz-black.png",
       "Blue": "mug-trimmed-15oz-blue.png",
-      "Cambridge Blue": "mug-trimmed-15oz-cambridge-blue.png",
       "Green": "mug-trimmed-15oz-green.png",
       "Maroon": "mug-trimmed-15oz-maroon.png",
       "Yellow": "mug-trimmed-15oz-yellow.png"
@@ -4073,7 +4071,6 @@ const MUG_MOCKUP_PHOTOS = {
     "11oz": {
       "Black": "mug-trimmed-15oz-black.png",
       "Blue": "mug-trimmed-15oz-blue.png",
-      "Cambridge Blue": "mug-trimmed-15oz-cambridge-blue.png",
       "Maroon": "mug-trimmed-15oz-maroon.png",
       "Green": "mug-trimmed-15oz-green.png",
       "Yellow": "mug-trimmed-15oz-yellow.png",
@@ -4096,7 +4093,6 @@ const MUG_MOCKUP_PHOTOS = {
     },
     "11oz": {
       "Blue": "mug-accented-15oz-blue.png",
-      "Cambridge Blue": "mug-accented-11oz-cambridge-blue.png",
       "Maroon": "mug-accented-15oz-maroon.png",
       "Green": "mug-accented-15oz-green.png",
       "Yellow": "mug-accented-15oz-yellow.png",
@@ -4112,7 +4108,6 @@ const MUG_MOCKUP_PHOTOS = {
     "11oz": {
       "Black": "mug-colorpop-black.png",
       "Blue": "mug-colorpop-blue.png",
-      "Cambridge Blue": "mug-colorpop-cambridge-blue.png",
       "Golden Yellow": "mug-colorpop-golden-yellow.png",
       "Green": "mug-colorpop-green.png",
       "Light Blue": "mug-colorpop-light-blue.png",
@@ -4126,7 +4121,6 @@ const MUG_MOCKUP_PHOTOS = {
     "15oz": {
       "Black": "mug-colorpop-black.png",
       "Blue": "mug-colorpop-blue.png",
-      "Cambridge Blue": "mug-colorpop-cambridge-blue.png",
       "Green": "mug-colorpop-green.png",
       "Light Blue": "mug-colorpop-light-blue.png",
       "Light Green": "mug-colorpop-light-green.png",
@@ -4722,7 +4716,15 @@ async function generateFaceIt(){
 
     presentFinishedNeedlesArt(resultImageUrl,()=>{
       document.getElementById('faceItEaselApproveRow').style.display='block';
-      scrollToFaceItRevealWhenReady();
+      // UPDATED (Aug 2026, Alyx's explicit request): stopped calling
+      // scrollToFaceItRevealWhenReady() here -- it re-scrolled further
+      // down once generation finished, purely to also fit the approve
+      // row into view, which meant every completed piece landed lower
+      // on screen than the position already reached during generation
+      // (the resetEverythingBtnTop anchor a few lines up in this same
+      // function). Alyx wants that first position to be the only one
+      // that sticks, even if it means a short manual scroll to reach
+      // the approve buttons.
     });
     faceItPendingResultUrl=resultImageUrl;
 
@@ -4808,12 +4810,9 @@ function backToTrackDescribeFromFaceItReveal(){
 const GOOD_MORNING_CATALOG = [
   "Parisian_balcony.jpg","Diner_window.jpg","Chocolate_chalet.jpg","Ivy_window.jpg",
   "Adobe_grotto.jpg","Ventana.jpg","Villa_hideaway.jpg","Coastal_cottage.jpg",
-  "Home_sweet_home.jpg","Country_cottage.jpg",
-  "Garden_arch.jpg","Rustic_porthole.jpg","Nautical_dock.jpg","Submarine_curiosity.jpg",
-  "Moroccan_mosaic.jpg","Japanese_bonsai.jpg","Fairytale_castle.jpg","Tropical_bamboo.jpg",
-  "Biker_eagle.jpg","Hobbit_shire_door.jpg"
+  "Home_sweet_home.jpg","Country_cottage.jpg"
 ];
-const GOOD_MORNING_COMING_SOON_COUNT=0; // 20 total slots - all 20 now real
+const GOOD_MORNING_COMING_SOON_COUNT=10; // 20 total slots - 10 real above
 
 let selectedGoodMorningTemplate=null;
 // Mirrors faceItOverridePhoto -- lets the customer swap in a different
@@ -4979,7 +4978,7 @@ async function generateGoodMorning(){
 
     presentFinishedNeedlesArt(resultImageUrl,()=>{
       document.getElementById('goodMorningEaselApproveRow').style.display='block';
-      scrollToGoodMorningRevealWhenReady();
+      // Same reasoning as the matching Face It removal -- see that comment.
     });
     goodMorningPendingResultUrl=resultImageUrl;
 
@@ -5212,7 +5211,7 @@ async function generateCoverMe(){
 
     presentFinishedNeedlesArt(resultImageUrl,()=>{
       document.getElementById('coverMeEaselApproveRow').style.display='block';
-      scrollToCoverMeRevealWhenReady();
+      // Same reasoning as the matching Face It removal -- see that comment.
     });
     coverMePendingResultUrl=resultImageUrl;
 
@@ -7601,12 +7600,6 @@ async function beginFinalMockupFetch(){
 
     const productId=startData.productId;
     const variantId=startData.variantId;
-    const startDiagnostic=startData.diagnostic || {};
-    lastMockupDebugData={
-      ...startDiagnostic,
-      requestedVariantId:variantId,
-      debugImages:[]
-    };
     let mockupUrl=null;
     let mockupUrls=[];
     const maxTries=40;
@@ -7623,13 +7616,6 @@ async function beginFinalMockupFetch(){
       if(checkData.ready){
         mockupUrl=checkData.mockupUrl;
         mockupUrls=Array.isArray(checkData.mockupUrls)?checkData.mockupUrls:[];
-        lastMockupDebugData={
-          ...lastMockupDebugData,
-          requestedVariantId:checkData.requestedVariantId ?? variantId,
-          debugImages:Array.isArray(checkData.debugImages)?checkData.debugImages:[],
-          blankViews:Array.isArray(checkData.blankViews)?checkData.blankViews:[],
-          temporaryProduct:checkData.temporaryProduct || null
-        };
         break;
       }
     }
@@ -7810,10 +7796,6 @@ let currentMockupUrls=[];
 let lastMockupDebugData=null;
 let currentMockupIndex=0;
 
-function renderMockupVariantDiagnostic(){}
-
-function renderBlankVariantPreview(){}
-
 function openMockupLightbox(index){
   if(!currentMockupUrls.length)return;
   currentMockupIndex=((index%currentMockupUrls.length)+currentMockupUrls.length)%currentMockupUrls.length;
@@ -7831,8 +7813,6 @@ function openMockupLightbox(index){
   const showArrows=currentMockupUrls.length>1;
   if(prevBtn)prevBtn.style.display=showArrows?'flex':'none';
   if(nextBtn)nextBtn.style.display=showArrows?'flex':'none';
-  renderMockupVariantDiagnostic();
-  renderBlankVariantPreview();
   overlay.classList.add('visible');
 }
 
@@ -9496,23 +9476,19 @@ function updatePlacementSummary(){
 
 const GEN_MUG_STYLES = {
   "Classic White": { colors: { "11oz": null, "15oz": null } },
-  // RESTORED (Aug 2026): Cambridge Blue is offered again wherever the
-  // product catalog says the exact blueprint/provider has that option.
-  // The backend now verifies every colored coffee-mug selection against
-  // Printify's LIVE variant catalog by exact size + exact color before any
-  // mockup/order is created. If Cambridge Blue (or any other color) is not
-  // genuinely available, the request fails explicitly rather than silently
-  // substituting another mug color.
+  // REMOVED (Aug 2026): Cambridge Blue pulled from every style/size
+  // combo below -- Alyx found the color/mockup mismatch wasn't unique
+  // to Color Pop 15oz, it recurs across every combination he tried.
   "Color Pop": { colors: { "11oz": [
     { name: "Black", hex: "#1c1c1c" }, { name: "Blue", hex: "#2255A4" },
-    { name: "Cambridge Blue", hex: "#A3C1AD" }, { name: "Golden Yellow", hex: "#D4A017" },
+    { name: "Golden Yellow", hex: "#D4A017" },
     { name: "Green", hex: "#1F7A45" }, { name: "Light Blue", hex: "#5FA8DE" },
     { name: "Light Green", hex: "#5FBF5F" }, { name: "Maroon", hex: "#7A1F2B" },
     { name: "Orange", hex: "#F0701A" }, { name: "Pink", hex: "#E0457B" },
     { name: "Red", hex: "#D62828" }, { name: "Yellow", hex: "#F0D43A" }
   ], "15oz": [
     { name: "Black", hex: "#1c1c1c" }, { name: "Blue", hex: "#2255A4" },
-    { name: "Cambridge Blue", hex: "#A3C1AD" }, { name: "Green", hex: "#1F7A45" },
+    { name: "Green", hex: "#1F7A45" },
     { name: "Light Blue", hex: "#5FA8DE" }, { name: "Light Green", hex: "#5FBF5F" },
     { name: "Maroon", hex: "#7A1F2B" }, { name: "Orange", hex: "#F0701A" },
     { name: "Pink", hex: "#E0457B" }, { name: "Red", hex: "#D62828" },
@@ -9522,19 +9498,19 @@ const GEN_MUG_STYLES = {
     { name: "Black", hex: "#1c1c1c" }, { name: "Blue", hex: "#2255A4" },
     { name: "Maroon", hex: "#7A1F2B" }, { name: "Green", hex: "#1F7A45" },
     { name: "Yellow", hex: "#F0D43A" }, { name: "Red", hex: "#D62828" },
-    { name: "Cambridge Blue", hex: "#A3C1AD" }, { name: "Light Blue", hex: "#5FA8DE" },
+    { name: "Light Blue", hex: "#5FA8DE" },
     { name: "Orange", hex: "#F0701A" }, { name: "Light Green", hex: "#5FBF5F" },
     { name: "Pink", hex: "#E0457B" }
   ], "15oz": [
     { name: "Black", hex: "#1c1c1c" }, { name: "Blue", hex: "#2255A4" },
     { name: "Maroon", hex: "#7A1F2B" }, { name: "Green", hex: "#1F7A45" },
-    { name: "Cambridge Blue", hex: "#A3C1AD" }, { name: "Yellow", hex: "#F0D43A" }
+    { name: "Yellow", hex: "#F0D43A" }
   ]}},
   "Accented": { colors: { "11oz": [
     { name: "Black", hex: "#1c1c1c" }, { name: "Blue", hex: "#2255A4" },
     { name: "Maroon", hex: "#7A1F2B" }, { name: "Green", hex: "#1F7A45" },
     { name: "Yellow", hex: "#F0D43A" }, { name: "Pink", hex: "#E0457B" },
-    { name: "Orange", hex: "#F0701A" }, { name: "Cambridge Blue", hex: "#A3C1AD" },
+    { name: "Orange", hex: "#F0701A" },
     { name: "Light Green", hex: "#5FBF5F" }, { name: "Red", hex: "#D62828" },
     { name: "Light Blue", hex: "#5FA8DE" }
   ], "15oz": [
@@ -9860,12 +9836,6 @@ async function runAutoMockupFetch(){
 
     const productId = startData.productId;
     const variantId = startData.variantId;
-    const startDiagnostic = startData.diagnostic || {};
-    lastMockupDebugData = {
-      ...startDiagnostic,
-      requestedVariantId: variantId,
-      debugImages: []
-    };
     let mockupUrl = null;
     let mockupUrls = [];
     const maxTries = 40;
@@ -9885,11 +9855,8 @@ async function runAutoMockupFetch(){
         mockupUrl = checkData.mockupUrl;
         mockupUrls = Array.isArray(checkData.mockupUrls) ? checkData.mockupUrls : [];
         lastMockupDebugData = {
-          ...lastMockupDebugData,
-          requestedVariantId: checkData.requestedVariantId ?? variantId,
-          debugImages: Array.isArray(checkData.debugImages) ? checkData.debugImages : [],
-          blankViews: Array.isArray(checkData.blankViews) ? checkData.blankViews : [],
-          temporaryProduct: checkData.temporaryProduct || null
+          requestedVariantId: checkData.requestedVariantId,
+          debugImages: Array.isArray(checkData.debugImages) ? checkData.debugImages : []
         };
         break;
       }
@@ -9935,13 +9902,7 @@ async function runAutoMockupFetch(){
     if (lastMockupDebugData) {
       const dbg = document.createElement('div');
       dbg.style.cssText = 'margin-top:10px;padding:8px;background:#0a0a1a;border:1px solid #444;border-radius:8px;font-family:monospace;font-size:11px;color:#9fd;white-space:pre-wrap;word-break:break-all';
-      const lines = [
-        `Picker selected: ${lastMockupDebugData.selectedColor ?? '—'}`,
-        `Selected size: ${lastMockupDebugData.selectedSize ?? '—'}`,
-        `Resolved variantId: ${lastMockupDebugData.resolvedVariantId ?? lastMockupDebugData.requestedVariantId ?? '—'}`,
-        `Printify title: ${lastMockupDebugData.resolvedVariantTitle ?? '—'}`,
-        ''
-      ];
+      const lines = [`Requested variantId: ${lastMockupDebugData.requestedVariantId}`, ''];
       lastMockupDebugData.debugImages.forEach((img, i) => {
         const matched = img.variant_ids.includes(lastMockupDebugData.requestedVariantId);
         lines.push(`Image ${i+1}: variant_ids=[${img.variant_ids.join(', ')}] ${matched ? '✅ MATCHES' : '❌ no match'}`);
