@@ -1,3 +1,4 @@
+// BUILD MARKER: cambridge-blue-fix-aug24-2026
 export const config = {
   maxDuration: 60,
 };
