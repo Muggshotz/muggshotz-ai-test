@@ -1,3 +1,4 @@
+// BUILD MARKER: cambridge-blue-fix-aug24-2026
 // BUILD-MARKER: LIVE-EXACT-MUG-VARIANT-RESOLUTION-v4
 // If you can see this comment on GitHub, this exact paste landed.
 import sharp from "sharp";
