@@ -1,4 +1,4 @@
-<!-- BUILD MARKER: scroll-landing-fix-aug24-2026 -->
+<!-- BUILD MARKER: needles-finale-watchdog-fix-aug24-2026 -->
 <!DOCTYPE html>
 <html lang="en">
 <head><link rel="manifest" href="needles-manifest.json">
@@ -1474,6 +1474,7 @@ let needlesMainClipCount = 0;
 let needlesLastRandomClip = null;
 let needlesFinishedImageUrl = null;
 let needlesPresentationDone = null;
+let needlesWatchdogTimer = null;
 let needlesSafetyTimer = null;
 let needlesOriginalReferenceImage = null;
 
@@ -1528,6 +1529,8 @@ function needlesResetSession(){
   needlesPresentationDone=null;
   clearTimeout(needlesSafetyTimer);
   needlesSafetyTimer=null;
+  clearTimeout(needlesWatchdogTimer);
+  needlesWatchdogTimer=null;
   needlesBuildPairPlan();
 }
 
@@ -1558,6 +1561,8 @@ function needlesFinishPresentation(){
   needlesFinalePlaying=false;
   clearTimeout(needlesSafetyTimer);
   needlesSafetyTimer=null;
+  clearTimeout(needlesWatchdogTimer);
+  needlesWatchdogTimer=null;
 
   const layers=[needlesActiveLayer,needlesIdleLayer].filter(Boolean);
   layers.forEach(layer=>{
@@ -1668,6 +1673,27 @@ function needlesPlayFile(filename){
   needlesApplyClipOverride(incoming,filename);
 
   let started=false;
+  let advanced=false;
+  clearTimeout(needlesWatchdogTimer);
+
+  // WATCHDOG FIX (Aug 2026, Alyx's find): if this clip's onended/onerror
+  // never fires -- a real, observed browser quirk with these video
+  // elements, same family as the earlier stale-duration and duplicate-
+  // canplay bugs already fixed elsewhere in this rotation -- the whole
+  // presentation chain used to freeze silently forever, permanently
+  // hiding the approve buttons after a real generation completed (no
+  // error, no console warning, just stuck on "Done in Xs"). Every clip
+  // in the rotation runs under 6s, so 9s is a generous ceiling that only
+  // ever fires when a clip has genuinely gotten stuck, not during normal
+  // playback.
+  function safeAdvance(){
+    if(advanced)return;
+    advanced=true;
+    clearTimeout(needlesWatchdogTimer);
+    needlesAdvance();
+  }
+  needlesWatchdogTimer=setTimeout(safeAdvance,9000);
+
   incoming.oncanplay=()=>{
     if(started)return;
     started=true;
@@ -1683,8 +1709,8 @@ function needlesPlayFile(filename){
     [needlesActiveLayer,needlesIdleLayer]=[incoming,outgoing];
   };
 
-  incoming.onended=()=>needlesAdvance();
-  incoming.onerror=()=>needlesAdvance();
+  incoming.onended=safeAdvance;
+  incoming.onerror=safeAdvance;
 }
 
 function needlesAdvance(){
