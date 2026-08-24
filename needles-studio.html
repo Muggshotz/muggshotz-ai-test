@@ -666,12 +666,6 @@ body.product-focus .card:not(#productCard){opacity:.35;filter:brightness(.6) sat
   <img id="mockupLightboxImg" class="mockup-lightbox-img" alt="Enlarged mockup"/>
   <button class="mockup-lightbox-arrow mockup-lightbox-arrow-right" id="mockupLightboxNext" onclick="mockupLightboxNext()" aria-label="Next angle">›</button>
   <div class="mockup-lightbox-counter" id="mockupLightboxCounter"></div>
-  <div id="mockupBlankVariantPanel" style="display:none;position:absolute;left:18px;top:18px;z-index:6;width:min(30vw,260px);max-width:260px;padding:8px;border-radius:10px;border:2px solid #7ee0b8;background:rgba(5,10,18,.96);box-shadow:0 4px 20px rgba(0,0,0,.65)">
-    <div style="color:#baf7df;font:700 11px/1.25 monospace;margin-bottom:6px;text-align:center">PRINTIFY PRINT-AREA VIEW (NOT PHYSICAL MUG PHOTO)</div>
-    <img id="mockupBlankVariantImg" alt="Printify blank variant view before artwork" style="display:block;width:100%;max-height:34vh;object-fit:contain;background:#fff;border-radius:7px"/>
-    <div id="mockupBlankVariantMeta" style="margin-top:6px;color:#baf7df;font:10px/1.3 monospace;word-break:break-all"></div>
-  </div>
-  <div id="mockupVariantDiagnostic" style="display:none;position:absolute;left:50%;bottom:92px;transform:translateX(-50%);z-index:5;width:min(92vw,720px);max-height:28vh;overflow:auto;padding:10px 12px;border-radius:10px;border:2px solid #29a3ff;background:rgba(5,10,18,.96);color:#dff6ff;font:12px/1.35 monospace;white-space:pre-wrap;text-align:left;box-shadow:0 4px 20px rgba(0,0,0,.65)"></div>
   <button type="button" id="mockupLightboxReturn" class="generate-btn" style="display:none;position:absolute;left:50%;bottom:24px;transform:translateX(-50%);width:auto;padding:.8rem 1.6rem" onclick="returnFromFinalMockup()">↩️ Return</button>
 </div>
 <div class="header">
@@ -7816,95 +7810,9 @@ let currentMockupUrls=[];
 let lastMockupDebugData=null;
 let currentMockupIndex=0;
 
-function renderMockupVariantDiagnostic(){
-  const box=document.getElementById('mockupVariantDiagnostic');
-  if(!box)return;
-  const d=lastMockupDebugData;
-  if(!d){box.style.display='none';box.textContent='';return;}
+function renderMockupVariantDiagnostic(){}
 
-  const lines=[
-    'TEMP DIAGNOSTIC — PRINTIFY VARIANT TRACE',
-    `Picker selected: ${d.selectedColor ?? '—'}`,
-    `Selected size: ${d.selectedSize ?? '—'}`,
-    `Product key: ${d.selectedProductKey ?? '—'}`,
-    `Blueprint / provider: ${d.blueprintId ?? '—'} / ${d.printProviderId ?? '—'}`,
-    `Resolved variant ID: ${d.resolvedVariantId ?? d.requestedVariantId ?? '—'}`,
-    `Printify variant title: ${d.resolvedVariantTitle ?? '—'}`,
-    `Printify variant enabled: ${d.resolvedVariantEnabled == null ? '—' : String(d.resolvedVariantEnabled)}`,
-    '',
-    'Returned mockup image variant_ids:'
-  ];
-  const requested=d.resolvedVariantId ?? d.requestedVariantId;
-  const imgs=Array.isArray(d.debugImages)?d.debugImages:[];
-  if(!imgs.length){
-    lines.push('(none reported)');
-  } else {
-    imgs.forEach((img,i)=>{
-      const ids=Array.isArray(img.variant_ids)?img.variant_ids:[];
-      const matched=requested!=null && ids.includes(requested);
-      lines.push(`Image ${i+1}: [${ids.join(', ')}] ${matched?'✅ MATCHES RESOLVED VARIANT':'❌ different variant'}`);
-      lines.push(`  position=${img.position ?? '—'} default=${img.is_default ? 'yes' : 'no'}`);
-      lines.push(`  src=${img.src ?? '—'}`);
-    });
-  }
-  const blanks=Array.isArray(d.blankViews)?d.blankViews:[];
-  lines.push('', 'Pre-art blank views for resolved variant:');
-  if(!blanks.length){
-    lines.push('(none reported by Printify)');
-  } else {
-    blanks.forEach((v,i)=>{
-      lines.push(`Blank ${i+1}: ${v.label || '—'} / ${v.position || '—'} / variants=[${(v.variant_ids||[]).join(', ')}]`);
-      lines.push(`  src=${v.src || '—'}`);
-    });
-  }
-  const tp=d.temporaryProduct || null;
-  lines.push('', 'ACTUAL TEMPORARY PRODUCT STORED BY PRINTIFY:');
-  if(!tp){
-    lines.push('(not reported)');
-  } else {
-    lines.push(`Product ID: ${tp.id ?? '—'}`);
-    lines.push(`Product title: ${tp.title || '—'}`);
-    lines.push(`Stored blueprint / provider: ${tp.blueprint_id ?? '—'} / ${tp.print_provider_id ?? '—'}`);
-    lines.push(`Requested variant: ${tp.requested_variant_id ?? '—'} | found in stored product: ${tp.requested_variant_found ? 'YES' : 'NO'}`);
-    const rv=tp.requested_variant;
-    if(rv){
-      lines.push(`Stored requested variant title: ${rv.title || '—'}`);
-      lines.push(`Stored requested variant enabled: ${rv.is_enabled == null ? '—' : String(rv.is_enabled)}`);
-      lines.push(`Stored requested variant options: ${rv.options == null ? '—' : JSON.stringify(rv.options)}`);
-    }
-    const vars=Array.isArray(tp.variants)?tp.variants:[];
-    lines.push(`Stored variants (${vars.length}):`);
-    vars.forEach((v,i)=>{
-      lines.push(`  ${i+1}. id=${v.id ?? '—'} title=${v.title || '—'} enabled=${v.is_enabled == null ? '—' : String(v.is_enabled)} options=${v.options == null ? '—' : JSON.stringify(v.options)}`);
-    });
-    const pas=Array.isArray(tp.print_areas)?tp.print_areas:[];
-    lines.push(`Stored print areas (${pas.length}):`);
-    pas.forEach((pa,i)=>{
-      lines.push(`  ${i+1}. variant_ids=[${(pa.variant_ids||[]).join(', ')}]`);
-      (pa.placeholders||[]).forEach(ph=>lines.push(`     position=${ph.position || '—'} image_ids=[${(ph.image_ids||[]).join(', ')}]`));
-    });
-  }
-  box.textContent=lines.join('\n');
-  box.style.display='block';
-}
-
-function renderBlankVariantPreview(){
-  const panel=document.getElementById('mockupBlankVariantPanel');
-  const img=document.getElementById('mockupBlankVariantImg');
-  const meta=document.getElementById('mockupBlankVariantMeta');
-  if(!panel||!img||!meta)return;
-  const blanks=Array.isArray(lastMockupDebugData?.blankViews)?lastMockupDebugData.blankViews:[];
-  const first=blanks[0];
-  if(!first?.src){
-    panel.style.display='none';
-    img.removeAttribute('src');
-    meta.textContent='';
-    return;
-  }
-  img.src=first.src;
-  meta.textContent=`${first.label || 'Blank view'} • ${first.position || '—'} • variant_ids=[${(first.variant_ids||[]).join(', ')}]`;
-  panel.style.display='block';
-}
+function renderBlankVariantPreview(){}
 
 function openMockupLightbox(index){
   if(!currentMockupUrls.length)return;
