@@ -1500,6 +1500,7 @@ let needlesFinishedImageUrl = null;
 let needlesPresentationDone = null;
 let needlesWatchdogTimer = null;
 let needlesSafetyTimer = null;
+let needlesHardCeilingTimer = null;
 let needlesOriginalReferenceImage = null;
 
 function needlesInitLayers(){
@@ -1555,6 +1556,8 @@ function needlesResetSession(){
   needlesSafetyTimer=null;
   clearTimeout(needlesWatchdogTimer);
   needlesWatchdogTimer=null;
+  clearTimeout(needlesHardCeilingTimer);
+  needlesHardCeilingTimer=null;
   needlesBuildPairPlan();
 }
 
@@ -1587,6 +1590,8 @@ function needlesFinishPresentation(){
   needlesSafetyTimer=null;
   clearTimeout(needlesWatchdogTimer);
   needlesWatchdogTimer=null;
+  clearTimeout(needlesHardCeilingTimer);
+  needlesHardCeilingTimer=null;
 
   const layers=[needlesActiveLayer,needlesIdleLayer].filter(Boolean);
   layers.forEach(layer=>{
@@ -1855,6 +1860,8 @@ function stopNeedlesStage(){
   needlesPhase='stopped';
   clearTimeout(needlesSafetyTimer);
   needlesSafetyTimer=null;
+  clearTimeout(needlesHardCeilingTimer);
+  needlesHardCeilingTimer=null;
 
   const wrap=document.getElementById('needlesStageWrap');
   if(wrap)wrap.classList.remove('visible');
@@ -1884,6 +1891,27 @@ function presentFinishedNeedlesArt(imageUrl,onDone){
       needlesPlayFile(needlesEndingQueue.shift());
     }
   },30000);
+
+  // HARD CEILING: the safety timer above deliberately backs off once
+  // the finale phase has started (needlesPhase!=='finale' in its own
+  // condition), leaving the per-clip 9s watchdog in needlesPlayFile as
+  // the only thing standing between a stuck ending clip and the
+  // customer being stranded on "Done in Xs" forever, with no way to
+  // reach their mockup -- a real, reported case of exactly that
+  // happening. This fires once, well past even a worst-case full
+  // ending-clip rotation, and forces the presentation to actually
+  // finish (revealing the approve buttons) if it somehow still hasn't,
+  // regardless of what phase the state machine is stuck in.
+  // needlesFinishPresentation() already guards against running twice
+  // (returns immediately if needlesPhase is already 'stopped'), so this
+  // is a safe no-op on the normal, successful path.
+  clearTimeout(needlesHardCeilingTimer);
+  needlesHardCeilingTimer=setTimeout(()=>{
+    if(needlesPhase!=='stopped'){
+      console.error('Needles presentation never completed on its own -- forcing it to finish so the customer isn\'t stranded.');
+      needlesFinishPresentation();
+    }
+  },45000);
 }
 let refImageAData=null, refImageBData=null;
 let previousImageData=null;
