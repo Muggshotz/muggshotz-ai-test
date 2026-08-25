@@ -676,6 +676,14 @@ body.product-focus .card:not(#productCard){opacity:.35;filter:brightness(.6) sat
     Your browser does not support the video tag.
   </video>
 </div>
+<script>
+document.getElementById('heroVideo').addEventListener('ended',()=>{
+  setTimeout(()=>{
+    const target=document.getElementById('uploadPhotoCard');
+    if(target)target.scrollIntoView({behavior:'smooth',block:'start'});
+  },5000);
+});
+</script>
 <div class="tagline">YOUR HONEY. OUR FUNNY.</div>
 <div class="main">
 
