@@ -876,7 +876,7 @@ document.getElementById('heroVideo').addEventListener('ended',()=>{
 </div>
 
 <div id="mugStyleLockOverlay" class="step-lock-overlay" style="display:none">
-<div class="card" id="mugStyleCard" style="max-width:420px;width:100%;margin:auto;position:relative;max-height:90vh;overflow-y:auto">
+<div class="card" id="mugStyleCard" style="max-width:420px;width:100%;margin:auto;position:relative;max-height:90vh;overflow-y:hidden">
 <div class="card-title">🎨 Coffee Mug Style &amp; Color</div>
 <div class="note-prominent" id="mugStyleCardNote" style="margin-top:0;margin-bottom:.9rem">Pick a size above to see pricing for each style.</div>
 <div class="grid3" id="preGenMugStyleGrid"></div>
@@ -2045,6 +2045,10 @@ function startPhotoGuide(){
   clearTimeout(forkRevealTimer);
   const photoCard=document.getElementById('uploadPhotoCard');
   if(photoCard)photoCard.scrollIntoView({behavior:'smooth',block:'start'});
+  forkRevealTimer=setTimeout(()=>{
+    const warningEl=document.getElementById('startOverBtn');
+    if(warningEl)scrollToStableBottom(warningEl,16,15);
+  },5000);
 }
 
 function showPostUploadFork(){
@@ -4378,7 +4382,7 @@ function showDesignMethodCard(){
   guidedScrollInProgress=true;
   requestAnimationFrame(()=>requestAnimationFrame(()=>{
     const rect=card.getBoundingClientRect();
-    const targetY=window.scrollY+rect.top-90;
+    const targetY=window.scrollY+rect.top-14;
     window.scrollTo({top:targetY,behavior:'smooth'});
   }));
   setTimeout(()=>{guidedScrollInProgress=false;},900);
@@ -4654,7 +4658,7 @@ function showFaceItCard(){
   snapExpandThrough('faceItCard');
   guidedScrollInProgress=true;
   const faceItCardEl=document.getElementById('faceItCard');
-  scrollToStableTop(faceItCardEl,90,15);
+  scrollToStableTop(faceItCardEl,14,15);
   setTimeout(()=>{guidedScrollInProgress=false;},2200);
 }
 
