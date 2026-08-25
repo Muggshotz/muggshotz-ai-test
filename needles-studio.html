@@ -1913,7 +1913,6 @@ function scheduleOpeningGuide(delay){
 let photoGuideTimer=null;
 let photoGuideActive=false;
 let forkRevealTimer=null;
-let designMethodLingerTimer=null;
 let coverMePanelLingerTimer=null;
 
 function schedulePhotoGuideAdvance(delay){
@@ -2051,7 +2050,6 @@ function suspendGuidedScrollsForGeneration(){
   clearTimeout(openingGuideTimer);
   clearTimeout(photoGuideTimer);
   clearTimeout(forkRevealTimer);
-  clearTimeout(designMethodLingerTimer);
   openingGuideDone=true;
   photoGuideActive=false;
   guidedScrollInProgress=false;
@@ -4462,15 +4460,6 @@ function showDesignMethodCard(){
     window.scrollTo({top:targetY,behavior:'smooth'});
   }));
   setTimeout(()=>{guidedScrollInProgress=false;},900);
-  // If the customer hasn't picked a tile after ~3s, nudge the view
-  // down once to reveal more of the tile list -- cancelled the moment
-  // they tap anything (pickDesignMethod), never fires twice.
-  clearTimeout(designMethodLingerTimer);
-  designMethodLingerTimer=setTimeout(()=>{
-    const tiles=document.getElementById('designMethodTiles');
-    if(!tiles||card.style.display==='none'||tiles.style.display==='none')return;
-    tiles.scrollIntoView({behavior:'smooth',block:'end'});
-  },3000);
 }
 
 // Tapping a prop tile. If Design By Description is checked, the
@@ -4480,7 +4469,6 @@ function showDesignMethodCard(){
 // of its old default (productCard). If unchecked, they go straight
 // to the method's screen.
 function pickDesignMethod(method){
-  clearTimeout(designMethodLingerTimer);
   selectedDesignMethod=method;
   document.querySelectorAll('#designMethodCard .btn-select').forEach(b=>b.classList.remove('selected'));
   const btnId={coverMe:'designMethodCoverMeBtn',faceIt:'designMethodFaceItBtn',homeSweetHome:'designMethodHomeBtn'}[method];
@@ -4513,7 +4501,6 @@ function toggleDesignByDescriptionInfo(){
 // Checkbox checked with no prop tile picked -- description-only path,
 // ends at the Edge-Treatment step rather than any prop screen.
 function continueWithDescriptionOnly(){
-  clearTimeout(designMethodLingerTimer);
   ideaReturnTarget='descriptionOnly';
   document.getElementById('designMethodCard').style.display='none';
   document.body.classList.remove('design-method-focus');
@@ -4524,7 +4511,6 @@ function continueWithDescriptionOnly(){
 }
 
 function designMethodBack(){
-  clearTimeout(designMethodLingerTimer);
   document.getElementById('designMethodCard').style.display='none';
   document.body.classList.remove('design-method-focus');
   mugColorFinishedPreGen=false;
