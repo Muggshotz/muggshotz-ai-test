@@ -1218,6 +1218,7 @@ Would you like to try out <span style="color:#7ab8ff">some of our fun props?</sp
 <div class="note-prominent" style="margin-top:0;margin-bottom:.9rem">Happy with just this one picture? We'll gladly take you to checkout. Want to try a few more designs first? If you're out of free tokens, a $5 Preview Reservation unlocks more tokens to keep creating — that $5 isn't an extra charge, it comes straight off your product's price at checkout. Whatever you end up with, your exact total (including any charge for extra printed designs, or an image on both sides) is always shown before you pay.</div>
 <div id="positionHolderRow" style="display:flex;align-items:flex-start;gap:6px;justify-content:center;flex-wrap:nowrap"></div>
 <div id="wraparoundStandbyPrompt" class="note mug-select-flash" style="display:none">⏳ Please Stand By While Panoramic Panels Are Being Completed</div>
+<button type="button" class="generate-btn" id="mugPanelsContinueBtn" style="display:none;margin-top:1rem" onclick="continueFromMugPanels()">✅ Continue</button>
 
 <div id="accessorizeCard" style="display:none;margin-top:1.1rem;padding-top:1.1rem;border-top:1px dashed #333">
 <div class="card-title">🖼️ Add a Frame?</div>
@@ -7131,9 +7132,18 @@ async function approveDesign(allThree){
   // choice. Nothing to warn about or composite here anymore.
 
   const order = getSlotOrder();
+  const slotMode = getSlotMode();
   if(allThree){
     order.forEach(pos => { placements[pos] = currentDesignId; });
     pendingSlotTarget=null;
+  } else if(slotMode==='three' && !pendingSlotTarget){
+    // Coffee mug default: a freshly approved design goes straight onto
+    // Left AND Right automatically -- Center is deliberately left alone.
+    // Center's default is "no image", and that's a real, finished
+    // choice, not an unfinished one. The customer can still change any
+    // of the three with one tap each (here or on "My Designs" below).
+    placements.left = currentDesignId;
+    placements.right = currentDesignId;
   } else {
     let target=(pendingSlotTarget && order.includes(pendingSlotTarget) && !placements[pendingSlotTarget])?pendingSlotTarget:order.find(p=>!placements[p]);
     pendingSlotTarget=null;
@@ -7154,18 +7164,24 @@ async function approveDesign(allThree){
   updatePlacementSummary();
   restoreFrameCardsToHome();
 
-  // NEW (Aug 2026, Alyx's flow redesign): coffee mug (both wraparound
-  // and three-panel) is now on the new post-generation flow -- once all
-  // required panels are approved, move to the new Reveal stage instead
-  // of the old "Design Your Product" panel view. Every other product is
-  // untouched for now, still landing on positionHolderCard as before,
-  // pending its own migration to this new flow in a later pass.
-  const slotsNowFilled=getSlotOrder().every(pos=>placements[pos]);
-  if(product==='mug' && slotsNowFilled){
-    enterRevealStage();
-  } else {
-    document.getElementById('positionHolderCard').scrollIntoView({behavior:'smooth',block:'start'});
-  }
+  // UPDATED: coffee mugs no longer auto-advance into the Reveal stage
+  // from here. Left/Right are addressed automatically (auto-filled
+  // above) and Center is addressed by its own default (intentionally
+  // empty unless the customer adds something), so nothing here still
+  // needs to happen before moving on -- the customer presses the
+  // explicit Continue button on this screen (continueFromMugPanels(),
+  // shown/hidden by renderPositionHolder()) whenever they're ready.
+  document.getElementById('positionHolderCard').scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+// Explicit "done with panel picks" action for the coffee mug Three
+// Panels flow -- replaces the old implicit auto-advance that used to
+// fire the moment every slot happened to be filled (which could never
+// fire at all once Center's default became "intentionally empty").
+// Left/Right are guaranteed filled by the time this button is visible
+// (see renderPositionHolder()), so this can just go.
+function continueFromMugPanels(){
+  enterRevealStage();
 }
 
 async function enterRevealStage(){
@@ -7175,15 +7191,19 @@ async function enterRevealStage(){
   const leftDesign=findDesignById(placements.left);
   const centerDesign=findDesignById(placements.front);
   const rightDesign=findDesignById(placements.right);
-  if(!leftDesign||!centerDesign||!rightDesign)return;
+  revealFlowThreePanel=(mugPrintMode==='three-panel');
+  // Wraparound stitches one continuous scene across all three, so it
+  // genuinely needs Center to exist. Three Panels treats Center as
+  // optional -- its default is "no image", which is already a finished,
+  // valid choice, not a gap waiting to be filled.
+  if(!leftDesign||!rightDesign)return;
+  if(!revealFlowThreePanel && !centerDesign)return;
 
   document.body.classList.add('step-locked');
   choiceOverlay.style.display='flex';
 
-  revealFlowThreePanel=(mugPrintMode==='three-panel');
-
   if(revealFlowThreePanel){
-    revealOriginalArtworkUrls=[leftDesign.url,centerDesign.url,rightDesign.url];
+    revealOriginalArtworkUrls=[leftDesign.url,centerDesign?centerDesign.url:null,rightDesign.url];
   } else {
     try{
       seamRawLeftUrl=leftDesign.url;
@@ -7296,7 +7316,7 @@ function showAccessorizeChoiceState(){
   // show it right away, unframed, rather than waiting until a choice is
   // made. It keeps live-updating from here as frames get tried.
   pendingWraparoundRaw={
-    center:findDesignById(placements.front).url,
+    center:placements.front?findDesignById(placements.front)?.url??null:null,
     left:findDesignById(placements.left).url,
     right:findDesignById(placements.right).url
   };
@@ -7338,7 +7358,11 @@ function chooseRevealPath(choice){
       if(revealThreeRow){
         revealThreeRow.style.display='flex';
         document.getElementById('revealThreePanelLeft').src=revealOriginalArtworkUrls[0];
-        document.getElementById('revealThreePanelCenter').src=revealOriginalArtworkUrls[1];
+        const centerEl=document.getElementById('revealThreePanelCenter');
+        if(centerEl){
+          if(revealOriginalArtworkUrls[1]){centerEl.style.display='';centerEl.src=revealOriginalArtworkUrls[1];}
+          else{centerEl.style.display='none';}
+        }
         document.getElementById('revealThreePanelRight').src=revealOriginalArtworkUrls[2];
       }
     } else {
@@ -7366,7 +7390,7 @@ function openAccessorizeForRevealFlow(){
   if(choicePanel)choicePanel.style.display='none';
   if(committed)committed.style.display='block';
   pendingWraparoundRaw={
-    center:findDesignById(placements.front).url,
+    center:placements.front?findDesignById(placements.front)?.url??null:null,
     left:findDesignById(placements.left).url,
     right:findDesignById(placements.right).url
   };
@@ -7436,6 +7460,7 @@ async function updateRevealFadePreview(){
   if(revealFlowThreePanel){
     const targetIds=['revealThreePanelLeft','revealThreePanelCenter','revealThreePanelRight'];
     await Promise.all(revealOriginalArtworkUrls.map(async(url,i)=>{
+      if(!url)return;
       const faded=await renderFadedArtwork(url,hex,revealFadeAmountPct);
       const el=document.getElementById(targetIds[i]);
       if(el)el.src=faded;
@@ -7469,17 +7494,19 @@ async function bakeFadeIntoDesigns(fadeAmountPct){
   const hex=getSelectedProductColorHex();
   if(revealFlowThreePanel){
     const [leftFaded,centerFaded,rightFaded]=await Promise.all(
-      revealOriginalArtworkUrls.map(u=>renderFadedArtwork(u,hex,fadeAmountPct))
+      revealOriginalArtworkUrls.map(u=>u?renderFadedArtwork(u,hex,fadeAmountPct):Promise.resolve(null))
     );
     const [leftUrl,centerUrl,rightUrl]=await Promise.all([
       uploadCompositedImage(leftFaded),
-      uploadCompositedImage(centerFaded),
+      centerFaded?uploadCompositedImage(centerFaded):Promise.resolve(null),
       uploadCompositedImage(rightFaded)
     ]);
     const leftDesign=findDesignById(placements.left);
     if(leftDesign)leftDesign.url=leftUrl;
-    const centerDesign=findDesignById(placements.front);
-    if(centerDesign)centerDesign.url=centerUrl;
+    if(centerUrl){
+      const centerDesign=findDesignById(placements.front);
+      if(centerDesign)centerDesign.url=centerUrl;
+    }
     const rightDesign=findDesignById(placements.right);
     if(rightDesign)rightDesign.url=rightUrl;
   } else {
@@ -7535,7 +7562,11 @@ function openFrameFadeOverlay(){
     if(threeRow){
       threeRow.style.display='flex';
       document.getElementById('frameFadeThreePanelLeft').src=revealOriginalArtworkUrls[0];
-      document.getElementById('frameFadeThreePanelCenter').src=revealOriginalArtworkUrls[1];
+      const centerEl=document.getElementById('frameFadeThreePanelCenter');
+      if(centerEl){
+        if(revealOriginalArtworkUrls[1]){centerEl.style.display='';centerEl.src=revealOriginalArtworkUrls[1];}
+        else{centerEl.style.display='none';}
+      }
       document.getElementById('frameFadeThreePanelRight').src=revealOriginalArtworkUrls[2];
     }
   } else {
@@ -7555,6 +7586,7 @@ async function updateFrameFadePreview(){
   if(revealFlowThreePanel){
     const targetIds=['frameFadeThreePanelLeft','frameFadeThreePanelCenter','frameFadeThreePanelRight'];
     await Promise.all(revealOriginalArtworkUrls.map(async(url,i)=>{
+      if(!url)return;
       const faded=await renderFadedArtwork(url,hex,frameFadeAmountPct);
       const el=document.getElementById(targetIds[i]);
       if(el)el.src=faded;
@@ -8318,7 +8350,7 @@ async function updateAccessorizePreview(){
       // meant to blend into one continuous scene -- frame (or no frame)
       // gets applied to each one separately, shown side by side.
       hideFrameManualFitControls();
-      const urls=[pendingWraparoundRaw.left,pendingWraparoundRaw.center,pendingWraparoundRaw.right];
+      const urls=[pendingWraparoundRaw.left,pendingWraparoundRaw.center,pendingWraparoundRaw.right].filter(Boolean);
       const framed=(selectedFrame||windowSillChoice)
         ? await Promise.all(urls.map(u=>compositeFrameOntoImageUrl(u)))
         : urls;
@@ -8555,18 +8587,20 @@ async function applyAccessorizeFrame(){
       if(strip)strip.innerHTML='<div class="note" style="width:100%;text-align:center"><span class="spinner"></span>Saving your framed designs...</div>';
       const [leftFramed,centerFramed,rightFramed]=await Promise.all([
         compositeFrameOntoImageUrl(pendingWraparoundRaw.left),
-        compositeFrameOntoImageUrl(pendingWraparoundRaw.center),
+        pendingWraparoundRaw.center?compositeFrameOntoImageUrl(pendingWraparoundRaw.center):Promise.resolve(null),
         compositeFrameOntoImageUrl(pendingWraparoundRaw.right)
       ]);
       const [leftUrl,centerUrl,rightUrl]=await Promise.all([
         uploadCompositedImage(leftFramed),
-        uploadCompositedImage(centerFramed),
+        centerFramed?uploadCompositedImage(centerFramed):Promise.resolve(null),
         uploadCompositedImage(rightFramed)
       ]);
       const leftDesign=findDesignById(placements.left);
       if(leftDesign)leftDesign.url=leftUrl;
-      const centerDesign=findDesignById(placements.front);
-      if(centerDesign)centerDesign.url=centerUrl;
+      if(centerUrl){
+        const centerDesign=findDesignById(placements.front);
+        if(centerDesign)centerDesign.url=centerUrl;
+      }
       const rightDesign=findDesignById(placements.right);
       if(rightDesign)rightDesign.url=rightUrl;
     } else if(pendingWraparoundRaw && (selectedFrame||windowSillChoice)){
@@ -9426,6 +9460,16 @@ function renderPositionHolder(){
       row.appendChild(makeSwapBtn(pos,order[i+1]));
     }
   });
+
+  // Continue button for the coffee mug Three Panels flow: Left and
+  // Right are the only two that are ever required (Center's default of
+  // "no image" is already a finished choice), so this just needs those
+  // two present -- it's never blocked on Center.
+  const continueBtn=document.getElementById('mugPanelsContinueBtn');
+  if(continueBtn){
+    const showContinue = product==='mug' && mugPrintMode==='three-panel' && !!placements.left && !!placements.right;
+    continueBtn.style.display = showContinue ? 'block' : 'none';
+  }
 }
 
 function swapSlots(posA,posB){
