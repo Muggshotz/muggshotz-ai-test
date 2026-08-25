@@ -1996,37 +1996,41 @@ function smoothScrollToTarget(targetId,block='start',after){
 // (the old behavior) could land short of showing the actual image.
 // Scroll to fit BOTH together: center the whole span if it fits in the
 // viewport, otherwise align to the top so the image stays visible.
-function scrollToCoverMeRevealWhenReady(){
+//
+// Polls until the approve row's position actually stops moving before
+// computing the target, the same stability-polling idea scrollToStableTop
+// uses -- the reveal animation (character + finished art compositing
+// into the frame) keeps growing the stage for a bit after it starts, so
+// a fixed one- or two-frame wait could fire before that settles, landing
+// a little high with the row still cut off.
+function scrollToNeedlesRevealWhenReady(approveRowId){
   const stageWrap=document.getElementById('needlesStageWrap');
-  const approveRow=document.getElementById('coverMeEaselApproveRow');
+  const approveRow=document.getElementById(approveRowId);
   if(!stageWrap||!approveRow)return;
-  requestAnimationFrame(()=>requestAnimationFrame(()=>{
-    const topY=stageWrap.getBoundingClientRect().top+window.scrollY;
-    const bottomY=approveRow.getBoundingClientRect().bottom+window.scrollY;
-    const span=bottomY-topY;
-    const vh=window.innerHeight;
-    const target=span<=vh ? topY-(vh-span)/2 : topY;
-    guidedScrollInProgress=true;
-    window.scrollTo({top:target,behavior:'smooth'});
-    setTimeout(()=>{guidedScrollInProgress=false;},750);
-  }));
+  let lastBottom=null;
+  let attempts=0;
+  function check(){
+    attempts++;
+    const bottom=approveRow.getBoundingClientRect().bottom;
+    if(bottom===lastBottom||attempts>=20){
+      const topY=stageWrap.getBoundingClientRect().top+window.scrollY;
+      const bottomY=approveRow.getBoundingClientRect().bottom+window.scrollY;
+      const span=bottomY-topY;
+      const vh=window.innerHeight;
+      const target=span<=vh ? topY-(vh-span)/2 : topY;
+      guidedScrollInProgress=true;
+      window.scrollTo({top:target,behavior:'smooth'});
+      setTimeout(()=>{guidedScrollInProgress=false;},750);
+      return;
+    }
+    lastBottom=bottom;
+    setTimeout(()=>requestAnimationFrame(check),100);
+  }
+  requestAnimationFrame(check);
 }
 
-function scrollToFaceItRevealWhenReady(){
-  const stageWrap=document.getElementById('needlesStageWrap');
-  const approveRow=document.getElementById('faceItEaselApproveRow');
-  if(!stageWrap||!approveRow)return;
-  requestAnimationFrame(()=>requestAnimationFrame(()=>{
-    const topY=stageWrap.getBoundingClientRect().top+window.scrollY;
-    const bottomY=approveRow.getBoundingClientRect().bottom+window.scrollY;
-    const span=bottomY-topY;
-    const vh=window.innerHeight;
-    const target=span<=vh ? topY-(vh-span)/2 : topY;
-    guidedScrollInProgress=true;
-    window.scrollTo({top:target,behavior:'smooth'});
-    setTimeout(()=>{guidedScrollInProgress=false;},750);
-  }));
-}
+function scrollToCoverMeRevealWhenReady(){scrollToNeedlesRevealWhenReady('coverMeEaselApproveRow');}
+function scrollToFaceItRevealWhenReady(){scrollToNeedlesRevealWhenReady('faceItEaselApproveRow');}
 
 function suspendGuidedScrollsForGeneration(){
   clearTimeout(openingGuideTimer);
@@ -5126,40 +5130,12 @@ function backToTrackDescribeFromGoodMorningReveal(){
   pickTrackDescribe();
 }
 
-function scrollToGoodMorningRevealWhenReady(){
-  const stageWrap=document.getElementById('needlesStageWrap');
-  const approveRow=document.getElementById('goodMorningEaselApproveRow');
-  if(!stageWrap||!approveRow)return;
-  requestAnimationFrame(()=>requestAnimationFrame(()=>{
-    const topY=stageWrap.getBoundingClientRect().top+window.scrollY;
-    const bottomY=approveRow.getBoundingClientRect().bottom+window.scrollY;
-    const span=bottomY-topY;
-    const vh=window.innerHeight;
-    const target=span<=vh ? topY-(vh-span)/2 : topY;
-    guidedScrollInProgress=true;
-    window.scrollTo({top:target,behavior:'smooth'});
-    setTimeout(()=>{guidedScrollInProgress=false;},750);
-  }));
-}
+function scrollToGoodMorningRevealWhenReady(){scrollToNeedlesRevealWhenReady('goodMorningEaselApproveRow');}
 
-// Same as scrollToCoverMeRevealWhenReady/scrollToFaceItRevealWhenReady/
+// Same shared helper as scrollToCoverMeRevealWhenReady/scrollToFaceItRevealWhenReady/
 // scrollToGoodMorningRevealWhenReady above, for the general/description
 // generation path (approveRow, not one of the three named props).
-function scrollToStandardRevealWhenReady(){
-  const stageWrap=document.getElementById('needlesStageWrap');
-  const approveRow=document.getElementById('approveRow');
-  if(!stageWrap||!approveRow)return;
-  requestAnimationFrame(()=>requestAnimationFrame(()=>{
-    const topY=stageWrap.getBoundingClientRect().top+window.scrollY;
-    const bottomY=approveRow.getBoundingClientRect().bottom+window.scrollY;
-    const span=bottomY-topY;
-    const vh=window.innerHeight;
-    const target=span<=vh ? topY-(vh-span)/2 : topY;
-    guidedScrollInProgress=true;
-    window.scrollTo({top:target,behavior:'smooth'});
-    setTimeout(()=>{guidedScrollInProgress=false;},750);
-  }));
-}
+function scrollToStandardRevealWhenReady(){scrollToNeedlesRevealWhenReady('approveRow');}
 
 function showCoverMeCard(){
   document.getElementById('designMethodComingSoonCard').style.display='none';
