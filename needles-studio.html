@@ -905,10 +905,12 @@ document.getElementById('heroVideo').addEventListener('ended',()=>{
 <div class="note" style="margin-top:6px;color:#29a3ff">One continuous picture that wraps all the way around.</div>
 </div>
 </div>
-<div id="geminiPanoramaToggleRow" style="display:none;align-items:center;gap:10px;margin-top:.9rem">
-<input type="checkbox" id="geminiPanoramaToggle" onchange="toggleGeminiPanorama()" style="width:20px;height:20px;cursor:pointer"/>
-<label style="margin:0;text-transform:none;font-size:14px;color:#fff;cursor:pointer" onclick="document.getElementById('geminiPanoramaToggle').click()">🧪 Generate all three panels in one shot (experimental — usually better aligned, may look slightly different in style)</label>
-</div>
+<!-- Gemini one-shot panorama option: shelved (Aug 2026, Alyx's call) until
+     there's revenue to justify a paid Gemini plan -- the free tier caps
+     this model's quota at zero. Backend/generation code (api/generate.js,
+     the useGeminiPanorama branch below) is left in place, just
+     unreachable with this checkbox gone, so it's a quick re-enable
+     once billing is worth turning on. -->
 </div>
 
 <div class="card" id="designMethodCard" style="display:none">
@@ -2787,7 +2789,6 @@ async function pickWindowSill(name){
       if(threeBtn)threeBtn.classList.add('selected');
       if(wrapBtn)wrapBtn.classList.remove('selected');
       refreshPanoramaFadeCardVisibility();
-      refreshGeminiPanoramaToggleVisibility();
       showGuidanceAlert('Window Sill Portrait can\'t be combined with Wraparound (it\'s a fixed scene, and stretching it all the way around would distort it) — switched your print format back to Up to Three Panels.');
     }
   }
@@ -3979,7 +3980,6 @@ function pickMugPrintMode(mode){
     showGuidanceAlert('Window Sill Portrait can\'t be combined with Wraparound (it\'s a fixed scene, and stretching it all the way around would distort it) — your Window Sill selection has been cleared.');
   }
   refreshPanoramaFadeCardVisibility();
-  refreshGeminiPanoramaToggleVisibility();
   suspendGuidedScrollsForGeneration();
   if(product==='water bottle'){
     // Variant is already chosen by the time this card is even visible
@@ -4084,7 +4084,6 @@ function pickPreGenTravelVariant(key){
   refreshMugPrintModeVisibility();
   refreshTravelMugColorVisibility();
   refreshPanoramaFadeCardVisibility();
-  refreshGeminiPanoramaToggleVisibility();
   suspendGuidedScrollsForGeneration();
 
   if(is40oz){
@@ -4123,21 +4122,6 @@ function refreshTravelMugVariantVisibility(){
   }
 }
 
-function refreshGeminiPanoramaToggleVisibility(){
-  const row=document.getElementById('geminiPanoramaToggleRow');
-  if(!row)return;
-  const show=(product==='mug' && mugPrintMode==='wraparound');
-  row.style.display=show?'flex':'none';
-  if(!show){
-    useGeminiPanorama=false;
-    const toggle=document.getElementById('geminiPanoramaToggle');
-    if(toggle)toggle.checked=false;
-  }
-}
-
-function toggleGeminiPanorama(){
-  useGeminiPanorama=document.getElementById('geminiPanoramaToggle').checked;
-}
 
 function refreshPanoramaFadeCardVisibility(){
   const card=document.getElementById('panoramaFadeCard');
@@ -6310,7 +6294,6 @@ function pick(el,type){
     refreshMugStyleCardVisibility();
     refreshMugPrintModeVisibility();
     refreshPanoramaFadeCardVisibility();
-    refreshGeminiPanoramaToggleVisibility();
     refreshPhotoPosterVisibility();
     refreshPhoneCaseModelVisibility();
     refreshTravelMugVariantVisibility();
@@ -10383,7 +10366,6 @@ checkForWorkshopRecall();
 refreshApproveRowForMode();
 refreshMugPrintModeVisibility();
 refreshPanoramaFadeCardVisibility();
-refreshGeminiPanoramaToggleVisibility();
 refreshPhotoPosterVisibility();
 refreshPhoneCaseModelVisibility();
 refreshTravelMugVariantVisibility();
@@ -10538,7 +10520,6 @@ function resetEverythingFreshStart(){
   refreshApproveRowForMode();
   refreshMugPrintModeVisibility();
   refreshPanoramaFadeCardVisibility();
-  refreshGeminiPanoramaToggleVisibility();
   refreshPhotoPosterVisibility();
   refreshPhoneCaseModelVisibility();
   refreshTravelMugVariantVisibility();
