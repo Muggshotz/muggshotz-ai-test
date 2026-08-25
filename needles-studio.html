@@ -1901,6 +1901,7 @@ let photoGuideTimer=null;
 let photoGuideActive=false;
 let forkRevealTimer=null;
 let designMethodLingerTimer=null;
+let coverMePanelLingerTimer=null;
 
 function schedulePhotoGuideAdvance(delay){
   clearTimeout(photoGuideTimer);
@@ -5391,6 +5392,16 @@ function showCoverMePanelCard(){
   renderCoverMePanelRows();
   document.getElementById('coverMePanelCard').style.display='block';
   smoothScrollToTarget('coverMePanelCard','center');
+  // Give the customer ~10s to read the panel before nudging further
+  // down toward the Done button -- cancelled if they've already moved
+  // on (card hidden) by the time this fires.
+  clearTimeout(coverMePanelLingerTimer);
+  coverMePanelLingerTimer=setTimeout(()=>{
+    const card=document.getElementById('coverMePanelCard');
+    const doneBtn=document.getElementById('coverMePanelDoneBtn');
+    if(!card||card.style.display==='none'||!doneBtn)return;
+    doneBtn.scrollIntoView({behavior:'smooth',block:'end'});
+  },10000);
 }
 
 function renderCoverMePanelRows(){
@@ -5569,6 +5580,7 @@ function refreshCoverMePanelDoneState(){
 // itself (card, catalog, compositing) is untouched and still fully wired
 // for reuse elsewhere (Design track, other products).
 async function coverMePanelDone(){
+  clearTimeout(coverMePanelLingerTimer);
   document.getElementById('coverMePanelCard').style.display='none';
   finalizeCoverMeMockup();
 }
