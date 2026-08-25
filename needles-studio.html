@@ -3768,7 +3768,6 @@ let pathCanvasReady=false;
 
 let mugPrintMode='three-panel';
 let mugPrintModeTouched=false;
-let printFormatPopupShown=false;
 // Design Method screen (Cover Me / Let's Just Face It / Home Sweet Home
 // / Design By Description) -- replaces the old Three Panels/Wraparound
 // popup as the next decision after Color for coffee mugs specifically.
@@ -4014,22 +4013,24 @@ function pickMugPrintMode(mode){
 function refreshMugPrintModeVisibility(){
   const card=document.getElementById('mugPrintModeCard');
   if(!card)return;
-  let show;
-  if(product==='mug'){
-    // RECONNECTED (Aug 2026): this card was disabled while Wraparound
-    // generation was broken (the three panels didn't reliably align).
-    // Now that the Gemini one-shot panorama path exists as a real fix
-    // for that, Wraparound is a genuine customer-facing option again --
-    // shown once Size/Style/Color are locked in, same trigger point
-    // showDesignMethodCard used to fire at directly.
-    show=mugColorFinishedPreGen;
-  } else if(product==='water bottle'){
-    show=!!preGenTravelVariant && preGenTravelVariant!=='travel-mug-40oz-insulated';
-  } else {
-    show=false;
-  }
-  card.style.display=show?'block':'none';
-  document.body.classList.toggle('print-mode-focus', show && !mugPrintModeTouched);
+  // SHELVED (Aug 2026, Alyx's explicit direction): Wraparound is being
+  // pulled from customer view entirely, for mugs and travel cups alike
+  // -- neither generation method behind it (the classic per-panel one,
+  // nor the Gemini one-shot panorama) is currently good enough to sell
+  // against (image reconciliation never looked natural / Gemini's free
+  // tier can't run at all). This card's only purpose was choosing
+  // between Three Panels and Wraparound, so with Wraparound off the
+  // table there's no real choice left to show -- always hidden now,
+  // mugPrintMode just stays at its 'three-panel' default. All the
+  // underlying generation code (this card's HTML, pickMugPrintMode(),
+  // the classic and Gemini panorama branches in generate(), Fix the
+  // Seams) is left in place and working, just unreachable through the
+  // UI. To bring it back: restore the show= logic this comment
+  // replaced (mug: mugColorFinishedPreGen, water bottle: variant-based)
+  // and revert pickPreGenTravelVariant()/finishPreGenMugColorPick() to
+  // route through this card again instead of skipping straight past it.
+  card.style.display='none';
+  document.body.classList.remove('print-mode-focus');
 }
 
 // Variant must be known before generating — 40oz uses a different strategy than 20oz/14oz.
@@ -4071,45 +4072,26 @@ function renderTravelMugVariantGrid(){
 function pickPreGenTravelVariant(key){
   if(key!==preGenTravelVariant)preGenTravelColor=null;
   preGenTravelVariant=key;
-  const is40oz=key==='travel-mug-40oz-insulated';
-  if(is40oz){
-    // Silently locked to the only real option for this variant -- no
-    // card, no click, no explanation needed since there's nothing to
-    // choose between.
-    mugPrintMode='three-panel';
-    document.getElementById('printModeThreeBtn').classList.add('selected');
-    document.getElementById('printModeWrapBtn').classList.remove('selected');
-  }
+  // SHELVED (Aug 2026, Alyx's explicit direction): Wraparound is off
+  // the table for every travel-cup variant now, not just the 40oz --
+  // silently locked to Three Panels the same way the 40oz always was,
+  // no card, no click, no explanation needed since there's nothing to
+  // choose between.
+  mugPrintMode='three-panel';
+  document.getElementById('printModeThreeBtn').classList.add('selected');
+  document.getElementById('printModeWrapBtn').classList.remove('selected');
   renderTravelMugVariantGrid();
   refreshMugPrintModeVisibility();
   refreshTravelMugColorVisibility();
   refreshPanoramaFadeCardVisibility();
   suspendGuidedScrollsForGeneration();
 
-  if(is40oz){
-    // Print style is skipped entirely for this variant -- go straight to
-    // color (if this variant has one) or Style, same "next real decision
-    // point" pattern used elsewhere.
-    const colorCard=document.getElementById('travelMugColorCard');
-    const scrollTarget=(colorCard && colorCard.style.display!=='none') ? 'travelMugColorCard' : 'styleSectionCard';
-    smoothScrollToTarget(scrollTarget,scrollTarget==='styleSectionCard'?'start':'center');
-  } else {
-    // Every other variant still has a real Three Separate Designs vs.
-    // Wraparound choice to make -- that card is now the next real
-    // decision point instead of color/Style. Same one-time explainer
-    // popup that used to fire at product-pick time now fires here,
-    // where it's actually still needed (see pick() below, which no
-    // longer triggers it for water bottle at all).
-    if(!printFormatPopupShown){
-      printFormatPopupShown=true;
-      showGuidanceAlert(
-        'Pick your print format — "Up to Three Panels" or "Wraparound." This changes how your artwork gets composed, so it needs to be chosen first.',
-        ()=>{ smoothScrollToTarget('mugPrintModeCard','center'); }
-      );
-    } else {
-      smoothScrollToTarget('mugPrintModeCard','center');
-    }
-  }
+  // Print style is skipped entirely -- go straight to color (if this
+  // variant has one) or Style, same "next real decision point" pattern
+  // used elsewhere.
+  const colorCard=document.getElementById('travelMugColorCard');
+  const scrollTarget=(colorCard && colorCard.style.display!=='none') ? 'travelMugColorCard' : 'styleSectionCard';
+  smoothScrollToTarget(scrollTarget,scrollTarget==='styleSectionCard'?'start':'center');
 }
 
 function refreshTravelMugVariantVisibility(){
@@ -4432,12 +4414,11 @@ function finishPreGenMugColorPick(){
   refreshMugStyleCardVisibility();
   refreshMugPrintModeVisibility();
   suspendGuidedScrollsForGeneration();
-  // Size, Style, and Color are now all locked in. RECONNECTED (Aug
-  // 2026): Print Style (Three Panels/Wraparound) is a real choice
-  // again -- see refreshMugPrintModeVisibility -- so that's the next
-  // stop now, not designMethodCard directly. pickMugPrintMode() moves
-  // on to designMethodCard once they've picked.
-  smoothScrollToTarget('mugPrintModeCard','center');
+  // Size, Style, and Color are now all locked in. Print Style (Three
+  // Panels/Wraparound) is shelved -- see refreshMugPrintModeVisibility
+  // -- so straight to Design Method next, mugPrintMode staying at its
+  // 'three-panel' default.
+  showDesignMethodCard();
 }
 
 function showDesignMethodCard(){
