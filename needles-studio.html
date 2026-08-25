@@ -426,6 +426,7 @@ body.final-generate-focus .card:not(#uploadPhotoCard){opacity:.35;filter:brightn
 body.initial-upload-focus .card:not(#uploadPhotoCard){opacity:0;pointer-events:none;transition:opacity .5s}
 body.idea-focus .card:not(#ideaCard){opacity:.35;filter:brightness(.6) saturate(.75);pointer-events:none;transition:opacity .5s,filter .5s}
 body.product-focus .card:not(#productCard){opacity:.35;filter:brightness(.6) saturate(.75);transition:opacity .5s,filter .5s}
+body.design-method-focus .card:not(#designMethodCard){opacity:.28;filter:brightness(.55) saturate(.7);pointer-events:none;transition:opacity .5s,filter .5s}
 .generation-reminder-banner{font-size:14px;font-weight:800;letter-spacing:.3px;text-align:center;padding:14px 10px;margin:1rem 0;border-radius:10px;background:#0d0d0d;border:1px solid #003c8c;animation:mugSelectFlash 1s ease-in-out infinite}
 #creditsModalOverlay{
   background:rgba(2,5,9,.9)!important;
@@ -4424,6 +4425,11 @@ function finishPreGenMugColorPick(){
 function showDesignMethodCard(){
   const card=document.getElementById('designMethodCard');
   if(card)card.style.display='block';
+  // Everything below this step (Product's Post-it/Phone case/etc. grid,
+  // in particular) was staying fully lit and visible here since nothing
+  // ever dimmed it once Product was picked -- every other step in this
+  // flow already dims its neighbors via this same *-focus class pattern.
+  document.body.classList.add('design-method-focus');
   // Wraparound only makes sense for a scene that can plausibly extend
   // left/right (a landscape, a whole room) -- the fun props (Cover Me,
   // Face It, Home Sweet Home) are each a single fixed picture meant to
@@ -4483,6 +4489,8 @@ function pickDesignMethod(method){
   if(designByDescriptionChecked){
     ideaReturnTarget=method;
     document.getElementById('designMethodCard').style.display='none';
+    document.body.classList.remove('design-method-focus');
+    document.body.classList.add('idea-focus');
     smoothScrollToTarget('ideaCard','center',()=>{
       document.getElementById('ideaDesc')?.focus();
     });
@@ -4508,6 +4516,8 @@ function continueWithDescriptionOnly(){
   clearTimeout(designMethodLingerTimer);
   ideaReturnTarget='descriptionOnly';
   document.getElementById('designMethodCard').style.display='none';
+  document.body.classList.remove('design-method-focus');
+  document.body.classList.add('idea-focus');
   smoothScrollToTarget('ideaCard','center',()=>{
     document.getElementById('ideaDesc')?.focus();
   });
@@ -4516,6 +4526,7 @@ function continueWithDescriptionOnly(){
 function designMethodBack(){
   clearTimeout(designMethodLingerTimer);
   document.getElementById('designMethodCard').style.display='none';
+  document.body.classList.remove('design-method-focus');
   mugColorFinishedPreGen=false;
   refreshMugStyleCardVisibility();
   smoothScrollToTarget('preGenMugMockupImg','center');
@@ -4531,6 +4542,7 @@ function designMethodComingSoonBack(){
 // placeholder until its own screen is built.
 function goToDesignMethodScreen(method){
   document.getElementById('designMethodCard').style.display='none';
+  document.body.classList.remove('design-method-focus');
   if(method==='coverMe'){
     showCoverMeCard();
   } else if(method==='faceIt'){
@@ -10417,6 +10429,7 @@ function resetEverythingFreshStart(){
   document.body.classList.remove('final-generate-focus');
   document.body.classList.remove('product-focus');
   document.body.classList.remove('idea-focus');
+  document.body.classList.remove('design-method-focus');
   document.body.classList.add('initial-upload-focus');
   const fadeToggle=document.getElementById('panoramaFadeToggle');
   if(fadeToggle)fadeToggle.checked=false;
