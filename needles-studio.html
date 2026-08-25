@@ -4814,7 +4814,7 @@ async function generateFaceIt(){
       // should land on screen together, no manual scroll needed.
       const faceItApproveRowEl=document.getElementById('faceItEaselApproveRow');
       faceItApproveRowEl.style.display='block';
-      faceItApproveRowEl.scrollIntoView({behavior:'smooth',block:'center'});
+      faceItApproveRowEl.scrollIntoView({behavior:'smooth',block:'nearest'});
     });
     faceItPendingResultUrl=resultImageUrl;
 
@@ -5069,7 +5069,7 @@ async function generateGoodMorning(){
       // Same reasoning as the matching Face It change -- see that comment.
       const goodMorningApproveRowEl=document.getElementById('goodMorningEaselApproveRow');
       goodMorningApproveRowEl.style.display='block';
-      goodMorningApproveRowEl.scrollIntoView({behavior:'smooth',block:'center'});
+      goodMorningApproveRowEl.scrollIntoView({behavior:'smooth',block:'nearest'});
     });
     goodMorningPendingResultUrl=resultImageUrl;
 
@@ -5291,7 +5291,7 @@ async function generateCoverMe(){
       // Same reasoning as the matching Face It change -- see that comment.
       const coverMeApproveRowEl=document.getElementById('coverMeEaselApproveRow');
       coverMeApproveRowEl.style.display='block';
-      coverMeApproveRowEl.scrollIntoView({behavior:'smooth',block:'center'});
+      coverMeApproveRowEl.scrollIntoView({behavior:'smooth',block:'nearest'});
     });
     coverMePendingResultUrl=resultImageUrl;
 
@@ -9392,7 +9392,7 @@ async function makeTestSingleZonePanorama(side){
       // manual scroll to reach. Now brings them into view automatically
       // once the reveal finishes, so the finished piece and the
       // decision to make about it land on screen together.
-      approveRowEl.scrollIntoView({behavior:'smooth',block:'center'});
+      approveRowEl.scrollIntoView({behavior:'smooth',block:'nearest'});
     });
 
   }catch(err){
