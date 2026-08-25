@@ -1314,7 +1314,7 @@ Would you like to try out <span style="color:#7ab8ff">some of our fun props?</sp
 <div class="note" style="margin-top:0;margin-bottom:.6rem">Tap Left, Center, or Right under a design to place it.</div>
 <div id="recentDesignsStrip" style="display:flex;gap:10px;overflow-x:auto;padding-bottom:6px"></div>
 </div>
-<button class="generate-btn cta-muted" id="orderMugBtn" onclick="goToOrder()" style="display:none;margin-top:.9rem">✅ Continue to Order</button>
+<button class="generate-btn cta-muted" id="orderMugBtn" onclick="continueToRealMockup()" style="display:none;margin-top:.9rem">✅ Continue to Order</button>
 </div>
 <div class="card" id="verifyCard" style="display:none">
 <div class="card-title">🎁 Get a Second Free Token</div>
@@ -9576,7 +9576,16 @@ function updateLibraryToggleLabel(){
 function updatePlacementSummary(){
   const assignedCount=['left','front','right'].filter(p=>placements[p]).length;
   const orderBtn=document.getElementById('orderMugBtn');
-  orderBtn.style.display=assignedCount>0?'block':'none';
+  // Coffee mugs have their own dedicated advance path now (the Three
+  // Panels Continue button, or the automatic jump straight into
+  // enterRevealStage() for Wraparound) -- this older button going
+  // straight to goToOrder() would let a mug customer skip the real
+  // Printify mockup preview entirely and check out against a raw AI
+  // image instead of a photo of the actual product. Hidden for mugs;
+  // every other product still uses it, now routed through a real
+  // mockup preview first (continueToRealMockup()) instead of jumping
+  // straight to checkout.
+  orderBtn.style.display=(assignedCount>0 && product!=='mug')?'block':'none';
 
   const showMugOptions = false; // Size/Style/Color are locked in pre-generation now (step-lock-overlay flow) -- re-showing this panel post-gen is redundant
   const showTravelOptions = (assignedCount>0 && product==='water bottle');
@@ -10052,6 +10061,18 @@ async function runAutoMockupFetch(){
     noteEl.className = 'note error';
     noteEl.style.display = 'block';
   }
+}
+
+// Entry point for every product that isn't on the full mug Reveal
+// Stage yet (water bottle and anything else still using the plain
+// positionHolderCard flow) -- gives them the same real-photo-before-
+// you-pay safety net mugs get, just without the Frame/Window Sill
+// decorative extras, which are still mug-Three-Panel-specific.
+// beginFinalMockupFetch() and buildMockupRequestBody() already build
+// their request generically from whatever placements are actually
+// filled, so this needed no changes there -- only a new way in.
+function continueToRealMockup(){
+  beginFinalMockupFetch();
 }
 
 function goToOrder(){
