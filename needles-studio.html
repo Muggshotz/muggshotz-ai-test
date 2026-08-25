@@ -4792,12 +4792,12 @@ async function generateFaceIt(){
       // should land on screen together, no manual scroll needed.
       const faceItApproveRowEl=document.getElementById('faceItEaselApproveRow');
       faceItApproveRowEl.style.display='block';
-      // Land on the full finished image first, un-cropped, with no
-      // immediate scroll -- let the customer actually see the reveal.
-      // Only after a couple seconds does it nudge down to the buttons.
-      setTimeout(()=>{
-        faceItApproveRowEl.scrollIntoView({behavior:'smooth',block:'nearest'});
-      },2000);
+      // scrollToFaceItRevealWhenReady() fits the image AND the approve
+      // row together in one landing spot -- was defined but never
+      // actually called; this delayed scrollIntoView(nearest) sat in its
+      // place instead and, since the browser already considered the row
+      // "in view" more often than not, frequently did nothing at all.
+      scrollToFaceItRevealWhenReady();
     });
     faceItPendingResultUrl=resultImageUrl;
 
@@ -5052,10 +5052,9 @@ async function generateGoodMorning(){
       // Same reasoning as the matching Face It change -- see that comment.
       const goodMorningApproveRowEl=document.getElementById('goodMorningEaselApproveRow');
       goodMorningApproveRowEl.style.display='block';
-      // Same two-stage reveal as Face It -- see that comment.
-      setTimeout(()=>{
-        goodMorningApproveRowEl.scrollIntoView({behavior:'smooth',block:'nearest'});
-      },2000);
+      // Same fix as Face It -- see that comment. scrollToGoodMorningRevealWhenReady()
+      // already existed for this but was never actually called.
+      scrollToGoodMorningRevealWhenReady();
     });
     goodMorningPendingResultUrl=resultImageUrl;
 
@@ -5130,6 +5129,25 @@ function backToTrackDescribeFromGoodMorningReveal(){
 function scrollToGoodMorningRevealWhenReady(){
   const stageWrap=document.getElementById('needlesStageWrap');
   const approveRow=document.getElementById('goodMorningEaselApproveRow');
+  if(!stageWrap||!approveRow)return;
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{
+    const topY=stageWrap.getBoundingClientRect().top+window.scrollY;
+    const bottomY=approveRow.getBoundingClientRect().bottom+window.scrollY;
+    const span=bottomY-topY;
+    const vh=window.innerHeight;
+    const target=span<=vh ? topY-(vh-span)/2 : topY;
+    guidedScrollInProgress=true;
+    window.scrollTo({top:target,behavior:'smooth'});
+    setTimeout(()=>{guidedScrollInProgress=false;},750);
+  }));
+}
+
+// Same as scrollToCoverMeRevealWhenReady/scrollToFaceItRevealWhenReady/
+// scrollToGoodMorningRevealWhenReady above, for the general/description
+// generation path (approveRow, not one of the three named props).
+function scrollToStandardRevealWhenReady(){
+  const stageWrap=document.getElementById('needlesStageWrap');
+  const approveRow=document.getElementById('approveRow');
   if(!stageWrap||!approveRow)return;
   requestAnimationFrame(()=>requestAnimationFrame(()=>{
     const topY=stageWrap.getBoundingClientRect().top+window.scrollY;
@@ -5277,10 +5295,9 @@ async function generateCoverMe(){
       // Same reasoning as the matching Face It change -- see that comment.
       const coverMeApproveRowEl=document.getElementById('coverMeEaselApproveRow');
       coverMeApproveRowEl.style.display='block';
-      // Same two-stage reveal as Face It -- see that comment.
-      setTimeout(()=>{
-        coverMeApproveRowEl.scrollIntoView({behavior:'smooth',block:'nearest'});
-      },2000);
+      // Same fix as Face It -- see that comment. scrollToCoverMeRevealWhenReady()
+      // already existed for this but was never actually called.
+      scrollToCoverMeRevealWhenReady();
     });
     coverMePendingResultUrl=resultImageUrl;
 
@@ -9374,12 +9391,8 @@ async function makeTestSingleZonePanorama(side){
       document.getElementById('toggleImageBtn').style.display='none';
       refreshApproveRowForMode();
       showSingleImageAccessorizeStep();
-      // Land on the full finished image first, un-cropped, with no
-      // immediate scroll -- let the customer actually see the reveal.
-      // Only after a couple seconds does it nudge down to the buttons.
-      setTimeout(()=>{
-        approveRowEl.scrollIntoView({behavior:'smooth',block:'nearest'});
-      },2000);
+      // Same fix as Face It/Cover Me/Home Sweet Home -- see that comment.
+      scrollToStandardRevealWhenReady();
     });
 
   }catch(err){
