@@ -9574,17 +9574,19 @@ function updatePlacementSummary(){
 
 const GEN_MUG_STYLES = {
   "Classic White": { colors: { "11oz": null, "15oz": null } },
-  // RESTORED (Aug 2026): Cambridge Blue was pulled from every style/size
-  // combo below after Alyx found the color/mockup mismatch wasn't unique
-  // to Color Pop 15oz -- it recurred across every combination he tried.
-  // The underlying fix (exact-variant matching + never falling back to
-  // an unrelated Printify image, see api/start-mockup.js and
-  // api/create-printify-order.js) is now in place, so it's back here
-  // for every style/size the product catalog actually supports it in
-  // (Accented stays 11oz-only -- it never had Cambridge Blue at 15oz).
+  // REMOVED AGAIN (Aug 2026): Cambridge Blue was briefly restored after
+  // the exact-variant-matching fix landed and the on-screen debug panel
+  // confirmed our code requests the right Printify variant and Printify
+  // tags its returned photo to that exact same variant -- no mismatch on
+  // our end anymore. But the photo Printify sends back for its own
+  // "Cambridge Blue" variant is a plain vivid blue, not the sage-grey
+  // color the name (and our swatch hex A3C1AD) promises. That's a
+  // Printify-side catalog/photography problem, not something fixable
+  // here. Pulled from every style/size combo below again until that's
+  // confirmed one way or the other against a real Printify listing or
+  // physical sample.
   "Color Pop": { colors: { "11oz": [
     { name: "Black", hex: "#1c1c1c" }, { name: "Blue", hex: "#2255A4" },
-    { name: "Cambridge Blue", hex: "#A3C1AD" },
     { name: "Golden Yellow", hex: "#D4A017" },
     { name: "Green", hex: "#1F7A45" }, { name: "Light Blue", hex: "#5FA8DE" },
     { name: "Light Green", hex: "#5FBF5F" }, { name: "Maroon", hex: "#7A1F2B" },
@@ -9592,7 +9594,6 @@ const GEN_MUG_STYLES = {
     { name: "Red", hex: "#D62828" }, { name: "Yellow", hex: "#F0D43A" }
   ], "15oz": [
     { name: "Black", hex: "#1c1c1c" }, { name: "Blue", hex: "#2255A4" },
-    { name: "Cambridge Blue", hex: "#A3C1AD" },
     { name: "Green", hex: "#1F7A45" },
     { name: "Light Blue", hex: "#5FA8DE" }, { name: "Light Green", hex: "#5FBF5F" },
     { name: "Maroon", hex: "#7A1F2B" }, { name: "Orange", hex: "#F0701A" },
@@ -9603,14 +9604,12 @@ const GEN_MUG_STYLES = {
     { name: "Black", hex: "#1c1c1c" }, { name: "Blue", hex: "#2255A4" },
     { name: "Maroon", hex: "#7A1F2B" }, { name: "Green", hex: "#1F7A45" },
     { name: "Yellow", hex: "#F0D43A" }, { name: "Red", hex: "#D62828" },
-    { name: "Cambridge Blue", hex: "#A3C1AD" },
     { name: "Light Blue", hex: "#5FA8DE" },
     { name: "Orange", hex: "#F0701A" }, { name: "Light Green", hex: "#5FBF5F" },
     { name: "Pink", hex: "#E0457B" }
   ], "15oz": [
     { name: "Black", hex: "#1c1c1c" }, { name: "Blue", hex: "#2255A4" },
     { name: "Maroon", hex: "#7A1F2B" }, { name: "Green", hex: "#1F7A45" },
-    { name: "Cambridge Blue", hex: "#A3C1AD" },
     { name: "Yellow", hex: "#F0D43A" }
   ]}},
   "Accented": { colors: { "11oz": [
@@ -9618,7 +9617,6 @@ const GEN_MUG_STYLES = {
     { name: "Maroon", hex: "#7A1F2B" }, { name: "Green", hex: "#1F7A45" },
     { name: "Yellow", hex: "#F0D43A" }, { name: "Pink", hex: "#E0457B" },
     { name: "Orange", hex: "#F0701A" },
-    { name: "Cambridge Blue", hex: "#A3C1AD" },
     { name: "Light Green", hex: "#5FBF5F" }, { name: "Red", hex: "#D62828" },
     { name: "Light Blue", hex: "#5FA8DE" }
   ], "15oz": [
