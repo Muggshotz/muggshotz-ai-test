@@ -4692,6 +4692,11 @@ function showFaceItCard(){
   renderFaceItGrid();
   updateFaceItPreviewImg();
   document.getElementById('faceItCard').style.display='block';
+  // Dim everything else the instant this card opens, not just after a
+  // template gets picked -- otherwise Product's icon grid (and anything
+  // else above) sits fully lit right through the whole browsing step,
+  // same gap already fixed for Design Method's own props-picker screen.
+  document.body.classList.add('faceitgen-focus');
   snapExpandThrough('faceItCard');
   guidedScrollInProgress=true;
   const faceItCardEl=document.getElementById('faceItCard');
@@ -4979,10 +4984,14 @@ function showGoodMorningCard(){
   renderGoodMorningGrid();
   updateGoodMorningPreviewImg();
   document.getElementById('goodMorningCard').style.display='block';
+  // Same two fixes as Cover Me -- see that comment: dim on open (not
+  // just after a template is picked), and 14 instead of 90 for the
+  // scroll's topMargin, matching Face It's already-correct value.
+  document.body.classList.add('goodmorninggen-focus');
   snapExpandThrough('goodMorningCard');
   guidedScrollInProgress=true;
   const goodMorningCardEl=document.getElementById('goodMorningCard');
-  scrollToStableTop(goodMorningCardEl,90,15);
+  scrollToStableTop(goodMorningCardEl,14,15);
   setTimeout(()=>{guidedScrollInProgress=false;},2200);
 }
 
@@ -5166,6 +5175,11 @@ function showCoverMeCard(){
   renderCoverMeGrid();
   updateCoverMePreviewImg();
   document.getElementById('coverMeCard').style.display='block';
+  // Dim everything else the instant this card opens, not just after a
+  // magazine gets picked -- otherwise Product's icon grid (and anything
+  // else above) sits fully lit right through the whole browsing step,
+  // same gap already fixed for Design Method's own props-picker screen.
+  document.body.classList.add('covermegen-focus');
   // Was scrolling to 'center', which cut off the card's own header at
   // the top when the magazine grid is taller than the viewport. Align
   // to top instead, with the same fixed-currency-bar compensation used
@@ -5173,10 +5187,16 @@ function showCoverMeCard(){
   // -- switched to scrollToStableTop(), which polls until the card's
   // position actually stops shifting (covers layout shifts from OTHER
   // images on the page still loading, not just this card's own).
+  //
+  // FIXED: topMargin was 90 here (and on Good Morning's matching call)
+  // while Face It's identical call already used 14 -- the correct value,
+  // matching the fixed currency bar's real height. That extra 76px of
+  // slack was exactly enough for Product's icon grid to peek through
+  // above this card even with the dimming fix above in place.
   snapExpandThrough('coverMeCard');
   guidedScrollInProgress=true;
   const coverMeCardEl=document.getElementById('coverMeCard');
-  scrollToStableTop(coverMeCardEl,90,15);
+  scrollToStableTop(coverMeCardEl,14,15);
   setTimeout(()=>{guidedScrollInProgress=false;},2200);
 }
 
@@ -10359,6 +10379,12 @@ function resetEverythingFreshStart(){
   document.body.classList.remove('product-focus');
   document.body.classList.remove('idea-focus');
   document.body.classList.remove('design-method-focus');
+  document.body.classList.remove('covermegen-focus');
+  document.body.classList.remove('covermereveal-focus');
+  document.body.classList.remove('faceitgen-focus');
+  document.body.classList.remove('faceitreveal-focus');
+  document.body.classList.remove('goodmorninggen-focus');
+  document.body.classList.remove('goodmorningreveal-focus');
   document.body.classList.add('initial-upload-focus');
   const fadeToggle=document.getElementById('panoramaFadeToggle');
   if(fadeToggle)fadeToggle.checked=false;
