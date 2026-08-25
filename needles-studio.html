@@ -4770,6 +4770,12 @@ async function generateFaceIt(){
   startGenTimer();
   showGenerationInProgress();
   startNeedlesStage();
+  // Hide the clipboard here, before the scroll below locks in its
+  // target -- same fix as Cover Me, see that comment.
+  {
+    const clipboard=document.querySelector('.needles-clipboard');
+    if(clipboard)clipboard.style.display='none';
+  }
   // FIXED (Aug 2026): this used to anchor to the Reset button near the
   // very top of the page instead of the actual easel -- landing back
   // on the plain "Creation in progress" placeholder above it, not
@@ -4814,8 +4820,8 @@ async function generateFaceIt(){
     document.body.classList.remove('generation-active');
     document.body.classList.add('faceitreveal-focus');
     removeGenerationReminders();
-    const clipboard=document.querySelector('.needles-clipboard');
-    if(clipboard)clipboard.style.display='none';
+    // Clipboard is hidden at generation start now, not here -- see the
+    // comment on that line for why.
     stopGenTimerSuccess();
     clearStatus();
     document.getElementById('cancelBtn').style.display='none';
@@ -5049,6 +5055,12 @@ async function generateGoodMorning(){
   startGenTimer();
   showGenerationInProgress();
   startNeedlesStage();
+  // Hide the clipboard here, before the scroll below locks in its
+  // target -- same fix as Cover Me, see that comment.
+  {
+    const clipboard=document.querySelector('.needles-clipboard');
+    if(clipboard)clipboard.style.display='none';
+  }
   // FIXED (Aug 2026): this used to anchor to the Reset button near the
   // very top of the page instead of the actual easel -- landing back
   // on the plain "Creation in progress" placeholder above it, not
@@ -5082,8 +5094,8 @@ async function generateGoodMorning(){
     document.body.classList.remove('generation-active');
     document.body.classList.add('goodmorningreveal-focus');
     removeGenerationReminders();
-    const clipboard=document.querySelector('.needles-clipboard');
-    if(clipboard)clipboard.style.display='none';
+    // Clipboard is hidden at generation start now, not here -- see the
+    // comment on that line for why.
     stopGenTimerSuccess();
     clearStatus();
     document.getElementById('cancelBtn').style.display='none';
@@ -5261,6 +5273,20 @@ async function generateCoverMe(){
   startGenTimer();
   showGenerationInProgress();
   startNeedlesStage();
+  // MOVED here from right before the reveal (Aug 2026): hiding the
+  // clipboard is correct -- the customer doesn't need their original
+  // input photo blown up next to the finished result -- but doing it at
+  // reveal time, AFTER the scroll position below had already been
+  // computed and locked in with the clipboard still visible, removed a
+  // real chunk of page height right as "Done" appeared and shifted the
+  // whole stage upward with no explicit scroll involved -- the "jumps
+  // for no reason the instant it's done" report. Hiding it here instead,
+  // before the scroll below ever runs, means the layout is already in
+  // its final shape for the whole animation -- nothing left to shift.
+  {
+    const clipboard=document.querySelector('.needles-clipboard');
+    if(clipboard)clipboard.style.display='none';
+  }
   // FIXED (Aug 2026): the Reset-button anchor this evolved into was
   // still landing on the plain "Creation in progress" placeholder
   // instead of showing Needles actually painting -- the actual repeated
@@ -5294,11 +5320,6 @@ async function generateCoverMe(){
       signal:currentGenerationController.signal
     });
 
-    // The finished result appears on the actual easel (needlesEaselArt,
-    // via presentFinishedNeedlesArt below) -- the customer doesn't need
-    // to also see their original input photo blown up in the clipboard
-    // above it, so the clipboard is hidden entirely here instead of
-    // being re-rendered with the old photo (an earlier fix's mistake).
     // Was: generation-active removed here, but covermereveal-focus only
     // added later inside presentFinishedNeedlesArt's async reveal
     // callback -- leaving a real gap with NO dimming active at all,
@@ -5308,8 +5329,8 @@ async function generateCoverMe(){
     document.body.classList.remove('generation-active');
     document.body.classList.add('covermereveal-focus');
     removeGenerationReminders();
-    const clipboard=document.querySelector('.needles-clipboard');
-    if(clipboard)clipboard.style.display='none';
+    // Clipboard is hidden at generation start now, not here -- see the
+    // comment on that line for why.
     stopGenTimerSuccess();
     clearStatus();
     document.getElementById('cancelBtn').style.display='none';
