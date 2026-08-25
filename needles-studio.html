@@ -1910,24 +1910,6 @@ function scheduleOpeningGuide(delay){
   },delay);
 }
 
-let photoGuideTimer=null;
-let photoGuideActive=false;
-let forkRevealTimer=null;
-let coverMePanelLingerTimer=null;
-
-function schedulePhotoGuideAdvance(delay){
-  clearTimeout(photoGuideTimer);
-  if(!photoGuideActive)return;
-  photoGuideTimer=setTimeout(()=>{
-    if(!photoGuideActive)return;
-    photoGuideActive=false;
-    smoothScrollToTarget('ideaCard','center',()=>{
-      const idea=document.getElementById('ideaDesc');
-      if(idea)idea.focus({preventScroll:true});
-    });
-  },delay);
-}
-
 // Some cards' true top position keeps shifting for a bit after display:block
 // -- not just from their OWN images loading, but from OTHER images
 // elsewhere on the page (e.g. product icons above them) still loading and
@@ -2048,10 +2030,7 @@ function scrollToFaceItRevealWhenReady(){
 
 function suspendGuidedScrollsForGeneration(){
   clearTimeout(openingGuideTimer);
-  clearTimeout(photoGuideTimer);
-  clearTimeout(forkRevealTimer);
   openingGuideDone=true;
-  photoGuideActive=false;
   guidedScrollInProgress=false;
 }
 
@@ -2064,26 +2043,17 @@ function noteRealCustomerActivity(){
 });
 
 function startPhotoGuide(){
-  photoGuideActive=true;
   // No auto-scroll AWAY from the fork once it's showing, on Alyx's
-  // explicit direction. Was: a 5-second delay before scrolling down to
-  // reveal the fork, landing at a position that cut off the "please
-  // select" warning at the bottom. Now scrolls immediately (the
-  // stability-polling in scrollToStableBottom already waits for layout
-  // to settle, so this doesn't jump the gun), and anchors to the
-  // BOTTOM of the red warning text itself rather than the top of the
-  // card, so the full warning is guaranteed visible along with the
-  // Track 1/2 buttons above it.
+  // explicit direction. Scrolls immediately (the stability-polling in
+  // scrollToStableBottom already waits for layout to settle, so this
+  // doesn't jump the gun), and anchors to the BOTTOM of the red warning
+  // text itself rather than the top of the card, so the full warning is
+  // guaranteed visible along with the Track 1/2 buttons above it.
   clearTimeout(openingGuideTimer);
   openingGuideDone=true;
   showPostUploadFork();
-  clearTimeout(forkRevealTimer);
-  const photoCard=document.getElementById('uploadPhotoCard');
-  if(photoCard)photoCard.scrollIntoView({behavior:'smooth',block:'start'});
-  forkRevealTimer=setTimeout(()=>{
-    const warningEl=document.getElementById('startOverBtn');
-    if(warningEl)scrollToStableBottom(warningEl,16,15);
-  },5000);
+  const warningEl=document.getElementById('startOverBtn');
+  if(warningEl)scrollToStableBottom(warningEl,16,15);
 }
 
 function showPostUploadFork(){
@@ -2096,8 +2066,6 @@ function showPostUploadFork(){
 // generate() already handles fine (falls back to a default polished
 // caricature description when idea is blank).
 function pickTrackProduct(){
-  clearTimeout(forkRevealTimer);
-  photoGuideActive=false;
   document.getElementById('postUploadForkRow').style.display='none';
   document.getElementById('startOverBtn').style.display='none';
   document.body.classList.remove('initial-upload-focus');
@@ -2110,7 +2078,6 @@ function pickTrackProduct(){
 // every upload -- now only fires once the customer deliberately picks
 // this path instead.
 function pickTrackDescribe(){
-  clearTimeout(forkRevealTimer);
   document.getElementById('postUploadForkRow').style.display='none';
   document.getElementById('startOverBtn').style.display='none';
   const styleCard=document.getElementById('styleSectionCard');
@@ -2121,7 +2088,10 @@ function pickTrackDescribe(){
   if(plainGenBtn)plainGenBtn.style.display='';
   document.body.classList.add('idea-focus');
   setTimeout(showIdeaBoxIntroIfNeeded,800);
-  schedulePhotoGuideAdvance(4000);
+  smoothScrollToTarget('ideaCard','center',()=>{
+    const idea=document.getElementById('ideaDesc');
+    if(idea)idea.focus({preventScroll:true});
+  });
 }
 
 function confirmIdeaSatisfied(){
@@ -2683,17 +2653,12 @@ async function pickFrame(name){
       smoothScrollToTarget('frameCatalogSatisfiedBtn','end');
     }
   } else if(selectedFrame){
-    // BUG FIX: the old first-time-visitor "guided tour" timer
-    // (schedulePhotoGuideAdvance, started when a photo is uploaded)
-    // stays armed until Generate is clicked, and ANY scroll/click/touch
-    // on the page re-arms it for another 5 seconds (see
-    // noteRealCustomerActivity). That meant even after this deliberate
-    // scroll landed correctly, a stray touch (like scrolling the Frame
-    // grid itself) could re-trigger the old timer, which would then
-    // silently yank the customer back to the idea box a few seconds
-    // later -- exactly what Alyx saw. Canceling it here, the same way
-    // Generate already does, so a deliberate selection can't get
-    // overridden by a leftover idle nudge.
+    // Cancel any leftover idle-nudge scroll before this deliberate
+    // selection can get overridden by one, same as Generate already
+    // does. (schedulePhotoGuideAdvance, the worst offender here -- it
+    // used to silently yank the customer back to the idea box a few
+    // seconds after a stray touch re-armed it -- is gone now, but this
+    // stays as a general guard against whatever's left.)
     suspendGuidedScrollsForGeneration();
     // Double Mat needs three colors chosen (Outer/Upper/Lower) before a
     // preview means anything -- jumping straight to the photo preview
@@ -5454,16 +5419,6 @@ function showCoverMePanelCard(){
   renderCoverMePanelRows();
   document.getElementById('coverMePanelCard').style.display='block';
   smoothScrollToTarget('coverMePanelCard','center');
-  // Give the customer ~10s to read the panel before nudging further
-  // down toward the Done button -- cancelled if they've already moved
-  // on (card hidden) by the time this fires.
-  clearTimeout(coverMePanelLingerTimer);
-  coverMePanelLingerTimer=setTimeout(()=>{
-    const card=document.getElementById('coverMePanelCard');
-    const doneBtn=document.getElementById('coverMePanelDoneBtn');
-    if(!card||card.style.display==='none'||!doneBtn)return;
-    doneBtn.scrollIntoView({behavior:'smooth',block:'end'});
-  },10000);
 }
 
 function renderCoverMePanelRows(){
@@ -5642,7 +5597,6 @@ function refreshCoverMePanelDoneState(){
 // itself (card, catalog, compositing) is untouched and still fully wired
 // for reuse elsewhere (Design track, other products).
 async function coverMePanelDone(){
-  clearTimeout(coverMePanelLingerTimer);
   document.getElementById('coverMePanelCard').style.display='none';
   finalizeCoverMeMockup();
 }
