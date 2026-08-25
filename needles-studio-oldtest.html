@@ -1,8 +1,11 @@
 <!DOCTYPE html>
 <html lang="en">
 <head><link rel="manifest" href="needles-manifest.json">
-<!-- BUILD-MARKER: wider-seam-slider-range-v12 -->
+<!-- BUILD-MARKER: SHARP-PANELS-FOR-ALIGNMENT-v15 -->
 <!-- If you can see this comment on GitHub, this exact paste landed. -->
+<!-- If your live site's page source does NOT say -->
+<!-- "SHARP-PANELS-FOR-ALIGNMENT-v15" right here, the upload/deploy did -->
+<!-- not take -- re-upload before testing. -->
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Needles' Studio</title>
@@ -535,6 +538,48 @@ body.product-focus .card:not(#productCard){opacity:.35;filter:brightness(.6) sat
   }
 }
 
+/* True up/down sliders for the Left/Right Vertical seam-nudge controls --
+   a sideways slider for an up/down adjustment was confusing to operate
+   (Alyx's report: values changed but the physical drag direction didn't
+   match "up" or "down" at all).
+   FIXED (Aug 2026): the first attempt used writing-mode+direction with a
+   -webkit-appearance fallback -- confirmed by Alyx to render as a normal
+   horizontal slider on Chrome for Android (writing-mode support on range
+   inputs is inconsistent across engines). Replaced with a plain CSS
+   rotate transform instead: this just visually rotates an ordinary
+   horizontal slider 90 degrees, which works identically on every
+   browser since it isn't relying on any special vertical-slider
+   support at all. rotate(-90deg) maps the slider's normal "right = max"
+   direction to "up = max" on screen, so dragging up still raises the
+   value and dragging down still lowers it. */
+.vertical-slider-wrap{
+  width:36px;
+  height:150px;
+  position:relative;
+  margin:0 auto;
+}
+.vertical-slider{
+  position:absolute;
+  top:50%;
+  left:50%;
+  width:150px;
+  height:36px;
+  transform:translate(-50%,-50%) rotate(-90deg);
+  margin:0;
+}
+.vertical-slider-row{
+  display:flex;
+  justify-content:center;
+  gap:2.2rem;
+  margin:10px 0 2px;
+}
+.vertical-slider-col{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:6px;
+}
+
 </style>
 </head>
 <body class="initial-upload-focus">
@@ -882,13 +927,23 @@ body.product-focus .card:not(#productCard){opacity:.35;filter:brightness(.6) sat
 <div class="note" style="margin-top:0;margin-bottom:.9rem">If you see a thin line where the panels meet, drag these until it disappears.</div>
 <img id="seamFixPreviewImg" style="width:100%;border-radius:10px;border:1px solid #003c8c;margin-bottom:.9rem;background:#0d0d0d"/>
 <label style="display:block;margin-bottom:2px">Left Seam <span id="seamLeftVal">0px</span></label>
-<input type="range" id="seamLeftSlider" min="0" max="300" step="1" value="0" oninput="updateSeamFixPreview()" style="width:100%"/>
+<input type="range" id="seamLeftSlider" min="0" max="600" step="1" value="0" oninput="updateSeamFixPreview()" style="width:100%"/>
 <label style="display:block;margin:10px 0 2px">Right Seam <span id="seamRightVal">0px</span></label>
 <input type="range" id="seamRightSlider" min="0" max="300" step="1" value="0" oninput="updateSeamFixPreview()" style="width:100%"/>
-<label style="display:block;margin:10px 0 2px">Left Vertical <span id="seamLeftVertVal">0px</span></label>
-<input type="range" id="seamLeftVertSlider" min="-100" max="100" step="1" value="0" oninput="updateSeamFixPreview()" style="width:100%"/>
-<label style="display:block;margin:10px 0 2px">Right Vertical <span id="seamRightVertVal">0px</span></label>
-<input type="range" id="seamRightVertSlider" min="-100" max="100" step="1" value="0" oninput="updateSeamFixPreview()" style="width:100%"/>
+<div class="vertical-slider-row">
+  <div class="vertical-slider-col">
+    <label>Left Vertical <span id="seamLeftVertVal">0px</span></label>
+    <div class="vertical-slider-wrap">
+      <input type="range" class="vertical-slider" id="seamLeftVertSlider" min="-100" max="100" step="1" value="0" oninput="updateSeamFixPreview()"/>
+    </div>
+  </div>
+  <div class="vertical-slider-col">
+    <label>Right Vertical <span id="seamRightVertVal">0px</span></label>
+    <div class="vertical-slider-wrap">
+      <input type="range" class="vertical-slider" id="seamRightVertSlider" min="-100" max="100" step="1" value="0" oninput="updateSeamFixPreview()"/>
+    </div>
+  </div>
+</div>
 <button type="button" class="generate-btn" style="margin-top:.9rem" onclick="confirmSeamFix()">✅ Satisfied?</button>
 </div>
 </div>
@@ -5865,6 +5920,18 @@ async function compositeFrameAcrossThreePanels(centerUrl,leftUrl,rightUrl){
     if(i===0)trimRightSrc=seamLeftOverlapPx*srcPerDestPx;
     if(i===1){trimLeftSrc=seamLeftOverlapPx*srcPerDestPx;trimRightSrc=seamRightOverlapPx*srcPerDestPx;}
     if(i===2)trimLeftSrc=seamRightOverlapPx*srcPerDestPx;
+    // Safety floor: Left Seam's range was doubled to 600px per Alyx's
+    // request, and combined with a narrow source photo that trim could
+    // in theory eat the entire crop width and leave nothing to draw.
+    // Never let the remaining width fall below 15% of the original --
+    // an extreme, very zoomed-in sliver is still a valid draw; zero or
+    // negative width is not.
+    const minSw=sw*0.15;
+    if(sw-(trimLeftSrc+trimRightSrc)<minSw){
+      const excess=(trimLeftSrc+trimRightSrc)-(sw-minSw);
+      const total=trimLeftSrc+trimRightSrc;
+      if(total>0){trimLeftSrc-=excess*(trimLeftSrc/total);trimRightSrc-=excess*(trimRightSrc/total);}
+    }
     sx+=trimLeftSrc;
     sw-=(trimLeftSrc+trimRightSrc);
     // Left/right panel vertical nudge -- lets the customer slide the outer
@@ -5873,9 +5940,24 @@ async function compositeFrameAcrossThreePanels(centerUrl,leftUrl,rightUrl){
     // that crosses the seam (e.g. a purse handle sitting slightly higher
     // on one panel than the other). Center panel never moves vertically --
     // it's the fixed reference the other two align to.
-    const srcPerDestPy=sh/h;
-    if(i===0)sy=Math.max(0,Math.min(img.naturalHeight-sh,sy+seamLeftVertPx*srcPerDestPy));
-    if(i===2)sy=Math.max(0,Math.min(img.naturalHeight-sh,sy+seamRightVertPx*srcPerDestPy));
+    // FIXED (Aug 2026): this used to shift sy directly, then clamp it to
+    // [0, naturalHeight-sh] -- but sh is usually almost exactly
+    // naturalHeight already (the cover-crop rarely needs much vertical
+    // trim to begin with), so that clamp range was often only a pixel or
+    // two wide regardless of the slider's true -100..100 range: the
+    // slider looked wired in but had nowhere to actually go. Fix:
+    // reserve a fixed 20% vertical zoom-in margin on these two panels
+    // specifically (10% top + 10% bottom) so there's always real room
+    // to pan within, then map the full slider range across that margin.
+    if(i===0||i===2){
+      const vertPx=i===0?seamLeftVertPx:seamRightVertPx;
+      const zoomedSh=sh*0.8;
+      const headroom=sh-zoomedSh;
+      const centeredSy=sy+headroom/2;
+      const offsetFrac=Math.max(-1,Math.min(1,vertPx/100));
+      sy=Math.max(0,Math.min(img.naturalHeight-zoomedSh,centeredSy+offsetFrac*(headroom/2)));
+      sh=zoomedSh;
+    }
     pctx.drawImage(img,sx,sy,sw,sh,i*panelW,0,panelW,h);
   });
 
@@ -5951,13 +6033,30 @@ async function stitchThreePanelsRaw(centerUrl,leftUrl,rightUrl,leftOverlapPx,rig
     if(i===0)trimRightSrc=leftOverlapPx*srcPerDestPx;
     if(i===1){trimLeftSrc=leftOverlapPx*srcPerDestPx;trimRightSrc=rightOverlapPx*srcPerDestPx;}
     if(i===2)trimLeftSrc=rightOverlapPx*srcPerDestPx;
+    // Same safety floor as compositeFrameAcrossThreePanels -- see the
+    // comment there for why this is needed now that Left Seam goes to 600.
+    const minSw=sw*0.15;
+    if(sw-(trimLeftSrc+trimRightSrc)<minSw){
+      const excess=(trimLeftSrc+trimRightSrc)-(sw-minSw);
+      const total=trimLeftSrc+trimRightSrc;
+      if(total>0){trimLeftSrc-=excess*(trimLeftSrc/total);trimRightSrc-=excess*(trimRightSrc/total);}
+    }
     sx+=trimLeftSrc;
     sw-=(trimLeftSrc+trimRightSrc);
     // Same left/right-only vertical nudge as compositeFrameAcrossThreePanels
     // -- kept in sync since these two stitch implementations are independent.
-    const srcPerDestPy=sh/h;
-    if(i===0)sy=Math.max(0,Math.min(img.naturalHeight-sh,sy+leftVertPx*srcPerDestPy));
-    if(i===2)sy=Math.max(0,Math.min(img.naturalHeight-sh,sy+rightVertPx*srcPerDestPy));
+    // Same headroom fix as compositeFrameAcrossThreePanels -- see the
+    // comment there for why the old direct-clamp approach never actually
+    // moved anything.
+    if(i===0||i===2){
+      const vertPx=i===0?leftVertPx:rightVertPx;
+      const zoomedSh=sh*0.8;
+      const headroom=sh-zoomedSh;
+      const centeredSy=sy+headroom/2;
+      const offsetFrac=Math.max(-1,Math.min(1,vertPx/100));
+      sy=Math.max(0,Math.min(img.naturalHeight-zoomedSh,centeredSy+offsetFrac*(headroom/2)));
+      sh=zoomedSh;
+    }
     ctx.drawImage(img,sx,sy,sw,sh,i*panelW,0,panelW,h);
   });
   return canvas.toDataURL('image/jpeg',0.92);
@@ -6722,6 +6821,9 @@ async function makeTestSingleZonePanorama(side){
         panelRole: 'left',
         signal: currentGenerationController.signal
       });
+      // Sharp, unfaded copy kept specifically for pendingWraparoundRaw --
+      // see the matching comment on rawRightUrl below for why.
+      const rawLeftUrl = leftUrl;
       if(!skipEdgeFade) leftUrl = await applyEdgeFadeToImageUrl(leftUrl, {top:true,bottom:true,left:true,right:false});
       placements.left = addToRecentDesigns(leftUrl);
 
@@ -6732,10 +6834,30 @@ async function makeTestSingleZonePanorama(side){
         panelRole: 'right',
         signal: currentGenerationController.signal
       });
+      // FIXED (Aug 2026, Alyx's find): pendingWraparoundRaw used to be
+      // built from these same already-edge-faded leftUrl/rightUrl (and
+      // the faded resultUrl for center) -- but the Fix the Seams screen's
+      // horizontal trim and vertical nudge sliders pan/crop a window
+      // across each panel, and the guaranteed edge fade above is baked
+      // in at each panel's own TRUE edge. Pan away from that exact spot
+      // even slightly and the crop window shows sharp, unfaded interior
+      // instead -- no fade at the new visible edge at all. Root cause of
+      // "the border moves when I move the sliders, and goes missing in
+      // spots." Fix: feed the seam-fix/vertical-alignment/frame pipeline
+      // genuinely sharp, unfaded copies of all three panels instead, kept
+      // separately here (rawLeftUrl, rawResultUrl for center, rawRightUrl)
+      // -- the guaranteed fade above still applies to placements.left/
+      // front/right themselves (the individually saved designs), just no
+      // longer to what Fix the Seams and the frame system actually work
+      // with. The existing Hard/Fade choice screen already fades the
+      // FINAL aligned panorama's true outer edges correctly once you're
+      // done aligning -- it just needed sharp input to fade correctly,
+      // not a rewrite.
+      const rawRightUrl = rightUrl;
       if(!skipEdgeFade) rightUrl = await applyEdgeFadeToImageUrl(rightUrl, {top:true,bottom:true,left:false,right:true});
       placements.right = addToRecentDesigns(rightUrl);
 
-      pendingWraparoundRaw = { left: leftUrl, center: resultUrl, right: rightUrl };
+      pendingWraparoundRaw = { left: rawLeftUrl, center: rawResultUrl, right: rawRightUrl };
 
       document.getElementById('wraparoundStandbyPrompt').style.display='none';
       renderRecentDesigns();
