@@ -3965,11 +3965,10 @@ function pickMugPrintMode(mode){
     const scrollTarget=(colorCard && colorCard.style.display!=='none') ? 'travelMugColorCard' : 'styleSectionCard';
     smoothScrollToTarget(scrollTarget,scrollTarget==='styleSectionCard'?'start':'center');
   } else {
-    // BUG FIX: regular mug (Three Separate Designs / Wraparound) had no
-    // auto-scroll at all after picking -- left the customer stranded on
-    // the same card with no next-step guidance. Style is the next real
-    // decision point.
-    smoothScrollToTarget('generateTokenNote','end');
+    // Coffee mug: Print Style is now the real decision made right
+    // before Design Method (Cover Me / Face It / Home Sweet Home /
+    // description) -- move on to that card next.
+    showDesignMethodCard();
   }
 }
 
@@ -3985,11 +3984,13 @@ function refreshMugPrintModeVisibility(){
   if(!card)return;
   let show;
   if(product==='mug'){
-    // UPDATED: coffee mugs no longer use this Three Panels/Wraparound
-    // card at all -- that decision moved post-generation (see
-    // designMethodCard / finishPreGenMugColorPick). Water bottle is
-    // untouched below and still uses this card as before.
-    show=false;
+    // RECONNECTED (Aug 2026): this card was disabled while Wraparound
+    // generation was broken (the three panels didn't reliably align).
+    // Now that the Gemini one-shot panorama path exists as a real fix
+    // for that, Wraparound is a genuine customer-facing option again --
+    // shown once Size/Style/Color are locked in, same trigger point
+    // showDesignMethodCard used to fire at directly.
+    show=mugColorFinishedPreGen;
   } else if(product==='water bottle'){
     show=!!preGenTravelVariant && preGenTravelVariant!=='travel-mug-40oz-insulated';
   } else {
@@ -4415,13 +4416,12 @@ function finishPreGenMugColorPick(){
   refreshMugStyleCardVisibility();
   refreshMugPrintModeVisibility();
   suspendGuidedScrollsForGeneration();
-  // Size, Style, and Color are now all locked in. UPDATED: the old
-  // "Three Panels/Wraparound" popup no longer fires here for coffee
-  // mugs -- what the image actually IS (Cover Me / Let's Just Face It
-  // / Home Sweet Home / plain description) has to be decided before
-  // where it goes on the mug, so that choice now moves post-generation
-  // instead. This card is shown/scrolled to directly.
-  showDesignMethodCard();
+  // Size, Style, and Color are now all locked in. RECONNECTED (Aug
+  // 2026): Print Style (Three Panels/Wraparound) is a real choice
+  // again -- see refreshMugPrintModeVisibility -- so that's the next
+  // stop now, not designMethodCard directly. pickMugPrintMode() moves
+  // on to designMethodCard once they've picked.
+  smoothScrollToTarget('mugPrintModeCard','center');
 }
 
 function showDesignMethodCard(){
