@@ -8847,11 +8847,10 @@ document.getElementById('cancelBtn').style.display='block';
   suspendGuidedScrollsForGeneration();
 
   const snapNeedlesStageToApprovedFrame=()=>{
-    // UPDATED (Aug 2026, Alyx's request): was anchoring to the needles
-    // stage itself, which scrolled the "Creation in progress" polaroid
-    // card (right above it) out of view above the fold. Anchoring to
-    // the polaroid card instead keeps both visible together.
-    const anchor=document.querySelector('.needles-clipboard');
+    // REVERTED: anchor to the actual Needles easel stage (where the
+    // generation video and finished-art reveal play out), not the
+    // plain "Creation in progress" polaroid placeholder above it.
+    const anchor=document.querySelector('#needlesStageWrap .needles-stage');
     if(!anchor)return;
     const target=(anchor.getBoundingClientRect().top+window.scrollY)-14;
     window.scrollTo(0,Math.max(0,target));
