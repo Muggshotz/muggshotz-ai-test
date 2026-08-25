@@ -912,7 +912,7 @@ document.getElementById('heroVideo').addEventListener('ended',()=>{
 </div>
 
 <div class="card" id="designMethodCard" style="display:none">
-<div style="text-align:center;padding:.4rem 0 1rem">
+<div id="designMethodPropsIntro" style="text-align:center;padding:.4rem 0 1rem">
 <div style="font-family:'Playfair Display',serif;font-style:italic;font-weight:700;font-size:20px;line-height:1.35;color:#f0f0f0">
 Would you like to try out <span style="color:#7ab8ff">some of our fun props?</span>
 </div>
@@ -920,6 +920,12 @@ Would you like to try out <span style="color:#7ab8ff">some of our fun props?</sp
 <span style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);background:#151b24;padding:0 8px;color:#7ab8ff;font-size:12px">◆</span>
 </div>
 <div style="font-size:13px;color:#7ab8ff;letter-spacing:.5px">◆ Click on one for more options. ◆</div>
+</div>
+<div id="designMethodWraparoundNotice" style="display:none;text-align:center;padding:.4rem 0 1rem">
+<div style="font-family:'Playfair Display',serif;font-style:italic;font-weight:700;font-size:19px;line-height:1.4;color:#f0f0f0">
+Wraparound designs need <span style="color:#7ab8ff">a bit of description</span>
+</div>
+<div class="note" style="margin-top:.6rem;color:#7ab8ff">Our fun props (Cover Me, Face It, Home Sweet Home) are each a single fixed picture, so they can't stretch all the way around a mug. Wraparound needs a scene Needles can extend to the left and right instead — check "Design By Description" below and tell us what you have in mind.</div>
 </div>
 <button type="button" class="snap-arrow-btn snap-arrow-up" id="designMethodDownArrow" style="display:flex;margin:0 auto 1rem" onclick="document.getElementById('designMethodTiles').scrollIntoView({behavior:'smooth',block:'end'})">⌄</button>
 <div id="designMethodTiles" style="display:flex;flex-direction:column;gap:10px">
@@ -4432,6 +4438,24 @@ function finishPreGenMugColorPick(){
 function showDesignMethodCard(){
   const card=document.getElementById('designMethodCard');
   if(card)card.style.display='block';
+  // Wraparound only makes sense for a scene that can plausibly extend
+  // left/right (a landscape, a whole room) -- the fun props (Cover Me,
+  // Face It, Home Sweet Home) are each a single fixed picture meant to
+  // represent a specific real thing (an actual magazine cover shape,
+  // a portrait template), not a panorama, so Wraparound was never a
+  // valid combination with any of them by design. Hide the prop tiles
+  // and point to Design By Description instead when Wraparound is
+  // active, rather than letting the customer pick a prop that can't
+  // actually produce a wraparound result.
+  const isMugWraparound=(product==='mug' && mugPrintMode==='wraparound');
+  const propsIntroEl=document.getElementById('designMethodPropsIntro');
+  const wraparoundNoticeEl=document.getElementById('designMethodWraparoundNotice');
+  const tilesEl=document.getElementById('designMethodTiles');
+  const downArrowEl=document.getElementById('designMethodDownArrow');
+  if(propsIntroEl)propsIntroEl.style.display=isMugWraparound?'none':'block';
+  if(wraparoundNoticeEl)wraparoundNoticeEl.style.display=isMugWraparound?'block':'none';
+  if(tilesEl)tilesEl.style.display=isMugWraparound?'none':'flex';
+  if(downArrowEl)downArrowEl.style.display=isMugWraparound?'none':'flex';
   snapExpandThrough('designMethodCard');
   // Single scroll to the final, already-compensated position (offset for
   // the fixed currency bar) instead of scrolling to 'start' and then
@@ -4452,7 +4476,7 @@ function showDesignMethodCard(){
   clearTimeout(designMethodLingerTimer);
   designMethodLingerTimer=setTimeout(()=>{
     const tiles=document.getElementById('designMethodTiles');
-    if(!tiles||card.style.display==='none')return;
+    if(!tiles||card.style.display==='none'||tiles.style.display==='none')return;
     tiles.scrollIntoView({behavior:'smooth',block:'end'});
   },3000);
 }
