@@ -1160,6 +1160,7 @@ Tell Needles <span style="color:#7ab8ff">what you have in mind</span>
 <div id="seamFixOverlay" class="step-lock-overlay" style="display:none">
 <div class="card" id="seamFixCard" style="max-width:520px;width:100%;margin:auto;position:relative;max-height:92vh;overflow-y:auto;text-align:center">
 <div class="card-title">🧵 Fix the Seams?</div>
+<div class="note" id="seamFixMethodLabel" style="margin-top:0;margin-bottom:.4rem;color:#7ab8ff;font-weight:700"></div>
 <div class="note" style="margin-top:0;margin-bottom:.9rem">If you see a thin line where the panels meet, drag these until it disappears.</div>
 <img id="seamFixPreviewImg" style="width:100%;border-radius:10px;border:1px solid #003c8c;margin-bottom:.9rem;background:#0d0d0d"/>
 <label style="display:block;margin-bottom:2px">Left Seam <span id="seamLeftVal">0px</span></label>
@@ -2573,6 +2574,14 @@ let pending40ozRaw = null; // { panorama }
 // construction. Separate leg of the flow -- default off, touches nothing
 // else when unchecked.
 let useGeminiPanorama = false;
+// Records which method actually produced the panels currently sitting
+// in pendingWraparoundRaw ('panorama' or 'classic') -- shown on the
+// Fix the Seams screen so there's never ambiguity again about which
+// one ran, after real confusion about whether the one-shot panorama
+// (which should never need seam adjustment, since it's one image
+// sliced into three) or the classic per-panel method (which can
+// genuinely drift) produced a given result.
+let lastWraparoundMethod = null;
 let windowSillChoice = null;
 // Per-session customer overrides for Window Sill fit, keyed by asset path
 // same as WINDOW_SILL_CALIBRATION. Set live via the Preview & Fit Your
@@ -7358,6 +7367,14 @@ async function openSeamFixOverlay(){
   if(!overlay)return;
   document.body.classList.add('step-locked');
   overlay.style.display='flex';
+  const methodLabel=document.getElementById('seamFixMethodLabel');
+  if(methodLabel){
+    methodLabel.textContent=lastWraparoundMethod==='panorama'
+      ? '⚡ Generated as one single image, split into three -- these panels should already line up exactly.'
+      : lastWraparoundMethod==='classic'
+      ? '🧵 Generated as three separate images -- use the sliders below to line them up.'
+      : '';
+  }
   document.getElementById('seamLeftSlider').value=0;
   document.getElementById('seamRightSlider').value=0;
   document.getElementById('seamLeftVal').textContent='0px';
@@ -9149,6 +9166,7 @@ Use rich environmental storytelling while keeping the face as the primary focal 
       placements.left=addToRecentDesigns(leftUrl);
       placements.right=addToRecentDesigns(rightUrl);
 
+      lastWraparoundMethod='panorama';
       pendingWraparoundRaw={left:rawLeftUrl,center:rawCenterUrl,right:rawRightUrl};
 
       document.getElementById('wraparoundStandbyPrompt').style.display='none';
@@ -9379,6 +9397,7 @@ async function makeTestSingleZonePanorama(side){
       if(!skipEdgeFade) rightUrl = await applyEdgeFadeToImageUrl(rightUrl, {top:true,bottom:true,left:false,right:true});
       placements.right = addToRecentDesigns(rightUrl);
 
+      lastWraparoundMethod='classic';
       pendingWraparoundRaw = { left: rawLeftUrl, center: rawResultUrl, right: rawRightUrl };
 
       document.getElementById('wraparoundStandbyPrompt').style.display='none';
