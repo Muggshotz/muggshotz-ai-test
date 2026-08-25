@@ -4814,7 +4814,12 @@ async function generateFaceIt(){
       // should land on screen together, no manual scroll needed.
       const faceItApproveRowEl=document.getElementById('faceItEaselApproveRow');
       faceItApproveRowEl.style.display='block';
-      faceItApproveRowEl.scrollIntoView({behavior:'smooth',block:'nearest'});
+      // Land on the full finished image first, un-cropped, with no
+      // immediate scroll -- let the customer actually see the reveal.
+      // Only after a couple seconds does it nudge down to the buttons.
+      setTimeout(()=>{
+        faceItApproveRowEl.scrollIntoView({behavior:'smooth',block:'nearest'});
+      },2000);
     });
     faceItPendingResultUrl=resultImageUrl;
 
@@ -5069,7 +5074,10 @@ async function generateGoodMorning(){
       // Same reasoning as the matching Face It change -- see that comment.
       const goodMorningApproveRowEl=document.getElementById('goodMorningEaselApproveRow');
       goodMorningApproveRowEl.style.display='block';
-      goodMorningApproveRowEl.scrollIntoView({behavior:'smooth',block:'nearest'});
+      // Same two-stage reveal as Face It -- see that comment.
+      setTimeout(()=>{
+        goodMorningApproveRowEl.scrollIntoView({behavior:'smooth',block:'nearest'});
+      },2000);
     });
     goodMorningPendingResultUrl=resultImageUrl;
 
@@ -5291,7 +5299,10 @@ async function generateCoverMe(){
       // Same reasoning as the matching Face It change -- see that comment.
       const coverMeApproveRowEl=document.getElementById('coverMeEaselApproveRow');
       coverMeApproveRowEl.style.display='block';
-      coverMeApproveRowEl.scrollIntoView({behavior:'smooth',block:'nearest'});
+      // Same two-stage reveal as Face It -- see that comment.
+      setTimeout(()=>{
+        coverMeApproveRowEl.scrollIntoView({behavior:'smooth',block:'nearest'});
+      },2000);
     });
     coverMePendingResultUrl=resultImageUrl;
 
@@ -9387,12 +9398,12 @@ async function makeTestSingleZonePanorama(side){
       document.getElementById('toggleImageBtn').style.display='none';
       refreshApproveRowForMode();
       showSingleImageAccessorizeStep();
-      // FIXED (Aug 2026): previously stopped at the "Needles presents"
-      // reveal moment and left the Yes/No approve buttons requiring a
-      // manual scroll to reach. Now brings them into view automatically
-      // once the reveal finishes, so the finished piece and the
-      // decision to make about it land on screen together.
-      approveRowEl.scrollIntoView({behavior:'smooth',block:'nearest'});
+      // Land on the full finished image first, un-cropped, with no
+      // immediate scroll -- let the customer actually see the reveal.
+      // Only after a couple seconds does it nudge down to the buttons.
+      setTimeout(()=>{
+        approveRowEl.scrollIntoView({behavior:'smooth',block:'nearest'});
+      },2000);
     });
 
   }catch(err){
