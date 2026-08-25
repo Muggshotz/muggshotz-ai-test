@@ -4801,52 +4801,6 @@ async function generateFaceIt(){
       signal:currentGenerationController.signal
     });
 
-    // RECONNECTED (Aug 2026): see the matching Cover Me comment -- same
-    // Center -> Left -> Right continuation sequence, using this merged
-    // result as the Center.
-    if(product==='mug' && mugPrintMode==='wraparound'){
-      const centerDesignId=addToRecentDesigns(resultImageUrl);
-      placements.front=centerDesignId;
-      document.getElementById('faceItGenerateBtn').disabled=false;
-      document.getElementById('wraparoundStandbyPrompt').style.display='block';
-      stopGenTimerSuccess();
-      setStatus('Center panel done. Generating the left panel — continuing the same scene...');
-
-      const centerForApi=await resizeDataUrl(await urlToDataURL(resultImageUrl),1280);
-      const leftUrl=await callGenerateAPI({
-        workingImage:centerForApi,
-        prompt:'Continue this scene to the left.',
-        panelRole:'left',
-        signal:currentGenerationController.signal
-      });
-      placements.left=addToRecentDesigns(leftUrl);
-
-      setStatus('Left panel done. Generating the right panel...');
-      const rightUrl=await callGenerateAPI({
-        workingImage:centerForApi,
-        prompt:'Continue this scene to the right.',
-        panelRole:'right',
-        signal:currentGenerationController.signal
-      });
-      placements.right=addToRecentDesigns(rightUrl);
-
-      pendingWraparoundRaw={left:leftUrl,center:resultImageUrl,right:rightUrl};
-
-      document.getElementById('wraparoundStandbyPrompt').style.display='none';
-      renderRecentDesigns();
-      renderPositionHolder();
-      updatePlacementSummary();
-      saveMugState();
-      clearReferenceSlots();
-      clearWorkshopStorage();
-      refreshTokenMeter();
-      stopNeedlesStage();
-      document.getElementById('cancelBtn').style.display='none';
-      setStatus('✅ All three wraparound panels are ready!');
-      enterRevealStage();
-      return;
-    }
-
     document.body.classList.remove('generation-active');
     document.body.classList.add('faceitreveal-focus');
     removeGenerationReminders();
@@ -5111,52 +5065,6 @@ async function generateGoodMorning(){
       signal:currentGenerationController.signal
     });
 
-    // RECONNECTED (Aug 2026): see the matching Cover Me comment -- same
-    // Center -> Left -> Right continuation sequence, using this merged
-    // result as the Center.
-    if(product==='mug' && mugPrintMode==='wraparound'){
-      const centerDesignId=addToRecentDesigns(resultImageUrl);
-      placements.front=centerDesignId;
-      document.getElementById('goodMorningGenerateBtn').disabled=false;
-      document.getElementById('wraparoundStandbyPrompt').style.display='block';
-      stopGenTimerSuccess();
-      setStatus('Center panel done. Generating the left panel — continuing the same scene...');
-
-      const centerForApi=await resizeDataUrl(await urlToDataURL(resultImageUrl),1280);
-      const leftUrl=await callGenerateAPI({
-        workingImage:centerForApi,
-        prompt:'Continue this scene to the left.',
-        panelRole:'left',
-        signal:currentGenerationController.signal
-      });
-      placements.left=addToRecentDesigns(leftUrl);
-
-      setStatus('Left panel done. Generating the right panel...');
-      const rightUrl=await callGenerateAPI({
-        workingImage:centerForApi,
-        prompt:'Continue this scene to the right.',
-        panelRole:'right',
-        signal:currentGenerationController.signal
-      });
-      placements.right=addToRecentDesigns(rightUrl);
-
-      pendingWraparoundRaw={left:leftUrl,center:resultImageUrl,right:rightUrl};
-
-      document.getElementById('wraparoundStandbyPrompt').style.display='none';
-      renderRecentDesigns();
-      renderPositionHolder();
-      updatePlacementSummary();
-      saveMugState();
-      clearReferenceSlots();
-      clearWorkshopStorage();
-      refreshTokenMeter();
-      stopNeedlesStage();
-      document.getElementById('cancelBtn').style.display='none';
-      setStatus('✅ All three wraparound panels are ready!');
-      enterRevealStage();
-      return;
-    }
-
     document.body.classList.remove('generation-active');
     document.body.classList.add('goodmorningreveal-focus');
     removeGenerationReminders();
@@ -5370,56 +5278,6 @@ async function generateCoverMe(){
       templateMerge:true,
       signal:currentGenerationController.signal
     });
-
-    // RECONNECTED (Aug 2026): Wraparound was a customer-facing option
-    // for coffee mugs long before Cover Me/Face It/Home Sweet Home
-    // existed, and never got wired into any of them when they were
-    // built -- picking Wraparound then a prop silently generated one
-    // plain single design, no matter what Wraparound was supposed to
-    // do. Same Center -> Left -> Right continuation sequence the plain
-    // Describe It flow uses, using this magazine merge as the Center.
-    if(product==='mug' && mugPrintMode==='wraparound'){
-      const centerDesignId=addToRecentDesigns(resultImageUrl);
-      placements.front=centerDesignId;
-      document.getElementById('coverMeGenerateBtn').disabled=false;
-      document.getElementById('wraparoundStandbyPrompt').style.display='block';
-      stopGenTimerSuccess();
-      setStatus('Center panel done. Generating the left panel — continuing the same scene...');
-
-      const centerForApi=await resizeDataUrl(await urlToDataURL(resultImageUrl),1280);
-      const leftUrl=await callGenerateAPI({
-        workingImage:centerForApi,
-        prompt:'Continue this scene to the left.',
-        panelRole:'left',
-        signal:currentGenerationController.signal
-      });
-      placements.left=addToRecentDesigns(leftUrl);
-
-      setStatus('Left panel done. Generating the right panel...');
-      const rightUrl=await callGenerateAPI({
-        workingImage:centerForApi,
-        prompt:'Continue this scene to the right.',
-        panelRole:'right',
-        signal:currentGenerationController.signal
-      });
-      placements.right=addToRecentDesigns(rightUrl);
-
-      pendingWraparoundRaw={left:leftUrl,center:resultImageUrl,right:rightUrl};
-
-      document.getElementById('wraparoundStandbyPrompt').style.display='none';
-      renderRecentDesigns();
-      renderPositionHolder();
-      updatePlacementSummary();
-      saveMugState();
-      clearReferenceSlots();
-      clearWorkshopStorage();
-      refreshTokenMeter();
-      stopNeedlesStage();
-      document.getElementById('cancelBtn').style.display='none';
-      setStatus('✅ All three wraparound panels are ready!');
-      enterRevealStage();
-      return;
-    }
 
     // The finished result appears on the actual easel (needlesEaselArt,
     // via presentFinishedNeedlesArt below) -- the customer doesn't need
