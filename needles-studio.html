@@ -4807,16 +4807,14 @@ async function generateFaceIt(){
     refreshTokenMeter();
 
     presentFinishedNeedlesArt(resultImageUrl,()=>{
-      document.getElementById('faceItEaselApproveRow').style.display='block';
-      // UPDATED (Aug 2026, Alyx's explicit request): stopped calling
-      // scrollToFaceItRevealWhenReady() here -- it re-scrolled further
-      // down once generation finished, purely to also fit the approve
-      // row into view, which meant every completed piece landed lower
-      // on screen than the position already reached during generation
-      // (the resetEverythingBtnTop anchor a few lines up in this same
-      // function). Alyx wants that first position to be the only one
-      // that sticks, even if it means a short manual scroll to reach
-      // the approve buttons.
+      // REVERSED (Aug 2026, Alyx's new explicit request): the earlier
+      // preference was to stop at the "Needles presents" reveal moment
+      // and require a manual scroll to reach the approve buttons. Now
+      // wants the opposite -- the finished piece and the Yes/No decision
+      // should land on screen together, no manual scroll needed.
+      const faceItApproveRowEl=document.getElementById('faceItEaselApproveRow');
+      faceItApproveRowEl.style.display='block';
+      faceItApproveRowEl.scrollIntoView({behavior:'smooth',block:'center'});
     });
     faceItPendingResultUrl=resultImageUrl;
 
@@ -5068,8 +5066,10 @@ async function generateGoodMorning(){
     refreshTokenMeter();
 
     presentFinishedNeedlesArt(resultImageUrl,()=>{
-      document.getElementById('goodMorningEaselApproveRow').style.display='block';
-      // Same reasoning as the matching Face It removal -- see that comment.
+      // Same reasoning as the matching Face It change -- see that comment.
+      const goodMorningApproveRowEl=document.getElementById('goodMorningEaselApproveRow');
+      goodMorningApproveRowEl.style.display='block';
+      goodMorningApproveRowEl.scrollIntoView({behavior:'smooth',block:'center'});
     });
     goodMorningPendingResultUrl=resultImageUrl;
 
@@ -5288,8 +5288,10 @@ async function generateCoverMe(){
     refreshTokenMeter();
 
     presentFinishedNeedlesArt(resultImageUrl,()=>{
-      document.getElementById('coverMeEaselApproveRow').style.display='block';
-      // Same reasoning as the matching Face It removal -- see that comment.
+      // Same reasoning as the matching Face It change -- see that comment.
+      const coverMeApproveRowEl=document.getElementById('coverMeEaselApproveRow');
+      coverMeApproveRowEl.style.display='block';
+      coverMeApproveRowEl.scrollIntoView({behavior:'smooth',block:'center'});
     });
     coverMePendingResultUrl=resultImageUrl;
 
@@ -9378,12 +9380,19 @@ async function makeTestSingleZonePanorama(side){
     // presented. Fall back to resultUrl only if something went wrong and
     // finalImageUrl never got set.
     presentFinishedNeedlesArt(finalImageUrl||resultUrl, ()=>{
-      document.getElementById('approveRow').style.display='block';
+      const approveRowEl=document.getElementById('approveRow');
+      approveRowEl.style.display='block';
       document.getElementById('keepTweakingBtn').style.display='block';
       document.getElementById('downloadDesignBtn').style.display='block';
       document.getElementById('toggleImageBtn').style.display='none';
       refreshApproveRowForMode();
       showSingleImageAccessorizeStep();
+      // FIXED (Aug 2026): previously stopped at the "Needles presents"
+      // reveal moment and left the Yes/No approve buttons requiring a
+      // manual scroll to reach. Now brings them into view automatically
+      // once the reveal finishes, so the finished piece and the
+      // decision to make about it land on screen together.
+      approveRowEl.scrollIntoView({behavior:'smooth',block:'center'});
     });
 
   }catch(err){
