@@ -3967,7 +3967,12 @@ function pickMugPrintMode(mode){
   } else {
     // Coffee mug: Print Style is now the real decision made right
     // before Design Method (Cover Me / Face It / Home Sweet Home /
-    // description) -- move on to that card next.
+    // description) -- move on to that card next. 'final-generate-focus'
+    // (added above) dims every card except Upload Photo -- meant for
+    // the old flow where Generate came right after this, which left
+    // Design Method's tiles dimmed and unclickable here since that's
+    // an earlier step, not the final one. Remove it before moving on.
+    document.body.classList.remove('final-generate-focus');
     showDesignMethodCard();
   }
 }
