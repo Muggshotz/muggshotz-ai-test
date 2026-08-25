@@ -1898,20 +1898,27 @@ function presentFinishedNeedlesArt(imageUrl,onDone){
   // the only thing standing between a stuck ending clip and the
   // customer being stranded on "Done in Xs" forever, with no way to
   // reach their mockup -- a real, reported case of exactly that
-  // happening. This fires once, well past even a worst-case full
-  // ending-clip rotation, and forces the presentation to actually
+  // happening. This fires once and forces the presentation to actually
   // finish (revealing the approve buttons) if it somehow still hasn't,
   // regardless of what phase the state machine is stuck in.
   // needlesFinishPresentation() already guards against running twice
   // (returns immediately if needlesPhase is already 'stopped'), so this
   // is a safe no-op on the normal, successful path.
+  //
+  // 20s, not a more generous ceiling (Alyx's explicit call): firing this
+  // isn't destructive -- it just skips straight to the same reveal the
+  // finale was already heading toward, a few seconds sooner than the
+  // full animation would have. A customer who's been staring at "Done"
+  // for 15-20s with nothing happening starts assuming it's broken and
+  // going looking for other options, which is worse than the animation
+  // ending slightly early.
   clearTimeout(needlesHardCeilingTimer);
   needlesHardCeilingTimer=setTimeout(()=>{
     if(needlesPhase!=='stopped'){
       console.error('Needles presentation never completed on its own -- forcing it to finish so the customer isn\'t stranded.');
       needlesFinishPresentation();
     }
-  },45000);
+  },20000);
 }
 let refImageAData=null, refImageBData=null;
 let previousImageData=null;
