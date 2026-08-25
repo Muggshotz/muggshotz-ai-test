@@ -667,7 +667,6 @@ body.product-focus .card:not(#productCard){opacity:.35;filter:brightness(.6) sat
   <img id="mockupLightboxImg" class="mockup-lightbox-img" alt="Enlarged mockup"/>
   <button class="mockup-lightbox-arrow mockup-lightbox-arrow-right" id="mockupLightboxNext" onclick="mockupLightboxNext()" aria-label="Next angle">›</button>
   <div class="mockup-lightbox-counter" id="mockupLightboxCounter"></div>
-  <div id="mockupLightboxDebug" style="display:none;position:absolute;top:12px;left:12px;right:12px;max-height:160px;overflow-y:auto;padding:8px;background:rgba(10,10,26,.92);border:1px solid #444;border-radius:8px;font-family:monospace;font-size:11px;color:#9fd;white-space:pre-wrap;word-break:break-all;text-align:left;z-index:5"></div>
   <button type="button" id="mockupLightboxReturn" class="generate-btn" style="display:none;position:absolute;left:50%;bottom:24px;transform:translateX(-50%);width:auto;padding:.8rem 1.6rem" onclick="returnFromFinalMockup()">↩️ Return</button>
 </div>
 <div class="header">
@@ -1960,6 +1959,29 @@ function scrollToStableBottom(el,bottomMargin,maxAttempts){
       return;
     }
     lastBottom=bottom;
+    setTimeout(()=>requestAnimationFrame(check),100);
+  }
+  requestAnimationFrame(check);
+}
+
+// Same stability-polling idea as scrollToStableBottom above, anchored
+// to an element's TOP instead -- used to land on the Needles easel
+// stage once it's done settling into its final layout position, rather
+// than guessing a fixed timeline of re-snaps that can go stale if
+// something (like the generation reminder banners) is still shifting
+// layout after the last one fires.
+function scrollToStableTop(el,topMargin,maxAttempts){
+  let lastTop=null;
+  let attempts=0;
+  function check(){
+    attempts++;
+    const top=el.getBoundingClientRect().top;
+    if(top===lastTop||attempts>=maxAttempts){
+      const target=window.scrollY+top-topMargin;
+      window.scrollTo({top:Math.max(0,target),behavior:'smooth'});
+      return;
+    }
+    lastTop=top;
     setTimeout(()=>requestAnimationFrame(check),100);
   }
   requestAnimationFrame(check);
@@ -7736,11 +7758,6 @@ async function beginFinalMockupFetch(){
       if(checkData.ready){
         mockupUrl=checkData.mockupUrl;
         mockupUrls=Array.isArray(checkData.mockupUrls)?checkData.mockupUrls:[];
-        lastMockupDebugData={
-          requestedVariantId:checkData.requestedVariantId,
-          debugImages:Array.isArray(checkData.debugImages)?checkData.debugImages:[],
-          requestedVariantTitle:checkData.temporaryProduct?.requested_variant?.title||null
-        };
         break;
       }
     }
@@ -7764,27 +7781,6 @@ async function beginFinalMockupFetch(){
     openMockupLightbox(0);
     const returnBtn=document.getElementById('mockupLightboxReturn');
     if(returnBtn)returnBtn.style.display='block';
-
-    // TEMPORARY DEBUG (Aug 2026): same diagnostic the pre-generation
-    // preview already shows, wired into the final mockup screen too --
-    // this is the screen customers actually see before ordering, so
-    // this is where we need the real color-match evidence. Remove once
-    // the Cambridge Blue diagnosis is fully confirmed, alongside the
-    // matching debug code in start-mockup.js.
-    const debugPanel=document.getElementById('mockupLightboxDebug');
-    if(debugPanel && lastMockupDebugData){
-      const lines=[
-        `Requested color's variant title on Printify: ${lastMockupDebugData.requestedVariantTitle||'(not found on returned product)'}`,
-        `Requested variantId: ${lastMockupDebugData.requestedVariantId}`,
-        ''
-      ];
-      lastMockupDebugData.debugImages.forEach((img,i)=>{
-        const matched=img.variant_ids.includes(lastMockupDebugData.requestedVariantId);
-        lines.push(`Image ${i+1}: variant_ids=[${img.variant_ids.join(', ')}] ${matched?'✅ MATCHES':'❌ no match'}`);
-      });
-      debugPanel.textContent=lines.join('\n');
-      debugPanel.style.display='block';
-    }
   }catch(err){
     console.error('Final mockup fetch failed:',err);
     if(overlay){overlay.style.display='none';document.body.classList.remove('step-locked');}
@@ -7937,9 +7933,6 @@ function scrollToFinishedImage(elementId,block){
 // populated by runAutoMockupFetch for both the single-image and
 // multi-angle-gallery cases).
 let currentMockupUrls=[];
-// TEMPORARY DEBUG (Aug 2026): see matching comment in start-mockup.js --
-// remove alongside it once the Cambridge Blue diagnosis is confirmed.
-let lastMockupDebugData=null;
 let currentMockupIndex=0;
 
 function openMockupLightbox(index){
@@ -8894,23 +8887,19 @@ setStatus('Generating your image... this may take several minutes, especially on
 document.getElementById('cancelBtn').style.display='block';
   suspendGuidedScrollsForGeneration();
 
-  const snapNeedlesStageToApprovedFrame=()=>{
-    // REVERTED: anchor to the actual Needles easel stage (where the
-    // generation video and finished-art reveal play out), not the
-    // plain "Creation in progress" polaroid placeholder above it.
-    const anchor=document.querySelector('#needlesStageWrap .needles-stage');
-    if(!anchor)return;
-    const target=(anchor.getBoundingClientRect().top+window.scrollY)-14;
-    window.scrollTo(0,Math.max(0,target));
-  };
-  requestAnimationFrame(()=>{
-    requestAnimationFrame(()=>{
-      snapNeedlesStageToApprovedFrame();
-      [80,180,350,600,900].forEach(delay=>{
-        setTimeout(snapNeedlesStageToApprovedFrame,delay);
-      });
-    });
-  });
+  // Anchor to the actual Needles easel stage (where the generation
+  // video and finished-art reveal play out), not the plain "Creation
+  // in progress" polaroid placeholder above it. FIXED (Aug 2026): the
+  // old version re-snapped at a handful of fixed delays (80-900ms) and
+  // then stopped -- if the generation reminder banners just inserted
+  // above (insertGenerationReminders(), called from startNeedlesStage()
+  // just above) were still settling into their final layout position
+  // after the last one fired, the page was left scrolled to a stale,
+  // too-high position, landing back on the plain placeholder instead
+  // of the easel. scrollToStableTop polls until the anchor's position
+  // actually stops moving instead of guessing a fixed timeline.
+  const needlesStageAnchor=document.querySelector('#needlesStageWrap .needles-stage');
+  if(needlesStageAnchor)scrollToStableTop(needlesStageAnchor,14,20);
   try{
     const idea=document.getElementById('ideaDesc').value.trim();
 
@@ -10106,10 +10095,6 @@ async function runAutoMockupFetch(){
       if (checkData.ready) {
         mockupUrl = checkData.mockupUrl;
         mockupUrls = Array.isArray(checkData.mockupUrls) ? checkData.mockupUrls : [];
-        lastMockupDebugData = {
-          requestedVariantId: checkData.requestedVariantId,
-          debugImages: Array.isArray(checkData.debugImages) ? checkData.debugImages : []
-        };
         break;
       }
     }
@@ -10143,24 +10128,6 @@ async function runAutoMockupFetch(){
       imgEl.onclick = () => openMockupLightbox(0);
       await waitForImageReady(imgEl);
       imgEl.scrollIntoView({behavior:'smooth',block:'center'});
-    }
-
-    // TEMPORARY DEBUG (Aug 2026): see matching comment in
-    // start-mockup.js -- shows what variant_ids Printify actually
-    // tagged each returned photo with, next to the variant we asked
-    // for, so we can see directly whether Printify ever sends a
-    // correctly-tagged photo for this color at all. Remove once
-    // confirmed.
-    if (lastMockupDebugData) {
-      const dbg = document.createElement('div');
-      dbg.style.cssText = 'margin-top:10px;padding:8px;background:#0a0a1a;border:1px solid #444;border-radius:8px;font-family:monospace;font-size:11px;color:#9fd;white-space:pre-wrap;word-break:break-all';
-      const lines = [`Requested variantId: ${lastMockupDebugData.requestedVariantId}`, ''];
-      lastMockupDebugData.debugImages.forEach((img, i) => {
-        const matched = img.variant_ids.includes(lastMockupDebugData.requestedVariantId);
-        lines.push(`Image ${i+1}: variant_ids=[${img.variant_ids.join(', ')}] ${matched ? '✅ MATCHES' : '❌ no match'}`);
-      });
-      dbg.textContent = lines.join('\n');
-      galleryEl.insertAdjacentElement('afterend', dbg);
     }
 
   } catch (err) {
