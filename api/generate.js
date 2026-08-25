@@ -196,6 +196,149 @@ export default async function handler(req, res) {
       return res.status(200).json({ imageUrl: compositeUrl });
     }
 
+    // Gemini-based single-shot panorama generation (Aug 2026): an
+    // alternative to the sequential Center -> Left -> Right OpenAI edit
+    // calls below. Those three calls are genuinely independent
+    // generations, which is why a "Fix the Seams" screen exists downstream
+    // to manually patch up scale/alignment drift between them. This path
+    // asks Gemini for ONE single wide image already containing all three
+    // panels side by side, then slices it into three equal thirds here in
+    // code — since it's one continuous image, the three pieces are
+    // pixel-perfectly aligned by construction, with no seam-matching
+    // needed. Additive only: the existing OpenAI wraparound flow is
+    // untouched — this is a separate opt-in path the front end calls
+    // instead of the normal 3-call sequence.
+    if (action === "wraparoundPanorama") {
+      if (!image || !prompt) {
+        return res.status(400).json({ error: "Missing image or prompt." });
+      }
+      if (!deviceId) {
+        return res.status(400).json({ error: "Missing device ID." });
+      }
+
+      let panoramaCustomer = await findCustomerByDeviceId(deviceId);
+      if (!panoramaCustomer) {
+        panoramaCustomer = await createCustomerForDevice(deviceId);
+      }
+      const panoramaIsAdmin = panoramaCustomer.role === "admin";
+      if (!panoramaIsAdmin && panoramaCustomer.token_balance <= 0) {
+        return res.status(403).json({
+          error: "You're out of free tokens. Verify your email to unlock another, or grab the $5 Preview Reservation for 4 more."
+        });
+      }
+
+      const panoramaMatch = image.match(/^data:(image\/\w+);base64,(.+)$/);
+      if (!panoramaMatch) {
+        return res.status(400).json({ error: "Image must be a base64 data URL." });
+      }
+
+      const referenceLine = (refImageA || refImageB)
+        ? `
+An additional reference image is attached. ${refImageA ? 'One is "Photo 2" — when the customer idea below mentions "Photo 2," use that exact image for the element described (e.g. a face, an object, a scene, a setting).' : ""} ${refImageB ? 'Another is "Photo 3" — use it the same way if the customer idea mentions "Photo 3."' : ""}`
+        : "";
+
+      const panoramaPrompt = `
+CRITICAL MUGGSHOTZ LIKENESS RULE:
+This is a caricature of the exact person in the uploaded photo.
+Study the uploaded face first. Capture the spark and personality behind the eyes.
+Keep the same attitude, expression, mood, and presence as the real photo.
+The eyes are the center of the likeness — a good result must feel like the same person is looking back at you.
+Base every exaggeration on features that are actually visible in the uploaded photo, including:
+the real eye shape, eye spacing, and eyelids; the real brow angle; the real nose shape;
+the real mouth shape and expression; the real jawline, cheeks, and ears;
+the real facial hair, head shape, skin tone, and age.
+Preserve normal head-to-body proportions unless the customer asks for wild exaggeration.
+
+PANORAMA LAYOUT — ONE SINGLE WIDE IMAGE, THREE EQUAL VERTICAL THIRDS:
+Generate exactly ONE wide image, mentally divided into three EQUAL vertical thirds: LEFT, CENTER, RIGHT.
+Place the caricature of the customer, based on the uploaded photo, centered inside the CENTER third only.
+The LEFT and RIGHT thirds must show the natural continuation of the same environment, background, lighting, and color palette as the center third — as if the camera simply panned further in that direction. Do NOT repeat the subject's face or body in the left or right thirds unless the scene naturally calls for a background element related to them (a shadow, a reflection, a distant object they'd plausibly be near).
+Keep lighting direction, color grading, and visual style perfectly continuous across all three thirds, with no visible seam, break, or style shift at the two internal dividing lines — this single image will be cut into three separate pieces along those exact lines afterward and displayed side by side on a wraparound mug, so any mismatch there will be very visible.
+${referenceLine}
+
+CUSTOMER REQUEST:
+${prompt}
+
+STYLE:
+Photorealistic rendering with caricature-level exaggeration of real features.
+Painted, airbrushed illustration finish — not cartoon, not vector, not anime style.
+Natural skin texture and lighting.
+Strong, unmistakable likeness to the uploaded photo.
+Expressive eyes, personality-centered face.
+Funny but respectful exaggeration, not a flattened cartoon mascot.
+Head proportions stay natural unless the customer specifically requests exaggeration.
+Polished gift-art quality.
+`;
+
+      const geminiParts = [
+        { text: panoramaPrompt },
+        { inlineData: { mimeType: panoramaMatch[1], data: panoramaMatch[2] } }
+      ];
+      function addGeminiRefPart(dataUrl) {
+        const m = dataUrl && dataUrl.match(/^data:(image\/\w+);base64,(.+)$/);
+        if (!m) return;
+        geminiParts.push({ inlineData: { mimeType: m[1], data: m[2] } });
+      }
+      addGeminiRefPart(refImageA);
+      addGeminiRefPart(refImageB);
+
+      const geminiResp = await fetch(
+        "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-goog-api-key": process.env.GEMINI_API_KEY
+          },
+          body: JSON.stringify({
+            contents: [{ parts: geminiParts }],
+            generationConfig: {
+              responseModalities: ["IMAGE"],
+              imageConfig: { aspectRatio: "21:9" }
+            }
+          })
+        }
+      );
+
+      const geminiData = await geminiResp.json();
+      if (!geminiResp.ok) {
+        const readableError =
+          geminiData?.error?.message || JSON.stringify(geminiData?.error) || "Unknown error from Gemini.";
+        return res.status(geminiResp.status).json({ error: readableError });
+      }
+
+      const geminiImagePart = geminiData?.candidates?.[0]?.content?.parts?.find(p => p.inlineData?.data);
+      if (!geminiImagePart) {
+        return res.status(502).json({ error: "No image returned from Gemini.", raw: geminiData });
+      }
+
+      const panoramaBuffer = Buffer.from(geminiImagePart.inlineData.data, "base64");
+      const panoramaMeta = await sharp(panoramaBuffer).metadata();
+      const fullWidth = panoramaMeta.width;
+      const fullHeight = panoramaMeta.height;
+      const thirdWidth = Math.floor(fullWidth / 3);
+
+      const [leftBuffer, centerBuffer, rightBuffer] = await Promise.all([
+        sharp(panoramaBuffer).extract({ left: 0, top: 0, width: thirdWidth, height: fullHeight }).png().toBuffer(),
+        sharp(panoramaBuffer).extract({ left: thirdWidth, top: 0, width: thirdWidth, height: fullHeight }).png().toBuffer(),
+        sharp(panoramaBuffer)
+          .extract({ left: thirdWidth * 2, top: 0, width: fullWidth - thirdWidth * 2, height: fullHeight })
+          .png()
+          .toBuffer()
+      ]);
+
+      const [leftUrl, centerUrl, rightUrl] = await Promise.all([
+        uploadGenerationToStorage(leftBuffer, deviceId + "-left"),
+        uploadGenerationToStorage(centerBuffer, deviceId + "-center"),
+        uploadGenerationToStorage(rightBuffer, deviceId + "-right")
+      ]);
+
+      await saveGenerationRecord(panoramaCustomer.id, prompt, null, centerUrl);
+      await deductOneToken(panoramaCustomer.id, panoramaCustomer.token_balance);
+
+      return res.status(200).json({ leftUrl, centerUrl, rightUrl });
+    }
+
     if (!image || !prompt) {
       return res.status(400).json({ error: "Missing image or prompt." });
     }

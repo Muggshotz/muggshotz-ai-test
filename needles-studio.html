@@ -906,6 +906,10 @@ document.getElementById('heroVideo').addEventListener('ended',()=>{
 <div class="note" style="margin-top:6px;color:#29a3ff">One continuous picture that wraps all the way around.</div>
 </div>
 </div>
+<div id="geminiPanoramaToggleRow" style="display:none;align-items:center;gap:10px;margin-top:.9rem">
+<input type="checkbox" id="geminiPanoramaToggle" onchange="toggleGeminiPanorama()" style="width:20px;height:20px;cursor:pointer"/>
+<label style="margin:0;text-transform:none;font-size:14px;color:#fff;cursor:pointer" onclick="document.getElementById('geminiPanoramaToggle').click()">🧪 Generate all three panels in one shot (experimental — usually better aligned, may look slightly different in style)</label>
+</div>
 </div>
 
 <div class="card" id="designMethodCard" style="display:none">
@@ -2520,6 +2524,15 @@ let accessorizeFrameScrolledOnce = false;
 // finished generating. Cleared once the user applies or skips.
 let pendingWraparoundRaw = null; // { left, center, right }
 let pending40ozRaw = null; // { panorama }
+// Opt-in alternate generation path for coffee-mug Wraparound: instead of
+// three separate OpenAI edit calls (Center, then Left/Right as
+// "continue this scene" edits of the Center result -- which can drift
+// slightly in scale/alignment, hence the Fix the Seams screen), this asks
+// Gemini for ONE single wide image already containing all three panels,
+// then slices it into equal thirds in the backend so they're aligned by
+// construction. Separate leg of the flow -- default off, touches nothing
+// else when unchecked.
+let useGeminiPanorama = false;
 let windowSillChoice = null;
 // Per-session customer overrides for Window Sill fit, keyed by asset path
 // same as WINDOW_SILL_CALIBRATION. Set live via the Preview & Fit Your
@@ -2725,6 +2738,7 @@ async function pickWindowSill(name){
       if(threeBtn)threeBtn.classList.add('selected');
       if(wrapBtn)wrapBtn.classList.remove('selected');
       refreshPanoramaFadeCardVisibility();
+      refreshGeminiPanoramaToggleVisibility();
       showGuidanceAlert('Window Sill Portrait can\'t be combined with Wraparound (it\'s a fixed scene, and stretching it all the way around would distort it) — switched your print format back to Up to Three Panels.');
     }
   }
@@ -3916,6 +3930,7 @@ function pickMugPrintMode(mode){
     showGuidanceAlert('Window Sill Portrait can\'t be combined with Wraparound (it\'s a fixed scene, and stretching it all the way around would distort it) — your Window Sill selection has been cleared.');
   }
   refreshPanoramaFadeCardVisibility();
+  refreshGeminiPanoramaToggleVisibility();
   suspendGuidedScrollsForGeneration();
   if(product==='water bottle'){
     // Variant is already chosen by the time this card is even visible
@@ -4014,6 +4029,7 @@ function pickPreGenTravelVariant(key){
   refreshMugPrintModeVisibility();
   refreshTravelMugColorVisibility();
   refreshPanoramaFadeCardVisibility();
+  refreshGeminiPanoramaToggleVisibility();
   suspendGuidedScrollsForGeneration();
 
   if(is40oz){
@@ -4050,6 +4066,22 @@ function refreshTravelMugVariantVisibility(){
   if(show){
     renderTravelMugVariantGrid();
   }
+}
+
+function refreshGeminiPanoramaToggleVisibility(){
+  const row=document.getElementById('geminiPanoramaToggleRow');
+  if(!row)return;
+  const show=(product==='mug' && mugPrintMode==='wraparound');
+  row.style.display=show?'flex':'none';
+  if(!show){
+    useGeminiPanorama=false;
+    const toggle=document.getElementById('geminiPanoramaToggle');
+    if(toggle)toggle.checked=false;
+  }
+}
+
+function toggleGeminiPanorama(){
+  useGeminiPanorama=document.getElementById('geminiPanoramaToggle').checked;
 }
 
 function refreshPanoramaFadeCardVisibility(){
@@ -6214,6 +6246,7 @@ function pick(el,type){
     refreshMugStyleCardVisibility();
     refreshMugPrintModeVisibility();
     refreshPanoramaFadeCardVisibility();
+    refreshGeminiPanoramaToggleVisibility();
     refreshPhotoPosterVisibility();
     refreshPhoneCaseModelVisibility();
     refreshTravelMugVariantVisibility();
@@ -9036,6 +9069,84 @@ The background should feel like a finished professional illustration or magazine
 Use rich environmental storytelling while keeping the face as the primary focal point.
 `;
 
+    // One-shot Gemini panorama path (opt-in toggle on the Wraparound
+    // card): replaces the normal Center -> Left -> Right sequence below
+    // entirely with a single call that asks Gemini for one wide image
+    // already containing all three panels, pre-split into equal thirds
+    // by the backend. Self-contained branch that returns on its own --
+    // everything below this block is the untouched original flow.
+    if(isWraparoundActive && product==='mug' && useGeminiPanorama){
+      document.getElementById('approveRow').style.display='none';
+      document.getElementById('keepTweakingBtn').style.display='none';
+      document.getElementById('downloadDesignBtn').style.display='none';
+      document.getElementById('wraparoundStandbyPrompt').style.display='block';
+      setStatus('Generating your panorama with Gemini — one image, all three panels at once...');
+
+      currentGenerationController=new AbortController();
+      let panoramaResp;
+      try{
+        panoramaResp=await fetch('/api/generate',{
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({action:'wraparoundPanorama',image:workingImage,prompt,deviceId,refImageA:refASnapshot,refImageB:refBSnapshot}),
+          signal:currentGenerationController.signal
+        });
+      }catch(abortErr){
+        if(abortErr.name==='AbortError'){
+          document.getElementById('wraparoundStandbyPrompt').style.display='none';
+          return;
+        }
+        throw abortErr;
+      }
+
+      const panoramaData=await panoramaResp.json();
+      if(!panoramaResp.ok){
+        if(panoramaResp.status===403){
+          clearStatus();
+          refreshTokenMeter();
+          stopNeedlesStage();
+          document.getElementById('wraparoundStandbyPrompt').style.display='none';
+          openCreditsPanel("You're out of image credits. Grab the $5 Preview Reservation below to unlock more and keep creating.");
+          return;
+        }
+        throw new Error(panoramaData.error||panoramaData.detail||'Panorama generation failed.');
+      }
+
+      let{leftUrl,centerUrl,rightUrl}=panoramaData;
+      if(!leftUrl||!centerUrl||!rightUrl)throw new Error('No panorama images returned.');
+
+      const rawLeftUrl=leftUrl, rawCenterUrl=centerUrl, rawRightUrl=rightUrl;
+      if(!skipEdgeFade){
+        centerUrl=await applyEdgeFadeToImageUrl(centerUrl,{top:true,bottom:true,left:false,right:false},getSelectedProductColorHex());
+        leftUrl=await applyEdgeFadeToImageUrl(leftUrl,{top:true,bottom:true,left:true,right:false});
+        rightUrl=await applyEdgeFadeToImageUrl(rightUrl,{top:true,bottom:true,left:false,right:true});
+      }
+
+      currentDesignId=addToRecentDesigns(centerUrl);
+      placements.front=currentDesignId;
+      placements.left=addToRecentDesigns(leftUrl);
+      placements.right=addToRecentDesigns(rightUrl);
+
+      pendingWraparoundRaw={left:rawLeftUrl,center:rawCenterUrl,right:rawRightUrl};
+
+      document.getElementById('wraparoundStandbyPrompt').style.display='none';
+      renderRecentDesigns();
+      renderPositionHolder();
+      updatePlacementSummary();
+      saveMugState();
+
+      currentDesignId=null;
+      resetMainSlot();
+      clearReferenceSlots();
+      clearWorkshopStorage();
+      refreshTokenMeter();
+      stopNeedlesStage();
+      setStatus('✅ All three wraparound panels are ready (single-shot panorama)!');
+      stopGenTimerSuccess();
+      enterRevealStage();
+      return;
+    }
+
     currentGenerationController=new AbortController();
     const resp=await fetch('/api/generate',{
       method:'POST',
@@ -10246,6 +10357,7 @@ checkForWorkshopRecall();
 refreshApproveRowForMode();
 refreshMugPrintModeVisibility();
 refreshPanoramaFadeCardVisibility();
+refreshGeminiPanoramaToggleVisibility();
 refreshPhotoPosterVisibility();
 refreshPhoneCaseModelVisibility();
 refreshTravelMugVariantVisibility();
@@ -10400,6 +10512,7 @@ function resetEverythingFreshStart(){
   refreshApproveRowForMode();
   refreshMugPrintModeVisibility();
   refreshPanoramaFadeCardVisibility();
+  refreshGeminiPanoramaToggleVisibility();
   refreshPhotoPosterVisibility();
   refreshPhoneCaseModelVisibility();
   refreshTravelMugVariantVisibility();
