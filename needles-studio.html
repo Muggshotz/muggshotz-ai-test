@@ -2135,7 +2135,19 @@ function confirmIdeaSatisfied(){
     const target=ideaReturnTarget;
     ideaReturnTarget=null;
     if(target==='descriptionOnly'){
-      smoothScrollToTarget('panoramaFadeCard','center');
+      // FIXED (Aug 2026): this scrolled to the Edge Fade card but never
+      // actually revealed the Generate button below it -- mugIdeaActionRow
+      // only shows when mugGuidedChangesActive is true (see
+      // updateIdeaCardNote()), which normally only gets set by
+      // handleMugDesignChanges() AFTER a first design already exists.
+      // A brand-new Design By Description order never set that flag, so
+      // the customer landed on Edge Fade with nowhere to go -- the exact
+      // "stranded" report. Mirrors handleMugDesignChanges()'s setup so
+      // the Generate button is actually there once they scroll down to it.
+      mugDesignConfirmed=false;
+      mugGuidedChangesActive=true;
+      updateMugGuidedFlow();
+      smoothScrollToTarget('panoramaFadeCard','start');
     } else {
       goToDesignMethodScreen(target);
     }
