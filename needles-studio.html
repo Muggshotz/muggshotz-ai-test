@@ -905,10 +905,6 @@ document.getElementById('heroVideo').addEventListener('ended',()=>{
 <div class="note" style="margin-top:6px;color:#29a3ff">One continuous picture that wraps all the way around.</div>
 </div>
 </div>
-<div id="geminiPanoramaToggleRow" style="display:none;align-items:center;gap:10px;margin-top:.9rem">
-<input type="checkbox" id="geminiPanoramaToggle" onchange="toggleGeminiPanorama()" style="width:20px;height:20px;cursor:pointer"/>
-<label style="margin:0;text-transform:none;font-size:14px;color:#fff;cursor:pointer" onclick="document.getElementById('geminiPanoramaToggle').click()">🧪 Generate all three panels in one shot (experimental — usually better aligned, may look slightly different in style)</label>
-</div>
 </div>
 
 <div class="card" id="designMethodCard" style="display:none">
@@ -2565,23 +2561,6 @@ let accessorizeFrameScrolledOnce = false;
 // finished generating. Cleared once the user applies or skips.
 let pendingWraparoundRaw = null; // { left, center, right }
 let pending40ozRaw = null; // { panorama }
-// Opt-in alternate generation path for coffee-mug Wraparound: instead of
-// three separate OpenAI edit calls (Center, then Left/Right as
-// "continue this scene" edits of the Center result -- which can drift
-// slightly in scale/alignment, hence the Fix the Seams screen), this asks
-// Gemini for ONE single wide image already containing all three panels,
-// then slices it into equal thirds in the backend so they're aligned by
-// construction. Separate leg of the flow -- default off, touches nothing
-// else when unchecked.
-let useGeminiPanorama = false;
-// Records which method actually produced the panels currently sitting
-// in pendingWraparoundRaw ('panorama' or 'classic') -- shown on the
-// Fix the Seams screen so there's never ambiguity again about which
-// one ran, after real confusion about whether the one-shot panorama
-// (which should never need seam adjustment, since it's one image
-// sliced into three) or the classic per-panel method (which can
-// genuinely drift) produced a given result.
-let lastWraparoundMethod = null;
 let windowSillChoice = null;
 // Per-session customer overrides for Window Sill fit, keyed by asset path
 // same as WINDOW_SILL_CALIBRATION. Set live via the Preview & Fit Your
@@ -2787,7 +2766,6 @@ async function pickWindowSill(name){
       if(threeBtn)threeBtn.classList.add('selected');
       if(wrapBtn)wrapBtn.classList.remove('selected');
       refreshPanoramaFadeCardVisibility();
-      refreshGeminiPanoramaToggleVisibility();
       showGuidanceAlert('Window Sill Portrait can\'t be combined with Wraparound (it\'s a fixed scene, and stretching it all the way around would distort it) — switched your print format back to Up to Three Panels.');
     }
   }
@@ -3929,8 +3907,6 @@ function handleMugGuidedGenerate(){
 let hardEdgesEnabled=true;
 
 const PANORAMA_FADE_INSTRUCTION_CENTER = "PANORAMA EDGE FADE: Fade the TOP and BOTTOM outside edges of the picture toward white, so they blend softly into a white canvas. Do NOT fade or soften the LEFT and RIGHT edges — those are the seams where this panel joins its neighbors, and must stay sharp, fully detailed, and continuous all the way to the edge so the scene lines up seamlessly across panels.";
-const PANORAMA_FADE_INSTRUCTION_LEFT = "PANORAMA EDGE FADE: Fade the TOP, BOTTOM, and LEFT outside edges of the picture toward white, so they blend softly into a white canvas — the left edge of this panel is a true outer edge, not a seam. Do NOT fade or soften the RIGHT edge — that is the seam where this panel joins the center panel, and must stay sharp, fully detailed, and continuous all the way to the edge so the scene lines up seamlessly.";
-const PANORAMA_FADE_INSTRUCTION_RIGHT = "PANORAMA EDGE FADE: Fade the TOP, BOTTOM, and RIGHT outside edges of the picture toward white, so they blend softly into a white canvas — the right edge of this panel is a true outer edge, not a seam. Do NOT fade or soften the LEFT edge — that is the seam where this panel joins the center panel, and must stay sharp, fully detailed, and continuous all the way to the edge so the scene lines up seamlessly.";
 
 const UNIFORM_EDGE_FADE_INSTRUCTION = "EDGE FADE: Fade all four outside edges of the picture (top, bottom, left, and right) smoothly and completely toward white, so there is no hard rectangular border or sticker-cutout look. The artwork should blend naturally into the product's white surface at every edge.";
 
@@ -3979,7 +3955,6 @@ function pickMugPrintMode(mode){
     showGuidanceAlert('Window Sill Portrait can\'t be combined with Wraparound (it\'s a fixed scene, and stretching it all the way around would distort it) — your Window Sill selection has been cleared.');
   }
   refreshPanoramaFadeCardVisibility();
-  refreshGeminiPanoramaToggleVisibility();
   suspendGuidedScrollsForGeneration();
   if(product==='water bottle'){
     // Variant is already chosen by the time this card is even visible
@@ -4084,7 +4059,6 @@ function pickPreGenTravelVariant(key){
   refreshMugPrintModeVisibility();
   refreshTravelMugColorVisibility();
   refreshPanoramaFadeCardVisibility();
-  refreshGeminiPanoramaToggleVisibility();
   suspendGuidedScrollsForGeneration();
 
   if(is40oz){
@@ -4121,22 +4095,6 @@ function refreshTravelMugVariantVisibility(){
   if(show){
     renderTravelMugVariantGrid();
   }
-}
-
-function refreshGeminiPanoramaToggleVisibility(){
-  const row=document.getElementById('geminiPanoramaToggleRow');
-  if(!row)return;
-  const show=(product==='mug' && mugPrintMode==='wraparound');
-  row.style.display=show?'flex':'none';
-  if(!show){
-    useGeminiPanorama=false;
-    const toggle=document.getElementById('geminiPanoramaToggle');
-    if(toggle)toggle.checked=false;
-  }
-}
-
-function toggleGeminiPanorama(){
-  useGeminiPanorama=document.getElementById('geminiPanoramaToggle').checked;
 }
 
 function refreshPanoramaFadeCardVisibility(){
@@ -6310,7 +6268,6 @@ function pick(el,type){
     refreshMugStyleCardVisibility();
     refreshMugPrintModeVisibility();
     refreshPanoramaFadeCardVisibility();
-    refreshGeminiPanoramaToggleVisibility();
     refreshPhotoPosterVisibility();
     refreshPhoneCaseModelVisibility();
     refreshTravelMugVariantVisibility();
@@ -7368,13 +7325,7 @@ async function openSeamFixOverlay(){
   document.body.classList.add('step-locked');
   overlay.style.display='flex';
   const methodLabel=document.getElementById('seamFixMethodLabel');
-  if(methodLabel){
-    methodLabel.textContent=lastWraparoundMethod==='panorama'
-      ? '⚡ Generated as one single image, split into three -- these panels should already line up exactly.'
-      : lastWraparoundMethod==='classic'
-      ? '🧵 Generated as three separate images -- use the sliders below to line them up.'
-      : '';
-  }
+  if(methodLabel)methodLabel.textContent='⚡ Generated as one single image, split into three -- these panels should already line up exactly.';
   document.getElementById('seamLeftSlider').value=0;
   document.getElementById('seamRightSlider').value=0;
   document.getElementById('seamLeftVal').textContent='0px';
@@ -9108,13 +9059,13 @@ The background should feel like a finished professional illustration or magazine
 Use rich environmental storytelling while keeping the face as the primary focal point.
 `;
 
-    // One-shot Gemini panorama path (opt-in toggle on the Wraparound
-    // card): replaces the normal Center -> Left -> Right sequence below
-    // entirely with a single call that asks Gemini for one wide image
-    // already containing all three panels, pre-split into equal thirds
-    // by the backend. Self-contained branch that returns on its own --
-    // everything below this block is the untouched original flow.
-    if(isWraparoundActive && product==='mug' && useGeminiPanorama){
+    // One-shot Gemini panorama path for coffee-mug Wraparound: asks
+    // Gemini for one wide image already containing all three panels,
+    // pre-split into equal thirds by the backend -- aligned by
+    // construction instead of the old three-separate-generations method,
+    // which was retired (Aug 2026, Alyx's explicit direction) for being
+    // unreliable and no longer having any advantage over this.
+    if(isWraparoundActive && product==='mug'){
       document.getElementById('approveRow').style.display='none';
       document.getElementById('keepTweakingBtn').style.display='none';
       document.getElementById('downloadDesignBtn').style.display='none';
@@ -9166,7 +9117,6 @@ Use rich environmental storytelling while keeping the face as the primary focal 
       placements.left=addToRecentDesigns(leftUrl);
       placements.right=addToRecentDesigns(rightUrl);
 
-      lastWraparoundMethod='panorama';
       pendingWraparoundRaw={left:rawLeftUrl,center:rawCenterUrl,right:rawRightUrl};
 
       document.getElementById('wraparoundStandbyPrompt').style.display='none';
@@ -9327,96 +9277,6 @@ async function makeTestSingleZonePanorama(side){
 
     currentDesignId=addToRecentDesigns(resultUrl);
     if(product==='water bottle'){ selectedTravelProductKey=preGenTravelVariant; selectedTravelColor=preGenTravelColor; }
-
-    if (product==='mug' && mugPrintMode==='wraparound'){
-      placements.front = currentDesignId;
-      document.getElementById('approveRow').style.display='none';
-      document.getElementById('keepTweakingBtn').style.display='none';
-      document.getElementById('downloadDesignBtn').style.display='none';
-      setStatus('Center panel done. Generating the left panel — continuing the same scene...');
-      document.getElementById('wraparoundStandbyPrompt').style.display='block';
-
-      const centerRaw = await urlToDataURL(rawResultUrl);
-      // TEST (Aug 2026, Alyx's idea): if a frame was pre-selected before
-      // generating, feed the AI a framed reference for the left/right
-      // "continue this scene" calls instead of the plain unframed
-      // center panel. The theory: since these calls already lean on the
-      // model visually continuing whatever it sees in the reference
-      // image, it may naturally extend the frame's border into the new
-      // panels too, the same way it already continues room/scene detail
-      // -- something composited-after-the-fact framing can never
-      // achieve, since it has no way to know what's "supposed" to
-      // continue past each panel's edge. Genuinely untested until now;
-      // this is intentionally the ONLY thing this test changes -- the
-      // seam-fix/vertical-align/frame-reapply pipeline downstream still
-      // runs exactly as before regardless of what the AI returns here.
-      const centerForFrameTest = selectedFrame ? await compositeFrameOntoImageUrl(rawResultUrl) : centerRaw;
-      const centerForApi = await resizeDataUrl(centerForFrameTest, 1280);
-      const panoramaFadeSuffixLeft = !skipEdgeFade ? ' ' + PANORAMA_FADE_INSTRUCTION_LEFT : '';
-      const panoramaFadeSuffixRight = !skipEdgeFade ? ' ' + PANORAMA_FADE_INSTRUCTION_RIGHT : '';
-
-      let leftUrl = await callGenerateAPI({
-        workingImage: centerForApi,
-        prompt: 'Continue this scene to the left.' + panoramaFadeSuffixLeft,
-        panelRole: 'left',
-        signal: currentGenerationController.signal
-      });
-      // Sharp, unfaded copy kept specifically for pendingWraparoundRaw --
-      // see the matching comment on rawRightUrl below for why.
-      const rawLeftUrl = leftUrl;
-      if(!skipEdgeFade) leftUrl = await applyEdgeFadeToImageUrl(leftUrl, {top:true,bottom:true,left:true,right:false});
-      placements.left = addToRecentDesigns(leftUrl);
-
-      setStatus('Left panel done. Generating the right panel...');
-      let rightUrl = await callGenerateAPI({
-        workingImage: centerForApi,
-        prompt: 'Continue this scene to the right.' + panoramaFadeSuffixRight,
-        panelRole: 'right',
-        signal: currentGenerationController.signal
-      });
-      // FIXED (Aug 2026, Alyx's find): pendingWraparoundRaw used to be
-      // built from these same already-edge-faded leftUrl/rightUrl (and
-      // the faded resultUrl for center) -- but the Fix the Seams screen's
-      // horizontal trim and vertical nudge sliders pan/crop a window
-      // across each panel, and the guaranteed edge fade above is baked
-      // in at each panel's own TRUE edge. Pan away from that exact spot
-      // even slightly and the crop window shows sharp, unfaded interior
-      // instead -- no fade at the new visible edge at all. Root cause of
-      // "the border moves when I move the sliders, and goes missing in
-      // spots." Fix: feed the seam-fix/vertical-alignment/frame pipeline
-      // genuinely sharp, unfaded copies of all three panels instead, kept
-      // separately here (rawLeftUrl, rawResultUrl for center, rawRightUrl)
-      // -- the guaranteed fade above still applies to placements.left/
-      // front/right themselves (the individually saved designs), just no
-      // longer to what Fix the Seams and the frame system actually work
-      // with. The existing Hard/Fade choice screen already fades the
-      // FINAL aligned panorama's true outer edges correctly once you're
-      // done aligning -- it just needed sharp input to fade correctly,
-      // not a rewrite.
-      const rawRightUrl = rightUrl;
-      if(!skipEdgeFade) rightUrl = await applyEdgeFadeToImageUrl(rightUrl, {top:true,bottom:true,left:false,right:true});
-      placements.right = addToRecentDesigns(rightUrl);
-
-      lastWraparoundMethod='classic';
-      pendingWraparoundRaw = { left: rawLeftUrl, center: rawResultUrl, right: rawRightUrl };
-
-      document.getElementById('wraparoundStandbyPrompt').style.display='none';
-      renderRecentDesigns();
-      renderPositionHolder();
-      updatePlacementSummary();
-      saveMugState();
-
-      currentDesignId=null;
-      resetMainSlot();
-      clearReferenceSlots();
-      clearWorkshopStorage();
-      refreshTokenMeter();
-      stopNeedlesStage();
-      setStatus('✅ All three wraparound panels are ready!');
-      stopGenTimerSuccess();
-      enterRevealStage();
-      return;
-    }
 
     document.getElementById('captionCard').className='card caption-card visible';
     document.getElementById('captionText').value='';
@@ -10383,7 +10243,6 @@ checkForWorkshopRecall();
 refreshApproveRowForMode();
 refreshMugPrintModeVisibility();
 refreshPanoramaFadeCardVisibility();
-refreshGeminiPanoramaToggleVisibility();
 refreshPhotoPosterVisibility();
 refreshPhoneCaseModelVisibility();
 refreshTravelMugVariantVisibility();
@@ -10538,7 +10397,6 @@ function resetEverythingFreshStart(){
   refreshApproveRowForMode();
   refreshMugPrintModeVisibility();
   refreshPanoramaFadeCardVisibility();
-  refreshGeminiPanoramaToggleVisibility();
   refreshPhotoPosterVisibility();
   refreshPhoneCaseModelVisibility();
   refreshTravelMugVariantVisibility();
