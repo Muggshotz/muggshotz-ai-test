@@ -2043,8 +2043,8 @@ function startPhotoGuide(){
   openingGuideDone=true;
   showPostUploadFork();
   clearTimeout(forkRevealTimer);
-  const warningEl=document.getElementById('startOverBtn');
-  if(warningEl)scrollToStableBottom(warningEl,16,15);
+  const photoCard=document.getElementById('uploadPhotoCard');
+  if(photoCard)photoCard.scrollIntoView({behavior:'smooth',block:'start'});
 }
 
 function showPostUploadFork(){
