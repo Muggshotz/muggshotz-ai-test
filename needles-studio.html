@@ -4755,19 +4755,15 @@ async function generateFaceIt(){
   startGenTimer();
   showGenerationInProgress();
   startNeedlesStage();
+  // FIXED (Aug 2026): this used to anchor to the Reset button near the
+  // very top of the page instead of the actual easel -- landing back
+  // on the plain "Creation in progress" placeholder above it, not
+  // showing Needles actually painting. Anchors to the real easel stage
+  // now, same fix and same stability-polling approach as the main
+  // guided-flow generate().
   {
-    const snapFaceItStageToClipboard=()=>{
-      const anchor=document.getElementById('resetEverythingBtnTop');
-      if(!anchor)return;
-      const target=(anchor.getBoundingClientRect().top+window.scrollY)-90;
-      window.scrollTo(0,Math.max(0,target));
-    };
-    requestAnimationFrame(()=>{
-      requestAnimationFrame(()=>{
-        snapFaceItStageToClipboard();
-        [80,180,350,600,900].forEach(delay=>setTimeout(snapFaceItStageToClipboard,delay));
-      });
-    });
+    const faceItStageAnchor=document.querySelector('#needlesStageWrap .needles-stage');
+    if(faceItStageAnchor)scrollToStableTop(faceItStageAnchor,14,20);
   }
   setStatus('Generating your piece... this may take several minutes, go grab a coffee if you like.');
   document.getElementById('cancelBtn').style.display='block';
@@ -5031,19 +5027,15 @@ async function generateGoodMorning(){
   startGenTimer();
   showGenerationInProgress();
   startNeedlesStage();
+  // FIXED (Aug 2026): this used to anchor to the Reset button near the
+  // very top of the page instead of the actual easel -- landing back
+  // on the plain "Creation in progress" placeholder above it, not
+  // showing Needles actually painting. Anchors to the real easel stage
+  // now, same fix and same stability-polling approach as the main
+  // guided-flow generate().
   {
-    const snapGoodMorningStageToClipboard=()=>{
-      const anchor=document.getElementById('resetEverythingBtnTop');
-      if(!anchor)return;
-      const target=(anchor.getBoundingClientRect().top+window.scrollY)-90;
-      window.scrollTo(0,Math.max(0,target));
-    };
-    requestAnimationFrame(()=>{
-      requestAnimationFrame(()=>{
-        snapGoodMorningStageToClipboard();
-        [80,180,350,600,900].forEach(delay=>setTimeout(snapGoodMorningStageToClipboard,delay));
-      });
-    });
+    const goodMorningStageAnchor=document.querySelector('#needlesStageWrap .needles-stage');
+    if(goodMorningStageAnchor)scrollToStableTop(goodMorningStageAnchor,14,20);
   }
   setStatus('Generating your piece... this may take several minutes, go grab a coffee if you like.');
   document.getElementById('cancelBtn').style.display='block';
@@ -5241,28 +5233,15 @@ async function generateCoverMe(){
   startGenTimer();
   showGenerationInProgress();
   startNeedlesStage();
-  // Was smoothScrollToTarget('needlesStageWrap','center') -- centering
-  // just the stage let the small "Creation in progress" polaroid card
-  // (right above it) scroll partly out of view, revealing the Product
-  // tiles above the fold. UPDATED per Alyx's exact target screenshot:
-  // was anchored flush to the clipboard itself, landing too far down
-  // (hiding the Reset button and Upload Photo header above it). Now
-  // anchors to the Reset button at the true top of the page instead, so
-  // that header content stays visible along with the clipboard and
-  // easel below it.
+  // FIXED (Aug 2026): the Reset-button anchor this evolved into was
+  // still landing on the plain "Creation in progress" placeholder
+  // instead of showing Needles actually painting -- the actual repeated
+  // complaint. Anchors to the real easel stage now instead, same fix
+  // and same stability-polling approach as the main guided-flow
+  // generate().
   {
-    const snapCoverMeStageToClipboard=()=>{
-      const anchor=document.getElementById('resetEverythingBtnTop');
-      if(!anchor)return;
-      const target=(anchor.getBoundingClientRect().top+window.scrollY)-90;
-      window.scrollTo(0,Math.max(0,target));
-    };
-    requestAnimationFrame(()=>{
-      requestAnimationFrame(()=>{
-        snapCoverMeStageToClipboard();
-        [80,180,350,600,900].forEach(delay=>setTimeout(snapCoverMeStageToClipboard,delay));
-      });
-    });
+    const coverMeStageAnchor=document.querySelector('#needlesStageWrap .needles-stage');
+    if(coverMeStageAnchor)scrollToStableTop(coverMeStageAnchor,14,20);
   }
   setStatus('Generating your cover... this may take several minutes, go grab a coffee if you like.');
   document.getElementById('cancelBtn').style.display='block';
