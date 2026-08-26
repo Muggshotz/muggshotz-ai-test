@@ -4910,6 +4910,7 @@ async function approveFaceIt(){
   document.body.classList.remove('faceitreveal-focus');
   document.getElementById('faceItEaselApproveRow').style.display='none';
   document.getElementById('faceItGenerateBtn').disabled=false;
+  panelScreenExit='mockup';
   saveMugState();
   showCoverMePanelCard();
   if(target==='front' && placements.front){
@@ -5173,6 +5174,7 @@ async function approveGoodMorning(){
   document.body.classList.remove('goodmorningreveal-focus');
   document.getElementById('goodMorningEaselApproveRow').style.display='none';
   document.getElementById('goodMorningGenerateBtn').disabled=false;
+  panelScreenExit='mockup';
   saveMugState();
   showCoverMePanelCard();
   if(target==='front' && placements.front){
@@ -5418,6 +5420,7 @@ async function approveCoverMe(){
   document.body.classList.remove('covermereveal-focus');
   document.getElementById('coverMeEaselApproveRow').style.display='none';
   document.getElementById('coverMeGenerateBtn').disabled=false;
+  panelScreenExit='mockup';
   saveMugState();
   showCoverMePanelCard();
   // NEW (Alyx's request): Center now defaults OFF -- the customer has
@@ -5695,6 +5698,12 @@ function refreshCoverMePanelDoneState(){
 // for reuse elsewhere (Design track, other products).
 async function coverMePanelDone(){
   document.getElementById('coverMePanelCard').style.display='none';
+  if(panelScreenExit==='reveal'){
+    // Design-first flow: reveal, Edge Fade and the frame offer are still
+    // ahead of it, exactly as they were before this screen was shared.
+    enterRevealStage();
+    return;
+  }
   finalizeCoverMeMockup();
 }
 
@@ -7317,6 +7326,7 @@ async function approveDesign(allThree){
   if(slotMode==='three' && approvedDesignId){
     const posHolder=document.getElementById('positionHolderCard');
     if(posHolder)posHolder.style.display='none';
+    panelScreenExit='reveal';
     placements.front=approvedDesignId;
     saveMugState();
     showCoverMePanelCard();
@@ -9513,6 +9523,16 @@ let placements={left:null,right:null,front:null};
 // "Add it back (free)" restores that exact panel's own last design --
 // not a copy from Center -- with no regeneration needed.
 let coverMeLastRemoved={left:null,right:null,front:null};
+
+// A MUTUAL DEPOT, not a convergence (Alyx's framing, and it is the right one).
+// Cover Me, Face It, Home Sweet Home and the design-first flow all pull into
+// the same SELECT THE PANELS platform -- but they do not all leave for the
+// same place. The props are finished once panels are settled and head
+// straight for mockups; the design-first flow still has its reveal, its Edge
+// Fade and its frame offer waiting downstream. Whoever routes INTO the panel
+// screen says here where it expects to leave from, so sharing the platform
+// never silently rewrites anyone's destination.
+let panelScreenExit='mockup';
 // True once the customer explicitly picks a DIFFERENT image for that
 // specific side (paid "Add a different image") -- autoFillCoverMePanels
 // must never overwrite an explicit per-panel choice like that. Any panel
