@@ -7482,14 +7482,25 @@ function showAccessorizeChoiceState(){
   frameInsetOverridePct=null;
   hideFrameManualFitControls();
 
-  // Window Sill was never actually available for Wraparound (it's a
-  // fixed scene that distorts if stretched around the seam) -- only
-  // offer the choice that's genuinely valid for this print mode.
+  // NO WINDOW SILLS ON THIS TRACK (Aug 2026, Alyx). This screen is only
+  // ever reached by the design-first flow -- the props exit to mockups and
+  // never arrive here -- which made this the one place in the app offering
+  // sills to precisely the customers they cannot serve.
+  //
+  // A sill is an aperture: it needs a subject shaped to fit an opening, a
+  // head or a figure standing in a doorway. Someone who described their own
+  // image gets a pegasus in full flight over Manhattan, wingtip to wingtip.
+  // There is no cottage window that image goes through. Props and sills
+  // constrain the composition; frames and fade only treat the edges, and
+  // edges are all this track's freely-composed images can safely be given.
+  //
+  // Sills are untouched everywhere else, including the pre-generation
+  // picker on the product-first flow, where choosing the scene BEFORE the
+  // image exists is exactly what makes them work.
   const sillBox=document.getElementById('accessorizeSillChoiceBox');
   const sillOr=document.getElementById('accessorizeSillChoiceOr');
-  const showSillOption=revealFlowThreePanel;
-  if(sillBox)sillBox.style.display=showSillOption?'block':'none';
-  if(sillOr)sillOr.style.display=showSillOption?'block':'none';
+  if(sillBox)sillBox.style.display='none';
+  if(sillOr)sillOr.style.display='none';
 
   // The panorama is the persistent centerpiece of this whole screen --
   // show it right away, unframed, rather than waiting until a choice is
@@ -8641,12 +8652,14 @@ function showSingleImageAccessorizeStep(){
   }
   if(previewCard)captionCard.parentNode.insertBefore(previewCard,captionCard);
   captionCard.parentNode.insertBefore(frameCard,captionCard);
-  captionCard.parentNode.insertBefore(sillCard,captionCard);
+  // Frames follow the finished image here; sills deliberately do not -- see
+  // showAccessorizeChoiceState() for why this track cannot use them.
+  sillCard.style.display='none';
   // Relocated here, these are no longer the pre-generation one-screen
   // Frame/Window Sill sections -- always make sure they're expanded
   // (not left collapsed from earlier), regardless of whether we're
   // about to auto-scroll to them.
-  snapExpandThrough('windowSillSectionCard');
+  snapExpandThrough('frameSectionCard');
   // If they already decided before generating, show them the finished
   // result they just waited for -- don't yank them away to a decision
   // that's already made. Only steer them to the picker if there's
