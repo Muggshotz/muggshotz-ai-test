@@ -21,8 +21,9 @@ const runToMockup = async (page, mockupBodies) => {
   await waitApprove(page);
   await page.locator('#approveRow button:has-text("Yes")').first().click();
   await page.waitForTimeout(1500);
-  await page.locator('button:has-text("Continue to Order")').first().click({ timeout: 8000 });
-  await page.waitForTimeout(6000);
+  // The mockup now fires automatically on approve (PRODUCTS_AUTO_MOCKUP);
+    // clicking Continue to Order is no longer how you reach it.
+    await page.waitForTimeout(8000);
   return mockupBodies.find(b => b && b.action === 'start');
 };
 

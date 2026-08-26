@@ -48,8 +48,9 @@ const scenarios = {
     await waitApprove(page);
     await page.locator('#approveRow button:has-text("Yes")').first().click();
     await page.waitForTimeout(1500);
-    await page.locator('button:has-text("Continue to Order")').first().click({ timeout: 5000 });
-    await page.waitForTimeout(6000);
+    // The mockup now fires automatically on approve (PRODUCTS_AUTO_MOCKUP);
+    // clicking Continue to Order is no longer how you reach it.
+    await page.waitForTimeout(8000);
     const start = mockupBodies.find(b => b.action === 'start');
     if (!start) return 'FAIL: no start-mockup call fired';
     if (start.productKey !== 'suitcase' || start.sizeLabel !== 'Medium' || !start.image)
@@ -83,8 +84,9 @@ const scenarios = {
     await waitApprove(page);
     await page.locator('#approveRow button:has-text("Yes")').first().click();
     await page.waitForTimeout(1500);
-    await page.locator('button:has-text("Continue to Order")').first().click({ timeout: 5000 });
-    await page.waitForTimeout(6000);
+    // The mockup now fires automatically on approve (PRODUCTS_AUTO_MOCKUP);
+    // clicking Continue to Order is no longer how you reach it.
+    await page.waitForTimeout(8000);
     const start = mockupBodies.find(b => b.action === 'start');
     if (!start) return 'FAIL: no start-mockup call fired';
     if (start.productKey !== 'phone-case-tough' || start.sizeLabel !== 'iPhone 15 Pro Max' || !start.image)
