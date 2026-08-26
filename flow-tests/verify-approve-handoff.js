@@ -51,6 +51,7 @@ async function orderBtnState(page) {
       inViewport: r.top < innerHeight && r.bottom > 0,
       top: Math.round(r.top),
       viewportH: innerHeight,
+      autoMockup: typeof PRODUCTS_AUTO_MOCKUP !== 'undefined' && PRODUCTS_AUTO_MOCKUP.includes(product),
     };
   });
 }
@@ -59,9 +60,18 @@ function judge(label, st) {
   if (!st.exists) return `FAIL: ${label}: orderMugBtn missing entirely`;
   if (!st.shown) return `FAIL: ${label}: Continue to Order is display:none — customer has NO next step`;
   if (st.muted || st.opacity < 0.9) return `FAIL: ${label}: still cta-muted (opacity ${st.opacity}) — the one action is greyed out`;
-  if (!st.inViewport) return `FAIL: ${label}: off-screen after approve (top=${st.top}, viewport=${st.viewportH})`;
   if (!st.flashing) return `FAIL: ${label}: not flashing — no lit point of engagement`;
-  return `PASS: ${label}: Continue to Order shown, un-muted, flashing, in viewport (top=${st.top}/${st.viewportH})`;
+  // UPDATED: products in PRODUCTS_AUTO_MOCKUP now fetch the real mockup the
+  // instant a design is approved, and its overlay takes the whole screen. The
+  // button is deliberately NOT scrolled to for those -- it is prepared for
+  // when the customer comes back from the mockup, not competed with while the
+  // overlay is up. In-viewport is still required for anything that does not
+  // auto-mockup, where the button really is the next thing to reach.
+  if (!st.autoMockup && !st.inViewport) {
+    return `FAIL: ${label}: off-screen after approve (top=${st.top}, viewport=${st.viewportH})`;
+  }
+  const where = st.autoMockup ? 'prepared behind the auto-mockup overlay' : `in viewport (top=${st.top}/${st.viewportH})`;
+  return `PASS: ${label}: Continue to Order shown, un-muted, flashing, ${where}`;
 }
 
 const scenarios = {

@@ -2261,6 +2261,23 @@ const PRODUCT_IDEA_LABEL={
 // route into those panels has to come through.
 const PRODUCTS_WITH_GIMMICKS=['mug','water bottle'];
 
+// Products that should show the real Printify mockup AUTOMATICALLY once a
+// design is approved (Alyx, Aug 2026).
+//
+// Mugs and travel cups already did: mugs fetch it inside the reveal flow, and
+// travel cups get the Real Photo Preview panel. Everything wired up more
+// recently did not -- the mockup sat behind the "Continue to Order" button,
+// which reads like checkout even though continueToRealMockup() IS the mockup.
+// So the customer approved a design and was shown their flat artwork again,
+// never their artwork ON the thing they were buying, with no hint that a
+// preview existed at all.
+//
+// These are all single-image products: one slot, nothing left to place, so
+// there is nothing to wait for the customer to decide before showing it.
+// Water bottle is deliberately absent -- it has its own preview panel and
+// would fetch twice.
+const PRODUCTS_AUTO_MOCKUP=['suitcase','phone case','tote bag','puzzle','photo poster'];
+
 function confirmIdeaSatisfied(){
   pauseIdeaGuideCycle();
   document.body.classList.remove('initial-upload-focus');
@@ -7660,6 +7677,16 @@ async function approveDesign(allThree){
   if(orderBtnNext && orderBtnNext.style.display!=='none'){
     orderBtnNext.classList.remove('cta-muted');
     orderBtnNext.classList.add('cta-flash');
+    // Show the real mockup straight away, the way mugs and travel cups always
+    // have. The button stays lit underneath for when they come back from it,
+    // but nobody should have to guess that a preview of their own product is
+    // hiding behind something labelled "Continue to Order". Its own overlay
+    // takes the screen from here, so no scroll -- the scroll below would only
+    // fight it.
+    if(PRODUCTS_AUTO_MOCKUP.includes(product)){
+      beginFinalMockupFetch();
+      return;
+    }
     // scrollToStableTop, NOT smoothScrollToTarget: everything above this
     // (renderPositionHolder / updatePlacementSummary / restoreFrameCardsToHome)
     // is still resizing the page at this moment. A plain smooth scrollIntoView
