@@ -2130,7 +2130,16 @@ function showPostUploadFork(){
 // choosing a product -- the idea box stays empty/unused, which
 // generate() already handles fine (falls back to a default polished
 // caricature description when idea is blank).
+// WHICH TRACK (Aug 2026, Alyx). Nothing used to record this. The fork at the
+// top of the flow set a focus class and was then forgotten, so downstream
+// steps could not tell a product-first customer from a describe-it-yourself
+// one -- which is how the fun-props screen ended up on both tracks, offering
+// magazine covers and window scenes to someone who had already written out
+// their own idea in full.
+let chosenTrack=null;
+
 function pickTrackProduct(){
+  chosenTrack='product';
   document.getElementById('postUploadForkRow').style.display='none';
   document.getElementById('startOverBtn').style.display='none';
   document.body.classList.remove('initial-upload-focus');
@@ -2143,6 +2152,7 @@ function pickTrackProduct(){
 // every upload -- now only fires once the customer deliberately picks
 // this path instead.
 function pickTrackDescribe(){
+  chosenTrack='describe';
   document.getElementById('postUploadForkRow').style.display='none';
   document.getElementById('startOverBtn').style.display='none';
   const styleCard=document.getElementById('styleSectionCard');
@@ -2184,7 +2194,8 @@ function confirmIdeaSatisfied(){
       mugDesignConfirmed=false;
       mugGuidedChangesActive=true;
       updateMugGuidedFlow();
-      smoothScrollToTarget('panoramaFadeCard','start');
+      // Was aimed at the Edge Fade card, which is retired and hidden now.
+      smoothScrollToTarget('ideaCard','center');
     } else {
       goToDesignMethodScreen(target);
     }
@@ -4028,6 +4039,20 @@ function pickMugPrintMode(mode){
     // Design Method's tiles dimmed and unclickable here since that's
     // an earlier step, not the final one. Remove it before moving on.
     document.body.classList.remove('final-generate-focus');
+    if(chosenTrack==='describe'){
+      // PROPS ARE TRACK ONE'S (Aug 2026, Alyx). Cover Me, Face It and Home
+      // Sweet Home each need a subject shaped to fit a fixed picture -- a
+      // face on a cover, a figure in a window. Someone on this track has
+      // already described the image they want, in their own words, and what
+      // they describe is nine times out of ten a wide moving scene that fits
+      // none of those. Offering props here asked them to abandon the idea
+      // they just wrote out. Straight to Generate instead.
+      mugDesignConfirmed=false;
+      mugGuidedChangesActive=true;
+      updateMugGuidedFlow();
+      smoothScrollToTarget('ideaCard','center');
+      return;
+    }
     showDesignMethodCard();
   }
 }
