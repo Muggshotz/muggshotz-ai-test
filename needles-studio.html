@@ -1895,7 +1895,20 @@ window.addEventListener('scroll',()=>{
 
 function startNeedlesStage(){
   requestNeedlesWakeLock();
-  document.body.classList.remove('final-generate-focus');
+  // BUG FIX (Aug 2026, Alyx's phone-case run): this removed exactly ONE stale
+  // spotlight, final-generate-focus, and any other left on the body survived
+  // into generation. product-focus was the one that bit: it dims
+  // .card:not(#productCard), and the Needles stage lives inside
+  // uploadPhotoCard, so the whole "Needles is working on it" panel rendered
+  // at 35% opacity behind a veil while he painted.
+  //
+  // generation-active is itself a spotlight and dims everything except the
+  // stage, so it must be the ONLY focus class on the body once generation
+  // starts. Clear the lot rather than naming them one at a time -- naming
+  // them individually is what let product-focus through in the first place.
+  Array.from(document.body.classList)
+    .filter(c=>c.endsWith('-focus'))
+    .forEach(c=>document.body.classList.remove(c));
   document.body.classList.add('generation-active');
   insertGenerationReminders();
   generationBottomSnapArmed=true;
@@ -2205,6 +2218,49 @@ function pickTrackDescribe(){
   });
 }
 
+/* ============================================================
+   PRODUCT POLICY — which products get which flow
+   Declared here, above every use. These are consulted from
+   confirmIdeaSatisfied() (~line 2250), showDesignMethodCard()
+   (~4500) and generate() (~9300); a const used thousands of
+   lines before its declaration is a temporal-dead-zone trap
+   for whoever edits next, even where runtime ordering happens
+   to save it today.
+   ============================================================ */
+// Products the art is simply printed ONTO. A mug or travel cup has real
+// alternatives to typing -- Cover Me, Face It and Home Sweet Home each produce
+// a described image without a word, and frames and window sills give a plain
+// photo somewhere to live. None of that applies to a suitcase, a phone case, a
+// tote or a puzzle: there is no gimmick to fall back on and no frame to sit in,
+// so a bare uploaded photo would just be stretched across the object.
+//
+// Left blank, prompt assembly silently substitutes a generic caricature line
+// (see generate(): "Create a funny, polished, product-ready caricature..."),
+// which is how a suitcase run came back as an Oval Office scene nobody asked
+// for. The customer spends tokens either way, so ask first.
+//
+// Coasters and mouse pads belong here too the moment they exist.
+const PRODUCTS_NEEDING_IDEA=['suitcase','phone case','tote bag','puzzle'];
+const PRODUCT_IDEA_LABEL={
+  'suitcase':'suitcase',
+  'phone case':'phone case',
+  'tote bag':'tote bag',
+  'puzzle':'puzzle'
+};
+
+// The ONLY products the three gimmick templates (Cover Me, Face It, Home
+// Sweet Home) apply to (Alyx, Aug 2026). The two-track system was invented
+// to accommodate exactly these two -- the gimmicks are the whole reason
+// track one exists. They do not travel: nobody wants a POSTER of themselves
+// on the cover of Newsweek, or a puzzle of themselves in a shallow window
+// sill. People want something more creative from a poster than a template.
+//
+// So track one continues only for a mug or a travel cup. Every other product
+// is handed silently back to the description path and is never shown the
+// gimmick panels at all -- see showDesignMethodCard(), the single door every
+// route into those panels has to come through.
+const PRODUCTS_WITH_GIMMICKS=['mug','water bottle'];
+
 function confirmIdeaSatisfied(){
   pauseIdeaGuideCycle();
   document.body.classList.remove('initial-upload-focus');
@@ -2233,6 +2289,29 @@ function confirmIdeaSatisfied(){
       goToDesignMethodScreen(target);
     }
     return;
+  }
+  // BUG FIX (Aug 2026, Alyx's phone-case run): this default sent the customer
+  // back to the PRODUCT card, which was right in the original design-first
+  // flow -- describe the image, THEN choose what to put it on. On the
+  // product-first rail the product is already chosen and fully configured by
+  // the time the description happens, so "I'm satisfied with my description"
+  // was marching them backwards to a decision they had already made, with the
+  // Generate button left far below the fold.
+  //
+  // The description is the LAST step for these products, so hand the
+  // spotlight to Generate instead. scrollToStableTop rather than a plain
+  // smooth scroll for the same reason the approve handoff needs it: the
+  // dim-clearing above changes layout as this runs and cancels a plain
+  // scrollIntoView.
+  if(PRODUCTS_NEEDING_IDEA.includes(product)){
+    const guide=document.getElementById('finalGenerateGuidance');
+    if(guide)guide.classList.add('visible');
+    const genBtn=document.getElementById('generateBtn');
+    if(genBtn){
+      const centreMargin=Math.max(0,(window.innerHeight-genBtn.offsetHeight)/2);
+      scrollToStableTop(genBtn,centreMargin,20);
+      return;
+    }
   }
   document.body.classList.add('product-focus');
   smoothScrollToTarget('productCard','center');
@@ -4494,18 +4573,7 @@ function finishPreGenMugColorPick(){
 }
 
 // Track two's landing: the idea box, with Generate live under it.
-// The ONLY products the three gimmick templates (Cover Me, Face It, Home
-// Sweet Home) apply to (Alyx, Aug 2026). The two-track system was invented
-// to accommodate exactly these two -- the gimmicks are the whole reason
-// track one exists. They do not travel: nobody wants a POSTER of themselves
-// on the cover of Newsweek, or a puzzle of themselves in a shallow window
-// sill. People want something more creative from a poster than a template.
-//
-// So track one continues only for a mug or a travel cup. Every other product
-// is handed silently back to the description path and is never shown the
-// gimmick panels at all -- see showDesignMethodCard(), the single door every
-// route into those panels has to come through.
-const PRODUCTS_WITH_GIMMICKS=['mug','water bottle'];
+
 
 function goToDescribeAndGenerate(){
   mugDesignConfirmed=false;
@@ -6293,26 +6361,7 @@ function refreshPhoneCaseModelVisibility(){
   if(product==='phone case')setupPhoneModelSearchGen();
 }
 
-// Products the art is simply printed ONTO. A mug or travel cup has real
-// alternatives to typing -- Cover Me, Face It and Home Sweet Home each produce
-// a described image without a word, and frames and window sills give a plain
-// photo somewhere to live. None of that applies to a suitcase, a phone case, a
-// tote or a puzzle: there is no gimmick to fall back on and no frame to sit in,
-// so a bare uploaded photo would just be stretched across the object.
-//
-// Left blank, prompt assembly silently substitutes a generic caricature line
-// (see generate(): "Create a funny, polished, product-ready caricature..."),
-// which is how a suitcase run came back as an Oval Office scene nobody asked
-// for. The customer spends tokens either way, so ask first.
-//
-// Coasters and mouse pads belong here too the moment they exist.
-const PRODUCTS_NEEDING_IDEA=['suitcase','phone case','tote bag','puzzle'];
-const PRODUCT_IDEA_LABEL={
-  'suitcase':'suitcase',
-  'phone case':'phone case',
-  'tote bag':'tote bag',
-  'puzzle':'puzzle'
-};
+
 
 // Photo Puzzle mirrors the phone-case pattern: piece count is a real,
 // mandatory pre-generation decision (four physically different puzzles
