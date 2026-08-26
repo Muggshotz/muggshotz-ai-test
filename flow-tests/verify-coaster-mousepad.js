@@ -101,9 +101,12 @@ scenarios.pricesMatchProbe = async (page) => {
   // Read straight from the served catalog module instead of the DOM.
   const fs = require('fs');
   const src = fs.readFileSync(__dirname + '/products-catalog.js', 'utf8');
+  // Retail set by Alyx on affordability grounds, not margin-maximising:
+  // coasters $29.95 (down from an initial $45.95), mouse pad $9.95 (down from
+  // $11.95, to keep it an easy sub-$10 add-on). Wholesale is $19.79 and $4.88.
   const checks = [
-    ['coaster-set', '45.95', '149519'],
-    ['mouse-pad', '11.95', '71923'],
+    ['coaster-set', '29.95', '149519'],
+    ['mouse-pad', '9.95', '71923'],
   ];
   for (const [key, price, variantId] of checks) {
     const i = src.indexOf(`"${key}"`);
