@@ -865,6 +865,17 @@ document.getElementById('heroVideo').addEventListener('ended',()=>{
 <div class="note" id="phoneModelSelectedNoteGen" style="margin-top:.6rem"></div>
 </div>
 
+<div class="card" id="suitcaseSizeCard" style="display:none">
+<div class="card-title">🧳 Which Suitcase Size?</div>
+<div class="note" style="margin-top:0;margin-bottom:.75rem">We need this before generating — each size is a different physical case with its own price, and your art gets composed to fit it exactly.</div>
+<div class="grid3" id="suitcaseSizeGrid">
+<div class="btn-select" data-suitcase-size="Small" onclick="pickSuitcaseSize('Small')">Small<div class="note" style="margin-top:4px">$169.95</div></div>
+<div class="btn-select" data-suitcase-size="Medium" onclick="pickSuitcaseSize('Medium')">Medium<div class="note" style="margin-top:4px">$194.95</div></div>
+<div class="btn-select" data-suitcase-size="Large" onclick="pickSuitcaseSize('Large')">Large<div class="note" style="margin-top:4px">$214.95</div></div>
+</div>
+<div class="note" id="suitcaseSizeSelectedNote" style="margin-top:.6rem"></div>
+</div>
+
 <div class="snap-section snap-collapsed" id="edgeFadeIdeaSection" data-snap-index="3">
 <button type="button" class="snap-arrow-btn snap-arrow-up" id="snapUp3" onclick="snapCollapseFrom(3)">⌃</button>
 <!-- RETIRED (Aug 2026, Alyx). This asked the customer to rule on how an
@@ -6216,6 +6227,27 @@ function refreshPhoneCaseModelVisibility(){
   if(product==='phone case')setupPhoneModelSearchGen();
 }
 
+// Suitcase mirrors the phone-case pattern: size is a real, mandatory
+// pre-generation decision (three physically different cases, $169.95 to
+// $214.95 -- prices shown here must track lib/products-catalog.js).
+let selectedSuitcaseSize=null;
+
+function pickSuitcaseSize(label){
+  selectedSuitcaseSize=label;
+  document.querySelectorAll('#suitcaseSizeGrid .btn-select').forEach(b=>{
+    b.classList.toggle('selected',b.dataset.suitcaseSize===label);
+  });
+  document.getElementById('suitcaseSizeSelectedNote').textContent='✓ Confirmed: '+label+'.';
+  document.getElementById('finalGenerateGuidance').classList.add('visible');
+  smoothScrollToTarget('finalGenerateGuidance','center');
+}
+
+function refreshSuitcaseSizeVisibility(){
+  const card=document.getElementById('suitcaseSizeCard');
+  if(!card)return;
+  card.style.display=(product==='suitcase')?'block':'none';
+}
+
 const PHOTO_POSTER_CATALOG = {
   base: {
     finishes: ["Glossy", "Matte"],
@@ -6364,7 +6396,8 @@ function pick(el,type){
     const productGuide=document.getElementById('productGuidancePrompt');
     if(productGuide)productGuide.classList.remove('visible');
     const finalGuide=document.getElementById('finalGenerateGuidance');
-    if(finalGuide)finalGuide.classList.toggle('visible',product==='phone case'&&!!selectedPhoneCaseModel);
+    if(finalGuide)finalGuide.classList.toggle('visible',
+      (product==='phone case'&&!!selectedPhoneCaseModel)||(product==='suitcase'&&!!selectedSuitcaseSize));
     refreshApproveRowForMode();
     refreshMugSizeCardVisibility();
     refreshMugStyleCardVisibility();
@@ -6372,6 +6405,7 @@ function pick(el,type){
     refreshPanoramaFadeCardVisibility();
     refreshPhotoPosterVisibility();
     refreshPhoneCaseModelVisibility();
+    refreshSuitcaseSizeVisibility();
     refreshTravelMugVariantVisibility();
     refreshTravelMugColorVisibility();
     refreshToteBagColorVisibility();
@@ -6393,6 +6427,10 @@ function pick(el,type){
         const input=document.getElementById('phoneModelSearchInputGen');
         if(input)input.focus();
       });
+    } else if(product==='suitcase'){
+      // Same "pick the thing that determines everything else first"
+      // pattern as phone case and mug: size is mandatory before Generate.
+      smoothScrollToTarget('suitcaseSizeCard','center');
     } else if(product==='water bottle'){
       smoothScrollToTarget('travelMugVariantCard','center');
     } else if(product==='mug'){
@@ -9065,6 +9103,11 @@ async function generate(){
     document.getElementById('phoneCaseModelCard').scrollIntoView({behavior:'smooth',block:'center'});
     return;
   }
+  if(product==='suitcase' && !selectedSuitcaseSize){
+    setStatus('Please pick your suitcase size above first — each size is a different physical case with its own price.',true);
+    document.getElementById('suitcaseSizeCard').scrollIntoView({behavior:'smooth',block:'center'});
+    return;
+  }
   if(product==='mug' && (!mugSizeChosenPreGen || !mugColorFinishedPreGen)){
     setStatus('Please finish picking your mug size, style, and color above first.',true);
     refreshMugSizeCardVisibility();
@@ -10279,6 +10322,21 @@ function buildMockupRequestBody(){
     return body;
   }
 
+  // Phone case and suitcase: both single-image catalog products whose
+  // variant is picked by sizeLabel (the phone MODEL doubles as the size
+  // key in lib/products-catalog.js; the suitcase uses Small/Medium/Large).
+  // start-mockup's single-image branch handles the rest generically.
+  if (product === 'phone case' || product === 'suitcase') {
+    const design = placements.left || placements.front || placements.right;
+    const url = design ? (findDesignById(design)?.url ?? null) : null;
+    if (product === 'phone case') {
+      if (!selectedPhoneCaseModel) return null;
+      return { productKey: 'phone-case-tough', sizeLabel: selectedPhoneCaseModel, image: url };
+    }
+    if (!selectedSuitcaseSize) return null;
+    return { productKey: 'suitcase', sizeLabel: selectedSuitcaseSize, image: url };
+  }
+
   return null;
 }
 
@@ -10568,6 +10626,7 @@ refreshMugPrintModeVisibility();
 refreshPanoramaFadeCardVisibility();
 refreshPhotoPosterVisibility();
 refreshPhoneCaseModelVisibility();
+refreshSuitcaseSizeVisibility();
 refreshTravelMugVariantVisibility();
 refreshTravelMugColorVisibility();
 refreshToteBagColorVisibility();
@@ -10667,6 +10726,11 @@ function resetEverythingFreshStart(){
   const phoneNote=document.getElementById('phoneModelSelectedNoteGen');
   if(phoneNote)phoneNote.textContent='';
   hidePhoneConfirmationGen();
+
+  selectedSuitcaseSize=null;
+  document.querySelectorAll('#suitcaseSizeGrid .btn-select').forEach(b=>b.classList.remove('selected'));
+  const suitcaseNote=document.getElementById('suitcaseSizeSelectedNote');
+  if(suitcaseNote)suitcaseNote.textContent='';
   pickPosterFramed(false);
   pickPosterOrientation('Vertical');
   pickPosterFinish('Glossy');
@@ -10728,6 +10792,7 @@ function resetEverythingFreshStart(){
   refreshPanoramaFadeCardVisibility();
   refreshPhotoPosterVisibility();
   refreshPhoneCaseModelVisibility();
+  refreshSuitcaseSizeVisibility();
   refreshTravelMugVariantVisibility();
   refreshTravelMugColorVisibility();
   refreshToteBagColorVisibility();
