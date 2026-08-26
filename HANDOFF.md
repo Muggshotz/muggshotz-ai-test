@@ -114,6 +114,34 @@ relay (the old note here was wrong — admin 405s it). Post-it and Greeting Card
 product grid with NO catalog entries — they generate art but cannot mockup/order; needs data
 + catalog entries too.
 
+## How hard is it to add a product? (answered for Alyx, 2026-08-26)
+Three very different costs — do not quote one number:
+1. **New variant of an existing type** (another travel mug, another tote colour, another
+   poster size): ~10 lines in `lib/products-catalog.js` + ~6 lines in the studio's
+   `TRAVEL_MUG_CATALOG`-style object. No new UI — the grids render themselves from the data.
+2. **New model inside an existing product**: phone cases are the best case in the repo —
+   models come from `api/phone-case-catalog.js` and are SEARCHED, not hardcoded, so this is a
+   pure data change. A new suitcase size is one tile + one catalog line.
+3. **A genuinely new product type** (what puzzle/poster/tote each were today): half a day.
+
+The server side is the strong half and deserves credit: `resolveVariant()` is generic over
+`sizes`/`colors` and falls back to a LIVE title-match when a `variantId` is null, so a product
+can go live before anyone looks up numeric IDs. Photo Puzzle needed ZERO server changes.
+
+**The friction is one specific thing:** `buildMockupRequestBody()` in needles-studio.html is a
+hardcoded if-chain. Every product needs a hand-written branch, and a missing branch returns
+`null` SILENTLY — the product generates art, looks completely healthy, and simply never
+mockups. No error, no console warning. Three products were sitting in exactly that state at the
+start of this session (puzzle, poster, tote); poster's UI AND server support were both already
+complete and it was missing nothing but that branch.
+
+**Recommended (NOT built — needs Alyx's go-ahead):** make `buildMockupRequestBody()`
+table-driven — a per-product descriptor naming its catalog key and where size/colour come from
+— so a new single-image product becomes a data entry, and a missing entry fails LOUDLY instead
+of returning null. Most products already fit one of two shapes (single-image, three-slot-wrap).
+Plus a cheap startup assertion that every product on the grid has both a catalog entry and a
+mockup path; that one check would have caught all three dead-ends instantly.
+
 ## Testing harness (`flow-tests/`)
 - `harness.js` — Playwright launcher: serves nothing itself; expects
   `python3 -m http.server 8788 --directory <repo> --bind 127.0.0.1`, stubs ALL `/api/*`
@@ -132,12 +160,45 @@ product grid with NO catalog entries — they generate art but cannot mockup/ord
 - **Fixtures are NOT committed.** `harness.js` readFileSync's `test-photo.jpg`,
   `fake-generated.jpg`, `fake-mockup.jpg` at load; they were missing. Regenerate with PIL
   (`pip install pillow`) — any plain JPEG works.
+- `verify-travel.js` — 6 checks: all five travel variants driven to their mockup body
+  (pinning productKey, sizeLabel, and single-image vs front-back body shape — the 40oz
+  insulated is the ONLY front-back one), plus a catalog-parity check that the studio's
+  `TRAVEL_MUG_CATALOG` has not drifted from the server's. 6/6 PASS. This closes the
+  "travel-mug deep coverage offered but not done" item.
+- **Printify CDN gotcha:** the travel variant grid renders one `<img>` per variant from
+  `images.printify.com`, which is unreachable from the sandbox exactly like Google Fonts.
+  `harness.js` now stubs it; unstubbed it produced four ERR_CONNECTION_RESET console errors
+  per run that looked like a product fault and were not one.
 - **Dialog gotcha:** `resetEverythingFreshStart()` opens a `window.confirm()` and returns early
   on dismiss. Playwright auto-DISMISSES dialogs, so any reset test must
   `page.once('dialog', d => d.accept())` first or it will falsely report "reset doesn't clear".
 - `AUDIT-CATALOG.md` — full issue catalog, secret-sauce inventory (line numbers approximate
   after later edits — re-grep), VERIFIED-WORKING list, and open taste questions Q1–Q5 that
   Alyx has NOT yet answered (Q2 was answered: keep the rail, hand off spotlights).
+
+## Findings this session that are NOT yet acted on
+- **`travel-mug-40oz-vacuum` (Vacuum Thermal Tumbler, 40oz) is unreachable.** It has a full
+  entry in `lib/products-catalog.js` — blueprint 1715, provider 90, real variant IDs for 8+
+  colours — but appears ZERO times in needles-studio.html, so it is not in the variant grid and
+  cannot be bought. Its price is explicitly marked `// TODO — price is a placeholder, not a
+  real pricing decision. "40oz": { price: 34.95 }`, which is why it was NOT added blind:
+  surfacing it would ship a placeholder price. Needs Alyx to confirm a retail price, then it is
+  a ~6-line addition to the studio's TRAVEL_MUG_CATALOG.
+- **Coaster + mouse pad data is gathered and ready** (see below) but both need two decisions
+  from Alyx that cannot be derived: WHICH blueprint, and the retail price.
+
+## Coaster / mouse pad candidates (fetched live, 2026-08-26)
+Coasters — 9 blueprints; strongest four, with provider and real variants:
+  #510  Corkwood Coaster Set   prov 48 Colorway (SAME as tote)  1 variant 72872 Cork 3.75" sq, 1169x1169
+  #2764 Hardboard Set of 4     prov 59 Imagine Your Photos (SAME as mugs) 1 variant 149519 4"x4", 1238x1238
+  #480  Cork Back Coaster      prov 70 Printed Mint  2 variants: 71689 sq 3.75" 1200x1200, 74633 round 4" 1320x1320
+  #1523 Ceramic Coaster        prov 23 WOYC  2 variants: 109346 round, 109347 square, both 1260x1260
+Mouse pads — 10 blueprints; strongest three:
+  #582  Mouse Pad              prov 99 Printify Choice / 70 Printed Mint  1 variant 71665 round, 2625x2625
+  #608  Mouse Pad (Rectangle)  prov 28 District Photo  1 variant 71923 9"x8", 2925x2502
+  #442  Mouse Pad (EU)         prov 30 OPT OnDemand — EU fulfilment, probably wrong for a US shop
+Note the provider overlap: #510 shares tote's provider and #2764 shares the mugs' provider,
+which is worth weighing for consolidated fulfilment.
 
 ## Open items
 - Alyx has a 28-item stress-test list from the outgoing session and may return with failures:

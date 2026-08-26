@@ -81,6 +81,13 @@ async function launch(opts = {}) {
   // so environmental noise doesn't pollute the zero-console-errors check.
   await page.route('https://fonts.googleapis.com/**', (route) =>
     route.fulfill({ contentType: 'text/css', body: '' }));
+  // Printify thumbnail CDN is unreachable from this sandbox exactly like
+  // Google Fonts is, and the travel-cup variant grid renders one <img> per
+  // variant from it -- left unstubbed that is four ERR_CONNECTION_RESET
+  // console errors per run, which looks like a product fault and isn't one.
+  await page.route('https://images.printify.com/**', (route) =>
+    route.fulfill({ contentType: 'image/jpeg', body: FAKE_MOCKUP }));
+
   await page.route('https://fonts.gstatic.com/**', (route) =>
     route.fulfill({ contentType: 'font/woff2', body: Buffer.alloc(0) }));
 
