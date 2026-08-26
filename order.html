@@ -789,6 +789,15 @@ function isPhoneCase(){ return selectedProductFamily === 'phone case'; }
 function isToteBag(){ return selectedProductFamily === 'tote bag'; }
 function isPuzzle(){ return selectedProductFamily === 'puzzle'; }
 function isPhotoPoster(){ return selectedProductFamily === 'photo poster'; }
+function isCoaster(){ return selectedProductFamily === 'coaster'; }
+function isMousePad(){ return selectedProductFamily === 'mouse pad'; }
+
+// Single-variant products: one size, no colour, so a flat price each. These
+// MUST match lib/products-catalog.js -- this page keeps its own copy of every
+// price rather than reading the catalog, so a change made in one place and not
+// the other shows the customer one number while the server charges another.
+const COASTER_PRICE = 29.95;
+const MOUSE_PAD_PRICE = 9.95;
 
 const PHOTO_POSTER_CATALOG = {
   base: {
@@ -837,7 +846,9 @@ const PHONE_CASE_MODELS = [
   "Samsung Galaxy S21","Samsung Galaxy S22","Samsung Galaxy S23",
   "Samsung Galaxy S24","Samsung Galaxy S25","Samsung Galaxy S26"
 ];
-const PHONE_CASE_PRICE = 24.95;
+// Kept in step with lib/products-catalog.js by hand -- this page carries its
+// own copy of every price. See COASTER_PRICE below for why that matters.
+const PHONE_CASE_PRICE = 19.95;
 let selectedPhoneModel = null;
 if (pendingOrder?.preselectedPhoneModel) {
   selectedPhoneModel = pendingOrder.preselectedPhoneModel;
@@ -868,9 +879,11 @@ const BRIDGE_GRID_PRODUCTS = [
   { key: 'mug', icon: '☕', label: 'Coffee Mug', priceFrom: '$14.95' },
   { key: 'water bottle', icon: '🍶', label: 'Travel Cups', priceFrom: '$34.95' },
   { key: 'suitcase', icon: '🧳', label: 'Suitcase', priceFrom: '$169.95' },
-  { key: 'phone case', icon: '📱', label: 'Phone Case', priceFrom: '$24.95' },
+  { key: 'phone case', icon: '📱', label: 'Phone Case', priceFrom: '$19.95' },
   { key: 'tote bag', icon: '👜', label: 'Tote Bag', priceFrom: '$23.95' },
-  { key: 'puzzle', icon: '🧩', label: 'Photo Puzzle', priceFrom: '$38.95' }
+  { key: 'puzzle', icon: '🧩', label: 'Photo Puzzle', priceFrom: '$38.95' },
+  { key: 'coaster', icon: '☕', label: 'Coasters', priceFrom: '$29.95' },
+  { key: 'mouse pad', icon: '🖱️', label: 'Mouse Pad', priceFrom: '$9.95' }
 ];
 const BRIDGE_GRID_COMING_SOON = [
   { icon: '🧸', label: 'Teddy Bear' },
@@ -1584,6 +1597,12 @@ function updateSummary(){
   } else if (isPuzzle()) {
     basePrice = PUZZLE_SIZES[selectedPuzzleSize].price;
     styleSizeLabel = 'Photo Puzzle, ' + selectedPuzzleSize;
+  } else if (isCoaster()) {
+    basePrice = COASTER_PRICE;
+    styleSizeLabel = 'Coasters, Set of 4 (4" x 4")';
+  } else if (isMousePad()) {
+    basePrice = MOUSE_PAD_PRICE;
+    styleSizeLabel = 'Mouse Pad (9" x 8")';
   } else if (isPhotoPoster()) {
     const tree = pendingOrder?.posterFramed ? PHOTO_POSTER_CATALOG.framedUpsell : PHOTO_POSTER_CATALOG.base;
     basePrice = tree.sizes[pendingOrder?.posterSize]?.price || 0;
