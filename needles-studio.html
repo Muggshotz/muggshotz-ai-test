@@ -400,7 +400,7 @@
 #creditsBtn:active{transform:translateY(1px)}
 
 .step-lock-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:900;align-items:flex-start;justify-content:center;padding:2.5rem 1.5rem;overflow-y:auto}
-body.generation-active .card:not(#uploadPhotoCard){opacity:.28;filter:brightness(.55) saturate(.7);pointer-events:none;transition:opacity .5s,filter .5s}
+body.generation-active .card:not(#uploadPhotoCard):not(#captionCard){opacity:.28;filter:brightness(.55) saturate(.7);pointer-events:none;transition:opacity .5s,filter .5s}
 body.generation-active #uploadPhotoCard{position:relative;z-index:5}
 body.generation-active #creditsModalOverlay .card{opacity:1!important;filter:none!important;pointer-events:auto!important}
 body .step-lock-overlay .card{opacity:1!important;filter:none!important;pointer-events:auto!important}
@@ -995,7 +995,7 @@ Tell Needles <span style="color:#7ab8ff">what you have in mind</span>
 
 <div class="card" id="designMethodComingSoonCard" style="display:none">
 <div class="card-title" id="designMethodComingSoonTitle"></div>
-<div class="note" style="margin-top:0">This design method is still being built — check back soon! In the meantime, try Cover Me or Design By Description.</div>
+<div class="note" style="margin-top:0">This design method is still being built — check back soon! In the meantime, try one of the other props, or decline them and describe your idea instead.</div>
 <button type="button" class="download-btn" style="margin-top:1rem" onclick="designMethodComingSoonBack()">← Back</button>
 </div>
 
@@ -1608,7 +1608,10 @@ function needlesRevealFinishedArt(){
 }
 
 function needlesFinishPresentation(){
-  if(needlesPhase==='stopped')return;
+  // Proceed even when the phase already claims 'stopped' if an approve
+  // callback is still owed -- something force-stopped the stage without
+  // paying out (the orphaned-callback case the done-watchdog rescues).
+  if(needlesPhase==='stopped' && !needlesPresentationDone)return;
   needlesPhase='stopped';
   needlesPlaying=false;
   needlesFinalePlaying=false;
@@ -1712,6 +1715,8 @@ function needlesPlayFile(filename){
     needlesFinishPresentation();
     return;
   }
+  // Each clip start counts as playback progress for the done-watchdog.
+  armNeedlesDoneWatchdog();
 
   const incoming=needlesIdleLayer;
   const outgoing=needlesActiveLayer;
@@ -1886,8 +1891,10 @@ function stopNeedlesStage(){
   needlesPhase='stopped';
   clearTimeout(needlesSafetyTimer);
   needlesSafetyTimer=null;
-  clearTimeout(needlesHardCeilingTimer);
-  needlesHardCeilingTimer=null;
+  // Deliberately NOT clearing the done-watchdog here: if this stop ever
+  // runs while an approve callback is still owed, that watchdog is the
+  // only thing left that can pay it out. When no callback is pending
+  // (cancel/error paths -- the normal reasons to be here) it no-ops.
 
   const wrap=document.getElementById('needlesStageWrap');
   if(wrap)wrap.classList.remove('visible');
@@ -1918,33 +1925,28 @@ function presentFinishedNeedlesArt(imageUrl,onDone){
     }
   },30000);
 
-  // HARD CEILING: the safety timer above deliberately backs off once
-  // the finale phase has started (needlesPhase!=='finale' in its own
-  // condition), leaving the per-clip 9s watchdog in needlesPlayFile as
-  // the only thing standing between a stuck ending clip and the
-  // customer being stranded on "Done in Xs" forever, with no way to
-  // reach their mockup -- a real, reported case of exactly that
-  // happening. This fires once and forces the presentation to actually
-  // finish (revealing the approve buttons) if it somehow still hasn't,
-  // regardless of what phase the state machine is stuck in.
-  // needlesFinishPresentation() already guards against running twice
-  // (returns immediately if needlesPhase is already 'stopped'), so this
-  // is a safe no-op on the normal, successful path.
-  //
-  // 20s, not a more generous ceiling (Alyx's explicit call): firing this
-  // isn't destructive -- it just skips straight to the same reveal the
-  // finale was already heading toward, a few seconds sooner than the
-  // full animation would have. A customer who's been staring at "Done"
-  // for 15-20s with nothing happening starts assuming it's broken and
-  // going looking for other options, which is worse than the animation
-  // ending slightly early.
+  armNeedlesDoneWatchdog();
+}
+
+// DONE-WATCHDOG (replaces the earlier flat 20s hard ceiling, which
+// reliably truncated healthy finales: the natural remaining show after
+// generation completes runs ~21-23s, longer than the ceiling itself).
+// The real invariant is "the customer must get their approve buttons":
+// once presentFinishedNeedlesArt has stored the done callback, this
+// re-arms on every clip advance -- a healthy show keeps pushing it
+// forward -- and only fires when playback has made NO progress for 12s
+// while that callback is still owed. Fires regardless of what the phase
+// machine claims (including a force-stop that orphaned the callback),
+// then finishes the presentation so the buttons appear.
+function armNeedlesDoneWatchdog(){
+  if(!needlesPresentationDone)return;
   clearTimeout(needlesHardCeilingTimer);
   needlesHardCeilingTimer=setTimeout(()=>{
-    if(needlesPhase!=='stopped'){
-      console.error('Needles presentation never completed on its own -- forcing it to finish so the customer isn\'t stranded.');
+    if(needlesPresentationDone){
+      console.error('Needles presentation stalled with the approve step still owed -- forcing it to finish so the customer isn\'t stranded.');
       needlesFinishPresentation();
     }
-  },20000);
+  },12000);
 }
 let refImageAData=null, refImageBData=null;
 let previousImageData=null;
@@ -3806,14 +3808,13 @@ let pathCanvasReady=false;
 let mugPrintMode='three-panel';
 let mugPrintModeTouched=false;
 // Design Method screen (Cover Me / Let's Just Face It / Home Sweet Home
-// / Design By Description) -- replaces the old Three Panels/Wraparound
+// / description-only) -- replaces the old Three Panels/Wraparound
 // popup as the next decision after Color for coffee mugs specifically.
 // selectedDesignMethod is null until a prop tile is tapped; ideaReturnTarget
-// tells confirmIdeaSatisfied() where to send the customer back to when
-// they finish the description panel via this screen's re-offered
-// checkbox, instead of its old hardcoded productCard destination.
+// tells confirmIdeaSatisfied() where to send the customer next when
+// they reach the description panel via this screen, instead of its old
+// hardcoded productCard destination.
 let selectedDesignMethod=null;
-let designByDescriptionChecked=false;
 let ideaReturnTarget=null;
 let frameGuidancePopupShown=false;
 let ideaBoxIntroShown=false;
@@ -4523,12 +4524,7 @@ function showDesignMethodCard(){
   setTimeout(()=>{guidedScrollInProgress=false;},900);
 }
 
-// Tapping a prop tile. If Design By Description is checked, the
-// customer goes through the description panel FIRST, then lands on
-// the chosen method's screen; ideaReturnTarget tells
-// confirmIdeaSatisfied() where "Satisfied" should send them instead
-// of its old default (productCard). If unchecked, they go straight
-// to the method's screen.
+// Tapping a prop tile goes straight to that method's screen.
 function pickDesignMethod(method){
   clearFunPropsDecline();
   selectedDesignMethod=method;
@@ -4536,17 +4532,7 @@ function pickDesignMethod(method){
   const btnId={coverMe:'designMethodCoverMeBtn',faceIt:'designMethodFaceItBtn',homeSweetHome:'designMethodHomeBtn'}[method];
   const btn=document.getElementById(btnId);
   if(btn)btn.classList.add('selected');
-  if(designByDescriptionChecked){
-    ideaReturnTarget=method;
-    document.getElementById('designMethodCard').style.display='none';
-    document.body.classList.remove('design-method-focus');
-    document.body.classList.add('idea-focus');
-    smoothScrollToTarget('ideaCard','center',()=>{
-      document.getElementById('ideaDesc')?.focus();
-    });
-  } else {
-    goToDesignMethodScreen(method);
-  }
+  goToDesignMethodScreen(method);
 }
 
 // Taking the "no thank you" out of the fun props. Clears any prop that was
@@ -4596,9 +4582,7 @@ function designMethodComingSoonBack(){
   showDesignMethodCard();
 }
 
-// Routes to each method's actual screen. Cover Me and Let's Just Face
-// It are both real -- Home Sweet Home still shows a Coming Soon
-// placeholder until its own screen is built.
+// Routes to each method's actual screen -- all three are real now.
 function goToDesignMethodScreen(method){
   document.getElementById('designMethodCard').style.display='none';
   document.body.classList.remove('design-method-focus');
@@ -4608,11 +4592,6 @@ function goToDesignMethodScreen(method){
     showFaceItCard();
   } else if(method==='homeSweetHome'){
     showGoodMorningCard();
-  } else {
-    const titleEl=document.getElementById('designMethodComingSoonTitle');
-    if(titleEl)titleEl.textContent='🪟 Home Sweet Home';
-    document.getElementById('designMethodComingSoonCard').style.display='block';
-    smoothScrollToTarget('designMethodComingSoonCard','center');
   }
 }
 
@@ -7417,6 +7396,10 @@ async function approveDesign(allThree){
     return;
   }
 
+  // Spotlight handoff for the non-mug tail: the mug branch above gets
+  // this inside showCoverMePanelCard(); without it here, the customer
+  // is scrolled to a placement card still locked under generation-active.
+  clearAllFocusModes();
   document.getElementById('positionHolderCard').scrollIntoView({behavior:'smooth',block:'start'});
 }
 
@@ -8015,10 +7998,18 @@ function cancelAccessorizeToOffer(){
 }
 
 function keepTweaking(){
+  // "No -- Let's Try Another" invites an idea edit -- the spotlight must
+  // release, or the box this scrolls to is dimmed and click-locked under
+  // generation-active. Generate re-arms the dim when they spin again.
+  clearAllFocusModes();
   const box=document.getElementById('ideaDesc');
   box.placeholder='What would you like to add or change? Describe it here, then hit Generate again.';
-  box.scrollIntoView({behavior:'smooth',block:'center'});
-  box.focus();
+  // smoothScrollToTarget, not raw scrollIntoView: on product-first flows
+  // the idea box lives in a still-collapsed snap section, so the old
+  // scroll pointed at an invisible box. This expands the section first.
+  smoothScrollToTarget('ideaCard','center',()=>{
+    box.focus({preventScroll:true});
+  });
   const reminder=document.getElementById('keepTweakingReminder');
   if(reminder)reminder.classList.add('visible');
 }
@@ -9055,6 +9046,13 @@ async function generate(){
   }
   if(!product){
     setStatus('Please select a product above first.',true);
+    // On Track 2 this fires while idea-focus is still on the body, whose
+    // CSS makes every card except the idea box pointer-events:none -- so
+    // scrolling the customer to the product grid delivered them to tiles
+    // they physically could not click. Perform the same focus handoff
+    // confirmIdeaSatisfied() does, so the destination is actually usable.
+    document.body.classList.remove('idea-focus');
+    document.body.classList.add('product-focus');
     document.getElementById('productCard').scrollIntoView({behavior:'smooth',block:'center'});
     return;
   }
@@ -9575,6 +9573,17 @@ async function makeTestSingleZonePanorama(side){
       enterRevealStage();
       return;
     }
+
+    // The guided-rail dim stays ON through the reveal: generation-active
+    // already spotlights exactly the right card (the finished art and the
+    // Yes/No row both live in #uploadPhotoCard, its one exemption -- plus
+    // #captionCard, the sanctioned add-text detour, exempted in the CSS).
+    // The spotlight hands off at the customer's decision instead:
+    // approveDesign() and keepTweaking() each clear it as they move the
+    // customer to their next point of engagement. Before this, nothing on
+    // the plain path ever cleared it at all -- the page below the top
+    // card stayed locked forever. Patience banners are done either way.
+    removeGenerationReminders();
 
     document.getElementById('captionCard').className='card caption-card visible';
     document.getElementById('captionText').value='';
