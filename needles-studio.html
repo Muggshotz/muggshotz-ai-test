@@ -4494,6 +4494,19 @@ function finishPreGenMugColorPick(){
 }
 
 // Track two's landing: the idea box, with Generate live under it.
+// The ONLY products the three gimmick templates (Cover Me, Face It, Home
+// Sweet Home) apply to (Alyx, Aug 2026). The two-track system was invented
+// to accommodate exactly these two -- the gimmicks are the whole reason
+// track one exists. They do not travel: nobody wants a POSTER of themselves
+// on the cover of Newsweek, or a puzzle of themselves in a shallow window
+// sill. People want something more creative from a poster than a template.
+//
+// So track one continues only for a mug or a travel cup. Every other product
+// is handed silently back to the description path and is never shown the
+// gimmick panels at all -- see showDesignMethodCard(), the single door every
+// route into those panels has to come through.
+const PRODUCTS_WITH_GIMMICKS=['mug','water bottle'];
+
 function goToDescribeAndGenerate(){
   mugDesignConfirmed=false;
   mugGuidedChangesActive=true;
@@ -4512,7 +4525,11 @@ function showDesignMethodCard(){
   //
   // Harmless for the back-buttons among those callers: they are only
   // reachable from inside a prop, which track two can no longer enter.
-  if(chosenTrack==='describe'){
+  // Two ways to end up on the description path: the customer explicitly
+  // chose track two, OR they picked a product the gimmicks were never meant
+  // for. The second is silent by design -- there is nothing to explain,
+  // because there was never a choice worth offering.
+  if(chosenTrack==='describe' || !PRODUCTS_WITH_GIMMICKS.includes(product)){
     goToDescribeAndGenerate();
     return;
   }
