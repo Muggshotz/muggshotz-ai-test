@@ -865,6 +865,18 @@ document.getElementById('heroVideo').addEventListener('ended',()=>{
 <div class="note" id="phoneModelSelectedNoteGen" style="margin-top:.6rem"></div>
 </div>
 
+<div class="card" id="puzzleSizeCard" style="display:none">
+<div class="card-title">🧩 How Many Pieces?</div>
+<div class="note" style="margin-top:0;margin-bottom:.75rem">We need this before generating — each piece count is a different physical puzzle with its own print size and price, and your art gets composed to fit it exactly.</div>
+<div class="grid2" id="puzzleSizeGrid">
+<div class="btn-select" data-puzzle-size="96 pcs" onclick="pickPuzzleSize('96 pcs')">96 pieces<div class="note" style="margin-top:4px">$38.95</div></div>
+<div class="btn-select" data-puzzle-size="252 pcs" onclick="pickPuzzleSize('252 pcs')">252 pieces<div class="note" style="margin-top:4px">$40.95</div></div>
+<div class="btn-select" data-puzzle-size="500 pcs" onclick="pickPuzzleSize('500 pcs')">500 pieces<div class="note" style="margin-top:4px">$43.95</div></div>
+<div class="btn-select" data-puzzle-size="1000 pcs" onclick="pickPuzzleSize('1000 pcs')">1000 pieces<div class="note" style="margin-top:4px">$43.95</div></div>
+</div>
+<div class="note" id="puzzleSizeSelectedNote" style="margin-top:.6rem"></div>
+</div>
+
 <div class="snap-section snap-collapsed" id="edgeFadeIdeaSection" data-snap-index="3">
 <button type="button" class="snap-arrow-btn snap-arrow-up" id="snapUp3" onclick="snapCollapseFrom(3)">⌃</button>
 <!-- RETIRED (Aug 2026, Alyx). This asked the customer to rule on how an
@@ -6216,6 +6228,30 @@ function refreshPhoneCaseModelVisibility(){
   if(product==='phone case')setupPhoneModelSearchGen();
 }
 
+// Photo Puzzle mirrors the phone-case pattern: piece count is a real,
+// mandatory pre-generation decision (four physically different puzzles
+// at different print sizes, $38.95 to $43.95 -- prices shown on the card
+// must track lib/products-catalog.js). NOTE the key translation: the UI
+// product value is 'puzzle', the catalog key is 'photo-puzzle';
+// buildMockupRequestBody() does that mapping.
+let selectedPuzzleSize=null;
+
+function pickPuzzleSize(label){
+  selectedPuzzleSize=label;
+  document.querySelectorAll('#puzzleSizeGrid .btn-select').forEach(b=>{
+    b.classList.toggle('selected',b.dataset.puzzleSize===label);
+  });
+  document.getElementById('puzzleSizeSelectedNote').textContent='✓ Confirmed: '+label+'.';
+  document.getElementById('finalGenerateGuidance').classList.add('visible');
+  smoothScrollToTarget('finalGenerateGuidance','center');
+}
+
+function refreshPuzzleSizeVisibility(){
+  const card=document.getElementById('puzzleSizeCard');
+  if(!card)return;
+  card.style.display=(product==='puzzle')?'block':'none';
+}
+
 const PHOTO_POSTER_CATALOG = {
   base: {
     finishes: ["Glossy", "Matte"],
@@ -6364,7 +6400,8 @@ function pick(el,type){
     const productGuide=document.getElementById('productGuidancePrompt');
     if(productGuide)productGuide.classList.remove('visible');
     const finalGuide=document.getElementById('finalGenerateGuidance');
-    if(finalGuide)finalGuide.classList.toggle('visible',product==='phone case'&&!!selectedPhoneCaseModel);
+    if(finalGuide)finalGuide.classList.toggle('visible',
+      (product==='phone case'&&!!selectedPhoneCaseModel)||(product==='puzzle'&&!!selectedPuzzleSize));
     refreshApproveRowForMode();
     refreshMugSizeCardVisibility();
     refreshMugStyleCardVisibility();
@@ -6372,6 +6409,7 @@ function pick(el,type){
     refreshPanoramaFadeCardVisibility();
     refreshPhotoPosterVisibility();
     refreshPhoneCaseModelVisibility();
+    refreshPuzzleSizeVisibility();
     refreshTravelMugVariantVisibility();
     refreshTravelMugColorVisibility();
     refreshToteBagColorVisibility();
@@ -6393,6 +6431,11 @@ function pick(el,type){
         const input=document.getElementById('phoneModelSearchInputGen');
         if(input)input.focus();
       });
+    } else if(product==='puzzle'){
+      // Same "pick the thing that determines everything else first"
+      // pattern as phone case and mug: piece count is mandatory before
+      // Generate, so land the customer on it directly.
+      smoothScrollToTarget('puzzleSizeCard','center');
     } else if(product==='water bottle'){
       smoothScrollToTarget('travelMugVariantCard','center');
     } else if(product==='mug'){
@@ -9065,6 +9108,11 @@ async function generate(){
     document.getElementById('phoneCaseModelCard').scrollIntoView({behavior:'smooth',block:'center'});
     return;
   }
+  if(product==='puzzle' && !selectedPuzzleSize){
+    setStatus('Please pick your puzzle piece count above first — each one is a different physical puzzle with its own price.',true);
+    document.getElementById('puzzleSizeCard').scrollIntoView({behavior:'smooth',block:'center'});
+    return;
+  }
   if(product==='mug' && (!mugSizeChosenPreGen || !mugColorFinishedPreGen)){
     setStatus('Please finish picking your mug size, style, and color above first.',true);
     refreshMugSizeCardVisibility();
@@ -10279,6 +10327,18 @@ function buildMockupRequestBody(){
     return body;
   }
 
+  // Photo Puzzle: a single-image catalog product whose variant is chosen
+  // purely by piece count. UI value 'puzzle' -> catalog key 'photo-puzzle'.
+  // start-mockup's generic path (getProduct + resolveVariant) handles the
+  // rest: colors is null, so it resolves straight off the per-size
+  // variantId already in the catalog.
+  if (product === 'puzzle') {
+    if (!selectedPuzzleSize) return null;
+    const design = placements.left || placements.front || placements.right;
+    const url = design ? (findDesignById(design)?.url ?? null) : null;
+    return { productKey: 'photo-puzzle', sizeLabel: selectedPuzzleSize, image: url };
+  }
+
   return null;
 }
 
@@ -10568,6 +10628,7 @@ refreshMugPrintModeVisibility();
 refreshPanoramaFadeCardVisibility();
 refreshPhotoPosterVisibility();
 refreshPhoneCaseModelVisibility();
+refreshPuzzleSizeVisibility();
 refreshTravelMugVariantVisibility();
 refreshTravelMugColorVisibility();
 refreshToteBagColorVisibility();
@@ -10667,6 +10728,12 @@ function resetEverythingFreshStart(){
   const phoneNote=document.getElementById('phoneModelSelectedNoteGen');
   if(phoneNote)phoneNote.textContent='';
   hidePhoneConfirmationGen();
+
+  selectedPuzzleSize=null;
+  document.querySelectorAll('#puzzleSizeGrid .btn-select').forEach(b=>b.classList.remove('selected'));
+  const puzzleNote=document.getElementById('puzzleSizeSelectedNote');
+  if(puzzleNote)puzzleNote.textContent='';
+
   pickPosterFramed(false);
   pickPosterOrientation('Vertical');
   pickPosterFinish('Glossy');
@@ -10728,6 +10795,7 @@ function resetEverythingFreshStart(){
   refreshPanoramaFadeCardVisibility();
   refreshPhotoPosterVisibility();
   refreshPhoneCaseModelVisibility();
+  refreshPuzzleSizeVisibility();
   refreshTravelMugVariantVisibility();
   refreshTravelMugColorVisibility();
   refreshToteBagColorVisibility();
