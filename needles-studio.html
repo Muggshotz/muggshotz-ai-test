@@ -5552,9 +5552,26 @@ function autoFillCoverMePanels(){
   saveMugState();
 }
 
+// Every dimming mode, not a hand-listed few. Each *-focus class spotlights
+// one card by dimming all the others to ~30% with pointer-events:none, and
+// whichever screen takes over next is responsible for switching it off. A
+// screen that only knows the classes from its OWN flow works perfectly until
+// another flow arrives -- and then renders itself invisible and unclickable,
+// because the dimmer it never heard of is still on.
+function clearAllFocusModes(){
+  document.body.classList.remove('generation-active');
+  Array.from(document.body.classList)
+    .filter(c=>c.endsWith('-focus'))
+    .forEach(c=>document.body.classList.remove(c));
+}
+
 function showCoverMePanelCard(){
-  document.body.classList.remove('covermegen-focus');
-  document.body.classList.remove('covermereveal-focus');
+  // Was removing covermegen-focus and covermereveal-focus only -- the two
+  // Cover Me sets. Arriving from the design-first track, the live class is
+  // idea-focus, which nothing here knew to clear: the panel card opened
+  // correctly and then sat at 35% opacity with clicks disabled. A blank,
+  // subdued screen with the panels invisible on it.
+  clearAllFocusModes();
   document.getElementById('coverMeCard').style.display='none';
   autoFillCoverMePanels();
   renderCoverMePanelRows();
