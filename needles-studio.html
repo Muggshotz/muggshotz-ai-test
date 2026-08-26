@@ -6412,12 +6412,15 @@ function hexToRgbTriple(hex){
 
 // Real hex behind the chosen product color, so the pixel-level edge fade matches it instead of white.
 function getSelectedProductColorHex(){
-  // THE RULE, product-wide (Aug 2026, Alyx): a fade disappears into the
-  // colour of the thing it is printed on. Not the mug's colour -- the
-  // PRODUCT's colour, because this has to hold just as well for phone
-  // cases, suitcases, lunch boxes and whatever else gets added later.
-  // Every product that knows its own hex resolves it here; anything that
-  // does not, or that prints on a white surface, falls through to white.
+  // THE RULE, product-wide (Aug 2026, Alyx): a fade is a BACKGROUND, so it
+  // takes the colour of the surface the picture is printed ON. The product's
+  // own hex -- never a trim, accent or accessory colour, which describe some
+  // other part of the object and sit nowhere behind the artwork.
+  //
+  // Stated that way it holds unchanged for phone cases, suitcases, lunch
+  // boxes and anything else added later: each product answers "what colour
+  // is the thing my picture sits on", and whatever cannot answer, or prints
+  // on white, falls through to white.
   //
   // Coffee mugs used to be pinned to white regardless. That was invisibly
   // correct for years because the mugs were white -- fading to white WAS
@@ -6427,7 +6430,10 @@ function getSelectedProductColorHex(){
     const match=TRAVEL_MUG_CATALOG[preGenTravelVariant]?.colors?.find(c=>c.name===preGenTravelColor);
     if(match)return match.hex;
   }
-  if(product==='mug' && selectedGenColor){
+  // Only sample a style whose colour IS the printed surface. Trimmed and
+  // Accented name a trim colour on a white body -- fading to those would
+  // ring the artwork in a colour that appears nowhere behind it.
+  if(product==='mug' && selectedGenColor && GEN_MUG_STYLES[selectedGenStyle]?.surfaceColored){
     const mugColors=GEN_MUG_STYLES[selectedGenStyle]?.colors?.[selectedGenSize];
     const match=mugColors?.find(c=>c.name===selectedGenColor);
     if(match)return match.hex;
@@ -9875,6 +9881,19 @@ function updatePlacementSummary(){
   updateMugGuidedFlow();
 }
 
+// PRINT SURFACE vs TRIM (Aug 2026, Alyx). These are two different categories
+// of colour and must never be conflated, however identical the `hex:` keys
+// below look.
+//
+// A fade is a BACKGROUND. It has to become the colour of the surface the
+// picture is actually printed on, so the edges vanish into it. A trim or an
+// accent is a colour somewhere else on the object entirely -- a handle, a
+// rim, the inside of the cup -- and sits nowhere behind the artwork.
+//
+// Only Color Pop's colour is the exterior the design prints onto. Trimmed
+// and Accented are white-bodied: their colour is the rim/handle/interior, so
+// their print surface is white and their fade must be white too.
+// surfaceColored marks the styles whose colour genuinely IS the background.
 const GEN_MUG_STYLES = {
   "Classic White": { colors: { "11oz": null, "15oz": null } },
   // REMOVED AGAIN (Aug 2026): Cambridge Blue was briefly restored after
@@ -9888,7 +9907,7 @@ const GEN_MUG_STYLES = {
   // here. Pulled from every style/size combo below again until that's
   // confirmed one way or the other against a real Printify listing or
   // physical sample.
-  "Color Pop": { colors: { "11oz": [
+  "Color Pop": { surfaceColored:true, colors: { "11oz": [
     { name: "Black", hex: "#1c1c1c" }, { name: "Blue", hex: "#2255A4" },
     { name: "Golden Yellow", hex: "#D4A017" },
     { name: "Green", hex: "#1F7A45" }, { name: "Light Blue", hex: "#5FA8DE" },
