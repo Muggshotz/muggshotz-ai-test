@@ -29,8 +29,16 @@ allowing shop reads would publish wholesale costs.
 - Branch **`claude/phone-suitcase-flows`** — UNMERGED, awaiting Alyx's word. Wires phone cases
   and suitcases through to the Printify mockup (buildMockupRequestBody branches + a new
   mandatory suitcase size card). Playwright-verified. Do not merge without explicit authorization.
-- Branch **`claude/handoff-portal-check-dro4je`** — UNMERGED. This session's work: Photo Puzzle
-  wired end-to-end + the 96/252 price flip (see below). Playwright-verified, 4/4.
+- Branch **`claude/handoff-portal-check-dro4je`** — Photo Puzzle + price flip: MERGED to main
+  2026-08-26 with Alyx's explicit authorization. Branch then restarted from main for the
+  Photo Poster + Tote Bag work.
+- `claude/phone-suitcase-flows` — MERGED to main 2026-08-26, same authorization. The merge
+  conflicted (11 hunks in needles-studio.html: puzzle and suitcase touch the same six places).
+  Every hunk was "both sides added adjacent code" -> keep BOTH, never pick a side. Two needed
+  real merging: the `finalGenerateGuidance` toggle must carry all three conditions (phone case
+  OR puzzle OR suitcase — taking either side alone silently breaks the other product), and a
+  naive union left `pickPuzzleSize()` unclosed because the shared tail after the hunk only
+  closes one copy. If this pattern recurs, resolve by union + a hand-written bridge.
 - Branch `claude/needles-flow-audit` — already merged into main; can be ignored.
 
 ## Standing rules (Alyx's, non-negotiable)
@@ -68,10 +76,29 @@ allowing shop reads would publish wholesale costs.
    wash. This was done WITHOUT wholesale data (unreachable — see top of file), so it is an
    assumption, not a verified-safe change. If real costs ever show 96pcs costs more to make,
    revisit: the flip CUT that variant's price by $2.
-5. Coasters — ❌ NOT in the UI or catalog at all; needs Printify data (Portal export from
+5. Photo/Poster — ✅ COMPLETED this session. The UI already existed in full (framed vs unframed,
+   size grid, orientation, finish, frame colour) and the SERVER already had a dedicated
+   `photo-poster` branch (`start-mockup.js` -> `resolvePhotoPosterSelection`). The only missing
+   piece was the client bridge: `photo-poster` appeared ZERO times in needles-studio.html, so
+   `buildMockupRequestBody()` returned null and the mockup never fired — the identical dead-end
+   puzzle had. Watch two things: `colorName` doubles as the FRAME COLOUR server-side and is sent
+   null when unframed (so an unframed poster can never resolve against a frame variant); and
+   every unframed `variantId` in the catalog is still null, so the live title-match fallback in
+   `resolvePhotoPosterSelection` is load-bearing, not decorative. 3/3 verified.
+6. Tote Bag — ✅ COMPLETED this session, and it was a bigger job than the queue implied.
+   Tote had a colour card but NO size card at all, while the catalog carries three sizes at
+   three prices with `colorsVaryBySize` (each size has its own variantIds). Added the size card
+   + the mockup bridge. **Judgement call flagged for Alyx:** the colour card used to read
+   "Optional", but `resolveVariant()` THROWS ("A color selection is required for this product")
+   whenever a size entry carries colors, which tote's do — so an uncoloured tote could never
+   have reached a mockup. Colour is now mandatory alongside size and the copy was reworded to
+   match. If Alyx wants colour to genuinely stay optional, the fix is NOT to relax the guard
+   (that just moves the crash server-side) — it needs a real default colour or a colour step
+   later in the order flow. 4/4 verified.
+7. Coasters — ❌ NOT in the UI or catalog at all; needs Printify data (Portal export from
    The Portal page listed candidates: Corkwood Coaster Set #510, Coasters #994, #1247,
    Ceramic Coaster #1523)
-6. Suitcases — ✅ built, on the UNMERGED `claude/phone-suitcase-flows`. Print dims now CONFIRMED
+8. Suitcases — ✅ MERGED to main. Print dims now CONFIRMED
    against live Printify (they never had been): Small=72133 5433x7323, Medium=79350 6260x8504,
    Large=79351 7217x9561 — all three IDs and prices match the catalog.
 
@@ -98,6 +125,10 @@ product grid with NO catalog entries — they generate art but cannot mockup/ord
 - `verify-phone-suitcase.js` — 4 checks for the unmerged branch.
 - `verify-puzzle.js` — 4 checks for Photo Puzzle (guard, price ladder, full rail → mockup body,
   reset). 4/4 PASS, zero console/page errors.
+- `verify-poster.js` — 3 checks (framed/unframed card toggle + size re-basing across the two
+  trees, unframed body, framed body). 3/3 PASS.
+- `verify-tote.js` — 4 checks (size guard, colour guard, full rail → mockup body, reset).
+  4/4 PASS.
 - **Fixtures are NOT committed.** `harness.js` readFileSync's `test-photo.jpg`,
   `fake-generated.jpg`, `fake-mockup.jpg` at load; they were missing. Regenerate with PIL
   (`pip install pillow`) — any plain JPEG works.

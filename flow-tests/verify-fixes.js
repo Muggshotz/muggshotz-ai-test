@@ -91,6 +91,16 @@ const scenarios = {
     await page.click('#productCard .btn-select[data-val="tote bag"]', { timeout: 5000 });
     const product = await page.evaluate(() => product);
     if (product !== 'tote bag') return `FAIL: product=${product}`;
+    // UPDATED (Aug 2026): tote bag now has MANDATORY pre-generation choices
+    // (size + colour), joining mug / phone case / suitcase / puzzle. Colour is
+    // mandatory because resolveVariant() throws when a size entry carries
+    // colors and none is sent, and tote's do. This test is about the Track 2
+    // guard BOUNCE, not about tote specifically, so complete tote's required
+    // picks here and leave the actual subject of the test unchanged.
+    await page.click('#toteSizeGrid .btn-select[data-tote-size=\'16" x 16"\']');
+    await page.waitForTimeout(500);
+    await page.click('#toteBagColorGridGen .color-btn[data-color="Black"]');
+    await page.waitForTimeout(400);
     // and generation must proceed end-to-end
     await page.evaluate(() => document.getElementById('generateBtn')?.scrollIntoView({ block: 'center' }));
     await page.click('#generateBtn');
