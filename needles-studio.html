@@ -771,10 +771,16 @@ document.getElementById('heroVideo').addEventListener('ended',()=>{
 <button class="generate-btn" id="allSidesBtn" style="flex:1;width:auto;padding:.8rem .4rem;font-size:13px" onclick="approveDesign(true)">✅ Yes — All 3 Sides</button>
 </div>
 <div class="note" id="approveSavingNote" style="display:none;margin-top:.5rem;text-align:center;color:#7888b4"><span class="spinner"></span>Saving your finished design...</div>
+<!-- The "No" belongs INSIDE approveRow, with the two Yes buttons it answers.
+     It used to be a sibling further down the page, and since the landing
+     scroll measures only as far as approveRow's bottom edge, the one button
+     that let a customer reject the design started exactly one pixel below
+     the fold -- every single time. Same shape as the Home Sweet Home bug.
+     The question reads "Are you satisfied?" and offered nothing but Yes. -->
+<button class="download-btn" id="keepTweakingBtn" onclick="keepTweaking()" style="display:none;margin-top:.6rem">🔧 No — Try Again</button>
 <div class="note" id="approveRowHint" style="margin-top:.5rem">Want it on exactly two sides? Press Yes first, then tap Left / Center / Right under the design in "My Designs" to add or remove spots.</div>
 </div>
 <button class="download-btn" id="toggleImageBtn" onclick="toggleWorkingImage()" style="display:none;margin-top:.6rem">↔️ Toggle Between Previous & New Image</button>
-<button class="download-btn" id="keepTweakingBtn" onclick="keepTweaking()" style="display:none;margin-top:.6rem">🔧 No — Keep Tweaking</button>
 <div id="keepTweakingReminder" class="guidance-prompt" role="status">Made your changes? Scroll down and hit Generate again. Running low on tokens? Tap Credits &amp; Extras to top up.</div>
 <div id="startOverBtn" class="critical-warning-blink" style="display:none;margin-top:.6rem;padding:.75rem;text-align:center;font-weight:700;color:#ff8a7a;cursor:default">PLEASE SELECT ONE OF THE ABOVE OPTIONS!</div>
 <button class="download-btn" id="downloadDesignBtn" onclick="downloadImage()" style="display:none;margin-top:.6rem">⬇️ Download for Printify</button>
@@ -7238,8 +7244,8 @@ function refreshApproveRowForMode(){
   const mode = getSlotMode();
   if (mode === 'three') {
     allSidesBtn.style.display = 'block';
-    allSidesBtn.textContent = '✅ Yes — All 3 Sides';
-    hint.textContent = 'Want it on exactly two sides? Press Yes first, then tap Left / Center / Right under the design in "My Designs" to add or remove spots.';
+    allSidesBtn.textContent = '✅ Yes — All 3 Mug Panels';
+    hint.textContent = 'Your mug prints on three panels — left, centre and right. "Use This Design" fills left and right; "All 3 Mug Panels" fills all three. You can change any of them afterwards under "My Designs".';
   } else if (mode === 'two') {
     allSidesBtn.style.display = 'block';
     allSidesBtn.textContent = '✅ Yes — Front & Back';
