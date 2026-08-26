@@ -750,6 +750,18 @@ document.getElementById('heroVideo').addEventListener('ended',()=>{
 <span class="note" style="color:#7ab8ff;cursor:pointer" onclick="backToTrackDescribeFromFaceItReveal()">← Describe it instead</span>
 </div>
 </div>
+<!-- Lives here in #uploadPhotoCard beside the easel, exactly like the Cover Me and Face It rows above -- NOT down inside #goodMorningCard with the rest of the window picker, where it originally sat. Two things broke while it was down there: body.goodmorningreveal-focus dims every .card except #uploadPhotoCard, so the buttons came up at .28 opacity and pointer-events:none, and scrollToNeedlesRevealWhenReady() measured a stage-to-row span taller than the viewport (the whole window grid sits between them) and so gave up on fitting both, landing on the easel alone with the buttons far below the fold. -->
+<div id="goodMorningEaselApproveRow" style="display:none;margin-top:.75rem">
+<div style="display:flex;gap:8px">
+<button type="button" class="generate-btn" style="flex:1;padding:.7rem .5rem;font-size:14px" onclick="approveGoodMorning()">✅ Yes — Use This Image</button>
+<button type="button" class="download-btn" style="flex:1;margin-top:0;padding:.7rem .5rem;font-size:14px" onclick="keepTweakingGoodMorning()">🔧 No — Start Over</button>
+</div>
+<div class="note" style="text-align:center;margin-top:.4rem;color:#29a3ff">Trying again uses one more token. <span style="color:#7ab8ff;cursor:pointer" onclick="openCreditsPanel()">Need more?</span></div>
+<div style="display:flex;gap:16px;justify-content:center;margin-top:.6rem">
+<span class="note" style="color:#7ab8ff;cursor:pointer" onclick="backToDesignMethodFromGoodMorningReveal()">← Choose a different prop</span>
+<span class="note" style="color:#7ab8ff;cursor:pointer" onclick="backToTrackDescribeFromGoodMorningReveal()">← Describe it instead</span>
+</div>
+</div>
 <input type="file" id="fileInput" accept="image/*" style="display:none"/><img id="previewImg" class="preview-img" style="display:none"/>
 <div id="approveRow" style="display:none">
 <div class="note" style="margin-top:.9rem;text-align:center;font-size:13px;color:#29a3ff">Are you satisfied with this design?</div>
@@ -1019,17 +1031,6 @@ Tell Needles <span style="color:#7ab8ff">what you have in mind</span>
 <input type="file" id="goodMorningPhotoInput" accept="image/*" style="display:none" onchange="handleGoodMorningPhotoChange(event)">
 <button type="button" id="goodMorningGenerateBtn" class="generate-btn generate-flash" style="display:none;margin-top:1rem" onclick="generateGoodMorning()">🎨 Generate</button>
 <button type="button" class="download-btn" style="margin-top:1rem" onclick="goodMorningBack()">← Back</button>
-<div id="goodMorningEaselApproveRow" style="display:none;margin-top:.75rem">
-<div style="display:flex;gap:8px">
-<button type="button" class="generate-btn" style="flex:1;padding:.7rem .5rem;font-size:14px" onclick="approveGoodMorning()">✅ Yes — Use This Image</button>
-<button type="button" class="download-btn" style="flex:1;margin-top:0;padding:.7rem .5rem;font-size:14px" onclick="keepTweakingGoodMorning()">🔧 No — Start Over</button>
-</div>
-<div class="note" style="text-align:center;margin-top:.4rem;color:#29a3ff">Trying again uses one more token. <span style="color:#7ab8ff;cursor:pointer" onclick="openCreditsPanel()">Need more?</span></div>
-<div style="display:flex;gap:16px;justify-content:center;margin-top:.6rem">
-<span class="note" style="color:#7ab8ff;cursor:pointer" onclick="backToDesignMethodFromGoodMorningReveal()">← Choose a different prop</span>
-<span class="note" style="color:#7ab8ff;cursor:pointer" onclick="backToTrackDescribeFromGoodMorningReveal()">← Describe it instead</span>
-</div>
-</div>
 </div>
 
 <div class="card" id="coverMePanelCard" style="display:none">
