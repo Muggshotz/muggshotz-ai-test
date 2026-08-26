@@ -869,8 +869,8 @@ document.getElementById('heroVideo').addEventListener('ended',()=>{
 <div class="card-title">🧩 How Many Pieces?</div>
 <div class="note" style="margin-top:0;margin-bottom:.75rem">We need this before generating — each piece count is a different physical puzzle with its own print size and price, and your art gets composed to fit it exactly.</div>
 <div class="grid2" id="puzzleSizeGrid">
-<div class="btn-select" data-puzzle-size="96 pcs" onclick="pickPuzzleSize('96 pcs')">96 pieces<div class="note" style="margin-top:4px">$38.95</div></div>
-<div class="btn-select" data-puzzle-size="252 pcs" onclick="pickPuzzleSize('252 pcs')">252 pieces<div class="note" style="margin-top:4px">$40.95</div></div>
+<div class="btn-select" data-puzzle-size="96 pcs" onclick="pickPuzzleSize('96 pcs')">96 pieces<div class="note" style="margin-top:4px">$40.95</div></div>
+<div class="btn-select" data-puzzle-size="252 pcs" onclick="pickPuzzleSize('252 pcs')">252 pieces<div class="note" style="margin-top:4px">$38.95</div></div>
 <div class="btn-select" data-puzzle-size="500 pcs" onclick="pickPuzzleSize('500 pcs')">500 pieces<div class="note" style="margin-top:4px">$43.95</div></div>
 <div class="btn-select" data-puzzle-size="1000 pcs" onclick="pickPuzzleSize('1000 pcs')">1000 pieces<div class="note" style="margin-top:4px">$43.95</div></div>
 </div>
@@ -910,7 +910,7 @@ document.getElementById('heroVideo').addEventListener('ended',()=>{
 <div id="ideaGuidancePrompt" class="guidance-prompt" role="status" style="margin-top:8px;margin-bottom:0;cursor:pointer" onclick="confirmIdeaSatisfied()">Click here when you are satisfied with your descriptive requests for the image.</div>
 </div>
 </div>
-<div class="card" id="productCard"><div class="card-title">🎁 Product</div><div class="guidance-prompt soft visible" id="productGuidancePrompt" role="status" style="margin-top:0;margin-bottom:.9rem">Please select your desired product below when ready.</div><div class="grid3"><div class="btn-select" data-val="mug" onclick="pick(this,'product')"><span class="icon">☕</span>Mug</div><div class="btn-select" data-val="greeting card" onclick="pick(this,'product')"><span class="icon">💌</span>Card</div><div class="btn-select" data-val="water bottle" onclick="pick(this,'product')"><span class="icon">🍶</span>Travel Cups</div><div class="btn-select" data-val="post-it note" onclick="pick(this,'product')"><span class="icon">📝</span>Post-it</div><div class="btn-select" data-val="phone case" onclick="pick(this,'product')"><span class="icon">📱</span>Phone case</div><div class="btn-select" data-val="tote bag" onclick="pick(this,'product')"><span class="icon">👜</span>Tote bag</div><div class="btn-select" data-val="suitcase" onclick="pick(this,'product')"><span class="icon">🧳</span>Suitcase</div><div class="btn-select" data-val="puzzle" onclick="pick(this,'product')"><span class="icon">🧩</span>Puzzle</div><div class="btn-select" data-val="photo poster" onclick="pick(this,'product')"><span class="icon">🖼️</span>Photo/Poster</div></div></div>
+<div class="card" id="productCard"><div class="card-title">🎁 Product</div><div class="guidance-prompt soft visible" id="productGuidancePrompt" role="status" style="margin-top:0;margin-bottom:.9rem">Please select your desired product below when ready.</div><div class="grid3"><div class="btn-select" data-val="mug" onclick="pick(this,'product')"><span class="icon">☕</span>Mug</div><div class="btn-select" data-val="greeting card" onclick="pick(this,'product')"><span class="icon">💌</span>Card</div><div class="btn-select" data-val="water bottle" onclick="pick(this,'product')"><span class="icon">🍶</span>Travel Cups</div><div class="btn-select" data-val="post-it note" onclick="pick(this,'product')"><span class="icon">📝</span>Post-it</div><div class="btn-select" data-val="phone case" onclick="pick(this,'product')"><span class="icon">📱</span>Phone case</div><div class="btn-select" data-val="tote bag" onclick="pick(this,'product')"><span class="icon">👜</span>Tote bag</div><div class="btn-select" data-val="suitcase" onclick="pick(this,'product')"><span class="icon">🧳</span>Suitcase</div><div class="btn-select" data-val="puzzle" onclick="pick(this,'product')"><span class="icon">🧩</span>Puzzle</div><div class="btn-select" data-val="photo poster" onclick="pick(this,'product')"><span class="icon">🖼️</span>Photo/Poster</div><div class="btn-select" data-val="coaster" onclick="pick(this,'product')"><span class="icon">☕</span>Coasters</div><div class="btn-select" data-val="mouse pad" onclick="pick(this,'product')"><span class="icon">🖱️</span>Mouse pad</div></div></div>
 
 <div id="mugSizeLockOverlay" class="step-lock-overlay" style="display:none">
 <div class="card" id="mugSizeCard" style="max-width:420px;width:100%;margin:auto;position:relative">
@@ -2240,12 +2240,14 @@ function pickTrackDescribe(){
 // for. The customer spends tokens either way, so ask first.
 //
 // Coasters and mouse pads belong here too the moment they exist.
-const PRODUCTS_NEEDING_IDEA=['suitcase','phone case','tote bag','puzzle'];
+const PRODUCTS_NEEDING_IDEA=['suitcase','phone case','tote bag','puzzle','coaster','mouse pad'];
 const PRODUCT_IDEA_LABEL={
   'suitcase':'suitcase',
   'phone case':'phone case',
   'tote bag':'tote bag',
-  'puzzle':'puzzle'
+  'puzzle':'puzzle',
+  'coaster':'coasters',
+  'mouse pad':'mouse pad'
 };
 
 // The ONLY products the three gimmick templates (Cover Me, Face It, Home
@@ -2276,7 +2278,7 @@ const PRODUCTS_WITH_GIMMICKS=['mug','water bottle'];
 // there is nothing to wait for the customer to decide before showing it.
 // Water bottle is deliberately absent -- it has its own preview panel and
 // would fetch twice.
-const PRODUCTS_AUTO_MOCKUP=['suitcase','phone case','tote bag','puzzle','photo poster'];
+const PRODUCTS_AUTO_MOCKUP=['suitcase','phone case','tote bag','puzzle','photo poster','coaster','mouse pad'];
 
 function confirmIdeaSatisfied(){
   pauseIdeaGuideCycle();
@@ -6639,6 +6641,12 @@ function pick(el,type){
         const input=document.getElementById('phoneModelSearchInputGen');
         if(input)input.focus();
       });
+    } else if(product==='coaster'||product==='mouse pad'){
+      // Both carry exactly ONE variant, so picking the product finishes the
+      // product -- there is no size, colour or model left to settle. The rail
+      // rule ("finish the thing, then decide what goes on it") is satisfied
+      // immediately, so go straight to the description.
+      handOffToIdeaAfterProductChoice();
     } else if(product==='tote bag'){
       // Size first, then colour -- both mandatory before Generate.
       smoothScrollToTarget('toteSizeCard','center');
@@ -10650,6 +10658,19 @@ function buildMockupRequestBody(){
       colorName: selectedToteColorGen,
       image: url
     };
+  }
+
+  // Coasters and mouse pads: single-image, single-variant. No size or colour
+  // to resolve, so the only thing the request needs is which catalog key and
+  // the artwork. sizeLabel still has to match the catalog's one size key --
+  // resolveVariant() looks the variant up by it.
+  if (product === 'coaster' || product === 'mouse pad') {
+    const design = placements.left || placements.front || placements.right;
+    const url = design ? (findDesignById(design)?.url ?? null) : null;
+    if (!url) return null;
+    return product === 'coaster'
+      ? { productKey: 'coaster-set', sizeLabel: '4" x 4"', image: url }
+      : { productKey: 'mouse-pad',   sizeLabel: '9" x 8"', image: url };
   }
 
   // Photo Puzzle: a single-image catalog product whose variant is chosen

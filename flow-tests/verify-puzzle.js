@@ -39,17 +39,28 @@ const scenarios = {
       size: e.dataset.puzzleSize,
       price: parseFloat((e.textContent.match(/\$([0-9.]+)/) || [])[1]),
     })));
-    const want = [['96 pcs', 38.95], ['252 pcs', 40.95], ['500 pcs', 43.95], ['1000 pcs', 43.95]];
+    // Prices track WHOLESALE COST, not piece count. A live cost probe
+    // (2026-08-26) showed 96 pcs costs $35.07 to make and 252 pcs only $33.62
+    // -- short runs are dearer -- so the 96-piece puzzle is legitimately the
+    // dearer of the two. These were briefly flipped on the assumption that a
+    // bigger puzzle costing less had to be a mistake; it was not.
+    const want = [['96 pcs', 40.95], ['252 pcs', 38.95], ['500 pcs', 43.95], ['1000 pcs', 43.95]];
     if (tiles.length !== 4) return `FAIL: expected 4 tiles, got ${tiles.length}`;
     for (let i = 0; i < 4; i++) {
       if (tiles[i].size !== want[i][0] || tiles[i].price !== want[i][1])
         return `FAIL: tile ${i} = ${JSON.stringify(tiles[i])}, expected ${JSON.stringify(want[i])}`;
     }
-    for (let i = 1; i < 4; i++) {
-      if (tiles[i].price < tiles[i - 1].price)
-        return `FAIL: price ladder decreases at ${tiles[i].size} ($${tiles[i - 1].price} -> $${tiles[i].price})`;
+    // Deliberately NOT asserting a non-decreasing ladder any more -- that
+    // assumption is what caused the flip. What actually has to hold is that
+    // every tier clears a real margin over its own wholesale cost.
+    const COST = { '96 pcs': 35.07, '252 pcs': 33.62, '500 pcs': 38.29, '1000 pcs': 38.29 };
+    for (const t of tiles) {
+      const margin = +(t.price - COST[t.size]).toFixed(2);
+      if (margin <= 0) return `FAIL: ${t.size} sells at $${t.price} but costs $${COST[t.size]} — losing money`;
+      if (margin < 3) return `FAIL: ${t.size} margin is only $${margin} — below anything worth shipping`;
     }
-    return `PASS: 4 tiles, prices match catalog, ladder non-decreasing (${tiles.map(t => t.price).join(' → ')})`;
+    const margins = tiles.map(t => `${t.size}:$${(t.price - COST[t.size]).toFixed(2)}`).join(' ');
+    return `PASS: 4 tiles match catalog, every tier clears its wholesale cost (${margins})`;
   },
 
   // 3. Full rail: pick a size, generate, approve, and confirm the mockup
