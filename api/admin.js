@@ -211,6 +211,136 @@ async function handlePrintifyCatalog(req, res) {
   }
 }
 
+// ---------------------------------------------------------------------------
+// COST PROBE (Aug 2026, Alyx's request). Printify's catalog API carries no
+// wholesale cost at all — cost only exists on a product that actually lives
+// in the shop. That is exactly why every shippingCost/estimatedProfit in
+// lib/products-catalog.js is still a 0 placeholder, and why checkout is
+// currently charging $0 shipping on every order.
+//
+// This closes that gap the only way the API allows: create a throwaway draft
+// product for a blueprint/provider, read the real per-variant cost off it,
+// then delete it. It reuses the same create/delete machinery
+// create-printify-order.js and start-mockup.js already use for temporary
+// mockup products, so this is not a new capability — only a new reader.
+//
+// Deliberately POST + password. It must NEVER move to the unauthenticated
+// GET relay above: catalog GETs need no auth, so exposing costs there would
+// publish this shop's wholesale pricing to anyone who found the URL.
+//
+// Shipping is the easy half and needs no product at all — Printify serves it
+// from the catalog; it simply was not on the GET whitelist.
+const PROBE_TITLE_PREFIX = 'ZZ_COST_PROBE_DELETE_ME';
+
+// 1x1 transparent PNG. Printify refuses to create a product whose print_areas
+// reference no real uploaded image. Nothing is ever printed from this — the
+// product is deleted seconds later.
+const PROBE_PIXEL_PNG_B64 =
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+
+const PROBE_SHOP_ID = '27439202';
+
+async function printifyCall(path, opts = {}) {
+  const res = await fetch(`https://api.printify.com/v1/${path}`, {
+    ...opts,
+    headers: {
+      Authorization: `Bearer ${PRINTIFY_API_TOKEN}`,
+      'Content-Type': 'application/json',
+      ...(opts.headers || {})
+    }
+  });
+  const text = await res.text();
+  let body;
+  try { body = JSON.parse(text); } catch { body = text; }
+  if (!res.ok) throw new Error(`Printify ${res.status} on ${path}: ${String(text).slice(0, 300)}`);
+  return body;
+}
+
+async function handleCostProbe(req, res) {
+  const { password, blueprintId, printProviderId } = req.body || {};
+  if (password !== ADMIN_PASSWORD) return res.status(403).json({ error: 'Unauthorized.' });
+  if (!PRINTIFY_API_TOKEN) return res.status(500).json({ error: 'Printify token is not configured on the server.' });
+  if (!blueprintId || !printProviderId) {
+    return res.status(400).json({ error: 'blueprintId and printProviderId are both required.' });
+  }
+
+  let productId = null;
+  try {
+    const catalog = await printifyCall(
+      `catalog/blueprints/${blueprintId}/print_providers/${printProviderId}/variants.json`
+    );
+    const variants = Array.isArray(catalog?.variants) ? catalog.variants : [];
+    if (!variants.length) return res.status(404).json({ error: 'No variants for that blueprint/provider.' });
+
+    // Shipping needs no product — straight off the catalog.
+    let shipping = null;
+    try {
+      shipping = await printifyCall(
+        `catalog/blueprints/${blueprintId}/print_providers/${printProviderId}/shipping.json`
+      );
+    } catch (e) {
+      shipping = { error: e.message };
+    }
+
+    // Cost DOES need a product, so make a throwaway one.
+    const uploaded = await printifyCall('uploads/images.json', {
+      method: 'POST',
+      body: JSON.stringify({ file_name: 'cost-probe-pixel.png', contents: PROBE_PIXEL_PNG_B64 })
+    });
+    const variantIds = variants.map(v => v.id);
+    const firstPosition = variants[0]?.placeholders?.[0]?.position || 'front';
+
+    const created = await printifyCall(`shops/${PROBE_SHOP_ID}/products.json`, {
+      method: 'POST',
+      body: JSON.stringify({
+        title: `${PROBE_TITLE_PREFIX} ${blueprintId}/${printProviderId}`,
+        description: 'Temporary cost probe. Safe to delete.',
+        blueprint_id: Number(blueprintId),
+        print_provider_id: Number(printProviderId),
+        variants: variantIds.map(id => ({ id, price: 100, is_enabled: true })),
+        print_areas: [{
+          variant_ids: variantIds,
+          placeholders: [{ position: firstPosition, images: [{ id: uploaded.id, x: 0.5, y: 0.5, scale: 1, angle: 0 }] }]
+        }]
+      })
+    });
+    productId = created.id;
+
+    const full = await printifyCall(`shops/${PROBE_SHOP_ID}/products/${productId}.json`);
+    const titleById = new Map(variants.map(v => [v.id, v.title]));
+    const costs = (full.variants || [])
+      .map(v => ({
+        variantId: v.id,
+        title: v.title || titleById.get(v.id) || null,
+        costCents: v.cost ?? null,
+        cost: v.cost != null ? Number((v.cost / 100).toFixed(2)) : null
+      }))
+      .sort((a, b) => (a.cost ?? 0) - (b.cost ?? 0));
+
+    return res.status(200).json({
+      blueprintId: Number(blueprintId),
+      printProviderId: Number(printProviderId),
+      variantCount: costs.length,
+      costs,
+      shipping,
+      note: 'Wholesale cost per unit, before shipping. The probe product was deleted.'
+    });
+  } catch (err) {
+    console.error('Cost probe failed:', err.message);
+    return res.status(500).json({ error: err.message, probeProductId: productId });
+  } finally {
+    // ALWAYS clean up, including on failure — an orphan would sit in the real
+    // shop. The title prefix makes any orphan that does survive obvious.
+    if (productId) {
+      try {
+        await printifyCall(`shops/${PROBE_SHOP_ID}/products/${productId}.json`, { method: 'DELETE' });
+      } catch (e) {
+        console.error(`Cost probe could not delete temp product ${productId}:`, e.message);
+      }
+    }
+  }
+}
+
 export default async function handler(req, res) {
   // Printify catalog reads are GET requests (read-only, no password
   // needed) — check this first, before the POST/action routing below.
@@ -228,6 +358,7 @@ export default async function handler(req, res) {
   // change, just which URL it calls.
   if (action === 'lookup') return handleLookup(req, res);
   if (action === 'grant' || action === 'deduct') return handleAdjust(req, res);
+  if (action === 'cost-probe') return handleCostProbe(req, res);
 
   return res.status(400).json({ error: `Unknown action "${action}".` });
 }

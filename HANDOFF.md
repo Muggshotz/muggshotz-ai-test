@@ -200,6 +200,38 @@ Mouse pads — 10 blueprints; strongest three:
 Note the provider overlap: #510 shares tote's provider and #2764 shares the mugs' provider,
 which is worth weighing for consolidated fulfilment.
 
+## Cost probe (`action: 'cost-probe'`, added 2026-08-26)
+`POST /api/admin` with `{action:'cost-probe', password, blueprintId, printProviderId}`.
+Returns real per-variant WHOLESALE cost plus the shipping table.
+
+Why it has to work this way: Printify's catalog API has no cost field at all — cost exists only
+on a product that actually lives in the shop. So the probe creates a throwaway draft product,
+reads the costs off it, and deletes it in a `finally` (reusing the same create/delete machinery
+start-mockup.js and create-printify-order.js already use for temp mockup products). Probe
+products are titled `ZZ_COST_PROBE_DELETE_ME <blueprint>/<provider>` so any orphan that
+survives a hard failure is obvious in the shop.
+
+Shipping is the easy half and needs NO product — Printify serves it from
+`catalog/blueprints/{id}/print_providers/{pid}/shipping.json`; it just was not on the GET
+whitelist.
+
+**Never move this to the GET relay.** Catalog GETs are unauthenticated, so exposing costs there
+would publish this shop's wholesale pricing to anyone who found the URL. It is POST + password
+on purpose.
+
+This is what unblocks the 15 products still sitting at `shippingCost: 0` / `estimatedProfit: 0`
+— i.e. the reason checkout currently charges $0 shipping on every order.
+
+## SECURITY — flagged, NOT changed
+`api/admin.js` still has `const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || '$Noneya6611$';`
+— a hardcoded fallback password committed to the repo (and in git history). Its own comment
+says to remove the fallback "once ADMIN_PASSWORD is confirmed set in Vercel". That was July
+2026 and it is still there. It was NOT removed unilaterally because if the env var is not
+actually set in Vercel, deleting the fallback locks Alyx out of admin instantly. **Action for
+Alyx:** confirm ADMIN_PASSWORD is set in Vercel -> Settings -> Environment Variables, then the
+fallback can be deleted safely — and the password should be rotated regardless, since it is in
+git history.
+
 ## Open items
 - Alyx has a 28-item stress-test list from the outgoing session and may return with failures:
   fix them one at a time, in real time, until each is gone (Alyx's stated working style).
@@ -209,7 +241,18 @@ which is worth weighing for consolidated fulfilment.
 - `$17.95` trivia: it's the Trimmed/Accented mug style price — resolved, don't chase it again.
 
 ## Practical notes
-- Live-site testing must be in **Incognito** — stale cache has produced two false bug reports.
+- **DO NOT test in Incognito — this earlier advice was WRONG and cost Alyx real time.**
+  `getDeviceId()` (needles-studio.html ~2436) mints the device id into `localStorage`, and
+  Incognito destroys localStorage on close, so every Incognito session gets a BRAND NEW device
+  id. `api/get-balance.js` never creates a customer row for an unknown device (its own line-6
+  comment says so), so an Incognito device has zero credits permanently and topping it up just
+  funds a ghost that vanishes on the next open. Incognito can never generate, by design.
+  **Correct approach:** a separate persistent Chrome PROFILE (profile icon -> Add). Persistent
+  localStorage means a stable device id — grant it tokens ONCE via admin.html and it sticks —
+  and it still gives a cache fully separate from the main profile. The page prints the device
+  id bottom-left on screen (`deviceIdDisplay`, ~line 606), so it can be read off and granted
+  directly. For cache-busting prefer DevTools -> Network -> "Disable cache" (fresh on every
+  load while DevTools is open) or a `?v=N` query string, over Ctrl+F5 gymnastics.
 - Alyx's plan tier changed mid-week; long sessions survive, but context compactions happen —
   this file is the recovery anchor. Keep it updated at every major milestone (Alyx-authorized
   pushes to main only).
