@@ -2191,11 +2191,8 @@ function confirmIdeaSatisfied(){
       // the customer landed on Edge Fade with nowhere to go -- the exact
       // "stranded" report. Mirrors handleMugDesignChanges()'s setup so
       // the Generate button is actually there once they scroll down to it.
-      mugDesignConfirmed=false;
-      mugGuidedChangesActive=true;
-      updateMugGuidedFlow();
       // Was aimed at the Edge Fade card, which is retired and hidden now.
-      smoothScrollToTarget('ideaCard','center');
+      goToDescribeAndGenerate();
     } else {
       goToDesignMethodScreen(target);
     }
@@ -4039,20 +4036,6 @@ function pickMugPrintMode(mode){
     // Design Method's tiles dimmed and unclickable here since that's
     // an earlier step, not the final one. Remove it before moving on.
     document.body.classList.remove('final-generate-focus');
-    if(chosenTrack==='describe'){
-      // PROPS ARE TRACK ONE'S (Aug 2026, Alyx). Cover Me, Face It and Home
-      // Sweet Home each need a subject shaped to fit a fixed picture -- a
-      // face on a cover, a figure in a window. Someone on this track has
-      // already described the image they want, in their own words, and what
-      // they describe is nine times out of ten a wide moving scene that fits
-      // none of those. Offering props here asked them to abandon the idea
-      // they just wrote out. Straight to Generate instead.
-      mugDesignConfirmed=false;
-      mugGuidedChangesActive=true;
-      updateMugGuidedFlow();
-      smoothScrollToTarget('ideaCard','center');
-      return;
-    }
     showDesignMethodCard();
   }
 }
@@ -4475,7 +4458,29 @@ function finishPreGenMugColorPick(){
   showDesignMethodCard();
 }
 
+// Track two's landing: the idea box, with Generate live under it.
+function goToDescribeAndGenerate(){
+  mugDesignConfirmed=false;
+  mugGuidedChangesActive=true;
+  updateMugGuidedFlow();
+  smoothScrollToTarget('ideaCard','center');
+}
+
 function showDesignMethodCard(){
+  // GUARDED AT THE DOOR (Aug 2026). The first attempt at this put the check
+  // in pickMugPrintMode(), which is the SHELVED print-mode picker and is
+  // never called -- so the guard was real, correct, and completely inert,
+  // while the live route through finishPreGenMugColorPick() walked straight
+  // past it. There are eleven callers of this function; guarding each one is
+  // eleven chances to miss another. The check belongs here, where every
+  // route has to come through it.
+  //
+  // Harmless for the back-buttons among those callers: they are only
+  // reachable from inside a prop, which track two can no longer enter.
+  if(chosenTrack==='describe'){
+    goToDescribeAndGenerate();
+    return;
+  }
   const card=document.getElementById('designMethodCard');
   if(card)card.style.display='block';
   clearFunPropsDecline();
