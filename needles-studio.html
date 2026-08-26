@@ -1245,7 +1245,7 @@ Tell Needles <span style="color:#7ab8ff">what you have in mind</span>
 <div id="frameFadeOverlay" class="step-lock-overlay" style="display:none">
 <div class="card" id="frameFadeCard" style="max-width:520px;width:100%;margin:auto;position:relative;max-height:92vh;overflow-y:auto;text-align:center">
 <div class="card-title">🌫️ Edge Fade</div>
-<div class="note" style="margin-top:0;margin-bottom:.9rem;text-align:left;line-height:1.6">Fade softens the outer edges of your picture so it settles <i>into</i> the mug instead of sitting on it like a sticker. It melts into your mug's own colour, whichever one you picked. This is how every Muggshotz mug looked before we had frames and props — and on a coloured cup it still looks best.<br><br>Drag to set how far the softening reaches in. All the way left is no fade at all: hard, sharp edges.</div>
+<div class="note" style="margin-top:0;margin-bottom:.9rem;text-align:left;line-height:1.6">Fade softens the outer edges of your picture so it settles <i>into</i> your product instead of sitting on it like a sticker. It melts into the colour of whatever you're printing on, so the edges simply disappear. This is how every Muggshotz design looked before we had frames and props — and on anything but white, it still looks best.<br><br>Drag to set how far the softening reaches in. All the way left is no fade at all: hard, sharp edges.</div>
 <img id="frameFadeArtworkImg" style="width:100%;border-radius:10px;border:1px solid #003c8c;margin:.9rem 0;background:#0d0d0d"/>
 <div id="frameFadeThreePanelRow" style="display:none;gap:8px;margin:.9rem 0">
 <img id="frameFadeThreePanelLeft" style="flex:1;min-width:0;border-radius:8px;border:1px solid #003c8c;object-fit:contain;max-height:200px;background:#0d0d0d"/>
@@ -6412,12 +6412,17 @@ function hexToRgbTriple(hex){
 
 // Real hex behind the chosen product color, so the pixel-level edge fade matches it instead of white.
 function getSelectedProductColorHex(){
-  // REVERSED (Aug 2026, Alyx): coffee mugs used to be pinned to white here,
-  // never sampling their own colour. That rule was invisibly correct for
-  // years because the mugs were white -- fading to white WAS fading to the
-  // mug. It only bites on a black or maroon mug, where a white fade leaves
-  // a pale halo ringing the art. A fade should disappear into the cup it is
-  // printed on, whatever colour that cup happens to be.
+  // THE RULE, product-wide (Aug 2026, Alyx): a fade disappears into the
+  // colour of the thing it is printed on. Not the mug's colour -- the
+  // PRODUCT's colour, because this has to hold just as well for phone
+  // cases, suitcases, lunch boxes and whatever else gets added later.
+  // Every product that knows its own hex resolves it here; anything that
+  // does not, or that prints on a white surface, falls through to white.
+  //
+  // Coffee mugs used to be pinned to white regardless. That was invisibly
+  // correct for years because the mugs were white -- fading to white WAS
+  // fading to the product -- and only ever went wrong on a coloured one,
+  // where it ringed the art in a pale halo.
   if(product==='water bottle' && preGenTravelVariant==='travel-mug-40oz-insulated' && preGenTravelColor){
     const match=TRAVEL_MUG_CATALOG[preGenTravelVariant]?.colors?.find(c=>c.name===preGenTravelColor);
     if(match)return match.hex;
