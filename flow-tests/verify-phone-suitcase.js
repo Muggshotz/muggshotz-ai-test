@@ -36,6 +36,13 @@ const scenarios = {
     await page.waitForTimeout(700);
     const note = await page.textContent('#suitcaseSizeSelectedNote');
     if (!/Medium/.test(note)) return `FAIL: confirm note wrong: ${note}`;
+    // Description is now REQUIRED on print-onto-object products, and comes
+    // after the product is fully chosen. page.fill focuses the textarea, which
+    // fires the once-per-session intro modal, so dismiss it like a customer.
+    await page.fill('#ideaDesc', 'riding a dragon over a volcano');
+    await page.waitForTimeout(600);
+    await dismissAlerts(page);
+    await page.waitForTimeout(300);
     await page.evaluate(() => document.getElementById('generateBtn')?.scrollIntoView({ block: 'center' }));
     await page.click('#generateBtn');
     await waitApprove(page);
@@ -64,6 +71,13 @@ const scenarios = {
     await page.waitForTimeout(800);
     await page.click('#phoneModelConfirmGen button:has-text("Yes")');
     await page.waitForTimeout(800);
+    // Description is now REQUIRED on print-onto-object products, and comes
+    // after the product is fully chosen. page.fill focuses the textarea, which
+    // fires the once-per-session intro modal, so dismiss it like a customer.
+    await page.fill('#ideaDesc', 'riding a dragon over a volcano');
+    await page.waitForTimeout(600);
+    await dismissAlerts(page);
+    await page.waitForTimeout(300);
     await page.evaluate(() => document.getElementById('generateBtn')?.scrollIntoView({ block: 'center' }));
     await page.click('#generateBtn');
     await waitApprove(page);

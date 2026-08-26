@@ -53,6 +53,13 @@ const scenarios = {
     if (!/18/.test(note)) return `FAIL: confirm note wrong: ${note}`;
     await page.click('#toteBagColorGridGen .color-btn[data-color="Black"]');
     await page.waitForTimeout(500);
+    // Description is now REQUIRED on print-onto-object products, and comes
+    // after the product is fully chosen. page.fill focuses the textarea, which
+    // fires the once-per-session intro modal, so dismiss it like a customer.
+    await page.fill('#ideaDesc', 'riding a dragon over a volcano');
+    await page.waitForTimeout(600);
+    await dismissAlerts(page);
+    await page.waitForTimeout(300);
     await page.evaluate(() => document.getElementById('generateBtn')?.scrollIntoView({ block: 'center' }));
     await page.click('#generateBtn');
     await waitApprove(page);
