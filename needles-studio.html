@@ -6239,8 +6239,34 @@ function confirmPhoneModelGen(isCorrect){
   selectedPhoneCaseModel=pendingPhoneCaseModel;
   hidePhoneConfirmationGen();
   document.getElementById('phoneModelSelectedNoteGen').textContent='✓ Confirmed: '+selectedPhoneCaseModel+'.';
-  document.getElementById('finalGenerateGuidance').classList.add('visible');
-  smoothScrollToTarget('finalGenerateGuidance','center');
+  handOffToIdeaAfterProductChoice();
+}
+
+// BUG FIX (Aug 2026, Alyx's report from a phone-case and a suitcase run):
+// every product with a mandatory pre-generation pick handed straight off to
+// finalGenerateGuidance -- which sits at ~line 1202, BELOW the idea card at
+// ~line 909. The idea card also lives inside a snap-COLLAPSED section, so
+// scrolling past it left it at zero height, out of the viewport, never
+// expanded. The customer was therefore never offered anywhere to say what
+// they wanted done with their photo: pick product -> pick model/size ->
+// Generate. Generation then fell back to the generic per-product art hint,
+// so they got an image nobody had described.
+//
+// Hand off to the idea card instead. smoothScrollToTarget() runs
+// snapExpandThrough(), and SNAP_ALIASES maps ideaCard -> edgeFadeIdeaSection,
+// so this expands the collapsed section AND lands on it. finalGenerateGuidance
+// is still marked visible, so it is waiting directly below once they've typed.
+function handOffToIdeaAfterProductChoice(){
+  const guide=document.getElementById('finalGenerateGuidance');
+  if(guide)guide.classList.add('visible');
+  // Deliberately does NOT focus() the textarea. #ideaDesc has a 'focus'
+  // listener that fires showIdeaBoxIntroIfNeeded(), a once-per-session modal
+  // meant for the customer CLICKING into the box. Focusing it programmatically
+  // pops that modal mid-scroll, unasked -- and because it is a real overlay it
+  // then sits on top of whatever comes next, which was covering the Yes/No
+  // approve buttons after generation. Scrolling here is the whole handoff; the
+  // intro still fires naturally the moment the customer clicks in.
+  smoothScrollToTarget('ideaCard','center');
 }
 
 function refreshPhoneCaseModelVisibility(){
@@ -6264,8 +6290,7 @@ function pickPuzzleSize(label){
     b.classList.toggle('selected',b.dataset.puzzleSize===label);
   });
   document.getElementById('puzzleSizeSelectedNote').textContent='✓ Confirmed: '+label+'.';
-  document.getElementById('finalGenerateGuidance').classList.add('visible');
-  smoothScrollToTarget('finalGenerateGuidance','center');
+  handOffToIdeaAfterProductChoice();
 }
 
 // Suitcase mirrors the phone-case pattern: size is a real, mandatory
@@ -6279,8 +6304,7 @@ function pickSuitcaseSize(label){
     b.classList.toggle('selected',b.dataset.suitcaseSize===label);
   });
   document.getElementById('suitcaseSizeSelectedNote').textContent='✓ Confirmed: '+label+'.';
-  document.getElementById('finalGenerateGuidance').classList.add('visible');
-  smoothScrollToTarget('finalGenerateGuidance','center');
+  handOffToIdeaAfterProductChoice();
 }
 
 function refreshPuzzleSizeVisibility(){
@@ -7526,7 +7550,38 @@ async function approveDesign(allThree){
   // this inside showCoverMePanelCard(); without it here, the customer
   // is scrolled to a placement card still locked under generation-active.
   clearAllFocusModes();
-  document.getElementById('positionHolderCard').scrollIntoView({behavior:'smooth',block:'start'});
+
+  // BUG FIX (Aug 2026, from Alyx's suitcase run): approving a single-image
+  // product dropped the customer at the TOP of positionHolderCard, whose
+  // first element is a long paragraph about Preview Reservations. The one
+  // thing there is to do next -- Continue to Order -- sits at the BOTTOM of
+  // that same card AND ships styled `cta-muted` (45% opacity, grayscaled),
+  // so it was simultaneously below the fold and visually switched off. The
+  // customer got a wall of text, no spotlight, and no visible next step,
+  // which is the exact failure the guided rail exists to prevent.
+  //
+  // Hand the spotlight to the real next action instead, reusing the same
+  // un-mute + flash that the frame/accessorize step already performs when
+  // IT hands off to this very button (see skipAccessorizeFrame). Falls back
+  // to the old card scroll only if the button genuinely isn't showing --
+  // updatePlacementSummary() above has already decided that.
+  const orderBtnNext=document.getElementById('orderMugBtn');
+  if(orderBtnNext && orderBtnNext.style.display!=='none'){
+    orderBtnNext.classList.remove('cta-muted');
+    orderBtnNext.classList.add('cta-flash');
+    // scrollToStableTop, NOT smoothScrollToTarget: everything above this
+    // (renderPositionHolder / updatePlacementSummary / restoreFrameCardsToHome)
+    // is still resizing the page at this moment. A plain smooth scrollIntoView
+    // gets cancelled by that reflow -- observed on puzzle, where the page
+    // simply never moved and the button sat ~4900px below the fold while
+    // suitcase happened to survive the same race. This polls until the
+    // button's position stops changing, then scrolls, which is the same
+    // approach scrollToNeedlesRevealWhenReady already uses for the reveal.
+    const centreMargin=Math.max(0,(window.innerHeight-orderBtnNext.offsetHeight)/2);
+    scrollToStableTop(orderBtnNext,centreMargin,20);
+  } else {
+    document.getElementById('positionHolderCard').scrollIntoView({behavior:'smooth',block:'start'});
+  }
 }
 
 // Explicit "done with panel picks" action for the coffee mug Three
@@ -10886,6 +10941,13 @@ function resetEverythingFreshStart(){
   const phoneNote=document.getElementById('phoneModelSelectedNoteGen');
   if(phoneNote)phoneNote.textContent='';
   hidePhoneConfirmationGen();
+
+  // The order button is un-muted and set flashing when a single-image
+  // design is approved; a fresh start has to put it back or it keeps
+  // flashing at a customer who has nothing to order yet. showAccessorizeStep
+  // already does this for its own handoff -- reset never did.
+  const orderBtnFresh=document.getElementById('orderMugBtn');
+  if(orderBtnFresh){orderBtnFresh.classList.add('cta-muted');orderBtnFresh.classList.remove('cta-flash');}
 
   selectedToteSize=null;
   document.querySelectorAll('#toteSizeGrid .btn-select').forEach(b=>b.classList.remove('selected'));
