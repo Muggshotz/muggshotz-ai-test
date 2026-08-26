@@ -766,19 +766,25 @@ document.getElementById('heroVideo').addEventListener('ended',()=>{
 <input type="file" id="fileInput" accept="image/*" style="display:none"/><img id="previewImg" class="preview-img" style="display:none"/>
 <div id="approveRow" style="display:none">
 <div class="note" style="margin-top:.9rem;text-align:center;font-size:13px;color:#29a3ff">Are you satisfied with this design?</div>
+<!-- Yes and No, side by side, the way every prop flow already does it. The
+     "No" used to live outside approveRow entirely, and since the landing
+     scroll measures only as far as approveRow's bottom edge, the one button
+     that let a customer reject the design started one pixel below the fold
+     -- every time. So the screen asked "Are you satisfied?" and offered
+     nothing but Yes.
+     allSidesBtn stays in the row but is now MUG-INVISIBLE (see
+     refreshApproveRowForMode): a mug's panels are chosen on the panel screen
+     that follows, where there is an actual picture of a mug to point at.
+     Travel mugs still use it as "Yes -- Front & Back", which is why the
+     button is hidden rather than deleted. -->
 <div class="bi-row">
 <button class="generate-btn" style="flex:1;width:auto;padding:.8rem .4rem;font-size:13px" onclick="approveDesign(false)">✅ Yes — Use This Design</button>
 <button class="generate-btn" id="allSidesBtn" style="flex:1;width:auto;padding:.8rem .4rem;font-size:13px" onclick="approveDesign(true)">✅ Yes — All 3 Sides</button>
+<button class="download-btn" id="keepTweakingBtn" style="flex:1;width:auto;margin-top:0;padding:.8rem .4rem;font-size:13px" onclick="keepTweaking()">🔧 No — Let's Try Another</button>
 </div>
 <div class="note" id="approveSavingNote" style="display:none;margin-top:.5rem;text-align:center;color:#7888b4"><span class="spinner"></span>Saving your finished design...</div>
-<!-- The "No" belongs INSIDE approveRow, with the two Yes buttons it answers.
-     It used to be a sibling further down the page, and since the landing
-     scroll measures only as far as approveRow's bottom edge, the one button
-     that let a customer reject the design started exactly one pixel below
-     the fold -- every single time. Same shape as the Home Sweet Home bug.
-     The question reads "Are you satisfied?" and offered nothing but Yes. -->
-<button class="download-btn" id="keepTweakingBtn" onclick="keepTweaking()" style="display:none;margin-top:.6rem">🔧 No — Try Again</button>
-<div class="note" id="approveRowHint" style="margin-top:.5rem">Want it on exactly two sides? Press Yes first, then tap Left / Center / Right under the design in "My Designs" to add or remove spots.</div>
+<div class="note" id="approveRetryCost" style="margin-top:.4rem;text-align:center;color:#29a3ff">Another go costs one more token. <span style="color:#7ab8ff;cursor:pointer" onclick="openCreditsPanel()">Need more?</span></div>
+<div class="note" id="approveRowHint" style="margin-top:.5rem"></div>
 </div>
 <button class="download-btn" id="toggleImageBtn" onclick="toggleWorkingImage()" style="display:none;margin-top:.6rem">↔️ Toggle Between Previous & New Image</button>
 <div id="keepTweakingReminder" class="guidance-prompt" role="status">Made your changes? Scroll down and hit Generate again. Running low on tokens? Tap Credits &amp; Extras to top up.</div>
@@ -7243,9 +7249,12 @@ function refreshApproveRowForMode(){
   if (!allSidesBtn) return;
   const mode = getSlotMode();
   if (mode === 'three') {
-    allSidesBtn.style.display = 'block';
-    allSidesBtn.textContent = '✅ Yes — All 3 Mug Panels';
-    hint.textContent = 'Your mug prints on three panels — left, centre and right. "Use This Design" fills left and right; "All 3 Mug Panels" fills all three. You can change any of them afterwards under "My Designs".';
+    // A mug's panels are a spatial question, and this screen has no mug on
+    // it to point at -- which is exactly why "All 3 Sides" read as a riddle
+    // here. The next screen shows the three panels as pictures, so the
+    // choice is made there, on the screen that can actually illustrate it.
+    allSidesBtn.style.display = 'none';
+    hint.textContent = 'Next you\'ll see your mug\'s three panels, and can pick which ones this design goes on.';
   } else if (mode === 'two') {
     allSidesBtn.style.display = 'block';
     allSidesBtn.textContent = '✅ Yes — Front & Back';
@@ -7286,9 +7295,9 @@ async function approveDesign(allThree){
       toggleLibrary();
     }
   }
+  const approvedDesignId=currentDesignId;
   currentDesignId=null;
   document.getElementById('approveRow').style.display='none';
-  document.getElementById('keepTweakingBtn').style.display='none';
   document.getElementById('downloadDesignBtn').style.display='none';
 
   saveMugState();
@@ -7297,13 +7306,32 @@ async function approveDesign(allThree){
   updatePlacementSummary();
   restoreFrameCardsToHome();
 
-  // UPDATED: coffee mugs no longer auto-advance into the Reveal stage
-  // from here. Left/Right are addressed automatically (auto-filled
-  // above) and Center is addressed by its own default (intentionally
-  // empty unless the customer adds something), so nothing here still
-  // needs to happen before moving on -- the customer presses the
-  // explicit Continue button on this screen (continueFromMugPanels(),
-  // shown/hidden by renderPositionHolder()) whenever they're ready.
+  // CONVERGENCE (Aug 2026, Alyx): this is where the design-first flow and
+  // the product-first flow become one flow. A mug approved here now lands
+  // on the very same SELECT THE PANELS screen that Cover Me, Face It and
+  // Home Sweet Home all hand off to -- left and right filled, centre
+  // deliberately off -- instead of its own separate positionHolder screen
+  // showing the same three slots a different way. Identical to what
+  // approveCoverMe/approveFaceIt/approveGoodMorning do, for the same
+  // reason: one screen where panels get chosen, not two.
+  if(slotMode==='three' && approvedDesignId){
+    const posHolder=document.getElementById('positionHolderCard');
+    if(posHolder)posHolder.style.display='none';
+    placements.front=approvedDesignId;
+    saveMugState();
+    showCoverMePanelCard();
+    // showCoverMePanelCard's autoFill has copied front onto left/right by
+    // now; clearing front is what leaves centre empty by default, and it
+    // reuses the same "removed" bookkeeping the panel screen's own Remove
+    // button uses, so "Turn Center On (free)" keeps working untouched.
+    coverMeLastRemoved.front=placements.front;
+    placements.front=null;
+    saveMugState();
+    renderCoverMePanelRowState('front');
+    refreshCoverMePanelDoneState();
+    return;
+  }
+
   document.getElementById('positionHolderCard').scrollIntoView({behavior:'smooth',block:'start'});
 }
 
@@ -8937,7 +8965,6 @@ async function generate(){
   startNeedlesStage();
   clearReferenceSlots();
   document.getElementById('approveRow').style.display='none';
-  document.getElementById('keepTweakingBtn').style.display='none';
   document.getElementById('downloadDesignBtn').style.display='none';
   document.getElementById('toggleImageBtn').style.display='none';
 setStatus('Generating your image... this may take several minutes, especially on busier or more detailed requests. Go grab a coffee if you like.');
@@ -9123,7 +9150,6 @@ Use rich environmental storytelling while keeping the face as the primary focal 
     // everything below this block is the untouched original flow.
     if(isWraparoundActive && product==='mug' && useGeminiPanorama){
       document.getElementById('approveRow').style.display='none';
-      document.getElementById('keepTweakingBtn').style.display='none';
       document.getElementById('downloadDesignBtn').style.display='none';
       document.getElementById('wraparoundStandbyPrompt').style.display='block';
       setStatus('Generating your panorama with Gemini — one image, all three panels at once...');
@@ -9338,7 +9364,6 @@ async function makeTestSingleZonePanorama(side){
     if (product==='mug' && mugPrintMode==='wraparound'){
       placements.front = currentDesignId;
       document.getElementById('approveRow').style.display='none';
-      document.getElementById('keepTweakingBtn').style.display='none';
       document.getElementById('downloadDesignBtn').style.display='none';
       setStatus('Center panel done. Generating the left panel — continuing the same scene...');
       document.getElementById('wraparoundStandbyPrompt').style.display='block';
@@ -9460,7 +9485,6 @@ async function makeTestSingleZonePanorama(side){
     presentFinishedNeedlesArt(finalImageUrl||resultUrl, ()=>{
       const approveRowEl=document.getElementById('approveRow');
       approveRowEl.style.display='block';
-      document.getElementById('keepTweakingBtn').style.display='block';
       document.getElementById('downloadDesignBtn').style.display='block';
       document.getElementById('toggleImageBtn').style.display='none';
       refreshApproveRowForMode();
@@ -9714,7 +9738,6 @@ function clearAllDesigns(){
   try{localStorage.removeItem('muggshotz_mug_state');}catch(e){}
   document.getElementById('positionHolderCard').style.display='none';
   document.getElementById('approveRow').style.display='none';
-  document.getElementById('keepTweakingBtn').style.display='none';
   document.getElementById('downloadDesignBtn').style.display='none';
   renderRecentDesigns();
   renderPositionHolder();
@@ -10373,7 +10396,6 @@ function recallLastGeneratedImage(){
     if(previousImageData)document.getElementById('toggleImageBtn').style.display='block';
     if(currentDesignId){
       document.getElementById('approveRow').style.display='block';
-      document.getElementById('keepTweakingBtn').style.display='block';
       document.getElementById('downloadDesignBtn').style.display='block';
       loadBaseImageForCaption(saved.working);
     }
@@ -10403,7 +10425,6 @@ function resetEverythingFreshStart(){
   pendingSlotTarget=null;
   hideAccessorizeStep();
   document.getElementById('approveRow').style.display='none';
-  document.getElementById('keepTweakingBtn').style.display='none';
   document.getElementById('downloadDesignBtn').style.display='none';
   const keepTweakingReminderReset=document.getElementById('keepTweakingReminder');
   if(keepTweakingReminderReset)keepTweakingReminderReset.classList.remove('visible');
