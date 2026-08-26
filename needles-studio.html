@@ -941,7 +941,7 @@ Would you like to try out <span style="color:#7ab8ff">some of our fun props?</sp
 <div style="font-family:'Playfair Display',serif;font-style:italic;font-weight:700;font-size:19px;line-height:1.4;color:#f0f0f0">
 Tell Needles <span style="color:#7ab8ff">what you have in mind</span>
 </div>
-<div class="note" style="margin-top:.6rem;color:#7ab8ff">Check "Design By Description" below and describe your idea for us.</div>
+<div class="note" style="margin-top:.6rem;color:#7ab8ff">Describe your idea for us in the box above.</div>
 </div>
 <button type="button" class="snap-arrow-btn snap-arrow-up" id="designMethodDownArrow" style="display:flex;margin:0 auto 1rem" onclick="document.getElementById('designMethodTiles').scrollIntoView({behavior:'smooth',block:'end'})">⌄</button>
 <div id="designMethodTiles" style="display:flex;justify-content:center;align-items:flex-start;gap:6px">
@@ -962,12 +962,13 @@ Tell Needles <span style="color:#7ab8ff">what you have in mind</span>
 </div>
 </div>
 <div style="margin-top:1rem;padding-top:1rem;border-top:1px solid #333">
-<label style="display:flex;align-items:center;gap:8px;cursor:pointer" onclick="event.stopPropagation()">
-<input type="checkbox" id="designByDescriptionCheck" onchange="toggleDesignByDescription()" style="width:18px;height:18px">
-<span>Design By Description</span>
-<span class="info-toggle" onclick="event.stopPropagation();toggleDesignByDescriptionInfo()" style="cursor:pointer;color:#7ab8ff">ⓘ</span>
-</label>
-<div class="note" id="designByDescriptionInfo" style="display:none;margin-top:.6rem">You may, if you wish, also include this to add any text or special instructions for our artist, Needles. You can select this option along with any of the props above, or select it by itself without choosing a prop. After you provide your description and click Satisfied, we'll create a custom design just for you.</div>
+<!-- This used to be a "Design By Description" checkbox. By the time anyone
+     sees this screen they have already written their idea in the box above,
+     so that control was asking them to opt into the thing they had just
+     done -- and, worse, it was the only way to make Continue appear. It is
+     a plain decline now: the props are the offer, this is the graceful way
+     past them, and Continue shows up once it is taken. -->
+<button type="button" class="download-btn" id="declinePropsBtn" style="margin-top:0" onclick="declineFunProps()">No thank you — Needles already has my words</button>
 <button type="button" class="generate-btn" id="designByDescriptionContinueBtn" style="display:none;margin-top:.9rem" onclick="continueWithDescriptionOnly()">Continue</button>
 </div>
 <button type="button" class="download-btn" style="margin-top:1rem" onclick="designMethodBack()">← Return</button>
@@ -4429,6 +4430,7 @@ function finishPreGenMugColorPick(){
 function showDesignMethodCard(){
   const card=document.getElementById('designMethodCard');
   if(card)card.style.display='block';
+  clearFunPropsDecline();
   // Everything below this step (Product's Post-it/Phone case/etc. grid,
   // in particular) was staying fully lit and visible here since nothing
   // ever dimmed it once Product was picked -- every other step in this
@@ -4475,6 +4477,7 @@ function showDesignMethodCard(){
 // of its old default (productCard). If unchecked, they go straight
 // to the method's screen.
 function pickDesignMethod(method){
+  clearFunPropsDecline();
   selectedDesignMethod=method;
   document.querySelectorAll('#designMethodCard .btn-select').forEach(b=>b.classList.remove('selected'));
   const btnId={coverMe:'designMethodCoverMeBtn',faceIt:'designMethodFaceItBtn',homeSweetHome:'designMethodHomeBtn'}[method];
@@ -4493,19 +4496,30 @@ function pickDesignMethod(method){
   }
 }
 
-function toggleDesignByDescription(){
-  designByDescriptionChecked=document.getElementById('designByDescriptionCheck').checked;
+// Taking the "no thank you" out of the fun props. Clears any prop that was
+// tentatively selected -- declining and having a prop still lit would be
+// contradictory -- and reveals Continue, which is the only thing that used
+// to require ticking the old checkbox.
+function declineFunProps(){
+  selectedDesignMethod=null;
+  document.querySelectorAll('#designMethodCard .btn-select').forEach(b=>b.classList.remove('selected'));
+  const btn=document.getElementById('declinePropsBtn');
+  if(btn){btn.style.borderColor='#29a3ff';btn.style.color='#7ab8ff';}
   const continueBtn=document.getElementById('designByDescriptionContinueBtn');
-  if(continueBtn)continueBtn.style.display=designByDescriptionChecked?'block':'none';
+  if(continueBtn)continueBtn.style.display='block';
 }
 
-function toggleDesignByDescriptionInfo(){
-  const info=document.getElementById('designByDescriptionInfo');
-  if(info)info.style.display=(info.style.display==='none')?'block':'none';
+// Undo the above -- on reopening the screen, or the moment a prop is tapped
+// after all, so a stale Continue is never left sitting under a live prop.
+function clearFunPropsDecline(){
+  const btn=document.getElementById('declinePropsBtn');
+  if(btn){btn.style.borderColor='';btn.style.color='';}
+  const continueBtn=document.getElementById('designByDescriptionContinueBtn');
+  if(continueBtn)continueBtn.style.display='none';
 }
 
-// Checkbox checked with no prop tile picked -- description-only path,
-// ends at the Edge-Treatment step rather than any prop screen.
+// Props declined -- description-only path, ends at the Edge-Treatment step
+// rather than any prop screen.
 function continueWithDescriptionOnly(){
   ideaReturnTarget='descriptionOnly';
   document.getElementById('designMethodCard').style.display='none';
