@@ -1178,9 +1178,20 @@ Tell Needles <span style="color:#7ab8ff">what you have in mind</span>
 <div class="note" id="posterPriceNote" style="margin-top:1rem;font-size:14px;color:#003c8c;font-weight:700"></div>
 </div>
 
+<div class="card" id="toteSizeCard" style="display:none">
+<div class="card-title">👜 Which Tote Size?</div>
+<div class="note" style="margin-top:0;margin-bottom:.75rem">We need this before generating — each size is a different bag with its own price, and your art gets composed to fit it exactly.</div>
+<div class="grid3" id="toteSizeGrid">
+<div class="btn-select" data-tote-size="13&quot; x 13&quot;" onclick="pickToteSize(this)">13" x 13"<div class="note" style="margin-top:4px">$23.95</div></div>
+<div class="btn-select" data-tote-size="16&quot; x 16&quot;" onclick="pickToteSize(this)">16" x 16"<div class="note" style="margin-top:4px">$24.95</div></div>
+<div class="btn-select" data-tote-size="18&quot; x 18&quot;" onclick="pickToteSize(this)">18" x 18"<div class="note" style="margin-top:4px">$25.95</div></div>
+</div>
+<div class="note" id="toteSizeSelectedNote" style="margin-top:.6rem"></div>
+</div>
+
 <div class="card" id="toteBagColorCard" style="display:none">
 <div class="card-title">👜 Tote Bag Color</div>
-<div class="note" style="margin-top:0;margin-bottom:.75rem">Optional — pick your tote color now so the automatic edge fade can match it exactly. You can still change this later.</div>
+<div class="note" style="margin-top:0;margin-bottom:.75rem">Pick your tote color — the automatic edge fade matches it exactly, and each color is a different bag we have to order by name.</div>
 <div class="color-grid" id="toteBagColorGridGen"></div>
 </div>
 
@@ -6320,6 +6331,37 @@ const TOTE_BAG_COLORS_GEN = [
 ];
 let selectedToteColorGen = null;
 
+// Tote size. NOTE (Aug 2026): tote had a colour card but NO size card at
+// all, while lib/products-catalog.js carries three sizes at three prices
+// with colorsVaryBySize -- so every size shares colour NAMES but has its
+// own variantIds. Without this card the flow had no way to say which bag
+// it was, and buildMockupRequestBody had no tote branch either, so the
+// mockup never fired. Size is a real pre-generation decision here, same
+// as puzzle piece count and suitcase size.
+//
+// Colour is ALSO mandatory for tote, which the old "Optional" copy got
+// wrong: resolveVariant() throws "A color selection is required for this
+// product" whenever a size entry carries colors, which tote's do. An
+// uncoloured tote could therefore never reach a mockup. Both are guarded
+// in generate() below.
+let selectedToteSize=null;
+
+function pickToteSize(el){
+  const label=el.dataset.toteSize;
+  selectedToteSize=label;
+  document.querySelectorAll('#toteSizeGrid .btn-select').forEach(b=>{
+    b.classList.toggle('selected',b.dataset.toteSize===label);
+  });
+  document.getElementById('toteSizeSelectedNote').textContent='✓ Confirmed: '+label+'.';
+  smoothScrollToTarget('toteBagColorCard','center');
+}
+
+function refreshToteSizeVisibility(){
+  const card=document.getElementById('toteSizeCard');
+  if(!card)return;
+  card.style.display=(product==='tote bag')?'block':'none';
+}
+
 function renderToteBagColorGridGen(){
   const grid = document.getElementById('toteBagColorGridGen');
   if (!grid || grid.childElementCount) return;
@@ -6446,6 +6488,7 @@ function pick(el,type){
     refreshTravelMugVariantVisibility();
     refreshTravelMugColorVisibility();
     refreshToteBagColorVisibility();
+    refreshToteSizeVisibility();
 
     updatePlacementSummary();
     updateMugGuidedFlow();
@@ -6464,6 +6507,9 @@ function pick(el,type){
         const input=document.getElementById('phoneModelSearchInputGen');
         if(input)input.focus();
       });
+    } else if(product==='tote bag'){
+      // Size first, then colour -- both mandatory before Generate.
+      smoothScrollToTarget('toteSizeCard','center');
     } else if(product==='puzzle'){
       // Same "pick the thing that determines everything else first"
       // pattern as phone case and mug: piece count is mandatory before
@@ -9145,6 +9191,13 @@ async function generate(){
     document.getElementById('phoneCaseModelCard').scrollIntoView({behavior:'smooth',block:'center'});
     return;
   }
+  if(product==='tote bag' && (!selectedToteSize || !selectedToteColorGen)){
+    setStatus(!selectedToteSize
+      ? 'Please pick your tote size above first — each size is a different bag with its own price.'
+      : 'Please pick your tote color above first — each color is a different bag we order by name.',true);
+    document.getElementById(!selectedToteSize?'toteSizeCard':'toteBagColorCard').scrollIntoView({behavior:'smooth',block:'center'});
+    return;
+  }
   if(product==='puzzle' && !selectedPuzzleSize){
     setStatus('Please pick your puzzle piece count above first — each one is a different physical puzzle with its own price.',true);
     document.getElementById('puzzleSizeCard').scrollIntoView({behavior:'smooth',block:'center'});
@@ -10369,6 +10422,52 @@ function buildMockupRequestBody(){
     return body;
   }
 
+  // Photo/Poster: everything the customer picks here (framed vs not,
+  // size, orientation, finish, frame color) is already held in the
+  // poster globals and the UI cards for them already exist -- the ONLY
+  // thing that was ever missing was this bridge, so buildMockupRequestBody
+  // returned null and the mockup never fired. The server already has a
+  // dedicated photo-poster branch (start-mockup.js -> resolvePhotoPosterSelection)
+  // which picks the right blueprint/provider for framed vs unframed and
+  // falls back to a live title-match when a variantId is null (every
+  // unframed variantId in the catalog currently IS null, so that fallback
+  // is load-bearing here, not decorative).
+  //
+  // NOTE: colorName doubles as the FRAME COLOR server-side, and is only
+  // meaningful when framed -- send null otherwise so an unframed poster
+  // can never resolve against a frame variant.
+  if (product === 'photo poster') {
+    const design = placements.left || placements.front || placements.right;
+    const url = design ? (findDesignById(design)?.url ?? null) : null;
+    if (!url) return null;
+    return {
+      productKey: 'photo-poster',
+      sizeLabel: posterSize,
+      colorName: posterFramed ? posterFrameColor : null,
+      image: url,
+      posterFramed: !!posterFramed,
+      posterOrientation: posterOrientation,
+      posterFinish: posterFinish
+    };
+  }
+
+  // Tote Bag: single-image product, variant keyed by size + colour name.
+  // resolveVariant() reads sizeEntry.colors, so BOTH must be present or it
+  // throws server-side -- generate()'s guard above is what keeps that from
+  // ever reaching the server.
+  if (product === 'tote bag') {
+    if (!selectedToteSize || !selectedToteColorGen) return null;
+    const design = placements.left || placements.front || placements.right;
+    const url = design ? (findDesignById(design)?.url ?? null) : null;
+    if (!url) return null;
+    return {
+      productKey: 'tote-bag',
+      sizeLabel: selectedToteSize,
+      colorName: selectedToteColorGen,
+      image: url
+    };
+  }
+
   // Photo Puzzle: a single-image catalog product whose variant is chosen
   // purely by piece count. UI value 'puzzle' -> catalog key 'photo-puzzle'.
   // start-mockup's generic path (getProduct + resolveVariant) handles the
@@ -10690,6 +10789,7 @@ refreshSuitcaseSizeVisibility();
 refreshTravelMugVariantVisibility();
 refreshTravelMugColorVisibility();
 refreshToteBagColorVisibility();
+refreshToteSizeVisibility();
 renderFrameGrid();
 renderWindowSillGrid();
 updateMugGuidedFlow();
@@ -10787,6 +10887,11 @@ function resetEverythingFreshStart(){
   if(phoneNote)phoneNote.textContent='';
   hidePhoneConfirmationGen();
 
+  selectedToteSize=null;
+  document.querySelectorAll('#toteSizeGrid .btn-select').forEach(b=>b.classList.remove('selected'));
+  const toteNote=document.getElementById('toteSizeSelectedNote');
+  if(toteNote)toteNote.textContent='';
+
   selectedPuzzleSize=null;
   document.querySelectorAll('#puzzleSizeGrid .btn-select').forEach(b=>b.classList.remove('selected'));
   const puzzleNote=document.getElementById('puzzleSizeSelectedNote');
@@ -10862,6 +10967,7 @@ function resetEverythingFreshStart(){
   refreshTravelMugVariantVisibility();
   refreshTravelMugColorVisibility();
   refreshToteBagColorVisibility();
+  refreshToteSizeVisibility();
   updatePlacementSummary();
   updateMugGuidedFlow();
 
