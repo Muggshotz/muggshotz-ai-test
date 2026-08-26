@@ -400,7 +400,7 @@
 #creditsBtn:active{transform:translateY(1px)}
 
 .step-lock-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:900;align-items:flex-start;justify-content:center;padding:2.5rem 1.5rem;overflow-y:auto}
-body.generation-active .card:not(#uploadPhotoCard){opacity:.28;filter:brightness(.55) saturate(.7);pointer-events:none;transition:opacity .5s,filter .5s}
+body.generation-active .card:not(#uploadPhotoCard):not(#captionCard){opacity:.28;filter:brightness(.55) saturate(.7);pointer-events:none;transition:opacity .5s,filter .5s}
 body.generation-active #uploadPhotoCard{position:relative;z-index:5}
 body.generation-active #creditsModalOverlay .card{opacity:1!important;filter:none!important;pointer-events:auto!important}
 body .step-lock-overlay .card{opacity:1!important;filter:none!important;pointer-events:auto!important}
@@ -7396,6 +7396,10 @@ async function approveDesign(allThree){
     return;
   }
 
+  // Spotlight handoff for the non-mug tail: the mug branch above gets
+  // this inside showCoverMePanelCard(); without it here, the customer
+  // is scrolled to a placement card still locked under generation-active.
+  clearAllFocusModes();
   document.getElementById('positionHolderCard').scrollIntoView({behavior:'smooth',block:'start'});
 }
 
@@ -7994,10 +7998,18 @@ function cancelAccessorizeToOffer(){
 }
 
 function keepTweaking(){
+  // "No -- Let's Try Another" invites an idea edit -- the spotlight must
+  // release, or the box this scrolls to is dimmed and click-locked under
+  // generation-active. Generate re-arms the dim when they spin again.
+  clearAllFocusModes();
   const box=document.getElementById('ideaDesc');
   box.placeholder='What would you like to add or change? Describe it here, then hit Generate again.';
-  box.scrollIntoView({behavior:'smooth',block:'center'});
-  box.focus();
+  // smoothScrollToTarget, not raw scrollIntoView: on product-first flows
+  // the idea box lives in a still-collapsed snap section, so the old
+  // scroll pointed at an invisible box. This expands the section first.
+  smoothScrollToTarget('ideaCard','center',()=>{
+    box.focus({preventScroll:true});
+  });
   const reminder=document.getElementById('keepTweakingReminder');
   if(reminder)reminder.classList.add('visible');
 }
@@ -9562,13 +9574,15 @@ async function makeTestSingleZonePanorama(side){
       return;
     }
 
-    // The three prop flows (Cover Me / Face It / Good Morning) lift the
-    // generation-active dim in their own success handlers -- this plain
-    // path never did, so after any successful generation here the whole
-    // page below the top card stayed dimmed with pointer-events:none
-    // forever: product tiles, "Continue to Order", everything. Same for
-    // the patience banners.
-    document.body.classList.remove('generation-active');
+    // The guided-rail dim stays ON through the reveal: generation-active
+    // already spotlights exactly the right card (the finished art and the
+    // Yes/No row both live in #uploadPhotoCard, its one exemption -- plus
+    // #captionCard, the sanctioned add-text detour, exempted in the CSS).
+    // The spotlight hands off at the customer's decision instead:
+    // approveDesign() and keepTweaking() each clear it as they move the
+    // customer to their next point of engagement. Before this, nothing on
+    // the plain path ever cleared it at all -- the page below the top
+    // card stayed locked forever. Patience banners are done either way.
     removeGenerationReminders();
 
     document.getElementById('captionCard').className='card caption-card visible';
