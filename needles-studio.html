@@ -867,7 +867,14 @@ document.getElementById('heroVideo').addEventListener('ended',()=>{
 
 <div class="snap-section snap-collapsed" id="edgeFadeIdeaSection" data-snap-index="3">
 <button type="button" class="snap-arrow-btn snap-arrow-up" id="snapUp3" onclick="snapCollapseFrom(3)">⌃</button>
-<div class="card" id="panoramaFadeCard">
+<!-- RETIRED (Aug 2026, Alyx). This asked the customer to rule on how an
+     image should feather at its edges BEFORE the image existed, and its
+     checkbox had been inert for months behind a kill-switch besides. Edges
+     are now settled on the real Edge Fade page, after generation, with the
+     picture on screen and a live slider. Hidden rather than deleted: the
+     checkbox inside is still poked by several places that keep it in sync
+     with hardEdgesEnabled, and it is harmless where it stands. -->
+<div class="card" id="panoramaFadeCard" style="display:none">
 <div class="card-title">🖌️ Edge Fade</div>
 <div class="note" id="panoramaFadeCardNote" style="margin-top:0;margin-bottom:.75rem">By default, every design's outer edges automatically fade into white so it blends into the mug instead of looking like a hard-edged sticker. In Wraparound mode, the seams where Left, Center, and Right join stay sharp and continuous — only the true outer edges (top/bottom, plus the far-left and far-right ends) fade. In the standard three-panel mode, each panel is independent, so all four of its edges fade. Doesn't change anything you see or type below; it's applied automatically behind the scenes.</div>
 <div style="display:flex;align-items:center;gap:10px">
@@ -1237,16 +1244,20 @@ Tell Needles <span style="color:#7ab8ff">what you have in mind</span>
 
 <div id="frameFadeOverlay" class="step-lock-overlay" style="display:none">
 <div class="card" id="frameFadeCard" style="max-width:520px;width:100%;margin:auto;position:relative;max-height:92vh;overflow-y:auto;text-align:center">
-<div class="card-title">◻️ Sharp or Faded Edges?</div>
+<div class="card-title">🌫️ Edge Fade</div>
+<div class="note" style="margin-top:0;margin-bottom:.9rem;text-align:left;line-height:1.6">Fade softens the outer edges of your picture so it settles <i>into</i> the mug instead of sitting on it like a sticker. It melts into your mug's own colour, whichever one you picked. This is how every Muggshotz mug looked before we had frames and props — and on a coloured cup it still looks best.<br><br>Drag to set how far the softening reaches in. All the way left is no fade at all: hard, sharp edges.</div>
 <img id="frameFadeArtworkImg" style="width:100%;border-radius:10px;border:1px solid #003c8c;margin:.9rem 0;background:#0d0d0d"/>
 <div id="frameFadeThreePanelRow" style="display:none;gap:8px;margin:.9rem 0">
 <img id="frameFadeThreePanelLeft" style="flex:1;min-width:0;border-radius:8px;border:1px solid #003c8c;object-fit:contain;max-height:200px;background:#0d0d0d"/>
 <img id="frameFadeThreePanelCenter" style="flex:1;min-width:0;border-radius:8px;border:1px solid #003c8c;object-fit:contain;max-height:200px;background:#0d0d0d"/>
 <img id="frameFadeThreePanelRight" style="flex:1;min-width:0;border-radius:8px;border:1px solid #003c8c;object-fit:contain;max-height:200px;background:#0d0d0d"/>
 </div>
-<div class="note" style="margin-top:0;margin-bottom:.5rem">Give me all sharp edges — or drag right if you'd like some fade instead.</div>
-<input type="range" id="frameFadeAmountSlider" min="0" max="80" step="1" value="0" oninput="updateFrameFadePreview()" style="width:100%"/>
-<div class="note" style="margin-top:.25rem;margin-bottom:0;text-align:center"><span id="frameFadeAmountVal">0%</span></div>
+<div style="display:flex;align-items:center;gap:10px;margin-top:.5rem">
+<span class="note" style="margin:0;white-space:nowrap;font-size:11px">Sharp</span>
+<input type="range" id="frameFadeAmountSlider" min="0" max="80" step="1" value="30" oninput="updateFrameFadePreview()" style="flex:1"/>
+<span class="note" style="margin:0;white-space:nowrap;font-size:11px">Soft</span>
+</div>
+<div class="note" style="margin-top:.25rem;margin-bottom:0;text-align:center"><span id="frameFadeAmountVal">30%</span></div>
 <button type="button" class="generate-btn" style="margin-top:.9rem" onclick="confirmFrameFadeAndContinue()">✅ Continue</button>
 </div>
 </div>
@@ -6401,13 +6412,19 @@ function hexToRgbTriple(hex){
 
 // Real hex behind the chosen product color, so the pixel-level edge fade matches it instead of white.
 function getSelectedProductColorHex(){
-  // Coffee mugs (any size/style) always fade to white -- never sample
-  // the mug's own selected color. Alyx's rule: color-sampled fade only
-  // applies to the 40oz travel mug, certain phone cases, and suitcases
-  // -- every other product (including regular coffee mugs and tote
-  // bags) always fades to white, no exceptions.
+  // REVERSED (Aug 2026, Alyx): coffee mugs used to be pinned to white here,
+  // never sampling their own colour. That rule was invisibly correct for
+  // years because the mugs were white -- fading to white WAS fading to the
+  // mug. It only bites on a black or maroon mug, where a white fade leaves
+  // a pale halo ringing the art. A fade should disappear into the cup it is
+  // printed on, whatever colour that cup happens to be.
   if(product==='water bottle' && preGenTravelVariant==='travel-mug-40oz-insulated' && preGenTravelColor){
     const match=TRAVEL_MUG_CATALOG[preGenTravelVariant]?.colors?.find(c=>c.name===preGenTravelColor);
+    if(match)return match.hex;
+  }
+  if(product==='mug' && selectedGenColor){
+    const mugColors=GEN_MUG_STYLES[selectedGenStyle]?.colors?.[selectedGenSize];
+    const match=mugColors?.find(c=>c.name===selectedGenColor);
     if(match)return match.hex;
   }
   return '#FFFFFF';
@@ -7396,7 +7413,14 @@ async function enterRevealStage(){
   choiceOverlay.style.display='none';
   document.body.classList.remove('step-locked');
   if(revealFlowThreePanel){
-    showAccessorizeChoiceState();
+    // THE FADE PAGE, AT LAST (Aug 2026, Alyx). openFrameFadeOverlay() has
+    // been sitting in this file complete and working -- preview, live
+    // slider, the lot -- with nothing anywhere calling it. That is the real
+    // story behind "the fade kept sneaking back in and we gave up": the
+    // page was built, orphaned, and then bricked over upstream. It runs
+    // here now, before the frame offer, so edges are settled while the
+    // picture is on screen and frames are chosen after.
+    openFrameFadeOverlay();
   } else {
     openSeamFixOverlay();
   }
@@ -7535,8 +7559,17 @@ function chooseRevealPath(choice){
     return;
   }
 
-  // 'none' -- just the picture, no frame/sill. Show the already-built
-  // Hard/Fade choice screen for the plain unframed artwork.
+  // 'none' -- no frame. Edges were already settled on the fade page a
+  // moment ago, so there is nothing left to ask: straight to the mockup,
+  // carrying whatever fade they chose. (The old Hard/Fade overlay below is
+  // left intact for the paths that still reach it.)
+  if(frameFadeSettled){
+    frameFadeSettled=false;
+    document.body.classList.remove('step-locked');
+    beginFinalMockupFetch();
+    return;
+  }
+
   const revealOverlay=document.getElementById('revealOverlay');
   const revealImg=document.getElementById('revealArtworkImg');
   const revealThreeRow=document.getElementById('revealThreePanelRow');
@@ -7737,16 +7770,23 @@ async function confirmFadeAndContinue(){
 // Frame/Window Sill catalog afterward instead of the final mockup fetch.
 let frameFadeAmountPct=0;
 
+const DEFAULT_FADE_PCT=30;
+let frameFadeSettled=false;
+
 function openFrameFadeOverlay(){
+  frameFadeSettled=true;
   const overlay=document.getElementById('frameFadeOverlay');
   const img=document.getElementById('frameFadeArtworkImg');
   const threeRow=document.getElementById('frameFadeThreePanelRow');
   if(!overlay)return;
   document.body.classList.add('step-locked');
   overlay.style.display='flex';
-  frameFadeAmountPct=0;
-  document.getElementById('frameFadeAmountSlider').value=0;
-  document.getElementById('frameFadeAmountVal').textContent='0%';
+  // Opens faded, not sharp. Fade is how these mugs looked before frames or
+  // props existed, and it is still the better default on a coloured cup --
+  // dragging to 0 is right there for anyone who wants a hard edge.
+  frameFadeAmountPct=DEFAULT_FADE_PCT;
+  document.getElementById('frameFadeAmountSlider').value=DEFAULT_FADE_PCT;
+  document.getElementById('frameFadeAmountVal').textContent=DEFAULT_FADE_PCT+'%';
   if(revealFlowThreePanel){
     if(img)img.style.display='none';
     if(threeRow){
@@ -7800,7 +7840,12 @@ async function confirmFrameFadeAndContinue(){
   if(mainToggle)mainToggle.checked=hardEdgesEnabled;
   const overlay=document.getElementById('frameFadeOverlay');
   if(overlay)overlay.style.display='none';
-  openAccessorizeForRevealFlow();
+  document.body.classList.remove('step-locked');
+  // The frame OFFER, not the catalogue: fade and frames are both on this
+  // track, and neither one forecloses the other. Declining a frame no
+  // longer costs the customer their fade, which is exactly what used to
+  // happen when the only route to a fade was refusing frames outright.
+  showAccessorizeChoiceState();
 }
 
 let revealFlowActive=false;
