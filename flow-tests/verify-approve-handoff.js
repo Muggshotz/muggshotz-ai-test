@@ -18,6 +18,17 @@ async function approveOne(page, productVal, prep) {
   await page.locator(`#productCard .btn-select[data-val="${productVal}"]`).click({ force: true });
   await page.waitForTimeout(900);
   if (prep) await prep(page);
+  // Product is finished; the description is the last thing before Generate.
+  const needsIdea = await page.evaluate((v) => PRODUCTS_NEEDING_IDEA.includes(v), productVal);
+  if (needsIdea) {
+    await page.fill('#ideaDesc', 'riding a dragon over a volcano');
+    await page.waitForTimeout(600);
+    // page.fill() focuses the textarea, which fires the once-per-session
+    // showIdeaBoxIntroIfNeeded() MODAL. A real customer clicks Got It; the
+    // test has to as well or the overlay swallows the next click.
+    await dismissAlerts(page);
+    await page.waitForTimeout(300);
+  }
   await page.evaluate(() => document.getElementById('generateBtn')?.scrollIntoView({ block: 'center' }));
   await page.click('#generateBtn');
   await waitApprove(page);
@@ -178,6 +189,74 @@ scenarios.ideaOfferedPhoneCase = async (page) => {
     if (await yes.count()) await yes.click();
   });
   return judgeIdea('phone case', await ideaCardState(page));
+};
+
+
+// --- description required, and required LAST -------------------------------
+const modalOf = (page) => page.evaluate(() => {
+  const b = document.getElementById('bigAlertOverlay');
+  return b && getComputedStyle(b).display !== 'none' ? document.getElementById('bigAlertMsg')?.textContent : null;
+});
+
+// Product fully chosen, description blank -> blocked, and told which product.
+scenarios.blankIdeaBlocked = async (page) => {
+  await afterMandatoryPick(page, 'suitcase', async (p) => {
+    await p.click('#suitcaseSizeGrid .btn-select[data-suitcase-size="Medium"]');
+  });
+  await page.evaluate(() => document.getElementById('generateBtn')?.scrollIntoView({ block: 'center' }));
+  await page.click('#generateBtn');
+  await page.waitForTimeout(1200);
+  const m = await modalOf(page);
+  if (!m || !/tell us what/i.test(m)) return `FAIL: blank description NOT blocked (modal=${JSON.stringify(m)})`;
+  if (!/suitcase/i.test(m)) return `FAIL: message does not name the product: ${m}`;
+  return `PASS: blank description blocked, names the product`;
+};
+
+// Nothing chosen at all -> the PRODUCT guard must fire first. Asking for the
+// description first would drag them out of a product they were mid-way through.
+scenarios.productGuardFiresBeforeIdea = async (page) => {
+  await page.click('#postUploadForkRow button:has-text("Select Your Product")');
+  await page.waitForTimeout(700);
+  await page.locator('#productCard .btn-select[data-val="suitcase"]').click({ force: true });
+  await page.waitForTimeout(1000);
+  await page.evaluate(() => document.getElementById('generateBtn')?.scrollIntoView({ block: 'center' }));
+  await page.click('#generateBtn');
+  await page.waitForTimeout(1200);
+  const m = await modalOf(page);
+  if (!m) return 'FAIL: nothing blocked with neither size nor description';
+  if (/tell us what/i.test(m)) return 'FAIL: asked for the description before the size — drags them out of the product';
+  if (!/suitcase size/i.test(m)) return `FAIL: unexpected guard fired first: ${m.slice(0, 70)}`;
+  return 'PASS: product guard fires first, description second (finish the product, then the image)';
+};
+
+// Tote is the only two-option product: size -> colour -> THEN the idea card.
+scenarios.toteFinishesProductBeforeIdea = async (page) => {
+  await page.click('#postUploadForkRow button:has-text("Select Your Product")');
+  await page.waitForTimeout(700);
+  await page.locator('#productCard .btn-select[data-val="tote bag"]').click({ force: true });
+  await page.waitForTimeout(1000);
+  await page.click('#toteSizeGrid .btn-select[data-tote-size=\'16" x 16"\']');
+  await page.waitForTimeout(1200);
+  const afterSize = await page.evaluate(() => {
+    const c = document.getElementById('toteBagColorCard');
+    const r = c.getBoundingClientRect();
+    return r.top < innerHeight && r.bottom > 0;
+  });
+  if (!afterSize) return 'FAIL: size did not hand off to the colour card';
+  await page.click('#toteBagColorGridGen .color-btn[data-color="Black"]');
+  await page.waitForTimeout(1600);
+  const st = await ideaCardState(page);
+  if (st.collapsed || !st.inViewport) return `FAIL: colour did not hand off to the idea card: ${JSON.stringify(st)}`;
+  return 'PASS: tote runs size -> colour -> idea card (product finished first)';
+};
+
+// Mugs keep their own path and are never forced to type.
+scenarios.mugExemptFromTyping = async (page) => {
+  const inList = await page.evaluate(() => PRODUCTS_NEEDING_IDEA.includes('mug'));
+  const cupInList = await page.evaluate(() => PRODUCTS_NEEDING_IDEA.includes('water bottle'));
+  if (inList) return 'FAIL: mug is in PRODUCTS_NEEDING_IDEA — it has Cover Me / Face It / Home Sweet Home';
+  if (cupInList) return 'FAIL: travel cup is in PRODUCTS_NEEDING_IDEA — same gimmicks apply';
+  return 'PASS: mug and travel cup exempt from the description requirement';
 };
 
 (async () => {

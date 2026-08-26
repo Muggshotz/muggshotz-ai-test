@@ -6276,6 +6276,27 @@ function refreshPhoneCaseModelVisibility(){
   if(product==='phone case')setupPhoneModelSearchGen();
 }
 
+// Products the art is simply printed ONTO. A mug or travel cup has real
+// alternatives to typing -- Cover Me, Face It and Home Sweet Home each produce
+// a described image without a word, and frames and window sills give a plain
+// photo somewhere to live. None of that applies to a suitcase, a phone case, a
+// tote or a puzzle: there is no gimmick to fall back on and no frame to sit in,
+// so a bare uploaded photo would just be stretched across the object.
+//
+// Left blank, prompt assembly silently substitutes a generic caricature line
+// (see generate(): "Create a funny, polished, product-ready caricature..."),
+// which is how a suitcase run came back as an Oval Office scene nobody asked
+// for. The customer spends tokens either way, so ask first.
+//
+// Coasters and mouse pads belong here too the moment they exist.
+const PRODUCTS_NEEDING_IDEA=['suitcase','phone case','tote bag','puzzle'];
+const PRODUCT_IDEA_LABEL={
+  'suitcase':'suitcase',
+  'phone case':'phone case',
+  'tote bag':'tote bag',
+  'puzzle':'puzzle'
+};
+
 // Photo Puzzle mirrors the phone-case pattern: piece count is a real,
 // mandatory pre-generation decision (four physically different puzzles
 // at different print sizes, $38.95 to $43.95 -- prices shown on the card
@@ -6410,6 +6431,10 @@ function pickToteBagColorGen(el, colorName){
   } else {
     el.classList.add('selected');
     selectedToteColorGen = colorName;
+    // Tote's LAST product option. Size -> colour -> and only now the image:
+    // the product is fully nailed down, so hand off to the description the
+    // same way the single-option products do straight from their size card.
+    handOffToIdeaAfterProductChoice();
   }
 }
 
@@ -9267,6 +9292,17 @@ async function generate(){
     setStatus('Please finish picking your mug size, style, and color above first.',true);
     refreshMugSizeCardVisibility();
     refreshMugStyleCardVisibility();
+    return;
+  }
+  // LAST of the pre-generation guards, deliberately. Every guard above settles
+  // the PRODUCT -- size, model, colour, variant -- and the rail walks those
+  // first: pick the thing, finish the thing, THEN decide what goes on it.
+  // Asking for the description earlier would drag the customer back out of a
+  // product they were halfway through choosing.
+  if(PRODUCTS_NEEDING_IDEA.includes(product) && !document.getElementById('ideaDesc').value.trim()){
+    const what=PRODUCT_IDEA_LABEL[product]||'product';
+    setStatus('Tell us what you\u2019d like on your '+what+' \u2014 a sentence is plenty. Your photo gives us the person; your words give us the scene.',true);
+    handOffToIdeaAfterProductChoice();
     return;
   }
   if(product==='water bottle' && !preGenTravelVariant){
