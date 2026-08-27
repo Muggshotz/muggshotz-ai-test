@@ -213,8 +213,38 @@ const missing = gridVals.filter(v =>
   v !== 'mug' && v !== 'water bottle'
 );
 checks.push(missing.length
-  ? `FAIL: on the studio grid but order.html has no branch: ${missing.join(', ')} — would be priced as a MUG`
-  : `PASS: every orderable studio product has an order.html branch (${gridVals.length} on the grid)`);
+  ? `FAIL: on the studio grid but order.html has no PRICING branch: ${missing.join(', ')} — would be priced as a MUG`
+  : `PASS: every orderable studio product has an order.html pricing branch (${gridVals.length} on the grid)`);
+
+// --- and a CHECKOUT branch, which is a different chain entirely -----------
+// The check above only proves a product can be PRICED. order.html builds the
+// checkout payload in a second, separate if/else chain, and coasters and
+// mouse pads were missing from it: they priced correctly, showed a correct
+// summary, and then fell through to the final else -- the MUG branch -- so
+// the order that reached Printify was a mug. The customer paid for coasters
+// and would have received a mug. Passing the pricing check is not evidence
+// of anything about checkout.
+{
+  const payloadStart = order.indexOf('async function submitOrder') >= 0
+    ? order.indexOf('async function submitOrder')
+    : order.indexOf('type: \'mug_order\'');
+  const payloadChain = order.slice(payloadStart);
+  const FAMILY_GUARD = {
+    'coaster': 'isCoaster()',
+    'mouse pad': 'isMousePad()',
+    'puzzle': 'isPuzzle()',
+    'tote bag': 'isToteBag()',
+    'suitcase': 'isSuitcase()',
+    'phone case': 'isPhoneCase()',
+    'photo poster': 'isPhotoPoster()',
+  };
+  const noCheckout = Object.entries(FAMILY_GUARD)
+    .filter(([, guard]) => !payloadChain.includes(guard))
+    .map(([fam]) => fam);
+  checks.push(noCheckout.length
+    ? `FAIL: no CHECKOUT branch in order.html for: ${noCheckout.join(', ')} — these fall through to the mug branch and order a MUG`
+    : `PASS: every product family has its own checkout branch, not just a price`);
+}
 
 let fails = 0;
 for (const c of checks) { console.log('[price-parity] ' + c); if (/^FAIL/.test(c)) fails++; }

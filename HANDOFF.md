@@ -129,7 +129,8 @@ combination: the fee scales with price, the margin does not.
 | mug 11oz / 15oz | $7.71 / $8.78 | $17.95 | $10.24 / $9.17 |
 | phone case (iPhone 11–17) | $11.04 | $19.95 | $8.91 |
 | phone case (5/5s, 6/6s, S6) | $15.77–$17.87 | $19.95 | $2.08–$4.18 |
-| coasters, set of 4 | $19.79 | $29.95 | $10.16 |
+| coasters, set of 4 (square) | $19.79 | $29.95 | $10.16 |
+| coasters, set of 4 (**round**) | $20.72 | $29.95 | $9.23 (**$7.77 after Stripe**) |
 | mouse pad 9x8 | $4.88 | $9.95 | $5.07 |
 | puzzle 96 / 252 / 500 / 1000 | $35.07 / $33.62 / $38.29 | $39.95 / $38.95 / $43.95 | ~$4.88–$5.66 |
 | poster 9x11 → 11x14 | $5.64–$9.98 | $11.95–$14.95 | $4.97–$6.31 |
@@ -436,6 +437,36 @@ Printify exposes only colour **names**. A hue slider on top of an approximation 
 a fade to a screen colour that is not the physical product's colour, on an unprofiled monitor. If a
 fade ever looks wrong against a real product, **correct the stored hex from a physical sample, once,
 for everyone.**
+
+## Round coasters, and a live order bug found adding them (2026-08-27)
+Alyx: *"I'm kinda partial to those round coasters, they look so good. My sister loved them… take
+only a marginal profit to keep them as low as we can get away with."*
+
+**The "round costs more" premise is true of singles and barely true of sets.** Probed: round 4-pack
+**$20.72** (bp **994** / Prima Printing **66**, variant 79363) against our square set's $19.79 — 93¢.
+So it is presented at **$29.95, the same as square**, and we absorb the 93¢ instead of marking the
+nicer shape up. That is the marginal profit asked for. $24.95 was rejected: it would price round
+*below* square while costing more to make.
+
+Shape is a **product fork, not a cosmetic one** — different blueprints, sizes and materials — so
+coasters now stop at a shape card before the description (`selectedCoasterShape`,
+`coaster-shape-focus`). Mouse pads still have one variant and still hand straight off. Round's print
+area is 1193x1193, a square canvas the product crops to a disc, which is why `getProductFadeShape()`
+returns `'circle'` for it.
+
+**Worth pricing out later:** bp 994's SQUARE 4-pack is **$13.46**, $6.33 cheaper than our current
+square set — but 3.7" corkwood rather than 4" hardboard. A consolidation, not a like-for-like swap.
+
+### The bug this uncovered: coasters and mouse pads were ordering MUGS
+`order.html` builds its checkout payload in a **second if/else chain, separate from pricing**, and
+neither coasters nor mouse pads had a branch in it. They priced correctly, showed a correct summary,
+and then fell through to the final `else` — the mug branch — so the order submitted to Printify was
+`mugType: 'Classic White'`. **The customer paid for coasters and would have received a mug.**
+
+`verify-price-parity.js` missed it because it only checked for a **pricing** branch
+(`selectedProductFamily === 'coaster'`), which existed. It now checks **both chains**, and the new
+check was proven against a copy with the branch removed before being trusted. **When adding any
+product, wire BOTH chains** — pricing alone is not evidence that checkout works.
 
 ## Secret sauce (read-only — flag, never edit)
 All AI prompt/description assembly. **Alyx gave an explicit go-ahead on 2026-08-27** to change the

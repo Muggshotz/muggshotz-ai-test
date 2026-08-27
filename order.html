@@ -1636,7 +1636,9 @@ function updateSummary(){
     styleSizeLabel = 'Photo Puzzle, ' + selectedPuzzleSize;
   } else if (isCoaster()) {
     basePrice = COASTER_PRICE;
-    styleSizeLabel = 'Coasters, Set of 4 (4" x 4")';
+    styleSizeLabel = (pendingOrder?.coasterShape === 'round')
+      ? 'Round Coasters, Set of 4 (3.7")'
+      : 'Coasters, Set of 4 (4" x 4")';
   } else if (isMousePad()) {
     basePrice = MOUSE_PAD_PRICE;
     styleSizeLabel = 'Mouse Pad (9" x 8")';
@@ -1848,6 +1850,44 @@ async function submitOrder(){
       deviceId,
       productKey: 'photo-puzzle',
       sizeLabel: selectedPuzzleSize,
+      image,
+      customerName: fullName,
+      giftMessage: giftMessageEnabled ? document.getElementById('giftMessageText').value.trim() : null,
+      shippingAddress,
+      referralCode
+    };
+
+  } else if (isCoaster() || isMousePad()) {
+    // ADDED 2026-08-27. Both products could be configured, priced and shown a
+    // summary here, and then had NO branch of their own -- so they fell
+    // through to the final else, which is the MUG branch, and a coaster order
+    // was submitted as `mugType: 'Classic White'`. The customer paid for
+    // coasters and the order that reached Printify was a mug.
+    //
+    // verify-price-parity.js did not catch it because it only checked that a
+    // product had a PRICING branch (`selectedProductFamily === 'coaster'`),
+    // which it did. Pricing and checkout are two different branch chains in
+    // this file; it now checks both.
+    const left = pendingOrder?.placements?.left || null;
+    const front = pendingOrder?.placements?.front || null;
+    const right = pendingOrder?.placements?.right || null;
+    const image = left || front || right || null;
+
+    if (!image) {
+      setStatus('No design found — please go back and generate one first.', true);
+      return;
+    }
+
+    // Round and square coasters are different Printify blueprints, so the
+    // shape the customer picked in the studio has to survive the hop to this
+    // page or they get whichever one the code happens to name.
+    const roundCoaster = isCoaster() && pendingOrder?.coasterShape === 'round';
+
+    body = {
+      type: 'mug_order',
+      deviceId,
+      productKey: isMousePad() ? 'mouse-pad' : (roundCoaster ? 'coaster-set-round' : 'coaster-set'),
+      sizeLabel: isMousePad() ? '9" x 8"' : (roundCoaster ? 'Round 3.7"' : '4" x 4"'),
       image,
       customerName: fullName,
       giftMessage: giftMessageEnabled ? document.getElementById('giftMessageText').value.trim() : null,

@@ -434,6 +434,7 @@ body.tote-color-focus .card:not(#toteBagColorCard){opacity:.35;filter:brightness
 body.phone-model-focus .card:not(#phoneCaseModelCard){opacity:.35;filter:brightness(.6) saturate(.75);transition:opacity .5s,filter .5s}
 body.poster-options-focus .card:not(#photoPosterOptionsCard){opacity:.35;filter:brightness(.6) saturate(.75);transition:opacity .5s,filter .5s}
 body.style-focus .card:not(#styleSectionCard){opacity:.35;filter:brightness(.6) saturate(.75);transition:opacity .5s,filter .5s}
+body.coaster-shape-focus .card:not(#coasterShapeCard){opacity:.35;filter:brightness(.6) saturate(.75);transition:opacity .5s,filter .5s}
 body.track-focus .card:not(#trackForkCard){opacity:.35;filter:brightness(.6) saturate(.75);transition:opacity .5s,filter .5s}
 body.ideafirst-focus .card:not(#ideaCard){opacity:.35;filter:brightness(.6) saturate(.75);transition:opacity .5s,filter .5s}
 body.design-method-focus .card:not(#designMethodCard){opacity:.28;filter:brightness(.55) saturate(.7);pointer-events:none;transition:opacity .5s,filter .5s}
@@ -944,6 +945,16 @@ const HERO_SETTLE_MS = 1000;
 <div class="btn-select" data-suitcase-size="Large" onclick="pickSuitcaseSize('Large')">Large<div class="note" style="margin-top:4px">$214.95</div></div>
 </div>
 <div class="note" id="suitcaseSizeSelectedNote" style="margin-top:.6rem"></div>
+</div>
+
+<div class="card" id="coasterShapeCard" style="display:none">
+<div class="card-title">⭕ Coaster Shape</div>
+<div class="note" style="margin-top:0;margin-bottom:.75rem">Both are sets of four with a cork backing. Same price — pick whichever you like the look of.</div>
+<div class="grid2" id="coasterShapeGrid">
+<div class="btn-select" data-coaster-shape="square" onclick="pickCoasterShape('square')"><span class="icon">⬜</span>Square<div class="note" style="margin-top:4px">4" × 4" hardboard · $29.95</div></div>
+<div class="btn-select" data-coaster-shape="round" onclick="pickCoasterShape('round')"><span class="icon">⭕</span>Round<div class="note" style="margin-top:4px">3.7" corkwood · $29.95</div></div>
+</div>
+<div class="note" id="coasterShapeSelectedNote" style="margin-top:.6rem"></div>
 </div>
 
 <div class="snap-section snap-collapsed" id="edgeFadeIdeaSection" data-snap-index="3">
@@ -6686,6 +6697,25 @@ function refreshPhoneCaseModelVisibility(){
 // buildMockupRequestBody() does that mapping.
 let selectedPuzzleSize=null;
 
+// Round vs square is a genuine product fork, not a cosmetic one: they are
+// different Printify blueprints (994 round, 2764 square), different sizes and
+// different materials. Same presented price, so the customer is choosing on
+// looks alone, which is how Alyx wanted it.
+let selectedCoasterShape=null;
+
+function pickCoasterShape(shape){
+  selectedCoasterShape=shape;
+  document.querySelectorAll('#coasterShapeGrid .btn-select').forEach(b=>{
+    b.classList.toggle('selected',b.dataset.coasterShape===shape);
+  });
+  const note=document.getElementById('coasterShapeSelectedNote');
+  if(note)note.textContent='✓ Confirmed: '+(shape==='round'?'Round, 3.7" corkwood':'Square, 4" hardboard')+'.';
+  // The fade geometry follows from this choice -- refresh so the Edge Fade
+  // card is describing the shape actually being ordered.
+  if(typeof refreshEdgeFadeControls==='function')refreshEdgeFadeControls();
+  handOffToIdeaAfterProductChoice();
+}
+
 function pickPuzzleSize(label){
   selectedPuzzleSize=label;
   document.querySelectorAll('#puzzleSizeGrid .btn-select').forEach(b=>{
@@ -6941,10 +6971,23 @@ function pick(el,type){
         const input=document.getElementById('phoneModelSearchInputGen');
         if(input)input.focus();
       });
-    } else if(product==='coaster'||product==='mouse pad'){
-      // Both carry exactly ONE variant, so picking the product finishes the
-      // product -- there is no size, colour or model left to settle. The rail
-      // rule ("finish the thing, then decide what goes on it") is satisfied
+    } else if(product==='coaster'){
+      // Coasters gained a real decision when the round set was added, so they
+      // no longer go straight to the description: shape first, per the rail
+      // rule that picking a product means FINISHING it. Mouse pads still have
+      // exactly one variant and still hand straight off below.
+      selectedCoasterShape=null;
+      const shapeCard=document.getElementById('coasterShapeCard');
+      if(shapeCard)shapeCard.style.display='block';
+      document.querySelectorAll('#coasterShapeGrid .btn-select').forEach(b=>b.classList.remove('selected'));
+      const shapeNote=document.getElementById('coasterShapeSelectedNote');
+      if(shapeNote)shapeNote.textContent='';
+      setOptionSpotlight('coaster-shape-focus');
+      smoothScrollToTarget('coasterShapeCard','center');
+    } else if(product==='mouse pad'){
+      // Exactly ONE variant, so picking the product finishes the product --
+      // there is no size, colour or model left to settle. The rail rule
+      // ("finish the thing, then decide what goes on it") is satisfied
       // immediately, so go straight to the description.
       handOffToIdeaAfterProductChoice();
     } else if(product==='tote bag'){
@@ -8933,6 +8976,12 @@ const PRODUCT_FADE_SHAPE = {
   // from this map is treated as rectangular.
 };
 function getProductFadeShape(){
+  // Coasters carry their shape in a separate choice rather than in the
+  // product key, because both shapes ARE the same product to the customer.
+  // This is the case PRODUCT_FADE_SHAPE was built for: a round coaster's
+  // canvas is square (1193x1193) and the product crops it to a disc, so a
+  // four-sided fade would feather toward corners that get cut off.
+  if(product==='coaster' && selectedCoasterShape==='round')return 'circle';
   return PRODUCT_FADE_SHAPE[product] || 'rect';
 }
 
@@ -11157,7 +11206,9 @@ function buildMockupRequestBody(){
     const url = design ? (findDesignById(design)?.url ?? null) : null;
     if (!url) return null;
     return product === 'coaster'
-      ? { productKey: 'coaster-set', sizeLabel: '4" x 4"', image: url }
+      ? (selectedCoasterShape === 'round'
+          ? { productKey: 'coaster-set-round', sizeLabel: 'Round 3.7"', image: url }
+          : { productKey: 'coaster-set', sizeLabel: '4" x 4"', image: url })
       : { productKey: 'mouse-pad',   sizeLabel: '9" x 8"', image: url };
   }
 
@@ -11316,6 +11367,10 @@ function goToOrder(){
     productIcon: product,
     mugPrintMode: mugPrintMode,
     isWraparoundSet: (product==='mug' && mugPrintMode==='wraparound'),
+    // Round and square coasters are different blueprints, so the shape has to
+    // survive the hop to order.html or the customer gets whichever one the
+    // code names by default.
+    coasterShape: (product==='coaster') ? selectedCoasterShape : null,
     posterFramed: posterFramed,
     posterSize: posterSize,
     posterOrientation: posterOrientation,

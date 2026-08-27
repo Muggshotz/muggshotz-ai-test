@@ -24,6 +24,20 @@ const EXPECT = {
   'mouse pad': { key: 'mouse-pad',   size: '9" x 8"',  price: 11.95, cost: 4.88 },
 };
 
+// UPDATED (Aug 2026): coasters gained a real decision when the round set was
+// added -- two different Printify blueprints, so shape is a genuine product
+// fork, not a cosmetic one. They now stop at the shape card before the
+// description, per the rail rule that picking a product means FINISHING it.
+// Mouse pads still have exactly one variant and still hand straight off.
+// Not a weakened assertion: these scenarios are about the description rail
+// and the mockup body, so they settle the shape explicitly and leave the
+// fork itself to the dedicated checks at the bottom of this file.
+async function settleShape(page, val, shape = 'square') {
+  if (val !== 'coaster') return;
+  await page.evaluate((sh) => pickCoasterShape(sh), shape);
+  await page.waitForTimeout(900);
+}
+
 const scenarios = {};
 
 for (const [val, want] of Object.entries(EXPECT)) {
@@ -32,6 +46,7 @@ for (const [val, want] of Object.entries(EXPECT)) {
   // Picking the product lands straight on the description -- nothing else to choose.
   scenarios['straightToIdea_' + slug] = async (page) => {
     await pick(page, val);
+    await settleShape(page, val);
     const st = await page.evaluate(() => {
       const c = document.getElementById('ideaCard');
       const sec = c.closest('.snap-section');
@@ -50,6 +65,7 @@ for (const [val, want] of Object.entries(EXPECT)) {
   // Blank description is refused, same as every other print-onto-object product.
   scenarios['blankBlocked_' + slug] = async (page) => {
     await pick(page, val);
+    await settleShape(page, val);
     await page.evaluate(() => document.getElementById('generateBtn')?.scrollIntoView({ block: 'center' }));
     await page.click('#generateBtn');
     await page.waitForTimeout(1200);
@@ -61,6 +77,7 @@ for (const [val, want] of Object.entries(EXPECT)) {
   // Full rail, and the mockup must fire on approve with the right catalog key.
   scenarios['fullRail_' + slug] = async (page, log, mockupCalls) => {
     await pick(page, val);
+    await settleShape(page, val);
     await page.fill('#ideaDesc', 'riding a dragon over a volcano');
     await page.waitForTimeout(600);
     await dismissAlerts(page);
@@ -83,6 +100,7 @@ for (const [val, want] of Object.entries(EXPECT)) {
   // Gimmicks are mug/travel-cup only; these must never see them.
   scenarios['noGimmicks_' + slug] = async (page) => {
     await pick(page, val);
+    await settleShape(page, val);
     const shown = await page.evaluate(() => {
       showDesignMethodCard();
       return document.getElementById('designMethodCard').style.display === 'block';
@@ -136,6 +154,63 @@ scenarios.puzzleFlipStaysReverted = async (page) => {
   if (!(p96.price > p252.price))
     return `FAIL: 96 pcs ($${p96.price}) is no longer dearer than 252 pcs ($${p252.price}) — the flip is back`;
   return 'PASS: puzzle ladder tracks wholesale cost again (96=$39.95 > 252=$38.95)';
+};
+
+// ---- Round coasters: a real fork, and the shape must survive to checkout ----
+// Round and square are different Printify blueprints (994 vs 2764), so a
+// shape that gets lost between the studio and the order page does not degrade
+// gracefully -- it ships the wrong physical product.
+scenarios.roundCoasterReachesTheOrder = async (page, log, mockupBodies) => {
+  await pick(page, 'coaster');
+  const shown = await page.evaluate(() => {
+    const c = document.getElementById('coasterShapeCard');
+    return c ? getComputedStyle(c).display !== 'none' : false;
+  });
+  if (!shown) return 'FAIL: no shape card — coasters have two blueprints now, that is a decision';
+  const focus = await page.evaluate(() => Array.from(document.body.classList).filter(c => c.endsWith('-focus')));
+  if (focus.join() !== 'coaster-shape-focus') return `FAIL: spotlight is ${JSON.stringify(focus)}, expected [coaster-shape-focus]`;
+
+  await settleShape(page, 'coaster', 'round');
+  await page.fill('#ideaDesc', 'a lighthouse in a storm');
+  await dismissAlerts(page);
+  await page.evaluate(() => document.getElementById('generateBtn')?.scrollIntoView({ block: 'center' }));
+  await page.click('#generateBtn');
+  await page.waitForFunction(() => document.getElementById('approveRow')?.style.display !== 'none', null, { timeout: 90000 });
+  await page.locator('#approveRow button:has-text("Yes")').first().click();
+  await page.waitForTimeout(6000);
+
+  const start = mockupBodies.find(b => b && b.action === 'start');
+  if (!start) return 'FAIL: no mockup fired for a round coaster';
+  if (start.productKey !== 'coaster-set-round')
+    return `FAIL: round coaster ordered as ${start.productKey} — that is the square blueprint`;
+
+  // And the shape has to survive the hop to the order page, which is a
+  // separate localStorage payload written by goToOrder(), not shared state.
+  // Drive the real handoff rather than reading a key nothing has written yet
+  // -- the first version of this check asserted against a payload that only
+  // exists once goToOrder() actually runs, and "undefined" told us nothing
+  // about whether the shape is carried.
+  await page.evaluate(() => goToOrder());
+  await page.waitForURL(/order\.html/, { timeout: 15000 }).catch(() => {});
+  const carried = await page.evaluate(() => {
+    try { return JSON.parse(localStorage.getItem('muggshotz_pending_order') || '{}').coasterShape; }
+    catch (e) { return 'unreadable'; }
+  });
+  if (carried !== 'round')
+    return `FAIL: order payload carries coasterShape=${JSON.stringify(carried)} — order.html would default to square`;
+  return 'PASS: round coaster routes to its own blueprint and the shape reaches the order page';
+};
+
+// A round print area must fade radially; a square one must not.
+scenarios.coasterShapeDrivesFadeGeometry = async (page) => {
+  await pick(page, 'coaster');
+  await settleShape(page, 'coaster', 'round');
+  const round = await page.evaluate(() => getProductFadeShape());
+  await settleShape(page, 'coaster', 'square');
+  const square = await page.evaluate(() => getProductFadeShape());
+  if (round !== 'circle') return `FAIL: a round coaster reports fade shape "${round}" — it would feather toward corners that get cut off`;
+  if (square !== 'rect') return `FAIL: a square coaster reports fade shape "${square}"`;
+  return 'PASS: fade geometry follows the coaster shape (round → circle, square → rect)';
 };
 
 (async () => {
