@@ -93,6 +93,79 @@ async function deductOneToken(customerId, currentBalance) {
 // Uploads the generated image bytes to Supabase Storage and returns a
 // permanent public URL, so we never store giant base64 blobs in the
 // database or send them back over the wire more than once.
+// THE STYLE BLOCK THAT WAS OVERRIDING THE STYLE PANEL (rewritten 2026-08-27).
+//
+// Two separate defects lived in the block this replaces, and they had been
+// hiding each other.
+//
+// 1. IT CAME LAST, SO IT WON. The customer's choice reaches us as
+//    "Selected style: <directive>." embedded in the MIDDLE of the request,
+//    and this block was then appended at the END. Image models weight later
+//    instructions far more heavily than earlier ones, so a customer who
+//    picked Comic Strip got "flat cel-shaded comic strip illustration" in
+//    the middle and a flat contradiction -- "not cartoon, not vector" -- at
+//    the end. The end won, every time, on every product. Line Art was the
+//    only style that visibly survived, because "black and white pen-and-ink,
+//    no colour" is concrete enough to punch through. Alyx read this,
+//    reasonably, as the Style panel simply not doing much: "for the most
+//    part the effect is mostly minor." The panel was never weak. It was
+//    being talked over.
+//
+// 2. IT CONTRADICTED ITSELF. "Photorealistic rendering" AND "painted,
+//    airbrushed illustration finish" AND "caricature-level exaggeration" are
+//    three different rendering targets stated as three absolutes. Handed
+//    that, a model splits the difference and returns the safest thing in the
+//    middle: a clean digital cartoon. That is the "why is the artwork so
+//    cartoonish" Alyx asked about -- our prompt, not Gemini's ceiling.
+//
+// The fix for (1) is to let the CHOSEN style be the last word whenever the
+// customer picked something other than the house default. The fix for (2) is
+// to stop using "photorealistic" as a medium and let it describe the
+// rendering QUALITY -- lighting, materials, depth -- which is what it was
+// always meant to say next to "painted airbrushed finish".
+//
+// Only the lines that genuinely apply to every style survive into the
+// non-default block: likeness and finish quality. The medium-defining lines
+// are exactly what a chosen style is entitled to replace.
+//
+// ORIGINAL BLOCK, verbatim, for a one-line revert (git: 2d63bf4):
+//   STYLE:
+//   Photorealistic rendering with caricature-level exaggeration of real features.
+//   Painted, airbrushed illustration finish - not cartoon, not vector, not anime style.
+//   Natural skin texture and lighting.
+//   Strong, unmistakable likeness to the uploaded photo.
+//   Expressive eyes, personality-centered face.
+//   Funny but respectful exaggeration, not a flattened cartoon mascot.
+//   Head proportions stay natural unless the customer specifically requests exaggeration.
+//   Polished gift-art quality.
+//
+// Back-compatible on purpose: a cached browser that sends neither
+// styleDirective nor styleIsDefault gets the house default, which is what it
+// would have got before.
+function buildStyleBlock(styleDirective, styleIsDefault) {
+  const chose = styleDirective && styleIsDefault === false;
+  if (!chose) {
+    return `STYLE:
+A premium painted caricature: rich airbrushed illustration, with photographic realism in the lighting, materials, textures and depth.
+Not flat cartoon, not vector, not anime, not children's-book illustration.
+Real skin texture, believable light and shadow across the face.
+Caricature-level exaggeration of this person's OWN real features — never a generic cartoon face.
+Strong, unmistakable likeness to the uploaded photo.
+Expressive eyes, personality-centered face.
+Funny but respectful exaggeration, not a flattened cartoon mascot.
+Head proportions stay natural unless the customer specifically requests exaggeration.
+Polished gift-art quality.
+`;
+  }
+  return `STYLE — THE CUSTOMER CHOSE THIS, AND IT IS THE FINAL WORD ON HOW THIS IS RENDERED:
+${styleDirective}
+Render the ENTIRE image in that style — the subject, the background, and every element in the scene, consistently.
+Where anything above conflicts with the style just named, the style just named wins.
+Keep a strong, unmistakable likeness to the uploaded photo: the person must stay immediately recognizable within this style.
+Polished gift-art quality.
+`;
+}
+
 async function uploadGenerationToStorage(imageBuffer, deviceId) {
   const fileName = `${deviceId}-${Date.now()}.png`;
   const uploadUrl = `${SUPABASE_URL}/storage/v1/object/generations/${fileName}`;
@@ -175,7 +248,7 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: "Method not allowed" });
   }
   try {
-    const { image, prompt, theme, deviceId, refImageA, refImageB, currentDesign, size, panelRole, action, templateMerge } = req.body;
+    const { image, prompt, theme, deviceId, refImageA, refImageB, currentDesign, size, panelRole, action, templateMerge, styleDirective, styleIsDefault } = req.body;
 
     // Lightweight path: upload an already-composited image (a Frame or
     // caption baked onto the finished art in the browser via canvas) to
@@ -293,16 +366,7 @@ ${referenceLine}
 CUSTOMER REQUEST:
 ${prompt}
 
-STYLE:
-Photorealistic rendering with caricature-level exaggeration of real features.
-Painted, airbrushed illustration finish — not cartoon, not vector, not anime style.
-Natural skin texture and lighting.
-Strong, unmistakable likeness to the uploaded photo.
-Expressive eyes, personality-centered face.
-Funny but respectful exaggeration, not a flattened cartoon mascot.
-Head proportions stay natural unless the customer specifically requests exaggeration.
-Polished gift-art quality.
-`;
+${buildStyleBlock(styleDirective, styleIsDefault)}`;
 
       const geminiParts = [
         { text: panoramaPrompt },
@@ -500,28 +564,14 @@ This magenta fill is a placeholder that will be programmatically removed after g
 
     const finalPrompt = isPanelContinuation
       ? `${panelContinuationPrompt}
-STYLE:
-Photorealistic rendering with caricature-level exaggeration of real features.
-Painted, airbrushed illustration finish — not cartoon, not vector, not anime style.
-Natural skin texture and lighting.
-Polished gift-art quality.
-`
+${buildStyleBlock(styleDirective, styleIsDefault)}`
       : `${identityLock}
 CUSTOMER REQUEST:
 ${prompt}
 ${backgroundInstruction}
 ${currentDesignInstruction}
 ${chromaKeyInstruction}
-STYLE:
-Photorealistic rendering with caricature-level exaggeration of real features.
-Painted, airbrushed illustration finish — not cartoon, not vector, not anime style.
-Natural skin texture and lighting.
-Strong, unmistakable likeness to the uploaded photo.
-Expressive eyes, personality-centered face.
-Funny but respectful exaggeration, not a flattened cartoon mascot.
-Head proportions stay natural unless the customer specifically requests exaggeration.
-Polished gift-art quality.
-`;
+${buildStyleBlock(styleDirective, styleIsDefault)}`;
 
     // image comes in as a data URL like "data:image/png;base64,AAAA..."
     // OpenAI's edit endpoint needs the raw file bytes, not the data URL prefix.

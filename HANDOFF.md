@@ -40,7 +40,7 @@ Working. The sandbox reaches `muggshotz-ai-test.vercel.app` directly.
   obvious. **Never move this to the GET relay** — catalog GETs need no auth, so that would publish
   wholesale pricing to anyone who found the URL.
 
-## Testing (`flow-tests/`) — 14 suites
+## Testing (`flow-tests/`) — 15 suites
 Serve the repo first: `python3 -m http.server 8788 --directory <repo> --bind 127.0.0.1`.
 Chromium is preinstalled at `/opt/pw-browsers/chromium` — use `executablePath`, do NOT
 `playwright install`. `npm install playwright` in a scratch dir and copy the harness there.
@@ -57,6 +57,7 @@ four ERR_CONNECTION_RESET console errors per run that look like a product fault 
 | `verify-auto-mockup.js` | every single-image product fetches its mockup on approve |
 | `verify-idea-confirm.js` | description confirm goes forward; stage never veiled |
 | `verify-gimmick-gate.js` | gimmicks limited to mug + travel cup |
+| `verify-style-panel.js` | the chosen style reaches the WIRE on every generation path; the default const matches the tile byte-for-byte |
 | `verify-wraparound.js` | Wraparound on both rails: panorama vs per-panel engine, outage fallback, 403 no-retry, mug thirds vs travel-cup uncut, 40oz exclusion |
 | `verify-price-parity.js` | **no browser** — order.html vs catalog price drift. **Run it from the repo root** (`node flow-tests/verify-price-parity.js`), not from the scratch copy: it reads `order.html` and `lib/products-catalog.js` by relative path and ENOENTs anywhere else. |
 | `verify-poster.js` `verify-puzzle.js` `verify-tote.js` `verify-phone-suitcase.js` `verify-coaster-mousepad.js` `verify-travel.js` | per-product flows |
@@ -275,8 +276,51 @@ proof before promoting Wraparound anywhere prominent.**
   "Shipping & Handling" line, alongside Stripe's `automatic_tax`. Customer pays product + markup +
   shipping + tax. **This is not a bug — the old comment saying otherwise has been corrected.**
 
+## The Style panel was never weak — it was being overridden (2026-08-27)
+**This is the most consequential thing found today, and it had been hiding in plain sight.**
+
+Alyx, describing the panel: *"up until now I have had almost no engagement or involvement with the
+Styles panel… for the most part the effect is mostly minor. Except for maybe the line drawings."*
+
+Cause: the customer's choice reached the server as `Selected style: <directive>.` in the **middle**
+of the request, and `api/generate.js` then appended a fixed house STYLE block at the **end**. Image
+models weight later instructions far more heavily. So picking **Comic Strip** put *"flat cel-shaded
+comic strip illustration"* in the middle and *"not cartoon, not vector"* at the end — and the end
+won, on every product, every time. **Line Art was the only style that visibly survived**, because
+"black and white pen-and-ink, no colour" is concrete enough to punch through. Exactly the symptom
+Alyx described, for a reason nothing on screen could reveal.
+
+That same block also **contradicted itself**: *"Photorealistic rendering"* AND *"painted, airbrushed
+illustration finish"* AND *"caricature-level exaggeration"* — three rendering targets stated as three
+absolutes. Handed that, a model splits the difference and returns the safest thing in the middle: a
+clean digital cartoon. That is the *"why is the artwork so cartoonish"* question, and the answer was
+our prompt, not Gemini's ceiling.
+
+**Now:** `buildStyleBlock(styleDirective, styleIsDefault)` in `api/generate.js` serves all three
+style blocks (single image, panorama, per-panel continuation). Pick anything but the house default
+and **the chosen style becomes the last word**. The default block no longer contradicts itself —
+"photorealistic" now qualifies the rendering *quality* (lighting, materials, depth), which is what it
+was always meant to say beside "painted airbrushed finish".
+
+**The trap this creates, and the test that guards it:** `MUGGSHOTZ_CLASSIC_STYLE` in
+needles-studio.html must stay **byte-for-byte identical** to the first Style tile's `data-val` — they
+are compared by exact string. A one-character drift marks *every* generation as "customer chose" and
+silently retires the house style for everyone, with nothing visible to show for it.
+`verify-style-panel.js` pins that, and pins that the directive actually reaches the **wire** on every
+path — the original defect was invisible in the UI, since the tile lit up and the variable was set
+correctly while the request still could not carry the decision.
+
+**This is the foundation the six-style panel needs.** Alyx's planned Facescape / Political Satire /
+Silhouette work would have been built on a block that crushed each new style the same way, and it
+would have looked like the styles didn't work rather than like something was overriding them.
+
 ## Secret sauce (read-only — flag, never edit)
-All AI prompt/description assembly. `getProductRules()` in needles-studio.html has no entry for
+All AI prompt/description assembly. **Alyx gave an explicit go-ahead on 2026-08-27** to change the
+panorama framing instruction and the STYLE block; both are documented above with the original text
+preserved verbatim in comments for a one-line revert. That go-ahead was specific to those two fixes
+— treat the rest as read-only still.
+
+`getProductRules()` in needles-studio.html has no entry for
 **coasters or mouse pads**, so both fall through to its generic default. It works, but a tailored
 line for a 4" coaster and a 9x8 mouse pad would likely produce better art. **Flagged for Alyx,
 deliberately not edited.**

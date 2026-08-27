@@ -1479,7 +1479,18 @@ Tell Needles <span style="color:#7ab8ff">what you have in mind</span>
 </div>
 
 <script>
-let product=null,style='Muggshotz Classic: premium professional caricature, expressive face, rich detail, painterly shading, funny gift-art scene',likeness='0.15',uploadedImageData=null,resultUrl=null;
+// The house default, byte-for-byte the same string as the first Style tile's
+// data-val. Anything else means the customer actively chose, which is what
+// tells the server to let THEIR style have the last word instead of the house
+// block -- see buildStyleBlock() in api/generate.js for why that mattered.
+// If the tile's data-val is ever edited, edit this with it: they are compared
+// by exact string, and a silent mismatch would make every generation look
+// "chosen" and quietly retire the house style.
+const MUGGSHOTZ_CLASSIC_STYLE='Muggshotz Classic: premium professional caricature, expressive face, rich detail, painterly shading, funny gift-art scene';
+function currentStylePayload(){
+  return { styleDirective: style, styleIsDefault: style===MUGGSHOTZ_CLASSIC_STYLE };
+}
+let product=null,style=MUGGSHOTZ_CLASSIC_STYLE,likeness='0.15',uploadedImageData=null,resultUrl=null;
 
 const NEEDLES_BEGINNING_SEQUENCE = [
   'A_final.webm',
@@ -9436,7 +9447,8 @@ async function callGenerateAPI({ workingImage, prompt, refImageA, refImageB, pan
       currentDesign:null,
       size:getImageSizeParam(),
       panelRole:panelRole||undefined,
-      templateMerge:templateMerge||false
+      templateMerge:templateMerge||false,
+      ...currentStylePayload()
     }),
     signal
   });
@@ -9755,7 +9767,7 @@ Use rich environmental storytelling while keeping the face as the primary focal 
           panoramaResp=await fetch('/api/generate',{
             method:'POST',
             headers:{'Content-Type':'application/json'},
-            body:JSON.stringify({action:'wraparoundPanorama',image:workingImage,prompt,deviceId,refImageA:refASnapshot,refImageB:refBSnapshot}),
+            body:JSON.stringify({action:'wraparoundPanorama',image:workingImage,prompt,deviceId,refImageA:refASnapshot,refImageB:refBSnapshot,...currentStylePayload()}),
             signal:currentGenerationController.signal
           });
         }catch(abortErr){
@@ -9863,7 +9875,7 @@ Use rich environmental storytelling while keeping the face as the primary focal 
       const resp=await fetch('/api/generate',{
         method:'POST',
         headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({image:workingImage,prompt,theme:null,deviceId,refImageA:refASnapshot,refImageB:refBSnapshot,currentDesign:null,size:getImageSizeParam()}),
+        body:JSON.stringify({image:workingImage,prompt,theme:null,deviceId,refImageA:refASnapshot,refImageB:refBSnapshot,currentDesign:null,size:getImageSizeParam(),...currentStylePayload()}),
         signal:currentGenerationController.signal
       });
 
