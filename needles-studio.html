@@ -687,18 +687,45 @@ body.design-method-focus .card:not(#designMethodCard){opacity:.28;filter:brightn
   </video>
 </div>
 <script>
-// The beat between the shine wave finishing and the page moving on. It is
-// deliberate -- the banner should be allowed to land before the page walks
-// away from it -- but at 5s it read as the page having hung, and Alyx hit it
-// on every single load: "it is entirely too long... cut that pause in half."
-// Halved to 2.5s, which still reads as a pause rather than a jump cut.
-const HERO_SETTLE_MS = 2500;
-document.getElementById('heroVideo').addEventListener('ended',()=>{
-  setTimeout(()=>{
-    const target=document.getElementById('uploadPhotoCard');
-    if(target)target.scrollIntoView({behavior:'smooth',block:'start'});
-  },HERO_SETTLE_MS);
-});
+// THE PAUSE WAS NEVER THE MAIN COST (Aug 2026). First pass halved the
+// trailing timeout 5s -> 2.5s and Alyx still called it "far too long", which
+// was the clue: needles-hero.mp4 runs 12.88s, so waiting for 'ended' meant
+// the real wait was 12.88 + 2.5 = 15.4s. Trimming the timeout alone could
+// never fix that -- most of the dead air is the banner's own tail, after the
+// shine wave has already finished.
+//
+// So the handoff now arms BEFORE the video ends rather than after, which is
+// literally what was asked: "shave an additional three seconds off the back
+// end of the hero banner."
+//
+//   HERO_LEAD_S    how early to start, measured back from the video's end
+//   HERO_SETTLE_MS the beat after that, so it reads as a pause not a cut
+//
+// 12.88 - 2.0 + 1.0 = 11.9s, against 15.4s before. To trim further, raise
+// HERO_LEAD_S; the two numbers are adjacent on purpose.
+const HERO_LEAD_S = 2.0;
+const HERO_SETTLE_MS = 1000;
+(function(){
+  const video=document.getElementById('heroVideo');
+  if(!video)return;
+  let handedOff=false;
+  function handOff(){
+    if(handedOff)return;
+    handedOff=true;
+    setTimeout(()=>{
+      const target=document.getElementById('uploadPhotoCard');
+      if(target)target.scrollIntoView({behavior:'smooth',block:'start'});
+    },HERO_SETTLE_MS);
+  }
+  // 'ended' stays as the backstop: duration is NaN until metadata loads, and
+  // a video that is paused, stalled or never plays would otherwise never
+  // hand off at all.
+  video.addEventListener('ended',handOff);
+  video.addEventListener('timeupdate',()=>{
+    if(!isFinite(video.duration))return;
+    if(video.currentTime>=video.duration-HERO_LEAD_S)handOff();
+  });
+})();
 </script>
 <div class="tagline">YOUR HONEY. OUR FUNNY.</div>
 <div class="main">
@@ -2220,7 +2247,22 @@ function showPostUploadFork(){
   const intro=document.getElementById('styleStepIntro');
   if(intro)intro.style.display='block';
   setOptionSpotlight('style-focus');
-  smoothScrollToTarget('styleSectionCard','center');
+  // LANDED SHORT (Aug 2026, Alyx's screenshot: the scroll stopped at the
+  // bottom of the upload card with Art Style only just entering view).
+  // scrollIntoView fires once, immediately, against a layout that is still
+  // moving -- the photo the customer just picked is still decoding and
+  // resizing the card above this one, so the target slides down after the
+  // scroll has already been aimed. Same race that cost us the puzzle button
+  // earlier in the rail.
+  //
+  // scrollToStableTop re-measures until the target's position stops changing
+  // and only then scrolls, so it cannot be aimed at a stale offset.
+  const styleEl=document.getElementById('styleSectionCard');
+  if(styleEl){
+    guidedScrollInProgress=true;
+    scrollToStableTop(styleEl,14,15);
+    setTimeout(()=>{guidedScrollInProgress=false;},1200);
+  }
 }
 
 // Hands the spotlight from Art Style to the track fork. Muggshotz Classic is

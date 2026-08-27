@@ -178,6 +178,12 @@ scenarios.styleIsTheFirstLitStepAfterThePhoto = async (page) => {
       beforeTrack: !!(style.compareDocumentPosition(track) & Node.DOCUMENT_POSITION_FOLLOWING),
       beforeProduct: !!(style.compareDocumentPosition(product) & Node.DOCUMENT_POSITION_FOLLOWING),
       onScreen: r.top < innerHeight && r.bottom > 0,
+      // How far from the top of the viewport the card actually landed. The
+      // loose "is it on screen at all" check passed the exact bad landing
+      // Alyx screenshotted -- stopped at the bottom of the upload card with
+      // Art Style only just creeping into view. A rail step that has the
+      // spotlight has to be the thing you are LOOKING at.
+      top: Math.round(r.top),
       height: Math.round(r.height),
       continueVisible: getComputedStyle(document.getElementById('styleContinueBtn')).display !== 'none',
       productOpacity: getComputedStyle(product).opacity,
@@ -189,9 +195,10 @@ scenarios.styleIsTheFirstLitStepAfterThePhoto = async (page) => {
   if (!st.beforeProduct) return 'FAIL: Art Style still sits below Product — that is the mid-rail position it was moved out of';
   if (st.focus.join() !== 'style-focus') return `FAIL: spotlight is ${JSON.stringify(st.focus)}, expected exactly [style-focus]`;
   if (!st.onScreen || st.height === 0) return `FAIL: Art Style is not on screen (h=${st.height})`;
+  if (st.top > 140) return `FAIL: Art Style landed ${st.top}px down the viewport — the scroll stopped short of it, which is what a stale scrollIntoView against a still-resizing photo does`;
   if (!st.continueVisible) return 'FAIL: no Continue button — Muggshotz Classic is preselected, so there is no way forward without one';
   if (parseFloat(st.productOpacity) > 0.5) return `FAIL: Product is not dimmed (opacity ${st.productOpacity}) — nothing else should compete`;
-  return 'PASS: Art Style is the first lit step after the photo, before track and product, everything else dimmed';
+  return `PASS: Art Style is the first lit step after the photo (landed ${st.top}px from top), before track and product, everything else dimmed`;
 };
 
 // ---- 7. It hands off to the tracks, and never traps anyone. ----
