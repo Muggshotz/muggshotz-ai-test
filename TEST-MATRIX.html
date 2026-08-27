@@ -1,0 +1,382 @@
+<title>Muggshotz Test Matrix</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+
+<style>
+  :root{
+    --ground:#f6f7f9;
+    --surface:#ffffff;
+    --surface-2:#eef1f5;
+    --line:#d8dee7;
+    --line-soft:#e6eaf0;
+    --ink:#111722;
+    --ink-2:#414b5c;
+    --ink-3:#6b7688;
+    --accent:#1a56b0;
+    --accent-soft:#e6eefb;
+    --glaze:#2f7d5a;
+    --glaze-soft:#e3f0ea;
+    --kiln:#a8551f;
+    --kiln-soft:#f8ebe0;
+    --done:#8b95a6;
+    --radius:10px;
+    --maxw:1080px;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --ground:#0d1118;
+      --surface:#151b25;
+      --surface-2:#1c2431;
+      --line:#2b3543;
+      --line-soft:#232c39;
+      --ink:#eef2f8;
+      --ink-2:#b3bdcc;
+      --ink-3:#7d8899;
+      --accent:#6da5f5;
+      --accent-soft:#17253c;
+      --glaze:#5fc394;
+      --glaze-soft:#13291f;
+      --kiln:#e0955c;
+      --kiln-soft:#2c1d12;
+      --done:#5b6675;
+    }
+  }
+  :root[data-theme="dark"]{
+    --ground:#0d1118;
+    --surface:#151b25;
+    --surface-2:#1c2431;
+    --line:#2b3543;
+    --line-soft:#232c39;
+    --ink:#eef2f8;
+    --ink-2:#b3bdcc;
+    --ink-3:#7d8899;
+    --accent:#6da5f5;
+    --accent-soft:#17253c;
+    --glaze:#5fc394;
+    --glaze-soft:#13291f;
+    --kiln:#e0955c;
+    --kiln-soft:#2c1d12;
+    --done:#5b6675;
+  }
+
+  *{box-sizing:border-box}
+  body{
+    margin:0;
+    background:var(--ground);
+    color:var(--ink);
+    font-family:"IBM Plex Sans","Segoe UI",system-ui,sans-serif;
+    font-size:15px;
+    line-height:1.55;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:var(--maxw);margin:0 auto;padding:2.5rem 1.25rem 5rem}
+
+  /* ---- masthead ---- */
+  header.mast{
+    display:flex;flex-wrap:wrap;gap:1.5rem;align-items:flex-end;
+    justify-content:space-between;
+    padding-bottom:1.25rem;margin-bottom:2rem;
+    border-bottom:2px solid var(--ink);
+  }
+  .mast h1{
+    font-family:"Bricolage Grotesque","IBM Plex Sans",sans-serif;
+    font-weight:800;font-size:clamp(1.9rem,4.5vw,2.75rem);
+    letter-spacing:-0.02em;line-height:1.05;margin:0;
+    text-wrap:balance;
+  }
+  .eyebrow{
+    font-family:"IBM Plex Mono",ui-monospace,monospace;
+    font-size:11px;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--ink-3);margin:0 0 .5rem;
+  }
+  .mast p.sub{margin:.6rem 0 0;color:var(--ink-2);max-width:56ch}
+
+  /* ---- progress ---- */
+  .tally{
+    flex-shrink:0;text-align:right;
+    font-family:"IBM Plex Mono",ui-monospace,monospace;
+  }
+  .tally .count{
+    font-size:2rem;font-weight:600;letter-spacing:-.03em;
+    font-variant-numeric:tabular-nums;color:var(--accent);
+    display:block;line-height:1;
+  }
+  .tally .of{font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--ink-3)}
+  .bar{height:4px;width:180px;background:var(--surface-2);border-radius:2px;margin-top:.6rem;overflow:hidden}
+  .bar span{display:block;height:100%;background:var(--accent);width:0;transition:width .3s ease}
+
+  /* ---- legend ---- */
+  .legend{
+    display:flex;flex-wrap:wrap;gap:.5rem 1.25rem;
+    margin:0 0 2.25rem;padding:.85rem 1rem;
+    background:var(--surface);border:1px solid var(--line-soft);border-radius:var(--radius);
+    font-size:12.5px;color:var(--ink-2);
+  }
+  .legend b{color:var(--ink);font-weight:600}
+
+  /* ---- sections ---- */
+  section{margin-bottom:2.5rem}
+  .sec-head{display:flex;align-items:baseline;gap:.75rem;margin-bottom:.9rem}
+  .sec-head h2{
+    font-family:"Bricolage Grotesque","IBM Plex Sans",sans-serif;
+    font-weight:700;font-size:1.15rem;letter-spacing:-.01em;margin:0;
+  }
+  .sec-head .rng{
+    font-family:"IBM Plex Mono",ui-monospace,monospace;
+    font-size:11px;color:var(--ink-3);letter-spacing:.06em;
+  }
+  .sec-note{margin:-.3rem 0 1rem;color:var(--ink-3);font-size:13px;max-width:70ch}
+
+  /* ---- rows ---- */
+  .rows{display:flex;flex-direction:column;gap:6px}
+  .row{
+    display:grid;
+    grid-template-columns:26px 34px 1fr;
+    gap:.75rem;
+    align-items:start;
+    background:var(--surface);
+    border:1px solid var(--line-soft);
+    border-radius:var(--radius);
+    padding:.8rem .95rem;
+    transition:opacity .2s,border-color .2s;
+  }
+  .row:focus-within{border-color:var(--accent)}
+  .row.done{opacity:.5}
+  .row.done .what{text-decoration:line-through;text-decoration-color:var(--done)}
+
+  .row input[type=checkbox]{
+    appearance:none;-webkit-appearance:none;
+    width:18px;height:18px;margin:3px 0 0;
+    border:1.5px solid var(--line);border-radius:5px;
+    background:var(--surface);cursor:pointer;flex-shrink:0;
+    display:grid;place-content:center;
+  }
+  .row input[type=checkbox]:checked{background:var(--accent);border-color:var(--accent)}
+  .row input[type=checkbox]:checked::after{
+    content:"";width:9px;height:5px;
+    border:2px solid #fff;border-top:0;border-right:0;
+    transform:rotate(-45deg) translate(1px,-1px);
+  }
+  .row input[type=checkbox]:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+  .id{
+    font-family:"IBM Plex Mono",ui-monospace,monospace;
+    font-size:12px;color:var(--ink-3);font-variant-numeric:tabular-nums;
+    padding-top:3px;
+  }
+  .what{font-weight:500;margin:0 0 .15rem;color:var(--ink)}
+  .expect{margin:0;font-size:13.5px;color:var(--ink-2)}
+  .expect b{color:var(--ink);font-weight:600}
+  .flag{
+    display:inline-block;margin-top:.4rem;padding:.2rem .5rem;
+    font-family:"IBM Plex Mono",ui-monospace,monospace;
+    font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;
+    border-radius:4px;
+  }
+  .flag.fixed{background:var(--glaze-soft);color:var(--glaze)}
+  .flag.known{background:var(--kiln-soft);color:var(--kiln)}
+  .flag.new{background:var(--accent-soft);color:var(--accent)}
+
+  code{
+    font-family:"IBM Plex Mono",ui-monospace,monospace;
+    font-size:.88em;background:var(--surface-2);
+    padding:.08em .35em;border-radius:4px;
+  }
+
+  footer{
+    margin-top:3rem;padding-top:1.25rem;border-top:1px solid var(--line);
+    color:var(--ink-3);font-size:13px;
+  }
+  .reset{
+    background:none;border:1px solid var(--line);color:var(--ink-2);
+    font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:11px;
+    letter-spacing:.08em;text-transform:uppercase;
+    padding:.45rem .8rem;border-radius:6px;cursor:pointer;
+  }
+  .reset:hover{border-color:var(--accent);color:var(--accent)}
+  .reset:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+  @media (prefers-reduced-motion: reduce){*{transition:none!important}}
+  @media (max-width:560px){
+    .row{grid-template-columns:24px 1fr;gap:.6rem}
+    .row .id{grid-column:2;padding-top:0;margin-bottom:.15rem}
+    .row .body{grid-column:2}
+    .tally{text-align:left}
+  }
+</style>
+
+<div class="wrap">
+
+  <header class="mast">
+    <div>
+      <p class="eyebrow">Needles' Studio &middot; regression pass</p>
+      <h1>Muggshotz Test Matrix</h1>
+      <p class="sub">Thirty combinations across style, size, colour, print mode and product. Work top to bottom &mdash; the early rows cover the paths that broke today, so a failure there tells you the most.</p>
+    </div>
+    <div class="tally">
+      <span class="count" id="count">0</span>
+      <span class="of">of 30 checked</span>
+      <div class="bar"><span id="bar"></span></div>
+    </div>
+  </header>
+
+  <div class="legend">
+    <span><b>Always start with a fresh <code>?v=</code> number</b> &mdash; a bare URL serves your cache.</span>
+    <span><span class="flag fixed">fixed today</span> should now work</span>
+    <span><span class="flag known">known broken</span> expect a failure</span>
+    <span><span class="flag new">unverified</span> never tested by hand</span>
+  </div>
+
+  <section>
+    <div class="sec-head"><h2>Coffee mug &mdash; style, size, colour</h2><span class="rng">01&ndash;08</span></div>
+    <p class="sec-note">The freeze this morning was reachability, not wiring, so it only shows on a short window. Do at least the first three with the browser window <em>short</em>, not maximised.</p>
+    <div class="rows" id="s1"></div>
+  </section>
+
+  <section>
+    <div class="sec-head"><h2>Mug print mode</h2><span class="rng">09&ndash;11</span></div>
+    <div class="rows" id="s2"></div>
+  </section>
+
+  <section>
+    <div class="sec-head"><h2>Travel cups &mdash; all six variants</h2><span class="rng">12&ndash;17</span></div>
+    <p class="sec-note">Only the 14oz handle and 30oz Tundra are wide enough for the panorama engine. The others wrap just as fully &mdash; they use the single-image engine because their print area is nearly square.</p>
+    <div class="rows" id="s3"></div>
+  </section>
+
+  <section>
+    <div class="sec-head"><h2>Fade &amp; edge geometry</h2><span class="rng">18&ndash;20</span></div>
+    <div class="rows" id="s4"></div>
+  </section>
+
+  <section>
+    <div class="sec-head"><h2>Every other product</h2><span class="rng">21&ndash;26</span></div>
+    <div class="rows" id="s5"></div>
+  </section>
+
+  <section>
+    <div class="sec-head"><h2>The exits</h2><span class="rng">27&ndash;30</span></div>
+    <p class="sec-note">Every bug found today lived here: machinery that worked, with one way out unwired. These are the cheapest tests to run and the most expensive to get wrong.</p>
+    <div class="rows" id="s6"></div>
+  </section>
+
+  <footer>
+    <p>Ticks are saved in this browser only. <button class="reset" id="reset">Clear all ticks</button></p>
+  </footer>
+</div>
+
+<script>
+const TESTS = {
+  s1:[
+    ["01","Classic White, 11oz","No colour swatches appear. <b>Satisfied &mdash; Continue</b> is visible without scrolling, and the mockup shows a <b>real white mug</b>, not a blank rectangle.","fixed"],
+    ["02","Classic White, 15oz","Same, and the mug photo is the <b>taller</b> one. 15oz is narrower and taller than 11oz, not fatter.","fixed"],
+    ["03","Trimmed, 11oz, Black","Ten swatches. Every one reachable &mdash; scroll to the bottom row and pick the <b>last</b> colour, not the first.","fixed"],
+    ["04","Trimmed, 15oz, Yellow","15oz Trimmed offers only <b>five</b> colours, not ten. Fewer swatches here is correct.",""],
+    ["05","Accented, 11oz, Light Blue","Price reads <b>$17.95</b> with <b>+$3.00</b> under it.",""],
+    ["06","Color Pop, 11oz, Golden Yellow","Golden Yellow exists only at 11oz. It should be on this grid.",""],
+    ["07","Color Pop, 15oz, Black","Price reads <b>$21.95</b> with <b>+$5.00</b> under it.",""],
+    ["08","Pick Classic White, then go back and switch to Color Pop","Price must move <b>$14.95 &rarr; $19.95</b> and the mockup must change with it. This is the upsell path.","new"]
+  ],
+  s2:[
+    ["09","11oz, Three Panels","You get the prop tiles (Cover Me / Face It / Home Sweet Home).",""],
+    ["10","11oz, Wraparound","<b>No Fix the Seams screen at all.</b> It is generated as one image, so there is no seam to repair.","fixed"],
+    ["11","15oz, Wraparound, with a frame","The frame border reaches the outer edges and does <b>not</b> draw a line down the middle of the wrap.","new"]
+  ],
+  s3:[
+    ["12","Travel Mug 20oz","Wraps fully. Print Style pick lands you on <b>Generate</b>, not on a dimmed card.","fixed"],
+    ["13","Travel Mug with Handle, 14oz","Panorama engine. Same landing on Generate.","fixed"],
+    ["14","Gator Tumbler, 32oz","Works end to end. Note: <b>$34.95 is a placeholder</b> nobody chose.","known"],
+    ["15","Tundra Tumbler, 30oz","Also <b>$34.95 placeholder</b>. This one is UV-printed, not sublimation.","known"],
+    ["16","Vacuum Thermal Tumbler, 40oz","You said this works. Confirm once more after today's changes.",""],
+    ["17","Insulated Travel Mug, 40oz","Front/back split. This is the <b>DTF + engraving</b> one &mdash; edge fade may behave differently on it.","new"]
+  ],
+  s4:[
+    ["18","Round coaster &rarr; fade","Fade closes in as a <b>circle</b>, not a square.",""],
+    ["19","Square coaster &rarr; fade","Fade closes in as a rectangle.",""],
+    ["20","Any product &rarr; fade slider","Slider starts at <b>0%</b>, and the preview is <b>one image</b>, not two halves of the same cup.","known"]
+  ],
+  s5:[
+    ["21","Mouse pad","Cheapest thing we sell, <b>$9.95</b>. Orders as a mouse pad, not a mug.",""],
+    ["22","Tote bag &mdash; all three sizes","13&times;13, 16&times;16, 18&times;18. Blank size and blank colour must both be blocked.","known"],
+    ["23","Phone case &mdash; search a model","Type a model you own. An unknown model says so rather than failing quietly.",""],
+    ["24","Puzzle","96 pieces is <b>$39.95</b>, more than the 252-piece at $38.95. That inversion is deliberate &mdash; the small one costs us more.","known"],
+    ["25","Poster &mdash; smallest and largest","9&times;11 at $11.95 and 24&times;36 at $34.95.","known"],
+    ["26","Suitcase","Most expensive item we carry, from <b>$169.95</b>.",""]
+  ],
+  s6:[
+    ["27","Finish a mockup, then close it with the <b>&times;</b> &mdash; not Return","<b>What's Next?</b> must still appear. Until today the &times; threw away the only route to checkout.","fixed"],
+    ["28","Look at the product picker","Every tile shows a price. <b>Card</b> and <b>Post-it</b> say &ldquo;Art only &mdash; not yet orderable&rdquo;, because they cannot be bought.","fixed"],
+    ["29","Pick a product, go back, pick a different one","You reported this freezes. I have not reproduced it yet &mdash; tell me which product you started from and which you switched to.","known"],
+    ["30","Reset All Settings &amp; Images","Everything clears, and the next design does not carry any of the previous one's artwork.",""]
+  ]
+};
+
+const KEY = "muggshotz-test-matrix-v1";
+let state = {};
+try { state = JSON.parse(localStorage.getItem(KEY) || "{}") || {}; } catch (e) { state = {}; }
+
+function save(){ try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} }
+
+function tally(){
+  const total = Object.values(TESTS).reduce((n,a)=>n+a.length,0);
+  const done = Object.values(state).filter(Boolean).length;
+  document.getElementById("count").textContent = done;
+  document.getElementById("bar").style.width = (total ? (done/total*100) : 0) + "%";
+}
+
+const FLAG_LABEL = { fixed:"fixed today", known:"known broken", new:"unverified" };
+
+for (const [sec, list] of Object.entries(TESTS)) {
+  const host = document.getElementById(sec);
+  for (const [id, what, expect, flag] of list) {
+    const row = document.createElement("div");
+    row.className = "row" + (state[id] ? " done" : "");
+
+    const cb = document.createElement("input");
+    cb.type = "checkbox";
+    cb.checked = !!state[id];
+    cb.id = "cb" + id;
+    cb.setAttribute("aria-label", "Test " + id + ": " + what.replace(/<[^>]+>/g, ""));
+    cb.addEventListener("change", () => {
+      state[id] = cb.checked;
+      row.classList.toggle("done", cb.checked);
+      save(); tally();
+    });
+
+    const num = document.createElement("label");
+    num.className = "id";
+    num.setAttribute("for", cb.id);
+    num.textContent = id;
+
+    const body = document.createElement("div");
+    body.className = "body";
+    const w = document.createElement("p");
+    w.className = "what";
+    w.innerHTML = what;
+    const e = document.createElement("p");
+    e.className = "expect";
+    e.innerHTML = expect;
+    body.append(w, e);
+    if (flag) {
+      const f = document.createElement("span");
+      f.className = "flag " + flag;
+      f.textContent = FLAG_LABEL[flag];
+      body.append(f);
+    }
+
+    row.append(cb, num, body);
+    host.append(row);
+  }
+}
+
+tally();
+
+document.getElementById("reset").addEventListener("click", () => {
+  state = {}; save(); tally();
+  document.querySelectorAll(".row input[type=checkbox]").forEach(cb => {
+    cb.checked = false;
+    cb.closest(".row").classList.remove("done");
+  });
+});
+</script>

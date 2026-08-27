@@ -1365,7 +1365,10 @@ Tell Needles <span style="color:#7ab8ff">what you have in mind</span>
 <div class="card" id="frameFadeCard" style="max-width:520px;width:100%;margin:auto;position:relative;max-height:92vh;overflow-y:auto;text-align:center">
 <div class="card-title">🌫️ Edge Fade</div>
 <div class="note" style="margin-top:0;margin-bottom:.9rem;text-align:left;line-height:1.6">Fade softens the outer edges of your picture so it settles <i>into</i> your product instead of sitting on it like a sticker. It melts into the colour of whatever you're printing on, so the edges simply disappear. This is how every Muggshotz design looked before we had frames and props — and on anything but white, it still looks best.<br><br>Drag to set how far the softening reaches in. All the way left is no fade at all: hard, sharp edges.</div>
-<img id="frameFadeArtworkImg" style="width:100%;border-radius:10px;border:1px solid #003c8c;margin:.9rem 0;background:#0d0d0d"/>
+<img id="frameFadeArtworkImg" style="width:100%;border-radius:10px;border:1px solid #003c8c;margin:.9rem 0 .3rem;background:#0d0d0d"/>
+<!-- Only shown when there is more than one panel, so the customer knows the
+     one picture in front of them is standing in for all of them. -->
+<div class="note" id="frameFadeAppliesToAllNote" style="display:none;margin:0 0 .6rem;color:#7ab8ff;font-size:11px"></div>
 <div id="frameFadeThreePanelRow" style="display:none;gap:8px;margin:.9rem 0">
 <img id="frameFadeThreePanelLeft" style="flex:1;min-width:0;border-radius:8px;border:1px solid #003c8c;object-fit:contain;max-height:200px;background:#0d0d0d"/>
 <img id="frameFadeThreePanelCenter" style="flex:1;min-width:0;border-radius:8px;border:1px solid #003c8c;object-fit:contain;max-height:200px;background:#0d0d0d"/>
@@ -8873,6 +8876,15 @@ function maybeOpenFadeBeforeMockup(){
 // Without this the two routes would fight over the same Done button.
 let fadeExitsToMockup=false;
 
+// Which panel stands in for the rest in the fade preview: the centre when
+// there is one (it is the face of the mug), otherwise the first that exists.
+let framefadePreviewIndex=0;
+function pickFadePreviewIndex(){
+  if(revealOriginalArtworkUrls[1])return 1;
+  const i=revealOriginalArtworkUrls.findIndex(Boolean);
+  return i<0?0:i;
+}
+
 function openFrameFadeOverlay(){
   frameFadeSettled=true;
   const overlay=document.getElementById('frameFadeOverlay');
@@ -8887,21 +8899,31 @@ function openFrameFadeOverlay(){
   frameFadeAmountPct=DEFAULT_FADE_PCT;
   document.getElementById('frameFadeAmountSlider').value=DEFAULT_FADE_PCT;
   document.getElementById('frameFadeAmountVal').textContent=DEFAULT_FADE_PCT+'%';
-  if(revealFlowThreePanel){
-    if(img)img.style.display='none';
-    if(threeRow){
-      threeRow.style.display='flex';
-      document.getElementById('frameFadeThreePanelLeft').src=revealOriginalArtworkUrls[0];
-      const centerEl=document.getElementById('frameFadeThreePanelCenter');
-      if(centerEl){
-        if(revealOriginalArtworkUrls[1]){centerEl.style.display='';centerEl.src=revealOriginalArtworkUrls[1];}
-        else{centerEl.style.display='none';}
-      }
-      document.getElementById('frameFadeThreePanelRight').src=revealOriginalArtworkUrls[2];
-    }
-  } else {
-    if(threeRow)threeRow.style.display='none';
-    if(img){img.style.display='block';img.src=revealOriginalArtworkUrls[0];}
+  // ONE IMAGE, AS LARGE AS WE CAN MAKE IT. Alyx: "when I tried to apply the
+  // fade to the cup that I had created it gave me two images instead of just
+  // one to apply it on. Now I know I had a left and right mug, but they're
+  // both gonna change the same so there's no reason to show me both sides...
+  // One image will do, 1 large image, and I do change the slide fade on that
+  // one and it will affect them both at the same time."
+  //
+  // Exactly right, and the old row made the point worse than it had to: with
+  // no centre panel it drew TWO thumbnails side by side, each at half width,
+  // to show one slider's effect twice. There is a single fade value, applied
+  // identically to every panel -- bakeFadeIntoDesigns fades all of them from
+  // that one number no matter what was on screen -- so a second thumbnail
+  // never carried information, it just halved the size of the one that did.
+  //
+  // Shows the centre panel where there is one, since that is the face of the
+  // mug, and otherwise the first panel that exists. Purely what is displayed;
+  // what gets baked in is unchanged.
+  if(threeRow)threeRow.style.display='none';
+  framefadePreviewIndex=pickFadePreviewIndex();
+  if(img){img.style.display='block';img.src=revealOriginalArtworkUrls[framefadePreviewIndex];}
+  const multi=document.getElementById('frameFadeAppliesToAllNote');
+  if(multi){
+    const panels=revealOriginalArtworkUrls.filter(Boolean).length;
+    multi.style.display=panels>1?'block':'none';
+    multi.textContent='This fade is applied to all '+panels+' panels at once.';
   }
   updateFrameFadePreview();
 }
@@ -8913,20 +8935,15 @@ async function updateFrameFadePreview(){
   if(readout)readout.textContent=frameFadeAmountPct+'%';
   if(!revealOriginalArtworkUrls.length)return;
   const hex=getSelectedProductColorHex();
-  if(revealFlowThreePanel){
-    const targetIds=['frameFadeThreePanelLeft','frameFadeThreePanelCenter','frameFadeThreePanelRight'];
-    await Promise.all(revealOriginalArtworkUrls.map(async(url,i)=>{
-      if(!url)return;
-      const faded=await renderFadedArtwork(url,hex,frameFadeAmountPct);
-      const el=document.getElementById(targetIds[i]);
-      if(el)el.src=faded;
-    }));
-  } else {
-    const img=document.getElementById('frameFadeArtworkImg');
-    if(!img)return;
-    const faded=await renderFadedArtwork(revealOriginalArtworkUrls[0],hex,frameFadeAmountPct);
-    img.src=faded;
-  }
+  // One preview, whatever the product. Fading three thumbnails to show one
+  // slider's value also meant three renderFadedArtwork passes per drag, which
+  // is why the slider felt heavy on a three-panel mug.
+  const img=document.getElementById('frameFadeArtworkImg');
+  if(!img)return;
+  const src=revealOriginalArtworkUrls[framefadePreviewIndex]||revealOriginalArtworkUrls.find(Boolean);
+  if(!src)return;
+  const faded=await renderFadedArtwork(src,hex,frameFadeAmountPct);
+  img.src=faded;
 }
 
 async function confirmFrameFadeAndContinue(){
