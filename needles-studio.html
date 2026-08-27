@@ -4648,6 +4648,65 @@ let mugColorFinishedPreGen=false;
 // Listed first so the ladder reads bottom-up, which is what makes the
 // upgrade legible: +$3.00 to Trimmed or Accented, +$5.00 to Color Pop, and
 // those deltas are identical at BOTH sizes.
+// WHAT IT COSTS, ON THE TILE. Alyx: "on all the products, just like on the
+// coffee mugs it already is, where you go to pick the product I want to see
+// the prices. No surprises. Anyone who goes further already knows how much it
+// costs."
+//
+// The lowest price a customer can actually leave with, per product. Products
+// with a size ladder say "from"; single-price products just say the number.
+// Every value is the MINIMUM across that product's real sizes in
+// lib/products-catalog.js, so the tile can never promise less than the
+// cheapest thing behind it.
+//
+// This is a fourth hand-kept copy of prices that live in the server catalog,
+// which is exactly how Classic White went missing from a picker for a
+// thousand iterations. verify-price-parity.mjs now recomputes every number
+// below straight from lib/products-catalog.js and fails on any drift, so it
+// cannot quietly go stale.
+//
+// Two tiles carry no price because they cannot be bought at all: Greeting Card
+// and Post-it Note are both in order.html's UNSUPPORTED_PRODUCT_NAMES. A
+// customer can pick either, describe it, spend a credit generating it, and
+// only meet the wall at the order page. That is a worse surprise than a price,
+// so they say so up front instead. Flagged for Alyx rather than removed --
+// whether they become real products or art-only is a product decision.
+const PRODUCT_TILE_PRICES = {
+  'mug':           { from: 14.95, ladder: true  },
+  'water bottle':  { from: 24.95, ladder: true  },
+  'phone case':    { from: 19.95, ladder: false },
+  'tote bag':      { from: 23.95, ladder: true  },
+  'suitcase':      { from: 169.95, ladder: true },
+  'puzzle':        { from: 38.95, ladder: true  },
+  'photo poster':  { from: 11.95, ladder: true  },
+  'coaster':       { from: 29.95, ladder: false },
+  'mouse pad':     { from: 9.95,  ladder: false },
+  'greeting card': { unsupported: true },
+  'post-it note':  { unsupported: true }
+};
+
+function renderProductTilePrices(){
+  document.querySelectorAll('#productCard .btn-select').forEach(tile=>{
+    if(tile.querySelector('.product-tile-price'))return;
+    const info=PRODUCT_TILE_PRICES[tile.dataset.val];
+    if(!info)return;
+    const el=document.createElement('div');
+    el.className='note product-tile-price';
+    if(info.unsupported){
+      // Deliberately not a price. Saying "coming soon" here is the whole
+      // point: the wall is at the order page, which is far too late to find
+      // out, and a credit has been spent by then.
+      el.style.cssText='margin-top:6px;color:#e0a44b;font-size:10px;font-weight:700';
+      el.textContent='Art only — not yet orderable';
+    } else {
+      el.style.cssText='margin-top:6px;color:#7ab8ff;font-weight:700;font-size:11px';
+      el.textContent=(info.ladder?'from $':'$')+info.from.toFixed(2);
+    }
+    tile.appendChild(el);
+  });
+}
+renderProductTilePrices();
+
 const PRE_GEN_MUG_STYLE_PRICES = {
   "Classic White": { "11oz": 14.95, "15oz": 16.95 },
   "Trimmed": { "11oz": 17.95, "15oz": 19.95 },

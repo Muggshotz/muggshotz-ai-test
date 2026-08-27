@@ -252,6 +252,113 @@ checks.push(missing.length
     : `PASS: every product family has its own checkout branch, not just a price`);
 }
 
+// --- the product picker's tile prices ---------------------------------------
+// Alyx: "on all the products, just like on the coffee mugs it already is,
+// where you go to pick the product I want to see the prices. No surprises."
+//
+// PRODUCT_TILE_PRICES is a FOURTH hand-kept copy of numbers that live in the
+// server catalog, and a stale one under-promises or over-promises to every
+// customer who reaches the picker. So rather than compare it to a second
+// hand-kept list, this recomputes each tile's minimum from
+// lib/products-catalog.js and from the studio's own poster ladder, and
+// insists the tile matches.
+//
+// A tile must never advertise LESS than the cheapest thing behind it, and
+// never MORE either -- too high loses the sale, too low is a promise we break
+// at the order page.
+{
+  const { PRODUCTS_CATALOG } = await import(
+    'file://' + path.join(ROOT, 'lib', 'products-catalog.js'));
+  const studio = fs.readFileSync(path.join(ROOT, 'needles-studio.html'), 'utf8');
+
+  // Which catalog keys sit behind each tile on the picker.
+  const TILE_SOURCES = {
+    'mug':          ['classic-white-mug', 'color-pop-mug', 'trimmed-mug', 'accented-mug'],
+    'water bottle': ['travel-mug-20oz', 'travel-mug-14oz-handle', 'travel-mug-40oz-insulated',
+                     'travel-mug-32oz-gator', 'travel-mug-30oz-tundra', 'travel-mug-40oz-vacuum'],
+    'phone case':   ['phone-case-tough'],
+    'tote bag':     ['tote-bag'],
+    'suitcase':     ['suitcase'],
+    'puzzle':       ['photo-puzzle'],
+    'coaster':      ['coaster-set', 'coaster-set-round'],
+    'mouse pad':    ['mouse-pad'],
+  };
+
+  const catMin = (keys) => {
+    const all = [];
+    for (const k of keys) {
+      const p = PRODUCTS_CATALOG[k];
+      if (!p) return { missing: k };
+      for (const o of Object.values(p.sizes || {})) {
+        if (typeof o?.price === 'number') all.push(o.price);
+      }
+    }
+    return all.length ? { min: Math.min(...all), count: all.length } : { none: true };
+  };
+
+  // The poster ladder lives in the studio itself, not the catalog.
+  const posterBlk = blockAfter(studio, 'const PHOTO_POSTER_CATALOG');
+  const posterPrices = posterBlk
+    ? [...posterBlk.matchAll(/price:\s*([\d.]+)/g)].map(m => parseFloat(m[1])) : [];
+
+  // Read the tile table out of the studio.
+  const tileBlk = blockAfter(studio, 'const PRODUCT_TILE_PRICES');
+  if (!tileBlk) {
+    checks.push('FAIL: PRODUCT_TILE_PRICES not found in needles-studio.html — the picker shows no prices at all');
+  } else {
+    const tiles = {};
+    for (const m of tileBlk.matchAll(/'([^']+)':\s*\{([^}]*)\}/g)) {
+      const body = m[2];
+      const from = /from:\s*([\d.]+)/.exec(body);
+      tiles[m[1]] = {
+        from: from ? parseFloat(from[1]) : null,
+        ladder: /ladder:\s*true/.test(body),
+        unsupported: /unsupported:\s*true/.test(body),
+      };
+    }
+
+    const bad = [];
+    for (const [tile, keys] of Object.entries(TILE_SOURCES)) {
+      const t = tiles[tile];
+      if (!t) { bad.push(`${tile}: no tile price at all`); continue; }
+      const c = catMin(keys);
+      if (c.missing) { bad.push(`${tile}: catalog key "${c.missing}" does not exist`); continue; }
+      if (c.none) { bad.push(`${tile}: no priced sizes in the catalog`); continue; }
+      if (t.from !== c.min)
+        bad.push(`${tile}: tile says $${t.from?.toFixed(2)} but the cheapest real option is $${c.min.toFixed(2)}`);
+      // "from" is a promise about there being more than one price.
+      const shouldLadder = c.count > 1 && new Set(
+        keys.flatMap(k => Object.values(PRODUCTS_CATALOG[k].sizes || {})
+          .map(o => o.price).filter(v => typeof v === 'number'))).size > 1;
+      if (t.ladder !== shouldLadder)
+        bad.push(`${tile}: ladder=${t.ladder} but ${shouldLadder ? 'prices differ across sizes' : 'every size is the same price'}`);
+    }
+
+    // Poster, from the studio's own ladder.
+    if (!posterPrices.length) bad.push('photo poster: could not read PHOTO_POSTER_CATALOG');
+    else {
+      const min = Math.min(...posterPrices);
+      if (tiles['photo poster']?.from !== min)
+        bad.push(`photo poster: tile says $${tiles['photo poster']?.from?.toFixed(2)} but the cheapest size is $${min.toFixed(2)}`);
+    }
+
+    // The unbuyable two must say so rather than carry a price.
+    const orderSrc = fs.readFileSync(path.join(ROOT, 'order.html'), 'utf8');
+    const unsupportedBlk = blockAfter(orderSrc, 'UNSUPPORTED_PRODUCT_NAMES');
+    const unsupported = unsupportedBlk
+      ? [...unsupportedBlk.matchAll(/'([^']+)':/g)].map(m => m[1]) : [];
+    for (const u of unsupported) {
+      if (!(u in tiles)) continue; // not on the picker at all, fine
+      if (!tiles[u].unsupported)
+        bad.push(`${u}: priced on the picker but listed in order.html's UNSUPPORTED_PRODUCT_NAMES — a customer would spend a credit and hit a wall at checkout`);
+    }
+
+    checks.push(bad.length
+      ? `FAIL: product picker prices: ${bad.join('; ')}`
+      : `PASS: every product tile matches the cheapest real option behind it (${Object.keys(TILE_SOURCES).length + 1} priced, ${unsupported.filter(u => u in tiles).length} marked unorderable)`);
+  }
+}
+
 let fails = 0;
 for (const c of checks) { console.log('[price-parity] ' + c); if (/^FAIL/.test(c)) fails++; }
 console.log(fails ? `\n${fails} FAILURE(S)` : '\nALL PRICE-PARITY VERIFICATIONS PASSED');
