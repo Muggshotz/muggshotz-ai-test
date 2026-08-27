@@ -2915,6 +2915,21 @@ let pending40ozRaw = null; // { panorama }
 // sliced into three) or the classic per-panel method (which can
 // genuinely drift) produced a given result.
 let lastWraparoundMethod = null;
+// THE UNCUT PANORAMA, kept as the source of truth for what gets PRINTED.
+// Alyx: "it's supposed to be one long panel." It is -- every mug blueprint we
+// sell exposes exactly one print area (checked against Printify's catalogue:
+// bp 478 front 2475x1155, bp 1151 front 2538x1211, bp 2692/2693 front
+// 2538x1088), so the three thirds were only ever a display convenience of
+// ours, and the server was gluing them back together to send one image.
+//
+// This holds the whole strip so the print file is built from the original
+// rather than from a reassembly. It is set only where the strip genuinely
+// exists -- straight off the generator, and out of the framing step, which
+// already builds the full-width strip before slicing it -- so it cannot drift
+// away from the panels the customer is looking at. Null on every other path
+// (Three Panels, the classic per-panel fallback), and the server falls back to
+// reassembling the thirds when it is null.
+let wraparoundPanoramaUrl = null;
 let windowSillChoice = null;
 // Per-session customer overrides for Window Sill fit, keyed by asset path
 // same as WINDOW_SILL_CALIBRATION. Set live via the Preview & Fit Your
@@ -9933,11 +9948,19 @@ async function applyAccessorizeFrame(){
     } else if(pendingWraparoundRaw && (selectedFrame||windowSillChoice)){
       if(strip)strip.innerHTML='<div class="note" style="width:100%;text-align:center"><span class="spinner"></span>Saving your framed design...</div>';
       const framed=await compositeFrameAcrossThreePanels(pendingWraparoundRaw.center,pendingWraparoundRaw.left,pendingWraparoundRaw.right);
-      const [centerUrl,leftUrl,rightUrl]=await Promise.all([
+      // framed.combined is the full-width strip this function already builds
+      // (and frames as one piece) before slicing it into thirds. Keeping it
+      // means the printed file comes from the same canvas the frame was drawn
+      // on, rather than from three slices glued back together server-side.
+      // Only meaningful on the panorama path -- on the classic path the strip
+      // is a stitch of three independent images, so it stays null there.
+      const [centerUrl,leftUrl,rightUrl,combinedUrl]=await Promise.all([
         uploadCompositedImage(framed.center),
         uploadCompositedImage(framed.left),
-        uploadCompositedImage(framed.right)
+        uploadCompositedImage(framed.right),
+        lastWraparoundMethod==='panorama' ? uploadCompositedImage(framed.combined) : Promise.resolve(null)
       ]);
+      if(lastWraparoundMethod==='panorama')wraparoundPanoramaUrl=combinedUrl;
       const centerDesign=findDesignById(placements.front);
       if(centerDesign)centerDesign.url=centerUrl;
       const leftDesign=findDesignById(placements.left);
@@ -10450,6 +10473,16 @@ Use rich environmental storytelling while keeping the face as the primary focal 
       if(!leftUrl||!centerUrl||!rightUrl)throw new Error('No panorama images returned.');
 
       const rawLeftUrl=leftUrl, rawCenterUrl=centerUrl, rawRightUrl=rightUrl;
+      // The whole strip, faded once across its true outer edges. The three
+      // per-panel fades below come to the same thing -- top and bottom on all
+      // three, the left edge only on the left panel, the right edge only on
+      // the right -- because the panels ARE this image in thirds. Doing it
+      // here as well keeps the printed file one continuous piece.
+      let panoramaWhole=panoramaData.panoramaUrl||null;
+      if(panoramaWhole && !skipEdgeFade){
+        panoramaWhole=await applyEdgeFadeToImageUrl(panoramaWhole,{top:true,bottom:true,left:true,right:true},getSelectedProductColorHex(),edgeFadeAmountPct);
+      }
+      wraparoundPanoramaUrl=panoramaWhole;
       if(!skipEdgeFade){
         centerUrl=await applyEdgeFadeToImageUrl(centerUrl,{top:true,bottom:true,left:false,right:false},getSelectedProductColorHex(),edgeFadeAmountPct);
         leftUrl=await applyEdgeFadeToImageUrl(leftUrl,{top:true,bottom:true,left:true,right:false},getSelectedProductColorHex(),edgeFadeAmountPct);
@@ -10709,6 +10742,10 @@ async function makeTestSingleZonePanorama(side){
       placements.right = addToRecentDesigns(rightUrl);
 
       lastWraparoundMethod='classic';
+      // No panorama exists on this path: left and right were generated
+      // independently by "continue this scene", so there is no single strip to
+      // print from and the server must reassemble the panels as before.
+      wraparoundPanoramaUrl=null;
       pendingWraparoundRaw = { left: rawLeftUrl, center: rawResultUrl, right: rawRightUrl };
 
       document.getElementById('wraparoundStandbyPrompt').style.display='none';
@@ -11025,6 +11062,9 @@ function swapSlots(posA,posB){
 function clearAllDesigns(){
   recentDesigns=[];
   placements={left:null,right:null,front:null};
+  // Same artwork, same lifetime -- a stale panorama would otherwise ship
+  // the previous design's strip to Printify alongside fresh placements.
+  wraparoundPanoramaUrl=null;
   coverMeLastRemoved={left:null,right:null,front:null};
   coverMePanelExplicit={left:false,right:false};
   currentDesignId=null;
@@ -11429,7 +11469,11 @@ function buildMockupRequestBody(){
         front: placements.front ? findDesignById(placements.front)?.url ?? null : null,
         right: placements.right ? findDesignById(placements.right)?.url ?? null : null
       },
-      printMode: mugPrintMode==='wraparound' ? 'fullBleed' : 'standard'
+      printMode: mugPrintMode==='wraparound' ? 'fullBleed' : 'standard',
+      // Null on every path but the panorama, and the server reassembles the
+      // thirds when it is null. Sent to the mockup as well as the order so the
+      // preview is built from the same file the customer will receive.
+      panoramaImage: mugPrintMode==='wraparound' ? wraparoundPanoramaUrl : null
     };
   }
 
@@ -11669,6 +11713,7 @@ function goToOrder(){
     productIcon: product,
     mugPrintMode: mugPrintMode,
     isWraparoundSet: (product==='mug' && mugPrintMode==='wraparound'),
+    panoramaImage: (product==='mug' && mugPrintMode==='wraparound') ? wraparoundPanoramaUrl : null,
     // Round and square coasters are different blueprints, so the shape has to
     // survive the hop to order.html or the customer gets whichever one the
     // code names by default.
@@ -11880,6 +11925,9 @@ function purgeStaleSessionOnEntry(){
   // rest of the page's life.
   recentDesigns=[];
   placements={left:null,right:null,front:null};
+  // Same artwork, same lifetime -- a stale panorama would otherwise ship
+  // the previous design's strip to Printify alongside fresh placements.
+  wraparoundPanoramaUrl=null;
   coverMeLastRemoved={left:null,right:null,front:null};
   currentDesignId=null;
   return true;
@@ -11935,6 +11983,9 @@ function resetEverythingFreshStart(){
 
   recentDesigns=[];
   placements={left:null,right:null,front:null};
+  // Same artwork, same lifetime -- a stale panorama would otherwise ship
+  // the previous design's strip to Printify alongside fresh placements.
+  wraparoundPanoramaUrl=null;
   coverMeLastRemoved={left:null,right:null,front:null};
   coverMePanelExplicit={left:false,right:false};
   try{localStorage.removeItem('muggshotz_mug_state');}catch(e){}

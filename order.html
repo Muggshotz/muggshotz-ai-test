@@ -1409,7 +1409,11 @@ async function fetchMockupPreview(){
     sizeLabel: selectedSize,
     colorName: selectedColor,
     placements: pendingOrder?.placements || {},
-    printMode: fullWrapEnabled ? 'fullBleed' : 'standard'
+    printMode: fullWrapEnabled ? 'fullBleed' : 'standard',
+    // The uncut panorama, when the studio produced one. Carried through so the
+    // preview is built from the same single strip as the print file rather
+    // than from three thirds glued back together.
+    panoramaImage: pendingOrder?.panoramaImage || null
   }, btn, noteEl, imgEl);
 
   if (url) {
@@ -1935,6 +1939,7 @@ async function submitOrder(){
       sizeLabel: selectedSize,
       color: selectedColor,
       printMode: fullWrapEnabled ? 'fullBleed' : 'standard',
+      panoramaImage: pendingOrder.panoramaImage || null,
       isWraparoundSet: !!pendingOrder.isWraparoundSet,
       customerName: fullName,
       giftMessage: giftMessageEnabled ? document.getElementById('giftMessageText').value.trim() : null,

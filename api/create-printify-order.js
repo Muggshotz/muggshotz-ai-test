@@ -543,7 +543,6 @@ export async function buildSeamlessWrapImage(placements, canvasWidth, canvasHeig
   // overlap, placing them back edge-to-edge reconstructs that same
   // original combined image -- frame and all.
   const WHITE = { r: 255, g: 255, b: 255 };
-  const CROP_FRACTION = 0.10;
   const { left, front, right } = placements;
   const sources = [left, front, right].filter(Boolean);
   if (sources.length === 0) throw new Error("No design provided for seamless wrap.");
@@ -564,6 +563,38 @@ export async function buildSeamlessWrapImage(placements, canvasWidth, canvasHeig
     .png()
     .toBuffer();
 
+  return await finishWrapStrip(stripBuffer, canvasWidth, canvasHeight);
+}
+
+// THE UNCUT PANORAMA GOES STRAIGHT THROUGH. Alyx: "Why you keep talking about
+// cutting and the cutting tool and piecing it together it's supposed to be one
+// long panel."
+//
+// It is, and Printify agrees: every mug blueprint we sell exposes exactly ONE
+// print area (bp 478 front 2475x1155, bp 1151 front 2538x1211, bp 2692 and
+// 2693 front 2538x1088, and the 15oz of each at 2475x1275). There is no
+// left/centre/right slot anywhere in their catalogue. The three-way split was
+// ours, and on the panorama path it was a round trip: cut one wide image into
+// thirds, then glue the thirds back edge-to-edge to send one wide image.
+//
+// So when the client has an uncut panorama it hands that over instead, and the
+// strip step is simply skipped. Everything downstream -- the 10% circumference
+// crop, the explicit aspect-match crop, the pure-stretch resize -- is the same
+// code as the reassembled path, deliberately, so the two cannot drift apart.
+//
+// buildSeamlessWrapImage above stays for the paths that really do hold three
+// separate pictures: Three Panels mode, and the classic per-panel fallback
+// when the panorama call fails.
+export async function buildSeamlessWrapFromPanorama(panoramaSource, canvasWidth, canvasHeight) {
+  if (!panoramaSource) throw new Error("No panorama provided for seamless wrap.");
+  const stripBuffer = await resolveImageBuffer(panoramaSource);
+  return await finishWrapStrip(stripBuffer, canvasWidth, canvasHeight);
+}
+
+// The shared tail: takes ONE wide strip, however it was arrived at, and fits
+// it to the print canvas.
+async function finishWrapStrip(stripBuffer, canvasWidth, canvasHeight) {
+  const CROP_FRACTION = 0.10;
   const meta = await sharp(stripBuffer).metadata();
   // Intentional circumference-compensation crop (10% total, 5% each side).
   const preCropWidth = Math.round(meta.width * (1 - CROP_FRACTION));
@@ -805,6 +836,7 @@ export async function placeProductOrder({
   customerName,
   orderId,
   printMode = "standard",
+  panoramaImage = null,
   posterFramed,
   posterOrientation,
   posterFinish
@@ -860,10 +892,17 @@ export async function placeProductOrder({
     const { width, height, position } = await getPlaceholderDimensions(
       effectiveBlueprintId, effectivePrintProviderId, variantId
     );
+    // ONE LONG PANEL WHEN WE HAVE ONE. panoramaImage is the uncut Gemini
+    // panorama; when the client sends it, the three thirds are only ever a
+    // display detail and the print file is built straight from the original.
+    // Falls back to reassembling the thirds when it is absent, which is the
+    // case for Three Panels mode and for the classic per-panel fallback.
     const buffer = isFullBleed
       ? await buildFullBleedImage(placements.front || placements.left || placements.right, width, height)
       : isSeamlessWrap
-      ? await buildSeamlessWrapImage(placements, width, height)
+      ? (panoramaImage
+          ? await buildSeamlessWrapFromPanorama(panoramaImage, width, height)
+          : await buildSeamlessWrapImage(placements, width, height))
       : await buildWraparoundImage(placements, width, height, hex || null);
     const imageId = await uploadImageToPrintify(buffer, `muggshotz-${Date.now()}.png`);
     printifyImages[position] = imageId;

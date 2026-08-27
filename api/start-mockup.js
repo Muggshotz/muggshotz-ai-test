@@ -10,6 +10,7 @@ import {
   buildWraparoundImage,
   buildFullBleedImage,
   buildSeamlessWrapImage,
+  buildSeamlessWrapFromPanorama,
   buildFrontBackImages,
   buildSingleImage,
   resolveVariant,
@@ -36,6 +37,7 @@ async function handleStart(req, res) {
     productKey, sizeLabel, colorName, placements,
     frontImage, backImage, image,
     printMode = "standard",
+    panoramaImage = null,
     posterFramed, posterOrientation, posterFinish
   } = req.body;
 
@@ -72,10 +74,17 @@ async function handleStart(req, res) {
     const { width, height, position } = await getPlaceholderDimensions(
       product.blueprintId, product.printProviderId, variantId
     );
+    // ONE LONG PANEL WHEN WE HAVE ONE. panoramaImage is the uncut Gemini
+    // panorama; when the client sends it, the three thirds are only ever a
+    // display detail and the print file is built straight from the original.
+    // Falls back to reassembling the thirds when it is absent, which is the
+    // case for Three Panels mode and for the classic per-panel fallback.
     const buffer = isFullBleed
       ? await buildFullBleedImage(placements.front || placements.left || placements.right, width, height)
       : isSeamlessWrap
-      ? await buildSeamlessWrapImage(placements, width, height)
+      ? (panoramaImage
+          ? await buildSeamlessWrapFromPanorama(panoramaImage, width, height)
+          : await buildSeamlessWrapImage(placements, width, height))
       : await buildWraparoundImage(placements, width, height, hex || null);
     const imageId = await uploadImageToPrintify(buffer, `muggshotz-mockup-preview-${Date.now()}.png`);
     printifyImages[position] = imageId;

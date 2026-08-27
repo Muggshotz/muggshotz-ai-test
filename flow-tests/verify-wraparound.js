@@ -377,7 +377,88 @@ scenarios.fortyOzNeverOffersWraparound = async (page) => {
 const OPTS = {
   mugWraparoundFallsBackOnOutage: { panoramaFails: true },
   mugWraparoundOutOfCreditsDoesNotRetry: { panoramaOutOfCredits: true },
+  classicFallbackHasNoPanorama: { panoramaFails: true },
 };
+
+// ---- 12. The mug prints from ONE strip, not three glued back together. ----
+// Alyx: "Why you keep talking about cutting and the cutting tool and piecing
+// it together it's supposed to be one long panel."
+//
+// Checked against Printify's own catalogue: every mug blueprint we sell has
+// exactly ONE print area -- bp 478 front 2475x1155, bp 1151 front 2538x1211,
+// bp 2692 and 2693 front 2538x1088, and the 15oz of each at 2475x1275. There
+// is no left/centre/right slot anywhere in it. So the round trip was real:
+// cut one wide image into thirds, ship all three, and have the server glue
+// them back edge-to-edge to fill the single slot.
+//
+// This asserts the uncut panorama actually reaches the wire, because that is
+// the only part a customer's printed mug depends on. The thirds still travel
+// alongside it -- they are what the order page renders, and what the server
+// falls back to when there is no panorama.
+scenarios.mugWraparoundPrintsFromOneStrip = async (page, log, mockupBodies) => {
+  await mugToPrintStyle(page);
+  await page.evaluate(() => pickMugPrintMode('wraparound'));
+  await T(page, 1200);
+  await dismissAlerts(page);
+  await describeAndGenerate(page, 'a wide desert canyon at sunrise');
+  await waitWrapDone(page);
+  await T(page, 1500);
+
+  const held = await page.evaluate(() => ({
+    method: lastWraparoundMethod,
+    hasPanorama: !!wraparoundPanoramaUrl,
+    body: typeof buildMockupRequestBody === 'function' ? buildMockupRequestBody() : null,
+  }));
+  if (held.method !== 'panorama') return `FAIL: lastWraparoundMethod=${held.method}`;
+  if (!held.hasPanorama)
+    return 'FAIL: the uncut panorama was discarded — the print file would still be rebuilt from three thirds';
+  if (!held.body?.panoramaImage)
+    return 'FAIL: panoramaImage missing from the mockup body — the server would fall back to reassembling the thirds';
+  if (held.body.printMode !== 'fullBleed')
+    return `FAIL: printMode=${held.body.printMode} on a wraparound`;
+
+  // And it must survive the hop to order.html, which is a different document
+  // reading a localStorage handoff -- an easy place for a new field to be
+  // dropped silently.
+  const handed = await page.evaluate(() => {
+    goToOrder();
+    try { return JSON.parse(localStorage.getItem('muggshotz_pending_order') || 'null'); }
+    catch (e) { return null; }
+  });
+  if (!handed) return 'FAIL: no pending order was written';
+  if (!handed.panoramaImage)
+    return 'FAIL: panoramaImage dropped in the handoff to order.html — the order would print from the reassembly';
+  if (!handed.placements?.front)
+    return 'FAIL: the thirds stopped travelling — the order page renders them and the server needs them as fallback';
+  return 'PASS: mug wraparound carries the uncut strip to both the mockup and the order, thirds still alongside';
+};
+
+// ---- 13. The classic fallback must NOT claim to have a panorama. ----
+// Its left and right panels came from two independent "continue this scene"
+// calls, so there is no single strip they are thirds of. Handing one over
+// would print something that was never generated as a whole. This is the
+// failure mode that matters most: it would be silent, and it would reach a
+// physical mug.
+scenarios.classicFallbackHasNoPanorama = async (page, log) => {
+  await mugToPrintStyle(page);
+  await page.evaluate(() => pickMugPrintMode('wraparound'));
+  await T(page, 1200);
+  await dismissAlerts(page);
+  await describeAndGenerate(page, 'a wide desert canyon at sunrise');
+  await waitSeamFix(page);
+  const s = await page.evaluate(() => ({
+    method: lastWraparoundMethod,
+    hasPanorama: !!wraparoundPanoramaUrl,
+    body: buildMockupRequestBody(),
+  }));
+  if (s.method !== 'classic') return `FAIL: expected the classic fallback, got ${s.method}`;
+  if (s.hasPanorama)
+    return 'FAIL: the classic fallback is carrying a panorama — its panels are independent generations, not thirds of one image';
+  if (s.body?.panoramaImage)
+    return 'FAIL: panoramaImage sent on the classic path — the server must reassemble the three real panels instead';
+  return 'PASS: classic fallback carries no panorama, so the server reassembles its three real panels';
+};
+
 
 (async () => {
   let fails = 0;
@@ -401,9 +482,12 @@ const OPTS = {
       fails++;
       await page.screenshot({ path: `shot-wrap-fail-${name}.png` }).catch(() => {});
     }
-    // The out-of-credits scenario deliberately provokes a 403; its console
-    // noise is the expected outcome, not a defect.
-    const ignore = name === 'mugWraparoundOutOfCreditsDoesNotRetry' || name === 'mugWraparoundFallsBackOnOutage';
+    // Scenarios that deliberately provoke an API failure. Their console noise
+    // IS the expected outcome, not a defect -- driven off the same OPTS map
+    // that stubs the failure, so a new outage scenario cannot be added without
+    // its exemption coming along automatically. Keeping this list by hand is
+    // what made the newest one look like a regression.
+    const ignore = !!(OPTS[name]?.panoramaFails || OPTS[name]?.panoramaOutOfCredits);
     const errs = log.consoleErrors.filter(e => !/ERR_TUNNEL/.test(e));
     if (errs.length && !ignore) { console.log(`  CONSOLE: ${JSON.stringify(errs)}`); fails++; }
     if (log.pageErrors.length) { console.log(`  PAGE ERRORS: ${JSON.stringify(log.pageErrors)}`); fails++; }
