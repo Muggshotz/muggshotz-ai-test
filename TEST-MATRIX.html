@@ -106,6 +106,20 @@
   .bar{height:4px;width:180px;background:var(--surface-2);border-radius:2px;margin-top:.6rem;overflow:hidden}
   .bar span{display:block;height:100%;background:var(--accent);width:0;transition:width .3s ease}
 
+  /* ---- how to use ---- */
+  .howto{
+    margin:0 0 1rem;padding:1rem 1.25rem;
+    background:var(--accent-soft);border:1px solid var(--line-soft);
+    border-radius:var(--radius);
+  }
+  .howto h2{
+    font-family:"Bricolage Grotesque","IBM Plex Sans",sans-serif;
+    font-weight:700;font-size:1rem;margin:0 0 .5rem;letter-spacing:-.01em;
+  }
+  .howto ol{margin:0;padding-left:1.2rem;display:flex;flex-direction:column;gap:.45rem}
+  .howto li{font-size:13.5px;color:var(--ink-2)}
+  .howto li b{color:var(--ink)}
+
   /* ---- legend ---- */
   .legend{
     display:flex;flex-wrap:wrap;gap:.5rem 1.25rem;
@@ -212,7 +226,7 @@
     <div>
       <p class="eyebrow">Needles' Studio &middot; regression pass</p>
       <h1>Muggshotz Test Matrix</h1>
-      <p class="sub">Thirty combinations across style, size, colour, print mode and product. Work top to bottom &mdash; the early rows cover the paths that broke today, so a failure there tells you the most.</p>
+      <p class="sub">Thirty combinations across style, size, colour, print mode and product. Work top to bottom &mdash; the early rows cover the paths that broke most recently.</p>
     </div>
     <div class="tally">
       <span class="count" id="count">0</span>
@@ -221,11 +235,20 @@
     </div>
   </header>
 
+  <div class="howto">
+    <h2>How this works</h2>
+    <ol>
+      <li>Open the studio with a <b>fresh <code>?v=</code> number</b> each session (e.g. <code>?v=42</code>, then <code>?v=43</code>&hellip;). A bare URL can serve yesterday&rsquo;s build from your cache.</li>
+      <li>Do a row. If the studio behaves as the row describes, <b>tick the box</b>. Ticks save by themselves, in this browser &mdash; there is no save button and nothing to download. They&rsquo;ll be here when you come back.</li>
+      <li>If a row does something wrong, <b>tell Claude the row number</b> and what you saw. A screenshot helps. That number is all Claude needs to find the exact path.</li>
+      <li>To get back to this page later: bookmark it, or press <code>ctrl+]</code> in the Claude Code terminal, or type <code>/artifacts</code>.</li>
+    </ol>
+  </div>
+
   <div class="legend">
-    <span><b>Always start with a fresh <code>?v=</code> number</b> &mdash; a bare URL serves your cache.</span>
-    <span><span class="flag fixed">fixed today</span> should now work</span>
-    <span><span class="flag known">known broken</span> expect a failure</span>
-    <span><span class="flag new">unverified</span> never tested by hand</span>
+    <span><span class="flag fixed">fixed</span> repaired recently &mdash; confirming the fix is the point of the row</span>
+    <span><span class="flag known">known broken</span> expect a failure; don&rsquo;t chase it, it&rsquo;s already on the list</span>
+    <span><span class="flag new">unverified</span> built and machine-tested, but no human has run it</span>
   </div>
 
   <section>
@@ -262,7 +285,7 @@
   </section>
 
   <footer>
-    <p>Ticks are saved in this browser only. <button class="reset" id="reset">Clear all ticks</button></p>
+    <p>Ticks save automatically and live in this browser only &mdash; tick on the machine you test on. <button class="reset" id="reset">Clear all ticks</button></p>
   </footer>
 </div>
 
@@ -294,20 +317,20 @@ const TESTS = {
   s4:[
     ["18","Round coaster &rarr; fade","Fade closes in as a <b>circle</b>, not a square.",""],
     ["19","Square coaster &rarr; fade","Fade closes in as a rectangle.",""],
-    ["20","Any product &rarr; fade slider","Slider starts at <b>0%</b>, and the preview is <b>one image</b>, not two halves of the same cup.","known"]
+    ["20","Any product &rarr; fade slider","The preview is <b>one large image</b> now, with a note when it stands in for several panels. (The Edge Fade page opens at 30% by design &mdash; the pre-generation slider is the one that starts at 0%.)","fixed"]
   ],
   s5:[
     ["21","Mouse pad","Cheapest thing we sell, <b>$9.95</b>. Orders as a mouse pad, not a mug.",""],
-    ["22","Tote bag &mdash; all three sizes","13&times;13, 16&times;16, 18&times;18. Blank size and blank colour must both be blocked.","known"],
+    ["22","Tote bag &mdash; all three sizes","13&times;13, 16&times;16, 18&times;18. Blank size and blank colour must both be blocked, and the fade page appears before the mockup.",""],
     ["23","Phone case &mdash; search a model","Type a model you own. An unknown model says so rather than failing quietly.",""],
-    ["24","Puzzle","96 pieces is <b>$39.95</b>, more than the 252-piece at $38.95. That inversion is deliberate &mdash; the small one costs us more.","known"],
-    ["25","Poster &mdash; smallest and largest","9&times;11 at $11.95 and 24&times;36 at $34.95.","known"],
+    ["24","Puzzle","96 pieces is <b>$39.95</b>, more than the 252-piece at $38.95. That inversion is deliberate &mdash; the small one costs us more.",""],
+    ["25","Poster &mdash; smallest and largest","9&times;11 at $11.95 and 24&times;36 at $34.95.",""],
     ["26","Suitcase","Most expensive item we carry, from <b>$169.95</b>.",""]
   ],
   s6:[
     ["27","Finish a mockup, then close it with the <b>&times;</b> &mdash; not Return","<b>What's Next?</b> must still appear. Until today the &times; threw away the only route to checkout.","fixed"],
     ["28","Look at the product picker","Every tile shows a price. <b>Card</b> and <b>Post-it</b> say &ldquo;Art only &mdash; not yet orderable&rdquo;, because they cannot be bought.","fixed"],
-    ["29","Pick a product, go back, pick a different one","You reported this freezes. I have not reproduced it yet &mdash; tell me which product you started from and which you switched to.","known"],
+    ["29","Pick a product, go back, pick a different one","Reproduced and fixed: the rail spotlights were locking the whole page, not just dimming it. Switching products mid-flow works now, and going back two steps clears choices the new pick can't honour.","fixed"],
     ["30","Reset All Settings &amp; Images","Everything clears, and the next design does not carry any of the previous one's artwork.",""]
   ]
 };
