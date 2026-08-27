@@ -183,7 +183,10 @@ scenarios.mugWraparoundFallsBackOnOutage = async (page, log) => {
   await waitSeamFix(page);
   const pano = panoramaCalls(log);
   const plain = plainGenCalls(log);
-  if (pano !== 1) return `FAIL: expected 1 attempted panorama call, saw ${pano}`;
+  // A 502 is transient, so it is RETRIED before the fallback runs. Three of
+  // four probe calls came back 503 in real testing; falling back on the first
+  // one would hand most customers the drifting-seam path on a merely busy day.
+  if (pano !== 3) return `FAIL: a transient 502 should be retried to 3 attempts, saw ${pano}`;
   if (plain < 3) return `FAIL: panorama failed but only ${plain} per-panel call(s) followed — the fallback did not run`;
   const s = await page.evaluate(() => ({
     method: lastWraparoundMethod,
@@ -208,9 +211,13 @@ scenarios.mugWraparoundOutOfCreditsDoesNotRetry = async (page, log) => {
   await T(page, 2500);
   const plain = plainGenCalls(log);
   if (plain > 0) return `FAIL: a 403 (out of credits) fell through to ${plain} per-panel generate call(s) — that path charges again`;
+  // A 403 is an ANSWER, not a busy signal. Retrying it would hammer the
+  // endpoint on behalf of someone who simply has no credits left.
+  const panoTries = panoramaCalls(log);
+  if (panoTries !== 1) return `FAIL: out of credits was retried ${panoTries} times — 403 is not transient`;
   const standby = await page.evaluate(() => document.getElementById('wraparoundStandbyPrompt')?.style.display);
   if (standby === 'block') return 'FAIL: left spinning on "Please Stand By" after being told they are out of credits';
-  return 'PASS: out of credits stops cleanly — no second generation attempted';
+  return 'PASS: out of credits stops cleanly — not retried, no second generation attempted';
 };
 
 // ---- 6. Three Panels is untouched: no panorama call, props still offered. ----

@@ -9733,23 +9733,52 @@ Use rich environmental storytelling while keeping the face as the primary focal 
       setStatus('Painting your wraparound as one continuous scene...');
 
       currentGenerationController=new AbortController();
-      let panoramaResp;
-      try{
-        panoramaResp=await fetch('/api/generate',{
-          method:'POST',
-          headers:{'Content-Type':'application/json'},
-          body:JSON.stringify({action:'wraparoundPanorama',image:workingImage,prompt,deviceId,refImageA:refASnapshot,refImageB:refBSnapshot}),
-          signal:currentGenerationController.signal
-        });
-      }catch(abortErr){
-        if(abortErr.name==='AbortError'){
+
+      // RETRY BEFORE FALLING BACK (Aug 2026). Measured, not assumed: three of
+      // four probe calls came back 503 "This model is currently experiencing
+      // high demand" within a couple of minutes of each other. Falling back on
+      // the first 503 would have quietly handed most customers the per-panel
+      // path -- the one with the drifting seams the panorama exists to fix --
+      // on a day when Gemini was merely busy rather than broken.
+      //
+      // Free to the customer: the endpoint only calls deductOneToken() AFTER a
+      // successful generation, so a 503 costs no credit and a retry is not a
+      // second charge. Retries are deliberately limited to transient statuses;
+      // a 403 (out of credits) or a 400 (bad request) is answered, not busy,
+      // and retrying either would be wrong.
+      const PANORAMA_RETRY_STATUSES=[429,500,502,503,504];
+      const PANORAMA_MAX_ATTEMPTS=3;
+      let panoramaResp=null,parsedPanorama=null;
+
+      for(let attempt=1;attempt<=PANORAMA_MAX_ATTEMPTS;attempt++){
+        try{
+          panoramaResp=await fetch('/api/generate',{
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({action:'wraparoundPanorama',image:workingImage,prompt,deviceId,refImageA:refASnapshot,refImageB:refBSnapshot}),
+            signal:currentGenerationController.signal
+          });
+        }catch(abortErr){
+          if(abortErr.name==='AbortError'){
+            document.getElementById('wraparoundStandbyPrompt').style.display='none';
+            return;
+          }
+          throw abortErr;
+        }
+
+        parsedPanorama=await panoramaResp.json();
+        if(panoramaResp.ok)break;
+        if(!PANORAMA_RETRY_STATUSES.includes(panoramaResp.status))break;
+        if(attempt===PANORAMA_MAX_ATTEMPTS)break;
+
+        setStatus('The art service is busy — trying again ('+attempt+' of '+(PANORAMA_MAX_ATTEMPTS-1)+')...');
+        await new Promise(r=>setTimeout(r,2000*attempt));
+        if(currentGenerationController.signal.aborted){
           document.getElementById('wraparoundStandbyPrompt').style.display='none';
           return;
         }
-        throw abortErr;
+        setStatus('Painting your wraparound as one continuous scene...');
       }
-
-      const parsedPanorama=await panoramaResp.json();
       if(panoramaResp.ok){
         panoramaData=parsedPanorama;
       } else if(panoramaResp.status===403){
