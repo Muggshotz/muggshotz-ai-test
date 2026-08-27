@@ -4163,6 +4163,43 @@ function pickMugPrintMode(mode){
   }
 }
 
+// MEASURED WRAP RATIOS (Aug 2026), pulled live from Printify's
+// catalog/blueprints/<bp>/print_providers/<prov>/variants.json, not
+// guessed from the product photos. "Travel cup" is not one shape:
+//
+//   20oz        bp 353   2795 x 2100   1.33:1
+//   32oz Gator  bp 1235  3384 x 1937   1.75:1
+//   14oz handle bp 1160  1995 x  930   2.15:1
+//   30oz Tundra bp 1662  3634 x 1039   3.50:1
+//   coffee mug           2475 x 1155   2.14:1
+//
+// This matters because the panorama prompt places the subject inside the
+// CENTER THIRD of the image. At ratio R that third is R/3 : 1 -- a
+// workable portrait frame at 2.14 (0.71:1), a useless vertical sliver at
+// 1.33 (0.44:1). Asking Gemini for 21:9 and letterboxing it into a 4:3
+// wrap would leave the art occupying barely half the height of a 20oz.
+//
+// So the panorama serves only wraps that are actually panoramic. The
+// narrow ones keep the single-image path they already had, which asks
+// for 1536x1024 (1.5:1) -- closer to 1.33 and 1.75 than 2.33 ever gets.
+// Same principle as the 40oz insulated's exclusion: a fact about the cup,
+// not about the generator.
+const PANORAMA_MIN_WRAP_RATIO = 2.0;
+const TRAVEL_WRAP_RATIO = {
+  'travel-mug-20oz': 1.33,
+  'travel-mug-32oz-gator': 1.75,
+  'travel-mug-14oz-handle': 2.15,
+  'travel-mug-30oz-tundra': 3.50,
+  'travel-mug-40oz-insulated': 0.69
+};
+
+function wrapIsPanoramic(){
+  if(product==='mug')return true;
+  if(product!=='water bottle')return false;
+  const ratio=TRAVEL_WRAP_RATIO[preGenTravelVariant];
+  return typeof ratio==='number' && ratio>=PANORAMA_MIN_WRAP_RATIO;
+}
+
 // UPDATED (Aug 2026, Alyx's request): reordered so travel cups pick
 // their variant BEFORE print style -- the 40oz's variant determines that
 // Wraparound was never actually a valid option for it, so instead of
@@ -9684,7 +9721,7 @@ Use rich environmental storytelling while keeping the face as the primary focal 
     // print-style card -- it splits a single image into front and back
     // halves through its own path below, and its handle means it never
     // had a continuous surface to wrap in the first place.
-    const usePanorama = isWraparoundActive && !is40ozWraparoundSplit;
+    const usePanorama = isWraparoundActive && !is40ozWraparoundSplit && wrapIsPanoramic();
     let panoramaData = null;
     if(usePanorama){
       document.getElementById('approveRow').style.display='none';

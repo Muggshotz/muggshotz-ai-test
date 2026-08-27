@@ -190,6 +190,24 @@ for us in the box above"* — and the box above was collapsed to zero height, of
 **mugs only**. Travel-cup wraparound carries no surcharge (it is one image either way, so it costs
 no more to make). Not touched; flagged for Alyx if they want it revisited.
 
+**"Travel cup" is not one shape.** Measured live from Printify's placeholders, not guessed:
+
+| cup | print area | ratio | engine |
+|---|---|---|---|
+| 20oz (bp 353) | 2795x2100 | 1.33:1 | single-image (1.5:1) |
+| 32oz Gator (bp 1235) | 3384x1937 | 1.75:1 | single-image (1.5:1) |
+| 14oz handle (bp 1160) | 1995x930 | 2.15:1 | **panorama** |
+| 30oz Tundra (bp 1662) | 3634x1039 | 3.50:1 | **panorama** |
+| coffee mug | 2475x1155 | 2.14:1 | **panorama** (three thirds) |
+
+The panorama prompt places the subject in the **centre third**, so at ratio R that third is `R/3 : 1`
+— a workable portrait frame at 2.15 (0.72:1), a useless vertical sliver at 1.33 (0.44:1). A 21:9
+image letterboxed into a 4:3 wrap would also leave the art on barely half the cup's height. So
+`wrapIsPanoramic()` gates the panorama at `PANORAMA_MIN_WRAP_RATIO = 2.0`; narrower wraps keep the
+single-image path they already had. **Wraparound is still offered on every one of them** — only the
+engine differs, which is not something a customer can see. `verify-wraparound.js` pins both the
+ratio table and the threshold, so an edit by eye fails before a customer gets a letterboxed cup.
+
 **Known limit, not yet addressed:** Gemini returns roughly 1536x672 for the whole panorama, so a
 mug panel arrives ~512x672 against a ~825x1155 print slot. `buildWraparoundImage()` already
 lanczos-upscales into the print canvas, so adding a second upscale in `generate.js` would only

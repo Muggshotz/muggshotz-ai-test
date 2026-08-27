@@ -232,14 +232,16 @@ scenarios.mugThreePanelUnaffected = async (page, log) => {
 };
 
 // ---- 7. Travel cups: card returns, and Wraparound takes the UNCUT panorama. ----
+// Driven on the 14oz (2.15:1), a genuinely panoramic wrap. See scenario 9
+// for why the 20oz deliberately does NOT come down this path.
 scenarios.travelWraparoundUsesUncutPanorama = async (page, log, mockupBodies) => {
   await pickProduct(page, 'water bottle');
-  await page.evaluate(() => pickPreGenTravelVariant('travel-mug-20oz'));
+  await page.evaluate(() => pickPreGenTravelVariant('travel-mug-14oz-handle'));
   await T(page, 1000);
   await dismissAlerts(page);
   const st = await cardVisible(page, 'mugPrintModeCard');
   if (st.display === 'none' || st.height === 0)
-    return `FAIL: Print Style card still hidden for the 20oz (display=${st.display}) — travel cups never got unshelved`;
+    return `FAIL: Print Style card still hidden for the 14oz (display=${st.display}) — travel cups never got unshelved`;
 
   await page.evaluate(() => pickMugPrintMode('wraparound'));
   await T(page, 1000);
@@ -261,11 +263,63 @@ scenarios.travelWraparoundUsesUncutPanorama = async (page, log, mockupBodies) =>
   await T(page, 7000);
   const start = mockupBodies.find(b => b && b.action === 'start');
   if (!start) return 'FAIL: no start-mockup fired after a travel-cup wraparound';
-  if (start.productKey !== 'travel-mug-20oz') return `FAIL: productKey=${start.productKey}`;
+  if (start.productKey !== 'travel-mug-14oz-handle') return `FAIL: productKey=${start.productKey}`;
   if (!start.image) return 'FAIL: single-image body carries no image — the uncut panorama never reached the order';
   if (start.frontImage || start.backImage)
     return 'FAIL: travel cup sent a front/back split — that is the 40oz shape, not a continuous wrap';
   return 'PASS: travel-cup Wraparound = 1 panorama call, one uncut image, single-image order body';
+};
+
+// ---- 9. Narrow wraps do NOT get the panorama, and that is the point. ----
+// The panorama prompt puts the subject in the CENTER THIRD. At ratio R
+// that third is R/3 : 1 -- fine at 2.15 (0.72:1), a useless sliver at 1.33
+// (0.44:1). A 21:9 image letterboxed into a 4:3 wrap would also leave the
+// art on barely half the cup's height. These cups keep the single-image
+// path they already had, which asks for 1.5:1 -- closer to 1.33 and 1.75
+// than 2.33 ever gets. Wraparound is still OFFERED on them; only the
+// engine behind it differs, which is not something a customer can see.
+const NARROW = { 'travel-mug-20oz': '1.33:1', 'travel-mug-32oz-gator': '1.75:1' };
+for (const [key, ratio] of Object.entries(NARROW)) {
+  scenarios['narrowWrapSkipsPanorama_' + key.replace(/-/g, '_')] = async (page, log) => {
+    await pickProduct(page, 'water bottle');
+    await page.evaluate((k) => pickPreGenTravelVariant(k), key);
+    await T(page, 1000);
+    await dismissAlerts(page);
+    const st = await cardVisible(page, 'mugPrintModeCard');
+    if (st.display === 'none' || st.height === 0)
+      return `FAIL: ${key} lost the Wraparound option entirely — it has a full wrap, just a narrow one`;
+    await page.evaluate(() => pickMugPrintMode('wraparound'));
+    await T(page, 1000);
+    await dismissAlerts(page);
+    if (await page.evaluate(() => wrapIsPanoramic()))
+      return `FAIL: ${key} (${ratio}) is classed as panoramic — its centre third would be a sliver`;
+    await describeAndGenerate(page, 'a wide desert canyon at sunrise');
+    await waitApprove(page);
+    if (panoramaCalls(log) !== 0)
+      return `FAIL: ${key} (${ratio}) fired a 21:9 panorama call anyway`;
+    if (plainGenCalls(log) !== 1)
+      return `FAIL: ${key} expected exactly 1 single-image generate call, saw ${plainGenCalls(log)}`;
+    return `PASS: ${key} (${ratio}) keeps the single-image path — no 21:9 letterbox`;
+  };
+}
+
+// The ratio table is measured from Printify, not guessed. If someone edits
+// it by eye, this catches it before a customer gets a letterboxed cup.
+scenarios.wrapRatiosMatchPrintify = async (page) => {
+  const MEASURED = {
+    'travel-mug-20oz': 1.33,
+    'travel-mug-32oz-gator': 1.75,
+    'travel-mug-14oz-handle': 2.15,
+    'travel-mug-30oz-tundra': 3.50,
+  };
+  const table = await page.evaluate(() => TRAVEL_WRAP_RATIO);
+  for (const [k, v] of Object.entries(MEASURED)) {
+    if (Math.abs((table[k] ?? -1) - v) > 0.01)
+      return `FAIL: ${k} ratio is ${table[k]}, Printify's placeholders say ${v}`;
+  }
+  const min = await page.evaluate(() => PANORAMA_MIN_WRAP_RATIO);
+  if (min !== 2.0) return `FAIL: panorama threshold moved to ${min} — recheck the centre-third maths before changing it`;
+  return 'PASS: wrap ratios match Printify\'s measured placeholders, threshold intact';
 };
 
 // ---- 8. The 40oz is still excluded, and for its own reason. ----
