@@ -8327,9 +8327,41 @@ async function enterRevealStage(){
     // here now, before the frame offer, so edges are settled while the
     // picture is on screen and frames are chosen after.
     openFrameFadeOverlay();
+  } else if(lastWraparoundMethod==='panorama'){
+    // NO SEAMS TO FIX ON A PANORAMA. Alyx: "Why have we still got the Fix
+    // the Seams tool in mugs for wrap around? I thought they were supposed
+    // to be doing it as one just big panel now?" Correct, and the card was
+    // arguing against itself -- its own label read "these panels should
+    // already line up exactly" above sliders offering to fix the alignment.
+    //
+    // They line up because the cut is exact. api/generate.js slices the one
+    // Gemini panorama at [0, third), [third, 2*third) and [2*third, full],
+    // adjacent, non-overlapping and covering every column, so stitching the
+    // three back together reproduces the original pixel for pixel. Zero is
+    // not merely the sensible default here, it is the only correct value:
+    // the overlap sliders crop pixels away to hide a mismatch, and with no
+    // mismatch to hide they can only introduce one.
+    //
+    // The screen stays for the classic path, which really does generate
+    // three independent images and really can misalign -- that is the
+    // fallback when the panorama call fails, so this is a skip and not a
+    // deletion.
+    resetSeamAdjustments();
+    showAccessorizeChoiceState();
   } else {
     openSeamFixOverlay();
   }
+}
+
+// Every seam value back to zero. These are module-level and feed the FINAL
+// print files downstream (stitchThreePanelsRaw at render time), so a customer
+// who nudged the sliders on a classic wraparound and then made a second
+// design that went down the panorama path would otherwise carry those
+// offsets into artwork that never needed them.
+function resetSeamAdjustments(){
+  seamLeftOverlapPx=0;seamRightOverlapPx=0;
+  seamLeftVertPx=0;seamRightVertPx=0;
+  seamLeftCoveragePct=0;seamRightCoveragePct=0;
 }
 
 let seamRawLeftUrl=null,seamRawCenterUrl=null,seamRawRightUrl=null;

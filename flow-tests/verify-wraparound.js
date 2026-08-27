@@ -91,6 +91,20 @@ const waitSeamFix = (page, t = 120000) =>
     return o && getComputedStyle(o).display !== 'none';
   }, null, { timeout: t });
 
+// The panorama path no longer stops at Fix the Seams (there is nothing to
+// fix on an exact cut), so a test that waits for that overlay would hang on
+// the very path it is meant to check. This waits for the wraparound to LAND,
+// on whichever screen it lands on.
+const waitWrapDone = (page, t = 120000) =>
+  page.waitForFunction(() => {
+    const shown = (id) => {
+      const el = document.getElementById(id);
+      return el && getComputedStyle(el).display !== 'none';
+    };
+    return shown('seamFixOverlay') || shown('accessorizeCard') ||
+           shown('frameFadeOverlay') || shown('approveRow');
+  }, null, { timeout: t });
+
 const waitApprove = (page, t = 120000) =>
   page.waitForFunction(() => document.getElementById('approveRow')?.style.display !== 'none', null, { timeout: t });
 
@@ -157,7 +171,8 @@ scenarios.mugWraparoundUsesPanorama = async (page, log) => {
   await T(page, 1200);
   await dismissAlerts(page);
   await describeAndGenerate(page, 'a wide desert canyon at sunrise');
-  await waitSeamFix(page);
+  await waitWrapDone(page);
+  await T(page, 1200);
   const pano = panoramaCalls(log);
   const plain = plainGenCalls(log);
   if (pano !== 1) return `FAIL: expected exactly 1 wraparoundPanorama call, saw ${pano}`;
@@ -165,12 +180,20 @@ scenarios.mugWraparoundUsesPanorama = async (page, log) => {
   const s = await page.evaluate(() => ({
     method: lastWraparoundMethod,
     left: !!placements.left, front: !!placements.front, right: !!placements.right,
-    label: document.getElementById('seamFixMethodLabel')?.textContent || '',
+    seamShown: getComputedStyle(document.getElementById('seamFixOverlay')).display !== 'none',
+    seams: [seamLeftOverlapPx, seamRightOverlapPx, seamLeftVertPx,
+            seamRightVertPx, seamLeftCoveragePct, seamRightCoveragePct],
   }));
   if (s.method !== 'panorama') return `FAIL: lastWraparoundMethod=${s.method}`;
   if (!s.left || !s.front || !s.right) return `FAIL: panels missing (l=${s.left} c=${s.front} r=${s.right})`;
-  if (!/single image/i.test(s.label)) return `FAIL: Fix the Seams still labels this as three separate images: "${s.label}"`;
-  return 'PASS: mug Wraparound = 1 panorama call, 3 aligned panels, labelled as one sliced image';
+  // Alyx: "Why have we still got the Fix the Seams tool in mugs for wrap
+  // around? I thought they were supposed to be doing it as one just big
+  // panel now?" The cut is exact, so there is no seam and no screen.
+  if (s.seamShown)
+    return 'FAIL: Fix the Seams still opens on the panorama path — the cut is exact, so its sliders can only introduce a mismatch, not repair one';
+  if (s.seams.some(v => v !== 0))
+    return `FAIL: seam offsets carried into a panorama render: ${JSON.stringify(s.seams)} — these feed the final print files`;
+  return 'PASS: mug Wraparound = 1 panorama call, 3 aligned panels, and no Fix the Seams screen';
 };
 
 // ---- 4. Panorama outage falls back to per-panel rather than dead-ending. ----
