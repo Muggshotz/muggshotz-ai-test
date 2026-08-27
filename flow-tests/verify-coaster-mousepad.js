@@ -127,9 +127,15 @@ scenarios.puzzleFlipStaysReverted = async (page) => {
   const p96 = tiles.find(t => t.size === '96 pcs');
   const p252 = tiles.find(t => t.size === '252 pcs');
   if (!p96 || !p252) return 'FAIL: puzzle tiles missing';
-  if (p96.price !== 40.95) return `FAIL: 96 pcs is $${p96.price}, expected $40.95 (costs $35.07 to make)`;
+  if (p96.price !== 39.95) return `FAIL: 96 pcs is $${p96.price}, expected $39.95 (costs $35.07 to make)`;
   if (p252.price !== 38.95) return `FAIL: 252 pcs is $${p252.price}, expected $38.95 (costs $33.62 to make)`;
-  return 'PASS: puzzle ladder tracks wholesale cost again (96=$40.95, 252=$38.95)';
+  // The POINT of this check is the inversion, not the literal figures: 96 pcs
+  // must stay dearer than 252 pcs because it genuinely costs more to make.
+  // Pinning only the numbers would let a future edit flip them and still pass
+  // if it happened to edit this line too.
+  if (!(p96.price > p252.price))
+    return `FAIL: 96 pcs ($${p96.price}) is no longer dearer than 252 pcs ($${p252.price}) — the flip is back`;
+  return 'PASS: puzzle ladder tracks wholesale cost again (96=$39.95 > 252=$38.95)';
 };
 
 (async () => {

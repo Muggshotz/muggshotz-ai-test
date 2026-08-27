@@ -44,7 +44,7 @@ const scenarios = {
     // -- short runs are dearer -- so the 96-piece puzzle is legitimately the
     // dearer of the two. These were briefly flipped on the assumption that a
     // bigger puzzle costing less had to be a mistake; it was not.
-    const want = [['96 pcs', 40.95], ['252 pcs', 38.95], ['500 pcs', 43.95], ['1000 pcs', 43.95]];
+    const want = [['96 pcs', 39.95], ['252 pcs', 38.95], ['500 pcs', 43.95], ['1000 pcs', 43.95]];
     if (tiles.length !== 4) return `FAIL: expected 4 tiles, got ${tiles.length}`;
     for (let i = 0; i < 4; i++) {
       if (tiles[i].size !== want[i][0] || tiles[i].price !== want[i][1])

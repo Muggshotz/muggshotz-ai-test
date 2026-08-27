@@ -115,7 +115,7 @@ combination: the fee scales with price, the margin does not.
 | phone case (5/5s, 6/6s, S6) | $15.77–$17.87 | $19.95 | $2.08–$4.18 |
 | coasters, set of 4 | $19.79 | $29.95 | $10.16 |
 | mouse pad 9x8 | $4.88 | $9.95 | $5.07 |
-| puzzle 96 / 252 / 500 / 1000 | $35.07 / $33.62 / $38.29 | $40.95 / $38.95 / $43.95 | ~$5.33–$5.88 |
+| puzzle 96 / 252 / 500 / 1000 | $35.07 / $33.62 / $38.29 | $39.95 / $38.95 / $43.95 | ~$4.88–$5.66 |
 | poster 9x11 → 11x14 | $5.64–$9.98 | $11.95–$14.95 | $4.97–$6.31 |
 | poster 16x20 / 18x24 / 24x36 | $16.18 / $20.18 / $32.21 | $19.95 / $24.95 / $34.95 | $3.77 / $4.77 / **$2.74** |
 | suitcase S / M / L | $144.93 / $162.64 / $180.35 | $169.95 / $194.95 / $214.95 | $25.02 / $32.31 / $34.60 |
@@ -126,6 +126,28 @@ combination: the fee scales with price, the margin does not.
 - Puzzle: 96 pcs costs MORE than 252 pcs ($35.07 vs $33.62) — short runs are dearer. This was
   flipped once today on the assumption it was an error; the probe disproved it and it was reverted.
 - Poster: 11x17 ($7.97) costs less than the smaller 11x14 ($9.98).
+
+### The pricing rule, in full (2026-08-27) — three passes got this wrong
+1. **It governs the PRESENTED price** — the number on the tile a customer reads and compares.
+   *"We don't care what the price ends up at, we care what the price is PRESENTED at. The final
+   penny count occurs after the sale is made."* Shipping and tax land where they land and must
+   **never** be reverse-engineered into a product price.
+2. **The .95 lands JUST UNDER a threshold** — a multiple of 5, or a "9" price point. It is not
+   "round to the nearest .95" and it is emphatically **not "round up"**: *"you would have rounded
+   it DOWN to 24.95, so that it can come in under $25. Which is a hard limit for some gifts."*
+   A $25.95 price is **strictly worse** than $24.95 despite being larger — it costs the sale.
+3. **Net margin is an outcome, not an input.** Do not derive a price from it.
+4. **A drop must not collapse a size ladder.** This kills most candidates: dropping Classic White
+   15oz to $14.95 collides with its own 11oz, Color Pop 15oz to $19.95 collides with its 11oz, and
+   tote 18x18 to $24.95 collides with its 16x16. Two sizes at one price means the larger one is
+   free money thrown away. **Check the whole ladder before applying the threshold rule.**
+
+**Audited catalog-wide 2026-08-27.** Only `photo-puzzle` 96 pcs was both over a threshold and safe
+to drop: $40.95 → **$39.95** (unique price, inversion intact, costs $1.00 of margin). Still over a
+line but deliberately left, each for a ladder collision or a thin margin: tote 18x18 $25.95,
+Color Pop 15oz $21.95, Classic White 15oz $16.95, poster 9x11 $11.95. **Flagged for Alyx, not
+changed** — a tote restructure (19.95 / 22.95 / 24.95) would clear $25 while keeping a ladder, but
+that is a pricing decision, not a cleanup.
 
 **Alyx's pricing philosophy:** *"I am not greedy… a quality product at a fair price."* Too much
 margin hurts affordability and desirability. The app runs on its own steam, so every sale is
