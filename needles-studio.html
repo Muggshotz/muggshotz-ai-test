@@ -4760,15 +4760,15 @@ function pickPreGenMugSize(size){
 // Blue at 11oz), since this thumbnail's job is showing the style's
 // general look, not a size-accurate color availability.
 const PRE_GEN_MUG_STYLE_THUMBNAILS = {
-  // Printify's own blueprint photo for bp 478 (Ceramic Mug, 11/15oz), saved
-  // locally rather than hotlinked. There had never been a style-classic-white
-  // asset, which is the likeliest reason this style quietly left the grid --
-  // the grid renders a thumbnail per style and this one had none.
+  // Alyx's own shot, matching the other three tiles: one mug, pure white
+  // ground, handle right. (Replaced a two-mug Printify stock photo that was
+  // standing in because no style-classic-white asset had ever existed -- the
+  // grid renders a thumbnail per style, and that missing image is the likeliest
+  // reason this style quietly left the grid in the first place.)
   //
-  // It shows both sizes together (tall thin 15oz behind, fat 11oz in front)
-  // where the other three tiles are single mugs on pure white, so it is not a
-  // perfect stylistic match. Alyx has proper single-mug shots of both sizes;
-  // dropping one in over this exact filename is the whole swap.
+  // Generic on purpose: SIZE is chosen before this card is ever shown, so the
+  // tile only has to say "plain white mug". Per-size artwork belongs in
+  // MUG_MOCKUP_PHOTOS, and is NOT wired yet -- see the note there.
   "Classic White": "style-classic-white.jpg",
   "Trimmed": "style-trimmed.jpg",
   "Accented": "style-accented.jpg",

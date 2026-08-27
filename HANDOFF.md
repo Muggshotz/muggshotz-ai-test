@@ -484,9 +484,24 @@ with itself. That is exactly what a cross-table check is for, and `verify-mug-st
 **Two things had to be fixed for it to work, and both are probably why it was dropped rather than
 repaired:**
 - **No thumbnail.** The grid renders one image per style and there had never been a
-  `style-classic-white` asset. Now `style-classic-white.jpg` — Printify's own bp 478 photo, saved
-  locally. It shows both sizes together where the other three tiles are single mugs on white, so
-  **Alyx has better shots; dropping one in over that exact filename is the whole swap.**
+  `style-classic-white` asset. Now `style-classic-white.jpg`, from Alyx's own photo — one mug, pure
+  white ground, handle right, matching the other three tiles. Generic on purpose: size is chosen
+  *before* this card appears, so the tile only has to say "plain white mug".
+
+**OPEN — the two uploaded mug photos appear to be mislabelled.** `White 11 ounce.png` and
+`White 15 ounce.png` are in the repo, but measured body proportions say the names are swapped:
+
+| file | body H ÷ W | shape |
+|---|---|---|
+| `White 11 ounce.png` | **1.575** | taller, narrower |
+| `White 15 ounce.png` | **1.351** | shorter, wider |
+
+Alyx's own description was *"the thinner one is the 15 ounce and the fatter one is the 11 ounce"* —
+which makes the **thin** one (1.575) the 15oz, i.e. the file named `White 11 ounce.png`. Real specs
+agree: an 11oz is ~3.7" on a 3.2" body, a 15oz ~4.5" on 3.4", so the 15oz is proportionally taller.
+**`MUG_MOCKUP_PHOTOS` has deliberately NOT been given Classic White entries until this is settled** —
+wiring it backwards would show an 11oz mug to someone who picked 15oz. The style tile is unaffected
+because it is generic.
 - **No colours.** Classic White is plain white, and the "Satisfied — Continue" button was revealed
   only by `pickPreGenMugColor()`, which can never fire without a colour grid. Choosing it left the
   customer on a card **with nothing to click**. `renderPreGenMugColorGrid()` now treats "nothing to
