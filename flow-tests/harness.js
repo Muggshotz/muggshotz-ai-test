@@ -45,10 +45,24 @@ async function launch(opts = {}) {
     if (p === '/api/generate') {
       await new Promise((r) => setTimeout(r, genDelayMs));
       if (body.action === 'wraparoundPanorama') {
+        // panoramaUrl is the whole uncut wide image -- travel cups take
+        // that one, coffee mugs take the three thirds. Both shapes come
+        // back from the same call, so both must be stubbed here or the
+        // travel-cup wraparound path throws "No panorama image returned."
+        if (opts.panoramaFails) {
+          return route.fulfill({ status: 502, json: { error: 'stubbed panorama outage' } });
+        }
+        // 403 is NOT an outage: it means the customer is out of credits, and
+        // it must stop the flow rather than fall through to the per-panel
+        // path, which would generate (and charge) a second time.
+        if (opts.panoramaOutOfCredits) {
+          return route.fulfill({ status: 403, json: { error: "You're out of free tokens." } });
+        }
         return route.fulfill({ json: {
           leftUrl: `${BASE}/__fake/generated.jpg`,
           centerUrl: `${BASE}/__fake/generated.jpg`,
           rightUrl: `${BASE}/__fake/generated.jpg`,
+          panoramaUrl: `${BASE}/__fake/generated.jpg`,
         }});
       }
       return route.fulfill({ json: { imageUrl: `${BASE}/__fake/generated.jpg` } });

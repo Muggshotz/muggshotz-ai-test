@@ -25,6 +25,22 @@ async function driveVariant(page, mockupBodies, key) {
   await page.evaluate((k) => pickPreGenTravelVariant(k), key);
   await page.waitForTimeout(900);
 
+  // UPDATED (Aug 2026): Wraparound is unshelved, so every variant except
+  // the 40oz now stops at the Print Style card first -- with the one-time
+  // "pick your print format" modal in front of it, which swallowed the
+  // Generate click and produced four bogus timeouts here. Not a weakened
+  // assertion: this suite is about variant -> productKey/sizeLabel/body
+  // shape, so it takes the default (Three Panels) explicitly and leaves
+  // Wraparound's own behaviour to verify-wraparound.js.
+  await dismissAlerts(page);
+  await page.waitForTimeout(300);
+  await page.evaluate(() => {
+    const card = document.getElementById('mugPrintModeCard');
+    if (card && card.style.display !== 'none') pickMugPrintMode('three-panel');
+  });
+  await page.waitForTimeout(600);
+  await dismissAlerts(page);
+
   // Pick a colour if this variant offers one.
   const picked = await page.evaluate(() => {
     const card = document.getElementById('travelMugColorCard');
