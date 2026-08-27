@@ -40,7 +40,7 @@ Working. The sandbox reaches `muggshotz-ai-test.vercel.app` directly.
   obvious. **Never move this to the GET relay** — catalog GETs need no auth, so that would publish
   wholesale pricing to anyone who found the URL.
 
-## Testing (`flow-tests/`) — 15 suites
+## Testing (`flow-tests/`) — 16 suites
 Serve the repo first: `python3 -m http.server 8788 --directory <repo> --bind 127.0.0.1`.
 Chromium is preinstalled at `/opt/pw-browsers/chromium` — use `executablePath`, do NOT
 `playwright install`. `npm install playwright` in a scratch dir and copy the harness there.
@@ -57,6 +57,7 @@ four ERR_CONNECTION_RESET console errors per run that look like a product fault 
 | `verify-auto-mockup.js` | every single-image product fetches its mockup on approve |
 | `verify-idea-confirm.js` | description confirm goes forward; stage never veiled |
 | `verify-gimmick-gate.js` | gimmicks limited to mug + travel cup |
+| `verify-cache-purge.js` | stale design slots cannot survive a page load into a print job; Recall still works by click; the order-page return is exempt |
 | `verify-style-panel.js` | Art Style's rail position + spotlight + handoff; the chosen style reaches the WIRE on every generation path; the default const matches the tile byte-for-byte; all six styles present |
 | `verify-wraparound.js` | Wraparound on both rails: panorama vs per-panel engine, outage fallback, 403 no-retry, mug thirds vs travel-cup uncut, 40oz exclusion |
 | `verify-price-parity.js` | **no browser** — order.html vs catalog price drift. **Run it from the repo root** (`node flow-tests/verify-price-parity.js`), not from the scratch copy: it reads `order.html` and `lib/products-catalog.js` by relative path and ENOENTs anywhere else. |
@@ -66,6 +67,10 @@ four ERR_CONNECTION_RESET console errors per run that look like a product fault 
 were missing before, which made the whole harness unrunnable from a fresh clone.
 
 **Gotchas that produce false failures:**
+- `verify-price-parity.js` must run from the REPO ROOT, not the scratch copy the browser suites run
+  from — it reads `order.html` and `lib/products-catalog.js` by relative path. Tripped over twice in
+  one session even after being documented; if a sweep exits non-zero with every browser suite green,
+  check this first.
 - `resetEverythingFreshStart()` opens a `window.confirm()`. Playwright auto-DISMISSES dialogs, so
   a reset test must `page.once('dialog', d => d.accept())` first.
 - `page.fill('#ideaDesc')` FOCUSES the textarea, which fires `showIdeaBoxIntroIfNeeded()` — a
@@ -361,6 +366,29 @@ explicitly: the likeness rules elsewhere insist on eyes, and a silhouette has no
 from a shortlist; runners-up were "Neck of the Woods" and "Village People". Before building it, test
 whether it reproduces consistently: it is the highest-variance style of the set by a distance, and it
 fights the likeness rules hardest (a face made of cottages has no skin tone and no skin texture).
+
+## Nothing is auto-restored from localStorage any more (2026-08-27)
+Alyx built a superhero-in-an-airport image, went to mock it up, and the mockup came back carrying a
+**different, older picture from a previous session** — never offered, never chosen. The piece was lost.
+
+`restoreMugLibrary()` ran on every page load and rehydrated **`placements`** — the left/centre/right
+print slots — out of `muggshotz_mug_state`. `buildMockupRequestBody()` reads `placements` directly.
+So a slot filled days earlier sat **live and invisible**, and any flow that didn't overwrite that
+exact slot shipped the old image to Printify. A `?v=` bump does nothing — this is browser storage,
+not a page cache.
+
+`purgeStaleSessionOnEntry()` now clears `muggshotz_mug_state`, `muggshotz_workshop` and
+`muggshotz_pending_order` **and** the in-memory arrays (clearing storage alone leaves the same stale
+slots live for the page's life). Two deliberate carve-outs:
+- **`muggshotz_device_id` is never touched** — identity and token balance, not content. Wiping it
+  zeroes the customer's credits and orphans any top-up.
+- **Returning from order.html is exempt** (`muggshotz_return_to_idea`). That's the same session
+  mid-flight; without the exemption, fixing a typo on the order page destroys the design being fixed.
+
+Recall survives as **opt-in only**: the workshop snapshot is *moved* to `muggshotz_workshop_prev`,
+read solely by the Recall buttons through `readWorkshopSnapshot()`. `verify-cache-purge.js` was run
+against the pre-fix build first and reproduced the loss exactly — the mockup request literally
+contained the stale image.
 
 ## Secret sauce (read-only — flag, never edit)
 All AI prompt/description assembly. **Alyx gave an explicit go-ahead on 2026-08-27** to change the
