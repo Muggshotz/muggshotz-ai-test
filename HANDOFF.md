@@ -119,7 +119,7 @@ combination: the fee scales with price, the margin does not.
 | poster 9x11 → 11x14 | $5.64–$9.98 | $11.95–$14.95 | $4.97–$6.31 |
 | poster 16x20 / 18x24 / 24x36 | $16.18 / $20.18 / $32.21 | $19.95 / $24.95 / $34.95 | $3.77 / $4.77 / **$2.74** |
 | suitcase S / M / L | $144.93 / $162.64 / $180.35 | $169.95 / $194.95 / $214.95 | $25.02 / $32.31 / $34.60 |
-| **Vacuum Thermal Tumbler 40oz** | $13.69 | $25.56 | $11.87 (**$10.18 after Stripe**) |
+| **Vacuum Thermal Tumbler 40oz** | $13.69 | $25.95 | $12.26 (**$10.55 after Stripe**) |
 | travel mug 40oz **insulated** | $39.29 | $44.95 | $5.66 (**$3.84 after Stripe**) |
 
 **Two price ladders deliberately DECREASE. Do not "fix" them:**
@@ -151,22 +151,22 @@ The insulated one's handle splits its body into separate faces, which is why it 
 and why no amount of generator work will ever make it wrap. Priced per Alyx: *"just figure to make
 a $9 profit… that way the customer gets a really good bargain."*
 
-**THIS PRODUCT IS PRICED TO THE TOTAL, NOT TO THE TILE.** The 4.95/9.95 ladder is satisfied at
-**checkout**, not on the product price: Alyx prices *what the customer pays*.
+**THE PRICING MODEL, in Alyx's words (2026-08-27), because two passes got it wrong:**
 
-```
-$44.95 customer total  −  $19.39 US shipping  =  $25.56 product price
-```
+> *"We don't care what the price ends up at, we care what the price is PRESENTED at. The final penny
+> count occurs after the sale is made. The 95 versus 39 ending trick is just a psychological
+> manipulation mechanism."*
 
-So `$25.56` is a remainder and is **supposed** to look off-ladder. An earlier pass "corrected" it to
-$25.95 on the theory that the .95 belonged on the tile; Alyx rejected that — *"that's not keeping
-with any pricing scheme I've ever used."* **Do not tidy it back onto the ladder.** Doing so breaks
-the total, which is the number actually being priced.
+So: **round the PRESENTED price — the number on the tile — up to the next .95, and stop.** Shipping
+and tax are added after the sale and land wherever they land. They are not part of the pricing
+decision and must never be reverse-engineered into the product price.
 
-Customer pays **$44.95**, we net **$10.18** — the same total as the insulated 40oz, which nets $3.84.
+Two wrong turns to not repeat: one pass set $25.56 so the US all-in total would read $44.95 (a
+non-.95 price on the tile, and only true for a US customer pre-tax anyway — Canada totals $52.14,
+the EU $46.94); another reasoned from net margin. Net is an outcome, not an input.
 
-Caveat: $44.95 is exact for a US customer pre-tax only. Canada totals $52.14 ($27.19 shipping), the
-EU $46.94, and `automatic_tax` moves it again per state.
+Presented at **$25.95**, we net **$10.55** — comfortably past Alyx's *"$9 profit is enough for one
+item."* The insulated 40oz is presented at $44.95 and nets $3.84.
 
 **Two things still open on it:**
 - **Decoration is `uv`, not sublimation** — a different printer and ink system from every other
