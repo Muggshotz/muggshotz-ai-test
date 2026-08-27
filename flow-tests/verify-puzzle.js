@@ -2,7 +2,7 @@
 // choice → generate → approve → YES → Continue to Order → mockup request
 // carries productKey 'photo-puzzle' + the chosen piece count → lightbox.
 // Mirrors verify-phone-suitcase.js. All /api/* is stubbed by the harness.
-const { launch, openStudio, uploadPhoto, dismissAlerts } = require('./harness');
+const { launch, openStudio, uploadPhoto, dismissAlerts, passFadePage } = require('./harness');
 
 const waitApprove = (page, t = 90000) =>
   page.waitForFunction(() => document.getElementById('approveRow')?.style.display !== 'none', null, { timeout: t });
@@ -83,8 +83,16 @@ const scenarios = {
     await waitApprove(page);
     await page.locator('#approveRow button:has-text("Yes")').first().click();
     await page.waitForTimeout(1500);
-    // The mockup now fires automatically on approve (PRODUCTS_AUTO_MOCKUP);
-    // clicking Continue to Order is no longer how you reach it.
+    // THE FADE PAGE STANDS BETWEEN APPROVE AND THE MOCKUP NOW. Every product
+    // in PRODUCTS_AUTO_MOCKUP routes through maybeOpenFadeBeforeMockup() on
+    // approve, and beginFinalMockupFetch() only runs once the customer
+    // confirms there. This suite predates that page, so it sat waiting for a
+    // start-mockup that was never coming and reported "no start-mockup fired"
+    // as if the product were broken. It is a feature, added on Alyx's request
+    // after reaching a coaster mockup without ever being offered a fade.
+    await passFadePage(page);
+    // The mockup then fires automatically (PRODUCTS_AUTO_MOCKUP); clicking
+    // Continue to Order is no longer how you reach it.
     await page.waitForTimeout(8000);
     const start = mockupBodies.find(b => b && b.action === 'start');
     if (!start) return `FAIL: no start-mockup request fired (bodies=${JSON.stringify(mockupBodies)})`;

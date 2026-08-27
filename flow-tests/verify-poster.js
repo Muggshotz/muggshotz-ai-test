@@ -9,7 +9,7 @@
 // dollar, and retail $61.95 cleared about $2 after Stripe.
 //
 // Printed Simply is Matte-only, so there is no finish choice left either.
-const { launch, openStudio, uploadPhoto, dismissAlerts } = require('./harness');
+const { launch, openStudio, uploadPhoto, dismissAlerts, passFadePage } = require('./harness');
 
 const waitApprove = (page, t = 90000) =>
   page.waitForFunction(() => document.getElementById('approveRow')?.style.display !== 'none', null, { timeout: t });
@@ -87,6 +87,17 @@ const scenarios = {
     await waitApprove(page);
     mockupCalls.length = 0;
     await page.locator('#approveRow button:has-text("Yes")').first().click();
+    await page.waitForTimeout(1500);
+    // THE FADE PAGE STANDS BETWEEN APPROVE AND THE MOCKUP NOW. Every product
+    // in PRODUCTS_AUTO_MOCKUP routes through maybeOpenFadeBeforeMockup() on
+    // approve, and beginFinalMockupFetch() only runs once the customer
+    // confirms there. This suite predates that page, so it sat waiting for a
+    // start-mockup that was never coming and reported "no start-mockup fired"
+    // as if the product were broken. It is a feature, added on Alyx's request
+    // after reaching a coaster mockup without ever being offered a fade.
+    // verify-coaster-mousepad and verify-auto-mockup already do this, which is
+    // why they were the only auto-mockup suites still passing.
+    await passFadePage(page);
     await page.waitForTimeout(9000);
     const start = mockupCalls.find(b => b && b.action === 'start');
     if (!start) return 'FAIL: no mockup fired on approve';

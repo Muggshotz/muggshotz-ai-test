@@ -2,7 +2,7 @@
 // no mockup bridge. Both size AND colour are mandatory: resolveVariant()
 // throws when a size entry carries colors and no colorName is sent, which
 // tote's do -- so the guards here are what keep that off the server.
-const { launch, openStudio, uploadPhoto, dismissAlerts } = require('./harness');
+const { launch, openStudio, uploadPhoto, dismissAlerts, passFadePage } = require('./harness');
 
 const waitApprove = (page, t = 90000) =>
   page.waitForFunction(() => document.getElementById('approveRow')?.style.display !== 'none', null, { timeout: t });
@@ -65,8 +65,18 @@ const scenarios = {
     await waitApprove(page);
     await page.locator('#approveRow button:has-text("Yes")').first().click();
     await page.waitForTimeout(1500);
-    // The mockup now fires automatically on approve (PRODUCTS_AUTO_MOCKUP);
-    // clicking Continue to Order is no longer how you reach it.
+    // THE FADE PAGE STANDS BETWEEN APPROVE AND THE MOCKUP NOW. Every product
+    // in PRODUCTS_AUTO_MOCKUP routes through maybeOpenFadeBeforeMockup() on
+    // approve, and beginFinalMockupFetch() only runs once the customer
+    // confirms there. This suite predates that page, so it sat waiting for a
+    // start-mockup that was never coming and reported "no start-mockup fired"
+    // as if the product were broken. It is a feature, added on Alyx's request
+    // after reaching a coaster mockup without ever being offered a fade.
+    // verify-coaster-mousepad and verify-auto-mockup already do this, which is
+    // why they were the only auto-mockup suites still passing.
+    await passFadePage(page);
+    // The mockup then fires automatically (PRODUCTS_AUTO_MOCKUP); clicking
+    // Continue to Order is no longer how you reach it.
     await page.waitForTimeout(8000);
     const start = mockupBodies.find(b => b && b.action === 'start');
     if (!start) return `FAIL: no start-mockup fired (bodies=${JSON.stringify(mockupBodies)})`;
