@@ -11219,9 +11219,20 @@ function hideWorkshopRecallRow(){
   if(row)row.style.display='none';
 }
 
+// Prefers the live key (mid-session) and falls back to the archive the entry
+// purge writes, so Recall still works across sessions WITHOUT anything being
+// restored automatically. Every caller goes through here so there is one
+// definition of "the snapshot", not three.
+function readWorkshopSnapshot(){
+  try{
+    return JSON.parse(localStorage.getItem('muggshotz_workshop')
+      || localStorage.getItem('muggshotz_workshop_prev') || 'null');
+  }catch(e){ return null; }
+}
+
 function checkForWorkshopRecall(){
   try{
-    const saved=JSON.parse(localStorage.getItem('muggshotz_workshop')||'null');
+    const saved=readWorkshopSnapshot();
     if(!saved||!saved.working)return;
     const row=document.getElementById('workshopRecallRow');
     const genBtn=document.getElementById('recallGeneratedBtn');
@@ -11234,7 +11245,7 @@ function checkForWorkshopRecall(){
 
 function recallLastPhotoUsed(){
   try{
-    const saved=JSON.parse(localStorage.getItem('muggshotz_workshop')||'null');
+    const saved=readWorkshopSnapshot();
     if(!saved)return;
     const photo=saved.previous||saved.working;
     if(!photo)return;
@@ -11248,7 +11259,7 @@ function recallLastPhotoUsed(){
 
 function recallLastGeneratedImage(){
   try{
-    const saved=JSON.parse(localStorage.getItem('muggshotz_workshop')||'null');
+    const saved=readWorkshopSnapshot();
     if(!saved||!saved.working)return;
     previousImageData=saved.previous||null;
     currentDesignId=saved.designId||null;
@@ -11263,6 +11274,54 @@ function recallLastGeneratedImage(){
     hideWorkshopRecallRow();
   }catch(e){console.error('Could not recall last generated image:',e);}
 }
+// PURGE BEFORE ANYTHING READS (2026-08-27, Alyx lost a finished piece to
+// this). Alyx built a superhero-in-an-airport image, went to mock it up, and
+// the mockup came back carrying a DIFFERENT, older picture -- one from a
+// previous session that was never offered to them and that they never chose.
+//
+// Mechanism, and it was entirely silent: restoreMugLibrary() ran on every
+// page load and rehydrated `placements` straight out of muggshotz_mug_state.
+// buildMockupRequestBody() reads `placements` directly. So a stale left/
+// centre/right slot from days ago sat there invisibly, and any flow that did
+// not happen to overwrite that exact slot shipped the old image to Printify.
+// Nothing on screen showed it. There was no way for a customer to know.
+//
+// Alyx's call, and it is the right one: "it is more important to clear the
+// cache than it would be to have a mechanism to remember past generated
+// images... clearing that immediate cache must take first priority."
+//
+// So no design state is ever auto-restored now. The workshop snapshot is not
+// destroyed -- it is MOVED to an archive key that only the explicit Recall
+// buttons read, so a customer can still deliberately pull their last photo
+// back, but nothing can ever silently populate a print slot again.
+//
+// The one exception is a genuine continuation: order.html sets
+// muggshotz_return_to_idea before sending the customer back here to edit an
+// order in progress. That is the same session mid-flight, not stale state,
+// so the purge stands down for it. That flag is read and cleared later in
+// DOMContentLoaded; this runs first, so it is still present to be seen.
+function purgeStaleSessionOnEntry(){
+  let returningFromOrder=false;
+  try{ returningFromOrder = localStorage.getItem('muggshotz_return_to_idea')==='1'; }catch(e){}
+  if(returningFromOrder) return false;
+  try{
+    const snapshot=localStorage.getItem('muggshotz_workshop');
+    if(snapshot)localStorage.setItem('muggshotz_workshop_prev',snapshot);
+  }catch(e){}
+  ['muggshotz_mug_state','muggshotz_workshop','muggshotz_pending_order'].forEach(k=>{
+    try{localStorage.removeItem(k);}catch(e){}
+  });
+  // In-memory too: the arrays above are module state, and clearing storage
+  // without clearing these would leave the same stale slots live for the
+  // rest of the page's life.
+  recentDesigns=[];
+  placements={left:null,right:null,front:null};
+  coverMeLastRemoved={left:null,right:null,front:null};
+  currentDesignId=null;
+  return true;
+}
+purgeStaleSessionOnEntry();
+
 restoreMugLibrary();
 checkForWorkshopRecall();
 refreshApproveRowForMode();
