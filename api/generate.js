@@ -237,6 +237,34 @@ export default async function handler(req, res) {
 An additional reference image is attached. ${refImageA ? 'One is "Photo 2" — when the customer idea below mentions "Photo 2," use that exact image for the element described (e.g. a face, an object, a scene, a setting).' : ""} ${refImageB ? 'Another is "Photo 3" — use it the same way if the customer idea mentions "Photo 3."' : ""}`
         : "";
 
+      // REWRITTEN 2026-08-27 — this is what was making Wraparound unusable.
+      //
+      // The previous wording told the model, in its own words, that the image
+      // was "mentally divided into three EQUAL vertical thirds" and that it
+      // "will be cut into three separate pieces along those exact lines
+      // afterward". Gemini obeyed literally and drew a TRIPTYCH: three framed
+      // pictures, white borders, mauve background showing through the gutters
+      // between them. The scene underneath was genuinely continuous, so the
+      // model was never the problem — but every slice came back carrying a
+      // painted border and a slab of background, and the Fix the Seams
+      // sliders cannot help with that, because the defect is drawn INTO the
+      // panels rather than being a misalignment between them.
+      //
+      // Reproduced twice, independently (Alyx's live run and a probe here),
+      // with the identical signature. The fix is to stop telling the model
+      // about the thirds at all — it never needed to know. The backend does
+      // the slicing; the model just paints one unbroken scene. The negative
+      // constraints below are deliberately blunt and redundant, because
+      // "triptych" is the exact failure mode being designed out.
+      //
+      // ORIGINAL WORDING, kept verbatim for a one-line revert:
+      //   PANORAMA LAYOUT — ONE SINGLE WIDE IMAGE, THREE EQUAL VERTICAL THIRDS:
+      //   Generate exactly ONE wide image, mentally divided into three EQUAL
+      //   vertical thirds: LEFT, CENTER, RIGHT. Place the caricature ...
+      //   centered inside the CENTER third only. ... this single image will be
+      //   cut into three separate pieces along those exact lines afterward and
+      //   displayed side by side on a wraparound mug ...
+      // (full text in git: api/generate.js @ 919b18a)
       const panoramaPrompt = `
 CRITICAL MUGGSHOTZ LIKENESS RULE:
 This is a caricature of the exact person in the uploaded photo.
@@ -249,11 +277,17 @@ the real mouth shape and expression; the real jawline, cheeks, and ears;
 the real facial hair, head shape, skin tone, and age.
 Preserve normal head-to-body proportions unless the customer asks for wild exaggeration.
 
-PANORAMA LAYOUT — ONE SINGLE WIDE IMAGE, THREE EQUAL VERTICAL THIRDS:
-Generate exactly ONE wide image, mentally divided into three EQUAL vertical thirds: LEFT, CENTER, RIGHT.
-Place the caricature of the customer, based on the uploaded photo, centered inside the CENTER third only.
-The LEFT and RIGHT thirds must show the natural continuation of the same environment, background, lighting, and color palette as the center third — as if the camera simply panned further in that direction. Do NOT repeat the subject's face or body in the left or right thirds unless the scene naturally calls for a background element related to them (a shadow, a reflection, a distant object they'd plausibly be near).
-Keep lighting direction, color grading, and visual style perfectly continuous across all three thirds, with no visible seam, break, or style shift at the two internal dividing lines — this single image will be cut into three separate pieces along those exact lines afterward and displayed side by side on a wraparound mug, so any mismatch there will be very visible.
+PANORAMA LAYOUT — ONE SINGLE UNINTERRUPTED ULTRA-WIDE SCENE:
+Generate exactly ONE continuous ultra-wide image, composed as a single sweeping panoramic photograph taken in one shot.
+Place the caricature of the customer, based on the uploaded photo, centred horizontally in the middle of the frame.
+To the left and to the right of the subject, continue the SAME environment outward without interruption — the same room, the same landscape, the same crowd, the same lighting — exactly as if the camera had simply panned further in that direction. Do NOT repeat the subject's face or body anywhere else in the scene unless the environment naturally calls for it (a shadow, a reflection, a distant object they would plausibly be near).
+Lighting direction, colour grading, horizon line, perspective and visual style must stay perfectly consistent all the way across the full width.
+
+CRITICAL COMPOSITION RULES — THE ARTWORK MUST FILL THE ENTIRE CANVAS, EDGE TO EDGE:
+Do NOT draw any border, frame, matte, margin, background surround, vignette, or coloured surface behind or around the artwork.
+Do NOT divide the image into panels, sections, columns, tiles, or separate pictures. This is NOT a triptych, NOT a diptych, NOT a collage, NOT a storyboard, and NOT a set of framed prints hanging on a wall.
+There must be no vertical lines, gutters, gaps, seams, or visual breaks anywhere in the composition.
+Every pixel, from the far left edge to the far right edge, is part of one single continuous scene.
 ${referenceLine}
 
 CUSTOMER REQUEST:
