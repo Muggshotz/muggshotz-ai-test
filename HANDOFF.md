@@ -141,6 +141,16 @@ combination: the fee scales with price, the margin does not.
    15oz to $14.95 collides with its own 11oz, Color Pop 15oz to $19.95 collides with its 11oz, and
    tote 18x18 to $24.95 collides with its 16x16. Two sizes at one price means the larger one is
    free money thrown away. **Check the whole ladder before applying the threshold rule.**
+5. **The threshold is a TARGET, not a cap, and the ladder outranks it.** Alyx, on the tote:
+   *"I don't think the 18 by 18 should be the same price as the 16 by 16 so make it higher. That
+   $25 cap is not a hard and fast rule, it's more of a target to aim at."* A price one rung over a
+   line is fine when moving it would flatten a ladder. **Tote 18x18 stays at $25.95** — a decision,
+   not an oversight, and commented as such in the catalog.
+
+**Also probed and recorded 2026-08-27 (do not re-probe):** tote wholesale $18.77 / $20.08 / $21.31
+for 13x13 / 16x16 / 18x18; Color Pop mug $7.87 (11oz) / $8.95 (15oz). A "19.95 / 22.95 / 24.95"
+tote ladder was proposed here and **rejected on its own numbers**: at $19.95 the 13x13 grosses
+$1.18 and Stripe takes about $1.03 of it — roughly fifteen cents a bag.
 
 **Audited catalog-wide 2026-08-27.** Only `photo-puzzle` 96 pcs was both over a threshold and safe
 to drop: $40.95 → **$39.95** (unique price, inversion intact, costs $1.00 of margin). Still over a
