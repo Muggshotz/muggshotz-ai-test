@@ -4581,11 +4581,37 @@ let mugColorFinishedPreGen=false;
 // Real prices confirmed from lib/products-catalog.js, 11oz/15oz — Classic
 // White deliberately excluded from this picker per Alyx's spec (only
 // Trimmed/Accented/Color Pop are offered here).
+// CLASSIC WHITE RESTORED (2026-08-27, Alyx spotted it: "a major major
+// mistake... I've done probably about 1000 iterations of this").
+//
+// This table is what the style grid renders from, and it was short by one
+// entry. Every OTHER mug table in the app -- GEN_MUG_STYLES,
+// GEN_STYLE_TO_PRODUCT_KEY, order.html's MUG_STYLES, and
+// lib/products-catalog.js -- carries Classic White with real variant IDs.
+// So the cheapest mug we sell existed everywhere except the one screen a
+// customer could pick it on, and the floor on every mug ever sold was
+// $19.95 while a $14.95 option sat one table away.
+//
+// Two things had to be true for it to work, and both are likely why it fell
+// off rather than being fixed:
+//   1. it has no thumbnail asset, and this grid renders one per style
+//   2. it has NO COLOURS, and the "Satisfied - Continue" button was revealed
+//      only by picking a colour -- so choosing it stranded the customer with
+//      nothing to click. Handled in renderPreGenMugColorGrid() now.
+//
+// Listed first so the ladder reads bottom-up, which is what makes the
+// upgrade legible: +$3.00 to Trimmed or Accented, +$5.00 to Color Pop, and
+// those deltas are identical at BOTH sizes.
 const PRE_GEN_MUG_STYLE_PRICES = {
+  "Classic White": { "11oz": 14.95, "15oz": 16.95 },
   "Trimmed": { "11oz": 17.95, "15oz": 19.95 },
   "Accented": { "11oz": 17.95, "15oz": 19.95 },
   "Color Pop": { "11oz": 19.95, "15oz": 21.95 }
 };
+
+// The base every upgrade is measured against. A name, not a number, so the
+// deltas cannot drift out of step with the table above.
+const MUG_UPGRADE_BASE_STYLE = "Classic White";
 
 // Real per-color mockup photos, keyed style -> size -> color name.
 // Printify's catalog only exposes one generic photo per blueprint, not
@@ -4734,6 +4760,16 @@ function pickPreGenMugSize(size){
 // Blue at 11oz), since this thumbnail's job is showing the style's
 // general look, not a size-accurate color availability.
 const PRE_GEN_MUG_STYLE_THUMBNAILS = {
+  // Printify's own blueprint photo for bp 478 (Ceramic Mug, 11/15oz), saved
+  // locally rather than hotlinked. There had never been a style-classic-white
+  // asset, which is the likeliest reason this style quietly left the grid --
+  // the grid renders a thumbnail per style and this one had none.
+  //
+  // It shows both sizes together (tall thin 15oz behind, fat 11oz in front)
+  // where the other three tiles are single mugs on pure white, so it is not a
+  // perfect stylistic match. Alyx has proper single-mug shots of both sizes;
+  // dropping one in over this exact filename is the whole swap.
+  "Classic White": "style-classic-white.jpg",
   "Trimmed": "style-trimmed.jpg",
   "Accented": "style-accented.jpg",
   "Color Pop": "style-color-pop.jpg"
@@ -4765,6 +4801,17 @@ function renderPreGenMugStyleGrid(){
     priceNote.style.cssText='margin-top:6px;color:#7ab8ff;font-weight:700';
     priceNote.textContent='$'+price.toFixed(2);
     btn.appendChild(priceNote);
+    // The upgrade in the customer's terms. "$19.95" beside "$14.95" makes
+    // them do the subtraction; "+$3.00" does it for them, which is the whole
+    // point of showing a ladder. Computed from the table so it cannot drift.
+    const basePrice=PRE_GEN_MUG_STYLE_PRICES[MUG_UPGRADE_BASE_STYLE]?.[selectedGenSize];
+    if(basePrice!=null && price>basePrice){
+      const delta=document.createElement('div');
+      delta.className='note';
+      delta.style.cssText='margin-top:2px;color:#7ab8ff;font-size:10px';
+      delta.textContent='+$'+(price-basePrice).toFixed(2);
+      btn.appendChild(delta);
+    }
     grid.appendChild(btn);
   });
 }
@@ -4793,7 +4840,17 @@ function renderPreGenMugColorGrid(){
   if(!wrap||!grid)return;
   const colors=GEN_MUG_STYLES[selectedGenStyle]?.colors?.[selectedGenSize] || null;
   if(!colors){
+    // NOTHING TO CHOOSE IS A FINISHED CHOICE. Classic White is a plain white
+    // mug with no colour options, and the "Satisfied - Continue" button is
+    // revealed by pickPreGenMugColor() -- which can never fire when there is
+    // no colour grid to click. Picking this style used to leave the customer
+    // on a card with no way forward at all, which is very likely why it was
+    // dropped from the picker instead of fixed.
     wrap.style.display='none';
+    selectedGenColor=null;
+    mugColorChosenPreGen=true;
+    const finishBtn=document.getElementById('preGenMugColorFinishBtn');
+    if(finishBtn)finishBtn.style.display='block';
     return;
   }
   wrap.style.display='block';
@@ -6505,7 +6562,13 @@ function changePropsFromCoverMe(){
 function updatePreGenMugMockupImg(){
   const img=document.getElementById('preGenMugMockupImg');
   if(!img)return;
-  const filename=MUG_MOCKUP_PHOTOS[selectedGenStyle]?.[selectedGenSize]?.[selectedGenColor];
+  // A style with no colours has no per-colour mockup photo, so fall back to
+  // its own thumbnail rather than showing a blank slot where every other
+  // style shows the customer their mug.
+  const hasColors=!!GEN_MUG_STYLES[selectedGenStyle]?.colors?.[selectedGenSize];
+  const filename=hasColors
+    ? MUG_MOCKUP_PHOTOS[selectedGenStyle]?.[selectedGenSize]?.[selectedGenColor]
+    : PRE_GEN_MUG_STYLE_THUMBNAILS[selectedGenStyle];
   if(filename){
     img.src=filename;
     img.style.display='block';

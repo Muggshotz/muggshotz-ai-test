@@ -14,7 +14,13 @@ async function mugLadder(page) {
   await page.waitForTimeout(500);
   await page.click('#preGenSize11Btn');
   await page.waitForTimeout(600);
-  await page.locator('#preGenMugStyleGrid .btn-select').first().click();
+  // Explicitly Trimmed, not .first(). Classic White was restored to this grid
+  // and listed FIRST so the price ladder reads bottom-up -- and it is the one
+  // style with no colours, so .first() now picks a mug whose colour grid never
+  // renders and the colour click below times out. This suite is about
+  // spotlights, the watchdog and the props, so it wants a style that HAS
+  // colours; verify-mug-styles.js covers the colourless path.
+  await page.locator('#preGenMugStyleGrid .btn-select[data-style="Trimmed"]').click();
   await page.waitForTimeout(800);
   await page.locator('#preGenMugColorGrid .color-btn').first().click();
   await page.waitForTimeout(1000);

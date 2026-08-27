@@ -40,7 +40,7 @@ Working. The sandbox reaches `muggshotz-ai-test.vercel.app` directly.
   obvious. **Never move this to the GET relay** — catalog GETs need no auth, so that would publish
   wholesale pricing to anyone who found the URL.
 
-## Testing (`flow-tests/`) — 17 suites
+## Testing (`flow-tests/`) — 18 suites
 Serve the repo first: `python3 -m http.server 8788 --directory <repo> --bind 127.0.0.1`.
 Chromium is preinstalled at `/opt/pw-browsers/chromium` — use `executablePath`, do NOT
 `playwright install`. `npm install playwright` in a scratch dir and copy the harness there.
@@ -57,6 +57,7 @@ four ERR_CONNECTION_RESET console errors per run that look like a product fault 
 | `verify-auto-mockup.js` | every single-image product fetches its mockup on approve |
 | `verify-idea-confirm.js` | description confirm goes forward; stage never veiled |
 | `verify-gimmick-gate.js` | gimmicks limited to mug + travel cup |
+| `verify-mug-styles.js` | all four mug tables agree; Classic White on the grid; upgrade deltas correct at both sizes; a colourless style can still proceed; every style has artwork |
 | `verify-edge-fade.js` | fade polarity (untouched and reset must both mean OFF), offered on every product, colour follows the product surface, depth slider reaches the renderer, round-vs-square geometry |
 | `verify-cache-purge.js` | stale design slots cannot survive a page load into a print job; Recall still works by click; the order-page return is exempt |
 | `verify-style-panel.js` | Art Style's rail position + spotlight + handoff; the chosen style reaches the WIRE on every generation path; the default const matches the tile byte-for-byte; all six styles present |
@@ -467,6 +468,38 @@ and then fell through to the final `else` — the mug branch — so the order su
 (`selectedProductFamily === 'coaster'`), which existed. It now checks **both chains**, and the new
 check was proven against a copy with the branch removed before being trusted. **When adding any
 product, wire BOTH chains** — pricing alone is not evidence that checkout works.
+
+## Classic White was unbuyable for months (2026-08-27)
+Alyx, after roughly a thousand runs: *"a major major mistake we've made in coffee mugs."*
+
+The style grid renders from **`PRE_GEN_MUG_STYLE_PRICES`**, which carried **three** styles. Every
+other mug table carried **four**: `GEN_MUG_STYLES`, `GEN_STYLE_TO_PRODUCT_KEY`, `order.html`'s
+`MUG_STYLES`, and `lib/products-catalog.js`. So the cheapest mug we sell had real variant IDs, a
+checkout branch and an order-page tile — and was **never once offered**. The floor on every mug ever
+sold was $19.95 while a **$14.95** option sat one table away.
+
+Nothing errored and nothing looked broken: a table short by one line while every other table agreed
+with itself. That is exactly what a cross-table check is for, and `verify-mug-styles.js` is now it.
+
+**Two things had to be fixed for it to work, and both are probably why it was dropped rather than
+repaired:**
+- **No thumbnail.** The grid renders one image per style and there had never been a
+  `style-classic-white` asset. Now `style-classic-white.jpg` — Printify's own bp 478 photo, saved
+  locally. It shows both sizes together where the other three tiles are single mugs on white, so
+  **Alyx has better shots; dropping one in over that exact filename is the whole swap.**
+- **No colours.** Classic White is plain white, and the "Satisfied — Continue" button was revealed
+  only by `pickPreGenMugColor()`, which can never fire without a colour grid. Choosing it left the
+  customer on a card **with nothing to click**. `renderPreGenMugColorGrid()` now treats "nothing to
+  choose" as a finished choice.
+
+**The upgrade ladder, which is why this matters commercially:** deltas from Classic White are
+**+$3.00** to Trimmed or Accented and **+$5.00** to Color Pop — *identical at both sizes*, so tiles
+show the delta with no per-size logic. Alyx's framing: a customer comes in at $14.95, sees their
+art, and upgrades. There was no ladder before because there was no bottom rung.
+
+**Watch out:** Classic White is listed **first** so the ladder reads bottom-up, which means
+`.first()` on the style grid now selects the one colourless style. `verify-fixes.js` picked that way
+and began timing out on a colour click; it names `Trimmed` explicitly now.
 
 ## Secret sauce (read-only — flag, never edit)
 All AI prompt/description assembly. **Alyx gave an explicit go-ahead on 2026-08-27** to change the
