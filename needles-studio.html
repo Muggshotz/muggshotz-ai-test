@@ -6677,6 +6677,22 @@ function updatePreGenMugMockupImg(){
   if(filename){
     img.src=filename;
     img.style.display='block';
+    // AND THE PUNCH-UP FILTER COMES OFF FOR A WHITE MUG ON WHITE.
+    //
+    // The slot carries filter:brightness(1.15) contrast(1.12) saturate(1.2)
+    // to lift Printify's mockup photos, which are dim. Measured against the
+    // Classic White product shot it does not lift it, it erases it: the mug
+    // body reads 233, the left edge 219 and the shadow 237, and every one of
+    // those clips to pure 255. 99.7% of that image becomes white paper. Alyx
+    // picked Classic White and got a blank rectangle with one faint curve --
+    // the surviving 0.3%.
+    //
+    // The same filter on a coloured mockup blows out 36.6%, all of it the
+    // white background, and the mug itself gains contrast. So this is not a
+    // bad filter, it is a filter applied to the one photo in the set that has
+    // no dark pixels to protect it. Keep it where it helps, drop it where the
+    // subject IS the highlight.
+    img.style.filter=hasColors ? 'brightness(1.15) contrast(1.12) saturate(1.2)' : 'none';
   } else {
     img.style.display='none';
   }

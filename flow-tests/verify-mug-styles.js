@@ -297,6 +297,61 @@ scenarios.styleCardIsScrollableByHand = async (page) => {
 scenarios.styleCardIsScrollableByHand.viewport = { width: 430, height: 620 };
 
 
+// ---- 9. The mockup slot must actually show a mug. ----
+// Alyx picked Classic White and got a white rectangle with one faint curve in
+// it. The photo was fine; the slot's filter was not. It carries
+// brightness(1.15) contrast(1.12) to lift Printify's dim mockups, and the
+// Classic White product shot is a white mug on white with no dark pixels
+// anywhere -- body 233, edge 219, shadow 237, all of which clip to 255.
+//
+// So this renders the slot to a canvas exactly as the browser paints it,
+// filter included, and asks the only question that matters: is there still a
+// mug in there? Measured as the share of pixels that are neither pure white
+// nor near it. A blank rectangle scores ~0. Asserting on the filter STRING
+// would pass any value that happens to be set, including the one that caused
+// this, so it deliberately does not.
+scenarios.theMockupSlotStillShowsAMug = async (page) => {
+  await toMugStyles(page);
+  const bad = [];
+  const styles = await page.evaluate(() => Object.keys(PRE_GEN_MUG_STYLE_PRICES));
+  for (const style of styles) {
+    await page.locator(`#preGenMugStyleGrid .btn-select[data-style="${style}"]`).click();
+    await T(page, 900);
+    const n = await page.evaluate(() => document.querySelectorAll('#preGenMugColorGrid .color-btn').length);
+    if (n) { await page.locator('#preGenMugColorGrid .color-btn').first().click(); await T(page, 1000); }
+    const m = await page.evaluate(async () => {
+      const img = document.getElementById('preGenMugMockupImg');
+      if (!img || getComputedStyle(img).display === 'none') return { shown: false };
+      if (!img.complete || !img.naturalWidth) {
+        await new Promise(r => { img.onload = r; img.onerror = r; setTimeout(r, 3000); });
+      }
+      if (!img.naturalWidth) return { shown: true, loaded: false };
+      const c = document.createElement('canvas');
+      c.width = 160; c.height = 160;
+      const ctx = c.getContext('2d');
+      // Paint through the SAME filter the page applies, so this measures what
+      // the customer sees rather than what the source file contains.
+      ctx.filter = getComputedStyle(img).filter === 'none' ? 'none' : getComputedStyle(img).filter;
+      ctx.drawImage(img, 0, 0, 160, 160);
+      const d = ctx.getImageData(0, 0, 160, 160).data;
+      let ink = 0, total = 160 * 160;
+      for (let i = 0; i < d.length; i += 4) {
+        if (Math.min(d[i], d[i + 1], d[i + 2]) < 245) ink++;
+      }
+      return { shown: true, loaded: true, inkPct: ink / total, filter: getComputedStyle(img).filter };
+    });
+    if (!m.shown) { bad.push(`${style}: no mockup shown at all`); continue; }
+    if (!m.loaded) { bad.push(`${style}: mockup image never loaded`); continue; }
+    // 5% is generous -- a real mug photo scores far higher, and the blown-out
+    // Classic White scored 0.3%.
+    if (m.inkPct < 0.05)
+      bad.push(`${style}: only ${(m.inkPct * 100).toFixed(1)}% of the mockup is non-white — it renders as a blank rectangle (filter: ${m.filter})`);
+  }
+  if (bad.length) return `FAIL: ${bad.join('; ')}`;
+  return `PASS: all ${styles.length} styles render a visible mug in the mockup slot`;
+};
+
+
 (async () => {
   let fails = 0;
   for (const [name, fn] of Object.entries(scenarios)) {
