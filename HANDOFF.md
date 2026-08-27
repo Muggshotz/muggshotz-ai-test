@@ -58,7 +58,7 @@ four ERR_CONNECTION_RESET console errors per run that look like a product fault 
 | `verify-idea-confirm.js` | description confirm goes forward; stage never veiled |
 | `verify-gimmick-gate.js` | gimmicks limited to mug + travel cup |
 | `verify-wraparound.js` | Wraparound on both rails: panorama vs per-panel engine, outage fallback, 403 no-retry, mug thirds vs travel-cup uncut, 40oz exclusion |
-| `verify-price-parity.js` | **no browser** — order.html vs catalog price drift |
+| `verify-price-parity.js` | **no browser** — order.html vs catalog price drift. **Run it from the repo root** (`node flow-tests/verify-price-parity.js`), not from the scratch copy: it reads `order.html` and `lib/products-catalog.js` by relative path and ENOENTs anywhere else. |
 | `verify-poster.js` `verify-puzzle.js` `verify-tote.js` `verify-phone-suitcase.js` `verify-coaster-mousepad.js` `verify-travel.js` | per-product flows |
 
 **Fixtures ARE committed now** (`test-photo.jpg`, `fake-generated.jpg`, `fake-mockup.jpg`) — they
