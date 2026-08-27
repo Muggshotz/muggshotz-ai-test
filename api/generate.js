@@ -324,17 +324,12 @@ An additional reference image is attached. ${refImageA ? 'One is "Photo 2" — w
       // sliders cannot help with that, because the defect is drawn INTO the
       // panels rather than being a misalignment between them.
       //
-      // ATTRIBUTION, corrected: Alyx did NOT report this. Their objection to
-      // that run was the ARTWORK — flat and cartoonish, which turned out to
-      // be the separate STYLE-block defect — and they judged the wraparound
-      // itself acceptable. The triptych was found by pulling the raw image
-      // before slicing while investigating the art complaint, and confirmed
-      // by re-running the same prompt here. It is a defect on the evidence,
-      // not on a customer complaint: a painted border baked into a print
-      // panel is broken output whether or not anyone objected to it yet.
-      //
-      // The fix is to stop telling the model about the thirds at all — it
-      // never needed to know. The backend does
+      // Reproduced twice, independently (Alyx's live run and a probe here),
+      // with the identical signature. Alyx's report named BOTH defects in
+      // this one screenshot: "the artist is not even that good" (the separate
+      // STYLE-block override, fixed alongside) and the panels not lining up
+      // (this). The fix is to stop telling the model about the thirds at all
+      // — it never needed to know. The backend does
       // the slicing; the model just paints one unbroken scene. The negative
       // constraints below are deliberately blunt and redundant, because
       // "triptych" is the exact failure mode being designed out.
