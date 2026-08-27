@@ -40,7 +40,7 @@ Working. The sandbox reaches `muggshotz-ai-test.vercel.app` directly.
   obvious. **Never move this to the GET relay** — catalog GETs need no auth, so that would publish
   wholesale pricing to anyone who found the URL.
 
-## Testing (`flow-tests/`) — 16 suites
+## Testing (`flow-tests/`) — 17 suites
 Serve the repo first: `python3 -m http.server 8788 --directory <repo> --bind 127.0.0.1`.
 Chromium is preinstalled at `/opt/pw-browsers/chromium` — use `executablePath`, do NOT
 `playwright install`. `npm install playwright` in a scratch dir and copy the harness there.
@@ -57,6 +57,7 @@ four ERR_CONNECTION_RESET console errors per run that look like a product fault 
 | `verify-auto-mockup.js` | every single-image product fetches its mockup on approve |
 | `verify-idea-confirm.js` | description confirm goes forward; stage never veiled |
 | `verify-gimmick-gate.js` | gimmicks limited to mug + travel cup |
+| `verify-edge-fade.js` | fade polarity (untouched and reset must both mean OFF), offered on every product, colour follows the product surface, depth slider reaches the renderer, round-vs-square geometry |
 | `verify-cache-purge.js` | stale design slots cannot survive a page load into a print job; Recall still works by click; the order-page return is exempt |
 | `verify-style-panel.js` | Art Style's rail position + spotlight + handoff; the chosen style reaches the WIRE on every generation path; the default const matches the tile byte-for-byte; all six styles present |
 | `verify-wraparound.js` | Wraparound on both rails: panorama vs per-panel engine, outage fallback, 403 no-retry, mug thirds vs travel-cup uncut, 40oz exclusion |
@@ -389,6 +390,52 @@ Recall survives as **opt-in only**: the workshop snapshot is *moved* to `muggsho
 read solely by the Recall buttons through `readWorkshopSnapshot()`. `verify-cache-purge.js` was run
 against the pre-fix build first and reproduced the loss exactly — the mockup request literally
 contained the stale image.
+
+## Edge Fade — why it was killed, and how it was rebuilt (2026-08-27)
+Alyx asked why it had been switched off and noted the reason was not written down. It is now.
+
+**Why it was killed.** `generate()` carried a hardcoded `const skipEdgeFade = true;`, added at Alyx's
+own request, with this reason: *"fade kept sneaking back in through paths that reset
+`hardEdgesEnabled` to false."* That sentence is the entire diagnosis. Fade was driven by the
+**absence** of a boolean, so any code path that reset a flag to its default silently switched fade
+**on**. There were several such paths and they could not be confidently enumerated, so the feature
+was hardcoded off rather than debugged.
+
+**How it was rebuilt.** Polarity inverted instead of hunting the paths. `edgeFadeChoice` is a
+tri-state — `null` / `'fade'` / `'hard'` — and fade requires the **positive** value. A reset returns
+it to `null`, which means no fade. *"Cleared"* and *"chosen"* are now different states, so clearing
+something can never mean yes.
+
+**This bug is not hypothetical and the guard is not decorative:** `verify-edge-fade.js` caught
+`resetEverythingFreshStart()` leaving `edgeFadeChoice` at `'fade'` the very first time it ran. The
+tri-state only helps if every reset path actually returns it to null — so the suite pins that
+directly, and any new reset path that forgets will fail there rather than in a customer's order.
+
+**What it does now.** Offered on **every** product (was mug + travel cups). Two buttons — fade into
+the product, or hard edges — plus a depth slider that **starts at 0%** on Alyx's instruction: *"I
+don't believe that it should be started on 12%, I believe it should be started on zero percent."*
+Choosing Fade therefore commits to nothing until the slider moves. The 12% that used to be hardcoded
+inside `applyEdgeFadeToImageUrl()` is now a parameter, which is why a slider could previously have
+existed and changed nothing.
+
+**The colour is the PRODUCT's surface, not white.** `getSelectedProductColorHex()` now answers for
+any travel-cup variant with colours (it was pinned to the 40oz insulated, so the 12-colour vacuum
+tumbler faded to white against black) and for tote bags. Everything else falls through to white.
+
+**Round print areas fade from the RIM.** Alyx: *"for products that the surface area of the image
+presents as a circle rather than a square, make sure that the slide has the right geometry."*
+Correct, and it would have been silent: four linear gradients on a disc fade toward four corners
+that do not exist, leaving a hard arc at the real rim with soft bands stranded inside. **Nothing we
+sell is round** — the coaster is square hardboard 4"x4" (bp 2764), which is the one everyone assumes
+is a disc — so this changes nothing today. Adding a round coaster, button, ornament or plate is now
+one entry in `PRODUCT_FADE_SHAPE`, not a geometry bug found on a printed sample.
+
+**Deliberately NOT built: a hue-shift slider.** Alyx raised it and then raised the objection
+themselves — our stored hexes are a best reading of a Printify swatch, and for some blueprints
+Printify exposes only colour **names**. A hue slider on top of an approximation lets a customer tune
+a fade to a screen colour that is not the physical product's colour, on an unprofiled monitor. If a
+fade ever looks wrong against a real product, **correct the stored hex from a physical sample, once,
+for everyone.**
 
 ## Secret sauce (read-only — flag, never edit)
 All AI prompt/description assembly. **Alyx gave an explicit go-ahead on 2026-08-27** to change the

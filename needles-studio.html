@@ -957,10 +957,25 @@ const HERO_SETTLE_MS = 1000;
      with hardEdgesEnabled, and it is harmless where it stands. -->
 <div class="card" id="panoramaFadeCard" style="display:none">
 <div class="card-title">🖌️ Edge Fade</div>
-<div class="note" id="panoramaFadeCardNote" style="margin-top:0;margin-bottom:.75rem">By default, every design's outer edges automatically fade into white so it blends into the mug instead of looking like a hard-edged sticker. In Wraparound mode, the seams where Left, Center, and Right join stay sharp and continuous — only the true outer edges (top/bottom, plus the far-left and far-right ends) fade. In the standard three-panel mode, each panel is independent, so all four of its edges fade. Doesn't change anything you see or type below; it's applied automatically behind the scenes.</div>
+<div class="note" id="panoramaFadeCardNote" style="margin-top:0;margin-bottom:.75rem">Your design can fade softly into the colour of the product itself, so it looks printed <i>on</i> the item rather than stuck on like a sticker — or it can stop at a hard, sharp edge. On a Wraparound the joins between panels always stay sharp and continuous; only the true outer edges fade.</div>
+<div style="display:flex;align-items:stretch;gap:10px">
+<div class="btn-select" id="edgeFadeSoftBtn" style="flex:1;padding:1rem .6rem" onclick="pickEdgeFade('fade')"><span class="icon">🌫️</span>Fade Into The Product<div class="note" style="margin-top:6px;color:#29a3ff">Edges melt into the product's own colour.</div></div>
+<div style="display:flex;align-items:center;color:#29a3ff;font-size:12px;font-weight:700">or</div>
+<div class="btn-select" id="edgeFadeHardBtn" style="flex:1;padding:1rem .6rem" onclick="pickEdgeFade('hard')"><span class="icon">⬛</span>Hard, Sharp Edges<div class="note" style="margin-top:6px;color:#29a3ff">The design stops at a clean edge.</div></div>
+</div>
+<!-- The original checkbox, kept in the DOM but hidden. Seven other places
+     read or write #panoramaFadeToggle to keep hardEdgesEnabled in step
+     (the accessorize step, the reveal flow, reset). Deleting it would have
+     turned every one of those into a null dereference; hiding it keeps them
+     all working while the two buttons above become the real control. -->
+<input type="checkbox" id="panoramaFadeToggle" onchange="togglePanoramaFadeEdges()" style="display:none"/>
+<div id="edgeFadeAmountWrap" style="display:none;margin-top:.9rem">
 <div style="display:flex;align-items:center;gap:10px">
-<input type="checkbox" id="panoramaFadeToggle" onchange="togglePanoramaFadeEdges()" style="width:20px;height:20px;cursor:pointer"/>
-<label style="margin:0;text-transform:none;font-size:14px;color:#fff;cursor:pointer" onclick="document.getElementById('panoramaFadeToggle').click()">No — I want hard, sharp edges instead</label>
+<span class="note" style="margin:0;white-space:nowrap">Fade depth</span>
+<input type="range" id="edgeFadeAmountSlider" min="0" max="35" step="1" value="0" oninput="updateEdgeFadeAmount()" style="flex:1"/>
+<span class="note" id="edgeFadeAmountReadout" style="margin:0;min-width:38px;text-align:right">0%</span>
+</div>
+<div class="note" id="edgeFadeColorNote" style="margin-top:.5rem;display:flex;align-items:center;gap:8px">Fading into <span id="edgeFadeSwatch" style="display:inline-block;width:16px;height:16px;border-radius:4px;border:1px solid #555;background:#FFFFFF"></span> <span id="edgeFadeColorName">white</span></div>
 </div>
 </div>
 
@@ -4217,7 +4232,9 @@ const PANORAMA_FADE_INSTRUCTION_RIGHT = "PANORAMA EDGE FADE: Fade the TOP, BOTTO
 const UNIFORM_EDGE_FADE_INSTRUCTION = "EDGE FADE: Fade all four outside edges of the picture (top, bottom, left, and right) smoothly and completely toward white, so there is no hard rectangular border or sticker-cutout look. The artwork should blend naturally into the product's white surface at every edge.";
 
 function togglePanoramaFadeEdges(){
-  hardEdgesEnabled=document.getElementById('panoramaFadeToggle').checked;
+  const t=document.getElementById('panoramaFadeToggle');
+  if(!t)return;
+  hardEdgesEnabled=t.checked;
   const accessorizeToggle=document.getElementById('accessorizeEdgeToggle');
   if(accessorizeToggle)accessorizeToggle.checked=hardEdgesEnabled;
 }
@@ -4232,6 +4249,10 @@ function toggleAccessorizeEdgeStyle(){
   hardEdgesEnabled=document.getElementById('accessorizeEdgeToggle').checked;
   const mainToggle=document.getElementById('panoramaFadeToggle');
   if(mainToggle)mainToggle.checked=hardEdgesEnabled;
+  // Mirror it onto the real control too, so the Edge Fade card never shows a
+  // choice that contradicts what was just picked downstream.
+  edgeFadeChoice=hardEdgesEnabled?'hard':'fade';
+  refreshEdgeFadeControls();
 }
 
 // UPDATED (Aug 2026, Alyx's request): reordered the travel-cups flow so
@@ -4456,16 +4477,67 @@ function refreshTravelMugVariantVisibility(){
 }
 
 
+// OFFERED ON EVERYTHING NOW (Aug 2026, Alyx: "a healthy fade to white might
+// be in order. No, better yet a fade to product colour panel"). It was mug
+// and travel cups only -- yet a coaster, a mouse pad, a tote or a poster
+// benefits from a soft edge just as much, and the machinery was always
+// product-agnostic. The old branch also RESET hardEdgesEnabled for every
+// other product, which is one of the paths that made fade unpredictable.
 function refreshPanoramaFadeCardVisibility(){
   const card=document.getElementById('panoramaFadeCard');
   if(!card)return;
-  const isMugOrTravel=(product==='mug'||product==='water bottle');
-  card.style.display=isMugOrTravel?'block':'none';
-  if(!isMugOrTravel){
-    hardEdgesEnabled=false;
-    const toggle=document.getElementById('panoramaFadeToggle');
-    if(toggle)toggle.checked=false;
-  }
+  card.style.display=product?'block':'none';
+  refreshEdgeFadeControls();
+}
+
+// The colour being faded INTO, shown live. A fade is a background, so the
+// customer should be able to see which colour that is before committing --
+// especially now it follows the tote's canvas or the tumbler's finish rather
+// than always being white.
+function refreshEdgeFadeControls(){
+  const softBtn=document.getElementById('edgeFadeSoftBtn');
+  const hardBtn=document.getElementById('edgeFadeHardBtn');
+  const wrap=document.getElementById('edgeFadeAmountWrap');
+  if(softBtn)softBtn.classList.toggle('selected',edgeFadeChoice==='fade');
+  if(hardBtn)hardBtn.classList.toggle('selected',edgeFadeChoice==='hard');
+  if(wrap)wrap.style.display=(edgeFadeChoice==='fade')?'block':'none';
+  const hex=getSelectedProductColorHex();
+  const swatch=document.getElementById('edgeFadeSwatch');
+  if(swatch)swatch.style.background=hex;
+  const nameEl=document.getElementById('edgeFadeColorName');
+  if(nameEl)nameEl.textContent=(hex.toUpperCase()==='#FFFFFF')?'white':describeFadeColorSource();
+}
+
+// Names the surface rather than the hex -- "your tote's colour" tells the
+// customer something; "#A8D4E8" does not. Deliberately vague about the exact
+// shade: our stored hexes are our best reading of a Printify swatch, and for
+// some blueprints Printify exposes only colour NAMES, so promising an exact
+// on-screen match to a physical product would be a promise we cannot keep.
+function describeFadeColorSource(){
+  if(product==='tote bag')return "your tote bag's colour";
+  if(product==='water bottle')return "your cup's colour";
+  if(product==='mug')return "your mug's colour";
+  return 'the product colour';
+}
+
+function pickEdgeFade(choice){
+  edgeFadeChoice=choice;
+  // Kept in sync so the older reveal/accessorize screens, which still read
+  // hardEdgesEnabled, agree with the choice made here rather than
+  // contradicting it. hardEdgesEnabled is no longer what DRIVES the fade --
+  // see skipEdgeFade in generate() -- it just mirrors the decision.
+  hardEdgesEnabled=(choice==='hard');
+  const legacyToggle=document.getElementById('panoramaFadeToggle');
+  if(legacyToggle)legacyToggle.checked=hardEdgesEnabled;
+  refreshEdgeFadeControls();
+}
+
+function updateEdgeFadeAmount(){
+  const slider=document.getElementById('edgeFadeAmountSlider');
+  if(!slider)return;
+  edgeFadeAmountPct=parseFloat(slider.value);
+  const readout=document.getElementById('edgeFadeAmountReadout');
+  if(readout)readout.textContent=edgeFadeAmountPct+'%';
 }
 
 const PHONE_CASE_MODELS = [
@@ -6949,8 +7021,19 @@ function getSelectedProductColorHex(){
   // correct for years because the mugs were white -- fading to white WAS
   // fading to the product -- and only ever went wrong on a coloured one,
   // where it ringed the art in a pale halo.
-  if(product==='water bottle' && preGenTravelVariant==='travel-mug-40oz-insulated' && preGenTravelColor){
+  // WIDENED (Aug 2026): this was pinned to the 40oz insulated specifically,
+  // so the vacuum 40oz -- twelve colours -- faded to white against a black
+  // tumbler. The rule above never said "the 40oz insulated"; it said "the
+  // colour of the surface the picture is printed on". Any variant that
+  // names a colour can answer that.
+  if(product==='water bottle' && preGenTravelColor){
     const match=TRAVEL_MUG_CATALOG[preGenTravelVariant]?.colors?.find(c=>c.name===preGenTravelColor);
+    if(match)return match.hex;
+  }
+  // Tote bags print straight onto the dyed canvas, so the bag's colour IS
+  // the surface behind the artwork.
+  if(product==='tote bag' && selectedToteColorGen){
+    const match=TOTE_BAG_COLORS_GEN.find(c=>c.name===selectedToteColorGen);
     if(match)return match.hex;
   }
   // Only sample a style whose colour IS the printed surface. Trimmed and
@@ -8069,6 +8152,21 @@ function confirmSeamFix(){
 
 let revealOriginalArtworkUrls=[];
 let revealFadeAmountPct=30;
+// THE EDGE FADE DECISION. Deliberately a tri-state, not a boolean:
+//   null   nobody has chosen -> no fade (identical to the old kill-switch)
+//   'fade' the customer asked for it
+//   'hard' the customer explicitly declined it
+// A boolean is what broke this before -- fade rode on the ABSENCE of a flag,
+// so every reset path switched it on by accident. "Not chosen" and "chosen"
+// must be distinguishable states or the bug comes straight back.
+let edgeFadeChoice=null;
+// STARTS AT ZERO (Alyx): "I don't believe that it should be started on 12%,
+// I believe it should be started on zero percent." So choosing Fade commits
+// to nothing on its own -- the customer dials up from nothing until it looks
+// right, rather than being handed a fade they did not ask for the depth of.
+// At 0 the renderer draws no gradient at all, so 'fade' at 0% and 'hard' are
+// visually identical until the slider is moved.
+let edgeFadeAmountPct=0;
 
 // Shows accessorizeCard in its initial "choice" state -- the two
 // labeled mockups + No Thank You, with the browsable-rows/preview
@@ -8814,7 +8912,31 @@ function magazineAssetToJpegDataURL(url,maxDimension){
     });
 }
 
-async function applyEdgeFadeToImageUrl(url, edges, fadeColorHex='#FFFFFF'){
+// THE FADE MUST MATCH THE SHAPE OF THE PRINT AREA (Alyx, Aug 2026): "for
+// products that the surface area of the image presents as a circle rather
+// than a square, make sure that the slide has the right geometry... it
+// should slide from the edges in the form of a circle, not a square."
+//
+// Correct, and it would have been a silent bug: four linear gradients on a
+// round product fade toward four corners that do not physically exist, so
+// the customer sees a hard arc at the real rim with soft bands stranded
+// inside it.
+//
+// Nothing we currently sell is round -- the coaster is square hardboard,
+// 4" x 4" (blueprint 2764), which is the one people assume is a disc. So
+// this changes nothing visible today. It exists so that adding a round
+// coaster, button, ornament or plate is a one-line entry in
+// PRODUCT_FADE_SHAPE below rather than a geometry bug discovered on a
+// printed sample.
+const PRODUCT_FADE_SHAPE = {
+  // 'circle' for anything whose PRINTED AREA is a disc. Everything absent
+  // from this map is treated as rectangular.
+};
+function getProductFadeShape(){
+  return PRODUCT_FADE_SHAPE[product] || 'rect';
+}
+
+async function applyEdgeFadeToImageUrl(url, edges, fadeColorHex='#FFFFFF', fadeAmountPct=null, shape=null){
   try{
     const resp=await fetch(url);
     const blob=await resp.blob();
@@ -8834,8 +8956,41 @@ async function applyEdgeFadeToImageUrl(url, edges, fadeColorHex='#FFFFFF'){
     URL.revokeObjectURL(objectUrl);
 
     const w=canvas.width, h=canvas.height;
-    const fadePxX=Math.round(w*0.12);
-    const fadePxY=Math.round(h*0.12);
+    // 12% was hardcoded here, which is why the fade could never be dialled
+    // even though a slider for it existed elsewhere. Now the customer's
+    // chosen amount drives it, falling back to the old constant.
+    const pct=(fadeAmountPct==null?12:fadeAmountPct)/100;
+
+    // Round print areas fade inward from the RIM, as one radial gradient,
+    // rather than from four straight sides. Corners outside the disc are
+    // filled solid: they are never printed, so leaving artwork there would
+    // only mislead the customer about what survives.
+    const useShape=shape||(typeof getProductFadeShape==='function'?getProductFadeShape():'rect');
+    if(useShape==='circle'){
+      if(pct>0){
+        const cx=w/2, cy=h/2;
+        const outer=Math.min(w,h)/2;
+        const inner=Math.max(0,outer*(1-pct));
+        const rg=ctx.createRadialGradient(cx,cy,inner,cx,cy,outer);
+        rg.addColorStop(0,`rgba(${hexToRgbTriple(fadeColorHex)},0)`);
+        rg.addColorStop(1,`rgba(${hexToRgbTriple(fadeColorHex)},1)`);
+        ctx.fillStyle=rg;
+        ctx.fillRect(0,0,w,h);
+      }
+      const cx2=w/2, cy2=h/2, r2=Math.min(w,h)/2;
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(0,0,w,h);
+      ctx.arc(cx2,cy2,r2,0,Math.PI*2,true);
+      ctx.closePath();
+      ctx.fillStyle=`rgba(${hexToRgbTriple(fadeColorHex)},1)`;
+      ctx.fill('evenodd');
+      ctx.restore();
+      return canvas.toDataURL('image/png');
+    }
+
+    const fadePxX=Math.round(w*pct);
+    const fadePxY=Math.round(h*pct);
     const rgb=hexToRgbTriple(fadeColorHex);
 
     if(edges.top){
@@ -9711,15 +9866,25 @@ document.getElementById('cancelBtn').style.display='block';
     // is ever revisited.
     const is40ozWraparoundSplit = product==='water bottle' && mugPrintMode==='wraparound' && preGenTravelVariant==='travel-mug-40oz-insulated';
 
-    // TEMPORARY (Aug 2026, Alyx's explicit request): hardcoded to true
-    // regardless of hardEdgesEnabled's actual value or any toggle state
-    // anywhere in the app -- fade kept sneaking back in through paths
-    // that reset hardEdgesEnabled to false, so this is a blunt full
-    // kill-switch until the fade-after-framing flow is properly rebuilt.
-    // No automatic fade can happen anywhere while this line reads
-    // `= true`. Revert to `= hardEdgesEnabled;` once that rebuild is
-    // done and fade is a deliberate customer choice again.
-    const skipEdgeFade = true;
+    // THE REBUILD THE KILL-SWITCH WAS WAITING FOR (Aug 2026).
+    //
+    // This read `const skipEdgeFade = true;` -- a blunt hardcode Alyx asked
+    // for because "fade kept sneaking back in through paths that reset
+    // hardEdgesEnabled to false". That is the whole diagnosis in one line:
+    // fade was driven by the ABSENCE of a boolean, so any code path that
+    // reset a flag to its default silently switched fade ON. There were
+    // several, and they were impossible to enumerate confidently.
+    //
+    // Fixed by inverting the polarity rather than by hunting the paths.
+    // edgeFadeChoice is a tri-state -- null / 'fade' / 'hard' -- and fade
+    // now requires the POSITIVE value 'fade'. A reset returns it to null,
+    // which means no fade. Nothing that clears a variable can turn fade on
+    // any more, because "cleared" and "chosen" are no longer the same state.
+    //
+    // Default is null, so out of the box this build behaves exactly as the
+    // kill-switch did: no fade unless the customer asks for it on the Edge
+    // Fade card.
+    const skipEdgeFade = (edgeFadeChoice !== 'fade');
 
     const wrapCompositionLine = (product==='mug'||product==='water bottle')
       ? (isWraparoundActive
@@ -9935,9 +10100,9 @@ Use rich environmental storytelling while keeping the face as the primary focal 
 
       const rawLeftUrl=leftUrl, rawCenterUrl=centerUrl, rawRightUrl=rightUrl;
       if(!skipEdgeFade){
-        centerUrl=await applyEdgeFadeToImageUrl(centerUrl,{top:true,bottom:true,left:false,right:false},getSelectedProductColorHex());
-        leftUrl=await applyEdgeFadeToImageUrl(leftUrl,{top:true,bottom:true,left:true,right:false});
-        rightUrl=await applyEdgeFadeToImageUrl(rightUrl,{top:true,bottom:true,left:false,right:true});
+        centerUrl=await applyEdgeFadeToImageUrl(centerUrl,{top:true,bottom:true,left:false,right:false},getSelectedProductColorHex(),edgeFadeAmountPct);
+        leftUrl=await applyEdgeFadeToImageUrl(leftUrl,{top:true,bottom:true,left:true,right:false},getSelectedProductColorHex(),edgeFadeAmountPct);
+        rightUrl=await applyEdgeFadeToImageUrl(rightUrl,{top:true,bottom:true,left:false,right:true},getSelectedProductColorHex(),edgeFadeAmountPct);
       }
 
       currentDesignId=addToRecentDesigns(centerUrl);
@@ -10092,7 +10257,7 @@ async function makeTestSingleZonePanorama(side){
       const centerEdges=(isWraparoundActive && !is40ozWraparoundSplit)
         ? {top:true,bottom:true,left:false,right:false}
         : {top:true,bottom:true,left:true,right:true};
-      resultUrl=await applyEdgeFadeToImageUrl(resultUrl,centerEdges,getSelectedProductColorHex());
+      resultUrl=await applyEdgeFadeToImageUrl(resultUrl,centerEdges,getSelectedProductColorHex(),edgeFadeAmountPct);
     }
 
     if (is40ozWraparoundSplit){
@@ -10159,7 +10324,7 @@ async function makeTestSingleZonePanorama(side){
       // Sharp, unfaded copy kept specifically for pendingWraparoundRaw --
       // see the matching comment on rawRightUrl below for why.
       const rawLeftUrl = leftUrl;
-      if(!skipEdgeFade) leftUrl = await applyEdgeFadeToImageUrl(leftUrl, {top:true,bottom:true,left:true,right:false});
+      if(!skipEdgeFade) leftUrl = await applyEdgeFadeToImageUrl(leftUrl, {top:true,bottom:true,left:true,right:false},getSelectedProductColorHex(),edgeFadeAmountPct);
       placements.left = addToRecentDesigns(leftUrl);
 
       setStatus('Left panel done. Generating the right panel...');
@@ -10189,7 +10354,7 @@ async function makeTestSingleZonePanorama(side){
       // done aligning -- it just needed sharp input to fade correctly,
       // not a rewrite.
       const rawRightUrl = rightUrl;
-      if(!skipEdgeFade) rightUrl = await applyEdgeFadeToImageUrl(rightUrl, {top:true,bottom:true,left:false,right:true});
+      if(!skipEdgeFade) rightUrl = await applyEdgeFadeToImageUrl(rightUrl, {top:true,bottom:true,left:false,right:true},getSelectedProductColorHex(),edgeFadeAmountPct);
       placements.right = addToRecentDesigns(rightUrl);
 
       lastWraparoundMethod='classic';
@@ -11387,6 +11552,20 @@ function resetEverythingFreshStart(){
 
   currentDesignId=null;
   pendingSlotTarget=null;
+  // Back to UNCHOSEN, not to a boolean default. Caught by
+  // verify-edge-fade.js the first time it ran: without this, a reset left
+  // edgeFadeChoice at 'fade' and the next design faded without being asked
+  // -- which is exactly the "fade kept sneaking back in" that got the whole
+  // feature hardcoded off in the first place. The tri-state only protects
+  // anything if every reset path actually returns it to null.
+  edgeFadeChoice=null;
+  edgeFadeAmountPct=0;
+  hardEdgesEnabled=false;
+  const fadeSliderReset=document.getElementById('edgeFadeAmountSlider');
+  if(fadeSliderReset)fadeSliderReset.value=0;
+  const fadeReadoutReset=document.getElementById('edgeFadeAmountReadout');
+  if(fadeReadoutReset)fadeReadoutReset.textContent='0%';
+  if(typeof refreshEdgeFadeControls==='function')refreshEdgeFadeControls();
   hideAccessorizeStep();
   document.getElementById('approveRow').style.display='none';
   document.getElementById('downloadDesignBtn').style.display='none';
