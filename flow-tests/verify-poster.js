@@ -1,8 +1,14 @@
-// Photo/Poster flow verification. The poster UI already existed; what was
-// missing was the buildMockupRequestBody bridge, so the mockup never fired.
-// These checks pin the request body for BOTH trees (unframed base vs the
-// framed upsell, which is a different blueprint/provider server-side) and
-// pin the framed/unframed card toggling.
+// Photo/Poster, rebuilt Aug 2026 onto Printed Simply (852/73).
+//
+// The previous provider, Prima Printing, had NO US shipping profile at all --
+// US orders fell to REST_OF_THE_WORLD at $31.79 a poster against $6.99 for a
+// mug, so a $12.95 poster cost $44.74 delivered and posters were effectively
+// unsellable domestically. Printed Simply ships US for $6.79.
+//
+// Frames are gone: framing an 18x24 cost $57.87 on a print that costs a
+// dollar, and retail $61.95 cleared about $2 after Stripe.
+//
+// Printed Simply is Matte-only, so there is no finish choice left either.
 const { launch, openStudio, uploadPhoto, dismissAlerts } = require('./harness');
 
 const waitApprove = (page, t = 90000) =>
@@ -12,86 +18,99 @@ const pickPoster = async (page) => {
   await page.click('#postUploadForkRow button:has-text("Select Your Product")');
   await page.waitForTimeout(700);
   await page.locator('#productCard .btn-select[data-val="photo poster"]').click({ force: true });
-  await page.waitForTimeout(1000);
-};
-
-const runToMockup = async (page, mockupBodies) => {
-  await page.evaluate(() => document.getElementById('generateBtn')?.scrollIntoView({ block: 'center' }));
-  await page.click('#generateBtn');
-  await waitApprove(page);
-  await page.locator('#approveRow button:has-text("Yes")').first().click();
-  await page.waitForTimeout(1500);
-  // The mockup now fires automatically on approve (PRODUCTS_AUTO_MOCKUP);
-    // clicking Continue to Order is no longer how you reach it.
-    await page.waitForTimeout(8000);
-  return mockupBodies.find(b => b && b.action === 'start');
+  await page.waitForTimeout(1200);
 };
 
 const scenarios = {
 
-  // Card appears, and framed/unframed swaps which sub-options are offered.
-  async posterCardToggle(page) {
+  // The size grid must offer exactly the four affordable sizes, at catalog prices.
+  async posterSizes(page) {
     await pickPoster(page);
-    if (!(await page.isVisible('#photoPosterOptionsCard'))) return 'FAIL: poster options card not shown';
-    const unframed = await page.evaluate(() => ({
-      orient: getComputedStyle(document.getElementById('posterOrientationFinishWrap')).display,
-      frame: getComputedStyle(document.getElementById('posterFrameColorWrap')).display,
-      size: posterSize,
-    }));
-    if (unframed.orient === 'none') return 'FAIL: orientation/finish hidden while unframed';
-    if (unframed.frame !== 'none') return 'FAIL: frame-colour shown while unframed';
-    await page.click('#posterFramedBtn');
-    await page.waitForTimeout(500);
-    const framed = await page.evaluate(() => ({
-      orient: getComputedStyle(document.getElementById('posterOrientationFinishWrap')).display,
-      frame: getComputedStyle(document.getElementById('posterFrameColorWrap')).display,
-      size: posterSize,
-    }));
-    if (framed.orient !== 'none') return 'FAIL: orientation/finish still shown while framed';
-    if (framed.frame === 'none') return 'FAIL: frame-colour hidden while framed';
-    if (framed.size === unframed.size) return `FAIL: size did not re-base across trees (both ${framed.size})`;
-    return `PASS: toggle swaps options + re-bases size (${unframed.size} → ${framed.size})`;
+    const tiles = await page.$$eval('#posterSizeGrid .btn-select', els => els.map(e => e.textContent.trim()));
+    if (tiles.length !== 7) return `FAIL: expected 7 sizes, got ${tiles.length}: ${JSON.stringify(tiles)}`;
+    // Four affordable sizes, plus three large formats Alyx chose to offer at
+    // thinner margins. Every one must clear its own wholesale cost.
+    const want = {
+      '9" x 11"': [11.95, 5.64], '11" x 17"': [13.95, 7.97],
+      '12" x 18"': [14.95, 8.99], '11" x 14"': [14.95, 9.98],
+      '16" x 20"': [19.95, 16.18], '18" x 24"': [24.95, 20.18],
+      '24" x 36"': [34.95, 32.21],
+    };
+    for (const [label, [price, cost]] of Object.entries(want)) {
+      const hit = tiles.find(t => t.startsWith(label));
+      if (!hit) return `FAIL: size ${label} missing from the grid`;
+      if (!hit.includes(price.toFixed(2))) return `FAIL: ${label} is not $${price.toFixed(2)} (got "${hit}")`;
+      if (price <= cost) return `FAIL: ${label} sells at $${price} but costs $${cost} — losing money`;
+    }
+    const affordable = ['9" x 11"', '11" x 17"', '12" x 18"', '11" x 14"'];
+    const broke15 = affordable.filter(l => want[l][0] >= 15);
+    if (broke15.length) return `FAIL: the affordable line broke $15: ${broke15.join(', ')}`;
+    return `PASS: 7 sizes, 4 under $15, all clear their wholesale cost`;
   },
 
-  // Unframed: orientation + finish must reach the server; frame colour must NOT.
-  async posterUnframed(page, log, mockupBodies) {
+  // Frames must be gone from the UI entirely.
+  async framesGone(page) {
     await pickPoster(page);
-    await page.click('#posterUnframedBtn');
-    await page.waitForTimeout(400);
+    const st = await page.evaluate(() => ({
+      framedBtn: !!document.getElementById('posterFramedBtn'),
+      unframedBtn: !!document.getElementById('posterUnframedBtn'),
+      frameColour: !!document.getElementById('posterFrameColorWrap'),
+      glossy: !!document.getElementById('posterFinishGlossyBtn'),
+      framedUpsell: PHOTO_POSTER_CATALOG.framedUpsell,
+      posterFramed,
+    }));
+    if (st.framedBtn || st.unframedBtn) return 'FAIL: framed/unframed toggle still in the DOM';
+    if (st.frameColour) return 'FAIL: frame-colour block still in the DOM';
+    if (st.glossy) return 'FAIL: Glossy finish still offered — Printed Simply is Matte-only';
+    if (st.framedUpsell !== null) return `FAIL: framedUpsell is not null: ${JSON.stringify(st.framedUpsell)}`;
+    if (st.posterFramed !== false) return 'FAIL: posterFramed is not false';
+    return 'PASS: frames and finish choice fully removed';
+  },
+
+  // Orientation still works, and the mockup body carries the right product.
+  async posterFullRail(page, log, mockupCalls) {
+    await pickPoster(page);
     await page.evaluate(() => {
-      const t = [...document.querySelectorAll('#posterSizeGrid .btn-select')].find(b => /20.*x.*30/.test(b.textContent));
+      const t = [...document.querySelectorAll('#posterSizeGrid .btn-select')].find(b => /12.*x.*18/.test(b.textContent));
       if (t) t.click();
     });
     await page.click('#posterOrientHorizontalBtn');
-    await page.click('#posterFinishMatteBtn');
-    await page.waitForTimeout(500);
-    const start = await runToMockup(page, mockupBodies);
-    if (!start) return `FAIL: no start-mockup fired (bodies=${JSON.stringify(mockupBodies)})`;
+    await page.waitForTimeout(600);
+    // Poster is idea-first now (Alyx: everything that is not a mug or travel
+    // cup goes down the description path), so describe before generating.
+    await page.fill('#ideaDesc', 'riding a dragon over a volcano');
+    await page.waitForTimeout(600);
+    await dismissAlerts(page);
+    await page.waitForTimeout(300);
+    await page.evaluate(() => document.getElementById('generateBtn')?.scrollIntoView({ block: 'center' }));
+    await page.click('#generateBtn');
+    await waitApprove(page);
+    mockupCalls.length = 0;
+    await page.locator('#approveRow button:has-text("Yes")').first().click();
+    await page.waitForTimeout(9000);
+    const start = mockupCalls.find(b => b && b.action === 'start');
+    if (!start) return 'FAIL: no mockup fired on approve';
     if (start.productKey !== 'photo-poster') return `FAIL: productKey=${start.productKey}`;
-    if (start.sizeLabel !== '20x30') return `FAIL: sizeLabel=${start.sizeLabel}, expected 20x30`;
-    if (start.posterFramed !== false) return `FAIL: posterFramed=${start.posterFramed}, expected false`;
+    if (start.sizeLabel !== '12x18') return `FAIL: sizeLabel=${start.sizeLabel}, expected 12x18`;
+    if (start.posterFramed !== false) return `FAIL: posterFramed=${start.posterFramed}, must always be false now`;
     if (start.posterOrientation !== 'Horizontal') return `FAIL: orientation=${start.posterOrientation}`;
-    if (start.posterFinish !== 'Matte') return `FAIL: finish=${start.posterFinish}`;
-    if (start.colorName !== null) return `FAIL: colorName=${JSON.stringify(start.colorName)}, must be null when unframed`;
-    if (!start.image) return 'FAIL: no image url';
-    return `PASS: unframed {20x30, Horizontal, Matte, colorName:null}`;
+    if (start.posterFinish !== 'Matte') return `FAIL: finish=${start.posterFinish}, Printed Simply is Matte-only`;
+    return `PASS: full rail {12x18, Horizontal, Matte, unframed}`;
   },
 
-  // Framed: frame colour must travel as colorName.
-  async posterFramed(page, log, mockupBodies) {
+  // Reset must not throw now that the elements it used to touch are gone.
+  async resetSurvivesRemovedElements(page) {
     await pickPoster(page);
-    await page.click('#posterFramedBtn');
-    await page.waitForTimeout(500);
-    await page.click('#posterFrameWhiteBtn');
-    await page.waitForTimeout(300);
-    const chosenSize = await page.evaluate(() => posterSize);
-    const start = await runToMockup(page, mockupBodies);
-    if (!start) return `FAIL: no start-mockup fired`;
-    if (start.productKey !== 'photo-poster') return `FAIL: productKey=${start.productKey}`;
-    if (start.posterFramed !== true) return `FAIL: posterFramed=${start.posterFramed}, expected true`;
-    if (start.colorName !== 'White') return `FAIL: colorName=${start.colorName}, expected White`;
-    if (start.sizeLabel !== chosenSize) return `FAIL: sizeLabel=${start.sizeLabel}, expected ${chosenSize}`;
-    return `PASS: framed {${start.sizeLabel}, frame White via colorName}`;
+    page.once('dialog', d => d.accept());
+    const err = await page.evaluate(() => {
+      try { resetEverythingFreshStart(); return null; } catch (e) { return String(e); }
+    });
+    if (err) return `FAIL: reset threw after the frame/finish elements were removed: ${err}`;
+    await page.waitForTimeout(600);
+    const st = await page.evaluate(() => ({ framed: posterFramed, finish: posterFinish, size: posterSize }));
+    if (st.framed !== false) return `FAIL: posterFramed=${st.framed} after reset`;
+    if (st.finish !== 'Matte') return `FAIL: posterFinish=${st.finish} after reset`;
+    return `PASS: reset clean (framed=false, finish=Matte, size=${st.size})`;
   },
 };
 
@@ -99,23 +118,20 @@ const scenarios = {
   let fails = 0;
   for (const [name, fn] of Object.entries(scenarios)) {
     const { browser, page, log } = await launch();
-    const mockupBodies = [];
+    const mockupCalls = [];
     page.on('request', (r) => {
       if (r.url().includes('/api/start-mockup')) {
-        try { mockupBodies.push(r.postDataJSON()); } catch (e) {}
+        try { mockupCalls.push(r.postDataJSON()); } catch (e) {}
       }
     });
     try {
-      await openStudio(page);
-      await uploadPhoto(page);
-      await dismissAlerts(page);
-      const result = await fn(page, log, mockupBodies);
+      await openStudio(page); await uploadPhoto(page); await dismissAlerts(page);
+      const result = await fn(page, log, mockupCalls);
       console.log(`[${name}] ${result}`);
       if (/^FAIL/.test(result)) fails++;
     } catch (e) {
       console.log(`[${name}] ERROR: ${String(e).split('\n')[0]}`);
       fails++;
-      await page.screenshot({ path: `shot-poster-fail-${name}.png` }).catch(() => {});
     }
     const errs = log.consoleErrors.filter(e => !/ERR_TUNNEL/.test(e));
     if (errs.length) { console.log(`  CONSOLE: ${JSON.stringify(errs)}`); fails++; }

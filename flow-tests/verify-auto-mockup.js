@@ -24,7 +24,14 @@ const PREP = {
     const yes = p.locator('#phoneModelConfirmGen button:has-text("Yes")');
     if (await yes.count()) await yes.click();
   },
-  'photo poster': async (p) => { await p.click('#posterUnframedBtn'); },
+  // Frames are gone (Aug 2026); posters open straight onto the size grid, and
+  // picking a size is what hands off to the description card.
+  'photo poster': async (p) => {
+    await p.evaluate(() => {
+      const t = [...document.querySelectorAll('#posterSizeGrid .btn-select')].find(b => /12.*x.*18/.test(b.textContent));
+      if (t) t.click();
+    });
+  },
 };
 
 async function approveAndWatch(page, val, mockupCalls) {
