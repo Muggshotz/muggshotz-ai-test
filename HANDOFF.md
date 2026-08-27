@@ -57,7 +57,7 @@ four ERR_CONNECTION_RESET console errors per run that look like a product fault 
 | `verify-auto-mockup.js` | every single-image product fetches its mockup on approve |
 | `verify-idea-confirm.js` | description confirm goes forward; stage never veiled |
 | `verify-gimmick-gate.js` | gimmicks limited to mug + travel cup |
-| `verify-style-panel.js` | the chosen style reaches the WIRE on every generation path; the default const matches the tile byte-for-byte |
+| `verify-style-panel.js` | Art Style's rail position + spotlight + handoff; the chosen style reaches the WIRE on every generation path; the default const matches the tile byte-for-byte; all six styles present |
 | `verify-wraparound.js` | Wraparound on both rails: panorama vs per-panel engine, outage fallback, 403 no-retry, mug thirds vs travel-cup uncut, 40oz exclusion |
 | `verify-price-parity.js` | **no browser** — order.html vs catalog price drift. **Run it from the repo root** (`node flow-tests/verify-price-parity.js`), not from the scratch copy: it reads `order.html` and `lib/products-catalog.js` by relative path and ENOENTs anywhere else. |
 | `verify-poster.js` `verify-puzzle.js` `verify-tote.js` `verify-phone-suitcase.js` `verify-coaster-mousepad.js` `verify-travel.js` | per-product flows |
@@ -78,8 +78,18 @@ model — THEN the image. Bouncing a customer out to the artwork and back for th
 what not to do.
 
 ```
-product → its options (all of them) → description → Generate → real mockup → order
+photo → ART STYLE → track → product → its options (all of them) → description → Generate → mockup → order
 ```
+
+**Art Style moved to the front of the rail (2026-08-27).** It used to sit between the tote colour
+picker and Degree of Caricature, two thirds down the page, with nothing pointing at it — and until
+that night it could not have changed anything anyway, because the server overrode it. Alyx: *"I
+don't want that panel to be mid rail. Activate it, highlight it, and dim everything else."* The
+card **and the track fork** were both lifted out of their old positions to sit directly under
+Upload Photo, so the rail is forward-only with no backtracking. The fork is revealed at the same
+moment as Art Style, deliberately: a customer who does not care about art style walks straight past
+to the tracks, exactly as before. `verify-style-panel.js` pins DOM order, the spotlight, the handoff
+and that the tracks stay clickable under the dim.
 
 - **Spotlight**: each option card lights when its product is picked and hands off when its choice
   is made. Dim-only, no `pointer-events` lock — a dim is a guide, not a cage, so deliberate
@@ -342,9 +352,15 @@ silently retires the house style for everyone, with nothing visible to show for 
 path — the original defect was invisible in the UI, since the tile lit up and the variable was set
 correctly while the request still could not carry the decision.
 
-**This is the foundation the six-style panel needs.** Alyx's planned Facescape / Political Satire /
-Silhouette work would have been built on a block that crushed each new style the same way, and it
-would have looked like the styles didn't work rather than like something was overriding them.
+**The six-style panel is now built on it.** Live tiles: Muggshotz Classic (default), Photorealistic,
+**Political Satire** (Mad-magazine exaggeration), Comic Strip, Line Art, **Silhouette** (solid black
+profile on white — recognition comes entirely from the outline, which is why its directive says so
+explicitly: the likeness rules elsewhere insist on eyes, and a silhouette has none).
+
+**Facescape is NOT built** — parked at Alyx's request for the separate-channel session. Name chosen
+from a shortlist; runners-up were "Neck of the Woods" and "Village People". Before building it, test
+whether it reproduces consistently: it is the highest-variance style of the set by a distance, and it
+fights the likeness rules hardest (a face made of cottages has no skin tone and no skin texture).
 
 ## Secret sauce (read-only — flag, never edit)
 All AI prompt/description assembly. **Alyx gave an explicit go-ahead on 2026-08-27** to change the

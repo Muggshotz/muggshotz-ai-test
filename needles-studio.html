@@ -433,6 +433,8 @@ body.tote-size-focus .card:not(#toteSizeCard){opacity:.35;filter:brightness(.6) 
 body.tote-color-focus .card:not(#toteBagColorCard){opacity:.35;filter:brightness(.6) saturate(.75);transition:opacity .5s,filter .5s}
 body.phone-model-focus .card:not(#phoneCaseModelCard){opacity:.35;filter:brightness(.6) saturate(.75);transition:opacity .5s,filter .5s}
 body.poster-options-focus .card:not(#photoPosterOptionsCard){opacity:.35;filter:brightness(.6) saturate(.75);transition:opacity .5s,filter .5s}
+body.style-focus .card:not(#styleSectionCard){opacity:.35;filter:brightness(.6) saturate(.75);transition:opacity .5s,filter .5s}
+body.track-focus .card:not(#trackForkCard){opacity:.35;filter:brightness(.6) saturate(.75);transition:opacity .5s,filter .5s}
 body.ideafirst-focus .card:not(#ideaCard){opacity:.35;filter:brightness(.6) saturate(.75);transition:opacity .5s,filter .5s}
 body.design-method-focus .card:not(#designMethodCard){opacity:.28;filter:brightness(.55) saturate(.7);pointer-events:none;transition:opacity .5s,filter .5s}
 .generation-reminder-banner{font-size:14px;font-weight:800;letter-spacing:.3px;text-align:center;padding:14px 10px;margin:1rem 0;border-radius:10px;background:#0d0d0d;border:1px solid #003c8c;animation:mugSelectFlash 1s ease-in-out infinite}
@@ -685,11 +687,17 @@ body.design-method-focus .card:not(#designMethodCard){opacity:.28;filter:brightn
   </video>
 </div>
 <script>
+// The beat between the shine wave finishing and the page moving on. It is
+// deliberate -- the banner should be allowed to land before the page walks
+// away from it -- but at 5s it read as the page having hung, and Alyx hit it
+// on every single load: "it is entirely too long... cut that pause in half."
+// Halved to 2.5s, which still reads as a pause rather than a jump cut.
+const HERO_SETTLE_MS = 2500;
 document.getElementById('heroVideo').addEventListener('ended',()=>{
   setTimeout(()=>{
     const target=document.getElementById('uploadPhotoCard');
     if(target)target.scrollIntoView({behavior:'smooth',block:'start'});
-  },5000);
+  },HERO_SETTLE_MS);
 });
 </script>
 <div class="tagline">YOUR HONEY. OUR FUNNY.</div>
@@ -708,16 +716,6 @@ document.getElementById('heroVideo').addEventListener('ended',()=>{
 <img id="refBPreview" class="preview-img" style="display:none;max-height:140px"/>
 </div>
 <div class="note" style="margin-top:.5rem;margin-bottom:0;text-align:center;font-size:11px"><u>Optional!</u> Pin extra reference photos above if you want to combine or pull elements from other pictures (e.g. "use the face from one on the body in the other"). If not, no biggie.</div>
-<div id="postUploadForkRow" style="display:none;gap:8px;margin-top:.9rem">
-<div style="flex:1;display:flex;flex-direction:column;gap:4px">
-<div class="track-label" style="text-align:center;color:#7ab8ff;font-size:11px;font-weight:700;letter-spacing:.5px">TRACK 1</div>
-<button type="button" class="btn-select track-btn-flash" style="padding:1rem .6rem" onclick="pickTrackProduct()">🛒 Select Your Product</button>
-</div>
-<div style="flex:1;display:flex;flex-direction:column;gap:4px">
-<div class="track-label track-label-2" style="text-align:center;color:#7ab8ff;font-size:11px;font-weight:700;letter-spacing:.5px">TRACK 2</div>
-<button type="button" class="btn-select track-btn-flash track-btn-flash-2" style="padding:1rem .6rem" onclick="pickTrackDescribe()">🖌️ Create Your Design</button>
-</div>
-</div>
 <div id="workshopRecallRow" style="display:none;gap:8px;margin-top:.6rem">
 <button class="download-btn" id="recallPhotoBtn" style="flex:1;margin-top:0" onclick="recallLastPhotoUsed()">↻ Use Last Photo Uploaded</button>
 <button class="download-btn" id="recallGeneratedBtn" style="flex:1;margin-top:0" onclick="recallLastGeneratedImage()">↻ Use Last Design Generated</button>
@@ -795,10 +793,36 @@ document.getElementById('heroVideo').addEventListener('ended',()=>{
 </div>
 <button class="download-btn" id="toggleImageBtn" onclick="toggleWorkingImage()" style="display:none;margin-top:.6rem">↔️ Toggle Between Previous & New Image</button>
 <div id="keepTweakingReminder" class="guidance-prompt" role="status">Made your changes? Scroll down and hit Generate again. Running low on tokens? Tap Credits &amp; Extras to top up.</div>
-<div id="startOverBtn" class="critical-warning-blink" style="display:none;margin-top:.6rem;padding:.75rem;text-align:center;font-weight:700;color:#ff8a7a;cursor:default">PLEASE SELECT ONE OF THE ABOVE OPTIONS!</div>
 <button class="download-btn" id="downloadDesignBtn" onclick="downloadImage()" style="display:none;margin-top:.6rem">⬇️ Download for Printify</button>
 
 <button type="button" class="snap-arrow-btn snap-arrow-down" id="snapDown0" onclick="snapExpand(1)">⌄</button>
+</div>
+
+<div class="card" id="styleSectionCard"><div class="card-title">🎨 Art Style</div>
+<div class="note" id="styleStepIntro" style="margin-top:0;margin-bottom:.75rem;text-align:center">Every one of these draws your photo a completely different way. Pick the look you want — you can change it later.</div>
+<div class="grid2">
+<div class="btn-select selected" data-val="Muggshotz Classic: premium professional caricature, expressive face, rich detail, painterly shading, funny gift-art scene" onclick="pick(this,'style')">🦝 Muggshotz Classic<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Our signature painted caricature.</div></div>
+<div class="btn-select" data-val="photorealistic rendering, natural skin texture and lighting like a real photograph, shot on camera — not illustrated, not painted, not stylized" onclick="pick(this,'style')">📷 Photorealistic<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Looks like a real photograph.</div></div>
+<div class="btn-select" data-val="savage political-satire caricature in the tradition of Mad magazine and newspaper editorial cartoons: aggressively exaggerated features, oversized head on a small body, wild expressive linework, dense comic detail packed into every corner, sharp satirical humour — push the exaggeration far, but keep the person unmistakably recognizable" onclick="pick(this,'style')">🗞️ Political Satire<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Mad magazine, dialled all the way up.</div></div>
+<div class="btn-select" data-val="flat cel-shaded comic strip illustration, bold black outlines, flat solid color fills, no gradients or painterly shading" onclick="pick(this,'style')">💥 Comic Strip<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Bold outlines, flat colour.</div></div>
+<div class="btn-select" data-val="black and white pen-and-ink line drawing, clean linework only, no color, no shading fills — cross-hatching for shadow only" onclick="pick(this,'style')">✏️ Line Art<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Elegant pen-and-ink linework.</div></div>
+<div class="btn-select" data-val="stark silhouette portrait: the subject rendered as a single solid pure-black shape against a plain pure-white background, no interior detail whatsoever, no facial features drawn, no shading, no outline — recognition comes ENTIRELY from the precise outline of the profile, so the contour of the nose, lips, chin, brow, jaw, hair and glasses must exactly match the uploaded photo. Compose it as a close-up head-and-shoulders profile facing to one side" onclick="pick(this,'style')">🖤 Silhouette<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Pure black profile, white ground.</div></div>
+</div>
+<button type="button" id="styleContinueBtn" class="generate-btn" style="margin-top:.9rem;max-width:280px" onclick="confirmStyleAndContinue()">✅ Use This Style — Continue</button>
+</div>
+<div class="card" id="trackForkCard">
+<div class="card-title">🛤️ How Would You Like To Start?</div>
+<div id="postUploadForkRow" style="display:none;gap:8px;margin-top:.9rem">
+<div style="flex:1;display:flex;flex-direction:column;gap:4px">
+<div class="track-label" style="text-align:center;color:#7ab8ff;font-size:11px;font-weight:700;letter-spacing:.5px">TRACK 1</div>
+<button type="button" class="btn-select track-btn-flash" style="padding:1rem .6rem" onclick="pickTrackProduct()">🛒 Select Your Product</button>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:4px">
+<div class="track-label track-label-2" style="text-align:center;color:#7ab8ff;font-size:11px;font-weight:700;letter-spacing:.5px">TRACK 2</div>
+<button type="button" class="btn-select track-btn-flash track-btn-flash-2" style="padding:1rem .6rem" onclick="pickTrackDescribe()">🖌️ Create Your Design</button>
+</div>
+</div>
+<div id="startOverBtn" class="critical-warning-blink" style="display:none;margin-top:.6rem;padding:.75rem;text-align:center;font-weight:700;color:#ff8a7a;cursor:default">PLEASE SELECT ONE OF THE ABOVE OPTIONS!</div>
 </div>
 
 <div class="card" id="framePreviewThumbCard" style="display:none;text-align:center">
@@ -1186,7 +1210,6 @@ Tell Needles <span style="color:#7ab8ff">what you have in mind</span>
 <div class="color-grid" id="toteBagColorGridGen"></div>
 </div>
 
-<div class="card" id="styleSectionCard"><div class="card-title">🎨 Style</div><div class="grid2"><div class="btn-select selected" data-val="Muggshotz Classic: premium professional caricature, expressive face, rich detail, painterly shading, funny gift-art scene" onclick="pick(this,'style')">🦝 Muggshotz Classic</div><div class="btn-select" data-val="photorealistic rendering, natural skin texture and lighting like a real photograph, shot on camera — not illustrated, not painted, not stylized" onclick="pick(this,'style')">📷 Photorealistic</div><div class="btn-select" data-val="flat cel-shaded comic strip illustration, bold black outlines, flat solid color fills, no gradients or painterly shading" onclick="pick(this,'style')">💥 Comic Strip</div><div class="btn-select" data-val="black and white pen-and-ink line drawing, clean linework only, no color, no shading fills — cross-hatching for shadow only" onclick="pick(this,'style')">✏️ Line Art</div></div></div>
 
 <div class="card" id="likenessSectionCard"><div class="card-title">🎭 Degree of Caricature</div><div class="grid3"><div class="btn-select selected" data-val="0.15" onclick="pick(this,'likeness')"><span class="icon">😊</span>Lifelike</div><div class="btn-select" data-val="0.25" onclick="pick(this,'likeness')"><span class="icon">😄</span>Balanced</div><div class="btn-select" data-val="0.35" onclick="pick(this,'likeness')"><span class="icon">🤪</span>Wild</div></div></div>
 
@@ -2168,13 +2191,52 @@ function startPhotoGuide(){
   clearTimeout(openingGuideTimer);
   openingGuideDone=true;
   showPostUploadFork();
-  const warningEl=document.getElementById('startOverBtn');
-  if(warningEl)scrollToStableBottom(warningEl,16,15);
 }
 
+// ART STYLE IS NOW THE FIRST DECISION AFTER THE PHOTO (Aug 2026, Alyx):
+// "I don't want that panel to be mid rail. Activate it, highlight it, and
+// dim everything else." It used to sit between the tote colour picker and
+// Degree of Caricature, roughly two thirds of the way down the page, where
+// nothing ever pointed at it and most customers never touched it -- and
+// until tonight it could not have changed anything anyway, since the server
+// overrode it (see buildStyleBlock in api/generate.js).
+//
+// The card and the track fork have both been lifted out of their old
+// positions to sit directly under Upload Photo, so the rail reads
+// photo -> style -> track -> product, forward-only, with no backtracking.
+//
+// The fork is REVEALED here rather than after the style pick, deliberately.
+// The house rule is that a dim is a guide, not a cage: someone who does not
+// care about art style can walk straight past this step to the tracks below,
+// exactly as they always could. The spotlight says where to look, not where
+// you are allowed to click.
 function showPostUploadFork(){
   const row=document.getElementById('postUploadForkRow');
   if(row)row.style.display='flex';
+  const styleCard=document.getElementById('styleSectionCard');
+  if(styleCard)styleCard.style.display='';
+  const continueBtn=document.getElementById('styleContinueBtn');
+  if(continueBtn)continueBtn.style.display='block';
+  const intro=document.getElementById('styleStepIntro');
+  if(intro)intro.style.display='block';
+  setOptionSpotlight('style-focus');
+  smoothScrollToTarget('styleSectionCard','center');
+}
+
+// Hands the spotlight from Art Style to the track fork. Muggshotz Classic is
+// preselected, so someone happy with the default still needs a way forward
+// that is not "click the thing that is already selected" -- hence a Continue
+// button rather than advancing on tile click. Same pattern as the mug colour
+// step's "Satisfied - Continue".
+function confirmStyleAndContinue(){
+  const continueBtn=document.getElementById('styleContinueBtn');
+  if(continueBtn)continueBtn.style.display='none';
+  const intro=document.getElementById('styleStepIntro');
+  if(intro)intro.style.display='none';
+  setOptionSpotlight('track-focus');
+  smoothScrollToTarget('trackForkCard','center');
+  const warningEl=document.getElementById('startOverBtn');
+  if(warningEl)scrollToStableBottom(warningEl,16,15);
 }
 
 // Track 1: skip the description step entirely, go straight to
@@ -2195,6 +2257,11 @@ function pickTrackProduct(){
   document.getElementById('startOverBtn').style.display='none';
   document.body.classList.remove('initial-upload-focus');
   document.body.classList.remove('idea-focus');
+  // Both of the new rail steps release here, including the case where the
+  // customer skipped Art Style entirely and clicked a track from under the
+  // dim. Leaving either behind would dim the product grid they just asked for.
+  document.body.classList.remove('style-focus');
+  document.body.classList.remove('track-focus');
   document.body.classList.add('product-focus');
   smoothScrollToTarget('productCard','center');
 }
@@ -2206,6 +2273,8 @@ function pickTrackDescribe(){
   chosenTrack='describe';
   document.getElementById('postUploadForkRow').style.display='none';
   document.getElementById('startOverBtn').style.display='none';
+  document.body.classList.remove('style-focus');
+  document.body.classList.remove('track-focus');
   const styleCard=document.getElementById('styleSectionCard');
   if(styleCard)styleCard.style.display='';
   const likenessCard=document.getElementById('likenessSectionCard');

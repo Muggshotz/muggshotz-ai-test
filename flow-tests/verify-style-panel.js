@@ -156,6 +156,88 @@ scenarios.untouchedStyleStaysDefault = async (page, log, bodies) => {
   return 'PASS: an untouched panel still reports the house default';
 };
 
+// ---- 6. Art Style is now a REAL rail step: first after the photo, lit. ----
+// It used to sit between the tote colour picker and Degree of Caricature,
+// two thirds down the page, with nothing pointing at it. Alyx: "I don't want
+// that panel to be mid rail. Activate it, highlight it, and dim everything
+// else." Position and spotlight are both pinned here because either one
+// failing alone puts the panel back to being invisible in practice.
+scenarios.styleIsTheFirstLitStepAfterThePhoto = async (page) => {
+  const st = await page.evaluate(() => {
+    const style = document.getElementById('styleSectionCard');
+    const upload = document.getElementById('uploadPhotoCard');
+    const track = document.getElementById('trackForkCard');
+    const product = document.getElementById('productCard');
+    if (!style || !upload || !track || !product) return { missing: true };
+    const r = style.getBoundingClientRect();
+    return {
+      focus: Array.from(document.body.classList).filter(c => c.endsWith('-focus')),
+      // DOM order is what makes this a rail step rather than a card that
+      // happens to light up somewhere far below.
+      afterUpload: !!(upload.compareDocumentPosition(style) & Node.DOCUMENT_POSITION_FOLLOWING),
+      beforeTrack: !!(style.compareDocumentPosition(track) & Node.DOCUMENT_POSITION_FOLLOWING),
+      beforeProduct: !!(style.compareDocumentPosition(product) & Node.DOCUMENT_POSITION_FOLLOWING),
+      onScreen: r.top < innerHeight && r.bottom > 0,
+      height: Math.round(r.height),
+      continueVisible: getComputedStyle(document.getElementById('styleContinueBtn')).display !== 'none',
+      productOpacity: getComputedStyle(product).opacity,
+    };
+  });
+  if (st.missing) return 'FAIL: styleSectionCard / trackForkCard / productCard not all present';
+  if (!st.afterUpload) return 'FAIL: Art Style is not after Upload Photo in the DOM';
+  if (!st.beforeTrack) return 'FAIL: Art Style comes AFTER the track fork — style must be chosen first';
+  if (!st.beforeProduct) return 'FAIL: Art Style still sits below Product — that is the mid-rail position it was moved out of';
+  if (st.focus.join() !== 'style-focus') return `FAIL: spotlight is ${JSON.stringify(st.focus)}, expected exactly [style-focus]`;
+  if (!st.onScreen || st.height === 0) return `FAIL: Art Style is not on screen (h=${st.height})`;
+  if (!st.continueVisible) return 'FAIL: no Continue button — Muggshotz Classic is preselected, so there is no way forward without one';
+  if (parseFloat(st.productOpacity) > 0.5) return `FAIL: Product is not dimmed (opacity ${st.productOpacity}) — nothing else should compete`;
+  return 'PASS: Art Style is the first lit step after the photo, before track and product, everything else dimmed';
+};
+
+// ---- 7. It hands off to the tracks, and never traps anyone. ----
+scenarios.styleHandsOffToTheTracks = async (page) => {
+  // A dim is a guide, not a cage: the tracks below must stay clickable for
+  // anyone who does not care about art style.
+  const reachable = await page.evaluate(() => {
+    const btn = document.querySelector('#postUploadForkRow button');
+    if (!btn) return null;
+    const r = btn.getBoundingClientRect();
+    const mid = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+    return { pe: getComputedStyle(btn).pointerEvents, covered: !!(mid && !btn.contains(mid)) };
+  });
+  if (!reachable) return 'FAIL: track buttons missing';
+  if (reachable.pe === 'none') return 'FAIL: the tracks are pointer-locked under the style dim — a dim is a guide, not a cage';
+
+  await page.click('#styleContinueBtn');
+  await T(page, 1200);
+  const after = await page.evaluate(() => ({
+    focus: Array.from(document.body.classList).filter(c => c.endsWith('-focus')),
+    continueGone: getComputedStyle(document.getElementById('styleContinueBtn')).display === 'none',
+    forkOpacity: getComputedStyle(document.getElementById('trackForkCard')).opacity,
+  }));
+  if (after.focus.join() !== 'track-focus') return `FAIL: after Continue the spotlight is ${JSON.stringify(after.focus)}, expected [track-focus]`;
+  if (!after.continueGone) return 'FAIL: the Continue button is still showing after being used';
+  if (parseFloat(after.forkOpacity) < 0.9) return `FAIL: the track fork is dimmed (${after.forkOpacity}) while holding the spotlight`;
+
+  await page.click('#postUploadForkRow button:has-text("Select Your Product")');
+  await T(page, 1200);
+  const end = await page.evaluate(() => Array.from(document.body.classList).filter(c => c.endsWith('-focus')));
+  if (end.join() !== 'product-focus') return `FAIL: picking a track left ${JSON.stringify(end)} — a stale style/track dim would grey out the product grid`;
+  return 'PASS: style -> track -> product relays cleanly, tracks stayed reachable throughout';
+};
+
+// ---- 8. All six styles are on the panel. ----
+scenarios.sixStylesOffered = async (page) => {
+  const tiles = await styleTiles(page);
+  const want = ['classic', 'photoreal', 'satire', 'comic', 'line art', 'silhouette'];
+  const labels = tiles.map(t => t.label.toLowerCase());
+  const missing = want.filter(w => !labels.some(l => l.includes(w.split(' ')[0])));
+  if (missing.length) return `FAIL: missing style(s): ${missing.join(', ')} (found ${tiles.length})`;
+  const empty = tiles.filter(t => !t.val || t.val.length < 20);
+  if (empty.length) return `FAIL: ${empty.length} tile(s) carry no real directive`;
+  return `PASS: all ${tiles.length} styles present, each with a real directive`;
+};
+
 (async () => {
   let fails = 0;
   for (const [name, fn] of Object.entries(scenarios)) {
