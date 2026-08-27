@@ -99,7 +99,7 @@ product → its options (all of them) → description → Generate → real mock
   by their own routes and would double up.
 
 ## Products
-Live and working end-to-end: **mug, travel cups (5 variants), phone case, suitcase, tote bag,
+Live and working end-to-end: **mug, travel cups (6 variants), phone case, suitcase, tote bag,
 photo puzzle, photo/poster, coasters, mouse pad.**
 On the grid with NO catalog entry (generate art, cannot be ordered): **greeting card, post-it.**
 
@@ -118,6 +118,8 @@ combination: the fee scales with price, the margin does not.
 | poster 9x11 → 11x14 | $5.64–$9.98 | $11.95–$14.95 | $4.97–$6.31 |
 | poster 16x20 / 18x24 / 24x36 | $16.18 / $20.18 / $32.21 | $19.95 / $24.95 / $34.95 | $3.77 / $4.77 / **$2.74** |
 | suitcase S / M / L | $144.93 / $162.64 / $180.35 | $169.95 / $194.95 / $214.95 | $25.02 / $32.31 / $34.60 |
+| **Vacuum Thermal Tumbler 40oz** | $13.69 | $24.95 | $11.26 (**$9.58 after Stripe**) |
+| travel mug 40oz **insulated** | $39.29 | $44.95 | $5.66 (**$3.84 after Stripe**) |
 
 **Two price ladders deliberately DECREASE. Do not "fix" them:**
 - Puzzle: 96 pcs costs MORE than 252 pcs ($35.07 vs $33.62) — short runs are dearer. This was
@@ -132,6 +134,35 @@ offer them. They cannot buy them if they don't want them."*
 
 **Seasonal note:** drop coasters to ~$24.95 around Christmas to land under $25 for Secret Santa
 (still $5.16 clear). Alyx wants phone cases under $20 for the same reason — already done.
+
+### The two 40oz tumblers (2026-08-27) — they are not the same product
+Alyx found a 40oz that genuinely wraps. It was already sitting in the catalog as
+`travel-mug-40oz-vacuum` (bp **1715** / **Smart Printee 90**), entered by an earlier session,
+never surfaced in the studio, and written off in this handoff as a leftover to scratch. **That was
+wrong.** Verified against the live API, not the comment beside it:
+
+| | placeholders | wholesale | US ship | net after Stripe |
+|---|---|---|---|---|
+| Vacuum Thermal 40oz (1715/90) | **one**, `front` 3710x2817 — a full wrap | $13.69 | $19.39 / $17.99 | **$9.58** @ $24.95 |
+| Insulated 40oz (1498/217) | **four** — mug_front/back 900x1200, drinkware_front/back 825x1200 | $39.29 | $7.59 / $2.99 | **$3.84** @ $44.95 |
+
+The insulated one's handle splits its body into separate faces, which is why it is `front-back`
+and why no amount of generator work will ever make it wrap. Priced per Alyx: *"just figure to make
+a $9 profit… that way the customer gets a really good bargain."* $24.95 → customer pays **$44.34
+all-in**, against **$52.54** for the insulated cup that nets us a third as much.
+
+**Two things still open on it:**
+- **Decoration is `uv`, not sublimation** — a different printer and ink system from every other
+  product in the catalog. UV DTF tumbler wraps are an established process, but we have never run
+  one. **Order a sample before promoting it.**
+- **US shipping is $19.39**, the highest in the catalog by a wide margin, and the customer sees it
+  as its own line — 78% of the product price on a $24.95 cup. The all-in total still wins; the
+  optics are real.
+- Colour hexes are still best-guess: Printify's variants endpoint exposes only colour **names** for
+  this blueprint, no swatches. Not fixable through the API.
+
+**Consider retiring the insulated 40oz rather than carrying both** — the worse product cannibalises
+the better one, and it is the thinnest real margin in the catalog after the 24x36 poster.
 
 ### Poster provider history (do not undo)
 Posters ran on blueprint 1079 / **Prima Printing**, which has **NO US shipping profile at all**.
@@ -253,9 +284,16 @@ v=3, v=4 and v=7. **Always tell them the number when announcing a push.**
   is private with 0 collaborators, and the worst case is someone granting themselves free tokens.
   **Do not re-raise unless the repo goes public or gains collaborators.**
 - **Greeting card + post-it** need catalog entries before they can be ordered.
-- **`travel-mug-40oz-vacuum`** has a full catalog entry with real variant IDs but appears ZERO
-  times in needles-studio.html, so it cannot be bought. Alyx called it a leftover — "scratch it".
-  Left in place, not surfaced.
+- **`travel-mug-40oz-vacuum` is now live** — see "The two 40oz tumblers" above. It was NOT a
+  leftover; it is the only 40oz we sell that can actually wrap, and it nets two and a half times
+  what the insulated one does. Still needs a **sample print** before promotion (UV decoration).
+- **FIXED 2026-08-27: order.html was missing two travel cups.** The 32oz Gator and 30oz Tundra
+  were sellable in the studio but absent from `order.html`'s own `TRAVEL_MUG_CATALOG`, which is
+  the table its tiles are built from. Not a crash — `selectedTravelProductKey` starts null on that
+  page and is only set by clicking a tile there, so the customer's cup silently vanished and they
+  picked a different one, correctly charged for a product they never chose. `verify-price-parity.js`
+  now checks travel variants three ways (studio↔order presence, studio↔catalog presence, price
+  agreement) and was proven against a re-broken copy before being trusted.
 - **24x36 poster** is the thinnest margin in the catalog (~$1.43 after Stripe). Kept on Alyx's
   call; $39.95 would clear $7.58 if it ever needs rescuing.
 - Alyx works in **real time, one bug at a time**, from live runs with screenshots. Expect reports

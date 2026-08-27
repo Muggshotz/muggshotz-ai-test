@@ -88,6 +88,11 @@ const VARIANTS = {
   // and reads variantId 88210 directly -- no colour is expected or needed.
   'travel-mug-14oz-handle':    ['14oz', false, false],
   'travel-mug-40oz-insulated': ['40oz', true,  true],
+  // The OTHER 40oz: a single 3710x2817 print area (a genuine full wrap)
+  // where the insulated one has four placeholders split by its handle.
+  // Same size label, single-image body shape, and it carries colours, so
+  // resolveVariant() needs a colorName the way the insulated one does.
+  'travel-mug-40oz-vacuum':    ['40oz', false, true],
   'travel-mug-32oz-gator':     ['32oz', false, false],
   'travel-mug-30oz-tundra':    ['30oz', false, false],
 };

@@ -149,6 +149,60 @@ for (const [label, tableName, catalogKey] of [
     : 'PASS: poster: framed upsell fully removed');
 }
 
+// --- travel cups: the studio and the order page must offer the SAME cups ---
+// order.html builds its travel-cup tiles from its OWN TRAVEL_MUG_CATALOG, and
+// selectedTravelProductKey starts null there -- it is only set by clicking a
+// tile on that page. So a cup the studio sells but this table omits does not
+// error: the customer arrives, finds their cup simply absent, and picks a
+// different one. A silent substitution, charged correctly, for a product they
+// never chose. The 32oz Gator and the 30oz Tundra were in exactly that state.
+{
+  const catSrc = fs.readFileSync(path.join(ROOT, 'lib', 'products-catalog.js'), 'utf8');
+  const travelKeys = [...new Set([...catSrc.matchAll(/"(travel-mug-[a-z0-9-]+)":\s*\{/g)].map(m => m[1]))];
+
+  // Read the studio locally: the shared `studio` const is declared further
+  // down this file, so touching it here is a temporal-dead-zone error.
+  const studioSrc = fs.readFileSync(path.join(ROOT, 'needles-studio.html'), 'utf8');
+  const studioBlock = blockAfter(studioSrc, 'const TRAVEL_MUG_CATALOG');
+  const orderBlock = blockAfter(order, 'const TRAVEL_MUG_CATALOG');
+  const keysIn = (b) => b ? [...new Set([...b.matchAll(/"(travel-mug-[a-z0-9-]+)":\s*\{/g)].map(m => m[1]))] : [];
+  const studioKeys = keysIn(studioBlock);
+  const orderKeys = keysIn(orderBlock);
+
+  if (!studioBlock || !orderBlock) {
+    checks.push('FAIL: travel cups: could not read TRAVEL_MUG_CATALOG from the studio or the order page');
+  } else {
+    const absent = studioKeys.filter(k => !orderKeys.includes(k));
+    checks.push(absent.length
+      ? `FAIL: travel cups: sold in the studio, absent from order.html: ${absent.join(', ')} — the customer's cup silently vanishes at checkout`
+      : `PASS: travel cups: all ${studioKeys.length} studio cups exist on the order page`);
+
+    const notInCatalog = studioKeys.filter(k => !travelKeys.includes(k));
+    checks.push(notInCatalog.length
+      ? `FAIL: travel cups: no server catalog entry for ${notInCatalog.join(', ')} — the order would throw`
+      : `PASS: travel cups: every studio cup has a server catalog entry`);
+
+    // Price agreement, catalog vs order page. The catalog nests price under
+    // sizes[<sizeLabel>]; the order page keeps a flat `price` per cup.
+    let bad = null;
+    for (const k of studioKeys) {
+      if (!orderKeys.includes(k) || !travelKeys.includes(k)) continue;
+      const catBlock = blockAfter(catSrc, `"${k}":`);
+      const sizes = catBlock && blockAfter(catBlock, 'sizes:');
+      const catPrice = sizes && sizes.match(/price:\s*([0-9.]+)/);
+      const ordEntry = blockAfter(orderBlock.slice(orderBlock.indexOf(`"${k}":`)), `"${k}":`);
+      const ordPrice = ordEntry && ordEntry.match(/price:\s*([0-9.]+)/);
+      if (!catPrice || !ordPrice) { bad = `${k}: could not read a price from one side`; break; }
+      if (parseFloat(catPrice[1]) !== parseFloat(ordPrice[1])) {
+        bad = `${k}: catalog $${catPrice[1]}, order page $${ordPrice[1]}`; break;
+      }
+    }
+    checks.push(bad
+      ? `FAIL: travel cups: ${bad}`
+      : `PASS: travel cups: every price agrees between the catalog and the order page`);
+  }
+}
+
 // --- every studio product must be orderable --------------------------------
 const studio = fs.readFileSync(path.join(ROOT, 'needles-studio.html'), 'utf8');
 const gridVals = [...new Set([...studio.matchAll(/data-val="([^"]+)"[^>]*onclick="pick\(this,'product'\)"/g)].map(m => m[1]))];

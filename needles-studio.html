@@ -4190,6 +4190,9 @@ const TRAVEL_WRAP_RATIO = {
   'travel-mug-32oz-gator': 1.75,
   'travel-mug-14oz-handle': 2.15,
   'travel-mug-30oz-tundra': 3.50,
+  // bp 1715, 3710 x 2817. A full wrap, but a NARROW one -- below the 2.0
+  // floor, so it takes the single-image path, not the panorama.
+  'travel-mug-40oz-vacuum': 1.32,
   'travel-mug-40oz-insulated': 0.69
 };
 
@@ -10524,6 +10527,25 @@ const TRAVEL_MUG_CATALOG = {
       { name: "Navy Blue", hex: "#2E4E7E" }, { name: "Royal Blue", hex: "#3B6FC4" },
       { name: "Teal", hex: "#BAE5DE" }, { name: "Olive Green", hex: "#8A9A5B" },
       { name: "Dark Gray", hex: "#5A5A5A" }, { name: "Red", hex: "#C94F4F" }
+    ]
+  },
+  "travel-mug-40oz-vacuum": {
+    displayName: "Vacuum Thermal Tumbler, 40oz",
+    layoutType: "single-image",
+    sizeLabel: "40oz",
+    thumbnail: "https://images.printify.com/696a61ef81d5e5f6610ce682",
+    // The OTHER 40oz. Where travel-mug-40oz-insulated has four separate
+    // placeholders (mug_front/back, drinkware_front/back) because its
+    // handle splits the body, this one has a SINGLE 3710x2817 print area
+    // covering the whole tumbler -- a genuine full wrap. Same nominal
+    // size, completely different product.
+    colors: [
+      { name: "White", hex: "#FFFFFF" }, { name: "Creamy White", hex: "#F5F0E1" },
+      { name: "Black", hex: "#1c1c1c" }, { name: "Navy Blue", hex: "#1B3D7A" },
+      { name: "Light Blue", hex: "#A8D0E6" }, { name: "Cyan", hex: "#00BCD4" },
+      { name: "Grey Green", hex: "#7A8B7F" }, { name: "Light Green", hex: "#90C695" },
+      { name: "Light Purple", hex: "#C9A8E0" }, { name: "Pink", hex: "#F4A6C1" },
+      { name: "Rose Red", hex: "#B7434F" }, { name: "Red", hex: "#D62828" }
     ]
   },
   "travel-mug-32oz-gator": {

@@ -423,6 +423,45 @@ const TRAVEL_MUG_CATALOG = {
       { name: "Teal", hex: "#1F9E8E" }, { name: "Olive Green", hex: "#6B8E23" },
       { name: "Dark Gray", hex: "#4a4a4a" }, { name: "Red", hex: "#D62828" }
     ]
+  },
+  // THE MISSING THREE (2026-08-27). This table is the grid the order page
+  // builds its travel-cup tiles FROM, and it carried only three of the five
+  // cups the studio sells. It is not a crash: selectedTravelProductKey
+  // starts null on this page and is only set by clicking a tile here, so a
+  // customer who configured a 32oz Gator or a 30oz Tundra in the studio
+  // arrived to find their cup simply absent and had to pick a different one.
+  // A silent substitution, which is worse than an error -- they get charged
+  // correctly for a cup they did not choose. Same root cause the handoff
+  // already flags for coasters: order.html keeps its OWN copy of every price
+  // and drifts from lib/products-catalog.js unless something checks.
+  // verify-price-parity.js now covers travel variants so it cannot recur.
+  "travel-mug-32oz-gator": {
+    displayName: "Gator Tumbler, 32oz",
+    layoutType: "single-image",
+    sizeLabel: "32oz",
+    price: 34.95,
+    colors: null
+  },
+  "travel-mug-30oz-tundra": {
+    displayName: "Tundra Tumbler, 30oz",
+    layoutType: "single-image",
+    sizeLabel: "30oz",
+    price: 34.95,
+    colors: null
+  },
+  "travel-mug-40oz-vacuum": {
+    displayName: "Vacuum Thermal Tumbler, 40oz",
+    layoutType: "single-image",
+    sizeLabel: "40oz",
+    price: 24.95,
+    colors: [
+      { name: "White", hex: "#FFFFFF" }, { name: "Creamy White", hex: "#F5F0E1" },
+      { name: "Black", hex: "#1c1c1c" }, { name: "Navy Blue", hex: "#1B3D7A" },
+      { name: "Light Blue", hex: "#A8D0E6" }, { name: "Cyan", hex: "#00BCD4" },
+      { name: "Grey Green", hex: "#7A8B7F" }, { name: "Light Green", hex: "#90C695" },
+      { name: "Light Purple", hex: "#C9A8E0" }, { name: "Pink", hex: "#F4A6C1" },
+      { name: "Rose Red", hex: "#B7434F" }, { name: "Red", hex: "#D62828" }
+    ]
   }
 };
 
