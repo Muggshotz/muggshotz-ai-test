@@ -414,18 +414,32 @@ body #accessorizeCard{opacity:1!important;filter:none!important;pointer-events:a
    ideaCard, mugPrintModeCard, and productCard already are for their
    own focus stages -- frame selection now works throughout. */
 body #frameSectionCard{opacity:1!important;filter:none!important;pointer-events:auto!important}
-body.print-mode-focus .card:not(#mugPrintModeCard){opacity:.28;filter:brightness(.55) saturate(.7);pointer-events:none;transition:opacity .5s,filter .5s}
-body.covermegen-focus .card:not(#coverMeCard){opacity:.28;filter:brightness(.55) saturate(.7);pointer-events:none;transition:opacity .5s,filter .5s}
-body.coverme-frameoffer-focus .card:not(#coverMeFrameOfferCard){opacity:.28;filter:brightness(.55) saturate(.7);pointer-events:none;transition:opacity .5s,filter .5s}
-body.coverme-fullframegrid-focus .card:not(#coverMeFrameFullGridCard){opacity:.28;filter:brightness(.55) saturate(.7);pointer-events:none;transition:opacity .5s,filter .5s}
-body.covermereveal-focus .card:not(#uploadPhotoCard){opacity:.28;filter:brightness(.55) saturate(.7);pointer-events:none;transition:opacity .5s,filter .5s}
-body.faceitgen-focus .card:not(#faceItCard){opacity:.28;filter:brightness(.55) saturate(.7);pointer-events:none;transition:opacity .5s,filter .5s}
-body.faceitreveal-focus .card:not(#uploadPhotoCard){opacity:.28;filter:brightness(.55) saturate(.7);pointer-events:none;transition:opacity .5s,filter .5s}
-body.goodmorninggen-focus .card:not(#goodMorningCard){opacity:.28;filter:brightness(.55) saturate(.7);pointer-events:none;transition:opacity .5s,filter .5s}
-body.goodmorningreveal-focus .card:not(#uploadPhotoCard){opacity:.28;filter:brightness(.55) saturate(.7);pointer-events:none;transition:opacity .5s,filter .5s}
+/* A DIM IS A GUIDE, NOT A CAGE -- and that goes for going BACK.
+   Alyx: "whenever we switch the back button we shouldn't switch the back
+   button and have things freeze up on us... going back allows you to
+   actually go back and then go forward from there."
+   Every rail spotlight below used to carry pointer-events:none alongside the
+   dimming, which made every card except the lit one literally unclickable.
+   Reaching Print Style on a mug therefore froze the PRODUCT card too: a
+   customer who changed their mind could see the grid, click a different
+   product, and have nothing happen at all -- reproduced exactly, product
+   stayed "mug" and the coaster shape card never opened.
+   The dimming stays; it is what tells you where to look. The lock is gone,
+   so a customer is always free to go back up the rail and come forward
+   again. initial-upload-focus keeps its lock on purpose: it sets opacity:0,
+   and an invisible clickable card is a trap in the other direction. */
+body.print-mode-focus .card:not(#mugPrintModeCard){opacity:.28;filter:brightness(.55) saturate(.7);transition:opacity .5s,filter .5s}
+body.covermegen-focus .card:not(#coverMeCard){opacity:.28;filter:brightness(.55) saturate(.7);transition:opacity .5s,filter .5s}
+body.coverme-frameoffer-focus .card:not(#coverMeFrameOfferCard){opacity:.28;filter:brightness(.55) saturate(.7);transition:opacity .5s,filter .5s}
+body.coverme-fullframegrid-focus .card:not(#coverMeFrameFullGridCard){opacity:.28;filter:brightness(.55) saturate(.7);transition:opacity .5s,filter .5s}
+body.covermereveal-focus .card:not(#uploadPhotoCard){opacity:.28;filter:brightness(.55) saturate(.7);transition:opacity .5s,filter .5s}
+body.faceitgen-focus .card:not(#faceItCard){opacity:.28;filter:brightness(.55) saturate(.7);transition:opacity .5s,filter .5s}
+body.faceitreveal-focus .card:not(#uploadPhotoCard){opacity:.28;filter:brightness(.55) saturate(.7);transition:opacity .5s,filter .5s}
+body.goodmorninggen-focus .card:not(#goodMorningCard){opacity:.28;filter:brightness(.55) saturate(.7);transition:opacity .5s,filter .5s}
+body.goodmorningreveal-focus .card:not(#uploadPhotoCard){opacity:.28;filter:brightness(.55) saturate(.7);transition:opacity .5s,filter .5s}
 body.final-generate-focus .card:not(#uploadPhotoCard){opacity:.35;filter:brightness(.6) saturate(.75);transition:opacity .5s,filter .5s}
 body.initial-upload-focus .card:not(#uploadPhotoCard){opacity:0;pointer-events:none;transition:opacity .5s}
-body.idea-focus .card:not(#ideaCard){opacity:.35;filter:brightness(.6) saturate(.75);pointer-events:none;transition:opacity .5s,filter .5s}
+body.idea-focus .card:not(#ideaCard){opacity:.35;filter:brightness(.6) saturate(.75);transition:opacity .5s,filter .5s}
 body.product-focus .card:not(#productCard){opacity:.35;filter:brightness(.6) saturate(.75);transition:opacity .5s,filter .5s}
 body.suitcase-size-focus .card:not(#suitcaseSizeCard){opacity:.35;filter:brightness(.6) saturate(.75);transition:opacity .5s,filter .5s}
 body.puzzle-size-focus .card:not(#puzzleSizeCard){opacity:.35;filter:brightness(.6) saturate(.75);transition:opacity .5s,filter .5s}
@@ -437,7 +451,7 @@ body.style-focus .card:not(#styleSectionCard){opacity:.35;filter:brightness(.6) 
 body.coaster-shape-focus .card:not(#coasterShapeCard){opacity:.35;filter:brightness(.6) saturate(.75);transition:opacity .5s,filter .5s}
 body.track-focus .card:not(#trackForkCard){opacity:.35;filter:brightness(.6) saturate(.75);transition:opacity .5s,filter .5s}
 body.ideafirst-focus .card:not(#ideaCard){opacity:.35;filter:brightness(.6) saturate(.75);transition:opacity .5s,filter .5s}
-body.design-method-focus .card:not(#designMethodCard){opacity:.28;filter:brightness(.55) saturate(.7);pointer-events:none;transition:opacity .5s,filter .5s}
+body.design-method-focus .card:not(#designMethodCard){opacity:.28;filter:brightness(.55) saturate(.7);transition:opacity .5s,filter .5s}
 .generation-reminder-banner{font-size:14px;font-weight:800;letter-spacing:.3px;text-align:center;padding:14px 10px;margin:1rem 0;border-radius:10px;background:#0d0d0d;border:1px solid #003c8c;animation:mugSelectFlash 1s ease-in-out infinite}
 #creditsModalOverlay{
   background:rgba(2,5,9,.9)!important;
@@ -4832,6 +4846,15 @@ function mugSizeLockBack(){
   document.querySelectorAll('#productCard .btn-select').forEach(b=>b.classList.remove('selected'));
   product=null;
   productExplicitlyChosen=false;
+  // Leaving the mug entirely, so nothing chosen inside it should outlive the
+  // trip. This used to keep mugStyleChosenPreGen true and the old style and
+  // colour set, which meant coming back in landed on a rail that thought
+  // decisions had been made that the customer could no longer see.
+  mugSizeChosenPreGen=false;
+  mugStyleChosenPreGen=false;
+  mugColorChosenPreGen=false;
+  mugColorFinishedPreGen=false;
+  selectedGenColor=null;
   document.body.classList.remove('final-generate-focus');
   const productGuide=document.getElementById('productGuidancePrompt');
   if(productGuide)productGuide.classList.add('visible');
@@ -4845,6 +4868,23 @@ function mugSizeLockBack(){
 // other one) both work naturally without losing their place.
 function mugStyleLockBack(){
   mugSizeChosenPreGen=false;
+  // GOING BACK PAST SIZE INVALIDATES THE COLOUR. Alyx: "try to go back twice,
+  // two steps to try to repick something and see what happens."
+  //
+  // What happened: the colour survived. Size decides which colours exist --
+  // Color Pop offers Golden Yellow at 11oz and not at 15oz, Trimmed offers ten
+  // at 11oz and five at 15oz -- so a colour chosen before a size change can be
+  // one this size does not sell. Reproduced exactly: 11oz Color Pop in Golden
+  // Yellow, back twice, re-pick 15oz, and selectedGenColor was still
+  // "Golden Yellow" against a list that no longer contained it.
+  //
+  // Nothing had ordered a bad variant yet, because Continue stays hidden until
+  // a colour is picked and picking one overwrites this. But an invalid colour
+  // sitting in state behind a screen that looks finished is the exact shape of
+  // the bugs found all day, and it costs one line not to carry it.
+  selectedGenColor=null;
+  mugColorChosenPreGen=false;
+  mugColorFinishedPreGen=false;
   refreshMugStyleCardVisibility();
   refreshMugSizeCardVisibility();
 }
