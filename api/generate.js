@@ -160,7 +160,8 @@ Polished gift-art quality.
   return `STYLE — THE CUSTOMER CHOSE THIS, AND IT IS THE FINAL WORD ON HOW THIS IS RENDERED:
 ${styleDirective}
 Render the ENTIRE image in that style — the subject, the background, and every element in the scene, consistently.
-Where anything above conflicts with the style just named, the style just named wins.
+Where anything above conflicts with the style just named, the style just named wins ON RENDERING: medium, linework, shading, palette, finish.
+It does NOT win on canvas, layout or composition. Any requirement about filling the canvas edge to edge, or about not drawing borders, frames, margins, panels, gutters or captions, is a technical printing requirement and overrides the style absolutely. Render the chosen style as a full-bleed image with no frame of any kind, however that style would normally be presented.
 Keep a strong, unmistakable likeness to the uploaded photo: the person must stay immediately recognizable within this style.
 Polished gift-art quality.
 `;
@@ -356,17 +357,19 @@ Place the caricature of the customer, based on the uploaded photo, centred horiz
 To the left and to the right of the subject, continue the SAME environment outward without interruption — the same room, the same landscape, the same crowd, the same lighting — exactly as if the camera had simply panned further in that direction. Do NOT repeat the subject's face or body anywhere else in the scene unless the environment naturally calls for it (a shadow, a reflection, a distant object they would plausibly be near).
 Lighting direction, colour grading, horizon line, perspective and visual style must stay perfectly consistent all the way across the full width.
 
-CRITICAL COMPOSITION RULES — THE ARTWORK MUST FILL THE ENTIRE CANVAS, EDGE TO EDGE:
-Do NOT draw any border, frame, matte, margin, background surround, vignette, or coloured surface behind or around the artwork.
-Do NOT divide the image into panels, sections, columns, tiles, or separate pictures. This is NOT a triptych, NOT a diptych, NOT a collage, NOT a storyboard, and NOT a set of framed prints hanging on a wall.
-There must be no vertical lines, gutters, gaps, seams, or visual breaks anywhere in the composition.
-Every pixel, from the far left edge to the far right edge, is part of one single continuous scene.
 ${referenceLine}
 
 CUSTOMER REQUEST:
 ${prompt}
 
-${buildStyleBlock(styleDirective, styleIsDefault)}`;
+${buildStyleBlock(styleDirective, styleIsDefault)}
+CRITICAL COMPOSITION RULES — THE ARTWORK MUST FILL THE ENTIRE CANVAS, EDGE TO EDGE:
+Do NOT draw any border, frame, matte, margin, background surround, vignette, or coloured surface behind or around the artwork.
+Do NOT divide the image into panels, sections, columns, tiles, or separate pictures. This is NOT a triptych, NOT a diptych, NOT a collage, NOT a storyboard, and NOT a set of framed prints hanging on a wall.
+There must be no vertical lines, gutters, gaps, seams, or visual breaks anywhere in the composition.
+Every pixel, from the far left edge to the far right edge, is part of one single continuous scene.
+These composition rules are technical printing requirements. They override the STYLE above, and every other instruction here, without exception.
+`;
 
       const geminiParts = [
         { text: panoramaPrompt },
