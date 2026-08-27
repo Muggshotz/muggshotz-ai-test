@@ -17,8 +17,12 @@ async function launch(opts = {}) {
     headless: true,
     args: ['--autoplay-policy=no-user-gesture-required'],
   });
+  // Viewport is overridable because height is not cosmetic here: cards with
+  // max-height:90vh clip their own content, so a bug that is invisible on a
+  // 900px-tall desktop window is a dead end on a 760px phone. Tests that care
+  // about reachability pass their own.
   const context = await browser.newContext({
-    viewport: { width: 1280, height: 900 },
+    viewport: opts.viewport || { width: 1280, height: 900 },
   });
   const page = await context.newPage();
 

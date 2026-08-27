@@ -29,6 +29,20 @@ async function pickProduct(page, val) {
   await T(page, 700);
   await page.locator(`#productCard .btn-select[data-val="${val}"]`).click({ force: true });
   await T(page, 1000);
+  // Coasters gained a shape step (square hardboard / round corkwood), and the
+  // rail holds the description box inside a collapsed #edgeFadeIdeaSection
+  // until a shape is chosen. Without this, page.fill('#ideaDesc') waits 30s on
+  // a box that is display:none by ancestor and the scenario dies before it
+  // asserts anything -- which is a stale test, not a product fault: the shape
+  // card is right there and picking it opens the description immediately.
+  // Visibility, not count: #coasterShapeCard is in the DOM for every product
+  // and merely hidden for the rest, so counting its buttons fires this for
+  // mugs and travel cups too and dies on an invisible click.
+  const shape = page.locator('#coasterShapeCard .btn-select').first();
+  if (await shape.isVisible().catch(() => false)) {
+    await shape.click({ force: true });
+    await T(page, 1200);
+  }
 }
 
 // Every /api/generate body this page sends, so the assertions can be made
