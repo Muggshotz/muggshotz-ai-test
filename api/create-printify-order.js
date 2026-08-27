@@ -30,7 +30,7 @@ const SHOP_ID = "27439202";
 // order path, single-image and wraparound alike. Fixing it at one of the five
 // call sites would have left the other four broken.
 const PRINTIFY_MAX_UPLOAD_BYTES = 8 * 1024 * 1024;
-const PRINTIFY_JPEG_QUALITY = 95;
+const PRINTIFY_JPEG_QUALITY = 92;
 
 async function compressForPrintify(imageBuffer, fileName) {
   let meta;
@@ -39,6 +39,14 @@ async function compressForPrintify(imageBuffer, fileName) {
   } catch (err) {
     console.error(`Printify upload: could not read image metadata, sending as-is: ${err.message}`);
     return { buffer: imageBuffer, fileName };
+  }
+
+  // Already lossy and already small enough: send it untouched. buildSingleImage
+  // now hands over a finished JPEG, and re-encoding a JPEG would cost seconds
+  // of CPU only to degrade it a second time. Just make sure the extension
+  // matches what is actually in the buffer, since callers name everything .png.
+  if ((meta.format === "jpeg" || meta.format === "jpg") && imageBuffer.length <= PRINTIFY_MAX_UPLOAD_BYTES) {
+    return { buffer: imageBuffer, fileName: fileName.replace(/\.png$/i, ".jpg") };
   }
 
   // Transparency must survive. A mug wraparound composited over a transparent
@@ -57,8 +65,11 @@ async function compressForPrintify(imageBuffer, fileName) {
   }
 
   const jpegName = fileName.replace(/\.png$/i, ".jpg");
+  // No mozjpeg: it compresses perhaps 20% better but took 9.9s on a 77.8MP
+  // canvas against 2.8s for standard libjpeg. Not worth the wait when the
+  // result already fits comfortably.
   const encode = (quality) =>
-    sharp(imageBuffer).jpeg({ quality, mozjpeg: true, chromaSubsampling: "4:4:4" }).toBuffer();
+    sharp(imageBuffer).jpeg({ quality, chromaSubsampling: "4:4:4" }).toBuffer();
 
   let out = await encode(PRINTIFY_JPEG_QUALITY);
 
@@ -78,7 +89,7 @@ async function compressForPrintify(imageBuffer, fileName) {
     for (const scale of [0.8, 0.65, 0.5]) {
       out = await sharp(imageBuffer)
         .resize(Math.round(meta.width * scale), null, { withoutEnlargement: true })
-        .jpeg({ quality: 88, mozjpeg: true, chromaSubsampling: "4:4:4" })
+        .jpeg({ quality: 88, chromaSubsampling: "4:4:4" })
         .toBuffer();
       if (out.length <= PRINTIFY_MAX_UPLOAD_BYTES) {
         console.error(
@@ -590,11 +601,22 @@ export async function buildSeamlessWrapImage(placements, canvasWidth, canvasHeig
     .png()
     .toBuffer();
 }
+// Encodes JPEG directly rather than building a full-resolution PNG and
+// re-compressing it afterwards. Measured on a 24x36 poster (77.8 megapixels,
+// the largest print area in the catalogue): the old two-step path spent 2.6s
+// building a 24.85MB PNG and a further 9.9s re-encoding it with mozjpeg, 12.6s
+// in total. One pipeline at q92 produces a SMALLER file, 3.93MB, in 2.8s --
+// about four and a half times faster for a better result.
+//
+// The canvas is contain-fitted onto solid white, so there is no alpha to lose
+// and JPEG is safe here. 4:4:4 chroma keeps full colour resolution, which
+// matters for print: the default 4:2:0 would throw away three quarters of the
+// colour detail to save about half a megabyte.
 export async function buildSingleImage(imageSource, canvasWidth, canvasHeight) {
   const WHITE = { r: 255, g: 255, b: 255 };
   return await sharp(await resolveImageBuffer(imageSource))
     .resize(canvasWidth, canvasHeight, { fit: "contain", background: WHITE })
-    .png()
+    .jpeg({ quality: 92, chromaSubsampling: "4:4:4" })
     .toBuffer();
 }
 
