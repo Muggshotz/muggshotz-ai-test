@@ -118,7 +118,7 @@ combination: the fee scales with price, the margin does not.
 | poster 9x11 → 11x14 | $5.64–$9.98 | $11.95–$14.95 | $4.97–$6.31 |
 | poster 16x20 / 18x24 / 24x36 | $16.18 / $20.18 / $32.21 | $19.95 / $24.95 / $34.95 | $3.77 / $4.77 / **$2.74** |
 | suitcase S / M / L | $144.93 / $162.64 / $180.35 | $169.95 / $194.95 / $214.95 | $25.02 / $32.31 / $34.60 |
-| **Vacuum Thermal Tumbler 40oz** | $13.69 | $25.95 | $12.26 (**$10.55 after Stripe**) |
+| **Vacuum Thermal Tumbler 40oz** | $13.69 | $25.56 | $11.87 (**$10.18 after Stripe**) |
 | travel mug 40oz **insulated** | $39.29 | $44.95 | $5.66 (**$3.84 after Stripe**) |
 
 **Two price ladders deliberately DECREASE. Do not "fix" them:**
@@ -148,16 +148,24 @@ wrong.** Verified against the live API, not the comment beside it:
 
 The insulated one's handle splits its body into separate faces, which is why it is `front-back`
 and why no amount of generator work will ever make it wrap. Priced per Alyx: *"just figure to make
-a $9 profit… that way the customer gets a really good bargain,"* then nudged to **$25.95** to keep
-the house .95 ending → customer pays **$45.34** US pre-tax, against **$52.54** for the insulated cup
-that nets us under a third as much.
+a $9 profit… that way the customer gets a really good bargain."*
 
-**The all-in total is not a number that can be pinned.** Alyx asked for it to read $44.95; hitting
-that exactly needs a $25.56 product price, which breaks the very .95 format that was the reason for
-asking. And it would only be true for a US customer before tax — the same cup is $52.14 all-in to
-Canada ($27.19 shipping) and $46.94 to the EU, and `automatic_tax` moves it again in every state.
-**The .95 convention lives on the product price the customer sees on the tile**, so that is where it
-was applied.
+**THIS PRODUCT IS PRICED TO THE TOTAL, NOT TO THE TILE.** The 4.95/9.95 ladder is satisfied at
+**checkout**, not on the product price: Alyx prices *what the customer pays*.
+
+```
+$44.95 customer total  −  $19.39 US shipping  =  $25.56 product price
+```
+
+So `$25.56` is a remainder and is **supposed** to look off-ladder. An earlier pass "corrected" it to
+$25.95 on the theory that the .95 belonged on the tile; Alyx rejected that — *"that's not keeping
+with any pricing scheme I've ever used."* **Do not tidy it back onto the ladder.** Doing so breaks
+the total, which is the number actually being priced.
+
+Customer pays **$44.95**, we net **$10.18** — the same total as the insulated 40oz, which nets $3.84.
+
+Caveat: $44.95 is exact for a US customer pre-tax only. Canada totals $52.14 ($27.19 shipping), the
+EU $46.94, and `automatic_tax` moves it again per state.
 
 **Two things still open on it:**
 - **Decoration is `uv`, not sublimation** — a different printer and ink system from every other
