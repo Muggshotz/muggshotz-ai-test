@@ -12,7 +12,7 @@
 // This suite plants stale state the way a previous session would have left
 // it, then proves it cannot reach a print slot. The FIRST scenario is the
 // regression itself and is written to fail against the old build.
-const { launch, openStudio, uploadPhoto, dismissAlerts, BASE } = require('./harness');
+const { launch, openStudio, uploadPhoto, dismissAlerts, BASE, passFadePage } = require('./harness');
 
 const T = (page, ms) => page.waitForTimeout(ms);
 const STALE = 'https://example.invalid/STALE-DESIGN-FROM-A-PREVIOUS-SESSION.png';
@@ -35,6 +35,17 @@ async function pickProduct(page, val) {
   await T(page, 700);
   await page.locator(`#productCard .btn-select[data-val="${val}"]`).click({ force: true });
   await T(page, 1000);
+  // Coasters gained a shape step (square hardboard / round corkwood), and the
+  // description box stays collapsed inside #edgeFadeIdeaSection until a shape
+  // is chosen -- so page.fill('#ideaDesc') times out on a box that is
+  // display:none by ancestor. Stale test, not a product fault; the shape card
+  // is right there and picking it opens the description immediately.
+  // Visibility-guarded so this never fires for products without the card.
+  const shape = page.locator('#coasterShapeCard .btn-select').first();
+  if (await shape.isVisible().catch(() => false)) {
+    await shape.click({ force: true });
+    await T(page, 1200);
+  }
 }
 
 const scenarios = {};
@@ -64,6 +75,11 @@ scenarios.mockupNeverCarriesStaleArt = async (page, log, bodies) => {
   await page.click('#generateBtn');
   await page.waitForFunction(() => document.getElementById('approveRow')?.style.display !== 'none', null, { timeout: 90000 });
   await page.locator('#approveRow button:has-text("Yes")').first().click();
+  await T(page, 1500);
+  // Coasters pause at the fade page on approve (PRODUCTS_AUTO_MOCKUP) -- the
+  // mockup only fires after the customer confirms there. Same stale-test
+  // family as verify-tote/poster/puzzle/phone-suitcase.
+  await passFadePage(page);
   await T(page, 6000);
 
   const start = bodies.find(b => b && b.action === 'start');

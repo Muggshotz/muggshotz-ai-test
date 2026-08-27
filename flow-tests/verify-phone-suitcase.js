@@ -1,7 +1,7 @@
 // Phone case + suitcase flow verification: product pick → mandatory
 // pre-gen choice → generate → approve → YES → Continue to Order →
 // mockup request carries the right productKey/sizeLabel → lightbox.
-const { launch, openStudio, uploadPhoto, dismissAlerts } = require('./harness');
+const { launch, openStudio, uploadPhoto, dismissAlerts, passFadePage } = require('./harness');
 
 const waitApprove = (page, t = 90000) =>
   page.waitForFunction(() => document.getElementById('approveRow')?.style.display !== 'none', null, { timeout: t });
@@ -48,8 +48,16 @@ const scenarios = {
     await waitApprove(page);
     await page.locator('#approveRow button:has-text("Yes")').first().click();
     await page.waitForTimeout(1500);
-    // The mockup now fires automatically on approve (PRODUCTS_AUTO_MOCKUP);
-    // clicking Continue to Order is no longer how you reach it.
+    // THE FADE PAGE STANDS BETWEEN APPROVE AND THE MOCKUP NOW. Same stale-test
+    // family as verify-tote/poster/puzzle, found in the same sweep: every
+    // product in PRODUCTS_AUTO_MOCKUP pauses at maybeOpenFadeBeforeMockup()
+    // on approve, and the mockup only fires once the customer confirms there.
+    // This suite predates that page, so it waited for a start-mockup that was
+    // deliberately parked behind a confirmation screen and reported the
+    // product broken. Walk through it like a customer does.
+    await passFadePage(page);
+    // The mockup then fires automatically (PRODUCTS_AUTO_MOCKUP); clicking
+    // Continue to Order is no longer how you reach it.
     await page.waitForTimeout(8000);
     const start = mockupBodies.find(b => b.action === 'start');
     if (!start) return 'FAIL: no start-mockup call fired';
@@ -84,8 +92,16 @@ const scenarios = {
     await waitApprove(page);
     await page.locator('#approveRow button:has-text("Yes")').first().click();
     await page.waitForTimeout(1500);
-    // The mockup now fires automatically on approve (PRODUCTS_AUTO_MOCKUP);
-    // clicking Continue to Order is no longer how you reach it.
+    // THE FADE PAGE STANDS BETWEEN APPROVE AND THE MOCKUP NOW. Same stale-test
+    // family as verify-tote/poster/puzzle, found in the same sweep: every
+    // product in PRODUCTS_AUTO_MOCKUP pauses at maybeOpenFadeBeforeMockup()
+    // on approve, and the mockup only fires once the customer confirms there.
+    // This suite predates that page, so it waited for a start-mockup that was
+    // deliberately parked behind a confirmation screen and reported the
+    // product broken. Walk through it like a customer does.
+    await passFadePage(page);
+    // The mockup then fires automatically (PRODUCTS_AUTO_MOCKUP); clicking
+    // Continue to Order is no longer how you reach it.
     await page.waitForTimeout(8000);
     const start = mockupBodies.find(b => b.action === 'start');
     if (!start) return 'FAIL: no start-mockup call fired';
