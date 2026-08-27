@@ -103,14 +103,34 @@ scenarios.colourlessStyleCanStillProceed = async (page) => {
   await toMugStyles(page);
   await page.evaluate(() => pickPreGenMugStyle('Classic White'));
   await T(page, 900);
-  const st = await page.evaluate(() => ({
-    colourWrapShown: getComputedStyle(document.getElementById('preGenMugColorWrap')).display !== 'none',
-    finishShown: getComputedStyle(document.getElementById('preGenMugColorFinishBtn')).display !== 'none',
-    chosen: mugColorChosenPreGen,
-    colour: selectedGenColor,
-  }));
-  if (st.colourWrapShown) return 'FAIL: a colour grid is showing for a mug that has no colours';
+  const st = await page.evaluate(() => {
+    const btn = document.getElementById('preGenMugColorFinishBtn');
+    const card = document.getElementById('mugStyleCard');
+    const b = btn.getBoundingClientRect(), c = card.getBoundingClientRect();
+    return {
+      // The GRID, not the wrap. #preGenMugColorWrap also contains the mug
+      // mockup and the Continue button, so it has to stay visible even for a
+      // style with no colours -- hiding it was the first, wrong fix, and it
+      // gave the Continue button display:block with a zero-size box at the
+      // page origin. Only the swatch grid should disappear.
+      colourGridShown: getComputedStyle(document.getElementById('preGenMugColorGrid')).display !== 'none',
+      swatchCount: document.querySelectorAll('#preGenMugColorGrid .color-btn').length,
+      finishShown: getComputedStyle(btn).display !== 'none',
+      // display:block is NOT enough. #mugStyleCard is max-height:90vh with
+      // overflow-y:hidden, so a button below the clip is rendered, visible to
+      // getComputedStyle, and impossible for a customer to reach or click.
+      // That is exactly how this shipped: the first version of this check
+      // asserted display alone and passed while the flow was frozen.
+      finishReachable: b.height > 0 && b.top >= c.top - 2 && b.bottom <= c.bottom + 2,
+      finishOffsetBelowCard: Math.round(b.bottom - c.bottom),
+      chosen: mugColorChosenPreGen,
+      colour: selectedGenColor,
+    };
+  });
+  if (st.colourGridShown || st.swatchCount)
+    return `FAIL: a colour grid is showing (${st.swatchCount} swatches) for a mug that has no colours`;
   if (!st.finishShown) return 'FAIL: no Continue button — picking Classic White strands the customer with nothing to click';
+  if (!st.finishReachable) return `FAIL: the Continue button is rendered but clipped ${st.finishOffsetBelowCard}px below #mugStyleCard, which has overflow-y:hidden — the customer cannot reach it and the flow is frozen`;
   if (st.chosen !== true) return 'FAIL: mugColorChosenPreGen is false, so the rail thinks a choice is still outstanding';
   if (st.colour !== null) return `FAIL: selectedGenColor is ${JSON.stringify(st.colour)} for a colourless style`;
 
@@ -119,7 +139,7 @@ scenarios.colourlessStyleCanStillProceed = async (page) => {
   await T(page, 900);
   const key = await page.evaluate(() => GEN_STYLE_TO_PRODUCT_KEY[selectedGenStyle]);
   if (key !== 'classic-white-mug') return `FAIL: Classic White maps to ${key}`;
-  return 'PASS: a colourless style proceeds cleanly and maps to classic-white-mug';
+  return 'PASS: a colourless style proceeds cleanly, Continue is reachable, and it maps to classic-white-mug';
 };
 
 // ---- 5. Every style has a thumbnail the grid can actually draw. ----
@@ -192,10 +212,98 @@ scenarios.sizePhotosAreNotSwapped = async (page) => {
   return `PASS: 15oz photo is the taller mug (H/W ${shapes.r15.toFixed(3)} vs ${shapes.r11.toFixed(3)}), matching Printify's print areas`;
 };
 
+// ---- 7. On a short window, EVERY style must leave a reachable next step. ----
+// Alyx, one message apart: "I clicked to select on Classic White and it didn't
+// take me anywhere, we seem to be frozen here" / "Same thing when I select
+// trimmed". Two different styles, one cause: #mugStyleCard is capped at 90vh,
+// and it used to be overflow-y:HIDDEN inside an overlay that could never
+// scroll past it. Anything below the cap was rendered, display:block, and
+// unreachable by any means the customer had.
+//
+// So this asserts the thing a customer actually needs, at a size where the
+// card genuinely overflows: after picking a style, the next control is inside
+// the card's visible box AND is the topmost element at its own centre point.
+// A colourless style hands you "Satisfied - Continue"; every other style hands
+// you the swatch grid. Either way something must be there to press.
+scenarios.everyStyleLeavesAReachableNextStepOnAShortWindow = async (page) => {
+  await toMugStyles(page);
+  const styles = await page.evaluate(() => Object.keys(PRE_GEN_MUG_STYLE_PRICES));
+  const bad = [];
+
+  // Reachable = has a box, sits inside the card's visible bounds, and is the
+  // topmost element at its own centre. Checking display alone is what let this
+  // ship twice.
+  const reach = (page, sel, nth) => page.evaluate(({ sel, nth }) => {
+    const card = document.getElementById('mugStyleCard');
+    const c = card.getBoundingClientRect();
+    const list = document.querySelectorAll(sel);
+    const el = nth == null ? document.querySelector(sel) : list[nth];
+    if (!el) return { missing: true, count: list.length };
+    const r = el.getBoundingClientRect();
+    const hit = r.height ? document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2) : null;
+    return {
+      count: list.length,
+      h: Math.round(r.height),
+      inCard: r.top >= c.top - 2 && r.bottom <= c.bottom + 2,
+      past: Math.round(r.bottom - c.bottom),
+      onTop: !!hit && (hit === el || el.contains(hit) || hit.contains(el)),
+      overflowY: getComputedStyle(card).overflowY,
+    };
+  }, { sel, nth });
+
+  for (const style of styles) {
+    await page.locator(`#preGenMugStyleGrid .btn-select[data-style="${style}"]`).click();
+    await T(page, 1100);
+
+    const n = await page.evaluate(() => document.querySelectorAll('#preGenMugColorGrid .color-btn').length);
+    if (n) {
+      // EVERY swatch, not just the first. The grid wraps to several rows and
+      // only the top row was ever above the clip, so a check on the first
+      // swatch passes while most of the colours on offer cannot be picked.
+      for (let i = 0; i < n; i++) {
+        const st = await reach(page, '#preGenMugColorGrid .color-btn', i);
+        if (!st.h) { bad.push(`${style}: swatch ${i + 1}/${n} has no box`); break; }
+        if (!st.inCard) { bad.push(`${style}: swatch ${i + 1}/${n} sits ${st.past}px past the card's bottom edge (overflow-y:${st.overflowY})`); break; }
+        if (!st.onTop) { bad.push(`${style}: swatch ${i + 1}/${n} is covered by something else`); break; }
+      }
+      // Then walk the rest of the journey: pick the LAST colour (the one
+      // furthest down the grid) and make sure Continue is reachable after it.
+      await page.locator('#preGenMugColorGrid .color-btn').nth(n - 1).click();
+      await T(page, 1200);
+    }
+
+    const fin = await reach(page, '#preGenMugColorFinishBtn', null);
+    if (fin.missing || !fin.h) bad.push(`${style}: no Continue button to press`);
+    else if (!fin.inCard) bad.push(`${style}: Continue sits ${fin.past}px past the card's bottom edge (overflow-y:${fin.overflowY}) — the customer cannot reach it`);
+    else if (!fin.onTop) bad.push(`${style}: Continue is covered by something else`);
+  }
+
+  if (bad.length) return `FAIL: ${bad.length} dead end(s) at 430x560 — ${bad.join('; ')}`;
+  return `PASS: all ${styles.length} styles walk style -> every colour -> Continue with nothing out of reach on a 430x560 window`;
+};
+scenarios.everyStyleLeavesAReachableNextStepOnAShortWindow.viewport = { width: 430, height: 560 };
+
+// ---- 8. And the card must never be a cage. ----
+// The guard on the above: even with every programmatic scroll working, a
+// customer who scrolls away by hand needs a way back. overflow-y:hidden on a
+// height-capped card takes that away and depends on us never missing a beat.
+scenarios.styleCardIsScrollableByHand = async (page) => {
+  await toMugStyles(page);
+  const ov = await page.evaluate(() => getComputedStyle(document.getElementById('mugStyleCard')).overflowY);
+  if (ov === 'hidden' || ov === 'visible' || ov === 'clip')
+    return `FAIL: #mugStyleCard is max-height:90vh with overflow-y:${ov} — content past the cap is unreachable and the customer has no scrollbar to recover with`;
+  return `PASS: #mugStyleCard is overflow-y:${ov}, so the customer can always scroll to whatever is below the cap`;
+};
+scenarios.styleCardIsScrollableByHand.viewport = { width: 430, height: 620 };
+
+
 (async () => {
   let fails = 0;
   for (const [name, fn] of Object.entries(scenarios)) {
-    const { browser, page, log } = await launch();
+    // A scenario may pin its own window size. The freeze this suite exists
+    // for was invisible at the default 1280x900 and fatal at 430x620, so
+    // "it passed" has to mean "it passed at the size it broke at".
+    const { browser, page, log } = await launch(fn.viewport ? { viewport: fn.viewport } : {});
     try {
       await openStudio(page); await uploadPhoto(page); await dismissAlerts(page);
       const result = await fn(page, log);

@@ -9,6 +9,12 @@
 //
 // This is a pure file-comparison check -- no browser needed.
 // ESM: the repo's package.json sets "type": "module", so no require() here.
+// .mjs ON PURPOSE. This is the one suite written as an ES module; every
+// other test here is CommonJS, and flow-tests/package.json pins the folder
+// to commonjs so those keep working under the repo root's "type": "module".
+// The extension is what exempts this file from that pin -- renaming it back
+// to .js breaks it with "Cannot use import statement outside a module".
+
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';

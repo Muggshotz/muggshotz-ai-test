@@ -1015,12 +1015,30 @@ const HERO_SETTLE_MS = 1000;
 </div>
 
 <div id="mugStyleLockOverlay" class="step-lock-overlay" style="display:none">
-<div class="card" id="mugStyleCard" style="max-width:420px;width:100%;margin:auto;position:relative;max-height:90vh;overflow-y:hidden">
+<!-- overflow-y is AUTO, not hidden (Alyx, 2026-08-27: "I clicked to select on
+     Classic White and it didn't take me anywhere, we seem to be frozen here",
+     then "Same thing when I select trimmed").
+
+     This card is capped at 90vh and sits inside .step-lock-overlay, which is
+     itself overflow-y:auto -- but the overlay can never scroll, because the
+     card is capped BELOW the overlay's own height. So with overflow-y:hidden
+     the card silently clipped whatever ran past 90vh and offered no scrollbar
+     to anyone: the colour swatches and the "Satisfied - Continue" button were
+     present, styled, display:block, and physically impossible to reach on a
+     short window. Every escape route depended on US scrolling the card at
+     exactly the right moment, so any moment we missed was a dead end.
+
+     Restoring Classic White made the style grid two rows instead of one,
+     which pushed everything below it into the clipped region and turned a
+     latent trap into a reproducible freeze. auto keeps the programmatic
+     scrolls working exactly as before and adds the customer's own thumb as a
+     fallback. A clip, like a dim, should be a guide and not a cage. -->
+<div class="card" id="mugStyleCard" style="max-width:420px;width:100%;margin:auto;position:relative;max-height:90vh;overflow-y:auto">
 <div class="card-title">🎨 Coffee Mug Style &amp; Color</div>
 <div class="note-prominent" id="mugStyleCardNote" style="margin-top:0;margin-bottom:.9rem">Pick a size above to see pricing for each style.</div>
 <div class="grid3" id="preGenMugStyleGrid"></div>
 <div id="preGenMugColorWrap" style="display:none;margin-top:1rem">
-<div class="note" style="margin-bottom:6px">Color</div>
+<div class="note" id="preGenMugColorLabel" style="margin-bottom:6px">Color</div>
 <div class="color-grid" id="preGenMugColorGrid"></div>
 <div id="preGenMugMockupResultWrap">
 <img id="preGenMugMockupImg" style="display:none;width:100%;max-width:280px;margin:.9rem auto 0;border-radius:10px;border:1px solid #003c8c;background:#fff;filter:brightness(1.15) contrast(1.12) saturate(1.2);box-shadow:0 2px 10px rgba(0,0,0,.45)"/>
@@ -4858,6 +4876,29 @@ function pickPreGenMugStyle(styleName){
   refreshMugPrintModeVisibility();
   const styleNote=document.getElementById('mugStyleCardNote');
   if(styleNote)styleNote.style.display='none';
+  // REACHING the Continue button, not merely showing it (Alyx: "I clicked to
+  // select on Classic White and it didn't take me anywhere, we seem to be
+  // frozen here").
+  //
+  // #mugStyleCard is max-height:90vh with overflow-y:HIDDEN -- it does not
+  // scroll on its own. Every style WITH colours gets past that because
+  // pickPreGenMugColor() ends in scrollToMugMockupResultWhenReady(), which
+  // scrolls inside that container. A colourless style never picks a colour,
+  // so nothing ever scrolled, and the button sat below the clip with no way
+  // to bring it into view. Present in the DOM, display:block, and completely
+  // unreachable.
+  //
+  // This runs for EVERY style, not just the colourless one. A style WITH
+  // colours is no better off: picking it reveals the swatch grid below the
+  // fold, and the only thing that ever scrolled the card was picking a
+  // colour -- which you cannot do while the swatches are out of sight. Alyx
+  // hit the identical dead end on Trimmed one message after Classic White.
+  // Colourless styles have no swatches, so they jump straight to Continue;
+  // every other style stops at the swatch grid, which is the actual next
+  // decision.
+  const stylelessColors=!GEN_MUG_STYLES[selectedGenStyle]?.colors?.[selectedGenSize];
+  if(stylelessColors)scrollToMugMockupResultWhenReady();
+  else scrollToMugColorGridWhenReady();
 }
 
 function renderPreGenMugColorGrid(){
@@ -4865,20 +4906,34 @@ function renderPreGenMugColorGrid(){
   const grid=document.getElementById('preGenMugColorGrid');
   if(!wrap||!grid)return;
   const colors=GEN_MUG_STYLES[selectedGenStyle]?.colors?.[selectedGenSize] || null;
+  const label=document.getElementById('preGenMugColorLabel');
   if(!colors){
     // NOTHING TO CHOOSE IS A FINISHED CHOICE. Classic White is a plain white
     // mug with no colour options, and the "Satisfied - Continue" button is
     // revealed by pickPreGenMugColor() -- which can never fire when there is
-    // no colour grid to click. Picking this style used to leave the customer
-    // on a card with no way forward at all, which is very likely why it was
-    // dropped from the picker instead of fixed.
-    wrap.style.display='none';
+    // no colour grid to click.
+    //
+    // AND THE WRAP MUST STAY VISIBLE. The first fix hid the whole
+    // #preGenMugColorWrap, which was wrong: the mug mockup image AND the
+    // Continue button are both nested INSIDE that wrap, so hiding it gave
+    // them zero size at the page origin -- display:block, no box, impossible
+    // to see or click. Alyx hit it immediately: "I clicked to select on
+    // Classic White and it didn't take me anywhere, we seem to be frozen."
+    // Hide only the label and the swatch grid; keep everything below them.
+    wrap.style.display='block';
+    if(label)label.style.display='none';
+    grid.style.display='none';
+    grid.innerHTML='';
     selectedGenColor=null;
     mugColorChosenPreGen=true;
     const finishBtn=document.getElementById('preGenMugColorFinishBtn');
     if(finishBtn)finishBtn.style.display='block';
     return;
   }
+  // Restore both for styles that DO have colours -- the colourless branch
+  // above hides them, and they are shared elements, not per-style ones.
+  if(label)label.style.display='block';
+  grid.style.display='';
   wrap.style.display='block';
   grid.innerHTML='';
   colors.forEach(c=>{
@@ -4902,6 +4957,28 @@ function pickPreGenMugColor(el,colorName){
   const finishBtn=document.getElementById('preGenMugColorFinishBtn');
   if(finishBtn)finishBtn.style.display='block';
   scrollToMugMockupResultWhenReady();
+}
+
+// Brings the colour swatches into view inside the card after a style is
+// picked. Same container-relative arithmetic as
+// scrollToMugMockupResultWhenReady() below, but it targets the swatch grid
+// through the Back button so the customer can see the choice they now have
+// to make AND still see the way back out.
+function scrollToMugColorGridWhenReady(){
+  const grid=document.getElementById('preGenMugColorGrid');
+  const backBtn=document.getElementById('mugStyleBackBtn');
+  const scrollContainer=document.getElementById('mugStyleCard');
+  if(!grid||!scrollContainer)return;
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{
+    const containerRect=scrollContainer.getBoundingClientRect();
+    const bottomEl=backBtn||grid;
+    const topY=grid.getBoundingClientRect().top-containerRect.top+scrollContainer.scrollTop;
+    const bottomY=bottomEl.getBoundingClientRect().bottom-containerRect.top+scrollContainer.scrollTop;
+    const span=bottomY-topY;
+    const visibleH=scrollContainer.clientHeight;
+    const target=span<=visibleH ? topY-(visibleH-span)/2 : topY;
+    scrollContainer.scrollTo({top:Math.max(0,target),behavior:'smooth'});
+  }));
 }
 
 // mugStyleCard scrolls internally (its own overflow-y:auto, not the page),

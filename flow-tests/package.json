@@ -1,0 +1,4 @@
+{
+  "//": "The repo root sets \"type\": \"module\", which makes node parse every .js file here as ESM -- and every test in this folder is CommonJS (require('./harness')). Without this file the whole suite dies on line 1 with 'require is not defined in ES module scope'. It only ever worked because an untracked copy of this file happened to sit here; a fresh clone could not run a single test. Scopes just this folder back to CommonJS.",
+  "type": "commonjs"
+}

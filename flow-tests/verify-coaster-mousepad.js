@@ -119,7 +119,13 @@ scenarios.pricesMatchProbe = async (page) => {
   })).catch(() => ({}));
   // Read straight from the served catalog module instead of the DOM.
   const fs = require('fs');
-  const src = fs.readFileSync(__dirname + '/products-catalog.js', 'utf8');
+  const path = require('path');
+  // The catalog lives in lib/, one level up -- this read pointed at
+  // flow-tests/products-catalog.js, which has never existed, so the whole
+  // scenario died on ENOENT before it compared a single price. Anchored to
+  // __dirname so it does not care what directory the suite is run from
+  // either; running from the wrong cwd has bitten this repo before.
+  const src = fs.readFileSync(path.join(__dirname, '..', 'lib', 'products-catalog.js'), 'utf8');
   // Retail set by Alyx on affordability grounds, not margin-maximising:
   // coasters $29.95 (down from an initial $45.95), mouse pad $9.95 (down from
   // $11.95, to keep it an easy sub-$10 add-on). Wholesale is $19.79 and $4.88.
