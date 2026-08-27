@@ -103,6 +103,52 @@ for (const [label, tableName, catalogKey] of [
   checks.push(bad ? `FAIL: ${label}: ${bad}` : `PASS: ${label}: all ${Object.keys(onPage).length} sizes match the catalog`);
 }
 
+// --- posters: nested under base.sizes, and duplicated in THREE places -------
+// (lib/products-catalog.js, needles-studio.html, order.html)
+{
+  const catSrc = fs.readFileSync(path.join(ROOT, 'lib', 'products-catalog.js'), 'utf8');
+  const studio = fs.readFileSync(path.join(ROOT, 'needles-studio.html'), 'utf8');
+
+  const pull = (src, anchorText) => {
+    const blk = blockAfter(src, anchorText);
+    if (!blk) return null;
+    const base = blockAfter(blk, 'base:');
+    if (!base) return null;
+    const sizes = blockAfter(base, 'sizes:');
+    if (!sizes) return null;
+    const out = {};
+    for (const m of sizes.matchAll(/"((?:[^"\\]|\\.)*)":\s*\{[^{}]*?price:\s*([0-9.]+)/g)) {
+      out[unesc(m[1])] = parseFloat(m[2]);
+    }
+    return out;
+  };
+
+  const fromCatalog = pull(catSrc, '"photo-poster":');
+  const fromStudio  = pull(studio, 'const PHOTO_POSTER_CATALOG');
+  const fromOrder   = pull(order,  'const PHOTO_POSTER_CATALOG');
+
+  if (!fromCatalog || !fromStudio || !fromOrder) {
+    checks.push('FAIL: poster: could not read one of the three poster tables');
+  } else {
+    let bad = null;
+    const keys = new Set([...Object.keys(fromCatalog), ...Object.keys(fromStudio), ...Object.keys(fromOrder)]);
+    for (const k of keys) {
+      const a = fromCatalog[k], b = fromStudio[k], c = fromOrder[k];
+      if (a === undefined || b === undefined || c === undefined) { bad = `${k} missing from one of the three tables (catalog=${a} studio=${b} order=${c})`; break; }
+      if (!(a === b && b === c)) { bad = `${k}: catalog $${a}, studio $${b}, order $${c}`; break; }
+    }
+    checks.push(bad ? `FAIL: poster: ${bad}` : `PASS: poster: all ${keys.size} sizes agree across catalog, studio and order page`);
+  }
+
+  // Frames are gone. Nothing should still offer them.
+  const framedStillOffered =
+    studio.includes("pickPosterFramed(true)") ||
+    /framedUpsell:\s*\{/.test(catSrc.slice(catSrc.indexOf('"photo-poster":'), catSrc.indexOf('"photo-poster":') + 4000));
+  checks.push(framedStillOffered
+    ? 'FAIL: poster: the framed option is still reachable — the frame cost 50x the print'
+    : 'PASS: poster: framed upsell fully removed');
+}
+
 // --- every studio product must be orderable --------------------------------
 const studio = fs.readFileSync(path.join(ROOT, 'needles-studio.html'), 'utf8');
 const gridVals = [...new Set([...studio.matchAll(/data-val="([^"]+)"[^>]*onclick="pick\(this,'product'\)"/g)].map(m => m[1]))];

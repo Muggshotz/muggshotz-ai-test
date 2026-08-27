@@ -799,25 +799,23 @@ function isMousePad(){ return selectedProductFamily === 'mouse pad'; }
 const COASTER_PRICE = 29.95;
 const MOUSE_PAD_PRICE = 9.95;
 
+// Mirrors lib/products-catalog.js -- verify-price-parity.js fails if these
+// drift. Posters moved to Printed Simply (852/73) because the previous
+// provider had no US shipping profile at all. Frames removed: the frame cost
+// more than fifty times the print it held.
 const PHOTO_POSTER_CATALOG = {
   base: {
     sizes: {
-      "16x20": { price: 12.95 },
-      "20x24": { price: 13.95 },
-      "20x30": { price: 15.95 }
+      "9x11":  { price: 11.95 },
+      "11x17": { price: 13.95 },
+      "12x18": { price: 14.95 },
+      "11x14": { price: 14.95 },
+      "16x20": { price: 19.95 },
+      "18x24": { price: 24.95 },
+      "24x36": { price: 34.95 }
     }
   },
-  framedUpsell: {
-    sizes: {
-      "8x11":  { price: 35.95 },
-      "11x14": { price: 39.95 },
-      "12x18": { price: 44.95 },
-      "16x20": { price: 53.95 },
-      "18x24": { price: 61.95 },
-      "20x30": { price: 73.95 },
-      "24x36": { price: 93.95 }
-    }
-  }
+  framedUpsell: null
 };
 
 const PUZZLE_SIZES = {
@@ -1256,7 +1254,7 @@ async function fetchSingleImageMockup(productKey, sizeLabel, colorName, btnId, n
 function renderPhotoPosterCard(){
   const framed = pendingOrder?.posterFramed;
   const size = pendingOrder?.posterSize;
-  const tree = framed ? PHOTO_POSTER_CATALOG.framedUpsell : PHOTO_POSTER_CATALOG.base;
+  const tree = PHOTO_POSTER_CATALOG.base;   // frames removed Aug 2026
   const price = tree.sizes[size]?.price || 0;
   const sizeLabel = size ? size.replace('x', '" x ') + '"' : 'Unknown size';
 
@@ -1604,7 +1602,7 @@ function updateSummary(){
     basePrice = MOUSE_PAD_PRICE;
     styleSizeLabel = 'Mouse Pad (9" x 8")';
   } else if (isPhotoPoster()) {
-    const tree = pendingOrder?.posterFramed ? PHOTO_POSTER_CATALOG.framedUpsell : PHOTO_POSTER_CATALOG.base;
+    const tree = PHOTO_POSTER_CATALOG.base;   // frames removed Aug 2026
     basePrice = tree.sizes[pendingOrder?.posterSize]?.price || 0;
     styleSizeLabel = 'Photo/Poster, ' + (pendingOrder?.posterSize || '').replace('x', '" x ') + '"';
   } else {
