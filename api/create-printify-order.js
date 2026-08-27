@@ -6,7 +6,101 @@ import { getProduct } from "../lib/products-catalog.js";
 
 const SHOP_ID = "27439202";
 
-export async function uploadImageToPrintify(imageBuffer, fileName) {
+// EVERY image bound for Printify is compressed here, on its way out (Alyx's
+// request: "compress it to its smallest possible size without losing image
+// resolution"). Resolution is never traded away except as a last-resort guard
+// rail that realistic artwork does not reach.
+//
+// Why this exists: Printify rejects oversized uploads with {"error":"The POST
+// data is too large."}, and the payload is base64, which inflates a buffer by
+// ~37% before the JSON envelope. It never surfaced while the catalogue was
+// mugs -- a mug print area is 2475x1155, about 2.9 megapixels. Every large
+// format added since is far bigger: a 12x18 poster is 19.4 MP, an 18x24 is
+// 38.9, a 24x36 is 77.8, the 1000-piece puzzle is 50.4, a large suitcase is
+// 69.0. As lossless PNG those run from tens of MB into the hundreds. Alyx hit
+// it on a live suitcase run.
+//
+// Measured on art-like content at FULL print resolution: a 24x36 poster is
+// 4.03 MB as PNG and 0.91 MB as JPEG q95; the large suitcase, 3.59 MB against
+// 0.86. So quality-95 JPEG at native size is both far smaller than the PNG and
+// nowhere near any limit -- downscaling is not needed and is not done.
+//
+// Guarded HERE, not in buildSingleImage(), because every image reaching
+// Printify passes through this one function -- the mockup path and the real
+// order path, single-image and wraparound alike. Fixing it at one of the five
+// call sites would have left the other four broken.
+const PRINTIFY_MAX_UPLOAD_BYTES = 8 * 1024 * 1024;
+const PRINTIFY_JPEG_QUALITY = 95;
+
+async function compressForPrintify(imageBuffer, fileName) {
+  let meta;
+  try {
+    meta = await sharp(imageBuffer).metadata();
+  } catch (err) {
+    console.error(`Printify upload: could not read image metadata, sending as-is: ${err.message}`);
+    return { buffer: imageBuffer, fileName };
+  }
+
+  // Transparency must survive. A mug wraparound composited over a transparent
+  // background would render its gaps as solid black under JPEG, so anything
+  // carrying an alpha channel stays PNG and is merely packed tighter.
+  if (meta.hasAlpha) {
+    const packed = await sharp(imageBuffer).png({ compressionLevel: 9, effort: 10 }).toBuffer();
+    const out = packed.length < imageBuffer.length ? packed : imageBuffer;
+    if (out.length > PRINTIFY_MAX_UPLOAD_BYTES) {
+      console.error(
+        `Printify upload: "${fileName}" has alpha and is ${(out.length / 1048576).toFixed(1)}MB ` +
+        `after PNG packing — above the ${PRINTIFY_MAX_UPLOAD_BYTES / 1048576}MB ceiling. Sending anyway.`
+      );
+    }
+    return { buffer: out, fileName };
+  }
+
+  const jpegName = fileName.replace(/\.png$/i, ".jpg");
+  const encode = (quality) =>
+    sharp(imageBuffer).jpeg({ quality, mozjpeg: true, chromaSubsampling: "4:4:4" }).toBuffer();
+
+  let out = await encode(PRINTIFY_JPEG_QUALITY);
+
+  // Last-resort guard rail. Realistic artwork never gets here -- only genuinely
+  // incompressible content (heavy noise, dense fine detail) could. Quality is
+  // stepped down first; resolution is only touched once quality is exhausted.
+  if (out.length > PRINTIFY_MAX_UPLOAD_BYTES) {
+    for (const quality of [90, 85, 80]) {
+      out = await encode(quality);
+      if (out.length <= PRINTIFY_MAX_UPLOAD_BYTES) {
+        console.log(`Printify upload: "${jpegName}" needed q${quality} to fit (unusual — check the source art).`);
+        break;
+      }
+    }
+  }
+  if (out.length > PRINTIFY_MAX_UPLOAD_BYTES && meta.width) {
+    for (const scale of [0.8, 0.65, 0.5]) {
+      out = await sharp(imageBuffer)
+        .resize(Math.round(meta.width * scale), null, { withoutEnlargement: true })
+        .jpeg({ quality: 88, mozjpeg: true, chromaSubsampling: "4:4:4" })
+        .toBuffer();
+      if (out.length <= PRINTIFY_MAX_UPLOAD_BYTES) {
+        console.error(
+          `Printify upload: "${jpegName}" could not fit at full resolution and was reduced to ` +
+          `${Math.round(scale * 100)}% (${meta.width}x${meta.height} source). Print quality is degraded.`
+        );
+        break;
+      }
+    }
+  }
+
+  if (imageBuffer.length > 1048576 || out.length > 1048576) {
+    console.log(
+      `Printify upload: ${fileName} ${(imageBuffer.length / 1048576).toFixed(2)}MB -> ` +
+      `${(out.length / 1048576).toFixed(2)}MB (${meta.width}x${meta.height} kept)`
+    );
+  }
+  return { buffer: out, fileName: jpegName };
+}
+
+export async function uploadImageToPrintify(rawBuffer, rawFileName) {
+  const { buffer: imageBuffer, fileName } = await compressForPrintify(rawBuffer, rawFileName);
   const base64Data = imageBuffer.toString("base64");
   const response = await fetch("https://api.printify.com/v1/uploads/images.json", {
     method: "POST",
