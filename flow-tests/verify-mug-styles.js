@@ -144,6 +144,54 @@ scenarios.everyStyleHasArtwork = async (page) => {
   return 'PASS: every mug style has a thumbnail that loads';
 };
 
+// ---- 6. The two sizes show the RIGHT mug, decided by Printify's data. ----
+// The uploaded files were mislabelled, and eyeballing would not have settled
+// it. Printify's print areas for bp 478 do: 11oz is 2475x1155, 15oz is
+// 2475x1275 -- identical width, so identical diameter, so the 15oz holds more
+// purely by being ~10% TALLER. The proportionally taller photo is therefore
+// the 15oz. This pins the mapping by measuring the images themselves, so a
+// future re-upload cannot silently swap them back.
+scenarios.sizePhotosAreNotSwapped = async (page) => {
+  await toMugStyles(page);
+  const shapes = await page.evaluate(async () => {
+    const srcs = MUG_COLORLESS_SIZE_PHOTOS['Classic White'];
+    if (!srcs) return null;
+    async function ratio(src) {
+      const im = await new Promise((res, rej) => {
+        const i = new Image();
+        i.onload = () => res(i); i.onerror = rej; i.src = src;
+      });
+      const c = document.createElement('canvas');
+      c.width = im.naturalWidth; c.height = im.naturalHeight;
+      const x = c.getContext('2d'); x.drawImage(im, 0, 0);
+      const d = x.getImageData(0, 0, c.width, c.height).data;
+      // Column ink counts -> body width; row extent -> body height.
+      const cols = new Array(c.width).fill(0);
+      let minY = c.height, maxY = 0;
+      for (let y = 0; y < c.height; y += 2) {
+        for (let px = 0; px < c.width; px += 2) {
+          const i2 = (y * c.width + px) * 4;
+          if (d[i2] < 245 || d[i2 + 1] < 245 || d[i2 + 2] < 245) {
+            cols[px]++;
+            if (y < minY) minY = y;
+            if (y > maxY) maxY = y;
+          }
+        }
+      }
+      const peak = Math.max(...cols), keep = [];
+      cols.forEach((n, i3) => { if (n >= peak * 0.55) keep.push(i3); });
+      const bw = keep.length ? keep[keep.length - 1] - keep[0] : 0;
+      return bw ? (maxY - minY) / bw : 0;
+    }
+    return { r11: await ratio(srcs['11oz']), r15: await ratio(srcs['15oz']) };
+  });
+  if (!shapes) return 'FAIL: MUG_COLORLESS_SIZE_PHOTOS has no Classic White entry';
+  if (!shapes.r11 || !shapes.r15) return `FAIL: could not measure the mug photos (${JSON.stringify(shapes)})`;
+  if (!(shapes.r15 > shapes.r11))
+    return `FAIL: the 15oz photo (H/W ${shapes.r15.toFixed(3)}) is not taller than the 11oz (${shapes.r11.toFixed(3)}) — the files are swapped. Printify: 11oz 2475x1155, 15oz 2475x1275, same width so the 15oz is the taller mug.`;
+  return `PASS: 15oz photo is the taller mug (H/W ${shapes.r15.toFixed(3)} vs ${shapes.r11.toFixed(3)}), matching Printify's print areas`;
+};
+
 (async () => {
   let fails = 0;
   for (const [name, fn] of Object.entries(scenarios)) {

@@ -488,20 +488,24 @@ repaired:**
   white ground, handle right, matching the other three tiles. Generic on purpose: size is chosen
   *before* this card appears, so the tile only has to say "plain white mug".
 
-**OPEN — the two uploaded mug photos appear to be mislabelled.** `White 11 ounce.png` and
-`White 15 ounce.png` are in the repo, but measured body proportions say the names are swapped:
+**RESOLVED — the two uploaded mug photos were mislabelled**, and Printify's own data settled it
+rather than eyeballing. Print areas for blueprint 478:
 
-| file | body H ÷ W | shape |
-|---|---|---|
-| `White 11 ounce.png` | **1.575** | taller, narrower |
-| `White 15 ounce.png` | **1.351** | shorter, wider |
+| size | print area |
+|---|---|
+| 11oz | 2475 x **1155** |
+| 15oz | 2475 x **1275** |
 
-Alyx's own description was *"the thinner one is the 15 ounce and the fatter one is the 11 ounce"* —
-which makes the **thin** one (1.575) the 15oz, i.e. the file named `White 11 ounce.png`. Real specs
-agree: an 11oz is ~3.7" on a 3.2" body, a 15oz ~4.5" on 3.4", so the 15oz is proportionally taller.
-**`MUG_MOCKUP_PHOTOS` has deliberately NOT been given Classic White entries until this is settled** —
-wiring it backwards would show an 11oz mug to someone who picked 15oz. The style tile is unaffected
-because it is generic.
+**Identical width** — so identical circumference, so identical diameter. The 15oz holds more purely
+by being **~10% taller**, which makes it the proportionally tall, narrow-looking mug. That matches
+Alyx's description (*"the thinner one is the 15 ounce and the fatter one is the 11 ounce"*) and
+contradicts the filenames they arrived under. Measured body H/W of the uploads: **1.575** and
+**1.351** — the taller one is the 15oz.
+
+Renamed on the way in to `mug-classic-white-11oz.png` / `mug-classic-white-15oz.png` so the
+misleading names do not survive, and wired through `MUG_COLORLESS_SIZE_PHOTOS`.
+`verify-mug-styles.js` measures the two images and fails if the 15oz is ever not the taller one, so
+a future re-upload cannot silently swap them back.
 - **No colours.** Classic White is plain white, and the "Satisfied — Continue" button was revealed
   only by `pickPreGenMugColor()`, which can never fire without a colour grid. Choosing it left the
   customer on a card **with nothing to click**. `renderPreGenMugColorGrid()` now treats "nothing to

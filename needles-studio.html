@@ -4759,6 +4759,32 @@ function pickPreGenMugSize(size){
 // tied to the selected size (Accented only actually sells Cambridge
 // Blue at 11oz), since this thumbnail's job is showing the style's
 // general look, not a size-accurate color availability.
+// Per-SIZE artwork for styles that have no colour options. Classic White is
+// the only one today.
+//
+// THE FILENAMES ALYX UPLOADED WERE SWAPPED, and it is worth recording how that
+// was settled rather than by eye. Printify's own print areas for blueprint 478
+// decide it:
+//
+//   11oz   2475 x 1155
+//   15oz   2475 x 1275
+//
+// Identical width -- so identical circumference, so identical diameter. The
+// 15oz holds more purely by being ~10% TALLER. That makes the 15oz the
+// proportionally tall, narrow-looking mug, which is exactly what Alyx said
+// ("the thinner one is the 15 ounce and the fatter one is the 11 ounce") and
+// the opposite of what the uploaded filenames said.
+//
+// Measured body height/width of the two uploads: 1.575 and 1.351. The taller
+// one is therefore the 15oz. Files renamed accordingly on the way in, so the
+// misleading names do not survive to trip up the next reader.
+const MUG_COLORLESS_SIZE_PHOTOS = {
+  "Classic White": {
+    "11oz": "mug-classic-white-11oz.png",
+    "15oz": "mug-classic-white-15oz.png"
+  }
+};
+
 const PRE_GEN_MUG_STYLE_THUMBNAILS = {
   // Alyx's own shot, matching the other three tiles: one mug, pure white
   // ground, handle right. (Replaced a two-mug Printify stock photo that was
@@ -4767,8 +4793,8 @@ const PRE_GEN_MUG_STYLE_THUMBNAILS = {
   // reason this style quietly left the grid in the first place.)
   //
   // Generic on purpose: SIZE is chosen before this card is ever shown, so the
-  // tile only has to say "plain white mug". Per-size artwork belongs in
-  // MUG_MOCKUP_PHOTOS, and is NOT wired yet -- see the note there.
+  // tile only has to say "plain white mug". Per-size artwork lives in
+  // MUG_COLORLESS_SIZE_PHOTOS below and drives the mockup slot instead.
   "Classic White": "style-classic-white.jpg",
   "Trimmed": "style-trimmed.jpg",
   "Accented": "style-accented.jpg",
@@ -6562,13 +6588,15 @@ function changePropsFromCoverMe(){
 function updatePreGenMugMockupImg(){
   const img=document.getElementById('preGenMugMockupImg');
   if(!img)return;
-  // A style with no colours has no per-colour mockup photo, so fall back to
-  // its own thumbnail rather than showing a blank slot where every other
-  // style shows the customer their mug.
+  // A style with no colours has no per-COLOUR mockup photo, but it can still
+  // have a per-SIZE one -- and should, because the two sizes are visibly
+  // different shapes. Falls back to the generic style tile if a size is ever
+  // missing, so this can never blank the slot.
   const hasColors=!!GEN_MUG_STYLES[selectedGenStyle]?.colors?.[selectedGenSize];
   const filename=hasColors
     ? MUG_MOCKUP_PHOTOS[selectedGenStyle]?.[selectedGenSize]?.[selectedGenColor]
-    : PRE_GEN_MUG_STYLE_THUMBNAILS[selectedGenStyle];
+    : (MUG_COLORLESS_SIZE_PHOTOS[selectedGenStyle]?.[selectedGenSize]
+       || PRE_GEN_MUG_STYLE_THUMBNAILS[selectedGenStyle]);
   if(filename){
     img.src=filename;
     img.style.display='block';
