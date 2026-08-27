@@ -327,16 +327,30 @@ Polished gift-art quality.
           .toBuffer()
       ]);
 
-      const [leftUrl, centerUrl, rightUrl] = await Promise.all([
+      // The whole, un-sliced panorama is uploaded alongside the three
+      // thirds. Coffee mugs print as three separate panels and want the
+      // slices; travel cups wrap as ONE continuous surface and want the
+      // original, uncut. Same single generation either way -- one extra
+      // upload is cheaper than a second Gemini call, and it means the
+      // caller picks its own shape instead of the backend guessing.
+      // Re-encoded through sharp rather than shipped as Gemini returned it:
+      // uploadGenerationToStorage() names every file .png and sends
+      // Content-Type: image/png unconditionally. The three slices already
+      // come out of sharp as real PNGs; handing it the raw model bytes
+      // would be the one upload whose declared type is a guess.
+      const panoramaPngBuffer = await sharp(panoramaBuffer).png().toBuffer();
+
+      const [leftUrl, centerUrl, rightUrl, panoramaUrl] = await Promise.all([
         uploadGenerationToStorage(leftBuffer, deviceId + "-left"),
         uploadGenerationToStorage(centerBuffer, deviceId + "-center"),
-        uploadGenerationToStorage(rightBuffer, deviceId + "-right")
+        uploadGenerationToStorage(rightBuffer, deviceId + "-right"),
+        uploadGenerationToStorage(panoramaPngBuffer, deviceId + "-panorama")
       ]);
 
       await saveGenerationRecord(panoramaCustomer.id, prompt, null, centerUrl);
       await deductOneToken(panoramaCustomer.id, panoramaCustomer.token_balance);
 
-      return res.status(200).json({ leftUrl, centerUrl, rightUrl });
+      return res.status(200).json({ leftUrl, centerUrl, rightUrl, panoramaUrl });
     }
 
     if (!image || !prompt) {

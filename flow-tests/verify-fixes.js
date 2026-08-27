@@ -20,6 +20,20 @@ async function mugLadder(page) {
   await page.waitForTimeout(1000);
   await page.click('#preGenMugColorFinishBtn');
   await page.waitForTimeout(800);
+  // UPDATED (Aug 2026): Wraparound is unshelved, so the mug rail now stops
+  // at Print Style between Colour and Design Method -- the prop tiles these
+  // scenarios click do not exist until a print format is chosen, which is
+  // what five page.click timeouts in this file were actually reporting.
+  // Not a weakened assertion: this suite is about spotlights, the watchdog
+  // and the props, so it takes the default (Three Panels) explicitly and
+  // leaves Wraparound's own behaviour to verify-wraparound.js.
+  await dismissAlerts(page);
+  await page.evaluate(() => {
+    const card = document.getElementById('mugPrintModeCard');
+    if (card && card.style.display !== 'none') pickMugPrintMode('three-panel');
+  });
+  await page.waitForTimeout(900);
+  await dismissAlerts(page);
 }
 
 const scenarios = {

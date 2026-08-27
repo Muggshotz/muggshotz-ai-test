@@ -40,7 +40,7 @@ Working. The sandbox reaches `muggshotz-ai-test.vercel.app` directly.
   obvious. **Never move this to the GET relay** — catalog GETs need no auth, so that would publish
   wholesale pricing to anyone who found the URL.
 
-## Testing (`flow-tests/`) — 12 suites
+## Testing (`flow-tests/`) — 14 suites
 Serve the repo first: `python3 -m http.server 8788 --directory <repo> --bind 127.0.0.1`.
 Chromium is preinstalled at `/opt/pw-browsers/chromium` — use `executablePath`, do NOT
 `playwright install`. `npm install playwright` in a scratch dir and copy the harness there.
@@ -57,7 +57,8 @@ four ERR_CONNECTION_RESET console errors per run that look like a product fault 
 | `verify-auto-mockup.js` | every single-image product fetches its mockup on approve |
 | `verify-idea-confirm.js` | description confirm goes forward; stage never veiled |
 | `verify-gimmick-gate.js` | gimmicks limited to mug + travel cup |
-| `verify-price-parity.js` | **no browser** — order.html vs catalog price drift |
+| `verify-wraparound.js` | Wraparound on both rails: panorama vs per-panel engine, outage fallback, 403 no-retry, mug thirds vs travel-cup uncut, 40oz exclusion |
+| `verify-price-parity.js` | **no browser** — order.html vs catalog price drift. **Run it from the repo root** (`node flow-tests/verify-price-parity.js`), not from the scratch copy: it reads `order.html` and `lib/products-catalog.js` by relative path and ENOENTs anywhere else. |
 | `verify-poster.js` `verify-puzzle.js` `verify-tote.js` `verify-phone-suitcase.js` `verify-coaster-mousepad.js` `verify-travel.js` | per-product flows |
 
 **Fixtures ARE committed now** (`test-photo.jpg`, `fake-generated.jpg`, `fake-mockup.jpg`) — they
@@ -142,6 +143,58 @@ poster cost $44.74 delivered, so posters were effectively unsellable domesticall
 dollar — the frame alone was $56.82. Retail $61.95 cleared ~$2 after Stripe. Alyx: *"for $61
 they'll probably make their own frame."* `resolvePhotoPosterSelection()` still has a framed
 branch; it is simply unreachable.
+
+## Wraparound — unshelved, and how it runs now (2026-08-27)
+Wraparound had been pulled from customer view entirely (commit `3695c8a`) because neither engine
+behind it was sellable: the per-panel method (Center, then Left/Right as "continue this scene"
+edits) drifted at the seams, and the Gemini one-shot panorama that fixes that by construction
+could not run at all on a free-tier key. **Alyx funded the Gemini key**, the panorama was measured
+live, and Wraparound is back for **coffee mugs and travel cups**.
+
+**Why the panorama works and gpt-image-2 never could:** gpt-image-2 is hard-capped at three sizes,
+the widest being 1536x1024 (1.5:1). A mug's print area is 2475x1155 (2.14:1). Nothing fixes a 43%
+gap. `gemini-2.5-flash-image` takes an arbitrary `imageConfig.aspectRatio`; at `21:9` it returns
+~2.29:1 — about a 7% crop.
+
+| | shape | who uses it |
+|---|---|---|
+| `leftUrl` / `centerUrl` / `rightUrl` | three equal thirds | coffee mug (three print panels) |
+| `panoramaUrl` | the whole uncut image | travel cups (one continuous wrap) |
+
+Both come back from the **same single call** — `{action:'wraparoundPanorama'}` in `api/generate.js`.
+One extra upload is far cheaper than a second generation, and it lets the caller pick its own
+shape instead of the backend guessing from a product name it does not have.
+
+**Three things that are deliberate, not oversights:**
+- **There is no opt-in checkbox any more.** `useGeminiPanorama` is gone. A customer cannot judge
+  which engine drew their mug, so offering the choice was an internal flag wearing a customer-
+  facing hat. Wraparound *means* the panorama.
+- **A panorama outage falls back to the per-panel engine instead of throwing.** Throwing was right
+  while it was an experiment the customer could untick; it is the product now, and an outage must
+  not strand someone who picked a valid option. **A 403 (out of credits) is NOT an outage and must
+  never fall through** — that path would generate, and charge, a second time. Pinned by
+  `mugWraparoundOutOfCreditsDoesNotRetry`.
+- **The 40oz still never sees the option.** Its handle physically breaks the front face, so there
+  is no continuous surface to wrap. That is a fact about the cup, not the generator; funding
+  Gemini does not change it.
+
+**Bug found the moment it came off the shelf:** the wraparound notice reads *"describe your idea
+for us in the box above"* — and the box above was collapsed to zero height, off-screen, because
+`ideaCard` lives inside `edgeFadeIdeaSection` and nothing on that route expanded it.
+`snapExpandThrough('designMethodCard')` could not have: **`designMethodCard` is not in
+`SNAP_ORDER`, so that call returns immediately and does nothing.** Fixed in
+`showDesignMethodCard()`, which now expands and hands off to the idea box on that path.
+
+**Pricing is unchanged and already wired:** `WRAPAROUND_SET_SURCHARGE = 3` in
+`create-checkout-session.js`, applied only when `isWraparoundSet` — which `goToOrder()` sets for
+**mugs only**. Travel-cup wraparound carries no surcharge (it is one image either way, so it costs
+no more to make). Not touched; flagged for Alyx if they want it revisited.
+
+**Known limit, not yet addressed:** Gemini returns roughly 1536x672 for the whole panorama, so a
+mug panel arrives ~512x672 against a ~825x1155 print slot. `buildWraparoundImage()` already
+lanczos-upscales into the print canvas, so adding a second upscale in `generate.js` would only
+resample twice. The real ceiling is Gemini's native output size. **Worth eyeballing on a physical
+proof before promoting Wraparound anywhere prominent.**
 
 ## Structural things worth knowing
 - **`order.html` keeps its OWN copy of every price**, separate from `lib/products-catalog.js`
