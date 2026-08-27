@@ -2,7 +2,7 @@
 // 2026-08-26 after a live cost probe gave real wholesale for the first time.
 // Both carry exactly ONE variant, so picking the product finishes the product
 // and the rail goes straight to the description.
-const { launch, openStudio, uploadPhoto, dismissAlerts } = require('./harness');
+const { launch, openStudio, uploadPhoto, dismissAlerts, passFadePage } = require('./harness');
 
 const waitApprove = (page, t = 90000) =>
   page.waitForFunction(() => document.getElementById('approveRow')?.style.display !== 'none', null, { timeout: t });
@@ -87,6 +87,7 @@ for (const [val, want] of Object.entries(EXPECT)) {
     await waitApprove(page);
     mockupCalls.length = 0;
     await page.locator('#approveRow button:has-text("Yes")').first().click();
+    await passFadePage(page);
     await page.waitForTimeout(9000);
     const started = mockupCalls.filter(b => b && b.action === 'start');
     if (!started.length) return `FAIL: ${val}: no mockup fired on approve`;
@@ -177,6 +178,7 @@ scenarios.roundCoasterReachesTheOrder = async (page, log, mockupBodies) => {
   await page.click('#generateBtn');
   await page.waitForFunction(() => document.getElementById('approveRow')?.style.display !== 'none', null, { timeout: 90000 });
   await page.locator('#approveRow button:has-text("Yes")').first().click();
+    await passFadePage(page);
   await page.waitForTimeout(6000);
 
   const start = mockupBodies.find(b => b && b.action === 'start');

@@ -3,7 +3,7 @@
 // "Continue to Order" button -- continueToRealMockup() IS the mockup -- so
 // nobody would guess a preview was there. Mugs and travel cups always fetched
 // it automatically; these did not.
-const { launch, openStudio, uploadPhoto, dismissAlerts } = require('./harness');
+const { launch, openStudio, uploadPhoto, dismissAlerts, passFadePage } = require('./harness');
 
 const waitApprove = (page, t = 90000) =>
   page.waitForFunction(() => document.getElementById('approveRow')?.style.display !== 'none', null, { timeout: t });
@@ -53,6 +53,7 @@ async function approveAndWatch(page, val, mockupCalls) {
   await waitApprove(page);
   mockupCalls.length = 0;               // only count what APPROVE triggers
   await page.locator('#approveRow button:has-text("Yes")').first().click();
+    await passFadePage(page);
   await page.waitForTimeout(9000);      // approve -> auto mockup -> poll
 }
 

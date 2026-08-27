@@ -167,4 +167,23 @@ async function bodyFocusClasses(page) {
     Array.from(document.body.classList).filter((c) => c.endsWith('-focus') || c === 'generation-active'));
 }
 
-module.exports = { launch, openStudio, uploadPhoto, interactable, bodyFocusClasses, dismissAlerts, BASE };
+// Single-image products now stop at the real Edge Fade page between approve
+// and the mockup -- the finished picture on screen with a live slider, which
+// is where the fade decision belongs (the pre-generation card was retired for
+// asking about an image that did not exist yet). Suites that drive a product
+// from approve to its mockup have to pass through it.
+//
+// Deliberately tolerant: mugs on the three-panel path reach this page by
+// their own route, and products that skip it are not an error here.
+async function passFadePage(page, { timeout = 20000 } = {}) {
+  const opened = await page.waitForFunction(() => {
+    const o = document.getElementById('frameFadeOverlay');
+    return !!(o && getComputedStyle(o).display !== 'none');
+  }, null, { timeout }).then(() => true).catch(() => false);
+  if (!opened) return false;
+  await page.click('#frameFadeOverlay button:has-text("Continue")');
+  await page.waitForTimeout(1200);
+  return true;
+}
+
+module.exports = { launch, openStudio, uploadPhoto, interactable, bodyFocusClasses, dismissAlerts, passFadePage, BASE };

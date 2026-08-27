@@ -72,18 +72,58 @@ scenarios.resetCannotTurnFadeOn = async (page) => {
   return `PASS: reset returns to ${JSON.stringify(after.choice)}, which is not 'fade' — a cleared flag can no longer mean yes`;
 };
 
-// ---- 3. Offered on every product, not just mugs and cups. ----
-scenarios.offeredOnEveryProduct = async (page) => {
+// ---- 3. The PRE-GENERATION card stays retired. ----
+// An earlier pass made it visible on every product and this scenario asserted
+// that as correct. It was wrong, and the assertion hid it: the note in the
+// HTML says the card was retired because it "asked the customer to rule on
+// how an image should feather at its edges BEFORE the image existed". Alyx
+// hit the symptom immediately -- a dimmed card above the idea box, about an
+// image that does not exist yet, is invisible in practice even when it is
+// technically on screen. The decision belongs after generation.
+scenarios.preGenerationCardStaysRetired = async (page) => {
   const bad = [];
-  for (const val of ['coaster', 'mouse pad', 'tote bag', 'photo poster', 'puzzle', 'mug']) {
+  for (const val of ['coaster', 'tote bag', 'mug']) {
     await pickProduct(page, val);
     const st = await fadeState(page);
-    if (!st.cardShown) bad.push(val);
+    if (st.cardShown) bad.push(val);
     await page.goto(BASE + '/needles-studio.html', { waitUntil: 'domcontentloaded' });
     await uploadPhoto(page); await dismissAlerts(page);
   }
-  if (bad.length) return `FAIL: Edge Fade card hidden for: ${bad.join(', ')}`;
-  return 'PASS: Edge Fade is offered on every product tested';
+  if (bad.length) return `FAIL: the retired pre-generation fade card is showing for: ${bad.join(', ')} — it asks about an image that does not exist yet`;
+  return 'PASS: the pre-generation card stays retired on every product';
+};
+
+// ---- 3b. And the fade page IS reached after generation. ----
+// Alyx got all the way to a coaster mockup without ever being offered a fade:
+// mugs reached openFrameFadeOverlay() from enterRevealStage(), and every
+// single-image product went straight from approve to the mockup. Same page,
+// same slider -- it simply was not on that route.
+scenarios.singleImageProductsReachTheFadePage = async (page) => {
+  await pickProduct(page, 'coaster');
+  await page.evaluate(() => pickCoasterShape('square'));
+  await T(page, 800);
+  await page.fill('#ideaDesc', 'a lighthouse in a storm');
+  await dismissAlerts(page);
+  await page.evaluate(() => document.getElementById('generateBtn')?.scrollIntoView({ block: 'center' }));
+  await page.click('#generateBtn');
+  await page.waitForFunction(() => document.getElementById('approveRow')?.style.display !== 'none', null, { timeout: 90000 });
+  await page.locator('#approveRow button:has-text("Yes")').first().click();
+
+  const reached = await page.waitForFunction(() => {
+    const o = document.getElementById('frameFadeOverlay');
+    return !!(o && getComputedStyle(o).display !== 'none');
+  }, null, { timeout: 30000 }).then(() => true).catch(() => false);
+  if (!reached) return 'FAIL: a coaster went from approve straight to the mockup — the fade page was never offered';
+
+  const live = await page.evaluate(() => ({
+    slider: !!document.getElementById('frameFadeAmountSlider'),
+    art: (document.getElementById('frameFadeArtworkImg') || {}).src ? 'shown' : 'missing',
+    exits: fadeExitsToMockup,
+  }));
+  if (!live.slider) return 'FAIL: no depth slider on the fade page';
+  if (live.art !== 'shown') return 'FAIL: the finished artwork is not on the fade page — the whole point is deciding edges while you can see them';
+  if (live.exits !== true) return 'FAIL: fadeExitsToMockup is not set — Continue would drop a coaster onto the mug frame offer';
+  return 'PASS: single-image products reach the real fade page, artwork and slider present, exiting to the mockup';
 };
 
 // ---- 4. The fade colour follows the product's surface. ----

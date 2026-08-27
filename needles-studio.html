@@ -4488,17 +4488,26 @@ function refreshTravelMugVariantVisibility(){
 }
 
 
-// OFFERED ON EVERYTHING NOW (Aug 2026, Alyx: "a healthy fade to white might
-// be in order. No, better yet a fade to product colour panel"). It was mug
-// and travel cups only -- yet a coaster, a mouse pad, a tote or a poster
-// benefits from a soft edge just as much, and the machinery was always
-// product-agnostic. The old branch also RESET hardEdgesEnabled for every
-// other product, which is one of the paths that made fade unpredictable.
+// STAYS RETIRED. An earlier pass in this same session made this card visible
+// on every product, reasoning that a coaster benefits from a soft edge as
+// much as a mug does. True -- but it put the DECISION back in the wrong
+// place, and the note above this card in the HTML says exactly why it was
+// retired: it "asked the customer to rule on how an image should feather at
+// its edges BEFORE the image existed". Alyx tested it and reported the
+// obvious symptom: "I have yet still to see anything that allows me to
+// control fade" -- because a dimmed card above the idea box, asking about an
+// image that does not exist yet, is invisible in practice even when it is
+// technically on screen.
+//
+// The fade decision belongs AFTER generation, with the picture on screen and
+// a live slider. That page already exists (openFrameFadeOverlay) and single-
+// image products now reach it -- see maybeOpenFadeBeforeMockup() below.
+// This card stays hidden; the checkbox inside it is still poked by several
+// places to keep hardEdgesEnabled in sync, so it is hidden, not deleted.
 function refreshPanoramaFadeCardVisibility(){
   const card=document.getElementById('panoramaFadeCard');
   if(!card)return;
-  card.style.display=product?'block':'none';
-  refreshEdgeFadeControls();
+  card.style.display='none';
 }
 
 // The colour being faded INTO, shown live. A fade is a background, so the
@@ -8049,7 +8058,15 @@ async function approveDesign(allThree){
     // takes the screen from here, so no scroll -- the scroll below would only
     // fight it.
     if(PRODUCTS_AUTO_MOCKUP.includes(product)){
-      beginFinalMockupFetch();
+      // THE FADE PAGE, for everything else (Aug 2026). Mugs on the three-panel
+      // path have had this since enterRevealStage() started calling
+      // openFrameFadeOverlay(): the finished picture on screen, a live slider,
+      // decide the edges while you can SEE them. Every single-image product
+      // went straight from approve to the mockup and never saw it, which is
+      // why Alyx got all the way to a coaster mockup without being offered a
+      // fade at all. Same page, same slider, same code -- it simply was not
+      // on this route.
+      maybeOpenFadeBeforeMockup();
       return;
     }
     // scrollToStableTop, NOT smoothScrollToTarget: everything above this
@@ -8372,6 +8389,34 @@ async function renderFadedArtwork(sourceUrl,hexColor,fadeAmountPct){
   canvas.height=img.naturalHeight;
   const ctx=canvas.getContext('2d');
   ctx.drawImage(img,0,0);
+
+  // Round print areas fade from the RIM. This renderer is the one the live
+  // slider on the fade page uses, so without this a round coaster would
+  // preview and bake a four-sided fade feathering toward corners the product
+  // cuts off. Same rule as applyEdgeFadeToImageUrl -- both paths have to
+  // agree or the preview lies about what gets printed.
+  if(typeof getProductFadeShape==='function' && getProductFadeShape()==='circle'){
+    const w=canvas.width,h=canvas.height;
+    const cx=w/2,cy=h/2,outer=Math.min(w,h)/2;
+    if(fadeAmountPct>0){
+      const inner=Math.max(0,outer*(1-fadeAmountPct/100));
+      const rg=ctx.createRadialGradient(cx,cy,inner,cx,cy,outer);
+      rg.addColorStop(0,hexColor+'00');
+      rg.addColorStop(1,hexColor+'FF');
+      ctx.fillStyle=rg;
+      ctx.fillRect(0,0,w,h);
+    }
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(0,0,w,h);
+    ctx.arc(cx,cy,outer,0,Math.PI*2,true);
+    ctx.closePath();
+    ctx.fillStyle=hexColor+'FF';
+    ctx.fill('evenodd');
+    ctx.restore();
+    return canvas.toDataURL('image/png');
+  }
+
   if(fadeAmountPct>0){
     const w=canvas.width,h=canvas.height;
     const fadeDist=(fadeAmountPct/100)*Math.min(w,h)*0.5;
@@ -8452,6 +8497,17 @@ async function bakeFadeIntoDesigns(fadeAmountPct){
     }
     const rightDesign=findDesignById(placements.right);
     if(rightDesign)rightDesign.url=rightUrl;
+  } else if(fadeExitsToMockup){
+    // SINGLE-IMAGE PRODUCTS. The branch below slices the faded result into
+    // thirds and spreads it across left/front/right, which is right for a mug
+    // wraparound and catastrophic for a coaster -- it would print one third of
+    // the design. These products have exactly one design; replace it in place.
+    const faded=await renderFadedArtwork(revealOriginalArtworkUrls[0],hex,fadeAmountPct);
+    const uploaded=await uploadCompositedImage(faded);
+    const slotId=placements.front||placements.left||placements.right;
+    const design=slotId?findDesignById(slotId):null;
+    if(design)design.url=uploaded;
+    finalImageUrl=uploaded;
   } else {
     const faded=await renderFadedArtwork(revealOriginalArtworkUrls[0],hex,fadeAmountPct);
     const slices=await sliceStitchedIntoThirds(faded);
@@ -8492,6 +8548,27 @@ let frameFadeAmountPct=0;
 
 const DEFAULT_FADE_PCT=30;
 let frameFadeSettled=false;
+
+// Opens the real Edge Fade page for a single-image product, then hands on to
+// the mockup when the customer is done. revealFlowThreePanel drives which
+// layout openFrameFadeOverlay draws, so it is set false here explicitly
+// rather than left at whatever the last mug run put there.
+function maybeOpenFadeBeforeMockup(){
+  const finished=finalImageUrl||resultUrl;
+  if(!finished){
+    beginFinalMockupFetch();
+    return;
+  }
+  revealFlowThreePanel=false;
+  revealOriginalArtworkUrls=[finished];
+  fadeExitsToMockup=true;
+  openFrameFadeOverlay();
+}
+
+// Where the fade page goes when it is finished. The mug path has its own
+// continuation (the frame offer); single-image products go to the mockup.
+// Without this the two routes would fight over the same Done button.
+let fadeExitsToMockup=false;
 
 function openFrameFadeOverlay(){
   frameFadeSettled=true;
@@ -8561,6 +8638,15 @@ async function confirmFrameFadeAndContinue(){
   const overlay=document.getElementById('frameFadeOverlay');
   if(overlay)overlay.style.display='none';
   document.body.classList.remove('step-locked');
+  // Two routes reach this page now and they do NOT continue to the same
+  // place. Single-image products (coaster, poster, tote, puzzle...) came
+  // here on their way to the mockup and have no frame offer -- sending them
+  // to showAccessorizeChoiceState() would drop them onto a mug screen.
+  if(fadeExitsToMockup){
+    fadeExitsToMockup=false;
+    beginFinalMockupFetch();
+    return;
+  }
   // The frame OFFER, not the catalogue: fade and frames are both on this
   // track, and neither one forecloses the other. Declining a frame no
   // longer costs the customer their fade, which is exactly what used to
