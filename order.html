@@ -3,46 +3,66 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Muggshotz — Order Your Mug</title>
+<title>Needles’ Studio — Order</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&display=swap"/>
 <style>
+/* DIAMONDS AND STEEL, NOT PUMPKINS AND BROWNIES (Alyx, 2026-08-28):
+   "Needles Easel is diamonds and steel. Muggshotz is pumpkins and brownies.
+   It's a different feel."
+   This block is the overall control mechanism Alyx asked for: the page's
+   whole motif lives in these named cans. Swap what's in the cans and the
+   page changes coat -- nothing below hardcodes the brand colours any more.
+   Deliberately NOT tokens: product-data hexes (an Orange mug stays orange
+   in any motif), the error red, and the flyer-status green -- those mean
+   things, they don't decorate. */
+:root{
+  --accent:#29a3ff;      /* bright blue -- links, live text   (was var(--accent) orange) */
+  --accent-deep:#003c8c; /* deep blue  -- strong borders/focus (was var(--accent))       */
+  --accent-soft:#7ab8ff; /* light blue -- secondary highlights (was var(--accent-soft))       */
+  --steel:#7888b4;       /* silver-steel -- titles, selected text                  */
+  --select-bg:#0e2036;   /* blue-dark selected ground          (was var(--select-bg) brown) */
+  --card-bg:#151b24;     /* card surface                       (was #1a1a1a)       */
+  --card-line:#24344a;   /* card border                        (was #333 on cards) */
+}
+
 *{box-sizing:border-box;margin:0;padding:0}
 body{background:#111;font-family:system-ui,sans-serif;color:#fff}
 .main{padding:1.5rem;display:flex;flex-direction:column;gap:1.5rem;max-width:600px;margin:0 auto}
-.header-title{font-size:22px;font-weight:800;color:#ff6a00;text-align:center;padding:1.5rem 0 0}
-.card{background:#1a1a1a;border:.5px solid #333;border-radius:12px;padding:1.25rem}
-.card-title{font-size:13px;font-weight:600;color:#ff6a00;letter-spacing:1px;text-transform:uppercase;margin-bottom:1rem}
+.header-title{font-family:'Playfair Display',serif;font-style:italic;font-size:24px;font-weight:700;color:var(--steel);text-align:center;padding:1.5rem 0 0;letter-spacing:.5px;text-shadow:0 0 12px rgba(0,60,140,0.4)}
+.card{background:var(--card-bg);border:1px solid var(--card-line);border-radius:12px;padding:1.25rem;box-shadow:0 2px 10px rgba(0,0,0,0.35)}
+.card-title{font-family:'Playfair Display',serif;font-style:italic;font-size:15px;font-weight:700;color:var(--steel);letter-spacing:.5px;text-transform:uppercase;margin-bottom:1rem;text-shadow:0 0 10px rgba(0,60,140,0.25)}
 .note{font-size:11px;color:#555;margin-top:6px;line-height:1.35}
 .grid2{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
 .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
 .btn-select{background:#0d0d0d;border:.5px solid #333;border-radius:8px;padding:.9rem .6rem;text-align:center;cursor:pointer;color:#888;font-size:13px;font-weight:600}
-.btn-select.selected{border-color:#ff6a00;background:#1a0a00;color:#ff6a00}
+.btn-select.selected{border-color:var(--accent-deep);background:var(--select-bg);color:var(--steel)}
 .btn-select .price{display:block;font-size:11px;color:#666;margin-top:3px;font-weight:400}
-.btn-select.selected .price{color:#ff9a4d}
+.btn-select.selected .price{color:var(--accent-soft)}
 .preview-row{display:flex;gap:10px;justify-content:center}
 .preview-slot{width:90px;text-align:center}
-.preview-slot img{width:90px;height:90px;object-fit:cover;border-radius:8px;border:2px solid #ff6a00}
+.preview-slot img{width:90px;height:90px;object-fit:cover;border-radius:8px;border:2px solid var(--accent)}
 .preview-slot .empty{width:90px;height:90px;border-radius:8px;border:2px dashed #333;display:flex;align-items:center;justify-content:center;color:#444;font-size:12px}
 .preview-label{font-size:10px;color:#888;letter-spacing:1px;text-transform:uppercase;margin-top:5px}
 .color-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:10px}
 .color-btn{width:100%;max-width:44px;aspect-ratio:1;border-radius:50%;background:#1a1a1a;padding:4px;cursor:pointer;box-shadow:0 3px 6px rgba(0,0,0,0.6);margin:0 auto;border:2px solid transparent}
 .color-btn .ball{width:100%;height:100%;border-radius:50%;position:relative;box-shadow:inset 0 -5px 9px rgba(0,0,0,0.35),inset 0 3px 7px rgba(255,255,255,0.35)}
-.color-btn.selected{border-color:#ff6a00;box-shadow:0 0 0 2px #ff6a00,0 0 10px 1px rgba(255,106,0,0.6)}
+.color-btn.selected{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent),0 0 10px 1px rgba(41,163,255,0.6)}
 .color-label{font-size:11px;color:#888;text-align:center;margin-top:10px}
 .mug-preview-wrap{width:100%;max-width:260px;margin:0 auto 1rem;text-align:center}
 #mugPreviewSvg{width:100%;height:auto;transition:transform 250ms ease;transform-origin:bottom center}
 #mugPreviewSvg.size-15oz{transform:scaleY(1.14)}
 .view-toggle-row{display:flex;gap:6px;justify-content:center;margin-top:1rem}
 .view-toggle-btn{flex:1;max-width:90px;background:#0d0d0d;border:.5px solid #333;border-radius:8px;padding:.5rem .4rem;text-align:center;cursor:pointer;color:#888;font-size:12px;font-weight:600}
-.view-toggle-btn.selected{border-color:#ff6a00;background:#1a0a00;color:#ff6a00}
+.view-toggle-btn.selected{border-color:var(--accent-deep);background:var(--select-bg);color:var(--steel)}
 input,select{width:100%;background:#0d0d0d;border:1px solid #444;border-radius:8px;padding:11px 12px;color:#fff;font-size:14px;font-family:system-ui,sans-serif;margin-bottom:.6rem}
-input:focus,select:focus{outline:none;border-color:#ff6a00}
+input:focus,select:focus{outline:none;border-color:var(--accent-deep)}
 label{font-size:11px;color:#888;letter-spacing:.5px;text-transform:uppercase;display:block;margin-bottom:4px}
 .field-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .summary-row{display:flex;justify-content:space-between;font-size:13px;color:#ccc;padding:.35rem 0}
 .summary-row.total{border-top:1px solid #333;margin-top:.5rem;padding-top:.75rem;font-size:16px;font-weight:700;color:#fff}
-.generate-btn{width:100%;background:#ff6a00;border:none;border-radius:10px;padding:1.1rem;color:#fff;font-size:17px;font-weight:700;cursor:pointer;letter-spacing:1px}
+.generate-btn{width:100%;background:linear-gradient(180deg,#6fb3ff,#003c8c 55%,#2266cc);border:1px solid var(--steel);border-radius:10px;padding:1.1rem;color:#fff;font-size:17px;font-weight:700;cursor:pointer;letter-spacing:1px;box-shadow:0 3px 10px rgba(0,60,140,0.35)}
 .generate-btn:disabled{background:#333;color:#666;cursor:not-allowed}
-.status{font-size:13px;color:#ff6a00;text-align:center;padding:1rem;display:none}
+.status{font-size:13px;color:var(--accent);text-align:center;padding:1rem;display:none}
 .status.visible{display:block}
 .error{color:#e24b4a!important}
 .back-link{display:block;text-align:center;color:#888;font-size:12px;text-decoration:none;margin-top:-.5rem}
@@ -52,7 +72,7 @@ label{font-size:11px;color:#888;letter-spacing:.5px;text-transform:uppercase;dis
 .flyer-status{font-size:11px;margin-top:6px;line-height:1.35}
 .flyer-status.ok{color:#5fbf5f}
 .flyer-status.pending{color:#888}
-.mockup-wait-banner{display:none;position:fixed;top:18%;left:50%;transform:translateX(-50%);background:#000;border:2px solid #ff6a00;color:#ff6a00;font-size:19px;font-weight:800;letter-spacing:.3px;padding:1rem 1.4rem;border-radius:14px;z-index:2000;text-align:center;max-width:90vw;box-shadow:0 8px 30px rgba(0,0,0,0.65);animation:mockupBannerBlink 1s steps(1) infinite}
+.mockup-wait-banner{display:none;position:fixed;top:18%;left:50%;transform:translateX(-50%);background:#000;border:2px solid var(--accent);color:var(--accent);font-size:19px;font-weight:800;letter-spacing:.3px;padding:1rem 1.4rem;border-radius:14px;z-index:2000;text-align:center;max-width:90vw;box-shadow:0 8px 30px rgba(0,0,0,0.65);animation:mockupBannerBlink 1s steps(1) infinite}
 .mockup-wait-banner.visible{display:block}
 @keyframes mockupBannerBlink{0%,49%{opacity:1}50%,100%{opacity:0}}
 .mockup-side-cta{position:absolute;top:50%;transform:translateY(-50%);display:none;width:96px;padding:10px 8px;border-radius:10px;cursor:pointer;font-size:12px;font-weight:700;line-height:1.35;text-align:center;letter-spacing:.2px;z-index:6;background:rgba(10,10,10,0.55);backdrop-filter:blur(2px);border:1px solid rgba(255,255,255,0.2);color:#eee;transition:background .15s,border-color .15s}
@@ -60,11 +80,11 @@ label{font-size:11px;color:#888;letter-spacing:.5px;text-transform:uppercase;dis
 .mockup-side-cta:hover{background:rgba(10,10,10,0.72)}
 .mockup-side-cta.cta-left{right:calc(100% + 14px);color:#8fe8a0;border-color:rgba(143,232,160,0.5)}
 .mockup-side-cta.cta-left:hover{background:rgba(20,45,25,0.78)}
-.mockup-side-cta.cta-right{left:calc(100% + 14px);color:#ffb27a;border-color:rgba(255,178,122,0.5)}
+.mockup-side-cta.cta-right{left:calc(100% + 14px);color:var(--accent-soft);border-color:rgba(255,178,122,0.5)}
 .mockup-side-cta.cta-right:hover{background:rgba(45,25,10,0.78)}
-.select-flash-prompt{display:none;position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:2100;max-width:92vw;width:360px;text-align:center;padding:.9rem 1.1rem;border-radius:12px;background:#1a0a00;border:2px solid #ff6a00;color:#ffb27a;font-size:14px;font-weight:800;letter-spacing:.2px;box-shadow:0 8px 24px rgba(0,0,0,0.6);animation:selectFlashPulse 1s ease-in-out infinite}
+.select-flash-prompt{display:none;position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:2100;max-width:92vw;width:360px;text-align:center;padding:.9rem 1.1rem;border-radius:12px;background:var(--select-bg);border:2px solid var(--accent);color:var(--accent-soft);font-size:14px;font-weight:800;letter-spacing:.2px;box-shadow:0 8px 24px rgba(0,0,0,0.6);animation:selectFlashPulse 1s ease-in-out infinite}
 .select-flash-prompt.visible{display:block}
-@keyframes selectFlashPulse{0%,100%{opacity:1;box-shadow:0 0 0 rgba(255,106,0,0)}50%{opacity:.85;box-shadow:0 0 18px rgba(255,106,0,.4)}}
+@keyframes selectFlashPulse{0%,100%{opacity:1;box-shadow:0 0 0 rgba(41,163,255,0)}50%{opacity:.85;box-shadow:0 0 18px rgba(41,163,255,.4)}}
 
 /* NEW (Alyx's request, Aug 2026): in-page lightbox so mockup images can
    be enlarged AND browsed left/right without leaving order.html — the
@@ -85,13 +105,95 @@ label{font-size:11px;color:#888;letter-spacing:.5px;text-transform:uppercase;dis
   .lightbox-prev{left:8px}
   .lightbox-next{right:8px}
 }
+
+/* THE CHIP METER, RE-SKINNED THE STUDIO'S WAY. Both pages carry the old
+   orange meter.png; the studio never swapped the image -- it hides it and
+   rebuilds the meter in CSS as the blue chrome NEEDLES STUDIO CURRENCY
+   panel. Ported verbatim so all three pages show the same jewel. */
+#tokenMeterWrap{
+  position:relative!important;
+  width:226px!important;
+  height:78px!important;
+  flex-shrink:0;
+  overflow:hidden;
+  border:1px solid #9fd5ff;
+  border-radius:10px;
+  background:
+    linear-gradient(135deg,rgba(255,255,255,.18),transparent 25%),
+    linear-gradient(180deg,#162434 0%,#070b10 52%,#111a24 100%);
+  box-shadow:
+    inset 0 0 0 2px #07101a,
+    inset 0 0 0 4px rgba(141,204,255,.35),
+    inset 0 0 22px rgba(46,143,226,.22),
+    0 0 0 1px rgba(220,240,255,.18),
+    0 0 18px rgba(50,150,255,.28);
+  pointer-events:auto;
+  cursor:pointer;
+}
+#tokenMeterWrap::before{
+  content:"NEEDLES STUDIO CURRENCY";
+  position:absolute;
+  left:9px;
+  right:9px;
+  top:7px;
+  height:22px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  color:#e8f6ff;
+  background:
+    linear-gradient(180deg,rgba(99,171,230,.28),rgba(8,16,24,.4)),
+    #101a25;
+  border:1px solid rgba(156,215,255,.62);
+  border-radius:5px;
+  font-family:"Playfair Display",Georgia,serif;
+  font-size:10px;
+  font-weight:800;
+  letter-spacing:1.6px;
+  text-shadow:0 0 8px rgba(116,196,255,.9);
+}
+#tokenMeterWrap::after{
+  content:"CHIPS REMAINING";
+  position:absolute;
+  right:13px;
+  bottom:15px;
+  color:#b9ddf7;
+  font-family:"Bebas Neue","Arial Narrow",sans-serif;
+  font-size:14px;
+  letter-spacing:1.4px;
+  text-shadow:0 0 7px rgba(77,172,255,.55);
+}
+#tokenMeterWrap > img{display:none!important}
+#tokenMeterNumber{
+  position:absolute!important;
+  left:15px!important;
+  top:34px!important;
+  width:67px!important;
+  height:34px!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  color:#f7fcff!important;
+  background:
+    radial-gradient(circle at 34% 28%,#eaf8ff 0%,#8fcfff 20%,#27699b 52%,#07101a 100%);
+  border:1px solid #d9f2ff;
+  border-radius:8px!important;
+  box-shadow:
+    inset 0 0 0 2px #0a1722,
+    inset 0 0 10px rgba(145,218,255,.65),
+    0 0 12px rgba(76,176,255,.55);
+  font-family:"Anton","Arial Black",sans-serif!important;
+  font-size:24px!important;
+  line-height:1!important;
+  text-shadow:0 0 9px #56baff!important;
+}
 </style>
 </head>
 <body>
 <div class="token-meter-row">
   <div id="tokenMeterWrap">
     <img src="meter.png" style="width:100%;display:block" alt="Chip meter"/>
-    <div id="tokenMeterNumber" style="position:absolute;left:44.4%;top:31.3%;width:13%;height:25.3%;display:flex;align-items:center;justify-content:center;color:#ff6a00;font-family:'Anton',sans-serif;font-weight:700;font-size:clamp(12px,3vw,18px);text-shadow:0 0 8px rgba(255,106,0,0.7)">—</div>
+    <div id="tokenMeterNumber" style="position:absolute;left:44.4%;top:31.3%;width:13%;height:25.3%;display:flex;align-items:center;justify-content:center;color:var(--accent);font-family:'Anton',sans-serif;font-weight:700;font-size:clamp(12px,3vw,18px);text-shadow:0 0 8px rgba(41,163,255,0.7)">—</div>
   </div>
 </div>
 <div class="header-title">🛒 Order Your Product</div>
@@ -126,19 +228,19 @@ label{font-size:11px;color:#888;letter-spacing:.5px;text-transform:uppercase;dis
 <div class="card-title">🖼️ Your Photo/Poster</div>
 <div class="note" style="margin-top:0;margin-bottom:.9rem">These options were locked in before you generated, since the print shape determines how the art was composed.</div>
 <div class="note" id="photoPosterSummary" style="font-size:14px;color:#fff"></div>
-<div class="note" id="photoPosterShippingNote" style="margin-top:.75rem;color:#ff9a4d;display:none">Ships separately from outside the US — slightly longer delivery.</div>
-<div class="note" id="posterMockupBtn" style="text-align:center;margin-top:1rem;color:#ff9a4d;font-weight:600">🔍 Click Image To Enlarge</div>
+<div class="note" id="photoPosterShippingNote" style="margin-top:.75rem;color:var(--accent-soft);display:none">Ships separately from outside the US — slightly longer delivery.</div>
+<div class="note" id="posterMockupBtn" style="text-align:center;margin-top:1rem;color:var(--accent-soft);font-weight:600">🔍 Click Image To Enlarge</div>
 <div class="note" id="posterMockupNote" style="margin-top:.5rem;text-align:center;display:none"></div>
-<img id="posterMockupImg" style="display:none;width:100%;border-radius:12px;border:1px solid #ff6a00;margin-top:.75rem"/>
+<img id="posterMockupImg" style="display:none;width:100%;border-radius:12px;border:1px solid var(--accent);margin-top:.75rem"/>
 </div>
 
 <div class="card" id="suitcaseSizeCard" style="display:none">
 <div class="card-title">🧳 Suitcase Size</div>
 <div class="grid3" id="suitcaseSizeGrid"></div>
 <div class="note">Comes in Black only.</div>
-<div class="note" id="suitcaseMockupBtn" style="text-align:center;margin-top:1rem;color:#ff9a4d;font-weight:600">🔍 Click Image To Enlarge</div>
+<div class="note" id="suitcaseMockupBtn" style="text-align:center;margin-top:1rem;color:var(--accent-soft);font-weight:600">🔍 Click Image To Enlarge</div>
 <div class="note" id="suitcaseMockupNote" style="margin-top:.5rem;text-align:center;display:none"></div>
-<img id="suitcaseMockupImg" style="display:none;width:100%;border-radius:12px;border:1px solid #ff6a00;margin-top:.75rem"/>
+<img id="suitcaseMockupImg" style="display:none;width:100%;border-radius:12px;border:1px solid var(--accent);margin-top:.75rem"/>
 </div>
 
 <div class="card" id="toteBagSizeCard" style="display:none">
@@ -150,17 +252,17 @@ label{font-size:11px;color:#888;letter-spacing:.5px;text-transform:uppercase;dis
 <div class="card-title">🎨 Tote Bag Color</div>
 <div class="color-grid" id="toteBagColorGrid"></div>
 <div class="color-label" id="toteBagColorLabel">Pick a color</div>
-<div class="note" id="toteMockupBtn" style="text-align:center;margin-top:1rem;color:#ff9a4d;font-weight:600">🔍 Click Image To Enlarge</div>
+<div class="note" id="toteMockupBtn" style="text-align:center;margin-top:1rem;color:var(--accent-soft);font-weight:600">🔍 Click Image To Enlarge</div>
 <div class="note" id="toteMockupNote" style="margin-top:.5rem;text-align:center;display:none"></div>
-<img id="toteMockupImg" style="display:none;width:100%;border-radius:12px;border:1px solid #ff6a00;margin-top:.75rem"/>
+<img id="toteMockupImg" style="display:none;width:100%;border-radius:12px;border:1px solid var(--accent);margin-top:.75rem"/>
 </div>
 
 <div class="card" id="puzzleSizeCard" style="display:none">
 <div class="card-title">🧩 Puzzle Size</div>
 <div class="grid2" id="puzzleSizeGrid"></div>
-<div class="note" id="puzzleMockupBtn" style="text-align:center;margin-top:1rem;color:#ff9a4d;font-weight:600">🔍 Click Image To Enlarge</div>
+<div class="note" id="puzzleMockupBtn" style="text-align:center;margin-top:1rem;color:var(--accent-soft);font-weight:600">🔍 Click Image To Enlarge</div>
 <div class="note" id="puzzleMockupNote" style="margin-top:.5rem;text-align:center;display:none"></div>
-<img id="puzzleMockupImg" style="display:none;width:100%;border-radius:12px;border:1px solid #ff6a00;margin-top:.75rem"/>
+<img id="puzzleMockupImg" style="display:none;width:100%;border-radius:12px;border:1px solid var(--accent);margin-top:.75rem"/>
 </div>
 
 <div class="card" id="phoneCaseCard" style="display:none">
@@ -170,9 +272,9 @@ label{font-size:11px;color:#888;letter-spacing:.5px;text-transform:uppercase;dis
   style="width:100%;padding:.6rem;border-radius:8px;border:.5px solid #333;background:#0d0d0d;color:#fff;box-sizing:border-box"/>
 <div id="phoneModelResults" style="margin-top:.6rem"></div>
 <div class="note" id="phoneModelSelectedNote" style="margin-top:.6rem"></div>
-<div class="note" id="phoneMockupBtn" style="text-align:center;margin-top:1rem;color:#ff9a4d;font-weight:600">🔍 Click Image To Enlarge</div>
+<div class="note" id="phoneMockupBtn" style="text-align:center;margin-top:1rem;color:var(--accent-soft);font-weight:600">🔍 Click Image To Enlarge</div>
 <div class="note" id="phoneMockupNote" style="margin-top:.5rem;text-align:center;display:none"></div>
-<img id="phoneMockupImg" style="display:none;width:100%;border-radius:12px;border:1px solid #ff6a00;margin-top:.75rem"/>
+<img id="phoneMockupImg" style="display:none;width:100%;border-radius:12px;border:1px solid var(--accent);margin-top:.75rem"/>
 </div>
 
 <div class="card" id="mugStyleCard">
@@ -183,9 +285,9 @@ label{font-size:11px;color:#888;letter-spacing:.5px;text-transform:uppercase;dis
 <div class="card" id="travelMugStyleCard" style="display:none">
 <div class="card-title">🍶 Which Travel Mug?</div>
 <div class="grid3" id="travelMugStyleGrid"></div>
-<div class="note" id="travelMockupPreviewBtn" style="text-align:center;margin-top:1rem;color:#ff9a4d;font-weight:600">🔍 Click Image To Enlarge</div>
+<div class="note" id="travelMockupPreviewBtn" style="text-align:center;margin-top:1rem;color:var(--accent-soft);font-weight:600">🔍 Click Image To Enlarge</div>
 <div class="note" id="travelMockupPreviewNote" style="margin-top:.5rem;text-align:center;display:none"></div>
-<img id="travelMockupPreviewImg" style="display:none;width:100%;border-radius:12px;border:1px solid #ff6a00;margin-top:.75rem"/>
+<img id="travelMockupPreviewImg" style="display:none;width:100%;border-radius:12px;border:1px solid var(--accent);margin-top:.75rem"/>
 </div>
 
 <div class="card" id="sizeCard">
@@ -198,9 +300,9 @@ label{font-size:11px;color:#888;letter-spacing:.5px;text-transform:uppercase;dis
 
 <div class="card" id="livePreviewCard">
 <div class="card-title">🖼️ Live Preview</div>
-<div class="note" id="mockupPreviewBtn" style="text-align:center;margin-bottom:1rem;color:#ff9a4d;font-weight:600">🔍 Click Image To Enlarge</div>
+<div class="note" id="mockupPreviewBtn" style="text-align:center;margin-bottom:1rem;color:var(--accent-soft);font-weight:600">🔍 Click Image To Enlarge</div>
 <div class="note" id="mockupPreviewNote" style="margin-top:-.6rem;margin-bottom:1rem;text-align:center;display:none"></div>
-<img id="mockupPreviewImg" style="display:none;width:100%;border-radius:12px;border:1px solid #ff6a00;margin-bottom:1rem"/>
+<img id="mockupPreviewImg" style="display:none;width:100%;border-radius:12px;border:1px solid var(--accent);margin-bottom:1rem"/>
 <div class="mug-preview-wrap">
 <svg id="mugPreviewSvg" viewBox="0 0 300 300" xmlns="http://www.w3.org/2000/svg">
   <defs>
@@ -239,7 +341,7 @@ label{font-size:11px;color:#888;letter-spacing:.5px;text-transform:uppercase;dis
 <div class="note" style="margin-top:0;margin-bottom:.75rem">Have your design stretched edge-to-edge across the mug (rather than a single front-facing panel). Best suited for designs already built for a full wraparound look. Note: this stretches ONE image across the whole print area — it's a different option from the generator's "Wraparound" scene-continuation feature, which auto-creates three matching panels instead.</div>
 <div style="display:flex;align-items:center;gap:10px">
 <input type="checkbox" id="fullWrapToggle" onchange="toggleFullWrap()" style="width:20px;height:20px;cursor:pointer"/>
-<label style="margin:0;text-transform:none;font-size:14px;color:#fff;cursor:pointer" onclick="document.getElementById('fullWrapToggle').click()">Yes, apply Full Wrap <span style="color:#ff9a4d;font-weight:700">— FREE</span></label>
+<label style="margin:0;text-transform:none;font-size:14px;color:#fff;cursor:pointer" onclick="document.getElementById('fullWrapToggle').click()">Yes, apply Full Wrap <span style="color:var(--accent-soft);font-weight:700">— FREE</span></label>
 </div>
 </div>
 
@@ -705,7 +807,7 @@ function scrollToCheckout(){
   if (!card) return;
   card.scrollIntoView({ behavior: 'smooth', block: 'start' });
   card.style.transition = 'box-shadow .3s';
-  card.style.boxShadow = '0 0 0 4px rgba(255,106,0,0.55)';
+  card.style.boxShadow = '0 0 0 4px rgba(41,163,255,0.55)';
   setTimeout(() => { card.style.boxShadow = ''; }, 1600);
   const nameInput = document.getElementById('fullName');
   if (nameInput) setTimeout(() => nameInput.focus(), 500);
@@ -765,7 +867,7 @@ async function runMockupJob(body, btn, noteEl, imgEl){
       allImagesForLightbox.forEach((url, idx) => {
         const thumb = document.createElement('img');
         thumb.src = url;
-        thumb.style.cssText = 'flex:0 0 150px;width:150px;height:150px;border-radius:12px;border:1px solid #ff6a00;object-fit:contain;background:#fff;cursor:pointer';
+        thumb.style.cssText = 'flex:0 0 150px;width:150px;height:150px;border-radius:12px;border:1px solid var(--accent);object-fit:contain;background:#fff;cursor:pointer';
         thumb.onclick = () => openLightbox(allImagesForLightbox, idx);
         galleryEl.appendChild(thumb);
       });
