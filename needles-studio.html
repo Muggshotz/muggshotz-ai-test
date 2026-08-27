@@ -1052,7 +1052,13 @@ const HERO_SETTLE_MS = 1000;
 <div class="note-prominent" id="mugStyleCardNote" style="margin-top:0;margin-bottom:.9rem">Pick a size above to see pricing for each style.</div>
 <div class="grid3" id="preGenMugStyleGrid"></div>
 <div id="preGenMugColorWrap" style="display:none;margin-top:1rem">
-<div class="note" id="preGenMugColorLabel" style="margin-bottom:6px">Color</div>
+<!-- A real instruction, not a caption. Alyx: "why don't we have a prompt
+     which reminds them to please select a color?" The structural guard was
+     already there (Continue only appears after a colour is picked) but the
+     label just said "Color" -- and after a back-trip wipes a previous choice
+     the customer met a silent swatch grid with nothing saying a decision was
+     pending. Same guidance style as "Please select your desired product". -->
+<div class="guidance-prompt soft visible" id="preGenMugColorLabel" role="status" style="margin-top:0;margin-bottom:8px">Please select a color for your mug.</div>
 <div class="color-grid" id="preGenMugColorGrid"></div>
 <div id="preGenMugMockupResultWrap">
 <img id="preGenMugMockupImg" style="display:none;width:100%;max-width:280px;margin:.9rem auto 0;border-radius:10px;border:1px solid #003c8c;background:#fff;filter:brightness(1.15) contrast(1.12) saturate(1.2);box-shadow:0 2px 10px rgba(0,0,0,.45)"/>
@@ -5062,7 +5068,20 @@ function renderPreGenMugColorGrid(){
   }
   // Restore both for styles that DO have colours -- the colourless branch
   // above hides them, and they are shared elements, not per-style ones.
-  if(label)label.style.display='block';
+  if(label){
+    label.style.display='block';
+    // Ask while the choice is pending, confirm once it is made. The pending
+    // wording matters most after a back-trip: backing past Size clears the
+    // colour (sizes offer different colours), so a returning customer needs
+    // to be TOLD a colour is wanted again, not left to infer it from a
+    // silent swatch grid.
+    const validNames=colors.map(c=>c.name);
+    const hasValidPick=!!selectedGenColor && validNames.includes(selectedGenColor);
+    label.textContent=hasValidPick
+      ? 'Color: '+selectedGenColor+' — tap another swatch to change it.'
+      : 'Please select a color for your mug.';
+    label.classList.toggle('soft',hasValidPick);
+  }
   grid.style.display='';
   wrap.style.display='block';
   grid.innerHTML='';
@@ -5083,6 +5102,12 @@ function pickPreGenMugColor(el,colorName){
   el.classList.add('selected');
   selectedGenColor=colorName;
   mugColorChosenPreGen=true;
+  // The prompt above the swatches asked for a colour; answer it.
+  const colorLabel=document.getElementById('preGenMugColorLabel');
+  if(colorLabel){
+    colorLabel.textContent='Color: '+colorName+' — tap another swatch to change it.';
+    colorLabel.classList.add('soft');
+  }
   updatePreGenMugMockupImg();
   const finishBtn=document.getElementById('preGenMugColorFinishBtn');
   if(finishBtn)finishBtn.style.display='block';

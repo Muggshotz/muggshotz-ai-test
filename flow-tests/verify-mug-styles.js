@@ -352,6 +352,55 @@ scenarios.theMockupSlotStillShowsAMug = async (page) => {
 };
 
 
+// ---- 10. The swatch grid asks for a colour; it never sits silent. ----
+// Alyx: "why don't we have a prompt which reminds them to please select a
+// color?" The structural guard existed (Continue appears only after a pick)
+// but the label just said "Color", and after a back-trip past Size wipes the
+// previous choice the customer met a silent grid with nothing saying a
+// decision was pending. Four states, all asserted here:
+//   pending  -> a visible instruction asking for a colour
+//   picked   -> a confirmation naming the colour
+//   re-entry -> back past Size wiped the colour, so the ASK must return
+//   colourless -> no prompt at all; there is nothing to ask for
+scenarios.colourGridAsksAndConfirms = async (page) => {
+  await toMugStyles(page);
+  const read = () => page.evaluate(() => {
+    const l = document.getElementById('preGenMugColorLabel');
+    const r = l.getBoundingClientRect();
+    return { text: l.textContent, shown: getComputedStyle(l).display !== 'none' && r.height > 0 };
+  });
+
+  await page.locator('#preGenMugStyleGrid .btn-select[data-style="Trimmed"]').click();
+  await T(page, 1000);
+  let st = await read();
+  if (!st.shown || !/select a color/i.test(st.text))
+    return `FAIL: pending state shows no ask (shown=${st.shown}, text="${st.text}") — a customer who backed in has no way to know a colour is wanted`;
+
+  await page.locator('#preGenMugColorGrid .color-btn').first().click();
+  await T(page, 1000);
+  st = await read();
+  if (!st.shown || !/Color:\s*\S/.test(st.text))
+    return `FAIL: picking a colour did not confirm it (text="${st.text}")`;
+
+  await page.evaluate(() => mugStyleLockBack());
+  await T(page, 700);
+  await page.evaluate(() => pickPreGenMugSize('15oz'));
+  await T(page, 800);
+  await page.locator('#preGenMugStyleGrid .btn-select[data-style="Trimmed"]').click();
+  await T(page, 1000);
+  st = await read();
+  if (!st.shown || !/select a color/i.test(st.text))
+    return `FAIL: after backing past Size (which wipes the colour) the ask did not return (text="${st.text}")`;
+
+  await page.locator('#preGenMugStyleGrid .btn-select[data-style="Classic White"]').click();
+  await T(page, 1000);
+  st = await read();
+  if (st.shown)
+    return `FAIL: Classic White has no colours, yet the colour prompt is showing ("${st.text}")`;
+  return 'PASS: the grid asks, confirms, asks again after a back-trip, and stays silent when there is nothing to choose';
+};
+
+
 (async () => {
   let fails = 0;
   for (const [name, fn] of Object.entries(scenarios)) {
