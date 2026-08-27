@@ -117,6 +117,63 @@ scenarios.catalogParity = async (page) => {
   return `PASS: UI travel catalog matches the ${uiKeys.length} variants under test`;
 };
 
+// ---- Picking Print Style must land on Generate, lit. ----
+// Alyx: "When I pick the type of mug I wanted the screen just went subdued,
+// veiled, and did nothing. I scrolled further down and I found a lit up
+// generate button. But I shouldn't have had to scroll down."
+//
+// pickMugPrintMode adds final-generate-focus, which dims every card but
+// Upload Photo -- the rail declaring Generate the last step -- and then
+// scrolled back to the colour or Style card it had just dimmed. Spotlight and
+// scroll disagreed, so the customer landed on a greyed-out card with the only
+// lit control below the fold.
+//
+// Asserts the landing the way a customer experiences it: the Generate button
+// is inside the viewport after the pick. Checking which function was called,
+// or that a class is set, would both have passed while this was broken.
+const GEN_LANDING = ['travel-mug-20oz', 'travel-mug-14oz-handle'];
+for (const key of GEN_LANDING) {
+  scenarios['printStyleLandsOnGenerate_' + key.replace(/-/g, '_')] = async (page) => {
+    await pickTravel(page);
+    await page.evaluate((k) => pickPreGenTravelVariant(k), key);
+    await page.waitForTimeout(1200);
+    await dismissAlerts(page);
+    const card = await page.evaluate(() => {
+      const c = document.getElementById('mugPrintModeCard');
+      return c ? getComputedStyle(c).display : 'missing';
+    });
+    if (card === 'none' || card === 'missing')
+      return `PASS (n/a): ${key} never shows the Print Style card`;
+
+    // Park the window somewhere unhelpful first, so a passing result means
+    // the app scrolled and not that the button happened to already be there.
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await page.waitForTimeout(400);
+    await page.evaluate(() => pickMugPrintMode('wraparound'));
+    await page.waitForTimeout(2500);
+
+    const st = await page.evaluate(() => {
+      const btn = document.getElementById('generateBtn');
+      if (!btn) return { missing: true };
+      const r = btn.getBoundingClientRect();
+      const onScreen = r.height > 0 && r.top >= 0 && r.bottom <= innerHeight + 2;
+      return {
+        onScreen,
+        top: Math.round(r.top),
+        bottom: Math.round(r.bottom),
+        viewportH: innerHeight,
+        below: Math.round(r.bottom - innerHeight),
+        veiled: document.body.classList.contains('final-generate-focus'),
+      };
+    });
+    if (st.missing) return 'FAIL: no Generate button on the page at all';
+    if (!st.onScreen)
+      return `FAIL: ${key} — after picking Print Style the Generate button sits ${st.below}px below the fold (top ${st.top}, viewport ${st.viewportH}); the customer has to go find it`;
+    return `PASS: ${key} lands on Generate (${st.top}px from the top, veil ${st.veiled ? 'on' : 'off'})`;
+  };
+}
+
+
 (async () => {
   let fails = 0;
   for (const [name, fn] of Object.entries(scenarios)) {

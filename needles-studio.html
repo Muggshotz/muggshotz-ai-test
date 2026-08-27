@@ -4328,15 +4328,28 @@ function pickMugPrintMode(mode){
   refreshPanoramaFadeCardVisibility();
   suspendGuidedScrollsForGeneration();
   if(product==='water bottle'){
-    // Variant is already chosen by the time this card is even visible
-    // (see the reorder above) -- so the next real decision point is
-    // color (if this variant has one) or Style, not back to the variant
-    // picker. Same scroll-target logic pickPreGenTravelVariant already
-    // uses for the 40oz's skip-this-card path, reused here for
-    // consistency across both routes into Style.
-    const colorCard=document.getElementById('travelMugColorCard');
-    const scrollTarget=(colorCard && colorCard.style.display!=='none') ? 'travelMugColorCard' : 'styleSectionCard';
-    smoothScrollToTarget(scrollTarget,scrollTarget==='styleSectionCard'?'start':'center');
+    // LAND ON GENERATE. Alyx: "When I pick the type of mug I wanted the
+    // screen just went subdued, veiled, and did nothing. I scrolled further
+    // down and I found a lit up generate button. But I shouldn't have had to
+    // scroll down."
+    //
+    // The veil was right and the scroll was wrong, and they disagreed with
+    // each other. 'final-generate-focus' (added above) dims every card but
+    // Upload Photo, which is the rail saying "Generate is the last step" --
+    // and then this scrolled BACK to the colour or Style card, which the
+    // veil had just dimmed. So the customer landed on a greyed-out card with
+    // the only lit control somewhere below the fold.
+    //
+    // Stale, not wrong-headed: it dates from before variant was moved ahead
+    // of print style. pickPreGenTravelVariant and the travel colour picker
+    // both already end on generateTokenNote, so this is the third route into
+    // the same landing and now agrees with them.
+    //
+    // 'end' anchors to the bottom-most content (the token note UNDER
+    // Generate) rather than a card's top, which is what guarantees the
+    // button itself is on screen regardless of card heights. Style and
+    // colour stay reachable by scrolling up -- a dim is a guide, not a cage.
+    smoothScrollToTarget('generateTokenNote','end');
   } else {
     // Coffee mug: Print Style is now the real decision made right
     // before Design Method (Cover Me / Face It / Home Sweet Home /
