@@ -118,7 +118,7 @@ combination: the fee scales with price, the margin does not.
 | poster 9x11 → 11x14 | $5.64–$9.98 | $11.95–$14.95 | $4.97–$6.31 |
 | poster 16x20 / 18x24 / 24x36 | $16.18 / $20.18 / $32.21 | $19.95 / $24.95 / $34.95 | $3.77 / $4.77 / **$2.74** |
 | suitcase S / M / L | $144.93 / $162.64 / $180.35 | $169.95 / $194.95 / $214.95 | $25.02 / $32.31 / $34.60 |
-| **Vacuum Thermal Tumbler 40oz** | $13.69 | $24.95 | $11.26 (**$9.58 after Stripe**) |
+| **Vacuum Thermal Tumbler 40oz** | $13.69 | $25.95 | $12.26 (**$10.55 after Stripe**) |
 | travel mug 40oz **insulated** | $39.29 | $44.95 | $5.66 (**$3.84 after Stripe**) |
 
 **Two price ladders deliberately DECREASE. Do not "fix" them:**
@@ -148,8 +148,16 @@ wrong.** Verified against the live API, not the comment beside it:
 
 The insulated one's handle splits its body into separate faces, which is why it is `front-back`
 and why no amount of generator work will ever make it wrap. Priced per Alyx: *"just figure to make
-a $9 profit… that way the customer gets a really good bargain."* $24.95 → customer pays **$44.34
-all-in**, against **$52.54** for the insulated cup that nets us a third as much.
+a $9 profit… that way the customer gets a really good bargain,"* then nudged to **$25.95** to keep
+the house .95 ending → customer pays **$45.34** US pre-tax, against **$52.54** for the insulated cup
+that nets us under a third as much.
+
+**The all-in total is not a number that can be pinned.** Alyx asked for it to read $44.95; hitting
+that exactly needs a $25.56 product price, which breaks the very .95 format that was the reason for
+asking. And it would only be true for a US customer before tax — the same cup is $52.14 all-in to
+Canada ($27.19 shipping) and $46.94 to the EU, and `automatic_tax` moves it again in every state.
+**The .95 convention lives on the product price the customer sees on the tile**, so that is where it
+was applied.
 
 **Two things still open on it:**
 - **Decoration is `uv`, not sublimation** — a different printer and ink system from every other
