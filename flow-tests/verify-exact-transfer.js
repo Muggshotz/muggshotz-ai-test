@@ -517,17 +517,32 @@ BYO_SETUP.add('byoMugRailLandsOnGenerateAndCanChangeStyle');
 scenarios.byoUploadButtonSkipsTheGate = async (page) => {
   page.on('filechooser', (fc) => fc.setFiles(require('path').join(__dirname, 'test-photo.jpg')).catch(() => {}));
   await page.click('#uploadZone');
-  await T(page, 2500);
-  const st = await page.evaluate(() => ({
-    gateShown: getComputedStyle(document.getElementById('intentGateOverlay')).display !== 'none',
-    intent: byoDeclaredIntent,
-    onProduct: document.body.classList.contains('product-focus'),
-    styleHidden: getComputedStyle(document.getElementById('styleSectionCard')).display === 'none',
-  }));
+  await T(page, 4000); // stable-scroll polls until layout settles; give it room
+  const st = await page.evaluate(() => {
+    const tiles = Array.from(document.querySelectorAll('#productCard .btn-select'));
+    const firstTile = tiles[0]?.getBoundingClientRect();
+    return {
+      gateShown: getComputedStyle(document.getElementById('intentGateOverlay')).display !== 'none',
+      intent: byoDeclaredIntent,
+      onProduct: document.body.classList.contains('product-focus'),
+      styleHidden: getComputedStyle(document.getElementById('styleSectionCard')).display === 'none',
+      // PIXELS, NOT CLASSES (Alyx's screenshot: the landing scroll stopped
+      // short and the grid sat half under the fold while this scenario
+      // stayed green on class checks alone). The first row of product
+      // tiles must be FULLY inside the viewport.
+      firstTileVisible: !!firstTile && firstTile.top >= 0 && firstTile.bottom <= innerHeight,
+      firstTileTop: firstTile ? Math.round(firstTile.top) : null,
+      // And the customer's own photo must not be dimmed by the product
+      // spotlight -- same exemption it has during generation.
+      photoOpacity: getComputedStyle(document.getElementById('uploadPhotoCard')).opacity,
+    };
+  });
   if (st.gateShown) return 'FAIL: the photo-frame upload still shows the gate — the customer already declared by picking this button';
   if (st.intent !== 'byo') return `FAIL: photo-frame upload declared intent=${st.intent}, expected byo`;
   if (!st.onProduct || !st.styleHidden) return 'FAIL: the as-is track did not land on product picking with the AI surfaces removed';
-  return 'PASS: the photo frame IS the as-is track — no gate, straight to products, AI surfaces gone';
+  if (!st.firstTileVisible) return `FAIL: the landing scroll stopped short — first product tile at ${st.firstTileTop}px is not fully on screen`;
+  if (parseFloat(st.photoOpacity) < 0.99) return `FAIL: the customer's photo is dimmed to ${st.photoOpacity} on the product landing`;
+  return 'PASS: the photo frame IS the as-is track — no gate, product tiles fully on screen, photo undimmed, AI surfaces gone';
 };
 BYO_SETUP.add('byoUploadButtonSkipsTheGate');
 

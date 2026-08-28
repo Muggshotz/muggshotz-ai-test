@@ -440,7 +440,7 @@ body.goodmorningreveal-focus .card:not(#uploadPhotoCard){opacity:.28;filter:brig
 body.final-generate-focus .card:not(#uploadPhotoCard){opacity:.35;filter:brightness(.6) saturate(.75);transition:opacity .5s,filter .5s}
 body.initial-upload-focus .card:not(#uploadPhotoCard){opacity:0;pointer-events:none;transition:opacity .5s}
 body.idea-focus .card:not(#ideaCard){opacity:.35;filter:brightness(.6) saturate(.75);transition:opacity .5s,filter .5s}
-body.product-focus .card:not(#productCard){opacity:.35;filter:brightness(.6) saturate(.75);transition:opacity .5s,filter .5s}
+body.product-focus .card:not(#productCard):not(#uploadPhotoCard){opacity:.35;filter:brightness(.6) saturate(.75);transition:opacity .5s,filter .5s}
 body.suitcase-size-focus .card:not(#suitcaseSizeCard){opacity:.35;filter:brightness(.6) saturate(.75);transition:opacity .5s,filter .5s}
 body.puzzle-size-focus .card:not(#puzzleSizeCard){opacity:.35;filter:brightness(.6) saturate(.75);transition:opacity .5s,filter .5s}
 body.tote-size-focus .card:not(#toteSizeCard){opacity:.35;filter:brightness(.6) saturate(.75);transition:opacity .5s,filter .5s}
@@ -2273,11 +2273,34 @@ function smoothScrollToTarget(targetId,block='start',after){
   if(!target)return;
   snapExpandThrough(targetId);
   guidedScrollInProgress=true;
-  target.scrollIntoView({behavior:'smooth',block});
-  setTimeout(()=>{
-    guidedScrollInProgress=false;
-    if(typeof after==='function')after();
-  },750);
+  // STABILITY-POLLED AT THE ROOT (Alyx, 2026-08-28: "if it happened once
+  // under those conditions it will likely happen when those conditions
+  // happen again. So get rid of them all in one sweep."). This used to
+  // fire scrollIntoView exactly once against whatever the layout happened
+  // to be mid-decode -- the root of the whole landed-short family (the Art
+  // Style landing, the product-grid landing after an upload...), each
+  // instance previously patched one at a time with scrollToStableTop.
+  // Every guided scroll in the app comes through here, so the cure lives
+  // here: re-measure until the target's position stops moving, THEN
+  // scroll. When layout is already still, two 100ms samples agree and the
+  // scroll fires almost immediately; when an image above is still
+  // resizing, it waits it out (capped at ~2s so it can never hang).
+  let lastTop=null,attempts=0;
+  function aim(){
+    attempts++;
+    const top=Math.round(target.getBoundingClientRect().top);
+    if(top===lastTop||attempts>=20){
+      target.scrollIntoView({behavior:'smooth',block});
+      setTimeout(()=>{
+        guidedScrollInProgress=false;
+        if(typeof after==='function')after();
+      },750);
+      return;
+    }
+    lastTop=top;
+    setTimeout(()=>requestAnimationFrame(aim),100);
+  }
+  requestAnimationFrame(aim);
 }
 
 // The finished-image reveal (easel photo + "Needles presents..." caption
@@ -2536,7 +2559,13 @@ function pickTrackProduct(){
   document.body.classList.remove('style-focus');
   document.body.classList.remove('track-focus');
   document.body.classList.add('product-focus');
-  smoothScrollToTarget('productCard','center');
+  // STABLE SCROLL, not one-shot (Alyx's screenshot, 2026-08-28 evening):
+  // arriving here right after an upload, the freshly-decoded preview photo
+  // is still resizing the card ABOVE this one, so a single scrollIntoView
+  // aims at a stale offset and lands with the product grid half under the
+  // fold -- the same disease scrollToStableTop already cures on the Art
+  // Style landing. Poll until the card stops moving, then land on it.
+  scrollToStableTop(document.getElementById('productCard'),14,20);
 }
 
 // Track 2: exactly the flow that used to fire automatically after
