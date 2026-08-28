@@ -939,6 +939,8 @@ function isPuzzle(){ return selectedProductFamily === 'puzzle'; }
 function isPhotoPoster(){ return selectedProductFamily === 'photo poster'; }
 function isCoaster(){ return selectedProductFamily === 'coaster'; }
 function isMousePad(){ return selectedProductFamily === 'mouse pad'; }
+function isGreetingCard(){ return selectedProductFamily === 'greeting card'; }
+function isPostIt(){ return selectedProductFamily === 'post-it note'; }
 
 // Single-variant products: one size, no colour, so a flat price each. These
 // MUST match lib/products-catalog.js -- this page keeps its own copy of every
@@ -946,6 +948,8 @@ function isMousePad(){ return selectedProductFamily === 'mouse pad'; }
 // the other shows the customer one number while the server charges another.
 const COASTER_PRICE = 29.95;
 const MOUSE_PAD_PRICE = 9.95;
+const GREETING_CARD_PRICE = 24.95; // 8-pack, CatPrint — under the $25 gift ceiling
+const POST_IT_PRICE = 14.95;       // 3" x 3" pad, Taylor
 
 // Mirrors lib/products-catalog.js -- verify-price-parity.js fails if these
 // drift. Posters moved to Printed Simply (852/73) because the previous
@@ -1029,12 +1033,12 @@ const BRIDGE_GRID_PRODUCTS = [
   { key: 'tote bag', icon: '👜', label: 'Tote Bag', priceFrom: '$23.95' },
   { key: 'puzzle', icon: '🧩', label: 'Photo Puzzle', priceFrom: '$38.95' },
   { key: 'coaster', icon: '☕', label: 'Coasters', priceFrom: '$29.95' },
-  { key: 'mouse pad', icon: '🖱️', label: 'Mouse Pad', priceFrom: '$9.95' }
+  { key: 'mouse pad', icon: '🖱️', label: 'Mouse Pad', priceFrom: '$9.95' },
+  { key: 'greeting card', icon: '💌', label: 'Greeting Cards', priceFrom: '$24.95' },
+  { key: 'post-it note', icon: '📝', label: 'Post-it® Pad', priceFrom: '$14.95' }
 ];
 const BRIDGE_GRID_COMING_SOON = [
   { icon: '🧸', label: 'Teddy Bear' },
-  { icon: '💌', label: 'Greeting Card' },
-  { icon: '📝', label: 'Post-it Note' },
   { icon: '👕', label: 'T-Shirt' },
   { icon: '🧥', label: 'Hoodie' },
   { icon: '🎒', label: 'Backpack' },
@@ -1044,8 +1048,8 @@ const BRIDGE_GRID_COMING_SOON = [
 ];
 
 const UNSUPPORTED_PRODUCT_NAMES = {
-  'greeting card': 'Greeting Card',
-  'post-it note': 'Post-it Note',
+  // greeting card and post-it note graduated to real products 2026-08-28 —
+  // CatPrint 8-pack and Taylor 3"x3" pad; see lib/products-catalog.js.
   'framed poster': 'Framed Poster',
   'teddy bear': 'Teddy Bear'
 };
@@ -1755,6 +1759,12 @@ function updateSummary(){
   } else if (isMousePad()) {
     basePrice = MOUSE_PAD_PRICE;
     styleSizeLabel = 'Mouse Pad (9" x 8")';
+  } else if (isGreetingCard()) {
+    basePrice = GREETING_CARD_PRICE;
+    styleSizeLabel = 'Greeting Cards, 8-Pack (4.25" x 5.5")';
+  } else if (isPostIt()) {
+    basePrice = POST_IT_PRICE;
+    styleSizeLabel = 'Post-it® Note Pad (3" x 3")';
   } else if (isPhotoPoster()) {
     const tree = PHOTO_POSTER_CATALOG.base;   // frames removed Aug 2026
     basePrice = tree.sizes[pendingOrder?.posterSize]?.price || 0;
@@ -1970,7 +1980,7 @@ async function submitOrder(){
       referralCode
     };
 
-  } else if (isCoaster() || isMousePad()) {
+  } else if (isCoaster() || isMousePad() || isGreetingCard() || isPostIt()) {
     // ADDED 2026-08-27. Both products could be configured, priced and shown a
     // summary here, and then had NO branch of their own -- so they fell
     // through to the final else, which is the MUG branch, and a coaster order
@@ -1999,8 +2009,14 @@ async function submitOrder(){
     body = {
       type: 'mug_order',
       deviceId,
-      productKey: isMousePad() ? 'mouse-pad' : (roundCoaster ? 'coaster-set-round' : 'coaster-set'),
-      sizeLabel: isMousePad() ? '9" x 8"' : (roundCoaster ? 'Round 3.7"' : '4" x 4"'),
+      productKey: isMousePad() ? 'mouse-pad'
+        : isGreetingCard() ? 'greeting-card'
+        : isPostIt() ? 'post-it-notes'
+        : (roundCoaster ? 'coaster-set-round' : 'coaster-set'),
+      sizeLabel: isMousePad() ? '9" x 8"'
+        : isGreetingCard() ? '8-Pack'
+        : isPostIt() ? '3" x 3"'
+        : (roundCoaster ? 'Round 3.7"' : '4" x 4"'),
       image,
       customerName: fullName,
       giftMessage: giftMessageEnabled ? document.getElementById('giftMessageText').value.trim() : null,

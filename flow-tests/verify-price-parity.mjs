@@ -243,6 +243,8 @@ checks.push(missing.length
     'suitcase': 'isSuitcase()',
     'phone case': 'isPhoneCase()',
     'photo poster': 'isPhotoPoster()',
+    'greeting card': 'isGreetingCard()',
+    'post-it note': 'isPostIt()',
   };
   const noCheckout = Object.entries(FAMILY_GUARD)
     .filter(([, guard]) => !payloadChain.includes(guard))
@@ -282,6 +284,8 @@ checks.push(missing.length
     'puzzle':       ['photo-puzzle'],
     'coaster':      ['coaster-set', 'coaster-set-round'],
     'mouse pad':    ['mouse-pad'],
+    'greeting card': ['greeting-card'],
+    'post-it note':  ['post-it-notes'],
   };
 
   const catMin = (keys) => {

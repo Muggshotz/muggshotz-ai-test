@@ -2420,7 +2420,10 @@ function pickTrackDescribe(){
 // for. The customer spends tokens either way, so ask first.
 //
 // Coasters and mouse pads belong here too the moment they exist.
-const PRODUCTS_NEEDING_IDEA=['suitcase','phone case','tote bag','puzzle','coaster','mouse pad','photo poster'];
+// Greeting cards and post-it pads joined 2026-08-28 when they graduated
+// from "Art only" to real orderable products -- same shape as mouse pad:
+// no gimmicks, no frame, one variant, so the description IS the design.
+const PRODUCTS_NEEDING_IDEA=['suitcase','phone case','tote bag','puzzle','coaster','mouse pad','photo poster','greeting card','post-it note'];
 const PRODUCT_IDEA_LABEL={
   'suitcase':'suitcase',
   'phone case':'phone case',
@@ -2428,7 +2431,9 @@ const PRODUCT_IDEA_LABEL={
   'puzzle':'puzzle',
   'coaster':'coasters',
   'mouse pad':'mouse pad',
-  'photo poster':'poster'
+  'photo poster':'poster',
+  'greeting card':'greeting cards',
+  'post-it note':'note pad'
 };
 
 // The ONLY products the three gimmick templates (Cover Me, Face It, Home
@@ -2459,7 +2464,7 @@ const PRODUCTS_WITH_GIMMICKS=['mug','water bottle'];
 // there is nothing to wait for the customer to decide before showing it.
 // Water bottle is deliberately absent -- it has its own preview panel and
 // would fetch twice.
-const PRODUCTS_AUTO_MOCKUP=['suitcase','phone case','tote bag','puzzle','photo poster','coaster','mouse pad'];
+const PRODUCTS_AUTO_MOCKUP=['suitcase','phone case','tote bag','puzzle','photo poster','coaster','mouse pad','greeting card','post-it note'];
 
 function confirmIdeaSatisfied(){
   pauseIdeaGuideCycle();
@@ -4708,8 +4713,10 @@ const PRODUCT_TILE_PRICES = {
   // single price undersells the product. The unit rides the tile.
   'coaster':       { from: 29.95, ladder: false, unit: 'set of 4' },
   'mouse pad':     { from: 9.95,  ladder: false },
-  'greeting card': { unsupported: true },
-  'post-it note':  { unsupported: true }
+  // Plugged in 2026-08-28 -- see lib/products-catalog.js for the printer
+  // story (chosen on US shipping, not unit cost).
+  'greeting card': { from: 24.95, ladder: false, unit: 'pack of 8' },
+  'post-it note':  { from: 14.95, ladder: false }
 };
 
 function renderProductTilePrices(){
@@ -7353,11 +7360,14 @@ function pick(el,type){
       if(shapeNote)shapeNote.textContent='';
       setOptionSpotlight('coaster-shape-focus');
       smoothScrollToTarget('coasterShapeCard','center');
-    } else if(product==='mouse pad'){
-      // Exactly ONE variant, so picking the product finishes the product --
-      // there is no size, colour or model left to settle. The rail rule
-      // ("finish the thing, then decide what goes on it") is satisfied
-      // immediately, so go straight to the description.
+    } else if(product==='mouse pad'||product==='greeting card'||product==='post-it note'){
+      // Exactly ONE variant each, so picking the product finishes the
+      // product -- there is no size, colour or model left to settle. The
+      // rail rule ("finish the thing, then decide what goes on it") is
+      // satisfied immediately, so go straight to the description. Cards
+      // and post-its joined 2026-08-28 when they graduated from "Art
+      // only"; before this they fell into the generic else below and the
+      // idea section stayed snap-collapsed -- a pick that went nowhere.
       handOffToIdeaAfterProductChoice();
     } else if(product==='tote bag'){
       // Size first, then colour -- both mandatory before Generate.
@@ -11762,6 +11772,18 @@ function buildMockupRequestBody(){
           ? { productKey: 'coaster-set-round', sizeLabel: 'Round 3.7"', image: url }
           : { productKey: 'coaster-set', sizeLabel: '4" x 4"', image: url })
       : { productKey: 'mouse-pad',   sizeLabel: '9" x 8"', image: url };
+  }
+
+  // Greeting cards and post-it pads: same single-image, single-variant
+  // shape as the mouse pad. sizeLabel must match the catalog's one size
+  // key exactly -- resolveVariant() looks the variant up by it.
+  if (product === 'greeting card' || product === 'post-it note') {
+    const design = placements.left || placements.front || placements.right;
+    const url = design ? (findDesignById(design)?.url ?? null) : null;
+    if (!url) return null;
+    return product === 'greeting card'
+      ? { productKey: 'greeting-card', sizeLabel: '8-Pack',   image: url }
+      : { productKey: 'post-it-notes', sizeLabel: '3" x 3"', image: url };
   }
 
   // Photo Puzzle: a single-image catalog product whose variant is chosen
