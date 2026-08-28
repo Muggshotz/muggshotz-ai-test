@@ -4702,7 +4702,11 @@ const PRODUCT_TILE_PRICES = {
   'suitcase':      { from: 169.95, ladder: true },
   'puzzle':        { from: 38.95, ladder: true  },
   'photo poster':  { from: 11.95, ladder: true  },
-  'coaster':       { from: 29.95, ladder: false },
+  // "$29.95" alone read as PER COASTER -- Alyx: "it occurs to me that selling
+  // coasters individually would be cost prohibitive, because of the shipping
+  // rates." Both shapes ship as sets of four, and a set price mistaken for a
+  // single price undersells the product. The unit rides the tile.
+  'coaster':       { from: 29.95, ladder: false, unit: 'set of 4' },
   'mouse pad':     { from: 9.95,  ladder: false },
   'greeting card': { unsupported: true },
   'post-it note':  { unsupported: true }
@@ -4723,7 +4727,7 @@ function renderProductTilePrices(){
       el.textContent='Art only — not yet orderable';
     } else {
       el.style.cssText='margin-top:6px;color:#7ab8ff;font-weight:700;font-size:11px';
-      el.textContent=(info.ladder?'from $':'$')+info.from.toFixed(2);
+      el.textContent=(info.ladder?'from $':'$')+info.from.toFixed(2)+(info.unit?' / '+info.unit:'');
     }
     tile.appendChild(el);
   });
