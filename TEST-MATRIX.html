@@ -226,11 +226,11 @@
     <div>
       <p class="eyebrow">Needles' Studio &middot; regression pass</p>
       <h1>Muggshotz Test Matrix</h1>
-      <p class="sub">Thirty combinations across style, size, colour, print mode and product. Work top to bottom &mdash; the early rows cover the paths that broke most recently.</p>
+      <p class="sub">Thirty-four checks across style, size, colour, print mode and product. Work top to bottom &mdash; the early rows cover the paths that broke most recently.</p>
     </div>
     <div class="tally">
       <span class="count" id="count">0</span>
-      <span class="of">of 30 checked</span>
+      <span class="of">of 34 checked</span>
       <div class="bar"><span id="bar"></span></div>
     </div>
   </header>
@@ -276,6 +276,12 @@
   <section>
     <div class="sec-head"><h2>Every other product</h2><span class="rng">21&ndash;26</span></div>
     <div class="rows" id="s5"></div>
+  </section>
+
+  <section>
+    <div class="sec-head"><h2>Checkout &mdash; go-live day</h2><span class="rng">31&ndash;34</span></div>
+    <p class="sec-note">Rows 31&ndash;32 work <em>today</em>, before any keys change: Stripe's test card walks the entire customer experience with no money and no mug. Rows 33&ndash;34 come after the key flip.</p>
+    <div class="rows" id="s7"></div>
   </section>
 
   <section>
@@ -326,6 +332,12 @@ const TESTS = {
     ["24","Puzzle","96 pieces is <b>$39.95</b>, more than the 252-piece at $38.95. That inversion is deliberate &mdash; the small one costs us more.",""],
     ["25","Poster &mdash; smallest and largest","9&times;11 at $11.95 and 24&times;36 at $34.95.",""],
     ["26","Suitcase","Most expensive item we carry, from <b>$169.95</b>.",""]
+  ],
+  s7:[
+    ["31","Dress rehearsal (test mode): full order with card 4242 4242 4242 4242","Any future expiry, any CVC, any name. The real Stripe page appears, payment succeeds, and you land on the <b>Order Placed</b> thank-you screen. <b>No money moves and no mug is printed</b> &mdash; the webhook ignores test payments by design.","new"],
+    ["32","On the Stripe page, go back instead of paying","You return to the order form: <b>&ldquo;nothing was charged&rdquo;</b>, your design and address still filled in, the button ready to try again.","new"],
+    ["33","After the key flip: run <code>bash flow-tests/go-live-probe.sh</code>","It must say <b>STRIPE MODE: LIVE</b>. If it still says TEST, the Vercel env didn&rsquo;t take &mdash; don&rsquo;t order yet.","new"],
+    ["34","THE order: insulated 40oz, wraparound art, live card","Payment succeeds, thank-you screen shows, the order appears in <b>Printify</b> (approval queue if manual approval is on) and in <b>Stripe&rsquo;s live payments</b>. The seam check comes when the cup arrives.","new"]
   ],
   s6:[
     ["27","Finish a mockup, then close it with the <b>&times;</b> &mdash; not Return","<b>What's Next?</b> must still appear. Until today the &times; threw away the only route to checkout.","fixed"],
