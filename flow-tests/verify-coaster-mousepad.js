@@ -62,16 +62,27 @@ for (const [val, want] of Object.entries(EXPECT)) {
     return `PASS: ${val} goes straight to the description (${st.height}px, on screen)`;
   };
 
-  // Blank description is refused, same as every other print-onto-object product.
-  scenarios['blankBlocked_' + slug] = async (page) => {
+  // UPDATED (2026-08-28, Alyx's exact-transfer feature): a blank description
+  // is no longer refused -- it now OFFERS the pass-through ("use your photo
+  // exactly as it is") via one confirm. Declining must land the customer
+  // back at the idea box with no API call and no charge, exactly like the
+  // old block did. The accepted path is verify-exact-transfer.js's job.
+  scenarios['blankOffersExactTransfer_' + slug] = async (page, log) => {
     await pick(page, val);
     await settleShape(page, val);
+    await page.evaluate(() => {
+      window.__confirmCalls = [];
+      window.confirm = (msg) => { window.__confirmCalls.push(msg); return false; };
+    });
     await page.evaluate(() => document.getElementById('generateBtn')?.scrollIntoView({ block: 'center' }));
     await page.click('#generateBtn');
     await page.waitForTimeout(1200);
-    const m = await modalOf(page);
-    if (!m || !/tell us what/i.test(m)) return `FAIL: ${val}: blank description not blocked (modal=${JSON.stringify(m)})`;
-    return `PASS: ${val}: blank description blocked`;
+    const calls = await page.evaluate(() => window.__confirmCalls || []);
+    if (!calls.length) return `FAIL: ${val}: blank description no longer asks anything (old block gone, no confirm either)`;
+    if (!/exactly as it is/i.test(calls[0])) return `FAIL: ${val}: confirm doesn't offer the photo as-is: ${calls[0]}`;
+    const gen = log.apiCalls.filter(c => c.path === '/api/generate');
+    if (gen.length) return `FAIL: ${val}: declining the transfer still fired ${gen.length} generate call(s)`;
+    return `PASS: ${val}: blank description offers the exact transfer, declining costs nothing`;
   };
 
   // Full rail, and the mockup must fire on approve with the right catalog key.

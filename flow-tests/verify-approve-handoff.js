@@ -208,18 +208,29 @@ const modalOf = (page) => page.evaluate(() => {
   return b && getComputedStyle(b).display !== 'none' ? document.getElementById('bigAlertMsg')?.textContent : null;
 });
 
-// Product fully chosen, description blank -> blocked, and told which product.
-scenarios.blankIdeaBlocked = async (page) => {
+// UPDATED (2026-08-28): product fully chosen, description blank -> no longer
+// blocked. It offers the exact transfer ("photo exactly as it is") via one
+// confirm that names the product; declining lands back on the idea rail with
+// nothing generated and nothing charged. The accepted path lives in
+// verify-exact-transfer.js.
+scenarios.blankIdeaOffersTransfer = async (page, log) => {
   await afterMandatoryPick(page, 'suitcase', async (p) => {
     await p.click('#suitcaseSizeGrid .btn-select[data-suitcase-size="Medium"]');
+  });
+  await page.evaluate(() => {
+    window.__confirmCalls = [];
+    window.confirm = (msg) => { window.__confirmCalls.push(msg); return false; };
   });
   await page.evaluate(() => document.getElementById('generateBtn')?.scrollIntoView({ block: 'center' }));
   await page.click('#generateBtn');
   await page.waitForTimeout(1200);
-  const m = await modalOf(page);
-  if (!m || !/tell us what/i.test(m)) return `FAIL: blank description NOT blocked (modal=${JSON.stringify(m)})`;
-  if (!/suitcase/i.test(m)) return `FAIL: message does not name the product: ${m}`;
-  return `PASS: blank description blocked, names the product`;
+  const calls = await page.evaluate(() => window.__confirmCalls || []);
+  if (!calls.length) return `FAIL: blank description asked nothing (old block gone, no transfer offer either)`;
+  if (!/exactly as it is/i.test(calls[0])) return `FAIL: confirm doesn't offer the photo as-is: ${calls[0]}`;
+  if (!/suitcase/i.test(calls[0])) return `FAIL: confirm does not name the product: ${calls[0]}`;
+  const gen = (log.apiCalls || []).filter(c => c.path === '/api/generate');
+  if (gen.length) return `FAIL: declining the transfer still fired ${gen.length} generate call(s)`;
+  return `PASS: blank description offers the exact transfer, names the product, declining costs nothing`;
 };
 
 // Nothing chosen at all -> the PRODUCT guard must fire first. Asking for the

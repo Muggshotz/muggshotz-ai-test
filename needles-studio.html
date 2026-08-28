@@ -1004,7 +1004,7 @@ const HERO_SETTLE_MS = 1000;
 </div>
 </div>
 
-<div class="card" id="ideaCard"><div class="card-title">💬 Tell Us Your Idea</div><div class="quote-text-reminder">⚠️ PLEASE REMEMBER TO SHOW ALL TEXT AND/OR CAPTIONS YOU WISH TO HAVE INCLUDED WITH YOUR IMAGE INSIDE QUOTES " "!</div><textarea id="ideaDesc" placeholder="Example: Put me on a tiny red tricycle wearing a firefighter helmet, shouting &quot;Out of my way!&quot; as I race through a parade with smoke and sirens behind me, under a banner that reads &quot;World's Fastest Firefighter.&quot;"></textarea><div class="quick-btns" id="quickBtns"></div><div class="note" id="ideaDefaultNote">Paint us a clear picture — the more detail you give us, the better our chances of getting your exact idea right.</div><div class="note" id="ideaArtistNote" style="display:none">Tell the artist what you have in mind.</div><div class="note" id="ideaWindowSillNote" style="display:none">(Optional) Add a costume, outfit, hair, or companion — or just upload your photo and we'll take it from there.</div><div id="mugIdeaActionRow" style="display:none;gap:8px;margin-top:.75rem"><button class="download-btn" style="flex:1;margin-top:0" onclick="handleReturnToPhotos()">📸 Return to select additional photos</button><button class="generate-btn" style="flex:1" onclick="handleMugGuidedGenerate()">🎨 Generate</button></div>
+<div class="card" id="ideaCard"><div class="card-title">💬 Tell Us Your Idea</div><div class="quote-text-reminder">⚠️ PLEASE REMEMBER TO SHOW ALL TEXT AND/OR CAPTIONS YOU WISH TO HAVE INCLUDED WITH YOUR IMAGE INSIDE QUOTES " "!</div><textarea id="ideaDesc" placeholder="Example: Put me on a tiny red tricycle wearing a firefighter helmet, shouting &quot;Out of my way!&quot; as I race through a parade with smoke and sirens behind me, under a banner that reads &quot;World's Fastest Firefighter.&quot;"></textarea><div class="quick-btns" id="quickBtns"></div><div class="note" id="ideaDefaultNote">Paint us a clear picture — the more detail you give us, the better our chances of getting your exact idea right.<br><span style="display:block;margin-top:.5rem">📸 <b>Just want your photo, exactly as it is?</b> Leave this box empty and hit Generate — no AI artwork, no changes, and it costs no image credits.</span></div><div class="note" id="ideaArtistNote" style="display:none">Tell the artist what you have in mind.</div><div class="note" id="ideaWindowSillNote" style="display:none">(Optional) Add a costume, outfit, hair, or companion — or just upload your photo and we'll take it from there.</div><div id="mugIdeaActionRow" style="display:none;gap:8px;margin-top:.75rem"><button class="download-btn" style="flex:1;margin-top:0" onclick="handleReturnToPhotos()">📸 Return to select additional photos</button><button class="generate-btn" style="flex:1" onclick="handleMugGuidedGenerate()">🎨 Generate</button></div>
 <div id="ideaGuidancePrompt" class="guidance-prompt" role="status" style="margin-top:8px;margin-bottom:0;cursor:pointer" onclick="confirmIdeaSatisfied()">Click here when you are satisfied with your descriptive requests for the image.</div>
 </div>
 </div>
@@ -2671,8 +2671,25 @@ window.addEventListener('DOMContentLoaded',()=>{
   }
 });
 
+// EXACT TRANSFER (Alyx, 2026-08-28): the working copy below is capped at
+// 1280px because that is plenty for an AI reference photo -- but when the
+// customer leaves the idea box empty and their photo goes on the product
+// AS-IS, the photo IS the print file, and 1280px is thin for a 2600px
+// print area. So the picker handler keeps the original File object here
+// and the pass-through re-resizes it larger at generate time. It is
+// in-memory only (never saved to the workshop), and BOTH setters below
+// null it, so a workshop recall or a gimmick flow can never pair a stale
+// original with a different working image -- only the picker handler,
+// which owns the real file, re-sets it after calling setMainSlotImage.
+let uploadedOriginalFile=null;
+// True while the design in play is the customer's own photo untouched --
+// the Edge Fade page reads it to open at 0% instead of the house default,
+// because defaulting ANY fade onto an "exactly as it is" photo is meddling.
+let lastGenerationWasExactTransfer=false;
+
 function setMainSlotImage(dataUrl){
   uploadedImageData=dataUrl;
+  uploadedOriginalFile=null;
   document.body.classList.remove('initial-upload-focus');
   const stageReference=document.getElementById('needlesReferencePhoto');
   if(stageReference){
@@ -2693,6 +2710,7 @@ function setMainSlotImage(dataUrl){
 
 function setWorkingImageDataOnly(dataUrl){
   uploadedImageData=dataUrl;
+  uploadedOriginalFile=null;
   restoreNeedlesOriginalReferencePhoto();
 }
 
@@ -5564,6 +5582,7 @@ function faceItBack(){
 // It), which need the fade/wash treatment plus the customer's own
 // words rendered into the piece instead of a plain face-merge.
 async function generateFaceIt(){
+  lastGenerationWasExactTransfer=false; // AI gimmick run: fade page reverts to its house default
   if(!selectedFaceItTemplate){
     showGuidanceAlert('Please pick a scene first.');
     return;
@@ -5857,6 +5876,7 @@ function goodMorningBack(){
 }
 
 async function generateGoodMorning(){
+  lastGenerationWasExactTransfer=false; // AI gimmick run: fade page reverts to its house default
   if(!selectedGoodMorningTemplate){
     showGuidanceAlert('Please pick a window first.');
     return;
@@ -6076,6 +6096,7 @@ function coverMeBack(){
 // Phase 5. This phase's scope is exactly: Generate -> Approve ->
 // single real mockup, full-screen, with arrows.
 async function generateCoverMe(){
+  lastGenerationWasExactTransfer=false; // AI gimmick run: fade page reverts to its house default
   if(!selectedMagazine){
     showGuidanceAlert('Please pick a magazine first.');
     return;
@@ -8110,6 +8131,9 @@ document.getElementById('fileInput').addEventListener('change',function(e){
   document.getElementById('toggleImageBtn').style.display='none';
   resizeImageFile(file, 1280).then((dataUrl)=>{
     setMainSlotImage(dataUrl);
+    // AFTER setMainSlotImage (which nulls it): keep the original file for
+    // the exact-transfer path, which re-resizes it at print size.
+    uploadedOriginalFile=file;
     saveWorkshop();
     hideWorkshopRecallRow();
     startPhotoGuide();
@@ -8992,9 +9016,15 @@ function openFrameFadeOverlay(){
   // Opens faded, not sharp. Fade is how these mugs looked before frames or
   // props existed, and it is still the better default on a coloured cup --
   // dragging to 0 is right there for anyone who wants a hard edge.
-  frameFadeAmountPct=DEFAULT_FADE_PCT;
-  document.getElementById('frameFadeAmountSlider').value=DEFAULT_FADE_PCT;
-  document.getElementById('frameFadeAmountVal').textContent=DEFAULT_FADE_PCT+'%';
+  //
+  // EXCEPT on an exact transfer: the customer asked for their photo
+  // "exactly as it is", so defaulting a 30% fade onto it is meddling.
+  // A transfer opens at 0% -- the slider is still right there for anyone
+  // who decides they want a fade after all.
+  const openingFadePct=lastGenerationWasExactTransfer?0:DEFAULT_FADE_PCT;
+  frameFadeAmountPct=openingFadePct;
+  document.getElementById('frameFadeAmountSlider').value=openingFadePct;
+  document.getElementById('frameFadeAmountVal').textContent=openingFadePct+'%';
   // ONE IMAGE, AS LARGE AS WE CAN MAKE IT. Alyx: "when I tried to apply the
   // fade to the cup that I had created it gave me two images instead of just
   // one to apply it on. Now I know I had a left and right mug, but they're
@@ -10319,7 +10349,15 @@ async function callGenerateAPI({ workingImage, prompt, refImageA, refImageB, pan
 }
 
 async function generate(){
-  if(currentTokenBalance!==null&&currentTokenBalance<=0&&!isAdminDevice){
+  // An exact transfer (empty idea box, no wraparound, no gimmick, no
+  // reference photos) never calls the AI, so it costs no image credits --
+  // an out-of-credits customer must NOT be blocked from it. Same
+  // eligibility test as the real guard further down; this one only decides
+  // whether the empty-balance popup applies.
+  const couldBeExactTransfer=!document.getElementById('ideaDesc').value.trim()
+    && !((product==='mug'||product==='water bottle')&&mugPrintMode==='wraparound')
+    && !windowSillChoice && !refImageAData && !refImageBData;
+  if(currentTokenBalance!==null&&currentTokenBalance<=0&&!isAdminDevice&&!couldBeExactTransfer){
     showTokenInfoPopup(document.getElementById('generateBtn'));
     return;
   }
@@ -10375,14 +10413,49 @@ async function generate(){
   // LAST of the pre-generation guards, deliberately. Every guard above settles
   // the PRODUCT -- size, model, colour, variant -- and the rail walks those
   // first: pick the thing, finish the thing, THEN decide what goes on it.
-  // Asking for the description earlier would drag the customer back out of a
-  // product they were halfway through choosing.
-  if(PRODUCTS_NEEDING_IDEA.includes(product) && !document.getElementById('ideaDesc').value.trim()){
-    const what=PRODUCT_IDEA_LABEL[product]||'product';
-    setStatus('Tell us what you\u2019d like on your '+what+' \u2014 a sentence is plenty. Your photo gives us the person; your words give us the scene.',true);
-    handOffToIdeaAfterProductChoice();
-    return;
+  //
+  // EXACT TRANSFER (Alyx, 2026-08-28): an empty idea box is no longer an
+  // error -- it is the customer's way of saying "just my photo, exactly as
+  // it is." The old block here (and the silent generic-caricature
+  // substitution further down) both violated that: one refused, the other
+  // meddled. Now: empty box = skip the AI entirely and send the uploaded
+  // photo itself down the rail. No tokens spent, no generative model ever
+  // touches the pixels, so nothing can be "sneakily added" -- any fitting
+  // to the print area downstream is pure geometry (crop/scale), which is
+  // the only kind of adjustment Alyx wants applied to an as-is photo.
+  //
+  // Three deliberate exclusions, each because the customer has ALREADY
+  // asked for AI work by some other means than typing:
+  //   * wraparound (mug or travel): a photo cannot honestly become a
+  //     seam-to-seam panorama without generative extension, so wraparound
+  //     still requires a description -- with a message that names the
+  //     Classic alternative rather than a bare refusal.
+  //   * Window Sill: the gimmick itself is an AI compositing job.
+  //   * reference photos attached: Photo 2/3 exist to be blended in.
+  // One confirm before proceeding (the house tier-b pattern): the old
+  // meaning of an empty box was "oops", so the one-time question protects
+  // anyone who left it blank by accident, and Cancel lands them on the
+  // idea box exactly like the old block did.
+  const ideaTextForTransfer=document.getElementById('ideaDesc').value.trim();
+  const wrapActiveForTransfer=(product==='mug'||product==='water bottle') && mugPrintMode==='wraparound';
+  let exactTransfer=false;
+  if(!ideaTextForTransfer){
+    if(wrapActiveForTransfer){
+      setStatus('A wraparound paints one continuous scene, so it needs a description. Want your photo exactly as it is instead? Switch Print Style to Classic and leave this box empty.',true);
+      handOffToIdeaAfterProductChoice();
+      return;
+    }
+    if(!windowSillChoice && !refImageAData && !refImageBData){
+      const what=PRODUCT_IDEA_LABEL[product]||product||'product';
+      const ok=window.confirm('Use your photo exactly as it is? With the description box empty we skip the AI completely \u2014 your photo goes onto your '+what+' unchanged (just fitted to size), and it costs no image credits. OK = use my photo as-is. Cancel = go back and describe an idea.');
+      if(!ok){
+        handOffToIdeaAfterProductChoice();
+        return;
+      }
+      exactTransfer=true;
+    }
   }
+  lastGenerationWasExactTransfer=exactTransfer;
   if(product==='water bottle' && !preGenTravelVariant){
     setStatus('Please pick which travel mug you want above first — we need it before generating so your art is composed correctly.',true);
     document.getElementById('travelMugVariantCard').scrollIntoView({behavior:'smooth',block:'center'});
@@ -10403,7 +10476,9 @@ async function generate(){
   document.getElementById('approveRow').style.display='none';
   document.getElementById('downloadDesignBtn').style.display='none';
   document.getElementById('toggleImageBtn').style.display='none';
-setStatus('Generating your image... this may take several minutes, especially on busier or more detailed requests. Go grab a coffee if you like.');
+setStatus(exactTransfer
+  ? 'No AI, no changes — sending your photo exactly as it is...'
+  : 'Generating your image... this may take several minutes, especially on busier or more detailed requests. Go grab a coffee if you like.');
 document.getElementById('cancelBtn').style.display='block';
   suspendGuidedScrollsForGeneration();
 
@@ -10474,7 +10549,11 @@ document.getElementById('cancelBtn').style.display='block';
     // Default is null, so out of the box this build behaves exactly as the
     // kill-switch did: no fade unless the customer asks for it on the Edge
     // Fade card.
-    const skipEdgeFade = (edgeFadeChoice !== 'fade');
+    // exactTransfer forces no generation-time fade regardless of any
+    // earlier fade choice: "exactly as it is" means the photo reaches the
+    // Edge Fade page untouched, and THAT page (opening at 0% for a
+    // transfer) is the one place the customer can still choose to fade it.
+    const skipEdgeFade = (edgeFadeChoice !== 'fade') || exactTransfer;
 
     const wrapCompositionLine = (product==='mug'||product==='water bottle')
       ? (isWraparoundActive
@@ -10743,7 +10822,24 @@ Use rich environmental storytelling while keeping the face as the primary focal 
       throw new Error('No panorama image returned.');
     }
 
-    if(travelPanoramaReady){
+    if(exactTransfer){
+      // EXACT TRANSFER: no AI call at all. The uploaded photo becomes the
+      // design directly. Prefer re-resizing the ORIGINAL file at print
+      // scale (2600px covers the largest print area, the greeting card's
+      // 2625px front, at essentially 1:1) over the 1280px working copy,
+      // which only exists at reference-photo size; the working copy is
+      // the fallback when the original is gone (workshop recall). Then
+      // upload for a real hosted URL -- Stripe metadata carries the image
+      // URL at the payment hop and a raw base64 data URL does not fit
+      // there, same reason the frame/caption composites upload.
+      setStatus('No AI, no changes — sending your photo exactly as it is...');
+      let passSource=workingImage;
+      if(uploadedOriginalFile){
+        try{ passSource=await resizeImageFile(uploadedOriginalFile, 2600); }
+        catch(err){ console.error('Could not re-read the original photo, using the working copy:',err); }
+      }
+      resultUrl=await uploadCompositedImage(passSource);
+    } else if(travelPanoramaReady){
       document.getElementById('wraparoundStandbyPrompt').style.display='none';
       resultUrl=panoramaData.panoramaUrl;
     } else {
