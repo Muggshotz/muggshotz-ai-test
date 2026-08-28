@@ -411,8 +411,9 @@ label{font-size:11px;color:#888;letter-spacing:.5px;text-transform:uppercase;dis
 <div class="summary-row" id="summaryUpsellRow" style="display:none"><span id="summaryUpsellLabel">Extra design charge</span><span id="summaryUpsell"></span></div>
 <div class="summary-row" id="summaryGiftRow" style="display:none"><span>Gift message</span><span id="summaryGift"></span></div>
 <div class="summary-row" id="summaryShippingRow"><span>Shipping & Handling</span><span id="summaryShipping">$6.95</span></div>
-<div class="summary-row" id="summaryFeesRow"><span>Fees</span><span id="summaryFees"></span></div>
+<div class="summary-row" id="summaryFeesRow"><span>Card Processing &amp; Handling</span><span id="summaryFees"></span></div>
 <div class="summary-row total"><span>Total</span><span id="summaryTotal">$21.90</span></div>
+<div class="note" id="feesExplainerNote" style="margin-top:.4rem;margin-bottom:0;font-size:10.5px;opacity:.75">Our payment processor charges 2.9% + 30&cent; per transaction, which we pass through at cost, plus a 5&cent; handling fee.</div>
 <div class="note" id="summaryDiscountNote" style="display:none;color:#5fbf5f;margin-top:.5rem">Your first-order 10% discount will be applied automatically at checkout if your email qualifies.</div>
 </div>
 
@@ -1782,15 +1783,18 @@ function updateSummary(){
 
   const giftCharge = giftMessageEnabled ? GIFT_MESSAGE_PRICE : 0;
   const shipping = FLAT_SHIPPING;
-  // FEES (Alyx, 2026-08-28): full Stripe pass-through, same gross-up
-  // formula as the server (create-checkout-session.js feeLineCents):
-  // (2.9% of subtotal + 30c) / (1 - 2.9%), rounded up to the cent.
-  // Shown here per the standing no-surprises rule -- the customer sees
-  // the fee before Continue to Payment, not first on the Stripe page.
-  // Display matches the server to the extent shipping does (this row
-  // uses the flat shipping estimate exactly like the row above it).
+  // FEES (Alyx, 2026-08-28, revised same day: explained, not mysterious):
+  // exactly what the note under the summary says -- the processor's
+  // 2.9% + 30c passed through at cost, plus a 5c handling fee. Same
+  // formula as the server (create-checkout-session.js feeLineCents);
+  // no gross-up, so the stated rate and the charged rate are the same
+  // number a customer can check with their own calculator. Shown here
+  // per the standing no-surprises rule -- the customer sees the fee
+  // before Continue to Payment, not first on the Stripe page. Display
+  // matches the server to the extent shipping does (this row uses the
+  // flat shipping estimate exactly like the row above it).
   const subtotalCents = Math.round((basePrice + upsellCharge + giftCharge + shipping) * 100);
-  const fees = subtotalCents > 0 ? Math.ceil((0.029 * subtotalCents + 30) / (1 - 0.029)) / 100 : 0;
+  const fees = subtotalCents > 0 ? Math.ceil(0.029 * subtotalCents + 30 + 5) / 100 : 0;
   const total = basePrice + upsellCharge + giftCharge + shipping + fees;
 
   document.getElementById('summaryStyleSize').textContent = styleSizeLabel;

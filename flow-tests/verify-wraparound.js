@@ -76,11 +76,24 @@ async function ideaBoxUsable(page) {
 }
 
 async function describeAndGenerate(page, text) {
-  if (await ideaBoxUsable(page)) {
-    await page.fill('#ideaDesc', text);
+  // Exact-transfer era (2026-08-28): an empty idea box no longer silently
+  // generates. On the travel rail the box starts collapsed, so the FIRST
+  // Generate press now fires the guard -- wraparound: a refusal that lands
+  // on the box; classic: the photo-as-is confirm (declined here) that does
+  // the same -- and THEN the customer types. This walks that exact
+  // journey rather than papering over it.
+  if (!(await ideaBoxUsable(page))) {
+    await page.evaluate(() => { window.confirm = () => false; });
+    await page.evaluate(() => document.getElementById('generateBtn')?.scrollIntoView({ block: 'center' }));
+    await page.click('#generateBtn');
+    await T(page, 1400);
     await dismissAlerts(page);
-    await T(page, 400);
+    if (!(await ideaBoxUsable(page)))
+      throw new Error('the empty-box guard did not land on a usable idea box');
   }
+  await page.fill('#ideaDesc', text);
+  await dismissAlerts(page);
+  await T(page, 400);
   await page.evaluate(() => document.getElementById('generateBtn')?.scrollIntoView({ block: 'center' }));
   await page.click('#generateBtn');
 }

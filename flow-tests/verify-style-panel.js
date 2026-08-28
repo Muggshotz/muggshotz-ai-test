@@ -141,6 +141,18 @@ scenarios.panoramaPathSendsTheChoice = async (page, log, bodies) => {
     pick(el, 'style');
   }, other.val);
   await T(page, 400);
+  // Exact-transfer era (2026-08-28): wraparound with an empty idea box is
+  // now refused outright (a photo cannot honestly become a panorama), and
+  // on the travel rail the idea box starts COLLAPSED -- so this walks the
+  // real journey: press Generate empty, get refused onto the now-live
+  // box, type the description a wraparound customer must give, generate.
+  await page.evaluate(() => document.getElementById('generateBtn')?.scrollIntoView({ block: 'center' }));
+  await page.click('#generateBtn');
+  await T(page, 1400);
+  await dismissAlerts(page);
+  await page.fill('#ideaDesc', 'a mountain range wrapping into a sunset');
+  await T(page, 500);
+  await dismissAlerts(page);
   await page.evaluate(() => document.getElementById('generateBtn')?.scrollIntoView({ block: 'center' }));
   await page.click('#generateBtn');
   await page.waitForFunction(() => document.getElementById('approveRow')?.style.display !== 'none', null, { timeout: 120000 });

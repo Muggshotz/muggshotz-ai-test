@@ -89,22 +89,28 @@ function calculateUpsellCharge(placements) {
   return distinctCount === 1 ? 3 : 6;
 }
 
-// FEES (Alyx, 2026-08-28): "why are we eating the cost of stripe?...
-// just call that in the mysterious, somewhat obsequious, and undefined
-// 'fees' category." Full pass-through of Stripe's cut (2.9% + 30c per
-// charge), grossed up so Stripe's bite of the fee itself is covered too:
-//   fee = (rate * subtotal + fixed) / (1 - rate), rounded UP to the cent.
+// FEES (Alyx, 2026-08-28, revised same day): originally a mysterious
+// grossed-up "Fees" line; Alyx pushed back -- "Customers may resent that.
+// Why not simply tell them what it's for?" So the fee is now EXACTLY what
+// we tell the customer it is: Stripe's published per-transaction rate
+// (2.9% + 30c) passed through at cost, plus a 5c handling fee. The 5c
+// quietly covers Stripe's bite on the fee line itself (~2-3c on typical
+// orders), so we stay whole WITHOUT a gross-up formula that would
+// contradict the stated rate. Every word of the customer-facing
+// explanation is verifiable -- deliberately no invented regulatory
+// justification, because nothing external mandates this fee and a
+// customer who looks it up should find we told the truth.
 // Applied uniformly to every order regardless of payment method, which
 // makes it plain pricing (a service fee), NOT a card surcharge -- card
 // surcharges are restricted in some states; a uniform fee line is not.
-// The label is exactly "Fees", per Alyx. Tax's share of Stripe's cut is
-// not recouped (tax is computed by Stripe after this session is built);
-// that residue is fractions of a cent-to-pennies per order.
+// Tax's share of Stripe's cut is not recouped (tax is computed by Stripe
+// after this session is built); the 5c absorbs most of that residue too.
 const STRIPE_FEE_RATE = 0.029;
 const STRIPE_FEE_FIXED_CENTS = 30;
+const HANDLING_FEE_CENTS = 5;
 function feeLineCents(subtotalCents) {
   if (!subtotalCents || subtotalCents <= 0) return 0;
-  return Math.ceil((STRIPE_FEE_RATE * subtotalCents + STRIPE_FEE_FIXED_CENTS) / (1 - STRIPE_FEE_RATE));
+  return Math.ceil(STRIPE_FEE_RATE * subtotalCents + STRIPE_FEE_FIXED_CENTS + HANDLING_FEE_CENTS);
 }
 
 function resolvePrice(product, sizeLabel, colorName) {
@@ -209,7 +215,7 @@ async function handleProductOrder(req, res) {
   const feeCents = feeLineCents(productCents + shippingCents);
   if (feeCents > 0) {
     line_items.push({
-      price_data: { currency: "usd", product_data: { name: "Fees" }, unit_amount: feeCents },
+      price_data: { currency: "usd", product_data: { name: "Card Processing & Handling", description: "Payment processing at our processor's standard rate (2.9% + 30¢) plus a 5¢ handling fee" }, unit_amount: feeCents },
       quantity: 1
     });
   }
@@ -301,7 +307,7 @@ async function handleTokenPurchase(req, res) {
     {
       price_data: {
         currency: "usd",
-        product_data: { name: "Fees" },
+        product_data: { name: "Card Processing & Handling", description: "Payment processing at our processor's standard rate (2.9% + 30¢) plus a 5¢ handling fee" },
         unit_amount: packFeeCents
       },
       quantity: 1

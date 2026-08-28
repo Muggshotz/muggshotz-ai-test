@@ -52,6 +52,21 @@ async function driveVariant(page, mockupBodies, key) {
   });
   await page.waitForTimeout(600);
 
+  // Since the exact-transfer feature (2026-08-28), an EMPTY idea box no
+  // longer silently generates a generic caricature — it offers the photo
+  // as-is via a confirm. On the travel rail the box starts collapsed, so
+  // this walks the real new journey: press Generate empty, decline the
+  // as-is offer, land on the now-expanded box, type, generate. This suite
+  // is about the AI rail's variant → body shape; the empty-box lane
+  // itself belongs to verify-exact-transfer.js.
+  await page.evaluate(() => { window.confirm = () => false; });
+  await page.evaluate(() => document.getElementById('generateBtn')?.scrollIntoView({ block: 'center' }));
+  await page.click('#generateBtn');
+  await page.waitForTimeout(1400);
+  await dismissAlerts(page);
+  await page.fill('#ideaDesc', 'surfing a giant wave at sunset');
+  await page.waitForTimeout(500);
+  await dismissAlerts(page);
   await page.evaluate(() => document.getElementById('generateBtn')?.scrollIntoView({ block: 'center' }));
   await page.click('#generateBtn');
   await waitApprove(page);

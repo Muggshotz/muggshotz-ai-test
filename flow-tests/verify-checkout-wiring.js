@@ -167,20 +167,26 @@ scenarios.submitSendsTheWholeOrder = async (page) => {
   return 'PASS: the real submit carries design, panorama, wrap surcharge, gift text and address intact';
 };
 
-// ---- Fees (Alyx, 2026-08-28): full Stripe pass-through in the mysterious
-// "Fees" category, on product orders AND token packs, and shown to the
-// customer in the order summary BEFORE payment (the no-surprises rule).
-// The formula must gross up -- (2.9% x subtotal + 30c) / (1 - 2.9%) --
-// or Stripe's bite of the fee itself goes uncovered. ----
+// ---- Fees (Alyx, 2026-08-28, revised same day): EXPLAINED, not
+// mysterious -- "Customers may resent that. Why not simply tell them what
+// it's for?" The fee is exactly the stated rate (2.9% + 30c processor
+// pass-through + 5c handling, NO gross-up, so a customer's own calculator
+// agrees with us), on product orders AND token packs, shown in the order
+// summary BEFORE payment (the no-surprises rule) with the explanation
+// right under it. Every claim in the explanation must be verifiable:
+// no "as per regulation" language anywhere. ----
 scenarios.feesRideEveryCharge = async (page) => {
   const session = fs.readFileSync(path.join(ROOT, 'api', 'create-checkout-session.js'), 'utf8');
   const order = fs.readFileSync(path.join(ROOT, 'order.html'), 'utf8');
   const bad = [];
   if (!/function feeLineCents/.test(session)) bad.push('no feeLineCents helper in the session builder');
-  if (!/1 - STRIPE_FEE_RATE/.test(session)) bad.push('server fee is not grossed up');
-  if ((session.match(/name: "Fees"/g) || []).length < 2) bad.push('the "Fees" line is not on both product orders and token packs');
+  if (/1 - STRIPE_FEE_RATE/.test(session)) bad.push('the gross-up is back -- the charged rate would contradict the stated rate');
+  if (!/HANDLING_FEE_CENTS = 5/.test(session)) bad.push('the 5c handling fee is missing');
+  if ((session.match(/name: "Card Processing & Handling"/g) || []).length < 2) bad.push('the explained fee line is not on both product orders and token packs');
   if (!/fees_cents/.test(session)) bad.push('fee never recorded in session metadata');
-  if (!/summaryFees/.test(order)) bad.push('order summary has no Fees row');
+  if (!/summaryFees/.test(order)) bad.push('order summary has no fee row');
+  if (!/feesExplainerNote/.test(order)) bad.push('the fee has no explanation under the summary');
+  if (/as per regulation/i.test(order) || /as per regulation/i.test(session)) bad.push('unverifiable "regulation" claim in the fee copy');
   if (bad.length) return `FAIL: ${bad.join('; ')}`;
 
   // Live check: the displayed fee follows the formula and the total includes it.
@@ -198,10 +204,10 @@ scenarios.feesRideEveryCharge = async (page) => {
   });
   if (!(st.fees > 0)) return `FAIL: no fee displayed (${JSON.stringify(st)})`;
   const subtotalCents = Math.round((st.base + st.ship) * 100);
-  const expected = Math.ceil((0.029 * subtotalCents + 30) / (1 - 0.029)) / 100;
-  if (Math.abs(st.fees - expected) > 0.001) return `FAIL: displayed fee $${st.fees} != formula $${expected}`;
+  const expected = Math.ceil(0.029 * subtotalCents + 30 + 5) / 100;
+  if (Math.abs(st.fees - expected) > 0.001) return `FAIL: displayed fee $${st.fees} != stated 2.9% + 30c + 5c ($${expected})`;
   if (Math.abs(st.total - (st.base + st.ship + st.fees)) > 0.005) return `FAIL: total $${st.total} does not include the fee`;
-  return `PASS: Fees line follows the gross-up formula ($${st.fees} on $${(st.base + st.ship).toFixed(2)}), shown before payment, on both charge lanes`;
+  return `PASS: fee is exactly the stated 2.9% + 30c + 5c ($${st.fees} on $${(st.base + st.ship).toFixed(2)}), explained and shown before payment, on both charge lanes`;
 };
 
 // ---- 5. The insulated 40oz — Alyx's first live order — arrives whole. ----

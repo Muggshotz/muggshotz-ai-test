@@ -2,7 +2,7 @@
 // interaction. PASS/FAIL per scenario; zero tolerated console errors
 // (Vanity 404 must be GONE; watchdog error only in the injected-stall
 // scenario where it is the expected rescue).
-const { launch, openStudio, uploadPhoto, dismissAlerts, bodyFocusClasses } = require('./harness');
+const { launch, openStudio, uploadPhoto, dismissAlerts, bodyFocusClasses, passFadePage } = require('./harness');
 
 const waitApprove = (page, id = 'approveRow', t = 90000) =>
   page.waitForFunction((i) => document.getElementById(i)?.style.display !== 'none', id, { timeout: t });
@@ -52,6 +52,12 @@ const scenarios = {
     await page.locator('#productCard .btn-select[data-val="greeting card"]').click({ force: true });
     await page.waitForTimeout(900);
     await dismissAlerts(page);
+    // Exact-transfer era (2026-08-28): an empty idea box now offers the
+    // photo as-is instead of silently generating — this scenario is about
+    // the AI rail's spotlight, so it types an idea like an AI customer.
+    await page.fill('#ideaDesc', 'a joyful birthday parade');
+    await page.waitForTimeout(500);
+    await dismissAlerts(page);
     await page.evaluate(() => document.getElementById('generateBtn')?.scrollIntoView({ block: 'center' }));
     await page.click('#generateBtn');
     await waitApprove(page);
@@ -67,13 +73,30 @@ const scenarios = {
     if (atReveal.productPE !== 'none') return 'FAIL: product grid not dimmed at reveal (spotlight leaking)';
     // Caption detour genuinely usable
     await page.locator('#captionText').fill('Happy Birthday!', { timeout: 4000 });
-    // YES → spotlight handoff → placement + Continue to Order live
+    // YES → spotlight handoff → placement + Continue to Order live.
+    // UPDATED (2026-08-28): greeting cards graduated to real orderable
+    // products and joined the auto-mockup rail, so the fade page and the
+    // real mockup now stand between YES and Continue to Order — pass
+    // through them the way a customer does.
     await page.locator('#approveRow button:has-text("Yes")').first().click();
     await page.waitForTimeout(1500);
     const afterYes = await page.evaluate(() => document.body.classList.contains('generation-active'));
     if (afterYes) return 'FAIL: spotlight not handed off after YES';
-    await page.locator('button:has-text("Continue to Order")').first().click({ timeout: 5000 });
-    return 'PASS: spotlight held at reveal (caption detour live), handed off at YES, order path clickable';
+    await passFadePage(page);
+    // The auto-mockup opens in the lightbox; the way onward is its Return
+    // button (What's Next appears behind it), same as a customer taps.
+    await page.waitForFunction(() => {
+      const b = document.getElementById('mockupLightboxReturn');
+      return b && getComputedStyle(b).display !== 'none';
+    }, null, { timeout: 30000 });
+    await page.click('#mockupLightboxReturn');
+    await page.waitForTimeout(1500);
+    // Post-mockup the onward button is What's Next's "✅ Checkout"
+    // (goToOrder) — "Continue to Order" is the PRE-mockup button on the
+    // mug/travel rail and never appears on this path.
+    await page.evaluate(() => { const b = [...document.querySelectorAll('button')].find(x => /Checkout/.test(x.textContent)); b?.scrollIntoView({ block: 'center' }); });
+    await page.locator('button:has-text("Checkout")').first().click({ timeout: 15000 });
+    return 'PASS: spotlight held at reveal (caption detour live), handed off at YES, fade+mockup+lightbox passed, order path clickable';
   },
 
   // I-1b: "No — Let's Try Another" must release the spotlight onto the idea box.
@@ -82,6 +105,10 @@ const scenarios = {
     await page.waitForTimeout(700);
     await page.locator('#productCard .btn-select[data-val="greeting card"]').click({ force: true });
     await page.waitForTimeout(900);
+    await dismissAlerts(page);
+    // Same exact-transfer note as fix1 above: the AI rail needs words now.
+    await page.fill('#ideaDesc', 'a joyful birthday parade');
+    await page.waitForTimeout(500);
     await dismissAlerts(page);
     await page.evaluate(() => document.getElementById('generateBtn')?.scrollIntoView({ block: 'center' }));
     await page.click('#generateBtn');
