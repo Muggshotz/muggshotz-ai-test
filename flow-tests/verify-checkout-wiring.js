@@ -65,8 +65,14 @@ scenarios.paymentChainCarriesEverything = async () => {
   if (!/checkout=success/.test(session) || !/handleCheckoutReturn/.test(order))
     bad.push('the return-from-payment handling is missing from order.html');
 
+  // Email capture (Alyx, 2026-08-28): every acquired email lands on the
+  // Supabase customers row -- product orders included (the lane the free
+  // BYO-art customer arrives through), fill-only so nothing overwrites.
+  if (!/m\.email && !customer\.email/.test(webhook))
+    bad.push('product orders no longer capture the buyer email onto the customers row (the marketing list)');
+
   if (bad.length) return `FAIL: ${bad.join('; ')}`;
-  return 'PASS: gift text, panorama, test-mode guard, external_id idempotency and the return screens are all wired';
+  return 'PASS: gift text, panorama, test-mode guard, external_id idempotency, email capture and the return screens are all wired';
 };
 
 // ---- 2. The thank-you screen, as the customer meets it. ----

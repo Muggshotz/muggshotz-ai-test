@@ -639,6 +639,34 @@ async function handleMugOrderPayment(session) {
       let customer = await findCustomerByDeviceId(m.device_id);
       if (!customer) customer = await createCustomerForDevice(m.device_id);
       await markHasPurchased(customer.id);
+      // EMAIL CAPTURE (Alyx, 2026-08-28): every acquired email lands on the
+      // customers row in Supabase -- the marketing list. Product orders were
+      // the one lane that skipped this (their email only reached the
+      // email_discounts side table), which would miss exactly the customer
+      // the free BYO-art lane brings in: buys a mug, never verifies, never
+      // buys tokens. Fill-only -- never overwrite an email already on the
+      // row, and leave email_verified alone so the free verification token
+      // stays claimable. Non-fatal like everything else post-order.
+      if (m.email && !customer.email) {
+        try {
+          const emailUrl = `${SUPABASE_URL}/rest/v1/customers?id=eq.${customer.id}`;
+          const emailResp = await fetch(emailUrl, {
+            method: "PATCH",
+            headers: {
+              apikey: SUPABASE_SERVICE_ROLE_KEY,
+              Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+              "Content-Type": "application/json",
+              Prefer: "return=representation"
+            },
+            body: JSON.stringify({ email: m.email })
+          });
+          if (!emailResp.ok) {
+            console.warn("Order email capture failed (order was still placed):", JSON.stringify(await emailResp.json()));
+          }
+        } catch (emailErr) {
+          console.warn("Order email capture failed (order was still placed):", emailErr.message);
+        }
+      }
     }
 
     if (m.referral_code) {
