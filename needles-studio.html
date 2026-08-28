@@ -748,6 +748,19 @@ const HERO_SETTLE_MS = 1000;
 <button class="reset-everything-btn" id="resetEverythingBtnTop" onclick="resetEverythingFreshStart()">🔄 Reset All Settings & Images — Return to Fresh Start</button>
 
 <div class="card snap-section" id="uploadPhotoCard" data-snap-index="0"><div class="card-title">📸 Upload Photo</div>
+<!-- THE FREE LANE, ADVERTISED AT THE FRONT DOOR (Alyx, 2026-08-28):
+     "their initial contact with our product should not be behind any kind
+     of a paywall except for the purchase price of the finished product."
+     Bring-your-own-art goes through the whole pipeline on zero credits --
+     generated in the customer's own AI or straight off their camera roll.
+     Deliberately says nothing about tokens being optional; it just sells
+     the free lane on its own terms. Sits inside uploadPhotoCard so the
+     initial-upload spotlight (which dims every OTHER card) leaves it lit
+     from the very first second of a first visit. -->
+<div id="byoArtBanner" style="border:1px solid #29a3ff;border-radius:10px;padding:.65rem .8rem;margin-bottom:.8rem;text-align:center;background:rgba(41,163,255,.07)">
+  <div style="font-size:13px;font-weight:bold;color:#29a3ff;letter-spacing:.5px">🆓 BRING YOUR OWN ART — FREE</div>
+  <div class="note" style="margin:.35rem 0 0;font-size:11.5px">Already made something you love in ChatGPT, Gemini, or any AI — or just have a picture you want on a product? Upload it here, leave the description box empty, and it prints <b>exactly as it is</b>. No image credits needed. You only pay for the product itself.</div>
+</div>
 <div style="font-size:11px;color:#29a3ff;letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px;text-align:center">Photo 1</div>
 <div class="needles-clipboard"><div class="needles-clip"></div><div class="upload-zone needles-polaroid" id="uploadZone" onclick="document.getElementById('fileInput').click()"><div style="font-size:32px;color:#555;margin-bottom:8px">👤</div><div class="upload-text">Tap here to upload a photo</div><div class="upload-sub">Clear face photo works best</div></div>
 <div class="ref-pin-zone" id="refAZone" onclick="document.getElementById('refAInput').click()"><div style="font-size:16px;color:#555;margin-bottom:1px">➕</div><div class="upload-text" style="font-size:8px;line-height:1.1">Add ref</div></div>
@@ -1004,7 +1017,22 @@ const HERO_SETTLE_MS = 1000;
 </div>
 </div>
 
-<div class="card" id="ideaCard"><div class="card-title">💬 Tell Us Your Idea</div><div class="quote-text-reminder">⚠️ PLEASE REMEMBER TO SHOW ALL TEXT AND/OR CAPTIONS YOU WISH TO HAVE INCLUDED WITH YOUR IMAGE INSIDE QUOTES " "!</div><textarea id="ideaDesc" placeholder="Example: Put me on a tiny red tricycle wearing a firefighter helmet, shouting &quot;Out of my way!&quot; as I race through a parade with smoke and sirens behind me, under a banner that reads &quot;World's Fastest Firefighter.&quot;"></textarea><div class="quick-btns" id="quickBtns"></div><div class="note" id="ideaDefaultNote">Paint us a clear picture — the more detail you give us, the better our chances of getting your exact idea right.<br><span style="display:block;margin-top:.5rem">📸 <b>Just want your photo, exactly as it is?</b> Leave this box empty and hit Generate — no AI artwork, no changes, and it costs no image credits.</span></div><div class="note" id="ideaArtistNote" style="display:none">Tell the artist what you have in mind.</div><div class="note" id="ideaWindowSillNote" style="display:none">(Optional) Add a costume, outfit, hair, or companion — or just upload your photo and we'll take it from there.</div><div id="mugIdeaActionRow" style="display:none;gap:8px;margin-top:.75rem"><button class="download-btn" style="flex:1;margin-top:0" onclick="handleReturnToPhotos()">📸 Return to select additional photos</button><button class="generate-btn" style="flex:1" onclick="handleMugGuidedGenerate()">🎨 Generate</button></div>
+<div class="card" id="ideaCard"><div class="card-title">💬 Tell Us Your Idea</div><div class="quote-text-reminder">⚠️ PLEASE REMEMBER TO SHOW ALL TEXT AND/OR CAPTIONS YOU WISH TO HAVE INCLUDED WITH YOUR IMAGE INSIDE QUOTES " "!</div><textarea id="ideaDesc" placeholder="Example: Put me on a tiny red tricycle wearing a firefighter helmet, shouting &quot;Out of my way!&quot; as I race through a parade with smoke and sirens behind me, under a banner that reads &quot;World's Fastest Firefighter.&quot;"></textarea><div class="quick-btns" id="quickBtns"></div><div class="note" id="ideaDefaultNote">Paint us a clear picture — the more detail you give us, the better our chances of getting your exact idea right.<br><span style="display:block;margin-top:.5rem">📸 <b>Just want your photo, exactly as it is?</b> Leave this box empty and hit Generate — no AI artwork, no changes, and it costs no image credits.</span></div>
+<!-- THE PROMPT KIT (Alyx, 2026-08-28): the other half of the free lane.
+     The customer generates in THEIR OWN AI (their subscription, their
+     free tier -- someone else's compute bill), and this hands them a
+     prompt already tuned to the product's print geometry so what comes
+     back fits our print area. Only generic fit guidance goes out the
+     door -- the house generation prompts (identity preservation, style
+     payloads) are trade secrets and stay server-side/in-house. -->
+<div style="text-align:center;margin-top:.6rem">
+  <button type="button" class="download-btn" id="promptKitToggleBtn" style="margin-top:0" onclick="togglePromptKit()">🧰 Free Prompt Kit — make your art in your own AI ▼</button>
+</div>
+<div id="promptKitPanel" style="display:none;margin-top:.6rem;border:1px dashed #29a3ff;border-radius:10px;padding:.7rem">
+  <div class="note" style="margin:0 0 .5rem;font-size:11.5px">Prefer to use ChatGPT, Gemini, or another AI you already have? Copy the prompt below, fill in the blank, paste it there, download the image it makes, then upload it above and <b>leave the description box empty</b>. It's shaped for the product you picked, so it will fit the print area.</div>
+  <textarea id="promptKitText" readonly style="width:100%;min-height:110px;font-size:12px" onclick="this.select()"></textarea>
+  <button type="button" class="download-btn" style="width:100%;margin-top:.5rem" onclick="copyPromptKit(this)">📋 Copy Prompt</button>
+</div><div class="note" id="ideaArtistNote" style="display:none">Tell the artist what you have in mind.</div><div class="note" id="ideaWindowSillNote" style="display:none">(Optional) Add a costume, outfit, hair, or companion — or just upload your photo and we'll take it from there.</div><div id="mugIdeaActionRow" style="display:none;gap:8px;margin-top:.75rem"><button class="download-btn" style="flex:1;margin-top:0" onclick="handleReturnToPhotos()">📸 Return to select additional photos</button><button class="generate-btn" style="flex:1" onclick="handleMugGuidedGenerate()">🎨 Generate</button></div>
 <div id="ideaGuidancePrompt" class="guidance-prompt" role="status" style="margin-top:8px;margin-bottom:0;cursor:pointer" onclick="confirmIdeaSatisfied()">Click here when you are satisfied with your descriptive requests for the image.</div>
 </div>
 </div>
@@ -8118,6 +8146,53 @@ async function buyTokenPack(packId){
 }
 
 let priceTableOpen=false;
+// ================= FREE PROMPT KIT (the BYO-AI lane) =================
+// Generic geometry guidance ONLY -- freshly worded for handing out, never
+// lifted from the house generation prompts. The customer's own AI does the
+// creating; all we tell it is what SHAPE fits the product they picked.
+const BYO_SHAPE_LINES={
+  'mug':'a square composition with the main subject centered and clear, safe margins on all four sides',
+  'water bottle':'a tall vertical composition that fills the frame top to bottom, with clean side margins',
+  'phone case':'a tall vertical composition with the important detail kept in the lower two-thirds of the frame',
+  'photo poster':null, // built live from the chosen orientation below
+  'greeting card':'a landscape composition (wider than it is tall) with the subject clear of the outer edges',
+  'post-it note':'a square composition with the subject centered',
+  'coaster':'a square composition that still reads well when trimmed to a circle',
+  'mouse pad':'a landscape composition (wider than it is tall)',
+  'tote bag':'a bold square composition that reads clearly from a distance',
+  'suitcase':'a bold vertical composition that reads clearly from a distance',
+  'puzzle':'a detailed composition with a clear central subject and good contrast throughout'
+};
+function buildByoPrompt(){
+  let shape=BYO_SHAPE_LINES[product]||'a square composition with the main subject centered and safe margins';
+  if(product==='photo poster')
+    shape='a '+(posterOrientation==='landscape'?'landscape':'portrait')+' composition sized for a printed poster, with the subject clear of the outer edges';
+  return 'Create [describe your idea here: a scene, a caricature of the attached photo, a pattern, anything you want]. '
+    +'Compose it as '+shape+'. '
+    +'Make it polished, high-detail, and print-ready. '
+    +'Do not add any words, captions, watermarks, or signatures unless I ask for them in quotation marks.';
+}
+function togglePromptKit(){
+  const panel=document.getElementById('promptKitPanel');
+  const btn=document.getElementById('promptKitToggleBtn');
+  const open=panel.style.display==='none';
+  panel.style.display=open?'block':'none';
+  if(btn)btn.textContent='🧰 Free Prompt Kit — make your art in your own AI '+(open?'▲':'▼');
+  if(open)document.getElementById('promptKitText').value=buildByoPrompt();
+}
+function copyPromptKit(btn){
+  const ta=document.getElementById('promptKitText');
+  ta.value=buildByoPrompt(); // rebuild in case the product changed while open
+  ta.select();
+  const done=()=>{ if(btn){btn.textContent='✅ Copied — paste it into your AI';setTimeout(()=>{btn.textContent='📋 Copy Prompt';},2500);} };
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(ta.value).then(done).catch(()=>{try{document.execCommand('copy');done();}catch(e){}});
+  } else {
+    try{document.execCommand('copy');done();}catch(e){}
+  }
+}
+// ================= END FREE PROMPT KIT =================
+
 function togglePriceTable(){
   priceTableOpen=!priceTableOpen;
   document.getElementById('priceTablePanel').style.display=priceTableOpen?'block':'none';

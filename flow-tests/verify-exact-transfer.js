@@ -142,6 +142,47 @@ scenarios.theBoxExplainsItself = async (page) => {
   return 'PASS: the idea card tells the customer: empty box = your photo as-is, free';
 };
 
+// ---- The free lane must be ADVERTISED at the front door: the banner
+// lives inside uploadPhotoCard so the initial-upload spotlight leaves it
+// lit from the first second of a first visit. ----
+scenarios.frontDoorAdvertisesTheFreeLane = async (page) => {
+  const st = await page.evaluate(() => {
+    const b = document.getElementById('byoArtBanner');
+    if (!b) return { exists: false };
+    const r = b.getBoundingClientRect();
+    return { exists: true, text: b.textContent, visible: r.height > 0 && getComputedStyle(b).display !== 'none',
+      insideUpload: !!b.closest('#uploadPhotoCard') };
+  });
+  if (!st.exists) return 'FAIL: no BYO banner on the page';
+  if (!st.visible) return 'FAIL: the banner exists but is not visible';
+  if (!st.insideUpload) return 'FAIL: the banner is outside uploadPhotoCard — the initial spotlight will dim it';
+  if (!/FREE/i.test(st.text) || !/exactly as it is/i.test(st.text)) return `FAIL: banner copy doesn't sell the free as-is lane`;
+  if (/token/i.test(st.text)) return 'FAIL: the banner mentions tokens — Alyx: "we don\'t have to say that"';
+  return 'PASS: the front door advertises bring-your-own-art, free, without mentioning tokens';
+};
+
+// ---- The Prompt Kit hands out a prompt SHAPED to the picked product,
+// and never leaks the house generation prompt (identity-preservation
+// language is the tell). ----
+scenarios.promptKitShapesToTheProduct = async (page) => {
+  await pickProduct(page, 'water bottle');
+  await page.evaluate(() => togglePromptKit());
+  const tall = await page.evaluate(() => document.getElementById('promptKitText').value);
+  if (!/tall vertical/i.test(tall)) return `FAIL: travel cup prompt isn't shaped tall: ${tall.slice(0, 80)}`;
+  // The fork button is spent after the first pick — switch on the grid
+  // itself (no paid work yet, so no tier-b confirm fires).
+  await page.locator('#productCard .btn-select[data-val="coaster"]').click({ force: true });
+  await T(page, 1000);
+  await dismissAlerts(page);
+  const round = await page.evaluate(() => { copyPromptKit(null); return document.getElementById('promptKitText').value; });
+  if (!/circle/i.test(round)) return `FAIL: coaster prompt doesn't mention the circle trim`;
+  for (const secret of [/identity preservation/i, /muggshotz caricature/i, /same hairline/i]) {
+    if (secret.test(tall) || secret.test(round)) return `FAIL: the kit leaks house prompt language (${secret})`;
+  }
+  if (!/quotation marks/i.test(tall)) return 'FAIL: the kit prompt forgot the no-unrequested-text rule';
+  return 'PASS: the Prompt Kit shapes to the product and leaks nothing of the house prompts';
+};
+
 (async () => {
   let fails = 0;
   for (const [name, fn] of Object.entries(scenarios)) {
