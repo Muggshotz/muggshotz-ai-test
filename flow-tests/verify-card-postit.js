@@ -23,8 +23,9 @@ const waitApprove = (page, t = 90000) =>
   page.waitForFunction(() => document.getElementById('approveRow')?.style.display !== 'none', null, { timeout: t });
 
 const PRODUCTS = [
-  { tile: 'greeting card', key: 'greeting-card', sizeLabel: '8-Pack', price: '24.95' },
-  { tile: 'post-it note', key: 'post-it-notes', sizeLabel: '3" x 3"', price: '14.95' },
+  // Reflex-buy prices (Alyx, 2026-08-28): ~$2 over wholesale, on purpose.
+  { tile: 'greeting card', key: 'greeting-card', sizeLabel: '8-Pack', price: '15.95' },
+  { tile: 'post-it note', key: 'post-it-notes', sizeLabel: '3" x 3"', price: '7.95' },
 ];
 
 const scenarios = {};

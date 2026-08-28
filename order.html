@@ -948,8 +948,10 @@ function isPostIt(){ return selectedProductFamily === 'post-it note'; }
 // the other shows the customer one number while the server charges another.
 const COASTER_PRICE = 29.95;
 const MOUSE_PAD_PRICE = 9.95;
-const GREETING_CARD_PRICE = 24.95; // 8-pack, CatPrint — under the $25 gift ceiling
-const POST_IT_PRICE = 14.95;       // 3" x 3" pad, Taylor
+// Reflex-buy pricing (Alyx, 2026-08-28): ~$2 over wholesale on purpose,
+// "not a profit generator" — do not round these upward.
+const GREETING_CARD_PRICE = 15.95; // 8-pack, CatPrint (wholesale $13.96)
+const POST_IT_PRICE = 7.95;        // 3" x 3" pad, Taylor (wholesale $6.22)
 
 // Mirrors lib/products-catalog.js -- verify-price-parity.js fails if these
 // drift. Posters moved to Printed Simply (852/73) because the previous
@@ -1034,8 +1036,8 @@ const BRIDGE_GRID_PRODUCTS = [
   { key: 'puzzle', icon: '🧩', label: 'Photo Puzzle', priceFrom: '$38.95' },
   { key: 'coaster', icon: '☕', label: 'Coasters', priceFrom: '$29.95' },
   { key: 'mouse pad', icon: '🖱️', label: 'Mouse Pad', priceFrom: '$9.95' },
-  { key: 'greeting card', icon: '💌', label: 'Greeting Cards', priceFrom: '$24.95' },
-  { key: 'post-it note', icon: '📝', label: 'Post-it® Pad', priceFrom: '$14.95' }
+  { key: 'greeting card', icon: '💌', label: 'Greeting Cards', priceFrom: '$15.95' },
+  { key: 'post-it note', icon: '📝', label: 'Post-it® Pad', priceFrom: '$7.95' }
 ];
 const BRIDGE_GRID_COMING_SOON = [
   { icon: '🧸', label: 'Teddy Bear' },
