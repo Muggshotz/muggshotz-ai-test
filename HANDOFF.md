@@ -564,3 +564,51 @@ v=3, v=4 and v=7. **Always tell them the number when announcing a push.**
   call; $39.95 would clear $7.58 if it ever needs rescuing.
 - Alyx works in **real time, one bug at a time**, from live runs with screenshots. Expect reports
   mid-turn. Fix them one at a time, verify, push, and **tell them the version number**.
+
+## CHECKOUT IS WIRED — tomorrow is go-live day (written 2026-08-28, end of session)
+
+Alyx's directive, verbatim intent: complete checkout wiring start to finish, get it ready to go
+online, run a final debugging sweep ("extensive but reasonable"), then Alyx personally orders an
+**insulated 40oz travel mug** through the live flow as the first real order. That cup's art is
+WRAPAROUND — one continuous panorama the studio splits at the centerline into front/back halves
+(`is40ozWraparoundSplit` in needles-studio.html) because the handle interrupts the wrap and
+bp 1498 exposes two print areas. Alyx cares about the seam meeting cleanly at the handle.
+
+**State: the chain is fully wired and verified.** order.html → create-checkout-session →
+Stripe → stripe-webhook → placeProductOrder → Printify. `flow-tests/verify-checkout-wiring.js`
+(5 scenarios, all green, suite #21) guards it, including a no-hands run of Alyx's exact 40oz
+order. Wired/fixed this session: return-from-payment screens (success clears the pending order,
+cancel keeps everything), the $1 gift message text now stored in Stripe metadata (was charged
+then dropped), panoramaImage rides metadata `image_url_d` into the Printify order, preselected
+mug style counts as chosen (styleTouched — Continue to Payment was blocking the NORMAL arrival
+path), and the travel cup's identity (preselectedTravelKey/Color) survives the hop so 40oz art
+cannot land on the wrong cup.
+
+**Safety architecture (verified in source, do not weaken):** the webhook discards
+`!event.livemode` completions, and Printify orders carry the Stripe session id as `external_id`
+— Printify rejects duplicates, so webhook retries cannot double-print.
+
+**Probed live (2026-08-28):** Printify is FULLY LIVE and always was. The webhook is deployed and
+rejects unsigned posts (400). The deployed Stripe key is the TEST key — session URLs come back
+`cs_test_`. That is the entire gap.
+
+**Tomorrow, in order:**
+1. Alyx (dashboards only, keys never through chat): Stripe live-mode → confirm `sk_live_` key
+   exists → register live webhook for `https://muggshotz-ai-test.vercel.app/api/stripe-webhook`
+   on `checkout.session.completed` → put that key + the live `whsec_` into Vercel env
+   (`STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`) → check Stripe Tax is activated in live mode
+   (product orders use automatic_tax; an unactivated account refuses the session) → glance at
+   Printify order-approval (manual approval ON is a good last look for the first order).
+2. Claude: final full sweep — all 21 suites (run-all.sh in flow-tests; keep serve.sh running).
+   Last complete pass was 19/19 clean before the checkout work; wiring-touched suites
+   (checkout-wiring, price-parity, travel, coaster-mousepad) re-ran green after.
+3. Alyx places the live 40oz order. Cheap re-probe to confirm live mode first:
+   a token_purchase POST to create-checkout-session returns `cs_live_` instead of `cs_test_`.
+
+**Also this session:** order.html + checkout.html rethemed to the Needles motif ("diamonds and
+steel, not pumpkins and brownies") via :root tokens — the motif is now a one-block setting.
+Product-data hexes, style names ("Muggshotz Classic"), and AI prompt text deliberately
+untouched. The old orange chip meter is re-skinned by the studio's own CSS on all three pages.
+Tagline "YOUR HONEY. OUR FUNNY." kept pending Alyx's word. checkout.html doubles as the legacy
+Muggshotz generator — its prompts are secret-sauce, read-only as ever.
+
