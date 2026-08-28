@@ -5108,6 +5108,17 @@ function mugStyleLockBack(){
     mugColorChosenPreGen=false;
     const finishBtn=document.getElementById('preGenMugColorFinishBtn');
     if(finishBtn)finishBtn.style.display='none';
+    // The swatches stay visible below the grid (the customer may well
+    // scroll down and pick again -- Alyx's green->red journey did exactly
+    // that), so their VISUAL state must match the cleared choice: no ring
+    // on the old colour, and the label asking again instead of confirming
+    // a pick that no longer exists.
+    document.querySelectorAll('#preGenMugColorGrid .color-btn').forEach(b=>b.classList.remove('selected'));
+    const colorLabelBack=document.getElementById('preGenMugColorLabel');
+    if(colorLabelBack && colorLabelBack.style.display!=='none'){
+      colorLabelBack.textContent='Please select a color for your mug.';
+      colorLabelBack.classList.remove('soft');
+    }
     const card=document.getElementById('mugStyleCard');
     if(card)card.scrollTo({top:0,behavior:'smooth'});
     return;
@@ -5338,6 +5349,14 @@ function pickPreGenMugColor(el,colorName){
   el.classList.add('selected');
   selectedGenColor=colorName;
   mugColorChosenPreGen=true;
+  // BACK MEANS BACK (Alyx's colour ping-pong report): picking a colour puts
+  // the customer AT the colour stage, and the stage tracker must say so.
+  // Without this line, a customer who went back to the style stage and then
+  // picked a colour straight off the still-visible swatches left the tracker
+  // stuck on 'style' -- so their next Back skipped clean over the style
+  // stage to Size. Every entrance to a stage must stamp the stage, no
+  // matter which door it came through.
+  mugStyleOverlayStage='colour';
   // The prompt above the swatches asked for a colour; answer it.
   const colorLabel=document.getElementById('preGenMugColorLabel');
   if(colorLabel){

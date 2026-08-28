@@ -644,6 +644,102 @@ scenarios.selectedOutlineIsBrilliantBlue = async (page) => {
 };
 BYO_SETUP.add('selectedOutlineIsBrilliantBlue');
 
+// ---- ALYX'S COLOUR PING-PONG (third step-8 report): "I picked 11oz
+// Classic White, changed to 11oz Color Pop, changed to 15oz Color Pop,
+// selected green, went back, selected red -- and it sent me back to the
+// 11/15oz decision." Root cause: picking a COLOUR never stamped the
+// stage tracker, so a colour picked after a back-trip left it stuck on
+// 'style' and the next Back skipped clean over the style stage to Size.
+// "Back means back and forward means forward no matter how many times we
+// go back and forth. It should accommodate us if we decide to do this 11
+// times." So this walks the exact reported journey, then ping-pongs the
+// colour eleven times, asserting Size is never reached except by two
+// deliberate Backs. ----
+scenarios.colourPingPongNeverThrowsYouToSize = async (page, log) => {
+  await uploadPhotoAndChooseBYO(page);
+  await page.locator('#productCard .btn-select[data-val="mug"]').click({ force: true });
+  await T(page, 1200);
+  await dismissAlerts(page);
+  const sizeOverlay = () => page.evaluate(() => document.getElementById('mugSizeLockOverlay').style.display);
+  const styleOverlay = () => page.evaluate(() => document.getElementById('mugStyleLockOverlay').style.display);
+
+  // The exact reported journey.
+  await page.evaluate(() => { pickPreGenMugSize('11oz'); });
+  await T(page, 400);
+  await page.evaluate(() => { pickPreGenMugStyle('Classic White'); });
+  await T(page, 500);
+  await page.click('#mugStyleBackBtn'); // colour -> style
+  await T(page, 500);
+  await page.evaluate(() => { pickPreGenMugStyle('Color Pop'); }); // 11oz Color Pop
+  await T(page, 500);
+  await page.click('#mugStyleBackBtn'); // colour -> style
+  await T(page, 500);
+  await page.click('#mugStyleBackBtn'); // style -> size (deliberate)
+  await T(page, 500);
+  if (await sizeOverlay() !== 'flex') return 'FAIL: two deliberate Backs did not reach Size';
+  await page.evaluate(() => { pickPreGenMugSize('15oz'); });
+  await T(page, 500);
+  await page.evaluate(() => { pickPreGenMugStyle('Color Pop'); }); // 15oz Color Pop
+  await T(page, 500);
+
+  const swatches = await page.evaluate(() =>
+    Array.from(document.querySelectorAll('#preGenMugColorGrid .color-btn')).length);
+  if (swatches < 2) return `FAIL: 15oz Color Pop offers ${swatches} swatches — cannot ping-pong`;
+
+  // Green -> Back -> pick again straight off the still-visible swatches:
+  // the moment that used to desync the stage tracker.
+  await page.evaluate(() => {
+    const btns = document.querySelectorAll('#preGenMugColorGrid .color-btn');
+    btns[0].click();
+  });
+  await T(page, 500);
+  await page.click('#mugStyleBackBtn'); // colour -> style (clears the pick)
+  await T(page, 600);
+  const cleared = await page.evaluate(() => ({
+    ringed: !!document.querySelector('#preGenMugColorGrid .color-btn.selected'),
+    label: document.getElementById('preGenMugColorLabel')?.textContent || '',
+  }));
+  if (cleared.ringed) return 'FAIL: after Back, the old colour still wears the ring while the state is cleared';
+  if (!/Please select/i.test(cleared.label)) return `FAIL: after Back, the label still confirms a dead pick: "${cleared.label}"`;
+  await page.evaluate(() => {
+    document.querySelectorAll('#preGenMugColorGrid .color-btn')[1].click(); // "red", off the visible swatches
+  });
+  await T(page, 500);
+  if (await sizeOverlay() !== 'none' || await styleOverlay() !== 'flex')
+    return 'FAIL: picking a colour after a back-trip left the overlay wrong';
+  await page.click('#mugStyleBackBtn'); // must climb to STYLE, not skip to Size
+  await T(page, 500);
+  if (await sizeOverlay() === 'flex')
+    return 'FAIL: Back after the re-picked colour skipped clean over the style stage to Size — the reported bug';
+
+  // Eleven rounds of colour ping-pong, per the letter of the request.
+  for (let i = 0; i < 11; i++) {
+    await page.evaluate((idx) => {
+      const btns = document.querySelectorAll('#preGenMugColorGrid .color-btn');
+      btns[idx % btns.length].click();
+    }, i);
+    await T(page, 250);
+    await page.click('#mugStyleBackBtn');
+    await T(page, 250);
+    if (await sizeOverlay() === 'flex')
+      return `FAIL: round ${i + 1} of colour ping-pong got thrown to Size`;
+  }
+  // And forward still works after all of it.
+  await page.evaluate(() => {
+    document.querySelectorAll('#preGenMugColorGrid .color-btn')[0].click();
+  });
+  await T(page, 500);
+  await page.evaluate(() => { finishPreGenMugColorPick(); });
+  await T(page, 2000);
+  const gen = await page.evaluate(() => {
+    const r = document.getElementById('generateBtn').getBoundingClientRect();
+    return r.top < innerHeight && r.bottom > 0;
+  });
+  if (!gen) return 'FAIL: after eleven ping-pongs, forward no longer reaches Generate';
+  return 'PASS: green -> back -> red never skips to Size, eleven ping-pong rounds hold, and forward still lands on Generate';
+};
+BYO_SETUP.add('colourPingPongNeverThrowsYouToSize');
+
 scenarios.resetRearmsTheGate = async (page) => {
   await uploadPhotoAndChooseBYO(page);
   await page.evaluate(() => {
