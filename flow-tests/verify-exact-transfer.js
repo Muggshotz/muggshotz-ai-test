@@ -570,6 +570,80 @@ scenarios.referencePinsAreLettered = async (page) => {
 };
 BYO_SETUP.add('referencePinsAreLettered');
 
+// ---- ALYX'S SECOND STEP-8 REPORT: Back from the colour/Continue view
+// jumped clean over the style stage to Size, and re-picking a size
+// re-opened the overlay at its OLD interior scroll (bottom of the card,
+// past the grid) -- reading exactly as "it skipped the style step and
+// kept my old style." Back is two-stage now, and every fresh entry
+// greets with the style grid at the top. ----
+scenarios.backIsTwoStageAndFreshEntryShowsTheGrid = async (page) => {
+  await uploadPhotoAndChooseBYO(page);
+  await page.locator('#productCard .btn-select[data-val="mug"]').click({ force: true });
+  await T(page, 1200);
+  await dismissAlerts(page);
+  await page.evaluate(() => { pickPreGenMugSize('15oz'); });
+  await T(page, 500);
+  await page.evaluate(() => { pickPreGenMugStyle('Classic White'); });
+  await T(page, 900);
+
+  // FIRST back: stays in the overlay, climbs to the style stage.
+  await page.click('#mugStyleBackBtn');
+  await T(page, 900);
+  const afterFirst = await page.evaluate(() => ({
+    styleOverlay: document.getElementById('mugStyleLockOverlay').style.display,
+    sizeOverlay: document.getElementById('mugSizeLockOverlay').style.display,
+    finishShown: document.getElementById('preGenMugColorFinishBtn')?.style.display !== 'none',
+    scrollTop: Math.round(document.getElementById('mugStyleCard').scrollTop),
+    stillHighlighted: document.querySelector('#preGenMugStyleGrid .btn-select.selected')?.dataset.style || null,
+  }));
+  if (afterFirst.styleOverlay !== 'flex') return 'FAIL: first Back left the Style overlay entirely — it must climb to the style stage first';
+  if (afterFirst.sizeOverlay === 'flex') return 'FAIL: first Back jumped clean over the style stage to Size';
+  if (afterFirst.finishShown) return 'FAIL: first Back left the Continue button showing — the colour stage did not clear';
+  if (afterFirst.scrollTop > 40) return `FAIL: first Back left the card scrolled to ${afterFirst.scrollTop}px — the grid is not what greets them`;
+  if (afterFirst.stillHighlighted !== 'Classic White') return `FAIL: the previous pick lost its highlight (${afterFirst.stillHighlighted})`;
+
+  // SECOND back: now it leaves for Size.
+  await page.click('#mugStyleBackBtn');
+  await T(page, 700);
+  const afterSecond = await page.evaluate(() => ({
+    styleOverlay: document.getElementById('mugStyleLockOverlay').style.display,
+    sizeOverlay: document.getElementById('mugSizeLockOverlay').style.display,
+  }));
+  if (afterSecond.sizeOverlay !== 'flex') return 'FAIL: second Back did not reach Size';
+  if (afterSecond.styleOverlay === 'flex') return 'FAIL: second Back left both overlays open';
+
+  // Re-pick a size going forward: the overlay must greet with the GRID at
+  // the top, not the old bottom-of-card Continue view.
+  await page.evaluate(() => { pickPreGenMugSize('15oz'); });
+  await T(page, 700);
+  const reentry = await page.evaluate(() => ({
+    styleOverlay: document.getElementById('mugStyleLockOverlay').style.display,
+    scrollTop: Math.round(document.getElementById('mugStyleCard').scrollTop),
+    finishShown: document.getElementById('preGenMugColorFinishBtn')?.style.display !== 'none',
+  }));
+  if (reentry.styleOverlay !== 'flex') return 'FAIL: re-picking a size never re-opened the Style step';
+  if (reentry.scrollTop > 40 || reentry.finishShown) return `FAIL: re-entry re-opened past the grid (scrollTop=${reentry.scrollTop}, continue=${reentry.finishShown}) — the "skipped style" illusion`;
+  return 'PASS: Back climbs colour -> style -> size one stage at a time, and every re-entry greets with the style grid';
+};
+BYO_SETUP.add('backIsTwoStageAndFreshEntryShowsTheGrid');
+
+// ---- The selected outline must be unmistakable (Alyx: "brilliant blue,
+// not a slightly lazy almost a little brighter blue"). ----
+scenarios.selectedOutlineIsBrilliantBlue = async (page) => {
+  const st = await page.evaluate(() => {
+    const el = document.querySelector('.btn-select.selected');
+    if (!el) return null;
+    const cs = getComputedStyle(el);
+    return { color: cs.borderTopColor, width: cs.borderTopWidth, glow: cs.boxShadow };
+  });
+  if (!st) return 'FAIL: no selected tile found to measure';
+  if (st.color !== 'rgb(41, 163, 255)') return `FAIL: selected border is ${st.color}, not the brilliant #29a3ff`;
+  if (parseFloat(st.width) < 2.5) return `FAIL: selected border is ${st.width} — too thin to be unmistakable`;
+  if (st.glow === 'none') return 'FAIL: selected tile has no glow';
+  return 'PASS: selection outline is 3px brilliant blue with a glow — unmistakable';
+};
+BYO_SETUP.add('selectedOutlineIsBrilliantBlue');
+
 scenarios.resetRearmsTheGate = async (page) => {
   await uploadPhotoAndChooseBYO(page);
   await page.evaluate(() => {
