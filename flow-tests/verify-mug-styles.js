@@ -72,8 +72,15 @@ scenarios.classicWhiteIsOnTheGrid = async (page) => {
   return `PASS: Classic White is on the grid at $14.95 (${tiles.length} styles offered)`;
 };
 
-// ---- 3. The upgrade ladder is legible, and correct at both sizes. ----
-scenarios.upgradeDeltasAreShownAndCorrect = async (page) => {
+// ---- 3. One real price per tile, and NO "+$" delta anywhere. ----
+// REVERSED (2026-08-28, Alyx, overturning their own earlier ask): "$21.95"
+// with "+$5.00" under it reads to a customer as $21.95 PLUS five more
+// dollars still to come, not as a comparison to the base style. "Just tell
+// him how much the cup cost." The tile shows the full price and nothing
+// else; this scenario now polices the delta's ABSENCE and the price's
+// correctness at both sizes, so neither the ladder nor a wrong number can
+// quietly return.
+scenarios.tilesShowOnePriceAndNoDelta = async (page) => {
   await toMugStyles(page);
   for (const size of ['11oz', '15oz']) {
     await page.evaluate((sz) => pickPreGenMugSize(sz), size);
@@ -83,19 +90,15 @@ scenarios.upgradeDeltasAreShownAndCorrect = async (page) => {
         style: b.dataset.style,
         text: b.textContent.replace(/\s+/g, ' ').trim(),
       })));
-    const base = await page.evaluate((sz) => PRE_GEN_MUG_STYLE_PRICES[MUG_UPGRADE_BASE_STYLE][sz], size);
     for (const tile of got) {
+      if (/\+\$/.test(tile.text))
+        return `FAIL: ${size} ${tile.style} shows a "+$" delta — the ladder is back: "${tile.text}"`;
       const price = await page.evaluate(([st, sz]) => PRE_GEN_MUG_STYLE_PRICES[st][sz], [tile.style, size]);
-      const want = price - base;
-      if (want <= 0) {
-        if (/\+\$/.test(tile.text)) return `FAIL: ${size} ${tile.style} is the base but shows an upgrade delta`;
-        continue;
-      }
-      if (!tile.text.includes('+$' + want.toFixed(2)))
-        return `FAIL: ${size} ${tile.style} should show +$${want.toFixed(2)} — got "${tile.text}"`;
+      if (!tile.text.includes('$' + price.toFixed(2)))
+        return `FAIL: ${size} ${tile.style} should show $${price.toFixed(2)} — got "${tile.text}"`;
     }
   }
-  return 'PASS: upgrade deltas shown and correct at both sizes (+$3.00 Trimmed/Accented, +$5.00 Color Pop)';
+  return 'PASS: every style tile shows its one real price at both sizes, no "+$" delta anywhere';
 };
 
 // ---- 4. A style with no colours must not strand the customer. ----

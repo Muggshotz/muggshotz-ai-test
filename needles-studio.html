@@ -5149,17 +5149,12 @@ function renderPreGenMugStyleGrid(){
     priceNote.style.cssText='margin-top:6px;color:#7ab8ff;font-weight:700';
     priceNote.textContent='$'+price.toFixed(2);
     btn.appendChild(priceNote);
-    // The upgrade in the customer's terms. "$19.95" beside "$14.95" makes
-    // them do the subtraction; "+$3.00" does it for them, which is the whole
-    // point of showing a ladder. Computed from the table so it cannot drift.
-    const basePrice=PRE_GEN_MUG_STYLE_PRICES[MUG_UPGRADE_BASE_STYLE]?.[selectedGenSize];
-    if(basePrice!=null && price>basePrice){
-      const delta=document.createElement('div');
-      delta.className='note';
-      delta.style.cssText='margin-top:2px;color:#7ab8ff;font-size:10px';
-      delta.textContent='+$'+(price-basePrice).toFixed(2);
-      btn.appendChild(delta);
-    }
+    // NO DELTA LINE (Alyx, 2026-08-28, reversing their own earlier ask):
+    // "$21.95" with "+$5.00" under it reads to a customer as $21.95 PLUS
+    // five more dollars still to come, not as a comparison to the base
+    // style. "Just tell him how much the cup cost. They don't need to be
+    // reminded of how much more they are paying." The tile shows the one
+    // real price and nothing else -- do not bring the +$ ladder back.
     grid.appendChild(btn);
   });
 }
