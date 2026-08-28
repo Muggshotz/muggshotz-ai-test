@@ -77,6 +77,40 @@ scenarios.acceptedTransferSkipsTheAI = async (page, log, mockupBodies) => {
   return 'PASS: empty box + OK = photo straight to the mockup, zero AI calls, fade page opens at 0%';
 };
 
+// ---- A non-default Art Style pick would silently never be applied on an
+// exact transfer (style only means anything to the AI, which never runs
+// here) -- Alyx's question, exactly. The confirm must say so, by name,
+// rather than let the customer discover it on the finished product. ----
+scenarios.confirmWarnsWhenAStyleWouldBeLost = async (page) => {
+  await dismissAlerts(page);
+  await page.locator('#styleSectionCard .btn-select', { hasText: 'Line Art' }).click({ force: true });
+  await T(page, 300);
+  await pickProduct(page, 'mouse pad');
+  await armConfirm(page, false); // decline -- this scenario is about the message text, not the accept path
+  await page.evaluate(() => document.getElementById('generateBtn')?.scrollIntoView({ block: 'center' }));
+  await page.click('#generateBtn');
+  await T(page, 500);
+  const calls = await page.evaluate(() => window.__confirmCalls || []);
+  if (!calls.length) return 'FAIL: no confirm fired';
+  if (!/Line Art/.test(calls[0])) return `FAIL: confirm never names the chosen style: ${calls[0]}`;
+  if (!/will NOT use it/i.test(calls[0])) return `FAIL: confirm doesn't say the style is dropped: ${calls[0]}`;
+  return 'PASS: exact-transfer confirm warns by name when a non-default style would be silently discarded';
+};
+
+// ---- The default style (never touched) needs no such warning -- nothing
+// real is being lost, so the note would just be noise. ----
+scenarios.confirmStaysQuietOnDefaultStyle = async (page) => {
+  await pickProduct(page, 'mouse pad');
+  await armConfirm(page, false);
+  await page.evaluate(() => document.getElementById('generateBtn')?.scrollIntoView({ block: 'center' }));
+  await page.click('#generateBtn');
+  await T(page, 500);
+  const calls = await page.evaluate(() => window.__confirmCalls || []);
+  if (!calls.length) return 'FAIL: no confirm fired';
+  if (/Note: you picked a style/.test(calls[0])) return `FAIL: warned about a style the customer never touched: ${calls[0]}`;
+  return 'PASS: no style warning when the customer never left the house default';
+};
+
 // ---- Out of credits must NOT block a transfer: it costs nothing. ----
 scenarios.outOfCreditsCanStillTransfer = async (page, log) => {
   await pickProduct(page, 'mouse pad');

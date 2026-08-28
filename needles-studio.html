@@ -10525,7 +10525,20 @@ async function generate(){
     }
     if(!windowSillChoice && !refImageAData && !refImageBData){
       const what=PRODUCT_IDEA_LABEL[product]||product||'product';
-      const ok=window.confirm('Use your photo exactly as it is? With the description box empty we skip the AI completely \u2014 your photo goes onto your '+what+' unchanged (just fitted to size), and it costs no image credits. OK = use my photo as-is. Cancel = go back and describe an idea.');
+      // If the customer already picked a real Art Style (Line Art, Comic
+      // Strip, etc.) that style only ever gets APPLIED by the AI -- an
+      // exact transfer skips the AI, so it would silently discard that
+      // choice with no explanation. Alyx's question ("wouldn't line art /
+      // cartoon / caricature require the AI?") is exactly right; the
+      // confirm now says so instead of leaving it a surprise.
+      const chosenStyleTile=document.querySelector('#styleSectionCard .btn-select.selected');
+      const chosenStyleLabel=chosenStyleTile
+        ? (chosenStyleTile.childNodes[0]?.textContent||'').trim()
+        : '';
+      const styleNote=(style!==MUGGSHOTZ_CLASSIC_STYLE && chosenStyleLabel)
+        ? ' Note: you picked a style ('+chosenStyleLabel+') back on Art Style \u2014 that only applies when the AI actually draws something, so an exact transfer will NOT use it. Your photo goes on as plain as it was uploaded.'
+        : '';
+      const ok=window.confirm('Use your photo exactly as it is? With the description box empty we skip the AI completely \u2014 your photo goes onto your '+what+' unchanged (just fitted to size), and it costs no image credits.'+styleNote+' OK = use my photo as-is. Cancel = go back and describe an idea.');
       if(!ok){
         handOffToIdeaAfterProductChoice();
         return;
