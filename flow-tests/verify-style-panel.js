@@ -189,6 +189,21 @@ scenarios.untouchedStyleStaysDefault = async (page, log, bodies) => {
 // else." Position and spotlight are both pinned here because either one
 // failing alone puts the panel back to being invisible in practice.
 scenarios.styleIsTheFirstLitStepAfterThePhoto = async (page) => {
+  // Since the intent gate (2026-08-28), the guided scroll starts at the
+  // moment of the AI choice, and under sweep load the smooth scroll can
+  // still be IN FLIGHT when this measures -- reading 200+px mid-animation
+  // and calling it a bad landing. Wait for the card's position to stop
+  // moving first: the assertion below is about the FINAL landing (the
+  // stale-scroll bug's symptom is a wrong final position, not a slow
+  // scroll), so settling first masks nothing.
+  await page.waitForFunction(() => {
+    const r = document.getElementById('styleSectionCard')?.getBoundingClientRect();
+    if (!r) return false;
+    window.__styleTops = window.__styleTops || [];
+    window.__styleTops.push(Math.round(r.top));
+    const t = window.__styleTops;
+    return t.length >= 4 && t[t.length - 1] === t[t.length - 2] && t[t.length - 2] === t[t.length - 3];
+  }, null, { timeout: 10000, polling: 300 }).catch(() => {});
   const st = await page.evaluate(() => {
     const style = document.getElementById('styleSectionCard');
     const upload = document.getElementById('uploadPhotoCard');

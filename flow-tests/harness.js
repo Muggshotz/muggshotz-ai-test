@@ -125,15 +125,29 @@ async function openStudio(page) {
   await page.waitForTimeout(800); // initial scripts, balance fetch
 }
 
+// THE INTENT GATE (2026-08-28): every upload now stops on a hard "AI or
+// your own art?" choice before Art Style/the Track fork ever show. Wait for
+// the gate to actually OPEN before choosing -- it opens from the photo
+// handler's .then chain, so its appearance proves the resize finished and
+// layout is settled. Choosing at a fixed delay raced that chain: under
+// sweep load the choice could fire BEFORE the gate opened, showPostUploadFork
+// then scrolled against a still-resizing photo (the stale-scroll landing
+// short), and the late-opening gate was left covering the page.
+async function waitForIntentGate(page) {
+  await page.waitForFunction(() => {
+    const o = document.getElementById('intentGateOverlay');
+    return o && getComputedStyle(o).display !== 'none';
+  }, null, { timeout: 15000 }).catch(() => {}); // old builds have no gate — proceed
+}
+
 async function uploadPhoto(page) {
   const input = page.locator('#fileInput');
   await input.setInputFiles(path.join(SCRATCH, 'test-photo.jpg'));
-  await page.waitForTimeout(600);
-  // THE INTENT GATE (2026-08-28): every upload now stops on a hard "AI or
-  // your own art?" choice before Art Style/the Track fork ever show. Every
-  // suite except verify-exact-transfer.js's BYO-gate scenarios is about the
-  // AI rail, so this reproduces the exact prior default by choosing AI here
-  // -- one suite-wide seam instead of touching dozens of scenario files.
+  await waitForIntentGate(page);
+  // Every suite except verify-exact-transfer.js's BYO-gate scenarios is
+  // about the AI rail, so this reproduces the exact prior default by
+  // choosing AI here -- one suite-wide seam instead of touching dozens of
+  // scenario files.
   await page.evaluate(() => { if (typeof chooseIntentAI === 'function') chooseIntentAI(); });
   await page.waitForTimeout(600); // fork reveal
 }
@@ -142,7 +156,7 @@ async function uploadPhoto(page) {
 async function uploadPhotoAndChooseBYO(page) {
   const input = page.locator('#fileInput');
   await input.setInputFiles(path.join(SCRATCH, 'test-photo.jpg'));
-  await page.waitForTimeout(600);
+  await waitForIntentGate(page);
   await page.evaluate(() => { if (typeof chooseIntentBYO === 'function') chooseIntentBYO(); });
   await page.waitForTimeout(600);
 }
@@ -206,4 +220,4 @@ async function passFadePage(page, { timeout = 20000 } = {}) {
   return true;
 }
 
-module.exports = { launch, openStudio, uploadPhoto, uploadPhotoAndChooseBYO, interactable, bodyFocusClasses, dismissAlerts, passFadePage, BASE };
+module.exports = { launch, openStudio, uploadPhoto, uploadPhotoAndChooseBYO, waitForIntentGate, interactable, bodyFocusClasses, dismissAlerts, passFadePage, BASE };

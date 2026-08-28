@@ -10,7 +10,7 @@
 // The declined path (Cancel = land back on the idea rail, nothing charged)
 // is asserted product-by-product in verify-coaster-mousepad.js and
 // verify-approve-handoff.js; this suite owns the accepted path.
-const { launch, openStudio, uploadPhoto, uploadPhotoAndChooseBYO, dismissAlerts, BASE } = require('./harness');
+const { launch, openStudio, uploadPhoto, uploadPhotoAndChooseBYO, waitForIntentGate, dismissAlerts, BASE } = require('./harness');
 
 const T = (page, ms) => page.waitForTimeout(ms);
 
@@ -83,7 +83,17 @@ scenarios.acceptedTransferSkipsTheAI = async (page, log, mockupBodies) => {
 // rather than let the customer discover it on the finished product. ----
 scenarios.confirmWarnsWhenAStyleWouldBeLost = async (page) => {
   await dismissAlerts(page);
-  await page.locator('#styleSectionCard .btn-select', { hasText: 'Line Art' }).click({ force: true });
+  // Drive pick() directly (the style-panel suite's own pattern): a force-
+  // click can land on a late guidance popup under load, silently leaving
+  // the style at default -- and this scenario's subject is the CONFIRM
+  // MESSAGE, not tile clickability (that's verify-style-panel.js's job).
+  const picked = await page.evaluate(() => {
+    const el = [...document.querySelectorAll('#styleSectionCard .btn-select')].find(b => /Line Art/.test(b.textContent));
+    if (!el) return false;
+    pick(el, 'style');
+    return el.classList.contains('selected');
+  });
+  if (!picked) return 'FAIL: could not select the Line Art style tile at all';
   await T(page, 300);
   await pickProduct(page, 'mouse pad');
   await armConfirm(page, false); // decline -- this scenario is about the message text, not the accept path
@@ -230,7 +240,7 @@ const BYO_SETUP = new Set();
 scenarios.gateBlocksEverythingUntilChosen = async (page) => {
   const input = page.locator('#fileInput');
   await input.setInputFiles(require('path').join(__dirname, 'test-photo.jpg'));
-  await page.waitForTimeout(700);
+  await waitForIntentGate(page); // fixed delays race the photo-resize chain under load
   const st = await page.evaluate(() => {
     const overlay = document.getElementById('intentGateOverlay');
     const styleCard = document.getElementById('styleSectionCard');
@@ -254,7 +264,7 @@ BYO_SETUP.add('gateBlocksEverythingUntilChosen');
 scenarios.chooseAIKeepsThePriorRailIntact = async (page) => {
   const input = page.locator('#fileInput');
   await input.setInputFiles(require('path').join(__dirname, 'test-photo.jpg'));
-  await page.waitForTimeout(700);
+  await waitForIntentGate(page); // same race as above: choose only once the gate is truly open
   await page.evaluate(() => chooseIntentAI());
   await page.waitForTimeout(700);
   const st = await page.evaluate(() => ({
