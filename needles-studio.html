@@ -8837,7 +8837,10 @@ async function approveDesign(allThree){
     const centreMargin=Math.max(0,(window.innerHeight-orderBtnNext.offsetHeight)/2);
     scrollToStableTop(orderBtnNext,centreMargin,20);
   } else {
-    document.getElementById('positionHolderCard').scrollIntoView({behavior:'smooth',block:'start'});
+    // Same mid-reflow moment as the branch above, same cure (scroll-audit
+    // panel, 2026-08-28): the plain one-shot here was the last survivor of
+    // the race its sibling's comment documents.
+    scrollToStableTop(document.getElementById('positionHolderCard'),0,20);
   }
 }
 
@@ -12321,7 +12324,13 @@ async function runAutoMockupFetch(){
   const galleryEl = document.getElementById('genPreviewGallery');
   const galleryHintEl = document.getElementById('genPreviewGalleryHint');
 
-  loadingEl.style.display = 'block'; loadingEl.scrollIntoView({behavior:'smooth',block:'center'});
+  loadingEl.style.display = 'block';
+  // Stability-polled (scroll-audit panel, 2026-08-28): this fires 500ms
+  // after approve/generation churn -- a debounce, not a settle -- while the
+  // accessorize preview above is still compositing its full-resolution
+  // image into a card with no reserved height. The one-shot scroll aimed
+  // stale; poll until still, then land centred.
+  scrollToStableTop(loadingEl,Math.max(0,(window.innerHeight-loadingEl.offsetHeight)/2),20);
   noteEl.style.display = 'none';
   imgEl.style.display = 'none';
   galleryEl.style.display = 'none';
