@@ -2378,9 +2378,11 @@ function confirmStyleAndContinue(){
 }
 
 // Track 1: skip the description step entirely, go straight to
-// choosing a product -- the idea box stays empty/unused, which
-// generate() already handles fine (falls back to a default polished
-// caricature description when idea is blank).
+// choosing a product -- the idea box stays empty/unused. UPDATED
+// (2026-08-28, exact transfer): generate() no longer falls back to a
+// silent generic caricature on a blank box -- it offers the customer's
+// photo exactly as it is (one confirm, zero tokens), except on
+// wraparound, which still needs a typed description.
 // WHICH TRACK (Aug 2026, Alyx). Nothing used to record this. The fork at the
 // top of the flow set a focus class and was then forgotten, so downstream
 // steps could not tell a product-first customer from a describe-it-yourself
