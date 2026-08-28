@@ -261,6 +261,62 @@ scenarios.twoStepsBackLeavesNoInvalidChoice = async (page) => {
 };
 
 
+// ---- 6. Tier b: switching away from PAID work asks once, names the cost. ----
+// Alyx's off-rail ladder: a free deviation is accommodated silently (tier a,
+// scenarios 2-5 above); a deviation that sets aside generated artwork gets
+// exactly one question. Both branches tested: decline keeps everything
+// exactly as it was; accept switches cleanly. And the free case must stay
+// silent -- a dialog on an un-paid switch would be the cage coming back in
+// polite clothing.
+scenarios.costlySwitchAsksOnce = async (page) => {
+  await toProduct(page);
+  // Coaster, not mug, as the base on purpose: the mug flow keeps a step-lock
+  // OVERLAY up until Size/Style/Colour are finished, and a force-click at a
+  // product tile's coordinates lands on that overlay, not the tile -- pick()
+  // never runs and the scenario tests nothing. (Cost of learning that: one
+  // false FAIL.) Coaster, mouse pad and puzzle are overlay-free rails.
+  await pickProduct(page, 'coaster');
+
+  // The confirm is intercepted INSIDE the page rather than through
+  // Playwright's dialog event -- the native-dialog plumbing proved flaky in
+  // this sequence (the guard fired, the event never reached the listener),
+  // and what this scenario exists to pin is the GUARD's logic: when it asks,
+  // what it says, and that both answers are honored.
+  await page.evaluate(() => {
+    window.__confirmCalls = [];
+    window.__confirmAnswer = true;
+    window.confirm = (msg) => { window.__confirmCalls.push(msg); return window.__confirmAnswer; };
+  });
+
+  // No generated work yet: switching must be SILENT.
+  await pickProduct(page, 'mouse pad');
+  let calls = await page.evaluate(() => window.__confirmCalls.length);
+  if (calls > 0)
+    return 'FAIL: switching products with no generated art raised a confirm — free deviations must stay frictionless';
+
+  // Simulate paid work the way generation leaves it, then decline the switch.
+  await page.evaluate(() => { currentDesignId = 'fake-paid-design'; window.__confirmAnswer = false; });
+  await pickProduct(page, 'puzzle', { expectChange: false });
+  let st = await page.evaluate(() => ({ product, asked: window.__confirmCalls }));
+  if (st.asked.length === 0)
+    return 'FAIL: switching away from generated artwork asked nothing — paid work can be set aside by a stray tap';
+  if (!/set(s)? .*aside|Recent Designs/i.test(st.asked[0]))
+    return `FAIL: the confirm does not name the cost ("${st.asked[0]}")`;
+  if (st.product !== 'mouse pad')
+    return `FAIL: declining the confirm still switched the product (product=${st.product})`;
+
+  // Accepting must switch cleanly, and ask exactly once per attempt.
+  await page.evaluate(() => { window.__confirmAnswer = true; });
+  await pickProduct(page, 'puzzle');
+  st = await page.evaluate(() => ({ product, n: window.__confirmCalls.length }));
+  if (st.product !== 'puzzle')
+    return `FAIL: accepting the confirm did not switch (product=${st.product})`;
+  if (st.n !== 2)
+    return `FAIL: expected exactly 2 asks across 2 paid attempts, saw ${st.n}`;
+  return 'PASS: free switches stay silent; a paid switch asks once, names the cost, and honors both answers';
+};
+
+
 (async () => {
   let fails = 0;
   for (const [name, fn] of Object.entries(scenarios)) {

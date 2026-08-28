@@ -7276,6 +7276,23 @@ function refreshPhotoPosterVisibility(){
 }
 
 function pick(el,type){
+  // TIER B OF THE OFF-RAIL LADDER (Alyx's design, 2026-08-28): a deviation
+  // that is rational but COSTLY gets exactly one question, phrased as the
+  // cost. Switching products before generating is tier a -- free, silent,
+  // accommodated. Switching AFTER credits were spent on artwork is the one
+  // move that deserves a breath. The art is not destroyed (it stays in
+  // Recent Designs, and Recall exists), so the message says "set aside",
+  // which is the truth. Uses window.confirm because that is already the
+  // house pattern (Reset uses it), and this must run BEFORE any visual
+  // selection change so a "no" leaves the screen exactly as it was.
+  if(type==='product'){
+    const nextProduct=el.dataset.val;
+    const hasPaidWork=!!(placements.left||placements.front||placements.right||resultUrl||currentDesignId);
+    if(hasPaidWork && product && nextProduct!==product){
+      const ok=window.confirm('You already generated artwork for your current product. Switching sets that design aside (it stays in Recent Designs). Switch anyway?');
+      if(!ok)return;
+    }
+  }
   el.closest('.grid3,.grid2').querySelectorAll('.btn-select').forEach(b=>b.classList.remove('selected'));
   el.classList.add('selected');
   if(type==='product'){
