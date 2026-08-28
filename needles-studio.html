@@ -2341,11 +2341,43 @@ function startPhotoGuide(){
 // See the HTML comment above #intentGateOverlay for the full reasoning.
 let byoDeclaredIntent=null; // null | 'ai' | 'byo'
 
+// ONE function owns the visibility of every AI-only surface, symmetric in
+// both directions. The first cut hid the cards inline in chooseIntentBYO and
+// restored SOME of them in scattered places -- which is exactly how the
+// adversarial review's blocker happened: BYO -> re-upload -> "AI" left
+// #trackForkCard display:none forever (showPostUploadFork restored the style
+// card and set the fork ROW to flex, but the row's PARENT card stayed
+// hidden), dead-ending the rail on a spotlight aimed at an invisible card.
+// Hiding and restoring through one list makes that asymmetry impossible.
+//
+// The BYO hides are the one deliberate exception to "a dim is a guide, not a
+// cage": every one of these surfaces asks a question that only means
+// something to the AI, which this customer has declared they are not using.
+const AI_ONLY_SURFACES=['styleSectionCard','trackForkCard','likenessSectionCard','ideaCard','refAZone','refBZone'];
+function applyByoRailVisibility(){
+  const byo=(byoDeclaredIntent==='byo');
+  AI_ONLY_SURFACES.forEach(id=>{
+    const el=document.getElementById(id);
+    if(el)el.style.display=byo?'none':'';
+  });
+  // The token note sits directly above Generate; for a declared-BYO
+  // customer "Requires at least 1 token" is exactly backwards.
+  const tokenNote=document.getElementById('generateTokenNote');
+  if(tokenNote)tokenNote.textContent=byo
+    ? '🆓 Free — your photo goes on exactly as it is. No credits needed.'
+    : 'Requires at least 1 token to generate.';
+}
+
 function openIntentGate(){
   const overlay=document.getElementById('intentGateOverlay');
   if(!overlay)return;
   document.body.classList.add('step-locked');
   overlay.style.display='flex';
+  // Keyboard users arrive here too: without this, focus stays behind the
+  // overlay and Tab walks the covered page. Not a full focus trap, but the
+  // gate's buttons become the immediate keyboard path.
+  const firstBtn=overlay.querySelector('button');
+  if(firstBtn)try{firstBtn.focus({preventScroll:true});}catch(e){}
 }
 
 function chooseIntentAI(){
@@ -2353,8 +2385,11 @@ function chooseIntentAI(){
   const overlay=document.getElementById('intentGateOverlay');
   if(overlay)overlay.style.display='none';
   document.body.classList.remove('step-locked');
-  // Exactly the prior default rail: Art Style shown and spotlit, then the
-  // Track fork, unchanged for a customer who chose the AI.
+  // Restore every AI surface FIRST (a prior BYO declaration this session
+  // may have hidden them -- the customer is allowed to change their mind
+  // at the next upload's gate), then the exact prior default rail: Art
+  // Style shown and spotlit, then the Track fork.
+  applyByoRailVisibility();
   showPostUploadFork();
 }
 
@@ -2363,15 +2398,21 @@ function chooseIntentBYO(){
   const overlay=document.getElementById('intentGateOverlay');
   if(overlay)overlay.style.display='none';
   document.body.classList.remove('step-locked');
-  // The one deliberate exception to "a dim is a guide, not a cage": these
-  // two cards ask questions that only mean something to the AI (which
-  // this customer has already declared they are not using), so they are
-  // truly removed from the page rather than merely dimmed -- a scroll up
-  // will not find them. resetEverythingFreshStart() restores them.
-  const styleCard=document.getElementById('styleSectionCard');
-  if(styleCard)styleCard.style.display='none';
-  const trackCard=document.getElementById('trackForkCard');
-  if(trackCard)trackCard.style.display='none';
+  applyByoRailVisibility();
+  // A BYO declaration also RESETS the AI-only state the customer may have
+  // set on an earlier lap of the rail (style picked in AI mode, a typed
+  // idea, pinned reference photos, a gimmick, wraparound). Left in place,
+  // each of these silently re-involves the AI -- stale idea text or a ref
+  // pin would run a full token-charging generation for a customer promised
+  // "free", and a non-default style would make the skip-confirm's
+  // no-style-warning assumption false. Cleared, the declaration is airtight.
+  const ideaBox=document.getElementById('ideaDesc');
+  if(ideaBox)ideaBox.value='';
+  clearReferenceSlots();
+  windowSillChoice=null;
+  mugPrintMode='three-panel';
+  style=MUGGSHOTZ_CLASSIC_STYLE;
+  document.querySelectorAll('#styleSectionCard .btn-select').forEach((b,i)=>b.classList.toggle('selected',i===0));
   // Same landing a Track 1 ("product first") customer gets -- there is no
   // description track for someone supplying their own finished art.
   pickTrackProduct();
@@ -4576,6 +4617,11 @@ function refreshMugPrintModeVisibility(){
   } else {
     show=false;
   }
+  // Wraparound is an AI generation by construction (a photo cannot honestly
+  // become a seam-to-seam panorama), so a declared-BYO customer is never
+  // offered the choice -- chooseIntentBYO() pinned mugPrintMode to
+  // 'three-panel', and hiding the card keeps that pin from being undone.
+  if(byoDeclaredIntent==='byo')show=false;
   card.style.display=show?'block':'none';
   document.body.classList.toggle('print-mode-focus', show && !mugPrintModeTouched);
 }
@@ -5308,6 +5354,13 @@ function goToDescribeAndGenerate(){
   mugDesignConfirmed=false;
   mugGuidedChangesActive=true;
   updateMugGuidedFlow();
+  // A declared-BYO customer has no idea box (hidden at the gate) and
+  // nothing to describe -- their next real step is Generate itself, which
+  // sends their photo through as-is.
+  if(byoDeclaredIntent==='byo'){
+    smoothScrollToTarget('generateTokenNote','end');
+    return;
+  }
   smoothScrollToTarget('ideaCard','center');
 }
 
@@ -5326,7 +5379,11 @@ function showDesignMethodCard(){
   // chose track two, OR they picked a product the gimmicks were never meant
   // for. The second is silent by design -- there is nothing to explain,
   // because there was never a choice worth offering.
-  if(chosenTrack==='describe' || !PRODUCTS_WITH_GIMMICKS.includes(product)){
+  // A declared-BYO customer never sees the gimmicks: every prop on this
+  // card (Cover Me, Face It, Home Sweet Home) IS an AI generation, which
+  // is precisely what they declared against at the intent gate. Same
+  // silent handling as a product the gimmicks were never meant for.
+  if(chosenTrack==='describe' || byoDeclaredIntent==='byo' || !PRODUCTS_WITH_GIMMICKS.includes(product)){
     goToDescribeAndGenerate();
     return;
   }
@@ -7139,6 +7196,16 @@ function setOptionSpotlight(cls){
 }
 
 function handOffToIdeaAfterProductChoice(){
+  // Declared-BYO: there is no idea to hand off to (the box is hidden and
+  // the description is meaningless to a photo that prints as-is). Their
+  // product is finished, so land them on Generate directly.
+  if(byoDeclaredIntent==='byo'){
+    document.body.classList.remove('ideafirst-focus');
+    const byoGuide=document.getElementById('finalGenerateGuidance');
+    if(byoGuide)byoGuide.classList.add('visible');
+    smoothScrollToTarget('generateTokenNote','end');
+    return;
+  }
   setOptionSpotlight('ideafirst-focus');
   const guide=document.getElementById('finalGenerateGuidance');
   if(guide)guide.classList.add('visible');
@@ -10488,14 +10555,17 @@ async function callGenerateAPI({ workingImage, prompt, refImageA, refImageB, pan
 }
 
 async function generate(){
-  // An exact transfer (empty idea box, no wraparound, no gimmick, no
-  // reference photos) never calls the AI, so it costs no image credits --
-  // an out-of-credits customer must NOT be blocked from it. Same
-  // eligibility test as the real guard further down; this one only decides
-  // whether the empty-balance popup applies.
-  const couldBeExactTransfer=!document.getElementById('ideaDesc').value.trim()
-    && !((product==='mug'||product==='water bottle')&&mugPrintMode==='wraparound')
-    && !windowSillChoice && !refImageAData && !refImageBData;
+  // An exact transfer never calls the AI, so it costs no image credits --
+  // an out-of-credits customer must NOT be blocked from it. A declared-BYO
+  // customer is a transfer by definition. And an empty box on WRAPAROUND
+  // skips the popup too, not because it's free but because the guard just
+  // below refuses it with a message that NAMES the free way out ("switch
+  // to Classic") -- a broke customer deserves that answer, not a buy-
+  // credits popup that contradicts the free lane's promise.
+  const emptyIdeaBoxNow=!document.getElementById('ideaDesc').value.trim();
+  const wrapModeNow=(product==='mug'||product==='water bottle')&&mugPrintMode==='wraparound';
+  const couldBeExactTransfer=byoDeclaredIntent==='byo'
+    || (emptyIdeaBoxNow && (wrapModeNow || (!windowSillChoice && !refImageAData && !refImageBData)));
   if(currentTokenBalance!==null&&currentTokenBalance<=0&&!isAdminDevice&&!couldBeExactTransfer){
     showTokenInfoPopup(document.getElementById('generateBtn'));
     return;
@@ -10578,13 +10648,22 @@ async function generate(){
   const ideaTextForTransfer=document.getElementById('ideaDesc').value.trim();
   const wrapActiveForTransfer=(product==='mug'||product==='water bottle') && mugPrintMode==='wraparound';
   let exactTransfer=false;
-  if(!ideaTextForTransfer){
-    if(wrapActiveForTransfer){
+  // Declared-BYO is a transfer BY DECLARATION, not by an empty box:
+  // chooseIntentBYO() cleared the idea text, refs, gimmicks and pinned the
+  // print mode to classic, and every surface that could re-set them is
+  // hidden -- so nothing here can route this customer into the AI. The
+  // wraparound refusal stays above it as a belt: it should be unreachable
+  // for BYO (the Print Style card is hidden), but if some future path
+  // re-enables wraparound, refusing honestly beats silently generating.
+  if(!ideaTextForTransfer || byoDeclaredIntent==='byo'){
+    if(wrapActiveForTransfer && !ideaTextForTransfer){
       setStatus('A wraparound paints one continuous scene, so it needs a description. Want your photo exactly as it is instead? Switch Print Style to Classic and leave this box empty.',true);
       handOffToIdeaAfterProductChoice();
       return;
     }
-    if(!windowSillChoice && !refImageAData && !refImageBData){
+    if(byoDeclaredIntent==='byo'){
+      exactTransfer=true;
+    } else if(!windowSillChoice && !refImageAData && !refImageBData){
       const what=PRODUCT_IDEA_LABEL[product]||product||'product';
       // If the customer already picked a real Art Style (Line Art, Comic
       // Strip, etc.) that style only ever gets APPLIED by the AI -- an
@@ -10599,13 +10678,12 @@ async function generate(){
       const styleNote=(style!==MUGGSHOTZ_CLASSIC_STYLE && chosenStyleLabel)
         ? ' Note: you picked a style ('+chosenStyleLabel+') back on Art Style \u2014 that only applies when the AI actually draws something, so an exact transfer will NOT use it. Your photo goes on as plain as it was uploaded.'
         : '';
-      // Already declared at the intent gate -- asking again here would be
-      // asking the same question twice. styleNote can never fire for this
-      // customer anyway (BYO hides Art Style, so style never left the
-      // default), which is why skipping straight past is safe.
-      const ok=(byoDeclaredIntent==='byo')
-        ? true
-        : window.confirm('Use your photo exactly as it is? With the description box empty we skip the AI completely \u2014 your photo goes onto your '+what+' unchanged (just fitted to size), and it costs no image credits.'+styleNote+' OK = use my photo as-is. Cancel = go back and describe an idea.');
+      // This branch is only ever reached by an UNDECLARED (or AI-declared)
+      // customer who happened to leave the box empty -- a declared-BYO
+      // customer already took the exactTransfer=true branch above, and
+      // chooseIntentBYO() reset the style to default, so the styleNote
+      // warning genuinely covers everyone who can see this confirm.
+      const ok=window.confirm('Use your photo exactly as it is? With the description box empty we skip the AI completely \u2014 your photo goes onto your '+what+' unchanged (just fitted to size), and it costs no image credits.'+styleNote+' OK = use my photo as-is. Cancel = go back and describe an idea.');
       if(!ok){
         handOffToIdeaAfterProductChoice();
         return;
@@ -12352,6 +12430,11 @@ function recallLastPhotoUsed(){
     setMainSlotImage(photo);
     saveWorkshop();
     hideWorkshopRecallRow();
+    // A recalled photo is a raw photo landing in the flow -- exactly the
+    // moment the intent gate exists for. Without this, recall was a side
+    // door that revealed the whole rail with no declaration ever forced
+    // (byoDeclaredIntent left null), caught by the adversarial review.
+    openIntentGate();
   }catch(e){console.error('Could not recall last photo used:',e);}
 }
 
@@ -12370,6 +12453,14 @@ function recallLastGeneratedImage(){
     }
     saveWorkshop();
     hideWorkshopRecallRow();
+    // Recalling a finished AI DESIGN is not a raw-photo moment, so no gate
+    // -- but the intent should be declared rather than left null: this
+    // customer is manifestly on the AI lane (they are holding its output),
+    // and recording that keeps every byoDeclaredIntent check downstream
+    // honest. applyByoRailVisibility() also un-hides any cards a BYO
+    // declaration earlier in the session removed.
+    byoDeclaredIntent='ai';
+    applyByoRailVisibility();
   }catch(e){console.error('Could not recall last generated image:',e);}
 }
 // PURGE BEFORE ANYTHING READS (2026-08-27, Alyx lost a finished piece to
@@ -12529,17 +12620,14 @@ function resetEverythingFreshStart(){
   const fadeToggle=document.getElementById('panoramaFadeToggle');
   if(fadeToggle)fadeToggle.checked=false;
 
-  // THE INTENT GATE resets too -- a BYO choice hid Art Style and the Track
-  // fork outright (the one deliberate exception to dim-not-cage); a fresh
-  // start must undo that, or the next upload would silently stay gated
-  // even if this customer would have chosen AI the second time.
+  // THE INTENT GATE resets too -- a BYO choice hid the AI-only surfaces
+  // outright (the one deliberate exception to dim-not-cage); a fresh start
+  // must undo all of it through the same symmetric helper the gate itself
+  // uses, so the restore list can never drift from the hide list.
   byoDeclaredIntent=null;
+  applyByoRailVisibility();
   const gateOverlay=document.getElementById('intentGateOverlay');
   if(gateOverlay)gateOverlay.style.display='none';
-  const styleCardReset=document.getElementById('styleSectionCard');
-  if(styleCardReset)styleCardReset.style.display='';
-  const trackCardReset=document.getElementById('trackForkCard');
-  if(trackCardReset)trackCardReset.style.display='';
 
   selectedFrame=null;
   frameColors={};

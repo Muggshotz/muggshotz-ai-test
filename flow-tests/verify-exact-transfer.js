@@ -337,6 +337,118 @@ scenarios.byoStillNeedsWordsForWraparound = async (page, log) => {
 };
 BYO_SETUP.add('byoStillNeedsWordsForWraparound');
 
+// ---- REAL CLICKS on the actual gate buttons. Every other scenario drives
+// chooseIntentAI/BYO via evaluate for speed, which means a broken onclick
+// would brick every real customer at upload while all suites stayed green
+// -- the adversarial review's sharpest harness-masking finding. These two
+// click the buttons the way a finger does. ----
+scenarios.gateButtonsWorkByRealClick_AI = async (page) => {
+  await page.locator('#fileInput').setInputFiles(require('path').join(__dirname, 'test-photo.jpg'));
+  await waitForIntentGate(page);
+  await page.click('#intentGateOverlay button:has-text("Let Our AI Create My Art")');
+  await T(page, 800);
+  const st = await page.evaluate(() => ({
+    gateGone: getComputedStyle(document.getElementById('intentGateOverlay')).display === 'none',
+    forkShown: document.getElementById('postUploadForkRow').style.display === 'flex',
+  }));
+  if (!st.gateGone) return 'FAIL: a real click on the AI button did not dismiss the gate';
+  if (!st.forkShown) return 'FAIL: a real click on the AI button did not reveal the rail';
+  return 'PASS: the AI gate button works by real click, not just by evaluate';
+};
+BYO_SETUP.add('gateButtonsWorkByRealClick_AI');
+
+scenarios.gateButtonsWorkByRealClick_BYO = async (page) => {
+  await page.locator('#fileInput').setInputFiles(require('path').join(__dirname, 'test-photo.jpg'));
+  await waitForIntentGate(page);
+  await page.click('#intentGateOverlay button:has-text("Supply My Own Finished Art")');
+  await T(page, 800);
+  const st = await page.evaluate(() => ({
+    gateGone: getComputedStyle(document.getElementById('intentGateOverlay')).display === 'none',
+    onProduct: document.body.classList.contains('product-focus'),
+  }));
+  if (!st.gateGone) return 'FAIL: a real click on the BYO button did not dismiss the gate';
+  if (!st.onProduct) return 'FAIL: a real click on the BYO button did not land on product picking';
+  return 'PASS: the BYO gate button works by real click, not just by evaluate';
+};
+BYO_SETUP.add('gateButtonsWorkByRealClick_BYO');
+
+// ---- THE RESURRECTION REGRESSION (the review's blocker): BYO, then a
+// mid-flow re-upload, then "AI" at the second gate. The first cut restored
+// the style card but left #trackForkCard display:none -- the rail then
+// dead-ended on a spotlight aimed at an invisible card. Both cards must
+// come back, through the symmetric helper. ----
+scenarios.byoThenReuploadThenAIRestoresTheWholeRail = async (page) => {
+  await uploadPhotoAndChooseBYO(page);
+  // A DIFFERENT file for the re-upload: setInputFiles with the identical
+  // file does not re-fire the change event, and a real re-uploading
+  // customer is picking a different photo anyway.
+  await page.locator('#fileInput').setInputFiles(require('path').join(__dirname, 'fake-generated.jpg'));
+  await waitForIntentGate(page);
+  await page.click('#intentGateOverlay button:has-text("Let Our AI Create My Art")');
+  await T(page, 800);
+  const st = await page.evaluate(() => ({
+    styleShown: getComputedStyle(document.getElementById('styleSectionCard')).display !== 'none',
+    trackShown: getComputedStyle(document.getElementById('trackForkCard')).display !== 'none',
+    forkRowShown: document.getElementById('postUploadForkRow').style.display === 'flex',
+    likenessShown: getComputedStyle(document.getElementById('likenessSectionCard')).display !== 'none',
+    ideaShown: getComputedStyle(document.getElementById('ideaCard')).display !== 'none',
+  }));
+  const missing = Object.entries(st).filter(([, v]) => !v).map(([k]) => k);
+  if (missing.length) return `FAIL: after BYO -> re-upload -> AI, still hidden: ${missing.join(', ')} — the rail dead-ends`;
+  return 'PASS: switching BYO -> AI at a second gate restores the entire rail (style, track fork, likeness, idea box)';
+};
+BYO_SETUP.add('byoThenReuploadThenAIRestoresTheWholeRail');
+
+// ---- The declaration must actually be ENFORCED down the rail: no gimmick
+// panel, no wraparound offer, no caricature knob, no ref pins, no idea box,
+// and the token note flipped to the free promise. ----
+scenarios.byoRailHidesTheAIParaphernalia = async (page) => {
+  await uploadPhotoAndChooseBYO(page);
+  const st = await page.evaluate(() => {
+    product = 'mug';
+    showDesignMethodCard(); // the single door into the gimmicks
+    return {
+      gimmicks: document.getElementById('designMethodCard').style.display === 'block',
+      likenessShown: getComputedStyle(document.getElementById('likenessSectionCard')).display !== 'none',
+      ideaShown: getComputedStyle(document.getElementById('ideaCard')).display !== 'none',
+      refPinShown: getComputedStyle(document.getElementById('refAZone')).display !== 'none',
+      printMode: mugPrintMode,
+      tokenNote: document.getElementById('generateTokenNote').textContent,
+    };
+  });
+  const bad = [];
+  if (st.gimmicks) bad.push('the AI gimmick panel opened for a declared-BYO customer');
+  if (st.likenessShown) bad.push('Degree of Caricature still visible');
+  if (st.ideaShown) bad.push('the idea box still visible');
+  if (st.refPinShown) bad.push('reference-photo pins still visible');
+  if (st.printMode !== 'three-panel') bad.push(`print mode is ${st.printMode}, not pinned to classic`);
+  if (!/free/i.test(st.tokenNote)) bad.push(`token note still says: ${st.tokenNote}`);
+  if (bad.length) return `FAIL: ${bad.join('; ')}`;
+  return 'PASS: a BYO declaration removes every AI surface — gimmicks, caricature knob, idea box, ref pins, wraparound — and the token note promises free';
+};
+BYO_SETUP.add('byoRailHidesTheAIParaphernalia');
+
+// ---- Workshop recall was a side door past the gate: a returning customer
+// clicked "Use Last Photo Uploaded" and got the whole rail with no
+// declaration ever forced. A recalled photo is a raw photo landing in the
+// flow — the gate's exact moment. ----
+scenarios.recallReopensTheGate = async (page) => {
+  await uploadPhoto(page); // upload + AI so saveWorkshop stores the photo
+  await page.reload({ waitUntil: 'domcontentloaded' });
+  await T(page, 1200);
+  const rowShown = await page.evaluate(() =>
+    document.getElementById('workshopRecallRow')?.style.display !== 'none');
+  if (!rowShown) return 'FAIL: the workshop recall row never appeared after reload — cannot test the side door';
+  await page.click('#recallPhotoBtn');
+  const opened = await page.waitForFunction(() => {
+    const o = document.getElementById('intentGateOverlay');
+    return o && getComputedStyle(o).display !== 'none';
+  }, null, { timeout: 8000 }).then(() => true).catch(() => false);
+  if (!opened) return 'FAIL: recalling the last photo bypassed the intent gate — the side door is open';
+  return 'PASS: recalling a raw photo opens the intent gate like any other upload';
+};
+BYO_SETUP.add('recallReopensTheGate');
+
 scenarios.resetRearmsTheGate = async (page) => {
   await uploadPhotoAndChooseBYO(page);
   await page.evaluate(() => {

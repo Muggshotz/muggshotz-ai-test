@@ -134,10 +134,14 @@ async function openStudio(page) {
 // then scrolled against a still-resizing photo (the stale-scroll landing
 // short), and the late-opening gate was left covering the page.
 async function waitForIntentGate(page) {
+  // No catch: the gate is mandatory now, so an upload that never produces
+  // it IS the failure -- swallowing it here would let uploadPhoto()
+  // fabricate the post-upload state and keep every suite green through a
+  // broken gate (the adversarial review's harness-masking finding).
   await page.waitForFunction(() => {
     const o = document.getElementById('intentGateOverlay');
     return o && getComputedStyle(o).display !== 'none';
-  }, null, { timeout: 15000 }).catch(() => {}); // old builds have no gate — proceed
+  }, null, { timeout: 15000 });
 }
 
 async function uploadPhoto(page) {
