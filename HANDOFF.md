@@ -565,7 +565,25 @@ v=3, v=4 and v=7. **Always tell them the number when announcing a push.**
 - Alyx works in **real time, one bug at a time**, from live runs with screenshots. Expect reports
   mid-turn. Fix them one at a time, verify, push, and **tell them the version number**.
 
-## CHECKOUT IS WIRED — tomorrow is go-live day (written 2026-08-28, end of session)
+## THE CHECKLIST PROTOCOL (Alyx, 2026-08-28 afternoon — supersedes "go-live today")
+
+Go-live now runs through checklists, on this protocol, in Alyx's words:
+- **Minimum 10 checks per day**, so the current 39-row matrix "must and will be done by
+  Monday" — but Alyx does "not relinquish the right to do 20 or 30 if it's going smoothly."
+- When the current list is done, **Claude makes up another list of 20 simple checks.**
+  ("It seems like these checks are uncovering other checks and other bugs, so they are
+  proving to be quite useful." — they are: day one's eight rows flushed out a BYO dead-end,
+  a missing back mechanism, an invisible selection outline, a backwards price label, and
+  the two-track upload redesign.)
+- **Termination condition:** "When I am able to think of no other checks, and when all
+  checks executed produce 'no rows returned', we will be done with all checklists and
+  ready to go public." ("No rows returned" = a check that surfaces no defects.)
+- The matrix lives at https://claude.ai/code/artifact/29030614-0fb9-4d98-894f-c5ab243effca
+  (39 rows; checkbox state is in Alyx's browser localStorage). Every defect a row surfaces
+  gets fixed, pinned by a regression scenario, pushed to main, and deploy-verified before
+  Alyx retests — that loop is the working rhythm.
+
+## CHECKOUT IS WIRED — go-live day (written 2026-08-28, end of session)
 
 Alyx's directive, verbatim intent: complete checkout wiring start to finish, get it ready to go
 online, run a final debugging sweep ("extensive but reasonable"), then Alyx personally orders an
