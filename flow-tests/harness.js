@@ -128,7 +128,23 @@ async function openStudio(page) {
 async function uploadPhoto(page) {
   const input = page.locator('#fileInput');
   await input.setInputFiles(path.join(SCRATCH, 'test-photo.jpg'));
-  await page.waitForTimeout(1200); // resize + fork reveal
+  await page.waitForTimeout(600);
+  // THE INTENT GATE (2026-08-28): every upload now stops on a hard "AI or
+  // your own art?" choice before Art Style/the Track fork ever show. Every
+  // suite except verify-exact-transfer.js's BYO-gate scenarios is about the
+  // AI rail, so this reproduces the exact prior default by choosing AI here
+  // -- one suite-wide seam instead of touching dozens of scenario files.
+  await page.evaluate(() => { if (typeof chooseIntentAI === 'function') chooseIntentAI(); });
+  await page.waitForTimeout(600); // fork reveal
+}
+
+// For scenarios that specifically test the "supply your own art" declaration.
+async function uploadPhotoAndChooseBYO(page) {
+  const input = page.locator('#fileInput');
+  await input.setInputFiles(path.join(SCRATCH, 'test-photo.jpg'));
+  await page.waitForTimeout(600);
+  await page.evaluate(() => { if (typeof chooseIntentBYO === 'function') chooseIntentBYO(); });
+  await page.waitForTimeout(600);
 }
 
 // Utility: is an element genuinely visible AND not consumed by a dimming
@@ -190,4 +206,4 @@ async function passFadePage(page, { timeout = 20000 } = {}) {
   return true;
 }
 
-module.exports = { launch, openStudio, uploadPhoto, interactable, bodyFocusClasses, dismissAlerts, passFadePage, BASE };
+module.exports = { launch, openStudio, uploadPhoto, uploadPhotoAndChooseBYO, interactable, bodyFocusClasses, dismissAlerts, passFadePage, BASE };

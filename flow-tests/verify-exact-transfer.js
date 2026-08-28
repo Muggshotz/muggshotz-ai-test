@@ -10,7 +10,7 @@
 // The declined path (Cancel = land back on the idea rail, nothing charged)
 // is asserted product-by-product in verify-coaster-mousepad.js and
 // verify-approve-handoff.js; this suite owns the accepted path.
-const { launch, openStudio, uploadPhoto, dismissAlerts, BASE } = require('./harness');
+const { launch, openStudio, uploadPhoto, uploadPhotoAndChooseBYO, dismissAlerts, BASE } = require('./harness');
 
 const T = (page, ms) => page.waitForTimeout(ms);
 
@@ -217,6 +217,136 @@ scenarios.promptKitShapesToTheProduct = async (page) => {
   return 'PASS: the Prompt Kit shapes to the product and leaks nothing of the house prompts';
 };
 
+// ================= THE INTENT GATE (Alyx, 2026-08-28) =================
+// "One should be forced to indicate whether or not they will be supplying
+// their own art or whether or not they will be using our generator...
+// this panel should not be accessible to them." A hard choice, not a dim:
+// Art Style and the Track fork are genuinely display:none for a declared
+// BYO customer, not merely spotlighted away from. These scenarios drive
+// their own setup (uploadPhotoAndChooseBYO / the raw gate), so they are
+// marked BYO_SETUP and the runner below skips the default uploadPhoto.
+const BYO_SETUP = new Set();
+
+scenarios.gateBlocksEverythingUntilChosen = async (page) => {
+  const input = page.locator('#fileInput');
+  await input.setInputFiles(require('path').join(__dirname, 'test-photo.jpg'));
+  await page.waitForTimeout(700);
+  const st = await page.evaluate(() => {
+    const overlay = document.getElementById('intentGateOverlay');
+    const styleCard = document.getElementById('styleSectionCard');
+    const mid = (() => {
+      const r = styleCard.getBoundingClientRect();
+      const x = Math.min(Math.max(r.left + r.width / 2, 0), innerWidth - 1);
+      const y = Math.min(Math.max(r.top + r.height / 2, 0), innerHeight - 1);
+      return document.elementFromPoint(x, y);
+    })();
+    return {
+      overlayShown: overlay && getComputedStyle(overlay).display !== 'none',
+      styleCardCovered: !(mid === styleCard || styleCard.contains(mid)),
+    };
+  });
+  if (!st.overlayShown) return 'FAIL: uploading a photo did not open the intent gate';
+  if (!st.styleCardCovered) return 'FAIL: Art Style is still the actual hit-target behind the gate — not a real block';
+  return 'PASS: the gate opens on upload and genuinely covers Art Style, not just dims it';
+};
+BYO_SETUP.add('gateBlocksEverythingUntilChosen');
+
+scenarios.chooseAIKeepsThePriorRailIntact = async (page) => {
+  const input = page.locator('#fileInput');
+  await input.setInputFiles(require('path').join(__dirname, 'test-photo.jpg'));
+  await page.waitForTimeout(700);
+  await page.evaluate(() => chooseIntentAI());
+  await page.waitForTimeout(700);
+  const st = await page.evaluate(() => ({
+    gateGone: getComputedStyle(document.getElementById('intentGateOverlay')).display === 'none',
+    styleShown: getComputedStyle(document.getElementById('styleSectionCard')).display !== 'none',
+    forkShown: document.getElementById('postUploadForkRow').style.display === 'flex',
+  }));
+  if (!st.gateGone) return 'FAIL: gate still showing after choosing AI';
+  if (!st.styleShown || !st.forkShown) return 'FAIL: Art Style / the Track fork did not appear for the AI choice';
+  return 'PASS: choosing AI dismisses the gate and reveals Art Style + the Track fork exactly as before';
+};
+BYO_SETUP.add('chooseAIKeepsThePriorRailIntact');
+
+scenarios.chooseBYOHidesStyleAndLandsOnProduct = async (page) => {
+  await uploadPhotoAndChooseBYO(page);
+  const st = await page.evaluate(() => ({
+    gateGone: getComputedStyle(document.getElementById('intentGateOverlay')).display === 'none',
+    styleHidden: getComputedStyle(document.getElementById('styleSectionCard')).display === 'none',
+    forkHidden: getComputedStyle(document.getElementById('trackForkCard')).display === 'none',
+    onProduct: document.body.classList.contains('product-focus'),
+  }));
+  if (!st.gateGone) return 'FAIL: gate still showing after choosing BYO';
+  if (!st.styleHidden) return 'FAIL: Art Style is still reachable after declaring BYO — the whole point of the hard gate';
+  if (!st.forkHidden) return 'FAIL: the Track fork is still reachable after declaring BYO';
+  if (!st.onProduct) return 'FAIL: BYO did not land on product picking';
+  return 'PASS: choosing BYO genuinely removes Art Style and the Track fork, lands straight on product picking';
+};
+BYO_SETUP.add('chooseBYOHidesStyleAndLandsOnProduct');
+
+scenarios.byoDeclaredCustomerSkipsTheConfirm = async (page, log, mockupBodies) => {
+  await uploadPhotoAndChooseBYO(page);
+  await page.locator('#productCard .btn-select[data-val="mouse pad"]').click({ force: true });
+  await T(page, 1200);
+  await dismissAlerts(page);
+  await armConfirm(page, false); // if this fires at all, the scenario should fail on the confirm-count check below
+  await page.evaluate(() => document.getElementById('generateBtn')?.scrollIntoView({ block: 'center' }));
+  await page.click('#generateBtn');
+  await T(page, 500);
+  const calls = await page.evaluate(() => window.__confirmCalls || []);
+  if (calls.length) return `FAIL: a declared-BYO customer was asked to confirm again (${JSON.stringify(calls)})`;
+  await waitApprove(page);
+  const gen = log.apiCalls.filter(c => c.path === '/api/generate');
+  const nonUpload = gen.filter(c => c.action !== 'uploadComposite');
+  if (nonUpload.length) return 'FAIL: the AI ran anyway for a declared-BYO customer';
+  return 'PASS: a customer who already declared BYO at the gate skips the mid-flow confirm entirely';
+};
+BYO_SETUP.add('byoDeclaredCustomerSkipsTheConfirm');
+
+scenarios.byoStillNeedsWordsForWraparound = async (page, log) => {
+  // Same reliable pattern as wraparoundStillNeedsWords above: call
+  // generate() directly against seeded state rather than clicking through
+  // the mug rail's own UI (that full click-through belongs to
+  // verify-wraparound.js). This scenario only owns one question: does a
+  // BYO declaration change the wraparound guard's answer? It must not.
+  await uploadPhotoAndChooseBYO(page);
+  await armConfirm(page, true);
+  await page.evaluate(() => {
+    product = 'mug';
+    mugPrintMode = 'wraparound';
+    mugSizeChosenPreGen = true;
+    mugColorFinishedPreGen = true;
+    generate();
+  });
+  await T(page, 1200);
+  const calls = await page.evaluate(() => window.__confirmCalls || []);
+  if (calls.length) return 'FAIL: wraparound skipped straight to a confirm — a photo cannot honestly become a panorama regardless of declared intent';
+  const gen = log.apiCalls.filter(c => c.path === '/api/generate');
+  if (gen.length) return 'FAIL: wraparound generated anyway for a declared-BYO customer';
+  return 'PASS: declaring BYO does not bypass the wraparound guard — that one still needs a description';
+};
+BYO_SETUP.add('byoStillNeedsWordsForWraparound');
+
+scenarios.resetRearmsTheGate = async (page) => {
+  await uploadPhotoAndChooseBYO(page);
+  await page.evaluate(() => {
+    window.confirm = () => true; // the "reset everything" confirm
+    resetEverythingFreshStart();
+  });
+  await T(page, 500);
+  const st = await page.evaluate(() => ({
+    styleDisplay: document.getElementById('styleSectionCard').style.display,
+    trackDisplay: document.getElementById('trackForkCard').style.display,
+    intent: typeof byoDeclaredIntent !== 'undefined' ? byoDeclaredIntent : 'MISSING',
+  }));
+  if (st.styleDisplay === 'none') return 'FAIL: Art Style is still hidden after a full reset — the next customer could be a different person';
+  if (st.trackDisplay === 'none') return 'FAIL: the Track fork is still hidden after a full reset';
+  if (st.intent !== null) return `FAIL: byoDeclaredIntent did not reset to null (got ${st.intent})`;
+  return 'PASS: a full reset un-hides Art Style/the Track fork and clears the declared intent, so the gate re-arms for a fresh upload';
+};
+BYO_SETUP.add('resetRearmsTheGate');
+// ================= END THE INTENT GATE =================
+
 (async () => {
   let fails = 0;
   for (const [name, fn] of Object.entries(scenarios)) {
@@ -229,8 +359,10 @@ scenarios.promptKitShapesToTheProduct = async (page) => {
     });
     try {
       await openStudio(page);
-      await uploadPhoto(page);
-      await dismissAlerts(page);
+      if (!BYO_SETUP.has(name)) {
+        await uploadPhoto(page);
+        await dismissAlerts(page);
+      }
       const result = await fn(page, log, mockupBodies);
       console.log(`[${name}] ${result}`);
       if (/^FAIL/.test(result)) fails++;

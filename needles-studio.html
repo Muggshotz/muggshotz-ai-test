@@ -1346,6 +1346,27 @@ Tell Needles <span style="color:#7ab8ff">what you have in mind</span>
 </div>
 </div>
 
+<!-- THE INTENT GATE (Alyx, 2026-08-28): "one should be forced to indicate
+     whether or not they will be supplying their own art or whether or not
+     they will be using our generator... this panel should not be
+     accessible to them." A HARD choice, deliberately -- Alyx: "If they're
+     not smart enough to understand or figure out the difference... they're
+     probably not gonna buy our product in the first place." Fires the
+     instant a photo lands, before Art Style or the Track fork are ever
+     shown. AI keeps the exact prior rail (showPostUploadFork). BYO hides
+     Art Style AND the Track fork outright (real display:none, not a dim --
+     the one deliberate exception to "a dim is a guide, not a cage", because
+     neither card means anything once the AI is off the table) and lands
+     straight on product picking. -->
+<div id="intentGateOverlay" class="step-lock-overlay" style="display:none;align-items:center">
+<div class="card" style="max-width:560px;width:100%;margin:auto;text-align:center">
+<div class="card-title">🎨 How Will You Get Your Art?</div>
+<div class="note" style="margin-top:0;margin-bottom:1rem">One quick choice before we get started — it decides the rest of this page.</div>
+<button type="button" class="btn-select" style="display:block;width:100%;padding:1rem;margin-bottom:.7rem" onclick="chooseIntentAI()">🤖 Let Our AI Create My Art<div class="note" style="margin-top:4px;color:#29a3ff;font-size:11px">Turn my photo into a caricature, cartoon, line art, and more — costs image credits.</div></button>
+<button type="button" class="btn-select" style="display:block;width:100%;padding:1rem" onclick="chooseIntentBYO()">📸 I'll Supply My Own Finished Art<div class="note" style="margin-top:4px;color:#29a3ff;font-size:11px">Skip the AI — put my photo on the product exactly as it is. Free, no credits needed.</div></button>
+</div>
+</div>
+
 <div id="mockupLoadingOverlay" class="step-lock-overlay" style="display:none;background:#000;align-items:center">
 <div style="text-align:center;font-size:20px;font-weight:800;color:#2196ff;animation:mugSelectFlash 1s ease-in-out infinite">Please wait while your mock-up is being generated...</div>
 </div>
@@ -2313,7 +2334,47 @@ function startPhotoGuide(){
   // guaranteed visible along with the Track 1/2 buttons above it.
   clearTimeout(openingGuideTimer);
   openingGuideDone=true;
+  openIntentGate();
+}
+
+// THE INTENT GATE (Alyx, 2026-08-28): every upload now stops here first.
+// See the HTML comment above #intentGateOverlay for the full reasoning.
+let byoDeclaredIntent=null; // null | 'ai' | 'byo'
+
+function openIntentGate(){
+  const overlay=document.getElementById('intentGateOverlay');
+  if(!overlay)return;
+  document.body.classList.add('step-locked');
+  overlay.style.display='flex';
+}
+
+function chooseIntentAI(){
+  byoDeclaredIntent='ai';
+  const overlay=document.getElementById('intentGateOverlay');
+  if(overlay)overlay.style.display='none';
+  document.body.classList.remove('step-locked');
+  // Exactly the prior default rail: Art Style shown and spotlit, then the
+  // Track fork, unchanged for a customer who chose the AI.
   showPostUploadFork();
+}
+
+function chooseIntentBYO(){
+  byoDeclaredIntent='byo';
+  const overlay=document.getElementById('intentGateOverlay');
+  if(overlay)overlay.style.display='none';
+  document.body.classList.remove('step-locked');
+  // The one deliberate exception to "a dim is a guide, not a cage": these
+  // two cards ask questions that only mean something to the AI (which
+  // this customer has already declared they are not using), so they are
+  // truly removed from the page rather than merely dimmed -- a scroll up
+  // will not find them. resetEverythingFreshStart() restores them.
+  const styleCard=document.getElementById('styleSectionCard');
+  if(styleCard)styleCard.style.display='none';
+  const trackCard=document.getElementById('trackForkCard');
+  if(trackCard)trackCard.style.display='none';
+  // Same landing a Track 1 ("product first") customer gets -- there is no
+  // description track for someone supplying their own finished art.
+  pickTrackProduct();
 }
 
 // ART STYLE IS NOW THE FIRST DECISION AFTER THE PHOTO (Aug 2026, Alyx):
@@ -10538,7 +10599,13 @@ async function generate(){
       const styleNote=(style!==MUGGSHOTZ_CLASSIC_STYLE && chosenStyleLabel)
         ? ' Note: you picked a style ('+chosenStyleLabel+') back on Art Style \u2014 that only applies when the AI actually draws something, so an exact transfer will NOT use it. Your photo goes on as plain as it was uploaded.'
         : '';
-      const ok=window.confirm('Use your photo exactly as it is? With the description box empty we skip the AI completely \u2014 your photo goes onto your '+what+' unchanged (just fitted to size), and it costs no image credits.'+styleNote+' OK = use my photo as-is. Cancel = go back and describe an idea.');
+      // Already declared at the intent gate -- asking again here would be
+      // asking the same question twice. styleNote can never fire for this
+      // customer anyway (BYO hides Art Style, so style never left the
+      // default), which is why skipping straight past is safe.
+      const ok=(byoDeclaredIntent==='byo')
+        ? true
+        : window.confirm('Use your photo exactly as it is? With the description box empty we skip the AI completely \u2014 your photo goes onto your '+what+' unchanged (just fitted to size), and it costs no image credits.'+styleNote+' OK = use my photo as-is. Cancel = go back and describe an idea.');
       if(!ok){
         handOffToIdeaAfterProductChoice();
         return;
@@ -12461,6 +12528,18 @@ function resetEverythingFreshStart(){
   document.body.classList.add('initial-upload-focus');
   const fadeToggle=document.getElementById('panoramaFadeToggle');
   if(fadeToggle)fadeToggle.checked=false;
+
+  // THE INTENT GATE resets too -- a BYO choice hid Art Style and the Track
+  // fork outright (the one deliberate exception to dim-not-cage); a fresh
+  // start must undo that, or the next upload would silently stay gated
+  // even if this customer would have chosen AI the second time.
+  byoDeclaredIntent=null;
+  const gateOverlay=document.getElementById('intentGateOverlay');
+  if(gateOverlay)gateOverlay.style.display='none';
+  const styleCardReset=document.getElementById('styleSectionCard');
+  if(styleCardReset)styleCardReset.style.display='';
+  const trackCardReset=document.getElementById('trackForkCard');
+  if(trackCardReset)trackCardReset.style.display='';
 
   selectedFrame=null;
   frameColors={};
