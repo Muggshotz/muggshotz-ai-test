@@ -89,6 +89,24 @@ function calculateUpsellCharge(placements) {
   return distinctCount === 1 ? 3 : 6;
 }
 
+// FEES (Alyx, 2026-08-28): "why are we eating the cost of stripe?...
+// just call that in the mysterious, somewhat obsequious, and undefined
+// 'fees' category." Full pass-through of Stripe's cut (2.9% + 30c per
+// charge), grossed up so Stripe's bite of the fee itself is covered too:
+//   fee = (rate * subtotal + fixed) / (1 - rate), rounded UP to the cent.
+// Applied uniformly to every order regardless of payment method, which
+// makes it plain pricing (a service fee), NOT a card surcharge -- card
+// surcharges are restricted in some states; a uniform fee line is not.
+// The label is exactly "Fees", per Alyx. Tax's share of Stripe's cut is
+// not recouped (tax is computed by Stripe after this session is built);
+// that residue is fractions of a cent-to-pennies per order.
+const STRIPE_FEE_RATE = 0.029;
+const STRIPE_FEE_FIXED_CENTS = 30;
+function feeLineCents(subtotalCents) {
+  if (!subtotalCents || subtotalCents <= 0) return 0;
+  return Math.ceil((STRIPE_FEE_RATE * subtotalCents + STRIPE_FEE_FIXED_CENTS) / (1 - STRIPE_FEE_RATE));
+}
+
 function resolvePrice(product, sizeLabel, colorName) {
   const sizeEntry = product.sizes?.[sizeLabel];
   if (!sizeEntry) throw new Error(`Unknown size "${sizeLabel}" for this product.`);
@@ -188,6 +206,13 @@ async function handleProductOrder(req, res) {
       quantity: 1
     });
   }
+  const feeCents = feeLineCents(productCents + shippingCents);
+  if (feeCents > 0) {
+    line_items.push({
+      price_data: { currency: "usd", product_data: { name: "Fees" }, unit_amount: feeCents },
+      quantity: 1
+    });
+  }
 
   let imageUrlA = "", imageUrlB = "", imageUrlC = "";
   if (product.layoutType === "three-slot-wrap") {
@@ -242,7 +267,8 @@ async function handleProductOrder(req, res) {
       zip: shippingAddress.zip || "",
       referral_code: cleanReferralCode || "",
       email_discount_eligible: emailDiscountEligible ? "true" : "false",
-      base_price: String(basePrice)
+      base_price: String(basePrice),
+      fees_cents: String(feeCents)
     },
     success_url: `${origin}/order.html?checkout=success`,
     cancel_url: `${origin}/order.html?checkout=cancelled`
@@ -259,6 +285,9 @@ async function handleTokenPurchase(req, res) {
 
   const origin = req.headers.origin || "https://muggshotz-ai-test.vercel.app";
 
+  // Fees on token packs too -- proportionally these hurt the most
+  // uncovered (30c fixed on a $5 pack is where Stripe's bite peaks).
+  const packFeeCents = feeLineCents(pack.amountCents);
   const session = await stripe.checkout.sessions.create({
     mode: "payment",
     line_items: [{
@@ -268,8 +297,16 @@ async function handleTokenPurchase(req, res) {
         unit_amount: pack.amountCents
       },
       quantity: 1
+    },
+    {
+      price_data: {
+        currency: "usd",
+        product_data: { name: "Fees" },
+        unit_amount: packFeeCents
+      },
+      quantity: 1
     }],
-    metadata: { device_id: deviceId, pack_id: packId },
+    metadata: { device_id: deviceId, pack_id: packId, fees_cents: String(packFeeCents) },
     success_url: `${origin}/index.html?checkout=success`,
     cancel_url: `${origin}/index.html?checkout=cancelled`
   });

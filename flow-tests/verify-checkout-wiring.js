@@ -167,6 +167,43 @@ scenarios.submitSendsTheWholeOrder = async (page) => {
   return 'PASS: the real submit carries design, panorama, wrap surcharge, gift text and address intact';
 };
 
+// ---- Fees (Alyx, 2026-08-28): full Stripe pass-through in the mysterious
+// "Fees" category, on product orders AND token packs, and shown to the
+// customer in the order summary BEFORE payment (the no-surprises rule).
+// The formula must gross up -- (2.9% x subtotal + 30c) / (1 - 2.9%) --
+// or Stripe's bite of the fee itself goes uncovered. ----
+scenarios.feesRideEveryCharge = async (page) => {
+  const session = fs.readFileSync(path.join(ROOT, 'api', 'create-checkout-session.js'), 'utf8');
+  const order = fs.readFileSync(path.join(ROOT, 'order.html'), 'utf8');
+  const bad = [];
+  if (!/function feeLineCents/.test(session)) bad.push('no feeLineCents helper in the session builder');
+  if (!/1 - STRIPE_FEE_RATE/.test(session)) bad.push('server fee is not grossed up');
+  if ((session.match(/name: "Fees"/g) || []).length < 2) bad.push('the "Fees" line is not on both product orders and token packs');
+  if (!/fees_cents/.test(session)) bad.push('fee never recorded in session metadata');
+  if (!/summaryFees/.test(order)) bad.push('order summary has no Fees row');
+  if (bad.length) return `FAIL: ${bad.join('; ')}`;
+
+  // Live check: the displayed fee follows the formula and the total includes it.
+  await page.addInitScript(() => {
+    localStorage.setItem('muggshotz_pending_order', JSON.stringify({
+      placements: { left: null, front: 'https://example.com/f.png', right: null },
+      deviceId: 'test-dev', productIcon: 'mouse pad'
+    }));
+  });
+  await page.goto(`${BASE}/order.html`, { waitUntil: 'domcontentloaded' });
+  await T(page, 1500);
+  const st = await page.evaluate(() => {
+    const num = (id) => parseFloat((document.getElementById(id)?.textContent || '').replace(/[^0-9.]/g, ''));
+    return { base: num('summaryBase'), ship: num('summaryShipping'), fees: num('summaryFees'), total: num('summaryTotal') };
+  });
+  if (!(st.fees > 0)) return `FAIL: no fee displayed (${JSON.stringify(st)})`;
+  const subtotalCents = Math.round((st.base + st.ship) * 100);
+  const expected = Math.ceil((0.029 * subtotalCents + 30) / (1 - 0.029)) / 100;
+  if (Math.abs(st.fees - expected) > 0.001) return `FAIL: displayed fee $${st.fees} != formula $${expected}`;
+  if (Math.abs(st.total - (st.base + st.ship + st.fees)) > 0.005) return `FAIL: total $${st.total} does not include the fee`;
+  return `PASS: Fees line follows the gross-up formula ($${st.fees} on $${(st.base + st.ship).toFixed(2)}), shown before payment, on both charge lanes`;
+};
+
 // ---- 5. The insulated 40oz — Alyx's first live order — arrives whole. ----
 // Front/back split art, preselected cup and colour. The studio now sends the
 // cup's identity across the hop and the order page honours it through the
