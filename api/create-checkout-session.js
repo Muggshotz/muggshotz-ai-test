@@ -200,6 +200,16 @@ async function handleProductOrder(req, res) {
   } else {
     imageUrlA = singleImage || "";
   }
+  // The uncut panorama, when the studio produced one (mug Wraparound). The
+  // print file is built straight from this single strip; without it the
+  // server falls back to reassembling the three thirds -- same pixels, but
+  // the strip is the source of truth and it must survive the payment hop.
+  const imageUrlD = req.body.panoramaImage || "";
+  // The customer PAYS for the gift message (GIFT_MESSAGE_PRICE above), so the
+  // text itself must survive into the order record -- it used to be charged
+  // and then dropped on the floor, never stored anywhere. Stripe metadata
+  // values cap at 500 chars, so trim with room to spare.
+  const giftMessageText = (giftMessage || "").trim().slice(0, 450);
 
   const session = await stripe.checkout.sessions.create({
     mode: "payment",
@@ -217,6 +227,8 @@ async function handleProductOrder(req, res) {
       image_url_a: imageUrlA,
       image_url_b: imageUrlB,
       image_url_c: imageUrlC,
+      image_url_d: imageUrlD,
+      gift_message: giftMessageText,
       customer_name: customerName || "",
       first_name: shippingAddress.first_name || "",
       last_name: shippingAddress.last_name || "",

@@ -913,6 +913,13 @@ fullWrapEnabled = pendingOrder?.mugPrintMode === 'wraparound';
 
 if (pendingOrder?.preselectedMugStyle && MUG_STYLES[pendingOrder.preselectedMugStyle]) {
   selectedStyle = pendingOrder.preselectedMugStyle;
+  // A preselected style IS a chosen style. The customer picked it in the
+  // studio's own Style & Color flow; without this flag,
+  // validateMugSelectionsAndFlash blocked Continue to Payment with "Please
+  // select a style" while that very style sat highlighted on screen -- the
+  // NORMAL arrival path from the studio could not pay without re-clicking a
+  // tile it had no reason to touch. Found by the checkout wire-tap test.
+  styleTouched = true;
 }
 if (pendingOrder?.preselectedMugSize && MUG_STYLES[selectedStyle]?.sizes?.[pendingOrder.preselectedMugSize]) {
   selectedSize = pendingOrder.preselectedMugSize;
@@ -2114,6 +2121,26 @@ if (isTravelMug()) {
     document.getElementById('previewNote').textContent =
       'Left = Front of your travel mug, Right = Back. If you only placed one design, Left or Center both work as the Front — either one will print correctly.';
     renderTravelMugStyleGrid();
+    // Honour the studio's choice. The customer already picked their cup (and
+    // colour) before generating; re-selecting here was both friction and a
+    // hazard -- front/back art built for the insulated 40oz must not end up
+    // on a different cup because a second, redundant pick went wrong. Driven
+    // through the SAME pick functions a click uses, so every side effect
+    // (colour grid, mockup label, summary) happens exactly as if tapped.
+    if (pendingOrder?.preselectedTravelKey && TRAVEL_MUG_CATALOG[pendingOrder.preselectedTravelKey]) {
+      const keys = Object.keys(TRAVEL_MUG_CATALOG);
+      const idx = keys.indexOf(pendingOrder.preselectedTravelKey);
+      const btn = document.querySelectorAll('#travelMugStyleGrid .btn-select')[idx];
+      if (btn) {
+        pickTravelMugStyle(pendingOrder.preselectedTravelKey, btn);
+        const product = TRAVEL_MUG_CATALOG[pendingOrder.preselectedTravelKey];
+        if (product.colors && pendingOrder.preselectedTravelColor) {
+          const ci = product.colors.findIndex(c => c.name === pendingOrder.preselectedTravelColor);
+          const cbtn = document.querySelectorAll('#travelColorGrid .color-btn')[ci];
+          if (ci >= 0 && cbtn) pickTravelColor(cbtn, product.colors[ci]);
+        }
+      }
+    }
   } else if (isSuitcase()) {
     hideAllProductCards();
     document.getElementById('suitcaseSizeCard').style.display = 'block';
@@ -2190,6 +2217,54 @@ if (isMug()) {
     if (livePreview) livePreview.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }, 300);
 }
+
+// ============================================================
+// THE RETURN FROM PAYMENT. Stripe sends the customer back here with
+// ?checkout=success or ?checkout=cancelled -- and until now the page did
+// NOTHING with either: a customer who had just paid landed back on the
+// order form, told nothing, with their filled form staring at them as if
+// the payment never happened. The single most important screen in the
+// whole shop was missing.
+//
+// Success: replace the page body with a confirmation, and clear the
+// pending order so the next design starts clean -- the purchase is done;
+// keeping the old design around only invites accidentally ordering it
+// twice. Cancelled: say so, charge nothing, and leave EVERYTHING exactly
+// as it was so they can simply press the button again.
+// Runs last, after all the render logic above, so it wins the screen.
+(function handleCheckoutReturn(){
+  const params = new URLSearchParams(location.search);
+  const state = params.get('checkout');
+  if (!state) return;
+  if (state === 'success') {
+    try { localStorage.removeItem('muggshotz_pending_order'); } catch (e) {}
+    // HIDE the form, don't destroy it: late timers and fetch callbacks from
+    // the page's normal boot still reference elements inside .main by id,
+    // and replacing innerHTML made those callbacks die on null. Display:none
+    // keeps every node alive and invisible; the confirmation is inserted as
+    // a sibling in front.
+    const main = document.querySelector('.main');
+    if (main) {
+      main.style.display = 'none';
+      const done = document.createElement('div');
+      done.className = 'main';
+      done.innerHTML =
+        '<div class="card" style="text-align:center;margin-top:2rem">' +
+        '<div class="card-title">🎉 Order Placed!</div>' +
+        '<div style="font-size:16px;line-height:1.6;margin-bottom:1rem">Your payment went through and your order is on its way to production.</div>' +
+        '<div class="note" style="font-size:12px;color:#888;line-height:1.6">A receipt is on its way to your email from our payment processor. Your piece is custom-made just for you, so please allow production and shipping time.</div>' +
+        '<a class="generate-btn" href="needles-studio.html" style="display:block;text-decoration:none;margin-top:1.25rem">🎨 Make Another</a>' +
+        '</div>';
+      main.parentNode.insertBefore(done, main);
+    }
+    const title = document.querySelector('.header-title');
+    if (title) title.textContent = 'Thank You!';
+  } else if (state === 'cancelled') {
+    setStatus('Payment cancelled — nothing was charged. Your design and details are still here whenever you\'re ready.', true);
+    const btn = document.getElementById('submitBtn');
+    if (btn) btn.disabled = false;
+  }
+})();
 </script>
 </body>
 </html>

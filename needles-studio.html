@@ -11899,6 +11899,13 @@ function goToOrder(){
     mugPrintMode: mugPrintMode,
     isWraparoundSet: (product==='mug' && mugPrintMode==='wraparound'),
     panoramaImage: (product==='mug' && mugPrintMode==='wraparound') ? wraparoundPanoramaUrl : null,
+    // The travel cup's identity must survive the hop. Without these the order
+    // page made the customer RE-pick which cup from a grid -- and art
+    // generated for one cup's shape (the insulated 40oz's front/back split
+    // most of all) could land on a different cup entirely if they picked
+    // wrong the second time.
+    preselectedTravelKey: (product==='water bottle') ? (selectedTravelProductKey||preGenTravelVariant||null) : null,
+    preselectedTravelColor: (product==='water bottle') ? (selectedTravelColor||preGenTravelColor||null) : null,
     // Round and square coasters are different blueprints, so the shape has to
     // survive the hop to order.html or the customer gets whichever one the
     // code names by default.

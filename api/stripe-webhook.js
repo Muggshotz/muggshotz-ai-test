@@ -620,6 +620,10 @@ async function handleMugOrderPayment(session) {
       front: m.image_url_b || null,
       right: m.image_url_c || null
     };
+    // The uncut panorama strip (mug Wraparound). placeProductOrder builds the
+    // print file straight from it when present; the thirds above remain the
+    // fallback and the classic per-panel path.
+    orderInput.panoramaImage = m.image_url_d || null;
   } else if (product.layoutType === "front-back") {
     orderInput.frontImage = m.image_url_a || null;
     orderInput.backImage = m.image_url_b || null;
