@@ -1336,6 +1336,7 @@ Tell Needles <span style="color:#7ab8ff">what you have in mind</span>
 <div id="finalGenerateGuidance" class="guidance-prompt" role="status">If satisfied with all selections, press "Generate." If not, feel free to scroll back up and make any additional changes.</div>
 <button class="generate-btn" id="generateBtn" onclick="generate()">🎨 GENERATE IMAGE</button>
 <div class="generate-token-note" id="generateTokenNote">Requires at least 1 token to generate.</div>
+<button type="button" class="download-btn" id="changeMugStyleBtn" style="display:none;margin-top:.5rem" onclick="goBackToMugStyle()">↩️ Change Mug Style / Color</button>
 <button class="download-btn" id="cancelBtn" onclick="cancelGeneration()" style="display:none;margin-top:.5rem">✖ Cancel & Try a Different Photo</button>
 
 <div id="finalChoiceOverlay" class="step-lock-overlay" style="display:none">
@@ -5177,6 +5178,7 @@ function pickPreGenMugStyle(styleName){
   renderPreGenMugColorGrid();
   updatePreGenMugMockupImg();
   refreshMugPrintModeVisibility();
+  refreshChangeMugStyleBtn();
   const styleNote=document.getElementById('mugStyleCardNote');
   if(styleNote)styleNote.style.display='none';
   // REACHING the Continue button, not merely showing it (Alyx: "I clicked to
@@ -5338,13 +5340,52 @@ function finishPreGenMugColorPick(){
   mugColorFinishedPreGen=true;
   refreshMugStyleCardVisibility();
   refreshMugPrintModeVisibility();
+  refreshChangeMugStyleBtn();
   suspendGuidedScrollsForGeneration();
+  // BUG FIX (2026-08-28, Alyx's first minute of live BYO testing): for a
+  // declared-BYO customer, refreshMugPrintModeVisibility() above just set
+  // the Print Style card to display:none -- so the scroll below aimed at
+  // an invisible element and stranded them at the product grid, and the
+  // flow DEAD-ENDED: the only road onward was pickMugPrintMode(), which
+  // hangs off a card they can never see. Print mode is already pinned to
+  // classic at the gate, so hand straight through the gimmick door (which
+  // routes BYO to the Generate landing) instead.
+  if(byoDeclaredIntent==='byo'){
+    showDesignMethodCard();
+    return;
+  }
   // Size, Style, and Color are now all locked in. UNSHELVED (Aug 2026):
   // Print Style (Three Panels/Wraparound) is a real choice again -- see
   // refreshMugPrintModeVisibility -- so that's the next stop, not
   // designMethodCard directly. pickMugPrintMode() moves on to
   // designMethodCard once they've picked.
   smoothScrollToTarget('mugPrintModeCard','center');
+}
+
+// STEP-8 MECHANISM (2026-08-28, Alyx: "there is no mechanism on this panel
+// which would send me back to change the style if that was my decision").
+// The Generate landing sits far below the mug Style/Color card; scrolling
+// up works (a dim is a guide, not a cage) but nothing SAYS so. This button
+// lives next to Generate and rides the real rail back: repicking re-runs
+// pickPreGenMugStyle(), which already clears the colour and re-walks the
+// swatch/Continue flow, so a changed style can never keep a stale colour.
+function refreshChangeMugStyleBtn(){
+  const btn=document.getElementById('changeMugStyleBtn');
+  if(!btn)return;
+  btn.style.display=(product==='mug' && mugStyleChosenPreGen)?'block':'none';
+}
+function goBackToMugStyle(){
+  // The mug Style/Color step is a step-lock OVERLAY (mugStyleLockOverlay),
+  // not an inline card -- it closes itself once the colour is finished, so
+  // scrolling to it would aim at a zero-height element. Re-open it through
+  // the rail's own state machine instead: un-finish the colour and let
+  // refreshMugStyleCardVisibility() bring the overlay back with the current
+  // style still highlighted. Repicking re-runs the same swatch/Continue
+  // flow, which lands back on Generate -- and pickPreGenMugStyle() already
+  // clears the colour on a style change, so nothing stale can ride along.
+  mugColorFinishedPreGen=false;
+  refreshMugStyleCardVisibility();
+  refreshMugPrintModeVisibility();
 }
 
 // Track two's landing: the idea box, with Generate live under it.
@@ -7499,6 +7540,7 @@ function pick(el,type){
     refreshMugSizeCardVisibility();
     refreshMugStyleCardVisibility();
     refreshMugPrintModeVisibility();
+    refreshChangeMugStyleBtn();
     refreshPanoramaFadeCardVisibility();
     refreshPhotoPosterVisibility();
     refreshPhoneCaseModelVisibility();
@@ -12628,6 +12670,7 @@ function resetEverythingFreshStart(){
   applyByoRailVisibility();
   const gateOverlay=document.getElementById('intentGateOverlay');
   if(gateOverlay)gateOverlay.style.display='none';
+  refreshChangeMugStyleBtn();
 
   selectedFrame=null;
   frameColors={};

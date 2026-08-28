@@ -449,6 +449,63 @@ scenarios.recallReopensTheGate = async (page) => {
 };
 BYO_SETUP.add('recallReopensTheGate');
 
+// ---- ALYX'S STEP-8 JOURNEY (live bug report, 2026-08-28): BYO -> mug ->
+// size -> Classic White -> Continue used to strand the customer at the
+// product grid (the onward scroll aimed at the Print Style card, which the
+// BYO enforcement had just hidden -- and the flow's only exit hung off
+// that invisible card, a dead end). And from the Generate landing there
+// was no mechanism back to change the cup style. This walks the repaired
+// rail end to end: land on Generate, find the Change Style button, ride
+// it back, repick Color Pop, and confirm the stale colour cleared. ----
+scenarios.byoMugRailLandsOnGenerateAndCanChangeStyle = async (page) => {
+  await uploadPhotoAndChooseBYO(page);
+  await page.locator('#productCard .btn-select[data-val="mug"]').click({ force: true });
+  await T(page, 1200);
+  await dismissAlerts(page);
+  await page.evaluate(() => { pickPreGenMugSize('11oz'); });
+  await T(page, 600);
+  await page.evaluate(() => { pickPreGenMugStyle('Classic White'); });
+  await T(page, 800);
+  await dismissAlerts(page);
+  // Classic White is colourless, so Continue is the next real click.
+  await page.evaluate(() => { finishPreGenMugColorPick(); });
+  await T(page, 2500);
+  const landing = await page.evaluate(() => {
+    const gen = document.getElementById('generateBtn').getBoundingClientRect();
+    const change = document.getElementById('changeMugStyleBtn');
+    return {
+      generateOnScreen: gen.top < innerHeight && gen.bottom > 0,
+      gimmicksShown: document.getElementById('designMethodCard').style.display === 'block',
+      changeBtnShown: change && getComputedStyle(change).display !== 'none',
+    };
+  });
+  if (landing.gimmicksShown) return 'FAIL: the gimmick panel opened on a BYO mug rail';
+  if (!landing.generateOnScreen) return 'FAIL: Continue after Classic White does not land on Generate — the strand-at-products bug';
+  if (!landing.changeBtnShown) return 'FAIL: no Change Mug Style / Color mechanism on the Generate landing (step 8)';
+
+  await page.click('#changeMugStyleBtn');
+  await T(page, 1200);
+  // The Style/Color step is a step-lock overlay; the button re-opens it
+  // through the rail's own state machine.
+  const back = await page.evaluate(() => ({
+    overlayShown: document.getElementById('mugStyleLockOverlay')?.style.display === 'flex',
+    stillSelected: document.querySelector('#preGenMugStyleGrid .btn-select.selected')?.dataset.style || null,
+  }));
+  if (!back.overlayShown) return 'FAIL: the Change Style button did not re-open the Style/Color step';
+  if (back.stillSelected !== 'Classic White') return `FAIL: re-opened style step lost the current pick (selected=${back.stillSelected})`;
+
+  // Repick Color Pop through the REAL pick function: the colour must clear
+  // (a Classic White "no colour" cannot ride into a style that needs one).
+  const repicked = await page.evaluate(() => {
+    pickPreGenMugStyle('Color Pop');
+    return { style: selectedGenStyle, color: selectedGenColor, finished: mugColorFinishedPreGen };
+  });
+  if (repicked.style !== 'Color Pop') return `FAIL: repick did not take (style=${repicked.style})`;
+  if (repicked.color !== null || repicked.finished) return 'FAIL: switching styles kept stale colour state';
+  return 'PASS: BYO mug rail lands on Generate, the Change Style button rides back, and a Color Pop repick clears the old state';
+};
+BYO_SETUP.add('byoMugRailLandsOnGenerateAndCanChangeStyle');
+
 scenarios.resetRearmsTheGate = async (page) => {
   await uploadPhotoAndChooseBYO(page);
   await page.evaluate(() => {
