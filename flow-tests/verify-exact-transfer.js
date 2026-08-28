@@ -506,6 +506,70 @@ scenarios.byoMugRailLandsOnGenerateAndCanChangeStyle = async (page) => {
 };
 BYO_SETUP.add('byoMugRailLandsOnGenerateAndCanChangeStyle');
 
+// ---- THE PRE-PICKER BIFURCATION (Alyx, 2026-08-28): "it's still not
+// clear to the customer that this is a bifurcation. There should be two
+// buttons that they have to pick." The photo frame is the as-is track;
+// "Collaborate With Our AI (1 token)" is the AI track. Both open the same
+// picker; a photo arriving through either NEVER sees the gate overlay --
+// the split already happened. Direct setInputFiles (no button) stays the
+// undeclared path and still hits the gate, which is what keeps every other
+// scenario in this suite honest. ----
+scenarios.byoUploadButtonSkipsTheGate = async (page) => {
+  page.on('filechooser', (fc) => fc.setFiles(require('path').join(__dirname, 'test-photo.jpg')).catch(() => {}));
+  await page.click('#uploadZone');
+  await T(page, 2500);
+  const st = await page.evaluate(() => ({
+    gateShown: getComputedStyle(document.getElementById('intentGateOverlay')).display !== 'none',
+    intent: byoDeclaredIntent,
+    onProduct: document.body.classList.contains('product-focus'),
+    styleHidden: getComputedStyle(document.getElementById('styleSectionCard')).display === 'none',
+  }));
+  if (st.gateShown) return 'FAIL: the photo-frame upload still shows the gate — the customer already declared by picking this button';
+  if (st.intent !== 'byo') return `FAIL: photo-frame upload declared intent=${st.intent}, expected byo`;
+  if (!st.onProduct || !st.styleHidden) return 'FAIL: the as-is track did not land on product picking with the AI surfaces removed';
+  return 'PASS: the photo frame IS the as-is track — no gate, straight to products, AI surfaces gone';
+};
+BYO_SETUP.add('byoUploadButtonSkipsTheGate');
+
+scenarios.aiCollabButtonSkipsTheGate = async (page) => {
+  const btnText = await page.evaluate(() => document.getElementById('aiCollabUploadBtn')?.textContent || '');
+  if (!/Collaborate/i.test(btnText) || !/1 token/i.test(btnText))
+    return `FAIL: the AI button doesn't say Collaborate + (1 token): "${btnText}"`;
+  page.on('filechooser', (fc) => fc.setFiles(require('path').join(__dirname, 'test-photo.jpg')).catch(() => {}));
+  await page.click('#aiCollabUploadBtn');
+  await T(page, 2500);
+  const st = await page.evaluate(() => ({
+    gateShown: getComputedStyle(document.getElementById('intentGateOverlay')).display !== 'none',
+    intent: byoDeclaredIntent,
+    forkShown: document.getElementById('postUploadForkRow').style.display === 'flex',
+    styleShown: getComputedStyle(document.getElementById('styleSectionCard')).display !== 'none',
+  }));
+  if (st.gateShown) return 'FAIL: the AI collab upload still shows the gate';
+  if (st.intent !== 'ai') return `FAIL: AI collab upload declared intent=${st.intent}, expected ai`;
+  if (!st.forkShown || !st.styleShown) return 'FAIL: the AI track did not land on the prior rail (Art Style + track fork)';
+  return 'PASS: Collaborate With Our AI (1 token) is the AI track — no gate, straight onto the prior rail';
+};
+BYO_SETUP.add('aiCollabButtonSkipsTheGate');
+
+// ---- Reference pins are LETTERED, and the AI is told the letters: the
+// customer writes "use the face from Reference A" and the instruction
+// block must map that name to the right image. ----
+scenarios.referencePinsAreLettered = async (page) => {
+  const st = await page.evaluate(() => ({
+    a: document.getElementById('refAZone')?.textContent || '',
+    b: document.getElementById('refBZone')?.textContent || '',
+    photo1Gone: !/Photo 1/.test(document.getElementById('uploadPhotoCard')?.textContent || ''),
+  }));
+  if (!/Reference A/i.test(st.a)) return `FAIL: first pin says "${st.a.trim()}", not Reference A`;
+  if (!/Reference B/i.test(st.b)) return `FAIL: second pin says "${st.b.trim()}", not Reference B`;
+  if (!st.photo1Gone) return 'FAIL: the clipped "Photo 1" label is still on the upload card';
+  const src = require('fs').readFileSync(require('path').join(__dirname, '..', 'needles-studio.html'), 'utf8');
+  if (!/This image is "Reference A"/.test(src) || !/This image is "Reference B"/.test(src))
+    return 'FAIL: the AI instruction block does not map Reference A/B to the pinned images';
+  return 'PASS: pins lettered Reference A/B, "Photo 1" gone, and the AI instruction maps the letters to the images';
+};
+BYO_SETUP.add('referencePinsAreLettered');
+
 scenarios.resetRearmsTheGate = async (page) => {
   await uploadPhotoAndChooseBYO(page);
   await page.evaluate(() => {

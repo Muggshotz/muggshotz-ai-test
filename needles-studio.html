@@ -760,18 +760,28 @@ const HERO_SETTLE_MS = 1000;
      from the very first second of a first visit. -->
 <div id="byoArtBanner" style="border:1px solid #29a3ff;border-radius:10px;padding:.65rem .8rem;margin-bottom:.8rem;text-align:center;background:rgba(41,163,255,.07)">
   <div style="font-size:13px;font-weight:bold;color:#29a3ff;letter-spacing:.5px">🆓 BRING YOUR OWN ART — FREE</div>
-  <div class="note" style="margin:.35rem 0 0;font-size:11.5px">Already made something you love in ChatGPT, Gemini, or any AI — or just have a picture you want on a product? Upload it here, leave the description box empty, and it prints <b>exactly as it is</b>. No image credits needed. You only pay for the product itself.</div>
+  <div class="note" style="margin:.35rem 0 0;font-size:11.5px">Already made something you love in ChatGPT, Gemini, or any AI — or just have a picture you want on a product? Tap the photo frame below and it prints <b>exactly as it is</b>. No image credits needed. You only pay for the product itself.</div>
 </div>
-<div style="font-size:11px;color:#29a3ff;letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px;text-align:center">Photo 1</div>
-<div class="needles-clipboard"><div class="needles-clip"></div><div class="upload-zone needles-polaroid" id="uploadZone" onclick="document.getElementById('fileInput').click()"><div style="font-size:32px;color:#555;margin-bottom:8px">👤</div><div class="upload-text">Tap here to upload a photo</div><div class="upload-sub">Clear face photo works best</div></div>
-<div class="ref-pin-zone" id="refAZone" onclick="document.getElementById('refAInput').click()"><div style="font-size:16px;color:#555;margin-bottom:1px">➕</div><div class="upload-text" style="font-size:8px;line-height:1.1">Add ref</div></div>
+<!-- THE BIFURCATION, VISIBLE BEFORE THE PICKER (Alyx, 2026-08-28): "it's
+     still not clear to the customer that this is a bifurcation. There
+     should be two buttons that they have to pick." The photo frame is the
+     as-is track (no AI, free); the button below it is the AI track, priced
+     honestly at the moment of choosing. BOTH open the same file picker --
+     "the destination they go to after clicking this button is exactly the
+     same: they go to wherever their pictures are stored" -- the split is
+     in what happens once the photo lands (startPhotoGuide reads the
+     declared intent; the old post-upload gate remains only as the fallback
+     for photos that arrive with no declaration, e.g. workshop recall). -->
+<div class="needles-clipboard"><div class="needles-clip"></div><div class="upload-zone needles-polaroid" id="uploadZone" onclick="startUploadWithIntent('byo')"><div style="font-size:32px;color:#555;margin-bottom:8px">👤</div><div class="upload-text">Tap here to upload a photo</div><div class="upload-sub">Your picture, exactly as it is — free</div></div>
+<div class="ref-pin-zone" id="refAZone" onclick="document.getElementById('refAInput').click()"><div style="font-size:16px;color:#555;margin-bottom:1px">➕</div><div class="upload-text" style="font-size:8px;line-height:1.1">Reference A</div></div>
 <input type="file" id="refAInput" accept="image/*" style="display:none"/>
 <img id="refAPreview" class="preview-img" style="display:none;max-height:140px"/>
-<div class="ref-pin-zone ref-pin-zone-b" id="refBZone" onclick="document.getElementById('refBInput').click()"><div style="font-size:16px;color:#555;margin-bottom:1px">➕</div><div class="upload-text" style="font-size:8px;line-height:1.1">Add ref</div></div>
+<div class="ref-pin-zone ref-pin-zone-b" id="refBZone" onclick="document.getElementById('refBInput').click()"><div style="font-size:16px;color:#555;margin-bottom:1px">➕</div><div class="upload-text" style="font-size:8px;line-height:1.1">Reference B</div></div>
 <input type="file" id="refBInput" accept="image/*" style="display:none"/>
 <img id="refBPreview" class="preview-img" style="display:none;max-height:140px"/>
 </div>
-<div class="note" style="margin-top:.5rem;margin-bottom:0;text-align:center;font-size:11px"><u>Optional!</u> Pin extra reference photos above if you want to combine or pull elements from other pictures (e.g. "use the face from one on the body in the other"). If not, no biggie.</div>
+<button type="button" class="generate-btn" id="aiCollabUploadBtn" style="margin-top:.7rem" onclick="startUploadWithIntent('ai')">🤝 Collaborate With Our AI (1 token)</button>
+<div class="note" style="margin-top:.5rem;margin-bottom:0;text-align:center;font-size:11px"><u>Optional!</u> Pin extra reference photos above — <b>Reference A</b> and <b>Reference B</b> — if you want to combine or pull elements from other pictures (e.g. "use the face from Reference A on the body in Reference B"). If not, no biggie.</div>
 <div id="workshopRecallRow" style="display:none;gap:8px;margin-top:.6rem">
 <button class="download-btn" id="recallPhotoBtn" style="flex:1;margin-top:0" onclick="recallLastPhotoUsed()">↻ Use Last Photo Uploaded</button>
 <button class="download-btn" id="recallGeneratedBtn" style="flex:1;margin-top:0" onclick="recallLastGeneratedImage()">↻ Use Last Design Generated</button>
@@ -2335,7 +2345,27 @@ function startPhotoGuide(){
   // guaranteed visible along with the Track 1/2 buttons above it.
   clearTimeout(openingGuideTimer);
   openingGuideDone=true;
+  // THE BIFURCATION (Alyx, 2026-08-28): the two upload buttons declare the
+  // intent BEFORE the picker opens, so a photo arriving through them never
+  // sees the gate -- the split already happened. The gate overlay remains
+  // only as the fallback for a photo that lands with no declaration
+  // (workshop recall, a re-tap of the preview image).
+  const declared=pendingUploadIntent;
+  pendingUploadIntent=null;
+  if(declared==='byo'){chooseIntentBYO();return;}
+  if(declared==='ai'){chooseIntentAI();return;}
   openIntentGate();
+}
+
+// Which track the customer picked at the upload buttons, consumed exactly
+// once by startPhotoGuide() above. Cleared on consume; a cancelled picker
+// leaves it set, but every path that opens the picker sets it fresh first
+// (both buttons here, null for the preview-image re-tap), so a stale value
+// can never leak into a different upload.
+let pendingUploadIntent=null;
+function startUploadWithIntent(intent){
+  pendingUploadIntent=intent;
+  document.getElementById('fileInput').click();
 }
 
 // THE INTENT GATE (Alyx, 2026-08-28): every upload now stops here first.
@@ -2832,7 +2862,11 @@ function setMainSlotImage(dataUrl){
   const img=document.getElementById('previewImg');
   img.src=dataUrl;
   img.style.display='block';
-  img.onclick=()=>document.getElementById('fileInput').click();
+  // A re-tap of the existing photo is an UNDECLARED upload: clear any
+  // pending intent so the replacement photo goes through the gate fallback
+  // (the customer may be switching tracks) instead of inheriting a stale
+  // button choice from a cancelled picker.
+  img.onclick=()=>{pendingUploadIntent=null;document.getElementById('fileInput').click();};
   const z=document.getElementById('uploadZone');
   z.classList.add('has-image');
   z.style.padding='0';
@@ -10867,9 +10901,10 @@ document.getElementById('cancelBtn').style.display='block';
 
     const referenceLine = (refASnapshot || refBSnapshot)
       ? `
-REFERENCE IMAGES: Additional photos have been provided beyond Photo 1 (the main photo).
-${refASnapshot ? 'This image is "Photo 2" — when the customer idea above mentions "Photo 2," use that exact image for the element described (e.g. a face, an object, a scene, a setting).' : ''}
-${refBSnapshot ? 'This image is "Photo 3" — when the customer idea above mentions "Photo 3," use that exact image for the element described.' : ''}
+REFERENCE IMAGES: Additional photos have been provided beyond the main photo. Customers name these pins loosely — treat any reasonable variation as the same pin, not just the exact label.
+${refASnapshot ? 'This image is "Reference A". The customer may call it: Reference A, Ref A, reference 1, the first reference, photo A, picture A, image A, box A, button A, pin A, the first pin, the second photo, Photo 2, or similar. When the customer idea above refers to it by ANY such name, use this exact image for the element described (e.g. a face, an object, a scene, a setting).' : ''}
+${refBSnapshot ? 'This image is "Reference B". The customer may call it: Reference B, Ref B, reference 2, the second reference, photo B, picture B, image B, box B, button B, pin B, the second pin, the third photo, Photo 3, or similar. When the customer idea above refers to it by ANY such name, use this exact image for the element described.' : ''}
+${refASnapshot && refBSnapshot ? 'If a name is ambiguous between the two (e.g. just "the reference"), prefer the one whose content matches what the idea asks for.' : ''}
 Only use these reference images for the specific elements the customer idea calls out. Do not blend in unrelated details from a reference photo.
 `
       : '';
