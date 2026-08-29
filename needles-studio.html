@@ -11615,9 +11615,14 @@ async function makeTestSingleZonePanorama(side){
         // easel stage's top edge down to the approve row's bottom -- BYO
         // never shows that stage, so that measurement is against an
         // element that was never positioned normally, landing the scroll
-        // somewhere wrong. Plain, direct scroll straight to the row itself
-        // instead of the stage-relative centering math.
-        approveRowEl.scrollIntoView({behavior:'smooth',block:'center'});
+        // somewhere wrong. BUG FIX: a plain scrollIntoView() here reintroduced
+        // the exact class of bug smoothScrollToTarget() exists to prevent --
+        // it fires against wherever the target happens to be at that instant,
+        // and content above (the just-hidden mockupLoadingOverlay, the
+        // approve row's own display swap) can still be settling, landing the
+        // scroll short. Use the same stability-polled scroll every other
+        // guided scroll in the app already relies on.
+        smoothScrollToTarget('approveRow','center');
       } else {
         // Same fix as Face It/Cover Me/Home Sweet Home -- see that comment.
         scrollToStandardRevealWhenReady();
