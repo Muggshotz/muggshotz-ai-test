@@ -5518,10 +5518,14 @@ function goToDescribeAndGenerate(){
   updateMugGuidedFlow();
   // A declared-BYO customer has no idea box (hidden at the gate) and
   // nothing to describe -- their next real step is Generate itself, which
-  // sends their photo through as-is.
+  // sends their photo through as-is. FIXED (Alyx): this used to scroll to
+  // the Generate button and wait for a manual click -- but that click
+  // doesn't generate anything either (no AI call, just an upload), so
+  // making the customer find and press a button for a no-op step is the
+  // same friction already removed from the easel and approve screen.
+  // Auto-run it directly instead.
   if(byoDeclaredIntent==='byo'){
-    setOptionSpotlight('final-generate-focus');
-    smoothScrollToTarget('generateTokenNote','end');
+    generate();
     return;
   }
   smoothScrollToTarget('ideaCard','center');
@@ -7386,12 +7390,11 @@ function setOptionSpotlight(cls){
 function handOffToIdeaAfterProductChoice(){
   // Declared-BYO: there is no idea to hand off to (the box is hidden and
   // the description is meaningless to a photo that prints as-is). Their
-  // product is finished, so land them on Generate directly.
+  // product is finished, so auto-run Generate directly instead of making
+  // them find and click a button that doesn't generate anything anyway
+  // (same reasoning as goToDescribeAndGenerate()'s matching fix).
   if(byoDeclaredIntent==='byo'){
-    setOptionSpotlight('final-generate-focus');
-    const byoGuide=document.getElementById('finalGenerateGuidance');
-    if(byoGuide)byoGuide.classList.add('visible');
-    smoothScrollToTarget('generateTokenNote','end');
+    generate();
     return;
   }
   setOptionSpotlight('ideafirst-focus');
