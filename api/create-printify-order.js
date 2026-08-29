@@ -341,17 +341,13 @@ export async function buildWraparoundImage(placements, canvasWidth, canvasHeight
   // deliberate buffer between the art and the border -- close, not
   // touching.
   //
-  // SPLIT BY FILL COUNT (Aug 2026, Alyx): 1 filled panel widens to 1.8x
-  // its base width, and 2 filled panels split the empty one's space
-  // between them -- either way there's real room, so a full 100% fill
-  // (PANEL_ZOOM=1, no white buffer, matches Bring Your Own Art's
-  // "exactly as it is" pledge) looks right and was confirmed on a real
-  // mockup tonight. All 3 filled is different: every panel stays at its
-  // fixed, narrow 1/3-width box with no widening to reclaim, so a full
-  // edge-to-edge fill on all three would crowd the colored border right
-  // up against the seam where one panel's art meets the next. That case
-  // alone reverts to the original 0.92 breathing room.
-  const PANEL_ZOOM = filledCount === 3 ? 0.92 : 1;
+  // TRIED a filledCount===3 special case reverting to 0.92 here, on the
+  // theory that with no widening to reclaim, a full fill would crowd the
+  // border against the seam between panels. Alyx tested it on a real
+  // 3-panel mockup and it was still smaller than he wanted -- the theory
+  // didn't hold up against the actual photo. Back to a flat 1 for every
+  // fill count.
+  const PANEL_ZOOM = 1;
 
   const baseSlots = {
     left: { x: 0, width: sectionWidth },
