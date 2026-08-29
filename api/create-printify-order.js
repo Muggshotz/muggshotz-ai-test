@@ -340,7 +340,18 @@ export async function buildWraparoundImage(placements, canvasWidth, canvasHeight
   // this can't reintroduce the truncation problem. Leaves a small,
   // deliberate buffer between the art and the border -- close, not
   // touching.
-  const PANEL_ZOOM = 0.92;
+  //
+  // REVERTED to 1 (Aug 2026, Alyx): this whole tuning history predates
+  // the Left+Right/Center-off flow ever reaching a real mockup -- the
+  // loop bug fixed tonight blocked it, so nobody had actually seen what
+  // 0.92 looked like here until now. Far too small in that real test.
+  // 1 crosses into the zoom>=1 branch below: cover-fit fills each
+  // panel's box completely, cropping only whatever doesn't match the
+  // box's aspect ratio, no white buffer at all. Also matches Bring Your
+  // Own Art's own promise of printing "exactly as it is" -- a padded
+  // shrink was working against that pledge for every BYOA mug too, not
+  // just AI-generated ones.
+  const PANEL_ZOOM = 1;
 
   const baseSlots = {
     left: { x: 0, width: sectionWidth },
