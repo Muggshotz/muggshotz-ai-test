@@ -11593,7 +11593,7 @@ async function makeTestSingleZonePanorama(side){
     // canvas and sets finalImageUrl -- that's the version that should be
     // presented. Fall back to resultUrl only if something went wrong and
     // finalImageUrl never got set.
-    presentFinishedNeedlesArt(finalImageUrl||resultUrl, ()=>{
+    const revealApproveStep=()=>{
       const approveRowEl=document.getElementById('approveRow');
       approveRowEl.style.display='block';
       document.getElementById('downloadDesignBtn').style.display='block';
@@ -11602,7 +11602,15 @@ async function makeTestSingleZonePanorama(side){
       showSingleImageAccessorizeStep();
       // Same fix as Face It/Cover Me/Home Sweet Home -- see that comment.
       scrollToStandardRevealWhenReady();
-    });
+    };
+    if(byoDeclaredIntent==='byo'){
+      // No AI ran, nothing was "created" -- the mascot-painting easel show
+      // is theater for a generation that never happened. Straight to the
+      // same next step everyone else reaches after watching it.
+      revealApproveStep();
+    } else {
+      presentFinishedNeedlesArt(finalImageUrl||resultUrl, revealApproveStep);
+    }
 
   }catch(err){
     document.getElementById('wraparoundStandbyPrompt').style.display='none';
