@@ -11018,14 +11018,12 @@ async function generate(){
   startGenTimer();
   showGenerationInProgress();
   // BYO has no generation to depict -- the easel show is built around
-  // watching the AI paint, and nothing paints here. Reuses the same
-  // "please wait while your mock-up is being generated" overlay the real
-  // Printify fetch shows later, instead of ever starting the animation.
-  const byoWaitOverlay=(byoDeclaredIntent==='byo')?document.getElementById('mockupLoadingOverlay'):null;
-  if(byoWaitOverlay){
-    byoWaitOverlay.style.display='flex';
-    document.body.classList.add('step-locked');
-  } else {
+  // watching the AI paint, and nothing paints here. FIXED (Alyx): the
+  // "please wait" overlay this used to show was on/off so fast (the
+  // exact-transfer upload takes ~1-2s) that it just flashed disorientingly
+  // rather than communicating anything -- removed rather than shown at
+  // all. BYO flows straight through to Edge Fade with no wait screen.
+  if(byoDeclaredIntent!=='byo'){
     startNeedlesStage();
   }
   clearReferenceSlots();
@@ -11689,10 +11687,7 @@ async function makeTestSingleZonePanorama(side){
       scrollToStandardRevealWhenReady();
     };
     if(byoDeclaredIntent==='byo'){
-      // No AI ran, no easel ever started -- hide the "please wait" overlay
-      // shown in its place at the top of generate().
-      const byoWaitOverlayDone=document.getElementById('mockupLoadingOverlay');
-      if(byoWaitOverlayDone)byoWaitOverlayDone.style.display='none';
+      // No AI ran, no easel or wait overlay ever started for BYO.
       document.body.classList.remove('step-locked');
       // NO APPROVE STEP FOR BYO (Alyx): "Are you satisfied with this
       // design? Yes / No -- try another" is AI-track language for
@@ -11709,11 +11704,6 @@ async function makeTestSingleZonePanorama(side){
   }catch(err){
     document.getElementById('wraparoundStandbyPrompt').style.display='none';
     stopNeedlesStage();
-    const byoWaitOverlayErr=document.getElementById('mockupLoadingOverlay');
-    if(byoWaitOverlayErr && byoWaitOverlayErr.style.display!=='none'){
-      byoWaitOverlayErr.style.display='none';
-      document.body.classList.remove('step-locked');
-    }
     setStatus(err.message,true);
     resetGenTimer();
     if(workingImage)setMainSlotImage(workingImage);
