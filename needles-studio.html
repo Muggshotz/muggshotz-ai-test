@@ -11605,8 +11605,14 @@ async function makeTestSingleZonePanorama(side){
     };
     if(byoDeclaredIntent==='byo'){
       // No AI ran, nothing was "created" -- the mascot-painting easel show
-      // is theater for a generation that never happened. Straight to the
-      // same next step everyone else reaches after watching it.
+      // is theater for a generation that never happened. BUG FIX: skipping
+      // straight to revealApproveStep() left the animation loop that
+      // startNeedlesStage() (top of generate()) had already started running
+      // with nothing to ever stop it -- normally presentFinishedNeedlesArt's
+      // finale sequence is what does that. stopNeedlesStage() properly tears
+      // the whole stage down first, same as every cancel/error path already
+      // does, before handing off to the same next step everyone else reaches.
+      stopNeedlesStage();
       revealApproveStep();
     } else {
       presentFinishedNeedlesArt(finalImageUrl||resultUrl, revealApproveStep);
