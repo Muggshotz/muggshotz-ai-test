@@ -5520,6 +5520,7 @@ function goToDescribeAndGenerate(){
   // nothing to describe -- their next real step is Generate itself, which
   // sends their photo through as-is.
   if(byoDeclaredIntent==='byo'){
+    setOptionSpotlight('final-generate-focus');
     smoothScrollToTarget('generateTokenNote','end');
     return;
   }
@@ -7387,7 +7388,7 @@ function handOffToIdeaAfterProductChoice(){
   // the description is meaningless to a photo that prints as-is). Their
   // product is finished, so land them on Generate directly.
   if(byoDeclaredIntent==='byo'){
-    document.body.classList.remove('ideafirst-focus');
+    setOptionSpotlight('final-generate-focus');
     const byoGuide=document.getElementById('finalGenerateGuidance');
     if(byoGuide)byoGuide.classList.add('visible');
     smoothScrollToTarget('generateTokenNote','end');
