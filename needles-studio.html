@@ -1532,7 +1532,7 @@ Tell Needles <span style="color:#7ab8ff">what you have in mind</span>
 <div style="position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(255,255,255,.3)"></div>
 <div style="position:absolute;top:0;left:0;right:0;bottom:0;display:flex;align-items:center;justify-content:center;text-align:center;color:#003c8c;font-weight:800;font-size:15px;padding:.5rem;text-shadow:0 0 6px rgba(255,255,255,.9),0 0 2px rgba(255,255,255,.9);animation:mugSelectFlash 1s ease-in-out infinite">Select a Window Sill?</div>
 </div>
-<button type="button" class="download-btn" style="margin:12px auto 0;max-width:200px;width:100%;display:block" onclick="chooseRevealPath('none')">No Thank You</button>
+<button type="button" class="download-btn cta-flash" style="margin:12px auto 0;max-width:200px;width:100%;display:block" onclick="chooseRevealPath('none')">No Thank You</button>
 </div>
 
 <div id="accessorizePreviewStrip" style="display:flex;gap:8px;margin-top:1rem"></div>
@@ -9045,6 +9045,10 @@ let edgeFadeChoice=null;
 // At 0 the renderer draws no gradient at all, so 'fade' at 0% and 'hard' are
 // visually identical until the slider is moved.
 let edgeFadeAmountPct=0;
+// Guards the Add a Frame screen's delayed auto-scroll, same purpose as
+// frameFadeAutoScrollToken -- bumped on open and on every exit path so a
+// leftover timer from a screen the customer already left can't fire.
+let accessorizeChoiceAutoScrollToken=0;
 
 // Shows accessorizeCard in its initial "choice" state -- the two
 // labeled mockups + No Thank You, with the browsable-rows/preview
@@ -9092,11 +9096,21 @@ function showAccessorizeChoiceState(){
   updateAccessorizePreview();
 
   card.scrollIntoView({behavior:'smooth',block:'start'});
+  // Same hold-then-snap as the Edge Fade screen: a few seconds to read
+  // "Add a Frame?" and see the choice, then auto-scroll down so the panel
+  // previews are visible too, without the customer scrolling by hand.
+  const myAccessorizeScrollToken=++accessorizeChoiceAutoScrollToken;
+  setTimeout(()=>{
+    if(myAccessorizeScrollToken!==accessorizeChoiceAutoScrollToken)return;
+    const strip=document.getElementById('accessorizePreviewStrip');
+    if(strip)strip.scrollIntoView({behavior:'smooth',block:'end'});
+  },3000);
 }
 
 // The three-way branch, now triggered from within accessorizeCard
 // itself rather than a separate preceding screen.
 function chooseRevealPath(choice){
+  accessorizeChoiceAutoScrollToken++;
   if(choice==='sill'){
     // Hard edges apply automatically -- no fade offer at all for
     // Window Sill, straight into the catalog.
@@ -9397,6 +9411,11 @@ function pickFadePreviewIndex(){
   return i<0?0:i;
 }
 
+// Guards the delayed auto-scroll below: bumped whenever the fade overlay
+// opens or closes, so a leftover 3-second timer from a screen the customer
+// has already left can never fire and yank their scroll position.
+let frameFadeAutoScrollToken=0;
+
 function openFrameFadeOverlay(){
   frameFadeSettled=true;
   const overlay=document.getElementById('frameFadeOverlay');
@@ -9405,6 +9424,17 @@ function openFrameFadeOverlay(){
   if(!overlay)return;
   document.body.classList.add('step-locked');
   overlay.style.display='flex';
+  // Opens on the heading so the customer actually reads "Edge Fade" first,
+  // then auto-snaps down to the slider/Continue after a few seconds --
+  // reading takes about three; nobody should have to scroll manually just
+  // to reach the control they came here to use.
+  const fadeCard=document.getElementById('frameFadeCard');
+  if(fadeCard)fadeCard.scrollTop=0;
+  const myFadeScrollToken=++frameFadeAutoScrollToken;
+  setTimeout(()=>{
+    if(myFadeScrollToken!==frameFadeAutoScrollToken)return;
+    if(fadeCard)fadeCard.scrollTo({top:fadeCard.scrollHeight,behavior:'smooth'});
+  },3000);
   // Opens faded, not sharp. Fade is how these mugs looked before frames or
   // props existed, and it is still the better default on a coloured cup --
   // dragging to 0 is right there for anyone who wants a hard edge.
@@ -9465,6 +9495,7 @@ async function updateFrameFadePreview(){
 }
 
 async function confirmFrameFadeAndContinue(){
+  frameFadeAutoScrollToken++;
   try{
     await bakeFadeIntoDesigns(frameFadeAmountPct);
   }catch(err){
