@@ -8803,22 +8803,21 @@ async function approveDesign(allThree){
   // showing the same three slots a different way. Identical to what
   // approveCoverMe/approveFaceIt/approveGoodMorning do, for the same
   // reason: one screen where panels get chosen, not two.
+  //
+  // REORDERED (Aug 2026, Alyx): Fade now comes BEFORE panel placement, not
+  // after. Whatever happens to one panel happens identically to every panel
+  // that ends up carrying the same image, so it makes more sense to finish
+  // the picture first and place it after -- not place it, then fix it.
+  // Fading a single source image before it's copied onto Left/Right/Center
+  // is also more correct than the old order: every panel the customer ends
+  // up choosing inherits from one already-perfected image, rather than
+  // baking fade separately into whichever panels happened to be filled at
+  // that moment.
   if(slotMode==='three' && approvedDesignId){
     const posHolder=document.getElementById('positionHolderCard');
     if(posHolder)posHolder.style.display='none';
     panelScreenExit='reveal';
-    placements.front=approvedDesignId;
-    saveMugState();
-    showCoverMePanelCard();
-    // showCoverMePanelCard's autoFill has copied front onto left/right by
-    // now; clearing front is what leaves centre empty by default, and it
-    // reuses the same "removed" bookkeeping the panel screen's own Remove
-    // button uses, so "Turn Center On (free)" keeps working untouched.
-    coverMeLastRemoved.front=placements.front;
-    placements.front=null;
-    saveMugState();
-    renderCoverMePanelRowState('front');
-    refreshCoverMePanelDoneState();
+    openFadeBeforePanelPlacement(approvedDesignId);
     return;
   }
 
@@ -8932,14 +8931,27 @@ async function enterRevealStage(){
   choiceOverlay.style.display='none';
   document.body.classList.remove('step-locked');
   if(revealFlowThreePanel){
-    // THE FADE PAGE, AT LAST (Aug 2026, Alyx). openFrameFadeOverlay() has
-    // been sitting in this file complete and working -- preview, live
-    // slider, the lot -- with nothing anywhere calling it. That is the real
-    // story behind "the fade kept sneaking back in and we gave up": the
-    // page was built, orphaned, and then bricked over upstream. It runs
-    // here now, before the frame offer, so edges are settled while the
-    // picture is on screen and frames are chosen after.
-    openFrameFadeOverlay();
+    // REORDERED (Aug 2026, Alyx): fade now runs BEFORE panel placement
+    // (see openFadeBeforePanelPlacement / confirmFrameFadeAndContinue), so
+    // by the time panel placement's Done button lands here, edges are
+    // already settled. Re-opening the fade page here would ask the same
+    // question twice -- skip straight to the frame offer instead. Still
+    // falls through to openFrameFadeOverlay() for any path that reaches
+    // this screen without having gone through the reordered pre-placement
+    // fade (kept as a safety net, not the normal route anymore).
+    if(fadeAlreadyAppliedPrePlacement){
+      fadeAlreadyAppliedPrePlacement=false;
+      showAccessorizeChoiceState();
+    } else {
+      // THE FADE PAGE, AT LAST (Aug 2026, Alyx). openFrameFadeOverlay() has
+      // been sitting in this file complete and working -- preview, live
+      // slider, the lot -- with nothing anywhere calling it. That is the real
+      // story behind "the fade kept sneaking back in and we gave up": the
+      // page was built, orphaned, and then bricked over upstream. It runs
+      // here now, before the frame offer, so edges are settled while the
+      // picture is on screen and frames are chosen after.
+      openFrameFadeOverlay();
+    }
   } else if(lastWraparoundMethod==='panorama'){
     // NO SEAMS TO FIX ON A PANORAMA. Alyx: "Why have we still got the Fix
     // the Seams tool in mugs for wrap around? I thought they were supposed
@@ -9351,6 +9363,15 @@ async function bakeFadeIntoDesigns(fadeAmountPct){
     const design=slotId?findDesignById(slotId):null;
     if(design)design.url=uploaded;
     finalImageUrl=uploaded;
+  } else if(fadeExitsToPanelPlacement){
+    // Same "replace in place" pattern as fadeExitsToMockup, but the design
+    // hasn't been placed on any panel yet -- placements.left/front/right are
+    // all still empty at this point, so the target has to come from
+    // pendingPanelPlacementDesignId instead of being derived from them.
+    const faded=await renderFadedArtwork(revealOriginalArtworkUrls[0],hex,fadeAmountPct);
+    const uploaded=await uploadCompositedImage(faded);
+    const design=pendingPanelPlacementDesignId?findDesignById(pendingPanelPlacementDesignId):null;
+    if(design)design.url=uploaded;
   } else {
     const faded=await renderFadedArtwork(revealOriginalArtworkUrls[0],hex,fadeAmountPct);
     const slices=await sliceStitchedIntoThirds(faded);
@@ -9408,10 +9429,34 @@ function maybeOpenFadeBeforeMockup(){
   openFrameFadeOverlay();
 }
 
+// REORDERED (Aug 2026, Alyx): the mug/panel path's fade now runs on the
+// single just-approved design, BEFORE it's ever copied onto Left/Right/
+// Center -- mirrors maybeOpenFadeBeforeMockup()'s pattern exactly, just
+// routing to panel placement afterward instead of the mockup fetch.
+function openFadeBeforePanelPlacement(approvedDesignId){
+  const design=findDesignById(approvedDesignId);
+  revealFlowThreePanel=false;
+  revealOriginalArtworkUrls=[design?design.url:null];
+  fadeExitsToMockup=false;
+  fadeExitsToPanelPlacement=true;
+  pendingPanelPlacementDesignId=approvedDesignId;
+  openFrameFadeOverlay();
+}
+
 // Where the fade page goes when it is finished. The mug path has its own
 // continuation (the frame offer); single-image products go to the mockup.
 // Without this the two routes would fight over the same Done button.
 let fadeExitsToMockup=false;
+// NEW third destination: the mug/panel path's fade, now running before
+// placement instead of after. pendingPanelPlacementDesignId carries which
+// design the fade was just applied to, so panel placement can pick it up
+// once the fade overlay hands off.
+let fadeExitsToPanelPlacement=false;
+let pendingPanelPlacementDesignId=null;
+// Set once fade has already been applied pre-placement, so enterRevealStage
+// (which runs AFTER panel placement) knows to skip straight to the frame
+// offer instead of opening Edge Fade a second time.
+let fadeAlreadyAppliedPrePlacement=false;
 
 // Which panel stands in for the rest in the fade preview: the centre when
 // there is one (it is the face of the mug), otherwise the first that exists.
@@ -9518,13 +9563,33 @@ async function confirmFrameFadeAndContinue(){
   const overlay=document.getElementById('frameFadeOverlay');
   if(overlay)overlay.style.display='none';
   document.body.classList.remove('step-locked');
-  // Two routes reach this page now and they do NOT continue to the same
+  // Three routes reach this page now and they do NOT continue to the same
   // place. Single-image products (coaster, poster, tote, puzzle...) came
   // here on their way to the mockup and have no frame offer -- sending them
   // to showAccessorizeChoiceState() would drop them onto a mug screen.
   if(fadeExitsToMockup){
     fadeExitsToMockup=false;
     beginFinalMockupFetch();
+    return;
+  }
+  // REORDERED (Aug 2026, Alyx): fade now runs before panel placement for
+  // the mug/design-first path. This is the same "set front, let
+  // showCoverMePanelCard's autoFill copy it onto left/right, then clear
+  // front so centre defaults off" handoff that used to live directly in
+  // approveDesign() -- moved here to run after the (now-faded) design is
+  // ready, instead of before.
+  if(fadeExitsToPanelPlacement){
+    fadeExitsToPanelPlacement=false;
+    fadeAlreadyAppliedPrePlacement=true;
+    placements.front=pendingPanelPlacementDesignId;
+    saveMugState();
+    showCoverMePanelCard();
+    coverMeLastRemoved.front=placements.front;
+    placements.front=null;
+    saveMugState();
+    renderCoverMePanelRowState('front');
+    refreshCoverMePanelDoneState();
+    pendingPanelPlacementDesignId=null;
     return;
   }
   // The frame OFFER, not the catalogue: fade and frames are both on this
