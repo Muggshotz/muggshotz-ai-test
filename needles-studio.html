@@ -10440,7 +10440,14 @@ function renderAccessorizeStripThree(urls){
   const strip=document.getElementById('accessorizePreviewStrip');
   if(!strip)return;
   strip.innerHTML='';
-  urls.forEach(u=>{
+  // Whatever happens to one identical design happens identically to every
+  // other panel carrying that same file -- Left and Right are frequently
+  // the exact same image, and showing it twice told the customer nothing
+  // a single copy didn't already. Only genuinely distinct designs (a real
+  // Center image, or an explicitly different Left/Right) get their own
+  // thumbnail.
+  const uniqueUrls=[...new Set(urls)];
+  uniqueUrls.forEach(u=>{
     const img=document.createElement('img');
     img.src=u;
     img.style.cssText='flex:1;min-width:0;border-radius:8px;border:1px solid #003c8c;object-fit:contain;max-height:170px;background:#0d0d0d';
