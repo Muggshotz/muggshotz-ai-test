@@ -10942,7 +10942,17 @@ async function generate(){
   if(keepTweakingReminderEl)keepTweakingReminderEl.classList.remove('visible');
   startGenTimer();
   showGenerationInProgress();
-  startNeedlesStage();
+  // BYO has no generation to depict -- the easel show is built around
+  // watching the AI paint, and nothing paints here. Reuses the same
+  // "please wait while your mock-up is being generated" overlay the real
+  // Printify fetch shows later, instead of ever starting the animation.
+  const byoWaitOverlay=(byoDeclaredIntent==='byo')?document.getElementById('mockupLoadingOverlay'):null;
+  if(byoWaitOverlay){
+    byoWaitOverlay.style.display='flex';
+    document.body.classList.add('step-locked');
+  } else {
+    startNeedlesStage();
+  }
   clearReferenceSlots();
   document.getElementById('approveRow').style.display='none';
   document.getElementById('downloadDesignBtn').style.display='none';
@@ -11604,15 +11614,12 @@ async function makeTestSingleZonePanorama(side){
       scrollToStandardRevealWhenReady();
     };
     if(byoDeclaredIntent==='byo'){
-      // No AI ran, nothing was "created" -- the mascot-painting easel show
-      // is theater for a generation that never happened. BUG FIX: skipping
-      // straight to revealApproveStep() left the animation loop that
-      // startNeedlesStage() (top of generate()) had already started running
-      // with nothing to ever stop it -- normally presentFinishedNeedlesArt's
-      // finale sequence is what does that. stopNeedlesStage() properly tears
-      // the whole stage down first, same as every cancel/error path already
-      // does, before handing off to the same next step everyone else reaches.
-      stopNeedlesStage();
+      // No AI ran, no easel ever started -- just hide the "please wait"
+      // overlay shown in its place at the top of generate() and hand off
+      // to the same next step everyone else reaches.
+      const byoWaitOverlayDone=document.getElementById('mockupLoadingOverlay');
+      if(byoWaitOverlayDone)byoWaitOverlayDone.style.display='none';
+      document.body.classList.remove('step-locked');
       revealApproveStep();
     } else {
       presentFinishedNeedlesArt(finalImageUrl||resultUrl, revealApproveStep);
@@ -11621,6 +11628,11 @@ async function makeTestSingleZonePanorama(side){
   }catch(err){
     document.getElementById('wraparoundStandbyPrompt').style.display='none';
     stopNeedlesStage();
+    const byoWaitOverlayErr=document.getElementById('mockupLoadingOverlay');
+    if(byoWaitOverlayErr && byoWaitOverlayErr.style.display!=='none'){
+      byoWaitOverlayErr.style.display='none';
+      document.body.classList.remove('step-locked');
+    }
     setStatus(err.message,true);
     resetGenTimer();
     if(workingImage)setMainSlotImage(workingImage);
