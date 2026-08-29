@@ -6703,24 +6703,6 @@ function buildCoverMePanelRow(pos,label){
 // filled (real design + Remove, with "add a different one instead" as
 // a secondary option) or empty (re-add for free, or add something new
 // for another token).
-// Mirrors buildWraparoundImage()'s computeBoxes() in create-printify-order.js:
-// the real print widens a filled panel into an empty neighbor's freed-up
-// space, so the preview needs to widen by the same ratio or it undersells
-// what the customer actually gets. Preview-space multiplier, not a pixel
-// port -- the photos here are angled shots, not a flat print canvas, so this
-// matches the server's PROPORTIONS rather than its exact coordinate math.
-function coverMePanelWidthMultiplier(pos){
-  const filled={left:!!placements.left,front:!!placements.front,right:!!placements.right};
-  const filledCount=Object.values(filled).filter(Boolean).length;
-  if(filledCount===3||filledCount===0)return 1;
-  if(filledCount===1)return filled[pos]?1.8:1;
-  // filledCount===2 -- one slot is empty, its neighbor(s) absorb it.
-  if(!filled.left)return pos==='front'?2:(pos==='right'?1:1);
-  if(!filled.right)return pos==='front'?2:(pos==='left'?1:1);
-  // front empty -- left and right split it evenly.
-  return (pos==='left'||pos==='right')?1.5:1;
-}
-
 function renderCoverMePanelRowState(pos){
   const overlay=document.getElementById('coverMeOverlay_'+pos);
   const controls=document.getElementById('coverMeControls_'+pos);
@@ -6731,14 +6713,7 @@ function renderCoverMePanelRowState(pos){
   const design=placements[pos]?findDesignById(placements[pos]):null;
 
   if(design){
-    const baseBox=COVER_ME_PANEL_OVERLAY_POS[pos];
-    const mult=coverMePanelWidthMultiplier(pos);
-    const centerX=baseBox.left+baseBox.width/2;
-    const widenedWidth=Math.min(96,Math.round(baseBox.width*mult));
-    let widenedLeft=Math.round(centerX-widenedWidth/2);
-    if(widenedLeft<0)widenedLeft=0;
-    if(widenedLeft+widenedWidth>100)widenedLeft=100-widenedWidth;
-    const box={top:baseBox.top,left:widenedLeft,width:widenedWidth,height:baseBox.height};
+    const box=COVER_ME_PANEL_OVERLAY_POS[pos];
     overlay.style.cssText=`position:absolute;top:${box.top}%;left:${box.left}%;width:${box.width}%;height:${box.height}%;border:2px solid #d32f2f;border-radius:4px;overflow:hidden`;
     const img=document.createElement('img');
     img.src=design.url;
