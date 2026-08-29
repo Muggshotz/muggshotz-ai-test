@@ -2421,6 +2421,11 @@ function applyByoRailVisibility(){
   if(tokenNote)tokenNote.textContent=byo
     ? '🆓 Free — your photo goes on exactly as it is. No credits needed.'
     : 'Requires at least 1 token to generate.';
+  // "GENERATE IMAGE" implies AI is about to run, which is exactly the
+  // opposite of what a declared-BYO customer was just promised -- nothing
+  // gets generated, their photo just gets built into a mockup.
+  const genBtnLabel=document.getElementById('generateBtn');
+  if(genBtnLabel)genBtnLabel.textContent=byo?'🖼️ GENERATE MOCK UP':'🎨 GENERATE IMAGE';
 }
 
 function openIntentGate(){
@@ -8725,6 +8730,11 @@ function refreshApproveRowForMode(){
   const allSidesBtn = document.getElementById('allSidesBtn');
   const hint = document.getElementById('approveRowHint');
   if (!allSidesBtn) return;
+  // "Another go costs one more token" is only true when the AI actually ran.
+  // A declared-BYO customer's photo went through untouched -- there's no
+  // token to spend regardless of how many times they hit "try another".
+  const retryCost = document.getElementById('approveRetryCost');
+  if (retryCost) retryCost.style.display = (byoDeclaredIntent === 'byo') ? 'none' : '';
   const mode = getSlotMode();
   if (mode === 'three') {
     // A mug's panels are a spatial question, and this screen has no mug on
