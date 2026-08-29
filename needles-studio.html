@@ -11610,8 +11610,18 @@ async function makeTestSingleZonePanorama(side){
       document.getElementById('toggleImageBtn').style.display='none';
       refreshApproveRowForMode();
       showSingleImageAccessorizeStep();
-      // Same fix as Face It/Cover Me/Home Sweet Home -- see that comment.
-      scrollToStandardRevealWhenReady();
+      if(byoDeclaredIntent==='byo'){
+        // scrollToStandardRevealWhenReady() centers by measuring from the
+        // easel stage's top edge down to the approve row's bottom -- BYO
+        // never shows that stage, so that measurement is against an
+        // element that was never positioned normally, landing the scroll
+        // somewhere wrong. Plain, direct scroll straight to the row itself
+        // instead of the stage-relative centering math.
+        approveRowEl.scrollIntoView({behavior:'smooth',block:'center'});
+      } else {
+        // Same fix as Face It/Cover Me/Home Sweet Home -- see that comment.
+        scrollToStandardRevealWhenReady();
+      }
     };
     if(byoDeclaredIntent==='byo'){
       // No AI ran, no easel ever started -- just hide the "please wait"
