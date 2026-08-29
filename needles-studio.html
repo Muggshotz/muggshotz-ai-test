@@ -12036,10 +12036,13 @@ function updatePlacementSummary(){
 // accent is a colour somewhere else on the object entirely -- a handle, a
 // rim, the inside of the cup -- and sits nowhere behind the artwork.
 //
-// Only Color Pop's colour is the exterior the design prints onto. Trimmed
-// and Accented are white-bodied: their colour is the rim/handle/interior, so
-// their print surface is white and their fade must be white too.
-// surfaceColored marks the styles whose colour genuinely IS the background.
+// CORRECTED (Aug 2026): all three colored mug styles (Color Pop, Trimmed,
+// Accented) are white-bodied -- their color is the rim/handle/interior,
+// confirmed against Printify's own product page for Color Pop's exact
+// blueprint (1151). The print surface is always white, so the fade is
+// always white for every mug style. surfaceColored is left in place below
+// as the flag for the day some style's color genuinely IS the exterior
+// (a future travel mug, tote, etc.) -- no current mug style qualifies.
 const GEN_MUG_STYLES = {
   "Classic White": { colors: { "11oz": null, "15oz": null } },
   // REMOVED AGAIN (Aug 2026): Cambridge Blue was briefly restored after
@@ -12053,7 +12056,14 @@ const GEN_MUG_STYLES = {
   // here. Pulled from every style/size combo below again until that's
   // confirmed one way or the other against a real Printify listing or
   // physical sample.
-  "Color Pop": { surfaceColored:true, colors: { "11oz": [
+  // CORRECTED (Aug 2026): was surfaceColored:true. Printify's own product
+  // page for this exact blueprint (1151) confirms these mugs "come with a
+  // colored handle and interior" -- the exterior body, where the fade
+  // actually sits, is white. Same pattern as Trimmed and Accented below,
+  // which never had this flag. Was causing the fade to color itself to
+  // match a surface (the exterior) that was never actually colored,
+  // ringing white-body artwork in a mismatched accent color.
+  "Color Pop": { colors: { "11oz": [
     { name: "Black", hex: "#1c1c1c" }, { name: "Blue", hex: "#2255A4" },
     { name: "Golden Yellow", hex: "#D4A017" },
     { name: "Green", hex: "#1F7A45" }, { name: "Light Blue", hex: "#5FA8DE" },
