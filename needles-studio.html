@@ -3271,7 +3271,7 @@ async function pickFrame(name){
     // the scroll position alone since the customer is already there.
     if(selectedFrame && !accessorizeFrameScrolledOnce){
       accessorizeFrameScrolledOnce=true;
-      smoothScrollToTarget('frameCatalogSatisfiedBtn','end');
+      smoothScrollToTarget('accessorizeSatisfiedBtn','end');
     }
   } else if(selectedFrame){
     // Cancel any leftover idle-nudge scroll before this deliberate
@@ -9124,7 +9124,7 @@ function chooseRevealPath(choice){
 
   if(choice==='frame'){
     openAccessorizeForRevealFlow();
-    smoothScrollToTarget('frameCatalogSatisfiedBtn','end');
+    smoothScrollToTarget('accessorizeSatisfiedBtn','end');
     return;
   }
 
