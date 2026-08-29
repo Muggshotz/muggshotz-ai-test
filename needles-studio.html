@@ -6657,6 +6657,11 @@ function showCoverMePanelCard(){
   autoFillCoverMePanels();
   renderCoverMePanelRows();
   document.getElementById('coverMePanelCard').style.display='block';
+  // A design already exists by this point -- Generate sitting further down
+  // the page just duplicates what Done already does, and re-clicking it
+  // would silently re-run the whole generation pipeline from scratch.
+  const genBtnHide=document.getElementById('generateBtn');
+  if(genBtnHide)genBtnHide.style.display='none';
   smoothScrollToTarget('coverMePanelCard','center');
 }
 
@@ -6831,6 +6836,8 @@ function addDifferentImageForCoverMePanel(pos){
   if(pos==='left'||pos==='right')coverMePanelExplicit[pos]=true;
   pendingSlotTarget=pos;
   document.getElementById('coverMePanelCard').style.display='none';
+  const genBtnRestore3=document.getElementById('generateBtn');
+  if(genBtnRestore3)genBtnRestore3.style.display='';
   showDesignMethodCard();
 }
 
@@ -11963,6 +11970,8 @@ function clearAllDesigns(){
   document.getElementById('positionHolderCard').style.display='none';
   document.getElementById('approveRow').style.display='none';
   document.getElementById('downloadDesignBtn').style.display='none';
+  const genBtnRestore1=document.getElementById('generateBtn');
+  if(genBtnRestore1)genBtnRestore1.style.display='';
   renderRecentDesigns();
   renderPositionHolder();
   updateLibraryToggleLabel();
@@ -12896,6 +12905,8 @@ function resetEverythingFreshStart(){
   hideAccessorizeStep();
   document.getElementById('approveRow').style.display='none';
   document.getElementById('downloadDesignBtn').style.display='none';
+  const genBtnRestore2=document.getElementById('generateBtn');
+  if(genBtnRestore2)genBtnRestore2.style.display='';
   const keepTweakingReminderReset=document.getElementById('keepTweakingReminder');
   if(keepTweakingReminderReset)keepTweakingReminderReset.classList.remove('visible');
   resetMainSlot();
