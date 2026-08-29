@@ -11610,32 +11610,23 @@ async function makeTestSingleZonePanorama(side){
       document.getElementById('toggleImageBtn').style.display='none';
       refreshApproveRowForMode();
       showSingleImageAccessorizeStep();
-      if(byoDeclaredIntent==='byo'){
-        // scrollToStandardRevealWhenReady() centers by measuring from the
-        // easel stage's top edge down to the approve row's bottom -- BYO
-        // never shows that stage, so that measurement is against an
-        // element that was never positioned normally, landing the scroll
-        // somewhere wrong. BUG FIX: a plain scrollIntoView() here reintroduced
-        // the exact class of bug smoothScrollToTarget() exists to prevent --
-        // it fires against wherever the target happens to be at that instant,
-        // and content above (the just-hidden mockupLoadingOverlay, the
-        // approve row's own display swap) can still be settling, landing the
-        // scroll short. Use the same stability-polled scroll every other
-        // guided scroll in the app already relies on.
-        smoothScrollToTarget('approveRow','center');
-      } else {
-        // Same fix as Face It/Cover Me/Home Sweet Home -- see that comment.
-        scrollToStandardRevealWhenReady();
-      }
+      // Same fix as Face It/Cover Me/Home Sweet Home -- see that comment.
+      scrollToStandardRevealWhenReady();
     };
     if(byoDeclaredIntent==='byo'){
-      // No AI ran, no easel ever started -- just hide the "please wait"
-      // overlay shown in its place at the top of generate() and hand off
-      // to the same next step everyone else reaches.
+      // No AI ran, no easel ever started -- hide the "please wait" overlay
+      // shown in its place at the top of generate().
       const byoWaitOverlayDone=document.getElementById('mockupLoadingOverlay');
       if(byoWaitOverlayDone)byoWaitOverlayDone.style.display='none';
       document.body.classList.remove('step-locked');
-      revealApproveStep();
+      // NO APPROVE STEP FOR BYO (Alyx): "Are you satisfied with this
+      // design? Yes / No -- try another" is AI-track language for
+      // approving or rejecting something the AI made. A BYO customer
+      // supplied the exact image themselves -- there's nothing to approve
+      // and no alternative "try another" ever produces (it's the same
+      // photo regardless). Auto-run the same logic that button triggers,
+      // immediately, instead of ever showing that screen.
+      approveDesign(false);
     } else {
       presentFinishedNeedlesArt(finalImageUrl||resultUrl, revealApproveStep);
     }
