@@ -6663,6 +6663,14 @@ function showCoverMePanelCard(){
   const genBtnHide=document.getElementById('generateBtn');
   if(genBtnHide)genBtnHide.style.display='none';
   smoothScrollToTarget('coverMePanelCard','center');
+  // Same hold-then-snap as Edge Fade and Add a Frame: land on the panels
+  // first, hold ~3 seconds, then auto-scroll down to the Done button so
+  // the customer isn't left to find it by scrolling manually.
+  const myPanelScrollToken=++coverMePanelAutoScrollToken;
+  setTimeout(()=>{
+    if(myPanelScrollToken!==coverMePanelAutoScrollToken)return;
+    smoothScrollToTarget('coverMePanelDoneBtn','center');
+  },3000);
 }
 
 function renderCoverMePanelRows(){
@@ -6868,6 +6876,7 @@ function refreshCoverMePanelDoneState(){
 // itself (card, catalog, compositing) is untouched and still fully wired
 // for reuse elsewhere (Design track, other products).
 async function coverMePanelDone(){
+  coverMePanelAutoScrollToken++;
   document.getElementById('coverMePanelCard').style.display='none';
   if(panelScreenExit==='reveal'){
     // Design-first flow: reveal, Edge Fade and the frame offer are still
@@ -9082,6 +9091,9 @@ let edgeFadeAmountPct=0;
 // frameFadeAutoScrollToken -- bumped on open and on every exit path so a
 // leftover timer from a screen the customer already left can't fire.
 let accessorizeChoiceAutoScrollToken=0;
+// Same purpose, for the Left/Center/Right panel picker's delayed
+// auto-scroll to the Done button.
+let coverMePanelAutoScrollToken=0;
 
 // Shows accessorizeCard in its initial "choice" state -- the two
 // labeled mockups + No Thank You, with the browsable-rows/preview
