@@ -1472,48 +1472,6 @@ Tell Needles <span style="color:#7ab8ff">what you have in mind</span>
 <div id="wraparoundStandbyPrompt" class="note mug-select-flash" style="display:none">⏳ Please Stand By While Panoramic Panels Are Being Completed</div>
 <button type="button" class="generate-btn" id="mugPanelsContinueBtn" style="display:none;margin-top:1rem" onclick="continueFromMugPanels()">✅ Continue</button>
 
-<div id="accessorizeCard" style="display:none;margin-top:1.1rem;padding-top:1.1rem;border-top:1px dashed #333">
-<div class="card-title">🖼️ Add a Frame?</div>
-
-<div id="accessorizeChoicePanel">
-<div style="max-width:200px;width:100%;margin:0 auto;cursor:pointer;position:relative;border-radius:10px;overflow:hidden;border:1px solid #003c8c;aspect-ratio:1;background:#0d0d0d" onclick="chooseRevealPath('frame')">
-<img src="frame-crystal-champagne.png" style="width:100%;height:100%;object-fit:cover;display:block"/>
-<div style="position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(255,255,255,.3)"></div>
-<div style="position:absolute;top:0;left:0;right:0;bottom:0;display:flex;align-items:center;justify-content:center;text-align:center;color:#003c8c;font-weight:800;font-size:15px;padding:.5rem;text-shadow:0 0 6px rgba(255,255,255,.9),0 0 2px rgba(255,255,255,.9);animation:mugSelectFlash 1s ease-in-out infinite">Select a Frame?</div>
-</div>
-<div id="accessorizeSillChoiceOr" style="text-align:center;color:#29a3ff;font-weight:700;margin:10px 0">or</div>
-<div id="accessorizeSillChoiceBox" style="max-width:200px;width:100%;margin:0 auto;cursor:pointer;position:relative;border-radius:10px;overflow:hidden;border:1px solid #003c8c;aspect-ratio:1;background:#0d0d0d" onclick="chooseRevealPath('sill')">
-<img src="frame-window-sill-b.png" style="width:100%;height:100%;object-fit:cover;display:block"/>
-<div style="position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(255,255,255,.3)"></div>
-<div style="position:absolute;top:0;left:0;right:0;bottom:0;display:flex;align-items:center;justify-content:center;text-align:center;color:#003c8c;font-weight:800;font-size:15px;padding:.5rem;text-shadow:0 0 6px rgba(255,255,255,.9),0 0 2px rgba(255,255,255,.9);animation:mugSelectFlash 1s ease-in-out infinite">Select a Window Sill?</div>
-</div>
-<button type="button" class="download-btn" style="margin:12px auto 0;max-width:200px;width:100%;display:block" onclick="chooseRevealPath('none')">No Thank You</button>
-</div>
-
-<div id="accessorizePreviewStrip" style="display:flex;gap:8px;margin-top:1rem"></div>
-
-<div id="accessorizeCommittedContent" style="display:none">
-<div class="note-prominent" style="margin-top:.9rem;margin-bottom:.75rem">Pick a Frame or Window Sill above and try as many combinations as you like — nothing is saved until you tap Satisfied below.</div>
-<div id="frameFitSlidersWrap" style="display:none;margin-top:.9rem">
-<button type="button" class="download-btn" id="frameFitSlidersToggleBtn" style="margin-top:0" onclick="toggleFrameFitSliders()">🎚️ Adjust Frame Fit</button>
-<div id="frameFitSliders" style="display:none;margin-top:.75rem">
-<div class="note" style="margin-top:0;margin-bottom:.5rem">Stretch or reposition the frame's opening to fit your picture exactly how you want.</div>
-<label style="display:block;margin-bottom:2px">Width <span id="frameFitWidthVal"></span></label>
-<input type="range" id="frameFitWidth" min="20" max="150" step="1" oninput="handleFrameFitSliderChange()" style="width:100%"/>
-<label style="display:block;margin:8px 0 2px">Height <span id="frameFitHeightVal"></span></label>
-<input type="range" id="frameFitHeight" min="20" max="150" step="1" oninput="handleFrameFitSliderChange()" style="width:100%"/>
-<label style="display:block;margin:8px 0 2px">Left/Right Position <span id="frameFitOffsetXVal"></span></label>
-<input type="range" id="frameFitOffsetX" min="-50" max="50" step="1" oninput="handleFrameFitSliderChange()" style="width:100%"/>
-<label style="display:block;margin:8px 0 2px">Up/Down Position <span id="frameFitOffsetYVal"></span></label>
-<input type="range" id="frameFitOffsetY" min="-50" max="50" step="1" oninput="handleFrameFitSliderChange()" style="width:100%"/>
-<button type="button" class="download-btn" style="margin-top:.6rem" onclick="resetFrameFitSliders()">↺ Reset to Default Fit</button>
-</div>
-</div>
-<button type="button" class="generate-btn" id="accessorizeSatisfiedBtn" style="margin-top:.9rem" onclick="applyAccessorizeFrame()">✅ Satisfied?</button>
-<button class="download-btn" id="accessorizeCancelBtn" style="display:block;margin-top:.6rem;border-color:#5a2a2a;color:#ff8a7a" onclick="cancelAccessorizeToOffer()">↩️ Cancel — Go Back</button>
-</div>
-</div>
-
 <div id="genMugOptionsWrap" style="display:none;margin-top:1.1rem">
 <div class="note-action-flash" id="genMugPickStyleNote" style="margin-bottom:.6rem">Pick a style below — the real photo preview updates to match, so you can see exactly what you're getting before you decide.</div>
 <div id="mugStyleConfirmRow" style="display:none;gap:8px;margin-top:0;margin-bottom:.6rem">
@@ -1558,6 +1516,49 @@ Tell Needles <span style="color:#7ab8ff">what you have in mind</span>
 </div>
 <button class="generate-btn cta-muted" id="orderMugBtn" onclick="continueToRealMockup()" style="display:none;margin-top:.9rem">✅ Continue to Order</button>
 </div>
+
+<div id="accessorizeCard" style="display:none;margin-top:1.1rem;padding-top:1.1rem;border-top:1px dashed #333">
+<div class="card-title">🖼️ Add a Frame?</div>
+
+<div id="accessorizeChoicePanel">
+<div style="max-width:200px;width:100%;margin:0 auto;cursor:pointer;position:relative;border-radius:10px;overflow:hidden;border:1px solid #003c8c;aspect-ratio:1;background:#0d0d0d" onclick="chooseRevealPath('frame')">
+<img src="frame-crystal-champagne.png" style="width:100%;height:100%;object-fit:cover;display:block"/>
+<div style="position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(255,255,255,.3)"></div>
+<div style="position:absolute;top:0;left:0;right:0;bottom:0;display:flex;align-items:center;justify-content:center;text-align:center;color:#003c8c;font-weight:800;font-size:15px;padding:.5rem;text-shadow:0 0 6px rgba(255,255,255,.9),0 0 2px rgba(255,255,255,.9);animation:mugSelectFlash 1s ease-in-out infinite">Select a Frame?</div>
+</div>
+<div id="accessorizeSillChoiceOr" style="text-align:center;color:#29a3ff;font-weight:700;margin:10px 0">or</div>
+<div id="accessorizeSillChoiceBox" style="max-width:200px;width:100%;margin:0 auto;cursor:pointer;position:relative;border-radius:10px;overflow:hidden;border:1px solid #003c8c;aspect-ratio:1;background:#0d0d0d" onclick="chooseRevealPath('sill')">
+<img src="frame-window-sill-b.png" style="width:100%;height:100%;object-fit:cover;display:block"/>
+<div style="position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(255,255,255,.3)"></div>
+<div style="position:absolute;top:0;left:0;right:0;bottom:0;display:flex;align-items:center;justify-content:center;text-align:center;color:#003c8c;font-weight:800;font-size:15px;padding:.5rem;text-shadow:0 0 6px rgba(255,255,255,.9),0 0 2px rgba(255,255,255,.9);animation:mugSelectFlash 1s ease-in-out infinite">Select a Window Sill?</div>
+</div>
+<button type="button" class="download-btn" style="margin:12px auto 0;max-width:200px;width:100%;display:block" onclick="chooseRevealPath('none')">No Thank You</button>
+</div>
+
+<div id="accessorizePreviewStrip" style="display:flex;gap:8px;margin-top:1rem"></div>
+
+<div id="accessorizeCommittedContent" style="display:none">
+<div class="note-prominent" style="margin-top:.9rem;margin-bottom:.75rem">Pick a Frame or Window Sill above and try as many combinations as you like — nothing is saved until you tap Satisfied below.</div>
+<div id="frameFitSlidersWrap" style="display:none;margin-top:.9rem">
+<button type="button" class="download-btn" id="frameFitSlidersToggleBtn" style="margin-top:0" onclick="toggleFrameFitSliders()">🎚️ Adjust Frame Fit</button>
+<div id="frameFitSliders" style="display:none;margin-top:.75rem">
+<div class="note" style="margin-top:0;margin-bottom:.5rem">Stretch or reposition the frame's opening to fit your picture exactly how you want.</div>
+<label style="display:block;margin-bottom:2px">Width <span id="frameFitWidthVal"></span></label>
+<input type="range" id="frameFitWidth" min="20" max="150" step="1" oninput="handleFrameFitSliderChange()" style="width:100%"/>
+<label style="display:block;margin:8px 0 2px">Height <span id="frameFitHeightVal"></span></label>
+<input type="range" id="frameFitHeight" min="20" max="150" step="1" oninput="handleFrameFitSliderChange()" style="width:100%"/>
+<label style="display:block;margin:8px 0 2px">Left/Right Position <span id="frameFitOffsetXVal"></span></label>
+<input type="range" id="frameFitOffsetX" min="-50" max="50" step="1" oninput="handleFrameFitSliderChange()" style="width:100%"/>
+<label style="display:block;margin:8px 0 2px">Up/Down Position <span id="frameFitOffsetYVal"></span></label>
+<input type="range" id="frameFitOffsetY" min="-50" max="50" step="1" oninput="handleFrameFitSliderChange()" style="width:100%"/>
+<button type="button" class="download-btn" style="margin-top:.6rem" onclick="resetFrameFitSliders()">↺ Reset to Default Fit</button>
+</div>
+</div>
+<button type="button" class="generate-btn" id="accessorizeSatisfiedBtn" style="margin-top:.9rem" onclick="applyAccessorizeFrame()">✅ Satisfied?</button>
+<button class="download-btn" id="accessorizeCancelBtn" style="display:block;margin-top:.6rem;border-color:#5a2a2a;color:#ff8a7a" onclick="cancelAccessorizeToOffer()">↩️ Cancel — Go Back</button>
+</div>
+</div>
+
 <div class="card" id="verifyCard" style="display:none">
 <div class="card-title">🎁 Get a Second Free Token</div>
 <div class="note" style="margin-top:0;margin-bottom:.75rem">Verify your email and we'll send you another free token to keep creating. We check that it's a real, working address — this keeps one bonus token per person fair for everyone.</div>
