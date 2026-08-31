@@ -1,3 +1,5 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Muggshotz Test Matrix</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -181,6 +183,12 @@
   }
   .what{font-weight:500;margin:0 0 .15rem;color:var(--ink)}
   .expect{margin:0;font-size:13.5px;color:var(--ink-2)}
+  .sub-badge{display:inline-block;margin-top:8px;font-size:11px;font-weight:700;color:var(--ink-2);border:1px solid var(--line);border-radius:12px;padding:2px 9px}
+  .sub-badge.all-done{color:var(--done);border-color:var(--done)}
+  .subs{margin-top:8px;display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:4px 14px}
+  .sub{display:flex;align-items:center;gap:7px;font-size:12.5px;color:var(--ink-2);cursor:pointer;padding:2px 0}
+  .sub input{width:15px;height:15px;accent-color:var(--done);flex:0 0 auto;cursor:pointer}
+  .sub.done span{text-decoration:line-through;opacity:.55}
   .expect b{color:var(--ink);font-weight:600}
   .flag{
     display:inline-block;margin-top:.4rem;padding:.2rem .5rem;
@@ -394,6 +402,38 @@ function tally(){
 
 const FLAG_LABEL = { fixed:"fixed today", known:"known broken", new:"unverified" };
 
+// MINI-CHECKS (Alyx: "a real checklist complete with boxes I can check so
+// that I can go through all of the mini checks"). A row may carry a `subs`
+// array — every entry becomes its own checkbox, keyed id.s<n> in the same
+// localStorage state. Checking the last sub auto-checks the parent row.
+// The lists below are generated from the app's REAL option data
+// (GEN_MUG_STYLES, TRAVEL_MUG_CATALOG, the size tables), not from memory.
+const SUBS = {
+  "42": ["Classic White (no swatches)",
+    ...["Black","Blue","Maroon","Green","Yellow","Red","Light Blue","Orange","Light Green","Pink"].map(c=>"Trimmed — "+c),
+    ...["Black","Blue","Maroon","Green","Yellow","Pink","Orange","Light Green","Red","Light Blue"].map(c=>"Accented — "+c),
+    ...["Black","Blue","Golden Yellow","Green","Light Blue","Light Green","Maroon","Orange","Pink","Red","Yellow"].map(c=>"Color Pop — "+c)],
+  "43": ["Classic White (no swatches)",
+    ...["Black","Blue","Maroon","Green","Yellow"].map(c=>"Trimmed — "+c),
+    ...["Black","Blue","Maroon","Green","Yellow","Pink","Light Blue"].map(c=>"Accented — "+c),
+    ...["Black","Blue","Green","Light Blue","Light Green","Maroon","Orange","Pink","Red","Yellow"].map(c=>"Color Pop — "+c)],
+  "44": ["Wraparound offered after Size/Style/Color","Describe → ONE panorama call","Three aligned panels, no visible seams","No Fix-the-Seams screen appears","Mockup shows the wrap","Order page carries the wrap surcharge"],
+  "45": ["11oz — photo prints untouched","15oz — photo prints untouched","Fade page opens at 0%","Zero credits spent (meter unchanged)"],
+  "46": ["Cover Me","Face It","Home Sweet Home","Caption text on a design","A frame end to end","Window Sill","Edge fade at several strengths","Back-navigation from every stage","Order page: right style, size, colour, price"],
+  "47": ["96 pieces ($39.95)","252 pieces ($38.95)","Order page price matches"],
+  "48": ["AI track end to end","Bring-your-own end to end","Order page: $15.95 / pack of 8"],
+  "49": ["AI track end to end","Bring-your-own end to end","Order page: $7.95"],
+  "50": ["Straight to description after pick","Fade → mockup → order at $9.95"],
+  "51": ["Small","Medium","Large"],
+  "52": ["Search a model you own","Unknown model says so plainly","Order at $19.95"],
+  "53": ["Travel Mug 20oz","Travel Mug with Handle 14oz","Insulated 40oz — plus its 8 colours","Vacuum Tumbler 40oz — plus its 12 colours","Gator Tumbler 32oz","Tundra Tumbler 30oz"],
+  "54": ["Square set","Round set","Shape survives to the order page","$29.95 / set of 4 label"],
+  "55": ["13×13","16×16 ($24.95)","18×18 ($25.95)","Colour is mandatory before Generate"],
+  "56": ["9×11 ($11.95)","24×36 ($34.95)","Vertical","Horizontal"],
+  "57": ["Comic Panel","Wanted Poster","Trophy Plaque","Trading Card","Thin Line","Vintage Postage Stamp","Double Mat"],
+  "58": ["Left end of the frame complete in the mockup","Right end complete"],
+};
+
 for (const [sec, list] of Object.entries(TESTS)) {
   const host = document.getElementById(sec);
   for (const [id, what, expect, flag] of list) {
@@ -430,6 +470,42 @@ for (const [sec, list] of Object.entries(TESTS)) {
       f.className = "flag " + flag;
       f.textContent = FLAG_LABEL[flag];
       body.append(f);
+    }
+
+    const subs = SUBS[id];
+    if (subs && subs.length) {
+      const badge = document.createElement("span");
+      badge.className = "sub-badge";
+      const list2 = document.createElement("div");
+      list2.className = "subs";
+      const refresh = () => {
+        const done = subs.filter((_, i) => state[id + ".s" + i]).length;
+        badge.textContent = done + "/" + subs.length + " mini-checks";
+        badge.classList.toggle("all-done", done === subs.length);
+      };
+      subs.forEach((label, i) => {
+        const key = id + ".s" + i;
+        const item = document.createElement("label");
+        item.className = "sub" + (state[key] ? " done" : "");
+        const scb = document.createElement("input");
+        scb.type = "checkbox";
+        scb.checked = !!state[key];
+        scb.addEventListener("change", () => {
+          state[key] = scb.checked;
+          item.classList.toggle("done", scb.checked);
+          // The last mini-check completes the row itself.
+          if (subs.every((_, j) => state[id + ".s" + j])) {
+            state[id] = true; cb.checked = true; row.classList.add("done");
+          }
+          save(); tally(); refresh();
+        });
+        const txt = document.createElement("span");
+        txt.textContent = label;
+        item.append(scb, txt);
+        list2.append(item);
+      });
+      refresh();
+      body.append(badge, list2);
     }
 
     row.append(cb, num, body);
