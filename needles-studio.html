@@ -5552,10 +5552,25 @@ function goToDescribeAndGenerate(){
   // same friction already removed from the easel and approve screen.
   // Auto-run it directly instead.
   if(byoDeclaredIntent==='byo'){
-    generate();
+    byoAutoGenerate();
     return;
   }
   smoothScrollToTarget('ideaCard','center');
+}
+
+// RE-ENTRY LATCH for the BYO auto-run (2026-08-28, found by the combined-
+// batch sweep). The parallel session's auto-run is right -- a button that
+// generates nothing is pure friction -- but generate()'s own guard paths
+// call handOffToIdeaAfterProductChoice(), which now calls generate()
+// again: with wraparound state that loop is SYNCHRONOUS and infinite
+// (Maximum call stack exceeded). The latch holds for the whole run
+// (including its awaits, so a double-fire during the upload is also
+// impossible) and releases when generate() settles.
+let byoAutoGenRunning=false;
+function byoAutoGenerate(){
+  if(byoAutoGenRunning)return;
+  byoAutoGenRunning=true;
+  Promise.resolve(generate()).catch(()=>{}).finally(()=>{byoAutoGenRunning=false;});
 }
 
 function showDesignMethodCard(){
@@ -7473,7 +7488,7 @@ function handOffToIdeaAfterProductChoice(){
   // them find and click a button that doesn't generate anything anyway
   // (same reasoning as goToDescribeAndGenerate()'s matching fix).
   if(byoDeclaredIntent==='byo'){
-    generate();
+    byoAutoGenerate();
     return;
   }
   setOptionSpotlight('ideafirst-focus');
@@ -11050,7 +11065,12 @@ async function generate(){
   if(!ideaTextForTransfer || byoDeclaredIntent==='byo'){
     if(wrapActiveForTransfer && !ideaTextForTransfer){
       setStatus('A wraparound paints one continuous scene, so it needs a description. Want your photo exactly as it is instead? Switch Print Style to Classic and leave this box empty.',true);
-      handOffToIdeaAfterProductChoice();
+      // NO handOff for a declared-BYO customer: their handOff auto-runs
+      // generate(), and this guard IS inside generate() -- the bounce was
+      // one half of a synchronous infinite loop (the byoAutoGenerate latch
+      // is the other, general defense). There is nothing to hand off to
+      // anyway: their idea box is hidden.
+      if(byoDeclaredIntent!=='byo')handOffToIdeaAfterProductChoice();
       return;
     }
     if(byoDeclaredIntent==='byo'){

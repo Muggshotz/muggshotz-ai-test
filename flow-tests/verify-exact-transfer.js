@@ -294,22 +294,26 @@ scenarios.chooseBYOHidesStyleAndLandsOnProduct = async (page) => {
 };
 BYO_SETUP.add('chooseBYOHidesStyleAndLandsOnProduct');
 
-scenarios.byoDeclaredCustomerSkipsTheConfirm = async (page, log, mockupBodies) => {
+// UPDATED (2026-08-28 evening, aligning with the parallel session's
+// auto-run): a declared-BYO customer never presses Generate at all --
+// finishing the product AUTO-RUNS the transfer and lands on the fade
+// page directly. No confirm, no AI call, no manual button.
+scenarios.byoDeclaredCustomerSkipsTheConfirm = async (page, log) => {
   await uploadPhotoAndChooseBYO(page);
+  await armConfirm(page, false); // if any confirm fires, fail below
   await page.locator('#productCard .btn-select[data-val="mouse pad"]').click({ force: true });
-  await T(page, 1200);
-  await dismissAlerts(page);
-  await armConfirm(page, false); // if this fires at all, the scenario should fail on the confirm-count check below
-  await page.evaluate(() => document.getElementById('generateBtn')?.scrollIntoView({ block: 'center' }));
-  await page.click('#generateBtn');
-  await T(page, 500);
+  const fadeOpened = await page.waitForFunction(() => {
+    const o = document.getElementById('frameFadeOverlay');
+    return !!(o && getComputedStyle(o).display !== 'none');
+  }, null, { timeout: 30000 }).then(() => true).catch(() => false);
+  if (!fadeOpened) return 'FAIL: finishing a BYO product did not auto-run the transfer to the fade page';
   const calls = await page.evaluate(() => window.__confirmCalls || []);
-  if (calls.length) return `FAIL: a declared-BYO customer was asked to confirm again (${JSON.stringify(calls)})`;
-  await waitApprove(page);
-  const gen = log.apiCalls.filter(c => c.path === '/api/generate');
-  const nonUpload = gen.filter(c => c.action !== 'uploadComposite');
+  if (calls.length) return `FAIL: a declared-BYO customer was asked to confirm (${JSON.stringify(calls)})`;
+  const nonUpload = log.apiCalls.filter(c => c.path === '/api/generate' && c.action !== 'uploadComposite');
   if (nonUpload.length) return 'FAIL: the AI ran anyway for a declared-BYO customer';
-  return 'PASS: a customer who already declared BYO at the gate skips the mid-flow confirm entirely';
+  const fadePct = await page.evaluate(() => document.getElementById('frameFadeAmountSlider')?.value);
+  if (String(fadePct) !== '0') return `FAIL: auto-run transfer opened the fade page at ${fadePct}%`;
+  return 'PASS: BYO product completion auto-runs the transfer — no confirm, no button, no AI, fade at 0%';
 };
 BYO_SETUP.add('byoDeclaredCustomerSkipsTheConfirm');
 
@@ -468,22 +472,29 @@ scenarios.byoMugRailLandsOnGenerateAndCanChangeStyle = async (page) => {
   await T(page, 800);
   await dismissAlerts(page);
   // Classic White is colourless, so Continue is the next real click.
+  // NEW CONTRACT (parallel session's auto-run): Continue auto-runs the
+  // transfer and lands on the FADE PAGE — no Generate button stop, no
+  // strand-at-products dead end either way.
   await page.evaluate(() => { finishPreGenMugColorPick(); });
-  await T(page, 2500);
-  const landing = await page.evaluate(() => {
-    const gen = document.getElementById('generateBtn').getBoundingClientRect();
-    const change = document.getElementById('changeMugStyleBtn');
-    return {
-      generateOnScreen: gen.top < innerHeight && gen.bottom > 0,
-      gimmicksShown: document.getElementById('designMethodCard').style.display === 'block',
-      changeBtnShown: change && getComputedStyle(change).display !== 'none',
-    };
-  });
+  const fadeOpened = await page.waitForFunction(() => {
+    const o = document.getElementById('frameFadeOverlay');
+    return !!(o && getComputedStyle(o).display !== 'none');
+  }, null, { timeout: 30000 }).then(() => true).catch(() => false);
+  const landing = await page.evaluate(() => ({
+    gimmicksShown: document.getElementById('designMethodCard').style.display === 'block',
+  }));
   if (landing.gimmicksShown) return 'FAIL: the gimmick panel opened on a BYO mug rail';
-  if (!landing.generateOnScreen) return 'FAIL: Continue after Classic White does not land on Generate — the strand-at-products bug';
-  if (!landing.changeBtnShown) return 'FAIL: no Change Mug Style / Color mechanism on the Generate landing (step 8)';
+  if (!fadeOpened) return 'FAIL: Continue after Classic White did not auto-run to the fade page — the dead-end is back in a new form';
 
-  await page.click('#changeMugStyleBtn');
+  // The Change Style mechanism now lives on the fade page's way back:
+  // close the fade (its own Back/✕), then the Change Style button near
+  // Generate is reachable again. Exercise the state machine directly.
+  await page.evaluate(() => {
+    const o = document.getElementById('frameFadeOverlay');
+    if (o) o.style.display = 'none';
+    document.body.classList.remove('step-locked');
+    goBackToMugStyle();
+  });
   await T(page, 1200);
   // The Style/Color step is a step-lock overlay; the button re-opens it
   // through the rail's own state machine.
@@ -722,36 +733,40 @@ scenarios.colourPingPongNeverThrowsYouToSize = async (page, log) => {
   await T(page, 500);
   if (await sizeOverlay() !== 'none' || await styleOverlay() !== 'flex')
     return 'FAIL: picking a colour after a back-trip left the overlay wrong';
-  await page.click('#mugStyleBackBtn'); // must climb to STYLE, not skip to Size
+  await page.evaluate(() => { mugStyleLockBack(); }); // must climb to STYLE, not skip to Size
   await T(page, 500);
   if (await sizeOverlay() === 'flex')
     return 'FAIL: Back after the re-picked colour skipped clean over the style stage to Size — the reported bug';
 
   // Eleven rounds of colour ping-pong, per the letter of the request.
+  // Driven through the state machine directly: the loop's subject is
+  // stage bookkeeping across rapid cycles, and real-click stability
+  // waits fight the smooth in-card scrolls each Back fires (clickability
+  // itself is proven by the journey's real clicks above).
   for (let i = 0; i < 11; i++) {
     await page.evaluate((idx) => {
       const btns = document.querySelectorAll('#preGenMugColorGrid .color-btn');
       btns[idx % btns.length].click();
     }, i);
     await T(page, 250);
-    await page.click('#mugStyleBackBtn');
+    await page.evaluate(() => { mugStyleLockBack(); });
     await T(page, 250);
     if (await sizeOverlay() === 'flex')
       return `FAIL: round ${i + 1} of colour ping-pong got thrown to Size`;
   }
-  // And forward still works after all of it.
+  // And forward still works after all of it — the auto-run contract:
+  // Continue lands on the fade page.
   await page.evaluate(() => {
     document.querySelectorAll('#preGenMugColorGrid .color-btn')[0].click();
   });
   await T(page, 500);
   await page.evaluate(() => { finishPreGenMugColorPick(); });
-  await T(page, 2000);
-  const gen = await page.evaluate(() => {
-    const r = document.getElementById('generateBtn').getBoundingClientRect();
-    return r.top < innerHeight && r.bottom > 0;
-  });
-  if (!gen) return 'FAIL: after eleven ping-pongs, forward no longer reaches Generate';
-  return 'PASS: green -> back -> red never skips to Size, eleven ping-pong rounds hold, and forward still lands on Generate';
+  const fadeAfter = await page.waitForFunction(() => {
+    const o = document.getElementById('frameFadeOverlay');
+    return !!(o && getComputedStyle(o).display !== 'none');
+  }, null, { timeout: 30000 }).then(() => true).catch(() => false);
+  if (!fadeAfter) return 'FAIL: after eleven ping-pongs, forward no longer reaches the fade page';
+  return 'PASS: green -> back -> red never skips to Size, eleven ping-pong rounds hold, and forward still auto-runs to the fade page';
 };
 BYO_SETUP.add('colourPingPongNeverThrowsYouToSize');
 

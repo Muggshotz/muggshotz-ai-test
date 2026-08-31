@@ -236,12 +236,17 @@ const scenarios = {
     // Rail: spotlight held at approve; YES hands off to the panel screen,
     // which clears every focus mode (parallel-session convergence).
     await page.locator('#approveRow button:has-text("Yes")').first().click();
-    await page.waitForTimeout(1800);
+    // Wait ON the handoff, not a fixed nap: the stability-polled scrolls
+    // and the panel screen's 3s hold-then-snap both stretch the callback
+    // chain past any fixed number under load. The assertion is the
+    // OUTCOME (spotlight released, panel screen up), not the timeline.
+    const handedOff = await page.waitForFunction(() =>
+      !document.body.classList.contains('generation-active'), null, { timeout: 15000 }
+    ).then(() => true).catch(() => false);
     const st = await page.evaluate(() => ({
-      genActive: document.body.classList.contains('generation-active'),
       panel: document.getElementById('coverMePanelCard')?.style.display !== 'none',
     }));
-    if (st.genActive) return 'FAIL: spotlight not handed off after YES (mug guided path)';
+    if (!handedOff) return 'FAIL: spotlight not handed off after YES (mug guided path)';
     if (!st.panel) return 'FAIL: mug guided path did not converge on panel screen';
     return 'PASS: guided path through approve, YES converges on panel screen with clean handoff';
   },
