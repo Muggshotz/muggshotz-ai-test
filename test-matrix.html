@@ -230,7 +230,7 @@
     </div>
     <div class="tally">
       <span class="count" id="count">0</span>
-      <span class="of">of 39 checked</span>
+      <span class="of">of 58 checked</span>
       <div class="bar"><span id="bar"></span></div>
     </div>
   </header>
@@ -282,6 +282,12 @@
     <div class="sec-head"><h2>Checkout &mdash; go-live day</h2><span class="rng">31&ndash;39</span></div>
     <p class="sec-note">Rows 31&ndash;32 work <em>today</em>, before any keys change: Stripe's test card walks the entire customer experience with no money and no mug. Rows 33&ndash;34 come after the key flip. Rows 35&ndash;36 are the two newest products, greeting cards and post-it pads, walked start to finish.</p>
     <div class="rows" id="s7"></div>
+  </section>
+
+  <section>
+    <div class="sec-head"><h2>Round Two &mdash; Alyx's product-by-product sweep</h2><span class="rng">40&ndash;58</span></div>
+    <p class="sec-note">Dictated 2026-08-28 evening. Rows 40&ndash;41 and 57&ndash;58 verify the four fixes from the same batch; the rest walk every product start to finish. Run each product's full flow: upload (both tracks where it matters), options, generate or as-is, fade, mockup, order page with correct price.</p>
+    <div class="rows" id="s8"></div>
   </section>
 
   <section>
@@ -343,6 +349,27 @@ const TESTS = {
     ["37","Exact transfer: photo only, no AI","Upload a photo, pick any non-wraparound product, leave the description box <b>empty</b>, hit Generate. One confirm (&ldquo;use your photo exactly as it is?&rdquo;), then your photo goes straight to the fade page (opening at <b>0%</b> &mdash; no default fade) and the real mockup. <b>No AI touches it, and it costs no image credits</b> &mdash; works even at 0 credits. Wraparound still asks for a description and points you to Classic.","new"],
     ["38","Card Processing &amp; Handling","The order summary shows a <b>Card Processing &amp; Handling</b> row before Continue to Payment &mdash; exactly 2.9% + 30&cent; (the processor's rate, passed through at cost) plus a 5&cent; handling fee &mdash; with a one-line explanation under the summary. The same line appears on the Stripe page, token packs included, and the total includes it. We no longer eat the card processing cost; every word of the explanation is verifiable.","new"],
     ["39","The two-track upload","The bifurcation is on the upload card itself: the <b>photo frame</b> (&ldquo;Your picture, exactly as it is &mdash; free&rdquo;) is the no-AI track, and <b>&ldquo;🤝 Collaborate With Our AI (1 token)&rdquo;</b> below it is the AI track. Both open your photo picker; the split happens when the photo lands. Frame-track: no Art Style, no props/description, straight to products, note above Generate reads <b>&ldquo;Free &mdash; no credits needed,&rdquo;</b> photo prints untouched. AI-track: the full prior rail. The full-screen gate now appears only for undeclared arrivals (&ldquo;Use Last Photo Uploaded,&rdquo; re-tapping the preview). Ref pins are lettered <b>Reference A / B</b> and the AI answers to loose names for them (&ldquo;box A,&rdquo; &ldquo;the second photo,&rdquo; etc.).","new"]
+  ],
+  s8:[
+    ["40","The &ldquo;or&rdquo; divider","Between the photo clipboard and <b>Collaborate With Our AI (1 token)</b> there is now an unmistakable <b>&mdash; or &mdash;</b>. The two tracks read as a choice, not a stack.","new"],
+    ["41","Nothing lives before the photo","Load the studio fresh. Before you upload (or pick AI collaboration), the ONLY live panel is the upload/choice card &mdash; every card below it AND the Generate button, its note, and the reset buttons are invisible and unclickable. Upload &rarr; everything releases at once and you advance (frame-track &rarr; products; AI-track &rarr; Art Style).","new"],
+    ["42","11oz &mdash; every style, every colour","Classic White (no swatches), Trimmed (10 colours), Accented, Color Pop (incl. Golden Yellow, 11oz-only). Each pick updates the mockup and the price. Ping-pong freely &mdash; Back climbs one stage at a time.","new"],
+    ["43","15oz &mdash; every style, every colour","Same walk at 15oz: Trimmed drops to 5 colours (correct), no Golden Yellow (correct), prices read the 15oz column.","new"],
+    ["44","Wraparound &mdash; the full three-panel flow","Mug &rarr; Wraparound print style &rarr; describe &rarr; one continuous panorama, three aligned panels, NO Fix-the-Seams screen, mockup shows the wrap, order carries the wrap surcharge.","new"],
+    ["45","Bring Your Own Art &mdash; 11oz and 15oz","Photo-frame track &rarr; mug &rarr; both sizes: photo goes on untouched, fade page opens at 0%, zero credits spent, order page prices the right size.","new"],
+    ["46","Coffee mugs &mdash; the exhaustive pass","Everything at once: both sizes, all styles/colours, both tracks, gimmicks (Cover Me / Face It / Home Sweet Home), captions, frames, Window Sill, edge fade, back-navigation everywhere, all the way to the order page. The goal: declare coffee mugs bug-free end to end.","new"],
+    ["47","Puzzles &mdash; full flow","Both piece counts (96 is dearer than 252 &mdash; deliberate), generate, fade, mockup, order.","new"],
+    ["48","Greeting cards &mdash; full flow","$15.95 / pack of 8 on the tile and the order page. Both tracks.","new"],
+    ["49","Post-it pads &mdash; full flow","$7.95. Both tracks.","new"],
+    ["50","Mouse pads &mdash; full flow","$9.95, straight to description, fade, mockup, order.","new"],
+    ["51","Suitcases &mdash; full flow","All three sizes from $169.95. Size mandatory before Generate.","new"],
+    ["52","Phone cases &mdash; full flow","Search a real model; unknown models say so. $19.95.","new"],
+    ["53","Travel cups &mdash; full flow","All six cups, colours where offered, print-style pick lands on Generate, 40oz stays front/back (no wraparound offer).","new"],
+    ["54","Coasters &mdash; full flow","Square AND round (different blueprints), shape survives to the order page, $29.95 / set of 4.","new"],
+    ["55","Tote bags &mdash; full flow","All three sizes, colour mandatory, 16&times;16 at $24.95 vs 18&times;18 at $25.95 (deliberate).","new"],
+    ["56","Photo/Poster &mdash; full flow","Smallest ($11.95) and largest ($34.95), both orientations.","new"],
+    ["57","Frame tiles show real frames","On the frame picker, the six drawn frames (Comic Panel, Wanted Poster, Trophy Plaque, Trading Card, Thin Line, Stamp, Double Mat) now show their actual artwork on the tile &mdash; no more blank colour-bordered boxes.","new"],
+    ["58","Framed wraparound keeps its ends","Frame a wraparound mug design and check the REAL mockup: the frame border must be complete on both ends, not sliced off where the seam crop runs. (Root cause: the frame was drawn to the full strip and the server crops 5% per side; the inset now defaults to match.)","new"]
   ],
   s6:[
     ["27","Finish a mockup, then close it with the <b>&times;</b> &mdash; not Return","<b>What's Next?</b> must still appear. Until today the &times; threw away the only route to checkout.","fixed"],

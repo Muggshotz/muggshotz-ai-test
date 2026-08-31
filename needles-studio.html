@@ -439,6 +439,14 @@ body.goodmorninggen-focus .card:not(#goodMorningCard){opacity:.28;filter:brightn
 body.goodmorningreveal-focus .card:not(#uploadPhotoCard){opacity:.28;filter:brightness(.55) saturate(.7);transition:opacity .5s,filter .5s}
 body.final-generate-focus .card:not(#uploadPhotoCard){opacity:.35;filter:brightness(.6) saturate(.75);transition:opacity .5s,filter .5s}
 body.initial-upload-focus .card:not(#uploadPhotoCard){opacity:0;pointer-events:none;transition:opacity .5s}
+/* THE WHOLE PAGE WAITS FOR THE PHOTO (Alyx, batch item 2): before a photo
+   is chosen (or AI collaboration picked), the ONLY live panel is the
+   upload/choice card. The card rule above already hides every .card, but
+   the elements that live BETWEEN cards at top level — Generate, its token
+   note, the guidance line, the reset buttons — leaked through fully lit
+   and clickable. Same hide, same release: setMainSlotImage() removing
+   this class frees everything at once. */
+body.initial-upload-focus :is(#generateBtn,#generateTokenNote,#finalGenerateGuidance,#changeMugStyleBtn,#cancelBtn,#resetEverythingBtn,#resetEverythingBtnTop,#approveRow,#downloadDesignBtn,#keepTweakingReminder,#statusMsg){opacity:0;pointer-events:none;transition:opacity .5s}
 body.idea-focus .card:not(#ideaCard){opacity:.35;filter:brightness(.6) saturate(.75);transition:opacity .5s,filter .5s}
 body.product-focus .card:not(#productCard):not(#uploadPhotoCard){opacity:.35;filter:brightness(.6) saturate(.75);transition:opacity .5s,filter .5s}
 body.suitcase-size-focus .card:not(#suitcaseSizeCard){opacity:.35;filter:brightness(.6) saturate(.75);transition:opacity .5s,filter .5s}
@@ -780,6 +788,7 @@ const HERO_SETTLE_MS = 1000;
 <input type="file" id="refBInput" accept="image/*" style="display:none"/>
 <img id="refBPreview" class="preview-img" style="display:none;max-height:140px"/>
 </div>
+<div style="text-align:center;margin-top:.7rem;font-size:14px;font-weight:700;color:#7ab8ff;letter-spacing:2px;text-transform:uppercase">— or —</div>
 <button type="button" class="generate-btn" id="aiCollabUploadBtn" style="margin-top:.7rem" onclick="startUploadWithIntent('ai')">🤝 Collaborate With Our AI (1 token)</button>
 <div class="note" style="margin-top:.5rem;margin-bottom:0;text-align:center;font-size:11px"><u>Optional!</u> Pin extra reference photos above — <b>Reference A</b> and <b>Reference B</b> — if you want to combine or pull elements from other pictures (e.g. "use the face from Reference A on the body in Reference B"). If not, no biggie.</div>
 <div id="workshopRecallRow" style="display:none;gap:8px;margin-top:.6rem">
@@ -3236,10 +3245,28 @@ function renderFrameGrid(){
       swatch.style.fontSize='22px';
       swatch.style.opacity='0.6';
     } else {
-      const preview=document.createElement('div');
-      const previewColor=data.defaultColor||(data.defaultColors?data.defaultColors[0]:'#888');
-      preview.style.cssText='width:80%;height:80%;border:6px solid '+previewColor+';border-radius:4px;background:transparent';
-      swatch.appendChild(preview);
+      // REAL PREVIEWS FOR PROCEDURAL FRAMES (Alyx, 2026-08-28 batch: tiles
+      // "should show an actual photo of a picture frame... instead of a
+      // blank placeholder"). These used to render an empty coloured-border
+      // box while every image frame showed a real picture. The procedural
+      // frames HAVE real artwork -- the same draw functions that paint
+      // them onto the final composite paint them here at tile size.
+      const thumb=document.createElement('canvas');
+      thumb.width=200;thumb.height=200;
+      thumb.style.cssText='width:100%;height:100%';
+      const tctx=thumb.getContext('2d');
+      try{
+        if(data.type==='proceduralMulti'){
+          drawDoubleMat(tctx,thumb,data.defaultColors);
+        } else {
+          drawProceduralFrame(tctx,thumb,data.draw,data.defaultColor||'#888');
+        }
+      }catch(err){
+        const previewColor=data.defaultColor||(data.defaultColors?data.defaultColors[0]:'#888');
+        tctx.strokeStyle=previewColor;tctx.lineWidth=12;
+        tctx.strokeRect(20,20,160,160);
+      }
+      swatch.appendChild(thumb);
     }
     btn.appendChild(swatch);
     const label=document.createElement('div');
@@ -6967,10 +6994,28 @@ function renderCoverMeFullFrameGrid(){
       img.style.cssText='width:100%;height:100%;object-fit:cover';
       swatch.appendChild(img);
     } else {
-      const preview=document.createElement('div');
-      const previewColor=data.defaultColor||(data.defaultColors?data.defaultColors[0]:'#888');
-      preview.style.cssText='width:80%;height:80%;border:6px solid '+previewColor+';border-radius:4px;background:transparent';
-      swatch.appendChild(preview);
+      // REAL PREVIEWS FOR PROCEDURAL FRAMES (Alyx, 2026-08-28 batch: tiles
+      // "should show an actual photo of a picture frame... instead of a
+      // blank placeholder"). These used to render an empty coloured-border
+      // box while every image frame showed a real picture. The procedural
+      // frames HAVE real artwork -- the same draw functions that paint
+      // them onto the final composite paint them here at tile size.
+      const thumb=document.createElement('canvas');
+      thumb.width=200;thumb.height=200;
+      thumb.style.cssText='width:100%;height:100%';
+      const tctx=thumb.getContext('2d');
+      try{
+        if(data.type==='proceduralMulti'){
+          drawDoubleMat(tctx,thumb,data.defaultColors);
+        } else {
+          drawProceduralFrame(tctx,thumb,data.draw,data.defaultColor||'#888');
+        }
+      }catch(err){
+        const previewColor=data.defaultColor||(data.defaultColors?data.defaultColors[0]:'#888');
+        tctx.strokeStyle=previewColor;tctx.lineWidth=12;
+        tctx.strokeRect(20,20,160,160);
+      }
+      swatch.appendChild(thumb);
     }
     btn.appendChild(swatch);
     const label=document.createElement('div');
@@ -7066,10 +7111,28 @@ function renderCoverMeFrameGrid(){
       img.style.cssText='width:100%;height:100%;object-fit:cover';
       swatch.appendChild(img);
     } else {
-      const preview=document.createElement('div');
-      const previewColor=data.defaultColor||(data.defaultColors?data.defaultColors[0]:'#888');
-      preview.style.cssText='width:80%;height:80%;border:6px solid '+previewColor+';border-radius:4px;background:transparent';
-      swatch.appendChild(preview);
+      // REAL PREVIEWS FOR PROCEDURAL FRAMES (Alyx, 2026-08-28 batch: tiles
+      // "should show an actual photo of a picture frame... instead of a
+      // blank placeholder"). These used to render an empty coloured-border
+      // box while every image frame showed a real picture. The procedural
+      // frames HAVE real artwork -- the same draw functions that paint
+      // them onto the final composite paint them here at tile size.
+      const thumb=document.createElement('canvas');
+      thumb.width=200;thumb.height=200;
+      thumb.style.cssText='width:100%;height:100%';
+      const tctx=thumb.getContext('2d');
+      try{
+        if(data.type==='proceduralMulti'){
+          drawDoubleMat(tctx,thumb,data.defaultColors);
+        } else {
+          drawProceduralFrame(tctx,thumb,data.draw,data.defaultColor||'#888');
+        }
+      }catch(err){
+        const previewColor=data.defaultColor||(data.defaultColors?data.defaultColors[0]:'#888');
+        tctx.strokeStyle=previewColor;tctx.lineWidth=12;
+        tctx.strokeRect(20,20,160,160);
+      }
+      swatch.appendChild(thumb);
     }
     btn.appendChild(swatch);
     const label=document.createElement('div');
@@ -10314,7 +10377,14 @@ async function compositeFrameAcrossThreePanels(centerUrl,leftUrl,rightUrl){
   // insetFractionX comment for why. If that server-side crop percentage
   // ever changes, this must change to match or the frame will drift
   // out of alignment with the final crop again.
-  await drawFrameOnCanvas(ctx,combined,(frameInsetOverridePct!=null?frameInsetOverridePct:0)/100);
+  // DEFAULT 5, NOT 0 (Alyx's report: "frames getting cropped at the ends",
+  // 2026-08-28 batch). insetFractionX was BUILT to survive the server's
+  // 10% seam crop (see drawFrameOnCanvas: "root cause of the frame's ends
+  // never appearing in the real mockup") -- but when the calibration
+  // slider was wired in, the no-override default regressed to 0, so every
+  // framed wrap whose customer never touched the slider went back to
+  // getting its frame ends sliced off. 5 matches CROP_FRACTION/2 exactly.
+  await drawFrameOnCanvas(ctx,combined,(frameInsetOverridePct!=null?frameInsetOverridePct:5)/100);
   await drawWindowSillOnCanvas(ctx,combined);
 
   const combinedDataUrl=combined.toDataURL('image/jpeg',0.92);
@@ -10516,7 +10586,7 @@ function toggleFrameManualFit(){
   const showing=panel.style.display==='block';
   panel.style.display=showing?'none':'block';
   if(!showing){
-    const current=frameInsetOverridePct!=null?frameInsetOverridePct:0;
+    const current=frameInsetOverridePct!=null?frameInsetOverridePct:5; // 5 = the real default (CROP_FRACTION/2)
     const slider=document.getElementById('frameInsetSlider');
     if(slider)slider.value=current;
     const val=document.getElementById('frameInsetVal');
