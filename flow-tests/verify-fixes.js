@@ -236,6 +236,10 @@ const scenarios = {
     // Rail: spotlight held at approve; YES hands off to the panel screen,
     // which clears every focus mode (parallel-session convergence).
     await page.locator('#approveRow button:has-text("Yes")').first().click();
+    // The parallel session reordered the mug flow: Edge Fade now runs
+    // BEFORE panel placement, so the fade page stands between YES and the
+    // panel screen this scenario asserts.
+    await passFadePage(page);
     // Wait ON the handoff, not a fixed nap: the stability-polled scrolls
     // and the panel screen's 3s hold-then-snap both stretch the callback
     // chain past any fixed number under load. The assertion is the
