@@ -35,6 +35,7 @@ async function deletePrintifyProduct(productId) {
 async function handleStart(req, res) {
   const {
     productKey, sizeLabel, colorName, placements,
+    placementAdjust,
     frontImage, backImage, image,
     printMode = "standard",
     panoramaImage = null,
@@ -85,7 +86,7 @@ async function handleStart(req, res) {
       ? (panoramaImage
           ? await buildSeamlessWrapFromPanorama(panoramaImage, width, height)
           : await buildSeamlessWrapImage(placements, width, height))
-      : await buildWraparoundImage(placements, width, height, hex || null);
+      : await buildWraparoundImage(placements, width, height, hex || null, placementAdjust || {});
     const imageId = await uploadImageToPrintify(buffer, `muggshotz-mockup-preview-${Date.now()}.png`);
     printifyImages[position] = imageId;
 
