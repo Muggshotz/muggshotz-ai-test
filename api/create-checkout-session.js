@@ -147,6 +147,7 @@ async function handleProductOrder(req, res) {
   const productKey = req.body.productKey || MUG_TYPE_TO_PRODUCT_KEY[req.body.mugType];
   const colorName = req.body.colorName || req.body.color || null;
   const placements = req.body.placements || null;
+  const placementAdjust = req.body.placementAdjust || null;
   const frontImage = req.body.frontImage || null;
   const backImage = req.body.backImage || null;
   const singleImage = req.body.image || null;
@@ -241,6 +242,12 @@ async function handleProductOrder(req, res) {
   // and then dropped on the floor, never stored anywhere. Stripe metadata
   // values cap at 500 chars, so trim with room to spare.
   const giftMessageText = (giftMessage || "").trim().slice(0, 450);
+  // Same 500-char metadata cap as gift_message above. A three-value object
+  // of small numbers is a few dozen chars in practice; the slice is a
+  // defensive ceiling, not an expected trim.
+  const placementAdjustText = product.layoutType === "three-slot-wrap" && placementAdjust
+    ? JSON.stringify(placementAdjust).slice(0, 490)
+    : "";
 
   const session = await stripe.checkout.sessions.create({
     mode: "payment",
@@ -259,6 +266,7 @@ async function handleProductOrder(req, res) {
       image_url_b: imageUrlB,
       image_url_c: imageUrlC,
       image_url_d: imageUrlD,
+      placement_adjust: placementAdjustText,
       gift_message: giftMessageText,
       customer_name: customerName || "",
       first_name: shippingAddress.first_name || "",
