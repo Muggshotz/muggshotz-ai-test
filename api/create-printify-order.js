@@ -304,7 +304,7 @@ export async function resolvePhotoPosterSelection(product, { framed, sizeLabel, 
   };
 }
 
-export async function buildWraparoundImage(placements, canvasWidth, canvasHeight, borderHex = null) {
+export async function buildWraparoundImage(placements, canvasWidth, canvasHeight, borderHex = null, adjustments = {}) {
   const { left, front, right } = placements;
   const WHITE = { r: 255, g: 255, b: 255 };
   const sectionWidth = Math.round(canvasWidth / 3);
@@ -347,6 +347,15 @@ export async function buildWraparoundImage(placements, canvasWidth, canvasHeight
   // 3-panel mockup and it was still smaller than he wanted -- the theory
   // didn't hold up against the actual photo. Back to a flat 1 for every
   // fill count.
+  //
+  // UPDATED (Sep 2026, per-panel Adjust sliders): this flat default is
+  // now only the FALLBACK for a panel the customer never touched --
+  // `adjustments[pos]` (zoom/offX/offY, from the panel-selection screen's
+  // Adjust sliders) overrides it per panel when present. A photo that
+  // isn't a portrait/face (a landscape, a pet, a product shot) can crop
+  // badly under a fixed centered zoom with no way for the customer to
+  // see or fix it before the physical mug arrives -- these sliders are
+  // the fix, and they have to reach all the way here to mean anything.
   const PANEL_ZOOM = 1;
 
   const baseSlots = {
@@ -429,22 +438,38 @@ export async function buildWraparoundImage(placements, canvasWidth, canvasHeight
       .toBuffer();
   }
 
-  async function renderSection(imageSource, box) {
+  async function renderSection(imageSource, box, pos) {
     if (!imageSource || !box) return null;
     const targetW = box.width;
     const targetH = canvasHeight;
-    if (PANEL_ZOOM >= 1) {
+    const adjust = adjustments[pos] || {};
+    // Clamp defensively -- this crosses an HTTP boundary from client input,
+    // so a stray/garbled value can't zoom to absurdity or divide by zero.
+    const zoom = Math.min(2, Math.max(0.5, Number(adjust.zoom) || PANEL_ZOOM));
+    // -1..1: how far to push the image toward one edge, as a fraction of
+    // the room actually available at this zoom. 0 is dead center, same as
+    // the old fixed behavior when a panel is never touched.
+    const offX = Math.min(1, Math.max(-1, Number(adjust.offX) || 0));
+    const offY = Math.min(1, Math.max(-1, Number(adjust.offY) || 0));
+    if (zoom >= 1) {
       // Zoom IN: resize larger than the box (cover-fit, no letterboxing),
-      // then crop back down to the box's true size from the center.
+      // then crop back down to the box's true size -- from the center by
+      // default, or shifted toward whichever edge the customer dragged
+      // the Adjust sliders to, so the part of the photo they actually
+      // want stays in the box instead of whatever the auto-crop guessed.
       // Guarantees the box is always fully filled -- some excess gets
       // cropped, by design, at any zoom above 1.
-      const zoomedW = Math.round(targetW * PANEL_ZOOM);
-      const zoomedH = Math.round(targetH * PANEL_ZOOM);
+      const zoomedW = Math.round(targetW * zoom);
+      const zoomedH = Math.round(targetH * zoom);
+      const slackX = zoomedW - targetW;
+      const slackY = zoomedH - targetH;
+      const left = Math.round((slackX / 2) * (1 - offX));
+      const top = Math.round((slackY / 2) * (1 - offY));
       const buffer = await sharp(await resolveImageBuffer(imageSource))
         .resize(zoomedW, zoomedH, { fit: "cover", position: "centre" })
         .extract({
-          left: Math.round((zoomedW - targetW) / 2),
-          top: Math.round((zoomedH - targetH) / 2),
+          left: Math.min(slackX, Math.max(0, left)),
+          top: Math.min(slackY, Math.max(0, top)),
           width: targetW,
           height: targetH
         })
@@ -454,24 +479,29 @@ export async function buildWraparoundImage(placements, canvasWidth, canvasHeight
     }
     // Zoom OUT (scale < 1): shrink the image into a smaller sub-box
     // (contain-fit, so nothing gets cropped -- the full image is
-    // preserved, just smaller), then center it within the box's true
-    // dimensions on a white background. This is genuine breathing-room
-    // padding, not a crop -- the opposite operation from the >=1 case
-    // above, which is why it needs its own branch rather than sharing
-    // the same resize+extract math.
-    const shrunkW = Math.round(targetW * PANEL_ZOOM);
-    const shrunkH = Math.round(targetH * PANEL_ZOOM);
+    // preserved, just smaller), then place it within the box's true
+    // dimensions on a white background -- centered by default, or
+    // shifted per the Adjust sliders within the padding available. This
+    // is genuine breathing-room padding, not a crop -- the opposite
+    // operation from the >=1 case above, which is why it needs its own
+    // branch rather than sharing the same resize+extract math.
+    const shrunkW = Math.round(targetW * zoom);
+    const shrunkH = Math.round(targetH * zoom);
     const shrunkBuffer = await sharp(await resolveImageBuffer(imageSource))
       .resize(shrunkW, shrunkH, { fit: "contain", background: WHITE })
       .png()
       .toBuffer();
+    const padX = targetW - shrunkW;
+    const padY = targetH - shrunkH;
+    const pasteLeft = Math.min(padX, Math.max(0, Math.round((padX / 2) * (1 + offX))));
+    const pasteTop = Math.min(padY, Math.max(0, Math.round((padY / 2) * (1 + offY))));
     const paddedBuffer = await sharp({
       create: { width: targetW, height: targetH, channels: 3, background: WHITE }
     })
       .composite([{
         input: shrunkBuffer,
-        left: Math.round((targetW - shrunkW) / 2),
-        top: Math.round((targetH - shrunkH) / 2)
+        left: pasteLeft,
+        top: pasteTop
       }])
       .png()
       .toBuffer();
@@ -479,9 +509,9 @@ export async function buildWraparoundImage(placements, canvasWidth, canvasHeight
   }
 
   const [leftComposite, frontComposite, rightComposite] = await Promise.all([
-    renderSection(left, boxes.left),
-    renderSection(front, boxes.front),
-    renderSection(right, boxes.right)
+    renderSection(left, boxes.left, "left"),
+    renderSection(front, boxes.front, "front"),
+    renderSection(right, boxes.right, "right")
   ]);
 
   const composites = [leftComposite, frontComposite, rightComposite].filter(Boolean);
@@ -836,6 +866,7 @@ export async function placeProductOrder({
   sizeLabel,
   colorName,
   placements,
+  placementAdjust,
   frontImage,
   backImage,
   image,
@@ -910,7 +941,7 @@ export async function placeProductOrder({
       ? (panoramaImage
           ? await buildSeamlessWrapFromPanorama(panoramaImage, width, height)
           : await buildSeamlessWrapImage(placements, width, height))
-      : await buildWraparoundImage(placements, width, height, hex || null);
+      : await buildWraparoundImage(placements, width, height, hex || null, placementAdjust || {});
     const imageId = await uploadImageToPrintify(buffer, `muggshotz-${Date.now()}.png`);
     printifyImages[position] = imageId;
     pricing = isFullBleed
