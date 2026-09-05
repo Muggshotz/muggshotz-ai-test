@@ -2,10 +2,10 @@
 <!DOCTYPE html>
 <html lang="en">
 <head><link rel="manifest" href="needles-manifest.json">
-<!-- BUILD-MARKER: PANELS-END-AT-DONE-v40 -->
+<!-- BUILD-MARKER: MOCKUP-BACK-v41 -->
 <!-- If you can see this comment on GitHub, this exact paste landed. -->
 <!-- If your live site's page source does NOT say -->
-<!-- "PANELS-END-AT-DONE-v40" right here, the upload/deploy did -->
+<!-- "MOCKUP-BACK-v41" right here, the upload/deploy did -->
 <!-- not take -- re-upload before testing. -->
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
@@ -753,7 +753,13 @@ body.panels-active #captionCard{display:none!important}
   <img id="mockupLightboxImg" class="mockup-lightbox-img" alt="Enlarged mockup"/>
   <button class="mockup-lightbox-arrow mockup-lightbox-arrow-right" id="mockupLightboxNext" onclick="mockupLightboxNext()" aria-label="Next angle">›</button>
   <div class="mockup-lightbox-counter" id="mockupLightboxCounter"></div>
-  <button type="button" id="mockupLightboxReturn" class="generate-btn" style="display:none;position:absolute;left:50%;bottom:24px;transform:translateX(-50%);width:auto;padding:.8rem 1.6rem" onclick="returnFromFinalMockup()">↩️ Return</button>
+  <!-- Two honest exits (Alyx, Sep 2026): "Return" used to open What's Next
+       with Checkout on it, which is forward, not back. Back returns to the
+       screen the customer came from; Looks Good moves on to What's Next. -->
+  <div id="mockupLightboxActions" style="display:none;position:absolute;left:50%;bottom:24px;transform:translateX(-50%);gap:10px;width:auto">
+    <button type="button" id="mockupLightboxBack" class="download-btn" style="width:auto;margin:0;padding:.8rem 1.3rem;white-space:nowrap" onclick="goBackFromFinalMockup()">↩️ Back</button>
+    <button type="button" id="mockupLightboxReturn" class="generate-btn" style="width:auto;margin:0;padding:.8rem 1.4rem;white-space:nowrap" onclick="returnFromFinalMockup()">✅ Looks Good</button>
+  </div>
 </div>
 <div class="header">
   <video class="header-video" id="heroVideo" autoplay muted playsinline preload="auto" aria-label="Needles Studio hero banner">
@@ -7707,6 +7713,7 @@ async function confirmCoverMeFrame(){
 // already reads placements.left/front/right directly, no changes
 // needed there).
 async function finalizeCoverMeMockup(){
+  preMockupBack=()=>showCoverMePanelCard();
   await beginFinalMockupFetch();
 }
 
@@ -9690,6 +9697,7 @@ function chooseRevealPath(choice){
   if(frameFadeSettled){
     frameFadeSettled=false;
     document.body.classList.remove('step-locked');
+    preMockupBack=()=>showAccessorizeChoiceState();
     beginFinalMockupFetch();
     return;
   }
@@ -9751,6 +9759,7 @@ function chooseEdgeStyleAndContinue(isHard){
   const overlay=document.getElementById('revealOverlay');
   if(overlay)overlay.style.display='none';
   document.body.classList.remove('step-locked');
+  preMockupBack=()=>{frameFadeSettled=false;chooseRevealPath('none');};
   beginFinalMockupFetch();
 }
 
@@ -9952,6 +9961,7 @@ async function confirmFadeAndContinue(){
   const overlay=document.getElementById('revealOverlay');
   if(overlay)overlay.style.display='none';
   document.body.classList.remove('step-locked');
+  preMockupBack=()=>{frameFadeSettled=false;chooseRevealPath('none');};
   beginFinalMockupFetch();
 }
 
@@ -10170,6 +10180,7 @@ async function confirmFrameFadeAndContinue(){
   // to showAccessorizeChoiceState() would drop them onto a mug screen.
   if(fadeExitsToMockup){
     fadeExitsToMockup=false;
+    preMockupBack=()=>{fadeExitsToMockup=true;openFrameFadeOverlay();};
     beginFinalMockupFetch();
     return;
   }
@@ -10282,6 +10293,8 @@ async function beginFinalMockupFetch(){
     }
     if(overlay){overlay.style.display='none';document.body.classList.remove('step-locked');}
     openMockupLightbox(0);
+    const actions=document.getElementById('mockupLightboxActions');
+    if(actions)actions.style.display='flex';
     const returnBtn=document.getElementById('mockupLightboxReturn');
     if(returnBtn)returnBtn.style.display='block';
   }catch(err){
@@ -10508,8 +10521,44 @@ function returnFromFinalMockup(){
   hideMockupLightbox();
   const returnBtn=document.getElementById('mockupLightboxReturn');
   if(returnBtn)returnBtn.style.display='none';
+  const actions=document.getElementById('mockupLightboxActions');
+  if(actions)actions.style.display='none';
   const finalOverlay=document.getElementById('finalChoiceOverlay');
   if(finalOverlay){finalOverlay.style.display='flex';document.body.classList.add('step-locked');}
+}
+
+// BACK from the mockup (Alyx, Sep 2026): "back" means the screen the
+// customer was on just before the mockup, whichever path brought them --
+// the Hard/Fade edge question, the frame offer, the single-image fade page,
+// or the panels screen. Each launcher records how to reopen itself in
+// preMockupBack right before it starts the mockup. With nothing recorded,
+// a mug goes back to its panels screen and anything else to What's Next.
+let preMockupBack=null;
+function goBackFromFinalMockup(){
+  hideMockupLightbox();
+  const returnBtn=document.getElementById('mockupLightboxReturn');
+  if(returnBtn)returnBtn.style.display='none';
+  const actions=document.getElementById('mockupLightboxActions');
+  if(actions)actions.style.display='none';
+  const finalOverlay=document.getElementById('finalChoiceOverlay');
+  if(finalOverlay)finalOverlay.style.display='none';
+  document.body.classList.remove('step-locked');
+  const back=preMockupBack;
+  preMockupBack=null;
+  if(typeof back==='function'){ back(); return; }
+  if(product==='mug' && typeof showCoverMePanelCard==='function'){ showCoverMePanelCard(); return; }
+  returnFromFinalMockup();
+}
+// Undo a baked-on decorative frame so a return to the frame offer starts
+// from the plain designs again (the frame is re-composited from these
+// originals if chosen a second time).
+function restoreUnframedDesigns(){
+  if(!pendingWraparoundRaw)return;
+  const restore=(pos,url)=>{const d=placements[pos]?findDesignById(placements[pos]):null; if(d&&url)d.url=url;};
+  restore('left',pendingWraparoundRaw.left);
+  restore('front',pendingWraparoundRaw.center);
+  restore('right',pendingWraparoundRaw.right);
+  saveMugState();
 }
 
 function returnToUploadForNewPhoto(){
@@ -11361,6 +11410,7 @@ async function applyAccessorizeFrame(){
   if(btn)btn.disabled=false;
   if(revealFlowActive){
     revealFlowActive=false;
+    preMockupBack=()=>{restoreUnframedDesigns();showAccessorizeChoiceState();};
     beginFinalMockupFetch();
   } else if(earlyOverlay){
     // Safety hide: if this path was reached outside the normal reveal
@@ -11380,6 +11430,7 @@ function skipAccessorizeFrame(){
   hideAccessorizeStep();
   if(revealFlowActive){
     revealFlowActive=false;
+    preMockupBack=()=>showAccessorizeChoiceState();
     beginFinalMockupFetch();
   }
 }
