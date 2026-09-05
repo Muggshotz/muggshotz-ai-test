@@ -2,10 +2,10 @@
 <!DOCTYPE html>
 <html lang="en">
 <head><link rel="manifest" href="needles-manifest.json">
-<!-- BUILD-MARKER: BACK-BUTTONS-BYO-v44 -->
+<!-- BUILD-MARKER: MUG-PHOTOS-BY-SIZE-v45 -->
 <!-- If you can see this comment on GitHub, this exact paste landed. -->
 <!-- If your live site's page source does NOT say -->
-<!-- "BACK-BUTTONS-BYO-v44" right here, the upload/deploy did -->
+<!-- "MUG-PHOTOS-BY-SIZE-v45" right here, the upload/deploy did -->
 <!-- not take -- re-upload before testing. -->
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
@@ -5124,12 +5124,19 @@ const MUG_MOCKUP_PHOTOS = {
       "Maroon": "mug-trimmed-15oz-maroon.png",
       "Yellow": "mug-trimmed-15oz-yellow.png"
     },
+    // CORRECTED (Sep 2026, Alyx): the Trimmed photos come from two different
+    // shoots -- a tall 15oz shape (black, yellow) and a squat 11oz shape (the
+    // files that used to be labelled 15oz blue/green/maroon). Sharing files
+    // across sizes showed a 15oz customer an 11oz mug for three colours and
+    // an 11oz customer a 15oz mug for two. Each size now has its own full
+    // set: 15oz blue/green/maroon recoloured from the real 15oz black photo,
+    // 11oz black/yellow recoloured from the real 11oz maroon photo.
     "11oz": {
-      "Black": "mug-trimmed-15oz-black.png",
-      "Blue": "mug-trimmed-15oz-blue.png",
-      "Maroon": "mug-trimmed-15oz-maroon.png",
-      "Green": "mug-trimmed-15oz-green.png",
-      "Yellow": "mug-trimmed-15oz-yellow.png",
+      "Black": "mug-trimmed-11oz-black.png",
+      "Blue": "mug-trimmed-11oz-blue.png",
+      "Maroon": "mug-trimmed-11oz-maroon.png",
+      "Green": "mug-trimmed-11oz-green.png",
+      "Yellow": "mug-trimmed-11oz-yellow.png",
       "Red": "mug-trimmed-11oz-red.png",
       "Light Blue": "mug-trimmed-11oz-light-blue.png",
       "Orange": "mug-trimmed-11oz-orange.png",
