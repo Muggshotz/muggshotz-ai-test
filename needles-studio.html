@@ -2,10 +2,10 @@
 <!DOCTYPE html>
 <html lang="en">
 <head><link rel="manifest" href="needles-manifest.json">
-<!-- BUILD-MARKER: MUG-CAPTIONS-v42 -->
+<!-- BUILD-MARKER: BYO-COPY-v43 -->
 <!-- If you can see this comment on GitHub, this exact paste landed. -->
 <!-- If your live site's page source does NOT say -->
-<!-- "MUG-CAPTIONS-v42" right here, the upload/deploy did -->
+<!-- "BYO-COPY-v43" right here, the upload/deploy did -->
 <!-- not take -- re-upload before testing. -->
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
@@ -832,7 +832,7 @@ const HERO_SETTLE_MS = 1000;
      from the very first second of a first visit. -->
 <div id="byoArtBanner" style="border:1px solid #29a3ff;border-radius:10px;padding:.65rem .8rem;margin-bottom:.8rem;text-align:center;background:rgba(41,163,255,.07)">
   <div style="font-size:13px;font-weight:bold;color:#29a3ff;letter-spacing:.5px">🆓 BRING YOUR OWN ART — FREE</div>
-  <div class="note" style="margin:.35rem 0 0;font-size:11.5px">Already made something you love in ChatGPT, Gemini, or any AI — or just have a picture you want on a product? Tap the photo frame below and it prints <b>exactly as it is</b>. No image credits needed. You only pay for the product itself.</div>
+  <div class="note" style="margin:.35rem 0 0;font-size:11.5px">Already have a picture you love? A photo, or something you made in ChatGPT, Gemini, or any other AI. Upload it and we'll put it on a coffee mug, phone case, or any of our other products <b>exactly as it is</b>. No image credits needed. You only pay for the product.</div>
 </div>
 <!-- THE BIFURCATION, VISIBLE BEFORE THE PICKER (Alyx, 2026-08-28): "it's
      still not clear to the customer that this is a bifurcation. There
@@ -844,7 +844,7 @@ const HERO_SETTLE_MS = 1000;
      in what happens once the photo lands (startPhotoGuide reads the
      declared intent; the old post-upload gate remains only as the fallback
      for photos that arrive with no declaration, e.g. workshop recall). -->
-<div class="needles-clipboard"><div class="needles-clip"></div><div class="upload-zone needles-polaroid" id="uploadZone" onclick="startUploadWithIntent('byo')"><div style="font-size:32px;color:#555;margin-bottom:8px">👤</div><div class="upload-text">Tap here to upload a photo</div><div class="upload-sub">Your picture, exactly as it is — free</div></div>
+<div class="needles-clipboard"><div class="needles-clip"></div><div class="upload-zone needles-polaroid" id="uploadZone" onclick="startUploadWithIntent('byo')"><div style="font-size:32px;color:#555;margin-bottom:8px">👤</div><div class="upload-text">Tap here to upload a photo</div><div class="upload-sub">Upload your picture — free</div></div>
 <div class="ref-pin-zone" id="refAZone" onclick="document.getElementById('refAInput').click()"><div style="font-size:16px;color:#555;margin-bottom:1px">➕</div><div class="upload-text" style="font-size:8px;line-height:1.1">Reference A</div></div>
 <input type="file" id="refAInput" accept="image/*" style="display:none"/>
 <img id="refAPreview" class="preview-img" style="display:none;max-height:140px"/>
