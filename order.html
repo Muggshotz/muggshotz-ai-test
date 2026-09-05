@@ -4,6 +4,7 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Needles’ Studio — Order</title>
+<meta name="theme-color" content="#003c8c"/>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&display=swap"/>
 <style>
 /* DIAMONDS AND STEEL, NOT PUMPKINS AND BROWNIES (Alyx, 2026-08-28):
@@ -190,12 +191,6 @@ label{font-size:11px;color:#888;letter-spacing:.5px;text-transform:uppercase;dis
 </style>
 </head>
 <body>
-<div class="token-meter-row">
-  <div id="tokenMeterWrap">
-    <img src="meter.png" style="width:100%;display:block" alt="Chip meter"/>
-    <div id="tokenMeterNumber" style="position:absolute;left:44.4%;top:31.3%;width:13%;height:25.3%;display:flex;align-items:center;justify-content:center;color:var(--accent);font-family:'Anton',sans-serif;font-weight:700;font-size:clamp(12px,3vw,18px);text-shadow:0 0 8px rgba(41,163,255,0.7)">—</div>
-  </div>
-</div>
 <div class="header-title">🛒 Order Your Product</div>
 <div class="main">
 
@@ -303,7 +298,7 @@ label{font-size:11px;color:#888;letter-spacing:.5px;text-transform:uppercase;dis
 <div class="note" id="mockupPreviewBtn" style="text-align:center;margin-bottom:1rem;color:var(--accent-soft);font-weight:600">🔍 Click Image To Enlarge</div>
 <div class="note" id="mockupPreviewNote" style="margin-top:-.6rem;margin-bottom:1rem;text-align:center;display:none"></div>
 <img id="mockupPreviewImg" style="display:none;width:100%;border-radius:12px;border:1px solid var(--accent);margin-bottom:1rem"/>
-<div class="mug-preview-wrap">
+<div class="mug-preview-wrap" style="display:none">
 <svg id="mugPreviewSvg" viewBox="0 0 300 300" xmlns="http://www.w3.org/2000/svg">
   <defs>
     <clipPath id="frontClip">
@@ -321,7 +316,7 @@ label{font-size:11px;color:#888;letter-spacing:.5px;text-transform:uppercase;dis
   <ellipse id="mugRim" cx="135" cy="72" rx="73" ry="13" fill="#ffffff" stroke="#ccc" stroke-width="1.5"/>
 </svg>
 </div>
-<div class="note" style="text-align:center;margin-top:.6rem">This illustration is a placeholder while your real photo mockup loads — exact colors and proportions may vary slightly from the finished print.</div>
+<div class="note" style="text-align:center;margin-top:.6rem">Exact colors and proportions may vary slightly from the finished print.</div>
 </div>
 
 <div class="card" id="colorCard" style="display:none">
@@ -423,7 +418,7 @@ label{font-size:11px;color:#888;letter-spacing:.5px;text-transform:uppercase;dis
 
 </div>
 
-<div class="mockup-wait-banner" id="mockupWaitBanner">Please Stand By While Your Mockup Is Being Created</div>
+<div class="mockup-wait-banner" id="mockupWaitBanner">Your mockup is being generated. Please be patient, this may take a moment.</div>
 <div class="mockup-side-cta cta-left" id="mockupCtaLeft" onclick="goCheckoutFromMockup(event)">Yes, go to checkout</div>
 <div class="mockup-side-cta cta-right" id="mockupCtaRight" onclick="returnToOptionsFromMockup(event)">Not yet — I'd still like to make changes</div>
 <div class="select-flash-prompt" id="selectFlashPrompt"></div>
@@ -448,7 +443,7 @@ const MUG_STYLES = {
     sizes: {
       "11oz": { price: 19.95, colors: [
         { name: "Black", hex: "#1c1c1c" }, { name: "Blue", hex: "#2255A4" },
-        { name: "Cambridge Blue", hex: "#A3C1AD" }, { name: "Golden Yellow", hex: "#D4A017" },
+        { name: "Golden Yellow", hex: "#D4A017" },
         { name: "Green", hex: "#1F7A45" }, { name: "Light Blue", hex: "#5FA8DE" },
         { name: "Light Green", hex: "#5FBF5F" }, { name: "Maroon", hex: "#7A1F2B" },
         { name: "Orange", hex: "#F0701A" }, { name: "Pink", hex: "#E0457B" },
@@ -456,7 +451,7 @@ const MUG_STYLES = {
       ]},
       "15oz": { price: 21.95, colors: [
         { name: "Black", hex: "#1c1c1c" }, { name: "Blue", hex: "#2255A4" },
-        { name: "Cambridge Blue", hex: "#A3C1AD" }, { name: "Green", hex: "#1F7A45" },
+        { name: "Green", hex: "#1F7A45" },
         { name: "Light Blue", hex: "#5FA8DE" }, { name: "Light Green", hex: "#5FBF5F" },
         { name: "Maroon", hex: "#7A1F2B" }, { name: "Orange", hex: "#F0701A" },
         { name: "Pink", hex: "#E0457B" }, { name: "Red", hex: "#D62828" },
@@ -470,14 +465,14 @@ const MUG_STYLES = {
         { name: "Black", hex: "#1c1c1c" }, { name: "Blue", hex: "#2255A4" },
         { name: "Maroon", hex: "#7A1F2B" }, { name: "Green", hex: "#1F7A45" },
         { name: "Yellow", hex: "#F0D43A" }, { name: "Red", hex: "#D62828" },
-        { name: "Cambridge Blue", hex: "#A3C1AD" }, { name: "Light Blue", hex: "#5FA8DE" },
+        { name: "Light Blue", hex: "#5FA8DE" },
         { name: "Orange", hex: "#F0701A" }, { name: "Light Green", hex: "#5FBF5F" },
         { name: "Pink", hex: "#E0457B" }
       ]},
       "15oz": { price: 19.95, colors: [
         { name: "Black", hex: "#1c1c1c" }, { name: "Blue", hex: "#2255A4" },
         { name: "Maroon", hex: "#7A1F2B" }, { name: "Green", hex: "#1F7A45" },
-        { name: "Cambridge Blue", hex: "#A3C1AD" }, { name: "Yellow", hex: "#F0D43A" }
+        { name: "Yellow", hex: "#F0D43A" }
       ]}
     }
   },
@@ -487,7 +482,7 @@ const MUG_STYLES = {
         { name: "Black", hex: "#1c1c1c" }, { name: "Blue", hex: "#2255A4" },
         { name: "Maroon", hex: "#7A1F2B" }, { name: "Green", hex: "#1F7A45" },
         { name: "Yellow", hex: "#F0D43A" }, { name: "Pink", hex: "#E0457B" },
-        { name: "Orange", hex: "#F0701A" }, { name: "Cambridge Blue", hex: "#A3C1AD" },
+        { name: "Orange", hex: "#F0701A" },
         { name: "Light Green", hex: "#5FBF5F" }, { name: "Red", hex: "#D62828" },
         { name: "Light Blue", hex: "#5FA8DE" }
       ]},
@@ -1283,6 +1278,7 @@ const deviceId = getDeviceId();
 
 async function refreshTokenMeter(){
   const meterEl = document.getElementById('tokenMeterNumber');
+  if (!meterEl) return; // the meter was removed from this page (Sep 2026)
   try {
     const resp = await fetch('/api/get-balance?deviceId=' + encodeURIComponent(deviceId));
     const data = await resp.json();
