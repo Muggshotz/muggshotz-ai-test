@@ -1,11 +1,11 @@
-<!-- BUILD MARKER: needles-finale-watchdog-fix-aug24-2026 -->
+<!-- BUILD MARKER: decline-wording-lit-refphoto-sep4-2026 -->
 <!DOCTYPE html>
 <html lang="en">
 <head><link rel="manifest" href="needles-manifest.json">
-<!-- BUILD-MARKER: OVERLAY-TEXT-CENTERED-v28 -->
+<!-- BUILD-MARKER: DECLINE-WORDING-LIT-REFPHOTO-v29 -->
 <!-- If you can see this comment on GitHub, this exact paste landed. -->
 <!-- If your live site's page source does NOT say -->
-<!-- "OVERLAY-TEXT-CENTERED-v28" right here, the upload/deploy did -->
+<!-- "DECLINE-WORDING-LIT-REFPHOTO-v29" right here, the upload/deploy did -->
 <!-- not take -- re-upload before testing. -->
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
@@ -447,7 +447,16 @@ body.initial-upload-focus .card:not(#uploadPhotoCard){opacity:0;pointer-events:n
    and clickable. Same hide, same release: setMainSlotImage() removing
    this class frees everything at once. */
 body.initial-upload-focus :is(#generateBtn,#generateTokenNote,#finalGenerateGuidance,#changeMugStyleBtn,#cancelBtn,#resetEverythingBtn,#resetEverythingBtnTop,#approveRow,#downloadDesignBtn,#keepTweakingReminder,#statusMsg){opacity:0;pointer-events:none;transition:opacity .5s}
-body.idea-focus .card:not(#ideaCard){opacity:.35;filter:brightness(.6) saturate(.75);transition:opacity .5s,filter .5s}
+body.idea-focus .card:not(#ideaCard):not(#uploadPhotoCard){opacity:.35;filter:brightness(.6) saturate(.75);transition:opacity .5s,filter .5s}
+/* uploadPhotoCard is excluded from the blanket dim above because it houses
+   the reference-photo easel stage, which Alyx wants to stay lit here --
+   the customer may want to glance back at their own photo for ideas while
+   writing their description. Everything else inside that same card (the
+   upload zone, Reference A/B slots, the AI-collab button, workshop recall
+   row) still needs to go dark and be unclickable, since none of it applies
+   once a photo is already chosen and the customer's attention should be on
+   the description box -- so it's dimmed here individually instead. */
+body.idea-focus #uploadPhotoCard>*:not(#needlesStageWrap){opacity:.35;filter:brightness(.6) saturate(.75);pointer-events:none;transition:opacity .5s,filter .5s}
 body.product-focus .card:not(#productCard):not(#uploadPhotoCard){opacity:.35;filter:brightness(.6) saturate(.75);transition:opacity .5s,filter .5s}
 body.suitcase-size-focus .card:not(#suitcaseSizeCard){opacity:.35;filter:brightness(.6) saturate(.75);transition:opacity .5s,filter .5s}
 body.puzzle-size-focus .card:not(#puzzleSizeCard){opacity:.35;filter:brightness(.6) saturate(.75);transition:opacity .5s,filter .5s}
@@ -1183,7 +1192,7 @@ Tell Needles <span style="color:#7ab8ff">what you have in mind</span>
      done -- and, worse, it was the only way to make Continue appear. It is
      a plain decline now: the props are the offer, this is the graceful way
      past them, and Continue shows up once it is taken. -->
-<button type="button" class="download-btn" id="declinePropsBtn" style="margin-top:0" onclick="declineFunProps()">No thank you — Needles already has my words</button>
+<button type="button" class="download-btn" id="declinePropsBtn" style="margin-top:0" onclick="declineFunProps()">No thank you — I'll just describe what I want</button>
 <button type="button" class="generate-btn" id="designByDescriptionContinueBtn" style="display:none;margin-top:.9rem" onclick="continueWithDescriptionOnly()">Continue</button>
 </div>
 <button type="button" class="download-btn" style="margin-top:1rem" onclick="designMethodBack()">← Return</button>
