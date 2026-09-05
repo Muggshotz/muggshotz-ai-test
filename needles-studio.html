@@ -2,7 +2,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head><link rel="manifest" href="needles-manifest.json">
-<!-- BUILD-MARKER: TWO-BOARDS-v49 -->
+<!-- BUILD-MARKER: BACKDROPS-v50 -->
 <!-- If you can see this comment on GitHub, this exact paste landed. -->
 <!-- If your live site's page source does NOT say -->
 <!-- "INSTANT-FIT-SCREEN-v47" right here, the upload/deploy did -->
@@ -180,6 +180,13 @@
 .panelSwitch .psState{font-size:11px;color:#999}
 .panelSwitch input:checked~.psState{color:#7ed957;font-weight:700}
 .panelSwitch .psDiff{font-size:10px;color:#ffb74d}
+/* Backdrops (Sep 2026): a texture behind the picture that the fade melts into. */
+.backdropTiles{display:flex;gap:6px;flex-wrap:wrap;justify-content:center}
+.backdropTile{width:58px;cursor:pointer;text-align:center;border:2px solid #333;border-radius:8px;padding:3px;background:#0d0d0d;user-select:none}
+.backdropTile img,.backdropTile span{display:block;width:100%;aspect-ratio:1;object-fit:cover;border-radius:5px}
+.backdropTile span{background:#fff;color:#333;font-size:10px;display:flex;align-items:center;justify-content:center}
+.backdropTile .bkLabel{font-size:9px;color:#7ab8ff;margin-top:3px;white-space:nowrap}
+.backdropTile.selected{border-color:#29a3ff;box-shadow:0 0 10px rgba(41,163,255,.7)}
 .bi-btn{flex:1;background:#0d0d0d;border:.5px solid #333;border-radius:8px;padding:.6rem;text-align:center;cursor:pointer;color:#29a3ff;font-size:16px}
 .bi-btn.selected{border-color:#003c8c;background:#0d1b33;color:#003c8c}
 
@@ -3219,8 +3226,11 @@ const FRAME_CATALOG = {
   "Enchanted Grove": { type:"image", asset:"frame-enchanted-grove.png", colorable:false },
   "Lantern Vine": { type:"image", asset:"frame-lantern-vine.png", colorable:false },
   "Trailblazer": { type:"image", asset:"frame-biker-native.png", colorable:false },
-  "Astral": { type:"image", asset:"astral.png", colorable:false },
-  "Mirror Mirror": { type:"image", asset:"mirror mirror.png", colorable:false },
+  "Astral": { type:"image", asset:"frame-astral.png", colorable:false },
+  // The glass in these two arrived painted in (opaque), so the frame hid
+  // the photo. frame-astral.png / frame-mirror-mirror.png are the same art
+  // with the opening cut to true transparency (Sep 2026).
+  "Mirror Mirror": { type:"image", asset:"frame-mirror-mirror.png", colorable:false },
   "Royal": { type:"image", asset:"royal.png", colorable:false }
 };
 
@@ -6998,7 +7008,7 @@ function getDesignAdjust(designId){
 }
 function setDesignAdjust(designId,adj){
   const r3=v=>Math.round((Number(v)||0)*1000)/1000;
-  const clean={zoom:r3(adj.zoom||1),offX:r3(adj.offX),offY:r3(adj.offY),fade:Math.round(Number(adj.fade)||0),border:adj.border!==false};
+  const clean={zoom:r3(adj.zoom||1),offX:r3(adj.offX),offY:r3(adj.offY),fade:Math.round(Number(adj.fade)||0),border:adj.border!==false,backdrop:backdropKey(adj.backdrop)};
   panelsWithDesign(designId).forEach(pos=>{placementAdjust[pos]={...clean};});
   saveMugState();
 }
@@ -7037,7 +7047,7 @@ function fadeMaskAlpha(x,y,w,h,pct){
 // Paints that mask onto a small canvas (the gradient is smooth, so a
 // low-resolution mask stretched over the box looks identical and costs
 // nothing to redraw on every slider tick).
-function paintFadeMask(canvas,boxW,boxH,pct,hex){
+function paintFadeMask(canvas,boxW,boxH,pct,hex,backdrop){
   const longSide=Math.max(boxW,boxH)||1;
   const scale=Math.min(1,240/longSide);
   const cw=Math.max(2,Math.round(boxW*scale)),ch=Math.max(2,Math.round(boxH*scale));
@@ -7055,6 +7065,17 @@ function paintFadeMask(canvas,boxW,boxH,pct,hex){
     }
   }
   ctx.putImageData(img,0,0);
+  // With a backdrop the soft edge shows the texture, not the flat colour:
+  // the mask just painted becomes the stencil and the backdrop (cover-
+  // fitted to the whole box, exactly as the server fits it) is drawn
+  // through it, offset so this canvas's patch of it lines up with the box.
+  if(backdrop&&backdrop.img){
+    const im=backdrop.img,iw=im.naturalWidth,ih=im.naturalHeight;
+    const s=Math.max(backdrop.boxW/iw,backdrop.boxH/ih);
+    ctx.globalCompositeOperation='source-in';
+    ctx.drawImage(im,((backdrop.boxW-iw*s)/2-backdrop.left)*scale,((backdrop.boxH-ih*s)/2-backdrop.top)*scale,iw*s*scale,ih*s*scale);
+    ctx.globalCompositeOperation='source-over';
+  }
 }
 
 // `rect` is the picture's printed rectangle inside the box (see
@@ -7074,10 +7095,18 @@ function decorateFitBox(box,adj,rect){
   const place=el=>{el.style.left=r.left+'px';el.style.top=r.top+'px';el.style.width=r.w+'px';el.style.height=r.h+'px';};
   place(capEl);place(fadeEl);place(frameEl);
   if(product==='mug')paintCaptionLayer(capEl,r.w,r.h); else capEl.style.display='none';
+  const bk=backdropKey(adj.backdrop);
+  if(bk){
+    box.style.backgroundImage='url("backdrop-preview-'+bk+'.jpg")';
+    box.style.backgroundSize='cover';
+    box.style.backgroundPosition='center';
+  } else {
+    box.style.backgroundImage='none';
+  }
   const pct=Math.max(0,Math.min(80,Number(adj.fade)||0));
   if(pct>0&&r.w>1&&r.h>1){
     fadeEl.style.display='block';
-    paintFadeMask(fadeEl,r.w,r.h,pct,getSelectedProductColorHex());
+    paintFadeMask(fadeEl,r.w,r.h,pct,getSelectedProductColorHex(),bk?{img:getBackdropImage(bk),boxW:box.clientWidth,boxH:box.clientHeight,left:r.left,top:r.top}:null);
   } else {
     fadeEl.style.display='none';
   }
@@ -7195,8 +7224,13 @@ async function bakeCaptionIntoDesign(designId){
   const c=document.createElement('canvas');
   c.width=w;c.height=h;
   const ctx=c.getContext('2d');
-  ctx.fillStyle=getSelectedProductColorHex();
-  ctx.fillRect(0,0,w,h);
+  // On a backdrop the picture must stay see-through where it fades, so the
+  // server can lay it over the texture: no flat fill, fade as transparency.
+  const bk=backdropKey(adj.backdrop);
+  if(!bk){
+    ctx.fillStyle=getSelectedProductColorHex();
+    ctx.fillRect(0,0,w,h);
+  }
   ctx.drawImage(img,f.left-left,f.top-top,f.w,f.h);
   // The fade goes on here, under the caption, so the words stay crisp on
   // top of the soft edge (the server is then told fade:0 for this
@@ -7214,9 +7248,13 @@ async function bakeCaptionIntoDesign(designId){
       for(let x=0;x<w;x++){
         const a=fadeMaskAlpha(x+0.5,y+0.5,w,h,fadePct);
         if(a>0){
-          d[i]=Math.round(d[i]*(1-a)+R*a);
-          d[i+1]=Math.round(d[i+1]*(1-a)+G*a);
-          d[i+2]=Math.round(d[i+2]*(1-a)+B*a);
+          if(bk){
+            d[i+3]=Math.round(d[i+3]*(1-a));
+          } else {
+            d[i]=Math.round(d[i]*(1-a)+R*a);
+            d[i+1]=Math.round(d[i+1]*(1-a)+G*a);
+            d[i+2]=Math.round(d[i+2]*(1-a)+B*a);
+          }
         }
         i+=4;
       }
@@ -7224,7 +7262,7 @@ async function bakeCaptionIntoDesign(designId){
     ctx.putImageData(id,0,0);
   }
   drawCaptionText(ctx,c);
-  const uploaded=await uploadCompositedImage(c.toDataURL('image/jpeg',0.92),{strict:true});
+  const uploaded=await uploadCompositedImage(bk?c.toDataURL('image/png'):c.toDataURL('image/jpeg',0.92),{strict:true});
   if(!design.rawUrl){design.rawUrl=src;design.preBakeAdjust={...adj};}
   design.url=uploaded;
   design.captioned=true;
@@ -7334,6 +7372,32 @@ function buildCoverMeFitter(designId,multiple){
   fadeNote.textContent='Any setting above Sharp melts every edge of the picture into the mug so no hard line remains. Further toward Soft, the melt reaches further in.';
   card.appendChild(fadeNote);
 
+  // Backdrop tiles: shown once there is something for a backdrop to do --
+  // a soft edge to melt into, or a picture smaller than its print area.
+  const bkWrap=document.createElement('div');
+  bkWrap.id='coverMeBackdrop_'+designId;
+  bkWrap.style.cssText='margin-top:10px;display:none';
+  bkWrap.innerHTML='<div class="note" style="margin:0 0 6px;text-align:center;color:#7ab8ff">Portrait? Give it a backdrop to melt into.</div><div class="backdropTiles"></div>';
+  const tiles=bkWrap.querySelector('.backdropTiles');
+  const addTile=(key,label,thumb)=>{
+    const t=document.createElement('div');
+    t.className='backdropTile'+(backdropKey(adj.backdrop)===key?' selected':'');
+    t.dataset.key=key||'';
+    t.title=label;
+    t.innerHTML=(thumb?'<img src="'+thumb+'" alt="">':'<span>None</span>')+'<div class="bkLabel">'+label+'</div>';
+    t.onclick=()=>{
+      const cur=getDesignAdjust(designId);
+      cur.backdrop=key;
+      setDesignAdjust(designId,cur);
+      tiles.querySelectorAll('.backdropTile').forEach(el=>el.classList.toggle('selected',(el.dataset.key||null)===key));
+      apply();
+    };
+    tiles.appendChild(t);
+  };
+  addTile(null,'None',null);
+  Object.entries(BACKDROPS).forEach(([k,v])=>addTile(k,v.label,'backdrop-thumb-'+k+'.jpg'));
+  card.appendChild(bkWrap);
+
   const accent=getMugAccentHex();
   const frameRow=document.createElement('label');
   frameRow.style.cssText='display:flex;align-items:center;justify-content:center;gap:8px;margin-top:10px;cursor:pointer;font-size:13px;color:#ddd';
@@ -7349,13 +7413,14 @@ function buildCoverMeFitter(designId,multiple){
   reset.className='note';
   reset.style.cssText='text-align:center;margin-top:8px;color:#7ab8ff;cursor:pointer';
   reset.textContent='↺ Put it back in the middle at normal size';
-  reset.onclick=()=>{const d=defaultPanelAdjust();const cur=getDesignAdjust(designId);d.fade=cur.fade;d.border=cur.border;setDesignAdjust(designId,d);renderCoverMePanelRows();};
+  reset.onclick=()=>{const d=defaultPanelAdjust();const cur=getDesignAdjust(designId);d.fade=cur.fade;d.border=cur.border;d.backdrop=cur.backdrop;setDesignAdjust(designId,d);renderCoverMePanelRows();};
   card.appendChild(reset);
 
   const apply=()=>{
     sizeFitBox(box,printBox);
     const cur=getDesignAdjust(designId);
     layoutFittedImage(img,box,cur);
+    bkWrap.style.display=((cur.fade||0)>0||(cur.zoom||1)<1)?'block':'none';
     panelsWithDesign(designId).forEach(pos=>applyPanelAdjustTransform(pos));
   };
   img.addEventListener('load',apply);
@@ -12979,7 +13044,38 @@ function placementAdjustForRequest(){
   return out;
 }
 
-function defaultPanelAdjust(){return{zoom:1,offX:0,offY:0,fade:0,border:true};}
+function defaultPanelAdjust(){return{zoom:1,offX:0,offY:0,fade:0,border:true,backdrop:null};}
+// BACKDROPS (Alyx, Sep 2026): the print area behind the picture can be one
+// of these textures instead of the bare product colour, so a soft edge
+// melts into bubbles or clouds rather than plain white. Keys travel on the
+// placement (adjust.backdrop); the server holds the same list and paints
+// the full-size file under the print. Thumbs and previews are small JPEG
+// copies made from these originals.
+const BACKDROPS={
+  bubbles:{file:'bubble drift.png',label:'Bubbles'},
+  clouds:{file:'clouds.png',label:'Clouds'},
+  marble:{file:'laced marble.png',label:'Marble'},
+  rose:{file:'rose crepe.png',label:'Rose'},
+  satin:{file:'satin sheets.png',label:'Satin'},
+  frost:{file:'frosted mirror.png',label:'Frost'},
+  leaves:{file:'pastel leaf.png',label:'Leaves'},
+  vignette:{file:'fade to white.png',label:'Vignette'}
+};
+function backdropKey(v){return (v&&BACKDROPS[v])?v:null;}
+const backdropImageCache={};
+// The preview-size copy, loaded once. Until it arrives the fade paints in
+// the plain surface colour; the load re-lays every fit box on screen.
+function getBackdropImage(key){
+  if(!BACKDROPS[key])return null;
+  let img=backdropImageCache[key];
+  if(!img){
+    img=new Image();
+    img.onload=()=>window.dispatchEvent(new Event('resize'));
+    img.src='backdrop-preview-'+key+'.jpg';
+    backdropImageCache[key]=img;
+  }
+  return (img.complete&&img.naturalWidth)?img:null;
+}
 let placementAdjust={left:defaultPanelAdjust(),front:defaultPanelAdjust(),right:defaultPanelAdjust()};
 // Remembers whatever was just removed from EACH panel individually, so
 // "Add it back (free)" restores that exact panel's own last design --
