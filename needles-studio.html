@@ -2,10 +2,10 @@
 <!DOCTYPE html>
 <html lang="en">
 <head><link rel="manifest" href="needles-manifest.json">
-<!-- BUILD-MARKER: QUIET-HUD-v36 -->
+<!-- BUILD-MARKER: QUIET-HUD-v37 -->
 <!-- If you can see this comment on GitHub, this exact paste landed. -->
 <!-- If your live site's page source does NOT say -->
-<!-- "QUIET-HUD-v36" right here, the upload/deploy did -->
+<!-- "QUIET-HUD-v37" right here, the upload/deploy did -->
 <!-- not take -- re-upload before testing. -->
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
@@ -624,6 +624,7 @@ body.design-method-focus .card:not(#designMethodCard){opacity:.28;filter:brightn
 #hudPill b{font-family:"Anton","Arial Black",sans-serif;font-size:15px;color:#f7fcff;text-shadow:0 0 6px #56baff}
 #hudPill span.sep{opacity:.5}
 #hudPill:hover{filter:brightness(1.15)}
+.token-credits-row.hud-gone{display:none!important}
 .token-credits-row.hud-hidden{opacity:0;pointer-events:none;transform:translateY(-140%)}
 .token-credits-row.hud-hidden:not(.scrolled):not(.compact){transform:translateY(140%)}
 
@@ -2499,6 +2500,7 @@ function openIntentGate(){
 
 function chooseIntentAI(){
   byoDeclaredIntent='ai';
+  if(typeof updateHudMode==='function')updateHudMode();
   const overlay=document.getElementById('intentGateOverlay');
   if(overlay)overlay.style.display='none';
   document.body.classList.remove('step-locked');
@@ -2512,6 +2514,7 @@ function chooseIntentAI(){
 
 function chooseIntentBYO(){
   byoDeclaredIntent='byo';
+  if(typeof updateHudMode==='function')updateHudMode();
   const overlay=document.getElementById('intentGateOverlay');
   if(overlay)overlay.style.display='none';
   document.body.classList.remove('step-locked');
@@ -13731,16 +13734,51 @@ function resetEverythingFreshStart(){
 let hudExpanded=false;
 let hudGenerateOnScreen=false;
 let hudScrollTimer=null;
+// A pop-over screen (any step-lock overlay) means the customer is inside
+// a focused step -- the HUD has no business there.
+function hudOverlayOpen(){
+  if(document.body.classList.contains('step-locked'))return true;
+  return Array.from(document.querySelectorAll('.step-lock-overlay')).some(o=>getComputedStyle(o).display!=='none');
+}
+// "A Generate button is on screen" has to mean REALLY on screen: laid out,
+// inside the viewport, and not sitting underneath a pop-over. The
+// intersection observer can't see covering layers, so the top-most
+// element at the button's centre is checked too.
+function hudGenerateButtonTrulyVisible(){
+  const ids=['generateBtn','faceItGenerateBtn','goodMorningGenerateBtn','coverMeGenerateBtn'];
+  for(const id of ids){
+    const el=document.getElementById(id);
+    if(!el||!el.offsetParent)continue;
+    const r=el.getBoundingClientRect();
+    if(r.width===0||r.height===0||r.bottom<0||r.top>innerHeight)continue;
+    const cx=Math.min(Math.max(r.left+r.width/2,0),innerWidth-1);
+    const cy=Math.min(Math.max(r.top+r.height/2,0),innerHeight-1);
+    const top=document.elementFromPoint(cx,cy);
+    if(top&&(top===el||el.contains(top)))return true;
+  }
+  return false;
+}
 function updateHudMode(){
   const row=document.querySelector('.token-credits-row');
   if(!row)return;
   const count=document.getElementById('tokenMeterNumber')?.textContent||'—';
   const pillCount=document.getElementById('hudPillCount');
   if(pillCount&&pillCount.textContent!==count)pillCount.textContent=count;
+  // Bring Your Own Art spends no chips anywhere, so on that track the HUD
+  // does not exist at all (Alyx). Same inside any pop-over screen.
+  const byo=(typeof byoDeclaredIntent!=='undefined'&&byoDeclaredIntent==='byo');
+  const gone=byo||hudOverlayOpen();
+  row.classList.toggle('hud-gone',gone);
+  if(gone){hudExpanded=false;return;}
   const outOfChips=currentTokenBalance!==null&&currentTokenBalance<=0&&!isAdminDevice;
+  hudGenerateOnScreen=hudGenerateButtonTrulyVisible();
   const full=hudExpanded||hudGenerateOnScreen||outOfChips;
   row.classList.toggle('compact',!full);
 }
+// Overlays open and close, tracks get chosen, cards appear -- rather than
+// chase every one of those, re-evaluate on a light tick as well as on the
+// events below. The check is a few rectangle reads; it costs nothing.
+setInterval(()=>{ if(typeof updateHudMode==='function')updateHudMode(); },400);
 function toggleHudExpanded(e){
   if(e)e.stopPropagation();
   hudExpanded=!hudExpanded;
@@ -13759,11 +13797,7 @@ document.addEventListener('click',(e)=>{
   const ids=['generateBtn','faceItGenerateBtn','goodMorningGenerateBtn','coverMeGenerateBtn'];
   const visible=new Set();
   if(typeof IntersectionObserver==='undefined')return;
-  const io=new IntersectionObserver((entries)=>{
-    entries.forEach(en=>{ if(en.isIntersecting&&en.intersectionRatio>0)visible.add(en.target.id); else visible.delete(en.target.id); });
-    hudGenerateOnScreen=visible.size>0;
-    updateHudMode();
-  },{threshold:[0,0.01]});
+  const io=new IntersectionObserver(()=>updateHudMode(),{threshold:[0,0.01]});
   ids.forEach(id=>{const el=document.getElementById(id); if(el)io.observe(el);});
 })();
 // The pill's number follows the meter's, wherever the meter gets updated.
