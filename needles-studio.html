@@ -2,7 +2,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head><link rel="manifest" href="needles-manifest.json">
-<!-- BUILD-MARKER: INSTANT-FIT-SCREEN-v47 -->
+<!-- BUILD-MARKER: TEN-FIXES-v48 -->
 <!-- If you can see this comment on GitHub, this exact paste landed. -->
 <!-- If your live site's page source does NOT say -->
 <!-- "INSTANT-FIT-SCREEN-v47" right here, the upload/deploy did -->
@@ -155,6 +155,18 @@
 .swatch-dot{width:14px;height:14px;border-radius:50%;display:inline-block;border:1px solid rgba(255,255,255,0.25)}
 .sub-section-label{font-size:11px;color:#29a3ff;letter-spacing:.5px;text-transform:uppercase;margin-top:1.1rem;margin-bottom:-.25rem}
 .bi-row{display:flex;gap:8px;margin-top:.75rem}
+/* Panel switches (Sep 2026): one picture above, three on/off switches here. */
+.panelSwitches{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+.panelSwitch{display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;user-select:none;min-width:88px;padding:10px 8px;border:1px solid #003c8c;border-radius:10px;background:#0d0d0d}
+.panelSwitch input{position:absolute;opacity:0;width:0;height:0}
+.panelSwitch .psLabel{font-weight:800;color:#7ab8ff;font-size:13px;letter-spacing:.5px}
+.panelSwitch .psTrack{position:relative;width:48px;height:26px;border-radius:13px;background:#444;transition:background .15s}
+.panelSwitch .psTrack::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:left .15s}
+.panelSwitch input:checked~.psTrack{background:#2196ff}
+.panelSwitch input:checked~.psTrack::after{left:25px}
+.panelSwitch .psState{font-size:11px;color:#999}
+.panelSwitch input:checked~.psState{color:#7ed957;font-weight:700}
+.panelSwitch .psDiff{font-size:10px;color:#ffb74d}
 .bi-btn{flex:1;background:#0d0d0d;border:.5px solid #333;border-radius:8px;padding:.6rem;text-align:center;cursor:pointer;color:#29a3ff;font-size:16px}
 .bi-btn.selected{border-color:#003c8c;background:#0d1b33;color:#003c8c}
 
@@ -764,8 +776,12 @@ body.panels-active #verifyCard{display:none!important}
   <!-- Two honest exits (Alyx, Sep 2026): "Return" used to open What's Next
        with Checkout on it, which is forward, not back. Back returns to the
        screen the customer came from; Looks Good moves on to What's Next. -->
-  <div id="mockupLightboxActions" style="display:none;position:absolute;left:50%;bottom:24px;transform:translateX(-50%);gap:10px;width:auto">
+  <div id="mockupLightboxActions" style="display:none;position:absolute;left:50%;bottom:24px;transform:translateX(-50%);gap:10px;width:auto;max-width:96vw;flex-wrap:wrap;justify-content:center">
     <button type="button" id="mockupLightboxBack" class="download-btn" style="width:auto;margin:0;padding:.8rem 1.3rem;white-space:nowrap" onclick="goBackFromFinalMockup()">↩️ Back</button>
+    <!-- The frame offer lives HERE now (Alyx, Sep 2026): on the finished
+         mockup, where a frame can be judged against the real mug. Mug
+         three-panel flow only. -->
+    <button type="button" id="mockupLightboxFrame" class="download-btn" style="display:none;width:auto;margin:0;padding:.8rem 1.3rem;white-space:nowrap;border-color:#003c8c;color:#7ab8ff" onclick="offerFrameFromMockup()">🖼️ Add a Frame</button>
     <button type="button" id="mockupLightboxReturn" class="generate-btn" style="width:auto;margin:0;padding:.8rem 1.4rem;white-space:nowrap" onclick="returnFromFinalMockup()">✅ Looks Good</button>
   </div>
 </div>
@@ -1324,7 +1340,7 @@ Tell Needles <span style="color:#7ab8ff">what you have in mind</span>
      per-panel "Adjust" bars were both redundant and invisible. -->
 <div id="coverMeFitWrap"></div>
 <div class="card-title">SELECT THE PANELS</div>
-<div class="note" style="margin-top:0;margin-bottom:1rem;text-align:center;color:#7ab8ff">WHERE DO YOU WISH TO PLACE YOUR IMAGE?</div>
+<div class="note" style="margin-top:0;margin-bottom:1rem;text-align:center;color:#7ab8ff">WHERE DO YOU WISH TO PLACE YOUR IMAGE? Switch each side of the mug on or off. The picture above, with its size, position, fade and caption, goes on every panel that is on.</div>
 <div id="coverMePanelRows" style="display:flex;flex-direction:column;gap:12px"></div>
 <div class="note" id="coverMePanelHint" style="margin-top:.9rem;text-align:center">At least one panel needs an image before you can continue.</div>
 <button type="button" class="generate-btn" id="coverMePanelDoneBtn" style="margin-top:.75rem" disabled onclick="coverMePanelDone()">✅ Done</button>
@@ -1463,7 +1479,7 @@ Tell Needles <span style="color:#7ab8ff">what you have in mind</span>
 </div>
 
 <div id="mockupLoadingOverlay" class="step-lock-overlay" style="display:none;background:#000;align-items:center">
-<div style="text-align:center;font-size:20px;font-weight:800;color:#2196ff;animation:mugSelectFlash 1s ease-in-out infinite">Please wait while your mock-up is being generated...</div>
+<div style="text-align:center;font-size:20px;font-weight:800;color:#2196ff;animation:mugSelectFlash 1s ease-in-out infinite">Your mockup is being generated. Please be patient, this may take a moment.</div>
 </div>
 
 <div id="seamFixOverlay" class="step-lock-overlay" style="display:none">
@@ -1507,12 +1523,12 @@ Tell Needles <span style="color:#7ab8ff">what you have in mind</span>
 <div class="card" id="revealCard" style="max-width:520px;width:100%;margin:auto;position:relative;max-height:92vh;overflow-y:auto;text-align:center">
 <div class="card-title">🎉 Your Finished Artwork</div>
 <img id="revealArtworkImg" style="width:100%;border-radius:10px;border:1px solid #003c8c;margin:.9rem 0;background:#0d0d0d"/>
-<div id="revealThreePanelRow" style="display:none;gap:8px;margin:.9rem 0">
-<img id="revealThreePanelLeft" style="flex:1;min-width:0;border-radius:8px;border:1px solid #003c8c;object-fit:contain;max-height:200px;background:#0d0d0d"/>
-<img id="revealThreePanelCenter" style="flex:1;min-width:0;border-radius:8px;border:1px solid #003c8c;object-fit:contain;max-height:200px;background:#0d0d0d"/>
-<img id="revealThreePanelRight" style="flex:1;min-width:0;border-radius:8px;border:1px solid #003c8c;object-fit:contain;max-height:200px;background:#0d0d0d"/>
-</div>
-<div class="note" style="margin-top:0;margin-bottom:.9rem">One more choice before we add any frame — how should the edges look?</div>
+<!-- Mug panels: the ONE picture, in the true shape of its print area, with
+     the fade drawn on it exactly as the Fit Your Picture box draws it. The
+     same picture on two or three panels is shown once (Alyx, Sep 2026). -->
+<div id="revealFitHost" style="display:none;margin:.9rem 0"></div>
+<div class="note" id="revealFitNote" style="display:none;margin-top:0;margin-bottom:.6rem;color:#7ab8ff;font-size:11px"></div>
+<div class="note" style="margin-top:0;margin-bottom:.9rem">How should the edges of your picture look on the mug?</div>
 <div class="bi-row" id="revealEdgeButtonsRow">
 <button type="button" class="generate-btn" style="flex:1;width:auto;padding:.9rem .4rem" onclick="chooseEdgeStyleAndContinue(true)">◻️ Hard Edges</button>
 <button type="button" class="generate-btn" style="flex:1;width:auto;padding:.9rem .4rem" onclick="chooseFadeEdges()">🌫️ Fade Edges</button>
@@ -1522,7 +1538,8 @@ Tell Needles <span style="color:#7ab8ff">what you have in mind</span>
 <div class="note" style="margin-top:0;margin-bottom:.5rem">How far should the fade reach in from the edges?</div>
 <input type="range" id="revealFadeAmountSlider" min="0" max="80" step="1" value="30" oninput="updateRevealFadePreview()" style="width:100%"/>
 <div class="note" style="margin-top:.25rem;margin-bottom:0;text-align:center"><span id="revealFadeAmountVal">30%</span></div>
-<button type="button" class="generate-btn" style="margin-top:.75rem" onclick="confirmFadeAndContinue()">✅ Continue</button>
+<div class="note" id="revealSavingNote" style="display:none;margin-top:.75rem;text-align:center"><span class="spinner"></span>Saving your captioned picture...</div>
+<button type="button" class="generate-btn" id="revealFadeContinueBtn" style="margin-top:.75rem" onclick="confirmFadeAndContinue()">✅ Continue</button>
 <button type="button" class="download-btn" style="margin-top:.6rem" onclick="revealFadeBack()">← Back</button>
 </div>
 </div>
@@ -6809,8 +6826,10 @@ function autoFillCoverMePanels(){
   if(!placements.front)return;
   // The fit travels with the picture: a panel that copies Center's design
   // copies Center's zoom/position too, so one setting really is one setting.
-  if(!coverMePanelExplicit.left){placements.left=placements.front;placementAdjust.left={...(placementAdjust.front||defaultPanelAdjust())};}
-  if(!coverMePanelExplicit.right){placements.right=placements.front;placementAdjust.right={...(placementAdjust.front||defaultPanelAdjust())};}
+  // A panel the customer switched OFF for this same picture stays off on a
+  // return visit (Back from a later screen) -- only a new picture refills it.
+  if(!coverMePanelExplicit.left&&coverMeLastRemoved.left!==placements.front){placements.left=placements.front;placementAdjust.left={...(placementAdjust.front||defaultPanelAdjust())};}
+  if(!coverMePanelExplicit.right&&coverMeLastRemoved.right!==placements.front){placements.right=placements.front;placementAdjust.right={...(placementAdjust.front||defaultPanelAdjust())};}
   saveMugState();
 }
 
@@ -6854,15 +6873,43 @@ function showCoverMePanelCard(){
   smoothScrollToTarget('coverMePanelCard','start');
 }
 
+// ONE PICTURE, THREE SWITCHES (Alyx, Sep 2026): the picture is already on
+// screen in the Fit Your Picture box, so the three mug thumbnails under
+// it only showed the same thing three more times. Each panel is now an
+// on/off switch; the "use a different image" links stay for the flows
+// that generate pictures (a customer's own photo is one photo).
 function renderCoverMePanelRows(){
   const wrap=document.getElementById('coverMePanelRows');
   if(!wrap)return;
   wrap.innerHTML='';
-  COVER_ME_PANEL_ORDER.forEach(([pos,label])=>{
-    wrap.appendChild(buildCoverMePanelRow(pos,label));
-    renderCoverMePanelRowState(pos);
-  });
+  wrap.appendChild(buildCoverMePanelSwitches());
+  COVER_ME_PANEL_ORDER.forEach(([pos])=>renderCoverMePanelRowState(pos));
   refreshCoverMePanelDoneState();
+}
+function buildCoverMePanelSwitches(){
+  const card=document.createElement('div');
+  card.className='card';
+  card.style.cssText='padding:14px;margin:0';
+  const row=document.createElement('div');
+  row.className='panelSwitches';
+  COVER_ME_PANEL_ORDER.forEach(([pos,label])=>{
+    const sw=document.createElement('label');
+    sw.className='panelSwitch';
+    sw.dataset.pos=pos;
+    sw.innerHTML=`<span class="psLabel">${label}</span><input type="checkbox" id="coverMeSwitch_${pos}"><span class="psTrack"></span><span class="psState" id="coverMeSwitchState_${pos}">Off</span><span class="psDiff" id="coverMeSwitchDiff_${pos}" style="display:none">different picture</span>`;
+    const input=sw.querySelector('input');
+    input.addEventListener('change',()=>{
+      if(input.checked)useCurrentDesignForCoverMePanel(pos);
+      else removeCoverMePanelDesign(pos);
+    });
+    row.appendChild(sw);
+  });
+  card.appendChild(row);
+  const links=document.createElement('div');
+  links.id='coverMePanelLinks';
+  links.style.cssText='margin-top:10px';
+  card.appendChild(links);
+  return card;
 }
 
 // ---------------- FIT YOUR PICTURE ----------------
@@ -7031,10 +7078,10 @@ function decorateFitBox(box,adj,rect){
 // Sizes the big box so the picture AND every control fit in one view: as
 // wide as the card allows, but never taller than half the window (Alyx:
 // scrolling between the picture and the sliders defeats the purpose).
-function sizeFitBox(box,printBox){
+function sizeFitBox(box,printBox,maxFrac){
   const parentW=box.parentElement?box.parentElement.clientWidth:0;
   if(!parentW)return;
-  const maxH=Math.max(200,Math.round(window.innerHeight*0.5));
+  const maxH=Math.max(200,Math.round(window.innerHeight*(maxFrac||0.5)));
   let h=Math.min(maxH,parentW*printBox.h/printBox.w);
   let w=h*printBox.w/printBox.h;
   if(w>parentW){w=parentW;h=w*printBox.h/printBox.w;}
@@ -7360,6 +7407,7 @@ window.addEventListener('resize',()=>{
     layoutFittedImage(card.querySelector('img'),box,getDesignAdjust(id));
   });
   ['left','front','right'].forEach(pos=>applyPanelAdjustTransform(pos));
+  if(revealFitState&&document.getElementById('revealOverlay')?.style.display==='flex')revealFitState.apply();
 });
 // ---------------- END FIT YOUR PICTURE ----------------
 
@@ -7424,79 +7472,35 @@ function coverMePanelWidthMultiplier(pos){
 }
 
 function renderCoverMePanelRowState(pos){
-  const overlay=document.getElementById('coverMeOverlay_'+pos);
-  const controls=document.getElementById('coverMeControls_'+pos);
-  if(!overlay||!controls)return;
-  overlay.innerHTML='';
-  controls.innerHTML='';
-
+  const input=document.getElementById('coverMeSwitch_'+pos);
+  if(!input)return;
   const design=placements[pos]?findDesignById(placements[pos]):null;
-
-  if(design){
-    const baseBox=COVER_ME_PANEL_OVERLAY_POS[pos];
-    const mult=coverMePanelWidthMultiplier(pos);
-    const centerX=baseBox.left+baseBox.width/2;
-    const widenedWidth=Math.min(96,Math.round(baseBox.width*mult));
-    let widenedLeft=Math.round(centerX-widenedWidth/2);
-    if(widenedLeft<0)widenedLeft=0;
-    if(widenedLeft+widenedWidth>100)widenedLeft=100-widenedWidth;
-    const box={top:baseBox.top,left:widenedLeft,width:widenedWidth,height:baseBox.height};
-    overlay.style.cssText=`position:absolute;top:${box.top}%;left:${box.left}%;width:${box.width}%;height:${box.height}%;border:2px solid #d32f2f;border-radius:4px;overflow:hidden;background:#fff`;
-    const img=document.createElement('img');
-    img.src=design.url;
-    img.draggable=false;
-    // Positioned by applyPanelAdjustTransform() with the same fit math as
-    // the print, once the image has a size -- this little overlay is the
-    // Fit Your Picture box in miniature.
-    img.style.cssText='position:absolute;display:block;max-width:none';
-    img.addEventListener('load',()=>applyPanelAdjustTransform(pos));
-    overlay.appendChild(img);
-
-    const removeBtn=document.createElement('button');
-    removeBtn.type='button';
-    removeBtn.className='download-btn';
-    removeBtn.style.cssText='width:100%;margin-top:0;border-color:#5a2a2a;color:#ff8a7a;font-size:12px;padding:.5rem';
-    removeBtn.textContent='✖ Remove';
-    removeBtn.onclick=()=>removeCoverMePanelDesign(pos);
-    controls.appendChild(removeBtn);
-
-    const diffLink=document.createElement('div');
-    diffLink.className='note';
-    diffLink.style.cssText='text-align:center;margin-top:6px;color:#7ab8ff;cursor:pointer;font-size:11px';
-    diffLink.textContent='Use a different image instead (1 more token)';
-    diffLink.onclick=()=>addDifferentImageForCoverMePanel(pos);
-    controls.appendChild(diffLink);
-
-    requestAnimationFrame(()=>applyPanelAdjustTransform(pos));
-
-  } else {
-    const emptyBox=COVER_ME_PANEL_OVERLAY_POS[pos];
-    overlay.style.cssText=`position:absolute;top:${emptyBox.top}%;left:${emptyBox.left}%;width:${emptyBox.width}%;height:${emptyBox.height}%;border:2px dashed #666;border-radius:4px`;
-    const note=document.createElement('div');
-    note.className='note';
-    note.style.cssText='text-align:center;color:#29a3ff;font-size:12px';
-    // Center defaults off (a deliberate choice, not an accidental
-    // removal) -- worded differently from Left/Right's empty state so
-    // it reads as "this is how it starts," not "something's missing."
-    note.textContent=(pos==='front')?'Center is off by default -- two panels looks cleaner for most photos.':'No image on this panel.';
-    controls.appendChild(note);
-
-    const addBackBtn=document.createElement('button');
-    addBackBtn.type='button';
-    addBackBtn.className='generate-btn';
-    addBackBtn.style.cssText='width:100%;margin-top:6px;margin-bottom:6px;font-size:12px;padding:.5rem';
-    addBackBtn.textContent=(pos==='front')?'Turn Center On (free)':'Add it back (free)';
-    addBackBtn.onclick=()=>useCurrentDesignForCoverMePanel(pos);
-    controls.appendChild(addBackBtn);
-
-    const diffBtn=document.createElement('button');
-    diffBtn.type='button';
-    diffBtn.className='download-btn';
-    diffBtn.style.cssText='width:100%;margin-top:0;font-size:12px;padding:.5rem';
-    diffBtn.textContent='Add a different image (1 more token)';
-    diffBtn.onclick=()=>addDifferentImageForCoverMePanel(pos);
-    controls.appendChild(diffBtn);
-  }
+  input.checked=!!design;
+  const state=document.getElementById('coverMeSwitchState_'+pos);
+  if(state)state.textContent=design?'On':'Off';
+  // A panel carrying a picture other than the main one says so, since the
+  // Fit Your Picture box above then shows more than one picture.
+  const ids=[...new Set(['left','front','right'].map(p=>placements[p]).filter(Boolean))];
+  const diff=document.getElementById('coverMeSwitchDiff_'+pos);
+  if(diff)diff.style.display=(design&&ids.length>1&&placements[pos]!==(placements.front||placements.left||placements.right))?'block':'none';
+  renderCoverMePanelLinks();
+}
+// "Use a different image" is a generated-picture idea: it spends a token
+// on a new picture for one side. A customer who brought their own photo
+// has one photo, so the links are not offered there.
+function renderCoverMePanelLinks(){
+  const wrap=document.getElementById('coverMePanelLinks');
+  if(!wrap)return;
+  wrap.innerHTML='';
+  if(product==='mug'&&byoDeclaredIntent==='byo')return;
+  COVER_ME_PANEL_ORDER.forEach(([pos,label])=>{
+    const link=document.createElement('div');
+    link.className='note';
+    link.style.cssText='text-align:center;margin-top:4px;color:#7ab8ff;cursor:pointer;font-size:11px';
+    link.textContent='Use a different image on '+label+' (1 more token)';
+    link.onclick=()=>addDifferentImageForCoverMePanel(pos);
+    wrap.appendChild(link);
+  });
 }
 
 // Lays the thumbnail's photo out inside its overlay with the exact same
@@ -7509,27 +7513,24 @@ function applyPanelAdjustTransform(pos){
   layoutFittedImage(img,overlay,placementAdjust[pos]||defaultPanelAdjust());
 }
 
-// Restores whatever was just removed from THIS panel -- no regeneration,
-// no copying from Center. If nothing has ever been removed from this
-// panel (e.g. it started empty), falls back to copying Center's current
-// design as a convenience default, same as the original behavior.
+// Switching a panel on: whatever was last on THIS panel comes back, or
+// the picture the other panels carry. Either way the picture's settings
+// (size, position, fade, thin frame) come with it -- copied from a panel
+// already carrying the same picture -- so one setting really is one
+// setting, Center switched on later included (Alyx, Sep 2026).
 function useCurrentDesignForCoverMePanel(pos){
-  const restored=coverMeLastRemoved[pos];
-  if(restored){
-    placements[pos]=restored;
-    coverMeLastRemoved[pos]=null;
-    saveMugState();
-    renderCoverMePanelRowState(pos);
-    refreshCoverMePanelDoneState();
-    return;
-  }
-  const source=placements.front;
+  const candidates=[coverMeLastRemoved[pos],placements.front,placements.left,placements.right,coverMeLastRemoved.front,coverMeLastRemoved.left,coverMeLastRemoved.right];
+  const source=candidates.find(id=>id&&findDesignById(id));
   if(!source){
-    showGuidanceAlert('Center doesn\'t have an image to copy right now -- add one there first, or use "Add a different image" instead.');
+    showGuidanceAlert('There is no picture to put on this panel yet -- add one first.');
+    renderCoverMePanelRowState(pos);
     return;
   }
   placements[pos]=source;
-  placementAdjust[pos]={...(placementAdjust.front||defaultPanelAdjust())};
+  coverMeLastRemoved[pos]=null;
+  const sibling=panelsWithDesign(source).find(p=>p!==pos&&placementAdjust[p]);
+  if(sibling)placementAdjust[pos]={...placementAdjust[sibling]};
+  else if(!placementAdjust[pos])placementAdjust[pos]=defaultPanelAdjust();
   saveMugState();
   renderCoverMePanelRowState(pos);
   refreshCoverMePanelDoneState();
@@ -9708,14 +9709,17 @@ async function enterRevealStage(){
   // genuinely needs Center to exist. Three Panels treats Center as
   // optional -- its default is "no image", which is already a finished,
   // valid choice, not a gap waiting to be filled.
-  if(!leftDesign||!rightDesign)return;
-  if(!revealFlowThreePanel && !centerDesign)return;
+  if(revealFlowThreePanel){
+    if(!leftDesign&&!centerDesign&&!rightDesign)return;
+  } else {
+    if(!leftDesign||!rightDesign||!centerDesign)return;
+  }
 
   document.body.classList.add('step-locked');
   choiceOverlay.style.display='flex';
 
   if(revealFlowThreePanel){
-    revealOriginalArtworkUrls=[leftDesign.url,centerDesign?centerDesign.url:null,rightDesign.url];
+    revealOriginalArtworkUrls=[leftDesign?leftDesign.url:null,centerDesign?centerDesign.url:null,rightDesign?rightDesign.url:null];
   } else {
     try{
       seamRawLeftUrl=leftDesign.url;
@@ -9750,8 +9754,11 @@ async function enterRevealStage(){
     // a Back button -- so this always goes to the frame offer. The Hard/Fade
     // edge question after "No Thank You" is a separate screen and stays.
     fadeAlreadyAppliedPrePlacement=false;
+    // MOVED (Sep 2026, Alyx): the frame offer now lives on the finished
+    // mockup (see offerFrameFromMockup), so Done goes straight to the
+    // Hard/Fade edge question.
     if(true){
-      showAccessorizeChoiceState();
+      showEdgeQuestion();
     } else {
       // THE FADE PAGE, AT LAST (Aug 2026, Alyx). openFrameFadeOverlay() has
       // been sitting in this file complete and working -- preview, live
@@ -9926,8 +9933,8 @@ function showAccessorizeChoiceState(){
   // made. It keeps live-updating from here as frames get tried.
   pendingWraparoundRaw={
     center:placements.front?findDesignById(placements.front)?.url??null:null,
-    left:findDesignById(placements.left).url,
-    right:findDesignById(placements.right).url
+    left:placements.left?findDesignById(placements.left)?.url??null:null,
+    right:placements.right?findDesignById(placements.right)?.url??null:null
   };
   updateAccessorizePreview();
 
@@ -9976,33 +9983,145 @@ function chooseRevealPath(choice){
     return;
   }
 
-  const revealOverlay=document.getElementById('revealOverlay');
+  showEdgeQuestion();
+}
+
+// THE HARD/FADE EDGE SCREEN (rebuilt Sep 2026, Alyx). Mug panels show the
+// one picture in the true shape of its print area with the fade drawn on
+// it, exactly as the Fit Your Picture box does -- the same picture on two
+// or three panels is shown once. The choice here only changes the fade
+// on the picture's placement (the server draws it on the print), so
+// nothing is re-encoded or uploaded on the way out. The one exception is a
+// captioned picture, whose fade is baked under the caption and so is baked
+// again when the fade changes.
+let revealFitState=null;
+function showEdgeQuestion(){
+  const overlay=document.getElementById('revealOverlay');
+  if(!overlay)return;
+  document.body.classList.add('step-locked');
+  overlay.style.display='flex';
   const revealImg=document.getElementById('revealArtworkImg');
-  const revealThreeRow=document.getElementById('revealThreePanelRow');
-  if(revealOverlay){
-    document.body.classList.add('step-locked');
-    revealOverlay.style.display='flex';
-    if(revealFlowThreePanel){
-      if(revealImg)revealImg.style.display='none';
-      if(revealThreeRow){
-        revealThreeRow.style.display='flex';
-        document.getElementById('revealThreePanelLeft').src=revealOriginalArtworkUrls[0];
-        const centerEl=document.getElementById('revealThreePanelCenter');
-        if(centerEl){
-          if(revealOriginalArtworkUrls[1]){centerEl.style.display='';centerEl.src=revealOriginalArtworkUrls[1];}
-          else{centerEl.style.display='none';}
-        }
-        document.getElementById('revealThreePanelRight').src=revealOriginalArtworkUrls[2];
-      }
-    } else {
-      if(revealThreeRow)revealThreeRow.style.display='none';
-      if(revealImg){revealImg.style.display='block';revealImg.src=revealOriginalArtworkUrls[0];}
-    }
-    const buttonsRow=document.getElementById('revealEdgeButtonsRow');
-    const fadePanel=document.getElementById('revealFadeSliderPanel');
-    if(buttonsRow)buttonsRow.style.display='flex';
-    if(fadePanel)fadePanel.style.display='none';
+  const host=document.getElementById('revealFitHost');
+  const note=document.getElementById('revealFitNote');
+  if(revealFlowThreePanel){
+    if(revealImg)revealImg.style.display='none';
+    if(host)host.style.display='block';
+    renderRevealFitPreview();
+  } else {
+    if(host)host.style.display='none';
+    if(note)note.style.display='none';
+    revealFitState=null;
+    if(revealImg){revealImg.style.display='block';revealImg.src=revealOriginalArtworkUrls[0];}
   }
+  const buttonsRow=document.getElementById('revealEdgeButtonsRow');
+  const fadePanel=document.getElementById('revealFadeSliderPanel');
+  const saving=document.getElementById('revealSavingNote');
+  if(buttonsRow)buttonsRow.style.display='flex';
+  if(fadePanel)fadePanel.style.display='none';
+  if(saving)saving.style.display='none';
+  overlay.scrollTop=0;
+}
+// The fade the picture carries right now: a captioned picture keeps its
+// real fade on preBakeAdjust (the server is told 0 because the fade is
+// already in the picture, under the caption).
+function currentEdgeFadePct(){
+  const pos=['front','left','right'].find(p=>placements[p]&&findDesignById(placements[p]));
+  if(!pos)return 0;
+  const d=findDesignById(placements[pos]);
+  const adj=(d.captioned&&d.preBakeAdjust)?d.preBakeAdjust:getDesignAdjust(placements[pos]);
+  return Math.round(Number(adj.fade)||0);
+}
+function renderRevealFitPreview(){
+  const host=document.getElementById('revealFitHost');
+  const note=document.getElementById('revealFitNote');
+  if(!host)return;
+  host.innerHTML='';
+  revealFitState=null;
+  const pos=['front','left','right'].find(p=>placements[p]&&findDesignById(placements[p]));
+  if(!pos)return;
+  const designId=placements[pos];
+  const design=findDesignById(designId);
+  const printBox=getPanelPrintBox(pos);
+  const box=document.createElement('div');
+  box.id='revealFitBox';
+  box.style.cssText=`position:relative;overflow:hidden;background:${getSelectedProductColorHex()};outline:2px dashed rgba(122,184,255,.6);outline-offset:2px;border-radius:2px;box-sizing:border-box`;
+  const img=document.createElement('img');
+  // A captioned picture is previewed from its original with the caption
+  // drawn on top, so the slider can move the fade under the words.
+  img.src=(design.captioned&&design.rawUrl)?design.rawUrl:design.url;
+  img.draggable=false;
+  img.alt='';
+  img.style.cssText='position:absolute;display:block;pointer-events:none;user-select:none;max-width:none';
+  box.appendChild(img);
+  host.appendChild(box);
+  const state={designId,fadeOverride:null,apply:null};
+  state.apply=()=>{
+    sizeFitBox(box,printBox,0.4);
+    const d=findDesignById(designId);
+    const adj=(d&&d.captioned&&d.preBakeAdjust)?{...d.preBakeAdjust}:getDesignAdjust(designId);
+    if(state.fadeOverride!=null)adj.fade=state.fadeOverride;
+    layoutFittedImage(img,box,adj);
+  };
+  img.addEventListener('load',state.apply);
+  requestAnimationFrame(state.apply);
+  revealFitState=state;
+  if(note){
+    const on=['left','front','right'].filter(p=>placements[p]).map(p=>p==='front'?'Center':p[0].toUpperCase()+p.slice(1));
+    note.style.display=on.length>1?'block':'none';
+    note.textContent='This picture goes on '+on.join(', ').replace(/, ([^,]*)$/,' and $1')+'. The edge choice applies to all of them.';
+  }
+}
+// Writes the chosen fade onto every panel carrying each picture. Only a
+// captioned picture needs saving (its fade is baked under the caption).
+async function applyEdgeFadeToPlacements(pct){
+  pct=Math.max(0,Math.min(80,Math.round(Number(pct)||0)));
+  const seen=[];
+  ['left','front','right'].forEach(pos=>{const id=placements[pos]; if(id&&!seen.includes(id)&&findDesignById(id))seen.push(id);});
+  for(const id of seen){
+    const d=findDesignById(id);
+    if(d.captioned&&d.rawUrl&&d.preBakeAdjust){
+      if(Math.round(Number(d.preBakeAdjust.fade)||0)===pct)continue;
+      d.preBakeAdjust={...d.preBakeAdjust,fade:pct};
+      await bakeCaptionIntoDesign(id);
+    } else {
+      const cur=getDesignAdjust(id);
+      if(Math.round(Number(cur.fade)||0)===pct)continue;
+      cur.fade=pct;
+      setDesignAdjust(id,cur);
+    }
+  }
+  hardEdgesEnabled=(pct===0);
+  const mainToggle=document.getElementById('panoramaFadeToggle');
+  if(mainToggle)mainToggle.checked=hardEdgesEnabled;
+  saveMugState();
+}
+// Applies the edge choice and moves on to the mockup; stays put with a
+// real message if a captioned picture cannot be saved.
+async function settleEdgeAndGo(pct){
+  const saving=document.getElementById('revealSavingNote');
+  const continueBtn=document.getElementById('revealFadeContinueBtn');
+  const buttons=document.querySelectorAll('#revealEdgeButtonsRow button');
+  if(saving)saving.style.display='block';
+  if(continueBtn)continueBtn.disabled=true;
+  buttons.forEach(b=>b.disabled=true);
+  try{
+    await applyEdgeFadeToPlacements(pct);
+  }catch(err){
+    console.error('Could not save the picture with its new fade:',err);
+    if(saving)saving.style.display='none';
+    if(continueBtn)continueBtn.disabled=false;
+    buttons.forEach(b=>b.disabled=false);
+    showGuidanceAlert(describeUploadFailure(err).replace(/faded picture/,'captioned picture'));
+    return;
+  }
+  if(saving)saving.style.display='none';
+  if(continueBtn)continueBtn.disabled=false;
+  buttons.forEach(b=>b.disabled=false);
+  const overlay=document.getElementById('revealOverlay');
+  if(overlay)overlay.style.display='none';
+  document.body.classList.remove('step-locked');
+  preMockupBack=()=>showEdgeQuestion();
+  beginFinalMockupFetch();
 }
 
 // Sets up the shared reveal-flow state (used by both the Window Sill
@@ -10020,20 +10139,25 @@ function openAccessorizeForRevealFlow(){
   if(committed)committed.style.display='block';
   pendingWraparoundRaw={
     center:placements.front?findDesignById(placements.front)?.url??null:null,
-    left:findDesignById(placements.left).url,
-    right:findDesignById(placements.right).url
+    left:placements.left?findDesignById(placements.left)?.url??null:null,
+    right:placements.right?findDesignById(placements.right)?.url??null:null
   };
   showAccessorizeStep();
 }
 
 function chooseEdgeStyleAndContinue(isHard){
+  if(revealFlowThreePanel){
+    // Hard edges = no fade on the placement. Nothing to upload.
+    settleEdgeAndGo(isHard?0:revealFadeAmountPct);
+    return;
+  }
   hardEdgesEnabled=isHard;
   const mainToggle=document.getElementById('panoramaFadeToggle');
   if(mainToggle)mainToggle.checked=isHard;
   const overlay=document.getElementById('revealOverlay');
   if(overlay)overlay.style.display='none';
   document.body.classList.remove('step-locked');
-  preMockupBack=()=>{frameFadeSettled=false;chooseRevealPath('none');};
+  preMockupBack=()=>{frameFadeSettled=false;showEdgeQuestion();};
   beginFinalMockupFetch();
 }
 
@@ -10042,6 +10166,12 @@ function chooseFadeEdges(){
   const fadePanel=document.getElementById('revealFadeSliderPanel');
   if(buttonsRow)buttonsRow.style.display='none';
   if(fadePanel)fadePanel.style.display='block';
+  if(revealFlowThreePanel){
+    // Start from the fade the picture already carries; Sharp means the
+    // house default, since they just asked for a fade.
+    const cur=currentEdgeFadePct();
+    revealFadeAmountPct=cur>0?cur:DEFAULT_FADE_PCT;
+  }
   const slider=document.getElementById('revealFadeAmountSlider');
   if(slider)slider.value=revealFadeAmountPct;
   updateRevealFadePreview();
@@ -10124,16 +10254,14 @@ async function updateRevealFadePreview(){
   const readout=document.getElementById('revealFadeAmountVal');
   revealFadeAmountPct=slider?parseFloat(slider.value):30;
   if(readout)readout.textContent=revealFadeAmountPct+'%';
+  if(revealFlowThreePanel){
+    // Same fade mask the print gets, drawn over the fitted picture.
+    if(revealFitState){revealFitState.fadeOverride=revealFadeAmountPct;revealFitState.apply();}
+    return;
+  }
   if(!revealOriginalArtworkUrls.length)return;
   const hex=getSelectedProductColorHex();
-  if(revealFlowThreePanel){
-    const targetIds=['revealThreePanelLeft','revealThreePanelCenter','revealThreePanelRight'];
-    await Promise.all(revealOriginalArtworkUrls.map(async(url,i)=>{
-      if(!url)return;
-      const faded=await renderFadedArtwork(url,hex,revealFadeAmountPct);
-      const el=document.getElementById(targetIds[i]);
-      if(el)el.src=faded;
-    }));
+  if(false){
   } else {
     const img=document.getElementById('revealArtworkImg');
     if(!img)return;
@@ -10224,6 +10352,12 @@ async function bakeFadeIntoDesigns(fadeAmountPct){
 }
 
 async function confirmFadeAndContinue(){
+  if(revealFlowThreePanel){
+    // The fade is a placement setting the server draws on the print --
+    // nothing is baked or uploaded here (a captioned picture aside).
+    settleEdgeAndGo(revealFadeAmountPct);
+    return;
+  }
   try{
     await bakeFadeIntoDesigns(revealFadeAmountPct);
   }catch(err){
@@ -10235,7 +10369,7 @@ async function confirmFadeAndContinue(){
   const overlay=document.getElementById('revealOverlay');
   if(overlay)overlay.style.display='none';
   document.body.classList.remove('step-locked');
-  preMockupBack=()=>{frameFadeSettled=false;chooseRevealPath('none');};
+  preMockupBack=()=>{frameFadeSettled=false;showEdgeQuestion();};
   beginFinalMockupFetch();
 }
 
@@ -10490,6 +10624,7 @@ let revealFlowActive=false;
 let revealFlowThreePanel=false;
 
 async function beginFinalMockupFetch(){
+  frameOfferFromMockup=false;
   const overlay=document.getElementById('mockupLoadingOverlay');
   if(overlay){overlay.style.display='flex';document.body.classList.add('step-locked');}
 
@@ -10572,6 +10707,7 @@ async function beginFinalMockupFetch(){
     if(actions)actions.style.display='flex';
     const returnBtn=document.getElementById('mockupLightboxReturn');
     if(returnBtn)returnBtn.style.display='block';
+    refreshMockupLightboxFrameBtn();
   }catch(err){
     console.error('Final mockup fetch failed:',err);
     if(overlay){overlay.style.display='none';document.body.classList.remove('step-locked');}
@@ -10593,7 +10729,58 @@ function cancelAccessorizeToOffer(){
   pendingWraparoundRaw=null;
   pending40ozRaw=null;
   restoreFrameCardsToHome();
+  if(frameOfferFromMockup){reopenMockupLightboxFromFrameOffer();return;}
   showAccessorizeChoiceState();
+}
+
+// ---- THE FRAME OFFER ON THE MOCKUP (Alyx, Sep 2026) ----
+// "Add a Frame" on the finished mockup opens the frame catalogue with its
+// instant on-screen previews; Satisfied bakes the frame on and rebuilds
+// the mockup; Back or Cancel returns to the mockup as it was. A second
+// visit ("Change Frame") starts again from the plain pictures.
+let frameOfferFromMockup=false;
+let preFrameMockupUrls=null;
+let unframedDesignSnapshot=null;
+let coverMeFrameApplied=false;
+function frameOfferAvailable(){
+  return product==='mug'&&mugPrintMode==='three-panel'&&['left','front','right'].some(pos=>placements[pos]&&findDesignById(placements[pos]));
+}
+function refreshMockupLightboxFrameBtn(){
+  const btn=document.getElementById('mockupLightboxFrame');
+  if(!btn)return;
+  const show=frameOfferAvailable();
+  btn.style.display=show?'block':'none';
+  btn.textContent=coverMeFrameApplied?'🖼️ Change Frame':'🖼️ Add a Frame';
+}
+function offerFrameFromMockup(){
+  hideMockupLightbox();
+  const actions=document.getElementById('mockupLightboxActions');
+  if(actions)actions.style.display='none';
+  const returnBtn=document.getElementById('mockupLightboxReturn');
+  if(returnBtn)returnBtn.style.display='none';
+  document.body.classList.remove('step-locked');
+  frameOfferFromMockup=true;
+  if(coverMeFrameApplied){
+    restoreUnframedDesigns();
+    if(preFrameMockupUrls&&preFrameMockupUrls.length)currentMockupUrls=preFrameMockupUrls.slice();
+  } else {
+    preFrameMockupUrls=currentMockupUrls.slice();
+  }
+  revealFlowThreePanel=true;
+  openAccessorizeForRevealFlow();
+}
+function reopenMockupLightboxFromFrameOffer(){
+  frameOfferFromMockup=false;
+  const card=document.getElementById('accessorizeCard');
+  if(card)card.style.display='none';
+  restoreFrameCardsToHome();
+  if(!currentMockupUrls||!currentMockupUrls.length){returnFromFinalMockup();return;}
+  openMockupLightbox(currentMockupIndex||0);
+  const actions=document.getElementById('mockupLightboxActions');
+  if(actions)actions.style.display='flex';
+  const returnBtn=document.getElementById('mockupLightboxReturn');
+  if(returnBtn)returnBtn.style.display='block';
+  refreshMockupLightboxFrameBtn();
 }
 
 function keepTweaking(){
@@ -10828,11 +11015,20 @@ function goBackFromFinalMockup(){
 // from the plain designs again (the frame is re-composited from these
 // originals if chosen a second time).
 function restoreUnframedDesigns(){
-  if(!pendingWraparoundRaw)return;
-  const restore=(pos,url)=>{const d=placements[pos]?findDesignById(placements[pos]):null; if(d&&url)d.url=url;};
-  restore('left',pendingWraparoundRaw.left);
-  restore('front',pendingWraparoundRaw.center);
-  restore('right',pendingWraparoundRaw.right);
+  const snap=unframedDesignSnapshot;
+  if(!snap){
+    if(!pendingWraparoundRaw)return;
+    const restore=(pos,url)=>{const d=placements[pos]?findDesignById(placements[pos]):null; if(d&&url)d.url=url;};
+    restore('left',pendingWraparoundRaw.left);
+    restore('front',pendingWraparoundRaw.center);
+    restore('right',pendingWraparoundRaw.right);
+    saveMugState();
+    return;
+  }
+  Object.keys(snap.urls).forEach(id=>{const d=findDesignById(id); if(d)d.url=snap.urls[id];});
+  ['left','front','right'].forEach(pos=>{if(snap.adjust[pos])placementAdjust[pos]={...snap.adjust[pos]};});
+  unframedDesignSnapshot=null;
+  coverMeFrameApplied=false;
   saveMugState();
 }
 
@@ -11547,6 +11743,14 @@ function showAccessorizeStep(){
   const sharedSatisfiedBtn=document.getElementById('accessorizeSatisfiedBtn');
   if(sharedSatisfiedBtn)sharedSatisfiedBtn.style.display=isWraparoundReveal?'none':'block';
   if(isWraparoundReveal && sillCard)sillCard.style.display='none';
+  // From the mockup: frames only (a customer's own photo is not composed
+  // for a sill's opening), and the way back is the mockup itself.
+  if(frameOfferFromMockup&&sillCard)sillCard.style.display='none';
+  if(frameOfferFromMockup&&crossPromo)crossPromo.style.display='none';
+  const cancelBtn=document.getElementById('accessorizeCancelBtn');
+  if(cancelBtn)cancelBtn.textContent=frameOfferFromMockup?'↩️ Back to the Mockup':'↩️ Cancel — Go Back';
+  const satisfiedBtn=document.getElementById('accessorizeSatisfiedBtn');
+  if(satisfiedBtn)satisfiedBtn.textContent=frameOfferFromMockup?'✅ Apply This Frame':'✅ Satisfied?';
   updateAccessorizePreview();
   // If they already decided before generating, don't yank them back to a
   // decision that's already made -- only steer them to the picker if
@@ -11613,27 +11817,22 @@ async function applyAccessorizeFrame(){
   try{
     if(pendingWraparoundRaw && revealFlowThreePanel && (selectedFrame||windowSillChoice)){
       if(strip)strip.innerHTML='<div class="note" style="width:100%;text-align:center"><span class="spinner"></span>Saving your framed designs...</div>';
-      const [leftFramed,centerFramed,rightFramed]=await Promise.all([
-        compositeFrameOntoImageUrl(pendingWraparoundRaw.left),
-        pendingWraparoundRaw.center?compositeFrameOntoImageUrl(pendingWraparoundRaw.center):Promise.resolve(null),
-        compositeFrameOntoImageUrl(pendingWraparoundRaw.right)
-      ]);
-      const [leftUrl,centerUrl,rightUrl]=await Promise.all([
-        uploadCompositedImage(leftFramed),
-        centerFramed?uploadCompositedImage(centerFramed):Promise.resolve(null),
-        uploadCompositedImage(rightFramed)
-      ]);
-      const leftDesign=findDesignById(placements.left);
-      if(leftDesign)leftDesign.url=leftUrl;
-      if(centerUrl){
-        const centerDesign=findDesignById(placements.front);
-        if(centerDesign)centerDesign.url=centerUrl;
-      }
-      const rightDesign=findDesignById(placements.right);
-      if(rightDesign)rightDesign.url=rightUrl;
+      // Remember the plain pictures and their fades so Back, Change Frame
+      // and Cancel can put everything back exactly as it was.
+      const snap={urls:{},adjust:{}};
+      ['left','front','right'].forEach(pos=>{const d=placements[pos]?findDesignById(placements[pos]):null; if(d&&!(d.id in snap.urls))snap.urls[d.id]=d.url; if(placementAdjust[pos])snap.adjust[pos]={...placementAdjust[pos]};});
+      unframedDesignSnapshot=snap;
+      // One picture on several panels is framed and saved ONCE.
+      const ids=[...new Set(['left','front','right'].map(pos=>placements[pos]).filter(id=>id&&findDesignById(id)))];
+      await Promise.all(ids.map(async id=>{
+        const d=findDesignById(id);
+        const framed=await compositeFrameOntoImageUrl(snap.urls[id]||d.url);
+        d.url=await uploadCompositedImage(framed);
+      }));
       // The decorative frame is now part of the picture; the print-area
       // fade would melt the frame's own edges, so it comes off here.
       ['left','front','right'].forEach(pos=>{if(placementAdjust[pos])placementAdjust[pos].fade=0;});
+      coverMeFrameApplied=true;
       saveMugState();
     } else if(pendingWraparoundRaw && (selectedFrame||windowSillChoice)){
       if(strip)strip.innerHTML='<div class="note" style="width:100%;text-align:center"><span class="spinner"></span>Saving your framed design...</div>';
@@ -11685,7 +11884,19 @@ async function applyAccessorizeFrame(){
   if(btn)btn.disabled=false;
   if(revealFlowActive){
     revealFlowActive=false;
-    preMockupBack=()=>{restoreUnframedDesigns();showAccessorizeChoiceState();};
+    if(frameOfferFromMockup){
+      // Back from the framed mockup: plain pictures again, the frame
+      // catalogue open, the unframed mockup kept for Cancel.
+      preMockupBack=()=>{
+        restoreUnframedDesigns();
+        if(preFrameMockupUrls&&preFrameMockupUrls.length)currentMockupUrls=preFrameMockupUrls.slice();
+        revealFlowThreePanel=true;
+        frameOfferFromMockup=true;
+        openAccessorizeForRevealFlow();
+      };
+    } else {
+      preMockupBack=()=>{restoreUnframedDesigns();showAccessorizeChoiceState();};
+    }
     beginFinalMockupFetch();
   } else if(earlyOverlay){
     // Safety hide: if this path was reached outside the normal reveal
@@ -14226,6 +14437,10 @@ function revealEdgeBack(){
   const overlay=document.getElementById('revealOverlay');
   if(overlay)overlay.style.display='none';
   document.body.classList.remove('step-locked');
+  revealFitState=null;
+  // The screen before this one is the panels screen now (the frame offer
+  // moved onto the mockup).
+  if(revealFlowThreePanel&&product==='mug'){showCoverMePanelCard();return;}
   showAccessorizeChoiceState();
 }
 function revealFadeBack(){
@@ -14233,6 +14448,8 @@ function revealFadeBack(){
   const fadePanel=document.getElementById('revealFadeSliderPanel');
   if(fadePanel)fadePanel.style.display='none';
   if(buttonsRow)buttonsRow.style.display='flex';
+  // The preview goes back to the fade the picture actually carries.
+  if(revealFitState){revealFitState.fadeOverride=null;revealFitState.apply();}
 }
 function finalChoiceBack(){
   const finalOverlay=document.getElementById('finalChoiceOverlay');
@@ -14244,6 +14461,7 @@ function finalChoiceBack(){
     if(actions)actions.style.display='flex';
     const returnBtn=document.getElementById('mockupLightboxReturn');
     if(returnBtn)returnBtn.style.display='block';
+    refreshMockupLightboxFrameBtn();
   }
 }
 
