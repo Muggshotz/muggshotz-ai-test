@@ -2,10 +2,10 @@
 <!DOCTYPE html>
 <html lang="en">
 <head><link rel="manifest" href="needles-manifest.json">
-<!-- BUILD-MARKER: FIT-FADE-FRAME-v35 -->
+<!-- BUILD-MARKER: QUIET-HUD-v36 -->
 <!-- If you can see this comment on GitHub, this exact paste landed. -->
 <!-- If your live site's page source does NOT say -->
-<!-- "FIT-FADE-FRAME-v35" right here, the upload/deploy did -->
+<!-- "QUIET-HUD-v36" right here, the upload/deploy did -->
 <!-- not take -- re-upload before testing. -->
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
@@ -594,6 +594,39 @@ body.design-method-focus .card:not(#designMethodCard){opacity:.28;filter:brightn
   }
 }
 
+/* QUIET HUD (Sep 2026, Alyx): the chip meter and the Credits button were
+   pinned full-size to every screen and sat on top of the work -- on the
+   Fit Your Picture box they covered the customer's face. They now
+   collapse into one small pill in the top-right corner. The full panels
+   come back only where chips actually matter: when a Generate button is
+   on screen (a chip is about to be spent), when the balance is zero, or
+   when the pill is tapped. Whatever mode it's in, the whole thing slides
+   away while the page is scrolling and returns when it stops. */
+.token-credits-row{transition:top .2s,bottom .2s,transform .25s ease,opacity .25s ease}
+.token-credits-row.compact{
+  top:10px;bottom:auto;right:12px;left:auto;
+  justify-content:flex-end;gap:0;
+  filter:drop-shadow(0 4px 10px rgba(0,0,0,.6));
+}
+.token-credits-row.compact #tokenMeterWrap,
+.token-credits-row.compact #creditsBtn{display:none!important}
+.token-credits-row:not(.compact) #hudPill{display:none!important}
+#hudPill{
+  pointer-events:auto;
+  display:inline-flex;align-items:center;gap:6px;
+  height:30px;padding:0 12px 0 10px;
+  border:1px solid rgba(156,215,255,.55);border-radius:15px;
+  background:linear-gradient(180deg,#162434 0%,#0a121a 100%);
+  color:#dceaff;font-family:"Bebas Neue","Arial Narrow",sans-serif;
+  font-size:14px;letter-spacing:1px;line-height:1;cursor:pointer;
+  box-shadow:inset 0 0 0 1px #07101a,0 0 10px rgba(50,150,255,.25);
+}
+#hudPill b{font-family:"Anton","Arial Black",sans-serif;font-size:15px;color:#f7fcff;text-shadow:0 0 6px #56baff}
+#hudPill span.sep{opacity:.5}
+#hudPill:hover{filter:brightness(1.15)}
+.token-credits-row.hud-hidden{opacity:0;pointer-events:none;transform:translateY(-140%)}
+.token-credits-row.hud-hidden:not(.scrolled):not(.compact){transform:translateY(140%)}
+
 /* True up/down sliders for the Left/Right Vertical seam-nudge controls --
    a sideways slider for an up/down adjustment was confusing to operate
    (Alyx's report: values changed but the physical drag direction didn't
@@ -640,7 +673,8 @@ body.design-method-focus .card:not(#designMethodCard){opacity:.28;filter:brightn
 </head>
 <body class="initial-upload-focus">
 <div id="deviceIdDisplay" style="position:fixed;bottom:2px;left:2px;font-size:9px;color:#444;z-index:998;pointer-events:none"></div>
-<div class="token-credits-row">
+<div class="token-credits-row compact">
+  <button id="hudPill" type="button" onclick="toggleHudExpanded(event)" title="Chips remaining. Tap for details and credits.">🪙 <b id="hudPillCount">—</b> CHIPS <span class="sep">·</span> CREDITS</button>
   <div id="tokenMeterWrap" style="position:relative;width:210px;flex-shrink:0">
     <img src="meter.png" style="width:100%;display:block" alt="Chip meter"/>
     <div id="tokenMeterNumber" style="position:absolute;left:44.4%;top:31.3%;width:13%;height:25.3%;display:flex;align-items:center;justify-content:center;color:#003c8c;font-family:'Anton',sans-serif;font-weight:700;font-size:clamp(14px,3.6vw,22px);text-shadow:0 0 8px rgba(0,60,140,0.7)">—</div>
@@ -3006,6 +3040,7 @@ async function refreshTokenMeter(){
   }catch(err){
     meterEl.textContent='—';
   }
+  if(typeof updateHudMode==='function')updateHudMode();
 }
 refreshTokenMeter();
 
@@ -13692,6 +13727,53 @@ function resetEverythingFreshStart(){
   window.scrollTo({top:0,behavior:'smooth'});
 }
 
+// ---- Quiet HUD: compact pill vs full panels (see the CSS note) ----
+let hudExpanded=false;
+let hudGenerateOnScreen=false;
+let hudScrollTimer=null;
+function updateHudMode(){
+  const row=document.querySelector('.token-credits-row');
+  if(!row)return;
+  const count=document.getElementById('tokenMeterNumber')?.textContent||'—';
+  const pillCount=document.getElementById('hudPillCount');
+  if(pillCount&&pillCount.textContent!==count)pillCount.textContent=count;
+  const outOfChips=currentTokenBalance!==null&&currentTokenBalance<=0&&!isAdminDevice;
+  const full=hudExpanded||hudGenerateOnScreen||outOfChips;
+  row.classList.toggle('compact',!full);
+}
+function toggleHudExpanded(e){
+  if(e)e.stopPropagation();
+  hudExpanded=!hudExpanded;
+  updateHudMode();
+}
+// Any tap outside the HUD folds the expanded panels back into the pill.
+document.addEventListener('click',(e)=>{
+  if(!hudExpanded)return;
+  if(e.target.closest('.token-credits-row')||e.target.closest('#tokenInfoPopup')||e.target.closest('#creditsModalOverlay'))return;
+  hudExpanded=false;
+  updateHudMode();
+});
+// The full panels belong wherever a chip is about to be spent: whenever any
+// Generate button is actually on screen.
+(function watchGenerateButtons(){
+  const ids=['generateBtn','faceItGenerateBtn','goodMorningGenerateBtn','coverMeGenerateBtn'];
+  const visible=new Set();
+  if(typeof IntersectionObserver==='undefined')return;
+  const io=new IntersectionObserver((entries)=>{
+    entries.forEach(en=>{ if(en.isIntersecting&&en.intersectionRatio>0)visible.add(en.target.id); else visible.delete(en.target.id); });
+    hudGenerateOnScreen=visible.size>0;
+    updateHudMode();
+  },{threshold:[0,0.01]});
+  ids.forEach(id=>{const el=document.getElementById(id); if(el)io.observe(el);});
+})();
+// The pill's number follows the meter's, wherever the meter gets updated.
+(function mirrorMeterIntoPill(){
+  const meter=document.getElementById('tokenMeterNumber');
+  if(!meter||typeof MutationObserver==='undefined')return;
+  new MutationObserver(updateHudMode).observe(meter,{childList:true,characterData:true,subtree:true});
+})();
+updateHudMode();
+
 window.addEventListener('scroll',function(){
   const row=document.querySelector('.token-credits-row');
   if(!row)return;
@@ -13700,6 +13782,10 @@ window.addEventListener('scroll',function(){
   } else {
     row.classList.remove('scrolled');
   }
+  // Out of the way while the page moves, back when it settles.
+  row.classList.add('hud-hidden');
+  clearTimeout(hudScrollTimer);
+  hudScrollTimer=setTimeout(()=>row.classList.remove('hud-hidden'),350);
 },{passive:true});
 </script>
 </body>
