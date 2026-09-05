@@ -2,7 +2,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head><link rel="manifest" href="needles-manifest.json">
-<!-- BUILD-MARKER: BACKDROPS-v51 -->
+<!-- BUILD-MARKER: FRAME-ON-PANEL-v52 -->
 <!-- If you can see this comment on GitHub, this exact paste landed. -->
 <!-- If your live site's page source does NOT say -->
 <!-- "INSTANT-FIT-SCREEN-v47" right here, the upload/deploy did -->
@@ -7278,6 +7278,69 @@ async function bakeCaptionIntoDesign(designId){
   }
   saveMugState();
 }
+// THE PANEL AS IT WILL PRINT (Alyx, Sep 2026), for framing. A decorative
+// frame used to be baked into the photo itself and then sent through Fit
+// Your Picture like any other picture -- so a shrunk picture wore a shrunk
+// frame floating in white, an enlarged or dragged one lost the frame's
+// edges, and a landscape photo in a portrait panel lost the frame's sides
+// to the crop. The frame belongs on the PRINT AREA. This renders that
+// area at print resolution -- surface colour or backdrop, the picture at
+// its chosen size and position, its fade, its caption -- so the frame can
+// be laid over the panel and the result fills the panel edge to edge.
+const panelPrintCache={};
+async function renderPanelPrintDataUrl(designId){
+  const design=findDesignById(designId);
+  const pos=panelsWithDesign(designId)[0];
+  if(!design||!pos)return null;
+  const box=getPanelPrintBox(pos);
+  const src=(design.captioned&&design.rawUrl)?design.rawUrl:design.url;
+  const adj=(design.captioned&&design.preBakeAdjust)?{...design.preBakeAdjust}:getDesignAdjust(designId);
+  const hex=getSelectedProductColorHex();
+  const caption=product==='mug'?currentCaptionText():'';
+  const key=JSON.stringify([designId,src,box,adj,hex,caption]);
+  if(panelPrintCache[key])return panelPrintCache[key];
+  const img=await loadImageFromUrl(src);
+  const c=document.createElement('canvas');
+  c.width=box.w;c.height=box.h;
+  const ctx=c.getContext('2d');
+  ctx.fillStyle=hex;
+  ctx.fillRect(0,0,box.w,box.h);
+  const bk=backdropKey(adj.backdrop);
+  if(bk){
+    try{
+      const b=await loadImageFromUrl(BACKDROPS[bk].file);
+      const sc=Math.max(box.w/b.naturalWidth,box.h/b.naturalHeight);
+      ctx.drawImage(b,(box.w-b.naturalWidth*sc)/2,(box.h-b.naturalHeight*sc)/2,b.naturalWidth*sc,b.naturalHeight*sc);
+    }catch(err){console.error('Backdrop could not be drawn for framing:',err);}
+  }
+  const f=computePanelFit(img.naturalWidth,img.naturalHeight,box.w,box.h,adj.zoom||1,adj.offX||0,adj.offY||0);
+  const left=Math.max(0,f.left),top=Math.max(0,f.top);
+  const w=Math.max(1,Math.min(f.w-Math.max(0,-f.left),box.w-left));
+  const h=Math.max(1,Math.min(f.h-Math.max(0,-f.top),box.h-top));
+  const pc=document.createElement('canvas');
+  pc.width=w;pc.height=h;
+  const pctx=pc.getContext('2d');
+  pctx.drawImage(img,f.left-left,f.top-top,f.w,f.h);
+  const fadePct=Math.max(0,Math.min(80,Number(adj.fade)||0));
+  if(fadePct>0){
+    const id=pctx.getImageData(0,0,w,h);
+    const d=id.data;
+    let i=3;
+    for(let y=0;y<h;y++){
+      for(let x=0;x<w;x++){
+        const a=fadeMaskAlpha(x+0.5,y+0.5,w,h,fadePct);
+        if(a>0)d[i]=Math.round(d[i]*(1-a));
+        i+=4;
+      }
+    }
+    pctx.putImageData(id,0,0);
+  }
+  if(caption){ try{ drawCaptionText(pctx,pc); }catch(err){ console.error('Caption could not be drawn for framing:',err); } }
+  ctx.drawImage(pc,left,top);
+  const url=c.toDataURL('image/png');
+  panelPrintCache[key]=url;
+  return url;
+}
 // Back to the un-captioned original and its pre-bake fit, for editing.
 function unbakeCaptionedDesigns(){
   let changed=false;
@@ -10227,8 +10290,9 @@ function openAccessorizeForRevealFlow(){
 
 function chooseEdgeStyleAndContinue(isHard){
   if(revealFlowThreePanel){
-    // Hard edges = no fade on the placement. Nothing to upload.
-    settleEdgeAndGo(isHard?0:revealFadeAmountPct);
+    // Hard edges = no fade on the placement. Nothing to upload. (The soft
+    // path keeps whatever fade the picture already carries.)
+    settleEdgeAndGo(isHard?0:(currentEdgeFadePct()||DEFAULT_FADE_PCT));
     return;
   }
   hardEdgesEnabled=isHard;
@@ -11643,9 +11707,13 @@ async function updateAccessorizePreview(){
     if(pendingWraparoundRaw && revealFlowThreePanel){
       // Three-panel mode: each panel is its own independent design, never
       // meant to blend into one continuous scene -- frame (or no frame)
-      // gets applied to each one separately, shown side by side.
+      // gets applied to each one separately, shown side by side. The
+      // frame goes on the PANEL as it will print (renderPanelPrintDataUrl),
+      // so the preview is the print, size and position included.
       hideFrameManualFitControls();
-      const urls=[pendingWraparoundRaw.left,pendingWraparoundRaw.center,pendingWraparoundRaw.right].filter(Boolean);
+      const ids=[...new Set(['left','front','right'].map(p=>placements[p]).filter(id=>id&&findDesignById(id)))];
+      const panels=(await Promise.all(ids.map(id=>renderPanelPrintDataUrl(id)))).filter(Boolean);
+      const urls=panels.length?panels:[pendingWraparoundRaw.left,pendingWraparoundRaw.center,pendingWraparoundRaw.right].filter(Boolean);
       const framed=(selectedFrame||windowSillChoice)
         ? await Promise.all(urls.map(u=>compositeFrameOntoImageUrl(u)))
         : urls;
@@ -11902,15 +11970,18 @@ async function applyAccessorizeFrame(){
       const snap={urls:{},adjust:{}};
       ['left','front','right'].forEach(pos=>{const d=placements[pos]?findDesignById(placements[pos]):null; if(d&&!(d.id in snap.urls))snap.urls[d.id]=d.url; if(placementAdjust[pos])snap.adjust[pos]={...placementAdjust[pos]};});
       unframedDesignSnapshot=snap;
-      // One picture on several panels is framed and saved ONCE.
+      // One picture on several panels is framed and saved ONCE. The frame
+      // is laid over the panel as it will print, so the framed picture IS
+      // the panel: it fills the print area exactly, at normal size, with
+      // the fade and backdrop already inside it.
       const ids=[...new Set(['left','front','right'].map(pos=>placements[pos]).filter(id=>id&&findDesignById(id)))];
       await Promise.all(ids.map(async id=>{
         const d=findDesignById(id);
-        const framed=await compositeFrameOntoImageUrl(snap.urls[id]||d.url);
+        const panelUrl=await renderPanelPrintDataUrl(id);
+        const framed=await compositeFrameOntoImageUrl(panelUrl||snap.urls[id]||d.url);
         d.url=await uploadCompositedImage(framed);
+        setDesignAdjust(id,{...getDesignAdjust(id),zoom:1,offX:0,offY:0,fade:0,backdrop:null});
       }));
-      // The decorative frame is now part of the picture; the print-area
-      // fade would melt the frame's own edges, so it comes off here.
       ['left','front','right'].forEach(pos=>{if(placementAdjust[pos])placementAdjust[pos].fade=0;});
       coverMeFrameApplied=true;
       saveMugState();
