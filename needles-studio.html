@@ -2,10 +2,10 @@
 <!DOCTYPE html>
 <html lang="en">
 <head><link rel="manifest" href="needles-manifest.json">
-<!-- BUILD-MARKER: MUG-PHOTOS-BY-SIZE-v45 -->
+<!-- BUILD-MARKER: STYLE-TILES-BY-SIZE-v46 -->
 <!-- If you can see this comment on GitHub, this exact paste landed. -->
 <!-- If your live site's page source does NOT say -->
-<!-- "MUG-PHOTOS-BY-SIZE-v45" right here, the upload/deploy did -->
+<!-- "STYLE-TILES-BY-SIZE-v46" right here, the upload/deploy did -->
 <!-- not take -- re-upload before testing. -->
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
@@ -5373,6 +5373,26 @@ const PRE_GEN_MUG_STYLE_THUMBNAILS = {
   "Accented": "style-accented.jpg",
   "Color Pop": "style-color-pop.jpg"
 };
+// CORRECTED (Sep 2026, Alyx): "even though I clicked the 15 ounce mug, all
+// three of these thumbnails seem to be 11 ounce mugs." The generic tiles
+// above are the squat shape. Where a real photo of the chosen size exists,
+// the tile shows THAT size; the generic tile is only the fallback.
+const PRE_GEN_MUG_STYLE_THUMBNAILS_BY_SIZE = {
+  "15oz": {
+    "Classic White": "mug-classic-white-15oz.png",
+    "Trimmed": "mug-trimmed-15oz-black.png",
+    "Accented": "mug-accented-15oz-black.png",
+    "Color Pop": "mug-colorpop-black.png"
+  },
+  "11oz": {
+    "Classic White": "mug-classic-white-11oz.png",
+    "Trimmed": "mug-trimmed-11oz-black.png"
+  }
+};
+function preGenMugStyleThumb(styleName){
+  const bySize=PRE_GEN_MUG_STYLE_THUMBNAILS_BY_SIZE[selectedGenSize]||{};
+  return bySize[styleName]||PRE_GEN_MUG_STYLE_THUMBNAILS[styleName];
+}
 
 function renderPreGenMugStyleGrid(){
   const grid=document.getElementById('preGenMugStyleGrid');
@@ -5388,7 +5408,7 @@ function renderPreGenMugStyleGrid(){
     btn.dataset.style=styleName;
     btn.onclick=()=>pickPreGenMugStyle(styleName);
     const thumb=document.createElement('img');
-    thumb.src=PRE_GEN_MUG_STYLE_THUMBNAILS[styleName];
+    thumb.src=preGenMugStyleThumb(styleName);
     thumb.alt=styleName;
     thumb.style.cssText='width:100%;border-radius:8px;background:#fff;margin-bottom:6px;box-shadow:0 2px 10px rgba(0,0,0,.45)';
     btn.appendChild(thumb);
