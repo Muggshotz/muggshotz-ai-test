@@ -2,7 +2,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head><link rel="manifest" href="needles-manifest.json">
-<!-- BUILD-MARKER: BACKDROPS-v50 -->
+<!-- BUILD-MARKER: BACKDROPS-v51 -->
 <!-- If you can see this comment on GitHub, this exact paste landed. -->
 <!-- If your live site's page source does NOT say -->
 <!-- "INSTANT-FIT-SCREEN-v47" right here, the upload/deploy did -->
@@ -13057,9 +13057,10 @@ const BACKDROPS={
   marble:{file:'laced marble.png',label:'Marble'},
   rose:{file:'rose crepe.png',label:'Rose'},
   satin:{file:'satin sheets.png',label:'Satin'},
-  frost:{file:'frosted mirror.png',label:'Frost'},
-  leaves:{file:'pastel leaf.png',label:'Leaves'},
-  vignette:{file:'fade to white.png',label:'Vignette'}
+  leaves:{file:'pastel leaf.png',label:'Leaves'}
+  // Frost and Vignette were pulled (Alyx, Sep 2026): their edges are grey,
+  // not white, so on a white mug they left a faint rectangle at the panel
+  // edge -- a ghost border that fought the fade.
 };
 function backdropKey(v){return (v&&BACKDROPS[v])?v:null;}
 const backdropImageCache={};

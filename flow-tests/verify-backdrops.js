@@ -30,7 +30,7 @@ scenarios.backdropTilesFollowThePicture = async (page) => {
     return { shown: wrap && getComputedStyle(wrap).display !== 'none', tiles: wrap ? wrap.querySelectorAll('.backdropTile').length : 0, fade: placementAdjust.left.fade };
   });
   if (!st0.shown) return `FAIL: backdrop row hidden with fade at ${st0.fade}`;
-  if (st0.tiles !== 9) return `FAIL: expected None + 8 tiles, got ${st0.tiles}`;
+  if (st0.tiles !== 7) return `FAIL: expected None + 6 tiles, got ${st0.tiles}`;
   await page.click('.backdropTile[data-key="bubbles"]');
   await T(page, 1500); // preview image load + relayout
   const st1 = await page.evaluate(() => {
