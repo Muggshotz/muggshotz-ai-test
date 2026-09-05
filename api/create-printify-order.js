@@ -304,6 +304,27 @@ export async function resolvePhotoPosterSelection(product, { framed, sizeLabel, 
   };
 }
 
+// Where a photo of imgW x imgH lands inside a boxW x boxH print area for a
+// given zoom (0.5..2) and offset (-1..1 per axis). Returns the drawn size
+// and the top-left corner relative to the box (negative = hangs outside).
+// zoom >= 1: the photo covers the box, so at least one axis overflows and
+// gets cropped. zoom < 1: the whole photo fits inside with white around it.
+// offX/offY = +1 pushes the photo right/down as far as the slack allows,
+// -1 left/up, 0 centered. MIRRORED VERBATIM in needles-studio.html
+// (computePanelFit) -- the customer's on-screen box is only honest if
+// both sides do the same arithmetic. Change one, change both.
+export function computePanelFit(imgW, imgH, boxW, boxH, zoom, offX, offY) {
+  const base = zoom >= 1
+    ? Math.max(boxW / imgW, boxH / imgH)
+    : Math.min(boxW / imgW, boxH / imgH);
+  const scale = base * zoom;
+  const w = Math.max(1, Math.round(imgW * scale));
+  const h = Math.max(1, Math.round(imgH * scale));
+  const left = Math.round((boxW - w) / 2 + offX * Math.abs(boxW - w) / 2);
+  const top = Math.round((boxH - h) / 2 + offY * Math.abs(boxH - h) / 2);
+  return { w, h, left, top };
+}
+
 export async function buildWraparoundImage(placements, canvasWidth, canvasHeight, borderHex = null, adjustments = {}) {
   const { left, front, right } = placements;
   const WHITE = { r: 255, g: 255, b: 255 };
@@ -451,61 +472,42 @@ export async function buildWraparoundImage(placements, canvasWidth, canvasHeight
     // the old fixed behavior when a panel is never touched.
     const offX = Math.min(1, Math.max(-1, Number(adjust.offX) || 0));
     const offY = Math.min(1, Math.max(-1, Number(adjust.offY) || 0));
-    if (zoom >= 1) {
-      // Zoom IN: resize larger than the box (cover-fit, no letterboxing),
-      // then crop back down to the box's true size -- from the center by
-      // default, or shifted toward whichever edge the customer dragged
-      // the Adjust sliders to, so the part of the photo they actually
-      // want stays in the box instead of whatever the auto-crop guessed.
-      // Guarantees the box is always fully filled -- some excess gets
-      // cropped, by design, at any zoom above 1.
-      const zoomedW = Math.round(targetW * zoom);
-      const zoomedH = Math.round(targetH * zoom);
-      const slackX = zoomedW - targetW;
-      const slackY = zoomedH - targetH;
-      const left = Math.round((slackX / 2) * (1 - offX));
-      const top = Math.round((slackY / 2) * (1 - offY));
-      const buffer = await sharp(await resolveImageBuffer(imageSource))
-        .resize(zoomedW, zoomedH, { fit: "cover", position: "centre" })
-        .extract({
-          left: Math.min(slackX, Math.max(0, left)),
-          top: Math.min(slackY, Math.max(0, top)),
-          width: targetW,
-          height: targetH
-        })
-        .png()
-        .toBuffer();
-      return { input: await applyBorderIfNeeded(buffer, targetW, targetH), left: box.x, top: 0 };
-    }
-    // Zoom OUT (scale < 1): shrink the image into a smaller sub-box
-    // (contain-fit, so nothing gets cropped -- the full image is
-    // preserved, just smaller), then place it within the box's true
-    // dimensions on a white background -- centered by default, or
-    // shifted per the Adjust sliders within the padding available. This
-    // is genuine breathing-room padding, not a crop -- the opposite
-    // operation from the >=1 case above, which is why it needs its own
-    // branch rather than sharing the same resize+extract math.
-    const shrunkW = Math.round(targetW * zoom);
-    const shrunkH = Math.round(targetH * zoom);
-    const shrunkBuffer = await sharp(await resolveImageBuffer(imageSource))
-      .resize(shrunkW, shrunkH, { fit: "contain", background: WHITE })
+
+    // REWRITTEN (Sep 2026, "Fit your picture" screen). The old version
+    // cover-fitted the photo into the box and only let the offset move
+    // within the extra room the ZOOM added -- so a wide photo in a tall
+    // box lost its sides symmetrically and no slider could bring either
+    // side back. The fit is now computed from the photo's real dimensions
+    // (computePanelFit, mirrored exactly in needles-studio.html so the
+    // on-screen box shows what will print), and the offset ranges over
+    // ALL the overflow, aspect mismatch included. Zoom >= 1 covers the
+    // box (some of the photo is cropped); zoom < 1 shrinks the whole
+    // photo inside it on white. Either way the piece that lands inside
+    // the box is what prints.
+    const srcBuffer = await resolveImageBuffer(imageSource);
+    const meta = await sharp(srcBuffer).rotate().metadata();
+    const imgW = meta.width || targetW;
+    const imgH = meta.height || targetH;
+    const fit = computePanelFit(imgW, imgH, targetW, targetH, zoom, offX, offY);
+    const cropLeft = Math.max(0, -fit.left);
+    const cropTop = Math.max(0, -fit.top);
+    const pasteLeft = Math.max(0, fit.left);
+    const pasteTop = Math.max(0, fit.top);
+    const visW = Math.max(1, Math.min(fit.w - cropLeft, targetW - pasteLeft));
+    const visH = Math.max(1, Math.min(fit.h - cropTop, targetH - pasteTop));
+    const piece = await sharp(srcBuffer)
+      .rotate()
+      .resize(fit.w, fit.h, { fit: "fill" })
+      .extract({ left: cropLeft, top: cropTop, width: visW, height: visH })
       .png()
       .toBuffer();
-    const padX = targetW - shrunkW;
-    const padY = targetH - shrunkH;
-    const pasteLeft = Math.min(padX, Math.max(0, Math.round((padX / 2) * (1 + offX))));
-    const pasteTop = Math.min(padY, Math.max(0, Math.round((padY / 2) * (1 + offY))));
-    const paddedBuffer = await sharp({
+    const buffer = await sharp({
       create: { width: targetW, height: targetH, channels: 3, background: WHITE }
     })
-      .composite([{
-        input: shrunkBuffer,
-        left: pasteLeft,
-        top: pasteTop
-      }])
+      .composite([{ input: piece, left: pasteLeft, top: pasteTop }])
       .png()
       .toBuffer();
-    return { input: await applyBorderIfNeeded(paddedBuffer, targetW, targetH), left: box.x, top: 0 };
+    return { input: await applyBorderIfNeeded(buffer, targetW, targetH), left: box.x, top: 0 };
   }
 
   const [leftComposite, frontComposite, rightComposite] = await Promise.all([
