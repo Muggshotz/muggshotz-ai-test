@@ -2,10 +2,10 @@
 <!DOCTYPE html>
 <html lang="en">
 <head><link rel="manifest" href="needles-manifest.json">
-<!-- BUILD-MARKER: FADE-CONTINUE-OVAL-v32 -->
+<!-- BUILD-MARKER: UPLOAD-REASON-SHRINK-v33 -->
 <!-- If you can see this comment on GitHub, this exact paste landed. -->
 <!-- If your live site's page source does NOT say -->
-<!-- "FADE-CONTINUE-OVAL-v32" right here, the upload/deploy did -->
+<!-- "UPLOAD-REASON-SHRINK-v33" right here, the upload/deploy did -->
 <!-- not take -- re-upload before testing. -->
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
@@ -9823,7 +9823,7 @@ async function confirmFrameFadeAndContinue(){
     if(savingNote)savingNote.style.display='none';
   }
   if(bakeError){
-    showGuidanceAlert('We couldn\'t save your faded picture -- the connection may be slow or dropped. Tap Continue to try again, or drag the slider all the way to Sharp to carry on without a fade.');
+    showGuidanceAlert(describeUploadFailure(bakeError));
     return;
   }
   hardEdgesEnabled=(frameFadeAmountPct===0);
@@ -11070,15 +11070,72 @@ function skipAccessorizeFrame(){
 // Stripe's metadata at checkout -- it would have failed later, silently,
 // on the payment hop. Better to tell the customer now and let them retry.
 const COMPOSITE_UPLOAD_TIMEOUT_MS=90000;
+// Vercel rejects any request body over 4.5MB outright (413, plain text,
+// before our code runs). A faded 2600px photo as a JPEG data URL can get
+// there. Everything above this many characters of data URL gets scaled
+// down before sending -- a slightly smaller design beats no design.
+const COMPOSITE_UPLOAD_MAX_CHARS=4000000;
+
+// Scales a data URL's image down until it fits under `maxChars`. Keeps
+// the original format (a PNG with transparency stays PNG; frames and
+// chroma-keyed composites depend on that) and only ever shrinks -- an
+// image already under the cap is returned untouched.
+async function shrinkDataUrlToFit(dataUrl,maxChars){
+  if(!dataUrl||!dataUrl.startsWith('data:')||dataUrl.length<=maxChars)return dataUrl;
+  const mime=(dataUrl.match(/^data:(image\/\w+);/)||[])[1]||'image/jpeg';
+  const img=await loadImageFromUrl(dataUrl);
+  const encode=(scale)=>{
+    const c=document.createElement('canvas');
+    c.width=Math.max(1,Math.round(img.naturalWidth*scale));
+    c.height=Math.max(1,Math.round(img.naturalHeight*scale));
+    c.getContext('2d').drawImage(img,0,0,c.width,c.height);
+    return (mime==='image/png')?c.toDataURL('image/png'):c.toDataURL('image/jpeg',0.85);
+  };
+  // A JPEG is often over the cap only because it was exported at a high
+  // quality setting -- try the same pixels at 0.85 before giving up any
+  // resolution. Then shrink by the measured overshoot, converging in a
+  // few steps rather than guessing a scale from the original's size.
+  let scale=1;
+  let out=(mime==='image/png')?dataUrl:encode(1);
+  for(let i=0;i<6 && out.length>maxChars && scale>0.2;i++){
+    scale*=Math.sqrt(maxChars/out.length)*0.95;
+    out=encode(scale);
+  }
+  console.warn('Composite was over the upload size cap; scaled down from '+dataUrl.length+' to '+out.length+' chars.');
+  return out;
+}
+
+// Turns whatever went wrong with an upload into a sentence the customer
+// can act on. The raw reasons are server/infra language ("exceed_storage_
+// size_quota", "FUNCTION_PAYLOAD_TOO_LARGE", "AbortError") and a customer
+// reading "connection may be slow" for a full-storage error will retry
+// forever on a fault that is entirely on our side.
+function describeUploadFailure(err){
+  const msg=String((err&&err.message)||err||'');
+  if(/storage_size_quota|storage upload failed|restricted due to/i.test(msg)){
+    return 'Our image storage is full right now, so we can\'t save your picture. This is on our end, not your connection -- please try again a little later, or drag the slider all the way to Sharp to carry on without a fade.';
+  }
+  if(/AbortError|aborted/i.test(msg)){
+    return 'Saving your picture took too long and timed out -- your connection may be slow. Tap Continue to try again, or drag the slider all the way to Sharp to carry on without a fade.';
+  }
+  if(/413|too large|payload/i.test(msg)){
+    return 'Your picture is too large to send even after shrinking it. Try a smaller photo, or drag the slider all the way to Sharp to carry on without a fade.';
+  }
+  return 'We couldn\'t save your faded picture'+(msg?' ('+msg.slice(0,140)+')':'')+'. Tap Continue to try again, or drag the slider all the way to Sharp to carry on without a fade.';
+}
+
 async function uploadCompositedImage(dataUrl,{strict=false}={}){
   try{
+    let toSend=dataUrl;
+    try{ toSend=await shrinkDataUrlToFit(dataUrl,COMPOSITE_UPLOAD_MAX_CHARS); }
+    catch(shrinkErr){ console.error('Could not shrink composite before upload, sending as-is:',shrinkErr); }
     const resp=await fetchWithTimeout('/api/generate',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({action:'uploadComposite',image:dataUrl,deviceId})
+      body:JSON.stringify({action:'uploadComposite',image:toSend,deviceId})
     },COMPOSITE_UPLOAD_TIMEOUT_MS);
     let data={};
-    try{ data=await resp.json(); }catch(_){ data={error:'HTTP '+resp.status}; }
+    try{ data=await resp.json(); }catch(_){ data={error:'HTTP '+resp.status+(resp.status===413?' payload too large':'')}; }
     if(resp.ok && data.imageUrl)return data.imageUrl;
     if(strict)throw new Error(data.error||('Upload failed with HTTP '+resp.status));
     console.error('Could not upload composited image, using the raw data URL instead:',data.error);
