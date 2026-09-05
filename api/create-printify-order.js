@@ -457,19 +457,46 @@ export async function buildWraparoundImage(placements, canvasWidth, canvasHeight
   // the print area itself, after the crop, as one elliptical gradient into
   // the surface colour (adjustments[pos].fadeHex, white when absent). The
   // Fit Your Picture box previews the identical gradient in CSS.
-  function buildFadeSvg(width, height, hex, pct) {
-    const outer = Math.SQRT2;
-    const inner = Math.max(0.05, outer * (1 - pct / 100));
-    const stop = (inner / outer).toFixed(4);
-    return Buffer.from(
-      `<svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg"><defs><radialGradient id="g" cx="0.5" cy="0.5" r="${(outer / 2).toFixed(4)}"><stop offset="0" stop-color="${hex}" stop-opacity="0"/><stop offset="${stop}" stop-color="${hex}" stop-opacity="0"/><stop offset="1" stop-color="${hex}" stop-opacity="1"/></radialGradient></defs><rect width="${width}" height="${height}" fill="url(#g)"/></svg>`
-    );
+  // REWRITTEN (Sep 2026, Alyx): the elliptical gradient only reached the
+  // surface colour at the four CORNERS, so the middle of every edge was
+  // still a hard line -- "spray-painted the edges and ran out of paint".
+  // The whole point of a fade is no hard edges anywhere. This mask goes
+  // fully to the surface colour along the entire perimeter and softens
+  // inward by `reach` (the slider: 0..80% of half the short side), with a
+  // rounded clear region in the middle so it still reads as a cloud, not
+  // a box. Same function, same numbers, in needles-studio.html
+  // (fadeMaskAlpha) for the on-screen preview.
+  function fadeMaskAlpha(x, y, w, h, pct) {
+    const reach = (pct / 100) * Math.min(w, h) / 2;
+    if (reach <= 0) return 0;
+    const bx = w / 2 - reach, by = h / 2 - reach;
+    const r = Math.min(bx, by) * 0.5;
+    const px = Math.abs(x - w / 2), py = Math.abs(y - h / 2);
+    const qx = px - (bx - r), qy = py - (by - r);
+    const d = Math.hypot(Math.max(qx, 0), Math.max(qy, 0)) + Math.min(Math.max(qx, qy), 0) - r;
+    const t = Math.min(1, Math.max(0, d / (reach * 0.92)));
+    return t * t * (3 - 2 * t);
+  }
+
+  function buildFadeLayer(width, height, hex, pct) {
+    const m = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(hex) || [null, "ff", "ff", "ff"];
+    const R = parseInt(m[1], 16), G = parseInt(m[2], 16), B = parseInt(m[3], 16);
+    const data = Buffer.alloc(width * height * 4);
+    let i = 0;
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        data[i++] = R; data[i++] = G; data[i++] = B;
+        data[i++] = Math.round(255 * fadeMaskAlpha(x + 0.5, y + 0.5, width, height, pct));
+      }
+    }
+    return { input: data, raw: { width, height, channels: 4 } };
   }
 
   async function applyFadeIfNeeded(buffer, width, height, pct, hex) {
     if (!(pct > 0)) return buffer;
+    const layer = buildFadeLayer(width, height, hex, pct);
     return await sharp(buffer)
-      .composite([{ input: buildFadeSvg(width, height, hex, pct), top: 0, left: 0 }])
+      .composite([{ input: layer.input, raw: layer.raw, top: 0, left: 0 }])
       .png()
       .toBuffer();
   }
