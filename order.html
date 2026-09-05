@@ -1526,6 +1526,7 @@ async function fetchMockupPreview(){
     sizeLabel: selectedSize,
     colorName: selectedColor,
     placements: pendingOrder?.placements || {},
+    placementAdjust: pendingOrder?.placementAdjust || {},
     printMode: fullWrapEnabled ? 'fullBleed' : 'standard',
     // The uncut panorama, when the studio produced one. Carried through so the
     // preview is built from the same single strip as the print file rather
@@ -2077,6 +2078,7 @@ async function submitOrder(){
       type: 'mug_order',
       deviceId: pendingOrder.deviceId,
       placements: pendingOrder.placements,
+      placementAdjust: pendingOrder.placementAdjust || {},
       mugType: selectedStyle,
       sizeLabel: selectedSize,
       color: selectedColor,
