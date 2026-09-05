@@ -2,10 +2,10 @@
 <!DOCTYPE html>
 <html lang="en">
 <head><link rel="manifest" href="needles-manifest.json">
-<!-- BUILD-MARKER: FADE-FOLLOWS-PICTURE-v39 -->
+<!-- BUILD-MARKER: PANELS-END-AT-DONE-v40 -->
 <!-- If you can see this comment on GitHub, this exact paste landed. -->
 <!-- If your live site's page source does NOT say -->
-<!-- "FADE-FOLLOWS-PICTURE-v39" right here, the upload/deploy did -->
+<!-- "PANELS-END-AT-DONE-v40" right here, the upload/deploy did -->
 <!-- not take -- re-upload before testing. -->
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
@@ -627,6 +627,18 @@ body.design-method-focus .card:not(#designMethodCard){opacity:.28;filter:brightn
 .token-credits-row.hud-gone{display:none!important}
 .token-credits-row.hud-hidden{opacity:0;pointer-events:none;transform:translateY(-140%)}
 .token-credits-row.hud-hidden:not(.scrolled):not(.compact){transform:translateY(140%)}
+
+/* PANELS SCREEN ENDS AT DONE (Sep 2026, Alyx): while the Select the
+   Panels card is showing, nothing below it should invite a scroll. The
+   caption tools down there are wired to single-image products, not to
+   the mug panels, so on this screen they were a dead end; the caricature
+   picker, token note and the old Design Your Product card are earlier
+   steps. Only the Reset button stays, at the bottom. The class is kept in
+   step with the card's own visibility by a MutationObserver. */
+body.panels-active #likenessSectionCard,
+body.panels-active #generateTokenNote,
+body.panels-active #positionHolderCard,
+body.panels-active #captionCard{display:none!important}
 
 /* True up/down sliders for the Left/Right Vertical seam-nudge controls --
    a sideways slider for an up/down adjustment was confusing to operate
@@ -13797,6 +13809,15 @@ function resetEverythingFreshStart(){
 
   window.scrollTo({top:0,behavior:'smooth'});
 }
+
+// ---- Panels screen: body.panels-active follows #coverMePanelCard ----
+(function watchPanelsCard(){
+  const card=document.getElementById('coverMePanelCard');
+  if(!card||typeof MutationObserver==='undefined')return;
+  const sync=()=>document.body.classList.toggle('panels-active',getComputedStyle(card).display!=='none');
+  new MutationObserver(sync).observe(card,{attributes:true,attributeFilter:['style','class']});
+  sync();
+})();
 
 // ---- Quiet HUD: compact pill vs full panels (see the CSS note) ----
 let hudExpanded=false;
