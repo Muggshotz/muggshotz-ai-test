@@ -450,6 +450,30 @@ export async function buildWraparoundImage(placements, canvasWidth, canvasHeight
     );
   }
 
+  // EDGE FADE, per panel (Sep 2026, Alyx): the fade used to be baked into
+  // the photo before placement, so zooming in could crop the soft edge
+  // right off. It now lives with the placement -- adjustments[pos].fade
+  // (0..80, the same Sharp..Soft scale as the slider) -- and is drawn on
+  // the print area itself, after the crop, as one elliptical gradient into
+  // the surface colour (adjustments[pos].fadeHex, white when absent). The
+  // Fit Your Picture box previews the identical gradient in CSS.
+  function buildFadeSvg(width, height, hex, pct) {
+    const outer = Math.SQRT2;
+    const inner = Math.max(0.05, outer * (1 - pct / 100));
+    const stop = (inner / outer).toFixed(4);
+    return Buffer.from(
+      `<svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg"><defs><radialGradient id="g" cx="0.5" cy="0.5" r="${(outer / 2).toFixed(4)}"><stop offset="0" stop-color="${hex}" stop-opacity="0"/><stop offset="${stop}" stop-color="${hex}" stop-opacity="0"/><stop offset="1" stop-color="${hex}" stop-opacity="1"/></radialGradient></defs><rect width="${width}" height="${height}" fill="url(#g)"/></svg>`
+    );
+  }
+
+  async function applyFadeIfNeeded(buffer, width, height, pct, hex) {
+    if (!(pct > 0)) return buffer;
+    return await sharp(buffer)
+      .composite([{ input: buildFadeSvg(width, height, hex, pct), top: 0, left: 0 }])
+      .png()
+      .toBuffer();
+  }
+
   async function applyBorderIfNeeded(buffer, width, height) {
     if (!borderHex) return buffer;
     const strokeWidth = Math.max(6, Math.round(Math.min(width, height) * 0.008));
@@ -472,6 +496,12 @@ export async function buildWraparoundImage(placements, canvasWidth, canvasHeight
     // the old fixed behavior when a panel is never touched.
     const offX = Math.min(1, Math.max(-1, Number(adjust.offX) || 0));
     const offY = Math.min(1, Math.max(-1, Number(adjust.offY) || 0));
+    const fadePct = Math.min(80, Math.max(0, Number(adjust.fade) || 0));
+    const fadeHex = /^#[0-9a-fA-F]{6}$/.test(String(adjust.fadeHex || "")) ? adjust.fadeHex : "#FFFFFF";
+    // The thin accent-colour frame is now the customer's choice (Alyx, Sep
+    // 2026): on unless the placement says border:false. Absent = on, so
+    // every order placed before the switch existed prints as it always has.
+    const wantBorder = adjust.border !== false;
 
     // REWRITTEN (Sep 2026, "Fit your picture" screen). The old version
     // cover-fitted the photo into the box and only let the offset move
@@ -507,7 +537,9 @@ export async function buildWraparoundImage(placements, canvasWidth, canvasHeight
       .composite([{ input: piece, left: pasteLeft, top: pasteTop }])
       .png()
       .toBuffer();
-    return { input: await applyBorderIfNeeded(buffer, targetW, targetH), left: box.x, top: 0 };
+    const faded = await applyFadeIfNeeded(buffer, targetW, targetH, fadePct, fadeHex);
+    const finished = wantBorder ? await applyBorderIfNeeded(faded, targetW, targetH) : faded;
+    return { input: finished, left: box.x, top: 0 };
   }
 
   const [leftComposite, frontComposite, rightComposite] = await Promise.all([
