@@ -30,7 +30,7 @@ scenarios.backdropTilesFollowThePicture = async (page) => {
     return { shown: wrap && getComputedStyle(wrap).display !== 'none', tiles: wrap ? wrap.querySelectorAll('.backdropTile').length : 0, fade: placementAdjust.left.fade };
   });
   if (!st0.shown) return `FAIL: backdrop row hidden with fade at ${st0.fade}`;
-  if (st0.tiles !== 7) return `FAIL: expected None + 6 tiles, got ${st0.tiles}`;
+  if (st0.tiles !== 9) return `FAIL: expected None + 8 tiles, got ${st0.tiles}`;
   await page.click('.backdropTile[data-key="bubbles"]');
   await T(page, 1500); // preview image load + relayout
   const st1 = await page.evaluate(() => {
@@ -114,6 +114,8 @@ scenarios.frameGoesOnThePrintPanel = async (page, log) => {
   await page.evaluate(() => chooseFadeEdges());
   await page.click('#revealFadeContinueBtn');
   await page.waitForFunction(() => document.getElementById('mockupLightboxOverlay').classList.contains('visible'), null, { timeout: 20000 });
+  const nudge0 = await page.evaluate(() => ({ nudge: getComputedStyle(document.getElementById('mockupLightboxNudge')).display, pulse: document.getElementById('mockupLightboxFrame').classList.contains('cta-flash') }));
+  if (nudge0.nudge === 'none' || !nudge0.pulse) return `FAIL: unframed mockup should show the nudge and pulse the button: ${JSON.stringify(nudge0)}`;
   await page.click('#mockupLightboxFrame');
   await T(page, 800);
   const before = await page.evaluate(async () => {
@@ -150,6 +152,8 @@ scenarios.frameGoesOnThePrintPanel = async (page, log) => {
   const a = after.left;
   if (!after.applied) return 'FAIL: frame not applied';
   if (a.zoom !== 1 || a.offX !== 0 || a.offY !== 0 || a.fade !== 0 || a.backdrop !== null) return `FAIL: framed panel not set to fill the print area: ${JSON.stringify(a)}`;
+  const nudge1 = await page.evaluate(() => ({ nudge: getComputedStyle(document.getElementById('mockupLightboxNudge')).display, pulse: document.getElementById('mockupLightboxFrame').classList.contains('cta-flash') }));
+  if (nudge1.nudge !== 'none' || nudge1.pulse) return `FAIL: framed mockup should settle the nudge and pulse: ${JSON.stringify(nudge1)}`;
   if (after.right.zoom !== 1 || after.right.fade !== 0) return `FAIL: the other panel carrying the picture kept old settings: ${JSON.stringify(after.right)}`;
   // Back undoes it, settings and all
   await page.click('#mockupLightboxBack');

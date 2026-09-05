@@ -338,7 +338,9 @@ const BACKDROP_FILES = {
   marble: "laced marble.png",
   rose: "rose crepe.png",
   satin: "satin sheets.png",
-  leaves: "pastel leaf.png"
+  leaves: "pastel leaf.png",
+  frost: "frosted mirror.png",
+  vignette: "fade to white.png"
 };
 function siteBaseUrl() {
   const h = process.env.SITE_BASE_URL || process.env.VERCEL_PROJECT_PRODUCTION_URL || "muggshotz-ai-test.vercel.app";
