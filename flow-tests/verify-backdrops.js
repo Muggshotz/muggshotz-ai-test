@@ -105,6 +105,60 @@ scenarios.knockedOutFramesShowThePhoto = async (page) => {
   return 'PASS: Mirror Mirror and Astral show the photo through the opening, with the product colour outside the silhouette';
 };
 
+scenarios.frameGoesOnThePrintPanel = async (page, log) => {
+  await reachPanels(page);
+  // A shrunk, dragged picture with a soft edge on a backdrop: the case that used to leave white around the frame.
+  await page.evaluate(() => { const id = placements.left; setDesignAdjust(id, { zoom: 0.7, offX: 0.4, offY: -0.3, fade: 40, border: true, backdrop: 'bubbles' }); });
+  await page.click('#coverMePanelDoneBtn');
+  await page.waitForFunction(() => document.getElementById('revealOverlay').style.display === 'flex', null, { timeout: 20000 });
+  await page.evaluate(() => chooseFadeEdges());
+  await page.click('#revealFadeContinueBtn');
+  await page.waitForFunction(() => document.getElementById('mockupLightboxOverlay').classList.contains('visible'), null, { timeout: 20000 });
+  await page.click('#mockupLightboxFrame');
+  await T(page, 800);
+  const before = await page.evaluate(async () => {
+    const id = placements.left; const box = getPanelPrintBox('left');
+    const url = await renderPanelPrintDataUrl(id);
+    const img = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = url; });
+    return { w: img.naturalWidth, h: img.naturalHeight, box, adjust: getDesignAdjust(id) };
+  });
+  if (before.w !== before.box.w || before.h !== before.box.h) return `FAIL: flattened panel is ${before.w}x${before.h}, print box is ${before.box.w}x${before.box.h}`;
+  // Pick a frame with solid corners, apply, and check what the mug will get.
+  await page.evaluate(() => { selectedFrame = 'Ornate Gold'; windowSillChoice = null; });
+  await page.evaluate(() => updateAccessorizePreview());
+  await T(page, 2500);
+  const strip = await page.evaluate(async () => {
+    const img = document.querySelector('#accessorizePreviewStrip img');
+    if (!img) return null;
+    await new Promise(r => { if (img.complete) r(); else img.onload = r; });
+    const c = document.createElement('canvas'); c.width = img.naturalWidth; c.height = img.naturalHeight;
+    const x = c.getContext('2d'); x.drawImage(img, 0, 0);
+    const px = (a, b) => Array.from(x.getImageData(a, b, 1, 1).data).slice(0, 3);
+    // The frame's rails sit a few percent in from the panel edge (the extreme corner may be
+    // ornament fringe showing the product colour, by design). The centre must be the picture.
+    return { w: c.width, h: c.height, rail: px(Math.round(c.width * 0.05), c.height >> 1), top: px(c.width >> 1, Math.round(c.height * 0.05)), centre: px(c.width >> 1, c.height >> 1) };
+  });
+  if (!strip) return 'FAIL: no framed preview in the strip';
+  if (strip.w !== before.box.w || strip.h !== before.box.h) return `FAIL: framed preview is ${strip.w}x${strip.h}, not the panel`;
+  const white = p => p.every(v => v > 245);
+  if (white(strip.rail) || white(strip.top)) return `FAIL: frame does not reach the panel edge (rail ${strip.rail}, top ${strip.top})`;
+  if (white(strip.centre)) return `FAIL: the picture is missing from inside the frame (centre ${strip.centre})`;
+  const calls0 = log.apiCalls.length;
+  await page.click('#accessorizeSatisfiedBtn');
+  await page.waitForFunction(() => document.getElementById('mockupLightboxOverlay').classList.contains('visible'), null, { timeout: 30000 });
+  const after = await page.evaluate(() => ({ left: getDesignAdjust(placements.left), right: placementAdjust.right, applied: coverMeFrameApplied }));
+  const a = after.left;
+  if (!after.applied) return 'FAIL: frame not applied';
+  if (a.zoom !== 1 || a.offX !== 0 || a.offY !== 0 || a.fade !== 0 || a.backdrop !== null) return `FAIL: framed panel not set to fill the print area: ${JSON.stringify(a)}`;
+  if (after.right.zoom !== 1 || after.right.fade !== 0) return `FAIL: the other panel carrying the picture kept old settings: ${JSON.stringify(after.right)}`;
+  // Back undoes it, settings and all
+  await page.click('#mockupLightboxBack');
+  await T(page, 800);
+  const undone = await page.evaluate(() => getDesignAdjust(placements.left));
+  if (undone.zoom !== 0.7 || undone.fade !== 40 || undone.backdrop !== 'bubbles' || Math.abs(undone.offX - 0.4) > 0.01) return `FAIL: Back did not restore the placement: ${JSON.stringify(undone)}`;
+  return 'PASS: the frame is laid over the print panel (size, position, fade and backdrop inside it), fills the panel edge to edge, and Back restores the placement';
+};
+
 (async () => {
   let failed = 0;
   for (const [name, fn] of Object.entries(scenarios)) {
