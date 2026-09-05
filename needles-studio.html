@@ -2,7 +2,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head><link rel="manifest" href="needles-manifest.json">
-<!-- BUILD-MARKER: TEN-FIXES-v48 -->
+<!-- BUILD-MARKER: TWO-BOARDS-v49 -->
 <!-- If you can see this comment on GitHub, this exact paste landed. -->
 <!-- If your live site's page source does NOT say -->
 <!-- "INSTANT-FIT-SCREEN-v47" right here, the upload/deploy did -->
@@ -26,7 +26,20 @@
 .needles-hero{position:relative;width:min(90%,1200px);aspect-ratio:1672/941;max-height:90vh;margin:0 auto;background:#000}
 .needles-hero img{display:block;width:100%;height:100%;object-fit:contain}
 
-.needles-clipboard{position:relative;background:linear-gradient(135deg,#8a5a34,#6b4423 55%,#4f2f18);border-radius:14px;padding:28px 16px 16px;box-shadow:0 8px 20px rgba(0,0,0,0.5);margin-bottom:.25rem}
+/* TWO CLIPBOARDS (Alyx, Sep 2026): the free path and the AI path side by
+   side as equals, each a real clipboard's proportion, a flashing OR between
+   them; stacked on a phone. The AI board carries the reference pins and the
+   blue glow -- it is the busier, paid option and comes second. */
+.needles-clipboard{display:flex;align-items:stretch;gap:12px;margin:14px 0 .25rem}
+.needles-board{position:relative;flex:1 1 0;min-width:0;display:flex;flex-direction:column;aspect-ratio:4/5;background:linear-gradient(135deg,#8a5a34,#6b4423 55%,#4f2f18);border-radius:14px;padding:28px 14px 14px;box-shadow:0 8px 20px rgba(0,0,0,0.5)}
+.needles-board .needles-polaroid{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.board-ai{border:1px solid #29a3ff;animation:trackBtnFlash 1.8s ease-in-out infinite}
+.board-ai .needles-polaroid .upload-text{color:#003c8c}
+.ai-board-note{color:#f5ead8!important;-webkit-text-fill-color:#f5ead8!important;background:none!important;font-size:11px;line-height:1.35;margin:10px 0 0;text-align:center}
+.ai-board-note b,.ai-board-note u{color:#ffd9a8}
+.boards-or{flex:0 0 46px;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:900;letter-spacing:2px;color:#7ab8ff;animation:orFlash 1s ease-in-out infinite;user-select:none}
+@keyframes orFlash{0%,100%{opacity:1;text-shadow:0 0 14px rgba(41,163,255,.95)}50%{opacity:.2;text-shadow:none}}
+@media (max-width:520px){.needles-clipboard{flex-direction:column;gap:4px}.needles-board{aspect-ratio:auto}.board-ai{margin-top:14px}.boards-or{flex:none;padding:8px 0 4px}}
 .needles-clip{position:absolute;top:-14px;left:50%;transform:translateX(-50%);width:70px;height:28px;background:linear-gradient(180deg,#e8e8e8,#a8a8a8 55%,#7a7a7a);border-radius:6px;box-shadow:0 3px 6px rgba(0,0,0,0.5);border:1px solid #666;z-index:2}.ref-pin-zone{position:absolute;top:34px;left:-14px;transform:rotate(-9deg);width:56px;height:56px;border-radius:8px;background:#faf8f2;border:1.5px dashed #444;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;z-index:3;box-shadow:0 3px 8px rgba(0,0,0,.5);overflow:hidden}.ref-pin-zone::before{content:'';position:absolute;top:-4px;left:50%;transform:translateX(-50%);width:9px;height:9px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#ff8a7a,#c23b2c);box-shadow:0 1px 3px rgba(0,0,0,.6);z-index:4}.ref-pin-zone.has-image{border-style:solid;border-color:#003c8c}.ref-pin-zone-b{left:auto;right:-14px;transform:rotate(9deg)}.ref-pin-zone img.preview-img{width:100%;height:100%;max-height:none;object-fit:cover}
 .needles-clip::after{content:'';position:absolute;top:50%;left:50%;width:10px;height:10px;background:#555;border-radius:50%;transform:translate(-50%,-50%);box-shadow:inset 0 1px 2px rgba(0,0,0,0.6)}
 .needles-polaroid{background:#faf8f2!important;border:none!important;padding:14px 14px 20px!important;box-shadow:0 4px 10px rgba(0,0,0,0.35)}
@@ -861,17 +874,19 @@ const HERO_SETTLE_MS = 1000;
      in what happens once the photo lands (startPhotoGuide reads the
      declared intent; the old post-upload gate remains only as the fallback
      for photos that arrive with no declaration, e.g. workshop recall). -->
-<div class="needles-clipboard"><div class="needles-clip"></div><div class="upload-zone needles-polaroid" id="uploadZone" onclick="startUploadWithIntent('byo')"><div style="font-size:32px;color:#555;margin-bottom:8px">👤</div><div class="upload-text">Tap here to upload a photo</div><div class="upload-sub">Upload your picture — free</div></div>
+<div class="needles-clipboard">
+<div class="needles-board board-free"><div class="needles-clip"></div><div class="upload-zone needles-polaroid" id="uploadZone" onclick="startUploadWithIntent('byo')"><div style="font-size:32px;color:#555;margin-bottom:8px">👤</div><div class="upload-text">Tap here to upload a photo</div><div class="upload-sub">Upload your picture — free</div></div></div>
+<div class="boards-or" aria-hidden="true">OR</div>
+<div class="needles-board board-ai" id="aiCollabBoard"><div class="needles-clip"></div><div class="upload-zone needles-polaroid" id="aiCollabUploadBtn" onclick="startUploadWithIntent('ai')"><div style="font-size:32px;margin-bottom:8px">🤝</div><div class="upload-text">Tap here to collaborate with our AI</div><div class="upload-sub">1 token — upload a photo, then tell Needles what to make of it</div></div>
 <div class="ref-pin-zone" id="refAZone" onclick="document.getElementById('refAInput').click()"><div style="font-size:16px;color:#555;margin-bottom:1px">➕</div><div class="upload-text" style="font-size:8px;line-height:1.1">Reference A</div></div>
 <input type="file" id="refAInput" accept="image/*" style="display:none"/>
 <img id="refAPreview" class="preview-img" style="display:none;max-height:140px"/>
 <div class="ref-pin-zone ref-pin-zone-b" id="refBZone" onclick="document.getElementById('refBInput').click()"><div style="font-size:16px;color:#555;margin-bottom:1px">➕</div><div class="upload-text" style="font-size:8px;line-height:1.1">Reference B</div></div>
 <input type="file" id="refBInput" accept="image/*" style="display:none"/>
 <img id="refBPreview" class="preview-img" style="display:none;max-height:140px"/>
+<div class="note ai-board-note"><u>Optional!</u> Pin extra reference photos on the sides — <b>Reference A</b> and <b>Reference B</b> — if you want to combine or pull elements from other pictures (e.g. "use the face from Reference A on the body in Reference B"). If not, no biggie.</div>
 </div>
-<div style="text-align:center;margin-top:.7rem;font-size:14px;font-weight:700;color:#7ab8ff;letter-spacing:2px;text-transform:uppercase">— or —</div>
-<button type="button" class="generate-btn" id="aiCollabUploadBtn" style="margin-top:.7rem" onclick="startUploadWithIntent('ai')">🤝 Collaborate With Our AI (1 token)</button>
-<div class="note" style="margin-top:.5rem;margin-bottom:0;text-align:center;font-size:11px"><u>Optional!</u> Pin extra reference photos above — <b>Reference A</b> and <b>Reference B</b> — if you want to combine or pull elements from other pictures (e.g. "use the face from Reference A on the body in Reference B"). If not, no biggie.</div>
+</div>
 <div id="workshopRecallRow" style="display:none;gap:8px;margin-top:.6rem">
 <button class="download-btn" id="recallPhotoBtn" style="flex:1;margin-top:0" onclick="recallLastPhotoUsed()">↻ Use Last Photo Uploaded</button>
 <button class="download-btn" id="recallGeneratedBtn" style="flex:1;margin-top:0" onclick="recallLastGeneratedImage()">↻ Use Last Design Generated</button>
