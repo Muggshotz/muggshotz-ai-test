@@ -2,10 +2,10 @@
 <!DOCTYPE html>
 <html lang="en">
 <head><link rel="manifest" href="needles-manifest.json">
-<!-- BUILD-MARKER: PANEL-ADJUST-SLIDERS-v31 -->
+<!-- BUILD-MARKER: FADE-CONTINUE-OVAL-v32 -->
 <!-- If you can see this comment on GitHub, this exact paste landed. -->
 <!-- If your live site's page source does NOT say -->
-<!-- "PANEL-ADJUST-SLIDERS-v31" right here, the upload/deploy did -->
+<!-- "FADE-CONTINUE-OVAL-v32" right here, the upload/deploy did -->
 <!-- not take -- re-upload before testing. -->
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
@@ -1474,7 +1474,11 @@ Tell Needles <span style="color:#7ab8ff">what you have in mind</span>
 <span class="note" style="margin:0;white-space:nowrap;font-size:11px">Soft</span>
 </div>
 <div class="note" style="margin-top:.25rem;margin-bottom:0;text-align:center"><span id="frameFadeAmountVal">30%</span></div>
-<button type="button" class="generate-btn" style="margin-top:.9rem" onclick="confirmFrameFadeAndContinue()">✅ Continue</button>
+<!-- Shown only while the faded picture is being saved after Continue. The
+     save is a real upload of the full-size photo, which on a slow phone
+     connection can take a while -- without this the button looked dead. -->
+<div class="note" id="frameFadeSavingNote" style="display:none;margin-top:.9rem;text-align:center"><span class="spinner"></span>Saving your faded picture... this can take a moment on a slow connection.</div>
+<button type="button" class="generate-btn" id="frameFadeContinueBtn" style="margin-top:.9rem" onclick="confirmFrameFadeAndContinue()">✅ Continue</button>
 </div>
 </div>
 
@@ -9491,23 +9495,34 @@ async function renderFadedArtwork(sourceUrl,hexColor,fadeAmountPct){
     return canvas.toDataURL('image/png');
   }
 
+  // OVAL VIGNETTE (Sep 2026, Alyx): this used to be four straight
+  // gradients, one per edge, which left a clear RECTANGLE in the middle
+  // with a visible corner wherever two of them met -- "that hard square
+  // fade". Alyx wanted the picture to fade in "like a cloud, vaguely
+  // oval". So: one elliptical gradient from the centre outward. The
+  // canvas is drawn as a unit circle stretched to the panel's own
+  // proportions, so the clear area is an oval that matches the picture's
+  // shape, and there are no corners in the fade at all.
+  //
+  // Reach: in ellipse-radius units the picture's edge midpoints sit at
+  // 1.0 and its corners at sqrt(2). Fully clear inside `inner`, solid
+  // mug colour at the corners, and the slider walks `inner` inward from
+  // the corners (0% = untouched) to a small clear centre at 80%. At the
+  // 30% default the clear oval just touches the four edge midpoints, so
+  // the sides stay crisp while the corners melt away -- the cloud look.
   if(fadeAmountPct>0){
     const w=canvas.width,h=canvas.height;
-    const fadeDist=(fadeAmountPct/100)*Math.min(w,h)*0.5;
-    const full=hexColor+'FF';
-    const clear=hexColor+'00';
-    let g=ctx.createLinearGradient(0,0,fadeDist,0);
-    g.addColorStop(0,full);g.addColorStop(1,clear);
-    ctx.fillStyle=g;ctx.fillRect(0,0,fadeDist,h);
-    g=ctx.createLinearGradient(w,0,w-fadeDist,0);
-    g.addColorStop(0,full);g.addColorStop(1,clear);
-    ctx.fillStyle=g;ctx.fillRect(w-fadeDist,0,fadeDist,h);
-    g=ctx.createLinearGradient(0,0,0,fadeDist);
-    g.addColorStop(0,full);g.addColorStop(1,clear);
-    ctx.fillStyle=g;ctx.fillRect(0,0,w,fadeDist);
-    g=ctx.createLinearGradient(0,h,0,h-fadeDist);
-    g.addColorStop(0,full);g.addColorStop(1,clear);
-    ctx.fillStyle=g;ctx.fillRect(0,h-fadeDist,w,fadeDist);
+    const outer=Math.SQRT2;
+    const inner=Math.max(0.05,outer*(1-fadeAmountPct/100));
+    ctx.save();
+    ctx.translate(w/2,h/2);
+    ctx.scale(w/2,h/2);
+    const rg=ctx.createRadialGradient(0,0,inner,0,0,outer);
+    rg.addColorStop(0,hexColor+'00');
+    rg.addColorStop(1,hexColor+'FF');
+    ctx.fillStyle=rg;
+    ctx.fillRect(-1,-1,2,2);
+    ctx.restore();
   }
   return canvas.toDataURL('image/jpeg',0.92);
 }
@@ -9554,14 +9569,22 @@ async function sliceStitchedIntoThirds(dataUrl){
 
 async function bakeFadeIntoDesigns(fadeAmountPct){
   const hex=getSelectedProductColorHex();
+  // Sharp (0%) on the pre-placement mug path changes nothing about the
+  // picture, so there is nothing to re-encode or upload -- the design keeps
+  // its existing hosted URL, at full quality. This is also the customer's
+  // way past a connection that cannot complete the upload: drag to Sharp
+  // and Continue. (Round coasters still bake at 0%: their bake also masks
+  // off the corners, which is not a no-op.)
+  if(fadeAmountPct===0 && fadeExitsToPanelPlacement && getProductFadeShape()!=='circle')return;
+  const strict={strict:true};
   if(revealFlowThreePanel){
     const [leftFaded,centerFaded,rightFaded]=await Promise.all(
       revealOriginalArtworkUrls.map(u=>u?renderFadedArtwork(u,hex,fadeAmountPct):Promise.resolve(null))
     );
     const [leftUrl,centerUrl,rightUrl]=await Promise.all([
-      uploadCompositedImage(leftFaded),
-      centerFaded?uploadCompositedImage(centerFaded):Promise.resolve(null),
-      uploadCompositedImage(rightFaded)
+      uploadCompositedImage(leftFaded,strict),
+      centerFaded?uploadCompositedImage(centerFaded,strict):Promise.resolve(null),
+      uploadCompositedImage(rightFaded,strict)
     ]);
     const leftDesign=findDesignById(placements.left);
     if(leftDesign)leftDesign.url=leftUrl;
@@ -9577,7 +9600,7 @@ async function bakeFadeIntoDesigns(fadeAmountPct){
     // wraparound and catastrophic for a coaster -- it would print one third of
     // the design. These products have exactly one design; replace it in place.
     const faded=await renderFadedArtwork(revealOriginalArtworkUrls[0],hex,fadeAmountPct);
-    const uploaded=await uploadCompositedImage(faded);
+    const uploaded=await uploadCompositedImage(faded,strict);
     const slotId=placements.front||placements.left||placements.right;
     const design=slotId?findDesignById(slotId):null;
     if(design)design.url=uploaded;
@@ -9588,16 +9611,16 @@ async function bakeFadeIntoDesigns(fadeAmountPct){
     // all still empty at this point, so the target has to come from
     // pendingPanelPlacementDesignId instead of being derived from them.
     const faded=await renderFadedArtwork(revealOriginalArtworkUrls[0],hex,fadeAmountPct);
-    const uploaded=await uploadCompositedImage(faded);
+    const uploaded=await uploadCompositedImage(faded,strict);
     const design=pendingPanelPlacementDesignId?findDesignById(pendingPanelPlacementDesignId):null;
     if(design)design.url=uploaded;
   } else {
     const faded=await renderFadedArtwork(revealOriginalArtworkUrls[0],hex,fadeAmountPct);
     const slices=await sliceStitchedIntoThirds(faded);
     const [leftUrl,centerUrl,rightUrl]=await Promise.all([
-      uploadCompositedImage(slices.left),
-      uploadCompositedImage(slices.center),
-      uploadCompositedImage(slices.right)
+      uploadCompositedImage(slices.left,strict),
+      uploadCompositedImage(slices.center,strict),
+      uploadCompositedImage(slices.right,strict)
     ]);
     const leftDesign=findDesignById(placements.left);
     if(leftDesign)leftDesign.url=leftUrl;
@@ -9769,12 +9792,39 @@ async function updateFrameFadePreview(){
   img.src=faded;
 }
 
+// Guards against a second tap on Continue while the first save is still
+// uploading -- each tap used to start another full upload of the photo.
+let frameFadeBakeInFlight=false;
+
 async function confirmFrameFadeAndContinue(){
+  if(frameFadeBakeInFlight)return;
   frameFadeAutoScrollToken++;
+  // SHOW THE WORK (Sep 2026, Alyx's live retest): the save below uploads
+  // the full-size faded photo, and on a slow connection that can take
+  // long enough that a silent button reads as broken. Disable the button
+  // and show a spinner for the duration, and if the save genuinely fails
+  // or times out, SAY so and stay on this page for a retry -- instead of
+  // the old "continue with the unfaded version", which quietly carried a
+  // raw data URL forward as the design and broke at checkout.
+  const continueBtn=document.getElementById('frameFadeContinueBtn');
+  const savingNote=document.getElementById('frameFadeSavingNote');
+  frameFadeBakeInFlight=true;
+  if(continueBtn)continueBtn.disabled=true;
+  if(savingNote)savingNote.style.display='block';
+  let bakeError=null;
   try{
     await bakeFadeIntoDesigns(frameFadeAmountPct);
   }catch(err){
-    console.error('Could not save the faded artwork, continuing with the unfaded version:',err);
+    bakeError=err;
+    console.error('Could not save the faded artwork:',err);
+  }finally{
+    frameFadeBakeInFlight=false;
+    if(continueBtn)continueBtn.disabled=false;
+    if(savingNote)savingNote.style.display='none';
+  }
+  if(bakeError){
+    showGuidanceAlert('We couldn\'t save your faded picture -- the connection may be slow or dropped. Tap Continue to try again, or drag the slider all the way to Sharp to carry on without a fade.');
+    return;
   }
   hardEdgesEnabled=(frameFadeAmountPct===0);
   const mainToggle=document.getElementById('panoramaFadeToggle');
@@ -11005,17 +11055,35 @@ function skipAccessorizeFrame(){
 // api/generate uploadComposite branch to get back a small real hosted URL
 // instead. Falls back to the raw dataUrl (old behavior) if the upload
 // itself fails, rather than breaking Apply entirely.
-async function uploadCompositedImage(dataUrl){
+//
+// TIMEOUT (Sep 2026): this was the one network call in the file with no
+// fetchWithTimeout() around it. The Edge Fade page's Continue awaited it
+// with nothing on screen, so a stalled upload (a big photo on a slow
+// phone connection) read as a dead button -- no spinner, no error, just
+// nothing, indefinitely. 90s is generous for a few-MB upload and still
+// far short of "gave up and closed the tab".
+//
+// `strict`: the fade bake passes true so a failed save THROWS instead of
+// quietly substituting the raw data URL. A data URL is a fine stand-in
+// for the accessorize preview (the old behaviour, kept for every other
+// caller), but as a mug DESIGN it is several MB that can never fit in
+// Stripe's metadata at checkout -- it would have failed later, silently,
+// on the payment hop. Better to tell the customer now and let them retry.
+const COMPOSITE_UPLOAD_TIMEOUT_MS=90000;
+async function uploadCompositedImage(dataUrl,{strict=false}={}){
   try{
-    const resp=await fetch('/api/generate',{
+    const resp=await fetchWithTimeout('/api/generate',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({action:'uploadComposite',image:dataUrl,deviceId})
-    });
-    const data=await resp.json();
+    },COMPOSITE_UPLOAD_TIMEOUT_MS);
+    let data={};
+    try{ data=await resp.json(); }catch(_){ data={error:'HTTP '+resp.status}; }
     if(resp.ok && data.imageUrl)return data.imageUrl;
+    if(strict)throw new Error(data.error||('Upload failed with HTTP '+resp.status));
     console.error('Could not upload composited image, using the raw data URL instead:',data.error);
   }catch(err){
+    if(strict)throw err;
     console.error('Could not upload composited image, using the raw data URL instead:',err);
   }
   return dataUrl;
