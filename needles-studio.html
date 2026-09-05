@@ -2,10 +2,10 @@
 <!DOCTYPE html>
 <html lang="en">
 <head><link rel="manifest" href="needles-manifest.json">
-<!-- BUILD-MARKER: MOCKUP-BACK-v41 -->
+<!-- BUILD-MARKER: MUG-CAPTIONS-v42 -->
 <!-- If you can see this comment on GitHub, this exact paste landed. -->
 <!-- If your live site's page source does NOT say -->
-<!-- "MOCKUP-BACK-v41" right here, the upload/deploy did -->
+<!-- "MUG-CAPTIONS-v42" right here, the upload/deploy did -->
 <!-- not take -- re-upload before testing. -->
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
@@ -637,8 +637,15 @@ body.design-method-focus .card:not(#designMethodCard){opacity:.28;filter:brightn
    step with the card's own visibility by a MutationObserver. */
 body.panels-active #likenessSectionCard,
 body.panels-active #generateTokenNote,
-body.panels-active #positionHolderCard,
-body.panels-active #captionCard{display:none!important}
+body.panels-active #positionHolderCard{display:none!important}
+/* Caption controls inside the Fit Your Picture card (mug track). Just the
+   input until something is typed; the full styling toolset unfolds below
+   it once there is text to style. */
+#captionCard.in-fit{margin:12px 0 0;padding:12px 12px 6px;border-color:#2a3a4a}
+#captionCard.in-fit .caption-header-row .card-title{font-size:14px}
+#captionCard.in-fit.caption-empty > :not(.caption-header-row):not(#captionText):not(.caption-hint){display:none!important}
+#captionCard.in-fit .caption-hint{display:block;font-size:11px;color:#7ab8ff;text-align:center;margin:6px 0 2px}
+#captionCard.in-fit:not(.caption-empty) .caption-hint{display:none}
 
 /* True up/down sliders for the Left/Right Vertical seam-nudge controls --
    a sideways slider for an up/down adjustment was confusing to operate
@@ -6785,6 +6792,7 @@ function showCoverMePanelCard(){
   // subdued screen with the panels invisible on it.
   clearAllFocusModes();
   document.getElementById('coverMeCard').style.display='none';
+  unbakeCaptionedDesigns();
   autoFillCoverMePanels();
   renderCoverMePanelRows();
   document.getElementById('coverMePanelCard').style.display='block';
@@ -6949,12 +6957,16 @@ function paintFadeMask(canvas,boxW,boxH,pct,hex){
 function decorateFitBox(box,adj,rect){
   if(!box)return;
   const r=rect||{left:0,top:0,w:box.clientWidth,h:box.clientHeight};
+  let capEl=box.querySelector('.fitCaption');
+  // Caption sits ABOVE the fade: a soft edge must never eat the words.
+  if(!capEl){capEl=document.createElement('canvas');capEl.className='fitCaption';capEl.style.cssText='position:absolute;pointer-events:none;z-index:2;display:none';box.appendChild(capEl);}
   let fadeEl=box.querySelector('.fitFade');
-  if(!fadeEl){fadeEl=document.createElement('canvas');fadeEl.className='fitFade';fadeEl.style.cssText='position:absolute;pointer-events:none';box.appendChild(fadeEl);}
+  if(!fadeEl){fadeEl=document.createElement('canvas');fadeEl.className='fitFade';fadeEl.style.cssText='position:absolute;pointer-events:none;z-index:1';box.appendChild(fadeEl);}
   let frameEl=box.querySelector('.fitFrame');
-  if(!frameEl){frameEl=document.createElement('div');frameEl.className='fitFrame';frameEl.style.cssText='position:absolute;pointer-events:none;box-sizing:border-box';box.appendChild(frameEl);}
+  if(!frameEl){frameEl=document.createElement('div');frameEl.className='fitFrame';frameEl.style.cssText='position:absolute;pointer-events:none;box-sizing:border-box;z-index:3';box.appendChild(frameEl);}
   const place=el=>{el.style.left=r.left+'px';el.style.top=r.top+'px';el.style.width=r.w+'px';el.style.height=r.h+'px';};
-  place(fadeEl);place(frameEl);
+  place(capEl);place(fadeEl);place(frameEl);
+  if(product==='mug')paintCaptionLayer(capEl,r.w,r.h); else capEl.style.display='none';
   const pct=Math.max(0,Math.min(80,Number(adj.fade)||0));
   if(pct>0&&r.w>1&&r.h>1){
     fadeEl.style.display='block';
@@ -6987,9 +6999,167 @@ function sizeFitBox(box,printBox){
   box.style.margin='0 auto';
 }
 
+// ---- Captions on the mug track ----
+// The existing "Add a Caption" card (fonts, colour, outline, effects,
+// path, position) is moved bodily into the Fit Your Picture card while the
+// panels screen is up, and moved back to its usual place when it closes.
+// One caption card exists, so it lives in the first fitter.
+let captionCardHome=null;
+function mountCaptionCardInFit(host){
+  const card=document.getElementById('captionCard');
+  if(!card||!host)return;
+  if(!captionCardHome)captionCardHome={parent:card.parentNode,next:card.nextSibling};
+  if(!card.querySelector('.caption-hint')){
+    const hint=document.createElement('div');
+    hint.className='caption-hint';
+    hint.textContent='Optional. Type a caption and the styling tools appear. It prints on the picture exactly where you see it.';
+    const input=card.querySelector('#captionText');
+    if(input&&input.parentNode===card)card.insertBefore(hint,input.nextSibling);
+  }
+  host.appendChild(card);
+  card.className='card caption-card visible in-fit';
+  syncCaptionEmptyClass();
+}
+function unmountCaptionCardFromFit(){
+  const card=document.getElementById('captionCard');
+  if(!card||!captionCardHome||!card.classList.contains('in-fit'))return;
+  card.classList.remove('in-fit','caption-empty');
+  const {parent,next}=captionCardHome;
+  if(parent){ if(next&&next.parentNode===parent)parent.insertBefore(card,next); else parent.appendChild(card); }
+}
+function currentCaptionText(){
+  const el=document.getElementById('captionText');
+  return el?el.value.trim():'';
+}
+function syncCaptionEmptyClass(){
+  const card=document.getElementById('captionCard');
+  if(card&&card.classList.contains('in-fit'))card.classList.toggle('caption-empty',!currentCaptionText());
+}
+// Any change in the caption tools redraws the caption on the fit box and
+// the thumbnails. Delegated so the card's own handlers stay untouched.
+let captionRefreshQueued=false;
+function refreshFitCaptions(){
+  if(captionRefreshQueued)return;
+  captionRefreshQueued=true;
+  requestAnimationFrame(()=>{
+    captionRefreshQueued=false;
+    syncCaptionEmptyClass();
+    document.querySelectorAll('#coverMeFitWrap [data-design-id]').forEach(card=>{
+      const id=card.dataset.designId;
+      layoutFittedImage(card.querySelector('#coverMeFitBox_'+id+' > img'),document.getElementById('coverMeFitBox_'+id),getDesignAdjust(id));
+    });
+    ['left','front','right'].forEach(pos=>applyPanelAdjustTransform(pos));
+  });
+}
+document.addEventListener('DOMContentLoaded',()=>{
+  const card=document.getElementById('captionCard');
+  if(!card)return;
+  ['input','change','click','pointerup'].forEach(ev=>card.addEventListener(ev,()=>{ if(card.classList.contains('in-fit'))refreshFitCaptions(); }));
+});
+// Draws the caption on a canvas that stands for the picture's printed
+// rectangle (so "bottom-left" means bottom-left of what prints).
+function paintCaptionLayer(canvas,rectW,rectH){
+  const text=currentCaptionText();
+  if(!text||rectW<2||rectH<2){canvas.style.display='none';return;}
+  const dpr=Math.min(2,window.devicePixelRatio||1);
+  const cw=Math.round(rectW*dpr),ch=Math.round(rectH*dpr);
+  if(canvas.width!==cw||canvas.height!==ch){canvas.width=cw;canvas.height=ch;}
+  const ctx=canvas.getContext('2d');
+  ctx.clearRect(0,0,cw,ch);
+  try{ drawCaptionText(ctx,canvas); }catch(err){ console.error('Caption preview failed:',err); }
+  canvas.style.display='block';
+}
+// The picture's printed rectangle at print resolution, with the caption
+// drawn on -- what the server will crop, fade and frame. Bakes from the
+// un-captioned original every time, so re-editing never stacks captions.
+async function bakeCaptionIntoDesign(designId){
+  const design=findDesignById(designId);
+  if(!design)return;
+  const firstPos=panelsWithDesign(designId)[0];
+  if(!firstPos)return;
+  const src=design.rawUrl||design.url;
+  const adj=design.preBakeAdjust?{...design.preBakeAdjust}:getDesignAdjust(designId);
+  const img=await loadImageFromUrl(src);
+  const box=getPanelPrintBox(firstPos);
+  const f=computePanelFit(img.naturalWidth,img.naturalHeight,box.w,box.h,adj.zoom||1,adj.offX||0,adj.offY||0);
+  const left=Math.max(0,f.left),top=Math.max(0,f.top);
+  const w=Math.max(1,Math.min(f.w-Math.max(0,-f.left),box.w-left));
+  const h=Math.max(1,Math.min(f.h-Math.max(0,-f.top),box.h-top));
+  const c=document.createElement('canvas');
+  c.width=w;c.height=h;
+  const ctx=c.getContext('2d');
+  ctx.fillStyle=getSelectedProductColorHex();
+  ctx.fillRect(0,0,w,h);
+  ctx.drawImage(img,f.left-left,f.top-top,f.w,f.h);
+  // The fade goes on here, under the caption, so the words stay crisp on
+  // top of the soft edge (the server is then told fade:0 for this
+  // picture -- it would otherwise fade the caption too). Same
+  // fadeMaskAlpha the server uses, at print resolution.
+  const fadePct=Math.max(0,Math.min(80,Number(adj.fade)||0));
+  if(fadePct>0){
+    const hex=getSelectedProductColorHex();
+    const m=/^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(hex)||[null,'ff','ff','ff'];
+    const R=parseInt(m[1],16),G=parseInt(m[2],16),B=parseInt(m[3],16);
+    const id=ctx.getImageData(0,0,w,h);
+    const d=id.data;
+    let i=0;
+    for(let y=0;y<h;y++){
+      for(let x=0;x<w;x++){
+        const a=fadeMaskAlpha(x+0.5,y+0.5,w,h,fadePct);
+        if(a>0){
+          d[i]=Math.round(d[i]*(1-a)+R*a);
+          d[i+1]=Math.round(d[i+1]*(1-a)+G*a);
+          d[i+2]=Math.round(d[i+2]*(1-a)+B*a);
+        }
+        i+=4;
+      }
+    }
+    ctx.putImageData(id,0,0);
+  }
+  drawCaptionText(ctx,c);
+  const uploaded=await uploadCompositedImage(c.toDataURL('image/jpeg',0.92),{strict:true});
+  if(!design.rawUrl){design.rawUrl=src;design.preBakeAdjust={...adj};}
+  design.url=uploaded;
+  design.captioned=true;
+  // The baked picture IS the printed rectangle. If the original overflowed
+  // the box, the baked one fits it exactly (same proportions), so it is
+  // placed at 1:1 centred. If it sat inside the box, its proportions are
+  // unchanged and the same zoom/offset lands it in the same spot.
+  // Fade is already in the picture; the server must not add another.
+  if((adj.zoom||1)>=1){
+    setDesignAdjust(designId,{...adj,zoom:1,offX:0,offY:0,fade:0});
+  } else {
+    setDesignAdjust(designId,{...adj,fade:0});
+  }
+  saveMugState();
+}
+// Back to the un-captioned original and its pre-bake fit, for editing.
+function unbakeCaptionedDesigns(){
+  let changed=false;
+  ['left','front','right'].forEach(pos=>{
+    const d=placements[pos]?findDesignById(placements[pos]):null;
+    if(d&&d.rawUrl&&d.captioned){
+      d.url=d.rawUrl;d.captioned=false;
+      if(d.preBakeAdjust)placementAdjust[pos]={...d.preBakeAdjust};
+      changed=true;
+    }
+  });
+  if(changed)saveMugState();
+}
+// Runs on Done: bakes the caption into every picture on the panels, or
+// restores the originals when the caption box is empty.
+async function bakeCaptionsForPanels(){
+  const text=currentCaptionText();
+  const seen=[];
+  ['left','front','right'].forEach(pos=>{const id=placements[pos]; if(id&&!seen.includes(id)&&findDesignById(id))seen.push(id);});
+  if(!text){ unbakeCaptionedDesigns(); return; }
+  for(const id of seen){ await bakeCaptionIntoDesign(id); }
+}
+
 function renderCoverMeFitters(){
   const wrap=document.getElementById('coverMeFitWrap');
   if(!wrap)return;
+  unmountCaptionCardFromFit();
   wrap.innerHTML='';
   const seen=[];
   ['left','front','right'].forEach(pos=>{
@@ -6997,6 +7167,8 @@ function renderCoverMeFitters(){
     if(id&&!seen.includes(id)&&findDesignById(id))seen.push(id);
   });
   seen.forEach(designId=>wrap.appendChild(buildCoverMeFitter(designId,seen.length>1)));
+  const firstHost=wrap.querySelector('.fitCaptionHost');
+  if(firstHost)mountCaptionCardInFit(firstHost);
 }
 
 function buildCoverMeFitter(designId,multiple){
@@ -7061,6 +7233,10 @@ function buildCoverMeFitter(designId,multiple){
   frameRow.innerHTML=`<input type="checkbox" id="coverMeFitBorder_${designId}" ${adj.border!==false?'checked':''} style="width:18px;height:18px"><span>Thin frame around the picture in your mug\'s colour</span><span style="display:inline-block;width:14px;height:14px;border-radius:3px;background:${accent||'#fff'};border:1px solid #666"></span>`;
   if(!accent)frameRow.style.display='none'; // Classic White has no accent colour, so no frame
   card.appendChild(frameRow);
+
+  const captionHost=document.createElement('div');
+  captionHost.className='fitCaptionHost';
+  card.appendChild(captionHost);
 
   const reset=document.createElement('div');
   reset.className='note';
@@ -7357,6 +7533,24 @@ function refreshCoverMePanelDoneState(){
 // for reuse elsewhere (Design track, other products).
 async function coverMePanelDone(){
   coverMePanelAutoScrollToken++;
+  // Caption first (Sep 2026): bake it into the fitted picture, or put the
+  // un-captioned original back if the box was emptied. A failed save keeps
+  // the customer here with a real message instead of moving on without it.
+  const doneBtn=document.getElementById('coverMePanelDoneBtn');
+  const needsBake=product==='mug'&&(currentCaptionText()||['left','front','right'].some(pos=>{const d=placements[pos]?findDesignById(placements[pos]):null;return d&&d.captioned;}));
+  if(needsBake){
+    const label=doneBtn?doneBtn.innerHTML:'';
+    if(doneBtn){doneBtn.disabled=true;doneBtn.innerHTML='<span class="spinner"></span>Saving your caption...';}
+    try{
+      await bakeCaptionsForPanels();
+    }catch(err){
+      console.error('Could not save the caption:',err);
+      if(doneBtn){doneBtn.disabled=false;doneBtn.innerHTML=label;}
+      showGuidanceAlert(describeUploadFailure(err).replace(/faded picture/,'captioned picture').replace(/drag the slider all the way to Sharp to carry on without a fade/,'clear the caption box to carry on without a caption'));
+      return;
+    }
+    if(doneBtn){doneBtn.disabled=false;doneBtn.innerHTML=label;}
+  }
   document.getElementById('coverMePanelCard').style.display='none';
   if(panelScreenExit==='reveal'){
     // Design-first flow: reveal, Edge Fade and the frame offer are still
@@ -8829,18 +9023,12 @@ function drawTextOnPath(ctx,text,pathPointsCanvasSpace,spacing,drawFn){
   ctx.textBaseline=prevBaseline;
 }
 
-async function drawCaption(){
-  if(!baseImg)return;
-  const myDrawToken=++drawCaptionToken;
-  const canvas=document.getElementById('captionCanvas');
-  canvas.width=baseImg.naturalWidth;
-  canvas.height=baseImg.naturalHeight;
-  const ctx=canvas.getContext('2d');
-  await drawPhotoInsetForFrame(ctx,canvas,baseImg,baseImg.naturalWidth,baseImg.naturalHeight);
-
-  await drawFrameOnCanvas(ctx,canvas);
-  await drawWindowSillOnCanvas(ctx,canvas);
-
+// The caption itself -- text, font, colour, outline, effect, path, position
+// -- drawn onto ANY canvas, sized relative to that canvas's width. Split out
+// of drawCaption() (Sep 2026) so the mug track can draw the same caption
+// onto the fitted print area: live in the Fit Your Picture box, and baked
+// into the picture when the customer presses Done.
+function drawCaptionText(ctx,canvas){
   const text=document.getElementById('captionText').value.trim();
   if(text){
     const sizePct=document.getElementById('captionSize').value;
@@ -8914,6 +9102,21 @@ async function drawCaption(){
 
     ctx.restore();
   }
+}
+
+async function drawCaption(){
+  if(!baseImg)return;
+  const myDrawToken=++drawCaptionToken;
+  const canvas=document.getElementById('captionCanvas');
+  canvas.width=baseImg.naturalWidth;
+  canvas.height=baseImg.naturalHeight;
+  const ctx=canvas.getContext('2d');
+  await drawPhotoInsetForFrame(ctx,canvas,baseImg,baseImg.naturalWidth,baseImg.naturalHeight);
+
+  await drawFrameOnCanvas(ctx,canvas);
+  await drawWindowSillOnCanvas(ctx,canvas);
+
+  drawCaptionText(ctx,canvas);
 
   // A newer click (color, frame, window sill, whatever) may have
   // started its own drawCaption() call while this one was still
@@ -13865,7 +14068,11 @@ function resetEverythingFreshStart(){
 (function watchPanelsCard(){
   const card=document.getElementById('coverMePanelCard');
   if(!card||typeof MutationObserver==='undefined')return;
-  const sync=()=>document.body.classList.toggle('panels-active',getComputedStyle(card).display!=='none');
+  const sync=()=>{
+    const active=getComputedStyle(card).display!=='none';
+    document.body.classList.toggle('panels-active',active);
+    if(!active&&typeof unmountCaptionCardFromFit==='function')unmountCaptionCardFromFit();
+  };
   new MutationObserver(sync).observe(card,{attributes:true,attributeFilter:['style','class']});
   sync();
 })();
