@@ -1,11 +1,11 @@
-<!-- BUILD MARKER: idea-photo-sidebyside-sep4-2026-v2 -->
+<!-- BUILD MARKER: panel-adjust-sliders-sep4-2026 -->
 <!DOCTYPE html>
 <html lang="en">
 <head><link rel="manifest" href="needles-manifest.json">
-<!-- BUILD-MARKER: IDEA-PHOTO-SIDEBYSIDE-v30 -->
+<!-- BUILD-MARKER: PANEL-ADJUST-SLIDERS-v31 -->
 <!-- If you can see this comment on GitHub, this exact paste landed. -->
 <!-- If your live site's page source does NOT say -->
-<!-- "IDEA-PHOTO-SIDEBYSIDE-v30" right here, the upload/deploy did -->
+<!-- "PANEL-ADJUST-SLIDERS-v31" right here, the upload/deploy did -->
 <!-- not take -- re-upload before testing. -->
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
@@ -6085,6 +6085,7 @@ async function approveFaceIt(){
   const validTargets=['left','front','right'];
   const target=(pendingSlotTarget && validTargets.includes(pendingSlotTarget))?pendingSlotTarget:'front';
   placements[target]=designId;
+  placementAdjust[target]=defaultPanelAdjust();
   pendingSlotTarget=null;
   faceItPendingResultUrl=null;
   document.body.classList.remove('faceitreveal-focus');
@@ -6350,6 +6351,7 @@ async function approveGoodMorning(){
   const validTargets=['left','front','right'];
   const target=(pendingSlotTarget && validTargets.includes(pendingSlotTarget))?pendingSlotTarget:'front';
   placements[target]=designId;
+  placementAdjust[target]=defaultPanelAdjust();
   pendingSlotTarget=null;
   goodMorningPendingResultUrl=null;
   document.body.classList.remove('goodmorningreveal-focus');
@@ -6597,6 +6599,7 @@ async function approveCoverMe(){
   const validTargets=['left','front','right'];
   const target=(pendingSlotTarget && validTargets.includes(pendingSlotTarget))?pendingSlotTarget:'front';
   placements[target]=designId;
+  placementAdjust[target]=defaultPanelAdjust();
   pendingSlotTarget=null;
   coverMePendingResultUrl=null;
   document.body.classList.remove('covermereveal-focus');
@@ -6688,8 +6691,8 @@ const COVER_ME_PANEL_OVERLAY_POS={
 // different image for that specific side (coverMePanelExplicit).
 function autoFillCoverMePanels(){
   if(!placements.front)return;
-  if(!coverMePanelExplicit.left)placements.left=placements.front;
-  if(!coverMePanelExplicit.right)placements.right=placements.front;
+  if(!coverMePanelExplicit.left){placements.left=placements.front;placementAdjust.left=defaultPanelAdjust();}
+  if(!coverMePanelExplicit.right){placements.right=placements.front;placementAdjust.right=defaultPanelAdjust();}
   saveMugState();
 }
 
@@ -6822,12 +6825,15 @@ function renderCoverMePanelRowState(pos){
     if(widenedLeft<0)widenedLeft=0;
     if(widenedLeft+widenedWidth>100)widenedLeft=100-widenedWidth;
     const box={top:baseBox.top,left:widenedLeft,width:widenedWidth,height:baseBox.height};
-    overlay.style.cssText=`position:absolute;top:${box.top}%;left:${box.left}%;width:${box.width}%;height:${box.height}%;border:2px solid #d32f2f;border-radius:4px;overflow:hidden`;
+    overlay.style.cssText=`position:absolute;top:${box.top}%;left:${box.left}%;width:${box.width}%;height:${box.height}%;border:2px solid #d32f2f;border-radius:4px;overflow:hidden;background:#fff`;
     const img=document.createElement('img');
     img.src=design.url;
-    // object-fit:contain (not cover) -- always enlarges the artwork to the
-    // largest size that fits this panel's space without cropping any of it off.
-    img.style.cssText='width:100%;height:100%;object-fit:contain;display:block';
+    // object-fit is set dynamically by applyPanelAdjustTransform() below --
+    // 'cover' (crops to fill, matches the real print) at zoom >= 1x, or
+    // 'contain' (shows the whole photo, letterboxed) below 1x. Whichever
+    // one actually applies right now gets set immediately after this img
+    // is in the DOM, so this preview always matches what will really print.
+    img.style.cssText='width:100%;height:100%;display:block';
     overlay.appendChild(img);
 
     const removeBtn=document.createElement('button');
@@ -6844,6 +6850,23 @@ function renderCoverMePanelRowState(pos){
     diffLink.textContent='Use a different image instead (1 more token)';
     diffLink.onclick=()=>addDifferentImageForCoverMePanel(pos);
     controls.appendChild(diffLink);
+
+    const adjustToggle=document.createElement('button');
+    adjustToggle.type='button';
+    adjustToggle.className='download-btn';
+    adjustToggle.style.cssText='width:100%;margin-top:6px;font-size:11px;padding:.4rem';
+    adjustToggle.textContent='🔧 Adjust position & zoom';
+    const sliders=document.createElement('div');
+    sliders.id='coverMeAdjustSliders_'+pos;
+    sliders.style.cssText='display:none;margin-top:8px';
+    sliders.innerHTML=buildPanelAdjustSlidersHTML(pos);
+    adjustToggle.onclick=()=>{
+      sliders.style.display=(sliders.style.display==='none')?'block':'none';
+    };
+    controls.appendChild(adjustToggle);
+    controls.appendChild(sliders);
+    wirePanelAdjustSliders(pos);
+    applyPanelAdjustTransform(pos);
 
   } else {
     const emptyBox=COVER_ME_PANEL_OVERLAY_POS[pos];
@@ -6873,6 +6896,84 @@ function renderCoverMePanelRowState(pos){
     diffBtn.onclick=()=>addDifferentImageForCoverMePanel(pos);
     controls.appendChild(diffBtn);
   }
+}
+
+function buildPanelAdjustSlidersHTML(pos){
+  const adj=placementAdjust[pos]||defaultPanelAdjust();
+  const zoomPct=Math.round((adj.zoom||1)*100);
+  const offXVal=Math.round((adj.offX||0)*100);
+  const offYVal=Math.round((adj.offY||0)*100);
+  return `
+    <div style="display:flex;align-items:center;gap:6px;margin-top:4px">
+      <span class="note" style="margin:0;min-width:44px;font-size:10px">Zoom</span>
+      <input type="range" min="60" max="200" step="1" value="${zoomPct}" id="coverMeZoom_${pos}" style="flex:1">
+      <span class="note" id="coverMeZoomOut_${pos}" style="margin:0;min-width:32px;text-align:right;font-size:10px">${zoomPct}%</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:6px;margin-top:4px">
+      <span class="note" style="margin:0;min-width:44px;font-size:10px">Move X</span>
+      <input type="range" min="-100" max="100" step="1" value="${offXVal}" id="coverMeOffX_${pos}" style="flex:1">
+      <span class="note" id="coverMeOffXOut_${pos}" style="margin:0;min-width:32px;text-align:right;font-size:10px">${offXVal}</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:6px;margin-top:4px">
+      <span class="note" style="margin:0;min-width:44px;font-size:10px">Move Y</span>
+      <input type="range" min="-100" max="100" step="1" value="${offYVal}" id="coverMeOffY_${pos}" style="flex:1">
+      <span class="note" id="coverMeOffYOut_${pos}" style="margin:0;min-width:32px;text-align:right;font-size:10px">${offYVal}</span>
+    </div>
+    <button type="button" class="download-btn" style="width:100%;margin-top:6px;font-size:10px;padding:.3rem" onclick="resetPanelAdjust('${pos}')">↺ Reset to default</button>
+  `;
+}
+
+function wirePanelAdjustSliders(pos){
+  const zoomEl=document.getElementById('coverMeZoom_'+pos);
+  const offXEl=document.getElementById('coverMeOffX_'+pos);
+  const offYEl=document.getElementById('coverMeOffY_'+pos);
+  if(!zoomEl||!offXEl||!offYEl)return;
+  const update=()=>{
+    placementAdjust[pos]={
+      zoom:Number(zoomEl.value)/100,
+      offX:Number(offXEl.value)/100,
+      offY:Number(offYEl.value)/100
+    };
+    document.getElementById('coverMeZoomOut_'+pos).textContent=zoomEl.value+'%';
+    document.getElementById('coverMeOffXOut_'+pos).textContent=offXEl.value;
+    document.getElementById('coverMeOffYOut_'+pos).textContent=offYEl.value;
+    applyPanelAdjustTransform(pos);
+    saveMugState();
+  };
+  zoomEl.addEventListener('input',update);
+  offXEl.addEventListener('input',update);
+  offYEl.addEventListener('input',update);
+}
+
+// Reset re-renders the whole row rather than just zeroing the sliders in
+// place -- simplest way to get the slider positions, the live preview, and
+// the saved state all back in sync in one call, and this row's DOM is cheap
+// to rebuild (it's three sliders and a couple of buttons, not the photo).
+function resetPanelAdjust(pos){
+  placementAdjust[pos]=defaultPanelAdjust();
+  renderCoverMePanelRowState(pos);
+  saveMugState();
+}
+
+// Mirrors the real print's own crop logic (buildWraparoundImage() in
+// create-printify-order.js) closely enough to preview it: zoom >= 1 crops
+// to fill (object-fit:cover, matching the server's cover-fit-then-extract),
+// zoom < 1 shows the whole photo shrunk with white padding (object-fit:
+// contain, matching the server's contain-fit-then-pad). The translate
+// approximates the server's slack-based offset math in CSS terms -- not
+// pixel-exact against the server, but the same direction and rough
+// proportion, which is what matters for the customer judging fit by eye.
+function applyPanelAdjustTransform(pos){
+  const overlay=document.getElementById('coverMeOverlay_'+pos);
+  if(!overlay)return;
+  const img=overlay.querySelector('img');
+  if(!img)return;
+  const adj=placementAdjust[pos]||defaultPanelAdjust();
+  const zoom=adj.zoom||1;
+  img.style.objectFit=(zoom>=1)?'cover':'contain';
+  const shift=Math.abs(zoom-1)*50;
+  img.style.transform=`scale(${zoom}) translate(${(adj.offX||0)*shift}%, ${(adj.offY||0)*shift}%)`;
+  img.style.transformOrigin='center center';
 }
 
 // Restores whatever was just removed from THIS panel -- no regeneration,
@@ -11839,6 +11940,13 @@ document.getElementById('cancelBtn').style.display='none';
 
 let recentDesigns=[];
 let placements={left:null,right:null,front:null};
+// Per-panel Adjust sliders (zoom/offX/offY) from the panel-selection screen.
+// zoom 1 = no zoom, offX/offY 0 = centered -- same as the old fixed
+// behavior, so a panel the customer never touches is unaffected. Reaches
+// the real print via buildMockupRequestBody() and goToOrder(); see
+// create-printify-order.js's buildWraparoundImage() for how it's applied.
+function defaultPanelAdjust(){return{zoom:1,offX:0,offY:0};}
+let placementAdjust={left:defaultPanelAdjust(),front:defaultPanelAdjust(),right:defaultPanelAdjust()};
 // Remembers whatever was just removed from EACH panel individually, so
 // "Add it back (free)" restores that exact panel's own last design --
 // not a copy from Center -- with no regeneration needed.
@@ -12065,6 +12173,7 @@ function swapSlots(posA,posB){
 function clearAllDesigns(){
   recentDesigns=[];
   placements={left:null,right:null,front:null};
+  placementAdjust={left:defaultPanelAdjust(),front:defaultPanelAdjust(),right:defaultPanelAdjust()};
   // Same artwork, same lifetime -- a stale panorama would otherwise ship
   // the previous design's strip to Printify alongside fresh placements.
   wraparoundPanoramaUrl=null;
@@ -12485,6 +12594,7 @@ function buildMockupRequestBody(){
         right: placements.right ? findDesignById(placements.right)?.url ?? null : null
       },
       printMode: mugPrintMode==='wraparound' ? 'fullBleed' : 'standard',
+      placementAdjust: placementAdjust,
       // Null on every path but the panorama, and the server reassembles the
       // thirds when it is null. Sent to the mockup as well as the order so the
       // preview is built from the same file the customer will receive.
@@ -12742,6 +12852,7 @@ function goToOrder(){
       front: placements.front ? findDesignById(placements.front).url : null,
       right: placements.right ? findDesignById(placements.right).url : null
     },
+    placementAdjust: placementAdjust,
     deviceId: deviceId,
     productIcon: product,
     mugPrintMode: mugPrintMode,
@@ -12834,7 +12945,7 @@ function clearWorkshopStorage(){
 
 function saveMugState(){
   try{
-    localStorage.setItem('muggshotz_mug_state',JSON.stringify({designs:recentDesigns,placements:placements}));
+    localStorage.setItem('muggshotz_mug_state',JSON.stringify({designs:recentDesigns,placements:placements,placementAdjust:placementAdjust}));
   }catch(e){console.error('Could not save mug state:',e);}
 }
 
@@ -12844,6 +12955,7 @@ function restoreMugLibrary(){
     if(mug&&Array.isArray(mug.designs)&&mug.designs.length){
       recentDesigns=mug.designs;
       placements=mug.placements||{left:null,right:null,front:null};
+      placementAdjust=mug.placementAdjust||{left:defaultPanelAdjust(),front:defaultPanelAdjust(),right:defaultPanelAdjust()};
       // FIXED: this used to force positionHolderCard visible on every
       // page load whenever any saved design history existed, regardless
       // of which screen/flow was actually active -- it would just sit
@@ -12978,6 +13090,7 @@ function purgeStaleSessionOnEntry(){
   // rest of the page's life.
   recentDesigns=[];
   placements={left:null,right:null,front:null};
+  placementAdjust={left:defaultPanelAdjust(),front:defaultPanelAdjust(),right:defaultPanelAdjust()};
   // Same artwork, same lifetime -- a stale panorama would otherwise ship
   // the previous design's strip to Printify alongside fresh placements.
   wraparoundPanoramaUrl=null;
@@ -13038,6 +13151,7 @@ function resetEverythingFreshStart(){
 
   recentDesigns=[];
   placements={left:null,right:null,front:null};
+  placementAdjust={left:defaultPanelAdjust(),front:defaultPanelAdjust(),right:defaultPanelAdjust()};
   // Same artwork, same lifetime -- a stale panorama would otherwise ship
   // the previous design's strip to Printify alongside fresh placements.
   wraparoundPanoramaUrl=null;
