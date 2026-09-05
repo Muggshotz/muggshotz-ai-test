@@ -2,10 +2,10 @@
 <!DOCTYPE html>
 <html lang="en">
 <head><link rel="manifest" href="needles-manifest.json">
-<!-- BUILD-MARKER: STYLE-TILES-BY-SIZE-v46 -->
+<!-- BUILD-MARKER: INSTANT-FIT-SCREEN-v47 -->
 <!-- If you can see this comment on GitHub, this exact paste landed. -->
 <!-- If your live site's page source does NOT say -->
-<!-- "STYLE-TILES-BY-SIZE-v46" right here, the upload/deploy did -->
+<!-- "INSTANT-FIT-SCREEN-v47" right here, the upload/deploy did -->
 <!-- not take -- re-upload before testing. -->
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
@@ -7578,10 +7578,32 @@ function refreshCoverMePanelDoneState(){
 // for reuse elsewhere (Design track, other products).
 async function coverMePanelDone(){
   coverMePanelAutoScrollToken++;
+  const doneBtn=document.getElementById('coverMePanelDoneBtn');
+  // The customer's own picture may still be uploading in the background
+  // (see startByoUploadInBackground). Everything after this screen needs
+  // the hosted copy, so wait for it here -- with the button saying so --
+  // and stay put with a real message if it cannot be saved.
+  if(product==='mug'){
+    const label=doneBtn?doneBtn.innerHTML:'';
+    let waiting=false;
+    try{
+      const needs=pendingByoUpload||['left','front','right'].some(pos=>{const d=placements[pos]?findDesignById(placements[pos]):null;return d&&((d.url&&d.url.startsWith('data:'))||(d.rawUrl&&d.rawUrl.startsWith('data:')));});
+      if(needs){
+        waiting=true;
+        if(doneBtn){doneBtn.disabled=true;doneBtn.innerHTML='<span class="spinner"></span>Saving your picture...';}
+        await ensureByoUploaded();
+      }
+    }catch(err){
+      console.error('Could not save the picture:',err);
+      if(doneBtn){doneBtn.disabled=false;doneBtn.innerHTML=label;}
+      showGuidanceAlert(describeUploadFailure(err).replace(/faded picture/,'picture').replace(/, or drag the slider all the way to Sharp to carry on without a fade/,'').replace(/ or drag the slider all the way to Sharp to carry on without a fade/,''));
+      return;
+    }
+    if(waiting&&doneBtn){doneBtn.disabled=false;doneBtn.innerHTML=label;}
+  }
   // Caption first (Sep 2026): bake it into the fitted picture, or put the
   // un-captioned original back if the box was emptied. A failed save keeps
   // the customer here with a real message instead of moving on without it.
-  const doneBtn=document.getElementById('coverMePanelDoneBtn');
   const needsBake=product==='mug'&&(currentCaptionText()||['left','front','right'].some(pos=>{const d=placements[pos]?findDesignById(placements[pos]):null;return d&&d.captioned;}));
   if(needsBake){
     const label=doneBtn?doneBtn.innerHTML:'';
@@ -12381,7 +12403,14 @@ Use rich environmental storytelling while keeping the face as the primary focal 
         try{ passSource=await resizeImageFile(uploadedOriginalFile, 2600); }
         catch(err){ console.error('Could not re-read the original photo, using the working copy:',err); }
       }
-      resultUrl=await uploadCompositedImage(passSource);
+      // INSTANT (Sep 2026, Alyx): the customer used to sit on the product
+      // grid for several seconds while this uploaded, then got scrolled to
+      // Fit Your Picture. The picture is already here in the browser, so
+      // the screen opens on it right away and the upload finishes in the
+      // background; Done waits for it (ensureByoUploaded) before anything
+      // needs the hosted copy.
+      resultUrl=passSource;
+      startByoUploadInBackground(passSource);
     } else if(travelPanoramaReady){
       document.getElementById('wraparoundStandbyPrompt').style.display='none';
       resultUrl=panoramaData.panoramaUrl;
@@ -14112,6 +14141,45 @@ function resetEverythingFreshStart(){
   updateMugGuidedFlow();
 
   window.scrollTo({top:0,behavior:'smooth'});
+}
+
+// ---- Background upload of the customer's own picture (Sep 2026) ----
+// The exact-transfer path hands the LOCAL picture to the panels screen
+// immediately and uploads it here. When the hosted copy lands, every
+// design (and any kept original) still pointing at the local copy is
+// swapped over. ensureByoUploaded() is awaited by Done, so nothing that
+// needs a hosted URL (mockup, checkout) ever sees the local one.
+let pendingByoUpload=null;
+function swapDesignUrl(fromUrl,toUrl){
+  if(!fromUrl||!toUrl||fromUrl===toUrl)return;
+  let changed=false;
+  recentDesigns.forEach(d=>{
+    if(d.url===fromUrl){d.url=toUrl;changed=true;}
+    if(d.rawUrl===fromUrl){d.rawUrl=toUrl;changed=true;}
+  });
+  if(resultUrl===fromUrl)resultUrl=toUrl;
+  if(changed)saveMugState();
+}
+function startByoUploadInBackground(localUrl){
+  pendingByoUpload=uploadCompositedImage(localUrl,{strict:true})
+    .then(url=>{swapDesignUrl(localUrl,url);return url;})
+    .finally(()=>{pendingByoUpload=null;});
+  pendingByoUpload.catch(err=>console.error('Background upload of the customer\'s picture failed; Done will retry:',err));
+}
+async function ensureByoUploaded(){
+  if(pendingByoUpload){
+    try{ await pendingByoUpload; }catch(_){ /* retried below */ }
+  }
+  const seen=new Set();
+  for(const pos of ['left','front','right']){
+    const d=placements[pos]?findDesignById(placements[pos]):null;
+    if(!d||seen.has(d.id))continue;
+    seen.add(d.id);
+    const local=d.rawUrl&&d.rawUrl.startsWith('data:')?d.rawUrl:(d.url&&d.url.startsWith('data:')?d.url:null);
+    if(!local)continue;
+    const hosted=await uploadCompositedImage(local,{strict:true});
+    swapDesignUrl(local,hosted);
+  }
 }
 
 // ---- Back buttons on the Bring Your Own Art mug flow (Alyx, Sep 2026) ----
