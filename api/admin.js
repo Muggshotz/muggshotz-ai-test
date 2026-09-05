@@ -1,4 +1,4 @@
-// BUILD-MARKER: ADMIN-GRANT-AUTOCREATE-v2
+// BUILD-MARKER: ADMIN-STORAGE-CLEANUP-v3
 // If you can see this comment on GitHub, this exact paste landed.
 // Merged admin endpoint (July 2026): combines what used to be two
 // separate files — admin-lookup.js and admin-tokens.js — into one,
@@ -341,6 +341,171 @@ async function handleCostProbe(req, res) {
   }
 }
 
+// ---------------------------------------------------------------------
+// STORAGE CLEANUP (Sep 2026, Alyx): every AI generation, fade and frame
+// composite is saved to the "generations" bucket and nothing ever removed
+// one, so the project hit Supabase's storage quota and every new upload
+// -- including the ones behind the Edge Fade page's Continue -- started
+// failing. This is the admin-side broom. Two modes, both password-gated:
+//   scan   -> lists the bucket and reports count/size/age breakdown, plus
+//             exactly what a given "older than N days" delete would remove.
+//             Never deletes anything.
+//   delete -> removes files older than N days. Requires confirm:true and
+//             N >= 1. Files are independent (one per generation, with the
+//             timestamp in the name), so removing old ones cannot affect
+//             new ones; the only cost is a customer whose browser still
+//             links an old design in "My Designs". Orders already placed
+//             are safe: Printify holds its own copy of the print file.
+// Lives here rather than in its own file for the same reason everything
+// else in this file does: Vercel's 12-function cap.
+const GENERATIONS_BUCKET = 'generations';
+const STORAGE_LIST_PAGE  = 1000;
+const STORAGE_DELETE_BATCH = 200;
+const AGE_BANDS = [
+  { label: '0-7 days',   min: 0,  max: 7 },
+  { label: '8-14 days',  min: 8,  max: 14 },
+  { label: '15-30 days', min: 15, max: 30 },
+  { label: '31-60 days', min: 31, max: 60 },
+  { label: '61-90 days', min: 61, max: 90 },
+  { label: 'over 90 days', min: 91, max: Infinity }
+];
+
+function storageHeaders() {
+  return {
+    apikey: SUPABASE_SERVICE_ROLE_KEY,
+    Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+    'Content-Type': 'application/json'
+  };
+}
+
+// Walks the whole bucket, page by page, oldest first. Storage's own
+// created_at is the age source; the Date.now() stamp baked into every
+// filename by uploadGenerationToStorage is the fallback if it's missing.
+async function listAllGenerationFiles() {
+  const files = [];
+  let offset = 0;
+  for (;;) {
+    const resp = await fetch(`${SUPABASE_URL}/storage/v1/object/list/${GENERATIONS_BUCKET}`, {
+      method: 'POST',
+      headers: storageHeaders(),
+      body: JSON.stringify({ prefix: '', limit: STORAGE_LIST_PAGE, offset, sortBy: { column: 'created_at', order: 'asc' } })
+    });
+    const rows = await resp.json();
+    if (!resp.ok) throw new Error('Supabase storage list failed: ' + JSON.stringify(rows));
+    if (!Array.isArray(rows)) throw new Error('Supabase storage list returned an unexpected shape.');
+    for (const r of rows) {
+      if (!r || !r.name || r.id === null) continue; // folders have a null id
+      let createdMs = Date.parse(r.created_at || r.updated_at || '');
+      if (!Number.isFinite(createdMs)) {
+        const m = r.name.match(/-(\d{13})\.\w+$/);
+        createdMs = m ? Number(m[1]) : NaN;
+      }
+      files.push({ name: r.name, createdMs, size: Number(r.metadata?.size) || 0 });
+    }
+    if (rows.length < STORAGE_LIST_PAGE) break;
+    offset += rows.length;
+    if (offset > 250000) break; // safety valve; nobody has this many
+  }
+  return files;
+}
+
+function ageInDays(createdMs, nowMs) {
+  if (!Number.isFinite(createdMs)) return Infinity; // undatable = treated as old
+  return Math.floor((nowMs - createdMs) / 86400000);
+}
+
+function summarizeFiles(files, olderThanDays, nowMs) {
+  const byAge = AGE_BANDS.map(b => ({ label: b.label, count: 0, bytes: 0 }));
+  let totalBytes = 0, oldestMs = Infinity, newestMs = -Infinity, undatable = 0;
+  const wouldRemove = { count: 0, bytes: 0 };
+  for (const f of files) {
+    totalBytes += f.size;
+    const age = ageInDays(f.createdMs, nowMs);
+    if (Number.isFinite(f.createdMs)) {
+      if (f.createdMs < oldestMs) oldestMs = f.createdMs;
+      if (f.createdMs > newestMs) newestMs = f.createdMs;
+    } else {
+      undatable++;
+    }
+    const band = AGE_BANDS.findIndex(b => age >= b.min && age <= b.max);
+    if (band >= 0) { byAge[band].count++; byAge[band].bytes += f.size; }
+    if (age > olderThanDays) { wouldRemove.count++; wouldRemove.bytes += f.size; }
+  }
+  return {
+    count: files.length,
+    totalBytes,
+    oldest: Number.isFinite(oldestMs) ? new Date(oldestMs).toISOString() : null,
+    newest: Number.isFinite(newestMs) ? new Date(newestMs).toISOString() : null,
+    undatable,
+    byAge,
+    olderThanDays,
+    wouldRemove
+  };
+}
+
+async function deleteGenerationFiles(names) {
+  let deleted = 0;
+  const failures = [];
+  for (let i = 0; i < names.length; i += STORAGE_DELETE_BATCH) {
+    const batch = names.slice(i, i + STORAGE_DELETE_BATCH);
+    const resp = await fetch(`${SUPABASE_URL}/storage/v1/object/${GENERATIONS_BUCKET}`, {
+      method: 'DELETE',
+      headers: storageHeaders(),
+      body: JSON.stringify({ prefixes: batch })
+    });
+    const body = await resp.json().catch(() => null);
+    if (!resp.ok) {
+      failures.push({ from: i, count: batch.length, error: JSON.stringify(body).slice(0, 300) });
+      continue;
+    }
+    deleted += Array.isArray(body) ? body.length : batch.length;
+  }
+  return { deleted, failures };
+}
+
+async function handleStorageCleanup(req, res) {
+  const { password, mode, olderThanDays, confirm } = req.body || {};
+  if (password !== ADMIN_PASSWORD) return res.status(403).json({ error: 'Unauthorized.' });
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+    return res.status(500).json({ error: 'Supabase is not configured on the server.' });
+  }
+  const days = Number.parseInt(olderThanDays, 10);
+  if (!Number.isInteger(days) || days < 1) {
+    return res.status(400).json({ error: 'olderThanDays must be a whole number of at least 1.' });
+  }
+  if (mode !== 'scan' && mode !== 'delete') {
+    return res.status(400).json({ error: 'mode must be "scan" or "delete".' });
+  }
+  if (mode === 'delete' && confirm !== true) {
+    return res.status(400).json({ error: 'Delete requires confirm: true.' });
+  }
+
+  try {
+    const nowMs = Date.now();
+    const files = await listAllGenerationFiles();
+    const before = summarizeFiles(files, days, nowMs);
+    if (mode === 'scan') return res.status(200).json({ mode, ...before });
+
+    const doomed = files.filter(f => ageInDays(f.createdMs, nowMs) > days);
+    const { deleted, failures } = await deleteGenerationFiles(doomed.map(f => f.name));
+    const deletedBytes = doomed.reduce((sum, f) => sum + f.size, 0);
+    // Re-list so the numbers reported are what's really left, not arithmetic.
+    const after = summarizeFiles(await listAllGenerationFiles(), days, nowMs);
+    return res.status(200).json({
+      mode,
+      olderThanDays: days,
+      deletedCount: deleted,
+      deletedBytes: failures.length ? null : deletedBytes,
+      failures,
+      before: { count: before.count, totalBytes: before.totalBytes },
+      after: { count: after.count, totalBytes: after.totalBytes, oldest: after.oldest }
+    });
+  } catch (err) {
+    console.error('Admin storage cleanup error:', err.message);
+    return res.status(500).json({ error: err.message });
+  }
+}
+
 export default async function handler(req, res) {
   // Printify catalog reads are GET requests (read-only, no password
   // needed) — check this first, before the POST/action routing below.
@@ -359,6 +524,7 @@ export default async function handler(req, res) {
   if (action === 'lookup') return handleLookup(req, res);
   if (action === 'grant' || action === 'deduct') return handleAdjust(req, res);
   if (action === 'cost-probe') return handleCostProbe(req, res);
+  if (action === 'storage-cleanup') return handleStorageCleanup(req, res);
 
   return res.status(400).json({ error: `Unknown action "${action}".` });
 }

@@ -119,6 +119,20 @@ input:focus{outline:none;border-color:#ff6a00}
   <div class="codes-output" id="onboardCodesOutput"></div>
 </div>
 
+<div class="card">
+  <h2 class="section-title">🧹 Storage Cleanup</h2>
+  <div class="sub">Generated images bucket — free up Supabase space</div>
+  <div style="font-size:12px;color:#999;line-height:1.6;margin-bottom:1rem">Every AI generation, fade and frame save lands in the <b>generations</b> bucket and nothing ever removes them. When the bucket hits the plan's limit, every new save on the site fails. <b>Scan</b> only reports. <b>Delete</b> removes files older than the number of days below and asks you to confirm first. Files are independent, so deleting old ones cannot affect new ones. Orders already placed are safe (Printify keeps its own copy).</div>
+
+  <label>Keep everything newer than (days)</label>
+  <input type="number" id="cleanupDays" value="14" min="1" step="1"/>
+
+  <button class="btn-full" id="cleanupScanBtn" onclick="storageCleanup('scan')">🔍 Scan the bucket</button>
+  <button class="btn-full" id="cleanupDeleteBtn" onclick="storageCleanup('delete')" disabled style="background:#c0392b">🗑️ Delete files older than that</button>
+
+  <div class="result" id="cleanupResult" style="white-space:pre-wrap;font-family:monospace;font-size:12px"></div>
+</div>
+
 </div>
 
 <script>
@@ -276,6 +290,99 @@ async function adjustTokens(action){
     document.getElementById('reason').value = '';
   }catch(err){
     showResult('Error: ' + err.message,'error');
+  }
+}
+
+// ---- Storage cleanup card ----
+let cleanupLastScan = null;
+
+function fmtMB(bytes){
+  if(bytes==null) return '?';
+  return (bytes/1048576).toFixed(1)+' MB';
+}
+function fmtDate(iso){
+  if(!iso) return '(none)';
+  const d=new Date(iso);
+  return isNaN(d) ? iso : d.toLocaleDateString(undefined,{year:'numeric',month:'short',day:'numeric'});
+}
+
+function showCleanupResult(msg, type){
+  const el=document.getElementById('cleanupResult');
+  el.textContent=msg;
+  el.className='result '+type;
+  el.style.display='block';
+}
+
+async function storageCleanup(mode){
+  const days=parseInt(document.getElementById('cleanupDays').value,10);
+  if(!Number.isInteger(days)||days<1){ showCleanupResult('Enter a whole number of days, at least 1.','error'); return; }
+  const scanBtn=document.getElementById('cleanupScanBtn');
+  const delBtn=document.getElementById('cleanupDeleteBtn');
+
+  if(mode==='delete'){
+    if(!cleanupLastScan||cleanupLastScan.olderThanDays!==days){
+      showCleanupResult('Scan first with this number of days, so you can see exactly what will be removed.','error');
+      delBtn.disabled=true;
+      return;
+    }
+    const w=cleanupLastScan.wouldRemove;
+    if(!w.count){ showCleanupResult('Nothing older than '+days+' days to delete.','success'); return; }
+    const ok=window.confirm('Delete '+w.count+' file'+(w.count===1?'':'s')+' ('+fmtMB(w.bytes)+') older than '+days+' days from the generations bucket?\n\nThis cannot be undone. Files newer than '+days+' days are not touched.');
+    if(!ok) return;
+  }
+
+  scanBtn.disabled=true; delBtn.disabled=true;
+  const busyLabel = mode==='scan' ? 'Scanning...' : 'Deleting...';
+  const scanLabel = scanBtn.textContent, delLabel = delBtn.textContent;
+  (mode==='scan'?scanBtn:delBtn).textContent=busyLabel;
+  try{
+    const resp=await fetch('/api/admin',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({ action:'storage-cleanup', password:enteredPassword, mode, olderThanDays:days, confirm: mode==='delete' })
+    });
+    const data=await resp.json();
+    if(resp.status===403){ relockWithError('Wrong password.'); return; }
+    if(!resp.ok) throw new Error(data.error||'Cleanup failed.');
+
+    if(mode==='scan'){
+      cleanupLastScan=data;
+      const lines=[
+        'Files in bucket: '+data.count+'  ('+fmtMB(data.totalBytes)+')',
+        'Oldest: '+fmtDate(data.oldest)+'    Newest: '+fmtDate(data.newest),
+        '',
+        'By age:'
+      ];
+      for(const b of data.byAge){ lines.push('  '+b.label.padEnd(14)+String(b.count).padStart(6)+' files  '+fmtMB(b.bytes)); }
+      if(data.undatable) lines.push('  (undatable: '+data.undatable+', treated as old)');
+      lines.push('');
+      lines.push('Delete older than '+days+' days would remove: '+data.wouldRemove.count+' files ('+fmtMB(data.wouldRemove.bytes)+')');
+      lines.push('Would keep: '+(data.count-data.wouldRemove.count)+' files ('+fmtMB(data.totalBytes-data.wouldRemove.bytes)+')');
+      showCleanupResult(lines.join('\n'),'success');
+      delBtn.disabled = data.wouldRemove.count===0;
+      addLog('Storage scan: '+data.count+' files, '+fmtMB(data.totalBytes)+'; '+data.wouldRemove.count+' older than '+days+'d');
+    } else {
+      cleanupLastScan=null;
+      const lines=[
+        'Deleted: '+data.deletedCount+' files'+(data.deletedBytes!=null?' ('+fmtMB(data.deletedBytes)+')':''),
+        'Before: '+data.before.count+' files ('+fmtMB(data.before.totalBytes)+')',
+        'Now:    '+data.after.count+' files ('+fmtMB(data.after.totalBytes)+')',
+        'Oldest remaining: '+fmtDate(data.after.oldest)
+      ];
+      if(data.failures&&data.failures.length){
+        lines.push('');
+        lines.push('Some batches failed ('+data.failures.length+'). First error: '+data.failures[0].error);
+      }
+      lines.push('');
+      lines.push('If the site was blocked for storage, Supabase lifts the block on its own once usage is under the limit -- usually within minutes.');
+      showCleanupResult(lines.join('\n'), data.failures&&data.failures.length ? 'error' : 'success');
+      addLog('Storage cleanup: deleted '+data.deletedCount+' files older than '+days+'d; '+data.after.count+' remain ('+fmtMB(data.after.totalBytes)+')');
+    }
+  }catch(err){
+    showCleanupResult('Error: '+err.message,'error');
+  }finally{
+    scanBtn.disabled=false; scanBtn.textContent=scanLabel; delBtn.textContent=delLabel;
+    if(mode==='delete'||!cleanupLastScan) delBtn.disabled=true;
   }
 }
 
