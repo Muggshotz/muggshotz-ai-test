@@ -2,10 +2,10 @@
 <!DOCTYPE html>
 <html lang="en">
 <head><link rel="manifest" href="needles-manifest.json">
-<!-- BUILD-MARKER: FIT-YOUR-PICTURE-v34 -->
+<!-- BUILD-MARKER: FIT-FADE-FRAME-v35 -->
 <!-- If you can see this comment on GitHub, this exact paste landed. -->
 <!-- If your live site's page source does NOT say -->
-<!-- "FIT-YOUR-PICTURE-v34" right here, the upload/deploy did -->
+<!-- "FIT-FADE-FRAME-v35" right here, the upload/deploy did -->
 <!-- not take -- re-upload before testing. -->
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
@@ -6809,6 +6809,7 @@ function layoutFittedImage(img,box,adj){
   const a=adj||defaultPanelAdjust();
   const f=computePanelFit(img.naturalWidth,img.naturalHeight,bw,bh,a.zoom||1,a.offX||0,a.offY||0);
   img.style.cssText=`position:absolute;left:${f.left}px;top:${f.top}px;width:${f.w}px;height:${f.h}px;max-width:none;display:block;pointer-events:none;user-select:none`;
+  decorateFitBox(box,a);
 }
 
 // One fit per DESIGN, not per panel: reads from the first panel carrying
@@ -6821,8 +6822,49 @@ function getDesignAdjust(designId){
   return pos?{...(placementAdjust[pos]||defaultPanelAdjust())}:defaultPanelAdjust();
 }
 function setDesignAdjust(designId,adj){
-  panelsWithDesign(designId).forEach(pos=>{placementAdjust[pos]={zoom:adj.zoom,offX:adj.offX,offY:adj.offY};});
+  const r3=v=>Math.round((Number(v)||0)*1000)/1000;
+  const clean={zoom:r3(adj.zoom||1),offX:r3(adj.offX),offY:r3(adj.offY),fade:Math.round(Number(adj.fade)||0),border:adj.border!==false};
+  panelsWithDesign(designId).forEach(pos=>{placementAdjust[pos]={...clean};});
   saveMugState();
+}
+
+// The mug's accent/trim colour for the thin frame preview -- the same hex
+// the server resolves from the colour name for the real border. Null when
+// the style has no colour choice (Classic White), which also means no
+// frame is possible, so the switch is hidden.
+function getMugAccentHex(){
+  if(product!=='mug'||!selectedGenColor)return null;
+  const list=GEN_MUG_STYLES[selectedGenStyle]?.colors?.[selectedGenSize];
+  const m=Array.isArray(list)?list.find(c=>c.name===selectedGenColor):null;
+  return m?m.hex:null;
+}
+
+// Draws the fade and the thin frame over a fitted box, in CSS, exactly as
+// the server draws them on the print: the fade is an ellipse through the
+// box's corners (CSS "farthest-corner" is that same ellipse), clear inside
+// the slider's reach and solid surface colour at the corners; the frame
+// is a stroke of ~0.8% of the box's short side, minimum 2px.
+function decorateFitBox(box,adj){
+  if(!box)return;
+  let fadeEl=box.querySelector('.fitFade');
+  if(!fadeEl){fadeEl=document.createElement('div');fadeEl.className='fitFade';fadeEl.style.cssText='position:absolute;inset:0;pointer-events:none';box.appendChild(fadeEl);}
+  let frameEl=box.querySelector('.fitFrame');
+  if(!frameEl){frameEl=document.createElement('div');frameEl.className='fitFrame';frameEl.style.cssText='position:absolute;inset:0;pointer-events:none;box-sizing:border-box';box.appendChild(frameEl);}
+  const pct=Math.max(0,Math.min(80,Number(adj.fade)||0));
+  if(pct>0){
+    const hex=getSelectedProductColorHex();
+    const stop=Math.max(0.05/Math.SQRT2,1-pct/100)*100;
+    fadeEl.style.background=`radial-gradient(ellipse farthest-corner at 50% 50%, ${hex}00 ${stop.toFixed(2)}%, ${hex}ff 100%)`;
+  } else {
+    fadeEl.style.background='none';
+  }
+  const accent=getMugAccentHex();
+  if(accent && adj.border!==false){
+    const px=Math.max(2,Math.round(Math.min(box.clientWidth,box.clientHeight)*0.008));
+    frameEl.style.border=px+'px solid '+accent;
+  } else {
+    frameEl.style.border='none';
+  }
 }
 
 function renderCoverMeFitters(){
@@ -6855,12 +6897,15 @@ function buildCoverMeFitter(designId,multiple){
   const note=document.createElement('div');
   note.className='note';
   note.style.cssText='margin-top:0;margin-bottom:.7rem;text-align:center;color:#7ab8ff';
-  note.textContent=(multiple?'Picture on '+panelsWithDesign(designId).map(p=>p==='front'?'CENTER':p.toUpperCase()).join(' & ')+'. ':'')+'The box is the print area on your mug. What\'s inside it prints; what\'s outside is cut off. Drag the picture to move it and use the slider to size it.';
+  note.textContent=(multiple?'Picture on '+panelsWithDesign(designId).map(p=>p==='front'?'CENTER':p.toUpperCase()).join(' & ')+'. ':'')+'The box is the print area on your mug. What\'s inside it prints; what\'s outside is cut off. Drag the picture to move it, size it with the first slider, soften its edges with the second, and choose whether you want the thin frame.';
   card.appendChild(note);
 
   const box=document.createElement('div');
   box.id='coverMeFitBox_'+designId;
-  box.style.cssText=`position:relative;width:100%;aspect-ratio:${printBox.w}/${printBox.h};overflow:hidden;background:#fff;border:3px solid #d32f2f;border-radius:6px;cursor:grab;touch-action:none;box-sizing:border-box`;
+  // The surface behind the picture is the product's own colour (white on
+  // most mugs), so a zoomed-out or faded picture blends into what it will
+  // really sit on. The dashed outline marks the print-area edge.
+  box.style.cssText=`position:relative;width:100%;aspect-ratio:${printBox.w}/${printBox.h};overflow:hidden;background:${getSelectedProductColorHex()};outline:2px dashed rgba(122,184,255,.6);outline-offset:2px;border-radius:2px;cursor:grab;touch-action:none;box-sizing:border-box`;
   const img=document.createElement('img');
   img.src=design.url;
   img.draggable=false;
@@ -6877,11 +6922,31 @@ function buildCoverMeFitter(designId,multiple){
     <span class="note" id="coverMeFitZoomOut_${designId}" style="margin:0;min-width:40px;text-align:right">${Math.round((adj.zoom||1)*100)}%</span>`;
   card.appendChild(row);
 
+  const fadeRow=document.createElement('div');
+  fadeRow.style.cssText='display:flex;align-items:center;gap:10px;margin-top:8px';
+  fadeRow.innerHTML=`<span class="note" style="margin:0;white-space:nowrap">Sharp</span>
+    <input type="range" min="0" max="80" step="1" value="${Math.round(adj.fade||0)}" id="coverMeFitFade_${designId}" style="flex:1">
+    <span class="note" style="margin:0;white-space:nowrap">Soft</span>
+    <span class="note" id="coverMeFitFadeOut_${designId}" style="margin:0;min-width:40px;text-align:right">${Math.round(adj.fade||0)}%</span>`;
+  card.appendChild(fadeRow);
+  const fadeNote=document.createElement('div');
+  fadeNote.className='note';
+  fadeNote.style.cssText='margin-top:2px;text-align:center';
+  fadeNote.textContent='Soft melts the edges of the picture into the mug so they disappear. Sharp keeps a clean, hard edge.';
+  card.appendChild(fadeNote);
+
+  const accent=getMugAccentHex();
+  const frameRow=document.createElement('label');
+  frameRow.style.cssText='display:flex;align-items:center;justify-content:center;gap:8px;margin-top:10px;cursor:pointer;font-size:13px;color:#ddd';
+  frameRow.innerHTML=`<input type="checkbox" id="coverMeFitBorder_${designId}" ${adj.border!==false?'checked':''} style="width:18px;height:18px"><span>Thin frame around the picture in your mug\'s colour</span><span style="display:inline-block;width:14px;height:14px;border-radius:3px;background:${accent||'#fff'};border:1px solid #666"></span>`;
+  if(!accent)frameRow.style.display='none'; // Classic White has no accent colour, so no frame
+  card.appendChild(frameRow);
+
   const reset=document.createElement('div');
   reset.className='note';
-  reset.style.cssText='text-align:center;margin-top:6px;color:#7ab8ff;cursor:pointer';
+  reset.style.cssText='text-align:center;margin-top:8px;color:#7ab8ff;cursor:pointer';
   reset.textContent='↺ Put it back in the middle at normal size';
-  reset.onclick=()=>{setDesignAdjust(designId,defaultPanelAdjust());renderCoverMePanelRows();};
+  reset.onclick=()=>{const d=defaultPanelAdjust();const cur=getDesignAdjust(designId);d.fade=cur.fade;d.border=cur.border;setDesignAdjust(designId,d);renderCoverMePanelRows();};
   card.appendChild(reset);
 
   const apply=()=>{
@@ -6898,6 +6963,21 @@ function buildCoverMeFitter(designId,multiple){
     const cur=getDesignAdjust(designId);
     cur.zoom=Number(zoomEl.value)/100;
     document.getElementById('coverMeFitZoomOut_'+designId).textContent=zoomEl.value+'%';
+    setDesignAdjust(designId,cur);
+    apply();
+  });
+  const fadeEl=fadeRow.querySelector('input');
+  fadeEl.addEventListener('input',()=>{
+    const cur=getDesignAdjust(designId);
+    cur.fade=Number(fadeEl.value);
+    document.getElementById('coverMeFitFadeOut_'+designId).textContent=fadeEl.value+'%';
+    setDesignAdjust(designId,cur);
+    apply();
+  });
+  const borderEl=frameRow.querySelector('input');
+  borderEl.addEventListener('change',()=>{
+    const cur=getDesignAdjust(designId);
+    cur.border=borderEl.checked;
     setDesignAdjust(designId,cur);
     apply();
   });
@@ -9148,7 +9228,7 @@ async function approveDesign(allThree){
     const posHolder=document.getElementById('positionHolderCard');
     if(posHolder)posHolder.style.display='none';
     panelScreenExit='reveal';
-    openFadeBeforePanelPlacement(approvedDesignId);
+    goStraightToPanelPlacement(approvedDesignId);
     return;
   }
 
@@ -9786,6 +9866,29 @@ function maybeOpenFadeBeforeMockup(){
 // single just-approved design, BEFORE it's ever copied onto Left/Right/
 // Center -- mirrors maybeOpenFadeBeforeMockup()'s pattern exactly, just
 // routing to panel placement afterward instead of the mockup fetch.
+// REPLACES the pre-placement Edge Fade page for mugs (Sep 2026, Alyx): the
+// fade is now a slider on the Fit Your Picture box, drawn on the print
+// area by the server, so there is nothing to bake and nothing to upload
+// here. Same "set Center, let autoFill copy it to Left/Right, then clear
+// Center so it defaults off" handoff confirmFrameFadeAndContinue used to
+// do on the fade page's way out. The house default fade (30%) is carried
+// on the design's placement; an exact transfer opens Sharp, as before.
+function goStraightToPanelPlacement(approvedDesignId){
+  fadeAlreadyAppliedPrePlacement=true;
+  placements.front=approvedDesignId;
+  const d=defaultPanelAdjust();
+  d.fade=lastGenerationWasExactTransfer?0:DEFAULT_FADE_PCT;
+  placementAdjust.front=d;
+  hardEdgesEnabled=(d.fade===0);
+  saveMugState();
+  showCoverMePanelCard();
+  coverMeLastRemoved.front=placements.front;
+  placements.front=null;
+  saveMugState();
+  renderCoverMePanelRowState('front');
+  refreshCoverMePanelDoneState();
+}
+
 function openFadeBeforePanelPlacement(approvedDesignId){
   const design=findDesignById(approvedDesignId);
   revealFlowThreePanel=false;
@@ -11086,6 +11189,10 @@ async function applyAccessorizeFrame(){
       }
       const rightDesign=findDesignById(placements.right);
       if(rightDesign)rightDesign.url=rightUrl;
+      // The decorative frame is now part of the picture; the print-area
+      // fade would melt the frame's own edges, so it comes off here.
+      ['left','front','right'].forEach(pos=>{if(placementAdjust[pos])placementAdjust[pos].fade=0;});
+      saveMugState();
     } else if(pendingWraparoundRaw && (selectedFrame||windowSillChoice)){
       if(strip)strip.innerHTML='<div class="note" style="width:100%;text-align:center"><span class="spinner"></span>Saving your framed design...</div>';
       const framed=await compositeFrameAcrossThreePanels(pendingWraparoundRaw.center,pendingWraparoundRaw.left,pendingWraparoundRaw.right);
@@ -12181,7 +12288,21 @@ let placements={left:null,right:null,front:null};
 // behavior, so a panel the customer never touches is unaffected. Reaches
 // the real print via buildMockupRequestBody() and goToOrder(); see
 // create-printify-order.js's buildWraparoundImage() for how it's applied.
-function defaultPanelAdjust(){return{zoom:1,offX:0,offY:0};}
+// zoom/offX/offY: where the picture sits in the print area. fade: 0..80,
+// the Sharp..Soft edge fade drawn on the print area by the server. border:
+// the thin accent-colour frame around the print area (Alyx: optional now).
+// What goes over the wire: each panel's fit plus the colour the fade
+// should melt into (the printed surface's colour, per the product-wide
+// rule in getSelectedProductColorHex), so the server never has to know
+// which mug styles are coloured where.
+function placementAdjustForRequest(){
+  const hex=getSelectedProductColorHex();
+  const out={};
+  ['left','front','right'].forEach(pos=>{out[pos]={...(placementAdjust[pos]||defaultPanelAdjust()),fadeHex:hex};});
+  return out;
+}
+
+function defaultPanelAdjust(){return{zoom:1,offX:0,offY:0,fade:0,border:true};}
 let placementAdjust={left:defaultPanelAdjust(),front:defaultPanelAdjust(),right:defaultPanelAdjust()};
 // Remembers whatever was just removed from EACH panel individually, so
 // "Add it back (free)" restores that exact panel's own last design --
@@ -12830,7 +12951,7 @@ function buildMockupRequestBody(){
         right: placements.right ? findDesignById(placements.right)?.url ?? null : null
       },
       printMode: mugPrintMode==='wraparound' ? 'fullBleed' : 'standard',
-      placementAdjust: placementAdjust,
+      placementAdjust: placementAdjustForRequest(),
       // Null on every path but the panorama, and the server reassembles the
       // thirds when it is null. Sent to the mockup as well as the order so the
       // preview is built from the same file the customer will receive.
@@ -13088,7 +13209,7 @@ function goToOrder(){
       front: placements.front ? findDesignById(placements.front).url : null,
       right: placements.right ? findDesignById(placements.right).url : null
     },
-    placementAdjust: placementAdjust,
+    placementAdjust: placementAdjustForRequest(),
     deviceId: deviceId,
     productIcon: product,
     mugPrintMode: mugPrintMode,
