@@ -2,10 +2,10 @@
 <!DOCTYPE html>
 <html lang="en">
 <head><link rel="manifest" href="needles-manifest.json">
-<!-- BUILD-MARKER: UPLOAD-REASON-SHRINK-v33 -->
+<!-- BUILD-MARKER: FIT-YOUR-PICTURE-v34 -->
 <!-- If you can see this comment on GitHub, this exact paste landed. -->
 <!-- If your live site's page source does NOT say -->
-<!-- "UPLOAD-REASON-SHRINK-v33" right here, the upload/deploy did -->
+<!-- "FIT-YOUR-PICTURE-v34" right here, the upload/deploy did -->
 <!-- not take -- re-upload before testing. -->
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
@@ -1255,6 +1255,12 @@ Tell Needles <span style="color:#7ab8ff">what you have in mind</span>
 </div>
 
 <div class="card" id="coverMePanelCard" style="display:none">
+<!-- FIT YOUR PICTURE (Sep 2026, Alyx): one big box in the true shape of
+     the mug's print area, the customer's picture inside it, drag to move
+     and a slider to size. What's inside the box is what prints. One
+     setting, applied to every panel that carries the picture -- the old
+     per-panel "Adjust" bars were both redundant and invisible. -->
+<div id="coverMeFitWrap"></div>
 <div class="card-title">SELECT THE PANELS</div>
 <div class="note" style="margin-top:0;margin-bottom:1rem;text-align:center;color:#7ab8ff">WHERE DO YOU WISH TO PLACE YOUR IMAGE?</div>
 <div id="coverMePanelRows" style="display:flex;flex-direction:column;gap:12px"></div>
@@ -6695,8 +6701,10 @@ const COVER_ME_PANEL_OVERLAY_POS={
 // different image for that specific side (coverMePanelExplicit).
 function autoFillCoverMePanels(){
   if(!placements.front)return;
-  if(!coverMePanelExplicit.left){placements.left=placements.front;placementAdjust.left=defaultPanelAdjust();}
-  if(!coverMePanelExplicit.right){placements.right=placements.front;placementAdjust.right=defaultPanelAdjust();}
+  // The fit travels with the picture: a panel that copies Center's design
+  // copies Center's zoom/position too, so one setting really is one setting.
+  if(!coverMePanelExplicit.left){placements.left=placements.front;placementAdjust.left={...(placementAdjust.front||defaultPanelAdjust())};}
+  if(!coverMePanelExplicit.right){placements.right=placements.front;placementAdjust.right={...(placementAdjust.front||defaultPanelAdjust())};}
   saveMugState();
 }
 
@@ -6729,15 +6737,12 @@ function showCoverMePanelCard(){
   // would silently re-run the whole generation pipeline from scratch.
   const genBtnHide=document.getElementById('generateBtn');
   if(genBtnHide)genBtnHide.style.display='none';
-  smoothScrollToTarget('coverMePanelCard','center');
-  // Same hold-then-snap as Edge Fade and Add a Frame: land on the panels
-  // first, hold ~3 seconds, then auto-scroll down to the Done button so
-  // the customer isn't left to find it by scrolling manually.
-  const myPanelScrollToken=++coverMePanelAutoScrollToken;
-  setTimeout(()=>{
-    if(myPanelScrollToken!==coverMePanelAutoScrollToken)return;
-    smoothScrollToTarget('coverMePanelDoneBtn','center');
-  },3000);
+  // Land on the top of the card, where the Fit Your Picture box is, and
+  // STAY there. The old hold-then-snap to Done whisked the customer past
+  // the one control on this screen they most needed to see (Alyx never
+  // found the sizer, twice). Done is one flick of the thumb below.
+  coverMePanelAutoScrollToken++;
+  smoothScrollToTarget('coverMePanelCard','start');
 }
 
 function renderCoverMePanelRows(){
@@ -6750,6 +6755,188 @@ function renderCoverMePanelRows(){
   });
   refreshCoverMePanelDoneState();
 }
+
+// ---------------- FIT YOUR PICTURE ----------------
+// Printify's real print-area size (pixels) for each mug style and size,
+// read from the catalog's variant placeholders. A single panel's box is a
+// third of this width (wider when a neighbor is empty -- see
+// coverMePanelWidthMultiplier, which mirrors the server's computeBoxes),
+// by the full height. Drives the SHAPE of the on-screen box, so what the
+// customer sees is the true proportion of what prints.
+const MUG_PRINT_AREA={
+  'classic-white-mug':{'11oz':{w:2475,h:1155},'15oz':{w:2475,h:1275}},
+  'color-pop-mug':   {'11oz':{w:2538,h:1211},'15oz':{w:2475,h:1275}},
+  'trimmed-mug':     {'11oz':{w:2538,h:1088},'15oz':{w:2475,h:1275}},
+  'accented-mug':    {'11oz':{w:2538,h:1088},'15oz':{w:2475,h:1275}}
+};
+function getMugPrintArea(){
+  const key=GEN_STYLE_TO_PRODUCT_KEY[selectedGenStyle]||'classic-white-mug';
+  const bySize=MUG_PRINT_AREA[key]||MUG_PRINT_AREA['classic-white-mug'];
+  return bySize[selectedGenSize]||bySize['11oz'];
+}
+// The print box for one panel, in real print pixels.
+function getPanelPrintBox(pos){
+  const area=getMugPrintArea();
+  const section=Math.round(area.w/3);
+  const w=Math.min(area.w,Math.round(section*coverMePanelWidthMultiplier(pos)));
+  return {w,h:area.h};
+}
+
+// MIRRORED VERBATIM from computePanelFit() in api/create-printify-order.js.
+// Where a photo of imgW x imgH lands inside a boxW x boxH print area for a
+// given zoom (0.5..2) and offset (-1..1 per axis): drawn size plus the
+// top-left corner relative to the box (negative = hangs outside). Change
+// one copy, change both -- the on-screen box is only honest if the server
+// does the same arithmetic.
+function computePanelFit(imgW,imgH,boxW,boxH,zoom,offX,offY){
+  const base=zoom>=1?Math.max(boxW/imgW,boxH/imgH):Math.min(boxW/imgW,boxH/imgH);
+  const scale=base*zoom;
+  const w=Math.max(1,Math.round(imgW*scale));
+  const h=Math.max(1,Math.round(imgH*scale));
+  const left=Math.round((boxW-w)/2+offX*Math.abs(boxW-w)/2);
+  const top=Math.round((boxH-h)/2+offY*Math.abs(boxH-h)/2);
+  return {w,h,left,top};
+}
+
+// Lays an <img> out inside its overflow:hidden box exactly as the print
+// will be cut, using the box's current on-screen pixel size. Works for the
+// big fit box and for the small mug thumbnails alike.
+function layoutFittedImage(img,box,adj){
+  if(!img||!box)return;
+  if(!img.naturalWidth||!img.naturalHeight)return; // not loaded yet; the load handler re-runs this
+  const bw=box.clientWidth,bh=box.clientHeight;
+  if(!bw||!bh)return;
+  const a=adj||defaultPanelAdjust();
+  const f=computePanelFit(img.naturalWidth,img.naturalHeight,bw,bh,a.zoom||1,a.offX||0,a.offY||0);
+  img.style.cssText=`position:absolute;left:${f.left}px;top:${f.top}px;width:${f.w}px;height:${f.h}px;max-width:none;display:block;pointer-events:none;user-select:none`;
+}
+
+// One fit per DESIGN, not per panel: reads from the first panel carrying
+// the design, writes to every panel carrying it.
+function panelsWithDesign(designId){
+  return ['left','front','right'].filter(pos=>placements[pos]===designId);
+}
+function getDesignAdjust(designId){
+  const pos=panelsWithDesign(designId)[0];
+  return pos?{...(placementAdjust[pos]||defaultPanelAdjust())}:defaultPanelAdjust();
+}
+function setDesignAdjust(designId,adj){
+  panelsWithDesign(designId).forEach(pos=>{placementAdjust[pos]={zoom:adj.zoom,offX:adj.offX,offY:adj.offY};});
+  saveMugState();
+}
+
+function renderCoverMeFitters(){
+  const wrap=document.getElementById('coverMeFitWrap');
+  if(!wrap)return;
+  wrap.innerHTML='';
+  const seen=[];
+  ['left','front','right'].forEach(pos=>{
+    const id=placements[pos];
+    if(id&&!seen.includes(id)&&findDesignById(id))seen.push(id);
+  });
+  seen.forEach(designId=>wrap.appendChild(buildCoverMeFitter(designId,seen.length>1)));
+}
+
+function buildCoverMeFitter(designId,multiple){
+  const design=findDesignById(designId);
+  const firstPos=panelsWithDesign(designId)[0];
+  const printBox=getPanelPrintBox(firstPos);
+  const adj=getDesignAdjust(designId);
+
+  const card=document.createElement('div');
+  card.className='card';
+  card.style.cssText='padding:14px;margin:0 0 14px';
+  card.dataset.designId=designId;
+
+  const title=document.createElement('div');
+  title.className='card-title';
+  title.textContent='FIT YOUR PICTURE';
+  card.appendChild(title);
+  const note=document.createElement('div');
+  note.className='note';
+  note.style.cssText='margin-top:0;margin-bottom:.7rem;text-align:center;color:#7ab8ff';
+  note.textContent=(multiple?'Picture on '+panelsWithDesign(designId).map(p=>p==='front'?'CENTER':p.toUpperCase()).join(' & ')+'. ':'')+'The box is the print area on your mug. What\'s inside it prints; what\'s outside is cut off. Drag the picture to move it and use the slider to size it.';
+  card.appendChild(note);
+
+  const box=document.createElement('div');
+  box.id='coverMeFitBox_'+designId;
+  box.style.cssText=`position:relative;width:100%;aspect-ratio:${printBox.w}/${printBox.h};overflow:hidden;background:#fff;border:3px solid #d32f2f;border-radius:6px;cursor:grab;touch-action:none;box-sizing:border-box`;
+  const img=document.createElement('img');
+  img.src=design.url;
+  img.draggable=false;
+  img.alt='';
+  img.style.cssText='position:absolute;display:block;pointer-events:none;user-select:none;max-width:none';
+  box.appendChild(img);
+  card.appendChild(box);
+
+  const row=document.createElement('div');
+  row.style.cssText='display:flex;align-items:center;gap:10px;margin-top:10px';
+  row.innerHTML=`<span class="note" style="margin:0;white-space:nowrap">Smaller</span>
+    <input type="range" min="50" max="200" step="1" value="${Math.round((adj.zoom||1)*100)}" id="coverMeFitZoom_${designId}" style="flex:1">
+    <span class="note" style="margin:0;white-space:nowrap">Bigger</span>
+    <span class="note" id="coverMeFitZoomOut_${designId}" style="margin:0;min-width:40px;text-align:right">${Math.round((adj.zoom||1)*100)}%</span>`;
+  card.appendChild(row);
+
+  const reset=document.createElement('div');
+  reset.className='note';
+  reset.style.cssText='text-align:center;margin-top:6px;color:#7ab8ff;cursor:pointer';
+  reset.textContent='↺ Put it back in the middle at normal size';
+  reset.onclick=()=>{setDesignAdjust(designId,defaultPanelAdjust());renderCoverMePanelRows();};
+  card.appendChild(reset);
+
+  const apply=()=>{
+    const cur=getDesignAdjust(designId);
+    layoutFittedImage(img,box,cur);
+    panelsWithDesign(designId).forEach(pos=>applyPanelAdjustTransform(pos));
+  };
+  img.addEventListener('load',apply);
+  // Box has no size until it's in the DOM; lay out on the next frame too.
+  requestAnimationFrame(apply);
+
+  const zoomEl=row.querySelector('input');
+  zoomEl.addEventListener('input',()=>{
+    const cur=getDesignAdjust(designId);
+    cur.zoom=Number(zoomEl.value)/100;
+    document.getElementById('coverMeFitZoomOut_'+designId).textContent=zoomEl.value+'%';
+    setDesignAdjust(designId,cur);
+    apply();
+  });
+
+  // Drag to move. The offset is a fraction of the slack on each axis, so a
+  // pixel of drag converts through half the slack -- when there's no slack
+  // on an axis (the photo exactly fills it) dragging that way does nothing,
+  // which is the truth: there's nothing to reveal.
+  let drag=null;
+  box.addEventListener('pointerdown',e=>{
+    if(!img.naturalWidth)return;
+    const cur=getDesignAdjust(designId);
+    const f=computePanelFit(img.naturalWidth,img.naturalHeight,box.clientWidth,box.clientHeight,cur.zoom||1,cur.offX||0,cur.offY||0);
+    drag={x:e.clientX,y:e.clientY,offX:cur.offX||0,offY:cur.offY||0,slackX:Math.abs(box.clientWidth-f.w)/2,slackY:Math.abs(box.clientHeight-f.h)/2};
+    box.setPointerCapture(e.pointerId);
+    box.style.cursor='grabbing';
+    e.preventDefault();
+  });
+  box.addEventListener('pointermove',e=>{
+    if(!drag)return;
+    const cur=getDesignAdjust(designId);
+    cur.offX=drag.slackX>0?Math.max(-1,Math.min(1,drag.offX+(e.clientX-drag.x)/drag.slackX)):0;
+    cur.offY=drag.slackY>0?Math.max(-1,Math.min(1,drag.offY+(e.clientY-drag.y)/drag.slackY)):0;
+    setDesignAdjust(designId,cur);
+    apply();
+  });
+  const endDrag=e=>{ if(!drag)return; drag=null; box.style.cursor='grab'; try{box.releasePointerCapture(e.pointerId);}catch(_){} };
+  box.addEventListener('pointerup',endDrag);
+  box.addEventListener('pointercancel',endDrag);
+  return card;
+}
+window.addEventListener('resize',()=>{
+  document.querySelectorAll('#coverMeFitWrap [data-design-id]').forEach(card=>{
+    const id=card.dataset.designId;
+    layoutFittedImage(card.querySelector('img'),document.getElementById('coverMeFitBox_'+id),getDesignAdjust(id));
+  });
+  ['left','front','right'].forEach(pos=>applyPanelAdjustTransform(pos));
+});
+// ---------------- END FIT YOUR PICTURE ----------------
 
 function buildCoverMePanelRow(pos,label){
   const row=document.createElement('div');
@@ -6832,12 +7019,12 @@ function renderCoverMePanelRowState(pos){
     overlay.style.cssText=`position:absolute;top:${box.top}%;left:${box.left}%;width:${box.width}%;height:${box.height}%;border:2px solid #d32f2f;border-radius:4px;overflow:hidden;background:#fff`;
     const img=document.createElement('img');
     img.src=design.url;
-    // object-fit is set dynamically by applyPanelAdjustTransform() below --
-    // 'cover' (crops to fill, matches the real print) at zoom >= 1x, or
-    // 'contain' (shows the whole photo, letterboxed) below 1x. Whichever
-    // one actually applies right now gets set immediately after this img
-    // is in the DOM, so this preview always matches what will really print.
-    img.style.cssText='width:100%;height:100%;display:block';
+    img.draggable=false;
+    // Positioned by applyPanelAdjustTransform() with the same fit math as
+    // the print, once the image has a size -- this little overlay is the
+    // Fit Your Picture box in miniature.
+    img.style.cssText='position:absolute;display:block;max-width:none';
+    img.addEventListener('load',()=>applyPanelAdjustTransform(pos));
     overlay.appendChild(img);
 
     const removeBtn=document.createElement('button');
@@ -6855,22 +7042,7 @@ function renderCoverMePanelRowState(pos){
     diffLink.onclick=()=>addDifferentImageForCoverMePanel(pos);
     controls.appendChild(diffLink);
 
-    const adjustToggle=document.createElement('button');
-    adjustToggle.type='button';
-    adjustToggle.className='download-btn';
-    adjustToggle.style.cssText='width:100%;margin-top:6px;font-size:11px;padding:.4rem';
-    adjustToggle.textContent='🔧 Adjust position & zoom';
-    const sliders=document.createElement('div');
-    sliders.id='coverMeAdjustSliders_'+pos;
-    sliders.style.cssText='display:none;margin-top:8px';
-    sliders.innerHTML=buildPanelAdjustSlidersHTML(pos);
-    adjustToggle.onclick=()=>{
-      sliders.style.display=(sliders.style.display==='none')?'block':'none';
-    };
-    controls.appendChild(adjustToggle);
-    controls.appendChild(sliders);
-    wirePanelAdjustSliders(pos);
-    applyPanelAdjustTransform(pos);
+    requestAnimationFrame(()=>applyPanelAdjustTransform(pos));
 
   } else {
     const emptyBox=COVER_ME_PANEL_OVERLAY_POS[pos];
@@ -6902,82 +7074,14 @@ function renderCoverMePanelRowState(pos){
   }
 }
 
-function buildPanelAdjustSlidersHTML(pos){
-  const adj=placementAdjust[pos]||defaultPanelAdjust();
-  const zoomPct=Math.round((adj.zoom||1)*100);
-  const offXVal=Math.round((adj.offX||0)*100);
-  const offYVal=Math.round((adj.offY||0)*100);
-  return `
-    <div style="display:flex;align-items:center;gap:6px;margin-top:4px">
-      <span class="note" style="margin:0;min-width:44px;font-size:10px">Zoom</span>
-      <input type="range" min="60" max="200" step="1" value="${zoomPct}" id="coverMeZoom_${pos}" style="flex:1">
-      <span class="note" id="coverMeZoomOut_${pos}" style="margin:0;min-width:32px;text-align:right;font-size:10px">${zoomPct}%</span>
-    </div>
-    <div style="display:flex;align-items:center;gap:6px;margin-top:4px">
-      <span class="note" style="margin:0;min-width:44px;font-size:10px">Move X</span>
-      <input type="range" min="-100" max="100" step="1" value="${offXVal}" id="coverMeOffX_${pos}" style="flex:1">
-      <span class="note" id="coverMeOffXOut_${pos}" style="margin:0;min-width:32px;text-align:right;font-size:10px">${offXVal}</span>
-    </div>
-    <div style="display:flex;align-items:center;gap:6px;margin-top:4px">
-      <span class="note" style="margin:0;min-width:44px;font-size:10px">Move Y</span>
-      <input type="range" min="-100" max="100" step="1" value="${offYVal}" id="coverMeOffY_${pos}" style="flex:1">
-      <span class="note" id="coverMeOffYOut_${pos}" style="margin:0;min-width:32px;text-align:right;font-size:10px">${offYVal}</span>
-    </div>
-    <button type="button" class="download-btn" style="width:100%;margin-top:6px;font-size:10px;padding:.3rem" onclick="resetPanelAdjust('${pos}')">↺ Reset to default</button>
-  `;
-}
-
-function wirePanelAdjustSliders(pos){
-  const zoomEl=document.getElementById('coverMeZoom_'+pos);
-  const offXEl=document.getElementById('coverMeOffX_'+pos);
-  const offYEl=document.getElementById('coverMeOffY_'+pos);
-  if(!zoomEl||!offXEl||!offYEl)return;
-  const update=()=>{
-    placementAdjust[pos]={
-      zoom:Number(zoomEl.value)/100,
-      offX:Number(offXEl.value)/100,
-      offY:Number(offYEl.value)/100
-    };
-    document.getElementById('coverMeZoomOut_'+pos).textContent=zoomEl.value+'%';
-    document.getElementById('coverMeOffXOut_'+pos).textContent=offXEl.value;
-    document.getElementById('coverMeOffYOut_'+pos).textContent=offYEl.value;
-    applyPanelAdjustTransform(pos);
-    saveMugState();
-  };
-  zoomEl.addEventListener('input',update);
-  offXEl.addEventListener('input',update);
-  offYEl.addEventListener('input',update);
-}
-
-// Reset re-renders the whole row rather than just zeroing the sliders in
-// place -- simplest way to get the slider positions, the live preview, and
-// the saved state all back in sync in one call, and this row's DOM is cheap
-// to rebuild (it's three sliders and a couple of buttons, not the photo).
-function resetPanelAdjust(pos){
-  placementAdjust[pos]=defaultPanelAdjust();
-  renderCoverMePanelRowState(pos);
-  saveMugState();
-}
-
-// Mirrors the real print's own crop logic (buildWraparoundImage() in
-// create-printify-order.js) closely enough to preview it: zoom >= 1 crops
-// to fill (object-fit:cover, matching the server's cover-fit-then-extract),
-// zoom < 1 shows the whole photo shrunk with white padding (object-fit:
-// contain, matching the server's contain-fit-then-pad). The translate
-// approximates the server's slack-based offset math in CSS terms -- not
-// pixel-exact against the server, but the same direction and rough
-// proportion, which is what matters for the customer judging fit by eye.
+// Lays the thumbnail's photo out inside its overlay with the exact same
+// fit math as the print (and as the Fit Your Picture box above it).
 function applyPanelAdjustTransform(pos){
   const overlay=document.getElementById('coverMeOverlay_'+pos);
   if(!overlay)return;
   const img=overlay.querySelector('img');
   if(!img)return;
-  const adj=placementAdjust[pos]||defaultPanelAdjust();
-  const zoom=adj.zoom||1;
-  img.style.objectFit=(zoom>=1)?'cover':'contain';
-  const shift=Math.abs(zoom-1)*50;
-  img.style.transform=`scale(${zoom}) translate(${(adj.offX||0)*shift}%, ${(adj.offY||0)*shift}%)`;
-  img.style.transformOrigin='center center';
+  layoutFittedImage(img,overlay,placementAdjust[pos]||defaultPanelAdjust());
 }
 
 // Restores whatever was just removed from THIS panel -- no regeneration,
@@ -7000,6 +7104,7 @@ function useCurrentDesignForCoverMePanel(pos){
     return;
   }
   placements[pos]=source;
+  placementAdjust[pos]={...(placementAdjust.front||defaultPanelAdjust())};
   saveMugState();
   renderCoverMePanelRowState(pos);
   refreshCoverMePanelDoneState();
@@ -7032,6 +7137,12 @@ function refreshCoverMePanelDoneState(){
   const resolved=filledCount>0;
   if(btn)btn.disabled=!resolved;
   if(hint)hint.style.display=resolved?'none':'block';
+  // Every change to which panels are filled changes the SHAPE of a panel's
+  // print area (an empty neighbor's space goes to the panel beside it), so
+  // the Fit Your Picture box is rebuilt here, on the one path every panel
+  // change already passes through, and the thumbnails re-laid to match.
+  renderCoverMeFitters();
+  ['left','front','right'].forEach(pos=>applyPanelAdjustTransform(pos));
 }
 
 // This IS the one real Printify mockup fetch for the whole Cover Me
