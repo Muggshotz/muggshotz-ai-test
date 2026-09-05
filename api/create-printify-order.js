@@ -325,6 +325,42 @@ export function computePanelFit(imgW, imgH, boxW, boxH, zoom, offX, offY) {
   return { w, h, left, top };
 }
 
+// BACKDROPS (Alyx, Sep 2026). MIRRORED from BACKDROPS in needles-studio.html:
+// the print area behind a picture can be one of these textures instead of
+// the flat surface colour. The customer picks a key on the Fit Your
+// Picture screen; it rides on adjustments[pos].backdrop. The full-size file
+// is fetched from the live site (the same file the studio previews from,
+// at preview size) and cover-fitted to the panel, exactly as the studio's
+// CSS cover-fits it, so the print matches the box on screen.
+const BACKDROP_FILES = {
+  bubbles: "bubble drift.png",
+  clouds: "clouds.png",
+  marble: "laced marble.png",
+  rose: "rose crepe.png",
+  satin: "satin sheets.png",
+  frost: "frosted mirror.png",
+  leaves: "pastel leaf.png",
+  vignette: "fade to white.png"
+};
+function siteBaseUrl() {
+  const h = process.env.SITE_BASE_URL || process.env.VERCEL_PROJECT_PRODUCTION_URL || "muggshotz-ai-test.vercel.app";
+  return (/^https?:\/\//.test(h) ? h : "https://" + h).replace(/\/$/, "");
+}
+const backdropFileCache = new Map();
+async function loadBackdropCover(key, width, height) {
+  const file = BACKDROP_FILES[key];
+  if (!file) return null;
+  const url = siteBaseUrl() + "/" + encodeURIComponent(file);
+  let buf = backdropFileCache.get(url);
+  if (!buf) {
+    const r = await fetch(url);
+    if (!r.ok) throw new Error(`Could not fetch backdrop ${key} (${r.status})`);
+    buf = Buffer.from(await r.arrayBuffer());
+    backdropFileCache.set(url, buf);
+  }
+  return await sharp(buf).resize(width, height, { fit: "cover" }).removeAlpha().png().toBuffer();
+}
+
 export async function buildWraparoundImage(placements, canvasWidth, canvasHeight, borderHex = null, adjustments = {}) {
   const { left, front, right } = placements;
   const WHITE = { r: 255, g: 255, b: 255 };
@@ -507,6 +543,23 @@ export async function buildWraparoundImage(placements, canvasWidth, canvasHeight
       .toBuffer();
   }
 
+  // On a backdrop the fade is transparency rather than a wash of surface
+  // colour: the picture's own alpha is multiplied by (1 - mask) so the
+  // texture underneath shows through its soft edge. Same fadeMaskAlpha.
+  async function applyFadeAsAlpha(pieceBuffer, pct) {
+    const { data, info } = await sharp(pieceBuffer).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+    const w = info.width, h = info.height;
+    let i = 3;
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const a = fadeMaskAlpha(x + 0.5, y + 0.5, w, h, pct);
+        if (a > 0) data[i] = Math.round(data[i] * (1 - a));
+        i += 4;
+      }
+    }
+    return await sharp(data, { raw: { width: w, height: h, channels: 4 } }).png().toBuffer();
+  }
+
   // Same rule for the thin frame: it traces the picture's printed edge,
   // which is the box edge when the picture fills the box.
   async function applyBorderIfNeeded(buffer, rect) {
@@ -537,6 +590,7 @@ export async function buildWraparoundImage(placements, canvasWidth, canvasHeight
     // 2026): on unless the placement says border:false. Absent = on, so
     // every order placed before the switch existed prints as it always has.
     const wantBorder = adjust.border !== false;
+    const backdropKey = BACKDROP_FILES[adjust.backdrop] ? adjust.backdrop : null;
 
     // REWRITTEN (Sep 2026, "Fit your picture" screen). The old version
     // cover-fitted the photo into the box and only let the offset move
@@ -566,15 +620,22 @@ export async function buildWraparoundImage(placements, canvasWidth, canvasHeight
       .extract({ left: cropLeft, top: cropTop, width: visW, height: visH })
       .png()
       .toBuffer();
-    const buffer = await sharp({
+    // The surface under the picture: the chosen backdrop, or the flat colour.
+    let base = null;
+    if (backdropKey) {
+      try { base = await loadBackdropCover(backdropKey, targetW, targetH); }
+      catch (err) { console.error("Backdrop unavailable, printing on the plain surface:", err); base = null; }
+    }
+    const pieceInput = (base && fadePct > 0) ? await applyFadeAsAlpha(piece, fadePct) : piece;
+    const buffer = await sharp(base || {
       create: { width: targetW, height: targetH, channels: 3, background: WHITE }
     })
-      .composite([{ input: piece, left: pasteLeft, top: pasteTop }])
+      .composite([{ input: pieceInput, left: pasteLeft, top: pasteTop }])
       .png()
       .toBuffer();
     // The picture's printed rectangle: where it actually lands in the box.
     const printed = { left: pasteLeft, top: pasteTop, w: visW, h: visH };
-    const faded = await applyFadeIfNeeded(buffer, printed, fadePct, fadeHex);
+    const faded = base ? buffer : await applyFadeIfNeeded(buffer, printed, fadePct, fadeHex);
     const finished = wantBorder ? await applyBorderIfNeeded(faded, printed) : faded;
     return { input: finished, left: box.x, top: 0 };
   }
