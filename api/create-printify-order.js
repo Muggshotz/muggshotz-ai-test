@@ -492,20 +492,28 @@ export async function buildWraparoundImage(placements, canvasWidth, canvasHeight
     return { input: data, raw: { width, height, channels: 4 } };
   }
 
-  async function applyFadeIfNeeded(buffer, width, height, pct, hex) {
+  // The fade belongs to the PICTURE, not the print area (Alyx, Sep 2026):
+  // a picture shrunk below the box kept hard edges while the fade sat out
+  // at the box edge over nothing but white. The mask now covers exactly
+  // the part of the picture that lands inside the box -- the whole box
+  // when the picture fills it, the picture's own rectangle when it's
+  // smaller -- and is composited at that rectangle's position.
+  async function applyFadeIfNeeded(buffer, rect, pct, hex) {
     if (!(pct > 0)) return buffer;
-    const layer = buildFadeLayer(width, height, hex, pct);
+    const layer = buildFadeLayer(rect.w, rect.h, hex, pct);
     return await sharp(buffer)
-      .composite([{ input: layer.input, raw: layer.raw, top: 0, left: 0 }])
+      .composite([{ input: layer.input, raw: layer.raw, top: rect.top, left: rect.left }])
       .png()
       .toBuffer();
   }
 
-  async function applyBorderIfNeeded(buffer, width, height) {
+  // Same rule for the thin frame: it traces the picture's printed edge,
+  // which is the box edge when the picture fills the box.
+  async function applyBorderIfNeeded(buffer, rect) {
     if (!borderHex) return buffer;
-    const strokeWidth = Math.max(6, Math.round(Math.min(width, height) * 0.008));
+    const strokeWidth = Math.max(6, Math.round(Math.min(rect.w, rect.h) * 0.008));
     return await sharp(buffer)
-      .composite([{ input: buildBorderSvg(width, height, borderHex, strokeWidth), top: 0, left: 0 }])
+      .composite([{ input: buildBorderSvg(rect.w, rect.h, borderHex, strokeWidth), top: rect.top, left: rect.left }])
       .png()
       .toBuffer();
   }
@@ -564,8 +572,10 @@ export async function buildWraparoundImage(placements, canvasWidth, canvasHeight
       .composite([{ input: piece, left: pasteLeft, top: pasteTop }])
       .png()
       .toBuffer();
-    const faded = await applyFadeIfNeeded(buffer, targetW, targetH, fadePct, fadeHex);
-    const finished = wantBorder ? await applyBorderIfNeeded(faded, targetW, targetH) : faded;
+    // The picture's printed rectangle: where it actually lands in the box.
+    const printed = { left: pasteLeft, top: pasteTop, w: visW, h: visH };
+    const faded = await applyFadeIfNeeded(buffer, printed, fadePct, fadeHex);
+    const finished = wantBorder ? await applyBorderIfNeeded(faded, printed) : faded;
     return { input: finished, left: box.x, top: 0 };
   }
 
