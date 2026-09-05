@@ -6958,9 +6958,10 @@ function decorateFitBox(box,adj,rect){
   if(!box)return;
   const r=rect||{left:0,top:0,w:box.clientWidth,h:box.clientHeight};
   let capEl=box.querySelector('.fitCaption');
-  if(!capEl){capEl=document.createElement('canvas');capEl.className='fitCaption';capEl.style.cssText='position:absolute;pointer-events:none;z-index:1;display:none';box.appendChild(capEl);}
+  // Caption sits ABOVE the fade: a soft edge must never eat the words.
+  if(!capEl){capEl=document.createElement('canvas');capEl.className='fitCaption';capEl.style.cssText='position:absolute;pointer-events:none;z-index:2;display:none';box.appendChild(capEl);}
   let fadeEl=box.querySelector('.fitFade');
-  if(!fadeEl){fadeEl=document.createElement('canvas');fadeEl.className='fitFade';fadeEl.style.cssText='position:absolute;pointer-events:none;z-index:2';box.appendChild(fadeEl);}
+  if(!fadeEl){fadeEl=document.createElement('canvas');fadeEl.className='fitFade';fadeEl.style.cssText='position:absolute;pointer-events:none;z-index:1';box.appendChild(fadeEl);}
   let frameEl=box.querySelector('.fitFrame');
   if(!frameEl){frameEl=document.createElement('div');frameEl.className='fitFrame';frameEl.style.cssText='position:absolute;pointer-events:none;box-sizing:border-box;z-index:3';box.appendChild(frameEl);}
   const place=el=>{el.style.left=r.left+'px';el.style.top=r.top+'px';el.style.width=r.w+'px';el.style.height=r.h+'px';};
@@ -7090,6 +7091,31 @@ async function bakeCaptionIntoDesign(designId){
   ctx.fillStyle=getSelectedProductColorHex();
   ctx.fillRect(0,0,w,h);
   ctx.drawImage(img,f.left-left,f.top-top,f.w,f.h);
+  // The fade goes on here, under the caption, so the words stay crisp on
+  // top of the soft edge (the server is then told fade:0 for this
+  // picture -- it would otherwise fade the caption too). Same
+  // fadeMaskAlpha the server uses, at print resolution.
+  const fadePct=Math.max(0,Math.min(80,Number(adj.fade)||0));
+  if(fadePct>0){
+    const hex=getSelectedProductColorHex();
+    const m=/^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(hex)||[null,'ff','ff','ff'];
+    const R=parseInt(m[1],16),G=parseInt(m[2],16),B=parseInt(m[3],16);
+    const id=ctx.getImageData(0,0,w,h);
+    const d=id.data;
+    let i=0;
+    for(let y=0;y<h;y++){
+      for(let x=0;x<w;x++){
+        const a=fadeMaskAlpha(x+0.5,y+0.5,w,h,fadePct);
+        if(a>0){
+          d[i]=Math.round(d[i]*(1-a)+R*a);
+          d[i+1]=Math.round(d[i+1]*(1-a)+G*a);
+          d[i+2]=Math.round(d[i+2]*(1-a)+B*a);
+        }
+        i+=4;
+      }
+    }
+    ctx.putImageData(id,0,0);
+  }
   drawCaptionText(ctx,c);
   const uploaded=await uploadCompositedImage(c.toDataURL('image/jpeg',0.92),{strict:true});
   if(!design.rawUrl){design.rawUrl=src;design.preBakeAdjust={...adj};}
@@ -7099,11 +7125,11 @@ async function bakeCaptionIntoDesign(designId){
   // the box, the baked one fits it exactly (same proportions), so it is
   // placed at 1:1 centred. If it sat inside the box, its proportions are
   // unchanged and the same zoom/offset lands it in the same spot.
+  // Fade is already in the picture; the server must not add another.
   if((adj.zoom||1)>=1){
-    const a={...adj,zoom:1,offX:0,offY:0};
-    setDesignAdjust(designId,a);
+    setDesignAdjust(designId,{...adj,zoom:1,offX:0,offY:0,fade:0});
   } else {
-    setDesignAdjust(designId,adj);
+    setDesignAdjust(designId,{...adj,fade:0});
   }
   saveMugState();
 }
