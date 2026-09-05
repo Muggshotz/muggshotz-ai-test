@@ -2,10 +2,10 @@
 <!DOCTYPE html>
 <html lang="en">
 <head><link rel="manifest" href="needles-manifest.json">
-<!-- BUILD-MARKER: BYO-COPY-v43 -->
+<!-- BUILD-MARKER: BACK-BUTTONS-BYO-v44 -->
 <!-- If you can see this comment on GitHub, this exact paste landed. -->
 <!-- If your live site's page source does NOT say -->
-<!-- "BYO-COPY-v43" right here, the upload/deploy did -->
+<!-- "BACK-BUTTONS-BYO-v44" right here, the upload/deploy did -->
 <!-- not take -- re-upload before testing. -->
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
@@ -637,7 +637,8 @@ body.design-method-focus .card:not(#designMethodCard){opacity:.28;filter:brightn
    step with the card's own visibility by a MutationObserver. */
 body.panels-active #likenessSectionCard,
 body.panels-active #generateTokenNote,
-body.panels-active #positionHolderCard{display:none!important}
+body.panels-active #positionHolderCard,
+body.panels-active #verifyCard{display:none!important}
 /* Caption controls inside the Fit Your Picture card (mug track). Just the
    input until something is typed; the full styling toolset unfolds below
    it once there is text to style. */
@@ -1120,7 +1121,8 @@ const HERO_SETTLE_MS = 1000;
 <div id="ideaGuidancePrompt" class="guidance-prompt" role="status" style="margin-top:8px;margin-bottom:0;cursor:pointer" onclick="confirmIdeaSatisfied()">Click here when you are satisfied with your descriptive requests for the image.</div>
 </div>
 </div>
-<div class="card" id="productCard"><div class="card-title">🎁 Product</div><div class="guidance-prompt soft visible" id="productGuidancePrompt" role="status" style="margin-top:0;margin-bottom:.9rem">Please select your desired product below when ready.</div><div class="grid3"><div class="btn-select" data-val="mug" onclick="pick(this,'product')"><span class="icon">☕</span>Mug</div><div class="btn-select" data-val="greeting card" onclick="pick(this,'product')"><span class="icon">💌</span>Card</div><div class="btn-select" data-val="water bottle" onclick="pick(this,'product')"><span class="icon">🍶</span>Travel Cups</div><div class="btn-select" data-val="post-it note" onclick="pick(this,'product')"><span class="icon">📝</span>Post-it</div><div class="btn-select" data-val="phone case" onclick="pick(this,'product')"><span class="icon">📱</span>Phone case</div><div class="btn-select" data-val="tote bag" onclick="pick(this,'product')"><span class="icon">👜</span>Tote bag</div><div class="btn-select" data-val="suitcase" onclick="pick(this,'product')"><span class="icon">🧳</span>Suitcase</div><div class="btn-select" data-val="puzzle" onclick="pick(this,'product')"><span class="icon">🧩</span>Puzzle</div><div class="btn-select" data-val="photo poster" onclick="pick(this,'product')"><span class="icon">🖼️</span>Photo/Poster</div><div class="btn-select" data-val="coaster" onclick="pick(this,'product')"><span class="icon">☕</span>Coasters</div><div class="btn-select" data-val="mouse pad" onclick="pick(this,'product')"><span class="icon">🖱️</span>Mouse pad</div></div></div>
+<div class="card" id="productCard"><div class="card-title">🎁 Product</div><div class="guidance-prompt soft visible" id="productGuidancePrompt" role="status" style="margin-top:0;margin-bottom:.9rem">Please select your desired product below when ready.</div><div class="grid3"><div class="btn-select" data-val="mug" onclick="pick(this,'product')"><span class="icon">☕</span>Mug</div><div class="btn-select" data-val="greeting card" onclick="pick(this,'product')"><span class="icon">💌</span>Card</div><div class="btn-select" data-val="water bottle" onclick="pick(this,'product')"><span class="icon">🍶</span>Travel Cups</div><div class="btn-select" data-val="post-it note" onclick="pick(this,'product')"><span class="icon">📝</span>Post-it</div><div class="btn-select" data-val="phone case" onclick="pick(this,'product')"><span class="icon">📱</span>Phone case</div><div class="btn-select" data-val="tote bag" onclick="pick(this,'product')"><span class="icon">👜</span>Tote bag</div><div class="btn-select" data-val="suitcase" onclick="pick(this,'product')"><span class="icon">🧳</span>Suitcase</div><div class="btn-select" data-val="puzzle" onclick="pick(this,'product')"><span class="icon">🧩</span>Puzzle</div><div class="btn-select" data-val="photo poster" onclick="pick(this,'product')"><span class="icon">🖼️</span>Photo/Poster</div><div class="btn-select" data-val="coaster" onclick="pick(this,'product')"><span class="icon">☕</span>Coasters</div><div class="btn-select" data-val="mouse pad" onclick="pick(this,'product')"><span class="icon">🖱️</span>Mouse pad</div></div>
+<button type="button" class="download-btn" id="productCardBackBtn" style="margin-top:1rem" onclick="productCardBack()">← Back</button></div>
 
 <div id="mugSizeLockOverlay" class="step-lock-overlay" style="display:none">
 <div class="card" id="mugSizeCard" style="max-width:420px;width:100%;margin:auto;position:relative">
@@ -1326,6 +1328,7 @@ Tell Needles <span style="color:#7ab8ff">what you have in mind</span>
 <div id="coverMePanelRows" style="display:flex;flex-direction:column;gap:12px"></div>
 <div class="note" id="coverMePanelHint" style="margin-top:.9rem;text-align:center">At least one panel needs an image before you can continue.</div>
 <button type="button" class="generate-btn" id="coverMePanelDoneBtn" style="margin-top:.75rem" disabled onclick="coverMePanelDone()">✅ Done</button>
+<button type="button" class="download-btn" id="coverMePanelBackBtn" style="margin-top:.6rem;display:none" onclick="coverMePanelBack()">← Back</button>
 </div>
 
 <div class="card" id="coverMeFrameOfferCard" style="display:none">
@@ -1433,6 +1436,7 @@ Tell Needles <span style="color:#7ab8ff">what you have in mind</span>
 <div class="card-title">🎉 What's Next?</div>
 <button type="button" class="generate-btn" style="margin-top:.9rem" onclick="goToOrder()">✅ Checkout</button>
 <button type="button" class="download-btn" style="margin-top:.75rem" onclick="returnToUploadForNewPhoto()">📸 Upload a Different Photo</button>
+<button type="button" class="download-btn" style="margin-top:.6rem" onclick="finalChoiceBack()">← Back</button>
 </div>
 </div>
 
@@ -1454,6 +1458,7 @@ Tell Needles <span style="color:#7ab8ff">what you have in mind</span>
 <div class="note" style="margin-top:0;margin-bottom:1rem">One quick choice before we get started — it decides the rest of this page.</div>
 <button type="button" class="btn-select" style="display:block;width:100%;padding:1rem;margin-bottom:.7rem" onclick="chooseIntentAI()">🤖 Let Our AI Create My Art<div class="note" style="margin-top:4px;color:#29a3ff;font-size:11px">Turn my photo into a caricature, cartoon, line art, and more — costs image credits.</div></button>
 <button type="button" class="btn-select" style="display:block;width:100%;padding:1rem" onclick="chooseIntentBYO()">📸 I'll Supply My Own Finished Art<div class="note" style="margin-top:4px;color:#29a3ff;font-size:11px">Skip the AI — put my photo on the product exactly as it is. Free, no credits needed.</div></button>
+<button type="button" class="download-btn" style="margin-top:.9rem" onclick="intentGateBack()">← Back — choose a different photo</button>
 </div>
 </div>
 
@@ -1512,11 +1517,13 @@ Tell Needles <span style="color:#7ab8ff">what you have in mind</span>
 <button type="button" class="generate-btn" style="flex:1;width:auto;padding:.9rem .4rem" onclick="chooseEdgeStyleAndContinue(true)">◻️ Hard Edges</button>
 <button type="button" class="generate-btn" style="flex:1;width:auto;padding:.9rem .4rem" onclick="chooseFadeEdges()">🌫️ Fade Edges</button>
 </div>
+<button type="button" class="download-btn" id="revealEdgeBackBtn" style="margin-top:.75rem" onclick="revealEdgeBack()">← Back</button>
 <div id="revealFadeSliderPanel" style="display:none;margin-top:.9rem">
 <div class="note" style="margin-top:0;margin-bottom:.5rem">How far should the fade reach in from the edges?</div>
 <input type="range" id="revealFadeAmountSlider" min="0" max="80" step="1" value="30" oninput="updateRevealFadePreview()" style="width:100%"/>
 <div class="note" style="margin-top:.25rem;margin-bottom:0;text-align:center"><span id="revealFadeAmountVal">30%</span></div>
 <button type="button" class="generate-btn" style="margin-top:.75rem" onclick="confirmFadeAndContinue()">✅ Continue</button>
+<button type="button" class="download-btn" style="margin-top:.6rem" onclick="revealFadeBack()">← Back</button>
 </div>
 </div>
 </div>
@@ -1616,6 +1623,7 @@ Tell Needles <span style="color:#7ab8ff">what you have in mind</span>
 <div style="position:absolute;top:0;left:0;right:0;bottom:0;display:flex;align-items:center;justify-content:center;text-align:center;color:#003c8c;font-weight:800;font-size:15px;padding:.5rem;text-shadow:0 0 6px rgba(255,255,255,.9),0 0 2px rgba(255,255,255,.9);animation:mugSelectFlash 1s ease-in-out infinite">Select a Window Sill?</div>
 </div>
 <button type="button" class="download-btn cta-flash" style="margin:12px auto 0;max-width:200px;width:100%;display:block" onclick="chooseRevealPath('none')">No Thank You</button>
+<button type="button" class="download-btn" style="margin:10px auto 0;max-width:200px;width:100%;display:block" onclick="accessorizeOfferBack()">← Back</button>
 </div>
 
 <div id="accessorizePreviewStrip" style="display:flex;gap:8px;margin-top:1rem"></div>
@@ -2471,6 +2479,7 @@ function startPhotoGuide(){
 // can never leak into a different upload.
 let pendingUploadIntent=null;
 function startUploadWithIntent(intent){
+  byoPanelsLive=false;
   pendingUploadIntent=intent;
   document.getElementById('fileInput').click();
 }
@@ -5590,6 +5599,13 @@ function finishPreGenMugColorPick(){
   // classic at the gate, so hand straight through the gimmick door (which
   // routes BYO to the Generate landing) instead.
   if(byoDeclaredIntent==='byo'){
+    // Came back here from Fit Your Picture via its Back button: the photo
+    // is already placed, so return to the same panels (the box reshapes
+    // itself for the newly chosen mug) rather than uploading it again.
+    if(byoPanelsLive&&(placements.left||placements.front||placements.right)){
+      showCoverMePanelCard();
+      return;
+    }
     showDesignMethodCard();
     return;
   }
@@ -6796,6 +6812,8 @@ function showCoverMePanelCard(){
   autoFillCoverMePanels();
   renderCoverMePanelRows();
   document.getElementById('coverMePanelCard').style.display='block';
+  const panelBack=document.getElementById('coverMePanelBackBtn');
+  if(panelBack)panelBack.style.display=(product==='mug'&&byoDeclaredIntent==='byo')?'block':'none';
   // A design already exists by this point -- Generate sitting further down
   // the page just duplicates what Done already does, and re-clicking it
   // would silently re-run the whole generation pipeline from scratch.
@@ -9678,8 +9696,12 @@ async function enterRevealStage(){
     // falls through to openFrameFadeOverlay() for any path that reaches
     // this screen without having gone through the reordered pre-placement
     // fade (kept as a safety net, not the normal route anymore).
-    if(fadeAlreadyAppliedPrePlacement){
-      fadeAlreadyAppliedPrePlacement=false;
+    // UPDATED (Sep 2026): the fade lives on the Fit Your Picture box now, on
+    // every pass through the panels screen -- including a second pass after
+    // a Back button -- so this always goes to the frame offer. The Hard/Fade
+    // edge question after "No Thank You" is a separate screen and stays.
+    fadeAlreadyAppliedPrePlacement=false;
+    if(true){
       showAccessorizeChoiceState();
     } else {
       // THE FADE PAGE, AT LAST (Aug 2026, Alyx). openFrameFadeOverlay() has
@@ -10205,6 +10227,7 @@ function maybeOpenFadeBeforeMockup(){
 // do on the fade page's way out. The house default fade (30%) is carried
 // on the design's placement; an exact transfer opens Sharp, as before.
 function goStraightToPanelPlacement(approvedDesignId){
+  byoPanelsLive=(byoDeclaredIntent==='byo');
   fadeAlreadyAppliedPrePlacement=true;
   placements.front=approvedDesignId;
   const d=defaultPanelAdjust();
@@ -14062,6 +14085,71 @@ function resetEverythingFreshStart(){
   updateMugGuidedFlow();
 
   window.scrollTo({top:0,behavior:'smooth'});
+}
+
+// ---- Back buttons on the Bring Your Own Art mug flow (Alyx, Sep 2026) ----
+// "Back" means the screen the customer was on just before this one, with
+// their work intact. Upload -> intent gate -> product -> size -> style &
+// colour -> Fit Your Picture -> frame offer -> edge question -> mockup ->
+// What's Next. Size and style already had theirs; these fill the gaps.
+function intentGateBack(){
+  const overlay=document.getElementById('intentGateOverlay');
+  if(overlay)overlay.style.display='none';
+  document.body.classList.remove('step-locked');
+  const fi=document.getElementById('fileInput');
+  if(fi)fi.click();
+}
+function productCardBack(){
+  const overlay=document.getElementById('intentGateOverlay');
+  if(!overlay||!uploadedImageData){
+    document.getElementById('uploadPhotoCard')?.scrollIntoView({behavior:'smooth',block:'start'});
+    return;
+  }
+  overlay.style.display='flex';
+  document.body.classList.add('step-locked');
+}
+// Set when the BYO picture has been placed on the panels; lets a trip back
+// to the mug style & colour screen return to the SAME panels on Satisfied
+// instead of re-uploading and re-placing the photo.
+let byoPanelsLive=false;
+function coverMePanelBack(){
+  coverMePanelAutoScrollToken++;
+  document.getElementById('coverMePanelCard').style.display='none';
+  if(product==='mug'){
+    goBackToMugStyle();
+    return;
+  }
+  document.getElementById('uploadPhotoCard')?.scrollIntoView({behavior:'smooth',block:'start'});
+}
+function accessorizeOfferBack(){
+  const acc=document.getElementById('accessorizeCard');
+  if(acc)acc.style.display='none';
+  revealFlowActive=false;
+  showCoverMePanelCard();
+}
+function revealEdgeBack(){
+  const overlay=document.getElementById('revealOverlay');
+  if(overlay)overlay.style.display='none';
+  document.body.classList.remove('step-locked');
+  showAccessorizeChoiceState();
+}
+function revealFadeBack(){
+  const buttonsRow=document.getElementById('revealEdgeButtonsRow');
+  const fadePanel=document.getElementById('revealFadeSliderPanel');
+  if(fadePanel)fadePanel.style.display='none';
+  if(buttonsRow)buttonsRow.style.display='flex';
+}
+function finalChoiceBack(){
+  const finalOverlay=document.getElementById('finalChoiceOverlay');
+  if(finalOverlay)finalOverlay.style.display='none';
+  document.body.classList.remove('step-locked');
+  if(currentMockupUrls&&currentMockupUrls.length){
+    openMockupLightbox(currentMockupIndex||0);
+    const actions=document.getElementById('mockupLightboxActions');
+    if(actions)actions.style.display='flex';
+    const returnBtn=document.getElementById('mockupLightboxReturn');
+    if(returnBtn)returnBtn.style.display='block';
+  }
 }
 
 // ---- Panels screen: body.panels-active follows #coverMePanelCard ----
