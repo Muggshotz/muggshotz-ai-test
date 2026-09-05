@@ -624,6 +624,18 @@ async function handleMugOrderPayment(session) {
     // print file straight from it when present; the thirds above remain the
     // fallback and the classic per-panel path.
     orderInput.panoramaImage = m.image_url_d || null;
+    // Per-panel Adjust sliders (zoom/offX/offY) from the panel-selection
+    // screen, round-tripped through Stripe metadata as a JSON string --
+    // same pattern as everything else here, since Stripe metadata is
+    // flat strings only. Absent/garbled parses to {}, which is exactly
+    // buildWraparoundImage()'s old always-centered behavior, so a
+    // missing value here can't break an order, only skip the customer's
+    // adjustment.
+    let parsedAdjust = {};
+    if (m.placement_adjust) {
+      try { parsedAdjust = JSON.parse(m.placement_adjust); } catch (e) { parsedAdjust = {}; }
+    }
+    orderInput.placementAdjust = parsedAdjust;
   } else if (product.layoutType === "front-back") {
     orderInput.frontImage = m.image_url_a || null;
     orderInput.backImage = m.image_url_b || null;
