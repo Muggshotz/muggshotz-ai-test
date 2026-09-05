@@ -2,7 +2,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head><link rel="manifest" href="needles-manifest.json">
-<!-- BUILD-MARKER: FRAME-ON-PANEL-v52 -->
+<!-- BUILD-MARKER: FRAME-NUDGE-v53 -->
 <!-- If you can see this comment on GitHub, this exact paste landed. -->
 <!-- If your live site's page source does NOT say -->
 <!-- "INSTANT-FIT-SCREEN-v47" right here, the upload/deploy did -->
@@ -801,6 +801,7 @@ body.panels-active #verifyCard{display:none!important}
     <!-- The frame offer lives HERE now (Alyx, Sep 2026): on the finished
          mockup, where a frame can be judged against the real mug. Mug
          three-panel flow only. -->
+    <div id="mockupLightboxNudge" style="display:none;flex-basis:100%;text-align:center;color:#7ab8ff;font-size:13px;font-weight:700;text-shadow:0 1px 3px rgba(0,0,0,.8);margin-bottom:2px">Want a frame around it? Try one on. It's free to look.</div>
     <button type="button" id="mockupLightboxFrame" class="download-btn" style="display:none;width:auto;margin:0;padding:.8rem 1.3rem;white-space:nowrap;border-color:#003c8c;color:#7ab8ff" onclick="offerFrameFromMockup()">🖼️ Add a Frame</button>
     <button type="button" id="mockupLightboxReturn" class="generate-btn" style="width:auto;margin:0;padding:.8rem 1.4rem;white-space:nowrap" onclick="returnFromFinalMockup()">✅ Looks Good</button>
   </div>
@@ -10895,6 +10896,12 @@ function refreshMockupLightboxFrameBtn(){
   const show=frameOfferAvailable();
   btn.style.display=show?'block':'none';
   btn.textContent=coverMeFrameApplied?'🖼️ Change Frame':'🖼️ Add a Frame';
+  // Easy to sail past next to the big blue Looks Good (Alyx, Sep 2026): the
+  // unframed mockup gets a nudge line and a pulsing button; once a frame is
+  // on, both settle down.
+  btn.classList.toggle('cta-flash',show&&!coverMeFrameApplied);
+  const nudge=document.getElementById('mockupLightboxNudge');
+  if(nudge)nudge.style.display=(show&&!coverMeFrameApplied)?'block':'none';
 }
 function offerFrameFromMockup(){
   hideMockupLightbox();
@@ -13128,10 +13135,12 @@ const BACKDROPS={
   marble:{file:'laced marble.png',label:'Marble'},
   rose:{file:'rose crepe.png',label:'Rose'},
   satin:{file:'satin sheets.png',label:'Satin'},
-  leaves:{file:'pastel leaf.png',label:'Leaves'}
-  // Frost and Vignette were pulled (Alyx, Sep 2026): their edges are grey,
-  // not white, so on a white mug they left a faint rectangle at the panel
-  // edge -- a ghost border that fought the fade.
+  leaves:{file:'pastel leaf.png',label:'Leaves'},
+  // Frost and Vignette have grey edges, so on a white mug they show a faint
+  // rectangle at the panel edge. Pulled once, then kept (Alyx, Sep 2026):
+  // "if someone doesn't like them they don't have to use them."
+  frost:{file:'frosted mirror.png',label:'Frost'},
+  vignette:{file:'fade to white.png',label:'Vignette'}
 };
 function backdropKey(v){return (v&&BACKDROPS[v])?v:null;}
 const backdropImageCache={};
