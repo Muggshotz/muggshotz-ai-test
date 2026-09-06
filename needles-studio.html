@@ -2,7 +2,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head><link rel="manifest" href="needles-manifest.json">
-<!-- BUILD-MARKER: WRAP-PREVIEW-SAME-FILE-v67 -->
+<!-- BUILD-MARKER: WRAP-PREVIEW-DISPLAY-ONLY-v68 -->
 <!-- If you can see this comment on GitHub, this exact paste landed. -->
 <!-- If your live site's page source does NOT say -->
 <!-- "INSTANT-FIT-SCREEN-v47" right here, the upload/deploy did -->
@@ -10062,6 +10062,7 @@ async function enterRevealStage(){
   choiceOverlay.style.display='flex';
 
   if(revealFlowThreePanel){
+    wrapDisplayOverrideUrl=null;
     revealOriginalArtworkUrls=[leftDesign?leftDesign.url:null,centerDesign?centerDesign.url:null,rightDesign?rightDesign.url:null];
   } else {
     try{
@@ -10084,12 +10085,19 @@ async function enterRevealStage(){
       // between switched it. When the uncut strip exists, show that. The
       // stitch stays for the classic fallback, which has no panorama and
       // really is three independently generated panels.
-      if(wraparoundPanoramaUrl){
-        revealOriginalArtworkUrls=[wraparoundPanoramaUrl];
-      } else {
-        const stitched=await stitchThreePanelsRaw(centerDesign.url,leftDesign.url,rightDesign.url);
-        revealOriginalArtworkUrls=[stitched];
-      }
+      // REVERTED, and it must stay this way. This variable is NOT a preview:
+      // bakeFadeIntoDesigns() takes revealOriginalArtworkUrls[0] on the Fade
+      // Edges path, fades it, slices it into thirds and OVERWRITES the three
+      // printed designs with those slices. Pointing it at the uncut panorama
+      // therefore changed the artwork itself -- the panorama already carries
+      // its own baked edge fade, so it got faded a second time and re-encoded
+      // an extra time on the way to the mug. Alyx caught it immediately, on
+      // the faces, which is the one thing that must never be traded for a
+      // tidier preview. The bake keeps the stitched input it has always had.
+      const stitched=await stitchThreePanelsRaw(centerDesign.url,leftDesign.url,rightDesign.url);
+      revealOriginalArtworkUrls=[stitched];
+      // The mug's own strip, for the SCREEN only.
+      wrapDisplayOverrideUrl=wraparoundPanoramaUrl||null;
     }catch(err){
       console.error('Could not stitch the panorama for Reveal:',err);
       choiceOverlay.style.display='none';
@@ -10230,6 +10238,11 @@ function confirmSeamFix(){
 }
 
 let revealOriginalArtworkUrls=[];
+// The wraparound strip as it will print, for the SCREEN only. Kept apart from
+// revealOriginalArtworkUrls on purpose: that one is baked into the real
+// designs, this one is never read by anything that writes a design or a print
+// file.
+let wrapDisplayOverrideUrl=null;
 let revealFadeAmountPct=30;
 // THE EDGE FADE DECISION. Deliberately a tri-state, not a boolean:
 //   null   nobody has chosen -> no fade (identical to the old kill-switch)
@@ -10373,10 +10386,13 @@ function showEdgeQuestion(){
     revealFitState=null;
     if(revealImg){
       revealImg.style.display='block';
-      const rawArtwork=revealOriginalArtworkUrls[0];
-      revealImg.src=rawArtwork;
-      wrapPreviewUrl(rawArtwork).then(u=>{ if(revealImg.dataset.wrapSrc===rawArtwork)revealImg.src=u; });
-      revealImg.dataset.wrapSrc=rawArtwork;
+      // Show the mug's own strip when we have it, the stitched fallback when
+      // we do not. Display only -- revealOriginalArtworkUrls is what the print
+      // path bakes from, and is deliberately left alone.
+      const shown=wrapDisplayOverrideUrl||revealOriginalArtworkUrls[0];
+      revealImg.src=shown;
+      revealImg.dataset.wrapSrc=shown;
+      wrapPreviewUrl(shown).then(u=>{ if(revealImg.dataset.wrapSrc===shown)revealImg.src=u; });
     }
   }
   const buttonsRow=document.getElementById('revealEdgeButtonsRow');
@@ -10632,7 +10648,7 @@ async function updateRevealFadePreview(){
   } else {
     const img=document.getElementById('revealArtworkImg');
     if(!img)return;
-    const faded=await renderFadedArtwork(revealOriginalArtworkUrls[0],hex,revealFadeAmountPct);
+    const faded=await renderFadedArtwork(wrapDisplayOverrideUrl||revealOriginalArtworkUrls[0],hex,revealFadeAmountPct);
     img.src=faded;
   }
 }
@@ -12091,6 +12107,8 @@ async function updateAccessorizePreview(){
         // the classic path, and the classic path is the one that still
         // re-stitches -- a panorama has no seams to align.
         if(wraparoundPanoramaUrl){
+          // Display only -- renderAccessorizeStrip draws, it never writes a
+          // design or a print file, so the mug's own strip is safe here.
           renderAccessorizeStrip(wraparoundPanoramaUrl);
         } else {
           const raw=await stitchThreePanelsRaw(pendingWraparoundRaw.center,pendingWraparoundRaw.left,pendingWraparoundRaw.right,seamLeftOverlapPx,seamRightOverlapPx,seamLeftVertPx,seamRightVertPx,seamLeftCoveragePct,seamRightCoveragePct);

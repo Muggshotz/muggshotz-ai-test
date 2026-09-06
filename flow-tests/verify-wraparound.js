@@ -544,7 +544,7 @@ scenarios.threePanelPreviewIsNotTrimmed = async (page) => {
 // that goes on the mug, not a reassembly of the sliced panels. If a picture
 // goes in one end and a different picture comes out the other, something in
 // between switched it.
-scenarios.previewIsTheSameFileAsTheMug = async (page, log, mockupBodies) => {
+scenarios.previewShowsTheMugWithoutTouchingThePrint = async (page, log, mockupBodies) => {
   await mugToPrintStyle(page);
   await page.evaluate(() => pickMugPrintMode('wraparound'));
   await T(page, 1200);
@@ -553,16 +553,27 @@ scenarios.previewIsTheSameFileAsTheMug = async (page, log, mockupBodies) => {
   await waitWrapDone(page);
   await T(page, 1000);
   const r = await page.evaluate(() => ({
-    preview: revealOriginalArtworkUrls[0],
+    shownOnScreen: (document.getElementById('revealArtworkImg') || {}).dataset?.wrapSrc || null,
+    displayOverride: wrapDisplayOverrideUrl,
     toTheMug: wraparoundPanoramaUrl,
-    stitched: String(revealOriginalArtworkUrls[0] || '').startsWith('data:'),
+    // What bakeFadeIntoDesigns() will slice into the three PRINTED designs.
+    bakedFrom: revealOriginalArtworkUrls[0],
+    bakedFromIsStitched: String(revealOriginalArtworkUrls[0] || '').startsWith('data:'),
   }));
   if (!r.toTheMug) return 'FAIL: no panorama was kept for the mug at all';
-  if (r.stitched) return 'FAIL: the preview is a re-stitched canvas, not the mug\'s own file';
-  if (r.preview !== r.toTheMug) {
-    return 'FAIL: preview and mug are different files: ' + JSON.stringify(r);
+  if (r.displayOverride !== r.toTheMug) {
+    return 'FAIL: the screen is not showing the mug\'s own strip: ' + JSON.stringify(r);
   }
-  return 'PASS: the finished-artwork preview is the identical file that travels to the mug';
+  // The one that matters. revealOriginalArtworkUrls is baked into the printed
+  // designs on the Fade Edges path -- putting the already-faded panorama there
+  // double-fades and re-encodes the artwork, which showed up on the faces.
+  if (!r.bakedFromIsStitched) {
+    return 'FAIL: the PRINT path is baking from the panorama, not the stitched panels: ' + JSON.stringify(r);
+  }
+  if (r.bakedFrom === r.toTheMug) {
+    return 'FAIL: preview and print path share a source again — the artwork will be double-faded: ' + JSON.stringify(r);
+  }
+  return 'PASS: the screen shows the mug\'s own strip while the print path still bakes from the stitched panels';
 };
 
 (async () => {
