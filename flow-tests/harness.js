@@ -42,7 +42,7 @@ async function launch(opts = {}) {
     let body = {};
     try { body = req.postDataJSON() || {}; } catch (_) {}
     const postData = req.postData() || '';
-    log.apiCalls.push({ path: p, action: body.action || null, bytes: postData.length,
+    log.apiCalls.push({ path: p, action: body.action || null, bytes: postData.length, body,
       mime: typeof body.image === 'string' ? (body.image.match(/^data:(image\/\w+)/) || [])[1] || null : null,
       placementAdjust: body.placementAdjust || null,
       prompt: typeof body.prompt === 'string' ? body.prompt : null });

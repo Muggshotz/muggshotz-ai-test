@@ -576,6 +576,35 @@ scenarios.previewShowsTheMugWithoutTouchingThePrint = async (page, log, mockupBo
   return 'PASS: the screen shows the mug\'s own strip while the print path still bakes from the stitched panels';
 };
 
+
+// IDENTITY TRAVELS WITH THE WRAPAROUND (Alyx, Sep 2026). Sequestering the
+// prompt fixed the seams and silently dropped the identity protection and the
+// Degree of Caricature setting, and the faces stopped being the customer that
+// same afternoon. The prompt field must stay the raw idea AND the likeness
+// setting must still reach the server.
+scenarios.wraparoundCarriesIdentityAndStrength = async (page, log) => {
+  await mugToPrintStyle(page);
+  await page.evaluate(() => pickMugPrintMode('wraparound'));
+  await T(page, 1200);
+  await dismissAlerts(page);
+  await page.evaluate(() => { likeness = '0.15'; });
+  await describeAndGenerate(page, 'a long wooden fence with a mountain range behind it');
+  await waitWrapDone(page);
+  const call = log.apiCalls.find((c) => c.action === 'wraparoundPanorama');
+  if (!call) return 'FAIL: no panorama call was made';
+  const body = call.body || {};
+  if (body.likeness !== '0.15') {
+    return 'FAIL: the Degree of Caricature never reached the server: ' + JSON.stringify({ likeness: body.likeness });
+  }
+  // The seam fix must not be undone in the process: the prompt stays the idea.
+  const p = String(body.prompt || '');
+  if (/this panel joins|IDENTITY PRESERVATION IS THE TOP PRIORITY|PRIORITY ORDER/i.test(p)) {
+    return 'FAIL: the shared template is back in the prompt field: ' + JSON.stringify(p.slice(0, 120));
+  }
+  if (p.length > 400) return `FAIL: prompt is ${p.length} chars — that is a template, not an idea`;
+  return `PASS: the wraparound sends the idea alone (${p.length} chars) and carries the caricature strength as its own field`;
+};
+
 (async () => {
   let fails = 0;
   for (const [name, fn] of Object.entries(scenarios)) {
