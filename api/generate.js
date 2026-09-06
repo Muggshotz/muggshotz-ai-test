@@ -357,22 +357,60 @@ An additional reference image is attached. ${refImageA ? 'One is "Photo 2" — w
       // recognisably the customer has no reason to exist, so the identity
       // half comes back here -- server-side, where it can never drag panel
       // wording along with it -- while the prompt field stays the raw idea.
+      // ALYX'S OWN IDENTITY BLOCK, VERBATIM (Sep 2026). Copied character for
+      // character from the client template that the Three Panel path still
+      // sends -- unchanged since August, two months of tuning behind it, and
+      // demonstrably still producing a true likeness on that path tonight
+      // while Wraparound was not. Wraparound had lost it when this action's
+      // prompt was sequestered at 1:41pm, and what I put in its place at
+      // 6:12pm was my own paraphrase. His words work; mine did not. This is
+      // his text, not a rewrite of it, and it is not to be reworded.
+      //
+      // Safe to send here: this block is pure identity. The wording that
+      // broke the seams lived further down that template -- the product
+      // target line, the priority-order block, and the "this panel joins the
+      // next one" composition line -- and none of it comes with this.
       const strengthLine =
         likeness === "0.15"
           ? "Caricature strength: LIGHT. Preserve identity very strongly. Use only mild exaggeration."
           : likeness === "0.25"
           ? "Caricature strength: BALANCED. Use moderate exaggeration, but identity must remain unmistakable."
-          : likeness === "0.4"
-          ? "Caricature strength: WILD. Use bold exaggeration only on the person's real existing features. Do not invent new facial features."
-          : "";
+          : "Caricature strength: WILD. Use bold exaggeration only on the person's real existing features. Do not invent new facial features.";
 
       const identityGuard = `
-IDENTITY PRESERVATION IS THE TOP PRIORITY, ABOVE THE SCENE AND ABOVE THE STYLE.
-Use the uploaded face as the source of truth. Do not invent a new person.
-Do NOT beautify, idealise, slim, smooth, youthen, age-shift, race-shift or gender-shift the face, and do not change the person's underlying facial structure in any way.
-Do NOT replace the face with a generic cartoon face, a stock caricature face, a model's face, or any actor, celebrity, mascot or invented character.
-Keep the same hairline and the same bald head or hairstyle, the same forehead, the same brow shape, the same eye shape and spacing, the same nose width and shape, the same mouth and smile shape, the same teeth, the same cheeks, the same jawline, the same chin, the same ears, the same skin tone, the same apparent age, and the same overall facial proportions as the uploaded photo.
-A stranger who knows this person must recognise them instantly. If a choice must be made between a more attractive face and a more accurate one, choose the accurate one every time.
+Transform the uploaded person into a premium professional Muggshotz caricature.
+
+IDENTITY PRESERVATION IS THE TOP PRIORITY.
+
+Use the uploaded face as the source of truth.
+Do not invent a new person.
+Do not replace the face with a generic cartoon face.
+Do not beautify, age-shift, race-shift, gender-shift, or change the person's facial structure.
+
+Preserve the exact recognizable identity:
+same bald head or hairstyle,
+same hairline,
+same forehead,
+same eyebrow shape,
+same eye shape, eye spacing, and eye color (do not lighten, darken, or shift the iris color),
+same nose shape,
+same mouth and smile shape,
+same teeth characteristics,
+same cheeks,
+same jawline,
+same chin,
+same skin tone,
+same age impression,
+same facial proportions,
+same natural personality.
+
+Do NOT add facial hair (beard, mustache, stubble) that is not clearly visible in the uploaded photo, and do not remove facial hair that is visible.
+Keep the person's actual clothing and outfit from the uploaded photo (garment type, color, and style) unless the customer's idea below specifically describes different clothing to wear instead.
+If the customer is smiling in the uploaded photo, match how THIS person's eyes actually look when they smile (most real smiles narrow the eyes at the outer corners to some degree) rather than a generic wide-open smiling-eyes look.
+
+Caricature this exact person only.
+Exaggerate existing real features, but keep the person immediately recognizable as the uploaded person.
+
 ${strengthLine}
 `;
 
