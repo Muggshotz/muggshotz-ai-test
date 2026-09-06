@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wraparound Method Comparison</title>
+<style>
+  :root{
+    --bg:#0b0f1a;
+    --panel:#121826;
+    --panel-border:#2a3550;
+    --gold:#e0b96a;
+    --blue:#7aa2ff;
+    --text:#dfe6f5;
+    --dim:#8b96b3;
+    --good:#5fd08a;
+    --bad:#e8697a;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+    padding:24px 16px 60px;
+  }
+  h1{
+    font-size:22px;
+    margin:0 0 4px;
+    color:var(--gold);
+  }
+  .sub{
+    color:var(--dim);
+    font-size:14px;
+    margin-bottom:24px;
+  }
+  .setup{
+    background:var(--panel);
+    border:1px solid var(--panel-border);
+    border-radius:10px;
+    padding:20px;
+    max-width:640px;
+    margin:0 auto 32px;
+  }
+  label{
+    display:block;
+    font-size:13px;
+    color:var(--dim);
+    margin-bottom:6px;
+  }
+  textarea{
+    width:100%;
+    min-height:80px;
+    background:#0e1420;
+    border:1px solid var(--panel-border);
+    border-radius:8px;
+    color:var(--text);
+    padding:10px;
+    font-size:14px;
+    resize:vertical;
+    margin-bottom:16px;
+  }
+  .upload-row{
+    display:flex;
+    gap:14px;
+    align-items:center;
+    margin-bottom:16px;
+  }
+  .thumb{
+    width:64px;
+    height:64px;
+    border-radius:8px;
+    object-fit:cover;
+    border:1px solid var(--panel-border);
+    display:none;
+  }
+  input[type=file]{
+    color:var(--dim);
+    font-size:13px;
+  }
+  button{
+    width:100%;
+    padding:14px;
+    border-radius:8px;
+    border:none;
+    background:var(--blue);
+    color:#0b0f1a;
+    font-weight:600;
+    font-size:15px;
+    cursor:pointer;
+  }
+  button:disabled{
+    opacity:.45;
+    cursor:not-allowed;
+  }
+  .device-line{
+    color:var(--dim);
+    font-size:11px;
+    margin-top:10px;
+    text-align:center;
+  }
+  .cols{
+    display:grid;
+    grid-template-columns:1fr;
+    gap:24px;
+    max-width:1100px;
+    margin:0 auto;
+  }
+  @media(min-width:820px){
+    .cols{grid-template-columns:1fr 1fr;}
+  }
+  .col{
+    background:var(--panel);
+    border:1px solid var(--panel-border);
+    border-radius:10px;
+    padding:18px;
+  }
+  .col h2{
+    font-size:15px;
+    margin:0 0 4px;
+    color:var(--gold);
+  }
+  .col .desc{
+    font-size:12.5px;
+    color:var(--dim);
+    margin-bottom:14px;
+    line-height:1.4;
+  }
+  .strip{
+    display:flex;
+    border-radius:6px;
+    overflow:hidden;
+    background:#000;
+    min-height:140px;
+    align-items:stretch;
+  }
+  .strip img{
+    flex:1;
+    width:33.333%;
+    object-fit:cover;
+    display:block;
+  }
+  .status{
+    margin-top:12px;
+    font-size:13px;
+    min-height:18px;
+  }
+  .status.good{color:var(--good);}
+  .status.bad{color:var(--bad);}
+  .status.busy{color:var(--blue);}
+  .timer{
+    color:var(--dim);
+    font-size:12px;
+    margin-top:4px;
+  }
+  .placeholder{
+    color:var(--dim);
+    font-size:13px;
+    text-align:center;
+    padding:50px 10px;
+  }
+</style>
+</head>
+<body>
+
+<h1>Wraparound Method Comparison</h1>
+<div class="sub">Same photo, same prompt, both generation paths — for judging seam continuity and likeness side by side. Not customer-facing.</div>
+
+<div class="setup">
+  <label>Reference photo</label>
+  <div class="upload-row">
+    <img id="thumb" class="thumb">
+    <input type="file" id="photoInput" accept="image/*">
+  </div>
+
+  <label>Description (same text goes to both methods)</label>
+  <textarea id="promptInput" placeholder="e.g. Standing in front of a long wooden fence with a mountain range in the background, wide open sky above, wearing a cowboy hat"></textarea>
+
+  <button id="runBtn" disabled>Run Both Methods</button>
+  <div class="device-line" id="deviceLine"></div>
+</div>
+
+<div class="cols">
+  <div class="col">
+    <h2>Method A — Single Panorama (Gemini)</h2>
+    <div class="desc">One call generates the whole scene at once, sliced into thirds afterward. Aligned by construction, but the model has no explicit awareness of where the crop lines fall.</div>
+    <div class="strip" id="stripA"><div class="placeholder">Waiting to run</div></div>
+    <div class="status" id="statusA"></div>
+    <div class="timer" id="timerA"></div>
+  </div>
+
+  <div class="col">
+    <h2>Method B — Sequential (OpenAI edit)</h2>
+    <div class="desc">Center is generated first as a real edit of your photo, then Left and Right are separate calls that outpaint from Center's actual pixels. Better grounding, but each call can drift in scale/style.</div>
+    <div class="strip" id="stripB"><div class="placeholder">Waiting to run</div></div>
+    <div class="status" id="statusB"></div>
+    <div class="timer" id="timerB"></div>
+  </div>
+</div>
+
+<script>
+function getDeviceId(){
+  let id = localStorage.getItem('muggshotz_device_id');
+  if(!id){
+    id = 'dev-' + Date.now() + '-' + Math.random().toString(36).slice(2,10);
+    localStorage.setItem('muggshotz_device_id', id);
+  }
+  return id;
+}
+const deviceId = getDeviceId();
+document.getElementById('deviceLine').textContent =
+  'Device: ' + deviceId + ' — this tool draws from that device\'s real token balance (1 token per method run).';
+
+let workingImage = null;
+
+function resizeDataUrl(dataUrl, maxDimension){
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = function(){
+      let { width, height } = img;
+      if (width > height && width > maxDimension) {
+        height = Math.round(height * (maxDimension / width));
+        width = maxDimension;
+      } else if (height > maxDimension) {
+        width = Math.round(width * (maxDimension / height));
+        height = maxDimension;
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+      resolve(canvas.toDataURL('image/jpeg', 0.9));
+    };
+    img.src = dataUrl;
+  });
+}
+
+document.getElementById('photoInput').addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = async () => {
+    workingImage = await resizeDataUrl(reader.result, 1280);
+    const thumb = document.getElementById('thumb');
+    thumb.src = workingImage;
+    thumb.style.display = 'block';
+    checkReady();
+  };
+  reader.readAsDataURL(file);
+});
+document.getElementById('promptInput').addEventListener('input', checkReady);
+function checkReady(){
+  document.getElementById('runBtn').disabled =
+    !workingImage || !document.getElementById('promptInput').value.trim();
+}
+
+function setStatus(id, text, cls){
+  const el = document.getElementById(id);
+  el.textContent = text;
+  el.className = 'status' + (cls ? ' ' + cls : '');
+}
+function setTimer(id, seconds){
+  document.getElementById(id).textContent = seconds != null ? seconds.toFixed(1) + 's' : '';
+}
+function renderStrip(id, urls){
+  const el = document.getElementById(id);
+  el.innerHTML = '';
+  urls.forEach(u => {
+    const img = document.createElement('img');
+    img.src = u;
+    el.appendChild(img);
+  });
+}
+
+async function runMethodA(prompt){
+  const startedAt = performance.now();
+  setStatus('statusA', 'Generating panorama...', 'busy');
+  try{
+    const resp = await fetch('/api/generate', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        action: 'wraparoundPanorama',
+        image: workingImage,
+        prompt,
+        deviceId
+      })
+    });
+    const data = await resp.json();
+    setTimer('timerA', (performance.now() - startedAt) / 1000);
+    if(!resp.ok){
+      setStatus('statusA', 'Error: ' + (data.error || 'unknown'), 'bad');
+      return;
+    }
+    renderStrip('stripA', [data.leftUrl, data.centerUrl, data.rightUrl]);
+    setStatus('statusA', 'Done — 1 token used.', 'good');
+  }catch(err){
+    setTimer('timerA', (performance.now() - startedAt) / 1000);
+    setStatus('statusA', 'Request failed: ' + err.message, 'bad');
+  }
+}
+
+async function runMethodB(prompt){
+  const startedAt = performance.now();
+  setStatus('statusB', 'Generating center panel...', 'busy');
+  try{
+    const centerPrompt = `
+CRITICAL MUGGSHOTZ LIKENESS RULE:
+This is a caricature of the exact person in the uploaded photo. Keep a strong, unmistakable likeness — same face, same attitude, same expression.
+
+CUSTOMER REQUEST:
+${prompt}
+
+COMPOSITION: This design will be printed as ONE CONTINUOUS WRAPAROUND image around a curved surface. The LEFT and RIGHT edges are the seam where this panel joins the next one — keep detail extended sharply all the way to those edges. Compose with detail extended toward the edges rather than tightly centered, so nothing important is lost at the seam.
+`;
+    const centerResp = await fetch('/api/generate', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        image: workingImage,
+        prompt: centerPrompt,
+        deviceId,
+        size: '1536x1024'
+      })
+    });
+    const centerData = await centerResp.json();
+    if(!centerResp.ok){
+      setTimer('timerB', (performance.now() - startedAt) / 1000);
+      setStatus('statusB', 'Error (center): ' + (centerData.error || 'unknown'), 'bad');
+      return;
+    }
+    renderStrip('stripB', [centerData.imageUrl]);
+    setStatus('statusB', 'Center done — generating left panel...', 'busy');
+
+    const centerAsDataUrl = await (await fetch(centerData.imageUrl)).blob().then(b => new Promise((resolve) => {
+      const r = new FileReader();
+      r.onloadend = () => resolve(r.result);
+      r.readAsDataURL(b);
+    }));
+    const centerResized = await resizeDataUrl(centerAsDataUrl, 1280);
+
+    const leftResp = await fetch('/api/generate', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        image: centerResized,
+        prompt: 'Continue this scene to the left.',
+        panelRole: 'left',
+        deviceId,
+        size: '1536x1024'
+      })
+    });
+    const leftData = await leftResp.json();
+    if(!leftResp.ok){
+      setTimer('timerB', (performance.now() - startedAt) / 1000);
+      setStatus('statusB', 'Error (left): ' + (leftData.error || 'unknown'), 'bad');
+      return;
+    }
+
+    setStatus('statusB', 'Left done — generating right panel...', 'busy');
+    const rightResp = await fetch('/api/generate', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        image: centerResized,
+        prompt: 'Continue this scene to the right.',
+        panelRole: 'right',
+        deviceId,
+        size: '1536x1024'
+      })
+    });
+    const rightData = await rightResp.json();
+    setTimer('timerB', (performance.now() - startedAt) / 1000);
+    if(!rightResp.ok){
+      setStatus('statusB', 'Error (right): ' + (rightData.error || 'unknown'), 'bad');
+      return;
+    }
+
+    renderStrip('stripB', [leftData.imageUrl, centerData.imageUrl, rightData.imageUrl]);
+    setStatus('statusB', 'Done — 1 token used (left/right are free continuations).', 'good');
+  }catch(err){
+    setTimer('timerB', (performance.now() - startedAt) / 1000);
+    setStatus('statusB', 'Request failed: ' + err.message, 'bad');
+  }
+}
+
+document.getElementById('runBtn').addEventListener('click', async () => {
+  const prompt = document.getElementById('promptInput').value.trim();
+  const btn = document.getElementById('runBtn');
+  btn.disabled = true;
+  btn.textContent = 'Running both...';
+  renderStrip('stripA', []);
+  renderStrip('stripB', []);
+  document.getElementById('stripA').innerHTML = '<div class="placeholder">Working...</div>';
+  document.getElementById('stripB').innerHTML = '<div class="placeholder">Working...</div>';
+  setTimer('timerA', null);
+  setTimer('timerB', null);
+
+  await Promise.all([
+    runMethodA(prompt),
+    runMethodB(prompt)
+  ]);
+
+  btn.disabled = false;
+  btn.textContent = 'Run Both Methods';
+});
+</script>
+
+</body>
+</html>
