@@ -2,7 +2,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head><link rel="manifest" href="needles-manifest.json">
-<!-- BUILD-MARKER: RECALL-HOSTED-v59 -->
+<!-- BUILD-MARKER: LIGHTBOX-ROW-v60 -->
 <!-- If you can see this comment on GitHub, this exact paste landed. -->
 <!-- If your live site's page source does NOT say -->
 <!-- "INSTANT-FIT-SCREEN-v47" right here, the upload/deploy did -->
@@ -818,12 +818,14 @@ body.panels-active #verifyCard{display:none!important}
   <!-- Two honest exits (Alyx, Sep 2026): "Return" used to open What's Next
        with Checkout on it, which is forward, not back. Back returns to the
        screen the customer came from; Looks Good moves on to What's Next. -->
-  <div id="mockupLightboxActions" style="display:none;position:absolute;left:50%;bottom:24px;transform:translateX(-50%);gap:10px;width:auto;max-width:96vw;flex-wrap:wrap;justify-content:center">
+  <div id="mockupLightboxActions" style="display:none;position:absolute;left:50%;bottom:24px;transform:translateX(-50%);gap:10px;width:auto;max-width:96vw;flex-wrap:wrap;justify-content:center;align-items:stretch">
+    <!-- The nudge comes FIRST so it takes its own line above the buttons and
+         the three buttons stay together on one row (Alyx, Sep 2026). -->
+    <div id="mockupLightboxNudge" style="display:none;flex-basis:100%;text-align:center;color:#fff;font-size:13px;font-weight:700;background:rgba(0,0,0,.72);border:1px solid rgba(122,184,255,.5);border-radius:999px;padding:6px 16px;margin:0 auto 4px;width:max-content;max-width:100%">Want a frame around it? Try one on. It's free to look.</div>
     <button type="button" id="mockupLightboxBack" class="download-btn" style="width:auto;margin:0;padding:.8rem 1.3rem;white-space:nowrap" onclick="goBackFromFinalMockup()">↩️ Back</button>
     <!-- The frame offer lives HERE now (Alyx, Sep 2026): on the finished
          mockup, where a frame can be judged against the real mug. Mug
          three-panel flow only. -->
-    <div id="mockupLightboxNudge" style="display:none;flex-basis:100%;text-align:center;color:#7ab8ff;font-size:13px;font-weight:700;text-shadow:0 1px 3px rgba(0,0,0,.8);margin-bottom:2px">Want a frame around it? Try one on. It's free to look.</div>
     <button type="button" id="mockupLightboxFrame" class="download-btn" style="display:none;width:auto;margin:0;padding:.8rem 1.3rem;white-space:nowrap;border-color:#003c8c;color:#7ab8ff" onclick="offerFrameFromMockup()">🖼️ Add a Frame</button>
     <button type="button" id="mockupLightboxReturn" class="generate-btn" style="width:auto;margin:0;padding:.8rem 1.4rem;white-space:nowrap" onclick="returnFromFinalMockup()">✅ Looks Good</button>
   </div>
