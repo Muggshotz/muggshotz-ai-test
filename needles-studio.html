@@ -2,7 +2,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head><link rel="manifest" href="needles-manifest.json">
-<!-- BUILD-MARKER: LIGHTBOX-ROW-v60 -->
+<!-- BUILD-MARKER: FRAME-STUDIO-v61 -->
 <!-- If you can see this comment on GitHub, this exact paste landed. -->
 <!-- If your live site's page source does NOT say -->
 <!-- "INSTANT-FIT-SCREEN-v47" right here, the upload/deploy did -->
@@ -205,6 +205,19 @@
 }
 @media (max-width:999px){
   .fitLeft{position:sticky;top:0;z-index:6;background:inherit;padding:6px 0 8px}
+}
+/* Frame studio (Alyx, Sep 2026): same shape as Fit Your Picture. Preview
+   pinned on the left with Apply and Back beneath it, the frame catalogue
+   scrolling on the right; stacked with a pinned preview on phones. */
+#frameStudio{display:grid;grid-template-columns:minmax(0,1fr);gap:12px}
+#frameStudio .fsLeft,#frameStudio .fsRight{min-width:0}
+#frameStudio #accessorizeCard{margin-top:0;padding-top:0;border-top:none}
+@media (min-width:1000px){
+  #frameStudio{width:min(980px,calc(100vw - 48px));position:relative;left:50%;transform:translateX(-50%);grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:22px;align-items:start}
+  #frameStudio .fsLeft{position:sticky;top:12px}
+}
+@media (max-width:999px){
+  #frameStudio .fsLeft{position:sticky;top:0;z-index:6;background:#0a0a0a;padding:6px 0 8px}
 }
 .curve-mode-row{flex-wrap:wrap}
 .curve-mode-btn svg{display:block;margin:0 auto 3px;width:44px;height:16px;color:#7ab8ff}
@@ -1693,7 +1706,7 @@ Tell Needles <span style="color:#7ab8ff">what you have in mind</span>
 <div id="accessorizePreviewStrip" style="display:flex;gap:8px;margin-top:1rem"></div>
 
 <div id="accessorizeCommittedContent" style="display:none">
-<div class="note-prominent" style="margin-top:.9rem;margin-bottom:.75rem">Pick a Frame or Window Sill above and try as many combinations as you like — nothing is saved until you tap Satisfied below.</div>
+<div class="note-prominent" id="accessorizeCommittedNote" style="margin-top:.9rem;margin-bottom:.75rem">Pick a Frame or Window Sill above and try as many combinations as you like — nothing is saved until you tap Satisfied below.</div>
 <div id="frameFitSlidersWrap" style="display:none;margin-top:.9rem">
 <button type="button" class="download-btn" id="frameFitSlidersToggleBtn" style="margin-top:0" onclick="toggleFrameFitSliders()">🎚️ Adjust Frame Fit</button>
 <div id="frameFitSliders" style="display:none;margin-top:.75rem">
@@ -11033,6 +11046,34 @@ async function beginFinalMockupFetch(){
   }
 }
 
+// The two-column frame studio, used when the catalogue opens from the
+// mockup: accessorizeCard (preview + Apply + Back) on the left, the frame
+// catalogue card on the right. Both go back where they came from on exit.
+let frameStudioHome=null;
+function mountFrameStudio(card,frameCard){
+  if(!card||!card.parentNode)return;
+  let studio=document.getElementById('frameStudio');
+  if(!studio){
+    studio=document.createElement('div');
+    studio.id='frameStudio';
+    studio.innerHTML='<div class="fsLeft"></div><div class="fsRight"></div>';
+  }
+  if(!frameStudioHome)frameStudioHome={parent:card.parentNode,next:card.nextSibling};
+  if(!studio.parentNode)card.parentNode.insertBefore(studio,card);
+  studio.querySelector('.fsLeft').appendChild(card);
+  if(frameCard)studio.querySelector('.fsRight').appendChild(frameCard);
+}
+function unmountFrameStudio(){
+  const studio=document.getElementById('frameStudio');
+  if(!studio||!studio.parentNode)return;
+  const card=document.getElementById('accessorizeCard');
+  if(card&&frameStudioHome){
+    const {parent,next}=frameStudioHome;
+    if(next&&next.parentNode===parent)parent.insertBefore(card,next); else parent.appendChild(card);
+  }
+  restoreFrameCardsToHome();
+  studio.remove();
+}
 function cancelAccessorizeToOffer(){
   revealFlowActive=false;
   clearTimeout(revealAutoApplyTimer);
@@ -11095,6 +11136,7 @@ function reopenMockupLightboxFromFrameOffer(){
   frameOfferFromMockup=false;
   const card=document.getElementById('accessorizeCard');
   if(card)card.style.display='none';
+  unmountFrameStudio();
   restoreFrameCardsToHome();
   if(!currentMockupUrls||!currentMockupUrls.length){returnFromFinalMockup();return;}
   openMockupLightbox(currentMockupIndex||0);
@@ -11982,7 +12024,7 @@ function renderAccessorizeStripThree(urls){
   uniqueUrls.forEach(u=>{
     const img=document.createElement('img');
     img.src=u;
-    img.style.cssText='flex:1;min-width:0;border-radius:8px;border:1px solid #003c8c;object-fit:contain;max-height:170px;background:#0d0d0d';
+    img.style.cssText='flex:1;min-width:0;border-radius:8px;border:1px solid #003c8c;object-fit:contain;max-height:'+(uniqueUrls.length===1?'440px':'170px')+';background:#0d0d0d';
     strip.appendChild(img);
   });
 }
@@ -12073,10 +12115,13 @@ function showAccessorizeStep(){
   // for a sill's opening), and the way back is the mockup itself.
   if(frameOfferFromMockup&&sillCard)sillCard.style.display='none';
   if(frameOfferFromMockup&&crossPromo)crossPromo.style.display='none';
+  if(frameOfferFromMockup)mountFrameStudio(card,frameCard); else unmountFrameStudio();
   const cancelBtn=document.getElementById('accessorizeCancelBtn');
   if(cancelBtn)cancelBtn.textContent=frameOfferFromMockup?'↩️ Back to the Mockup':'↩️ Cancel — Go Back';
   const satisfiedBtn=document.getElementById('accessorizeSatisfiedBtn');
   if(satisfiedBtn)satisfiedBtn.textContent=frameOfferFromMockup?'✅ Apply This Frame':'✅ Satisfied?';
+  const committedNote=document.getElementById('accessorizeCommittedNote');
+  if(committedNote)committedNote.textContent=frameOfferFromMockup?'Tap any frame to try it on. Nothing is saved until you tap Apply This Frame.':'Pick a Frame or Window Sill above and try as many combinations as you like — nothing is saved until you tap Satisfied below.';
   updateAccessorizePreview();
   // If they already decided before generating, don't yank them back to a
   // decision that's already made -- only steer them to the picker if
@@ -12115,6 +12160,7 @@ function hideAccessorizeStep(){
   pending40ozRaw=null;
   const card=document.getElementById('accessorizeCard');
   if(card)card.style.display='none';
+  unmountFrameStudio();
   restoreFrameCardsToHome();
   if(revealFlowActive)return;
   // The frame cards just got yanked out from under whatever the customer

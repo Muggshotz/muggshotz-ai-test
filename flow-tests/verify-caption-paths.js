@@ -125,6 +125,34 @@ scenarios.metallicEffectsTakeTheColour = async (page) => {
   return 'PASS: metallic effects take the picked colour and keep their own look when the colour is white';
 };
 
+scenarios.frameStudioTwoColumns = async (page) => {
+  await openStudio(page);
+  await reachPanels(page);
+  await page.click('#coverMePanelDoneBtn');
+  await page.waitForFunction(() => document.getElementById('revealOverlay').style.display === 'flex', null, { timeout: 20000 });
+  await page.evaluate(() => chooseEdgeStyleAndContinue(true));
+  await page.waitForFunction(() => document.getElementById('mockupLightboxOverlay').classList.contains('visible'), null, { timeout: 20000 });
+  await page.click('#mockupLightboxFrame');
+  await T(page, 1000);
+  const wide = await page.evaluate(() => {
+    const l = document.querySelector('#frameStudio .fsLeft'), r = document.querySelector('#frameStudio .fsRight');
+    if (!l || !r) return { missing: true };
+    const lb = l.getBoundingClientRect(), rb = r.getBoundingClientRect();
+    return { sideBySide: lb.right <= rb.left + 2, sticky: getComputedStyle(l).position, previewInLeft: !!l.querySelector('#accessorizePreviewStrip'), gridInRight: !!r.querySelector('#frameSectionCard'), applyInLeft: !!l.querySelector('#accessorizeSatisfiedBtn') };
+  });
+  if (wide.missing) return 'FAIL: frame studio not mounted';
+  if (!wide.sideBySide || wide.sticky !== 'sticky') return 'FAIL: not two columns with a pinned preview: ' + JSON.stringify(wide);
+  if (!wide.previewInLeft || !wide.gridInRight || !wide.applyInLeft) return 'FAIL: pieces in the wrong columns: ' + JSON.stringify(wide);
+  await page.setViewportSize({ width: 420, height: 800 }); await T(page, 400);
+  const narrow = await page.evaluate(() => { const l = document.querySelector('#frameStudio .fsLeft'), r = document.querySelector('#frameStudio .fsRight'); return { sameX: Math.abs(l.getBoundingClientRect().left - r.getBoundingClientRect().left) < 2, sticky: getComputedStyle(l).position }; });
+  if (!narrow.sameX || narrow.sticky !== 'sticky') return 'FAIL: phone layout ' + JSON.stringify(narrow);
+  await page.setViewportSize({ width: 1280, height: 900 }); await T(page, 300);
+  await page.click('#accessorizeCancelBtn'); await T(page, 500);
+  const after = await page.evaluate(() => ({ studio: !!document.getElementById('frameStudio'), lightbox: document.getElementById('mockupLightboxOverlay').classList.contains('visible'), cardHome: document.getElementById('accessorizeCard').parentNode.id || document.getElementById('accessorizeCard').parentNode.className }));
+  if (after.studio || !after.lightbox) return 'FAIL: cancel did not dismantle the studio and return to the mockup: ' + JSON.stringify(after);
+  return 'PASS: frame catalogue opens as preview-left, frames-right with a pinned preview, stacks on phones, and packs away on cancel';
+};
+
 (async () => {
   let failed = 0;
   for (const [name, fn] of Object.entries(scenarios)) {
