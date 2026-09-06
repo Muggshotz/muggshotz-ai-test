@@ -605,6 +605,45 @@ scenarios.wraparoundCarriesIdentityAndStrength = async (page, log) => {
   return `PASS: the wraparound sends the idea alone (${p.length} chars) and carries the caricature strength as its own field`;
 };
 
+
+// The two-column frame studio was gated on the mockup entry point, so the
+// Wraparound frame offer -- which arrives through the reveal flow -- kept the
+// old stacked layout and pushed the picture off the screen you judge against.
+scenarios.wraparoundFrameOfferOpensTheStudio = async (page) => {
+  await mugToPrintStyle(page);
+  await page.evaluate(() => pickMugPrintMode('wraparound'));
+  await T(page, 1200);
+  await dismissAlerts(page);
+  await describeAndGenerate(page, 'a long wooden fence with a mountain range behind it');
+  await waitWrapDone(page);
+  await T(page, 800);
+  const opened = await page.evaluate(async () => {
+    if (typeof openAccessorizeForRevealFlow === 'function') openAccessorizeForRevealFlow();
+    await new Promise(r => setTimeout(r, 900));
+    const l = document.querySelector('#frameStudio .fsLeft'), r2 = document.querySelector('#frameStudio .fsRight');
+    if (!l || !r2) return { missing: true };
+    const lb = l.getBoundingClientRect(), rb = r2.getBoundingClientRect();
+    return {
+      sideBySide: lb.right <= rb.left + 2,
+      sticky: getComputedStyle(l).position,
+      previewLeft: !!l.querySelector('#accessorizePreviewStrip'),
+      framesRight: !!r2.querySelector('#frameSectionCard'),
+    };
+  });
+  if (opened.missing) return 'FAIL: the frame studio did not mount on the wraparound frame offer';
+  if (!opened.sideBySide || opened.sticky !== 'sticky') return 'FAIL: not two columns with a pinned picture: ' + JSON.stringify(opened);
+  if (!opened.previewLeft || !opened.framesRight) return 'FAIL: pieces in the wrong columns: ' + JSON.stringify(opened);
+  // The layout is the default now, not a per-entry-point special case: the
+  // Window Sill catalogue rides in the right column too when it is offered.
+  const sill = await page.evaluate(() => {
+    const sc = document.getElementById('windowSillSectionCard');
+    if (!sc || getComputedStyle(sc).display === 'none') return { notOffered: true };
+    return { inRight: !!document.querySelector('#frameStudio .fsRight #windowSillSectionCard') };
+  });
+  if (!sill.notOffered && !sill.inRight) return 'FAIL: Window Sill is on offer but sits outside the studio columns';
+  return 'PASS: the Wraparound frame offer opens the same two-column studio, picture pinned left, catalogues scrolling right';
+};
+
 (async () => {
   let fails = 0;
   for (const [name, fn] of Object.entries(scenarios)) {
