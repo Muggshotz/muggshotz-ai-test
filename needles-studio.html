@@ -2,7 +2,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head><link rel="manifest" href="needles-manifest.json">
-<!-- BUILD-MARKER: WRAP-PREVIEW-TRUE-v66 -->
+<!-- BUILD-MARKER: WRAP-PREVIEW-SAME-FILE-v67 -->
 <!-- If you can see this comment on GitHub, this exact paste landed. -->
 <!-- If your live site's page source does NOT say -->
 <!-- "INSTANT-FIT-SCREEN-v47" right here, the upload/deploy did -->
@@ -10070,8 +10070,26 @@ async function enterRevealStage(){
       seamRawRightUrl=rightDesign.url;
       seamLeftOverlapPx=0;
       seamRightOverlapPx=0;
-      const stitched=await stitchThreePanelsRaw(centerDesign.url,leftDesign.url,rightDesign.url);
-      revealOriginalArtworkUrls=[stitched];
+      // THE PREVIEW IS THE MUG'S OWN PICTURE (Alyx, Sep 2026). This used to
+      // re-glue the three sliced panels back into a strip, while the mockup
+      // and the print file were built from the uncut panorama the server
+      // returned. Two different pictures, and the customer judged the wrap on
+      // the wrong one: the panels have already had their outer edges faded to
+      // white, the right third can differ from the other two by a pixel or
+      // two (it takes the remainder of the width), and stitchThreePanelsRaw
+      // cover-crops each one into the centre panel's exact slot to close any
+      // gap -- so the reassembly drifts at the joins even when the panorama
+      // it came from is flawless. Alyx put it plainly: if a picture goes in
+      // one end and a different picture comes out the other, something in
+      // between switched it. When the uncut strip exists, show that. The
+      // stitch stays for the classic fallback, which has no panorama and
+      // really is three independently generated panels.
+      if(wraparoundPanoramaUrl){
+        revealOriginalArtworkUrls=[wraparoundPanoramaUrl];
+      } else {
+        const stitched=await stitchThreePanelsRaw(centerDesign.url,leftDesign.url,rightDesign.url);
+        revealOriginalArtworkUrls=[stitched];
+      }
     }catch(err){
       console.error('Could not stitch the panorama for Reveal:',err);
       choiceOverlay.style.display='none';
@@ -12068,8 +12086,16 @@ async function updateAccessorizePreview(){
         // raw un-stitched panels from scratch, so leaving these out
         // silently reverted every alignment choice back to 0 the moment
         // this screen rendered (the bug that surfaced this fix).
-        const raw=await stitchThreePanelsRaw(pendingWraparoundRaw.center,pendingWraparoundRaw.left,pendingWraparoundRaw.right,seamLeftOverlapPx,seamRightOverlapPx,seamLeftVertPx,seamRightVertPx,seamLeftCoveragePct,seamRightCoveragePct);
-        renderAccessorizeStrip(raw);
+        // Same rule as the finished-artwork screen: the uncut strip is what
+        // prints, so it is what gets shown. The seam sliders only exist on
+        // the classic path, and the classic path is the one that still
+        // re-stitches -- a panorama has no seams to align.
+        if(wraparoundPanoramaUrl){
+          renderAccessorizeStrip(wraparoundPanoramaUrl);
+        } else {
+          const raw=await stitchThreePanelsRaw(pendingWraparoundRaw.center,pendingWraparoundRaw.left,pendingWraparoundRaw.right,seamLeftOverlapPx,seamRightOverlapPx,seamLeftVertPx,seamRightVertPx,seamLeftCoveragePct,seamRightCoveragePct);
+          renderAccessorizeStrip(raw);
+        }
       }
     } else if(pending40ozRaw){
       hideFrameManualFitControls();

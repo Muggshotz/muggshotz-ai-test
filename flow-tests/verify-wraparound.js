@@ -539,6 +539,32 @@ scenarios.threePanelPreviewIsNotTrimmed = async (page) => {
   return 'PASS: Three Panels is left alone — only Wraparound is trimmed to the wrap';
 };
 
+
+// THE SWITCHED PICTURE (Alyx, Sep 2026): the preview must be the very file
+// that goes on the mug, not a reassembly of the sliced panels. If a picture
+// goes in one end and a different picture comes out the other, something in
+// between switched it.
+scenarios.previewIsTheSameFileAsTheMug = async (page, log, mockupBodies) => {
+  await mugToPrintStyle(page);
+  await page.evaluate(() => pickMugPrintMode('wraparound'));
+  await T(page, 1200);
+  await dismissAlerts(page);
+  await describeAndGenerate(page, 'a long wooden fence with a mountain range behind it');
+  await waitWrapDone(page);
+  await T(page, 1000);
+  const r = await page.evaluate(() => ({
+    preview: revealOriginalArtworkUrls[0],
+    toTheMug: wraparoundPanoramaUrl,
+    stitched: String(revealOriginalArtworkUrls[0] || '').startsWith('data:'),
+  }));
+  if (!r.toTheMug) return 'FAIL: no panorama was kept for the mug at all';
+  if (r.stitched) return 'FAIL: the preview is a re-stitched canvas, not the mug\'s own file';
+  if (r.preview !== r.toTheMug) {
+    return 'FAIL: preview and mug are different files: ' + JSON.stringify(r);
+  }
+  return 'PASS: the finished-artwork preview is the identical file that travels to the mug';
+};
+
 (async () => {
   let fails = 0;
   for (const [name, fn] of Object.entries(scenarios)) {
