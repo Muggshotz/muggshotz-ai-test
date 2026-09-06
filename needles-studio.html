@@ -2,7 +2,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head><link rel="manifest" href="needles-manifest.json">
-<!-- BUILD-MARKER: TINTED-METALS-v58 -->
+<!-- BUILD-MARKER: LIGHTBOX-ROW-v60 -->
 <!-- If you can see this comment on GitHub, this exact paste landed. -->
 <!-- If your live site's page source does NOT say -->
 <!-- "INSTANT-FIT-SCREEN-v47" right here, the upload/deploy did -->
@@ -818,12 +818,14 @@ body.panels-active #verifyCard{display:none!important}
   <!-- Two honest exits (Alyx, Sep 2026): "Return" used to open What's Next
        with Checkout on it, which is forward, not back. Back returns to the
        screen the customer came from; Looks Good moves on to What's Next. -->
-  <div id="mockupLightboxActions" style="display:none;position:absolute;left:50%;bottom:24px;transform:translateX(-50%);gap:10px;width:auto;max-width:96vw;flex-wrap:wrap;justify-content:center">
+  <div id="mockupLightboxActions" style="display:none;position:absolute;left:50%;bottom:24px;transform:translateX(-50%);gap:10px;width:auto;max-width:96vw;flex-wrap:wrap;justify-content:center;align-items:stretch">
+    <!-- The nudge comes FIRST so it takes its own line above the buttons and
+         the three buttons stay together on one row (Alyx, Sep 2026). -->
+    <div id="mockupLightboxNudge" style="display:none;flex-basis:100%;text-align:center;color:#fff;font-size:13px;font-weight:700;background:rgba(0,0,0,.72);border:1px solid rgba(122,184,255,.5);border-radius:999px;padding:6px 16px;margin:0 auto 4px;width:max-content;max-width:100%">Want a frame around it? Try one on. It's free to look.</div>
     <button type="button" id="mockupLightboxBack" class="download-btn" style="width:auto;margin:0;padding:.8rem 1.3rem;white-space:nowrap" onclick="goBackFromFinalMockup()">↩️ Back</button>
     <!-- The frame offer lives HERE now (Alyx, Sep 2026): on the finished
          mockup, where a frame can be judged against the real mug. Mug
          three-panel flow only. -->
-    <div id="mockupLightboxNudge" style="display:none;flex-basis:100%;text-align:center;color:#7ab8ff;font-size:13px;font-weight:700;text-shadow:0 1px 3px rgba(0,0,0,.8);margin-bottom:2px">Want a frame around it? Try one on. It's free to look.</div>
     <button type="button" id="mockupLightboxFrame" class="download-btn" style="display:none;width:auto;margin:0;padding:.8rem 1.3rem;white-space:nowrap;border-color:#003c8c;color:#7ab8ff" onclick="offerFrameFromMockup()">🖼️ Add a Frame</button>
     <button type="button" id="mockupLightboxReturn" class="generate-btn" style="width:auto;margin:0;padding:.8rem 1.4rem;white-space:nowrap" onclick="returnFromFinalMockup()">✅ Looks Good</button>
   </div>
@@ -1524,7 +1526,7 @@ Tell Needles <span style="color:#7ab8ff">what you have in mind</span>
 </div>
 
 <div id="mockupLoadingOverlay" class="step-lock-overlay" style="display:none;background:#000;align-items:center">
-<div style="text-align:center;font-size:20px;font-weight:800;color:#2196ff;animation:mugSelectFlash 1s ease-in-out infinite">Your mockup is being generated. Please be patient, this may take a moment.</div>
+<div id="waitOverlayText" style="text-align:center;font-size:20px;font-weight:800;color:#2196ff;animation:mugSelectFlash 1s ease-in-out infinite">Your mockup is being generated. Please be patient, this may take a moment.</div>
 </div>
 
 <div id="seamFixOverlay" class="step-lock-overlay" style="display:none">
@@ -7785,14 +7787,17 @@ async function coverMePanelDone(){
       if(needs){
         waiting=true;
         if(doneBtn){doneBtn.disabled=true;doneBtn.innerHTML='<span class="spinner"></span>Saving your picture...';}
+        showWaitOverlay('Saving your picture. Please be patient, this may take a moment.');
         await ensureByoUploaded();
       }
     }catch(err){
       console.error('Could not save the picture:',err);
+      hideWaitOverlay();
       if(doneBtn){doneBtn.disabled=false;doneBtn.innerHTML=label;}
       showGuidanceAlert(describeUploadFailure(err).replace(/faded picture/,'picture').replace(/, or drag the slider all the way to Sharp to carry on without a fade/,'').replace(/ or drag the slider all the way to Sharp to carry on without a fade/,''));
       return;
     }
+    hideWaitOverlay();
     if(waiting&&doneBtn){doneBtn.disabled=false;doneBtn.innerHTML=label;}
   }
   // Caption first (Sep 2026): bake it into the fitted picture, or put the
@@ -7802,15 +7807,18 @@ async function coverMePanelDone(){
   if(needsBake){
     const label=doneBtn?doneBtn.innerHTML:'';
     if(doneBtn){doneBtn.disabled=true;doneBtn.innerHTML='<span class="spinner"></span>Saving your caption...';}
+    showWaitOverlay('Saving your caption. Please be patient, this may take a moment.');
     try{
       await bakeCaptionsForPanels();
     }catch(err){
       console.error('Could not save the caption:',err);
+      hideWaitOverlay();
       if(doneBtn){doneBtn.disabled=false;doneBtn.innerHTML=label;}
       showGuidanceAlert(describeUploadFailure(err).replace(/faded picture/,'captioned picture').replace(/drag the slider all the way to Sharp to carry on without a fade/,'clear the caption box to carry on without a caption'));
       return;
     }
-    if(doneBtn){doneBtn.disabled=false;doneBtn.innerHTML=label;}
+    hideWaitOverlay();
+      if(doneBtn){doneBtn.disabled=false;doneBtn.innerHTML=label;}
   }
   document.getElementById('coverMePanelCard').style.display='none';
   if(panelScreenExit==='reveal'){
@@ -10910,6 +10918,21 @@ async function confirmFrameFadeAndContinue(){
 let revealFlowActive=false;
 let revealFlowThreePanel=false;
 
+// The full-screen wait, with a message for what is actually being waited
+// on (Alyx, Sep 2026: a long save behind a small spinner reads as stuck).
+const WAIT_OVERLAY_DEFAULT='Your mockup is being generated. Please be patient, this may take a moment.';
+function showWaitOverlay(msg){
+  const o=document.getElementById('mockupLoadingOverlay');
+  const t=document.getElementById('waitOverlayText');
+  if(t)t.textContent=msg||WAIT_OVERLAY_DEFAULT;
+  if(o){o.style.display='flex';document.body.classList.add('step-locked');}
+}
+function hideWaitOverlay(){
+  const o=document.getElementById('mockupLoadingOverlay');
+  const t=document.getElementById('waitOverlayText');
+  if(o){o.style.display='none';document.body.classList.remove('step-locked');}
+  if(t)t.textContent=WAIT_OVERLAY_DEFAULT;
+}
 async function beginFinalMockupFetch(){
   frameOfferFromMockup=false;
   const overlay=document.getElementById('mockupLoadingOverlay');
@@ -13189,6 +13212,7 @@ async function makeTestSingleZonePanorama(side){
       const newWorking=await resizeDataUrl(newWorkingRaw, 1280);
       previousImageData=workingImage;
       setWorkingImageDataOnly(newWorking);
+      lastHostedResultUrl=/^https?:\/\//.test(resultUrl||'')?resultUrl:null;
       saveWorkshop();
     }catch(recycleErr){
       console.error('Could not recycle result into the working image state:',recycleErr);
@@ -14288,9 +14312,14 @@ function cancelGeneration(){
   }
 }
 
+// The hosted copy of the last generated design (the URL the generator
+// returned). A recall registers THAT as the design, so Done never has to
+// upload a multi-megabyte data URL again (Alyx: "thinking for over two
+// minutes").
+let lastHostedResultUrl=null;
 function saveWorkshop(){
   try{
-    localStorage.setItem('muggshotz_workshop',JSON.stringify({working:uploadedImageData,previous:previousImageData,designId:currentDesignId}));
+    localStorage.setItem('muggshotz_workshop',JSON.stringify({working:uploadedImageData,previous:previousImageData,designId:currentDesignId,hosted:lastHostedResultUrl}));
   }catch(e){
     try{
       localStorage.setItem('muggshotz_workshop',JSON.stringify({working:uploadedImageData,previous:null,designId:currentDesignId}));
@@ -14413,7 +14442,8 @@ function recallLastGeneratedImage(){
     // spotlight, and route to the product picker when no product is chosen
     // yet; approval follows once the colour is picked.
     if(!currentDesignId){currentDesignId='design-'+Date.now();}
-    if(!findDesignById(currentDesignId)){recentDesigns.push({id:currentDesignId,url:saved.working});saveMugState();}
+    if(!findDesignById(currentDesignId)){recentDesigns.push({id:currentDesignId,url:saved.hosted||saved.working});saveMugState();}
+    lastHostedResultUrl=saved.hosted||null;
     const startOver=document.getElementById('startOverBtn');
     if(startOver)startOver.style.display='none';
     document.body.classList.remove('initial-upload-focus');

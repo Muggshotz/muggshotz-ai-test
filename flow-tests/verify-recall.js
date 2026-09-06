@@ -7,7 +7,7 @@ const T = (page, ms) => page.waitForTimeout(ms);
 (async () => {
   const { browser, page, log } = await launch({ viewport: { width: 1280, height: 900 } });
   const photo = 'data:image/jpeg;base64,' + fs.readFileSync(path.join(__dirname, 'test-photo.jpg')).toString('base64');
-  await page.addInitScript((p) => { localStorage.setItem('muggshotz_workshop_prev', JSON.stringify({ working: p, previous: p, designId: 'design-recall-1' })); }, photo);
+  await page.addInitScript((p) => { localStorage.setItem('muggshotz_workshop_prev', JSON.stringify({ working: p, previous: p, designId: 'design-recall-1', hosted: 'https://example.test/hosted-design.jpg' })); }, photo);
   let result = 'PASS: recall lifts the spotlight, registers the design, routes through product to approval, and approval opens Fit Your Picture';
   try {
     await openStudio(page);
@@ -25,6 +25,8 @@ const T = (page, ms) => page.waitForTimeout(ms);
     if (st.dim) throw new Error('page still in the first-visit spotlight');
     if (st.startOver !== 'none') throw new Error('"please select" warning still showing');
     if (!st.design) throw new Error('recalled design not registered');
+    const hostedUrl = await page.evaluate(() => findDesignById(currentDesignId).url);
+    if (hostedUrl !== 'https://example.test/hosted-design.jpg') throw new Error('recall should register the hosted copy, got ' + hostedUrl.slice(0, 40));
     if (parseFloat(st.productCard) < 0.95) throw new Error('product card still dimmed (' + st.productCard + ')');
     await page.locator('#productCard .btn-select[data-val="mug"]').click({ force: true });
     await T(page, 1200); await dismissAlerts(page);
