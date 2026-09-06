@@ -2,7 +2,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head><link rel="manifest" href="needles-manifest.json">
-<!-- BUILD-MARKER: FRAMES-ART-ONLY-v55 -->
+<!-- BUILD-MARKER: CAPTION-PATHS-v56 -->
 <!-- If you can see this comment on GitHub, this exact paste landed. -->
 <!-- If your live site's page source does NOT say -->
 <!-- "INSTANT-FIT-SCREEN-v47" right here, the upload/deploy did -->
@@ -94,12 +94,13 @@
 #needlesProgressCluster{display:block}
 .needles-gen-overlay-status{
   position:absolute;
-  top:50%;
+  bottom:5%;
   left:9%;
   right:9%;
-  transform:translateY(-50%);
-  padding:20px 16px;
-  background:transparent;
+  padding:12px 16px;
+  background:rgba(0,0,0,.66);
+  border:1px solid rgba(122,184,255,.35);
+  border-radius:10px;
   color:#7888b4;
   font-size:13px;
   font-weight:700;
@@ -187,6 +188,27 @@
 .backdropTile span{background:#fff;color:#333;font-size:10px;display:flex;align-items:center;justify-content:center}
 .backdropTile .bkLabel{font-size:9px;color:#7ab8ff;margin-top:3px;white-space:nowrap}
 .backdropTile.selected{border-color:#29a3ff;box-shadow:0 0 10px rgba(41,163,255,.7)}
+/* Fit Your Picture layout (Alyx, Sep 2026): the picture stays in view while
+   the caption is being styled. Wide screens: picture left, controls right,
+   picture pinned. Phones: picture pinned to the top while the controls
+   scroll beneath it. */
+.fitCard{display:grid;grid-template-columns:minmax(0,1fr);gap:10px}
+.fitCard>.card-title,.fitCard>.note{grid-column:1/-1}
+.fitLeft{min-width:0}
+.fitRight{min-width:0}
+@media (min-width:1000px){
+  /* The page column is 600px wide; the panels card steps out of it so the
+     picture and the controls each get a proper half. */
+  #coverMePanelCard{width:min(980px,calc(100vw - 48px));max-width:none;position:relative;left:50%;transform:translateX(-50%)}
+  .fitCard{grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:22px;align-items:start}
+  .fitLeft{position:sticky;top:12px}
+}
+@media (max-width:999px){
+  .fitLeft{position:sticky;top:0;z-index:6;background:inherit;padding:6px 0 8px}
+}
+.curve-mode-row{flex-wrap:wrap}
+.curve-mode-btn svg{display:block;margin:0 auto 3px;width:44px;height:16px;color:#7ab8ff}
+.curve-mode-btn.selected svg{color:#fff}
 .bi-btn{flex:1;background:#0d0d0d;border:.5px solid #333;border-radius:8px;padding:.6rem;text-align:center;cursor:pointer;color:#29a3ff;font-size:16px}
 .bi-btn.selected{border-color:#003c8c;background:#0d1b33;color:#003c8c}
 
@@ -1722,15 +1744,20 @@ Tell Needles <span style="color:#7ab8ff">what you have in mind</span>
 <div class="cap-row"><label>Spacing</label><input type="range" id="letterSpacing" min="-5" max="30" value="0" oninput="drawCaption()"/></div>
 
 <div class="sub-section-label">Text Path</div>
+<!-- Shape tiles (Alyx, Sep 2026): pick the line the caption follows, then
+     one Bend slider for how strongly it curves. Replaces the old Quick Arc
+     slider, whose letters piled up as the curve tightened. -->
 <div class="curve-mode-row" id="curveModeRow">
-<div class="curve-mode-btn selected" data-mode="straight" onclick="pickCurveMode(this)">➖ Straight</div>
-<div class="curve-mode-btn" data-mode="slider" onclick="pickCurveMode(this)">🌙 Quick Arc</div>
+<div class="curve-mode-btn selected" data-mode="straight" onclick="pickCurveMode(this)"><svg viewBox="0 0 44 16"><path d="M2 8H42" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>Straight</div>
+<div class="curve-mode-btn" data-mode="smile" onclick="pickCurveMode(this)"><svg viewBox="0 0 44 16"><path d="M2 3Q22 22 42 3" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>Smile</div>
+<div class="curve-mode-btn" data-mode="arch" onclick="pickCurveMode(this)"><svg viewBox="0 0 44 16"><path d="M2 13Q22 -6 42 13" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>Arch</div>
+<div class="curve-mode-btn" data-mode="wave" onclick="pickCurveMode(this)"><svg viewBox="0 0 44 16"><path d="M2 8C8 0 16 0 22 8S36 16 42 8" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>Wave</div>
 <div class="curve-mode-btn" data-mode="draw" onclick="pickCurveMode(this)">✏️ Draw Path</div>
 </div>
 
 <div id="sliderModeBox" style="display:none">
-<div class="cap-row"><label>Curve</label><input type="range" id="curveAmount" min="-100" max="100" value="0" oninput="drawCaption()"/></div>
-<div class="note" style="margin-top:-.5rem">Drag left for a downward arc (smile), right for an upward arc (frown), center for flat.</div>
+<div class="cap-row"><label>Bend</label><input type="range" id="curveBend" min="5" max="100" value="50" oninput="drawCaption()"/></div>
+<div class="note" style="margin-top:.25rem">Drag left for a gentle curve, right for a strong one.</div>
 </div>
 
 <div id="drawModeBox" style="display:none">
@@ -4621,6 +4648,10 @@ function updateIdeaCardNote(){
     sillNote.style.display='none';
   }
   actionRow.style.display=active?'flex':'none';
+  // Once Generate is on screen the earlier "click here when you are
+  // satisfied" prompt is a second, competing next step -- hide it.
+  const guidance=document.getElementById('ideaGuidancePrompt');
+  if(guidance)guidance.style.display=active?'none':'';
 }
 
 function updateMugGuidedFlow(){
@@ -7387,9 +7418,13 @@ function buildCoverMeFitter(designId,multiple){
   const adj=getDesignAdjust(designId);
 
   const card=document.createElement('div');
-  card.className='card';
+  card.className='card fitCard';
   card.style.cssText='padding:14px;margin:0 0 14px';
   card.dataset.designId=designId;
+  const left=document.createElement('div');
+  left.className='fitLeft';
+  const right=document.createElement('div');
+  right.className='fitRight';
 
   const title=document.createElement('div');
   title.className='card-title';
@@ -7400,6 +7435,8 @@ function buildCoverMeFitter(designId,multiple){
   note.style.cssText='margin-top:0;margin-bottom:.7rem;text-align:center;color:#7ab8ff';
   note.textContent=(multiple?'Picture on '+panelsWithDesign(designId).map(p=>p==='front'?'CENTER':p.toUpperCase()).join(' & ')+'. ':'')+'The box is the print area on your mug. What\'s inside it prints; what\'s outside is cut off. Drag the picture to move it, size it with the first slider, soften its edges with the second, and choose whether you want the thin frame.';
   card.appendChild(note);
+  card.appendChild(left);
+  card.appendChild(right);
 
   const box=document.createElement('div');
   box.id='coverMeFitBox_'+designId;
@@ -7413,7 +7450,7 @@ function buildCoverMeFitter(designId,multiple){
   img.alt='';
   img.style.cssText='position:absolute;display:block;pointer-events:none;user-select:none;max-width:none';
   box.appendChild(img);
-  card.appendChild(box);
+  left.appendChild(box);
 
   const row=document.createElement('div');
   row.style.cssText='display:flex;align-items:center;gap:10px;margin-top:10px';
@@ -7421,7 +7458,7 @@ function buildCoverMeFitter(designId,multiple){
     <input type="range" min="50" max="200" step="1" value="${Math.round((adj.zoom||1)*100)}" id="coverMeFitZoom_${designId}" style="flex:1">
     <span class="note" style="margin:0;white-space:nowrap">Bigger</span>
     <span class="note" id="coverMeFitZoomOut_${designId}" style="margin:0;min-width:40px;text-align:right">${Math.round((adj.zoom||1)*100)}%</span>`;
-  card.appendChild(row);
+  right.appendChild(row);
 
   const fadeRow=document.createElement('div');
   fadeRow.style.cssText='display:flex;align-items:center;gap:10px;margin-top:8px';
@@ -7429,12 +7466,12 @@ function buildCoverMeFitter(designId,multiple){
     <input type="range" min="0" max="80" step="1" value="${Math.round(adj.fade||0)}" id="coverMeFitFade_${designId}" style="flex:1">
     <span class="note" style="margin:0;white-space:nowrap">Soft</span>
     <span class="note" id="coverMeFitFadeOut_${designId}" style="margin:0;min-width:40px;text-align:right">${Math.round(adj.fade||0)}%</span>`;
-  card.appendChild(fadeRow);
+  right.appendChild(fadeRow);
   const fadeNote=document.createElement('div');
   fadeNote.className='note';
   fadeNote.style.cssText='margin-top:2px;text-align:center';
   fadeNote.textContent='Any setting above Sharp melts every edge of the picture into the mug so no hard line remains. Further toward Soft, the melt reaches further in.';
-  card.appendChild(fadeNote);
+  right.appendChild(fadeNote);
 
   // Backdrop tiles: shown once there is something for a backdrop to do --
   // a soft edge to melt into, or a picture smaller than its print area.
@@ -7460,28 +7497,28 @@ function buildCoverMeFitter(designId,multiple){
   };
   addTile(null,'None',null);
   Object.entries(BACKDROPS).forEach(([k,v])=>addTile(k,v.label,'backdrop-thumb-'+k+'.jpg'));
-  card.appendChild(bkWrap);
+  right.appendChild(bkWrap);
 
   const accent=getMugAccentHex();
   const frameRow=document.createElement('label');
   frameRow.style.cssText='display:flex;align-items:center;justify-content:center;gap:8px;margin-top:10px;cursor:pointer;font-size:13px;color:#ddd';
   frameRow.innerHTML=`<input type="checkbox" id="coverMeFitBorder_${designId}" ${adj.border!==false?'checked':''} style="width:18px;height:18px"><span>Thin frame around the picture in your mug\'s colour</span><span style="display:inline-block;width:14px;height:14px;border-radius:3px;background:${accent||'#fff'};border:1px solid #666"></span>`;
   if(!accent)frameRow.style.display='none'; // Classic White has no accent colour, so no frame
-  card.appendChild(frameRow);
+  right.appendChild(frameRow);
 
   const captionHost=document.createElement('div');
   captionHost.className='fitCaptionHost';
-  card.appendChild(captionHost);
+  right.appendChild(captionHost);
 
   const reset=document.createElement('div');
   reset.className='note';
   reset.style.cssText='text-align:center;margin-top:8px;color:#7ab8ff;cursor:pointer';
   reset.textContent='↺ Put it back in the middle at normal size';
   reset.onclick=()=>{const d=defaultPanelAdjust();const cur=getDesignAdjust(designId);d.fade=cur.fade;d.border=cur.border;d.backdrop=cur.backdrop;setDesignAdjust(designId,d);renderCoverMePanelRows();};
-  card.appendChild(reset);
+  right.appendChild(reset);
 
   const apply=()=>{
-    sizeFitBox(box,printBox);
+    sizeFitBox(box,printBox,window.innerWidth<1000?0.34:0.5);
     const cur=getDesignAdjust(designId);
     layoutFittedImage(img,box,cur);
     bkWrap.style.display=((cur.fade||0)>0||(cur.zoom||1)<1)?'block':'none';
@@ -7547,7 +7584,7 @@ window.addEventListener('resize',()=>{
     const id=card.dataset.designId;
     const box=document.getElementById('coverMeFitBox_'+id);
     const firstPos=panelsWithDesign(id)[0];
-    if(firstPos)sizeFitBox(box,getPanelPrintBox(firstPos));
+    if(firstPos)sizeFitBox(box,getPanelPrintBox(firstPos),window.innerWidth<1000?0.34:0.5);
     layoutFittedImage(card.querySelector('img'),box,getDesignAdjust(id));
   });
   ['left','front','right'].forEach(pos=>applyPanelAdjustTransform(pos));
@@ -8830,7 +8867,8 @@ function pickCurveMode(el){
   document.getElementById('curveModeRow').querySelectorAll('.curve-mode-btn').forEach(b=>b.classList.remove('selected'));
   el.classList.add('selected');
   curveMode=el.dataset.mode;
-  document.getElementById('sliderModeBox').style.display=(curveMode==='slider')?'block':'none';
+  if(curveMode==='slider')curveMode='arch'; // the old Quick Arc name
+  document.getElementById('sliderModeBox').style.display=(curveMode==='smile'||curveMode==='arch'||curveMode==='wave')?'block':'none';
   document.getElementById('drawModeBox').style.display=(curveMode==='draw')?'block':'none';
   if(curveMode==='draw'){
     setupPathCanvas();
@@ -8963,6 +9001,10 @@ function resetCaptionSettings(){
   curveMode="straight";
   drawnStrokes=[];
   currentStroke=[];
+  document.querySelectorAll('#curveModeRow .curve-mode-btn').forEach(b=>b.classList.toggle('selected',b.dataset.mode==='straight'));
+  const bendEl=document.getElementById('curveBend'); if(bendEl)bendEl.value=50;
+  const sliderBox=document.getElementById('sliderModeBox'); if(sliderBox)sliderBox.style.display='none';
+  const drawBox=document.getElementById('drawModeBox'); if(drawBox)drawBox.style.display='none';
 
   document.getElementById('captionText').value='';
 
@@ -8976,7 +9018,7 @@ function resetCaptionSettings(){
   document.getElementById('captionColor').value='#ffffff';
   document.getElementById('captionSize').value=48;
   document.getElementById('letterSpacing').value=0;
-  document.getElementById('curveAmount').value=0;
+  const bendReset=document.getElementById('curveBend'); if(bendReset)bendReset.value=50;
   document.getElementById('outlineThickness').value=12;
 
   document.getElementById('effectRow').querySelectorAll('.style-chip').forEach(b=>{
@@ -9075,32 +9117,82 @@ function drawTextWithSpacing(ctx,text,x,y,align,spacing,drawFn){
   ctx.textAlign=prevAlign;
 }
 
-function drawTextOnArc(ctx,text,centerX,centerY,radius,curveAmount,spacing,drawFn){
-  const direction=curveAmount<0?-1:1;
-  const strength=Math.abs(curveAmount)/100;
-  const chars=text.split('');
-  const charWidths=chars.map(c=>ctx.measureText(c).width+spacing);
-  const totalWidth=charWidths.reduce((a,b)=>a+b,0);
-  const totalAngle=(totalWidth/radius)*strength;
-  let angle=-totalAngle/2;
-
-  const prevAlign=ctx.textAlign;
-  const prevBaseline=ctx.textBaseline;
+// CURVED CAPTIONS (rebuilt Sep 2026, Alyx: "the words just jumble on top of
+// each other"). The old arc scaled the angle between letters by the bend,
+// so at any bend short of full the letters sat closer than their own widths
+// and piled up; it also tilted them for the opposite curve to the one they
+// were placed on. Now the bend sets the circle's RADIUS (gentle = a big
+// circle) and every letter advances along the arc by its measured width,
+// so the spacing is right at every bend, and each letter is tilted to the
+// tangent of the curve it actually sits on. Negative = Smile (ends up),
+// positive = Arch (ends down). The curve is kept on the canvas: a Smile at
+// the top or an Arch at the bottom is nudged inward by its own rise.
+function drawTextOnArc(ctx,text,pos,canvas,curveAmount,spacing,fontSize,drawFn){
+  const dir=curveAmount<0?-1:1;
+  const strength=Math.max(0.05,Math.min(1,Math.abs(curveAmount)/100));
+  const chars=[...text];
+  const widths=chars.map(c=>Math.max(1,ctx.measureText(c).width+spacing));
+  const total=widths.reduce((a,b)=>a+b,0);
+  // Full bend spans about 150 degrees of circle; less bend, bigger circle.
+  const span=Math.PI*0.85;
+  const radius=Math.max(total/span, total/(span*strength));
+  const totalAngle=total/radius;
+  const chord=2*radius*Math.sin(totalAngle/2);
+  const sag=radius*(1-Math.cos(totalAngle/2));
+  let cx=pos.x;
+  if(pos.align==='left')cx+=chord/2; else if(pos.align==='right')cx-=chord/2;
+  let cy=pos.y;
+  if(pos.baseline==='top')cy+=fontSize/2; else if(pos.baseline==='bottom')cy-=fontSize/2;
+  if(dir<0&&pos.baseline==='top')cy+=sag;
+  if(dir>0&&pos.baseline==='bottom')cy-=sag;
+  const prevAlign=ctx.textAlign,prevBaseline=ctx.textBaseline;
   ctx.textAlign='center';
   ctx.textBaseline='middle';
-
+  let angle=-totalAngle/2;
   chars.forEach((c,i)=>{
-    const charAngle=angle+(charWidths[i]/2/radius)*strength;
-    const px=centerX+radius*Math.sin(charAngle);
-    const py=centerY-direction*radius*(1-Math.cos(charAngle));
+    const mid=angle+widths[i]/2/radius;
+    const px=cx+radius*Math.sin(mid);
+    const py=cy+dir*radius*(1-Math.cos(mid));
     ctx.save();
     ctx.translate(px,py);
-    ctx.rotate(direction*charAngle);
+    ctx.rotate(dir*mid);
     drawFn(c,0,0);
     ctx.restore();
-    angle+=(charWidths[i]/radius)*strength;
+    angle+=widths[i]/radius;
   });
+  ctx.textAlign=prevAlign;
+  ctx.textBaseline=prevBaseline;
+}
 
+// One full wave across the caption; the bend sets its height. Letters
+// advance by their widths and tilt to the wave's slope where they sit.
+function drawTextOnWave(ctx,text,pos,canvas,bend,spacing,fontSize,drawFn){
+  const strength=Math.max(0.05,Math.min(1,bend/100));
+  const chars=[...text];
+  const widths=chars.map(c=>Math.max(1,ctx.measureText(c).width+spacing));
+  const total=widths.reduce((a,b)=>a+b,0);
+  const amp=fontSize*0.55*strength;
+  const period=Math.max(total,fontSize*4);
+  let x0=pos.x;
+  if(pos.align==='center')x0=pos.x-total/2; else if(pos.align==='right')x0=pos.x-total;
+  let cy=pos.y;
+  if(pos.baseline==='top')cy+=fontSize/2+amp; else if(pos.baseline==='bottom')cy-=fontSize/2+amp;
+  const prevAlign=ctx.textAlign,prevBaseline=ctx.textBaseline;
+  ctx.textAlign='center';
+  ctx.textBaseline='middle';
+  let x=x0;
+  chars.forEach((c,i)=>{
+    const xm=x+widths[i]/2;
+    const t=2*Math.PI*(xm-x0)/period;
+    const y=cy+amp*Math.sin(t);
+    const slope=amp*(2*Math.PI/period)*Math.cos(t);
+    ctx.save();
+    ctx.translate(xm,y);
+    ctx.rotate(Math.atan(slope));
+    drawFn(c,0,0);
+    ctx.restore();
+    x+=widths[i];
+  });
   ctx.textAlign=prevAlign;
   ctx.textBaseline=prevBaseline;
 }
@@ -9248,7 +9340,7 @@ function drawCaptionText(ctx,canvas){
     const color=document.getElementById('captionColor').value;
     const pad=Math.round(canvas.width*0.04);
     const spacing=parseFloat(document.getElementById('letterSpacing').value)||0;
-    const curveAmount=parseFloat(document.getElementById('curveAmount').value)||0;
+    const bend=parseFloat((document.getElementById('curveBend')||{value:0}).value)||0;
     const outlineThickness=parseFloat(document.getElementById('outlineThickness').value);
 
     ctx.font=buildFontString(fontSize);
@@ -9305,9 +9397,10 @@ function drawCaptionText(ctx,canvas){
           drawTextOnPath(ctx,words[i],smoothedStrokes[i],spacing,drawGlyph);
         }
       }
-    } else if(curveMode==='slider'&&curveAmount!==0){
-      const radius=canvas.width*1.1;
-      drawTextOnArc(ctx,text,pos.x,pos.y,radius,curveAmount,spacing,drawGlyph);
+    } else if((curveMode==='smile'||curveMode==='arch'||curveMode==='slider')&&bend>0){
+      drawTextOnArc(ctx,text,pos,canvas,curveMode==='smile'?-bend:bend,spacing,fontSize,drawGlyph);
+    } else if(curveMode==='wave'&&bend>0){
+      drawTextOnWave(ctx,text,pos,canvas,bend,spacing,fontSize,drawGlyph);
     } else {
       drawTextWithSpacing(ctx,text,pos.x,pos.y,pos.align,spacing,drawGlyph);
     }
