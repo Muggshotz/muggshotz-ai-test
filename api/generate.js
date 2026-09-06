@@ -2,7 +2,7 @@ import fs from "fs";
 import path from "path";
 import sharp from "sharp";
 
-// BUILD: 2026-09-06e — added explicit SCALE LOCK instructions to all three continuation prompts (panelContinuation, wraparoundPanorama, wraparoundOutpaintTest): the shared center's mountain range was being drawn at a different scale/distance than every flanking method independently invented, which was the real cause of the seam mismatch seen in the A/B/C/D comparison run, not a fundamental flaw in any one method
+// BUILD: 2026-09-06f — added explicit eye-color matching and smile-specific eye-shape matching to the likeness instruction (both occurrences) -- close comparison against the reference photo showed Method A rendering lighter/more open eyes than the subject's actual dark, smile-narrowed eyes, and the prompt never mentioned color or smile-shape at all
 
 // RESTORED (July 2026): this file was found genuinely truncated — cut
 // off mid-function with no closing brackets and no export default
@@ -351,9 +351,10 @@ Study the uploaded face first. Capture the spark and personality behind the eyes
 Keep the same attitude, expression, mood, and presence as the real photo.
 The eyes are the center of the likeness — a good result must feel like the same person is looking back at you.
 Base every exaggeration on features that are actually visible in the uploaded photo, including:
-the real eye shape, eye spacing, and eyelids; the real brow angle; the real nose shape;
+the real eye shape, eye spacing, and eyelids; the real EYE COLOR (match the iris shade exactly -- do not lighten, darken, or shift it toward a different color); the real brow angle; the real nose shape;
 the real mouth shape and expression; the real jawline, cheeks, and ears;
 the real facial hair, head shape, skin tone, and age.
+If the uploaded photo shows the person smiling, study exactly how THIS person's eyes look when they smile -- most real smiles narrow and crinkle the eyes at the outer corners to some degree, and the exact amount varies person to person. Match that specific person's real smiling eye shape rather than defaulting to a generic wide-open smiling-eyes look.
 Preserve normal head-to-body proportions unless the customer asks for wild exaggeration.
 
 PANORAMA LAYOUT — ONE SINGLE UNINTERRUPTED ULTRA-WIDE SCENE:
@@ -593,9 +594,10 @@ Study the uploaded face first. Capture the spark and personality behind the eyes
 Keep the same attitude, expression, mood, and presence as the real photo.
 The eyes are the center of the likeness — a good result must feel like the same person is looking back at you.
 Base every exaggeration on features that are actually visible in the uploaded photo, including:
-the real eye shape, eye spacing, and eyelids; the real brow angle; the real nose shape;
+the real eye shape, eye spacing, and eyelids; the real EYE COLOR (match the iris shade exactly -- do not lighten, darken, or shift it toward a different color); the real brow angle; the real nose shape;
 the real mouth shape and expression; the real jawline, cheeks, and ears;
 the real facial hair, head shape, skin tone, and age.
+If the uploaded photo shows the person smiling, study exactly how THIS person's eyes look when they smile -- most real smiles narrow and crinkle the eyes at the outer corners to some degree, and the exact amount varies person to person. Match that specific person's real smiling eye shape rather than defaulting to a generic wide-open smiling-eyes look.
 Preserve normal head-to-body proportions unless the customer asks for wild exaggeration.
 `;
 
