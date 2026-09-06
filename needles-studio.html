@@ -2,7 +2,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head><link rel="manifest" href="needles-manifest.json">
-<!-- BUILD-MARKER: CAPTION-LAYER-v62 -->
+<!-- BUILD-MARKER: STUDIO-POLISH-v63 -->
 <!-- If you can see this comment on GitHub, this exact paste landed. -->
 <!-- If your live site's page source does NOT say -->
 <!-- "INSTANT-FIT-SCREEN-v47" right here, the upload/deploy did -->
@@ -214,8 +214,14 @@
 #frameStudio #accessorizeCard{margin-top:0;padding-top:0;border-top:none}
 @media (min-width:1000px){
   #frameStudio{width:min(980px,calc(100vw - 48px));position:relative;left:50%;transform:translateX(-50%);grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:22px;align-items:start}
-  #frameStudio .fsLeft{position:sticky;top:12px}
+  #frameStudio .fsLeft{position:sticky;top:12px;max-height:calc(100vh - 24px);overflow-y:auto}
 }
+/* In the studio the frame card loses its pre-generation furniture: the
+   collapse arrow, the Window Sill cross-promo and the "before you generate"
+   intro (a mockup-mode intro shows instead). */
+#frameStudio .snap-arrow-btn,#frameStudio #frameSillCrossPromoBanner,#frameStudio #frameSectionIntro{display:none!important}
+#frameSectionIntroMockup{display:none}
+#frameStudio #frameSectionIntroMockup{display:block}
 @media (max-width:999px){
   #frameStudio .fsLeft{position:sticky;top:0;z-index:6;background:#0a0a0a;padding:6px 0 8px}
 }
@@ -271,8 +277,8 @@
 .guidance-alert-close:hover{background:#0850ab}
 
 .mockup-lightbox-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:1700;align-items:center;justify-content:center}
-.mockup-lightbox-overlay.visible{display:flex}
-.mockup-lightbox-img{max-width:88vw;max-height:82vh;object-fit:contain;border-radius:10px;background:#fff}
+.mockup-lightbox-overlay.visible{display:flex;flex-direction:column;gap:14px}
+.mockup-lightbox-img{max-width:88vw;max-height:min(82vh,calc(100vh - 170px));object-fit:contain;border-radius:10px;background:#fff}
 .mockup-lightbox-close{position:fixed;top:16px;right:16px;width:40px;height:40px;border-radius:50%;background:#151b24;border:1px solid #003c8c;color:#fff;font-size:18px;cursor:pointer;z-index:1701;display:flex;align-items:center;justify-content:center}
 .mockup-lightbox-arrow{position:fixed;top:50%;transform:translateY(-50%);width:52px;height:52px;border-radius:50%;background:#151b24;border:1px solid #003c8c;color:#fff;font-size:30px;line-height:1;cursor:pointer;z-index:1701;align-items:center;justify-content:center;display:flex}
 .mockup-lightbox-arrow-left{left:16px}
@@ -831,10 +837,10 @@ body.panels-active #verifyCard{display:none!important}
   <!-- Two honest exits (Alyx, Sep 2026): "Return" used to open What's Next
        with Checkout on it, which is forward, not back. Back returns to the
        screen the customer came from; Looks Good moves on to What's Next. -->
-  <div id="mockupLightboxActions" style="display:none;position:absolute;left:50%;bottom:24px;transform:translateX(-50%);gap:10px;width:auto;max-width:96vw;flex-wrap:wrap;justify-content:center;align-items:stretch">
+  <div id="mockupLightboxActions" style="display:none;position:relative;gap:10px;width:auto;max-width:96vw;flex-wrap:wrap;justify-content:center;align-items:stretch">
     <!-- The nudge comes FIRST so it takes its own line above the buttons and
          the three buttons stay together on one row (Alyx, Sep 2026). -->
-    <div id="mockupLightboxNudge" style="display:none;flex-basis:100%;text-align:center;color:#fff;font-size:13px;font-weight:700;background:rgba(0,0,0,.72);border:1px solid rgba(122,184,255,.5);border-radius:999px;padding:6px 16px;margin:0 auto 4px;width:max-content;max-width:100%">Want a frame around it? Try one on. It's free to look.</div>
+    <div style="flex-basis:100%;text-align:center"><span id="mockupLightboxNudge" style="display:none;color:#fff;font-size:13px;font-weight:700;background:rgba(0,0,0,.72);border:1px solid rgba(122,184,255,.5);border-radius:999px;padding:6px 16px;margin:0 auto 4px;max-width:100%">Want a frame around it? Try one on. It's free to look.</span></div>
     <button type="button" id="mockupLightboxBack" class="download-btn" style="width:auto;margin:0;padding:.8rem 1.3rem;white-space:nowrap" onclick="goBackFromFinalMockup()">↩️ Back</button>
     <!-- The frame offer lives HERE now (Alyx, Sep 2026): on the finished
          mockup, where a frame can be judged against the real mug. Mug
@@ -1050,7 +1056,8 @@ const HERO_SETTLE_MS = 1000;
 <div class="card snap-section snap-collapsed" id="frameSectionCard" data-snap-index="1">
 <button type="button" class="snap-arrow-btn snap-arrow-up" id="snapUp1" onclick="snapCollapseFrom(1)">⌃</button>
 <div class="card-title">🖼️ Frame</div>
-<div class="note" style="margin-top:0;margin-bottom:.75rem">Optional — pick a frame to add around your finished artwork now, before you generate, so you don't lose track of it later. Applied automatically once your design is ready. Leave blank for a clean, unframed look.</div>
+<div class="note" id="frameSectionIntro" style="margin-top:0;margin-bottom:.75rem">Optional — pick a frame to add around your finished artwork now, before you generate, so you don't lose track of it later. Applied automatically once your design is ready. Leave blank for a clean, unframed look.</div>
+<div class="note" id="frameSectionIntroMockup" style="margin-top:0;margin-bottom:.75rem">Tap a frame and it goes on the picture at the left, exactly as it will print. Try as many as you like.</div>
 <div class="theme-grid frame-grid" id="frameGrid"></div>
 <div id="frameColorPanel" style="display:none;margin-top:14px"></div>
 <div id="frameSillCrossPromoBanner" class="note mug-select-flash" style="margin-top:14px;text-align:center">🪟 Don't see what you're looking for? Window Sill Portrait is also available — just below!</div>
@@ -9094,10 +9101,12 @@ function tintStop(stopHex,tint){
   // Keep the metal's brightness band; borrow the caption colour's hue and
   // saturation (a little of the band's own saturation survives so highlights
   // still read as highlights).
-  const sat=Math.min(1,tint.s*0.9+st.s*0.1);
-  // Halfway between the band's own brightness and the colour's: Diamond's
-  // near-white bands would otherwise wash any colour out to a faint blush.
-  const l=st.l*0.5+tint.l*0.5;
+  const sat=Math.min(1,tint.s*0.95+st.s*0.05);
+  // The bands shine around the colour's OWN brightness (Alyx, Sep 2026: a
+  // red caption under Chrome came out pink). Averaging with the metal's
+  // near-white bands washed every colour toward a blush; now each band is
+  // the chosen colour, a little lighter or darker than the next.
+  const l=Math.max(0.08,Math.min(0.92,tint.l+(st.l-0.5)*0.45));
   return 'hsl('+Math.round(tint.h*360)+' '+Math.round(sat*100)+'% '+Math.round(l*100)+'%)';
 }
 function getMetallicGradient(ctx,x,y,fontSize,kind,tintHex){
@@ -11093,7 +11102,7 @@ function refreshMockupLightboxFrameBtn(){
   // on, both settle down.
   btn.classList.toggle('cta-flash',show&&!coverMeFrameApplied);
   const nudge=document.getElementById('mockupLightboxNudge');
-  if(nudge)nudge.style.display=(show&&!coverMeFrameApplied)?'block':'none';
+  if(nudge)nudge.style.display=(show&&!coverMeFrameApplied)?'inline-block':'none';
 }
 function offerFrameFromMockup(){
   hideMockupLightbox();
@@ -12032,7 +12041,7 @@ function renderAccessorizeStripThree(urls){
   uniqueUrls.forEach(u=>{
     const img=document.createElement('img');
     img.src=u;
-    img.style.cssText='flex:1;min-width:0;border-radius:8px;border:1px solid #003c8c;object-fit:contain;max-height:'+(uniqueUrls.length===1?'440px':'170px')+';background:#0d0d0d';
+    img.style.cssText='flex:1;min-width:0;border-radius:8px;border:1px solid #003c8c;object-fit:contain;max-height:'+(uniqueUrls.length===1?'min(440px,calc(100vh - 330px))':'170px')+';background:#0d0d0d';
     strip.appendChild(img);
   });
 }
