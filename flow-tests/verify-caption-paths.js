@@ -111,15 +111,18 @@ scenarios.metallicEffectsTakeTheColour = async (page) => {
     const col = document.getElementById('captionColor'); col.value = '#ff0000'; col.dispatchEvent(new Event('input', { bubbles: true }));
     await wait(200);
     const diamondRed = sample();
+    pick('chrome'); await wait(200);
+    const chromeRed = sample();
     pick('gold'); await wait(200);
     const goldRed = sample();
     col.value = '#ffffff'; col.dispatchEvent(new Event('input', { bubbles: true })); await wait(200);
     const goldWhite = sample();
-    return { effect: captionEffect, diamondWhite, diamondRed, goldRed, goldWhite };
+    return { effect: captionEffect, diamondWhite, diamondRed, chromeRed, goldRed, goldWhite };
   });
   if (!res.diamondWhite || !res.diamondRed) return 'FAIL: no caption pixels sampled ' + JSON.stringify(res);
   if (!(res.diamondWhite.b > res.diamondWhite.r)) return 'FAIL: Diamond in white should be icy blue: ' + JSON.stringify(res.diamondWhite);
-  if (!(res.diamondRed.r > res.diamondRed.g + 40 && res.diamondRed.r > res.diamondRed.b + 40)) return 'FAIL: Diamond did not take the red: ' + JSON.stringify(res.diamondRed);
+  if (!(res.diamondRed.r > res.diamondRed.g + 90 && res.diamondRed.r > res.diamondRed.b + 90)) return 'FAIL: Diamond did not take the red: ' + JSON.stringify(res.diamondRed);
+  if (!(res.chromeRed.r > res.chromeRed.g + 90 && res.chromeRed.r > res.chromeRed.b + 90)) return 'FAIL: Chrome washed the red to pink: ' + JSON.stringify(res.chromeRed);
   if (!(res.goldRed.r > res.goldRed.g + 40)) return 'FAIL: Gold did not take the red: ' + JSON.stringify(res.goldRed);
   if (!(res.goldWhite.r > res.goldWhite.b + 30 && res.goldWhite.g > res.goldWhite.b + 10)) return 'FAIL: Gold in white should still be gold: ' + JSON.stringify(res.goldWhite);
   return 'PASS: metallic effects take the picked colour and keep their own look when the colour is white';
@@ -143,6 +146,14 @@ scenarios.frameStudioTwoColumns = async (page) => {
   if (wide.missing) return 'FAIL: frame studio not mounted';
   if (!wide.sideBySide || wide.sticky !== 'sticky') return 'FAIL: not two columns with a pinned preview: ' + JSON.stringify(wide);
   if (!wide.previewInLeft || !wide.gridInRight || !wide.applyInLeft) return 'FAIL: pieces in the wrong columns: ' + JSON.stringify(wide);
+  // Apply and Back stay on screen under the preview, even on a short window; the pre-generation furniture is gone.
+  for (const h of [900, 680]) {
+    await page.setViewportSize({ width: 1280, height: h }); await T(page, 400);
+    const fit = await page.evaluate(() => { const a = document.getElementById('accessorizeSatisfiedBtn').getBoundingClientRect(), b = document.getElementById('accessorizeCancelBtn').getBoundingClientRect(); const vis = (el) => el && getComputedStyle(el).display !== 'none' && el.getBoundingClientRect().height > 0; return { applyBottom: Math.round(a.bottom), backBottom: Math.round(b.bottom), vh: innerHeight, arrow: vis(document.querySelector('#frameStudio .snap-arrow-btn')), promo: vis(document.getElementById('frameSillCrossPromoBanner')), preGen: vis(document.getElementById('frameSectionIntro')), mock: vis(document.getElementById('frameSectionIntroMockup')) }; });
+    if (fit.applyBottom > fit.vh || fit.backBottom > fit.vh) return `FAIL: Apply/Back off screen at ${h}px tall: ` + JSON.stringify(fit);
+    if (fit.arrow || fit.promo || fit.preGen || !fit.mock) return 'FAIL: pre-generation furniture showing in the studio: ' + JSON.stringify(fit);
+  }
+  await page.setViewportSize({ width: 1280, height: 900 }); await T(page, 300);
   await page.setViewportSize({ width: 420, height: 800 }); await T(page, 400);
   const narrow = await page.evaluate(() => { const l = document.querySelector('#frameStudio .fsLeft'), r = document.querySelector('#frameStudio .fsRight'); return { sameX: Math.abs(l.getBoundingClientRect().left - r.getBoundingClientRect().left) < 2, sticky: getComputedStyle(l).position }; });
   if (!narrow.sameX || narrow.sticky !== 'sticky') return 'FAIL: phone layout ' + JSON.stringify(narrow);
@@ -183,6 +194,21 @@ scenarios.captionTravelsAsLayer = async (page, log) => {
   if (fa.caption !== after.caption) return 'FAIL: the caption layer did not reach the mockup request: ' + JSON.stringify(fa);
   // Back to Fit Your Picture takes the layer off; Done with the same words puts the same URL back without a second upload.
   return `PASS: Done uploads one ${Math.round(uploads[0].bytes / 1024)}KB transparent caption sheet, the picture is untouched, the fade changes for free, and both reach the mockup request`;
+};
+
+scenarios.nudgeSitsBelowTheMug = async (page) => {
+  await openStudio(page);
+  await reachPanels(page);
+  await page.click('#coverMePanelDoneBtn');
+  await page.waitForFunction(() => document.getElementById('revealOverlay').style.display === 'flex', null, { timeout: 20000 });
+  await page.evaluate(() => chooseEdgeStyleAndContinue(true));
+  await page.waitForFunction(() => document.getElementById('mockupLightboxOverlay').classList.contains('visible'), null, { timeout: 20000 });
+  await T(page, 500);
+  const r = await page.evaluate(() => { const img = document.getElementById('mockupLightboxImg').getBoundingClientRect(), n = document.getElementById('mockupLightboxNudge').getBoundingClientRect(), b = document.getElementById('mockupLightboxReturn').getBoundingClientRect(); return { imgBottom: Math.round(img.bottom), nudgeTop: Math.round(n.top), nudgeShown: n.height > 0, btnBottom: Math.round(b.bottom), vh: innerHeight }; });
+  if (!r.nudgeShown) return 'FAIL: nudge not shown on the unframed mockup';
+  if (r.nudgeTop < r.imgBottom) return 'FAIL: the nudge overlaps the mug picture: ' + JSON.stringify(r);
+  if (r.btnBottom > r.vh) return 'FAIL: buttons pushed off screen: ' + JSON.stringify(r);
+  return 'PASS: the nudge and the buttons sit below the mug picture, all on screen';
 };
 
 (async () => {
