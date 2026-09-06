@@ -488,6 +488,57 @@ scenarios.classicFallbackHasNoPanorama = async (page, log) => {
 };
 
 
+
+// WHAT YOU SEE IS WHAT WRAPS: the wraparound preview must show the strip
+// after the same circumference and shape trim the printed mug gets, not the
+// wider raw strip -- a customer judging the far edges of a picture that
+// never prints is exactly how a good wrap gets rejected.
+scenarios.wrapPreviewMatchesThePrint = async (page) => {
+  await mugToPrintStyle(page);
+  await page.evaluate(() => pickMugPrintMode('wraparound'));
+  await T(page, 1200);
+  await dismissAlerts(page);
+  await describeAndGenerate(page, 'a long wooden fence with a mountain range behind it');
+  await waitWrapDone(page);
+  await T(page, 1000);
+  const r = await page.evaluate(async () => {
+    const area = getMugPrintArea();
+    const raw = revealOriginalArtworkUrls[0];
+    const img = await loadImageFromUrl(raw);
+    const trimmedUrl = await wrapPreviewUrl(raw);
+    const t = await loadImageFromUrl(trimmedUrl);
+    return {
+      area, mode: mugPrintMode,
+      raw: img.naturalWidth + 'x' + img.naturalHeight,
+      rawAspect: +(img.naturalWidth / img.naturalHeight).toFixed(3),
+      trimmed: t.naturalWidth + 'x' + t.naturalHeight,
+      trimmedAspect: +(t.naturalWidth / t.naturalHeight).toFixed(3),
+      targetAspect: +(area.w / area.h).toFixed(3),
+      changed: trimmedUrl !== raw,
+      onScreen: (document.getElementById('revealArtworkImg') || {}).src ? true : false,
+    };
+  });
+  if (!r.changed) return 'FAIL: the preview was not trimmed at all: ' + JSON.stringify(r);
+  if (Math.abs(r.trimmedAspect - r.targetAspect) > 0.02) {
+    return `FAIL: trimmed preview is ${r.trimmedAspect}, print area is ${r.targetAspect}: ` + JSON.stringify(r);
+  }
+  if (r.trimmedAspect >= r.rawAspect) return 'FAIL: trimming should narrow the strip: ' + JSON.stringify(r);
+  return `PASS: the wraparound preview is trimmed to the print's own shape (${r.rawAspect} raw -> ${r.trimmedAspect}, print area ${r.targetAspect})`;
+};
+
+// Three Panels is genuinely three separate pictures and must NOT be trimmed
+// as though it wrapped.
+scenarios.threePanelPreviewIsNotTrimmed = async (page) => {
+  await openStudio(page);
+  const same = await page.evaluate(async () => {
+    product = 'mug'; mugPrintMode = 'three-panel';
+    const u = 'about:blank-not-a-wrap';
+    return (await wrapPreviewUrl(u)) === u;
+  });
+  if (!same) return 'FAIL: a three-panel design was trimmed as a wraparound';
+  return 'PASS: Three Panels is left alone — only Wraparound is trimmed to the wrap';
+};
+
 (async () => {
   let fails = 0;
   for (const [name, fn] of Object.entries(scenarios)) {

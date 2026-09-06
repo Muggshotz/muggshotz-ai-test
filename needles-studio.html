@@ -2,7 +2,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head><link rel="manifest" href="needles-manifest.json">
-<!-- BUILD-MARKER: WRAP-PAYLOAD-READOUT-v65 -->
+<!-- BUILD-MARKER: WRAP-PREVIEW-TRUE-v66 -->
 <!-- If you can see this comment on GitHub, this exact paste landed. -->
 <!-- If your live site's page source does NOT say -->
 <!-- "INSTANT-FIT-SCREEN-v47" right here, the upload/deploy did -->
@@ -1600,18 +1600,6 @@ Tell Needles <span style="color:#7ab8ff">what you have in mind</span>
 <div id="wrapMethodBanner" style="display:none;position:fixed;top:10px;left:50%;transform:translateX(-50%);z-index:1800;max-width:min(760px,94vw);padding:8px 40px 8px 14px;border-radius:10px;font-size:12.5px;font-weight:700;line-height:1.35;text-align:center;box-shadow:0 6px 18px rgba(0,0,0,.55)">
 <span id="wrapMethodBannerText"></span>
 <button type="button" onclick="hideWrapMethodBanner()" aria-label="Dismiss" style="position:absolute;top:4px;right:8px;background:none;border:none;color:inherit;font-size:15px;font-weight:700;cursor:pointer;line-height:1;padding:4px">✕</button>
-</div>
-<!-- WHAT WAS ACTUALLY SENT (Alyx, Sep 2026). Reading the source proved the
-     production call and the comparison tool's Method A were equivalent, and
-     they still produce different pictures from the same endpoint. So this
-     prints the real outgoing request at the moment of the call -- prompt
-     verbatim, photo dimensions and weight, whether the reference pins rode
-     along, the style values -- because "the code looks identical" and "the
-     request was identical" are not the same claim. Diagnostic: remove once
-     the discrepancy is closed. -->
-<div id="wrapPayloadReadout" style="display:none;position:fixed;top:64px;left:50%;transform:translateX(-50%);z-index:1799;width:min(760px,94vw);max-height:46vh;overflow:auto;padding:12px 40px 12px 14px;border-radius:10px;background:#06131f;border:1px solid #2f6ea8;color:#cfe6ff;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11.5px;line-height:1.5;white-space:pre-wrap;word-break:break-word;box-shadow:0 8px 22px rgba(0,0,0,.6)">
-<button type="button" onclick="document.getElementById('wrapPayloadReadout').style.display='none'" aria-label="Dismiss" style="position:absolute;top:4px;right:8px;background:none;border:none;color:#cfe6ff;font-size:15px;font-weight:700;cursor:pointer;padding:4px">✕</button>
-<span id="wrapPayloadReadoutText"></span>
 </div>
 <div id="revealOverlay" class="step-lock-overlay" style="display:none">
 <div class="card" id="revealCard" style="max-width:520px;width:100%;margin:auto;position:relative;max-height:92vh;overflow-y:auto;text-align:center">
@@ -10365,7 +10353,13 @@ function showEdgeQuestion(){
     if(host)host.style.display='none';
     if(note)note.style.display='none';
     revealFitState=null;
-    if(revealImg){revealImg.style.display='block';revealImg.src=revealOriginalArtworkUrls[0];}
+    if(revealImg){
+      revealImg.style.display='block';
+      const rawArtwork=revealOriginalArtworkUrls[0];
+      revealImg.src=rawArtwork;
+      wrapPreviewUrl(rawArtwork).then(u=>{ if(revealImg.dataset.wrapSrc===rawArtwork)revealImg.src=u; });
+      revealImg.dataset.wrapSrc=rawArtwork;
+    }
   }
   const buttonsRow=document.getElementById('revealEdgeButtonsRow');
   const fadePanel=document.getElementById('revealFadeSliderPanel');
@@ -11972,12 +11966,56 @@ async function stitchThreePanelsRaw(centerUrl,leftUrl,rightUrl,leftOverlapPx,rig
 // press Apply -- instead of a frame getting silently baked in (or not)
 // before they've even seen the result.
 
+// WHAT YOU SEE IS WHAT WRAPS (Alyx, Sep 2026). The printed mug is built
+// from the uncut strip by finishWrapStrip() on the server: 5% comes off
+// each end to compensate for the mug's circumference, and then the strip
+// is cropped to the print area's exact shape. The preview showed the raw
+// strip instead -- wider than the thing that prints -- so the customer
+// judged the wraparound on content that never survives to the mug, and a
+// perfectly good wrap could be rejected over its far edges. This mirrors
+// finishWrapStrip step for step against the real print area. Display
+// only: the design URLs and the print file are untouched.
+const wrapPreviewCache={};
+async function wrapPreviewUrl(url){
+  if(!url||!(product==='mug'&&mugPrintMode==='wraparound'))return url;
+  const area=getMugPrintArea();
+  const key=url+'|'+area.w+'x'+area.h;
+  if(wrapPreviewCache[key])return wrapPreviewCache[key];
+  try{
+    const img=await loadImageFromUrl(url);
+    const iw=img.naturalWidth,ih=img.naturalHeight;
+    const targetAspect=area.w/area.h;
+    const CROP_FRACTION=0.10;
+    const preCropWidth=Math.round(iw*(1-CROP_FRACTION));
+    const preCropLeft=Math.round((iw-preCropWidth)/2);
+    const preCropAspect=preCropWidth/ih;
+    let cropLeft=preCropLeft,cropWidth=preCropWidth,cropTop=0,cropHeight=ih;
+    if(preCropAspect>targetAspect){
+      cropWidth=Math.round(ih*targetAspect);
+      cropLeft=preCropLeft+Math.round((preCropWidth-cropWidth)/2);
+    } else if(preCropAspect<targetAspect){
+      cropHeight=Math.round(preCropWidth/targetAspect);
+      cropTop=Math.round((ih-cropHeight)/2);
+    }
+    const c=document.createElement('canvas');
+    c.width=Math.max(1,cropWidth);c.height=Math.max(1,cropHeight);
+    c.getContext('2d').drawImage(img,cropLeft,cropTop,cropWidth,cropHeight,0,0,c.width,c.height);
+    const out=c.toDataURL('image/jpeg',0.92);
+    wrapPreviewCache[key]=out;
+    return out;
+  }catch(err){
+    // A preview that cannot be trimmed is still worth showing untrimmed.
+    console.error('Could not trim the wrap preview; showing the untrimmed strip:',err);
+    return url;
+  }
+}
 function renderAccessorizeStrip(url){
   const strip=document.getElementById('accessorizePreviewStrip');
   if(strip){
     strip.innerHTML='';
     const img=document.createElement('img');
     img.src=url;
+    wrapPreviewUrl(url).then(u=>{img.src=u;});
     img.style.cssText='width:100%;border-radius:8px;border:1px solid #003c8c;max-height:340px;object-fit:contain;background:#0d0d0d';
     strip.appendChild(img);
   }
@@ -12955,32 +12993,6 @@ Use rich environmental storytelling while keeping the face as the primary focal 
       // second charge. Retries are deliberately limited to transient statuses;
       // a 403 (out of credits) or a 400 (bad request) is answered, not busy,
       // and retrying either would be wrong.
-      // Printed from the SAME object that is about to be sent, so it cannot
-      // drift from reality the way a hand-written summary would.
-      try{
-        const bodyObj={action:'wraparoundPanorama',image:workingImage,prompt:panoramaIdea,deviceId,refImageA:refASnapshot,refImageB:refBSnapshot,...currentStylePayload()};
-        const probe=new Image();
-        probe.onload=()=>{
-          const el=document.getElementById('wrapPayloadReadoutText');
-          const box=document.getElementById('wrapPayloadReadout');
-          if(!el||!box)return;
-          const kb=(v)=>v?Math.round(v.length/1365)+' KB':'null';
-          el.textContent=
-            'SENT TO wraparoundPanorama\n'+
-            '-----------------------------------------\n'+
-            'prompt ('+String(bodyObj.prompt||'').length+' chars):\n'+JSON.stringify(bodyObj.prompt)+'\n\n'+
-            'image: '+probe.naturalWidth+'x'+probe.naturalHeight+', '+kb(bodyObj.image)+', '+String(bodyObj.image||'').slice(5,15)+'\n'+
-            'refImageA: '+(bodyObj.refImageA?('PRESENT '+kb(bodyObj.refImageA)):'null')+'\n'+
-            'refImageB: '+(bodyObj.refImageB?('PRESENT '+kb(bodyObj.refImageB)):'null')+'\n'+
-            'styleIsDefault: '+bodyObj.styleIsDefault+'\n'+
-            'styleDirective ('+String(bodyObj.styleDirective||'').length+' chars): '+JSON.stringify(String(bodyObj.styleDirective||'').slice(0,180))+'\n'+
-            'other keys: '+Object.keys(bodyObj).filter(k=>!['action','image','prompt','deviceId','refImageA','refImageB','styleIsDefault','styleDirective'].includes(k)).join(', ');
-          box.style.display='block';
-        };
-        probe.onerror=()=>{};
-        probe.src=workingImage;
-      }catch(readoutErr){ console.error('Payload readout failed (harmless):',readoutErr); }
-
       const PANORAMA_RETRY_STATUSES=[429,500,502,503,504];
       const PANORAMA_MAX_ATTEMPTS=3;
       let panoramaResp=null,parsedPanorama=null;

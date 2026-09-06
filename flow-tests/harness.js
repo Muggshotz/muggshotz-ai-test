@@ -66,11 +66,18 @@ async function launch(opts = {}) {
         if (opts.panoramaOutOfCredits) {
           return route.fulfill({ status: 403, json: { error: "You're out of free tokens." } });
         }
+        // Real 21:9 geometry (Sep 2026). These used to be four copies of the
+        // same square stub, which made every panel the same shape as every
+        // box and hid the one bug that mattered: a third of a 21:9 strip is
+        // 7:9, a mug panel is not, and the preview cover-cropped the
+        // difference off both sides of every panel -- deleting the scene
+        // exactly where the panels join. Geometry the stub cannot express is
+        // geometry the tests cannot catch.
         return route.fulfill({ json: {
-          leftUrl: `${BASE}/__fake/generated.jpg`,
-          centerUrl: `${BASE}/__fake/generated.jpg`,
-          rightUrl: `${BASE}/__fake/generated.jpg`,
-          panoramaUrl: `${BASE}/__fake/generated.jpg`,
+          leftUrl: `${BASE}/__fake/pano-left.jpg`,
+          centerUrl: `${BASE}/__fake/pano-center.jpg`,
+          rightUrl: `${BASE}/__fake/pano-right.jpg`,
+          panoramaUrl: `${BASE}/__fake/panorama.jpg`,
         }});
       }
       return route.fulfill({ json: { imageUrl: `${BASE}/__fake/generated.jpg` } });
@@ -114,6 +121,10 @@ async function launch(opts = {}) {
     route.fulfill({ contentType: 'font/woff2', body: Buffer.alloc(0) }));
 
   // Fake image assets referenced by the stubs above.
+  for (const [name, file] of [['pano-left','fake-pano-left.jpg'],['pano-center','fake-pano-center.jpg'],['pano-right','fake-pano-right.jpg'],['panorama','fake-panorama.jpg']]) {
+    await page.route(`**/__fake/${name}.jpg`, (route) =>
+      route.fulfill({ contentType: 'image/jpeg', body: fs.readFileSync(path.join(SCRATCH, file)) }));
+  }
   await page.route('**/__fake/generated.jpg', (route) =>
     route.fulfill({ contentType: 'image/jpeg', body: FAKE_GENERATED }));
   await page.route('**/__fake/mockup.jpg', (route) =>
