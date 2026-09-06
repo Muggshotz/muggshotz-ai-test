@@ -602,7 +602,23 @@ scenarios.wraparoundCarriesIdentityAndStrength = async (page, log) => {
     return 'FAIL: the shared template is back in the prompt field: ' + JSON.stringify(p.slice(0, 120));
   }
   if (p.length > 400) return `FAIL: prompt is ${p.length} chars — that is a template, not an idea`;
-  return `PASS: the wraparound sends the idea alone (${p.length} chars) and carries the caricature strength as its own field`;
+  // ALYX'S OWN IDENTITY BLOCK, VERBATIM. Wraparound must send character for
+  // character what the working Three Panel path sends -- not a paraphrase of
+  // it. This compares the two files directly, so a reworded copy fails.
+  const fs = require('fs'), pathmod = require('path');
+  const root = pathmod.join(__dirname, '..');
+  const client = fs.readFileSync(pathmod.join(root, 'needles-studio.html'), 'utf8');
+  const server = fs.readFileSync(pathmod.join(root, 'api', 'generate.js'), 'utf8');
+  const a = client.indexOf('Transform the uploaded person into a premium professional Muggshotz caricature.');
+  const z = client.indexOf('Exaggerate existing real features, but keep the person immediately recognizable as the uploaded person.');
+  const block = client.slice(a, z);
+  for (const line of block.split('\n').map(l => l.trim()).filter(l => l && !l.startsWith('$'))) {
+    if (!server.includes(line)) return `FAIL: wraparound is missing your line -> "${line.slice(0, 70)}"`;
+  }
+  if (/ABOVE THE SCENE AND ABOVE THE STYLE/.test(server)) {
+    return 'FAIL: the paraphrased identity block is back — it must be your text, not a rewrite';
+  }
+  return `PASS: the wraparound sends the idea alone (${p.length} chars), carries the caricature strength, and uses your identity block verbatim — same text Three Panel sends`;
 };
 
 
