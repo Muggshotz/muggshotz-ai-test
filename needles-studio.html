@@ -2,7 +2,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head><link rel="manifest" href="needles-manifest.json">
-<!-- BUILD-MARKER: STUDIO-POLISH-v63 -->
+<!-- BUILD-MARKER: WRAP-PAYLOAD-READOUT-v65 -->
 <!-- If you can see this comment on GitHub, this exact paste landed. -->
 <!-- If your live site's page source does NOT say -->
 <!-- "INSTANT-FIT-SCREEN-v47" right here, the upload/deploy did -->
@@ -1586,9 +1586,44 @@ Tell Needles <span style="color:#7ab8ff">what you have in mind</span>
 <div style="text-align:center;font-size:20px;font-weight:800;color:#2196ff;animation:mugSelectFlash 1s ease-in-out infinite">Please wait while your panoramic image is being assembled...</div>
 </div>
 
+<!-- WHICH ENGINE PAINTED THIS (Alyx, Sep 2026). The wraparound has two
+     paths -- the single-shot panorama, and the older per-panel fallback
+     that takes over silently when the panorama service is down. They fail
+     in completely different ways, so a bad result cannot be read until you
+     know which one produced it. The only label before this lived inside the
+     Seam Fix overlay, which ONLY the fallback path ever opens, so on the
+     panorama path there was nothing to see at all. This is fixed to the
+     top of the window instead of living on one screen, because the two
+     paths land the customer on different screens; it rides above the
+     step-lock overlays (z-index 1800 clears the mockup lightbox's 1700)
+     and stays until dismissed or until the next generation starts. -->
+<div id="wrapMethodBanner" style="display:none;position:fixed;top:10px;left:50%;transform:translateX(-50%);z-index:1800;max-width:min(760px,94vw);padding:8px 40px 8px 14px;border-radius:10px;font-size:12.5px;font-weight:700;line-height:1.35;text-align:center;box-shadow:0 6px 18px rgba(0,0,0,.55)">
+<span id="wrapMethodBannerText"></span>
+<button type="button" onclick="hideWrapMethodBanner()" aria-label="Dismiss" style="position:absolute;top:4px;right:8px;background:none;border:none;color:inherit;font-size:15px;font-weight:700;cursor:pointer;line-height:1;padding:4px">✕</button>
+</div>
+<!-- WHAT WAS ACTUALLY SENT (Alyx, Sep 2026). Reading the source proved the
+     production call and the comparison tool's Method A were equivalent, and
+     they still produce different pictures from the same endpoint. So this
+     prints the real outgoing request at the moment of the call -- prompt
+     verbatim, photo dimensions and weight, whether the reference pins rode
+     along, the style values -- because "the code looks identical" and "the
+     request was identical" are not the same claim. Diagnostic: remove once
+     the discrepancy is closed. -->
+<div id="wrapPayloadReadout" style="display:none;position:fixed;top:64px;left:50%;transform:translateX(-50%);z-index:1799;width:min(760px,94vw);max-height:46vh;overflow:auto;padding:12px 40px 12px 14px;border-radius:10px;background:#06131f;border:1px solid #2f6ea8;color:#cfe6ff;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11.5px;line-height:1.5;white-space:pre-wrap;word-break:break-word;box-shadow:0 8px 22px rgba(0,0,0,.6)">
+<button type="button" onclick="document.getElementById('wrapPayloadReadout').style.display='none'" aria-label="Dismiss" style="position:absolute;top:4px;right:8px;background:none;border:none;color:#cfe6ff;font-size:15px;font-weight:700;cursor:pointer;padding:4px">✕</button>
+<span id="wrapPayloadReadoutText"></span>
+</div>
 <div id="revealOverlay" class="step-lock-overlay" style="display:none">
 <div class="card" id="revealCard" style="max-width:520px;width:100%;margin:auto;position:relative;max-height:92vh;overflow-y:auto;text-align:center">
 <div class="card-title">🎉 Your Finished Artwork</div>
+<!-- WHICH ENGINE PAINTED THIS (Alyx, Sep 2026). The wraparound has two
+     paths -- the single-shot panorama, and the older per-panel fallback
+     that takes over silently when the panorama service is down. They fail
+     in completely different ways, so a bad result is unreadable until you
+     know which one ran. The only label before this lived inside the Seam
+     Fix overlay, which ONLY the fallback path ever opens -- so on the
+     panorama path there was nothing to see. This says it plainly, on the
+     first screen after generating, on both paths. -->
 <img id="revealArtworkImg" style="width:100%;border-radius:10px;border:1px solid #003c8c;margin:.9rem 0;background:#0d0d0d"/>
 <!-- Mug panels: the ONE picture, in the true shape of its print area, with
      the fade drawn on it exactly as the Fit Your Picture box draws it. The
@@ -9994,6 +10029,29 @@ function continueFromMugPanels(){
   enterRevealStage();
 }
 
+// Called at the exact point each engine commits, so the banner reports what
+// actually ran rather than what was asked for.
+function showWrapMethodBanner(method){
+  const box=document.getElementById('wrapMethodBanner');
+  const txt=document.getElementById('wrapMethodBannerText');
+  if(!box||!txt)return;
+  if(method==='panorama'){
+    box.style.background='rgba(10,58,26,.96)';
+    box.style.border='1px solid #2e9e57';
+    box.style.color='#8bf3b0';
+    txt.textContent='\u26A1 Single-shot panorama \u2014 one image, cut into three. Seams line up by construction.';
+  } else if(method==='classic'){
+    box.style.background='rgba(74,36,6,.97)';
+    box.style.border='1px solid #e09330';
+    box.style.color='#ffcc85';
+    txt.textContent='\uD83E\uDDF5 FALLBACK \u2014 the panorama service was unavailable, so the three panels were painted separately. Seams may not line up.';
+  } else { return; }
+  box.style.display='block';
+}
+function hideWrapMethodBanner(){
+  const box=document.getElementById('wrapMethodBanner');
+  if(box)box.style.display='none';
+}
 async function enterRevealStage(){
   const choiceOverlay=document.getElementById('revealChoiceOverlay');
   if(!choiceOverlay)return;
@@ -12624,6 +12682,10 @@ async function generate(){
   const btn=document.getElementById('generateBtn');
   btn.disabled=true;
   const workingImage=uploadedImageData;
+  // Cleared per run: the badge on the reveal screen reports THIS
+  // generation's engine, never the one before it.
+  lastWraparoundMethod=null;
+  hideWrapMethodBanner();
   const refASnapshot=refImageAData;
   const refBSnapshot=refImageBData;
   const keepTweakingReminderEl=document.getElementById('keepTweakingReminder');
@@ -12893,6 +12955,32 @@ Use rich environmental storytelling while keeping the face as the primary focal 
       // second charge. Retries are deliberately limited to transient statuses;
       // a 403 (out of credits) or a 400 (bad request) is answered, not busy,
       // and retrying either would be wrong.
+      // Printed from the SAME object that is about to be sent, so it cannot
+      // drift from reality the way a hand-written summary would.
+      try{
+        const bodyObj={action:'wraparoundPanorama',image:workingImage,prompt:panoramaIdea,deviceId,refImageA:refASnapshot,refImageB:refBSnapshot,...currentStylePayload()};
+        const probe=new Image();
+        probe.onload=()=>{
+          const el=document.getElementById('wrapPayloadReadoutText');
+          const box=document.getElementById('wrapPayloadReadout');
+          if(!el||!box)return;
+          const kb=(v)=>v?Math.round(v.length/1365)+' KB':'null';
+          el.textContent=
+            'SENT TO wraparoundPanorama\n'+
+            '-----------------------------------------\n'+
+            'prompt ('+String(bodyObj.prompt||'').length+' chars):\n'+JSON.stringify(bodyObj.prompt)+'\n\n'+
+            'image: '+probe.naturalWidth+'x'+probe.naturalHeight+', '+kb(bodyObj.image)+', '+String(bodyObj.image||'').slice(5,15)+'\n'+
+            'refImageA: '+(bodyObj.refImageA?('PRESENT '+kb(bodyObj.refImageA)):'null')+'\n'+
+            'refImageB: '+(bodyObj.refImageB?('PRESENT '+kb(bodyObj.refImageB)):'null')+'\n'+
+            'styleIsDefault: '+bodyObj.styleIsDefault+'\n'+
+            'styleDirective ('+String(bodyObj.styleDirective||'').length+' chars): '+JSON.stringify(String(bodyObj.styleDirective||'').slice(0,180))+'\n'+
+            'other keys: '+Object.keys(bodyObj).filter(k=>!['action','image','prompt','deviceId','refImageA','refImageB','styleIsDefault','styleDirective'].includes(k)).join(', ');
+          box.style.display='block';
+        };
+        probe.onerror=()=>{};
+        probe.src=workingImage;
+      }catch(readoutErr){ console.error('Payload readout failed (harmless):',readoutErr); }
+
       const PANORAMA_RETRY_STATUSES=[429,500,502,503,504];
       const PANORAMA_MAX_ATTEMPTS=3;
       let panoramaResp=null,parsedPanorama=null;
@@ -12980,6 +13068,7 @@ Use rich environmental storytelling while keeping the face as the primary focal 
       placements.right=addToRecentDesigns(rightUrl);
 
       lastWraparoundMethod='panorama';
+      showWrapMethodBanner('panorama');
       pendingWraparoundRaw={left:rawLeftUrl,center:rawCenterUrl,right:rawRightUrl};
 
       document.getElementById('wraparoundStandbyPrompt').style.display='none';
@@ -13251,6 +13340,7 @@ async function makeTestSingleZonePanorama(side){
       placements.right = addToRecentDesigns(rightUrl);
 
       lastWraparoundMethod='classic';
+      showWrapMethodBanner('classic');
       // No panorama exists on this path: left and right were generated
       // independently by "continue this scene", so there is no single strip to
       // print from and the server must reassemble the panels as before.

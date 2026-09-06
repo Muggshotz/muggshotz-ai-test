@@ -206,7 +206,19 @@ scenarios.mugWraparoundUsesPanorama = async (page, log) => {
     return 'FAIL: Fix the Seams still opens on the panorama path — the cut is exact, so its sliders can only introduce a mismatch, not repair one';
   if (s.seams.some(v => v !== 0))
     return `FAIL: seam offsets carried into a panorama render: ${JSON.stringify(s.seams)} — these feed the final print files`;
-  return 'PASS: mug Wraparound = 1 panorama call, 3 aligned panels, and no Fix the Seams screen';
+  // THE PROMPT IS THE IDEA, NOTHING ELSE. The shared client template used to
+  // ride in this field and land inside the server's own "CUSTOMER REQUEST"
+  // slot, carrying per-panel seam language into a prompt whose whole job is
+  // to convince the model there are no panels. It was fixed once and has to
+  // stay fixed, so it is asserted rather than trusted.
+  const sent = log.apiCalls.filter((c) => c.action === 'wraparoundPanorama').pop();
+  if (!sent || sent.prompt == null) return 'FAIL: no panorama request body captured';
+  if (sent.prompt !== 'a wide desert canyon at sunrise')
+    return `FAIL: the panorama call sent more than the customer's idea (${sent.prompt.length} chars): ${JSON.stringify(sent.prompt.slice(0, 160))}`;
+  const banner = await page.evaluate(() => { const b = document.getElementById('wrapMethodBanner'); return { shown: getComputedStyle(b).display !== 'none', text: document.getElementById('wrapMethodBannerText').textContent }; });
+  if (!banner.shown) return 'FAIL: no engine banner after a panorama run';
+  if (!/panorama/i.test(banner.text)) return 'FAIL: banner does not name the panorama engine: ' + banner.text;
+  return 'PASS: mug Wraparound = 1 panorama call carrying the idea alone, 3 aligned panels, no Fix the Seams, and the banner says panorama';
 };
 
 // ---- 4. Panorama outage falls back to per-panel rather than dead-ending. ----
@@ -230,7 +242,10 @@ scenarios.mugWraparoundFallsBackOnOutage = async (page, log) => {
   }));
   if (s.method !== 'classic') return `FAIL: lastWraparoundMethod=${s.method} after a panorama outage`;
   if (!s.left || !s.front || !s.right) return `FAIL: fallback left panels missing (l=${s.left} c=${s.front} r=${s.right})`;
-  return 'PASS: panorama outage falls back to the per-panel engine and still finishes';
+  const fb = await page.evaluate(() => { const b = document.getElementById('wrapMethodBanner'); return { shown: getComputedStyle(b).display !== 'none', text: document.getElementById('wrapMethodBannerText').textContent }; });
+  if (!fb.shown) return 'FAIL: a silent fallback stayed silent — no banner';
+  if (!/FALLBACK/.test(fb.text)) return 'FAIL: banner does not announce the fallback: ' + fb.text;
+  return 'PASS: panorama outage falls back, still finishes, and says so on screen instead of silently';
 };
 
 // ---- 5. Out of credits does NOT fall back to a second chargeable path. ----

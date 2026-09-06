@@ -44,7 +44,8 @@ async function launch(opts = {}) {
     const postData = req.postData() || '';
     log.apiCalls.push({ path: p, action: body.action || null, bytes: postData.length,
       mime: typeof body.image === 'string' ? (body.image.match(/^data:(image\/\w+)/) || [])[1] || null : null,
-      placementAdjust: body.placementAdjust || null });
+      placementAdjust: body.placementAdjust || null,
+      prompt: typeof body.prompt === 'string' ? body.prompt : null });
 
     if (p === '/api/get-balance') {
       return route.fulfill({ json: { tokenBalance: 25, hasPurchased: true, isAdmin: false } });
