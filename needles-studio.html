@@ -2,7 +2,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head><link rel="manifest" href="needles-manifest.json">
-<!-- BUILD-MARKER: WRAP-PREVIEW-DISPLAY-ONLY-v68 -->
+<!-- BUILD-MARKER: WRAP-IDENTITY-RESTORED-v69 -->
 <!-- If you can see this comment on GitHub, this exact paste landed. -->
 <!-- If your live site's page source does NOT say -->
 <!-- "INSTANT-FIT-SCREEN-v47" right here, the upload/deploy did -->
@@ -13024,6 +13024,12 @@ Use rich environmental storytelling while keeping the face as the primary focal 
       // template. Every other product path is completely untouched --
       // `prompt` itself still exists below for them, unchanged.
       const panoramaIdea = idea || 'Create a funny, polished, product-ready caricature of the uploaded person.';
+      // The Degree of Caricature (Lifelike / Balanced / Wild) used to reach the
+      // model only as a line inside the shared template. Sequestering the
+      // prompt took the template out and took the setting with it, so the
+      // control silently stopped doing anything on this path. It travels as
+      // its own field now -- data, not prose -- and the server turns it into
+      // the strength line. The prompt field stays the customer's raw idea.
 
       // RETRY BEFORE FALLING BACK (Aug 2026). Measured, not assumed: three of
       // four probe calls came back 503 "This model is currently experiencing
@@ -13046,7 +13052,7 @@ Use rich environmental storytelling while keeping the face as the primary focal 
           panoramaResp=await fetch('/api/generate',{
             method:'POST',
             headers:{'Content-Type':'application/json'},
-            body:JSON.stringify({action:'wraparoundPanorama',image:workingImage,prompt:panoramaIdea,deviceId,refImageA:refASnapshot,refImageB:refBSnapshot,...currentStylePayload()}),
+            body:JSON.stringify({action:'wraparoundPanorama',image:workingImage,prompt:panoramaIdea,deviceId,likeness,refImageA:refASnapshot,refImageB:refBSnapshot,...currentStylePayload()}),
             signal:currentGenerationController.signal
           });
         }catch(abortErr){

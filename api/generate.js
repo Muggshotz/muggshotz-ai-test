@@ -251,7 +251,7 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: "Method not allowed" });
   }
   try {
-    const { image, prompt, theme, deviceId, refImageA, refImageB, currentDesign, size, panelRole, action, templateMerge, styleDirective, styleIsDefault } = req.body;
+    const { image, prompt, theme, deviceId, refImageA, refImageB, currentDesign, size, panelRole, action, templateMerge, styleDirective, styleIsDefault, likeness } = req.body;
 
     // Lightweight path: upload an already-composited image (a Frame or
     // caption baked onto the finished art in the browser via canvas) to
@@ -344,7 +344,39 @@ An additional reference image is attached. ${refImageA ? 'One is "Photo 2" — w
       //   cut into three separate pieces along those exact lines afterward and
       //   displayed side by side on a wraparound mug ...
       // (full text in git: api/generate.js @ 919b18a)
-      const panoramaPrompt = `
+      // IDENTITY PROTECTION, RESTORED (Sep 2026, Alyx). Sequestering this
+      // action's prompt down to the customer's raw idea fixed the seams --
+      // the shared client template was carrying per-panel "this panel joins
+      // the next one" language into a prompt whose whole job is to convince
+      // the model there are no panels. But that template was also the only
+      // place these NEGATIVE identity constraints lived, and the block below
+      // has none of them: it says what to capture, never what not to do. The
+      // faces started coming back beautified, smoothed and generically
+      // handsome from the same afternoon the sequestering shipped, and Alyx
+      // called it on the first generation. A caricature that isn't
+      // recognisably the customer has no reason to exist, so the identity
+      // half comes back here -- server-side, where it can never drag panel
+      // wording along with it -- while the prompt field stays the raw idea.
+      const strengthLine =
+        likeness === "0.15"
+          ? "Caricature strength: LIGHT. Preserve identity very strongly. Use only mild exaggeration."
+          : likeness === "0.25"
+          ? "Caricature strength: BALANCED. Use moderate exaggeration, but identity must remain unmistakable."
+          : likeness === "0.4"
+          ? "Caricature strength: WILD. Use bold exaggeration only on the person's real existing features. Do not invent new facial features."
+          : "";
+
+      const identityGuard = `
+IDENTITY PRESERVATION IS THE TOP PRIORITY, ABOVE THE SCENE AND ABOVE THE STYLE.
+Use the uploaded face as the source of truth. Do not invent a new person.
+Do NOT beautify, idealise, slim, smooth, youthen, age-shift, race-shift or gender-shift the face, and do not change the person's underlying facial structure in any way.
+Do NOT replace the face with a generic cartoon face, a stock caricature face, a model's face, or any actor, celebrity, mascot or invented character.
+Keep the same hairline and the same bald head or hairstyle, the same forehead, the same brow shape, the same eye shape and spacing, the same nose width and shape, the same mouth and smile shape, the same teeth, the same cheeks, the same jawline, the same chin, the same ears, the same skin tone, the same apparent age, and the same overall facial proportions as the uploaded photo.
+A stranger who knows this person must recognise them instantly. If a choice must be made between a more attractive face and a more accurate one, choose the accurate one every time.
+${strengthLine}
+`;
+
+      const panoramaPrompt = `${identityGuard}
 CRITICAL MUGGSHOTZ LIKENESS RULE:
 This is a caricature of the exact person in the uploaded photo.
 Study the uploaded face first. Capture the spark and personality behind the eyes.
