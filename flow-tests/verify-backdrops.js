@@ -116,6 +116,9 @@ scenarios.frameGoesOnThePrintPanel = async (page, log) => {
   await page.waitForFunction(() => document.getElementById('mockupLightboxOverlay').classList.contains('visible'), null, { timeout: 20000 });
   const nudge0 = await page.evaluate(() => ({ nudge: getComputedStyle(document.getElementById('mockupLightboxNudge')).display, pulse: document.getElementById('mockupLightboxFrame').classList.contains('cta-flash') }));
   if (nudge0.nudge === 'none' || !nudge0.pulse) return `FAIL: unframed mockup should show the nudge and pulse the button: ${JSON.stringify(nudge0)}`;
+  // A prop flow must never see the frame offer, whatever is on the panels.
+  const propGate = await page.evaluate(() => { const keep = selectedDesignMethod; selectedDesignMethod = 'coverMe'; const r = frameOfferAvailable(); selectedDesignMethod = keep; refreshMockupLightboxFrameBtn(); return r; });
+  if (propGate) return 'FAIL: the frame offer is available on a prop (magazine cover) flow';
   await page.click('#mockupLightboxFrame');
   await T(page, 800);
   const before = await page.evaluate(async () => {
