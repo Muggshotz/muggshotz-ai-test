@@ -97,6 +97,34 @@ scenarios.generateHidesTheOlderPrompt = async (page) => {
   return 'PASS: the satisfied prompt hides while Generate is on screen and returns when it is not';
 };
 
+scenarios.metallicEffectsTakeTheColour = async (page) => {
+  await openStudio(page);
+  await reachPanels(page);
+  const res = await page.evaluate(async () => {
+    const wait = (ms) => new Promise(r => setTimeout(r, ms));
+    const t = document.getElementById('captionText'); t.value = 'HELLO'; t.dispatchEvent(new Event('input', { bubbles: true }));
+    await wait(200);
+    const sample = () => { const c = document.querySelector('[id^="coverMeFitBox_"] .fitCaption'); const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let r = 0, g = 0, b = 0, n = 0; for (let i = 0; i < d.length; i += 4) if (d[i + 3] > 200) { r += d[i]; g += d[i + 1]; b += d[i + 2]; n++; } return n ? { r: r / n, g: g / n, b: b / n } : null; };
+    const pick = (name) => { const btn = [...document.querySelectorAll('.effect-btn, [data-effect]')].find(b => (b.dataset.effect || '').includes(name) || b.textContent.trim().toLowerCase().includes(name)); if (btn) btn.click(); };
+    pick('diamond'); await wait(200);
+    const diamondWhite = sample();
+    const col = document.getElementById('captionColor'); col.value = '#ff0000'; col.dispatchEvent(new Event('input', { bubbles: true }));
+    await wait(200);
+    const diamondRed = sample();
+    pick('gold'); await wait(200);
+    const goldRed = sample();
+    col.value = '#ffffff'; col.dispatchEvent(new Event('input', { bubbles: true })); await wait(200);
+    const goldWhite = sample();
+    return { effect: captionEffect, diamondWhite, diamondRed, goldRed, goldWhite };
+  });
+  if (!res.diamondWhite || !res.diamondRed) return 'FAIL: no caption pixels sampled ' + JSON.stringify(res);
+  if (!(res.diamondWhite.b > res.diamondWhite.r)) return 'FAIL: Diamond in white should be icy blue: ' + JSON.stringify(res.diamondWhite);
+  if (!(res.diamondRed.r > res.diamondRed.g + 40 && res.diamondRed.r > res.diamondRed.b + 40)) return 'FAIL: Diamond did not take the red: ' + JSON.stringify(res.diamondRed);
+  if (!(res.goldRed.r > res.goldRed.g + 40)) return 'FAIL: Gold did not take the red: ' + JSON.stringify(res.goldRed);
+  if (!(res.goldWhite.r > res.goldWhite.b + 30 && res.goldWhite.g > res.goldWhite.b + 10)) return 'FAIL: Gold in white should still be gold: ' + JSON.stringify(res.goldWhite);
+  return 'PASS: metallic effects take the picked colour and keep their own look when the colour is white';
+};
+
 (async () => {
   let failed = 0;
   for (const [name, fn] of Object.entries(scenarios)) {
