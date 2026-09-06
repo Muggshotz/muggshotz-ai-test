@@ -1706,7 +1706,7 @@ Tell Needles <span style="color:#7ab8ff">what you have in mind</span>
 <div id="accessorizePreviewStrip" style="display:flex;gap:8px;margin-top:1rem"></div>
 
 <div id="accessorizeCommittedContent" style="display:none">
-<div class="note-prominent" style="margin-top:.9rem;margin-bottom:.75rem">Pick a Frame or Window Sill above and try as many combinations as you like — nothing is saved until you tap Satisfied below.</div>
+<div class="note-prominent" id="accessorizeCommittedNote" style="margin-top:.9rem;margin-bottom:.75rem">Pick a Frame or Window Sill above and try as many combinations as you like — nothing is saved until you tap Satisfied below.</div>
 <div id="frameFitSlidersWrap" style="display:none;margin-top:.9rem">
 <button type="button" class="download-btn" id="frameFitSlidersToggleBtn" style="margin-top:0" onclick="toggleFrameFitSliders()">🎚️ Adjust Frame Fit</button>
 <div id="frameFitSliders" style="display:none;margin-top:.75rem">
@@ -12024,7 +12024,7 @@ function renderAccessorizeStripThree(urls){
   uniqueUrls.forEach(u=>{
     const img=document.createElement('img');
     img.src=u;
-    img.style.cssText='flex:1;min-width:0;border-radius:8px;border:1px solid #003c8c;object-fit:contain;max-height:170px;background:#0d0d0d';
+    img.style.cssText='flex:1;min-width:0;border-radius:8px;border:1px solid #003c8c;object-fit:contain;max-height:'+(uniqueUrls.length===1?'440px':'170px')+';background:#0d0d0d';
     strip.appendChild(img);
   });
 }
@@ -12120,6 +12120,8 @@ function showAccessorizeStep(){
   if(cancelBtn)cancelBtn.textContent=frameOfferFromMockup?'↩️ Back to the Mockup':'↩️ Cancel — Go Back';
   const satisfiedBtn=document.getElementById('accessorizeSatisfiedBtn');
   if(satisfiedBtn)satisfiedBtn.textContent=frameOfferFromMockup?'✅ Apply This Frame':'✅ Satisfied?';
+  const committedNote=document.getElementById('accessorizeCommittedNote');
+  if(committedNote)committedNote.textContent=frameOfferFromMockup?'Tap any frame to try it on. Nothing is saved until you tap Apply This Frame.':'Pick a Frame or Window Sill above and try as many combinations as you like — nothing is saved until you tap Satisfied below.';
   updateAccessorizePreview();
   // If they already decided before generating, don't yank them back to a
   // decision that's already made -- only steer them to the picker if
