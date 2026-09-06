@@ -2,7 +2,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head><link rel="manifest" href="needles-manifest.json">
-<!-- BUILD-MARKER: CAPTION-PATHS-v56 -->
+<!-- BUILD-MARKER: RECALL-DESIGN-v57 -->
 <!-- If you can see this comment on GitHub, this exact paste landed. -->
 <!-- If your live site's page source does NOT say -->
 <!-- "INSTANT-FIT-SCREEN-v47" right here, the upload/deploy did -->
@@ -2713,6 +2713,9 @@ function confirmStyleAndContinue(){
 // magazine covers and window scenes to someone who had already written out
 // their own idea in full.
 let chosenTrack=null;
+// A recalled design with no product chosen yet: approval waits until the
+// product, size, style and colour are picked (see finishPreGenMugColorPick).
+let recalledDesignAwaitingApproval=false;
 
 function pickTrackProduct(){
   chosenTrack='product';
@@ -5715,6 +5718,15 @@ function finishPreGenMugColorPick(){
   // refreshMugPrintModeVisibility -- so that's the next stop, not
   // designMethodCard directly. pickMugPrintMode() moves on to
   // designMethodCard once they've picked.
+  if(recalledDesignAwaitingApproval&&currentDesignId&&findDesignById(currentDesignId)){
+    // A recalled design now has its product: approve it here, not Generate.
+    recalledDesignAwaitingApproval=false;
+    clearAllFocusModes();
+    const row=document.getElementById('approveRow');
+    if(row)row.style.display='block';
+    smoothScrollToTarget('approveRow','center');
+    return;
+  }
   smoothScrollToTarget('mugPrintModeCard','center');
 }
 
@@ -14356,6 +14368,27 @@ function recallLastGeneratedImage(){
     // declaration earlier in the session removed.
     byoDeclaredIntent='ai';
     applyByoRailVisibility();
+    // RECALL AFTER A FRESH LOAD (Alyx, Sep 2026): the page opens in the
+    // first-visit spotlight that dims every card but the upload card, and
+    // the recall left it on -- a subdued page with nothing clickable. The
+    // design record was also gone (the print state is purged on entry), so
+    // approval could never have placed it. Register the design, lift the
+    // spotlight, and route to the product picker when no product is chosen
+    // yet; approval follows once the colour is picked.
+    if(!currentDesignId){currentDesignId='design-'+Date.now();}
+    if(!findDesignById(currentDesignId)){recentDesigns.push({id:currentDesignId,url:saved.working});saveMugState();}
+    const startOver=document.getElementById('startOverBtn');
+    if(startOver)startOver.style.display='none';
+    document.body.classList.remove('initial-upload-focus');
+    if(product){
+      clearAllFocusModes();
+      document.getElementById('approveRow').style.display='block';
+      smoothScrollToTarget('approveRow','center');
+    } else {
+      recalledDesignAwaitingApproval=true;
+      document.getElementById('approveRow').style.display='none';
+      pickTrackProduct();
+    }
   }catch(e){console.error('Could not recall last generated image:',e);}
 }
 // PURGE BEFORE ANYTHING READS (2026-08-27, Alyx lost a finished piece to
