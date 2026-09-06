@@ -2,7 +2,7 @@ import fs from "fs";
 import path from "path";
 import sharp from "sharp";
 
-// BUILD: 2026-09-06 — wraparoundPanorama prompt: added explicit anti-letterbox/pillarbox language (subject was coming back padded with black bars top/bottom while flanking scene filled full height)
+// BUILD: 2026-09-06b — wraparoundPanorama prompt: added fence/mountain/tree-line continuity language and single-sky continuity language (test showed fence rail, mountain silhouette, and sky color drifting across the seams even after the letterbox fix)
 
 // RESTORED (July 2026): this file was found genuinely truncated — cut
 // off mid-function with no closing brackets and no export default
@@ -362,6 +362,8 @@ Place the caricature of the customer, based on the uploaded photo, centred horiz
 To the left and to the right of the subject, continue the SAME environment outward without interruption — the same room, the same landscape, the same crowd, the same lighting — exactly as if the camera had simply panned further in that direction. Do NOT repeat the subject's face or body anywhere else in the scene unless the environment naturally calls for it (a shadow, a reflection, a distant object they would plausibly be near).
 Lighting direction, colour grading, horizon line, perspective and visual style must stay perfectly consistent all the way across the full width.
 The scene must fill the ENTIRE height of the canvas everywhere, including directly above and below the subject. Do NOT shrink, inset, or pad the subject inside a smaller box of their own — the same environment that fills the left and right edges top-to-bottom must also fill the space immediately above and below the subject, with no gap, band, or empty area of any colour separating the subject from the rest of the scene.
+Any continuous physical structure that appears in the scene — a fence, wall, tree line, mountain range, roofline, or similar — must behave as ONE real object running the full width of the image: same height, same spacing, same angle, same material, with no jump, reset, or restart at any point, as if it were photographed in a single unbroken panoramic shot rather than painted separately in different regions.
+The sky is a single sky: its color, gradient, and cloud shapes must blend smoothly across the entire width with no abrupt shift in hue, brightness, or cloud pattern anywhere.
 
 ${referenceLine}
 
