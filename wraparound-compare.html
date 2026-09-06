@@ -11,6 +11,7 @@
     --panel-border:#2a3550;
     --gold:#e0b96a;
     --blue:#7aa2ff;
+    --purple:#b98af0;
     --text:#dfe6f5;
     --dim:#8b96b3;
     --good:#5fd08a;
@@ -103,11 +104,14 @@
     display:grid;
     grid-template-columns:1fr;
     gap:24px;
-    max-width:1100px;
+    max-width:1500px;
     margin:0 auto;
   }
   @media(min-width:820px){
     .cols{grid-template-columns:1fr 1fr;}
+  }
+  @media(min-width:1240px){
+    .cols{grid-template-columns:1fr 1fr 1fr;}
   }
   .col{
     background:var(--panel);
@@ -115,10 +119,16 @@
     border-radius:10px;
     padding:18px;
   }
+  .col.experimental{
+    border-color:var(--purple);
+  }
   .col h2{
     font-size:15px;
     margin:0 0 4px;
     color:var(--gold);
+  }
+  .col.experimental h2{
+    color:var(--purple);
   }
   .col .desc{
     font-size:12.5px;
@@ -164,7 +174,7 @@
 <body>
 
 <h1>Wraparound Method Comparison</h1>
-<div class="sub">Same photo, same prompt, both generation paths — for judging seam continuity and likeness side by side. Not customer-facing.</div>
+<div class="sub">Same photo, same prompt, all three generation paths — for judging seam continuity and likeness side by side. Not customer-facing.</div>
 
 <div class="setup">
   <label>Reference photo</label>
@@ -173,10 +183,10 @@
     <input type="file" id="photoInput" accept="image/*">
   </div>
 
-  <label>Description (same text goes to both methods)</label>
+  <label>Description (same text goes to all methods)</label>
   <textarea id="promptInput" placeholder="e.g. Standing in front of a long wooden fence with a mountain range in the background, wide open sky above, wearing a cowboy hat"></textarea>
 
-  <button id="runBtn" disabled>Run Both Methods</button>
+  <button id="runBtn" disabled>Run All Methods</button>
   <div class="device-line" id="deviceLine"></div>
 </div>
 
@@ -190,11 +200,19 @@
   </div>
 
   <div class="col">
-    <h2>Method B — Sequential (OpenAI edit)</h2>
-    <div class="desc">Center is generated first as a real edit of your photo, then Left and Right are separate calls that outpaint from Center's actual pixels. Better grounding, but each call can drift in scale/style.</div>
+    <h2>Method B — Sequential, text-only (OpenAI edit)</h2>
+    <div class="desc">Center is generated first as a real edit of your photo. Left and Right are separate calls that hand over the whole center image and ask for a brand-new image continuing the scene — the model re-imagines the boundary rather than preserving it.</div>
     <div class="strip" id="stripB"><div class="placeholder">Waiting to run</div></div>
     <div class="status" id="statusB"></div>
     <div class="timer" id="timerB"></div>
+  </div>
+
+  <div class="col experimental">
+    <h2>Method C — Sequential, masked outpaint (experimental)</h2>
+    <div class="desc">Same center as Method B. Left and Right use real masked outpainting instead: existing pixels are marked untouchable via transparency, only the new strip is generated. Untested until now — and resolution-limited to 768px-wide test panels by the model's fixed size menu, so judge alignment here, not sharpness.</div>
+    <div class="strip" id="stripC"><div class="placeholder">Waiting to run</div></div>
+    <div class="status" id="statusC"></div>
+    <div class="timer" id="timerC"></div>
   </div>
 </div>
 
@@ -209,9 +227,18 @@ function getDeviceId(){
 }
 const deviceId = getDeviceId();
 document.getElementById('deviceLine').textContent =
-  'Device: ' + deviceId + ' — this tool draws from that device\'s real token balance (1 token per method run).';
+  'Device: ' + deviceId + ' \u2014 this tool draws from that device\'s real token balance (1 token for Method A, 1 token for Method B\'s center, Method C reuses that same center for free).';
 
 let workingImage = null;
+
+function loadImage(src){
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = src;
+  });
+}
 
 function resizeDataUrl(dataUrl, maxDimension){
   return new Promise((resolve) => {
@@ -232,6 +259,20 @@ function resizeDataUrl(dataUrl, maxDimension){
       resolve(canvas.toDataURL('image/jpeg', 0.9));
     };
     img.src = dataUrl;
+  });
+}
+
+// Fetches a hosted image and returns it as a data URL, entirely in-memory.
+// Used instead of setting img.crossOrigin on a direct URL load, so later
+// canvas reads (toDataURL) never hit a tainted-canvas security error
+// regardless of the storage bucket's CORS headers.
+async function urlToDataURL(url){
+  const blob = await (await fetch(url)).blob();
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
   });
 }
 
@@ -293,51 +334,50 @@ async function runMethodA(prompt){
       return;
     }
     renderStrip('stripA', [data.leftUrl, data.centerUrl, data.rightUrl]);
-    setStatus('statusA', 'Done — 1 token used.', 'good');
+    setStatus('statusA', 'Done \u2014 1 token used.', 'good');
   }catch(err){
     setTimer('timerA', (performance.now() - startedAt) / 1000);
     setStatus('statusA', 'Request failed: ' + err.message, 'bad');
   }
 }
 
-async function runMethodB(prompt){
-  const startedAt = performance.now();
-  setStatus('statusB', 'Generating center panel...', 'busy');
-  try{
-    const centerPrompt = `
+// Generates the ONE shared center panel used by both Method B and Method C,
+// so the only variable that differs between them is the outpaint mechanism
+// itself, not the starting image.
+async function generateSharedCenter(prompt){
+  const centerPrompt = `
 CRITICAL MUGGSHOTZ LIKENESS RULE:
-This is a caricature of the exact person in the uploaded photo. Keep a strong, unmistakable likeness — same face, same attitude, same expression.
+This is a caricature of the exact person in the uploaded photo. Keep a strong, unmistakable likeness \u2014 same face, same attitude, same expression.
 
 CUSTOMER REQUEST:
 ${prompt}
 
-COMPOSITION: This design will be printed as ONE CONTINUOUS WRAPAROUND image around a curved surface. The LEFT and RIGHT edges are the seam where this panel joins the next one — keep detail extended sharply all the way to those edges. Compose with detail extended toward the edges rather than tightly centered, so nothing important is lost at the seam.
+COMPOSITION: This design will be printed as ONE CONTINUOUS WRAPAROUND image around a curved surface. The LEFT and RIGHT edges are the seam where this panel joins the next one \u2014 keep detail extended sharply all the way to those edges. Compose with detail extended toward the edges rather than tightly centered, so nothing important is lost at the seam.
 `;
-    const centerResp = await fetch('/api/generate', {
-      method: 'POST',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({
-        image: workingImage,
-        prompt: centerPrompt,
-        deviceId,
-        size: '1536x1024'
-      })
-    });
-    const centerData = await centerResp.json();
-    if(!centerResp.ok){
-      setTimer('timerB', (performance.now() - startedAt) / 1000);
-      setStatus('statusB', 'Error (center): ' + (centerData.error || 'unknown'), 'bad');
-      return;
-    }
-    renderStrip('stripB', [centerData.imageUrl]);
-    setStatus('statusB', 'Center done — generating left panel...', 'busy');
+  const centerResp = await fetch('/api/generate', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({
+      image: workingImage,
+      prompt: centerPrompt,
+      deviceId,
+      size: '1536x1024'
+    })
+  });
+  const centerData = await centerResp.json();
+  if(!centerResp.ok){
+    throw new Error(centerData.error || 'unknown error generating center panel');
+  }
+  return centerData.imageUrl;
+}
 
-    const centerAsDataUrl = await (await fetch(centerData.imageUrl)).blob().then(b => new Promise((resolve) => {
-      const r = new FileReader();
-      r.onloadend = () => resolve(r.result);
-      r.readAsDataURL(b);
-    }));
-    const centerResized = await resizeDataUrl(centerAsDataUrl, 1280);
+async function runMethodBSides(prompt, centerUrl, startedAt){
+  try{
+    renderStrip('stripB', [centerUrl]);
+    setStatus('statusB', 'Center done \u2014 generating left panel...', 'busy');
+
+    const centerDataUrl = await urlToDataURL(centerUrl);
+    const centerResized = await resizeDataUrl(centerDataUrl, 1280);
 
     const leftResp = await fetch('/api/generate', {
       method: 'POST',
@@ -357,7 +397,7 @@ COMPOSITION: This design will be printed as ONE CONTINUOUS WRAPAROUND image arou
       return;
     }
 
-    setStatus('statusB', 'Left done — generating right panel...', 'busy');
+    setStatus('statusB', 'Left done \u2014 generating right panel...', 'busy');
     const rightResp = await fetch('/api/generate', {
       method: 'POST',
       headers: {'Content-Type':'application/json'},
@@ -376,11 +416,93 @@ COMPOSITION: This design will be printed as ONE CONTINUOUS WRAPAROUND image arou
       return;
     }
 
-    renderStrip('stripB', [leftData.imageUrl, centerData.imageUrl, rightData.imageUrl]);
-    setStatus('statusB', 'Done — 1 token used (left/right are free continuations).', 'good');
+    renderStrip('stripB', [leftData.imageUrl, centerUrl, rightData.imageUrl]);
+    setStatus('statusB', 'Done \u2014 1 token used total (left/right are free continuations).', 'good');
   }catch(err){
     setTimer('timerB', (performance.now() - startedAt) / 1000);
     setStatus('statusB', 'Request failed: ' + err.message, 'bad');
+  }
+}
+
+// Builds the 1536x1024 composite sent to the masked-outpaint endpoint: a
+// 768-wide strip of real, existing pixels on one half, fully transparent
+// on the other. side='left' means we are generating the LEFT panel, so the
+// existing context sits on the RIGHT half and the transparent region (the
+// new content) is to its left \u2014 and the mirror for side='right'.
+async function buildOutpaintComposite(centerDataUrl, side){
+  const img = await loadImage(centerDataUrl);
+  const scale = 1024 / img.height;
+  const srcStripWidthNative = 768 / scale;
+  // The LEFT panel needs context from the center's LEFT edge to continue
+  // smoothly leftward; the RIGHT panel needs context from the center's
+  // RIGHT edge.
+  const srcX = (side === 'left') ? 0 : Math.max(0, img.width - srcStripWidthNative);
+
+  const stripCanvas = document.createElement('canvas');
+  stripCanvas.width = 768;
+  stripCanvas.height = 1024;
+  stripCanvas.getContext('2d').drawImage(
+    img, srcX, 0, srcStripWidthNative, img.height, 0, 0, 768, 1024
+  );
+
+  const canvas = document.createElement('canvas');
+  canvas.width = 1536;
+  canvas.height = 1024;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, 1536, 1024);
+  ctx.drawImage(stripCanvas, side === 'left' ? 768 : 0, 0);
+
+  return canvas.toDataURL('image/png');
+}
+
+// Pulls just the newly-generated half back out of the 1536x1024 result.
+async function extractNewHalf(resultDataUrl, side){
+  const img = await loadImage(resultDataUrl);
+  const canvas = document.createElement('canvas');
+  canvas.width = 768;
+  canvas.height = 1024;
+  const srcX = side === 'left' ? 0 : 768;
+  canvas.getContext('2d').drawImage(img, srcX, 0, 768, 1024, 0, 0, 768, 1024);
+  return canvas.toDataURL('image/jpeg', 0.92);
+}
+
+async function runOutpaintSide(prompt, centerDataUrl, side){
+  const composite = await buildOutpaintComposite(centerDataUrl, side);
+  const resp = await fetch('/api/generate', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({
+      action: 'wraparoundOutpaintTest',
+      image: composite,
+      prompt,
+      deviceId
+    })
+  });
+  const data = await resp.json();
+  if(!resp.ok){
+    throw new Error((side + ': ') + (data.error || 'unknown error'));
+  }
+  const resultDataUrl = await urlToDataURL(data.imageUrl);
+  return extractNewHalf(resultDataUrl, side);
+}
+
+async function runMethodCSides(prompt, centerUrl, startedAt){
+  try{
+    renderStrip('stripC', [centerUrl]);
+    setStatus('statusC', 'Center reused \u2014 outpainting left panel...', 'busy');
+
+    const centerDataUrl = await urlToDataURL(centerUrl);
+
+    const leftJpeg = await runOutpaintSide(prompt, centerDataUrl, 'left');
+    setStatus('statusC', 'Left done \u2014 outpainting right panel...', 'busy');
+    const rightJpeg = await runOutpaintSide(prompt, centerDataUrl, 'right');
+
+    setTimer('timerC', (performance.now() - startedAt) / 1000);
+    renderStrip('stripC', [leftJpeg, centerUrl, rightJpeg]);
+    setStatus('statusC', 'Done \u2014 free (experimental action, no charge). Left/Right shown at half-width \u2014 resolution-limited test only.', 'good');
+  }catch(err){
+    setTimer('timerC', (performance.now() - startedAt) / 1000);
+    setStatus('statusC', 'Request failed: ' + err.message, 'bad');
   }
 }
 
@@ -388,21 +510,34 @@ document.getElementById('runBtn').addEventListener('click', async () => {
   const prompt = document.getElementById('promptInput').value.trim();
   const btn = document.getElementById('runBtn');
   btn.disabled = true;
-  btn.textContent = 'Running both...';
-  renderStrip('stripA', []);
-  renderStrip('stripB', []);
-  document.getElementById('stripA').innerHTML = '<div class="placeholder">Working...</div>';
-  document.getElementById('stripB').innerHTML = '<div class="placeholder">Working...</div>';
-  setTimer('timerA', null);
-  setTimer('timerB', null);
+  btn.textContent = 'Running all three...';
+  ['stripA','stripB','stripC'].forEach(id => {
+    document.getElementById(id).innerHTML = '<div class="placeholder">Working...</div>';
+  });
+  ['timerA','timerB','timerC'].forEach(id => setTimer(id, null));
+  ['statusA','statusB','statusC'].forEach(id => setStatus(id, '', ''));
 
-  await Promise.all([
-    runMethodA(prompt),
-    runMethodB(prompt)
-  ]);
+  const methodAPromise = runMethodA(prompt);
+
+  setStatus('statusB', 'Generating center panel...', 'busy');
+  setStatus('statusC', 'Waiting for center panel...', 'busy');
+  const sharedStartedAt = performance.now();
+
+  try{
+    const centerUrl = await generateSharedCenter(prompt);
+    await Promise.all([
+      methodAPromise,
+      runMethodBSides(prompt, centerUrl, sharedStartedAt),
+      runMethodCSides(prompt, centerUrl, sharedStartedAt)
+    ]);
+  }catch(err){
+    setStatus('statusB', 'Error (center): ' + err.message, 'bad');
+    setStatus('statusC', 'Error (center): ' + err.message, 'bad');
+    await methodAPromise;
+  }
 
   btn.disabled = false;
-  btn.textContent = 'Run Both Methods';
+  btn.textContent = 'Run All Methods';
 });
 </script>
 
