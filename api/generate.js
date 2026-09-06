@@ -2,7 +2,7 @@ import fs from "fs";
 import path from "path";
 import sharp from "sharp";
 
-// BUILD: 2026-09-06d — added experimental wraparoundOutpaintTest action (masked outpainting via real alpha transparency) for the Method C comparison test; no changes to any production-facing action
+// BUILD: 2026-09-06e — added explicit SCALE LOCK instructions to all three continuation prompts (panelContinuation, wraparoundPanorama, wraparoundOutpaintTest): the shared center's mountain range was being drawn at a different scale/distance than every flanking method independently invented, which was the real cause of the seam mismatch seen in the A/B/C/D comparison run, not a fundamental flaw in any one method
 
 // RESTORED (July 2026): this file was found genuinely truncated — cut
 // off mid-function with no closing brackets and no export default
@@ -363,6 +363,7 @@ To the left and to the right of the subject, continue the SAME environment outwa
 Lighting direction, colour grading, horizon line, perspective and visual style must stay perfectly consistent all the way across the full width.
 The scene must fill the ENTIRE height of the canvas everywhere, including directly above and below the subject. Do NOT shrink, inset, or pad the subject inside a smaller box of their own — the same environment that fills the left and right edges top-to-bottom must also fill the space immediately above and below the subject, with no gap, band, or empty area of any colour separating the subject from the rest of the scene.
 Any continuous physical structure that appears in the scene — a fence, wall, tree line, mountain range, roofline, or similar — must behave as ONE real object running the full width of the image: same height, same spacing, same angle, same material, with no jump, reset, or restart at any point, as if it were photographed in a single unbroken panoramic shot rather than painted separately in different regions.
+If the attached reference image already shows a background environment (not just a plain backdrop behind the person), any large environmental feature visible in it — a mountain range, tree line, skyline, or similar — must appear at that EXACT SAME apparent scale and distance everywhere across the width. Do not draw a larger, closer, or more dramatic version of it near the subject and a smaller, more distant version elsewhere, or the reverse. Match the reference image's own scale first, then continue outward from it at that same scale.
 The sky is a single sky: its color, gradient, and cloud shapes must blend smoothly across the entire width with no abrupt shift in hue, brightness, or cloud pattern anywhere.
 
 ${referenceLine}
@@ -505,7 +506,7 @@ FINAL REMINDER ON LIKENESS: Do not add facial hair, tattoos, piercings, scars, j
       outpaintFormData.append("model", "gpt-image-2");
       outpaintFormData.append(
         "prompt",
-        `OUTPAINTING TASK -- READ CAREFULLY:\nThis image is 1536x1024. Roughly half of it is real, existing content from an already-approved design. The other half is empty/transparent.\nDo NOT alter, redraw, recolor, rescale, or shift any of the existing (opaque) pixels in any way -- they must survive completely untouched.\nFill ONLY the empty/transparent area by continuing the exact same scene outward, believably, as if the camera had simply panned further in that direction: same environment, same lighting direction, same color grading, same art style, same scale.\nThe join between the existing content and the new content must be seamless -- no visible seam, no gap, no shift in perspective, scale, or style at the boundary.\n\n${prompt}`
+        `OUTPAINTING TASK -- READ CAREFULLY:\nThis image is 1536x1024. Roughly half of it is real, existing content from an already-approved design. The other half is empty/transparent.\nDo NOT alter, redraw, recolor, rescale, or shift any of the existing (opaque) pixels in any way -- they must survive completely untouched.\nFill ONLY the empty/transparent area by continuing the exact same scene outward, believably, as if the camera had simply panned further in that direction: same environment, same lighting direction, same color grading, same art style.\nSCALE LOCK: any large environmental feature that touches the boundary between the existing content and the empty area -- a mountain range, tree line, building, fence, or similar -- must continue at the EXACT SAME apparent size and distance it has right at that boundary. Do not shrink it, recede it further away, or enlarge it as you move away from the boundary.\nThe join between the existing content and the new content must be seamless -- no visible seam, no gap, no shift in perspective, scale, or style at the boundary.\n\n${prompt}`
       );
       outpaintFormData.append("size", "1536x1024");
       outpaintFormData.append(
@@ -611,6 +612,7 @@ The attached image is the CENTER panel of a three-panel wraparound design that h
 Generate a NEW image that continues this exact same scene as if the camera panned to the ${panelRole === "left" ? "LEFT" : "RIGHT"} of the center panel — same environment, same lighting direction, same color palette, same art style, continuing background and environmental elements naturally from the ${panelRole === "left" ? "left" : "right"} edge of the reference image.
 This is a BACKGROUND/ENVIRONMENT continuation panel. Do NOT repeat the main subject's face or body in this panel, unless the scene naturally calls for a background element related to them (e.g. a shadow, a reflection, a distant object they'd plausibly be near). The goal is extending the WORLD of the scene outward, not duplicating the subject.
 Match the lighting direction, color grading, and visual style of the reference image exactly, so all three panels feel like one single continuous photograph or illustration when placed side by side.
+SCALE LOCK: Any landmark already visible in the reference image at its edge — a mountain range, a tree line, a building, a fence, any large environmental feature — must continue at the EXACT SAME apparent size and distance as it appears in the reference image, measured right at that edge. Do not shrink it, recede it further away, enlarge it, or otherwise change how close or far it looks. Match its scale at the seam first, then continue it outward from there at that same scale.
 ` : "";
 
     // If a background theme was chosen and we have a matching reference
