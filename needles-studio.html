@@ -2,7 +2,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head><link rel="manifest" href="needles-manifest.json">
-<!-- BUILD-MARKER: MIRROR-HD-v54 -->
+<!-- BUILD-MARKER: FRAMES-ART-ONLY-v55 -->
 <!-- If you can see this comment on GitHub, this exact paste landed. -->
 <!-- If your live site's page source does NOT say -->
 <!-- "INSTANT-FIT-SCREEN-v47" right here, the upload/deploy did -->
@@ -10887,8 +10887,14 @@ let frameOfferFromMockup=false;
 let preFrameMockupUrls=null;
 let unframedDesignSnapshot=null;
 let coverMeFrameApplied=false;
+// Frames are for pictures that stand on their own: the customer's own
+// photo, or the art they described themselves. A prop (magazine cover,
+// Face It, Home Sweet Home) or a Window Sill already frames its subject,
+// so those mockups get no frame offer (Alyx, Sep 2026).
 function frameOfferAvailable(){
-  return product==='mug'&&mugPrintMode==='three-panel'&&['left','front','right'].some(pos=>placements[pos]&&findDesignById(placements[pos]));
+  if(product!=='mug'||mugPrintMode!=='three-panel')return false;
+  if(selectedDesignMethod||windowSillChoice)return false;
+  return ['left','front','right'].some(pos=>placements[pos]&&findDesignById(placements[pos]));
 }
 function refreshMockupLightboxFrameBtn(){
   const btn=document.getElementById('mockupLightboxFrame');
