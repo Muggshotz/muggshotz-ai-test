@@ -2,6 +2,8 @@ import fs from "fs";
 import path from "path";
 import sharp from "sharp";
 
+// BUILD: 2026-09-06 — wraparoundPanorama prompt: added explicit anti-letterbox/pillarbox language (subject was coming back padded with black bars top/bottom while flanking scene filled full height)
+
 // RESTORED (July 2026): this file was found genuinely truncated — cut
 // off mid-function with no closing brackets and no export default
 // handler at all, meaning every generation request failed instantly.
@@ -359,6 +361,7 @@ Generate exactly ONE continuous ultra-wide image, composed as a single sweeping 
 Place the caricature of the customer, based on the uploaded photo, centred horizontally in the middle of the frame.
 To the left and to the right of the subject, continue the SAME environment outward without interruption — the same room, the same landscape, the same crowd, the same lighting — exactly as if the camera had simply panned further in that direction. Do NOT repeat the subject's face or body anywhere else in the scene unless the environment naturally calls for it (a shadow, a reflection, a distant object they would plausibly be near).
 Lighting direction, colour grading, horizon line, perspective and visual style must stay perfectly consistent all the way across the full width.
+The scene must fill the ENTIRE height of the canvas everywhere, including directly above and below the subject. Do NOT shrink, inset, or pad the subject inside a smaller box of their own — the same environment that fills the left and right edges top-to-bottom must also fill the space immediately above and below the subject, with no gap, band, or empty area of any colour separating the subject from the rest of the scene.
 
 ${referenceLine}
 
@@ -370,7 +373,8 @@ CRITICAL COMPOSITION RULES — THE ARTWORK MUST FILL THE ENTIRE CANVAS, EDGE TO 
 Do NOT draw any border, frame, matte, margin, background surround, vignette, or coloured surface behind or around the artwork.
 Do NOT divide the image into panels, sections, columns, tiles, or separate pictures. This is NOT a triptych, NOT a diptych, NOT a collage, NOT a storyboard, and NOT a set of framed prints hanging on a wall.
 There must be no vertical lines, gutters, gaps, seams, or visual breaks anywhere in the composition.
-Every pixel, from the far left edge to the far right edge, is part of one single continuous scene.
+Do NOT letterbox or pillarbox the subject — no black bars, coloured bars, or blank padding above, below, or beside the subject. The subject stands directly inside the same continuous environment as the rest of the image, at the same scale as everything around them, touched on every side by that environment.
+Every pixel, from the far left edge to the far right edge and from the top edge to the bottom edge, is part of one single continuous scene.
 These composition rules are technical printing requirements. They override the STYLE above, and every other instruction here, without exception.
 `;
 
