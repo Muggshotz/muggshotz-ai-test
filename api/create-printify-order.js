@@ -637,7 +637,27 @@ export async function buildWraparoundImage(placements, canvasWidth, canvasHeight
     const printed = { left: pasteLeft, top: pasteTop, w: visW, h: visH };
     const faded = base ? buffer : await applyFadeIfNeeded(buffer, printed, fadePct, fadeHex);
     const finished = wantBorder ? await applyBorderIfNeeded(faded, printed) : faded;
-    return { input: finished, left: box.x, top: 0 };
+    // THE CAPTION LAYER (Sep 2026, Alyx): the words come as their own
+    // transparent sheet, drawn by the studio at the size of this box and
+    // hosted like any picture (adjustments[pos].caption). It goes on last,
+    // above the fade and the border, so the letters print crisp while the
+    // picture underneath is the very file the customer uploaded -- nothing
+    // is re-encoded or re-uploaded for a caption any more. A sheet drawn
+    // for a box a few pixels off this one is stretched to fit; a caption
+    // that cannot be fetched fails the render rather than printing a mug
+    // without the words the customer wrote.
+    const captionUrl = typeof adjust.caption === "string" && /^(https?:\/\/|data:image\/)/.test(adjust.caption) ? adjust.caption : null;
+    if (!captionUrl) return { input: finished, left: box.x, top: 0 };
+    const captionSheet = await sharp(await resolveImageBuffer(captionUrl))
+      .ensureAlpha()
+      .resize(targetW, targetH, { fit: "fill" })
+      .png()
+      .toBuffer();
+    const captioned = await sharp(finished)
+      .composite([{ input: captionSheet, left: 0, top: 0 }])
+      .png()
+      .toBuffer();
+    return { input: captioned, left: box.x, top: 0 };
   }
 
   const [leftComposite, frontComposite, rightComposite] = await Promise.all([
