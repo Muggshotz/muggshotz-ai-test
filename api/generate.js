@@ -2,7 +2,7 @@ import fs from "fs";
 import path from "path";
 import sharp from "sharp";
 
-// BUILD: 2026-09-06f — added explicit eye-color matching and smile-specific eye-shape matching to the likeness instruction (both occurrences) -- close comparison against the reference photo showed Method A rendering lighter/more open eyes than the subject's actual dark, smile-narrowed eyes, and the prompt never mentioned color or smile-shape at all
+// BUILD: 2026-09-06g — added a COLOR vibrancy line to the wraparoundPanorama prompt only (Alyx noted the background reading pastel/washed-out on a recent run); easy to remove if it doesn't help, since it's isolated from the scale-lock and likeness fixes
 
 // RESTORED (July 2026): this file was found genuinely truncated — cut
 // off mid-function with no closing brackets and no export default
@@ -373,6 +373,7 @@ CUSTOMER REQUEST:
 ${prompt}
 
 ${buildStyleBlock(styleDirective, styleIsDefault)}
+COLOR: Render with vivid, saturated, punchy color throughout the scene — rich blue skies, strong contrast in the mountains, clouds, and landscape. Avoid a muted, hazy, washed-out, sepia-tinted, or pastel palette.
 CRITICAL COMPOSITION RULES — THE ARTWORK MUST FILL THE ENTIRE CANVAS, EDGE TO EDGE:
 Do NOT draw any border, frame, matte, margin, background surround, vignette, or coloured surface behind or around the artwork.
 Do NOT divide the image into panels, sections, columns, tiles, or separate pictures. This is NOT a triptych, NOT a diptych, NOT a collage, NOT a storyboard, and NOT a set of framed prints hanging on a wall.
