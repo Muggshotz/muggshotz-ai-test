@@ -12784,7 +12784,7 @@ same bald head or hairstyle,
 same hairline,
 same forehead,
 same eyebrow shape,
-same eye shape and eye spacing,
+same eye shape, eye spacing, and eye color (do not lighten, darken, or shift the iris color),
 same nose shape,
 same mouth and smile shape,
 same teeth characteristics,
@@ -12795,6 +12795,10 @@ same skin tone,
 same age impression,
 same facial proportions,
 same natural personality.
+
+Do NOT add facial hair (beard, mustache, stubble) that is not clearly visible in the uploaded photo, and do not remove facial hair that is visible.
+Keep the person's actual clothing and outfit from the uploaded photo (garment type, color, and style) unless the customer's idea below specifically describes different clothing to wear instead.
+If the customer is smiling in the uploaded photo, match how THIS person's eyes actually look when they smile (most real smiles narrow the eyes at the outer corners to some degree) rather than a generic wide-open smiling-eyes look.
 
 Caricature this exact person only.
 Exaggerate existing real features, but keep the person immediately recognizable as the uploaded person.
@@ -12859,6 +12863,24 @@ Use rich environmental storytelling while keeping the face as the primary focal 
 
       currentGenerationController=new AbortController();
 
+      // SEQUESTERED PROMPT (Sep 2026). This call used to receive the same
+      // giant client-composed `prompt` used by every other product path --
+      // its own older identity-preservation paragraph, product-target
+      // line, priority-order block, and more, all landing inside this
+      // action's own "CUSTOMER REQUEST" section on top of the server-side
+      // prompt that's already been specifically tuned for this action
+      // (identity, eye color, clothing, scale-lock, composition). A real
+      // side-by-side test (a standalone comparison tool, since removed
+      // from scope here) showed that extra client-side content measurably
+      // correlated with drift the tuned server prompt alone didn't have --
+      // a beard that wasn't in the photo, an invented cowboy outfit
+      // replacing the customer's real shirt -- on the exact same photo and
+      // idea that the minimal-prompt version got right. So this action
+      // alone gets just the customer's raw idea text, not the shared
+      // template. Every other product path is completely untouched --
+      // `prompt` itself still exists below for them, unchanged.
+      const panoramaIdea = idea || 'Create a funny, polished, product-ready caricature of the uploaded person.';
+
       // RETRY BEFORE FALLING BACK (Aug 2026). Measured, not assumed: three of
       // four probe calls came back 503 "This model is currently experiencing
       // high demand" within a couple of minutes of each other. Falling back on
@@ -12880,7 +12902,7 @@ Use rich environmental storytelling while keeping the face as the primary focal 
           panoramaResp=await fetch('/api/generate',{
             method:'POST',
             headers:{'Content-Type':'application/json'},
-            body:JSON.stringify({action:'wraparoundPanorama',image:workingImage,prompt,deviceId,refImageA:refASnapshot,refImageB:refBSnapshot,...currentStylePayload()}),
+            body:JSON.stringify({action:'wraparoundPanorama',image:workingImage,prompt:panoramaIdea,deviceId,refImageA:refASnapshot,refImageB:refBSnapshot,...currentStylePayload()}),
             signal:currentGenerationController.signal
           });
         }catch(abortErr){
