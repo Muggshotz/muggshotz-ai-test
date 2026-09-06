@@ -28,6 +28,10 @@ const T = (page, ms) => page.waitForTimeout(ms);
     const hostedUrl = await page.evaluate(() => findDesignById(currentDesignId).url);
     if (hostedUrl !== 'https://example.test/hosted-design.jpg') throw new Error('recall should register the hosted copy, got ' + hostedUrl.slice(0, 40));
     if (parseFloat(st.productCard) < 0.95) throw new Error('product card still dimmed (' + st.productCard + ')');
+    // The recalled design hangs on the AI clipboard, not in the free photo slot.
+    const board = await page.evaluate(() => ({ onAi: !!document.querySelector('#aiCollabUploadBtn #previewImg'), inFree: !!document.querySelector('#uploadZone #previewImg'), freeText: (document.getElementById('uploadZone').textContent || '').includes('Tap here to upload a photo') }));
+    if (!board.onAi || board.inFree || !board.freeText) throw new Error('recalled design not on the AI board: ' + JSON.stringify(board));
+    await page.screenshot({ path: require('path').join(process.env.SCRATCH_DIR || __dirname, 'recall-board.png'), clip: { x: 0, y: 0, width: 1280, height: 700 } });
     await page.locator('#productCard .btn-select[data-val="mug"]').click({ force: true });
     await T(page, 1200); await dismissAlerts(page);
     await page.evaluate(() => pickPreGenMugSize('15oz')); await T(page, 500);

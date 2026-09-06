@@ -2,7 +2,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head><link rel="manifest" href="needles-manifest.json">
-<!-- BUILD-MARKER: FRAME-STUDIO-v61 -->
+<!-- BUILD-MARKER: CAPTION-LAYER-v62 -->
 <!-- If you can see this comment on GitHub, this exact paste landed. -->
 <!-- If your live site's page source does NOT say -->
 <!-- "INSTANT-FIT-SCREEN-v47" right here, the upload/deploy did -->
@@ -7067,7 +7067,7 @@ function getDesignAdjust(designId){
 }
 function setDesignAdjust(designId,adj){
   const r3=v=>Math.round((Number(v)||0)*1000)/1000;
-  const clean={zoom:r3(adj.zoom||1),offX:r3(adj.offX),offY:r3(adj.offY),fade:Math.round(Number(adj.fade)||0),border:adj.border!==false,backdrop:backdropKey(adj.backdrop)};
+  const clean={zoom:r3(adj.zoom||1),offX:r3(adj.offX),offY:r3(adj.offY),fade:Math.round(Number(adj.fade)||0),border:adj.border!==false,backdrop:backdropKey(adj.backdrop),caption:(typeof adj.caption==='string'&&/^https?:\/\//.test(adj.caption))?adj.caption:null};
   panelsWithDesign(designId).forEach(pos=>{placementAdjust[pos]={...clean};});
   saveMugState();
 }
@@ -7264,78 +7264,55 @@ function paintCaptionLayer(canvas,rectW,rectH){
   try{ drawCaptionText(ctx,canvas); }catch(err){ console.error('Caption preview failed:',err); }
   canvas.style.display='block';
 }
-// The picture's printed rectangle at print resolution, with the caption
-// drawn on -- what the server will crop, fade and frame. Bakes from the
-// un-captioned original every time, so re-editing never stacks captions.
+// THE CAPTION AS ITS OWN LAYER (Alyx, Sep 2026). The caption used to be
+// baked into the picture, which meant re-encoding and re-uploading the
+// whole print-size photo every time Done was pressed, and again on every
+// fade change -- minutes on a slow connection. The picture is now never
+// touched: the words are drawn on a transparent sheet the size of the
+// print box, laid over the picture's printed rectangle exactly where the
+// on-screen preview draws them, and that small sheet is uploaded on its
+// own. Its URL rides on the placement (adjust.caption); the server lays it
+// over the finished panel, above the fade, so the letters stay crisp. The
+// fade stays a number on the placement, as for every other picture, so
+// the edge screen saves nothing at all.
+const captionLayerCache={};
 async function bakeCaptionIntoDesign(designId){
   const design=findDesignById(designId);
   if(!design)return;
   const firstPos=panelsWithDesign(designId)[0];
   if(!firstPos)return;
-  const src=design.rawUrl||design.url;
-  const adj=design.preBakeAdjust?{...design.preBakeAdjust}:getDesignAdjust(designId);
-  const img=await loadImageFromUrl(src);
+  // A picture captioned the old way (words inside the file) goes back to
+  // its original first; the layer carries the words from here on.
+  if(design.captioned&&design.rawUrl){
+    design.url=design.rawUrl;
+    if(design.preBakeAdjust)setDesignAdjust(designId,{...design.preBakeAdjust});
+    delete design.rawUrl;delete design.preBakeAdjust;design.captioned=false;
+  }
+  const adj=getDesignAdjust(designId);
+  const img=await loadImageFromUrl(design.url);
   const box=getPanelPrintBox(firstPos);
   const f=computePanelFit(img.naturalWidth,img.naturalHeight,box.w,box.h,adj.zoom||1,adj.offX||0,adj.offY||0);
   const left=Math.max(0,f.left),top=Math.max(0,f.top);
   const w=Math.max(1,Math.min(f.w-Math.max(0,-f.left),box.w-left));
   const h=Math.max(1,Math.min(f.h-Math.max(0,-f.top),box.h-top));
+  // The words are laid out against the printed rectangle (so bottom-left
+  // means the bottom-left of what prints), then set into the full box.
+  const pc=document.createElement('canvas');
+  pc.width=w;pc.height=h;
+  drawCaptionText(pc.getContext('2d'),pc);
   const c=document.createElement('canvas');
-  c.width=w;c.height=h;
-  const ctx=c.getContext('2d');
-  // On a backdrop the picture must stay see-through where it fades, so the
-  // server can lay it over the texture: no flat fill, fade as transparency.
-  const bk=backdropKey(adj.backdrop);
-  if(!bk){
-    ctx.fillStyle=getSelectedProductColorHex();
-    ctx.fillRect(0,0,w,h);
+  c.width=box.w;c.height=box.h;
+  c.getContext('2d').drawImage(pc,left,top);
+  const dataUrl=c.toDataURL('image/png');
+  // The same words in the same place on the same fit are not sent twice.
+  const cached=captionLayerCache[designId];
+  if(cached&&cached.dataUrl===dataUrl){
+    if(adj.caption!==cached.url)setDesignAdjust(designId,{...adj,caption:cached.url});
+    return;
   }
-  ctx.drawImage(img,f.left-left,f.top-top,f.w,f.h);
-  // The fade goes on here, under the caption, so the words stay crisp on
-  // top of the soft edge (the server is then told fade:0 for this
-  // picture -- it would otherwise fade the caption too). Same
-  // fadeMaskAlpha the server uses, at print resolution.
-  const fadePct=Math.max(0,Math.min(80,Number(adj.fade)||0));
-  if(fadePct>0){
-    const hex=getSelectedProductColorHex();
-    const m=/^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(hex)||[null,'ff','ff','ff'];
-    const R=parseInt(m[1],16),G=parseInt(m[2],16),B=parseInt(m[3],16);
-    const id=ctx.getImageData(0,0,w,h);
-    const d=id.data;
-    let i=0;
-    for(let y=0;y<h;y++){
-      for(let x=0;x<w;x++){
-        const a=fadeMaskAlpha(x+0.5,y+0.5,w,h,fadePct);
-        if(a>0){
-          if(bk){
-            d[i+3]=Math.round(d[i+3]*(1-a));
-          } else {
-            d[i]=Math.round(d[i]*(1-a)+R*a);
-            d[i+1]=Math.round(d[i+1]*(1-a)+G*a);
-            d[i+2]=Math.round(d[i+2]*(1-a)+B*a);
-          }
-        }
-        i+=4;
-      }
-    }
-    ctx.putImageData(id,0,0);
-  }
-  drawCaptionText(ctx,c);
-  const uploaded=await uploadCompositedImage(bk?c.toDataURL('image/png'):c.toDataURL('image/jpeg',0.92),{strict:true});
-  if(!design.rawUrl){design.rawUrl=src;design.preBakeAdjust={...adj};}
-  design.url=uploaded;
-  design.captioned=true;
-  // The baked picture IS the printed rectangle. If the original overflowed
-  // the box, the baked one fits it exactly (same proportions), so it is
-  // placed at 1:1 centred. If it sat inside the box, its proportions are
-  // unchanged and the same zoom/offset lands it in the same spot.
-  // Fade is already in the picture; the server must not add another.
-  if((adj.zoom||1)>=1){
-    setDesignAdjust(designId,{...adj,zoom:1,offX:0,offY:0,fade:0});
-  } else {
-    setDesignAdjust(designId,{...adj,fade:0});
-  }
-  saveMugState();
+  const uploaded=await uploadCompositedImage(dataUrl,{strict:true});
+  captionLayerCache[designId]={dataUrl,url:uploaded};
+  setDesignAdjust(designId,{...getDesignAdjust(designId),caption:uploaded});
 }
 // THE PANEL AS IT WILL PRINT (Alyx, Sep 2026), for framing. A decorative
 // frame used to be baked into the photo itself and then sent through Fit
@@ -7400,7 +7377,9 @@ async function renderPanelPrintDataUrl(designId){
   panelPrintCache[key]=url;
   return url;
 }
-// Back to the un-captioned original and its pre-bake fit, for editing.
+// Back to the un-captioned picture, for editing: the caption layer comes
+// off the placement (and a picture captioned the old way, with the words
+// inside the file, goes back to its original and its pre-bake fit).
 function unbakeCaptionedDesigns(){
   let changed=false;
   ['left','front','right'].forEach(pos=>{
@@ -7410,6 +7389,7 @@ function unbakeCaptionedDesigns(){
       if(d.preBakeAdjust)placementAdjust[pos]={...d.preBakeAdjust};
       changed=true;
     }
+    if(placementAdjust[pos]&&placementAdjust[pos].caption){placementAdjust[pos].caption=null;changed=true;}
   });
   if(changed)saveMugState();
 }
@@ -7541,7 +7521,7 @@ function buildCoverMeFitter(designId,multiple){
   reset.className='note';
   reset.style.cssText='text-align:center;margin-top:8px;color:#7ab8ff;cursor:pointer';
   reset.textContent='↺ Put it back in the middle at normal size';
-  reset.onclick=()=>{const d=defaultPanelAdjust();const cur=getDesignAdjust(designId);d.fade=cur.fade;d.border=cur.border;d.backdrop=cur.backdrop;setDesignAdjust(designId,d);renderCoverMePanelRows();};
+  reset.onclick=()=>{const d=defaultPanelAdjust();const cur=getDesignAdjust(designId);d.fade=cur.fade;d.border=cur.border;d.backdrop=cur.backdrop;d.caption=cur.caption;setDesignAdjust(designId,d);renderCoverMePanelRows();};
   right.appendChild(reset);
 
   const apply=()=>{
@@ -7816,7 +7796,7 @@ async function coverMePanelDone(){
   // Caption first (Sep 2026): bake it into the fitted picture, or put the
   // un-captioned original back if the box was emptied. A failed save keeps
   // the customer here with a real message instead of moving on without it.
-  const needsBake=product==='mug'&&(currentCaptionText()||['left','front','right'].some(pos=>{const d=placements[pos]?findDesignById(placements[pos]):null;return d&&d.captioned;}));
+  const needsBake=product==='mug'&&(currentCaptionText()||['left','front','right'].some(pos=>{const d=placements[pos]?findDesignById(placements[pos]):null;return !!(d&&d.captioned)||!!(placementAdjust[pos]&&placementAdjust[pos].caption);}));
   if(needsBake){
     const label=doneBtn?doneBtn.innerHTML:'';
     if(doneBtn){doneBtn.disabled=true;doneBtn.innerHTML='<span class="spinner"></span>Saving your caption...';}
@@ -9788,6 +9768,7 @@ function clearReferenceSlots(){
 }
 
 function showGenerationInProgress(){
+  restoreAiBoardPolaroid();
   const z=document.getElementById('uploadZone');
   z.classList.remove('has-image');
   z.style.padding='2rem';
@@ -10298,9 +10279,8 @@ function chooseRevealPath(choice){
 // it, exactly as the Fit Your Picture box does -- the same picture on two
 // or three panels is shown once. The choice here only changes the fade
 // on the picture's placement (the server draws it on the print), so
-// nothing is re-encoded or uploaded on the way out. The one exception is a
-// captioned picture, whose fade is baked under the caption and so is baked
-// again when the fade changes.
+// nothing is re-encoded or uploaded on the way out -- a caption included,
+// since it travels as its own layer above the fade.
 let revealFitState=null;
 function showEdgeQuestion(){
   const overlay=document.getElementById('revealOverlay');
@@ -10328,9 +10308,8 @@ function showEdgeQuestion(){
   if(saving)saving.style.display='none';
   overlay.scrollTop=0;
 }
-// The fade the picture carries right now: a captioned picture keeps its
-// real fade on preBakeAdjust (the server is told 0 because the fade is
-// already in the picture, under the caption).
+// The fade the picture carries right now (a picture captioned the old
+// way, words inside the file, keeps its real fade on preBakeAdjust).
 function currentEdgeFadePct(){
   const pos=['front','left','right'].find(p=>placements[p]&&findDesignById(placements[p]));
   if(!pos)return 0;
@@ -10378,8 +10357,9 @@ function renderRevealFitPreview(){
     note.textContent='This picture goes on '+on.join(', ').replace(/, ([^,]*)$/,' and $1')+'. The edge choice applies to all of them.';
   }
 }
-// Writes the chosen fade onto every panel carrying each picture. Only a
-// captioned picture needs saving (its fade is baked under the caption).
+// Writes the chosen fade onto every panel carrying each picture. Nothing
+// is saved: the fade is a number on the placement, and a caption is its
+// own layer that the server lays above it.
 async function applyEdgeFadeToPlacements(pct){
   pct=Math.max(0,Math.min(80,Math.round(Number(pct)||0)));
   const seen=[];
@@ -10387,15 +10367,15 @@ async function applyEdgeFadeToPlacements(pct){
   for(const id of seen){
     const d=findDesignById(id);
     if(d.captioned&&d.rawUrl&&d.preBakeAdjust){
-      if(Math.round(Number(d.preBakeAdjust.fade)||0)===pct)continue;
+      // Captioned the old way (words inside the file): moves to the layer.
       d.preBakeAdjust={...d.preBakeAdjust,fade:pct};
       await bakeCaptionIntoDesign(id);
-    } else {
-      const cur=getDesignAdjust(id);
-      if(Math.round(Number(cur.fade)||0)===pct)continue;
-      cur.fade=pct;
-      setDesignAdjust(id,cur);
+      continue;
     }
+    const cur=getDesignAdjust(id);
+    if(Math.round(Number(cur.fade)||0)===pct)continue;
+    cur.fade=pct;
+    setDesignAdjust(id,cur);
   }
   hardEdgesEnabled=(pct===0);
   const mainToggle=document.getElementById('panoramaFadeToggle');
@@ -11164,12 +11144,40 @@ function keepTweaking(){
   if(reminder)reminder.classList.add('visible');
 }
 
+// A recalled AI design belongs on the AI clipboard (Alyx, Sep 2026): it
+// used to sit in the free board's photo slot as though it were a photo the
+// customer had just uploaded. The free slot goes back to blank and the
+// design hangs on the AI board's polaroid instead; the board is put back
+// whenever the main slot is reset or a new creation starts.
+let aiBoardBlankHtml=null;
+function showRecalledDesignOnAiBoard(){
+  const z=document.getElementById('uploadZone');
+  const ai=document.getElementById('aiCollabUploadBtn');
+  const img=document.getElementById('previewImg');
+  if(!z||!ai||!img||!img.src)return;
+  if(aiBoardBlankHtml===null)aiBoardBlankHtml=ai.innerHTML;
+  z.classList.remove('has-image');
+  z.style.padding='';
+  z.innerHTML='<div style="font-size:32px;color:#555;margin-bottom:8px">\ud83d\udc64</div><div class="upload-text">Tap here to upload a photo</div><div class="upload-sub">Upload your picture \u2014 free</div>';
+  ai.classList.add('has-image');
+  ai.style.padding='0';
+  ai.innerHTML='';
+  ai.appendChild(img);
+}
+function restoreAiBoardPolaroid(){
+  const ai=document.getElementById('aiCollabUploadBtn');
+  if(!ai||aiBoardBlankHtml===null)return;
+  ai.classList.remove('has-image');
+  ai.style.padding='';
+  ai.innerHTML=aiBoardBlankHtml;
+}
 function resetMainSlot(){
   stopNeedlesStage();
   uploadedImageData=null;
   previousImageData=null;
   document.getElementById('toggleImageBtn').style.display='none';
   document.getElementById('startOverBtn').style.display='none';
+  restoreAiBoardPolaroid();
   const z=document.getElementById('uploadZone');
   z.classList.remove('has-image');
   z.style.padding='2rem';
@@ -12204,7 +12212,7 @@ async function applyAccessorizeFrame(){
         const panelUrl=await renderPanelPrintDataUrl(id);
         const framed=await compositeFrameOntoImageUrl(panelUrl||snap.urls[id]||d.url);
         d.url=await uploadCompositedImage(framed);
-        setDesignAdjust(id,{...getDesignAdjust(id),zoom:1,offX:0,offY:0,fade:0,backdrop:null});
+        setDesignAdjust(id,{...getDesignAdjust(id),zoom:1,offX:0,offY:0,fade:0,backdrop:null,caption:null});
       }));
       ['left','front','right'].forEach(pos=>{if(placementAdjust[pos])placementAdjust[pos].fade=0;});
       coverMeFrameApplied=true;
@@ -13340,7 +13348,7 @@ function placementAdjustForRequest(){
   return out;
 }
 
-function defaultPanelAdjust(){return{zoom:1,offX:0,offY:0,fade:0,border:true,backdrop:null};}
+function defaultPanelAdjust(){return{zoom:1,offX:0,offY:0,fade:0,border:true,backdrop:null,caption:null};}
 // BACKDROPS (Alyx, Sep 2026): the print area behind the picture can be one
 // of these textures instead of the bare product colour, so a soft edge
 // melts into bubbles or clouds rather than plain white. Keys travel on the
@@ -14464,6 +14472,7 @@ function recallLastGeneratedImage(){
     previousImageData=saved.previous||null;
     currentDesignId=saved.designId||null;
     setMainSlotImage(saved.working);
+    showRecalledDesignOnAiBoard();
     if(previousImageData)document.getElementById('toggleImageBtn').style.display='block';
     if(currentDesignId){
       document.getElementById('approveRow').style.display='block';

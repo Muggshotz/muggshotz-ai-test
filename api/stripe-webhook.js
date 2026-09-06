@@ -631,9 +631,13 @@ async function handleMugOrderPayment(session) {
     // buildWraparoundImage()'s old always-centered behavior, so a
     // missing value here can't break an order, only skip the customer's
     // adjustment.
+    // Since the caption became a hosted layer (Sep 2026) the JSON can run
+    // past one 500-char value, so create-checkout-session splits it over
+    // placement_adjust .. placement_adjust_4; joined back here.
     let parsedAdjust = {};
-    if (m.placement_adjust) {
-      try { parsedAdjust = JSON.parse(m.placement_adjust); } catch (e) { parsedAdjust = {}; }
+    const adjustText = [m.placement_adjust, m.placement_adjust_2, m.placement_adjust_3, m.placement_adjust_4].map((v) => v || "").join("");
+    if (adjustText) {
+      try { parsedAdjust = JSON.parse(adjustText); } catch (e) { parsedAdjust = {}; }
     }
     orderInput.placementAdjust = parsedAdjust;
   } else if (product.layoutType === "front-back") {

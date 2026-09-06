@@ -153,6 +153,38 @@ scenarios.frameStudioTwoColumns = async (page) => {
   return 'PASS: frame catalogue opens as preview-left, frames-right with a pinned preview, stacks on phones, and packs away on cancel';
 };
 
+scenarios.captionTravelsAsLayer = async (page, log) => {
+  await openStudio(page);
+  await reachPanels(page);
+  await page.evaluate(() => { const t = document.getElementById('captionText'); t.value = 'Hello there'; t.dispatchEvent(new Event('input', { bubbles: true })); });
+  await T(page, 800);
+  const pos = await page.evaluate(() => ['front', 'left', 'right'].find((p) => placements[p]));
+  const before = await page.evaluate((p) => ({ url: findDesignById(placements[p]).url, n: recentDesigns.length }), pos);
+  const seen = log.apiCalls.length;
+  await page.click('#coverMePanelDoneBtn');
+  await page.waitForFunction(() => document.getElementById('revealOverlay').style.display === 'flex', null, { timeout: 20000 });
+  const uploads = log.apiCalls.slice(seen).filter((c) => c.action === 'uploadComposite');
+  if (uploads.length !== 1) return `FAIL: Done made ${uploads.length} uploads, expected exactly one (the caption sheet): ${JSON.stringify(uploads)}`;
+  if (uploads[0].mime !== 'image/png') return `FAIL: caption sheet is ${uploads[0].mime}, not a transparent PNG`;
+  if (uploads[0].bytes > 700000) return `FAIL: caption sheet is ${uploads[0].bytes} bytes; the picture is being re-uploaded`;
+  const after = await page.evaluate((p) => { const d = findDesignById(placements[p]); return { url: d.url, raw: d.rawUrl || null, caption: placementAdjust[p].caption, fade: placementAdjust[p].fade }; }, pos);
+  if (after.url !== before.url || after.raw) return 'FAIL: the picture itself was replaced: ' + JSON.stringify(after);
+  if (!/^https?:\/\//.test(after.caption || '')) return 'FAIL: no caption layer on the placement: ' + JSON.stringify(after);
+  // The edge screen changes the fade without saving anything.
+  const seen2 = log.apiCalls.length;
+  await page.evaluate(() => chooseEdgeStyleAndContinue(false));
+  await page.waitForFunction(() => document.getElementById('mockupLightboxOverlay').classList.contains('visible'), null, { timeout: 20000 });
+  const late = log.apiCalls.slice(seen2).filter((c) => c.action === 'uploadComposite');
+  if (late.length) return `FAIL: the edge screen uploaded ${late.length} file(s) for a captioned picture`;
+  const mock = log.apiCalls.slice(seen2).find((c) => c.path === '/api/start-mockup' && c.placementAdjust);
+  if (!mock) return 'FAIL: no mockup request carrying placementAdjust';
+  const fa = mock.placementAdjust[pos] || {};
+  if (!(fa.fade > 0)) return 'FAIL: the soft edge did not reach the mockup request: ' + JSON.stringify(fa);
+  if (fa.caption !== after.caption) return 'FAIL: the caption layer did not reach the mockup request: ' + JSON.stringify(fa);
+  // Back to Fit Your Picture takes the layer off; Done with the same words puts the same URL back without a second upload.
+  return `PASS: Done uploads one ${Math.round(uploads[0].bytes / 1024)}KB transparent caption sheet, the picture is untouched, the fade changes for free, and both reach the mockup request`;
+};
+
 (async () => {
   let failed = 0;
   for (const [name, fn] of Object.entries(scenarios)) {

@@ -242,12 +242,25 @@ async function handleProductOrder(req, res) {
   // and then dropped on the floor, never stored anywhere. Stripe metadata
   // values cap at 500 chars, so trim with room to spare.
   const giftMessageText = (giftMessage || "").trim().slice(0, 450);
-  // Same 500-char metadata cap as gift_message above. A three-value object
-  // of small numbers is a few dozen chars in practice; the slice is a
-  // defensive ceiling, not an expected trim.
+  // Same 500-char metadata cap as gift_message above. The per-panel
+  // adjustments used to be a few dozen chars of small numbers; since the
+  // caption became its own hosted layer (Sep 2026) each panel can carry a
+  // caption URL as well, and three of those alone pass 490. The JSON is
+  // therefore split across up to four metadata values (placement_adjust,
+  // placement_adjust_2..4) that the webhook joins back together before
+  // parsing. Anything beyond that would be a garbled placement, which the
+  // webhook reads as "no adjustment" -- so it is logged loudly here.
   const placementAdjustText = product.layoutType === "three-slot-wrap" && placementAdjust
-    ? JSON.stringify(placementAdjust).slice(0, 490)
+    ? JSON.stringify(placementAdjust)
     : "";
+  const ADJUST_CHUNK = 490;
+  const placementAdjustChunks = [];
+  for (let i = 0; i < placementAdjustText.length && placementAdjustChunks.length < 4; i += ADJUST_CHUNK) {
+    placementAdjustChunks.push(placementAdjustText.slice(i, i + ADJUST_CHUNK));
+  }
+  if (placementAdjustText.length > ADJUST_CHUNK * 4) {
+    console.error("placementAdjust too long for Stripe metadata; the order will print without adjustments:", placementAdjustText.length);
+  }
 
   const session = await stripe.checkout.sessions.create({
     mode: "payment",
@@ -266,7 +279,10 @@ async function handleProductOrder(req, res) {
       image_url_b: imageUrlB,
       image_url_c: imageUrlC,
       image_url_d: imageUrlD,
-      placement_adjust: placementAdjustText,
+      placement_adjust: placementAdjustChunks[0] || "",
+      placement_adjust_2: placementAdjustChunks[1] || "",
+      placement_adjust_3: placementAdjustChunks[2] || "",
+      placement_adjust_4: placementAdjustChunks[3] || "",
       gift_message: giftMessageText,
       customer_name: customerName || "",
       first_name: shippingAddress.first_name || "",
