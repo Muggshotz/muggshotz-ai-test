@@ -738,6 +738,61 @@ scenarios.wraparoundFrameOfferOpensTheStudio = async (page) => {
   return 'PASS: the Wraparound frame offer opens the same two-column studio, picture pinned left, catalogues scrolling right';
 };
 
+// PICTURES SHOWN ONCE (Alyx's rule), CHECKED BY OPENING THE SCREEN.
+//
+// This test exists because the fix for the duplicate photograph shipped in a
+// build doing nothing. It asked the DOM whether the two-column studio was
+// mounted -- nineteen lines BEFORE the line that mounts it -- so on FIRST
+// open there was no studio yet, the check said "not mounted", and the second
+// copy appeared. Reopening the screen looked fine, which is why it read as
+// intermittent.
+//
+// So this counts visible pictures on the actual screen rather than testing a
+// variable, and it opens the screen TWICE, because the broken version was
+// only wrong the first time.
+scenarios.thePictureIsShownOnce = async (page) => {
+  const open = () => page.evaluate(async () => {
+    product = 'mug'; mugPrintMode = 'wraparound';
+    revealFlowActive = true; revealFlowThreePanel = false; frameOfferFromMockup = false;
+    lastWraparoundMethod = 'panorama';
+    wraparoundPanoramaBaseUrl = 'http://127.0.0.1:8788/__fake/panorama.jpg';
+    wraparoundPanoramaUrl = wraparoundPanoramaBaseUrl;
+    pendingWraparoundRaw = {
+      left: 'http://127.0.0.1:8788/__fake/pano-left.jpg',
+      center: 'http://127.0.0.1:8788/__fake/pano-center.jpg',
+      right: 'http://127.0.0.1:8788/__fake/pano-right.jpg',
+    };
+    selectedFrame = 'Mirror Mirror'; windowSillChoice = null; revealFadeSliderTouched = false;
+    showAccessorizeStep();
+    await updateAccessorizePreview();
+    if (accessorizePreviewInFlight) await accessorizePreviewInFlight;
+    const visible = (el) => {
+      let n = el;
+      while (n && n !== document.body) {
+        const st = getComputedStyle(n);
+        if (st.display === 'none' || st.visibility === 'hidden') return false;
+        n = n.parentElement;
+      }
+      return true;
+    };
+    const imgs = [...document.querySelectorAll('#accessorizePreviewStrip img, #frameCatalogInlinePreview img')]
+      .filter(visible)
+      .map((i) => (i.closest('#frameCatalogInlinePreview') ? 'under the catalogue' : 'left column'));
+    return { count: imgs.length, where: imgs, studioMounted: !!document.getElementById('frameStudio') };
+  });
+
+  const first = await open();
+  if (!first.studioMounted) return 'FAIL: the two-column studio did not mount: ' + JSON.stringify(first);
+  if (first.count !== 1) {
+    return `FAIL: ${first.count} copies of the same photograph on first open (${first.where.join(', ')})`;
+  }
+  const second = await open();
+  if (second.count !== 1) {
+    return `FAIL: ${second.count} copies of the same photograph on reopen (${second.where.join(', ')})`;
+  }
+  return 'PASS: one picture on the screen, pinned in the left column, on first open and on reopen';
+};
+
 (async () => {
   let fails = 0;
   for (const [name, fn] of Object.entries(scenarios)) {
