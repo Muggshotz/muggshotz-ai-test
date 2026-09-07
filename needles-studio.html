@@ -2,7 +2,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head><link rel="manifest" href="needles-manifest.json">
-<!-- BUILD-MARKER: FADE-THE-BOX-v94 -->
+<!-- BUILD-MARKER: FADE-WHAT-YOU-SEE-v95 -->
 <!-- If you can see this comment on GitHub, this exact paste landed. -->
 <!-- If your live site's page source does NOT say -->
 <!-- "INSTANT-FIT-SCREEN-v47" right here, the upload/deploy did -->
@@ -4586,13 +4586,35 @@ async function drawPhotoInsetForFrame(ctx,canvas,source,sourceW,sourceH,fadePct=
     ctx.clip();
     ctx.drawImage(source,0,0,sourceW,sourceH,drawX,drawY,drawW,drawH);
     ctx.restore();
-    // The visible picture is the box itself: fade the box.
-    if(fadePct>0)paintOvalFadeOnRect(ctx,insetX,insetY,insetW,insetH,getSelectedProductColorHex(),fadePct);
+    // The visible picture is the box, seen through the frame's opening.
+    if(fadePct>0){
+      const open=await getFrameInsetFraction(asset);
+      paintOvalFadeOnVisible(ctx,canvas,insetX,insetY,insetW,insetH,fadePct,open);
+    }
     return;
   }
   ctx.drawImage(source,0,0,sourceW,sourceH,drawX,drawY,drawW,drawH);
   // Shrink-to-fit: the visible picture is exactly what was drawn.
-  if(fadePct>0)paintOvalFadeOnRect(ctx,drawX,drawY,drawW,drawH,getSelectedProductColorHex(),fadePct);
+  if(fadePct>0)paintOvalFadeOnVisible(ctx,canvas,drawX,drawY,drawW,drawH,fadePct,null);
+}
+// THE FADE FITS WHAT YOU CAN SEE (Alyx, v95: "I had to adjust the fade to
+// about 90 in order to cover those edges"). At Height 150% the box is far
+// taller than the frame's opening, and v94 fitted the fade oval to the whole
+// box. The opening's top and bottom edges then sat only halfway out on that
+// oval and got no fade at all. What the customer sees is the box THROUGH
+// the opening, so the oval is fitted to that: the box clipped to the
+// opening and to the canvas.
+function paintOvalFadeOnVisible(ctx,canvas,x,y,w,h,fadePct,open){
+  let x0=Math.max(0,x),y0=Math.max(0,y);
+  let x1=Math.min(canvas.width,x+w),y1=Math.min(canvas.height,y+h);
+  if(open){
+    x0=Math.max(x0,open.x*canvas.width);
+    y0=Math.max(y0,open.y*canvas.height);
+    x1=Math.min(x1,(open.x+open.w)*canvas.width);
+    y1=Math.min(y1,(open.y+open.h)*canvas.height);
+  }
+  if(x1<=x0||y1<=y0)return;
+  paintOvalFadeOnRect(ctx,x0,y0,x1-x0,y1-y0,getSelectedProductColorHex(),fadePct);
 }
 
 // Loads a same-origin local asset as an Image. Plain Image(), no

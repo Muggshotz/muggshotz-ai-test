@@ -422,14 +422,19 @@ scenarios.theFadeSurvivesTheHeightSlider = async (page) => {
       const cal = customFrameCalibration[asset];
       const bw = Math.floor(c.width * cal.widthPct / 100), bh = Math.floor(c.height * cal.heightPct / 100);
       const bx = Math.floor((c.width - bw) / 2), by = Math.floor((c.height - bh) / 2);
-      // Only the part of the box that is on the canvas.
-      const x0 = Math.max(0, bx), y0 = Math.max(0, by);
-      const x1 = Math.min(c.width, bx + bw), y1 = Math.min(c.height, by + bh);
+      // Only the part of the box you can see: through the frame's opening.
+      const frac = await getFrameInsetFraction(asset);
+      const x0 = Math.max(0, bx, Math.floor(frac.x * c.width)), y0 = Math.max(0, by, Math.floor(frac.y * c.height));
+      const x1 = Math.min(c.width, bx + bw, Math.floor((frac.x + frac.w) * c.width));
+      const y1 = Math.min(c.height, by + bh, Math.floor((frac.y + frac.h) * c.height));
       const d = ctx.getImageData(x0, y0, x1 - x0, y1 - y0).data;
       let white = 0;
       for (let k = 0; k < d.length; k += 4) if (d[k] > 215 && d[k + 1] > 215 && d[k + 2] > 215) white++;
       const cp = ctx.getImageData(Math.floor(c.width / 2), Math.floor(c.height / 2), 1, 1).data;
-      return { whiteShare: white / ((x1 - x0) * (y1 - y0)), centre: [cp[0], cp[1], cp[2]] };
+      // The top of the frame's opening, at the middle: at Height 150% the
+      // picture runs right up to it, and it must be softened too (v95).
+      const tp = ctx.getImageData(Math.floor(c.width / 2), y0 + 6, 1, 1).data;
+      return { whiteShare: white / ((x1 - x0) * (y1 - y0)), centre: [cp[0], cp[1], cp[2]], topEdge: [tp[0], tp[1], tp[2]] };
     };
     customFrameCalibration[asset] = { widthPct: 100, heightPct: 150, offsetXPct: 0, offsetYPct: 0 };
     const tall = { plain: await measure(0), faded: await measure(40) };
@@ -437,10 +442,17 @@ scenarios.theFadeSurvivesTheHeightSlider = async (page) => {
     return tall;
   });
   if (r.plain.whiteShare > 0.05) return `FAIL: the tall box is ${Math.round(r.plain.whiteShare * 100)}% white with no fade: ` + JSON.stringify(r);
-  if (r.faded.whiteShare < 0.08) {
+  // Mirror Mirror's opening is an oval, so the rectangle's corners -- where a
+  // fade whitens first -- sit under the gold. The area count can only rise a
+  // little here; the edge sample below is the real measurement.
+  if (r.faded.whiteShare < r.plain.whiteShare + 0.02) {
     return `FAIL: with Height at 150% the fade only turned ${Math.round(r.faded.whiteShare * 100)}% of the box white — the crop ate the fade again: ` + JSON.stringify(r);
   }
   if (r.faded.centre.join() !== r.plain.centre.join()) return `FAIL: the fade reached the centre: ` + JSON.stringify(r);
+  const lift = r.faded.topEdge.reduce((a, v, i) => a + (v - r.plain.topEdge[i]), 0);
+  if (lift < 60) {
+    return `FAIL: the visible top edge barely faded (rgb(${r.plain.topEdge}) -> rgb(${r.faded.topEdge})) — the oval was fitted to the part of the box hanging off the canvas: ` + JSON.stringify(r);
+  }
   return `PASS: with Height at 150% the box still fades (${Math.round(r.faded.whiteShare * 100)}% of it to white, centre untouched)`;
 };
 
