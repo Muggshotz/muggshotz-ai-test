@@ -2,7 +2,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head><link rel="manifest" href="needles-manifest.json">
-<!-- BUILD-MARKER: NO-LEFT-RIGHT-ON-A-WRAP-v76 -->
+<!-- BUILD-MARKER: FRAMES-THAT-BRING-THEIR-OWN-FADE-v77 -->
 <!-- If you can see this comment on GitHub, this exact paste landed. -->
 <!-- If your live site's page source does NOT say -->
 <!-- "INSTANT-FIT-SCREEN-v47" right here, the upload/deploy did -->
@@ -1618,7 +1618,8 @@ Tell Needles <span style="color:#7ab8ff">what you have in mind</span>
      same picture on two or three panels is shown once (Alyx, Sep 2026). -->
 <div id="revealFitHost" style="display:none;margin:.9rem 0"></div>
 <div class="note" id="revealFitNote" style="display:none;margin-top:0;margin-bottom:.6rem;color:#7ab8ff;font-size:11px"></div>
-<div class="note" style="margin-top:0;margin-bottom:.9rem">How should the edges of your picture look on the mug?</div>
+<div class="note" id="revealEdgeQuestionNote" style="margin-top:0;margin-bottom:.9rem">How should the edges of your picture look on the mug?</div>
+<div class="note" id="revealRequiredFadeNote" style="display:none;margin-top:0;margin-bottom:.9rem;color:#7ab8ff">This frame comes with a soft edge built in — its decoration reaches into the opening, and a hard edge would cut across it. Choose how far the fade reaches below.</div>
 <div class="bi-row" id="revealEdgeButtonsRow">
 <button type="button" class="generate-btn" style="flex:1;width:auto;padding:.9rem .4rem" onclick="chooseEdgeStyleAndContinue(true)">◻️ Hard Edges</button>
 <button type="button" class="generate-btn" style="flex:1;width:auto;padding:.9rem .4rem" onclick="chooseFadeEdges()">🌫️ Fade Edges</button>
@@ -3273,8 +3274,8 @@ const FRAME_CATALOG = {
   "Black Champagne": { type:"image", asset:"frame-black-champagne.png", defaultColor:"#D9C89E" },
   "Air Mail": { type:"image", asset:"frame-air-mail.png", defaultColor:"#003c8c" },
   "Neon Celebration": { type:"image", asset:"frame-neon-celebration.png", defaultColor:"#ff2ee0" },
-  "Retro Arcade": { type:"image", asset:"frame-retro-arcade.png", defaultColor:"#ffcc00" },
-  "Neon Dreams": { type:"image", asset:"frame-neon-dreams.png", defaultColor:"#00eaff" },
+  "Retro Arcade": { type:"image", asset:"frame-retro-arcade.png", defaultColor:"#ffcc00", requiresFade:true },
+  "Neon Dreams": { type:"image", asset:"frame-neon-dreams.png", defaultColor:"#00eaff", requiresFade:true },
   "Comic Panel": { type:"procedural", draw:"comic", defaultColor:"#1c1c1c" },
   "Wanted Poster": { type:"procedural", draw:"wanted", defaultColor:"#c9a05a" },
   "Trophy Plaque": { type:"procedural", draw:"plaque", defaultColor:"#d4a017" },
@@ -3288,26 +3289,26 @@ const FRAME_CATALOG = {
   // past that original 15-tile count (Blue Floral, Crystal Champagne,
   // Pressed Flowers, Celestial Deco, and Double Mat were added after this
   // note was written) — no replacement design is still needed here.
-  "Wrought Iron": { type:"image", asset:"frame-wrought-iron.png", colorable:false },
+  "Wrought Iron": { type:"image", asset:"frame-wrought-iron.png", colorable:false, requiresFade:true },
   "Blue Floral": { type:"image", asset:"frame-blue-floral.png", defaultColor:"#1B3D7A" },
   // REVERTED (Aug 2026, Alyx's request): the two-piece corner+rail test
   // above never once worked correctly, and was only built for
   // Wraparound in the first place -- which isn't being pursued anymore.
   // Back to the old single-image version, Alyx's favorite.
   "Crystal Champagne": { type:"image", asset:"frame-crystal-champagne.png", defaultColor:"#D9C89E" },
-  "Pressed Flowers": { type:"image", asset:"frame-pressed-flowers.png", defaultColor:"#ffffff" },
-  "Celestial Deco": { type:"image", asset:"frame-celestial-deco.png", defaultColor:"#D4AF37" },
+  "Pressed Flowers": { type:"image", asset:"frame-pressed-flowers.png", defaultColor:"#ffffff", requiresFade:true },
+  "Celestial Deco": { type:"image", asset:"frame-celestial-deco.png", defaultColor:"#D4AF37", requiresFade:true },
   "Double Mat": { type:"proceduralMulti", draw:"doubleMat", layers:["Outer Frame","Upper Mat","Lower Mat"], defaultColors:["#8a5a34","#f5f0e6","#2a2a2a"] },
-  "Moonlit Ivy": { type:"image", asset:"frame-moonlit-ivy.png", colorable:false },
-  "Enchanted Grove": { type:"image", asset:"frame-enchanted-grove.png", colorable:false },
-  "Lantern Vine": { type:"image", asset:"frame-lantern-vine.png", colorable:false },
-  "Trailblazer": { type:"image", asset:"frame-biker-native.png", colorable:false },
-  "Astral": { type:"image", asset:"frame-astral.png", colorable:false },
+  "Moonlit Ivy": { type:"image", asset:"frame-moonlit-ivy.png", colorable:false, requiresFade:true },
+  "Enchanted Grove": { type:"image", asset:"frame-enchanted-grove.png", colorable:false, requiresFade:true },
+  "Lantern Vine": { type:"image", asset:"frame-lantern-vine.png", colorable:false, requiresFade:true },
+  "Trailblazer": { type:"image", asset:"frame-biker-native.png", colorable:false, requiresFade:true },
+  "Astral": { type:"image", asset:"frame-astral.png", colorable:false, requiresFade:true },
   // The glass in these two arrived painted in (opaque), so the frame hid
   // the photo. frame-astral.png / frame-mirror-mirror.png are the same art
   // with the opening cut to true transparency (Sep 2026).
-  "Mirror Mirror": { type:"image", asset:"frame-mirror-mirror.png", colorable:false },
-  "Royal": { type:"image", asset:"royal.png", colorable:false }
+  "Mirror Mirror": { type:"image", asset:"frame-mirror-mirror.png", colorable:false, requiresFade:true },
+  "Royal": { type:"image", asset:"royal.png", colorable:false, requiresFade:true }
 };
 
 // ================= WINDOW SILL (standalone, decoupled from Frame) =================
@@ -3455,11 +3456,55 @@ function hexToHue(hex){
   return hDeg;
 }
 
+// FRAMES THAT BRING THEIR OWN FADE (Alyx, Sep 2026).
+// Twelve of the twenty-seven frames have decoration that reaches INTO the
+// opening -- gems, ivy, neon tubes, starbursts, an oval, an arcade cabinet's
+// control panel. A picture with a hard rectangular edge lands on top of that
+// decoration and you can see exactly where the picture stops. A fade
+// dissolves the picture into the product colour instead and the decoration
+// reads as sitting over open space, which is what it is meant to look like.
+// The other fifteen are plain rectangles whose inner edge a picture can meet
+// cleanly, and they are left alone.
+// Alyx identified all twelve by hand, clicking each frame in the studio and
+// looking at the result -- not from any measurement. Do not "correct" this
+// list from geometry; the failure is visual and no number predicts it.
+// Wrought Iron was already special-cased by name in
+// syncEdgeFadeWithFrameSelection for exactly this reason. This generalises
+// that one hardcode to every frame that needs it.
+function frameRequiresFade(name){
+  return !!(name && FRAME_CATALOG[name] && FRAME_CATALOG[name].requiresFade);
+}
+
+// The fade these frames come with. 40% is what Alyx settled on by eye on the
+// wraparound; the floor stops a customer dragging it back to zero and
+// re-opening the very gap the frame needs closed. They keep the slider
+// between those two points.
+const REQUIRED_FADE_DEFAULT_PCT=40;
+const REQUIRED_FADE_FLOOR_PCT=15;
+
+// The catalogue, split the way it is displayed: the frames that stand on
+// their own first, then the frames that come with a fade. Catalogue order is
+// preserved inside each section so Alyx's curation of the running order
+// survives the split.
+function frameCatalogSections(){
+  const plain=[],fading=[];
+  Object.entries(FRAME_CATALOG).forEach(([name,data])=>{
+    (data.requiresFade?fading:plain).push([name,data]);
+  });
+  return {plain,fading};
+}
+
 function renderFrameGrid(){
   const grid=document.getElementById('frameGrid');
   if(!grid)return;
   grid.innerHTML='';
-  Object.entries(FRAME_CATALOG).forEach(([name,data])=>{
+  // The container stops being the grid itself -- it now holds two grids with
+  // the explanation between them. Each section is three across so both come
+  // out square: fifteen plain frames in five rows, twelve fading frames in
+  // four, with no orphan tile at the end of either.
+  grid.style.display='block';
+
+  function makeTile(name,data){
     const btn=document.createElement('div');
     btn.className='theme-btn frame-btn'+(selectedFrame===name?' selected':'')+(data.type==='comingSoon'?' coming-soon':'');
     const swatch=document.createElement('div');
@@ -3470,7 +3515,7 @@ function renderFrameGrid(){
       img.style.cssText='width:100%;height:100%;object-fit:cover';
       swatch.appendChild(img);
     } else if(data.type==='comingSoon'){
-      swatch.textContent='🔜';
+      swatch.textContent='\ud83d\udd1c';
       swatch.style.fontSize='22px';
       swatch.style.opacity='0.6';
     } else {
@@ -3505,8 +3550,26 @@ function renderFrameGrid(){
     if(data.type!=='comingSoon'){
       btn.onclick=()=>pickFrame(name);
     }
-    grid.appendChild(btn);
-  });
+    return btn;
+  }
+
+  function makeSection(entries){
+    const sec=document.createElement('div');
+    sec.style.cssText='display:grid;grid-template-columns:repeat(3,1fr);gap:8px';
+    entries.forEach(([name,data])=>sec.appendChild(makeTile(name,data)));
+    return sec;
+  }
+
+  const {plain,fading}=frameCatalogSections();
+  grid.appendChild(makeSection(plain));
+  if(fading.length){
+    const note=document.createElement('div');
+    note.className='note-prominent';
+    note.style.cssText='margin:18px 0 10px;text-align:center';
+    note.textContent='The following frames all require a fade, which is pre-included.';
+    grid.appendChild(note);
+    grid.appendChild(makeSection(fading));
+  }
 }
 
 async function pickFrame(name){
@@ -3576,7 +3639,11 @@ function syncEdgeFadeWithFrameSelection(){
   const toggle=document.getElementById('panoramaFadeToggle');
   const accessorizeToggle=document.getElementById('accessorizeEdgeToggle');
   if(!toggle)return;
-  if(selectedFrame==='Wrought Iron'){
+  // GENERALISED (Sep 2026). This read `selectedFrame==='Wrought Iron'` -- the
+  // first frame whose open scrollwork made a hard picture edge obvious. Alyx
+  // went through the catalogue and found eleven more with the same problem,
+  // so the rule now lives on the frames themselves.
+  if(frameRequiresFade(selectedFrame)){
     hardEdgesEnabled=false;
     toggle.checked=false;
   } else if(selectedFrame||windowSillChoice){
@@ -8049,8 +8116,11 @@ function renderCoverMeFrameGrid(){
   const grid=document.getElementById('coverMeFrameGrid');
   if(!grid)return;
   grid.innerHTML='';
-  Object.entries(FRAME_CATALOG).forEach(([name,data])=>{
-    if(data.type==='comingSoon')return; // nothing to actually apply
+  // Same two sections as the main catalogue -- the split follows the frames
+  // wherever they are on display, the way the two-column studio layout does.
+  grid.style.display='block';
+
+  function makeTile(name,data){
     const btn=document.createElement('div');
     btn.className='theme-btn'+(coverMeSelectedFrame===name?' selected':'');
     const swatch=document.createElement('div');
@@ -8090,8 +8160,29 @@ function renderCoverMeFrameGrid(){
     label.textContent=name;
     btn.appendChild(label);
     btn.onclick=()=>coverMePickFrameTile(name);
-    grid.appendChild(btn);
-  });
+    return btn;
+  }
+
+  function makeSection(entries){
+    const sec=document.createElement('div');
+    sec.style.cssText='display:grid;grid-template-columns:repeat(3,1fr);gap:8px';
+    entries.forEach(([name,data])=>{
+      if(data.type==='comingSoon')return; // nothing to actually apply
+      sec.appendChild(makeTile(name,data));
+    });
+    return sec;
+  }
+
+  const {plain,fading}=frameCatalogSections();
+  grid.appendChild(makeSection(plain));
+  if(fading.length){
+    const note=document.createElement('div');
+    note.className='note-prominent';
+    note.style.cssText='margin:18px 0 10px;text-align:center';
+    note.textContent='The following frames all require a fade, which is pre-included.';
+    grid.appendChild(note);
+    grid.appendChild(makeSection(fading));
+  }
 }
 
 async function coverMePickFrameTile(name){
@@ -10270,6 +10361,10 @@ let revealOriginalArtworkUrls=[];
 // file.
 let wrapDisplayOverrideUrl=null;
 let revealFadeAmountPct=30;
+// Whether the customer has actually moved the reveal fade slider. Without
+// this there is no way to tell a deliberate 30% from the module's own
+// starting 30%, so a frame that comes with its own 40% could never apply it.
+let revealFadeSliderTouched=false;
 // THE EDGE FADE DECISION. Deliberately a tri-state, not a boolean:
 //   null   nobody has chosen -> no fade (identical to the old kill-switch)
 //   'fade' the customer asked for it
@@ -10432,9 +10527,30 @@ function showEdgeQuestion(){
   const buttonsRow=document.getElementById('revealEdgeButtonsRow');
   const fadePanel=document.getElementById('revealFadeSliderPanel');
   const saving=document.getElementById('revealSavingNote');
-  if(buttonsRow)buttonsRow.style.display='flex';
-  if(fadePanel)fadePanel.style.display='none';
   if(saving)saving.style.display='none';
+  // A FRAME THAT COMES WITH A FADE DOESN'T ASK (Alyx, Sep 2026).
+  // Offering Hard Edges here and then overruling it would read as a bug.
+  // Skip the question entirely, say why in one line, and land straight on
+  // the slider so the only thing left to decide is how much.
+  const questionNote=document.getElementById('revealEdgeQuestionNote');
+  const requiredNote=document.getElementById('revealRequiredFadeNote');
+  syncEdgeFadeWithFrameSelection();
+  if(frameRequiresFade(selectedFrame)){
+    if(buttonsRow)buttonsRow.style.display='none';
+    if(questionNote)questionNote.style.display='none';
+    if(requiredNote)requiredNote.style.display='block';
+    chooseFadeEdges();
+  } else {
+    if(buttonsRow)buttonsRow.style.display='flex';
+    if(questionNote)questionNote.style.display='block';
+    if(requiredNote)requiredNote.style.display='none';
+    if(fadePanel)fadePanel.style.display='none';
+    // Put the floor back. Only chooseFadeEdges used to touch it, so a
+    // customer who tried a fading frame and then picked a plain one was
+    // left unable to drag below 15%.
+    const sl=document.getElementById('revealFadeAmountSlider');
+    if(sl)sl.min='0';
+  }
   overlay.scrollTop=0;
 }
 // The fade the picture carries right now (a picture captioned the old
@@ -10562,6 +10678,16 @@ function openAccessorizeForRevealFlow(){
 }
 
 function chooseEdgeStyleAndContinue(isHard){
+  // Hard edges are not on the menu against a frame that needs a fade -- the
+  // button is hidden below -- but guard the entry point too rather than
+  // trusting the UI to be the only way in.
+  if(isHard && frameRequiresFade(selectedFrame)){
+    hardEdgesEnabled=false;
+    const t=document.getElementById('panoramaFadeToggle');
+    if(t)t.checked=false;
+    chooseFadeEdges();
+    return;
+  }
   if(revealFlowThreePanel){
     // Hard edges = no fade on the placement. Nothing to upload. (The soft
     // path keeps whatever fade the picture already carries.)
@@ -10590,7 +10716,17 @@ function chooseFadeEdges(){
     revealFadeAmountPct=cur>0?cur:DEFAULT_FADE_PCT;
   }
   const slider=document.getElementById('revealFadeAmountSlider');
-  if(slider)slider.value=revealFadeAmountPct;
+  // A frame that comes with a fade starts at the fade it comes with, and the
+  // slider cannot go below the floor -- dragging to zero would re-open the
+  // gap the frame needs closed, which is the whole reason it is on the list.
+  const needs=frameRequiresFade(selectedFrame);
+  if(slider){
+    slider.min=needs?String(REQUIRED_FADE_FLOOR_PCT):'0';
+    if(needs && (!revealFadeSliderTouched || revealFadeAmountPct<REQUIRED_FADE_FLOOR_PCT)){
+      revealFadeAmountPct=REQUIRED_FADE_DEFAULT_PCT;
+    }
+    slider.value=revealFadeAmountPct;
+  }
   updateRevealFadePreview();
 }
 
@@ -10670,6 +10806,7 @@ async function updateRevealFadePreview(){
   const slider=document.getElementById('revealFadeAmountSlider');
   const readout=document.getElementById('revealFadeAmountVal');
   revealFadeAmountPct=slider?parseFloat(slider.value):30;
+  revealFadeSliderTouched=true;
   if(readout)readout.textContent=revealFadeAmountPct+'%';
   if(revealFlowThreePanel){
     // Same fade mask the print gets, drawn over the fitted picture.
@@ -14939,6 +15076,10 @@ function resetEverythingFreshStart(){
   edgeFadeChoice=null;
   edgeFadeAmountPct=0;
   hardEdgesEnabled=false;
+  // Same reasoning as edgeFadeChoice above: a leftover "the customer already
+  // chose a fade" would stop the next design's frame applying its own.
+  revealFadeSliderTouched=false;
+  revealFadeAmountPct=DEFAULT_FADE_PCT;
   const fadeSliderReset=document.getElementById('edgeFadeAmountSlider');
   if(fadeSliderReset)fadeSliderReset.value=0;
   const fadeReadoutReset=document.getElementById('edgeFadeAmountReadout');
@@ -15232,6 +15373,10 @@ function revealEdgeBack(){
   showAccessorizeChoiceState();
 }
 function revealFadeBack(){
+  // On a frame that comes with a fade there is no Hard/Fade row to go back
+  // to -- showEdgeQuestion skipped it. Back means back a whole screen, not
+  // back to a choice that was never offered.
+  if(frameRequiresFade(selectedFrame)){revealEdgeBack();return;}
   const buttonsRow=document.getElementById('revealEdgeButtonsRow');
   const fadePanel=document.getElementById('revealFadeSliderPanel');
   if(fadePanel)fadePanel.style.display='none';
