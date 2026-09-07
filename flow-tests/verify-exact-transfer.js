@@ -135,10 +135,11 @@ scenarios.outOfCreditsCanStillTransfer = async (page, log) => {
   return 'PASS: zero credits still allows the free exact transfer';
 };
 
-// ---- Wraparound still needs words, and says why + the way out. Drives the
-// real generate() against seeded wraparound state (the full pick rail for
-// wraparound is verify-wraparound.js's job; this scenario only owns the
-// guard's message). ----
+// ---- Wraparound with an empty box just paints (Alyx, v97: the "needs a
+// description" popup was agreed gone). Wraparound is an AI job by
+// definition, so an empty box means "paint my scene", never "my photo
+// as-is": no refusal, no transfer confirm, and the panorama call fires with
+// its own default idea. Drives the real generate() against seeded state. ----
 scenarios.wraparoundStillNeedsWords = async (page, log) => {
   await armConfirm(page, true);
   await page.evaluate(() => {
@@ -148,14 +149,14 @@ scenarios.wraparoundStillNeedsWords = async (page, log) => {
     mugColorFinishedPreGen = true;
     generate();
   });
-  await T(page, 1200);
+  await T(page, 2500);
   const calls = await page.evaluate(() => window.__confirmCalls || []);
   if (calls.length) return 'FAIL: wraparound + empty box offered the transfer (a photo cannot honestly become a panorama)';
-  const gen = log.apiCalls.filter(c => c.path === '/api/generate');
-  if (gen.length) return 'FAIL: wraparound + empty box still generated';
-  const status = await page.evaluate(() => document.getElementById('statusMsg')?.textContent || document.body.textContent);
-  if (!/Classic/.test(status)) return 'FAIL: the refusal never names the Classic way out';
-  return 'PASS: wraparound + empty box refuses, names Classic as the way to an as-is photo';
+  const pano = log.apiCalls.filter(c => c.path === '/api/generate' && c.action === 'wraparoundPanorama');
+  if (!pano.length) return 'FAIL: wraparound + empty box did not paint — the old refusal is back';
+  const status = await page.evaluate(() => document.getElementById('statusMsg')?.textContent || '');
+  if (/needs a description/.test(status)) return 'FAIL: the "needs a description" popup is back';
+  return 'PASS: wraparound + empty box paints the scene, no popup, no confirm';
 };
 
 // ---- Typing words must leave the AI path exactly as it was: no confirm,
