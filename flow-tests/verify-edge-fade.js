@@ -225,6 +225,102 @@ scenarios.squareProductsStayRectangular = async (page) => {
   return `PASS: all ${Object.keys(shape).length} current products are rectangular, as their blueprints say`;
 };
 
+// FRAMES THAT BRING THEIR OWN FADE (Alyx, Sep 2026).
+// Twelve of the twenty-seven frames have decoration reaching into the opening,
+// so a picture with a hard rectangular edge lands on top of it and you can see
+// where the picture stops. Alyx found all twelve by hand, clicking each frame
+// and looking. These lock in what the code does about it.
+scenarios.theTwelveFramesAreFlagged = async (page) => {
+  const r = await page.evaluate(() => {
+    const {plain, fading} = frameCatalogSections();
+    return { plain: plain.map(([n]) => n), fading: fading.map(([n]) => n) };
+  });
+  const expected = ['Retro Arcade','Neon Dreams','Wrought Iron','Pressed Flowers',
+    'Celestial Deco','Moonlit Ivy','Enchanted Grove','Lantern Vine','Trailblazer',
+    'Astral','Mirror Mirror','Royal'];
+  const missing = expected.filter(n => !r.fading.includes(n));
+  const extra = r.fading.filter(n => !expected.includes(n));
+  if (missing.length) return 'FAIL: these need a fade and are not flagged: ' + missing.join(', ');
+  if (extra.length) return 'FAIL: these are flagged and should not be: ' + extra.join(', ');
+  if (r.plain.length !== 15) return `FAIL: the plain section holds ${r.plain.length}, expected 15`;
+  return `PASS: ${r.plain.length} frames stand on their own, ${r.fading.length} bring their own fade`;
+};
+
+scenarios.theCatalogueSplitsIntoTwoSections = async (page) => {
+  const r = await page.evaluate(() => {
+    renderFrameGrid();
+    const g = document.getElementById('frameGrid');
+    const kids = [...g.children];
+    const grids = kids.filter(e => e.style.display === 'grid');
+    const note = kids.find(e => e.className === 'note-prominent');
+    return {
+      sizes: grids.map(s => s.children.length),
+      columns: grids.map(s => s.style.gridTemplateColumns),
+      note: note ? note.textContent : null,
+      total: grids.reduce((a, s) => a + s.children.length, 0),
+    };
+  });
+  if (r.total !== 27) return `FAIL: ${r.total} tiles rendered, the catalogue holds 27: ` + JSON.stringify(r);
+  if (r.sizes.join(',') !== '15,12') return 'FAIL: sections are ' + r.sizes.join(' and ') + ', expected 15 and 12';
+  if (!r.columns.every(c => /repeat\(3/.test(c))) return 'FAIL: sections are not three across: ' + JSON.stringify(r.columns);
+  if (!r.note || !/require a fade/.test(r.note)) return 'FAIL: the explanation between the sections is missing: ' + r.note;
+  return `PASS: ${r.sizes[0]} then ${r.sizes[1]}, three across, with the explanation between them`;
+};
+
+scenarios.aFadingFrameIsNeverOfferedHardEdges = async (page) => {
+  const probe = (f) => page.evaluate((frame) => {
+    selectedFrame = frame;
+    revealFlowThreePanel = false;
+    revealOriginalArtworkUrls = ['http://127.0.0.1:8788/__fake/panorama.jpg'];
+    wrapDisplayOverrideUrl = null;
+    revealFadeSliderTouched = false;
+    revealFadeAmountPct = 30;
+    showEdgeQuestion();
+    const row = document.getElementById('revealEdgeButtonsRow');
+    const panel = document.getElementById('revealFadeSliderPanel');
+    const why = document.getElementById('revealRequiredFadeNote');
+    const slider = document.getElementById('revealFadeAmountSlider');
+    return {
+      hardOffered: row.style.display !== 'none',
+      fadeOpen: panel.style.display === 'block',
+      whyShown: why.style.display === 'block',
+      min: Number(slider.min),
+      value: Number(slider.value),
+      hardEdgesEnabled,
+    };
+  }, f);
+
+  const fading = await probe('Wrought Iron');
+  if (fading.hardOffered) return 'FAIL: Hard Edges was offered against a frame that needs a fade: ' + JSON.stringify(fading);
+  if (!fading.fadeOpen) return 'FAIL: the fade panel did not open: ' + JSON.stringify(fading);
+  if (!fading.whyShown) return 'FAIL: nothing on screen says why the choice was skipped: ' + JSON.stringify(fading);
+  if (fading.value !== 40) return `FAIL: a fading frame should start at 40%, got ${fading.value}`;
+  if (fading.min !== 15) return `FAIL: the slider floor should be 15%, got ${fading.min}`;
+  if (fading.hardEdgesEnabled) return 'FAIL: hard edges is still flagged on: ' + JSON.stringify(fading);
+
+  // The floor must not leak onto the next frame the customer tries.
+  const plain = await probe('Ornate Gold');
+  if (!plain.hardOffered) return 'FAIL: a plain frame lost its Hard Edges choice: ' + JSON.stringify(plain);
+  if (plain.min !== 0) return `FAIL: the fading frame's floor leaked onto a plain one (min ${plain.min})`;
+  if (plain.whyShown) return 'FAIL: the explanation is showing against a plain frame';
+
+  // And Hard must not be reachable by calling straight into the handler.
+  const forced = await page.evaluate(() => {
+    selectedFrame = 'Royal';
+    revealFlowThreePanel = false;
+    showEdgeQuestion();
+    chooseEdgeStyleAndContinue(true);
+    return {
+      fadeOpen: document.getElementById('revealFadeSliderPanel').style.display === 'block',
+      hardEdgesEnabled,
+    };
+  });
+  if (!forced.fadeOpen || forced.hardEdgesEnabled) {
+    return 'FAIL: hard edges got through the back door: ' + JSON.stringify(forced);
+  }
+  return 'PASS: the twelve skip the question, start at 40% with a 15% floor, and the floor does not leak';
+};
+
 (async () => {
   let fails = 0;
   for (const [name, fn] of Object.entries(scenarios)) {
