@@ -2,7 +2,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head><link rel="manifest" href="needles-manifest.json">
-<!-- BUILD-MARKER: FRAMES-THAT-BRING-THEIR-OWN-FADE-v77 -->
+<!-- BUILD-MARKER: TWO-COLUMN-EVERYWHERE-v79 -->
 <!-- If you can see this comment on GitHub, this exact paste landed. -->
 <!-- If your live site's page source does NOT say -->
 <!-- "INSTANT-FIT-SCREEN-v47" right here, the upload/deploy did -->
@@ -10121,15 +10121,27 @@ function continueFromMugPanels(){
 
 // Called at the exact point each engine commits, so the banner reports what
 // actually ran rather than what was asked for.
+// SILENCE WHEN IT WORKS, A WARNING WHEN IT DOESN'T (Alyx, Sep 2026).
+// The green "Single-shot panorama -- one image, cut into three. Seams line up
+// by construction." banner has been retired. Two reasons, and Alyx reached
+// both independently:
+//   1. It said "cut into three" -- the exact idea this flow spent a night
+//      removing. Slicing is how Printify's coffee-mug product takes delivery
+//      of the file, not something a customer needs told, and saying it out
+//      loud is what invited everyone to think of a wraparound as three
+//      pictures in the first place.
+//   2. It was engineering language on a customer's screen -- "single-shot",
+//      "the panorama service", "by construction" -- reporting which backend
+//      happened to run. When it works there is nothing to report.
+// The orange fallback banner stays, because that one tells the customer
+// something real: the seams on this particular image may need attention.
 function showWrapMethodBanner(method){
   const box=document.getElementById('wrapMethodBanner');
   const txt=document.getElementById('wrapMethodBannerText');
   if(!box||!txt)return;
   if(method==='panorama'){
-    box.style.background='rgba(10,58,26,.96)';
-    box.style.border='1px solid #2e9e57';
-    box.style.color='#8bf3b0';
-    txt.textContent='\u26A1 Single-shot panorama \u2014 one image, cut into three. Seams line up by construction.';
+    hideWrapMethodBanner();
+    return;
   } else if(method==='classic'){
     box.style.background='rgba(74,36,6,.97)';
     box.style.border='1px solid #e09330';
@@ -10396,6 +10408,15 @@ function showAccessorizeChoiceState(){
   const choicePanel=document.getElementById('accessorizeChoicePanel');
   const committed=document.getElementById('accessorizeCommittedContent');
   if(!card)return;
+  // PUT THE CARDS BACK FIRST. This state is the "Add a Frame?" offer -- one
+  // column, no catalogue -- so the two-column studio has no business still
+  // being assembled around it. Every other exit from the catalogue already
+  // unmounts (hideAccessorizeStep, reopenMockupLightboxFromFrameOffer); this
+  // one did not, because until now the studio never mounted on a route that
+  // came back here. Cancel on the wraparound does exactly that, and without
+  // this the offer screen would render inside the studio's left column with
+  // an empty right column beside it.
+  unmountFrameStudio();
   card.style.display='block';
   if(choicePanel)choicePanel.style.display='block';
   if(committed)committed.style.display='none';
@@ -12515,7 +12536,16 @@ function showAccessorizeStep(){
   // for a sill's opening), and the way back is the mockup itself.
   if(frameOfferFromMockup&&sillCard)sillCard.style.display='none';
   if(frameOfferFromMockup&&crossPromo)crossPromo.style.display='none';
-  if(frameOfferFromMockup)mountFrameStudio(card,frameCard); else unmountFrameStudio();
+  // THE TWO-COLUMN STUDIO FOLLOWS THE FRAMES (Alyx's standing rule, and his
+  // catch that the wraparound was the one place it did not). This read
+  // `if(frameOfferFromMockup)` alone, so the wraparound reveal -- the one
+  // route where seeing the picture and the catalogue at the same time
+  // matters most, because the picture is three times wider than it is tall
+  // -- explicitly unmounted it and stacked the frames above the picture.
+  // Layout only: mountFrameStudio moves two existing cards into two columns
+  // and unmountFrameStudio puts them back. Nothing here touches an image, a
+  // prompt, or the print path.
+  if(frameOfferFromMockup||isWraparoundReveal)mountFrameStudio(card,frameCard); else unmountFrameStudio();
   const cancelBtn=document.getElementById('accessorizeCancelBtn');
   if(cancelBtn)cancelBtn.textContent=frameOfferFromMockup?'↩️ Back to the Mockup':'↩️ Cancel — Go Back';
   const satisfiedBtn=document.getElementById('accessorizeSatisfiedBtn');

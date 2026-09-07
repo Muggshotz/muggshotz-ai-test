@@ -216,9 +216,13 @@ scenarios.mugWraparoundUsesPanorama = async (page, log) => {
   if (sent.prompt !== 'a wide desert canyon at sunrise')
     return `FAIL: the panorama call sent more than the customer's idea (${sent.prompt.length} chars): ${JSON.stringify(sent.prompt.slice(0, 160))}`;
   const banner = await page.evaluate(() => { const b = document.getElementById('wrapMethodBanner'); return { shown: getComputedStyle(b).display !== 'none', text: document.getElementById('wrapMethodBannerText').textContent }; });
-  if (!banner.shown) return 'FAIL: no engine banner after a panorama run';
-  if (!/panorama/i.test(banner.text)) return 'FAIL: banner does not name the panorama engine: ' + banner.text;
-  return 'PASS: mug Wraparound = 1 panorama call carrying the idea alone, 3 aligned panels, no Fix the Seams, and the banner says panorama';
+  // RETIRED (Alyx, Sep 2026). This used to require a green banner announcing
+  // the panorama engine. It said "cut into three" -- the exact idea this flow
+  // spent a night removing -- and it reported which backend ran, which is
+  // engineering news, not customer news. When it works there is nothing to
+  // say. The fallback banner is still required; see the outage scenario.
+  if (banner.shown) return 'FAIL: a working panorama should say nothing: ' + banner.text;
+  return 'PASS: mug Wraparound = 1 panorama call carrying the idea alone, 3 aligned panels, no Fix the Seams, and no banner when it works';
 };
 
 // ---- 4. Panorama outage falls back to per-panel rather than dead-ending. ----
