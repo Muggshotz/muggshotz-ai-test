@@ -295,13 +295,16 @@ scenarios.aFadingFrameIsNeverOfferedHardEdges = async (page) => {
   if (!fading.fadeOpen) return 'FAIL: the fade panel did not open: ' + JSON.stringify(fading);
   if (!fading.whyShown) return 'FAIL: nothing on screen says why the choice was skipped: ' + JSON.stringify(fading);
   if (fading.value !== 40) return `FAIL: a fading frame should start at 40%, got ${fading.value}`;
-  if (fading.min !== 15) return `FAIL: the slider floor should be 15%, got ${fading.min}`;
+  // NO FLOOR (Alyx): "The slide isn't permanent it's adjustable. That's the
+  // reason why it's a slide." 0 is no fade, 100 is a whiteout, and the choice
+  // belongs to whoever is holding it.
+  if (fading.min !== 0) return `FAIL: the fade slider is capped at ${fading.min}% — it should reach zero`;
   if (fading.hardEdgesEnabled) return 'FAIL: hard edges is still flagged on: ' + JSON.stringify(fading);
 
   // The floor must not leak onto the next frame the customer tries.
   const plain = await probe('Ornate Gold');
   if (!plain.hardOffered) return 'FAIL: a plain frame lost its Hard Edges choice: ' + JSON.stringify(plain);
-  if (plain.min !== 0) return `FAIL: the fading frame's floor leaked onto a plain one (min ${plain.min})`;
+  if (plain.min !== 0) return `FAIL: the fade slider is capped at ${plain.min}% on a plain frame`;
   if (plain.whyShown) return 'FAIL: the explanation is showing against a plain frame';
 
   // And Hard must not be reachable by calling straight into the handler.
@@ -318,7 +321,7 @@ scenarios.aFadingFrameIsNeverOfferedHardEdges = async (page) => {
   if (!forced.fadeOpen || forced.hardEdgesEnabled) {
     return 'FAIL: hard edges got through the back door: ' + JSON.stringify(forced);
   }
-  return 'PASS: the twelve skip the question, start at 40% with a 15% floor, and the floor does not leak';
+  return 'PASS: the twelve skip the question and start at 40%, with the slider free to run 0-100';
 };
 
 // THE FADE MUST ACTUALLY BE ON THE PICTURE (Alyx, Sep 2026).

@@ -870,9 +870,9 @@ scenarios.theFrameStudioHasAFadeSlider = async (page) => {
 
   const listed = await probe('Mirror Mirror');
   if (listed.start !== 40) return `FAIL: a listed frame should start at 40%, got ${listed.start}`;
-  if (listed.min !== 15) return `FAIL: a listed frame's slider should floor at 15%, got ${listed.min}`;
+  if (listed.min !== 0) return `FAIL: a listed frame's slider is capped at ${listed.min}% — it should reach zero`;
   if (!listed.noteShown) return 'FAIL: nothing explains why a listed frame carries a fade';
-  if (listed.floored !== 15) return `FAIL: a listed frame was draggable below its floor (${listed.floored})`;
+  if (listed.floored !== 0) return `FAIL: a listed frame could not be taken back to no fade (${listed.floored})`;
   if (listed.raised !== 60) return `FAIL: the slider did not raise the fade (${listed.raised})`;
   if (!listed.sourceFaded) return 'FAIL: the slider moved but the picture was not faded';
 
@@ -882,7 +882,67 @@ scenarios.theFrameStudioHasAFadeSlider = async (page) => {
   if (plain.noteShown) return 'FAIL: the "comes with a fade" note is showing on a frame that does not';
   if (plain.floored !== 0) return `FAIL: an unlisted frame could not be taken back to no fade (${plain.floored})`;
   if (plain.raised !== 60) return 'FAIL: an unlisted frame could not be given a fade on request';
-  return 'PASS: listed frames start at 40% and floor at 15%, unlisted start at none and can still be given one';
+  return 'PASS: listed frames start at 40%, unlisted at none, and every one runs the full 0-100';
+};
+
+// THE TOOLS BUTTON IS ON EVERY FRAME (Alyx, Sep 2026): "Almost all the
+// frames won't need it, but it doesn't hurt anything just to have it there
+// just in case."
+// It used to appear only on the twenty frames drawn from an artwork file.
+// The other seven paint their border straight onto the canvas edge --
+// drawPhotoInsetForFrame returns early for them and the photo fills the whole
+// canvas -- so Width, Height and Position have nothing to grip and are hidden
+// with a line saying why. Edge Fade works on any frame and is always there.
+// Checks all 27, not a sample.
+scenarios.everyFrameHasTheToolsPanel = async (page) => {
+  const rows = await page.evaluate(async () => {
+    product = 'mug'; mugPrintMode = 'wraparound';
+    revealFlowActive = true; revealFlowThreePanel = false;
+    lastWraparoundMethod = 'panorama';
+    wraparoundPanoramaBaseUrl = 'http://127.0.0.1:8788/__fake/panorama.jpg';
+    pendingWraparoundRaw = { left: 'a', center: 'b', right: 'c' };
+    const out = [];
+    for (const name of Object.keys(FRAME_CATALOG)) {
+      selectedFrame = name; windowSillChoice = null; frameStudioFadePct = null;
+      await refreshFrameFitSliders();
+      out.push({
+        frame: name,
+        isImage: FRAME_CATALOG[name].type === 'image',
+        toolsButton: document.getElementById('frameFitSlidersWrap').style.display !== 'none',
+        fitSliders: document.getElementById('frameFitOpeningControls').style.display !== 'none',
+        explains: document.getElementById('frameFitNoOpeningNote').style.display === 'block',
+        fadeStart: Number(document.getElementById('frameFitFade').value),
+        fadeFloor: Number(document.getElementById('frameFitFade').min),
+        fadeCeiling: Number(document.getElementById('frameFitFade').max),
+        needsFade: frameRequiresFade(name),
+      });
+    }
+    return out;
+  });
+
+  if (rows.length !== 27) return `FAIL: expected 27 frames, saw ${rows.length}`;
+  const noButton = rows.filter((r) => !r.toolsButton).map((r) => r.frame);
+  if (noButton.length) return 'FAIL: no tools button on: ' + noButton.join(', ');
+
+  // Fit sliders exactly where there is an opening to fit.
+  const wrongSliders = rows.filter((r) => r.fitSliders !== r.isImage).map((r) => r.frame);
+  if (wrongSliders.length) return 'FAIL: fit sliders shown/hidden wrongly on: ' + wrongSliders.join(', ');
+  // And a reason given wherever they are absent.
+  const unexplained = rows.filter((r) => !r.fitSliders && !r.explains).map((r) => r.frame);
+  if (unexplained.length) return 'FAIL: sliders missing with no explanation on: ' + unexplained.join(', ');
+
+  // Edge Fade is on all 27, and the twelve keep their default and their floor.
+  const listed = rows.filter((r) => r.needsFade);
+  if (listed.length !== 12) return `FAIL: ${listed.length} frames flagged as needing a fade, expected 12`;
+  const wrongDefault = listed.filter((r) => r.fadeStart !== 40).map((r) => r.frame);
+  if (wrongDefault.length) return 'FAIL: listed frames not starting at 40%: ' + wrongDefault.join(', ');
+  const wrongPlain = rows.filter((r) => !r.needsFade && r.fadeStart !== 0).map((r) => r.frame);
+  if (wrongPlain.length) return 'FAIL: unlisted frames carrying a fade they should not: ' + wrongPlain.join(', ');
+  // Every frame's slider runs the whole range. No frame gets to cap it.
+  const capped = rows.filter((r) => r.fadeFloor !== 0 || r.fadeCeiling !== 100).map((r) => `${r.frame} ${r.fadeFloor}-${r.fadeCeiling}`);
+  if (capped.length) return 'FAIL: these frames cap the fade slider: ' + capped.join(', ');
+
+  return `PASS: the tools panel opens on all ${rows.length} frames — fit sliders on the ${rows.filter((r) => r.fitSliders).length} with an opening, Edge Fade on all of them`;
 };
 
 (async () => {

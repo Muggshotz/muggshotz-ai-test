@@ -2,7 +2,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head><link rel="manifest" href="needles-manifest.json">
-<!-- BUILD-MARKER: HOLD-STILL-AND-FADE-WHERE-YOU-CAN-SEE-IT-v82 -->
+<!-- BUILD-MARKER: TOOLS-EVERYWHERE-NO-FLOOR-v83 -->
 <!-- If you can see this comment on GitHub, this exact paste landed. -->
 <!-- If your live site's page source does NOT say -->
 <!-- "INSTANT-FIT-SCREEN-v47" right here, the upload/deploy did -->
@@ -1627,7 +1627,7 @@ Tell Needles <span style="color:#7ab8ff">what you have in mind</span>
 <button type="button" class="download-btn" id="revealEdgeBackBtn" style="margin-top:.75rem" onclick="revealEdgeBack()">← Back</button>
 <div id="revealFadeSliderPanel" style="display:none;margin-top:.9rem">
 <div class="note" style="margin-top:0;margin-bottom:.5rem">How far should the fade reach in from the edges?</div>
-<input type="range" id="revealFadeAmountSlider" min="0" max="80" step="1" value="30" oninput="updateRevealFadePreview()" style="width:100%"/>
+<input type="range" id="revealFadeAmountSlider" min="0" max="100" step="1" value="30" oninput="updateRevealFadePreview()" style="width:100%"/>
 <div class="note" style="margin-top:.25rem;margin-bottom:0;text-align:center"><span id="revealFadeAmountVal">30%</span></div>
 <div class="note" id="revealSavingNote" style="display:none;margin-top:.75rem;text-align:center"><span class="spinner"></span>Saving your captioned picture...</div>
 <button type="button" class="generate-btn" id="revealFadeContinueBtn" style="margin-top:.75rem" onclick="confirmFadeAndContinue()">✅ Continue</button>
@@ -1741,6 +1741,7 @@ Tell Needles <span style="color:#7ab8ff">what you have in mind</span>
 <div id="frameFitSlidersWrap" style="display:none;margin-top:.9rem">
 <button type="button" class="download-btn" id="frameFitSlidersToggleBtn" style="margin-top:0" onclick="toggleFrameFitSliders()">🎚️ Adjust Frame Fit</button>
 <div id="frameFitSliders" style="display:none;margin-top:.75rem">
+<div id="frameFitOpeningControls">
 <div class="note" style="margin-top:0;margin-bottom:.5rem">Stretch or reposition the frame's opening to fit your picture exactly how you want.</div>
 <label style="display:block;margin-bottom:2px">Width <span id="frameFitWidthVal"></span></label>
 <input type="range" id="frameFitWidth" min="20" max="150" step="1" oninput="handleFrameFitSliderChange()" style="width:100%"/>
@@ -1750,12 +1751,14 @@ Tell Needles <span style="color:#7ab8ff">what you have in mind</span>
 <input type="range" id="frameFitOffsetX" min="-50" max="50" step="1" oninput="handleFrameFitSliderChange()" style="width:100%"/>
 <label style="display:block;margin:8px 0 2px">Up/Down Position <span id="frameFitOffsetYVal"></span></label>
 <input type="range" id="frameFitOffsetY" min="-50" max="50" step="1" oninput="handleFrameFitSliderChange()" style="width:100%"/>
+</div>
+<div class="note" id="frameFitNoOpeningNote" style="display:none;margin-top:0;margin-bottom:.5rem">This frame's border is drawn straight onto the edge of your picture, so there is no opening to resize — but you can still soften the edges below.</div>
 <!-- THE FADE, WHERE YOU CAN SEE IT (Alyx, Sep 2026). The fade used to be
      decided on a different screen, blind. Here it sits with the fit sliders
      and the picture above them, so the corners can be watched disappearing
      into the mug while the slider moves. -->
 <label style="display:block;margin:8px 0 2px">Edge Fade <span id="frameFitFadeVal"></span></label>
-<input type="range" id="frameFitFade" min="0" max="80" step="1" oninput="handleFrameFadeSliderChange()" style="width:100%"/>
+<input type="range" id="frameFitFade" min="0" max="100" step="1" oninput="handleFrameFadeSliderChange()" style="width:100%"/>
 <div class="note" id="frameFitFadeNote" style="display:none;margin-top:4px;margin-bottom:0;color:#7ab8ff">This frame comes with a fade — its decoration reaches into the opening, so the picture is softened before the frame goes on.</div>
 <button type="button" class="download-btn" style="margin-top:.6rem" onclick="resetFrameFitSliders()">↺ Reset to Default Fit</button>
 </div>
@@ -3482,10 +3485,19 @@ function frameRequiresFade(name){
   return !!(name && FRAME_CATALOG[name] && FRAME_CATALOG[name].requiresFade);
 }
 
-// The fade these frames come with. 40% is what Alyx settled on by eye on the
-// wraparound; the floor stops a customer dragging it back to zero and
-// re-opening the very gap the frame needs closed. They keep the slider
-// between those two points.
+// Where a frame that comes with a fade STARTS. 40% is the amount Alyx set by
+// eye on the wraparound. It is a starting point, not a limit -- the slider
+// runs the full 0-100 from there.
+//
+// There used to be a 15% floor here, so a customer could not drag a listed
+// frame's fade back to nothing. Alyx removed it, and the reasoning is worth
+// keeping: "People have eyes... they might have their own reasons for wanting
+// to have the edge visible through the frame... The slide isn't permanent
+// it's adjustable. That's the reason why it's a slide."
+// The rule he drew, which applies well beyond this slider: hiding controls
+// that genuinely do nothing removes distraction; capping a control that works
+// removes choice. "I'm not limiting options to control behavior, I'm limiting
+// distractions to focus behavior. There's a difference."
 const REQUIRED_FADE_DEFAULT_PCT=40;
 // What the Edge Fade slider in the frame studio is set to. null means nobody
 // has touched it and the frame's own default applies -- 40% for a frame that
@@ -3497,16 +3509,14 @@ let frameStudioFadePct=null;
 // (see applyAccessorizeFrame), so on that route this IS the whole decision.
 function requiredFadePctForFrame(){
   if(frameStudioFadePct!=null)return frameStudioFadePct;
-  return (revealFadeSliderTouched && revealFadeAmountPct>=REQUIRED_FADE_FLOOR_PCT)
-    ? revealFadeAmountPct
-    : REQUIRED_FADE_DEFAULT_PCT;
+  return revealFadeSliderTouched ? revealFadeAmountPct : REQUIRED_FADE_DEFAULT_PCT;
 }
 // How much fade the picture under the frame actually gets. A frame on the
 // list always gets at least the floor. A frame not on the list gets none
 // unless the customer asks for some with the slider.
 function frameStudioFadeAmount(){
-  if(frameRequiresFade(selectedFrame))return Math.max(REQUIRED_FADE_FLOOR_PCT,requiredFadePctForFrame());
-  return frameStudioFadePct!=null?frameStudioFadePct:0;
+  if(frameStudioFadePct!=null)return frameStudioFadePct;
+  return frameRequiresFade(selectedFrame)?requiredFadePctForFrame():0;
 }
 // The strip a frame gets drawn onto: faded first when the frame needs it, so
 // the picture dissolves into the product colour UNDER the frame and the
@@ -3517,7 +3527,6 @@ async function wrapSourceForFrame(){
   if(!(pct>0))return wraparoundPanoramaBaseUrl;
   return await renderFadedArtwork(wraparoundPanoramaBaseUrl,getSelectedProductColorHex(),pct);
 }
-const REQUIRED_FADE_FLOOR_PCT=15;
 
 // The catalogue, split the way it is displayed: the frames that stand on
 // their own first, then the frames that come with a fade. Catalogue order is
@@ -3873,21 +3882,32 @@ async function refreshFrameFitSliders(){
     return;
   }
   const data=FRAME_CATALOG[selectedFrame];
-  if(!data||data.type!=='image'){
+  if(!data){
     wrap.style.display='none';
     return;
   }
   wrap.style.display='block';
-  const active=customFrameCalibration[data.asset]||await getFrameDefaultCalibrationPct(data.asset);
-  document.getElementById('frameFitWidth').value=active.widthPct;
-  document.getElementById('frameFitHeight').value=active.heightPct;
-  document.getElementById('frameFitOffsetX').value=active.offsetXPct;
-  document.getElementById('frameFitOffsetY').value=active.offsetYPct;
+  // Only a frame drawn from an artwork file has an opening to stretch. The
+  // procedural ones paint their border onto the canvas edge, so those four
+  // sliders would move and do nothing -- worse than not being offered.
+  const hasOpening=(data.type==='image' && !!data.asset);
+  const openingControls=document.getElementById('frameFitOpeningControls');
+  const noOpeningNote=document.getElementById('frameFitNoOpeningNote');
+  if(openingControls)openingControls.style.display=hasOpening?'block':'none';
+  if(noOpeningNote)noOpeningNote.style.display=hasOpening?'none':'block';
+  if(hasOpening){
+    const active=customFrameCalibration[data.asset]||await getFrameDefaultCalibrationPct(data.asset);
+    document.getElementById('frameFitWidth').value=active.widthPct;
+    document.getElementById('frameFitHeight').value=active.heightPct;
+    document.getElementById('frameFitOffsetX').value=active.offsetXPct;
+    document.getElementById('frameFitOffsetY').value=active.offsetYPct;
+  }
   const fadeSlider=document.getElementById('frameFitFade');
   const fadeNote=document.getElementById('frameFitFadeNote');
   const needs=frameRequiresFade(selectedFrame);
   if(fadeSlider){
-    fadeSlider.min=needs?String(REQUIRED_FADE_FLOOR_PCT):'0';
+    fadeSlider.min='0';
+    fadeSlider.max='100';
     fadeSlider.value=String(frameStudioFadeAmount());
   }
   if(fadeNote)fadeNote.style.display=needs?'block':'none';
@@ -3895,7 +3915,12 @@ async function refreshFrameFitSliders(){
 }
 
 function updateFrameFitSliderReadouts(){
-  ['frameFitWidth','frameFitHeight','frameFitOffsetX','frameFitOffsetY','frameFitFade'].forEach(id=>{
+  const d=selectedFrame?FRAME_CATALOG[selectedFrame]:null;
+  const hasOpening=!!(d && d.type==='image' && d.asset);
+  const ids=hasOpening
+    ? ['frameFitWidth','frameFitHeight','frameFitOffsetX','frameFitOffsetY','frameFitFade']
+    : ['frameFitFade'];
+  ids.forEach(id=>{
     const slider=document.getElementById(id);
     const readout=document.getElementById(id+'Val');
     if(!slider||!readout)return;
@@ -3907,14 +3932,9 @@ function updateFrameFitSliderReadouts(){
 function handleFrameFadeSliderChange(){
   const slider=document.getElementById('frameFitFade');
   if(!slider)return;
-  let pct=parseFloat(slider.value);
-  // A frame that comes with a fade cannot be dragged back to nothing -- that
-  // re-opens the very gap the frame needs closed.
-  if(frameRequiresFade(selectedFrame) && pct<REQUIRED_FADE_FLOOR_PCT){
-    pct=REQUIRED_FADE_FLOOR_PCT;
-    slider.value=String(pct);
-  }
-  frameStudioFadePct=pct;
+  // No clamping. 0 is no fade at all, 100 is a total whiteout, and everything
+  // between belongs to whoever is holding the slider.
+  frameStudioFadePct=parseFloat(slider.value);
   updateFrameFitSliderReadouts();
   scheduleQuietPreviewRedraw();
 }
@@ -3951,8 +3971,8 @@ function scheduleQuietPreviewRedraw(){
 function resetFrameFitSliders(){
   if(!selectedFrame)return;
   const data=FRAME_CATALOG[selectedFrame];
-  if(!data||data.type!=='image')return;
-  delete customFrameCalibration[data.asset];
+  if(!data)return;
+  if(data.type==='image' && data.asset)delete customFrameCalibration[data.asset];
   frameStudioFadePct=null;
   refreshFrameFitSliders();
   scheduleQuietPreviewRedraw();
@@ -10642,11 +10662,8 @@ function showEdgeQuestion(){
     if(questionNote)questionNote.style.display='block';
     if(requiredNote)requiredNote.style.display='none';
     if(fadePanel)fadePanel.style.display='none';
-    // Put the floor back. Only chooseFadeEdges used to touch it, so a
-    // customer who tried a fading frame and then picked a plain one was
-    // left unable to drag below 15%.
     const sl=document.getElementById('revealFadeAmountSlider');
-    if(sl)sl.min='0';
+    if(sl){sl.min='0';sl.max='100';}
   }
   overlay.scrollTop=0;
 }
@@ -10818,10 +10835,9 @@ function chooseFadeEdges(){
   // gap the frame needs closed, which is the whole reason it is on the list.
   const needs=frameRequiresFade(selectedFrame);
   if(slider){
-    slider.min=needs?String(REQUIRED_FADE_FLOOR_PCT):'0';
-    if(needs && (!revealFadeSliderTouched || revealFadeAmountPct<REQUIRED_FADE_FLOOR_PCT)){
-      revealFadeAmountPct=REQUIRED_FADE_DEFAULT_PCT;
-    }
+    slider.min='0';
+    slider.max='100';
+    if(needs && !revealFadeSliderTouched)revealFadeAmountPct=REQUIRED_FADE_DEFAULT_PCT;
     slider.value=revealFadeAmountPct;
   }
   updateRevealFadePreview();
@@ -10884,8 +10900,19 @@ async function renderFadedArtwork(sourceUrl,hexColor,fadeAmountPct){
   // the sides stay crisp while the corners melt away -- the cloud look.
   if(fadeAmountPct>0){
     const w=canvas.width,h=canvas.height;
+    // 100% MEANS 100% (Alyx, Sep 2026). The slider used to stop at 80 and
+    // this kept a small clear core no matter what, so even at the top of the
+    // range the middle of the picture survived. The range runs to 100 now,
+    // and the end of a range should be the actual end of it: a total wash to
+    // the product colour. "Of course they'll never use it, but who are you to
+    // tell them they can't? Maybe they'll have some clever innovative trick."
+    if(fadeAmountPct>=100){
+      ctx.fillStyle=hexColor;
+      ctx.fillRect(0,0,canvas.width,canvas.height);
+      return canvas.toDataURL('image/jpeg',0.92);
+    }
     const outer=Math.SQRT2;
-    const inner=Math.max(0.05,outer*(1-fadeAmountPct/100));
+    const inner=outer*(1-fadeAmountPct/100);
     ctx.save();
     ctx.translate(w/2,h/2);
     ctx.scale(w/2,h/2);
