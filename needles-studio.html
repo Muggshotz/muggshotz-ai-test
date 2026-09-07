@@ -2,7 +2,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head><link rel="manifest" href="needles-manifest.json">
-<!-- BUILD-MARKER: THE-SLIDERS-FILL-THE-BOX-v90 -->
+<!-- BUILD-MARKER: THE-MUG-FROM-THE-PHOTO-v91 -->
 <!-- If you can see this comment on GitHub, this exact paste landed. -->
 <!-- If your live site's page source does NOT say -->
 <!-- "INSTANT-FIT-SCREEN-v47" right here, the upload/deploy did -->
@@ -11998,20 +11998,25 @@ const MUG3D = (function(){
   }
 
   function outerProfile(THREE,S){
-    const R=S.R, H=S.H, BASE=0.13, RIM=0.085, WALL=0.17;
+    const R=S.R, H=S.H, BASE=0.13, RIM=0.085;
     const p=[], V=THREE.Vector2;
     p.push(new V(0,0));
     p.push(new V(R-BASE,0));
     for(let i=0;i<=8;i++){ const t=i/8*Math.PI/2; p.push(new V(R-BASE+Math.sin(t)*BASE, BASE-Math.cos(t)*BASE)); }
-    p.push(new V(R, H-RIM));
-    for(let i=1;i<=8;i++){ const t=i/8*Math.PI/2; p.push(new V(R-RIM+Math.cos(t)*RIM, H-RIM+Math.sin(t)*RIM)); }
-    p.push(new V(R-WALL, H-RIM*0.4));
+    p.push(new V(R, H-RIM));           // the white stops at the top of the outer wall
     return p;
   }
+  // THE RIM'S TOP FACE IS THE ACCENT (Sep 2026, Alyx, with the real photo
+  // beside it: "the accent goes all the way around the top of the rim, not
+  // just the edge of it"). The rim used to be a white arc with the colour
+  // starting at the inner lip. Now this lathe begins where the white outer
+  // wall ends, rolls over the whole top of the rim and carries on down the
+  // inside, so the top face reads as one colour, as it does on the cup.
   function innerProfile(THREE,S){
     const R=S.R, H=S.H, RIM=0.085, WALL=0.17;
     const p=[], V=THREE.Vector2;
-    p.push(new V(R-WALL, H-RIM*0.4));
+    const cx=R-WALL/2, r=WALL/2;       // a half-round rim, outer edge to inner edge
+    for(let i=0;i<=12;i++){ const t=i/12*Math.PI; p.push(new V(cx+Math.cos(t)*r, H-RIM+Math.sin(t)*r)); }
     p.push(new V(R-WALL, WALL*1.5));
     p.push(new V(R-WALL-0.11, WALL*0.95));
     p.push(new V(0, WALL*0.95));
@@ -12025,25 +12030,83 @@ const MUG3D = (function(){
   // 15oz. The top arm leaves the body nearly flat, sweeps out to 0.81R,
   // runs down the outside and curves back in low: a rounded D. Both ends
   // sit slightly INSIDE the body so the joins never show a gap.
+  // AN EAR, NOT A LOOP (Alyx). The top arm leaves the body nearly flat and
+  // stays high, the bulge sits in the upper half, and the bottom arm comes
+  // back in steeper and lower. Reach 0.78R: the traced 0.815R pulled in 4%.
+  // A SYMMETRICAL ARC (Sep 2026, Alyx: "take a horizontal cross section
+  // through the centre of that arc and both hemispheres are identical").
+  // Points every 15 degrees around a true ellipse: 0.366H tall (the top and bottom of
+  // the ear pulled 3% up-and-out and down-and-out on Alyx's call, "a finger on the top of the ear and one on the
+  // bottom, and pull"), centred at
+  // 0.525H (the midpoint of the two attachments), the same above and below
+  // the centre, with the apex pressed in to 0.77R so the arc runs flatter
+  // either side of it (Alyx: "a metaphorical finger on the apex"). An inch
+  // down from the top and an inch up from the bottom meet the handle at the
+  // same distance from the wall.
   const HANDLE_PATH=[
-    [0.880,-0.060],   // starts inside the body, just under the rim
-    [0.845, 0.100],
-    [0.790, 0.400],
-    [0.710, 0.620],
-    [0.600, 0.770],
-    [0.460, 0.815],   // furthest reach, 0.81R, as measured
-    [0.320, 0.750],
-    [0.210, 0.590],
-    [0.150, 0.300],
-    [0.135,-0.060]    // ends inside the body, low
+    [0.895,-0.060],   // inside the body, just under the rim
+    [0.879, 0.216],
+    [0.842, 0.422],
+    [0.784, 0.603],
+    [0.708, 0.705],
+    [0.620, 0.762],
+    [0.525, 0.772],   // the apex, pressed in so the arc runs flat either side
+    [0.430, 0.762],
+    [0.342, 0.705],
+    [0.266, 0.603],
+    [0.208, 0.422],
+    [0.171, 0.216],
+    [0.155,-0.060]    // inside the body
   ];
+  // A tube whose radius varies along its length, with material groups, so
+  // the feet can flare AND be a different colour. three's TubeGeometry can do
+  // neither, so this is the same construction with those two additions.
+  function flaredTube(THREE,curve,segments,radial,radiusAt,whiteUntil){
+    const frames=curve.computeFrenetFrames(segments,false);
+    const pos=[],nrm=[],uv=[],idx=[];
+    for(let i=0;i<=segments;i++){
+      const t=i/segments, P=curve.getPointAt(t), N=frames.normals[i], B=frames.binormals[i], r=radiusAt(t);
+      for(let j=0;j<=radial;j++){
+        const v=j/radial*Math.PI*2, sn=Math.sin(v), cs=-Math.cos(v);
+        const nx=cs*N.x+sn*B.x, ny=cs*N.y+sn*B.y, nz=cs*N.z+sn*B.z;
+        nrm.push(nx,ny,nz); pos.push(P.x+r*nx,P.y+r*ny,P.z+r*nz); uv.push(t,j/radial);
+      }
+    }
+    for(let i=1;i<=segments;i++)for(let j=1;j<=radial;j++){
+      const a=(radial+1)*(i-1)+(j-1), b=(radial+1)*i+(j-1), c=(radial+1)*i+j, d=(radial+1)*(i-1)+j;
+      idx.push(a,b,d, b,c,d);
+    }
+    const g=new THREE.BufferGeometry();
+    g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));
+    g.setAttribute('normal',new THREE.Float32BufferAttribute(nrm,3));
+    g.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));
+    g.setIndex(idx);
+    // feet white, middle the accent: three groups along the length
+    const per=radial*6, nWhite=Math.round(whiteUntil*segments);
+    g.addGroup(0, nWhite*per, 0);
+    g.addGroup(nWhite*per, (segments-2*nWhite)*per, 1);
+    g.addGroup((segments-nWhite)*per, nWhite*per, 0);
+    return g;
+  }
+  // THE FEET FLARE, AND THEY ARE WHITE (Sep 2026, Alyx, with the real photo
+  // beside it: "it should flare slightly towards the ends as it melds into
+  // the cup ... the base of the flare is not painted, the accent begins
+  // about halfway through the flare"). A constant-thickness tube looked
+  // "extremely fragile and flimsy". Each foot swells to 1.7x the handle's
+  // thickness over the last 18% of its length, and the colour starts
+  // halfway up that swell.
   function handleGeo(THREE,S){
     const R=S.R, H=S.H;
     const pts=HANDLE_PATH.map(([yf,rf])=>new THREE.Vector3(0, yf*H, -(R+rf*R)));
-    // Centripetal: follows the traced points without the overshoot that
-    // put visible lumps along the outer curve of the first cut.
     const curve=new THREE.CatmullRomCurve3(pts,false,'centripetal');
-    return new THREE.TubeGeometry(curve,140,R*0.095,24,false);
+    const rMid=R*0.092, FLARE=0.20, SWELL=0.65;   // the photo's 0.089R, feet swelling over the last 20%
+    const ease=x=>x*x*(3-2*x);
+    const radiusAt=t=>{
+      const e=Math.min(t,1-t);
+      const f=e<FLARE?ease(1-e/FLARE):0;
+      return rMid*(1+SWELL*f);
+    };
+    return flaredTube(THREE,curve,140,24,radiusAt,FLARE*0.32);   // the colour reaches well into the flare
   }
   function build(THREE,opts){
     const S=SIZES[opts.sizeLabel]||SIZES['11oz'];
@@ -12053,7 +12116,7 @@ const MUG3D = (function(){
     renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));
     renderer.outputEncoding=THREE.sRGBEncoding;
     renderer.toneMapping=THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure=1.05;
+    renderer.toneMappingExposure=0.92;
     renderer.shadowMap.enabled=true;
     renderer.shadowMap.type=THREE.PCFSoftShadowMap;
     host.appendChild(renderer.domElement);
@@ -12089,24 +12152,37 @@ const MUG3D = (function(){
     // The renderer lights in linear space and converts to sRGB on output,
     // so a hex passed straight in renders washed out -- Maroon #7A1F2B
     // came back pink. Convert it going in, and it is the colour it says.
-    const accent=new THREE.MeshPhysicalMaterial(Object.assign(
-      {color:new THREE.Color(accentHex).convertSRGBToLinear(), side:THREE.DoubleSide},glaze));
+    // Less clearcoat than the white: the broad sheen was washing a deep red
+    // out to salmon against the real photo.
+    const accent=new THREE.MeshPhysicalMaterial(Object.assign({},glaze,
+      {color:new THREE.Color(accentHex).convertSRGBToLinear(), side:THREE.DoubleSide,
+       clearcoat:0.35, roughness:0.30, envMapIntensity:0.55}));
 
     const outer=new THREE.Mesh(new THREE.LatheGeometry(outerProfile(THREE,S),160),white);
     outer.castShadow=true; outer.receiveShadow=true; mugGroup.add(outer);
 
-    const inner=new THREE.Mesh(new THREE.LatheGeometry(innerProfile(THREE,S),160),accent);
-    inner.receiveShadow=true; mugGroup.add(inner);
-
-    const hand=new THREE.Mesh(handleGeo(THREE,S),accent);
-    hand.castShadow=true; hand.receiveShadow=true; mugGroup.add(hand);
-
-    // Trimmed is the one style with a coloured line at the lip.
+    // Per style, from the real product photos: the rim's top face carries
+    // the accent on every coloured style; Accented and Color Pop are
+    // coloured inside as well; Trimmed keeps a white inside under its
+    // coloured rim. The lathe below is rim-top-then-inside, so Trimmed gets
+    // its coloured rim from the accent material with the inside still white
+    // by splitting the geometry at the inner lip.
+    const rimAndInside=new THREE.LatheGeometry(innerProfile(THREE,S),160);
     if(opts.styleName==='Trimmed'){
-      const trim=new THREE.Mesh(
-        new THREE.CylinderGeometry(S.R+0.003,S.R+0.003,0.085,160,1,true),accent);
-      trim.position.y=S.H-0.055; mugGroup.add(trim);
+      // 13 rim points then 3 inside points: split the index range there.
+      const seg=160, rows=innerProfile(THREE,S).length, perRow=seg*6;
+      const rimRows=12;
+      rimAndInside.addGroup(0, rimRows*perRow, 0);
+      rimAndInside.addGroup(rimRows*perRow, (rows-1-rimRows)*perRow, 1);
+      const inner=new THREE.Mesh(rimAndInside,[accent,white]);
+      inner.receiveShadow=true; mugGroup.add(inner);
+    } else {
+      const inner=new THREE.Mesh(rimAndInside,accent);
+      inner.receiveShadow=true; mugGroup.add(inner);
     }
+
+    const hand=new THREE.Mesh(handleGeo(THREE,S),[white,accent]);
+    hand.castShadow=true; hand.receiveShadow=true; mugGroup.add(hand);
 
     designCanvas=document.createElement('canvas');
     designCanvas.width=2048; designCanvas.height=1024;
