@@ -145,6 +145,61 @@ scenarios.wraparoundWrapsThePanorama = async (page) => {
   return `PASS: wraparound mug wraps the uncut panorama (${(art*100).toFixed(0)}% of the stage is artwork)`;
 };
 
+// ---- THE TUMBLERS TURN (Alyx, Sep 2026: "now I want to implement that new
+// mockup process we designed"). A Tundra wraparound opens the 3D engine with
+// the Tundra body, not a mug, and wears the wrap. ----
+OPTS.tundraOpensThe3DTumbler = { chromiumArgs: GL };
+scenarios.tundraOpensThe3DTumbler = async (page) => {
+  await pickProduct(page, 'water bottle');
+  await page.evaluate(() => pickPreGenTravelVariant('travel-mug-30oz-tundra'));
+  await T(page, 1000);
+  await dismissAlerts(page);
+  await page.evaluate(() => pickMugPrintMode('wraparound'));
+  await T(page, 1000);
+  await dismissAlerts(page);
+  await describeAndGenerate(page, 'a wide desert canyon at sunrise');
+  await waitLanded(page);
+  await T(page, 1200);
+  await page.evaluate(() => approveDesign(true));
+  await T(page, 1500);
+  await dismissAlerts(page);
+  await spyOnMug3D(page);
+  page.evaluate(() => beginFinalMockupFetch());
+  await page.waitForFunction(() => document.querySelector('#mug3dStage canvas'), null, { timeout: 15000 });
+  await T(page, 1500);
+  const opens = await page.evaluate(() => window.__mug3dOpens);
+  if (!opens.length) return 'FAIL: MUG3D.open was never called for the Tundra';
+  if (opens[0].tumblerKey !== 'travel-mug-30oz-tundra') return `FAIL: opened as ${JSON.stringify(opens[0])}, not the Tundra body`;
+  if (!opens[0].panoramaUrl) return 'FAIL: the Tundra was not handed its wrap';
+  const art = await artworkFraction(page, 'tundra');
+  // The band is a smaller share of the stage than a mug's whole wrap, and
+  // the fake strip is pale: 2% coloured is a picture on the cup here.
+  if (art < 0.02) return `FAIL: only ${(art*100).toFixed(1)}% of the stage is coloured — no artwork on the tumbler`;
+  return `PASS: the Tundra opens as a 3D tumbler wearing its wrap (${(art*100).toFixed(0)}% of the stage is artwork)`;
+};
+
+// ---- The travel picker draws its own tumblers: the three the engine knows
+// become renders, the two handled cups keep their photos for now. ----
+OPTS.theTravelPickerDrawsItsOwnTumblers = { chromiumArgs: GL };
+scenarios.theTravelPickerDrawsItsOwnTumblers = async (page) => {
+  await pickProduct(page, 'water bottle');
+  const drawn = ['Tundra Tumbler, 30oz', 'Gator Tumbler, 32oz', 'Travel Mug, 20oz'];
+  const kept = ['Travel Mug with Handle, 14oz', 'Insulated Travel Mug, 40oz'];
+  await page.waitForFunction((names) => names.every((n) => {
+    const im = document.querySelector(`#travelMugVariantGrid img[alt="${n}"]`);
+    return im && im.src.startsWith('data:');
+  }), drawn, { timeout: 25000 }).catch(() => {});
+  const r = await page.evaluate(({ drawn, kept }) => {
+    const src = (n) => (document.querySelector(`#travelMugVariantGrid img[alt="${n}"]`) || {}).src || '';
+    return { drawn: drawn.map((n) => [n, src(n).slice(0, 5)]), kept: kept.map((n) => [n, src(n).slice(0, 5)]) };
+  }, { drawn, kept });
+  const cold = r.drawn.filter(([, s]) => s !== 'data:');
+  if (cold.length) return `FAIL: still a catalogue photo: ${cold.map(([n]) => n).join(', ')}`;
+  const swapped = r.kept.filter(([, s]) => s === 'data:');
+  if (swapped.length) return `FAIL: a handled cup got a render it has no body for: ${swapped.map(([n]) => n).join(', ')}`;
+  return 'PASS: Tundra, Gator and 20oz tiles are drawn by the engine; the 14oz and 40oz keep their photos';
+};
+
 // ---- 3. 15oz builds too. ----
 OPTS.fifteenOunceBuilds = { chromiumArgs: GL };
 scenarios.fifteenOunceBuilds = async (page) => {

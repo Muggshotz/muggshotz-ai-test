@@ -2,7 +2,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head><link rel="manifest" href="needles-manifest.json">
-<!-- BUILD-MARKER: NO-FORMAT-POPUP-v97 -->
+<!-- BUILD-MARKER: THE-TUMBLERS-TURN-v98 -->
 <!-- If you can see this comment on GitHub, this exact paste landed. -->
 <!-- If your live site's page source does NOT say -->
 <!-- "INSTANT-FIT-SCREEN-v47" right here, the upload/deploy did -->
@@ -5321,6 +5321,7 @@ function renderTravelMugVariantGrid(){
   const grid=document.getElementById('travelMugVariantGrid');
   if(!grid)return;
   grid.innerHTML='';
+  if(typeof MUG3D!=='undefined')MUG3D.warm();
   Object.entries(TRAVEL_MUG_CATALOG).forEach(([key,prod])=>{
     const btn=document.createElement('div');
     btn.className='theme-btn'+(key===preGenTravelVariant?' selected':'');
@@ -5329,6 +5330,14 @@ function renderTravelMugVariantGrid(){
     img.src=prod.thumbnail;
     img.alt=prod.displayName;
     img.style.background='#fff';
+    // THE PICKER DRAWS ITS OWN TUMBLERS (Alyx, Sep 2026: "they should at
+    // least be uniformly presented"). The cups the 3D engine knows are
+    // drawn by it, same angle, same light, same white, so the tiles match
+    // each other instead of Printify's assorted catalogue photos. The
+    // photo stays until the still arrives, and stays for good without WebGL.
+    if(typeof MUG3D!=='undefined' && MUG3D.hasTumbler(key)){
+      requestMugStill({tumblerKey:key, px:560}, url=>{ img.src=url; });
+    }
     btn.appendChild(img);
     if(prod.whiteOnly){
       const badge=document.createElement('div');
@@ -11646,7 +11655,7 @@ async function beginFinalMockupFetch(){
   // what actually validates that Printify accepted this artwork, and a
   // failure there predicts a failed order, so it must still be heard.
   let usingMug3D=false;
-  if(product==='mug' && !mug3dFailed){
+  if((product==='mug'||tumbler3dKey()) && !mug3dFailed){
     try{ await openMug3DMockup(); usingMug3D=true; }
     catch(err){ usingMug3D=false; }
   }
@@ -11851,7 +11860,7 @@ function reopenMockupLightboxFromFrameOffer(){
   // was taken off. Reopening the flat photo here would have handed the
   // customer a downgrade for accepting the frame offer, and, if Printify
   // had not yet answered, bounced them out to What's Next entirely.
-  if(product==='mug' && !mug3dFailed){
+  if((product==='mug'||tumbler3dKey()) && !mug3dFailed){
     openMug3DMockup().catch(()=>{ reopenFlatMockupFromFrameOffer(); });
     return;
   }
@@ -12030,6 +12039,13 @@ function scrollToFinishedImage(elementId,block){
 let mug3dFailed=false;
 let mug3dShowing=false;
 
+// The travel cup on the screen, if it is one the 3D engine can draw.
+function tumbler3dKey(){
+  if(product!=='water bottle')return null;
+  const key=selectedTravelProductKey||preGenTravelVariant||null;
+  return (typeof MUG3D!=='undefined' && MUG3D.hasTumbler(key))?key:null;
+}
+
 function toggleMug3DTilt(){
   const btn=document.getElementById('mug3dTiltBtn');
   const on=btn.getAttribute('aria-pressed')!=='true';
@@ -12076,17 +12092,22 @@ function openMug3DMockup(){
   const list=sizeColors?sizeColors[selectedGenSize]:null;
   const match=Array.isArray(list)?list.find(c=>c.name===selectedGenColor):null;
 
-  return MUG3D.open(stage,{
+  // A travel cup carries one picture, the whole band. Same engine, a
+  // different body (see TUMBLERS in MUG3D).
+  const tumblerKey=tumbler3dKey();
+  const urlOf=pos=>placements[pos]?((findDesignById(placements[pos])||{}).url||null):null;
+  const openOpts=tumblerKey?{
+    tumblerKey,
+    colorHex:'#ffffff',
+    panoramaUrl: urlOf('left')||urlOf('front')||urlOf('right')||null
+  }:{
     sizeLabel: selectedGenSize,
     styleName: selectedGenStyle,
     colorHex: match?match.hex:'#ffffff',
     panoramaUrl: (mugPrintMode==='wraparound')?wraparoundPanoramaUrl:null,
-    panelUrls: [
-      placements.left?(findDesignById(placements.left)||{}).url:null,
-      placements.front?(findDesignById(placements.front)||{}).url:null,
-      placements.right?(findDesignById(placements.right)||{}).url:null
-    ]
-  }).then(()=>{
+    panelUrls: [urlOf('left'),urlOf('front'),urlOf('right')]
+  };
+  return MUG3D.open(stage,openOpts).then(()=>{
     const slider=document.getElementById('mug3dAngle');
     if(slider){
       slider.oninput=function(){ MUG3D.setAngle(+slider.value); };
@@ -12346,6 +12367,87 @@ const MUG3D = (function(){
     return g;
   }
 
+  // ================= THE TUMBLERS (Sep 2026, Alyx: "Begin") =================
+  // The three plain travel cups, traced off Printify's own product photos
+  // (the Tundra's three-lid shot, the Gator bottle, the 20oz with its lid
+  // off). Inches. What is measured: the print band, straight from each
+  // blueprint's print area at 300 DPI. What is traced: the silhouette --
+  // heights and radii read off the photo against the band's known height,
+  // to be corrected by eye against a real cup, as the mug's handle was.
+  //   Tundra 30oz  band 3634 x 1039 px = 12.11" x 3.46"
+  //   Gator  32oz  band 3384 x 1937 px = 11.28" x 6.46"
+  //   20oz         band 2795 x 2100 px =  9.32" x 7.00"
+  // Each cup: a white body lathe, optional steel and lid parts, and a band
+  // (rTop/rBot/h/y) the artwork wraps all the way round.
+  const TUMBLERS = {
+    'travel-mug-30oz-tundra': {
+      totalH:7.55, maxR:1.86, bandR:1.80,
+      band:{ rTop:1.80, rBot:1.80, h:3.46, y:4.80, wrapIn:12.11 },
+      parts:[
+        { mat:'body',  pts:()=>{
+            const p=[[0,0],[1.20,0],[1.30,0.06],[1.30,0.30],[1.24,0.34]];
+            // the ribbed lower section: five grooves cut into a 1.34 wall
+            let y=0.40; p.push([1.34,y]);
+            for(let i=0;i<5;i++){ p.push([1.34,y+0.16],[1.29,y+0.21],[1.29,y+0.31],[1.34,y+0.36]); y+=0.36; }
+            p.push([1.34,2.30]);
+            // the shoulder: an S from the narrow base to the wide upper wall
+            for(let i=1;i<=8;i++){ const t=i/8, e=t*t*(3-2*t); p.push([1.34+(1.80-1.34)*e, 2.30+0.70*t]); }
+            p.push([1.80,6.60]);
+            return p; } },
+        { mat:'steel', pts:()=>[[1.80,6.60],[1.80,7.05],[1.70,7.05],[1.70,6.62]] },
+        { mat:'lid',   pts:()=>[[0,7.05],[1.86,7.05],[1.86,7.35],[1.78,7.46],[1.20,7.53],[0,7.55]] }
+      ]
+    },
+    'travel-mug-32oz-gator': {
+      totalH:9.40, maxR:1.72, bandR:1.70,
+      band:{ rTop:1.70, rBot:1.70, h:6.46, y:3.62, wrapIn:11.28 },
+      parts:[
+        { mat:'body', pts:()=>{
+            const p=[[0,0],[1.45,0]];
+            for(let i=1;i<=6;i++){ const t=i/6*Math.PI/2; p.push([1.45+Math.sin(t)*0.25, 0.25-Math.cos(t)*0.25]); }
+            p.push([1.70,6.90]);
+            for(let i=1;i<=8;i++){ const t=i/8, e=t*t*(3-2*t); p.push([1.70-(1.70-1.22)*e, 6.90+0.80*t]); }
+            p.push([1.22,7.75]);
+            return p; } },
+        { mat:'cap',  pts:()=>[[0,7.72],[1.30,7.72],[1.30,9.20],[1.22,9.34],[0.9,9.40],[0,9.40]] }
+      ]
+    },
+    'travel-mug-20oz': {
+      totalH:6.90, maxR:1.62, bandR:1.49,
+      band:{ rTop:1.616, rBot:1.365, h:6.30, y:3.50, wrapIn:9.32 },
+      parts:[
+        { mat:'body',  pts:()=>[[0,0],[1.28,0],[1.36,0.08],[1.36,0.22],[1.62,6.75],[1.62,6.90]] },
+        // the steel lip and the inside of an open cup
+        { mat:'steel', pts:()=>[[1.62,6.75],[1.62,6.90],[1.50,6.90],[1.48,6.60],[1.30,0.45],[0,0.45]] }
+      ]
+    }
+  };
+  function hasTumbler(key){ return !!(key && TUMBLERS[key]); }
+  function tumblerMaterials(THREE,mats){
+    const steel=new THREE.MeshStandardMaterial({color:0xc9ced4, metalness:0.92, roughness:0.32, envMapIntensity:1.1, side:THREE.DoubleSide});
+    const lid=new THREE.MeshPhysicalMaterial({color:0xdfe7f1, transparent:true, opacity:0.55, roughness:0.12, metalness:0.0, clearcoat:0.6, envMapIntensity:1.0, side:THREE.DoubleSide, depthWrite:false});
+    const cap=new THREE.MeshPhysicalMaterial({color:0x0a0b0d, roughness:0.6, metalness:0.0, clearcoat:0.1, envMapIntensity:0.35, side:THREE.DoubleSide});
+    return { body:mats.white, steel, lid, cap };
+  }
+  function assembleTumbler(THREE,T,mats){
+    const g=new THREE.Group();
+    const tm=tumblerMaterials(THREE,mats);
+    T.parts.forEach(part=>{
+      const pts=part.pts().map(([r,y])=>new THREE.Vector2(r,y));
+      const m=new THREE.Mesh(new THREE.LatheGeometry(pts,160),tm[part.mat]);
+      m.castShadow=(part.mat!=='lid'); m.receiveShadow=true;
+      if(part.mat==='lid')m.renderOrder=2;
+      g.add(m);
+    });
+    g.userData.tumblerMats=tm;
+    return g;
+  }
+  // The stand-in for SIZES on a tumbler: what the camera, the floor shadow
+  // and the band need to know.
+  function tumblerSize(T){
+    return { R:T.maxR, H:T.totalH, wrapIn:T.band.wrapIn, bandH:T.band.h, band:T.band, tumbler:true };
+  }
+
   // The studio: environment light, a key light with shadows, a contact
   // shadow under the mug and a floor to catch the key's shadow. The
   // environment map is built once per renderer and reused.
@@ -12384,8 +12486,10 @@ const MUG3D = (function(){
   }
 
   function build(THREE,opts){
-    const S=SIZES[opts.sizeLabel]||SIZES['11oz'];
-    const wrap=S.wrapIn/(2*Math.PI*S.R);
+    const T=hasTumbler(opts.tumblerKey)?TUMBLERS[opts.tumblerKey]:null;
+    const S=T?tumblerSize(T):(SIZES[opts.sizeLabel]||SIZES['11oz']);
+    // A tumbler's band goes all the way round; a mug's stops at the handle.
+    const wrap=T?1:S.wrapIn/(2*Math.PI*S.R);
 
     renderer=new THREE.WebGLRenderer({antialias:true,alpha:false});
     renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));
@@ -12402,21 +12506,25 @@ const MUG3D = (function(){
     dressScene(THREE,renderer,scene,S);
 
     const mats=makeMaterials(THREE,opts);
-    mugGroup=assembleMug(THREE,S,opts,mats); scene.add(mugGroup);
+    mugGroup=T?assembleTumbler(THREE,T,mats):assembleMug(THREE,S,opts,mats); scene.add(mugGroup);
 
     designCanvas=document.createElement('canvas');
-    designCanvas.width=2048; designCanvas.height=1024;
+    // The band's own proportions, so the artwork is cropped the way the
+    // print is: a mug's 2:1 stays as it was; a tumbler's band is measured.
+    designCanvas.width=2048;
+    designCanvas.height=T?Math.round(2048/(T.band.wrapIn/T.band.h)):1024;
     designTex=new THREE.CanvasTexture(designCanvas);
     designTex.encoding=THREE.sRGBEncoding;
     designTex.anisotropy=renderer.capabilities.getMaxAnisotropy();
 
+    const rTop=T?T.band.rTop+0.004:S.R+0.004, rBot=T?T.band.rBot+0.004:S.R+0.004;
     printMesh=new THREE.Mesh(
-      new THREE.CylinderGeometry(S.R+0.004,S.R+0.004,S.bandH,200,1,true,
+      new THREE.CylinderGeometry(rTop,rBot,S.bandH,200,1,true,
         -wrap*Math.PI, wrap*2*Math.PI),
       new THREE.MeshPhysicalMaterial(Object.assign(
         {map:designTex, side:THREE.FrontSide, transparent:true},mats.glaze))
     );
-    printMesh.position.y=S.H/2;   // a CylinderGeometry is centred on its position
+    printMesh.position.y=T?T.band.y:S.H/2;   // a CylinderGeometry is centred on its position
     printMesh.receiveShadow=true;
     mugGroup.add(printMesh);
 
@@ -12439,7 +12547,7 @@ const MUG3D = (function(){
     const px=opts.px||560;
     const angle=(opts.angle==null)?-90:opts.angle;      // handle to the right
     const el=(opts.el==null)?0.18:opts.el;               // a little above
-    const key=[opts.sizeLabel,opts.styleName,opts.colorHex,angle,el,px,opts.background||'#ffffff'].join('|');
+    const key=[opts.tumblerKey||'',opts.sizeLabel,opts.styleName,opts.colorHex,angle,el,px,opts.background||'#ffffff'].join('|');
     if(snapCache.has(key))return snapCache.get(key);
     const pr=loadThree().then(THREE=>{
       if(!snapRenderer){
@@ -12452,24 +12560,28 @@ const MUG3D = (function(){
         snapRenderer.shadowMap.type=THREE.PCFSoftShadowMap;
       }
       snapRenderer.setSize(px,px,false);
-      const S=SIZES[opts.sizeLabel]||SIZES['11oz'];
+      const T=hasTumbler(opts.tumblerKey)?TUMBLERS[opts.tumblerKey]:null;
+      const S=T?tumblerSize(T):(SIZES[opts.sizeLabel]||SIZES['11oz']);
       const sc=new THREE.Scene();
       sc.background=new THREE.Color(opts.background||'#ffffff');
       dressScene(THREE,snapRenderer,sc,S);
       const mats=makeMaterials(THREE,opts);
-      const g=assembleMug(THREE,S,opts,mats);
+      const g=T?assembleTumbler(THREE,T,mats):assembleMug(THREE,S,opts,mats);
       g.rotation.y=angle*Math.PI/180;
       sc.add(g);
       const cam=new THREE.PerspectiveCamera(9,1,0.1,400);
       // Fixed distance for both sizes: 43" back, which at 9 degrees frames
       // the 15oz with its handle and leaves the 11oz honestly smaller.
-      const d=43, lookY=S.H*0.5, lookX=S.R*0.42;
+      // The tumblers share one distance too, 66" back, so the 9.4" Gator
+      // fills its tile and the 20oz is honestly the small one.
+      const d=T?66:43, lookY=S.H*0.5, lookX=T?0:S.R*0.42;
       cam.position.set(lookX, lookY+Math.sin(el)*d, Math.cos(el)*d);
       cam.lookAt(lookX,lookY,0);
       snapRenderer.render(sc,cam);
       const url=snapRenderer.domElement.toDataURL('image/png');
       g.traverse(o=>{ if(o.geometry)o.geometry.dispose(); });
       mats.white.dispose(); mats.accent.dispose();
+      if(g.userData.tumblerMats){ const tm=g.userData.tumblerMats; tm.steel.dispose(); tm.lid.dispose(); tm.cap.dispose(); }
       return url;
     });
     snapCache.set(key,pr);
@@ -12508,14 +12620,15 @@ const MUG3D = (function(){
   // will not be on the mug.
   function paint(img){
     if(!designCanvas)return;
+    const W=designCanvas.width, Hc=designCanvas.height;
     const g=designCanvas.getContext('2d');
-    g.clearRect(0,0,2048,1024);
+    g.clearRect(0,0,W,Hc);
     if(img){
-      const want=2048/1024, have=img.width/img.height;
+      const want=W/Hc, have=img.width/img.height;
       let sw,sh,sx,sy;
       if(have>want){ sh=img.height; sw=sh*want; sx=(img.width-sw)/2; sy=0; }
       else { sw=img.width; sh=sw/want; sx=0; sy=(img.height-sh)/2; }
-      g.drawImage(img,sx,sy,sw,sh,0,0,2048,1024);
+      g.drawImage(img,sx,sy,sw,sh,0,0,W,Hc);
     }
     if(designTex)designTex.needsUpdate=true;
   }
@@ -12600,6 +12713,7 @@ const MUG3D = (function(){
 
   return {
     isCeramicMug(){ return typeof product!=='undefined' && product==='mug'; },
+    hasTumbler,
     // Fetch three.js ahead of the first still so the picker never waits on
     // the download itself.
     warm(){ return loadThree().catch(()=>null); },
@@ -12612,6 +12726,7 @@ const MUG3D = (function(){
     resize,
 
     // opts: { sizeLabel, styleName, colorHex, panelUrls[], panoramaUrl }
+    //   or, for a travel cup: { tumblerKey, colorHex, panoramaUrl }
     open(hostEl, opts){
       host=hostEl;
       return loadThree().then(THREE=>{
