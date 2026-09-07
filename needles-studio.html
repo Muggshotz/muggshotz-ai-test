@@ -2,7 +2,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head><link rel="manifest" href="needles-manifest.json">
-<!-- BUILD-MARKER: THE-REAL-HANDLE-v89 -->
+<!-- BUILD-MARKER: THE-SLIDERS-FILL-THE-BOX-v90 -->
 <!-- If you can see this comment on GitHub, this exact paste landed. -->
 <!-- If your live site's page source does NOT say -->
 <!-- "INSTANT-FIT-SCREEN-v47" right here, the upload/deploy did -->
@@ -4488,6 +4488,19 @@ async function drawPhotoInsetForFrame(ctx,canvas,source,sourceW,sourceH){
       insetH=canvas.height*(calib.heightPct/100);
       insetX=(canvas.width-insetW)/2+canvas.width*(calib.offsetXPct/100);
       insetY=(canvas.height-insetH)/2+canvas.height*(calib.offsetYPct/100);
+      // THE SLIDERS SET A BOX THE PICTURE FILLS (Sep 2026, Alyx: "the height
+      // refuses to expand at all even though it should be at 150%"). This
+      // box used to be shrink-to-fit like the default: the picture scaled
+      // until it fitted inside on BOTH axes. A 21:9 strip in a near-square
+      // opening hits the width first, so Height above that point did
+      // nothing at all -- and below it worked, which is why 67% "fixed"
+      // Mirror Mirror earlier. A picture can only get taller than
+      // shrink-to-fit allows by giving up its sides. So once the customer
+      // has set the box by hand it FILLS it, the overflow clipped to the
+      // box; Reset to Default Fit returns to shrink-to-fit. Same function
+      // for a single picture, the wraparound strip and the three-panel
+      // strip, so all of them answer the sliders the same way.
+      fitMode='fill';
     } else {
       const frac=await getFrameInsetFraction(asset);
       insetX=frac.x*canvas.width;
@@ -4496,13 +4509,22 @@ async function drawPhotoInsetForFrame(ctx,canvas,source,sourceW,sourceH){
       insetH=frac.h*canvas.height;
     }
   }
-  const scale=fitMode==='cover'
+  const scale=(fitMode==='cover'||fitMode==='fill')
     ? Math.max(insetW/sourceW, insetH/sourceH)
     : Math.min(insetW/sourceW, insetH/sourceH);
   const drawW=sourceW*scale;
   const drawH=sourceH*scale;
   const drawX=insetX+(insetW-drawW)/2;
   const drawY=insetY+(insetH-drawH)/2;
+  if(fitMode==='fill'){
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(insetX,insetY,insetW,insetH);
+    ctx.clip();
+    ctx.drawImage(source,0,0,sourceW,sourceH,drawX,drawY,drawW,drawH);
+    ctx.restore();
+    return;
+  }
   ctx.drawImage(source,0,0,sourceW,sourceH,drawX,drawY,drawW,drawH);
 }
 
