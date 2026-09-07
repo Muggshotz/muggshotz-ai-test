@@ -2,7 +2,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head><link rel="manifest" href="needles-manifest.json">
-<!-- BUILD-MARKER: THE-MUG-FROM-THE-PHOTO-v91 -->
+<!-- BUILD-MARKER: THE-PICKER-DRAWS-ITS-OWN-MUGS-v92 -->
 <!-- If you can see this comment on GitHub, this exact paste landed. -->
 <!-- If your live site's page source does NOT say -->
 <!-- "INSTANT-FIT-SCREEN-v47" right here, the upload/deploy did -->
@@ -5750,10 +5750,22 @@ function preGenMugStyleThumb(styleName){
   return bySize[styleName]||PRE_GEN_MUG_STYLE_THUMBNAILS[styleName];
 }
 
+// One place asks the model for a still and hands the picture back. Fails
+// quietly: no WebGL means the photos stay, exactly as before.
+function requestMugStill(opts,onReady){
+  if(typeof MUG3D==='undefined' || (typeof mug3dFailed!=='undefined' && mug3dFailed))return;
+  try{
+    MUG3D.snapshot(opts).then(url=>{ try{ onReady(url); }catch(e){} }).catch(err=>{
+      console.warn('3D mug still unavailable; keeping the photo:',err&&err.message);
+    });
+  }catch(e){}
+}
+
 function renderPreGenMugStyleGrid(){
   const grid=document.getElementById('preGenMugStyleGrid');
   const note=document.getElementById('mugStyleCardNote');
   if(!grid)return;
+  if(typeof MUG3D!=='undefined')MUG3D.warm();
   if(note){note.textContent='Pick a style — real price for '+selectedGenSize+' shown under each.';note.style.display='block';}
   grid.innerHTML='';
   Object.keys(PRE_GEN_MUG_STYLE_PRICES).forEach(styleName=>{
@@ -5766,6 +5778,13 @@ function renderPreGenMugStyleGrid(){
     const thumb=document.createElement('img');
     thumb.src=preGenMugStyleThumb(styleName);
     thumb.alt=styleName;
+    // THE TILE DRAWS ITS OWN MUG (Sep 2026). The photo above is the instant
+    // fallback; the 3D still replaces it as soon as it is rendered. Shown in
+    // Cambridge Blue on the coloured styles, as the photos always were, so
+    // the four tiles compare like for like.
+    requestMugStill({sizeLabel:selectedGenSize, styleName,
+      colorHex: styleName==='Classic White'?'#ffffff':'#A3C1AD'},
+      url=>{ if(url && thumb.isConnected) thumb.src=url; });
     thumb.style.cssText='width:100%;border-radius:8px;background:#fff;margin-bottom:6px;box-shadow:0 2px 10px rgba(0,0,0,.45)';
     btn.appendChild(thumb);
     const label=document.createElement('div');
@@ -5880,6 +5899,7 @@ function renderPreGenMugColorGrid(){
   colors.forEach(c=>{
     const btn=document.createElement('div');
     btn.className='color-btn'+(c.name===selectedGenColor?' selected':'');
+    btn.title=c.name;   // the ball says what colour it is on hover
     btn.onclick=()=>pickPreGenMugColor(btn,c.name);
     const ball=document.createElement('div');
     ball.className='ball';
@@ -8467,6 +8487,7 @@ function changePropsFromCoverMe(){
   showDesignMethodCard();
 }
 
+let preGenMugStillToken=0;
 function updatePreGenMugMockupImg(){
   const img=document.getElementById('preGenMugMockupImg');
   if(!img)return;
@@ -8475,10 +8496,26 @@ function updatePreGenMugMockupImg(){
   // different shapes. Falls back to the generic style tile if a size is ever
   // missing, so this can never blank the slot.
   const hasColors=!!GEN_MUG_STYLES[selectedGenStyle]?.colors?.[selectedGenSize];
-  const filename=hasColors
+  const filename=(hasColors
     ? MUG_MOCKUP_PHOTOS[selectedGenStyle]?.[selectedGenSize]?.[selectedGenColor]
-    : (MUG_COLORLESS_SIZE_PHOTOS[selectedGenStyle]?.[selectedGenSize]
-       || PRE_GEN_MUG_STYLE_THUMBNAILS[selectedGenStyle]);
+    : MUG_COLORLESS_SIZE_PHOTOS[selectedGenStyle]?.[selectedGenSize])
+    // A colour with no photo (Cambridge Blue is back and never had one) shows
+    // the style tile until the drawn mug arrives, never an empty slot.
+    || PRE_GEN_MUG_STYLE_THUMBNAILS[selectedGenStyle];
+  // THE SLOT DRAWS ITS OWN MUG (Sep 2026). Size, style and colour in, the
+  // model's still out; the photo is only what shows until it lands. The
+  // token guards a fast customer: a still that arrives for a colour they
+  // have already moved on from is dropped.
+  const token=++preGenMugStillToken;
+  if(hasColors ? !!selectedGenColor : true){
+    const list=hasColors?GEN_MUG_STYLES[selectedGenStyle].colors[selectedGenSize]:null;
+    const match=list?list.find(c=>c.name===selectedGenColor):null;
+    if(!hasColors || match){
+      requestMugStill({sizeLabel:selectedGenSize, styleName:selectedGenStyle,
+        colorHex: match?match.hex:'#ffffff'},
+        url=>{ if(url && token===preGenMugStillToken){ img.src=url; img.style.display='block'; img.style.filter='none'; } });
+    }
+  }
   if(filename){
     img.src=filename;
     img.style.display='block';
@@ -11949,7 +11986,7 @@ const MUG3D = (function(){
   // actually prints; the remainder is the bare strip at the handle.
   const SIZES = {
     '11oz': { R:1.600, H:3.70, wrapIn:8.25, bandH:3.35 },
-    '15oz': { R:1.675, H:4.50, wrapIn:8.50, bandH:4.05 }
+    '15oz': { R:1.675, H:4.36, wrapIn:8.50, bandH:3.95 }   // height/width 1.30, measured off mug-cambridge-blue.jpg
   };
 
   let three=null, mounted=false, host=null;
@@ -12108,6 +12145,89 @@ const MUG3D = (function(){
     };
     return flaredTube(THREE,curve,140,24,radiusAt,FLARE*0.32);   // the colour reaches well into the flare
   }
+  // Materials, per style. The body is white on every style; only the
+  // handle, rim top and (except Trimmed) the inside take the colour.
+  function makeMaterials(THREE,opts){
+    const glaze={ roughness:0.16, metalness:0.0, clearcoat:0.85,
+                  clearcoatRoughness:0.10, envMapIntensity:1.05 };
+    const white=new THREE.MeshPhysicalMaterial(Object.assign({color:0xffffff, side:THREE.DoubleSide},glaze));
+    const accentHex=opts.colorHex||'#ffffff';
+    // The renderer lights in linear space and converts to sRGB on output,
+    // so a hex passed straight in renders washed out -- Maroon #7A1F2B
+    // came back pink. Convert it going in, and it is the colour it says.
+    // Less clearcoat than the white: the broad sheen was washing a deep red
+    // out to salmon against the real photo.
+    const accent=new THREE.MeshPhysicalMaterial(Object.assign({},glaze,
+      {color:new THREE.Color(accentHex).convertSRGBToLinear(), side:THREE.DoubleSide,
+       clearcoat:0.35, roughness:0.30, envMapIntensity:0.55}));
+    return {white,accent,glaze};
+  }
+
+  // The mug itself: outer wall, rim-top-and-inside, handle. One assembly
+  // serves the spinning mockup and every still the picker draws.
+  function assembleMug(THREE,S,opts,mats){
+    const g=new THREE.Group();
+    const outer=new THREE.Mesh(new THREE.LatheGeometry(outerProfile(THREE,S),160),mats.white);
+    outer.castShadow=true; outer.receiveShadow=true; g.add(outer);
+    // Per style, from the real product photos: the rim's top face carries
+    // the accent on every coloured style; Accented and Color Pop are
+    // coloured inside as well; Trimmed keeps a white inside under its
+    // coloured rim. The lathe below is rim-top-then-inside, so Trimmed gets
+    // its coloured rim from the accent material with the inside still white
+    // by splitting the geometry at the inner lip.
+    const rimAndInside=new THREE.LatheGeometry(innerProfile(THREE,S),160);
+    if(opts.styleName==='Trimmed'){
+      const seg=160, rows=innerProfile(THREE,S).length, perRow=seg*6, rimRows=12;
+      rimAndInside.addGroup(0, rimRows*perRow, 0);
+      rimAndInside.addGroup(rimRows*perRow, (rows-1-rimRows)*perRow, 1);
+      const inner=new THREE.Mesh(rimAndInside,[mats.accent,mats.white]);
+      inner.receiveShadow=true; g.add(inner);
+    } else {
+      const inner=new THREE.Mesh(rimAndInside,mats.accent);
+      inner.receiveShadow=true; g.add(inner);
+    }
+    const hand=new THREE.Mesh(handleGeo(THREE,S),[mats.white,mats.accent]);
+    hand.castShadow=true; hand.receiveShadow=true; g.add(hand);
+    return g;
+  }
+
+  // The studio: environment light, a key light with shadows, a contact
+  // shadow under the mug and a floor to catch the key's shadow. The
+  // environment map is built once per renderer and reused.
+  function dressScene(THREE,rend,scene,S){
+    if(!rend.__studioEnv){
+      const pmrem=new THREE.PMREMGenerator(rend);
+      pmrem.compileEquirectangularShader();
+      const envTex=new THREE.CanvasTexture(studioEnv(THREE));
+      envTex.mapping=THREE.EquirectangularReflectionMapping;
+      rend.__studioEnv=pmrem.fromEquirectangular(envTex).texture;
+    }
+    scene.environment=rend.__studioEnv;
+    const key=new THREE.DirectionalLight(0xffffff,1.5);
+    key.position.set(-3.2,5.4,4.2);
+    key.castShadow=true;
+    key.shadow.mapSize.set(1024,1024);
+    key.shadow.camera.left=-4; key.shadow.camera.right=4;
+    key.shadow.camera.top=4; key.shadow.camera.bottom=-4;
+    key.shadow.bias=-0.0012;
+    scene.add(key);
+    scene.add(new THREE.AmbientLight(0xffffff,0.22));
+    const sc=document.createElement('canvas'); sc.width=sc.height=256;
+    const g2=sc.getContext('2d');
+    const gr=g2.createRadialGradient(128,128,10,128,128,124);
+    gr.addColorStop(0,'rgba(20,26,36,.40)');
+    gr.addColorStop(.55,'rgba(20,26,36,.15)');
+    gr.addColorStop(1,'rgba(20,26,36,0)');
+    g2.fillStyle=gr; g2.fillRect(0,0,256,256);
+    const contact=new THREE.Mesh(
+      new THREE.PlaneGeometry(S.R*4.4,S.R*4.4),
+      new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(sc),transparent:true,depthWrite:false}));
+    contact.rotation.x=-Math.PI/2; contact.position.y=0.003; scene.add(contact);
+    const floor=new THREE.Mesh(new THREE.PlaneGeometry(40,40),
+      new THREE.ShadowMaterial({opacity:0.17}));
+    floor.rotation.x=-Math.PI/2; floor.receiveShadow=true; scene.add(floor);
+  }
+
   function build(THREE,opts){
     const S=SIZES[opts.sizeLabel]||SIZES['11oz'];
     const wrap=S.wrapIn/(2*Math.PI*S.R);
@@ -12124,65 +12244,10 @@ const MUG3D = (function(){
     scene=new THREE.Scene();
     scene.background=new THREE.Color('#f2f4f7');
     camera=new THREE.PerspectiveCamera(9,4/3,0.1,400);
+    dressScene(THREE,renderer,scene,S);
 
-    const pmrem=new THREE.PMREMGenerator(renderer);
-    pmrem.compileEquirectangularShader();
-    const envTex=new THREE.CanvasTexture(studioEnv(THREE));
-    envTex.mapping=THREE.EquirectangularReflectionMapping;
-    scene.environment=pmrem.fromEquirectangular(envTex).texture;
-
-    const key=new THREE.DirectionalLight(0xffffff,1.5);
-    key.position.set(-3.2,5.4,4.2);
-    key.castShadow=true;
-    key.shadow.mapSize.set(1024,1024);
-    key.shadow.camera.left=-4; key.shadow.camera.right=4;
-    key.shadow.camera.top=4; key.shadow.camera.bottom=-4;
-    key.shadow.bias=-0.0012;
-    scene.add(key);
-    scene.add(new THREE.AmbientLight(0xffffff,0.22));
-
-    mugGroup=new THREE.Group(); scene.add(mugGroup);
-
-    const glaze={ roughness:0.16, metalness:0.0, clearcoat:0.85,
-                  clearcoatRoughness:0.10, envMapIntensity:1.05 };
-    // The body is white on every style -- only the handle and interior
-    // take the colour. See the note at the top of this module.
-    const white=new THREE.MeshPhysicalMaterial(Object.assign({color:0xffffff, side:THREE.DoubleSide},glaze));
-    const accentHex=opts.colorHex||'#ffffff';
-    // The renderer lights in linear space and converts to sRGB on output,
-    // so a hex passed straight in renders washed out -- Maroon #7A1F2B
-    // came back pink. Convert it going in, and it is the colour it says.
-    // Less clearcoat than the white: the broad sheen was washing a deep red
-    // out to salmon against the real photo.
-    const accent=new THREE.MeshPhysicalMaterial(Object.assign({},glaze,
-      {color:new THREE.Color(accentHex).convertSRGBToLinear(), side:THREE.DoubleSide,
-       clearcoat:0.35, roughness:0.30, envMapIntensity:0.55}));
-
-    const outer=new THREE.Mesh(new THREE.LatheGeometry(outerProfile(THREE,S),160),white);
-    outer.castShadow=true; outer.receiveShadow=true; mugGroup.add(outer);
-
-    // Per style, from the real product photos: the rim's top face carries
-    // the accent on every coloured style; Accented and Color Pop are
-    // coloured inside as well; Trimmed keeps a white inside under its
-    // coloured rim. The lathe below is rim-top-then-inside, so Trimmed gets
-    // its coloured rim from the accent material with the inside still white
-    // by splitting the geometry at the inner lip.
-    const rimAndInside=new THREE.LatheGeometry(innerProfile(THREE,S),160);
-    if(opts.styleName==='Trimmed'){
-      // 13 rim points then 3 inside points: split the index range there.
-      const seg=160, rows=innerProfile(THREE,S).length, perRow=seg*6;
-      const rimRows=12;
-      rimAndInside.addGroup(0, rimRows*perRow, 0);
-      rimAndInside.addGroup(rimRows*perRow, (rows-1-rimRows)*perRow, 1);
-      const inner=new THREE.Mesh(rimAndInside,[accent,white]);
-      inner.receiveShadow=true; mugGroup.add(inner);
-    } else {
-      const inner=new THREE.Mesh(rimAndInside,accent);
-      inner.receiveShadow=true; mugGroup.add(inner);
-    }
-
-    const hand=new THREE.Mesh(handleGeo(THREE,S),[white,accent]);
-    hand.castShadow=true; hand.receiveShadow=true; mugGroup.add(hand);
+    const mats=makeMaterials(THREE,opts);
+    mugGroup=assembleMug(THREE,S,opts,mats); scene.add(mugGroup);
 
     designCanvas=document.createElement('canvas');
     designCanvas.width=2048; designCanvas.height=1024;
@@ -12194,33 +12259,67 @@ const MUG3D = (function(){
       new THREE.CylinderGeometry(S.R+0.004,S.R+0.004,S.bandH,200,1,true,
         -wrap*Math.PI, wrap*2*Math.PI),
       new THREE.MeshPhysicalMaterial(Object.assign(
-        {map:designTex, side:THREE.FrontSide, transparent:true},glaze))
+        {map:designTex, side:THREE.FrontSide, transparent:true},mats.glaze))
     );
     printMesh.position.y=S.H/2;   // a CylinderGeometry is centred on its position
     printMesh.receiveShadow=true;
     mugGroup.add(printMesh);
 
-    const sc=document.createElement('canvas'); sc.width=sc.height=256;
-    (function(){
-      const g=sc.getContext('2d');
-      const gr=g.createRadialGradient(128,128,10,128,128,124);
-      gr.addColorStop(0,'rgba(20,26,36,.40)');
-      gr.addColorStop(.55,'rgba(20,26,36,.15)');
-      gr.addColorStop(1,'rgba(20,26,36,0)');
-      g.fillStyle=gr; g.fillRect(0,0,256,256);
-    })();
-    const contact=new THREE.Mesh(
-      new THREE.PlaneGeometry(S.R*4.4,S.R*4.4),
-      new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(sc),transparent:true,depthWrite:false}));
-    contact.rotation.x=-Math.PI/2; contact.position.y=0.003; scene.add(contact);
-
-    const floor=new THREE.Mesh(new THREE.PlaneGeometry(40,40),
-      new THREE.ShadowMaterial({opacity:0.17}));
-    floor.rotation.x=-Math.PI/2; floor.receiveShadow=true; scene.add(floor);
-
     scene.userData.S=S;
     placeCamera();
     resize();
+  }
+
+  // A STILL OF ANY MUG, DRAWN ONCE AND KEPT (Sep 2026, Alyx: "take a stock,
+  // standard image of one of each and use those exact same images to
+  // generate all the different colour variants, in real time"). This is the
+  // picker's supply of mug pictures now: size, style and colour in, one
+  // PNG out, from the same model as the spinning mockup. One offscreen
+  // renderer serves every still (WebGL contexts are scarce); the camera is
+  // fixed at the same distance for both sizes so an 11oz and a 15oz side by
+  // side are honestly different sizes, which the old photos never were.
+  let snapRenderer=null;
+  const snapCache=new Map();
+  function snapshot(opts){
+    const px=opts.px||560;
+    const angle=(opts.angle==null)?-90:opts.angle;      // handle to the right
+    const el=(opts.el==null)?0.18:opts.el;               // a little above
+    const key=[opts.sizeLabel,opts.styleName,opts.colorHex,angle,el,px,opts.background||'#ffffff'].join('|');
+    if(snapCache.has(key))return snapCache.get(key);
+    const pr=loadThree().then(THREE=>{
+      if(!snapRenderer){
+        snapRenderer=new THREE.WebGLRenderer({antialias:true,alpha:false,preserveDrawingBuffer:true});
+        snapRenderer.setPixelRatio(1);
+        snapRenderer.outputEncoding=THREE.sRGBEncoding;
+        snapRenderer.toneMapping=THREE.ACESFilmicToneMapping;
+        snapRenderer.toneMappingExposure=0.92;
+        snapRenderer.shadowMap.enabled=true;
+        snapRenderer.shadowMap.type=THREE.PCFSoftShadowMap;
+      }
+      snapRenderer.setSize(px,px,false);
+      const S=SIZES[opts.sizeLabel]||SIZES['11oz'];
+      const sc=new THREE.Scene();
+      sc.background=new THREE.Color(opts.background||'#ffffff');
+      dressScene(THREE,snapRenderer,sc,S);
+      const mats=makeMaterials(THREE,opts);
+      const g=assembleMug(THREE,S,opts,mats);
+      g.rotation.y=angle*Math.PI/180;
+      sc.add(g);
+      const cam=new THREE.PerspectiveCamera(9,1,0.1,400);
+      // Fixed distance for both sizes: 43" back, which at 9 degrees frames
+      // the 15oz with its handle and leaves the 11oz honestly smaller.
+      const d=43, lookY=S.H*0.5, lookX=S.R*0.42;
+      cam.position.set(lookX, lookY+Math.sin(el)*d, Math.cos(el)*d);
+      cam.lookAt(lookX,lookY,0);
+      snapRenderer.render(sc,cam);
+      const url=snapRenderer.domElement.toDataURL('image/png');
+      g.traverse(o=>{ if(o.geometry)o.geometry.dispose(); });
+      mats.white.dispose(); mats.accent.dispose();
+      return url;
+    });
+    snapCache.set(key,pr);
+    pr.catch(()=>snapCache.delete(key));
+    return pr;
   }
 
   function placeCamera(){
@@ -12346,6 +12445,10 @@ const MUG3D = (function(){
 
   return {
     isCeramicMug(){ return typeof product!=='undefined' && product==='mug'; },
+    // Fetch three.js ahead of the first still so the picker never waits on
+    // the download itself.
+    warm(){ return loadThree().catch(()=>null); },
+    snapshot,
     setLookDown(v){ lookDown=!!v; if(scene)placeCamera(); },
     setSpinning,
     spinning(){ return spinning; },
@@ -15058,17 +15161,18 @@ function updatePlacementSummary(){
 // (a future travel mug, tote, etc.) -- no current mug style qualifies.
 const GEN_MUG_STYLES = {
   "Classic White": { colors: { "11oz": null, "15oz": null } },
-  // REMOVED AGAIN (Aug 2026): Cambridge Blue was briefly restored after
-  // the exact-variant-matching fix landed and the on-screen debug panel
-  // confirmed our code requests the right Printify variant and Printify
-  // tags its returned photo to that exact same variant -- no mismatch on
-  // our end anymore. But the photo Printify sends back for its own
-  // "Cambridge Blue" variant is a plain vivid blue, not the sage-grey
-  // color the name (and our swatch hex A3C1AD) promises. That's a
-  // Printify-side catalog/photography problem, not something fixable
-  // here. Pulled from every style/size combo below again until that's
-  // confirmed one way or the other against a real Printify listing or
-  // physical sample.
+  // CAMBRIDGE BLUE IS BACK (Sep 2026). It was pulled because the photo
+  // Printify sent back for its own "Cambridge Blue" variant was a plain
+  // vivid blue, not the sage the name and swatch (#A3C1AD) promise -- a
+  // bug in a photograph nobody here controls, and three weeks went into
+  // it. The mockup is no longer their photo. It is our own 3D mug coloured
+  // by our own hex, so #A3C1AD renders as #A3C1AD, and Alyx's product
+  // photo (mug-cambridge-blue.jpg) confirms that IS the real shade.
+  //
+  // It returns ONLY where lib/products-catalog.js carries a real Printify
+  // variant ID for it: Color Pop 11oz (96178) and 15oz (114846), Trimmed
+  // 11oz (148135) and 15oz (148127), Accented 11oz (148155). Accented 15oz
+  // and Classic White never sold it and do not get it.
   // CORRECTED (Aug 2026): was surfaceColored:true. Printify's own product
   // page for this exact blueprint (1151) confirms these mugs "come with a
   // colored handle and interior" -- the exterior body, where the fade
@@ -15077,14 +15181,14 @@ const GEN_MUG_STYLES = {
   // match a surface (the exterior) that was never actually colored,
   // ringing white-body artwork in a mismatched accent color.
   "Color Pop": { colors: { "11oz": [
-    { name: "Black", hex: "#1c1c1c" }, { name: "Blue", hex: "#2255A4" },
+    { name: "Black", hex: "#1c1c1c" }, { name: "Blue", hex: "#2255A4" }, { name: "Cambridge Blue", hex: "#A3C1AD" },
     { name: "Golden Yellow", hex: "#D4A017" },
     { name: "Green", hex: "#1F7A45" }, { name: "Light Blue", hex: "#5FA8DE" },
     { name: "Light Green", hex: "#5FBF5F" }, { name: "Maroon", hex: "#7A1F2B" },
     { name: "Orange", hex: "#F0701A" }, { name: "Pink", hex: "#E0457B" },
     { name: "Red", hex: "#D62828" }, { name: "Yellow", hex: "#F0D43A" }
   ], "15oz": [
-    { name: "Black", hex: "#1c1c1c" }, { name: "Blue", hex: "#2255A4" },
+    { name: "Black", hex: "#1c1c1c" }, { name: "Blue", hex: "#2255A4" }, { name: "Cambridge Blue", hex: "#A3C1AD" },
     { name: "Green", hex: "#1F7A45" },
     { name: "Light Blue", hex: "#5FA8DE" }, { name: "Light Green", hex: "#5FBF5F" },
     { name: "Maroon", hex: "#7A1F2B" }, { name: "Orange", hex: "#F0701A" },
@@ -15092,19 +15196,19 @@ const GEN_MUG_STYLES = {
     { name: "Yellow", hex: "#F0D43A" }
   ]}},
   "Trimmed": { colors: { "11oz": [
-    { name: "Black", hex: "#1c1c1c" }, { name: "Blue", hex: "#2255A4" },
+    { name: "Black", hex: "#1c1c1c" }, { name: "Blue", hex: "#2255A4" }, { name: "Cambridge Blue", hex: "#A3C1AD" },
     { name: "Maroon", hex: "#7A1F2B" }, { name: "Green", hex: "#1F7A45" },
     { name: "Yellow", hex: "#F0D43A" }, { name: "Red", hex: "#D62828" },
     { name: "Light Blue", hex: "#5FA8DE" },
     { name: "Orange", hex: "#F0701A" }, { name: "Light Green", hex: "#5FBF5F" },
     { name: "Pink", hex: "#E0457B" }
   ], "15oz": [
-    { name: "Black", hex: "#1c1c1c" }, { name: "Blue", hex: "#2255A4" },
+    { name: "Black", hex: "#1c1c1c" }, { name: "Blue", hex: "#2255A4" }, { name: "Cambridge Blue", hex: "#A3C1AD" },
     { name: "Maroon", hex: "#7A1F2B" }, { name: "Green", hex: "#1F7A45" },
     { name: "Yellow", hex: "#F0D43A" }
   ]}},
   "Accented": { colors: { "11oz": [
-    { name: "Black", hex: "#1c1c1c" }, { name: "Blue", hex: "#2255A4" },
+    { name: "Black", hex: "#1c1c1c" }, { name: "Blue", hex: "#2255A4" }, { name: "Cambridge Blue", hex: "#A3C1AD" },
     { name: "Maroon", hex: "#7A1F2B" }, { name: "Green", hex: "#1F7A45" },
     { name: "Yellow", hex: "#F0D43A" }, { name: "Pink", hex: "#E0457B" },
     { name: "Orange", hex: "#F0701A" },

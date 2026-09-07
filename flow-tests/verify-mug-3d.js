@@ -223,6 +223,82 @@ scenarios.exitsTearDown = async (page) => {
   return 'PASS: close, Back and Looks Good all tear the 3D mug down';
 };
 
+// ---- 7. The picker draws its own mugs. ----
+// Alyx: "take a stock, standard image of one of each and use those exact same
+// images to generate all the different colour variants, in real time". The
+// four style tiles and the big confirmation mug are 3D stills now; the photos
+// are only what shows until each still lands. Cambridge Blue is back, on
+// exactly the five combinations the catalogue carries a variant ID for.
+OPTS.thePickerDrawsItsOwnMugs = { chromiumArgs: GL };
+scenarios.thePickerDrawsItsOwnMugs = async (page) => {
+  await pickProduct(page, 'mug');
+  await page.evaluate(() => pickPreGenMugSize('11oz'));
+  // the four tiles turn into stills
+  await page.waitForFunction(() => {
+    const imgs = [...document.querySelectorAll('#preGenMugStyleGrid img')];
+    return imgs.length === 4 && imgs.every(i => i.src.startsWith('data:image/png'));
+  }, null, { timeout: 20000 });
+  const tiles = await page.evaluate(() => [...document.querySelectorAll('#preGenMugStyleGrid img')].map(i => i.alt));
+  // Trimmed, Cambridge Blue: a colour that never had a photo
+  await page.evaluate(() => pickPreGenMugStyle('Trimmed'));
+  await T(page, 400);
+  const hasCB = await page.evaluate(() => {
+    const b = [...document.querySelectorAll('#preGenMugColorGrid .color-btn')].find(x => /cambridge/i.test(x.title));
+    if (!b) return false; b.click(); return true;
+  });
+  if (!hasCB) return 'FAIL: no Cambridge Blue swatch on Trimmed 11oz';
+  await page.waitForFunction(() => {
+    const i = document.getElementById('preGenMugMockupImg');
+    return i && i.style.display !== 'none' && i.src.startsWith('data:image/png');
+  }, null, { timeout: 20000 });
+  // and the still really is sage, not Printify's vivid blue
+  const sage = await page.evaluate(async () => {
+    const i = document.getElementById('preGenMugMockupImg');
+    const im = new Image(); im.src = i.src; await im.decode();
+    const c = document.createElement('canvas'); c.width = im.width; c.height = im.height;
+    const g = c.getContext('2d'); g.drawImage(im, 0, 0);
+    const d = g.getImageData(0, 0, c.width, c.height).data;
+    // Count only CHROMATIC pixels: the white body, its shading and the floor
+    // shadow are all greys and say nothing about the accent. Of what has a
+    // hue at all, nearly everything on a Cambridge Blue mug should lean sage.
+    let n = 0, sageish = 0;
+    for (let k = 0; k < d.length; k += 16) {
+      const r = d[k], gg = d[k + 1], b = d[k + 2];
+      const chroma = Math.max(r, gg, b) - Math.min(r, gg, b);
+      if (chroma < 12) continue;
+      n++;
+      if (gg >= r + 6 && gg >= b - 6) sageish++;
+    }
+    return { coloured: n, sageish, filter: i.style.filter };
+  });
+  if (sage.coloured < 500) return `FAIL: the still has almost no coloured pixels (${sage.coloured})`;
+  if (sage.sageish / sage.coloured < 0.8) return `FAIL: the Cambridge Blue still is not sage (${sage.sageish}/${sage.coloured} chromatic pixels lean sage)`;
+  if (sage.filter && sage.filter !== 'none') return `FAIL: the photo punch-up filter (${sage.filter}) is still applied to a drawn mug`;
+  // exactly the five catalogue combinations
+  const combos = await page.evaluate(() => {
+    const out = [];
+    for (const [style, def] of Object.entries(GEN_MUG_STYLES)) for (const [size, list] of Object.entries(def.colors))
+      if (Array.isArray(list) && list.some(c => c.name === 'Cambridge Blue')) out.push(style + ' ' + size);
+    return out.sort();
+  });
+  const want = ['Accented 11oz', 'Color Pop 11oz', 'Color Pop 15oz', 'Trimmed 11oz', 'Trimmed 15oz'];
+  if (JSON.stringify(combos) !== JSON.stringify(want)) return `FAIL: Cambridge Blue is offered on ${JSON.stringify(combos)}, catalogue says ${JSON.stringify(want)}`;
+  await page.locator('#mugStyleCard').screenshot({ path: 'shot-mug3d-picker.png' }).catch(() => {});
+  return `PASS: four style tiles (${tiles.join(', ')}) and the confirmation mug are 3D stills; Cambridge Blue renders sage (${sage.sageish}/${sage.coloured}) on exactly ${want.length} combinations`;
+};
+
+// ---- 8. No WebGL: the picker keeps its photos. ----
+OPTS.noWebGLPickerKeepsPhotos = { noWebGL: true };
+scenarios.noWebGLPickerKeepsPhotos = async (page) => {
+  await pickProduct(page, 'mug');
+  await page.evaluate(() => pickPreGenMugSize('11oz'));
+  await T(page, 2500);
+  const srcs = await page.evaluate(() => [...document.querySelectorAll('#preGenMugStyleGrid img')].map(i => i.src));
+  if (srcs.length !== 4) return `FAIL: ${srcs.length} tiles`;
+  if (srcs.some(u => u.startsWith('data:'))) return 'FAIL: a tile became a still with no WebGL';
+  return 'PASS: without WebGL the four tiles keep their photos';
+};
+
 // ---- 6. No WebGL: the flat photo path runs, exactly as before. ----
 OPTS.noWebGLFallsBackToThePhoto = { noWebGL: true };
 scenarios.noWebGLFallsBackToThePhoto = async (page, log) => {
