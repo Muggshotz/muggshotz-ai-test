@@ -400,6 +400,73 @@ scenarios.aFadingFrameActuallyGetsFaded = async (page) => {
   return `PASS: a listed frame is drawn onto a genuinely faded strip (corner rgb(${r.fadingCorner}) on a ${r.hex} mug, centre untouched), an unlisted one onto the original`;
 };
 
+// THE NUMBER ON THE SLIDER IS THE AMOUNT OF PICTURE GONE (Alyx, Sep 2026).
+//
+// Two separate complaints, both right, both about the same line of code:
+//   "it should completely disappear and it should completely white out the
+//    picture, one extreme to the next. Right now you barely get any fade."
+//   "zero should be zero, twenty five should be 25, 50 should be 50% and a
+//    100 should be 100%. Why are we doing all this in between bullshit?"
+//
+// The gradient used to pin its centre stop fully transparent at every
+// setting, so 100% left the middle of the picture untouched and whitened
+// barely 1% of it -- neither end of the slider did what it said. And the
+// slider drove a RADIUS, so with area growing as the square of radius, 0->40
+// covered 8% while 40->60 jumped from 8% to 56%: the same twenty points of
+// travel doing wildly different amounts of work depending where you were.
+//
+// This measures real pixels at thirteen points and demands the slider track
+// coverage one for one. It cannot pass on either of the old behaviours.
+scenarios.theFadeSliderMeansWhatItSays = async (page) => {
+  const rows = await page.evaluate(async () => {
+    product = 'mug';
+    const src = 'http://127.0.0.1:8788/__fake/panorama.jpg';
+    const out = [];
+    for (const pct of [0, 10, 20, 25, 30, 40, 50, 60, 70, 75, 80, 90, 100]) {
+      const url = pct === 0 ? src : await renderFadedArtwork(src, '#FFFFFF', pct);
+      const im = await loadImageFromUrl(url);
+      const c = document.createElement('canvas');
+      c.width = im.naturalWidth; c.height = im.naturalHeight;
+      const x = c.getContext('2d'); x.drawImage(im, 0, 0);
+      const d = x.getImageData(0, 0, c.width, c.height).data;
+      // "gone" = the original ink is at least half replaced by mug colour.
+      let gone = 0, total = 0;
+      for (let i = 0; i < d.length; i += 4) { total++; if (d[i] >= 191) gone++; }
+      const px = (a, b) => { const q = x.getImageData(a, b, 1, 1).data; return [q[0], q[1], q[2]]; };
+      out.push({
+        slider: pct,
+        gone: Math.round(gone / total * 100),
+        centre: px(Math.floor(c.width / 2), Math.floor(c.height / 2)),
+        corner: px(2, 2),
+      });
+    }
+    return out;
+  });
+  const at = (p) => rows.find((r) => r.slider === p);
+
+  // Both ends must be absolute.
+  if (at(0).gone !== 0) return `FAIL: 0 already covers ${at(0).gone}% of the picture`;
+  if (at(100).gone !== 100) return `FAIL: 100 leaves ${100 - at(100).gone}% of the picture showing`;
+  if (!at(100).centre.every((c) => c > 245)) {
+    return `FAIL: 100 left the centre at rgb(${at(100).centre}) — the centre never fades, the old bug`;
+  }
+
+  // And every step in between must mean what it says, within a couple of points.
+  const off = rows.map((r) => ({ slider: r.slider, gone: r.gone, by: r.gone - r.slider }))
+                  .filter((r) => Math.abs(r.by) > 3);
+  if (off.length) {
+    return 'FAIL: the slider does not match what it covers: '
+      + off.map((o) => `${o.slider} covers ${o.gone}%`).join(', ');
+  }
+
+  // Corners still go before the middle -- the oval, cloud shape.
+  if (at(50).centre.every((c) => c > 245)) return 'FAIL: at 50 the centre is gone — the fade is not working from the corners in';
+  if (!at(50).corner.every((c) => c > 245)) return `FAIL: at 50 the corners are still rgb(${at(50).corner})`;
+
+  const worst = Math.max(...rows.map((r) => Math.abs(r.gone - r.slider)));
+  return `PASS: the slider tracks coverage 1:1 across ${rows.length} points (worst error ${worst}%), 0 untouched, 100 completely gone, corners first`;
+};
+
 (async () => {
   let fails = 0;
   for (const [name, fn] of Object.entries(scenarios)) {
