@@ -135,11 +135,10 @@ scenarios.outOfCreditsCanStillTransfer = async (page, log) => {
   return 'PASS: zero credits still allows the free exact transfer';
 };
 
-// ---- Wraparound with an empty box just paints (Alyx, v97: the "needs a
-// description" popup was agreed gone). Wraparound is an AI job by
-// definition, so an empty box means "paint my scene", never "my photo
-// as-is": no refusal, no transfer confirm, and the panorama call fires with
-// its own default idea. Drives the real generate() against seeded state. ----
+// ---- Wraparound with an empty box goes straight to the idea box (Alyx,
+// v99). No refusal popup (v97 took it out), and no painting the fallback
+// idea either (that spent a chip on a picture nobody described). Generate
+// on an empty box lands on a usable idea box, silently, and nothing fires. ----
 scenarios.wraparoundStillNeedsWords = async (page, log) => {
   await armConfirm(page, true);
   await page.evaluate(() => {
@@ -149,14 +148,20 @@ scenarios.wraparoundStillNeedsWords = async (page, log) => {
     mugColorFinishedPreGen = true;
     generate();
   });
-  await T(page, 2500);
+  await T(page, 1500);
   const calls = await page.evaluate(() => window.__confirmCalls || []);
   if (calls.length) return 'FAIL: wraparound + empty box offered the transfer (a photo cannot honestly become a panorama)';
-  const pano = log.apiCalls.filter(c => c.path === '/api/generate' && c.action === 'wraparoundPanorama');
-  if (!pano.length) return 'FAIL: wraparound + empty box did not paint — the old refusal is back';
+  const gen = log.apiCalls.filter(c => c.path === '/api/generate');
+  if (gen.length) return 'FAIL: wraparound + empty box generated — a chip spent on a picture nobody described';
   const status = await page.evaluate(() => document.getElementById('statusMsg')?.textContent || '');
   if (/needs a description/.test(status)) return 'FAIL: the "needs a description" popup is back';
-  return 'PASS: wraparound + empty box paints the scene, no popup, no confirm';
+  const usable = await page.evaluate(() => {
+    const t = document.getElementById('ideaDesc'); if (!t) return false;
+    const r = t.getBoundingClientRect();
+    return r.height > 0 && r.width > 0 && getComputedStyle(t).display !== 'none';
+  });
+  if (!usable) return 'FAIL: Generate on an empty box did not land on a usable idea box';
+  return 'PASS: wraparound + empty box lands on the idea box, no popup, no confirm, no chip';
 };
 
 // ---- Typing words must leave the AI path exactly as it was: no confirm,
