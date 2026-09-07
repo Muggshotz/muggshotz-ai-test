@@ -82,10 +82,12 @@ async function describeAndGenerate(page, text) {
   // on the box; classic: the photo-as-is confirm (declined here) that does
   // the same -- and THEN the customer types. This walks that exact
   // journey rather than papering over it.
+  // v97: a wraparound with an empty box PAINTS now (the refusal popup is
+  // gone), so pressing Generate here would spend a generation instead of
+  // revealing the box. Open the idea box the way the rail itself does.
   if (!(await ideaBoxUsable(page))) {
     await page.evaluate(() => { window.confirm = () => false; });
-    await page.evaluate(() => document.getElementById('generateBtn')?.scrollIntoView({ block: 'center' }));
-    await page.click('#generateBtn');
+    await page.evaluate(() => handOffToIdeaAfterProductChoice());
     await T(page, 1400);
     await dismissAlerts(page);
     if (!(await ideaBoxUsable(page)))
