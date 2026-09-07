@@ -2,7 +2,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head><link rel="manifest" href="needles-manifest.json">
-<!-- BUILD-MARKER: THE-FADE-ACTUALLY-REACHES-THE-FRAME-v80 -->
+<!-- BUILD-MARKER: ONE-PICTURE-ON-THE-SCREEN-v81 -->
 <!-- If you can see this comment on GitHub, this exact paste landed. -->
 <!-- If your live site's page source does NOT say -->
 <!-- "INSTANT-FIT-SCREEN-v47" right here, the upload/deploy did -->
@@ -12545,8 +12545,20 @@ function showAccessorizeStep(){
   const inlineSatisfiedBtn=document.getElementById('frameCatalogSatisfiedBtn');
   const isWraparoundReveal=(revealFlowActive && !revealFlowThreePanel);
   if(crossPromo)crossPromo.style.display=isWraparoundReveal?'none':'block';
-  const studioMounted=!!document.getElementById('frameStudio');
-  if(inlinePreview)inlinePreview.style.display=(isWraparoundReveal&&!studioMounted)?'block':'none';
+  // PICTURES SHOWN ONCE (Alyx's rule).
+  // This second copy of the photograph, sitting under the catalogue, was a
+  // crutch from when the two-column studio did not mount on the wraparound:
+  // with the frames stacked in the middle you could not see your picture
+  // while browsing them. The studio mounts on every route that reaches this
+  // screen now and pins the picture in the left column, so the crutch is
+  // simply the same photograph twice.
+  // The previous attempt at this asked the DOM whether the studio was
+  // mounted -- nineteen lines BEFORE the line that mounts it. On first open
+  // there was no studio yet, so it answered "not mounted" and showed the
+  // copy anyway. Decide from the same condition that drives the mount, not
+  // from the DOM's state partway through setting the screen up.
+  const studioWillMount=(frameOfferFromMockup||isWraparoundReveal);
+  if(inlinePreview)inlinePreview.style.display=(isWraparoundReveal&&!studioWillMount)?'block':'none';
   if(inlineSatisfiedBtn)inlineSatisfiedBtn.style.display=isWraparoundReveal?'block':'none';
   const sharedSatisfiedBtn=document.getElementById('accessorizeSatisfiedBtn');
   if(sharedSatisfiedBtn)sharedSatisfiedBtn.style.display=isWraparoundReveal?'none':'block';
