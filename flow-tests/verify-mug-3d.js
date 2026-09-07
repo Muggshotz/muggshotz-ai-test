@@ -15,60 +15,9 @@ const fs = require('fs');
 const T = (page, ms) => page.waitForTimeout(ms);
 const GL = ['--use-gl=swiftshader', '--enable-unsafe-swiftshader'];
 
-async function pickProduct(page, val) {
-  await page.click('#postUploadForkRow button:has-text("Select Your Product")');
-  await T(page, 700);
-  await page.locator(`#productCard .btn-select[data-val="${val}"]`).click({ force: true });
-  await T(page, 1000);
-}
-async function mugToPrintStyle(page, size = '11oz', styleIndex = 0) {
-  await pickProduct(page, 'mug');
-  await page.evaluate((s) => pickPreGenMugSize(s), size);
-  await T(page, 500);
-  await page.evaluate((i) => pickPreGenMugStyle(Object.keys(GEN_MUG_STYLES)[i]), styleIndex);
-  await T(page, 500);
-  await page.evaluate(() => { const b = document.querySelector('#preGenMugColorGrid .color-btn'); if (b) b.click(); });
-  await T(page, 500);
-  await page.evaluate(() => finishPreGenMugColorPick());
-  await T(page, 900);
-  await dismissAlerts(page);
-}
-async function ideaBoxUsable(page) {
-  return page.evaluate(() => {
-    const t = document.getElementById('ideaDesc'); if (!t) return false;
-    const r = t.getBoundingClientRect();
-    return r.height > 0 && r.width > 0 && getComputedStyle(t).display !== 'none';
-  });
-}
-async function describeAndGenerate(page, text) {
-  if (!(await ideaBoxUsable(page))) {
-    await page.evaluate(() => { window.confirm = () => false; });
-    await page.evaluate(() => document.getElementById('generateBtn')?.scrollIntoView({ block: 'center' }));
-    await page.click('#generateBtn');
-    await T(page, 1400);
-    await dismissAlerts(page);
-    if (!(await ideaBoxUsable(page))) throw new Error('the empty-box guard did not land on a usable idea box');
-  }
-  await page.fill('#ideaDesc', text);
-  await dismissAlerts(page);
-  await T(page, 400);
-  await page.evaluate(() => document.getElementById('generateBtn')?.scrollIntoView({ block: 'center' }));
-  await page.click('#generateBtn');
-}
-// The real "Yes -- All 3 Sides" button. Nothing reaches the mockup with
-// artwork on it until the customer has answered "Are you satisfied?"; a
-// test that skipped this step handed the mug three empty slots and called
-// the resulting blank mug a defect. It was the test that was wrong.
-async function approveAllThree(page) {
-  await page.evaluate(() => approveDesign(true));
-  await T(page, 1200);
-  await dismissAlerts(page);
-}
-const waitLanded = (page, t = 120000) =>
-  page.waitForFunction(() => {
-    const shown = (id) => { const el = document.getElementById(id); return el && getComputedStyle(el).display !== 'none'; };
-    return shown('seamFixOverlay') || shown('accessorizeCard') || shown('frameFadeOverlay') || shown('approveRow');
-  }, null, { timeout: t });
+// The click-path helpers live in verify-mug-3d-helpers.js so ad-hoc
+// drives (a real-chain reproduction, say) use the exact same sequence.
+const { pickProduct, mugToPrintStyle, describeAndGenerate, approveAllThree, waitLanded } = require('./verify-mug-3d-helpers');
 
 // Record what the 3D module is handed, without touching how it behaves.
 async function spyOnMug3D(page) {
@@ -96,13 +45,30 @@ const stageState = (page) => page.evaluate(() => {
   };
 });
 
-// A stage that has a mug with artwork on it screenshots MUCH larger than a
-// flat, empty one. Crude, but it cannot be fooled by a blank canvas.
-async function stageBytes(page, name) {
+// Is there artwork on the mug? Count coloured pixels in a screenshot of the
+// stage: the mug is white, the ground is grey, the shadow is grey, so any
+// saturated pixel is the artwork. The first cut of this check compared PNG
+// byte sizes, and a longer lens (smaller mug, more plain background) made an
+// honest render fail it -- a size is not a picture.
+async function artworkFraction(page, name) {
   const p = `shot-mug3d-${name}.png`;
   await page.locator('#mug3dStage').screenshot({ path: p });
-  return fs.statSync(p).size;
+  const b64 = fs.readFileSync(p).toString('base64');
+  return page.evaluate(async (b64) => {
+    const im = new Image(); im.src = 'data:image/png;base64,' + b64; await im.decode();
+    const c = document.createElement('canvas'); c.width = im.width; c.height = im.height;
+    const g = c.getContext('2d'); g.drawImage(im, 0, 0);
+    const d = g.getImageData(0, 0, c.width, c.height).data;
+    let colourful = 0, total = 0;
+    for (let i = 0; i < d.length; i += 16) { // every 4th pixel is plenty
+      total++;
+      const r = d[i], gg = d[i + 1], b = d[i + 2];
+      if (Math.max(r, gg, b) - Math.min(r, gg, b) > 40) colourful++;
+    }
+    return colourful / total;
+  }, b64);
 }
+const MIN_ARTWORK = 0.03;   // 3% of the stage coloured = a picture is on the mug
 
 const scenarios = {};
 const OPTS = {};
@@ -144,8 +110,8 @@ scenarios.threePanelOpensThe3DMug = async (page, log) => {
   if (o.sizeLabel !== '11oz') return `FAIL: opened as ${o.sizeLabel}`;
   if (o.panoramaUrl) return 'FAIL: a three-panel mug was handed a panorama';
   if (!(o.panelUrls || []).filter(Boolean).length) return 'FAIL: no panel artwork reached the 3D mug';
-  const bytes = await stageBytes(page, 'three-panel');
-  if (bytes < 30000) return `FAIL: the stage screenshot is only ${bytes} bytes — looks like an empty stage`;
+  const art = await artworkFraction(page, 'three-panel');
+  if (art < MIN_ARTWORK) return `FAIL: only ${(art*100).toFixed(1)}% of the stage is coloured — no artwork on the mug`;
 
   // Printify still fires behind it, and its answer does not demote the mug.
   await opened;
@@ -154,7 +120,7 @@ scenarios.threePanelOpensThe3DMug = async (page, log) => {
   if (!fired) return 'FAIL: the Printify mockup request no longer fires for a mug';
   const after = await stageState(page);
   if (!after.wrap || after.photo) return 'FAIL: Printify answering replaced the 3D mug with the flat photo';
-  return `PASS: 3D mug up in ${ms}ms with artwork, action row and slider; Printify still fired behind it (${bytes} byte stage)`;
+  return `PASS: 3D mug up in ${ms}ms with artwork (${(art*100).toFixed(0)}% of the stage), action row and slider; Printify still fired behind it`;
 };
 
 // ---- 2. Wraparound: the uncut panorama is what wraps the mug. ----
@@ -174,9 +140,9 @@ scenarios.wraparoundWrapsThePanorama = async (page) => {
   const opens = await page.evaluate(() => window.__mug3dOpens);
   if (!opens.length) return 'FAIL: MUG3D.open was never called';
   if (!opens[0].panoramaUrl) return 'FAIL: the wraparound mug was not handed the uncut panorama';
-  const bytes = await stageBytes(page, 'wraparound');
-  if (bytes < 30000) return `FAIL: stage looks empty (${bytes} bytes)`;
-  return `PASS: wraparound mug wraps the uncut panorama (${bytes} byte stage)`;
+  const art = await artworkFraction(page, 'wraparound');
+  if (art < MIN_ARTWORK) return `FAIL: only ${(art*100).toFixed(1)}% of the stage is coloured — no artwork on the mug`;
+  return `PASS: wraparound mug wraps the uncut panorama (${(art*100).toFixed(0)}% of the stage is artwork)`;
 };
 
 // ---- 3. 15oz builds too. ----
@@ -196,9 +162,9 @@ scenarios.fifteenOunceBuilds = async (page) => {
   await T(page, 1200);
   const opens = await page.evaluate(() => window.__mug3dOpens);
   if (opens[0]?.sizeLabel !== '15oz') return `FAIL: opened as ${opens[0]?.sizeLabel}`;
-  const bytes = await stageBytes(page, '15oz');
-  if (bytes < 30000) return `FAIL: stage looks empty (${bytes} bytes)`;
-  return `PASS: 15oz mug builds and carries artwork (${bytes} byte stage)`;
+  const art = await artworkFraction(page, '15oz');
+  if (art < MIN_ARTWORK) return `FAIL: only ${(art*100).toFixed(1)}% of the stage is coloured — no artwork on the mug`;
+  return `PASS: 15oz mug builds and carries artwork (${(art*100).toFixed(0)}% of the stage)`;
 };
 
 // ---- 4. Add a Frame and come back: it is the 3D mug that returns. ----
