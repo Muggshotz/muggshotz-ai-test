@@ -2,7 +2,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head><link rel="manifest" href="needles-manifest.json">
-<!-- BUILD-MARKER: FADE-WHAT-YOU-SEE-v95 -->
+<!-- BUILD-MARKER: TUNDRA-FULL-WRAP-v96 -->
 <!-- If you can see this comment on GitHub, this exact paste landed. -->
 <!-- If your live site's page source does NOT say -->
 <!-- "INSTANT-FIT-SCREEN-v47" right here, the upload/deploy did -->
@@ -5216,6 +5216,55 @@ const TRAVEL_WRAP_RATIO = {
   'travel-mug-40oz-vacuum': 1.32,
   'travel-mug-40oz-insulated': 0.69
 };
+
+// THE TUNDRA'S FULL WRAP (Alyx, Sep 2026: "B plus D"). The 30oz Tundra's
+// band is 3.50:1 and the widest picture Gemini will paint is 21:9 (2.33:1),
+// so a third of the band came back as bare white either side of the scene.
+// Alyx's pick, from the side-by-side bench: B, mirror the scene out into the
+// flanks so the environment keeps going, plus D, fade the outer ends to the
+// cup's colour so the fold in the mirror melts away and the two ends meet
+// white-on-white at the back seam. The scene itself is untouched and stays
+// in the middle at full size. Only wraps wider than the picture get this;
+// the 14oz (2.15:1) is narrower than the picture and keeps what it had.
+async function extendWrapToProductRatio(url){
+  if(product!=='water bottle')return url;
+  const ratio=TRAVEL_WRAP_RATIO[preGenTravelVariant];
+  if(typeof ratio!=='number')return url;
+  const img=await loadImageFromUrl(url);
+  const w=img.naturalWidth,h=img.naturalHeight;
+  const targetW=Math.round(h*ratio);
+  if(targetW<=w*1.02)return url;
+  const flank=Math.round((targetW-w)/2);
+  const hex=getSelectedProductColorHex();
+  const c=document.createElement('canvas');
+  c.width=flank*2+w; c.height=h;
+  const ctx=c.getContext('2d');
+  ctx.fillStyle=hex;
+  ctx.fillRect(0,0,c.width,h);
+  ctx.drawImage(img,flank,0);
+  // B: each flank is the scene's own edge, mirrored, so the seam is
+  // continuous by construction.
+  ctx.save();
+  ctx.translate(flank,0); ctx.scale(-1,1);
+  ctx.drawImage(img,0,0,flank,h,0,0,flank,h);
+  ctx.restore();
+  ctx.save();
+  ctx.translate(flank+w,0); ctx.scale(-1,1);
+  ctx.drawImage(img,w-flank,0,flank,h,-flank,0,flank,h);
+  ctx.restore();
+  // D: the flanks dissolve into the cup colour toward the outer ends.
+  const fadeTo=(x0,x1)=>{
+    const g=ctx.createLinearGradient(x0,0,x1,0);
+    g.addColorStop(0,hex+'00');
+    g.addColorStop(0.45,hex+'80');
+    g.addColorStop(1,hex+'FF');
+    ctx.fillStyle=g;
+    ctx.fillRect(Math.min(x0,x1),0,Math.abs(x1-x0),h);
+  };
+  fadeTo(flank,0);
+  fadeTo(flank+w,flank*2+w);
+  return c.toDataURL('image/jpeg',0.92);
+}
 
 function wrapIsPanoramic(){
   if(product==='mug')return true;
@@ -14540,7 +14589,7 @@ Use rich environmental storytelling while keeping the face as the primary focal 
       startByoUploadInBackground(passSource);
     } else if(travelPanoramaReady){
       document.getElementById('wraparoundStandbyPrompt').style.display='none';
-      resultUrl=panoramaData.panoramaUrl;
+      resultUrl=await extendWrapToProductRatio(panoramaData.panoramaUrl);
     } else {
       currentGenerationController=new AbortController();
       const resp=await fetch('/api/generate',{

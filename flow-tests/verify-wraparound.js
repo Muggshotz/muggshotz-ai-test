@@ -1068,6 +1068,76 @@ scenarios.artStyleHasABackButton = async (page) => {
   return `PASS: "${r.label}" under Art Style lifts the spotlight, puts the step away and lands on the upload boards`;
 };
 
+// THE TUNDRA'S FULL WRAP (Alyx, Sep 2026: "B plus D"). The 30oz band is
+// 3.50:1, the picture 2.33:1, so a third of the band was bare. Now the scene
+// is mirrored out into the flanks (B) and the outer ends fade to the cup's
+// colour (D). Measured on the real function: the result is the band's own
+// ratio, the scene sits untouched in the middle, each flank is a mirror of
+// the edge beside it, and the outer ends are the cup's white. The 14oz is
+// narrower than the picture and must come back exactly as it went in.
+scenarios.tundraWrapIsMirroredAndFaded = async (page) => {
+  const r = await page.evaluate(async () => {
+    const src = 'http://127.0.0.1:8788/__fake/panorama.jpg';
+    product = 'water bottle'; preGenTravelColor = null;
+    preGenTravelVariant = 'travel-mug-14oz-handle';
+    const narrow = await extendWrapToProductRatio(src);
+    preGenTravelVariant = 'travel-mug-30oz-tundra';
+    const out = await extendWrapToProductRatio(src);
+    const orig = await loadImageFromUrl(src);
+    const ext = await loadImageFromUrl(out);
+    const px = (im, x, y) => {
+      const c = document.createElement('canvas'); c.width = im.naturalWidth; c.height = im.naturalHeight;
+      const ctx = c.getContext('2d'); ctx.drawImage(im, 0, 0);
+      const d = ctx.getImageData(Math.round(x), Math.round(y), 1, 1).data; return [d[0], d[1], d[2]];
+    };
+    const w = orig.naturalWidth, h = orig.naturalHeight, W = ext.naturalWidth;
+    const flank = (W - w) / 2, y = h * 0.35;
+    return {
+      narrowUnchanged: narrow === src,
+      ratio: W / ext.naturalHeight, flank, w, h,
+      centreOrig: px(orig, w / 2, h / 2), centreExt: px(ext, flank + w / 2, h / 2),
+      edgeOrig: px(orig, 4, y), mirrorExt: px(ext, flank - 5, y),
+      outerLeft: px(ext, 1, y), outerRight: px(ext, W - 2, y),
+      hex: getSelectedProductColorHex(),
+    };
+  });
+  const near = (a, b, tol) => a.every((v, i) => Math.abs(v - b[i]) <= tol);
+  if (!r.narrowUnchanged) return 'FAIL: the 14oz (narrower than the picture) was rebuilt when it should pass straight through';
+  if (Math.abs(r.ratio - 3.5) > 0.02) return `FAIL: the Tundra wrap came out ${r.ratio.toFixed(3)}:1, not 3.50:1`;
+  if (!near(r.centreOrig, r.centreExt, 6)) return `FAIL: the scene moved or changed in the middle: rgb(${r.centreOrig}) vs rgb(${r.centreExt})`;
+  if (!near(r.edgeOrig, r.mirrorExt, 14)) return `FAIL: the flank beside the seam is not a mirror of the scene's edge: rgb(${r.edgeOrig}) vs rgb(${r.mirrorExt}) ` + JSON.stringify(r);
+  if (!near(r.outerLeft, [255, 255, 255], 8) || !near(r.outerRight, [255, 255, 255], 8)) {
+    return `FAIL: the outer ends did not fade to the cup's white: left rgb(${r.outerLeft}), right rgb(${r.outerRight})`;
+  }
+  return `PASS: Tundra wrap is ${r.ratio.toFixed(2)}:1, scene untouched in the middle, flanks mirror the edges, ends fade to ${r.hex}; the 14oz passes straight through`;
+};
+
+// And through the real flow: a Tundra wraparound order carries the full
+// band, not the bare 21:9 picture.
+scenarios.tundraOrderCarriesTheFullWrap = async (page, log, mockupBodies) => {
+  await pickProduct(page, 'water bottle');
+  await page.evaluate(() => pickPreGenTravelVariant('travel-mug-30oz-tundra'));
+  await T(page, 1000);
+  await dismissAlerts(page);
+  await page.evaluate(() => pickMugPrintMode('wraparound'));
+  await T(page, 1000);
+  await dismissAlerts(page);
+  await describeAndGenerate(page, 'a wide desert canyon at sunrise');
+  await waitApprove(page);
+  if (panoramaCalls(log) !== 1) return `FAIL: expected 1 wraparoundPanorama call, saw ${panoramaCalls(log)}`;
+  await page.locator('#approveRow button:has-text("Yes")').first().click();
+  await T(page, 1500);
+  await page.locator('button:has-text("Continue to Order")').first().click({ timeout: 10000 });
+  await T(page, 7000);
+  const start = mockupBodies.find(b => b && b.action === 'start');
+  if (!start) return 'FAIL: no start-mockup fired after a Tundra wraparound';
+  if (start.productKey !== 'travel-mug-30oz-tundra') return `FAIL: productKey=${start.productKey}`;
+  if (!start.image) return 'FAIL: the order body carries no image';
+  const ratio = await page.evaluate(async (u) => { const im = await loadImageFromUrl(u); return im.naturalWidth / im.naturalHeight; }, start.image);
+  if (Math.abs(ratio - 3.5) > 0.02) return `FAIL: the Tundra order image is ${ratio.toFixed(3)}:1 — the band would print with bare ends`;
+  return `PASS: the Tundra order carries a ${ratio.toFixed(2)}:1 wrap, the band's own shape`;
+};
+
 // THE TOOLS BUTTON IS ON EVERY FRAME (Alyx, Sep 2026): "Almost all the
 // frames won't need it, but it doesn't hurt anything just to have it there
 // just in case."
