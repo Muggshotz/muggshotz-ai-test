@@ -793,6 +793,98 @@ scenarios.thePictureIsShownOnce = async (page) => {
   return 'PASS: one picture on the screen, pinned in the left column, on first open and on reopen';
 };
 
+// THE PICTURE HOLDS STILL WHILE YOU WORK THE SLIDERS (Alyx, Sep 2026).
+// "the image keeps shifting it doesn't hold still... you can't see what
+// you're doing to the picture."
+// Every slider tick used to wipe the strip, drop in a one-line "Updating
+// preview..." message, and build a brand new <img>. The box fell from ~187px
+// tall to ~22px and back, forty-odd times per drag, so the page jumped under
+// the slider being aimed. This simulates a real drag and watches the box's
+// height on every frame.
+scenarios.thePreviewHoldsStillWhileDragging = async (page) => {
+  await page.evaluate(async () => {
+    product = 'mug'; mugPrintMode = 'wraparound';
+    revealFlowActive = true; revealFlowThreePanel = false; frameOfferFromMockup = false;
+    lastWraparoundMethod = 'panorama';
+    wraparoundPanoramaBaseUrl = 'http://127.0.0.1:8788/__fake/panorama.jpg';
+    wraparoundPanoramaUrl = wraparoundPanoramaBaseUrl;
+    pendingWraparoundRaw = {
+      left: 'http://127.0.0.1:8788/__fake/pano-left.jpg',
+      center: 'http://127.0.0.1:8788/__fake/pano-center.jpg',
+      right: 'http://127.0.0.1:8788/__fake/pano-right.jpg',
+    };
+    selectedFrame = 'Mirror Mirror'; windowSillChoice = null; frameStudioFadePct = null;
+    showAccessorizeStep();
+    await updateAccessorizePreview();
+    if (accessorizePreviewInFlight) await accessorizePreviewInFlight;
+    await refreshFrameFitSliders();
+  });
+  const r = await page.evaluate(async () => {
+    const strip = document.getElementById('accessorizePreviewStrip');
+    const heights = []; let stop = false;
+    (function watch() { heights.push(Math.round(strip.getBoundingClientRect().height)); if (!stop) requestAnimationFrame(watch); })();
+    const el = document.getElementById('frameFitHeight');
+    const startImg = strip.querySelector('img.fsPreviewImg');
+    for (let v = 100; v >= 67; v--) { el.value = String(v); handleFrameFitSliderChange(); await new Promise((r2) => setTimeout(r2, 12)); }
+    await new Promise((r2) => setTimeout(r2, 600));
+    if (accessorizePreviewInFlight) await accessorizePreviewInFlight;
+    await new Promise((r2) => setTimeout(r2, 300));
+    stop = true;
+    const endImg = strip.querySelector('img.fsPreviewImg');
+    const sorted = [...new Set(heights)].sort((a, b) => a - b);
+    return {
+      sameElement: !!startImg && startImg === endImg,
+      min: sorted[0], max: sorted[sorted.length - 1],
+      settledAt: customFrameCalibration[FRAME_CATALOG['Mirror Mirror'].asset]?.heightPct,
+    };
+  });
+  if (!r.sameElement) return 'FAIL: the picture element was destroyed and rebuilt during the drag: ' + JSON.stringify(r);
+  if (r.min < 100) return `FAIL: the preview collapsed to ${r.min}px mid-drag — that is the jump: ` + JSON.stringify(r);
+  if (r.max - r.min > 60) return `FAIL: the preview moved ${r.max - r.min}px during the drag: ` + JSON.stringify(r);
+  if (r.settledAt !== 67) return `FAIL: the slider did not settle where it was left (${r.settledAt})`;
+  return `PASS: one image element throughout, height held between ${r.min} and ${r.max}px across a 34-step drag`;
+};
+
+// THE FADE, WHERE THE CUSTOMER CAN SEE IT. A fifth slider under the fit
+// sliders, with the picture above it -- so the corners can be watched
+// disappearing instead of being decided blind on another screen.
+scenarios.theFrameStudioHasAFadeSlider = async (page) => {
+  const probe = (frame) => page.evaluate(async (f) => {
+    product = 'mug'; mugPrintMode = 'wraparound';
+    revealFlowActive = true; revealFlowThreePanel = false;
+    lastWraparoundMethod = 'panorama';
+    wraparoundPanoramaBaseUrl = 'http://127.0.0.1:8788/__fake/panorama.jpg';
+    pendingWraparoundRaw = { left: 'a', center: 'b', right: 'c' };
+    frameStudioFadePct = null; selectedFrame = f; windowSillChoice = null;
+    await refreshFrameFitSliders();
+    const sl = document.getElementById('frameFitFade');
+    const note = document.getElementById('frameFitFadeNote');
+    const out = { start: Number(sl.value), min: Number(sl.min), noteShown: note.style.display === 'block' };
+    sl.value = '0'; handleFrameFadeSliderChange();
+    out.floored = frameStudioFadeAmount();
+    sl.value = '60'; handleFrameFadeSliderChange();
+    out.raised = frameStudioFadeAmount();
+    out.sourceFaded = String(await wrapSourceForFrame()).startsWith('data:');
+    return out;
+  }, frame);
+
+  const listed = await probe('Mirror Mirror');
+  if (listed.start !== 40) return `FAIL: a listed frame should start at 40%, got ${listed.start}`;
+  if (listed.min !== 15) return `FAIL: a listed frame's slider should floor at 15%, got ${listed.min}`;
+  if (!listed.noteShown) return 'FAIL: nothing explains why a listed frame carries a fade';
+  if (listed.floored !== 15) return `FAIL: a listed frame was draggable below its floor (${listed.floored})`;
+  if (listed.raised !== 60) return `FAIL: the slider did not raise the fade (${listed.raised})`;
+  if (!listed.sourceFaded) return 'FAIL: the slider moved but the picture was not faded';
+
+  const plain = await probe('Ornate Gold');
+  if (plain.start !== 0) return `FAIL: an unlisted frame should start with no fade, got ${plain.start}`;
+  if (plain.min !== 0) return `FAIL: an unlisted frame should reach zero, floor was ${plain.min}`;
+  if (plain.noteShown) return 'FAIL: the "comes with a fade" note is showing on a frame that does not';
+  if (plain.floored !== 0) return `FAIL: an unlisted frame could not be taken back to no fade (${plain.floored})`;
+  if (plain.raised !== 60) return 'FAIL: an unlisted frame could not be given a fade on request';
+  return 'PASS: listed frames start at 40% and floor at 15%, unlisted start at none and can still be given one';
+};
+
 (async () => {
   let fails = 0;
   for (const [name, fn] of Object.entries(scenarios)) {
