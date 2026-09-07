@@ -2,7 +2,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head><link rel="manifest" href="needles-manifest.json">
-<!-- BUILD-MARKER: IDEA-BOX-DIRECT-v99 -->
+<!-- BUILD-MARKER: EVERY-PANEL-HAS-A-BACK-v100 -->
 <!-- If you can see this comment on GitHub, this exact paste landed. -->
 <!-- If your live site's page source does NOT say -->
 <!-- "INSTANT-FIT-SCREEN-v47" right here, the upload/deploy did -->
@@ -1038,6 +1038,9 @@ const HERO_SETTLE_MS = 1000;
 <div class="note" id="approveSavingNote" style="display:none;margin-top:.5rem;text-align:center;color:#7888b4"><span class="spinner"></span>Saving your finished design...</div>
 <div class="note" id="approveRetryCost" style="margin-top:.4rem;text-align:center;color:#29a3ff">Trying again uses one more token. <span style="color:#7ab8ff;cursor:pointer" onclick="openCreditsPanel()">Need more?</span></div>
 <div class="note" id="approveRowHint" style="margin-top:.5rem"></div>
+<!-- EVERY PANEL HAS A BACK (Alyx, v100). Back from the result is back to
+     the idea box, with the picture kept in My Designs. -->
+<button type="button" class="download-btn" id="approveBackBtn" style="margin-top:.6rem" onclick="resultScreenBack()">← Back</button>
 </div>
 <button class="download-btn" id="toggleImageBtn" onclick="toggleWorkingImage()" style="display:none;margin-top:.6rem">↔️ Toggle Between Previous & New Image</button>
 <div id="keepTweakingReminder" class="guidance-prompt" role="status">Made your changes? Scroll down and hit Generate again. Running low on tokens? Tap Credits &amp; Extras to top up.</div>
@@ -1076,6 +1079,7 @@ const HERO_SETTLE_MS = 1000;
 </div>
 </div>
 <div id="startOverBtn" class="critical-warning-blink" style="display:none;margin-top:.6rem;padding:.75rem;text-align:center;font-weight:700;color:#ff8a7a;cursor:default">PLEASE SELECT ONE OF THE ABOVE OPTIONS!</div>
+<button type="button" class="download-btn" id="trackForkBackBtn" style="margin-top:.6rem" onclick="trackForkBack()">← Back</button>
 </div>
 
 <div class="card" id="framePreviewThumbCard" style="display:none;text-align:center">
@@ -1325,6 +1329,7 @@ const HERO_SETTLE_MS = 1000;
      choice -- it was an internal flag wearing a customer-facing hat. The
      per-panel method survives as an automatic fallback in generate() if the
      panorama call fails; nobody has to be told which one ran. -->
+<button type="button" class="download-btn" id="printModeBackBtn" style="margin-top:1rem" onclick="printModeBack()">← Back</button>
 </div>
 
 <div class="card" id="designMethodCard" style="display:none">
@@ -1496,6 +1501,7 @@ Tell Needles <span style="color:#7ab8ff">what you have in mind</span>
 <div class="card-title">🍶 Which Travel Mug?</div>
 <div class="note" style="margin-top:0;margin-bottom:.9rem">Pick which travel mug you're getting before generating — the shape and print layout differ enough between them that we need this locked in first.</div>
 <div class="theme-grid" id="travelMugVariantGrid"></div>
+<button type="button" class="download-btn" id="travelVariantBackBtn" style="margin-top:1rem" onclick="travelVariantBack()">← Back</button>
 </div>
 
 <div class="card" id="travelMugColorCard" style="display:none">
@@ -11875,6 +11881,71 @@ function reopenFlatMockupFromFrameOffer(){
   if(returnBtn)returnBtn.style.display='block';
   refreshMockupLightboxFrameBtn();
 }
+
+// EVERY PANEL HAS A BACK (Alyx, v100). Each of these goes to the panel
+// before it on the rail. Nothing is undone; the customer can change the
+// earlier answer or come straight back.
+function resultScreenBack(){
+  clearAllFocusModes();
+  smoothScrollToTarget('ideaCard','center');
+}
+function trackForkBack(){
+  // Back from the fork is Art Style: its Continue, its Back and its
+  // spotlight come back exactly as they were after the photo landed.
+  showPostUploadFork();
+}
+function printModeBack(){
+  if(product==='water bottle'){ smoothScrollToTarget('travelMugVariantCard','center'); return; }
+  smoothScrollToTarget('productCard','start');
+}
+function travelVariantBack(){
+  smoothScrollToTarget('productCard','start');
+}
+
+// THE RESULT SCREEN IS PINNED (Alyx, v100: "there's nowhere to go... you
+// should only be able to have a few degrees of freedom up and a few down").
+// While "Are you satisfied?" is showing, the page scrolls only far enough
+// to reach the picture above and the buttons below it: scrolling past
+// either end is pulled back. Released the moment the row goes away (Yes,
+// No, Back, a new generation) so the rest of the page is reachable again.
+const RESULT_PIN_SLACK=28;
+let resultPinActive=false, resultPinRaf=0;
+function resultPinBounds(){
+  const top=document.getElementById('previewImg');
+  const bottom=document.getElementById('approveRow');
+  if(!bottom||bottom.style.display==='none')return null;
+  const topEl=(top&&top.offsetParent)?top:bottom;
+  const y=window.scrollY;
+  const minY=topEl.getBoundingClientRect().top+y-RESULT_PIN_SLACK;
+  const maxY=bottom.getBoundingClientRect().bottom+y+RESULT_PIN_SLACK-window.innerHeight;
+  return { minY:Math.max(0,minY), maxY:Math.max(0,maxY) };
+}
+function resultPinOnScroll(){
+  if(!resultPinActive||resultPinRaf)return;
+  resultPinRaf=requestAnimationFrame(()=>{
+    resultPinRaf=0;
+    const b=resultPinBounds();
+    if(!b)return;
+    const y=window.scrollY;
+    if(y<b.minY)window.scrollTo(0,b.minY);
+    else if(y>b.maxY&&b.maxY>=b.minY)window.scrollTo(0,b.maxY);
+  });
+}
+function setResultPinned(on){
+  if(on===resultPinActive)return;
+  resultPinActive=on;
+  if(on)window.addEventListener('scroll',resultPinOnScroll,{passive:true});
+  else window.removeEventListener('scroll',resultPinOnScroll);
+}
+// The row is shown and hidden from many places; watch it rather than
+// chasing every one of them.
+document.addEventListener('DOMContentLoaded',()=>{
+  const row=document.getElementById('approveRow');
+  if(!row||!window.MutationObserver)return;
+  const sync=()=>setResultPinned(row.style.display!=='none'&&!!row.offsetParent);
+  new MutationObserver(sync).observe(row,{attributes:true,attributeFilter:['style']});
+  sync();
+});
 
 function keepTweaking(){
   // "No -- Let's Try Another" invites an idea edit -- the spotlight must
