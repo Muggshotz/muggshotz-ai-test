@@ -2,7 +2,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head><link rel="manifest" href="needles-manifest.json">
-<!-- BUILD-MARKER: TWO-COLUMN-EVERYWHERE-v79 -->
+<!-- BUILD-MARKER: THE-FADE-ACTUALLY-REACHES-THE-FRAME-v80 -->
 <!-- If you can see this comment on GitHub, this exact paste landed. -->
 <!-- If your live site's page source does NOT say -->
 <!-- "INSTANT-FIT-SCREEN-v47" right here, the upload/deploy did -->
@@ -3480,6 +3480,23 @@ function frameRequiresFade(name){
 // re-opening the very gap the frame needs closed. They keep the slider
 // between those two points.
 const REQUIRED_FADE_DEFAULT_PCT=40;
+// How much fade a frame that comes with one actually gets. Whatever the
+// customer set, when they set something at or above the floor; the frame's
+// own default otherwise. Picking a frame skips the Hard/Fade screen entirely
+// (see applyAccessorizeFrame), so on that route this IS the whole decision.
+function requiredFadePctForFrame(){
+  return (revealFadeSliderTouched && revealFadeAmountPct>=REQUIRED_FADE_FLOOR_PCT)
+    ? revealFadeAmountPct
+    : REQUIRED_FADE_DEFAULT_PCT;
+}
+// The strip a frame gets drawn onto: faded first when the frame needs it, so
+// the picture dissolves into the product colour UNDER the frame and the
+// decoration reads as sitting over open space.
+async function wrapSourceForFrame(){
+  if(!wraparoundPanoramaBaseUrl)return null;
+  if(!frameRequiresFade(selectedFrame))return wraparoundPanoramaBaseUrl;
+  return await renderFadedArtwork(wraparoundPanoramaBaseUrl,getSelectedProductColorHex(),requiredFadePctForFrame());
+}
 const REQUIRED_FADE_FLOOR_PCT=15;
 
 // The catalogue, split the way it is displayed: the frames that stand on
@@ -12349,8 +12366,9 @@ async function updateAccessorizePreview(){
       if(selectedFrame||windowSillChoice){
         // Draw the frame on the mug's own strip when there is one. The
         // three-panel reassembly is for the classic fallback only.
-        const framed=(lastWraparoundMethod==='panorama'&&wraparoundPanoramaBaseUrl)
-          ? await compositeFrameAcrossPanorama(wraparoundPanoramaBaseUrl)
+        const previewSource=await wrapSourceForFrame();
+        const framed=(lastWraparoundMethod==='panorama'&&previewSource)
+          ? await compositeFrameAcrossPanorama(previewSource)
           : await compositeFrameAcrossThreePanels(pendingWraparoundRaw.center,pendingWraparoundRaw.left,pendingWraparoundRaw.right);
         renderAccessorizeStrip(framed.combined);
         // Only the seamless-wrap path (Wraparound, frame selected) is
@@ -12527,7 +12545,8 @@ function showAccessorizeStep(){
   const inlineSatisfiedBtn=document.getElementById('frameCatalogSatisfiedBtn');
   const isWraparoundReveal=(revealFlowActive && !revealFlowThreePanel);
   if(crossPromo)crossPromo.style.display=isWraparoundReveal?'none':'block';
-  if(inlinePreview)inlinePreview.style.display=isWraparoundReveal?'block':'none';
+  const studioMounted=!!document.getElementById('frameStudio');
+  if(inlinePreview)inlinePreview.style.display=(isWraparoundReveal&&!studioMounted)?'block':'none';
   if(inlineSatisfiedBtn)inlineSatisfiedBtn.style.display=isWraparoundReveal?'block':'none';
   const sharedSatisfiedBtn=document.getElementById('accessorizeSatisfiedBtn');
   if(sharedSatisfiedBtn)sharedSatisfiedBtn.style.display=isWraparoundReveal?'none':'block';
@@ -12644,8 +12663,9 @@ async function applyAccessorizeFrame(){
       // Always source from the UNFRAMED strip, never from wraparoundPanoramaUrl
       // -- that one may already carry a frame from an earlier pass, and
       // framing it again would stack a second frame inside the first.
-      const framed=(lastWraparoundMethod==='panorama'&&wraparoundPanoramaBaseUrl)
-        ? await compositeFrameAcrossPanorama(wraparoundPanoramaBaseUrl)
+      const frameSource=await wrapSourceForFrame();
+      const framed=(lastWraparoundMethod==='panorama'&&frameSource)
+        ? await compositeFrameAcrossPanorama(frameSource)
         : await compositeFrameAcrossThreePanels(pendingWraparoundRaw.center,pendingWraparoundRaw.left,pendingWraparoundRaw.right);
       // framed.combined is the full-width strip this function already builds
       // (and frames as one piece) before slicing it into thirds. Keeping it
