@@ -2,7 +2,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head><link rel="manifest" href="needles-manifest.json">
-<!-- BUILD-MARKER: ALL-IN-ONE-FRAME-v85 -->
+<!-- BUILD-MARKER: FADE-WITHOUT-A-FRAME-v86 -->
 <!-- If you can see this comment on GitHub, this exact paste landed. -->
 <!-- If your live site's page source does NOT say -->
 <!-- "INSTANT-FIT-SCREEN-v47" right here, the upload/deploy did -->
@@ -1668,7 +1668,7 @@ Tell Needles <span style="color:#7ab8ff">what you have in mind</span>
 </div>
 <div style="display:flex;align-items:center;gap:10px;margin-top:.5rem">
 <span class="note" style="margin:0;white-space:nowrap;font-size:11px">Sharp</span>
-<input type="range" id="frameFadeAmountSlider" min="0" max="80" step="1" value="30" oninput="updateFrameFadePreview()" style="flex:1"/>
+<input type="range" id="frameFadeAmountSlider" min="0" max="100" step="1" value="30" oninput="updateFrameFadePreview()" style="flex:1"/>
 <span class="note" style="margin:0;white-space:nowrap;font-size:11px">Soft</span>
 </div>
 <div class="note" style="margin-top:.25rem;margin-bottom:0;text-align:center"><span id="frameFadeAmountVal">30%</span></div>
@@ -3903,20 +3903,19 @@ function toggleFrameFitSliders(){
 async function refreshFrameFitSliders(){
   const wrap=document.getElementById('frameFitSlidersWrap');
   if(!wrap)return;
-  if(!selectedFrame){
-    wrap.style.display='none';
-    return;
-  }
-  const data=FRAME_CATALOG[selectedFrame];
-  if(!data){
-    wrap.style.display='none';
-    return;
-  }
+  // NOT CONTINGENT ON PICKING A FRAME (Alyx, Sep 2026). This returned early
+  // with the panel hidden whenever no frame was selected -- my own addition,
+  // not anything he asked for, and it quietly made the Edge Fade slider
+  // unreachable for anyone who wanted soft edges on a bare picture and had no
+  // interest in the catalogue. The panel opens either way now; with no frame
+  // there is simply no opening to fit, so the four fit sliders stay hidden
+  // exactly as they do on a frame drawn onto the canvas edge.
   wrap.style.display='block';
+  const data=selectedFrame?FRAME_CATALOG[selectedFrame]:null;
   // Only a frame drawn from an artwork file has an opening to stretch. The
   // procedural ones paint their border onto the canvas edge, so those four
   // sliders would move and do nothing -- worse than not being offered.
-  const hasOpening=(data.type==='image' && !!data.asset);
+  const hasOpening=!!(data && data.type==='image' && data.asset);
   const openingControls=document.getElementById('frameFitOpeningControls');
   const noOpeningNote=document.getElementById('frameFitNoOpeningNote');
   if(openingControls)openingControls.style.display=hasOpening?'block':'none';
@@ -7700,7 +7699,7 @@ function buildCoverMeFitter(designId,multiple){
   const fadeRow=document.createElement('div');
   fadeRow.style.cssText='display:flex;align-items:center;gap:10px;margin-top:8px';
   fadeRow.innerHTML=`<span class="note" style="margin:0;white-space:nowrap">Sharp</span>
-    <input type="range" min="0" max="80" step="1" value="${Math.round(adj.fade||0)}" id="coverMeFitFade_${designId}" style="flex:1">
+    <input type="range" min="0" max="100" step="1" value="${Math.round(adj.fade||0)}" id="coverMeFitFade_${designId}" style="flex:1">
     <span class="note" style="margin:0;white-space:nowrap">Soft</span>
     <span class="note" id="coverMeFitFadeOut_${designId}" style="margin:0;min-width:40px;text-align:right">${Math.round(adj.fade||0)}%</span>`;
   right.appendChild(fadeRow);
