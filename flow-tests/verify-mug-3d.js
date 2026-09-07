@@ -258,8 +258,7 @@ scenarios.exitsTearDown = async (page) => {
 };
 
 // ---- 6. No WebGL: the flat photo path runs, exactly as before. ----
-// The harness's default Chromium has no GL in this sandbox, so this is the
-// device-without-WebGL case for free.
+OPTS.noWebGLFallsBackToThePhoto = { noWebGL: true };
 scenarios.noWebGLFallsBackToThePhoto = async (page, log) => {
   await mugToPrintStyle(page, '11oz');
   await page.evaluate(() => pickMugPrintMode('three-panel'));
@@ -270,7 +269,7 @@ scenarios.noWebGLFallsBackToThePhoto = async (page, log) => {
   await T(page, 800);
   await approveAllThree(page);
   const hasGL = await page.evaluate(() => { try { const c = document.createElement('canvas'); return !!(c.getContext('webgl') || c.getContext('experimental-webgl')); } catch (e) { return false; } });
-  if (hasGL) return 'SKIP: this Chromium has WebGL, so the no-WebGL fallback cannot be exercised here';
+  if (hasGL) return 'FAIL: WebGL was supposed to be switched off for this scenario and is not';
   await page.evaluate(() => beginFinalMockupFetch());
   await page.waitForFunction(() => {
     const i = document.getElementById('mockupLightboxImg');
@@ -287,6 +286,17 @@ scenarios.noWebGLFallsBackToThePhoto = async (page, log) => {
   let fails = 0;
   for (const [name, fn] of Object.entries(scenarios)) {
     const { browser, page, log } = await launch(OPTS[name] || {});
+    // A device without WebGL, simulated honestly: the canvas refuses a GL
+    // context, exactly as an old phone or a locked-down browser does.
+    if (OPTS[name]?.noWebGL) {
+      await page.addInitScript(() => {
+        const real = HTMLCanvasElement.prototype.getContext;
+        HTMLCanvasElement.prototype.getContext = function (type, ...rest) {
+          if (/webgl/i.test(String(type))) return null;
+          return real.call(this, type, ...rest);
+        };
+      });
+    }
     try {
       await openStudio(page);
       await uploadPhoto(page);
@@ -299,8 +309,13 @@ scenarios.noWebGLFallsBackToThePhoto = async (page, log) => {
       fails++;
       await page.screenshot({ path: `shot-mug3d-fail-${name}.png` }).catch(() => {});
     }
+    // The no-WebGL scenario provokes exactly two console errors -- three.js
+    // reporting no context, and the studio saying it is falling back. That
+    // noise IS the expected outcome, keyed off the same option that causes
+    // it, so the exemption cannot drift from the scenario.
+    const expectedNoise = !!OPTS[name]?.noWebGL;
     const errs = log.consoleErrors.filter((e) => !/ERR_TUNNEL|ERR_CONNECTION/.test(e));
-    if (errs.length) { console.log(`  CONSOLE: ${JSON.stringify(errs.slice(0, 5))}`); fails++; }
+    if (errs.length && !expectedNoise) { console.log(`  CONSOLE: ${JSON.stringify(errs.slice(0, 5))}`); fails++; }
     if (log.pageErrors.length) { console.log(`  PAGE ERRORS: ${JSON.stringify(log.pageErrors)}`); fails++; }
     await browser.close();
   }
