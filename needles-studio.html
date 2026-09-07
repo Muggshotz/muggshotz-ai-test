@@ -2,7 +2,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head><link rel="manifest" href="needles-manifest.json">
-<!-- BUILD-MARKER: ONE-IMAGE-NOT-THREE-v75 -->
+<!-- BUILD-MARKER: NO-LEFT-RIGHT-ON-A-WRAP-v76 -->
 <!-- If you can see this comment on GitHub, this exact paste landed. -->
 <!-- If your live site's page source does NOT say -->
 <!-- "INSTANT-FIT-SCREEN-v47" right here, the upload/deploy did -->
@@ -13825,6 +13825,42 @@ function renderPositionHolder(){
   const row=document.getElementById('positionHolderRow');
   if(!row)return;
   row.innerHTML='';
+
+  // THERE IS NO LEFT, CENTER AND RIGHT ON A WRAPAROUND (Alyx, Sep 2026).
+  // A single-shot panorama is ONE picture that goes all the way around the
+  // mug. It is sliced into three only because Printify's coffee-mug product
+  // takes three panel files -- that is a delivery detail, not something the
+  // customer has any business being shown, let alone handed X / swap / New
+  // buttons for. Showing the three-slot picker here is where most of this
+  // flow's confusion came from: it invited everyone, this file included, to
+  // treat a panorama as three separate designs.
+  // The classic per-panel fallback is NOT this. Its panels really are three
+  // independent generations and it keeps the full picker below.
+  if(product==='mug' && mugPrintMode==='wraparound' && lastWraparoundMethod==='panorama' && wraparoundPanoramaUrl){
+    const card=document.getElementById('positionHolderCard');
+    if(card)card.style.display='block';
+    const wrap=document.createElement('div');
+    wrap.style.cssText='width:100%';
+    const label=document.createElement('div');
+    label.className='pos-slot-label';
+    label.style.cssText='text-align:center;margin-bottom:6px';
+    label.textContent='YOUR WRAPAROUND';
+    wrap.appendChild(label);
+    const img=document.createElement('img');
+    img.src=wraparoundPanoramaUrl;
+    img.style.cssText='width:100%;display:block;border-radius:8px;border:1px solid #003c8c;background:#0d0d0d';
+    wrap.appendChild(img);
+    const note=document.createElement('div');
+    note.className='note';
+    note.style.cssText='text-align:center;margin-top:6px';
+    note.textContent='One picture, all the way around the mug.';
+    wrap.appendChild(note);
+    row.appendChild(wrap);
+    const continueBtnWrap=document.getElementById('mugPanelsContinueBtn');
+    if(continueBtnWrap)continueBtnWrap.style.display='none';
+    return;
+  }
+
   const order=getSlotOrder();
 
   function makeSlot(pos,label){
