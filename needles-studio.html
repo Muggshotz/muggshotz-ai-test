@@ -2,7 +2,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head><link rel="manifest" href="needles-manifest.json">
-<!-- BUILD-MARKER: THE-PICKER-DRAWS-ITS-OWN-MUGS-v92 -->
+<!-- BUILD-MARKER: THE-STYLES-AS-THEY-ARE-v93 -->
 <!-- If you can see this comment on GitHub, this exact paste landed. -->
 <!-- If your live site's page source does NOT say -->
 <!-- "INSTANT-FIT-SCREEN-v47" right here, the upload/deploy did -->
@@ -12169,24 +12169,29 @@ const MUG3D = (function(){
     const g=new THREE.Group();
     const outer=new THREE.Mesh(new THREE.LatheGeometry(outerProfile(THREE,S),160),mats.white);
     outer.castShadow=true; outer.receiveShadow=true; g.add(outer);
-    // Per style, from the real product photos: the rim's top face carries
-    // the accent on every coloured style; Accented and Color Pop are
-    // coloured inside as well; Trimmed keeps a white inside under its
-    // coloured rim. The lathe below is rim-top-then-inside, so Trimmed gets
-    // its coloured rim from the accent material with the inside still white
-    // by splitting the geometry at the inner lip.
-    const rimAndInside=new THREE.LatheGeometry(innerProfile(THREE,S),160);
-    if(opts.styleName==='Trimmed'){
-      const seg=160, rows=innerProfile(THREE,S).length, perRow=seg*6, rimRows=12;
-      rimAndInside.addGroup(0, rimRows*perRow, 0);
-      rimAndInside.addGroup(rimRows*perRow, (rows-1-rimRows)*perRow, 1);
-      const inner=new THREE.Mesh(rimAndInside,[mats.accent,mats.white]);
-      inner.receiveShadow=true; g.add(inner);
-    } else {
-      const inner=new THREE.Mesh(rimAndInside,mats.accent);
-      inner.receiveShadow=true; g.add(inner);
-    }
-    const hand=new THREE.Mesh(handleGeo(THREE,S),[mats.white,mats.accent]);
+    // PER STYLE (Alyx, Sep 2026, definitive): "Trimmed -- think rimmed with a
+    // T for tail: the entire rim is coloured and the tail is the handle.
+    // Accented is only the inside, not the handle, not the rim, nothing on
+    // the outside. Color Pop is all three."
+    //   Classic White -- white throughout.
+    //   Trimmed       -- whole rim + handle coloured; white inside.
+    //   Accented      -- inside coloured; rim and handle white.
+    //   Color Pop     -- inside, rim and handle coloured.
+    // The rim and the inside are TWO lathes, not one with material groups:
+    // a LatheGeometry lays its triangles out by angle, not by row, so a
+    // group boundary meant for the lip landed around the circumference and
+    // drew every Trimmed rim half white, half colour. Two surfaces, two
+    // materials, no index arithmetic.
+    const style=opts.styleName||'Classic White';
+    const prof=innerProfile(THREE,S);
+    const rimGeo=new THREE.LatheGeometry(prof.slice(0,13),160);      // the half-round rim
+    const insideGeo=new THREE.LatheGeometry(prof.slice(12),160);     // inner wall and floor
+    const rimMat   = (style==='Trimmed'||style==='Color Pop') ? mats.accent : mats.white;
+    const insideMat= (style==='Accented'||style==='Color Pop') ? mats.accent : mats.white;
+    const rim=new THREE.Mesh(rimGeo,rimMat); rim.receiveShadow=true; g.add(rim);
+    const inside=new THREE.Mesh(insideGeo,insideMat); inside.receiveShadow=true; g.add(inside);
+    const handleColoured=(style==='Trimmed'||style==='Color Pop');
+    const hand=new THREE.Mesh(handleGeo(THREE,S), handleColoured?[mats.white,mats.accent]:[mats.white,mats.white]);
     hand.castShadow=true; hand.receiveShadow=true; g.add(hand);
     return g;
   }
