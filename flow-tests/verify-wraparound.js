@@ -885,6 +885,74 @@ scenarios.theFrameStudioHasAFadeSlider = async (page) => {
   return 'PASS: listed frames start at 40%, unlisted at none, and every one runs the full 0-100';
 };
 
+// THE HEIGHT SLIDER MAKES THE PICTURE TALLER (Alyx, Sep 2026): "the height
+// refuses to expand at all even though it should be at 150%". The hand-set
+// box used to be shrink-to-fit, so a 21:9 strip in a near-square opening hit
+// the width first and Height above that point did nothing. Now a box the
+// customer sets is FILLED. Measured on the real placement function with a
+// solid-colour 21:9 strip: the picture's drawn height must grow with the
+// slider, must stay inside the box, and must go back to shrink-to-fit on
+// Reset. Same function serves the wraparound strip, the three-panel strip
+// and a single picture, so this covers all three.
+scenarios.theHeightSliderMakesThePictureTaller = async (page) => {
+  const r = await page.evaluate(async () => {
+    const asset = FRAME_CATALOG['Crystal Champagne'].asset;
+    selectedFrame = 'Crystal Champagne'; windowSillChoice = null; product = 'mug';
+    // a 21:9 strip of pure blue -- trivially separable from a white base
+    const src = document.createElement('canvas'); src.width = 2100; src.height = 900;
+    src.getContext('2d').fillStyle = '#0000ff'; src.getContext('2d').fillRect(0, 0, 2100, 900);
+    const measure = async () => {
+      const c = document.createElement('canvas'); c.width = 1200; c.height = 900;
+      const ctx = c.getContext('2d');
+      await drawPhotoInsetForFrame(ctx, c, src, src.width, src.height);
+      const d = ctx.getImageData(0, 0, c.width, c.height).data;
+      const blueAt = (x, y) => { const i = (y * c.width + x) * 4; return d[i] < 80 && d[i + 1] < 80 && d[i + 2] > 150; };
+      // bounding box of the blue, so a shift shows up as a moved centre
+      let top = -1, bot = -1, left = 1e9, right = -1;
+      for (let y = 0; y < c.height; y++) for (let x = 0; x < c.width; x += 2) if (blueAt(x, y)) {
+        if (top < 0) top = y; bot = y; if (x < left) left = x; if (x > right) right = x;
+      }
+      return { h: bot - top, w: right - left, cx: (left + right) / 2, cy: (top + bot) / 2 };
+    };
+    const def = await getFrameDefaultCalibrationPct(asset);
+    delete customFrameCalibration[asset];
+    const untouched = await measure();
+    customFrameCalibration[asset] = { ...def };
+    const atDefault = await measure();
+    // 1. Height
+    const tallPct = Math.min(150, def.heightPct * 1.5);
+    customFrameCalibration[asset] = { ...def, heightPct: tallPct };
+    const taller = await measure();
+    const boxH = Math.round(900 * (tallPct / 100));
+    // 2. Width
+    customFrameCalibration[asset] = { ...def, widthPct: def.widthPct * 0.6 };
+    const narrower = await measure();
+    // 3. Left/Right
+    customFrameCalibration[asset] = { ...def, offsetXPct: 8 };
+    const shiftedRight = await measure();
+    // 4. Up/Down
+    customFrameCalibration[asset] = { ...def, offsetYPct: 8 };
+    const shiftedDown = await measure();
+    // 5. Edge Fade is measured by theFrameStudioHasAFadeSlider, same suite.
+    delete customFrameCalibration[asset];
+    const reset = await measure();
+    return { def, tallPct, untouched, atDefault, taller, boxH, narrower, shiftedRight, shiftedDown, reset };
+  });
+  if (!(r.taller.h > r.atDefault.h * 1.2))
+    return `FAIL: Height ${r.def.heightPct}% -> ${r.tallPct}% only took the picture from ${r.atDefault.h}px to ${r.taller.h}px tall`;
+  if (r.taller.h > r.boxH + 2)
+    return `FAIL: the picture (${r.taller.h}px) overflowed the box it was given (${r.boxH}px) — nothing is clipping it`;
+  if (!(r.narrower.w < r.atDefault.w * 0.75))
+    return `FAIL: Width at 60% of default only took the picture from ${r.atDefault.w}px to ${r.narrower.w}px wide`;
+  if (!(r.shiftedRight.cx > r.atDefault.cx + 40))
+    return `FAIL: Left/Right +8% moved the picture's centre from x=${r.atDefault.cx} to x=${r.shiftedRight.cx}`;
+  if (!(r.shiftedDown.cy > r.atDefault.cy + 30))
+    return `FAIL: Up/Down +8% moved the picture's centre from y=${r.atDefault.cy} to y=${r.shiftedDown.cy}`;
+  if (r.reset.h !== r.untouched.h)
+    return `FAIL: Reset did not return to shrink-to-fit (${r.reset.h}px vs ${r.untouched.h}px untouched)`;
+  return `PASS: Height ${Math.round(r.def.heightPct)}%->${Math.round(r.tallPct)}% makes the strip ${r.atDefault.h}->${r.taller.h}px tall inside its ${r.boxH}px box; Width 60% makes it ${r.atDefault.w}->${r.narrower.w}px wide; Left/Right +8% moves it ${Math.round(r.shiftedRight.cx - r.atDefault.cx)}px right; Up/Down +8% moves it ${Math.round(r.shiftedDown.cy - r.atDefault.cy)}px down; Reset returns to shrink-to-fit`;
+};
+
 // THE TOOLS BUTTON IS ON EVERY FRAME (Alyx, Sep 2026): "Almost all the
 // frames won't need it, but it doesn't hurt anything just to have it there
 // just in case."
