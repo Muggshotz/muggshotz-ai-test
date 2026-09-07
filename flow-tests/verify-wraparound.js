@@ -540,11 +540,20 @@ scenarios.threePanelPreviewIsNotTrimmed = async (page) => {
 };
 
 
-// THE SWITCHED PICTURE (Alyx, Sep 2026): the preview must be the very file
-// that goes on the mug, not a reassembly of the sliced panels. If a picture
-// goes in one end and a different picture comes out the other, something in
-// between switched it.
-scenarios.previewShowsTheMugWithoutTouchingThePrint = async (page, log, mockupBodies) => {
+// ONE SOURCE FOR THE SCREEN AND THE PRINT (Alyx, Sep 2026).
+//
+// This test used to assert the opposite -- that the screen showed the strip
+// while the print path kept baking from a stitch of the three sliced panels --
+// and it passed for a day while Alyx was looking at a preview that was not
+// what he was buying. The stitch is not the mug: it reassembles thirds that
+// have already been sliced, faded and cover-cropped, and it reads the three
+// panel records, which is exactly what applying a frame overwrites. That is
+// how a declined frame stayed on the finished artwork.
+//
+// The contract now: one picture, from one place. If a picture goes in one end
+// and a different picture comes out the other, something in between switched
+// it.
+scenarios.oneSourceForScreenAndPrint = async (page, log, mockupBodies) => {
   await mugToPrintStyle(page);
   await page.evaluate(() => pickMugPrintMode('wraparound'));
   await T(page, 1200);
@@ -553,27 +562,92 @@ scenarios.previewShowsTheMugWithoutTouchingThePrint = async (page, log, mockupBo
   await waitWrapDone(page);
   await T(page, 1000);
   const r = await page.evaluate(() => ({
-    shownOnScreen: (document.getElementById('revealArtworkImg') || {}).dataset?.wrapSrc || null,
     displayOverride: wrapDisplayOverrideUrl,
     toTheMug: wraparoundPanoramaUrl,
-    // What bakeFadeIntoDesigns() will slice into the three PRINTED designs.
+    // What bakeFadeIntoDesigns() bakes into the PRINTED designs.
     bakedFrom: revealOriginalArtworkUrls[0],
-    bakedFromIsStitched: String(revealOriginalArtworkUrls[0] || '').startsWith('data:'),
+    // The unframed original, kept so a frame can be taken back off.
+    base: wraparoundPanoramaBaseUrl,
+    unframedThirds: unframedWrapDesignUrls,
   }));
   if (!r.toTheMug) return 'FAIL: no panorama was kept for the mug at all';
   if (r.displayOverride !== r.toTheMug) {
-    return 'FAIL: the screen is not showing the mug\'s own strip: ' + JSON.stringify(r);
+    return "FAIL: the screen is not showing the mug's own strip: " + JSON.stringify(r);
   }
-  // The one that matters. revealOriginalArtworkUrls is baked into the printed
-  // designs on the Fade Edges path -- putting the already-faded panorama there
-  // double-fades and re-encodes the artwork, which showed up on the faces.
-  if (!r.bakedFromIsStitched) {
-    return 'FAIL: the PRINT path is baking from the panorama, not the stitched panels: ' + JSON.stringify(r);
+  if (r.bakedFrom !== r.toTheMug) {
+    return 'FAIL: the print path is baking from something other than the mug\'s own strip: ' + JSON.stringify(r);
   }
-  if (r.bakedFrom === r.toTheMug) {
-    return 'FAIL: preview and print path share a source again — the artwork will be double-faded: ' + JSON.stringify(r);
+  if (r.base !== r.toTheMug) {
+    return 'FAIL: the unframed original was not captured: ' + JSON.stringify(r);
   }
-  return 'PASS: the screen shows the mug\'s own strip while the print path still bakes from the stitched panels';
+  if (!r.unframedThirds || !r.unframedThirds.left || !r.unframedThirds.center || !r.unframedThirds.right) {
+    return 'FAIL: the unframed panel records were not captured: ' + JSON.stringify(r);
+  }
+
+  // A FRAME MUST COME BACK OFF (Alyx: "it doesn't remove the frame").
+  // Applying one overwrites the strip and all three panel records; No Thank
+  // You and Cancel both call restoreUnframedDesigns(), which has to undo it.
+  const undo = await page.evaluate(() => {
+    const framed = 'http://127.0.0.1:8788/__fake/framed-strip.jpg';
+    wraparoundPanoramaUrl = framed;
+    ['left', 'front', 'right'].forEach((pos) => {
+      const d = placements[pos] ? findDesignById(placements[pos]) : null;
+      if (d) d.url = framed;
+    });
+    restoreUnframedDesigns();
+    return {
+      strip: wraparoundPanoramaUrl,
+      left: (findDesignById(placements.left) || {}).url,
+      center: (findDesignById(placements.front) || {}).url,
+      right: (findDesignById(placements.right) || {}).url,
+    };
+  });
+  if (undo.strip !== r.base) {
+    return 'FAIL: the frame did not come off the mug\'s strip: ' + JSON.stringify(undo);
+  }
+  if (undo.left !== r.unframedThirds.left || undo.center !== r.unframedThirds.center || undo.right !== r.unframedThirds.right) {
+    return 'FAIL: the frame did not come off the panel records: ' + JSON.stringify(undo);
+  }
+  return 'PASS: screen, print and mug all read one strip, and a frame comes back off both it and the panels';
+};
+
+// THE FRAME GOES ON THE WHOLE STRIP, NOT ON THREE PANELS (Alyx, Sep 2026).
+// compositeFrameAcrossThreePanels cover-crops each third into the centre
+// panel's slot and, because seamLeftCoveragePct/seamRightCoveragePct default
+// to 0, vertically zooms the OUTER two to 0.8 and stretches them back to full
+// height -- 25% taller than the untouched middle one. The horizon stepped at
+// both seams and a face crossing a seam came out as two mismatched halves.
+// The panorama path frames the uncut strip as one picture instead.
+scenarios.frameGoesOnTheWholeStrip = async (page) => {
+  await openStudio(page);
+  const r = await page.evaluate(async () => {
+    if (typeof compositeFrameAcrossPanorama !== 'function') return { missing: true };
+    const strip = 'http://127.0.0.1:8788/__fake/panorama.jpg';
+    const img = await loadImageFromUrl(strip);
+    const out = await compositeFrameAcrossPanorama(strip);
+    const back = await loadImageFromUrl(out.combined);
+    const l = await loadImageFromUrl(out.left);
+    const c = await loadImageFromUrl(out.center);
+    return {
+      srcW: img.naturalWidth, srcH: img.naturalHeight,
+      outW: back.naturalWidth, outH: back.naturalHeight,
+      leftW: l.naturalWidth, leftH: l.naturalHeight,
+      centerW: c.naturalWidth, centerH: c.naturalHeight,
+    };
+  });
+  if (r.missing) return 'FAIL: compositeFrameAcrossPanorama is not defined';
+  if (r.outW !== r.srcW || r.outH !== r.srcH) {
+    return 'FAIL: framing changed the strip\'s own dimensions: ' + JSON.stringify(r);
+  }
+  // Every panel comes off the same canvas at the same height -- no outer-panel
+  // zoom, so nothing can step at a seam.
+  if (r.leftH !== r.centerH || r.leftH !== r.outH) {
+    return 'FAIL: the panels are not all the strip\'s full height: ' + JSON.stringify(r);
+  }
+  if (r.leftW !== r.centerW) {
+    return 'FAIL: the panels are not equal thirds: ' + JSON.stringify(r);
+  }
+  return `PASS: the frame goes on the whole strip (${r.outW}x${r.outH}), sliced afterwards into equal full-height thirds`;
 };
 
 

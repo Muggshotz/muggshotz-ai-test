@@ -2,7 +2,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head><link rel="manifest" href="needles-manifest.json">
-<!-- BUILD-MARKER: BACK-TO-THE-617-BUILD-v74 -->
+<!-- BUILD-MARKER: ONE-IMAGE-NOT-THREE-v75 -->
 <!-- If you can see this comment on GitHub, this exact paste landed. -->
 <!-- If your live site's page source does NOT say -->
 <!-- "INSTANT-FIT-SCREEN-v47" right here, the upload/deploy did -->
@@ -3406,6 +3406,17 @@ let lastWraparoundMethod = null;
 // (Three Panels, the classic per-panel fallback), and the server falls back to
 // reassembling the thirds when it is null.
 let wraparoundPanoramaUrl = null;
+// The same strip as generated, before any frame or window sill was drawn
+// on it. wraparoundPanoramaUrl gets overwritten when a frame is applied;
+// this one never does, so re-framing always starts from a clean picture
+// instead of stacking a second frame on top of the first, and declining a
+// frame has something true to go back to.
+let wraparoundPanoramaBaseUrl = null;
+// The three panel records exactly as they were registered when the
+// panorama generated -- the unframed thirds. Restoring these is what
+// actually takes a frame back off; pendingWraparoundRaw holds the raw
+// pre-edge-fade thirds, which is not the same picture.
+let unframedWrapDesignUrls = null;
 let windowSillChoice = null;
 // Per-session customer overrides for Window Sill fit, keyed by asset path
 // same as WINDOW_SILL_CALIBRATION. Set live via the Preview & Fit Your
@@ -10071,32 +10082,47 @@ async function enterRevealStage(){
       seamRawRightUrl=rightDesign.url;
       seamLeftOverlapPx=0;
       seamRightOverlapPx=0;
-      // THE PREVIEW IS THE MUG'S OWN PICTURE (Alyx, Sep 2026). This used to
-      // re-glue the three sliced panels back into a strip, while the mockup
-      // and the print file were built from the uncut panorama the server
-      // returned. Two different pictures, and the customer judged the wrap on
-      // the wrong one: the panels have already had their outer edges faded to
-      // white, the right third can differ from the other two by a pixel or
-      // two (it takes the remainder of the width), and stitchThreePanelsRaw
-      // cover-crops each one into the centre panel's exact slot to close any
-      // gap -- so the reassembly drifts at the joins even when the panorama
-      // it came from is flawless. Alyx put it plainly: if a picture goes in
-      // one end and a different picture comes out the other, something in
-      // between switched it. When the uncut strip exists, show that. The
-      // stitch stays for the classic fallback, which has no panorama and
-      // really is three independently generated panels.
-      // REVERTED, and it must stay this way. This variable is NOT a preview:
-      // bakeFadeIntoDesigns() takes revealOriginalArtworkUrls[0] on the Fade
-      // Edges path, fades it, slices it into thirds and OVERWRITES the three
-      // printed designs with those slices. Pointing it at the uncut panorama
-      // therefore changed the artwork itself -- the panorama already carries
-      // its own baked edge fade, so it got faded a second time and re-encoded
-      // an extra time on the way to the mug. Alyx caught it immediately, on
-      // the faces, which is the one thing that must never be traded for a
-      // tidier preview. The bake keeps the stitched input it has always had.
-      const stitched=await stitchThreePanelsRaw(centerDesign.url,leftDesign.url,rightDesign.url);
-      revealOriginalArtworkUrls=[stitched];
-      // The mug's own strip, for the SCREEN only.
+      // ONE PICTURE, FROM ONE PLACE (Alyx, Sep 2026).
+      //
+      // A wraparound panorama exists in this file in two shapes: the uncut
+      // strip the server returned (wraparoundPanoramaUrl), and the three
+      // thirds it was sliced into and registered as panel designs. The mug
+      // and the print file have always been built from the strip. Several
+      // screens were built from the thirds. They are not the same picture.
+      //
+      // stitchThreePanelsRaw glues the thirds back together, but it cannot
+      // give back what slicing took: the outer edges have already been faded,
+      // the right third can differ in width by a pixel or two (it takes the
+      // remainder), and each panel is cover-cropped into the centre panel's
+      // exact slot to close any gap -- so the reassembly drifts at the joins
+      // even when the panorama it came from is flawless. Worse, the three
+      // panel records are what the frame apply overwrites, so the stitch
+      // carried a frame the customer had already declined.
+      //
+      // So the source is the strip whenever there is one. Alyx put it
+      // plainly: if a picture goes in one end and a different picture comes
+      // out the other, something in between switched it.
+      //
+      // A NOTE ON THE DOUBLE-FADE REVERT that used to be recorded here.
+      // revealOriginalArtworkUrls is not a preview -- bakeFadeIntoDesigns()
+      // fades it and OVERWRITES the printed designs -- so an earlier attempt
+      // to point it at the panorama was reverted on the grounds that the
+      // panorama already carries its own baked edge fade. Half right. It does
+      // carry one, but so do the three thirds: generate()'s wraparoundPanorama
+      // branch fades the strip AND each panel, from the same slider, in the
+      // same pass. Both candidates carry exactly one fade. That revert was
+      // guarding a difference that was never there, and the cost of it was a
+      // day of the preview and the product being two different pictures --
+      // with the preview the better one, so the problem stayed hidden.
+      //
+      // The classic per-panel fallback has no strip, and its panels really are
+      // three independent generations, so it keeps the stitch.
+      const wrapSource=(lastWraparoundMethod==='panorama'&&wraparoundPanoramaUrl)
+        ? wraparoundPanoramaUrl
+        : await stitchThreePanelsRaw(centerDesign.url,leftDesign.url,rightDesign.url);
+      revealOriginalArtworkUrls=[wrapSource];
+      // Now the same picture as the source on the panorama path. Kept so the
+      // classic fallback still shows the strip on screen.
       wrapDisplayOverrideUrl=wraparoundPanoramaUrl||null;
     }catch(err){
       console.error('Could not stitch the panorama for Reveal:',err);
@@ -10345,10 +10371,16 @@ function chooseRevealPath(choice){
     return;
   }
 
-  // 'none' -- no frame. Edges were already settled on the fade page a
-  // moment ago, so there is nothing left to ask: straight to the mockup,
-  // carrying whatever fade they chose. (The old Hard/Fade overlay below is
-  // left intact for the paths that still reach it.)
+  // 'none' -- no frame. That has to mean no frame LEFT OVER either: applying
+  // one overwrites the mug's strip and the three panel records, and until now
+  // nothing put them back, so a customer who tried a frame, went Back, and
+  // then said No Thank You still got the frame on their mug. The fade is not
+  // a frame and survives this (see bakeFadeIntoDesigns).
+  restoreUnframedDesigns();
+  // Edges were already settled on the fade page a moment ago, so there is
+  // nothing left to ask: straight to the mockup, carrying whatever fade they
+  // chose. (The old Hard/Fade overlay below is left intact for the paths that
+  // still reach it.)
   if(frameFadeSettled){
     frameFadeSettled=false;
     document.body.classList.remove('step-locked');
@@ -10387,8 +10419,10 @@ function showEdgeQuestion(){
     if(revealImg){
       revealImg.style.display='block';
       // Show the mug's own strip when we have it, the stitched fallback when
-      // we do not. Display only -- revealOriginalArtworkUrls is what the print
-      // path bakes from, and is deliberately left alone.
+      // we do not. On the panorama path these are now the same picture --
+      // revealOriginalArtworkUrls, which is what the print path bakes from,
+      // is the strip too (see enterRevealStage). On the classic fallback they
+      // still differ, and there this is display only.
       const shown=wrapDisplayOverrideUrl||revealOriginalArtworkUrls[0];
       revealImg.src=shown;
       revealImg.dataset.wrapSrc=shown;
@@ -10720,11 +10754,24 @@ async function bakeFadeIntoDesigns(fadeAmountPct){
   } else {
     const faded=await renderFadedArtwork(revealOriginalArtworkUrls[0],hex,fadeAmountPct);
     const slices=await sliceStitchedIntoThirds(faded);
-    const [leftUrl,centerUrl,rightUrl]=await Promise.all([
+    const [leftUrl,centerUrl,rightUrl,wholeUrl]=await Promise.all([
       uploadCompositedImage(slices.left,strict),
       uploadCompositedImage(slices.center,strict),
-      uploadCompositedImage(slices.right,strict)
+      uploadCompositedImage(slices.right,strict),
+      (lastWraparoundMethod==='panorama')?uploadCompositedImage(faded,strict):Promise.resolve(null)
     ]);
+    // The strip is what the mug prints on the panorama path, so the fade has
+    // to land on it as well. Without this the three panel records came back
+    // faded while the strip stayed sharp -- the same split between the two
+    // representations as the frame, pointing the other way.
+    if(wholeUrl){
+      wraparoundPanoramaUrl=wholeUrl;
+      // The fade is not a frame -- it must survive taking a frame back off.
+      // These two are the "everything except the frame" state that
+      // restoreUnframedDesigns() puts back, so the fade belongs in them.
+      wraparoundPanoramaBaseUrl=wholeUrl;
+      unframedWrapDesignUrls={left:leftUrl,center:centerUrl,right:rightUrl};
+    }
     const leftDesign=findDesignById(placements.left);
     if(leftDesign)leftDesign.url=leftUrl;
     const centerDesign=findDesignById(placements.front);
@@ -11152,6 +11199,8 @@ function unmountFrameStudio(){
 function cancelAccessorizeToOffer(){
   revealFlowActive=false;
   clearTimeout(revealAutoApplyTimer);
+  // Cancel means the frame never happened -- same as No Thank You above.
+  restoreUnframedDesigns();
   pendingWraparoundRaw=null;
   pending40ozRaw=null;
   restoreFrameCardsToHome();
@@ -11484,6 +11533,20 @@ function goBackFromFinalMockup(){
 function restoreUnframedDesigns(){
   const snap=unframedDesignSnapshot;
   if(!snap){
+    // THE PANORAMA PATH (Sep 2026, Alyx: "it doesn't remove the frame").
+    // Applying a frame overwrites both the mug's strip and the three panel
+    // records. Nothing here ever put either of them back, so a declined or
+    // backed-out frame stayed baked into every source the reveal and the
+    // print read from. Restore both from what was registered at generation.
+    if(wraparoundPanoramaBaseUrl)wraparoundPanoramaUrl=wraparoundPanoramaBaseUrl;
+    if(unframedWrapDesignUrls){
+      const put=(pos,url)=>{const d=placements[pos]?findDesignById(placements[pos]):null; if(d&&url)d.url=url;};
+      put('left',unframedWrapDesignUrls.left);
+      put('front',unframedWrapDesignUrls.center);
+      put('right',unframedWrapDesignUrls.right);
+      saveMugState();
+      return;
+    }
     if(!pendingWraparoundRaw)return;
     const restore=(pos,url)=>{const d=placements[pos]?findDesignById(placements[pos]):null; if(d&&url)d.url=url;};
     restore('left',pendingWraparoundRaw.left);
@@ -11784,6 +11847,45 @@ function loadImageFromUrl(url){
 // default; a customer-set value always wins once they've touched the
 // slider.
 let frameInsetOverridePct=null;
+
+// THE WRAPAROUND IS ONE IMAGE, NOT THREE (Sep 2026, Alyx).
+// Frame the whole strip as a single picture, then slice for the three panel
+// records at the very end. compositeFrameAcrossThreePanels below does the
+// opposite -- reassembles three thirds and frames the result -- which is
+// right for the classic fallback, where the panels really are three separate
+// generations, and wrong here. Its per-panel cover-crop and its default 0.8
+// vertical zoom on the OUTER two panels (seamLeftCoveragePct defaults to 0)
+// stretched those two 25% taller than the untouched middle one: the horizon
+// stepped at both seams, bands present in the middle third were cropped away
+// from the outer two, and a face crossing a seam came out as two mismatched
+// halves. The mug never did any of that -- it prints the uncut strip -- so
+// the framed preview was showing a picture the product would never be.
+async function compositeFrameAcrossPanorama(stripUrl){
+  const img=await loadImageFromUrl(stripUrl);
+  const stripW=img.naturalWidth;
+  const h=img.naturalHeight;
+  const panelW=Math.floor(stripW/3);
+  const combined=document.createElement('canvas');
+  combined.width=stripW;
+  combined.height=h;
+  const ctx=combined.getContext('2d');
+  await drawPhotoInsetForFrame(ctx,combined,img,stripW,h);
+  // Same 5% default as compositeFrameAcrossThreePanels -- it matches
+  // CROP_FRACTION/2 in create-printify-order.js so the frame's ends survive
+  // the server's circumference crop. See that function's comment.
+  await drawFrameOnCanvas(ctx,combined,(frameInsetOverridePct!=null?frameInsetOverridePct:5)/100);
+  await drawWindowSillOnCanvas(ctx,combined);
+  const combinedDataUrl=combined.toDataURL('image/jpeg',0.92);
+  function sliceThird(i){
+    const w=(i===2?stripW-panelW*2:panelW);
+    const c=document.createElement('canvas');
+    c.width=w;
+    c.height=h;
+    c.getContext('2d').drawImage(combined,i*panelW,0,w,h,0,0,w,h);
+    return c.toDataURL('image/jpeg',0.92);
+  }
+  return { left: sliceThird(0), center: sliceThird(1), right: sliceThird(2), combined: combinedDataUrl };
+}
 
 async function compositeFrameAcrossThreePanels(centerUrl,leftUrl,rightUrl){
   const [leftImg,centerImg,rightImg]=await Promise.all([
@@ -12087,7 +12189,11 @@ async function updateAccessorizePreview(){
       renderAccessorizeStripThree(framed);
     } else if(pendingWraparoundRaw){
       if(selectedFrame||windowSillChoice){
-        const framed=await compositeFrameAcrossThreePanels(pendingWraparoundRaw.center,pendingWraparoundRaw.left,pendingWraparoundRaw.right);
+        // Draw the frame on the mug's own strip when there is one. The
+        // three-panel reassembly is for the classic fallback only.
+        const framed=(lastWraparoundMethod==='panorama'&&wraparoundPanoramaBaseUrl)
+          ? await compositeFrameAcrossPanorama(wraparoundPanoramaBaseUrl)
+          : await compositeFrameAcrossThreePanels(pendingWraparoundRaw.center,pendingWraparoundRaw.left,pendingWraparoundRaw.right);
         renderAccessorizeStrip(framed.combined);
         // Only the seamless-wrap path (Wraparound, frame selected) is
         // ever subject to the server-side circumference-compensation
@@ -12368,7 +12474,12 @@ async function applyAccessorizeFrame(){
       saveMugState();
     } else if(pendingWraparoundRaw && (selectedFrame||windowSillChoice)){
       if(strip)strip.innerHTML='<div class="note" style="width:100%;text-align:center"><span class="spinner"></span>Saving your framed design...</div>';
-      const framed=await compositeFrameAcrossThreePanels(pendingWraparoundRaw.center,pendingWraparoundRaw.left,pendingWraparoundRaw.right);
+      // Always source from the UNFRAMED strip, never from wraparoundPanoramaUrl
+      // -- that one may already carry a frame from an earlier pass, and
+      // framing it again would stack a second frame inside the first.
+      const framed=(lastWraparoundMethod==='panorama'&&wraparoundPanoramaBaseUrl)
+        ? await compositeFrameAcrossPanorama(wraparoundPanoramaBaseUrl)
+        : await compositeFrameAcrossThreePanels(pendingWraparoundRaw.center,pendingWraparoundRaw.left,pendingWraparoundRaw.right);
       // framed.combined is the full-width strip this function already builds
       // (and frames as one piece) before slicing it into thirds. Keeping it
       // means the printed file comes from the same canvas the frame was drawn
@@ -13118,6 +13229,7 @@ Use rich environmental storytelling while keeping the face as the primary focal 
         panoramaWhole=await applyEdgeFadeToImageUrl(panoramaWhole,{top:true,bottom:true,left:true,right:true},getSelectedProductColorHex(),edgeFadeAmountPct);
       }
       wraparoundPanoramaUrl=panoramaWhole;
+      wraparoundPanoramaBaseUrl=panoramaWhole;
       if(!skipEdgeFade){
         centerUrl=await applyEdgeFadeToImageUrl(centerUrl,{top:true,bottom:true,left:false,right:false},getSelectedProductColorHex(),edgeFadeAmountPct);
         leftUrl=await applyEdgeFadeToImageUrl(leftUrl,{top:true,bottom:true,left:true,right:false},getSelectedProductColorHex(),edgeFadeAmountPct);
@@ -13128,6 +13240,7 @@ Use rich environmental storytelling while keeping the face as the primary focal 
       placements.front=currentDesignId;
       placements.left=addToRecentDesigns(leftUrl);
       placements.right=addToRecentDesigns(rightUrl);
+      unframedWrapDesignUrls={left:leftUrl,center:centerUrl,right:rightUrl};
 
       lastWraparoundMethod='panorama';
       showWrapMethodBanner('panorama');
@@ -13406,7 +13519,7 @@ async function makeTestSingleZonePanorama(side){
       // No panorama exists on this path: left and right were generated
       // independently by "continue this scene", so there is no single strip to
       // print from and the server must reassemble the panels as before.
-      wraparoundPanoramaUrl=null;
+      wraparoundPanoramaUrl=null;wraparoundPanoramaBaseUrl=null;unframedWrapDesignUrls=null;
       pendingWraparoundRaw = { left: rawLeftUrl, center: rawResultUrl, right: rawRightUrl };
 
       document.getElementById('wraparoundStandbyPrompt').style.display='none';
@@ -13590,8 +13703,18 @@ let coverMePanelExplicit={left:false,right:false};
 let pendingSlotTarget=null;
 let libraryOpen=false;
 
+// COLLIDING DESIGN IDS (Sep 2026). This was 'design-'+Date.now() alone, and
+// the wraparound registers its three panels in three back-to-back calls --
+// which land in the SAME millisecond on any machine that isn't struggling. All
+// three then got an identical id, so findDesignById() returned the first
+// matching record for all three slots: the panels stopped being independent
+// records, LEFT and RIGHT could show the same picture, and writing one slot's
+// url wrote another's. A counter makes the id actually unique. Nothing parses
+// these ids -- they are only ever compared to each other -- so the format is
+// free to change.
+let recentDesignIdSeq=0;
 function addToRecentDesigns(url){
-  const designId='design-'+Date.now();
+  const designId='design-'+Date.now()+'-'+(++recentDesignIdSeq);
   recentDesigns.push({id:designId,url:url});
   document.getElementById('positionHolderCard').style.display='block';
   renderRecentDesigns();
@@ -13796,7 +13919,7 @@ function clearAllDesigns(){
   placementAdjust={left:defaultPanelAdjust(),front:defaultPanelAdjust(),right:defaultPanelAdjust()};
   // Same artwork, same lifetime -- a stale panorama would otherwise ship
   // the previous design's strip to Printify alongside fresh placements.
-  wraparoundPanoramaUrl=null;
+  wraparoundPanoramaUrl=null;wraparoundPanoramaBaseUrl=null;unframedWrapDesignUrls=null;
   coverMeLastRemoved={left:null,right:null,front:null};
   coverMePanelExplicit={left:false,right:false};
   currentDesignId=null;
@@ -14679,7 +14802,7 @@ function recallLastGeneratedImage(){
     // approval could never have placed it. Register the design, lift the
     // spotlight, and route to the product picker when no product is chosen
     // yet; approval follows once the colour is picked.
-    if(!currentDesignId){currentDesignId='design-'+Date.now();}
+    if(!currentDesignId){currentDesignId='design-'+Date.now()+'-'+(++recentDesignIdSeq);}
     if(!findDesignById(currentDesignId)){recentDesigns.push({id:currentDesignId,url:saved.hosted||saved.working});saveMugState();}
     lastHostedResultUrl=saved.hosted||null;
     const startOver=document.getElementById('startOverBtn');
@@ -14741,7 +14864,7 @@ function purgeStaleSessionOnEntry(){
   placementAdjust={left:defaultPanelAdjust(),front:defaultPanelAdjust(),right:defaultPanelAdjust()};
   // Same artwork, same lifetime -- a stale panorama would otherwise ship
   // the previous design's strip to Printify alongside fresh placements.
-  wraparoundPanoramaUrl=null;
+  wraparoundPanoramaUrl=null;wraparoundPanoramaBaseUrl=null;unframedWrapDesignUrls=null;
   coverMeLastRemoved={left:null,right:null,front:null};
   currentDesignId=null;
   return true;
@@ -14802,7 +14925,7 @@ function resetEverythingFreshStart(){
   placementAdjust={left:defaultPanelAdjust(),front:defaultPanelAdjust(),right:defaultPanelAdjust()};
   // Same artwork, same lifetime -- a stale panorama would otherwise ship
   // the previous design's strip to Printify alongside fresh placements.
-  wraparoundPanoramaUrl=null;
+  wraparoundPanoramaUrl=null;wraparoundPanoramaBaseUrl=null;unframedWrapDesignUrls=null;
   coverMeLastRemoved={left:null,right:null,front:null};
   coverMePanelExplicit={left:false,right:false};
   try{localStorage.removeItem('muggshotz_mug_state');}catch(e){}
