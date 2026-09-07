@@ -864,7 +864,20 @@ scenarios.theFrameStudioHasAFadeSlider = async (page) => {
     out.floored = frameStudioFadeAmount();
     sl.value = '60'; handleFrameFadeSliderChange();
     out.raised = frameStudioFadeAmount();
-    out.sourceFaded = String(await wrapSourceForFrame()).startsWith('data:');
+    // v94: the fade is painted on the box inside the composite, so ask the
+    // composite whether the raised fade whitened the frame's opening.
+    const whiteShare = async (pct) => {
+      const framed = await compositeFrameAcrossPanorama(wraparoundPanoramaBaseUrl, pct);
+      const im = await loadImageFromUrl(framed.combined);
+      const c = document.createElement('canvas');
+      c.width = im.naturalWidth; c.height = im.naturalHeight;
+      const ctx = c.getContext('2d'); ctx.drawImage(im, 0, 0);
+      const frac = await getFrameInsetFraction(FRAME_CATALOG[f].asset);
+      const d = ctx.getImageData(Math.floor(frac.x * c.width), Math.floor(frac.y * c.height), Math.floor(frac.w * c.width), Math.floor(frac.h * c.height)).data;
+      let w = 0; for (let k = 0; k < d.length; k += 4) if (d[k] > 215 && d[k + 1] > 215 && d[k + 2] > 215) w++;
+      return w / (d.length / 4);
+    };
+    out.sourceFaded = (await whiteShare(frameStudioFadeAmount())) - (await whiteShare(0)) > 0.08;
     return out;
   }, frame);
 
@@ -951,6 +964,108 @@ scenarios.theHeightSliderMakesThePictureTaller = async (page) => {
   if (r.reset.h !== r.untouched.h)
     return `FAIL: Reset did not return to shrink-to-fit (${r.reset.h}px vs ${r.untouched.h}px untouched)`;
   return `PASS: Height ${Math.round(r.def.heightPct)}%->${Math.round(r.tallPct)}% makes the strip ${r.atDefault.h}->${r.taller.h}px tall inside its ${r.boxH}px box; Width 60% makes it ${r.atDefault.w}->${r.narrower.w}px wide; Left/Right +8% moves it ${Math.round(r.shiftedRight.cx - r.atDefault.cx)}px right; Up/Down +8% moves it ${Math.round(r.shiftedDown.cy - r.atDefault.cy)}px down; Reset returns to shrink-to-fit`;
+};
+
+// THE BUTTON UNDER THE PICTURE (Alyx, v94): "the button to go ahead and
+// generate is all the way the hell at the bottom, merely vaguely named
+// Satisfied?". An Apply Frame -- Continue button now sits in the left
+// column right under the picture, and Satisfied? stays at the bottom of the
+// catalogue as well ("do that as an and too"). Both go the same way.
+scenarios.theApplyFrameButtonSitsUnderThePicture = async (page) => {
+  const r = await page.evaluate(async () => {
+    product = 'mug'; mugPrintMode = 'wraparound';
+    revealFlowActive = true; revealFlowThreePanel = false; frameOfferFromMockup = false;
+    lastWraparoundMethod = 'panorama';
+    wraparoundPanoramaBaseUrl = 'http://127.0.0.1:8788/__fake/panorama.jpg';
+    wraparoundPanoramaUrl = wraparoundPanoramaBaseUrl;
+    pendingWraparoundRaw = { left: 'a', center: 'b', right: 'c' };
+    selectedFrame = 'Mirror Mirror'; windowSillChoice = null; frameStudioFadePct = null;
+    showAccessorizeStep();
+    await updateAccessorizePreview();
+    if (accessorizePreviewInFlight) await accessorizePreviewInFlight;
+    const btn = document.getElementById('accessorizeApplyFrameBtn');
+    const satisfied = document.getElementById('frameCatalogSatisfiedBtn');
+    const strip = document.getElementById('accessorizePreviewStrip');
+    const vis = (el) => !!el && el.offsetParent !== null;
+    return {
+      shown: vis(btn), label: btn ? btn.textContent.trim() : null,
+      onclick: btn ? btn.getAttribute('onclick') : null,
+      inLeftColumn: !!btn && !!btn.closest('.fsLeft'),
+      belowPicture: !!btn && !!strip && btn.getBoundingClientRect().top >= strip.getBoundingClientRect().bottom - 1,
+      satisfiedStillThere: vis(satisfied) && satisfied.getAttribute('onclick') === 'applyAccessorizeFrame()',
+    };
+  });
+  if (!r.shown) return 'FAIL: no Apply Frame button is showing in the studio: ' + JSON.stringify(r);
+  if (!/Apply Frame/.test(r.label) || !/Continue/.test(r.label)) return `FAIL: the button reads "${r.label}"`;
+  if (r.onclick !== 'applyAccessorizeFrame()') return `FAIL: the button is wired to ${r.onclick}`;
+  if (!r.inLeftColumn) return 'FAIL: the button is not in the left column with the picture';
+  if (!r.belowPicture) return 'FAIL: the button is not under the picture: ' + JSON.stringify(r);
+  if (!r.satisfiedStillThere) return 'FAIL: Satisfied? at the bottom of the catalogue was lost: ' + JSON.stringify(r);
+  return `PASS: "${r.label}" sits under the picture in the left column, Satisfied? still at the bottom, both wired the same`;
+};
+
+// THE FRAMES ARE WARMED WHEN THE STUDIO OPENS (v94, with Alyx's go-ahead).
+// Every frame file in the catalogue is fetched and its opening measured in
+// the background as soon as the studio mounts, so the first frame tapped
+// draws instead of downloading.
+scenarios.theFramesAreWarmedWhenTheStudioOpens = async (page) => {
+  const r = await page.evaluate(async () => {
+    product = 'mug'; mugPrintMode = 'wraparound';
+    revealFlowActive = true; revealFlowThreePanel = false; frameOfferFromMockup = false;
+    lastWraparoundMethod = 'panorama';
+    wraparoundPanoramaBaseUrl = 'http://127.0.0.1:8788/__fake/panorama.jpg';
+    wraparoundPanoramaUrl = wraparoundPanoramaBaseUrl;
+    pendingWraparoundRaw = {
+      left: 'http://127.0.0.1:8788/__fake/pano-left.jpg',
+      center: 'http://127.0.0.1:8788/__fake/pano-center.jpg',
+      right: 'http://127.0.0.1:8788/__fake/pano-right.jpg',
+    };
+    selectedFrame = null; windowSillChoice = null;
+    Object.keys(frameInsetCache).forEach((k) => delete frameInsetCache[k]);
+    frameStudioWarmed = false;
+    const assets = Object.values(FRAME_CATALOG).filter((d) => d.type === 'image' && d.asset).map((d) => d.asset);
+    const before = Object.keys(frameInsetCache).length;
+    showAccessorizeStep();
+    const t0 = performance.now();
+    while (Object.keys(frameInsetCache).length < assets.length && performance.now() - t0 < 20000) {
+      await new Promise((r2) => setTimeout(r2, 100));
+    }
+    const missing = assets.filter((a) => !frameInsetCache[a]);
+    return { before, total: assets.length, warmed: assets.length - missing.length, missing, ms: Math.round(performance.now() - t0) };
+  });
+  if (r.before !== 0) return `FAIL: the cache was not empty at the start (${r.before})`;
+  if (r.missing.length) return `FAIL: ${r.warmed}/${r.total} frames warmed after ${r.ms}ms, still cold: ${r.missing.join(', ')}`;
+  return `PASS: all ${r.total} frame files loaded and measured in the background within ${r.ms}ms of the studio opening`;
+};
+
+// ART STYLE HAS A BACK (Alyx, v94): "There is no back button anywhere on
+// this page... My only recourse is to completely exit the entire program."
+// Every panel gets a Back. Here Back is back to the photo: the spotlight
+// lifts, the step puts itself away, and the upload boards are back in view.
+scenarios.artStyleHasABackButton = async (page) => {
+  const r = await page.evaluate(async () => {
+    const back = document.getElementById('styleBackBtn');
+    const vis = (el) => !!el && el.offsetParent !== null;
+    const out = { shownAfterUpload: vis(back), label: back ? back.textContent.trim() : null,
+      spotlitBefore: document.body.classList.contains('style-focus') };
+    if (back) back.click();
+    await new Promise((r2) => setTimeout(r2, 900));
+    out.spotlitAfter = document.body.classList.contains('style-focus');
+    out.continueHidden = !vis(document.getElementById('styleContinueBtn'));
+    out.forkHidden = !vis(document.getElementById('postUploadForkRow'));
+    const up = document.getElementById('uploadPhotoCard').getBoundingClientRect();
+    out.uploadInView = up.bottom > 0 && up.top < window.innerHeight;
+    out.boardStillTappable = !!document.getElementById('uploadZone') && !!document.getElementById('aiCollabUploadBtn');
+    return out;
+  });
+  if (!r.shownAfterUpload) return 'FAIL: no Back button under Art Style after the photo lands: ' + JSON.stringify(r);
+  if (!/Back/.test(r.label)) return `FAIL: the button reads "${r.label}"`;
+  if (!r.spotlitBefore) return 'FAIL: Art Style was not spotlit before Back (test setup)';
+  if (r.spotlitAfter) return 'FAIL: Back left the Art Style spotlight on';
+  if (!r.continueHidden || !r.forkHidden) return 'FAIL: Back left the step on screen: ' + JSON.stringify(r);
+  if (!r.uploadInView) return 'FAIL: Back did not bring the upload boards into view: ' + JSON.stringify(r);
+  if (!r.boardStillTappable) return 'FAIL: the upload boards are gone';
+  return `PASS: "${r.label}" under Art Style lifts the spotlight, puts the step away and lands on the upload boards`;
 };
 
 // THE TOOLS BUTTON IS ON EVERY FRAME (Alyx, Sep 2026): "Almost all the
