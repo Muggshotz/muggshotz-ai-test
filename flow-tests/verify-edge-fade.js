@@ -321,6 +321,82 @@ scenarios.aFadingFrameIsNeverOfferedHardEdges = async (page) => {
   return 'PASS: the twelve skip the question, start at 40% with a 15% floor, and the floor does not leak';
 };
 
+// THE FADE MUST ACTUALLY BE ON THE PICTURE (Alyx, Sep 2026).
+//
+// This test exists because the first cut of the forced fade shipped green and
+// did nothing. The fade was wired to the Hard/Fade question -- a screen that
+// only appears when a customer says No Thank You to frames -- so it fired for
+// everyone EXCEPT the people choosing the twelve frames it was built for.
+// The tests passed because they checked that the question screen behaved,
+// never that a framed picture came out faded.
+//
+// So this one reads pixels. It cannot pass unless the strip a frame is drawn
+// onto has genuinely been faded toward the product colour. The fade is an
+// elliptical vignette by design ("like a cloud, vaguely oval"), so the
+// corners go to the product colour and the centre stays untouched -- that is
+// what gets measured.
+scenarios.aFadingFrameActuallyGetsFaded = async (page) => {
+  const r = await page.evaluate(async () => {
+    wraparoundPanoramaBaseUrl = 'http://127.0.0.1:8788/__fake/panorama.jpg';
+    lastWraparoundMethod = 'panorama';
+    revealFadeSliderTouched = false;
+    product = 'mug';
+    const sample = async (url) => {
+      const im = await loadImageFromUrl(url);
+      const c = document.createElement('canvas');
+      c.width = im.naturalWidth; c.height = im.naturalHeight;
+      const ctx = c.getContext('2d');
+      ctx.drawImage(im, 0, 0);
+      const px = (x, y) => { const d = ctx.getImageData(x, y, 1, 1).data; return [d[0], d[1], d[2]]; };
+      return {
+        corner: px(2, 2),
+        centre: px(Math.floor(im.naturalWidth / 2), Math.floor(im.naturalHeight / 2)),
+      };
+    };
+    windowSillChoice = null;
+    selectedFrame = 'Mirror Mirror';                  // on the list
+    const fadingUrl = await wrapSourceForFrame();
+    const fading = await sample(fadingUrl);
+    const pct = requiredFadePctForFrame();
+    selectedFrame = 'Ornate Gold';                    // not on the list
+    const plainUrl = await wrapSourceForFrame();
+    const plain = await sample(plainUrl);
+    return {
+      pct,
+      fadingUrl, plainUrl,
+      base: wraparoundPanoramaBaseUrl,
+      fadingCorner: fading.corner, fadingCentre: fading.centre,
+      plainCorner: plain.corner, plainCentre: plain.centre,
+      hex: getSelectedProductColorHex(),
+    };
+  });
+
+  if (r.pct !== 40) return `FAIL: a frame that comes with a fade should carry 40%, got ${r.pct}`;
+  if (r.fadingUrl === r.base) {
+    return 'FAIL: the frame was drawn onto the untouched strip — the fade never happened: ' + JSON.stringify(r);
+  }
+  // The product is a white mug, so a faded corner must be near white and must
+  // be clearly lighter than the same corner without a fade.
+  const near = (rgb, v, tol) => rgb.every((c) => Math.abs(c - v) <= tol);
+  if (!near(r.fadingCorner, 255, 12)) {
+    return `FAIL: the corner did not fade to the mug's own white: rgb(${r.fadingCorner}) ` + JSON.stringify(r);
+  }
+  const lifted = r.fadingCorner.reduce((a, c, i) => a + (c - r.plainCorner[i]), 0);
+  if (lifted <= 30) {
+    return `FAIL: the faded corner is barely different from the unfaded one (${lifted}): ` + JSON.stringify(r);
+  }
+  // The middle of the picture must survive untouched -- a fade that washes
+  // the whole image out would also pass the corner check.
+  if (r.fadingCentre.join() !== r.plainCentre.join()) {
+    return `FAIL: the fade reached the centre of the picture: rgb(${r.fadingCentre}) vs rgb(${r.plainCentre})`;
+  }
+  // A frame NOT on the list must get the strip exactly as it was.
+  if (r.plainUrl !== r.base) {
+    return 'FAIL: a frame that needs no fade got one anyway: ' + JSON.stringify(r);
+  }
+  return `PASS: a listed frame is drawn onto a genuinely faded strip (corner rgb(${r.fadingCorner}) on a ${r.hex} mug, centre untouched), an unlisted one onto the original`;
+};
+
 (async () => {
   let fails = 0;
   for (const [name, fn] of Object.entries(scenarios)) {
