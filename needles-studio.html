@@ -2,7 +2,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head><link rel="manifest" href="needles-manifest.json">
-<!-- BUILD-MARKER: THE-MUG-THAT-TURNS-v88 -->
+<!-- BUILD-MARKER: THE-REAL-HANDLE-v89 -->
 <!-- If you can see this comment on GitHub, this exact paste landed. -->
 <!-- If your live site's page source does NOT say -->
 <!-- "INSTANT-FIT-SCREEN-v47" right here, the upload/deploy did -->
@@ -11929,9 +11929,6 @@ const MUG3D = (function(){
     '11oz': { R:1.600, H:3.70, wrapIn:8.25, bandH:3.35 },
     '15oz': { R:1.675, H:4.50, wrapIn:8.50, bandH:4.05 }
   };
-  // Measured off the real product photo: the handle reaches 0.80 of the
-  // mug's radius past the wall and spans 0.68 of its height.
-  const H_REACH=0.80, H_SPAN=0.68, H_TUBE=0.105;
 
   let three=null, mounted=false, host=null;
   let renderer, scene, camera, mugGroup, printMesh, designTex, designCanvas;
@@ -11998,22 +11995,34 @@ const MUG3D = (function(){
     p.push(new V(0, WALL*0.95));
     return p;
   }
+  // THE HANDLE IS THE PHOTO'S HANDLE (Sep 2026, Alyx: "our mugs don't have
+  // triangular handles"). The first cut was six guessed points on a curve
+  // and it came out angular. This is the real handle's centreline, traced
+  // row by row off mug-classic-white-11oz.png and expressed as fractions of
+  // the mug's height (y) and radius (reach), so the same shape scales to the
+  // 15oz. The top arm leaves the body nearly flat, sweeps out to 0.81R,
+  // runs down the outside and curves back in low: a rounded D. Both ends
+  // sit slightly INSIDE the body so the joins never show a gap.
+  const HANDLE_PATH=[
+    [0.880,-0.060],   // starts inside the body, just under the rim
+    [0.845, 0.100],
+    [0.790, 0.400],
+    [0.710, 0.620],
+    [0.600, 0.770],
+    [0.460, 0.815],   // furthest reach, 0.81R, as measured
+    [0.320, 0.750],
+    [0.210, 0.590],
+    [0.150, 0.300],
+    [0.135,-0.060]    // ends inside the body, low
+  ];
   function handleGeo(THREE,S){
     const R=S.R, H=S.H;
-    const yMid=H*0.54, half=H*H_SPAN/2;
-    const zIn=-(R-0.04), zOut=-(R+R*H_REACH);
-    const V=THREE.Vector3;
-    const curve=new THREE.CatmullRomCurve3([
-      new V(0,yMid+half,zIn),
-      new V(0,yMid+half*0.86,zOut*0.72),
-      new V(0,yMid+half*0.34,zOut),
-      new V(0,yMid-half*0.30,zOut),
-      new V(0,yMid-half*0.84,zOut*0.70),
-      new V(0,yMid-half,zIn)
-    ],false,'catmullrom',0.4);
-    return new THREE.TubeGeometry(curve,90,R*H_TUBE,20,false);
+    const pts=HANDLE_PATH.map(([yf,rf])=>new THREE.Vector3(0, yf*H, -(R+rf*R)));
+    // Centripetal: follows the traced points without the overshoot that
+    // put visible lumps along the outer curve of the first cut.
+    const curve=new THREE.CatmullRomCurve3(pts,false,'centripetal');
+    return new THREE.TubeGeometry(curve,140,R*0.095,24,false);
   }
-
   function build(THREE,opts){
     const S=SIZES[opts.sizeLabel]||SIZES['11oz'];
     const wrap=S.wrapIn/(2*Math.PI*S.R);
@@ -12029,7 +12038,7 @@ const MUG3D = (function(){
 
     scene=new THREE.Scene();
     scene.background=new THREE.Color('#f2f4f7');
-    camera=new THREE.PerspectiveCamera(28,4/3,0.1,100);
+    camera=new THREE.PerspectiveCamera(9,4/3,0.1,400);
 
     const pmrem=new THREE.PMREMGenerator(renderer);
     pmrem.compileEquirectangularShader();
@@ -12118,8 +12127,16 @@ const MUG3D = (function(){
 
   function placeCamera(){
     const S=scene.userData.S;
-    const d=S.H*3.20;   // far enough that the base never crops
-    const el=lookDown?0.46:0.20;
+    // A long lens from well back (Alyx: "why does the image taper?"). The
+    // first cut was a 28-degree lens from three mug-heights away -- a phone
+    // snap. At that range the front of the mug is 1.6" nearer than its sides
+    // on a 12" shot, so the artwork drew ~15% taller at the front: a
+    // rectangle bulging into a barrel. Alyx, an artist, called the size of
+    // it, and he was right. This is a 9-degree lens from ten mug-heights
+    // back, which is roughly a studio shot from four feet: about 4%, which
+    // is what a real product photo carries.
+    const d=S.H*10.5;                   // ~39" from an 11oz: a studio distance
+    const el=lookDown?0.40:0.10;
     const lookY=S.H*0.47;
     camera.position.set(0, lookY+Math.sin(el)*d, Math.cos(el)*d);
     camera.lookAt(0,lookY,0);
