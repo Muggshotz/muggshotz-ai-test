@@ -2,7 +2,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head><link rel="manifest" href="needles-manifest.json">
-<!-- BUILD-MARKER: FADE-WITHOUT-A-FRAME-v86 -->
+<!-- BUILD-MARKER: EVERY-FADE-ZERO-TO-A-HUNDRED-v87 -->
 <!-- If you can see this comment on GitHub, this exact paste landed. -->
 <!-- If your live site's page source does NOT say -->
 <!-- "INSTANT-FIT-SCREEN-v47" right here, the upload/deploy did -->
@@ -1195,7 +1195,12 @@ const HERO_SETTLE_MS = 1000;
 <div id="edgeFadeAmountWrap" style="display:none;margin-top:.9rem">
 <div style="display:flex;align-items:center;gap:10px">
 <span class="note" style="margin:0;white-space:nowrap">Fade depth</span>
-<input type="range" id="edgeFadeAmountSlider" min="0" max="35" step="1" value="0" oninput="updateEdgeFadeAmount()" style="flex:1"/>
+<!-- 0-100 like every other fade (Alyx, Sep 2026). This was capped at 35 on
+     the judgement that a fade baked in at generation time should not be
+     pushable as far as one that can be undone afterwards. That was a
+     decision nobody asked for; the rule was 0 to 100 for fade, and this is a
+     fade. Default stays 0, so nothing changes unless it is asked for. -->
+<input type="range" id="edgeFadeAmountSlider" min="0" max="100" step="1" value="0" oninput="updateEdgeFadeAmount()" style="flex:1"/>
 <span class="note" id="edgeFadeAmountReadout" style="margin:0;min-width:38px;text-align:right">0%</span>
 </div>
 <div class="note" id="edgeFadeColorNote" style="margin-top:.5rem;display:flex;align-items:center;gap:8px">Fading into <span id="edgeFadeSwatch" style="display:inline-block;width:16px;height:16px;border-radius:4px;border:1px solid #555;background:#FFFFFF"></span> <span id="edgeFadeColorName">white</span></div>
