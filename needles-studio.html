@@ -2,7 +2,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head><link rel="manifest" href="needles-manifest.json">
-<!-- BUILD-MARKER: THE-TUMBLERS-TURN-v98 -->
+<!-- BUILD-MARKER: IDEA-BOX-DIRECT-v99 -->
 <!-- If you can see this comment on GitHub, this exact paste landed. -->
 <!-- If your live site's page source does NOT say -->
 <!-- "INSTANT-FIT-SCREEN-v47" right here, the upload/deploy did -->
@@ -14228,12 +14228,16 @@ async function generate(){
         setStatus('A wraparound paints one continuous scene, so it needs a description. Want your photo exactly as it is instead? Switch Print Style to Classic and leave this box empty.',true);
         return;
       }
-      // NO POPUP (Alyx, v97: "I thought we agreed that this panel was
-      // supposed to be removed too"). Wraparound is an AI job by
-      // definition, so an empty box here does not mean "my photo as-is";
-      // it means "paint my scene". The panorama call already has its own
-      // default idea for an empty box, so this falls straight through as
-      // an ordinary generation: no refusal, no transfer confirm.
+      // STRAIGHT TO THE IDEA BOX (Alyx, v99). v97 took the popup out and,
+      // with it, the only thing that ever opened the idea box on Track 1:
+      // Generate on an empty box painted the fallback idea and spent a
+      // chip on a picture nobody described. "You should be able to remove
+      // the box without removing the place that the box took you to." So
+      // the detour is gone and the destination stays: an empty box under
+      // Wraparound lands on the idea box, no message, no chip, and the
+      // customer types. The declared-BYO belt above is unchanged.
+      handOffToIdeaAfterProductChoice();
+      return;
     } else if(byoDeclaredIntent==='byo'){
       exactTransfer=true;
     } else if(!windowSillChoice && !refImageAData && !refImageBData){
