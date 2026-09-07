@@ -2,7 +2,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head><link rel="manifest" href="needles-manifest.json">
-<!-- BUILD-MARKER: FRAMES-THAT-BRING-THEIR-OWN-FADE-v77 -->
+<!-- BUILD-MARKER: SILENCE-WHEN-IT-WORKS-v78 -->
 <!-- If you can see this comment on GitHub, this exact paste landed. -->
 <!-- If your live site's page source does NOT say -->
 <!-- "INSTANT-FIT-SCREEN-v47" right here, the upload/deploy did -->
@@ -10121,15 +10121,27 @@ function continueFromMugPanels(){
 
 // Called at the exact point each engine commits, so the banner reports what
 // actually ran rather than what was asked for.
+// SILENCE WHEN IT WORKS, A WARNING WHEN IT DOESN'T (Alyx, Sep 2026).
+// The green "Single-shot panorama -- one image, cut into three. Seams line up
+// by construction." banner has been retired. Two reasons, and Alyx reached
+// both independently:
+//   1. It said "cut into three" -- the exact idea this flow spent a night
+//      removing. Slicing is how Printify's coffee-mug product takes delivery
+//      of the file, not something a customer needs told, and saying it out
+//      loud is what invited everyone to think of a wraparound as three
+//      pictures in the first place.
+//   2. It was engineering language on a customer's screen -- "single-shot",
+//      "the panorama service", "by construction" -- reporting which backend
+//      happened to run. When it works there is nothing to report.
+// The orange fallback banner stays, because that one tells the customer
+// something real: the seams on this particular image may need attention.
 function showWrapMethodBanner(method){
   const box=document.getElementById('wrapMethodBanner');
   const txt=document.getElementById('wrapMethodBannerText');
   if(!box||!txt)return;
   if(method==='panorama'){
-    box.style.background='rgba(10,58,26,.96)';
-    box.style.border='1px solid #2e9e57';
-    box.style.color='#8bf3b0';
-    txt.textContent='\u26A1 Single-shot panorama \u2014 one image, cut into three. Seams line up by construction.';
+    hideWrapMethodBanner();
+    return;
   } else if(method==='classic'){
     box.style.background='rgba(74,36,6,.97)';
     box.style.border='1px solid #e09330';
