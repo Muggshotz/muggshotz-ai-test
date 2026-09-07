@@ -11637,6 +11637,18 @@ function reopenMockupLightboxFromFrameOffer(){
   if(card)card.style.display='none';
   unmountFrameStudio();
   restoreFrameCardsToHome();
+  // A mug comes back to its 3D mockup, repainted from the placements as
+  // they now stand -- framed if a frame was just applied, unframed if it
+  // was taken off. Reopening the flat photo here would have handed the
+  // customer a downgrade for accepting the frame offer, and, if Printify
+  // had not yet answered, bounced them out to What's Next entirely.
+  if(product==='mug' && !mug3dFailed){
+    openMug3DMockup().catch(()=>{ reopenFlatMockupFromFrameOffer(); });
+    return;
+  }
+  reopenFlatMockupFromFrameOffer();
+}
+function reopenFlatMockupFromFrameOffer(){
   if(!currentMockupUrls||!currentMockupUrls.length){returnFromFinalMockup();return;}
   openMockupLightbox(currentMockupIndex||0);
   const actions=document.getElementById('mockupLightboxActions');

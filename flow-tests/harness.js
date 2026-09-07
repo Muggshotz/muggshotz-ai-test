@@ -15,7 +15,9 @@ async function launch(opts = {}) {
   const browser = await chromium.launch({
     executablePath: '/opt/pw-browsers/chromium',
     headless: true,
-    args: ['--autoplay-policy=no-user-gesture-required'],
+    // WebGL scenarios (the 3D mug) need a software GL in this headless
+    // sandbox; they pass it in. Everything else runs exactly as before.
+    args: ['--autoplay-policy=no-user-gesture-required', ...(opts.chromiumArgs || [])],
   });
   // Viewport is overridable because height is not cosmetic here: cards with
   // max-height:90vh clip their own content, so a bug that is invisible on a
