@@ -55,6 +55,15 @@ async function describeAndGenerate(page, text) {
   await page.evaluate(() => document.getElementById('generateBtn')?.scrollIntoView({ block: 'center' }));
   await page.click('#generateBtn');
 }
+// The real "Yes -- All 3 Sides" button. Nothing reaches the mockup with
+// artwork on it until the customer has answered "Are you satisfied?"; a
+// test that skipped this step handed the mug three empty slots and called
+// the resulting blank mug a defect. It was the test that was wrong.
+async function approveAllThree(page) {
+  await page.evaluate(() => approveDesign(true));
+  await T(page, 1200);
+  await dismissAlerts(page);
+}
 const waitLanded = (page, t = 120000) =>
   page.waitForFunction(() => {
     const shown = (id) => { const el = document.getElementById(id); return el && getComputedStyle(el).display !== 'none'; };
@@ -108,10 +117,13 @@ scenarios.threePanelOpensThe3DMug = async (page, log) => {
   await describeAndGenerate(page, 'a lighthouse in a storm');
   await waitLanded(page);
   await T(page, 800);
+  await approveAllThree(page);
   await spyOnMug3D(page);
 
   const t0 = Date.now();
-  const opened = page.evaluate(() => beginFinalMockupFetch());
+  // Caught immediately: a dangling rejection after the browser closes
+  // would take the whole runner down with it.
+  const opened = page.evaluate(() => beginFinalMockupFetch()).catch(() => {});
   // The 3D stage must be up long before Printify would have answered.
   await page.waitForFunction(() => {
     const w = document.getElementById('mug3dWrap');
@@ -177,6 +189,7 @@ scenarios.fifteenOunceBuilds = async (page) => {
   await describeAndGenerate(page, 'a lighthouse in a storm');
   await waitLanded(page);
   await T(page, 800);
+  await approveAllThree(page);
   await spyOnMug3D(page);
   page.evaluate(() => beginFinalMockupFetch());
   await page.waitForFunction(() => document.querySelector('#mug3dStage canvas'), null, { timeout: 15000 });
@@ -198,6 +211,7 @@ scenarios.frameRoundTripReturnsTo3D = async (page) => {
   await describeAndGenerate(page, 'a lighthouse in a storm');
   await waitLanded(page);
   await T(page, 800);
+  await approveAllThree(page);
   await page.evaluate(() => beginFinalMockupFetch());
   await page.waitForFunction(() => document.querySelector('#mug3dStage canvas'), null, { timeout: 15000 });
   await T(page, 800);
@@ -227,6 +241,7 @@ scenarios.exitsTearDown = async (page) => {
   await describeAndGenerate(page, 'a lighthouse in a storm');
   await waitLanded(page);
   await T(page, 800);
+  await approveAllThree(page);
   for (const exit of ['closeMockupLightbox', 'goBackFromFinalMockup', 'returnFromFinalMockup']) {
     await page.evaluate(() => beginFinalMockupFetch());
     await page.waitForFunction(() => document.querySelector('#mug3dStage canvas'), null, { timeout: 15000 });
@@ -253,6 +268,7 @@ scenarios.noWebGLFallsBackToThePhoto = async (page, log) => {
   await describeAndGenerate(page, 'a lighthouse in a storm');
   await waitLanded(page);
   await T(page, 800);
+  await approveAllThree(page);
   const hasGL = await page.evaluate(() => { try { const c = document.createElement('canvas'); return !!(c.getContext('webgl') || c.getContext('experimental-webgl')); } catch (e) { return false; } });
   if (hasGL) return 'SKIP: this Chromium has WebGL, so the no-WebGL fallback cannot be exercised here';
   await page.evaluate(() => beginFinalMockupFetch());
