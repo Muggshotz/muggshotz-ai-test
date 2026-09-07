@@ -2,7 +2,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head><link rel="manifest" href="needles-manifest.json">
-<!-- BUILD-MARKER: TUNDRA-FULL-WRAP-v96 -->
+<!-- BUILD-MARKER: NO-FORMAT-POPUP-v97 -->
 <!-- If you can see this comment on GitHub, this exact paste landed. -->
 <!-- If your live site's page source does NOT say -->
 <!-- "INSTANT-FIT-SCREEN-v47" right here, the upload/deploy did -->
@@ -4926,7 +4926,6 @@ let pathCanvasReady=false;
 
 let mugPrintMode='three-panel';
 let mugPrintModeTouched=false;
-let printFormatPopupShown=false;
 // Design Method screen (Cover Me / Let's Just Face It / Home Sweet Home
 // / description-only) -- replaces the old Three Panels/Wraparound
 // popup as the next decision after Color for coffee mugs specifically.
@@ -5383,18 +5382,11 @@ function pickPreGenTravelVariant(key){
   } else {
     // Every other variant has a real Three Separate Designs vs.
     // Wraparound choice to make again -- that card is the next real
-    // decision point, not color/Style. The one-time explainer fires
-    // here, where it is actually needed (see pick(), which no longer
-    // triggers it for water bottle at product-pick time).
-    if(!printFormatPopupShown){
-      printFormatPopupShown=true;
-      showGuidanceAlert(
-        'Pick your print format — "Up to Three Panels" or "Wraparound." This changes how your artwork gets composed, so it needs to be chosen first.',
-        ()=>{ smoothScrollToTarget('mugPrintModeCard','center'); }
-      );
-    } else {
-      smoothScrollToTarget('mugPrintModeCard','center');
-    }
+    // decision point, not color/Style. The "Pick your print format"
+    // explainer that used to fire here is gone (Alyx, v97: "I thought we
+    // had agreed that this panel was supposed to be removed?"). The card
+    // it pointed at says the same thing; the scroll lands on it.
+    smoothScrollToTarget('mugPrintModeCard','center');
   }
 }
 
@@ -14113,16 +14105,21 @@ async function generate(){
   // re-enables wraparound, refusing honestly beats silently generating.
   if(!ideaTextForTransfer || byoDeclaredIntent==='byo'){
     if(wrapActiveForTransfer && !ideaTextForTransfer){
-      setStatus('A wraparound paints one continuous scene, so it needs a description. Want your photo exactly as it is instead? Switch Print Style to Classic and leave this box empty.',true);
-      // NO handOff for a declared-BYO customer: their handOff auto-runs
-      // generate(), and this guard IS inside generate() -- the bounce was
-      // one half of a synchronous infinite loop (the byoAutoGenerate latch
-      // is the other, general defense). There is nothing to hand off to
-      // anyway: their idea box is hidden.
-      if(byoDeclaredIntent!=='byo')handOffToIdeaAfterProductChoice();
-      return;
-    }
-    if(byoDeclaredIntent==='byo'){
+      if(byoDeclaredIntent==='byo'){
+        // Belt only: a declared-BYO customer cannot reach wraparound (the
+        // Print Style card is hidden). If some future path re-enables it,
+        // refusing beats silently generating. NO handOff: their handOff
+        // auto-runs generate(), and this guard IS inside generate().
+        setStatus('A wraparound paints one continuous scene, so it needs a description. Want your photo exactly as it is instead? Switch Print Style to Classic and leave this box empty.',true);
+        return;
+      }
+      // NO POPUP (Alyx, v97: "I thought we agreed that this panel was
+      // supposed to be removed too"). Wraparound is an AI job by
+      // definition, so an empty box here does not mean "my photo as-is";
+      // it means "paint my scene". The panorama call already has its own
+      // default idea for an empty box, so this falls straight through as
+      // an ordinary generation: no refusal, no transfer confirm.
+    } else if(byoDeclaredIntent==='byo'){
       exactTransfer=true;
     } else if(!windowSillChoice && !refImageAData && !refImageBData){
       const what=PRODUCT_IDEA_LABEL[product]||product||'product';
