@@ -2,7 +2,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head><link rel="manifest" href="needles-manifest.json">
-<!-- BUILD-MARKER: SILENCE-WHEN-IT-WORKS-v78 -->
+<!-- BUILD-MARKER: TWO-COLUMN-EVERYWHERE-v79 -->
 <!-- If you can see this comment on GitHub, this exact paste landed. -->
 <!-- If your live site's page source does NOT say -->
 <!-- "INSTANT-FIT-SCREEN-v47" right here, the upload/deploy did -->
@@ -10408,6 +10408,15 @@ function showAccessorizeChoiceState(){
   const choicePanel=document.getElementById('accessorizeChoicePanel');
   const committed=document.getElementById('accessorizeCommittedContent');
   if(!card)return;
+  // PUT THE CARDS BACK FIRST. This state is the "Add a Frame?" offer -- one
+  // column, no catalogue -- so the two-column studio has no business still
+  // being assembled around it. Every other exit from the catalogue already
+  // unmounts (hideAccessorizeStep, reopenMockupLightboxFromFrameOffer); this
+  // one did not, because until now the studio never mounted on a route that
+  // came back here. Cancel on the wraparound does exactly that, and without
+  // this the offer screen would render inside the studio's left column with
+  // an empty right column beside it.
+  unmountFrameStudio();
   card.style.display='block';
   if(choicePanel)choicePanel.style.display='block';
   if(committed)committed.style.display='none';
@@ -12527,7 +12536,16 @@ function showAccessorizeStep(){
   // for a sill's opening), and the way back is the mockup itself.
   if(frameOfferFromMockup&&sillCard)sillCard.style.display='none';
   if(frameOfferFromMockup&&crossPromo)crossPromo.style.display='none';
-  if(frameOfferFromMockup)mountFrameStudio(card,frameCard); else unmountFrameStudio();
+  // THE TWO-COLUMN STUDIO FOLLOWS THE FRAMES (Alyx's standing rule, and his
+  // catch that the wraparound was the one place it did not). This read
+  // `if(frameOfferFromMockup)` alone, so the wraparound reveal -- the one
+  // route where seeing the picture and the catalogue at the same time
+  // matters most, because the picture is three times wider than it is tall
+  // -- explicitly unmounted it and stacked the frames above the picture.
+  // Layout only: mountFrameStudio moves two existing cards into two columns
+  // and unmountFrameStudio puts them back. Nothing here touches an image, a
+  // prompt, or the print path.
+  if(frameOfferFromMockup||isWraparoundReveal)mountFrameStudio(card,frameCard); else unmountFrameStudio();
   const cancelBtn=document.getElementById('accessorizeCancelBtn');
   if(cancelBtn)cancelBtn.textContent=frameOfferFromMockup?'↩️ Back to the Mockup':'↩️ Cancel — Go Back';
   const satisfiedBtn=document.getElementById('accessorizeSatisfiedBtn');
