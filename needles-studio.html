@@ -2,7 +2,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head><link rel="manifest" href="needles-manifest.json">
-<!-- BUILD-MARKER: EVERY-FADE-ZERO-TO-A-HUNDRED-v87 -->
+<!-- BUILD-MARKER: THE-MUG-THAT-TURNS-v88 -->
 <!-- If you can see this comment on GitHub, this exact paste landed. -->
 <!-- If your live site's page source does NOT say -->
 <!-- "INSTANT-FIT-SCREEN-v47" right here, the upload/deploy did -->
@@ -301,7 +301,7 @@ body.frame-tools-open #accessorizeCancelBtn{padding:.45rem;font-size:12px;margin
 .mockup-lightbox-arrow-left{left:16px}
 .mockup-lightbox-arrow-right{right:16px}
 .mockup-lightbox-arrow:hover,.mockup-lightbox-close:hover{border-color:#7888b4;background:#1c2636}
-.mockup-lightbox-counter{position:fixed;top:22px;left:50%;transform:translateX(-50%);background:#151b24;border:1px solid #003c8c;border-radius:20px;padding:6px 16px;color:#7ab8ff;font-size:13px;font-weight:700;z-index:1701;display:none}
+.mug3d-stage{width:min(86vw,780px);height:min(62vh,560px);background:#f2f4f7;border-radius:10px;overflow:hidden;cursor:grab;touch-action:none;box-shadow:0 8px 30px rgba(0,0,0,.45)}.mug3d-stage:active{cursor:grabbing}.mug3d-stage canvas{display:block;width:100%;height:100%}.mug3d-controls{display:flex;align-items:center;gap:14px;width:min(86vw,780px);padding:2px 4px}#mug3dAngle{flex:1;accent-color:#29a3ff}.mug3d-tilt{background:#151b24;border:1px solid #003c8c;border-radius:8px;color:#7ab8ff;font-size:12px;font-weight:700;padding:8px 12px;cursor:pointer;white-space:nowrap}.mug3d-tilt[aria-pressed=true]{background:#0e2036;border-color:#29a3ff;color:#29a3ff}.mug3d-hint{color:#7ab8ff;font-size:12px;font-weight:600;text-align:center;margin:0}@media(max-width:640px){.mug3d-stage{width:94vw;height:52vh}.mug3d-controls{width:94vw}}.mockup-lightbox-counter{position:fixed;top:22px;left:50%;transform:translateX(-50%);background:#151b24;border:1px solid #003c8c;border-radius:20px;padding:6px 16px;color:#7ab8ff;font-size:13px;font-weight:700;z-index:1701;display:none}
 @media (max-width:520px){
   .mockup-lightbox-arrow{width:42px;height:42px;font-size:24px}
   .mockup-lightbox-arrow-left{left:6px}
@@ -849,6 +849,14 @@ body.panels-active #verifyCard{display:none!important}
   <button class="mockup-lightbox-close" onclick="closeMockupLightbox()" aria-label="Close">✖</button>
   <button class="mockup-lightbox-arrow mockup-lightbox-arrow-left" id="mockupLightboxPrev" onclick="mockupLightboxPrev()" aria-label="Previous angle">‹</button>
   <img id="mockupLightboxImg" class="mockup-lightbox-img" alt="Enlarged mockup"/>
+<div id="mug3dWrap" style="display:none;flex-direction:column;align-items:center;gap:10px">
+  <div id="mug3dStage" class="mug3d-stage"></div>
+  <div class="mug3d-controls">
+    <input type="range" id="mug3dAngle" min="-180" max="180" value="0" aria-label="Turn the mug"/>
+    <button type="button" id="mug3dTiltBtn" class="mug3d-tilt" aria-pressed="false" onclick="toggleMug3DTilt()">Look down</button>
+  </div>
+  <p class="mug3d-hint">Drag the mug to turn it · click it to stop or start the spin</p>
+</div>
   <button class="mockup-lightbox-arrow mockup-lightbox-arrow-right" id="mockupLightboxNext" onclick="mockupLightboxNext()" aria-label="Next angle">›</button>
   <div class="mockup-lightbox-counter" id="mockupLightboxCounter"></div>
   <!-- Two honest exits (Alyx, Sep 2026): "Return" used to open What's Next
@@ -11419,8 +11427,23 @@ function hideWaitOverlay(){
 }
 async function beginFinalMockupFetch(){
   frameOfferFromMockup=false;
+
+  // A CERAMIC MUG DOES NOT WAIT (Sep 2026, Alyx). Everything below polls
+  // Printify up to forty times at 1.5s intervals -- a minute of "your
+  // mockup is being generated, please be patient" -- to be handed a set of
+  // fixed camera angles. For a coffee mug we can draw the thing ourselves,
+  // instantly, at any angle the customer drags it to. So the 3D mug opens
+  // straight away and the Printify request still runs behind it: it is
+  // what actually validates that Printify accepted this artwork, and a
+  // failure there predicts a failed order, so it must still be heard.
+  let usingMug3D=false;
+  if(product==='mug' && !mug3dFailed){
+    try{ await openMug3DMockup(); usingMug3D=true; }
+    catch(err){ usingMug3D=false; }
+  }
+
   const overlay=document.getElementById('mockupLoadingOverlay');
-  if(overlay){overlay.style.display='flex';document.body.classList.add('step-locked');}
+  if(overlay && !usingMug3D){overlay.style.display='flex';document.body.classList.add('step-locked');}
 
   // FIXED (Aug 2026): buildMockupRequestBody() used to run outside the
   // try/catch below entirely -- if it threw (e.g. a design ID no longer
@@ -11496,7 +11519,10 @@ async function beginFinalMockupFetch(){
       currentMockupUrls=[currentMockupUrls[currentMockupUrls.length-1],...currentMockupUrls.slice(0,-1)];
     }
     if(overlay){overlay.style.display='none';document.body.classList.remove('step-locked');}
-    openMockupLightbox(0);
+    // The 3D mug is already on screen and already carries the action row;
+    // replacing it now with a flat photo would be a downgrade the customer
+    // did not ask for. The photos stay in currentMockupUrls either way.
+    if(!usingMug3D)openMockupLightbox(0);
     const actions=document.getElementById('mockupLightboxActions');
     if(actions)actions.style.display='flex';
     const returnBtn=document.getElementById('mockupLightboxReturn');
@@ -11611,6 +11637,18 @@ function reopenMockupLightboxFromFrameOffer(){
   if(card)card.style.display='none';
   unmountFrameStudio();
   restoreFrameCardsToHome();
+  // A mug comes back to its 3D mockup, repainted from the placements as
+  // they now stand -- framed if a frame was just applied, unframed if it
+  // was taken off. Reopening the flat photo here would have handed the
+  // customer a downgrade for accepting the frame offer, and, if Printify
+  // had not yet answered, bounced them out to What's Next entirely.
+  if(product==='mug' && !mug3dFailed){
+    openMug3DMockup().catch(()=>{ reopenFlatMockupFromFrameOffer(); });
+    return;
+  }
+  reopenFlatMockupFromFrameOffer();
+}
+function reopenFlatMockupFromFrameOffer(){
   if(!currentMockupUrls||!currentMockupUrls.length){returnFromFinalMockup();return;}
   openMockupLightbox(currentMockupIndex||0);
   const actions=document.getElementById('mockupLightboxActions');
@@ -11777,6 +11815,464 @@ function scrollToFinishedImage(elementId,block){
   el.scrollIntoView({behavior:'smooth',block:block||'center'});
 }
 
+
+// True once the 3D mug has failed on this device (no WebGL, driver refusal).
+// From then on the flat Printify photos are used, exactly as before.
+let mug3dFailed=false;
+let mug3dShowing=false;
+
+function toggleMug3DTilt(){
+  const btn=document.getElementById('mug3dTiltBtn');
+  const on=btn.getAttribute('aria-pressed')!=='true';
+  btn.setAttribute('aria-pressed',String(on));
+  MUG3D.setLookDown(on);
+}
+
+function hideMug3D(){
+  if(!mug3dShowing)return;
+  mug3dShowing=false;
+  const wrap=document.getElementById('mug3dWrap');
+  if(wrap)wrap.style.display='none';
+  const img=document.getElementById('mockupLightboxImg');
+  if(img)img.style.display='';
+  try{ MUG3D.close(); }catch(e){}
+}
+
+// The mug mockup, drawn here rather than fetched. Opens instantly.
+function openMug3DMockup(){
+  const overlay=document.getElementById('mockupLightboxOverlay');
+  const wrap=document.getElementById('mug3dWrap');
+  const stage=document.getElementById('mug3dStage');
+  if(!overlay||!wrap||!stage)return Promise.reject(new Error('no 3D stage'));
+
+  const img=document.getElementById('mockupLightboxImg');
+  const prev=document.getElementById('mockupLightboxPrev');
+  const next=document.getElementById('mockupLightboxNext');
+  const counter=document.getElementById('mockupLightboxCounter');
+  if(img)img.style.display='none';
+  if(prev)prev.style.display='none';
+  if(next)next.style.display='none';
+  if(counter)counter.style.display='none';
+  wrap.style.display='flex';
+  overlay.classList.add('visible');
+  mug3dShowing=true;
+
+  const actions=document.getElementById('mockupLightboxActions');
+  if(actions)actions.style.display='flex';
+  const returnBtn=document.getElementById('mockupLightboxReturn');
+  if(returnBtn)returnBtn.style.display='block';
+  refreshMockupLightboxFrameBtn();
+
+  const sizeColors=(GEN_MUG_STYLES[selectedGenStyle]||{}).colors;
+  const list=sizeColors?sizeColors[selectedGenSize]:null;
+  const match=Array.isArray(list)?list.find(c=>c.name===selectedGenColor):null;
+
+  return MUG3D.open(stage,{
+    sizeLabel: selectedGenSize,
+    styleName: selectedGenStyle,
+    colorHex: match?match.hex:'#ffffff',
+    panoramaUrl: (mugPrintMode==='wraparound')?wraparoundPanoramaUrl:null,
+    panelUrls: [
+      placements.left?(findDesignById(placements.left)||{}).url:null,
+      placements.front?(findDesignById(placements.front)||{}).url:null,
+      placements.right?(findDesignById(placements.right)||{}).url:null
+    ]
+  }).then(()=>{
+    const slider=document.getElementById('mug3dAngle');
+    if(slider){
+      slider.oninput=function(){ MUG3D.setAngle(+slider.value); };
+      MUG3D.onSpin(function(deg){ slider.value=deg; });
+    }
+    return true;
+  }).catch(err=>{
+    console.error('The 3D mug could not start; falling back to the photo mockup:',err);
+    mug3dFailed=true;
+    hideMug3D();
+    throw err;
+  });
+}
+
+
+// ================= THE MUG THAT TURNS =================
+// Replaces the flat Printify photo for ceramic coffee mugs with a real 3D
+// mug the customer can spin.
+//
+// WHY THIS EXISTS (Sep 2026, Alyx's direction). Two complaints met here:
+// "I don't like these small filmstrip format of the mock up, I prefer a
+// single large photo that you can click right or left on it to the next
+// viewing angle", and, of the wait before that filmstrip appeared,
+// "seems awfully slow". Printify's mockup is a set of fixed camera angles
+// that takes up to sixty seconds of polling to arrive. This is one object,
+// rendered locally, that turns to ANY angle and appears instantly.
+//
+// WHAT IS REAL HERE, and what is a model:
+//   - The mug's proportions are a real 11oz/15oz mug.
+//   - The handle's reach and vertical span were measured off the real
+//     product photo (mug-classic-white-11oz.png), not invented.
+//   - The print wraps 8.25" of a 10.05" circumference -- Printify's actual
+//     coverage -- so the bare strip either side of the handle is the real
+//     one, and turning the mug past it shows bare mug, as it will in life.
+//   - Every mug style is a WHITE exterior. Only the handle and interior
+//     take the colour (Trimmed adds a coloured rim). That is not a guess:
+//     see the GEN_MUG_STYLES note above citing Printify's own product page
+//     for blueprint 1151 -- "a colored handle and interior".
+//
+// It does NOT replace Printify as the authority on what ships. The real
+// mockup request still fires in the background, so a Printify-side failure
+// still surfaces before checkout and the real photos are still available.
+const MUG3D = (function(){
+  'use strict';
+
+  // Real mugs, in inches. wrapIn is how much of the circumference Printify
+  // actually prints; the remainder is the bare strip at the handle.
+  const SIZES = {
+    '11oz': { R:1.600, H:3.70, wrapIn:8.25, bandH:3.35 },
+    '15oz': { R:1.675, H:4.50, wrapIn:8.50, bandH:4.05 }
+  };
+  // Measured off the real product photo: the handle reaches 0.80 of the
+  // mug's radius past the wall and spans 0.68 of its height.
+  const H_REACH=0.80, H_SPAN=0.68, H_TUBE=0.105;
+
+  let three=null, mounted=false, host=null;
+  let renderer, scene, camera, mugGroup, printMesh, designTex, designCanvas;
+  let spin=0, spinning=true, dragging=false, lookDown=false, rafId=0, visible=true;
+  let onSpinChange=null;
+
+  function reducedMotion(){
+    try{ return window.matchMedia('(prefers-reduced-motion: reduce)').matches; }
+    catch(e){ return false; }
+  }
+
+  // three.js is 600KB. Nobody who never opens a mug mockup should pay for it,
+  // so it is fetched the first time this is actually used and never again.
+  let threePromise=null;
+  function loadThree(){
+    if(window.THREE) return Promise.resolve(window.THREE);
+    if(threePromise) return threePromise;
+    threePromise = new Promise((resolve,reject)=>{
+      const s=document.createElement('script');
+      s.src='three.min.js';
+      s.onload=()=>window.THREE?resolve(window.THREE):reject(new Error('three.js loaded but THREE is missing'));
+      s.onerror=()=>reject(new Error('three.js could not be loaded'));
+      document.head.appendChild(s);
+    });
+    return threePromise;
+  }
+
+  // A softbox studio, built on a canvas rather than downloaded.
+  function studioEnv(THREE){
+    const c=document.createElement('canvas'); c.width=1024; c.height=512;
+    const g=c.getContext('2d');
+    const sky=g.createLinearGradient(0,0,0,512);
+    sky.addColorStop(0,'#f6f8fb'); sky.addColorStop(.48,'#ccd2dc');
+    sky.addColorStop(.52,'#6f7681'); sky.addColorStop(1,'#2c313a');
+    g.fillStyle=sky; g.fillRect(0,0,1024,512);
+    const box=(cx,cy,w,h,a)=>{
+      const gr=g.createRadialGradient(cx,cy,0,cx,cy,Math.max(w,h));
+      gr.addColorStop(0,'rgba(255,255,255,'+a+')');
+      gr.addColorStop(1,'rgba(255,255,255,0)');
+      g.fillStyle=gr; g.save(); g.translate(cx,cy); g.scale(1,h/w); g.translate(-cx,-cy);
+      g.fillRect(cx-w,cy-w,w*2,w*2); g.restore();
+    };
+    box(300,150,190,120,1); box(760,190,150,110,.62); box(520,60,300,90,.5);
+    return c;
+  }
+
+  function outerProfile(THREE,S){
+    const R=S.R, H=S.H, BASE=0.13, RIM=0.085, WALL=0.17;
+    const p=[], V=THREE.Vector2;
+    p.push(new V(0,0));
+    p.push(new V(R-BASE,0));
+    for(let i=0;i<=8;i++){ const t=i/8*Math.PI/2; p.push(new V(R-BASE+Math.sin(t)*BASE, BASE-Math.cos(t)*BASE)); }
+    p.push(new V(R, H-RIM));
+    for(let i=1;i<=8;i++){ const t=i/8*Math.PI/2; p.push(new V(R-RIM+Math.cos(t)*RIM, H-RIM+Math.sin(t)*RIM)); }
+    p.push(new V(R-WALL, H-RIM*0.4));
+    return p;
+  }
+  function innerProfile(THREE,S){
+    const R=S.R, H=S.H, RIM=0.085, WALL=0.17;
+    const p=[], V=THREE.Vector2;
+    p.push(new V(R-WALL, H-RIM*0.4));
+    p.push(new V(R-WALL, WALL*1.5));
+    p.push(new V(R-WALL-0.11, WALL*0.95));
+    p.push(new V(0, WALL*0.95));
+    return p;
+  }
+  function handleGeo(THREE,S){
+    const R=S.R, H=S.H;
+    const yMid=H*0.54, half=H*H_SPAN/2;
+    const zIn=-(R-0.04), zOut=-(R+R*H_REACH);
+    const V=THREE.Vector3;
+    const curve=new THREE.CatmullRomCurve3([
+      new V(0,yMid+half,zIn),
+      new V(0,yMid+half*0.86,zOut*0.72),
+      new V(0,yMid+half*0.34,zOut),
+      new V(0,yMid-half*0.30,zOut),
+      new V(0,yMid-half*0.84,zOut*0.70),
+      new V(0,yMid-half,zIn)
+    ],false,'catmullrom',0.4);
+    return new THREE.TubeGeometry(curve,90,R*H_TUBE,20,false);
+  }
+
+  function build(THREE,opts){
+    const S=SIZES[opts.sizeLabel]||SIZES['11oz'];
+    const wrap=S.wrapIn/(2*Math.PI*S.R);
+
+    renderer=new THREE.WebGLRenderer({antialias:true,alpha:false});
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));
+    renderer.outputEncoding=THREE.sRGBEncoding;
+    renderer.toneMapping=THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure=1.05;
+    renderer.shadowMap.enabled=true;
+    renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+    host.appendChild(renderer.domElement);
+
+    scene=new THREE.Scene();
+    scene.background=new THREE.Color('#f2f4f7');
+    camera=new THREE.PerspectiveCamera(28,4/3,0.1,100);
+
+    const pmrem=new THREE.PMREMGenerator(renderer);
+    pmrem.compileEquirectangularShader();
+    const envTex=new THREE.CanvasTexture(studioEnv(THREE));
+    envTex.mapping=THREE.EquirectangularReflectionMapping;
+    scene.environment=pmrem.fromEquirectangular(envTex).texture;
+
+    const key=new THREE.DirectionalLight(0xffffff,1.5);
+    key.position.set(-3.2,5.4,4.2);
+    key.castShadow=true;
+    key.shadow.mapSize.set(1024,1024);
+    key.shadow.camera.left=-4; key.shadow.camera.right=4;
+    key.shadow.camera.top=4; key.shadow.camera.bottom=-4;
+    key.shadow.bias=-0.0012;
+    scene.add(key);
+    scene.add(new THREE.AmbientLight(0xffffff,0.22));
+
+    mugGroup=new THREE.Group(); scene.add(mugGroup);
+
+    const glaze={ roughness:0.16, metalness:0.0, clearcoat:0.85,
+                  clearcoatRoughness:0.10, envMapIntensity:1.05 };
+    // The body is white on every style -- only the handle and interior
+    // take the colour. See the note at the top of this module.
+    const white=new THREE.MeshPhysicalMaterial(Object.assign({color:0xffffff, side:THREE.DoubleSide},glaze));
+    const accentHex=opts.colorHex||'#ffffff';
+    // The renderer lights in linear space and converts to sRGB on output,
+    // so a hex passed straight in renders washed out -- Maroon #7A1F2B
+    // came back pink. Convert it going in, and it is the colour it says.
+    const accent=new THREE.MeshPhysicalMaterial(Object.assign(
+      {color:new THREE.Color(accentHex).convertSRGBToLinear(), side:THREE.DoubleSide},glaze));
+
+    const outer=new THREE.Mesh(new THREE.LatheGeometry(outerProfile(THREE,S),160),white);
+    outer.castShadow=true; outer.receiveShadow=true; mugGroup.add(outer);
+
+    const inner=new THREE.Mesh(new THREE.LatheGeometry(innerProfile(THREE,S),160),accent);
+    inner.receiveShadow=true; mugGroup.add(inner);
+
+    const hand=new THREE.Mesh(handleGeo(THREE,S),accent);
+    hand.castShadow=true; hand.receiveShadow=true; mugGroup.add(hand);
+
+    // Trimmed is the one style with a coloured line at the lip.
+    if(opts.styleName==='Trimmed'){
+      const trim=new THREE.Mesh(
+        new THREE.CylinderGeometry(S.R+0.003,S.R+0.003,0.085,160,1,true),accent);
+      trim.position.y=S.H-0.055; mugGroup.add(trim);
+    }
+
+    designCanvas=document.createElement('canvas');
+    designCanvas.width=2048; designCanvas.height=1024;
+    designTex=new THREE.CanvasTexture(designCanvas);
+    designTex.encoding=THREE.sRGBEncoding;
+    designTex.anisotropy=renderer.capabilities.getMaxAnisotropy();
+
+    printMesh=new THREE.Mesh(
+      new THREE.CylinderGeometry(S.R+0.004,S.R+0.004,S.bandH,200,1,true,
+        -wrap*Math.PI, wrap*2*Math.PI),
+      new THREE.MeshPhysicalMaterial(Object.assign(
+        {map:designTex, side:THREE.FrontSide, transparent:true},glaze))
+    );
+    printMesh.position.y=S.H/2;   // a CylinderGeometry is centred on its position
+    printMesh.receiveShadow=true;
+    mugGroup.add(printMesh);
+
+    const sc=document.createElement('canvas'); sc.width=sc.height=256;
+    (function(){
+      const g=sc.getContext('2d');
+      const gr=g.createRadialGradient(128,128,10,128,128,124);
+      gr.addColorStop(0,'rgba(20,26,36,.40)');
+      gr.addColorStop(.55,'rgba(20,26,36,.15)');
+      gr.addColorStop(1,'rgba(20,26,36,0)');
+      g.fillStyle=gr; g.fillRect(0,0,256,256);
+    })();
+    const contact=new THREE.Mesh(
+      new THREE.PlaneGeometry(S.R*4.4,S.R*4.4),
+      new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(sc),transparent:true,depthWrite:false}));
+    contact.rotation.x=-Math.PI/2; contact.position.y=0.003; scene.add(contact);
+
+    const floor=new THREE.Mesh(new THREE.PlaneGeometry(40,40),
+      new THREE.ShadowMaterial({opacity:0.17}));
+    floor.rotation.x=-Math.PI/2; floor.receiveShadow=true; scene.add(floor);
+
+    scene.userData.S=S;
+    placeCamera();
+    resize();
+  }
+
+  function placeCamera(){
+    const S=scene.userData.S;
+    const d=S.H*3.20;   // far enough that the base never crops
+    const el=lookDown?0.46:0.20;
+    const lookY=S.H*0.47;
+    camera.position.set(0, lookY+Math.sin(el)*d, Math.cos(el)*d);
+    camera.lookAt(0,lookY,0);
+  }
+
+  function resize(){
+    if(!renderer||!host)return;
+    const w=host.clientWidth||640;
+    const h=host.clientHeight||Math.round(w*0.75);
+    renderer.setSize(w,h,false);
+    camera.aspect=w/h; camera.updateProjectionMatrix();
+  }
+
+  // The artwork, laid into the printable band exactly as Printify lays it:
+  // the file fills the print area, and whatever does not fit is cropped
+  // rather than letterboxed, so the customer never sees a white bar that
+  // will not be on the mug.
+  function paint(img){
+    if(!designCanvas)return;
+    const g=designCanvas.getContext('2d');
+    g.clearRect(0,0,2048,1024);
+    if(img){
+      const want=2048/1024, have=img.width/img.height;
+      let sw,sh,sx,sy;
+      if(have>want){ sh=img.height; sw=sh*want; sx=(img.width-sw)/2; sy=0; }
+      else { sw=img.width; sh=sw/want; sx=0; sy=(img.height-sh)/2; }
+      g.drawImage(img,sx,sy,sw,sh,0,0,2048,1024);
+    }
+    if(designTex)designTex.needsUpdate=true;
+  }
+
+  // Three-panel mugs arrive as three separate images. Printify joins them
+  // left -> centre -> right around the wrap; so do we, on one canvas, before
+  // anything is wrapped.
+  function joinPanels(urls){
+    const live=urls.filter(Boolean);
+    if(!live.length)return Promise.resolve(null);
+    return Promise.all(live.map(u=>new Promise(res=>{
+      const im=new Image(); im.crossOrigin='anonymous';
+      im.onload=()=>res(im); im.onerror=()=>res(null); im.src=u;
+    }))).then(imgs=>{
+      const ok=imgs.filter(Boolean);
+      if(!ok.length)return null;
+      if(ok.length===1)return ok[0];
+      const h=1024, c=document.createElement('canvas');
+      c.width=Math.round(ok.reduce((s,i)=>s+h*(i.width/i.height),0));
+      c.height=h;
+      const g=c.getContext('2d');
+      let x=0;
+      ok.forEach(i=>{ const w=h*(i.width/i.height); g.drawImage(i,x,0,w,h); x+=w; });
+      const out=new Image(); out.src=c.toDataURL('image/png');
+      return new Promise(res=>{ out.onload=()=>res(out); });
+    });
+  }
+
+  function loop(){
+    rafId=requestAnimationFrame(loop);
+    if(!renderer)return;
+    if(!visible)return;                       // off screen or tab hidden: don't burn a battery
+    if(spinning && !dragging){ setSpin(spin+0.32); }
+    renderer.render(scene,camera);
+  }
+
+  function setSpin(deg){
+    spin=deg;
+    if(mugGroup)mugGroup.rotation.y=spin*Math.PI/180;
+    if(onSpinChange){
+      let s=((deg+180)%360+360)%360-180;
+      onSpinChange(Math.round(s));
+    }
+  }
+
+  function wire(){
+    host.addEventListener('pointerdown',e=>{
+      dragging=true; host._lastX=e.clientX;
+      try{ host.setPointerCapture(e.pointerId); }catch(err){}
+    });
+    host.addEventListener('pointermove',e=>{
+      if(!dragging)return;
+      setSpin(spin+(e.clientX-host._lastX)*0.42);
+      host._lastX=e.clientX;
+    });
+    const up=()=>{ dragging=false; };
+    host.addEventListener('pointerup',up);
+    host.addEventListener('pointercancel',up);
+    // A click that did not drag is the stop/start toggle.
+    host.addEventListener('click',()=>{ setSpinning(!spinning); });
+
+    document.addEventListener('visibilitychange',onVis);
+    if(window.IntersectionObserver){
+      const io=new IntersectionObserver(es=>{
+        visible = !document.hidden && es.some(e=>e.isIntersecting);
+      },{threshold:0.01});
+      io.observe(host);
+      host._io=io;
+    }
+    window.addEventListener('resize',resize);
+  }
+  function onVis(){ visible = !document.hidden; }
+
+  function setSpinning(on){
+    spinning=!!on;
+    const btn=document.getElementById('mug3dSpinBtn');
+    if(btn){
+      btn.setAttribute('aria-pressed',String(spinning));
+      btn.textContent=spinning?'⏸ Pause':'▶ Spin';
+    }
+  }
+
+  return {
+    isCeramicMug(){ return typeof product!=='undefined' && product==='mug'; },
+    setLookDown(v){ lookDown=!!v; if(scene)placeCamera(); },
+    setSpinning,
+    spinning(){ return spinning; },
+    setAngle(deg){ setSpin(deg); },
+    onSpin(fn){ onSpinChange=fn; },
+    resize,
+
+    // opts: { sizeLabel, styleName, colorHex, panelUrls[], panoramaUrl }
+    open(hostEl, opts){
+      host=hostEl;
+      return loadThree().then(THREE=>{
+        if(!mounted){
+          host.innerHTML='';
+          build(THREE,opts);
+          wire();
+          mounted=true;
+          loop();
+        }
+        spinning = !reducedMotion();      // queasy customers get it still
+        setSpinning(spinning);
+        visible=!document.hidden;
+        resize();
+        const source = opts.panoramaUrl ? [opts.panoramaUrl] : (opts.panelUrls||[]);
+        return joinPanels(source).then(img=>{ paint(img); return true; });
+      });
+    },
+
+    close(){
+      if(rafId)cancelAnimationFrame(rafId);
+      rafId=0;
+      document.removeEventListener('visibilitychange',onVis);
+      if(host&&host._io){ host._io.disconnect(); host._io=null; }
+      window.removeEventListener('resize',resize);
+      if(renderer){ renderer.dispose(); if(renderer.domElement&&renderer.domElement.parentNode)
+        renderer.domElement.parentNode.removeChild(renderer.domElement); }
+      renderer=null; scene=null; camera=null; mugGroup=null; printMesh=null;
+      designTex=null; designCanvas=null; mounted=false; host=null;
+    }
+  };
+})();
+// ================= END THE MUG THAT TURNS =================
+
 // ================= MOCKUP LIGHTBOX =================
 // Enlarged real-photo-mockup images used to just window.open() the raw
 // Printify URL in a new tab -- no way to see another angle without
@@ -11789,6 +12285,7 @@ let currentMockupUrls=[];
 let currentMockupIndex=0;
 
 function openMockupLightbox(index){
+  hideMug3D();
   if(!currentMockupUrls.length)return;
   currentMockupIndex=((index%currentMockupUrls.length)+currentMockupUrls.length)%currentMockupUrls.length;
   const overlay=document.getElementById('mockupLightboxOverlay');
@@ -11811,6 +12308,7 @@ function openMockupLightbox(index){
 // Just hides the overlay. Everything that needs the lightbox gone without
 // making a decision about the flow calls this.
 function hideMockupLightbox(){
+  hideMug3D();
   const overlay=document.getElementById('mockupLightboxOverlay');
   if(overlay)overlay.classList.remove('visible');
 }
