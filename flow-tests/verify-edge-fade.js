@@ -344,60 +344,104 @@ scenarios.aFadingFrameActuallyGetsFaded = async (page) => {
     lastWraparoundMethod = 'panorama';
     revealFadeSliderTouched = false;
     product = 'mug';
-    const sample = async (url) => {
-      const im = await loadImageFromUrl(url);
+    windowSillChoice = null;
+    customFrameCalibration = {};
+    // v94: the fade is painted on the BOX the picture shows through, inside
+    // the real composite, not on the picture file beforehand. So measure the
+    // composite: count near-white pixels inside the frame's opening, and
+    // read the centre of the picture.
+    const measure = async (pct) => {
+      const framed = await compositeFrameAcrossPanorama(wraparoundPanoramaBaseUrl, pct);
+      const im = await loadImageFromUrl(framed.combined);
       const c = document.createElement('canvas');
       c.width = im.naturalWidth; c.height = im.naturalHeight;
       const ctx = c.getContext('2d');
       ctx.drawImage(im, 0, 0);
-      const px = (x, y) => { const d = ctx.getImageData(x, y, 1, 1).data; return [d[0], d[1], d[2]]; };
-      return {
-        corner: px(2, 2),
-        centre: px(Math.floor(im.naturalWidth / 2), Math.floor(im.naturalHeight / 2)),
-      };
+      const frac = await getFrameInsetFraction(FRAME_CATALOG[selectedFrame].asset);
+      const bx = Math.floor(frac.x * c.width), by = Math.floor(frac.y * c.height);
+      const bw = Math.floor(frac.w * c.width), bh = Math.floor(frac.h * c.height);
+      const d = ctx.getImageData(bx, by, bw, bh).data;
+      let white = 0;
+      for (let k = 0; k < d.length; k += 4) if (d[k] > 215 && d[k + 1] > 215 && d[k + 2] > 215) white++;
+      const cp = ctx.getImageData(Math.floor(c.width / 2), Math.floor(c.height / 2), 1, 1).data;
+      return { whiteShare: white / (bw * bh), centre: [cp[0], cp[1], cp[2]] };
     };
-    windowSillChoice = null;
     selectedFrame = 'Mirror Mirror';                  // on the list
-    const fadingUrl = await wrapSourceForFrame();
-    const fading = await sample(fadingUrl);
-    const pct = requiredFadePctForFrame();
+    frameStudioFadePct = null;
+    const pct = frameStudioFadeAmount();
+    const fading = await measure(pct);
+    const plain = await measure(0);
     selectedFrame = 'Ornate Gold';                    // not on the list
-    const plainUrl = await wrapSourceForFrame();
-    const plain = await sample(plainUrl);
-    return {
-      pct,
-      fadingUrl, plainUrl,
-      base: wraparoundPanoramaBaseUrl,
-      fadingCorner: fading.corner, fadingCentre: fading.centre,
-      plainCorner: plain.corner, plainCentre: plain.centre,
-      hex: getSelectedProductColorHex(),
-    };
+    frameStudioFadePct = null;
+    const unlistedPct = frameStudioFadeAmount();
+    return { pct, unlistedPct, fading, plain, hex: getSelectedProductColorHex() };
   });
 
   if (r.pct !== 40) return `FAIL: a frame that comes with a fade should carry 40%, got ${r.pct}`;
-  if (r.fadingUrl === r.base) {
-    return 'FAIL: the frame was drawn onto the untouched strip — the fade never happened: ' + JSON.stringify(r);
+  // The product is a white mug, so a fade lifts the corners of the opening
+  // toward white (the band is soft, so count pixels that are clearly light).
+  // Without the fade the opening is the picture.
+  if (r.plain.whiteShare > 0.05) {
+    return `FAIL: the opening is already ${Math.round(r.plain.whiteShare * 100)}% white before any fade: ` + JSON.stringify(r);
   }
-  // The product is a white mug, so a faded corner must be near white and must
-  // be clearly lighter than the same corner without a fade.
-  const near = (rgb, v, tol) => rgb.every((c) => Math.abs(c - v) <= tol);
-  if (!near(r.fadingCorner, 255, 12)) {
-    return `FAIL: the corner did not fade to the mug's own white: rgb(${r.fadingCorner}) ` + JSON.stringify(r);
-  }
-  const lifted = r.fadingCorner.reduce((a, c, i) => a + (c - r.plainCorner[i]), 0);
-  if (lifted <= 30) {
-    return `FAIL: the faded corner is barely different from the unfaded one (${lifted}): ` + JSON.stringify(r);
+  if (r.fading.whiteShare < 0.12) {
+    return `FAIL: with the fade on, only ${Math.round(r.fading.whiteShare * 100)}% of the opening went to the mug's white — the fade never happened: ` + JSON.stringify(r);
   }
   // The middle of the picture must survive untouched -- a fade that washes
   // the whole image out would also pass the corner check.
-  if (r.fadingCentre.join() !== r.plainCentre.join()) {
-    return `FAIL: the fade reached the centre of the picture: rgb(${r.fadingCentre}) vs rgb(${r.plainCentre})`;
+  if (r.fading.centre.join() !== r.plain.centre.join()) {
+    return `FAIL: the fade reached the centre of the picture: rgb(${r.fading.centre}) vs rgb(${r.plain.centre})`;
   }
-  // A frame NOT on the list must get the strip exactly as it was.
-  if (r.plainUrl !== r.base) {
-    return 'FAIL: a frame that needs no fade got one anyway: ' + JSON.stringify(r);
+  // A frame NOT on the list gets none unless asked.
+  if (r.unlistedPct !== 0) {
+    return `FAIL: a frame that needs no fade got ${r.unlistedPct}% anyway`;
   }
-  return `PASS: a listed frame is drawn onto a genuinely faded strip (corner rgb(${r.fadingCorner}) on a ${r.hex} mug, centre untouched), an unlisted one onto the original`;
+  return `PASS: a listed frame's opening goes ${Math.round(r.fading.whiteShare * 100)}% to the mug's ${r.hex} with the fade on (centre untouched), an unlisted one carries none`;
+};
+
+// THE FADE SURVIVES THE FIT SLIDERS (Alyx, v94: "the fade doesn't take until
+// Height is lowered"). The fade used to be painted on the picture file's own
+// edges; when the fit sliders set a box the picture FILLS, the overflow that
+// got clipped away was exactly where the fade lived, so the slider looked
+// dead. Now the box itself fades. Measured: with Height at 150% (the strip
+// overflowing and cropped) the opening must still go white at its corners.
+scenarios.theFadeSurvivesTheHeightSlider = async (page) => {
+  const r = await page.evaluate(async () => {
+    wraparoundPanoramaBaseUrl = 'http://127.0.0.1:8788/__fake/panorama.jpg';
+    lastWraparoundMethod = 'panorama';
+    product = 'mug'; windowSillChoice = null;
+    selectedFrame = 'Mirror Mirror';
+    const asset = FRAME_CATALOG[selectedFrame].asset;
+    const measure = async (pct) => {
+      const framed = await compositeFrameAcrossPanorama(wraparoundPanoramaBaseUrl, pct);
+      const im = await loadImageFromUrl(framed.combined);
+      const c = document.createElement('canvas');
+      c.width = im.naturalWidth; c.height = im.naturalHeight;
+      const ctx = c.getContext('2d');
+      ctx.drawImage(im, 0, 0);
+      const cal = customFrameCalibration[asset];
+      const bw = Math.floor(c.width * cal.widthPct / 100), bh = Math.floor(c.height * cal.heightPct / 100);
+      const bx = Math.floor((c.width - bw) / 2), by = Math.floor((c.height - bh) / 2);
+      // Only the part of the box that is on the canvas.
+      const x0 = Math.max(0, bx), y0 = Math.max(0, by);
+      const x1 = Math.min(c.width, bx + bw), y1 = Math.min(c.height, by + bh);
+      const d = ctx.getImageData(x0, y0, x1 - x0, y1 - y0).data;
+      let white = 0;
+      for (let k = 0; k < d.length; k += 4) if (d[k] > 215 && d[k + 1] > 215 && d[k + 2] > 215) white++;
+      const cp = ctx.getImageData(Math.floor(c.width / 2), Math.floor(c.height / 2), 1, 1).data;
+      return { whiteShare: white / ((x1 - x0) * (y1 - y0)), centre: [cp[0], cp[1], cp[2]] };
+    };
+    customFrameCalibration[asset] = { widthPct: 100, heightPct: 150, offsetXPct: 0, offsetYPct: 0 };
+    const tall = { plain: await measure(0), faded: await measure(40) };
+    customFrameCalibration = {};
+    return tall;
+  });
+  if (r.plain.whiteShare > 0.05) return `FAIL: the tall box is ${Math.round(r.plain.whiteShare * 100)}% white with no fade: ` + JSON.stringify(r);
+  if (r.faded.whiteShare < 0.08) {
+    return `FAIL: with Height at 150% the fade only turned ${Math.round(r.faded.whiteShare * 100)}% of the box white — the crop ate the fade again: ` + JSON.stringify(r);
+  }
+  if (r.faded.centre.join() !== r.plain.centre.join()) return `FAIL: the fade reached the centre: ` + JSON.stringify(r);
+  return `PASS: with Height at 150% the box still fades (${Math.round(r.faded.whiteShare * 100)}% of it to white, centre untouched)`;
 };
 
 // THE NUMBER ON THE SLIDER IS THE AMOUNT OF PICTURE GONE (Alyx, Sep 2026).

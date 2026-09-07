@@ -2,7 +2,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head><link rel="manifest" href="needles-manifest.json">
-<!-- BUILD-MARKER: THE-STYLES-AS-THEY-ARE-v93 -->
+<!-- BUILD-MARKER: FADE-THE-BOX-v94 -->
 <!-- If you can see this comment on GitHub, this exact paste landed. -->
 <!-- If your live site's page source does NOT say -->
 <!-- "INSTANT-FIT-SCREEN-v47" right here, the upload/deploy did -->
@@ -135,6 +135,7 @@
 #frameFitSliders button{font-size:12px}
 body.frame-tools-open #frameFitSlidersToggleBtn{padding:.45rem;font-size:12px;margin-top:.35rem}
 body.frame-tools-open #accessorizeSatisfiedBtn{padding:.7rem;margin-top:.5rem}
+body.frame-tools-open #accessorizeApplyFrameBtn{padding:.7rem;margin-top:.5rem}
 body.frame-tools-open #accessorizeCancelBtn{padding:.45rem;font-size:12px;margin-top:.35rem}
 @keyframes metallicShine{0%,100%{background-position:0% 50%}50%{background-position:100% 50%}}.note-prominent{font-size:14px;color:#7888b4;margin-top:6px;line-height:1.5;font-weight:600}.note-action-flash{font-size:15px;font-weight:700;line-height:1.5;margin-top:0;animation:notePromptFlash 1.4s ease-in-out infinite}@keyframes notePromptFlash{0%,100%{color:#003c8c;text-shadow:0 0 8px rgba(0,60,140,.7)}50%{color:#7888b4;text-shadow:0 0 14px rgba(0,60,140,.4)}}.upload-zone{border:1.5px dashed #444;border-radius:12px;padding:2rem;text-align:center;cursor:pointer;background:#0d0d0d}.upload-zone.has-image{border-color:#003c8c;border-style:solid}.upload-text{font-size:14px;color:#29a3ff}.upload-sub{font-size:12px;color:#29a3ff;margin-top:4px}.preview-img{width:100%;max-height:320px;object-fit:contain;border-radius:8px;margin-top:0;cursor:pointer}.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.grid2{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}.btn-select{background:#0d0d0d;border:.5px solid #333;border-radius:8px;padding:.75rem .5rem;text-align:center;cursor:pointer;color:#29a3ff;font-size:12px}.btn-select.selected{border-color:#29a3ff;border-width:3px;background:#0e2036;color:#29a3ff;box-shadow:0 0 14px rgba(41,163,255,0.75)}.magazine-tile.selected{border-color:#29a3ff;border-width:3px;box-shadow:0 0 14px rgba(41,163,255,0.75)}.goodmorning-tile.selected{border-color:#29a3ff;border-width:3px;box-shadow:0 0 10px 2px rgba(41,163,255,0.95),0 0 30px 8px rgba(41,163,255,0.65)}.icon{font-size:20px;margin-bottom:4px;display:block}.quick-btns{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}.quick-btn{background:#0d0d0d;border:.5px solid #444;border-radius:20px;padding:4px 10px;color:#29a3ff;font-size:11px;cursor:pointer}.quick-btn:hover{border-color:#003c8c;color:#003c8c}.generate-btn{width:100%;background:linear-gradient(180deg,#6fb3ff,#003c8c 55%,#2266cc);border:1px solid #7888b4;border-radius:10px;padding:1.1rem;color:#fff;font-size:17px;font-weight:700;cursor:pointer;letter-spacing:1px;box-shadow:0 3px 10px rgba(0,60,140,0.35)}.generate-btn:disabled{background:#333;color:#666;cursor:not-allowed}.status{font-size:16px;font-weight:600;color:#003c8c;text-align:center;padding:1rem;display:none;line-height:1.4}.status.visible{display:block}.error{color:#e24b4a!important}.note.error{background:none!important;-webkit-text-fill-color:#e24b4a!important;color:#e24b4a!important}.spinner{display:inline-block;width:16px;height:16px;border:2px solid #003c8c;border-top-color:transparent;border-radius:50%;animation:spin .8s linear infinite;vertical-align:middle;margin-right:8px}@keyframes spin{to{transform:rotate(360deg)}}@keyframes trackBlink{0%,100%{opacity:.5;text-shadow:none}50%{opacity:1;text-shadow:0 0 10px rgba(122,184,255,.95)}}.track-label{animation:trackBlink 1.8s ease-in-out infinite}.track-label-2{animation-delay:.9s}@keyframes criticalWarningBlink{0%,100%{opacity:1;text-shadow:0 0 8px rgba(255,80,60,.9)}50%{opacity:.35;text-shadow:none}}.critical-warning-blink{animation:criticalWarningBlink 1.1s ease-in-out infinite}@keyframes trackBtnFlash{0%,100%{box-shadow:0 3px 10px rgba(0,60,140,0.35);border-color:#7888b4}50%{box-shadow:0 0 20px rgba(41,163,255,.95);border-color:#29a3ff}}.track-btn-flash{animation:trackBtnFlash 1.8s ease-in-out infinite}.track-btn-flash-2{animation-delay:.9s}.generate-flash{animation:trackBtnFlash 1.8s ease-in-out infinite}.result-area{display:none}.result-area.visible{display:block}.result-img{width:100%;border-radius:12px;border:1px solid #003c8c}.mockup-label{font-size:12px;color:#29a3ff;text-align:center;margin-top:8px}.download-btn{width:100%;background:#0d0d0d;border:1px solid #003c8c;border-radius:10px;padding:.75rem;color:#003c8c;font-size:14px;cursor:pointer;margin-top:.75rem}
 .caption-card{display:none}.caption-card.visible{display:block}
@@ -1056,6 +1057,11 @@ const HERO_SETTLE_MS = 1000;
 <div class="btn-select" data-val="stark silhouette portrait: the subject rendered as a single solid pure-black shape against a plain pure-white background, no interior detail whatsoever, no facial features drawn, no shading, no outline — recognition comes ENTIRELY from the precise outline of the profile, so the contour of the nose, lips, chin, brow, jaw, hair and glasses must exactly match the uploaded photo. Compose it as a close-up head-and-shoulders profile facing to one side" onclick="pick(this,'style')">🖤 Silhouette<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Pure black profile, white ground.</div></div>
 </div>
 <button type="button" id="styleContinueBtn" class="generate-btn" style="margin-top:.9rem;max-width:280px" onclick="confirmStyleAndContinue()">✅ Use This Style — Continue</button>
+<!-- EVERY PANEL HAS A BACK (Alyx, v94: "There is no back button anywhere on
+     this page... no mechanism by which I can go back and change my image").
+     Back here is back to the photo: the spotlight lifts and the upload
+     boards come into view so another picture can be tapped in. -->
+<button type="button" id="styleBackBtn" class="download-btn" style="display:none;margin-top:.6rem;max-width:280px" onclick="styleStepBack()">← Back — Change Photo</button>
 </div>
 <div class="card" id="trackForkCard">
 <div class="card-title">🛤️ How Would You Like To Start?</div>
@@ -1765,6 +1771,11 @@ Tell Needles <span style="color:#7ab8ff">what you have in mind</span>
 </div>
 
 <div id="accessorizePreviewStrip" style="display:flex;gap:8px;margin-top:1rem"></div>
+<!-- THE BUTTON UNDER THE PICTURE (Alyx, v94): the way forward used to be
+     only "Satisfied?" at the very bottom of the catalogue. This sits right
+     under the picture in the studio's left column. Satisfied? stays where
+     it is as well. Both do the same thing. -->
+<button type="button" class="generate-btn" id="accessorizeApplyFrameBtn" style="display:none;margin-top:.7rem" onclick="applyAccessorizeFrame()">✅ Apply Frame — Continue</button>
 
 <div id="accessorizeCommittedContent" style="display:none">
 <!-- The "pick a frame and try as many as you like" instructions are gone
@@ -2752,6 +2763,8 @@ function showPostUploadFork(){
   if(styleCard)styleCard.style.display='';
   const continueBtn=document.getElementById('styleContinueBtn');
   if(continueBtn)continueBtn.style.display='block';
+  const backBtn=document.getElementById('styleBackBtn');
+  if(backBtn)backBtn.style.display='block';
   const intro=document.getElementById('styleStepIntro');
   if(intro)intro.style.display='block';
   setOptionSpotlight('style-focus');
@@ -2778,9 +2791,29 @@ function showPostUploadFork(){
 // that is not "click the thing that is already selected" -- hence a Continue
 // button rather than advancing on tile click. Same pattern as the mug colour
 // step's "Satisfied - Continue".
+// Back from Art Style (v94): the step before it is the photo. Lift the
+// spotlight, put the Art Style step away exactly as it was before the photo
+// landed, and bring the upload boards back into view so another picture can
+// be tapped in. Nothing about the photo already loaded is touched; tapping a
+// board opens the file picker as it always does.
+function styleStepBack(){
+  const continueBtn=document.getElementById('styleContinueBtn');
+  if(continueBtn)continueBtn.style.display='none';
+  const backBtn=document.getElementById('styleBackBtn');
+  if(backBtn)backBtn.style.display='none';
+  const intro=document.getElementById('styleStepIntro');
+  if(intro)intro.style.display='none';
+  const row=document.getElementById('postUploadForkRow');
+  if(row)row.style.display='none';
+  setOptionSpotlight(null);
+  smoothScrollToTarget('uploadPhotoCard','start');
+}
+
 function confirmStyleAndContinue(){
   const continueBtn=document.getElementById('styleContinueBtn');
   if(continueBtn)continueBtn.style.display='none';
+  const backBtn=document.getElementById('styleBackBtn');
+  if(backBtn)backBtn.style.display='none';
   const intro=document.getElementById('styleStepIntro');
   if(intro)intro.style.display='none';
   setOptionSpotlight('track-focus');
@@ -3551,14 +3584,12 @@ function frameStudioFadeAmount(){
   if(frameStudioFadePct!=null)return frameStudioFadePct;
   return frameRequiresFade(selectedFrame)?requiredFadePctForFrame():0;
 }
-// The strip a frame gets drawn onto: faded first when the frame needs it, so
-// the picture dissolves into the product colour UNDER the frame and the
-// decoration reads as sitting over open space.
-async function wrapSourceForFrame(){
-  if(!wraparoundPanoramaBaseUrl)return null;
-  const pct=frameStudioFadeAmount();
-  if(!(pct>0))return wraparoundPanoramaBaseUrl;
-  return await renderFadedArtwork(wraparoundPanoramaBaseUrl,getSelectedProductColorHex(),pct);
+// The strip a frame gets drawn onto is the plain, unframed panorama. The
+// fade is no longer baked into this file first: it is painted on the box
+// the picture shows through, inside compositeFrameAcrossPanorama, so it
+// survives whatever the fit sliders crop away (v94).
+function wrapSourceForFrame(){
+  return wraparoundPanoramaBaseUrl||null;
 }
 
 // The catalogue, split the way it is displayed: the frames that stand on
@@ -4379,6 +4410,32 @@ async function getFrameDefaultCalibrationPct(asset){
 // directly onto canvas pixels with no extra conversion. Cached per asset
 // since this involves a full pixel scan and drawCaption() can run on
 // every keystroke.
+// WARM-UP (v94, with Alyx's go-ahead: "give it a try then if it won't hurt
+// anything"). Every frame in the catalogue is fetched and its opening
+// measured once, in the background, the first time the frame studio opens.
+// getFrameInsetFraction caches the measurement and the browser caches the
+// file, so the first tap on a frame draws instead of downloading. One at a
+// time so the preview already on screen is never starved; failures are
+// logged by the loaders and change nothing.
+let frameStudioWarmed=false;
+function warmFrameStudioAssets(){
+  if(frameStudioWarmed)return;
+  frameStudioWarmed=true;
+  const jobs=[];
+  Object.values(FRAME_CATALOG).forEach(data=>{
+    if(data.type==='image'&&data.asset)jobs.push(()=>getFrameInsetFraction(data.asset));
+    if(data.type==='twoPiece'){
+      if(data.cornerAsset)jobs.push(()=>loadLocalImage(data.cornerAsset));
+      if(data.railAsset)jobs.push(()=>loadLocalImage(data.railAsset));
+    }
+  });
+  (async()=>{
+    for(const job of jobs){
+      try{await job();}catch(e){}
+    }
+  })();
+}
+
 async function getFrameInsetFraction(assetPath){
   if(frameInsetCache[assetPath])return frameInsetCache[assetPath];
   let frac;
@@ -4412,7 +4469,13 @@ async function getFrameInsetFraction(assetPath){
 // draw when no real image-type frame is selected, since procedural
 // frames already account for their own thickness analytically and
 // Window Sill is a full-bleed scene, not a border.
-async function drawPhotoInsetForFrame(ctx,canvas,source,sourceW,sourceH){
+// fadePct (v94): fade the edges of the BOX the picture shows through, in the
+// product colour, after the picture is placed. The fade used to be painted
+// on the picture FILE before it came here, so when the fit sliders set a box
+// the picture fills, the cropped-off edges took the fade with them and the
+// slider looked dead until Height came down ("the fade doesn't take"). Now
+// whatever is visible inside the opening is what fades, sliders or not.
+async function drawPhotoInsetForFrame(ctx,canvas,source,sourceW,sourceH,fadePct=0){
   // Same containment problem Frame had, applies here too: a Window Sill
   // scene has its own real opening (the window cutout), smaller than the
   // full canvas, with real padding around it in the source file. Drawing
@@ -4523,9 +4586,13 @@ async function drawPhotoInsetForFrame(ctx,canvas,source,sourceW,sourceH){
     ctx.clip();
     ctx.drawImage(source,0,0,sourceW,sourceH,drawX,drawY,drawW,drawH);
     ctx.restore();
+    // The visible picture is the box itself: fade the box.
+    if(fadePct>0)paintOvalFadeOnRect(ctx,insetX,insetY,insetW,insetH,getSelectedProductColorHex(),fadePct);
     return;
   }
   ctx.drawImage(source,0,0,sourceW,sourceH,drawX,drawY,drawW,drawH);
+  // Shrink-to-fit: the visible picture is exactly what was drawn.
+  if(fadePct>0)paintOvalFadeOnRect(ctx,drawX,drawY,drawW,drawH,getSelectedProductColorHex(),fadePct);
 }
 
 // Loads a same-origin local asset as an Image. Plain Image(), no
@@ -11045,40 +11112,60 @@ async function renderFadedArtwork(sourceUrl,hexColor,fadeAmountPct){
     // After the scale below the picture is the square [-1,1], so the geometry
     // is exact: a circle of radius r covers pi*r^2 of it until r passes 1,
     // after which the square clips four circular segments off it.
-    const t=Math.min(1,Math.max(0,fadeAmountPct/100));
-    const insideArea=(r)=>{
-      if(r<=0)return 0;
-      if(r>=Math.SQRT2)return 4;
-      if(r<=1)return Math.PI*r*r;
-      return Math.PI*r*r-4*(r*r*Math.acos(1/r)-Math.sqrt(r*r-1));
-    };
-    // Bisection: find the radius whose OUTSIDE is exactly t of the picture.
-    let lo=0,hi=Math.SQRT2,radius=hi;
-    const wantInside=4*(1-t);
-    for(let k=0;k<50;k++){
-      radius=(lo+hi)/2;
-      if(insideArea(radius)<wantInside)lo=radius; else hi=radius;
-    }
-    ctx.save();
-    ctx.translate(w/2,h/2);
-    ctx.scale(w/2,h/2);
-    if(t>=0.999){
-      ctx.fillStyle=hexColor+'FF';
-      ctx.fillRect(-1,-1,2,2);
-    } else {
-      // A soft band centred on that radius, so the picture dissolves rather
-      // than ending at a hard ring. It narrows at the extremes so 0 stays
-      // genuinely untouched and 100 stays genuinely solid.
-      const band=0.5*Math.min(1,t*5,(1-t)*5);
-      const rg=ctx.createRadialGradient(0,0,Math.max(0,radius-band/2),0,0,radius+band/2);
-      rg.addColorStop(0,hexColor+'00');
-      rg.addColorStop(1,hexColor+'FF');
-      ctx.fillStyle=rg;
-      ctx.fillRect(-1,-1,2,2);
-    }
-    ctx.restore();
+    paintOvalFadeOnRect(ctx,0,0,canvas.width,canvas.height,hexColor,fadeAmountPct);
   }
   return canvas.toDataURL('image/jpeg',0.92);
+}
+
+// THE FADE, PAINTED ON A RECTANGLE OF A CANVAS (v94). The oval vignette
+// used to live inside renderFadedArtwork and could only ever fade a whole
+// picture file. The frame studio now fades the BOX the picture is seen
+// through instead (see drawPhotoInsetForFrame), so the same maths is here,
+// aimed at any rectangle: the rectangle is drawn as a unit square, the
+// clear oval sits in its middle, and the corners of the rectangle go to
+// the product colour first. Everything below is the maths exactly as it
+// was; only the target moved.
+function paintOvalFadeOnRect(ctx,x,y,w,h,hexColor,fadeAmountPct){
+  if(!(fadeAmountPct>0)||!(w>0)||!(h>0))return;
+  if(fadeAmountPct>=100){
+    ctx.save();
+    ctx.fillStyle=hexColor;
+    ctx.fillRect(x,y,w,h);
+    ctx.restore();
+    return;
+  }
+  const t=Math.min(1,Math.max(0,fadeAmountPct/100));
+  const insideArea=(r)=>{
+    if(r<=0)return 0;
+    if(r>=Math.SQRT2)return 4;
+    if(r<=1)return Math.PI*r*r;
+    return Math.PI*r*r-4*(r*r*Math.acos(1/r)-Math.sqrt(r*r-1));
+  };
+  // Bisection: find the radius whose OUTSIDE is exactly t of the picture.
+  let lo=0,hi=Math.SQRT2,radius=hi;
+  const wantInside=4*(1-t);
+  for(let k=0;k<50;k++){
+    radius=(lo+hi)/2;
+    if(insideArea(radius)<wantInside)lo=radius; else hi=radius;
+  }
+  ctx.save();
+  ctx.translate(x+w/2,y+h/2);
+  ctx.scale(w/2,h/2);
+  if(t>=0.999){
+    ctx.fillStyle=hexColor+'FF';
+    ctx.fillRect(-1,-1,2,2);
+  } else {
+    // A soft band centred on that radius, so the picture dissolves rather
+    // than ending at a hard ring. It narrows at the extremes so 0 stays
+    // genuinely untouched and 100 stays genuinely solid.
+    const band=0.5*Math.min(1,t*5,(1-t)*5);
+    const rg=ctx.createRadialGradient(0,0,Math.max(0,radius-band/2),0,0,radius+band/2);
+    rg.addColorStop(0,hexColor+'00');
+    rg.addColorStop(1,hexColor+'FF');
+    ctx.fillStyle=rg;
+    ctx.fillRect(-1,-1,2,2);
+  }
+  ctx.restore();
 }
 
 async function updateRevealFadePreview(){
@@ -12930,7 +13017,7 @@ let frameInsetOverridePct=null;
 // from the outer two, and a face crossing a seam came out as two mismatched
 // halves. The mug never did any of that -- it prints the uncut strip -- so
 // the framed preview was showing a picture the product would never be.
-async function compositeFrameAcrossPanorama(stripUrl){
+async function compositeFrameAcrossPanorama(stripUrl,fadePct=0){
   const img=await loadImageFromUrl(stripUrl);
   const stripW=img.naturalWidth;
   const h=img.naturalHeight;
@@ -12939,7 +13026,7 @@ async function compositeFrameAcrossPanorama(stripUrl){
   combined.width=stripW;
   combined.height=h;
   const ctx=combined.getContext('2d');
-  await drawPhotoInsetForFrame(ctx,combined,img,stripW,h);
+  await drawPhotoInsetForFrame(ctx,combined,img,stripW,h,fadePct);
   // Same 5% default as compositeFrameAcrossThreePanels -- it matches
   // CROP_FRACTION/2 in create-printify-order.js so the frame's ends survive
   // the server's circumference crop. See that function's comment.
@@ -13290,9 +13377,9 @@ async function updateAccessorizePreview(){
       if(selectedFrame||windowSillChoice){
         // Draw the frame on the mug's own strip when there is one. The
         // three-panel reassembly is for the classic fallback only.
-        const previewSource=await wrapSourceForFrame();
+        const previewSource=wrapSourceForFrame();
         const framed=(lastWraparoundMethod==='panorama'&&previewSource)
-          ? await compositeFrameAcrossPanorama(previewSource)
+          ? await compositeFrameAcrossPanorama(previewSource,frameStudioFadeAmount())
           : await compositeFrameAcrossThreePanels(pendingWraparoundRaw.center,pendingWraparoundRaw.left,pendingWraparoundRaw.right);
         renderAccessorizeStrip(framed.combined);
         // Only the seamless-wrap path (Wraparound, frame selected) is
@@ -13486,6 +13573,12 @@ function showAccessorizeStep(){
   if(inlineSatisfiedBtn)inlineSatisfiedBtn.style.display=isWraparoundReveal?'block':'none';
   const sharedSatisfiedBtn=document.getElementById('accessorizeSatisfiedBtn');
   if(sharedSatisfiedBtn)sharedSatisfiedBtn.style.display=isWraparoundReveal?'none':'block';
+  const applyFrameBtn=document.getElementById('accessorizeApplyFrameBtn');
+  if(applyFrameBtn)applyFrameBtn.style.display=studioWillMount?'block':'none';
+  // Warm the frames while the customer is still looking at the picture
+  // (v94), so the first frame tapped does not pay for loading and measuring
+  // its file in front of them.
+  if(studioWillMount)warmFrameStudioAssets();
   if(isWraparoundReveal && sillCard)sillCard.style.display='none';
   // From the mockup: frames only (a customer's own photo is not composed
   // for a sill's opening), and the way back is the mockup itself.
@@ -13599,9 +13692,9 @@ async function applyAccessorizeFrame(){
       // Always source from the UNFRAMED strip, never from wraparoundPanoramaUrl
       // -- that one may already carry a frame from an earlier pass, and
       // framing it again would stack a second frame inside the first.
-      const frameSource=await wrapSourceForFrame();
+      const frameSource=wrapSourceForFrame();
       const framed=(lastWraparoundMethod==='panorama'&&frameSource)
-        ? await compositeFrameAcrossPanorama(frameSource)
+        ? await compositeFrameAcrossPanorama(frameSource,frameStudioFadeAmount())
         : await compositeFrameAcrossThreePanels(pendingWraparoundRaw.center,pendingWraparoundRaw.left,pendingWraparoundRaw.right);
       // framed.combined is the full-width strip this function already builds
       // (and frames as one piece) before slicing it into thirds. Keeping it
