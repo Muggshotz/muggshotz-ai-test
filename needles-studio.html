@@ -2,7 +2,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head><link rel="manifest" href="needles-manifest.json">
-<!-- BUILD-MARKER: ONE-PICTURE-ON-THE-SCREEN-v81 -->
+<!-- BUILD-MARKER: HOLD-STILL-AND-FADE-WHERE-YOU-CAN-SEE-IT-v82 -->
 <!-- If you can see this comment on GitHub, this exact paste landed. -->
 <!-- If your live site's page source does NOT say -->
 <!-- "INSTANT-FIT-SCREEN-v47" right here, the upload/deploy did -->
@@ -1750,6 +1750,13 @@ Tell Needles <span style="color:#7ab8ff">what you have in mind</span>
 <input type="range" id="frameFitOffsetX" min="-50" max="50" step="1" oninput="handleFrameFitSliderChange()" style="width:100%"/>
 <label style="display:block;margin:8px 0 2px">Up/Down Position <span id="frameFitOffsetYVal"></span></label>
 <input type="range" id="frameFitOffsetY" min="-50" max="50" step="1" oninput="handleFrameFitSliderChange()" style="width:100%"/>
+<!-- THE FADE, WHERE YOU CAN SEE IT (Alyx, Sep 2026). The fade used to be
+     decided on a different screen, blind. Here it sits with the fit sliders
+     and the picture above them, so the corners can be watched disappearing
+     into the mug while the slider moves. -->
+<label style="display:block;margin:8px 0 2px">Edge Fade <span id="frameFitFadeVal"></span></label>
+<input type="range" id="frameFitFade" min="0" max="80" step="1" oninput="handleFrameFadeSliderChange()" style="width:100%"/>
+<div class="note" id="frameFitFadeNote" style="display:none;margin-top:4px;margin-bottom:0;color:#7ab8ff">This frame comes with a fade — its decoration reaches into the opening, so the picture is softened before the frame goes on.</div>
 <button type="button" class="download-btn" style="margin-top:.6rem" onclick="resetFrameFitSliders()">↺ Reset to Default Fit</button>
 </div>
 </div>
@@ -3480,22 +3487,35 @@ function frameRequiresFade(name){
 // re-opening the very gap the frame needs closed. They keep the slider
 // between those two points.
 const REQUIRED_FADE_DEFAULT_PCT=40;
+// What the Edge Fade slider in the frame studio is set to. null means nobody
+// has touched it and the frame's own default applies -- 40% for a frame that
+// comes with a fade, none for one that does not.
+let frameStudioFadePct=null;
 // How much fade a frame that comes with one actually gets. Whatever the
 // customer set, when they set something at or above the floor; the frame's
 // own default otherwise. Picking a frame skips the Hard/Fade screen entirely
 // (see applyAccessorizeFrame), so on that route this IS the whole decision.
 function requiredFadePctForFrame(){
+  if(frameStudioFadePct!=null)return frameStudioFadePct;
   return (revealFadeSliderTouched && revealFadeAmountPct>=REQUIRED_FADE_FLOOR_PCT)
     ? revealFadeAmountPct
     : REQUIRED_FADE_DEFAULT_PCT;
+}
+// How much fade the picture under the frame actually gets. A frame on the
+// list always gets at least the floor. A frame not on the list gets none
+// unless the customer asks for some with the slider.
+function frameStudioFadeAmount(){
+  if(frameRequiresFade(selectedFrame))return Math.max(REQUIRED_FADE_FLOOR_PCT,requiredFadePctForFrame());
+  return frameStudioFadePct!=null?frameStudioFadePct:0;
 }
 // The strip a frame gets drawn onto: faded first when the frame needs it, so
 // the picture dissolves into the product colour UNDER the frame and the
 // decoration reads as sitting over open space.
 async function wrapSourceForFrame(){
   if(!wraparoundPanoramaBaseUrl)return null;
-  if(!frameRequiresFade(selectedFrame))return wraparoundPanoramaBaseUrl;
-  return await renderFadedArtwork(wraparoundPanoramaBaseUrl,getSelectedProductColorHex(),requiredFadePctForFrame());
+  const pct=frameStudioFadeAmount();
+  if(!(pct>0))return wraparoundPanoramaBaseUrl;
+  return await renderFadedArtwork(wraparoundPanoramaBaseUrl,getSelectedProductColorHex(),pct);
 }
 const REQUIRED_FADE_FLOOR_PCT=15;
 
@@ -3863,17 +3883,40 @@ async function refreshFrameFitSliders(){
   document.getElementById('frameFitHeight').value=active.heightPct;
   document.getElementById('frameFitOffsetX').value=active.offsetXPct;
   document.getElementById('frameFitOffsetY').value=active.offsetYPct;
+  const fadeSlider=document.getElementById('frameFitFade');
+  const fadeNote=document.getElementById('frameFitFadeNote');
+  const needs=frameRequiresFade(selectedFrame);
+  if(fadeSlider){
+    fadeSlider.min=needs?String(REQUIRED_FADE_FLOOR_PCT):'0';
+    fadeSlider.value=String(frameStudioFadeAmount());
+  }
+  if(fadeNote)fadeNote.style.display=needs?'block':'none';
   updateFrameFitSliderReadouts();
 }
 
 function updateFrameFitSliderReadouts(){
-  ['frameFitWidth','frameFitHeight','frameFitOffsetX','frameFitOffsetY'].forEach(id=>{
+  ['frameFitWidth','frameFitHeight','frameFitOffsetX','frameFitOffsetY','frameFitFade'].forEach(id=>{
     const slider=document.getElementById(id);
     const readout=document.getElementById(id+'Val');
     if(!slider||!readout)return;
     const num=parseFloat(slider.value);
     readout.textContent=(isNaN(num)?'—':num)+'%';
   });
+}
+
+function handleFrameFadeSliderChange(){
+  const slider=document.getElementById('frameFitFade');
+  if(!slider)return;
+  let pct=parseFloat(slider.value);
+  // A frame that comes with a fade cannot be dragged back to nothing -- that
+  // re-opens the very gap the frame needs closed.
+  if(frameRequiresFade(selectedFrame) && pct<REQUIRED_FADE_FLOOR_PCT){
+    pct=REQUIRED_FADE_FLOOR_PCT;
+    slider.value=String(pct);
+  }
+  frameStudioFadePct=pct;
+  updateFrameFitSliderReadouts();
+  scheduleQuietPreviewRedraw();
 }
 
 function handleFrameFitSliderChange(){
@@ -3887,7 +3930,22 @@ function handleFrameFitSliderChange(){
     offsetYPct:parseFloat(document.getElementById('frameFitOffsetY').value)
   };
   updateFrameFitSliderReadouts();
-  if(pendingWraparoundRaw||pending40ozRaw)updateAccessorizePreview();
+  scheduleQuietPreviewRedraw();
+}
+
+// A drag fires oninput on every pixel of travel -- forty-odd full canvas
+// composites for one slider sweep, each one fighting the last. Coalesce them
+// into a steady few per second, and redraw quietly so the picture is never
+// taken off screen mid-adjustment.
+let quietPreviewTimer=null;
+function scheduleQuietPreviewRedraw(){
+  if(!(pendingWraparoundRaw||pending40ozRaw))return;
+  if(quietPreviewTimer)return;
+  quietPreviewTimer=setTimeout(()=>{
+    quietPreviewTimer=null;
+    accessorizePreviewQuiet=true;
+    Promise.resolve(updateAccessorizePreview()).finally(()=>{accessorizePreviewQuiet=false;});
+  },120);
 }
 
 function resetFrameFitSliders(){
@@ -3895,8 +3953,9 @@ function resetFrameFitSliders(){
   const data=FRAME_CATALOG[selectedFrame];
   if(!data||data.type!=='image')return;
   delete customFrameCalibration[data.asset];
+  frameStudioFadePct=null;
   refreshFrameFitSliders();
-  if(pendingWraparoundRaw||pending40ozRaw)updateAccessorizePreview();
+  scheduleQuietPreviewRedraw();
 }
 
 // NEW (Aug 2026, Alyx's request): the Preview & Fit sliders now start
@@ -12320,15 +12379,35 @@ async function wrapPreviewUrl(url){
     return url;
   }
 }
+// HOLD STILL WHILE THE CUSTOMER IS WORKING (Alyx, Sep 2026).
+// This used to wipe the strip and build a brand new <img> on every redraw.
+// The frame-fit sliders redraw on every tick of a drag, so the picture was
+// deleted and rebuilt dozens of times a second: the box collapsed from ~340px
+// tall to nothing and back each time, and the whole page jumped under the
+// slider you were trying to aim. Alyx: "you can't see what you're doing to
+// the picture."
+// Keep ONE image element for the life of the screen and only swap its src.
+// Nothing is removed, so nothing collapses, so nothing moves.
+function accessorizeStripImage(strip){
+  let img=strip.querySelector('img.fsPreviewImg');
+  if(!img){
+    strip.innerHTML='';
+    img=document.createElement('img');
+    img.className='fsPreviewImg';
+    img.style.cssText='width:100%;border-radius:8px;border:1px solid #003c8c;max-height:340px;object-fit:contain;background:#0d0d0d';
+    strip.appendChild(img);
+  }
+  return img;
+}
 function renderAccessorizeStrip(url){
   const strip=document.getElementById('accessorizePreviewStrip');
   if(strip){
-    strip.innerHTML='';
-    const img=document.createElement('img');
+    const img=accessorizeStripImage(strip);
+    // Guard against an earlier, slower redraw landing after a later one and
+    // putting the previous picture back.
+    const token=(++accessorizeStripToken);
     img.src=url;
-    wrapPreviewUrl(url).then(u=>{img.src=u;});
-    img.style.cssText='width:100%;border-radius:8px;border:1px solid #003c8c;max-height:340px;object-fit:contain;background:#0d0d0d';
-    strip.appendChild(img);
+    wrapPreviewUrl(url).then(u=>{ if(token===accessorizeStripToken)img.src=u; });
   }
   const inlinePreview=document.getElementById('frameCatalogInlinePreview');
   if(inlinePreview && inlinePreview.style.display==='block'){
@@ -12340,12 +12419,21 @@ function renderAccessorizeStrip(url){
   }
 }
 
+let accessorizeStripToken=0;
 let accessorizePreviewInFlight=null;
+// A slider nudge redraws a picture that is ALREADY on screen. Replacing it
+// with a one-line "Updating preview..." message is what made the box collapse
+// and the page jump. Only show the message when there is nothing to look at
+// yet.
+let accessorizePreviewQuiet=false;
 async function updateAccessorizePreview(){
   const strip=document.getElementById('accessorizePreviewStrip');
   if(!strip)return;
   if(!pendingWraparoundRaw && !pending40ozRaw)return;
-  strip.innerHTML='<div class="note" style="width:100%;text-align:center"><span class="spinner"></span>Updating preview...</div>';
+  const alreadyShowingAPicture=!!strip.querySelector('img.fsPreviewImg');
+  if(!(accessorizePreviewQuiet && alreadyShowingAPicture)){
+    strip.innerHTML='<div class="note" style="width:100%;text-align:center"><span class="spinner"></span>Updating preview...</div>';
+  }
   accessorizePreviewInFlight=(async()=>{
   try{
     if(pendingWraparoundRaw && revealFlowThreePanel){
@@ -15142,6 +15230,7 @@ function resetEverythingFreshStart(){
   // chose a fade" would stop the next design's frame applying its own.
   revealFadeSliderTouched=false;
   revealFadeAmountPct=DEFAULT_FADE_PCT;
+  frameStudioFadePct=null;
   const fadeSliderReset=document.getElementById('edgeFadeAmountSlider');
   if(fadeSliderReset)fadeSliderReset.value=0;
   const fadeReadoutReset=document.getElementById('edgeFadeAmountReadout');
