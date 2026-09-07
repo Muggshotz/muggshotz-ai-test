@@ -1140,6 +1140,57 @@ scenarios.tundraOrderCarriesTheFullWrap = async (page, log, mockupBodies) => {
   return `PASS: the Tundra order carries a ${ratio.toFixed(2)}:1 wrap, the band's own shape`;
 };
 
+// EVERY PANEL HAS A BACK, and the result screen is pinned (Alyx, v100).
+// Walks the travel rail and checks each panel's Back is there and wired,
+// then generates and checks the result screen cannot be scrolled away from.
+scenarios.theTravelRailHasBacksAndThePinnedResult = async (page) => {
+  await pickProduct(page, 'water bottle');
+  await page.evaluate(() => pickPreGenTravelVariant('travel-mug-30oz-tundra'));
+  await T(page, 800);
+  await dismissAlerts(page);
+  await page.evaluate(() => pickMugPrintMode('wraparound'));
+  await T(page, 800);
+  await dismissAlerts(page);
+  const backs = await page.evaluate(() => {
+    const vis = (el) => !!el && el.offsetParent !== null;
+    const check = (id, fn) => { const b = document.getElementById(id); return { shown: vis(b), wired: !!b && b.getAttribute('onclick') === fn }; };
+    return {
+      fork: check('trackForkBackBtn', 'trackForkBack()'),
+      travel: check('travelVariantBackBtn', 'travelVariantBack()'),
+      print: check('printModeBackBtn', 'printModeBack()'),
+    };
+  });
+  for (const [name, r] of Object.entries(backs)) {
+    if (!r.shown) return `FAIL: the ${name} panel has no visible Back`;
+    if (!r.wired) return `FAIL: the ${name} panel's Back is not wired`;
+  }
+  await describeAndGenerate(page, 'a wide desert canyon at sunrise');
+  await waitApprove(page);
+  await T(page, 1500);
+  const pin = await page.evaluate(async () => {
+    const vis = (el) => !!el && el.offsetParent !== null;
+    const back = document.getElementById('approveBackBtn');
+    const row = document.getElementById('approveRow');
+    const rowBottom = row.getBoundingClientRect().bottom + window.scrollY;
+    const picTop = document.getElementById('previewImg').getBoundingClientRect().top + window.scrollY;
+    window.scrollTo(0, 0);
+    await new Promise((r) => setTimeout(r, 400));
+    const atTop = window.scrollY;
+    window.scrollTo(0, document.body.scrollHeight);
+    await new Promise((r) => setTimeout(r, 400));
+    const atBottom = window.scrollY + window.innerHeight;
+    resultScreenBack();
+    await new Promise((r) => setTimeout(r, 400));
+    const rowHiddenOrPinReleased = true;
+    return { backShown: vis(back), backWired: !!back && back.getAttribute('onclick') === 'resultScreenBack()', atTop, picTop, atBottom, rowBottom };
+  });
+  if (!pin.backShown) return 'FAIL: the result screen has no visible Back';
+  if (!pin.backWired) return 'FAIL: the result screen Back is not wired';
+  if (pin.atTop < pin.picTop - 60) return `FAIL: the result screen scrolled away to the top of the page (${pin.atTop} vs picture at ${pin.picTop})`;
+  if (pin.atBottom > pin.rowBottom + 60) return `FAIL: the result screen scrolled away below its buttons (${pin.atBottom} vs row bottom ${pin.rowBottom})`;
+  return 'PASS: fork, travel-mug and print-style panels have Backs; the result screen has a Back and holds between its picture and its buttons';
+};
+
 // THE TOOLS BUTTON IS ON EVERY FRAME (Alyx, Sep 2026): "Almost all the
 // frames won't need it, but it doesn't hurt anything just to have it there
 // just in case."
