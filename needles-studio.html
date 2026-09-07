@@ -2,7 +2,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head><link rel="manifest" href="needles-manifest.json">
-<!-- BUILD-MARKER: ALYX-IDENTITY-BLOCK-v72 -->
+<!-- BUILD-MARKER: BACK-TO-THE-617-BUILD-v74 -->
 <!-- If you can see this comment on GitHub, this exact paste landed. -->
 <!-- If your live site's page source does NOT say -->
 <!-- "INSTANT-FIT-SCREEN-v47" right here, the upload/deploy did -->
@@ -11125,14 +11125,7 @@ async function beginFinalMockupFetch(){
 // mockup: accessorizeCard (preview + Apply + Back) on the left, the frame
 // catalogue card on the right. Both go back where they came from on exit.
 let frameStudioHome=null;
-// THE LAYOUT FOLLOWS THE FRAMES (Alyx, Sep 2026). This began life gated to
-// the frame offer that opens off the mockup, so every other screen that shows
-// the catalogue kept the old stacked layout -- frames pushing the picture off
-// the very screen you are judging them against. It is now the default wherever
-// a catalogue is on display: the picture pinned on the left, everything you
-// can browse scrolling on the right. Window Sill rides in the right column too
-// when it is offered alongside, so the rule holds for one catalogue or two.
-function mountFrameStudio(card,frameCard,sillCard){
+function mountFrameStudio(card,frameCard){
   if(!card||!card.parentNode)return;
   let studio=document.getElementById('frameStudio');
   if(!studio){
@@ -11143,11 +11136,7 @@ function mountFrameStudio(card,frameCard,sillCard){
   if(!frameStudioHome)frameStudioHome={parent:card.parentNode,next:card.nextSibling};
   if(!studio.parentNode)card.parentNode.insertBefore(studio,card);
   studio.querySelector('.fsLeft').appendChild(card);
-  const right=studio.querySelector('.fsRight');
-  if(frameCard)right.appendChild(frameCard);
-  // Only when it is actually on offer -- a hidden sill card moved into the
-  // column would leave a gap under the frames.
-  if(sillCard&&sillCard.style.display!=='none')right.appendChild(sillCard);
+  if(frameCard)studio.querySelector('.fsRight').appendChild(frameCard);
 }
 function unmountFrameStudio(){
   const studio=document.getElementById('frameStudio');
@@ -12283,13 +12272,7 @@ function showAccessorizeStep(){
   // for a sill's opening), and the way back is the mockup itself.
   if(frameOfferFromMockup&&sillCard)sillCard.style.display='none';
   if(frameOfferFromMockup&&crossPromo)crossPromo.style.display='none';
-  // The two-column studio -- picture pinned on the left, frames scrolling on
-  // the right -- was built for the frame offer that opens off the mockup and
-  // gated on that one entry point. The Wraparound frame offer arrives through
-  // the reveal flow instead, so it kept the old stacked layout where the
-  // frames push the picture off the screen you are judging them against.
-  // Same screen, same job: it gets the same studio (Alyx, Sep 2026).
-  mountFrameStudio(card,frameCard,sillCard);
+  if(frameOfferFromMockup)mountFrameStudio(card,frameCard); else unmountFrameStudio();
   const cancelBtn=document.getElementById('accessorizeCancelBtn');
   if(cancelBtn)cancelBtn.textContent=frameOfferFromMockup?'↩️ Back to the Mockup':'↩️ Cancel — Go Back';
   const satisfiedBtn=document.getElementById('accessorizeSatisfiedBtn');
