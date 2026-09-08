@@ -232,6 +232,75 @@ scenarios.coasterShapeDrivesFadeGeometry = async (page) => {
   return 'PASS: fade geometry follows the coaster shape (round → circle, square → rect)';
 };
 
+// EVERY PANEL HAS A WAY BACK (Alyx's standing rule; v110). The three flat
+// products walk product -> (shape) -> description -> generate -> fade, and
+// three of those panels shipped without one.
+scenarios.everyFlatPanelHasABack = async (page) => {
+  const backOn = (id) => page.evaluate((i) => {
+    const c = document.getElementById(i);
+    if (!c || c.offsetParent === null) return 'missing';
+    const b = Array.from(c.querySelectorAll('button')).filter(x => x.offsetParent !== null);
+    return b.some(x => /back|←/i.test(x.textContent)) ? 'yes' : 'no';
+  }, id);
+
+  await pick(page, 'coaster');
+  if (await backOn('coasterShapeCard') !== 'yes') return 'FAIL: the coaster shape card has no Back';
+  // Back from the shape is the product grid.
+  await page.evaluate(() => coasterShapeBack());
+  await page.waitForTimeout(900);
+  const atProduct = await page.evaluate(() => { const r = document.getElementById('productCard').getBoundingClientRect(); return r.top < innerHeight && r.bottom > 0; });
+  if (!atProduct) return 'FAIL: Back from the coaster shape does not reach the product grid';
+
+  await settleShape(page, 'coaster');
+  if (await backOn('ideaCard') !== 'yes') return 'FAIL: the description card has no Back';
+  // Back from the description on a coaster is its shape card, spotlit again.
+  await page.evaluate(() => ideaStepBack());
+  await page.waitForTimeout(900);
+  const shapeLit = await page.evaluate(() => Array.from(document.body.classList).find(c => c.endsWith('-focus')));
+  if (shapeLit !== 'coaster-shape-focus') return `FAIL: Back from the description lit ${shapeLit}, not the coaster shape`;
+  return 'PASS: shape and description both have a Back, and each lands on the step before it';
+};
+
+// The Edge Fade page sits between "Yes, use this design" and the mockup on
+// every single-image product. Back has to undo that Yes, not just close.
+scenarios.theFadePageHasABackThatUndoesTheYes = async (page) => {
+  await pick(page, 'mouse pad');
+  await page.fill('#ideaDesc', 'riding a dragon over a volcano');
+  await page.waitForTimeout(600);
+  await dismissAlerts(page);
+  await page.evaluate(() => document.getElementById('generateBtn')?.scrollIntoView({ block: 'center' }));
+  await page.click('#generateBtn');
+  await waitApprove(page);
+  await page.locator('#approveRow button:has-text("Yes")').first().click();
+  await page.waitForTimeout(2500);
+
+  const open = await page.evaluate(() => {
+    const o = document.getElementById('frameFadeOverlay');
+    const b = document.getElementById('frameFadeBackBtn');
+    const card = document.getElementById('frameFadeCard');
+    const r = card.getBoundingClientRect();
+    return { shown: o && o.style.display !== 'none', back: !!b && b.offsetParent !== null,
+      fits: card.scrollHeight <= Math.ceil(r.height) + 2 && r.bottom <= innerHeight + 2 };
+  });
+  if (!open.shown) return 'FAIL: the fade page did not open on a mouse pad';
+  if (!open.back) return 'FAIL: the fade page has no Back';
+  if (!open.fits) return 'FAIL: the fade page still needs scrolling inside itself to reach its buttons';
+
+  await page.evaluate(() => frameFadeBack());
+  await page.waitForTimeout(1200);
+  const after = await page.evaluate(() => ({
+    fadeGone: document.getElementById('frameFadeOverlay').style.display === 'none',
+    askingAgain: document.getElementById('approveRow').style.display !== 'none',
+    placed: ['left', 'front', 'right'].filter(p => placements[p]).length,
+    locked: document.body.classList.contains('step-locked'),
+  }));
+  if (!after.fadeGone) return 'FAIL: Back left the fade page open';
+  if (!after.askingAgain) return 'FAIL: Back did not put the design decision back on screen';
+  if (after.placed !== 0) return `FAIL: Back left ${after.placed} placement(s) behind — the Yes was not undone`;
+  if (after.locked) return 'FAIL: Back left the page step-locked';
+  return 'PASS: the fade page fits the screen, and its Back undoes the Yes and asks again';
+};
+
 (async () => {
   let fails = 0;
   for (const [name, fn] of Object.entries(scenarios)) {

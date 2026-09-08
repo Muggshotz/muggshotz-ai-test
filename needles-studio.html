@@ -2,7 +2,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head><link rel="manifest" href="needles-manifest.json">
-<!-- BUILD-MARKER: HUMAN-AND-ROBOT-HANDSHAKE-v110 -->
+<!-- BUILD-MARKER: THREE-FLAT-PRODUCTS-WALKED-v111 -->
 <!-- If you can see this comment on GitHub, this exact paste landed. -->
 <!-- If your live site's page source does NOT say -->
 <!-- "INSTANT-FIT-SCREEN-v47" right here, the upload/deploy did -->
@@ -1199,6 +1199,7 @@ const HERO_SETTLE_MS = 1000;
 <div class="btn-select" data-coaster-shape="round" onclick="pickCoasterShape('round')"><span class="icon">⭕</span>Round<div class="note" style="margin-top:4px">3.7" corkwood · $29.95</div></div>
 </div>
 <div class="note" id="coasterShapeSelectedNote" style="margin-top:.6rem"></div>
+<button type="button" class="download-btn" id="coasterShapeBackBtn" style="margin-top:1rem" onclick="coasterShapeBack()">← Back</button>
 </div>
 
 <div class="snap-section snap-collapsed" id="edgeFadeIdeaSection" data-snap-index="3">
@@ -1239,7 +1240,7 @@ const HERO_SETTLE_MS = 1000;
 </div>
 </div>
 
-<div class="card" id="ideaCard"><div class="card-title">💬 Tell Us Your Idea</div><div class="quote-text-reminder">⚠️ PLEASE REMEMBER TO SHOW ALL TEXT AND/OR CAPTIONS YOU WISH TO HAVE INCLUDED WITH YOUR IMAGE INSIDE QUOTES " "!</div><div class="idea-photo-row"><img id="ideaPhotoPreview" alt="Your uploaded photo" style="display:none"/><textarea id="ideaDesc" placeholder="Example: Put me on a tiny red tricycle wearing a firefighter helmet, shouting &quot;Out of my way!&quot; as I race through a parade with smoke and sirens behind me, under a banner that reads &quot;World's Fastest Firefighter.&quot;"></textarea></div><div class="quick-btns" id="quickBtns"></div><div class="note" id="ideaDefaultNote">Paint us a clear picture — the more detail you give us, the better our chances of getting your exact idea right.<br><span style="display:block;margin-top:.5rem">📸 <b>Just want your photo, exactly as it is?</b> Leave this box empty and hit Generate — no AI artwork, no changes, and it costs no image credits.</span></div>
+<div class="card" id="ideaCard"><div class="card-title">💬 Tell Us Your Idea</div><div class="quote-text-reminder">⚠️ PLEASE REMEMBER TO SHOW ALL TEXT AND/OR CAPTIONS YOU WISH TO HAVE INCLUDED WITH YOUR IMAGE INSIDE QUOTES " "!</div><div class="idea-photo-row"><img id="ideaPhotoPreview" alt="Your uploaded photo" style="display:none"/><textarea id="ideaDesc" placeholder="Example: Put me on a tiny red tricycle wearing a firefighter helmet, shouting &quot;Out of my way!&quot; as I race through a parade with smoke and sirens behind me, under a banner that reads &quot;World's Fastest Firefighter.&quot;"></textarea></div><div class="quick-btns" id="quickBtns"></div><button type="button" class="download-btn" id="ideaBackBtn" style="margin-bottom:.9rem" onclick="ideaStepBack()">← Back</button><div class="note" id="ideaDefaultNote">Paint us a clear picture — the more detail you give us, the better our chances of getting your exact idea right.<br><span style="display:block;margin-top:.5rem">📸 <b>Just want your photo, exactly as it is?</b> Leave this box empty and hit Generate — no AI artwork, no changes, and it costs no image credits.</span></div>
 <!-- THE PROMPT KIT (Alyx, 2026-08-28): the other half of the free lane.
      The customer generates in THEIR OWN AI (their subscription, their
      free tier -- someone else's compute bill), and this hands them a
@@ -1723,6 +1724,7 @@ Tell Needles <span style="color:#7ab8ff">what you have in mind</span>
      connection can take a while -- without this the button looked dead. -->
 <div class="note" id="frameFadeSavingNote" style="display:none;margin-top:.9rem;text-align:center"><span class="spinner"></span>Saving your faded picture... this can take a moment on a slow connection.</div>
 <button type="button" class="generate-btn" id="frameFadeContinueBtn" style="margin-top:.9rem" onclick="confirmFrameFadeAndContinue()">✅ Continue</button>
+<button type="button" class="download-btn" id="frameFadeBackBtn" style="margin-top:.6rem;display:none" onclick="frameFadeBack()">← Back — Change the Picture</button>
 </div>
 </div>
 
@@ -10550,8 +10552,12 @@ function refreshApproveRowForMode(){
   }
 }
 
+let approveUndoSnapshot=null;
 async function approveDesign(allThree){
   if(!currentDesignId)return;
+  // What the page looked like before Yes, so the Edge Fade page can offer a
+  // way back to the design decision (v110).
+  approveUndoSnapshot={ designId: currentDesignId, placements: { left: placements.left, front: placements.front, right: placements.right } };
 
   // UPDATED (Aug 2026, Alyx's flow redesign): Frame/Window Sill no
   // longer happen at this point in the flow at all -- they're offered
@@ -11737,8 +11743,14 @@ function openFrameFadeOverlay(){
   // then auto-snaps down to the slider/Continue after a few seconds --
   // reading takes about three; nobody should have to scroll manually just
   // to reach the control they came here to use.
+  // Back is offered only on the single-image route, where this page sits
+  // directly between the design decision and the mockup and the snapshot
+  // taken at approve can honestly undo one step (v110).
+  const fadeBack=document.getElementById('frameFadeBackBtn');
+  if(fadeBack)fadeBack.style.display=(fadeExitsToMockup&&approveUndoSnapshot)?'block':'none';
   const fadeCard=document.getElementById('frameFadeCard');
   if(fadeCard)fadeCard.scrollTop=0;
+  setTimeout(fitFrameFadeCard,60);
   const myFadeScrollToken=++frameFadeAutoScrollToken;
   setTimeout(()=>{
     if(myFadeScrollToken!==frameFadeAutoScrollToken)return;
@@ -12168,6 +12180,79 @@ function printModeBack(){
 function travelVariantBack(){
   smoothScrollToTarget('productCard','start');
 }
+
+// EVERY PANEL HAS A WAY BACK (Alyx, standing rule; v110 walked the three
+// flat products and found three panels without one).
+// The shape is the whole product decision for a coaster, so back from it is
+// the product grid.
+function coasterShapeBack(){
+  clearAllFocusModes();
+  smoothScrollToTarget('productCard','start');
+}
+
+// The description box is reached from the product grid on every flat
+// product, and from its own fork elsewhere; back goes wherever it came from.
+function ideaStepBack(){
+  clearAllFocusModes();
+  if(ideaReturnTarget==='descriptionOnly' && typeof showDesignMethodCard==='function'){
+    showDesignMethodCard();
+    return;
+  }
+  if(product==='coaster'){
+    const shape=document.getElementById('coasterShapeCard');
+    if(shape && shape.style.display!=='none'){
+      setOptionSpotlight('coaster-shape-focus');
+      smoothScrollToTarget('coasterShapeCard','center');
+      return;
+    }
+  }
+  smoothScrollToTarget('productCard','start');
+}
+
+// Back from the Edge Fade page is the design decision it came from: put the
+// picture back the way it was before Yes and ask again. Only offered on the
+// single-image route, where the fade sits directly between approve and the
+// mockup -- the mug's panel route has its own way back.
+function frameFadeBack(){
+  const snap=approveUndoSnapshot;
+  if(!snap){ closeFrameFadeOverlay(); return; }
+  approveUndoSnapshot=null;
+  placements.left=snap.placements.left;
+  placements.front=snap.placements.front;
+  placements.right=snap.placements.right;
+  currentDesignId=snap.designId;
+  closeFrameFadeOverlay();
+  const approveRow=document.getElementById('approveRow');
+  if(approveRow)approveRow.style.display='';
+  const dl=document.getElementById('downloadDesignBtn');
+  if(dl)dl.style.display='';
+  try{ renderRecentDesigns(); renderPositionHolder(); updatePlacementSummary(); saveMugState(); }catch(e){}
+  if(approveRow)scrollToStableTop(approveRow,Math.max(0,(window.innerHeight-approveRow.offsetHeight)/2),20);
+}
+
+// Shared by Continue and Back so the overlay always leaves the same way.
+function closeFrameFadeOverlay(){
+  const overlay=document.getElementById('frameFadeOverlay');
+  if(overlay)overlay.style.display='none';
+  document.body.classList.remove('step-locked');
+}
+
+// THE WHOLE FADE PAGE FITS THE SCREEN (Alyx's cropped-button complaint, v110).
+// The picture gives up height so the slider and both buttons are on screen
+// without scrolling inside the card.
+function fitFrameFadeCard(){
+  const card=document.getElementById('frameFadeCard'), img=document.getElementById('frameFadeArtworkImg');
+  if(!card||!img)return;
+  img.style.maxHeight='none';
+  const room=Math.round(window.innerHeight*0.92);
+  const over=card.scrollHeight-room;
+  if(over>0){
+    const h=img.getBoundingClientRect().height;
+    img.style.maxHeight=Math.max(140,Math.round(h-over))+'px';
+    img.style.objectFit='contain';
+  }
+}
+window.addEventListener('resize',()=>{ const o=document.getElementById('frameFadeOverlay'); if(o&&o.style.display!=='none')fitFrameFadeCard(); });
 
 // THE SCREEN YOU ARE ON IS THE ONLY SCREEN (Alyx, v100 and v101: "there's
 // nowhere to go... you should only be able to have a few degrees of freedom

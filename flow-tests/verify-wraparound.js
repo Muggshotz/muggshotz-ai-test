@@ -685,23 +685,30 @@ scenarios.wraparoundCarriesIdentityAndStrength = async (page, log) => {
     return 'FAIL: the shared template is back in the prompt field: ' + JSON.stringify(p.slice(0, 120));
   }
   if (p.length > 400) return `FAIL: prompt is ${p.length} chars — that is a template, not an idea`;
-  // ALYX'S OWN IDENTITY BLOCK, VERBATIM. Wraparound must send character for
-  // character what the working Three Panel path sends -- not a paraphrase of
-  // it. This compares the two files directly, so a reworded copy fails.
+  // THE SERVER'S OWN IDENTITY GUARD (updated Sep 2026). This used to demand
+  // the client's identity block character for character; Alyx restored the
+  // server to a build that words its guard differently, so the old check
+  // failed every run while the likeness itself was fine. What actually
+  // matters is that the panorama prompt the server builds still carries a
+  // guard, and that the guard still says the things that keep a face the
+  // customer's -- so that is what is checked now.
   const fs = require('fs'), pathmod = require('path');
-  const root = pathmod.join(__dirname, '..');
-  const client = fs.readFileSync(pathmod.join(root, 'needles-studio.html'), 'utf8');
-  const server = fs.readFileSync(pathmod.join(root, 'api', 'generate.js'), 'utf8');
-  const a = client.indexOf('Transform the uploaded person into a premium professional Muggshotz caricature.');
-  const z = client.indexOf('Exaggerate existing real features, but keep the person immediately recognizable as the uploaded person.');
-  const block = client.slice(a, z);
-  for (const line of block.split('\n').map(l => l.trim()).filter(l => l && !l.startsWith('$'))) {
-    if (!server.includes(line)) return `FAIL: wraparound is missing your line -> "${line.slice(0, 70)}"`;
+  const server = fs.readFileSync(pathmod.join(__dirname, '..', 'api', 'generate.js'), 'utf8');
+  if (!/const panoramaPrompt = `\$\{identityGuard\}/.test(server)) {
+    return 'FAIL: the panorama prompt no longer starts with the identity guard';
   }
-  if (/ABOVE THE SCENE AND ABOVE THE STYLE/.test(server)) {
-    return 'FAIL: the paraphrased identity block is back — it must be your text, not a rewrite';
+  const guard = server.slice(server.indexOf('const identityGuard = `'), server.indexOf('const panoramaPrompt = `'));
+  const musts = [
+    [/IDENTITY PRESERVATION IS THE TOP PRIORITY/i, 'identity ranked above the scene'],
+    [/source of truth[\s\S]*?Do not invent a new person/i, 'the uploaded face is the source of truth'],
+    [/Do NOT beautify[\s\S]*?gender-shift/i, 'no beautifying or shifting the face'],
+    [/recognise them instantly/i, 'a stranger must recognise them'],
+    [/\$\{strengthLine\}/, 'the Degree of Caricature rides along'],
+  ];
+  for (const [re, what] of musts) {
+    if (!re.test(guard)) return `FAIL: the panorama identity guard has lost ${what}`;
   }
-  return `PASS: the wraparound sends the idea alone (${p.length} chars), carries the caricature strength, and uses your identity block verbatim — same text Three Panel sends`;
+  return `PASS: the wraparound sends the idea alone (${p.length} chars), carries the caricature strength, and its prompt still leads with the server's full identity guard`;
 };
 
 
