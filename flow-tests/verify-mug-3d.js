@@ -200,22 +200,22 @@ scenarios.fortyOunceInsulatedOpensWithTwoFaces = async (page) => {
   await describeAndGenerate(page, 'a lighthouse in a storm');
   await waitLanded(page);
   await T(page, 1200);
-  await page.evaluate(() => approveDesign(true));
-  await T(page, 1500);
-  await dismissAlerts(page);
-  const placement = await page.evaluate(() => { const c = document.getElementById('positionHolderCard'); return c && c.style.display !== 'none'; });
-  if (!placement) return 'FAIL: a front-and-back cup lost its placement panel — there is a second face to fill';
+  // v108: one Yes puts the picture on both faces and opens the cup.
   await spyOnMug3D(page);
-  await page.locator('button:has-text("Continue to Order")').first().click({ timeout: 10000 });
+  const hint = await page.evaluate(() => document.getElementById('approveRowHint').textContent);
+  if (!/both sides/i.test(hint)) return `FAIL: the result screen does not say the picture goes on both sides: "${hint}"`;
+  await page.locator('#approveRow button:has-text("Yes")').first().click();
   await page.waitForFunction(() => document.querySelector('#mug3dStage canvas'), null, { timeout: 15000 });
   await T(page, 1500);
   const opens = await page.evaluate(() => window.__mug3dOpens);
   if (!opens.length) return 'FAIL: MUG3D.open was never called for the 40oz';
   if (opens[0].tumblerKey !== 'travel-mug-40oz-insulated') return `FAIL: opened as ${JSON.stringify(opens[0])}`;
-  if (!Array.isArray(opens[0].panelUrls) || opens[0].panelUrls.length !== 2 || !opens[0].panelUrls[0] || !opens[0].panelUrls[1]) return 'FAIL: the 40oz was not handed its two faces: ' + JSON.stringify(opens[0].panelUrls);
+  if (!Array.isArray(opens[0].panelUrls) || opens[0].panelUrls.length !== 2 || !opens[0].panelUrls[0] || opens[0].panelUrls[0] !== opens[0].panelUrls[1]) return 'FAIL: the 40oz was not handed the same picture on both faces: ' + JSON.stringify(opens[0].panelUrls);
+  const placement = await page.evaluate(() => { const c = document.getElementById('positionHolderCard'); return c && c.style.display !== 'none'; });
+  if (placement) return 'FAIL: the placement panel is still showing behind the cup';
   const art = await artworkFraction(page, '40oz');
   if (art < 0.02) return `FAIL: only ${(art*100).toFixed(1)}% of the stage is coloured — no artwork on the cup`;
-  return `PASS: the 40oz insulated keeps its placement panel and opens as a 3D cup wearing both faces (${(art*100).toFixed(0)}% of the stage is artwork)`;
+  return `PASS: one Yes puts the picture on both faces of the 40oz and opens the cup (${(art*100).toFixed(0)}% of the stage is artwork)`;
 };
 
 // ---- The travel picker draws its own tumblers: the three the engine knows

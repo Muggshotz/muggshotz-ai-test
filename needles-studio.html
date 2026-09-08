@@ -2,7 +2,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head><link rel="manifest" href="needles-manifest.json">
-<!-- BUILD-MARKER: SIX-CUPS-TURN-v107 -->
+<!-- BUILD-MARKER: ONE-CUP-BOTH-FACES-v108 -->
 <!-- If you can see this comment on GitHub, this exact paste landed. -->
 <!-- If your live site's page source does NOT say -->
 <!-- "INSTANT-FIT-SCREEN-v47" right here, the upload/deploy did -->
@@ -1520,7 +1520,13 @@ Tell Needles <span style="color:#7ab8ff">what you have in mind</span>
 <div class="card" id="travelMugColorCard" style="display:none">
 <div class="card-title">🎨 Travel Mug Color</div>
 <div class="note" style="margin-top:0;margin-bottom:.75rem">Optional — pick your mug color now so the automatic edge fade can match it exactly, instead of assuming white. You can still change this later.</div>
+<!-- THE CHOSEN CUP, PINNED BESIDE THE SWATCHES (Alyx, v108): drawn by the
+     engine in the chosen colour and repainted as the swatches are tapped,
+     so the colour is seen on the cup without scrolling back up. -->
+<div style="display:flex;gap:14px;align-items:flex-start">
+<img id="travelCupStill" alt="Your cup" style="display:none;width:38%;max-width:220px;border-radius:10px;background:#fff;flex:none"/>
 <div class="color-grid" id="travelMugColorGridGen"></div>
+</div>
 </div>
 
 <div class="card" id="photoPosterOptionsCard" style="display:none">
@@ -5371,6 +5377,7 @@ async function extendWrapToProductRatio(url){
     };
     fadeTo(F,0);
     fadeTo(targetW-F,targetW);
+    softenTopAndBottom(ctx,targetW,h,hex);
     return c.toDataURL('image/jpeg',0.92);
   }
   // The fold: the band-wide file, with the tail past targetW dissolved
@@ -5386,7 +5393,27 @@ async function extendWrapToProductRatio(url){
   tctx.fillStyle=mask;
   tctx.fillRect(0,0,X,h);
   ctx.drawImage(tail,0,0);
+  softenTopAndBottom(ctx,targetW,h,getSelectedProductColorHex());
   return c.toDataURL('image/jpeg',0.92);
+}
+// THE TOP AND BOTTOM TOO (Alyx, v108: "why should only the back ends be
+// faded and then I see the sharp edges on the top and bottom?"). A cup's
+// band has a hard top and bottom on every cup, closing or not, and the
+// fade page that used to soften them was skipped when Yes went straight to
+// the cup. So the wrap builder softens them itself, over the outer tenth
+// of the height, into the cup's own colour.
+function softenTopAndBottom(ctx,W,H,hex){
+  const F=Math.round(H*0.10);
+  const fadeTo=(y0,y1)=>{
+    const g=ctx.createLinearGradient(0,y0,0,y1);
+    g.addColorStop(0,hex+'00');
+    g.addColorStop(0.45,hex+'80');
+    g.addColorStop(1,hex+'FF');
+    ctx.fillStyle=g;
+    ctx.fillRect(0,Math.min(y0,y1),W,Math.abs(y1-y0));
+  };
+  fadeTo(F,0);
+  fadeTo(H-F,H);
 }
 
 // DOES THE BAND GO ALL THE WAY ROUND? (Alyx, v105). Printify's own photo of
@@ -5454,12 +5481,36 @@ function refreshMugPrintModeVisibility(){
 }
 
 // Variant must be known before generating — 40oz uses a different strategy than 20oz/14oz.
+// The still of the chosen cup in the chosen colour, for the colour card.
+function refreshTravelCupStill(){
+  const img=document.getElementById('travelCupStill');
+  if(!img)return;
+  const key=preGenTravelVariant;
+  if(!key || typeof MUG3D==='undefined' || !MUG3D.hasTumbler(key)){ img.style.display='none'; return; }
+  const prod=TRAVEL_MUG_CATALOG[key];
+  const c=(prod.colors && preGenTravelColor)?prod.colors.find(x=>x.name===preGenTravelColor):null;
+  requestMugStill({tumblerKey:key, px:560, colorHex:c?c.hex:'#ffffff', finish:c&&c.finish?c.finish:'coat'}, url=>{ img.src=url; img.style.display='block'; });
+}
+// Back to all six cups.
+function changeTravelCup(){
+  preGenTravelVariant=null;
+  preGenTravelColor=null;
+  refreshTravelMugColorVisibility();
+  refreshMugPrintModeVisibility();
+  renderTravelMugVariantGrid();
+  refreshTravelCupStill();
+  smoothScrollToTarget('travelMugVariantCard','center');
+}
 function renderTravelMugVariantGrid(){
   const grid=document.getElementById('travelMugVariantGrid');
   if(!grid)return;
   grid.innerHTML='';
   if(typeof MUG3D!=='undefined')MUG3D.warm();
-  Object.entries(TRAVEL_MUG_CATALOG).forEach(([key,prod])=>{
+  // ONE CUP ONCE ONE IS CHOSEN (Alyx, v108: "once I've picked my choice out
+  // of the six, the others should disappear"). The chosen cup stays, in its
+  // colour, with a way back to the six.
+  const entries=Object.entries(TRAVEL_MUG_CATALOG).filter(([key])=>!preGenTravelVariant||key===preGenTravelVariant);
+  entries.forEach(([key,prod])=>{
     const btn=document.createElement('div');
     btn.className='theme-btn'+(key===preGenTravelVariant?' selected':'');
     btn.style.position='relative';
@@ -5491,6 +5542,16 @@ function renderTravelMugVariantGrid(){
     btn.onclick=()=>pickPreGenTravelVariant(key);
     grid.appendChild(btn);
   });
+  if(preGenTravelVariant){
+    const change=document.createElement('button');
+    change.type='button';
+    change.className='download-btn';
+    change.id='travelChangeCupBtn';
+    change.style.gridColumn='1 / -1';
+    change.textContent='↺ Change cup';
+    change.onclick=changeTravelCup;
+    grid.appendChild(change);
+  }
 }
 
 // UPDATED (Aug 2026, Alyx's request): variant is now picked BEFORE
@@ -5533,6 +5594,7 @@ function pickPreGenTravelVariant(key){
     // Print Style follows from there. A cup without colours goes straight
     // to Print Style, as before. The "Pick your print format" explainer
     // that used to fire here is gone (v97).
+    refreshTravelCupStill();
     const prodPicked=TRAVEL_MUG_CATALOG[key];
     if(prodPicked && prodPicked.colors && !preGenTravelColor){
       setOptionSpotlight('travel-color-focus');
@@ -8875,11 +8937,16 @@ function pickTravelMugColorGen(el,colorName){
       smoothScrollToTarget('mugPrintModeCard','center');
     } else {
       document.body.classList.remove('travel-color-focus');
-      smoothScrollToTarget('generateTokenNote','end');
+      // The next unanswered question (v108, the 40oz has no Print Style
+      // step to do this): the idea box when it is empty, else Generate.
+      const ideaBox=document.getElementById('ideaDesc');
+      if(ideaBox && !ideaBox.value.trim())handOffToIdeaAfterProductChoice();
+      else smoothScrollToTarget('generateTokenNote','end');
     }
   }
   // The picker tile follows the colour (v101).
   renderTravelMugVariantGrid();
+  refreshTravelCupStill();
 }
 
 function refreshTravelMugColorVisibility(){
@@ -10471,6 +10538,11 @@ function refreshApproveRowForMode(){
     // choice is made there, on the screen that can actually illustrate it.
     allSidesBtn.style.display = 'none';
     hint.textContent = 'Next you\'ll see your mug\'s three panels, and can pick which ones this design goes on.';
+  } else if (mode === 'two' && product === 'water bottle') {
+    // A two-face cup (v108): one Yes, both faces, and the plain truth about
+    // a second picture.
+    allSidesBtn.style.display = 'none';
+    hint.textContent = 'Same picture on both sides. Want a different picture on the back? That\'s a second spin: press Back on the cup, then New under Back.';
   } else if (mode === 'two') {
     allSidesBtn.style.display = 'block';
     allSidesBtn.textContent = '✅ Yes — Front & Back';
@@ -10491,6 +10563,13 @@ async function approveDesign(allThree){
 
   const order = getSlotOrder();
   const slotMode = getSlotMode();
+  // BOTH FACES BY DEFAULT (Alyx, v108: "I'm of a mind that it should be
+  // the default"). On a two-face cup, Yes puts the picture on every face
+  // that is still empty; a second spin can replace the back later.
+  if(product==='water bottle' && slotMode==='two' && typeof tumbler3dKey==='function' && tumbler3dKey()){
+    order.forEach(pos=>{ if(!placements[pos])placements[pos]=currentDesignId; });
+    allThree=false; pendingSlotTarget=null;
+  }
   if(allThree){
     order.forEach(pos => { placements[pos] = currentDesignId; });
     pendingSlotTarget=null;
@@ -10557,10 +10636,9 @@ async function approveDesign(allThree){
   // That last click should take me directly to our new mockup"). A cup the
   // engine can draw has one picture and nothing to place, so the placement
   // panel and Printify's blank preview are skipped: Yes opens the 3D cup.
-  // A front-and-back cup has a second face to fill, so it keeps its
-  // placement panel; only a one-picture cup goes straight to the mockup.
-  if(product==='water bottle' && typeof tumbler3dKey==='function' && tumbler3dKey()
-     && (TRAVEL_MUG_CATALOG[tumbler3dKey()]||{}).layoutType!=='front-back'){
+  // Every cup the engine draws goes straight to the mockup (v108: a
+  // two-face cup wears the picture on both faces by default).
+  if(product==='water bottle' && typeof tumbler3dKey==='function' && tumbler3dKey()){
     const ph=document.getElementById('positionHolderCard');
     if(ph)ph.style.display='none';
     beginFinalMockupFetch();
@@ -11995,6 +12073,13 @@ let coverMeFrameApplied=false;
 // Face It, Home Sweet Home) or a Window Sill already frames its subject,
 // so those mockups get no frame offer (Alyx, Sep 2026).
 function frameOfferAvailable(){
+  // A travel cup's picture is one image, the easiest case for a frame
+  // (Alyx, v108: "why can't we put frames on this mug?"). Coffee mugs keep
+  // their three-panel-only rule.
+  if(product==='water bottle'){
+    if(selectedDesignMethod||windowSillChoice)return false;
+    return ['left','front','right'].some(pos=>placements[pos]&&findDesignById(placements[pos]));
+  }
   if(product!=='mug'||mugPrintMode!=='three-panel')return false;
   if(selectedDesignMethod||windowSillChoice)return false;
   return ['left','front','right'].some(pos=>placements[pos]&&findDesignById(placements[pos]));
@@ -13340,6 +13425,12 @@ function goBackFromFinalMockup(){
   preMockupBack=null;
   if(typeof back==='function'){ back(); return; }
   if(product==='mug' && typeof showCoverMePanelCard==='function'){ showCoverMePanelCard(); return; }
+  // Back from a two-face cup is the faces panel (v108): take a side off,
+  // or spin a different picture for the back.
+  if(product==='water bottle' && getSlotMode()==='two'){
+    const ph=document.getElementById('positionHolderCard');
+    if(ph){ ph.style.display='block'; scrollToStableTop(ph,0,20); return; }
+  }
   returnFromFinalMockup();
 }
 // Undo a baked-on decorative frame so a return to the frame offer starts
@@ -14025,7 +14116,11 @@ async function updateAccessorizePreview(){
       // so the preview is the print, size and position included.
       hideFrameManualFitControls();
       const ids=[...new Set(['left','front','right'].map(p=>placements[p]).filter(id=>id&&findDesignById(id)))];
-      const panels=(await Promise.all(ids.map(id=>renderPanelPrintDataUrl(id)))).filter(Boolean);
+      // A travel cup's picture is framed as it is; the panel print box is a
+      // coffee-mug shape (v108).
+      const panels=product==='water bottle'
+        ? ids.map(id=>(findDesignById(id)||{}).url).filter(Boolean)
+        : (await Promise.all(ids.map(id=>renderPanelPrintDataUrl(id)))).filter(Boolean);
       const urls=panels.length?panels:[pendingWraparoundRaw.left,pendingWraparoundRaw.center,pendingWraparoundRaw.right].filter(Boolean);
       const framed=(selectedFrame||windowSillChoice)
         ? await Promise.all(urls.map(u=>compositeFrameOntoImageUrl(u)))
@@ -14337,7 +14432,7 @@ async function applyAccessorizeFrame(){
       const ids=[...new Set(['left','front','right'].map(pos=>placements[pos]).filter(id=>id&&findDesignById(id)))];
       await Promise.all(ids.map(async id=>{
         const d=findDesignById(id);
-        const panelUrl=await renderPanelPrintDataUrl(id);
+        const panelUrl=product==='water bottle'?null:await renderPanelPrintDataUrl(id);
         const framed=await compositeFrameOntoImageUrl(panelUrl||snap.urls[id]||d.url);
         d.url=await uploadCompositedImage(framed);
         setDesignAdjust(id,{...getDesignAdjust(id),zoom:1,offX:0,offY:0,fade:0,backdrop:null,caption:null});

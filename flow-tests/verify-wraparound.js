@@ -323,7 +323,10 @@ scenarios.travelWraparoundUsesUncutPanorama = async (page, log, mockupBodies) =>
 
   await page.locator('#approveRow button:has-text("Yes")').first().click();
   await T(page, 1500);
-  await page.locator('button:has-text("Continue to Order")').first().click({ timeout: 10000 });
+  // v107: the 14oz has a body now, so Yes goes straight to the cup and
+  // there is no Continue to Order to press.
+  const cont = page.locator('button:has-text("Continue to Order")').first();
+  if (await cont.isVisible().catch(() => false)) await cont.click({ timeout: 10000 });
   await T(page, 7000);
   const start = mockupBodies.find(b => b && b.action === 'start');
   if (!start) return 'FAIL: no start-mockup fired after a travel-cup wraparound';
@@ -1105,6 +1108,8 @@ scenarios.tundraWrapIsMirroredAndFaded = async (page) => {
       // The back seam: the file's last column must be the neighbour of its
       // first (v102), and neither end is the cup's white any more.
       seamLeft: px(ext, 0, y), seamRight: px(ext, W - 1, y),
+      // v108: the top and bottom edges are softened into the cup too.
+      topEdge: px(ext, W / 2, 1), bottomEdge: px(ext, W / 2, ext.naturalHeight - 2),
       outerLeft: px(ext, 1, y), outerRight: px(ext, W - 2, y),
       // NO HAIRLINES (v104): no column of the wrap may be white from top to
       // bottom -- that is the cup showing through a gap between flank and
@@ -1134,6 +1139,7 @@ scenarios.tundraWrapIsMirroredAndFaded = async (page) => {
   if (near(r.outerLeft, [255, 255, 255], 8) && near(r.outerRight, [255, 255, 255], 8)) {
     return 'FAIL: the ends still fade to white — the old fade-to-cup is back';
   }
+  if (!near(r.topEdge, [255, 255, 255], 10) || !near(r.bottomEdge, [255, 255, 255], 10)) return `FAIL: the top and bottom edges are still hard: rgb(${r.topEdge}) / rgb(${r.bottomEdge})`;
   if (r.whiteColumns.length) return `FAIL: white hairline(s) down the wrap at x=${r.whiteColumns.slice(0, 6).join(',')} — a gap between flank and picture`;
   return `PASS: Tundra wrap is ${r.ratio.toFixed(2)}:1, scene untouched in the middle, flanks mirror the edges, and the two ends meet each other at the back; the 14oz is cropped to its own band`;
 };
@@ -1338,7 +1344,9 @@ scenarios.blankBandsAreTrimmedFromTheWrap = async (page) => {
       const im = await loadImageFromUrl(await extendWrapToProductRatio(make(true)));
       const c = document.createElement('canvas'); c.width = im.naturalWidth; c.height = im.naturalHeight;
       const g = c.getContext('2d'); g.drawImage(im, 0, 0);
-      const d = g.getImageData(Math.floor(c.width / 2), 2, 1, 1).data; return [d[0], d[1], d[2]];
+      // v108 softens the top tenth into the cup colour, so read a quarter
+      // of the way down: that is picture if the bands were trimmed.
+      const d = g.getImageData(Math.floor(c.width / 2), Math.floor(c.height * 0.25), 1, 1).data; return [d[0], d[1], d[2]];
     })();
     return { banded, plain, top };
   });
@@ -1400,6 +1408,61 @@ scenarios.gatorWrapFadesToTheBottle = async (page) => {
   if (!near(r.left, [255, 255, 255], 8) || !near(r.right, [255, 255, 255], 8)) return `FAIL: the ends did not fade to the bottle's white: rgb(${r.left}) / rgb(${r.right})`;
   if (!near(r.centre, r.origCentre, 8)) return `FAIL: the centre of the picture changed: rgb(${r.origCentre}) -> rgb(${r.centre})`;
   return 'PASS: the Gator wrap is 1.75:1 with both ends faded to the bottle and the centre untouched';
+};
+
+// THE 40oz LANDS ON THE IDEA BOX (Alyx, v108). It has no Print Style step,
+// so the colour pick is what has to land on the next open question.
+scenarios.theFortyOunceLandsOnTheIdeaBox = async (page) => {
+  await pickProduct(page, 'water bottle');
+  await page.evaluate(() => pickPreGenTravelVariant('travel-mug-40oz-insulated'));
+  await T(page, 1200);
+  await dismissAlerts(page);
+  await page.evaluate(() => { const b = document.querySelector('#travelMugColorGridGen .color-btn[data-color="Black"]'); b.click(); });
+  await T(page, 1500);
+  await dismissAlerts(page);
+  const idea = await page.evaluate(() => { const t = document.getElementById('ideaDesc'); const r = t.getBoundingClientRect(); return r.height > 0 && r.bottom > 0 && r.top < window.innerHeight; });
+  if (!idea) return 'FAIL: the 40oz colour pick did not land on the idea box';
+  return 'PASS: the 40oz insulated lands on the idea box after its colour pick';
+};
+
+// FRAMES ON CUPS (Alyx, v108: "why can't we put frames on this mug?").
+scenarios.framesAreOfferedOnCups = async (page) => {
+  const r = await page.evaluate(() => {
+    product = 'water bottle'; preGenTravelVariant = 'travel-mug-30oz-tundra'; selectedTravelProductKey = preGenTravelVariant;
+    mugPrintMode = 'wraparound'; windowSillChoice = null; selectedDesignMethod = null;
+    placements.front = null; placements.left = null; placements.right = null;
+    const before = frameOfferAvailable();
+    placements.front = addToRecentDesigns('http://127.0.0.1:8788/__fake/panorama.jpg');
+    const after = frameOfferAvailable();
+    return { before, after };
+  });
+  if (r.before) return 'FAIL: a frame was offered on a cup with no picture on it';
+  if (!r.after) return 'FAIL: no frame offered on a cup with a picture on it';
+  return 'PASS: a cup with a picture is offered a frame';
+};
+
+// ONE CUP ONCE ONE IS CHOSEN (Alyx, v108): the other five go, the chosen
+// cup sits beside the swatches in its colour, and Change cup brings the six
+// back.
+scenarios.pickingACupIsolatesIt = async (page) => {
+  await pickProduct(page, 'water bottle');
+  const six = await page.evaluate(() => document.querySelectorAll('#travelMugVariantGrid .theme-btn').length);
+  if (six !== 6) return `FAIL: expected six cups before a pick, saw ${six}`;
+  await page.evaluate(() => pickPreGenTravelVariant('travel-mug-30oz-tundra'));
+  await T(page, 1200);
+  await dismissAlerts(page);
+  const one = await page.evaluate(() => ({
+    tiles: document.querySelectorAll('#travelMugVariantGrid .theme-btn').length,
+    change: !!document.getElementById('travelChangeCupBtn'),
+    stillShown: (() => { const im = document.getElementById('travelCupStill'); return !!im && im.offsetParent !== null; })(),
+  }));
+  if (one.tiles !== 1) return `FAIL: ${one.tiles} cups still showing after a pick`;
+  if (!one.change) return 'FAIL: no way back to the six cups';
+  await page.evaluate(() => changeTravelCup());
+  await T(page, 800);
+  const back = await page.evaluate(() => document.querySelectorAll('#travelMugVariantGrid .theme-btn').length);
+  if (back !== 6) return `FAIL: Change cup brought back ${back} cups`;
+  return `PASS: one cup after a pick (still beside the swatches: ${one.stillShown ? 'yes' : 'not without WebGL'}), six again after Change cup`;
 };
 
 // THE TOOLS BUTTON IS ON EVERY FRAME (Alyx, Sep 2026): "Almost all the
