@@ -1099,6 +1099,9 @@ scenarios.tundraWrapIsMirroredAndFaded = async (page) => {
       ratio: W / ext.naturalHeight, flank, w, h,
       centreOrig: px(orig, w / 2, h / 2), centreExt: px(ext, flank + w / 2, h / 2),
       edgeOrig: px(orig, 4, y), mirrorExt: px(ext, flank - 5, y),
+      // The back seam: the file's last column must be the neighbour of its
+      // first (v102), and neither end is the cup's white any more.
+      seamLeft: px(ext, 0, y), seamRight: px(ext, W - 1, y),
       outerLeft: px(ext, 1, y), outerRight: px(ext, W - 2, y),
       hex: getSelectedProductColorHex(),
     };
@@ -1108,10 +1111,13 @@ scenarios.tundraWrapIsMirroredAndFaded = async (page) => {
   if (Math.abs(r.ratio - 3.5) > 0.02) return `FAIL: the Tundra wrap came out ${r.ratio.toFixed(3)}:1, not 3.50:1`;
   if (!near(r.centreOrig, r.centreExt, 6)) return `FAIL: the scene moved or changed in the middle: rgb(${r.centreOrig}) vs rgb(${r.centreExt})`;
   if (!near(r.edgeOrig, r.mirrorExt, 14)) return `FAIL: the flank beside the seam is not a mirror of the scene's edge: rgb(${r.edgeOrig}) vs rgb(${r.mirrorExt}) ` + JSON.stringify(r);
-  if (!near(r.outerLeft, [255, 255, 255], 8) || !near(r.outerRight, [255, 255, 255], 8)) {
-    return `FAIL: the outer ends did not fade to the cup's white: left rgb(${r.outerLeft}), right rgb(${r.outerRight})`;
+  if (!near(r.seamLeft, r.seamRight, 40)) {
+    return `FAIL: the two ends do not meet: first column rgb(${r.seamLeft}) vs last column rgb(${r.seamRight}) — the back seam would show`;
   }
-  return `PASS: Tundra wrap is ${r.ratio.toFixed(2)}:1, scene untouched in the middle, flanks mirror the edges, ends fade to ${r.hex}; the 14oz passes straight through`;
+  if (near(r.outerLeft, [255, 255, 255], 8) && near(r.outerRight, [255, 255, 255], 8)) {
+    return 'FAIL: the ends still fade to white — the old fade-to-cup is back';
+  }
+  return `PASS: Tundra wrap is ${r.ratio.toFixed(2)}:1, scene untouched in the middle, flanks mirror the edges, and the two ends meet each other at the back; the 14oz passes straight through`;
 };
 
 // And through the real flow: a Tundra wraparound order carries the full
@@ -1321,6 +1327,31 @@ scenarios.blankBandsAreTrimmedFromTheWrap = async (page) => {
   if (r.plain[1] !== 658) return `FAIL: a file with no bands was trimmed to ${r.plain[1]}px`;
   if (r.top[0] > 200 && r.top[1] > 200 && r.top[2] > 200) return `FAIL: the top of the wrap is still blank: rgb(${r.top})`;
   return `PASS: empty bands trimmed (658 -> ${r.banded[1]}px), wrap 3.50:1 and picture to the top edge; an unbanded file is untouched`;
+};
+
+// THE PALETTE COMES NEXT (Alyx, v102): a cup with colours lands on its
+// colour card, a colour lands on Print Style, and Print Style with an
+// empty idea box lands on the idea box, not Generate.
+scenarios.theCupsPaletteComesNext = async (page) => {
+  await pickProduct(page, 'water bottle');
+  await page.evaluate(() => pickPreGenTravelVariant('travel-mug-30oz-tundra'));
+  await T(page, 1500);
+  await dismissAlerts(page);
+  const inView = (id) => page.evaluate((i) => { const r = document.getElementById(i).getBoundingClientRect(); return r.bottom > 0 && r.top < window.innerHeight; }, id);
+  const focus = () => page.evaluate(() => Array.from(document.body.classList).find((c) => c.endsWith('-focus')));
+  if (await focus() !== 'travel-color-focus') return `FAIL: after picking the Tundra the spotlight is ${await focus()}, not the colour card`;
+  if (!(await inView('travelMugColorCard'))) return 'FAIL: the colour card is not on screen after picking the Tundra';
+  await page.evaluate(() => { const b = document.querySelector('#travelMugColorGridGen .color-btn[data-color="Black"]'); b.click(); });
+  await T(page, 1500);
+  await dismissAlerts(page);
+  if (await focus() !== 'print-mode-focus') return `FAIL: after picking Black the spotlight is ${await focus()}, not Print Style`;
+  if (!(await inView('mugPrintModeCard'))) return 'FAIL: Print Style is not on screen after picking a colour';
+  await page.evaluate(() => pickMugPrintMode('wraparound'));
+  await T(page, 1500);
+  await dismissAlerts(page);
+  const idea = await page.evaluate(() => { const t = document.getElementById('ideaDesc'); const r = t.getBoundingClientRect(); return r.height > 0 && r.bottom > 0 && r.top < window.innerHeight; });
+  if (!idea) return 'FAIL: Print Style with an empty idea box did not land on the idea box';
+  return 'PASS: Tundra -> colour card -> Print Style -> idea box, each the next open question';
 };
 
 // THE TOOLS BUTTON IS ON EVERY FRAME (Alyx, Sep 2026): "Almost all the

@@ -59,15 +59,17 @@ async function driveVariant(page, mockupBodies, key) {
   // as-is offer, land on the now-expanded box, type, generate. This suite
   // is about the AI rail's variant → body shape; the empty-box lane
   // itself belongs to verify-exact-transfer.js.
+  // v102: the rail itself lands on the idea box (Print Style with an empty
+  // box goes there), and every spotlit step pins the page to itself, so
+  // the way to Generate is the rail's own: describe, then "satisfied".
   await page.evaluate(() => { window.confirm = () => false; });
-  await page.evaluate(() => document.getElementById('generateBtn')?.scrollIntoView({ block: 'center' }));
-  await page.click('#generateBtn');
-  await page.waitForTimeout(1400);
-  await dismissAlerts(page);
+  await page.evaluate(() => handOffToIdeaAfterProductChoice());
+  await page.waitForTimeout(800);
   await page.fill('#ideaDesc', 'surfing a giant wave at sunset');
   await page.waitForTimeout(500);
   await dismissAlerts(page);
-  await page.evaluate(() => document.getElementById('generateBtn')?.scrollIntoView({ block: 'center' }));
+  await page.evaluate(() => confirmIdeaSatisfied());
+  await page.waitForTimeout(1500);
   await page.click('#generateBtn');
   await waitApprove(page);
   await page.locator('#approveRow button:has-text("Yes")').first().click();
@@ -168,6 +170,10 @@ for (const key of GEN_LANDING) {
 
     // Park the window somewhere unhelpful first, so a passing result means
     // the app scrolled and not that the button happened to already be there.
+    // v102: with the idea box empty, Print Style lands on the idea box (the
+    // next open question). This scenario is about Generate, so describe
+    // first, the way a Track 2 customer already has.
+    await page.evaluate(() => { const t = document.getElementById('ideaDesc'); if (t) t.value = 'surfing a giant wave at sunset'; });
     await page.evaluate(() => window.scrollTo(0, 0));
     await page.waitForTimeout(400);
     await page.evaluate(() => pickMugPrintMode('wraparound'));
