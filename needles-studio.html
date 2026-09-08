@@ -2,7 +2,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head><link rel="manifest" href="needles-manifest.json">
-<!-- BUILD-MARKER: EVERY-PANEL-HAS-A-BACK-v100 -->
+<!-- BUILD-MARKER: THE-SCREEN-YOU-ARE-ON-v101 -->
 <!-- If you can see this comment on GitHub, this exact paste landed. -->
 <!-- If your live site's page source does NOT say -->
 <!-- "INSTANT-FIT-SCREEN-v47" right here, the upload/deploy did -->
@@ -508,7 +508,13 @@ body #accessorizeCard{opacity:1!important;filter:none!important;pointer-events:a
    the flow before Generate. Exempted here the same way uploadPhotoCard,
    ideaCard, mugPrintModeCard, and productCard already are for their
    own focus stages -- frame selection now works throughout. */
-body #frameSectionCard{opacity:1!important;filter:none!important;pointer-events:auto!important}
+/* THE CATALOGUE OBEYS THE DIM (Alyx, v101: "I don't know why the frames are
+   always lit up"). The blanket exemption above was for picking a frame before
+   Generate, which is no longer a step. Now it is lit only where it is the
+   step: inside the frame studio. */
+#frameStudio #frameSectionCard{opacity:1!important;filter:none!important;pointer-events:auto!important}
+/* THE GENERATE STEP IS A PANEL OF ITS OWN (Alyx, v101). */
+body.generate-focus .card:not(#likenessSectionCard){opacity:.35;filter:brightness(.6) saturate(.75);transition:opacity .5s,filter .5s}
 /* A DIM IS A GUIDE, NOT A CAGE -- and that goes for going BACK.
    Alyx: "whenever we switch the back button we shouldn't switch the back
    button and have things freeze up on us... going back allows you to
@@ -1078,8 +1084,8 @@ const HERO_SETTLE_MS = 1000;
 <button type="button" class="btn-select track-btn-flash track-btn-flash-2" style="padding:1rem .6rem" onclick="pickTrackDescribe()">🖌️ Create Your Design</button>
 </div>
 </div>
-<div id="startOverBtn" class="critical-warning-blink" style="display:none;margin-top:.6rem;padding:.75rem;text-align:center;font-weight:700;color:#ff8a7a;cursor:default">PLEASE SELECT ONE OF THE ABOVE OPTIONS!</div>
 <button type="button" class="download-btn" id="trackForkBackBtn" style="margin-top:.6rem" onclick="trackForkBack()">← Back</button>
+<div id="startOverBtn" class="critical-warning-blink" style="display:none;margin-top:.6rem;padding:.75rem;text-align:center;font-weight:700;color:#ff8a7a;cursor:default">PLEASE SELECT ONE OF THE ABOVE OPTIONS!</div>
 </div>
 
 <div class="card" id="framePreviewThumbCard" style="display:none;text-align:center">
@@ -1553,6 +1559,7 @@ Tell Needles <span style="color:#7ab8ff">what you have in mind</span>
 <div id="finalGenerateGuidance" class="guidance-prompt" role="status">If satisfied with all selections, press "Generate." If not, feel free to scroll back up and make any additional changes.</div>
 <button class="generate-btn" id="generateBtn" onclick="generate()">🎨 GENERATE IMAGE</button>
 <div class="generate-token-note" id="generateTokenNote">Requires at least 1 token to generate.</div>
+<button type="button" class="download-btn" id="generateBackBtn" style="margin-top:.6rem" onclick="generateStepBack()">← Back</button>
 <button type="button" class="download-btn" id="changeMugStyleBtn" style="display:none;margin-top:.5rem" onclick="goBackToMugStyle()">↩️ Change Mug Style / Color</button>
 <button class="download-btn" id="cancelBtn" onclick="cancelGeneration()" style="display:none;margin-top:.5rem">✖ Cancel & Try a Different Photo</button>
 
@@ -3009,6 +3016,19 @@ function confirmIdeaSatisfied(){
       scrollToStableTop(genBtn,centreMargin,20);
       return;
     }
+  }
+  // STRAIGHT TO GENERATE (Alyx, v101: "Meanwhile the Generate Image button
+  // is way here at the bottom"). When the product, cup and print style are
+  // already chosen, the only thing left is Generate, so that is where the
+  // button lands: the caricature card and Generate lit, the rest dimmed.
+  if(productRailIsComplete()){
+    setOptionSpotlight('generate-focus');
+    const genBtn=document.getElementById('generateBtn');
+    if(genBtn){
+      const centreMargin=Math.max(0,(window.innerHeight-genBtn.offsetHeight)/2);
+      scrollToStableTop(genBtn,centreMargin,20);
+    }
+    return;
   }
   document.body.classList.add('product-focus');
   smoothScrollToTarget('productCard','center');
@@ -5231,15 +5251,52 @@ const TRAVEL_WRAP_RATIO = {
 // white-on-white at the back seam. The scene itself is untouched and stays
 // in the middle at full size. Only wraps wider than the picture get this;
 // the 14oz (2.15:1) is narrower than the picture and keeps what it had.
+// BLANK BANDS COME OFF FIRST (Alyx, v101, item 8: a white strip above and
+// below the scene). Gemini sometimes paints the scene wider than 21:9 and
+// pads the file back to shape with empty rows, transparent or white. Those
+// rows are not picture, and on a cup they print as bare white across the
+// band. Rows that are blank edge to edge are trimmed from the top and the
+// bottom before the wrap is built; the scene itself is never touched, and
+// nothing is trimmed unless a real band is there.
+function trimBlankBands(img){
+  const w=img.naturalWidth||img.width, h=img.naturalHeight||img.height;
+  const c=document.createElement('canvas'); c.width=w; c.height=h;
+  const g=c.getContext('2d'); g.drawImage(img,0,0);
+  let d; try{ d=g.getImageData(0,0,w,h).data; }catch(e){ return img; }
+  const blankRow=y=>{
+    let blank=0;
+    for(let x=0;x<w;x++){ const i=(y*w+x)*4; if(d[i+3]<16||(d[i]>238&&d[i+1]>238&&d[i+2]>238))blank++; }
+    return blank>=w*0.985;
+  };
+  let top=0; while(top<h&&blankRow(top))top++;
+  let bottom=h; while(bottom>top&&blankRow(bottom-1))bottom--;
+  const kept=bottom-top;
+  if(top+(h-bottom)<h*0.02||kept<h*0.45)return img;
+  const out=document.createElement('canvas'); out.width=w; out.height=kept;
+  out.getContext('2d').drawImage(c,0,top,w,kept,0,0,w,kept);
+  out.naturalWidth=w; out.naturalHeight=kept;
+  return out;
+}
 async function extendWrapToProductRatio(url){
   if(product!=='water bottle')return url;
   const ratio=TRAVEL_WRAP_RATIO[preGenTravelVariant];
   if(typeof ratio!=='number')return url;
-  const img=await loadImageFromUrl(url);
-  const w=img.naturalWidth,h=img.naturalHeight;
-  const targetW=Math.round(h*ratio);
-  if(targetW<=w*1.02)return url;
-  const flank=Math.round((targetW-w)/2);
+  const raw=await loadImageFromUrl(url);
+  let img=trimBlankBands(raw);
+  let w=img.naturalWidth,h=img.naturalHeight;
+  let targetW=Math.round(h*ratio);
+  if(targetW<=w*1.02 && img===raw)return url;
+  if(targetW<w){
+    // Trimming the bands left a picture wider than the band. The band is
+    // the band: take the middle of the picture at the band's own ratio
+    // rather than hand the server something it would letterbox again.
+    const cx=Math.round((w-targetW)/2);
+    const cc=document.createElement('canvas'); cc.width=targetW; cc.height=h;
+    cc.getContext('2d').drawImage(img,cx,0,targetW,h,0,0,targetW,h);
+    cc.naturalWidth=targetW; cc.naturalHeight=h;
+    img=cc; w=targetW;
+  }
+  const flank=Math.max(0,Math.round((targetW-w)/2));
   const hex=getSelectedProductColorHex();
   const c=document.createElement('canvas');
   c.width=flank*2+w; c.height=h;
@@ -5247,6 +5304,7 @@ async function extendWrapToProductRatio(url){
   ctx.fillStyle=hex;
   ctx.fillRect(0,0,c.width,h);
   ctx.drawImage(img,flank,0);
+  if(flank===0)return c.toDataURL('image/jpeg',0.92);
   // B: each flank is the scene's own edge, mirrored, so the seam is
   // continuous by construction.
   ctx.save();
@@ -5342,7 +5400,9 @@ function renderTravelMugVariantGrid(){
     // each other instead of Printify's assorted catalogue photos. The
     // photo stays until the still arrives, and stays for good without WebGL.
     if(typeof MUG3D!=='undefined' && MUG3D.hasTumbler(key)){
-      requestMugStill({tumblerKey:key, px:560}, url=>{ img.src=url; });
+      // The chosen cup wears the chosen colour; the others stay white.
+      const c=(key===preGenTravelVariant && prod.colors && preGenTravelColor)?prod.colors.find(x=>x.name===preGenTravelColor):null;
+      requestMugStill({tumblerKey:key, px:560, colorHex:c?c.hex:'#ffffff', finish:c&&c.finish?c.finish:'coat'}, url=>{ img.src=url; });
     }
     btn.appendChild(img);
     if(prod.whiteOnly){
@@ -8720,6 +8780,8 @@ function pickTravelMugColorGen(el,colorName){
     suspendGuidedScrollsForGeneration();
     smoothScrollToTarget('generateTokenNote','end');
   }
+  // The picker tile follows the colour (v101).
+  renderTravelMugVariantGrid();
 }
 
 function refreshTravelMugColorVisibility(){
@@ -10393,6 +10455,17 @@ async function approveDesign(allThree){
   // is scrolled to a placement card still locked under generation-active.
   clearAllFocusModes();
 
+  // STRAIGHT TO THE CUP (Alyx, v101: "This panel should not even exist...
+  // That last click should take me directly to our new mockup"). A cup the
+  // engine can draw has one picture and nothing to place, so the placement
+  // panel and Printify's blank preview are skipped: Yes opens the 3D cup.
+  if(product==='water bottle' && typeof tumbler3dKey==='function' && tumbler3dKey()){
+    const ph=document.getElementById('positionHolderCard');
+    if(ph)ph.style.display='none';
+    beginFinalMockupFetch();
+    return;
+  }
+
   // BUG FIX (Aug 2026, from Alyx's suitcase run): approving a single-image
   // product dropped the customer at the TOP of positionHolderCard, whose
   // first element is a long paragraph about Preview Reservations. The one
@@ -11885,6 +11958,17 @@ function reopenFlatMockupFromFrameOffer(){
 // EVERY PANEL HAS A BACK (Alyx, v100). Each of these goes to the panel
 // before it on the rail. Nothing is undone; the customer can change the
 // earlier answer or come straight back.
+function generateStepBack(){
+  document.body.classList.remove('generate-focus');
+  handOffToIdeaAfterProductChoice();
+}
+// The product rail is answered: nothing above Generate is still a question.
+function productRailIsComplete(){
+  if(!product)return false;
+  if(product==='water bottle')return !!preGenTravelVariant;
+  if(product==='mug')return !!mugColorFinishedPreGen;
+  return true;
+}
 function resultScreenBack(){
   clearAllFocusModes();
   smoothScrollToTarget('ideaCard','center');
@@ -11902,49 +11986,97 @@ function travelVariantBack(){
   smoothScrollToTarget('productCard','start');
 }
 
-// THE RESULT SCREEN IS PINNED (Alyx, v100: "there's nowhere to go... you
-// should only be able to have a few degrees of freedom up and a few down").
-// While "Are you satisfied?" is showing, the page scrolls only far enough
-// to reach the picture above and the buttons below it: scrolling past
-// either end is pulled back. Released the moment the row goes away (Yes,
-// No, Back, a new generation) so the rest of the page is reachable again.
-const RESULT_PIN_SLACK=28;
-let resultPinActive=false, resultPinRaf=0;
-function resultPinBounds(){
-  const top=document.getElementById('previewImg');
-  const bottom=document.getElementById('approveRow');
-  if(!bottom||bottom.style.display==='none')return null;
-  const topEl=(top&&top.offsetParent)?top:bottom;
+// THE SCREEN YOU ARE ON IS THE ONLY SCREEN (Alyx, v100 and v101: "there's
+// nowhere to go... you should only be able to have a few degrees of freedom
+// up and a few down"). One pin, driven by the state of the page:
+//   * a spotlight (any body class ending in -focus) pins to the card that
+//     spotlight lights, read from the same CSS rule that dims the others;
+//   * generation-active pins to the easel while the picture paints;
+//   * "Are you satisfied?" pins between the picture and its buttons.
+// Scrolling past either end of the pinned region is pulled back. The pin is
+// re-read whenever the body's classes or the approve row change, so every
+// screen that dims the rest of the page is automatically the only screen.
+const SCROLL_PIN_SLACK=28;
+let scrollPinRaf=0, scrollPinListening=false;
+let focusCardMap=null;
+function focusCardFor(cls){
+  if(!focusCardMap){
+    focusCardMap={};
+    try{
+      Array.from(document.styleSheets).forEach(sh=>{
+        let rules; try{ rules=sh.cssRules; }catch(e){ return; }
+        Array.from(rules||[]).forEach(r=>{
+          const m=/^body\.([a-z-]+-focus)\s+\.card:not\(#([A-Za-z0-9_]+)\)/.exec(r.selectorText||'');
+          if(m && !focusCardMap[m[1]])focusCardMap[m[1]]=m[2];
+        });
+      });
+    }catch(e){}
+    focusCardMap['generate-focus']='likenessSectionCard';
+  }
+  return focusCardMap[cls]||null;
+}
+function scrollPinTargets(){
+  const vis=el=>!!el&&el.offsetParent!==null;
+  const row=document.getElementById('approveRow');
+  if(row && row.style.display!=='none' && vis(row)){
+    const pic=document.getElementById('previewImg');
+    return [vis(pic)?pic:row,row];
+  }
+  const cls=Array.from(document.body.classList);
+  if(cls.includes('generation-active')){
+    const stage=document.getElementById('needlesStageWrap');
+    if(vis(stage))return [stage,stage];
+  }
+  const focus=cls.find(c=>c.endsWith('-focus'));
+  if(focus){
+    // Both routes to the Generate step (the idea box's "satisfied" and a
+    // travel cup's Print Style pick) pin from the caricature card to the
+    // Back under Generate.
+    if(focus==='generate-focus'||focus==='final-generate-focus'){
+      const top=document.getElementById('likenessSectionCard'), bottom=document.getElementById('generateBackBtn');
+      if(vis(top)&&vis(bottom))return [top,bottom];
+    }
+    const id=focusCardFor(focus);
+    const card=id?document.getElementById(id):null;
+    if(vis(card))return [card,card];
+  }
+  return null;
+}
+function scrollPinBounds(){
+  const t=scrollPinTargets();
+  if(!t)return null;
   const y=window.scrollY;
-  const minY=topEl.getBoundingClientRect().top+y-RESULT_PIN_SLACK;
-  const maxY=bottom.getBoundingClientRect().bottom+y+RESULT_PIN_SLACK-window.innerHeight;
+  const minY=t[0].getBoundingClientRect().top+y-SCROLL_PIN_SLACK;
+  const maxY=t[1].getBoundingClientRect().bottom+y+SCROLL_PIN_SLACK-window.innerHeight;
   return { minY:Math.max(0,minY), maxY:Math.max(0,maxY) };
 }
-function resultPinOnScroll(){
-  if(!resultPinActive||resultPinRaf)return;
-  resultPinRaf=requestAnimationFrame(()=>{
-    resultPinRaf=0;
-    const b=resultPinBounds();
+function scrollPinOnScroll(){
+  if(scrollPinRaf)return;
+  scrollPinRaf=requestAnimationFrame(()=>{
+    scrollPinRaf=0;
+    const b=scrollPinBounds();
     if(!b)return;
+    // A panel taller than the window scrolls within itself (minY..maxY); a
+    // panel shorter than the window may sit anywhere it is wholly on screen
+    // (maxY..minY). Either way the allowed range is between the two.
+    const lo=Math.min(b.minY,b.maxY), hi=Math.max(b.minY,b.maxY);
     const y=window.scrollY;
-    if(y<b.minY)window.scrollTo(0,b.minY);
-    else if(y>b.maxY&&b.maxY>=b.minY)window.scrollTo(0,b.maxY);
+    if(y<lo)window.scrollTo(0,lo);
+    else if(y>hi)window.scrollTo(0,hi);
   });
 }
-function setResultPinned(on){
-  if(on===resultPinActive)return;
-  resultPinActive=on;
-  if(on)window.addEventListener('scroll',resultPinOnScroll,{passive:true});
-  else window.removeEventListener('scroll',resultPinOnScroll);
+function refreshScrollPin(){
+  const on=!!scrollPinTargets();
+  if(on&&!scrollPinListening){ window.addEventListener('scroll',scrollPinOnScroll,{passive:true}); scrollPinListening=true; }
+  if(!on&&scrollPinListening){ window.removeEventListener('scroll',scrollPinOnScroll); scrollPinListening=false; }
 }
-// The row is shown and hidden from many places; watch it rather than
-// chasing every one of them.
+function setResultPinned(){ refreshScrollPin(); }
 document.addEventListener('DOMContentLoaded',()=>{
+  if(!window.MutationObserver)return;
+  new MutationObserver(refreshScrollPin).observe(document.body,{attributes:true,attributeFilter:['class']});
   const row=document.getElementById('approveRow');
-  if(!row||!window.MutationObserver)return;
-  const sync=()=>setResultPinned(row.style.display!=='none'&&!!row.offsetParent);
-  new MutationObserver(sync).observe(row,{attributes:true,attributeFilter:['style']});
-  sync();
+  if(row)new MutationObserver(refreshScrollPin).observe(row,{attributes:true,attributeFilter:['style']});
+  refreshScrollPin();
 });
 
 function keepTweaking(){
@@ -12110,6 +12242,18 @@ function scrollToFinishedImage(elementId,block){
 let mug3dFailed=false;
 let mug3dShowing=false;
 
+function travelDefaultColorName(){
+  const key=selectedTravelProductKey||preGenTravelVariant||null;
+  const prod=key?TRAVEL_MUG_CATALOG[key]:null;
+  return (prod&&prod.colors&&prod.colors.length)?prod.colors[0].name:null;
+}
+function travelColorEntry(){
+  const key=selectedTravelProductKey||preGenTravelVariant||null;
+  const prod=key?TRAVEL_MUG_CATALOG[key]:null;
+  if(!prod||!prod.colors)return null;
+  const name=selectedTravelColor||preGenTravelColor||prod.colors[0].name;
+  return prod.colors.find(c=>c.name===name)||prod.colors[0];
+}
 // The travel cup on the screen, if it is one the 3D engine can draw.
 function tumbler3dKey(){
   if(product!=='water bottle')return null;
@@ -12167,9 +12311,11 @@ function openMug3DMockup(){
   // different body (see TUMBLERS in MUG3D).
   const tumblerKey=tumbler3dKey();
   const urlOf=pos=>placements[pos]?((findDesignById(placements[pos])||{}).url||null):null;
+  const cupColor=travelColorEntry();
   const openOpts=tumblerKey?{
     tumblerKey,
-    colorHex:'#ffffff',
+    colorHex: cupColor?cupColor.hex:'#ffffff',
+    finish: cupColor&&cupColor.finish?cupColor.finish:'coat',
     panoramaUrl: urlOf('left')||urlOf('front')||urlOf('right')||null
   }:{
     sizeLabel: selectedGenSize,
@@ -12494,15 +12640,23 @@ const MUG3D = (function(){
     }
   };
   function hasTumbler(key){ return !!(key && TUMBLERS[key]); }
-  function tumblerMaterials(THREE,mats){
+  function tumblerMaterials(THREE,mats,opts){
     const steel=new THREE.MeshStandardMaterial({color:0xc9ced4, metalness:0.92, roughness:0.32, envMapIntensity:1.1, side:THREE.DoubleSide});
     const lid=new THREE.MeshPhysicalMaterial({color:0xdfe7f1, transparent:true, opacity:0.55, roughness:0.12, metalness:0.0, clearcoat:0.6, envMapIntensity:1.0, side:THREE.DoubleSide, depthWrite:false});
     const cap=new THREE.MeshPhysicalMaterial({color:0x0a0b0d, roughness:0.6, metalness:0.0, clearcoat:0.1, envMapIntensity:0.35, side:THREE.DoubleSide});
-    return { body:mats.white, steel, lid, cap };
+    // THE CUP'S OWN COLOUR (Alyx, v101). White is the glazed white the mug
+    // uses; Steel is bare metal; anything else is a powder coat in that hex.
+    const hex=(opts&&opts.colorHex)||'#ffffff';
+    let body=mats.white;
+    if(opts&&opts.finish==='steel')body=steel;
+    else if(hex.toLowerCase()!=='#ffffff'){
+      body=new THREE.MeshPhysicalMaterial({color:new THREE.Color(hex).convertSRGBToLinear(), roughness:0.42, metalness:0.05, clearcoat:0.25, clearcoatRoughness:0.3, envMapIntensity:0.6, side:THREE.DoubleSide});
+    }
+    return { body, steel, lid, cap };
   }
-  function assembleTumbler(THREE,T,mats){
+  function assembleTumbler(THREE,T,mats,opts){
     const g=new THREE.Group();
-    const tm=tumblerMaterials(THREE,mats);
+    const tm=tumblerMaterials(THREE,mats,opts);
     T.parts.forEach(part=>{
       const pts=part.pts().map(([r,y])=>new THREE.Vector2(r,y));
       const m=new THREE.Mesh(new THREE.LatheGeometry(pts,160),tm[part.mat]);
@@ -12577,7 +12731,7 @@ const MUG3D = (function(){
     dressScene(THREE,renderer,scene,S);
 
     const mats=makeMaterials(THREE,opts);
-    mugGroup=T?assembleTumbler(THREE,T,mats):assembleMug(THREE,S,opts,mats); scene.add(mugGroup);
+    mugGroup=T?assembleTumbler(THREE,T,mats,opts):assembleMug(THREE,S,opts,mats); scene.add(mugGroup);
 
     designCanvas=document.createElement('canvas');
     // The band's own proportions, so the artwork is cropped the way the
@@ -12618,7 +12772,7 @@ const MUG3D = (function(){
     const px=opts.px||560;
     const angle=(opts.angle==null)?-90:opts.angle;      // handle to the right
     const el=(opts.el==null)?0.18:opts.el;               // a little above
-    const key=[opts.tumblerKey||'',opts.sizeLabel,opts.styleName,opts.colorHex,angle,el,px,opts.background||'#ffffff'].join('|');
+    const key=[opts.tumblerKey||'',opts.finish||'',opts.sizeLabel,opts.styleName,opts.colorHex,angle,el,px,opts.background||'#ffffff'].join('|');
     if(snapCache.has(key))return snapCache.get(key);
     const pr=loadThree().then(THREE=>{
       if(!snapRenderer){
@@ -12637,7 +12791,7 @@ const MUG3D = (function(){
       sc.background=new THREE.Color(opts.background||'#ffffff');
       dressScene(THREE,snapRenderer,sc,S);
       const mats=makeMaterials(THREE,opts);
-      const g=T?assembleTumbler(THREE,T,mats):assembleMug(THREE,S,opts,mats);
+      const g=T?assembleTumbler(THREE,T,mats,opts):assembleMug(THREE,S,opts,mats);
       g.rotation.y=angle*Math.PI/180;
       sc.add(g);
       const cam=new THREE.PerspectiveCamera(9,1,0.1,400);
@@ -15646,8 +15800,15 @@ const TRAVEL_MUG_CATALOG = {
     layoutType: "single-image",
     sizeLabel: "30oz",
     thumbnail: "https://images.printify.com/6a6a0b3a6d82be4de2023450",
-    whiteOnly: true,
-    colors: null
+    // THREE COLOURS, FROM PRINTIFY ITSELF (Sep 2026, pulled live through the
+    // catalogue relay: blueprint 1662, provider 86 lists Black / White /
+    // Steel, all UV, all the same 3634 x 1039 band). The "Only White In
+    // Stock" badge was a guess, and it was wrong.
+    colors: [
+      { name: "White", hex: "#FFFFFF" },
+      { name: "Black", hex: "#111214" },
+      { name: "Steel", hex: "#B8BCC2", finish: "steel" }
+    ]
   }
 };
 
@@ -15862,10 +16023,14 @@ function buildMockupRequestBody(){
     const front = placements.front ? findDesignById(placements.front).url : null;
     const right = placements.right ? findDesignById(placements.right).url : null;
 
+    // A cup with colours always sends one (Alyx, v101: Printify was handed
+    // no colour for the Tundra and took its first variant, the black one).
+    // The first colour in the list is the default: White.
+    const defaultColor=(travelProduct.colors&&travelProduct.colors.length)?travelProduct.colors[0].name:null;
     const body = {
       productKey: selectedTravelProductKey,
       sizeLabel: travelProduct.sizeLabel,
-      colorName: selectedTravelColor
+      colorName: selectedTravelColor||defaultColor
     };
     if (travelProduct.layoutType === 'front-back') {
       body.frontImage = left || front || null;
@@ -16118,7 +16283,7 @@ function goToOrder(){
     // most of all) could land on a different cup entirely if they picked
     // wrong the second time.
     preselectedTravelKey: (product==='water bottle') ? (selectedTravelProductKey||preGenTravelVariant||null) : null,
-    preselectedTravelColor: (product==='water bottle') ? (selectedTravelColor||preGenTravelColor||null) : null,
+    preselectedTravelColor: (product==='water bottle') ? (selectedTravelColor||preGenTravelColor||travelDefaultColorName()||null) : null,
     // Round and square coasters are different blueprints, so the shape has to
     // survive the hop to order.html or the customer gets whichever one the
     // code names by default.

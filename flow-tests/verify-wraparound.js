@@ -1129,7 +1129,10 @@ scenarios.tundraOrderCarriesTheFullWrap = async (page, log, mockupBodies) => {
   if (panoramaCalls(log) !== 1) return `FAIL: expected 1 wraparoundPanorama call, saw ${panoramaCalls(log)}`;
   await page.locator('#approveRow button:has-text("Yes")').first().click();
   await T(page, 1500);
-  await page.locator('button:has-text("Continue to Order")').first().click({ timeout: 10000 });
+  // v101: Yes opens the cup's mockup directly; Continue to Order is only
+  // there for cups the engine cannot draw.
+  const cont = page.locator('button:has-text("Continue to Order")').first();
+  if (await cont.isVisible().catch(() => false)) await cont.click({ timeout: 10000 });
   await T(page, 7000);
   const start = mockupBodies.find(b => b && b.action === 'start');
   if (!start) return 'FAIL: no start-mockup fired after a Tundra wraparound';
@@ -1189,6 +1192,135 @@ scenarios.theTravelRailHasBacksAndThePinnedResult = async (page) => {
   if (pin.atTop < pin.picTop - 60) return `FAIL: the result screen scrolled away to the top of the page (${pin.atTop} vs picture at ${pin.picTop})`;
   if (pin.atBottom > pin.rowBottom + 60) return `FAIL: the result screen scrolled away below its buttons (${pin.atBottom} vs row bottom ${pin.rowBottom})`;
   return 'PASS: fork, travel-mug and print-style panels have Backs; the result screen has a Back and holds between its picture and its buttons';
+};
+
+// THE SCREEN YOU ARE ON IS THE ONLY SCREEN (Alyx, v101). A spotlit panel
+// pins the page to itself: scrolling to the top of the page or the bottom
+// is pulled back to the panel's own edges. Measured on Art Style, which is
+// spotlit the moment the photo lands.
+scenarios.theSpotlitPanelIsPinned = async (page) => {
+  const r = await page.evaluate(async () => {
+    const card = document.getElementById('styleSectionCard');
+    const top = card.getBoundingClientRect().top + window.scrollY;
+    const bottom = card.getBoundingClientRect().bottom + window.scrollY;
+    window.scrollTo(0, 0);
+    await new Promise((r2) => setTimeout(r2, 400));
+    const atTop = window.scrollY;
+    window.scrollTo(0, document.body.scrollHeight);
+    await new Promise((r2) => setTimeout(r2, 400));
+    const atBottom = window.scrollY + window.innerHeight;
+    return { focus: Array.from(document.body.classList).find((c) => c.endsWith('-focus')), top, bottom, atTop, atBottom, innerH: window.innerHeight, pageH: document.body.scrollHeight };
+  });
+  if (r.focus !== 'style-focus') return `FAIL: expected Art Style to be spotlit, body has ${r.focus}`;
+  // Wherever the pin parks, the panel has to be wholly on screen: after a
+  // scroll to the top its bottom edge is still in view, after a scroll to
+  // the bottom its top edge is.
+  if (r.atTop + r.innerH < r.bottom - 60) return `FAIL: scrolled away above the spotlit panel (window ${r.atTop}..${r.atTop + r.innerH} vs panel ${r.top}..${r.bottom})`;
+  if (r.atBottom - r.innerH > r.top + 60) return `FAIL: scrolled away below the spotlit panel (window ${r.atBottom - r.innerH}..${r.atBottom} vs panel ${r.top}..${r.bottom}, page ${r.pageH})`;
+  return `PASS: with Art Style spotlit the page holds between ${Math.round(r.top)} and ${Math.round(r.bottom)}`;
+};
+
+// THE IDEA BOX LANDS ON GENERATE (Alyx, v101: "Meanwhile the Generate Image
+// button is way here at the bottom"). With the product, cup and print style
+// already chosen, "Click here when you are satisfied" goes to Generate, lit,
+// with a Back, and the frame catalogue dimmed like everything else.
+scenarios.ideaSatisfiedLandsOnGenerate = async (page) => {
+  await pickProduct(page, 'water bottle');
+  await page.evaluate(() => pickPreGenTravelVariant('travel-mug-30oz-tundra'));
+  await T(page, 800);
+  await dismissAlerts(page);
+  await page.evaluate(() => pickMugPrintMode('wraparound'));
+  await T(page, 800);
+  await dismissAlerts(page);
+  await page.evaluate(() => handOffToIdeaAfterProductChoice());
+  await T(page, 600);
+  await page.fill('#ideaDesc', 'a lighthouse in a storm');
+  await page.evaluate(() => confirmIdeaSatisfied());
+  await T(page, 1500);
+  const r = await page.evaluate(() => {
+    const vis = (el) => !!el && el.offsetParent !== null;
+    const gen = document.getElementById('generateBtn').getBoundingClientRect();
+    const back = document.getElementById('generateBackBtn');
+    const frames = document.getElementById('frameSectionCard');
+    return {
+      focus: Array.from(document.body.classList).find((c) => c.endsWith('-focus')),
+      genInView: gen.top >= 0 && gen.bottom <= window.innerHeight,
+      backShown: vis(back), backWired: !!back && back.getAttribute('onclick') === 'generateStepBack()',
+      framesOpacity: frames ? parseFloat(getComputedStyle(frames).opacity) : null,
+      framesShown: vis(frames),
+    };
+  });
+  if (r.focus !== 'generate-focus') return `FAIL: expected the Generate step lit, body has ${r.focus}`;
+  if (!r.genInView) return 'FAIL: Generate is not on screen after "satisfied"';
+  if (!r.backShown || !r.backWired) return 'FAIL: the Generate step has no wired Back: ' + JSON.stringify(r);
+  if (r.framesShown && r.framesOpacity >= 0.99) return `FAIL: the frame catalogue is still lit under the Generate dim (opacity ${r.framesOpacity})`;
+  return 'PASS: "satisfied" lands on Generate, lit, with a Back, and the frames dim with the rest';
+};
+
+// THE TUNDRA COMES IN THREE (Alyx, v101, from Printify's own variant list:
+// Black / White / Steel). The badge is gone, the colour card shows, the
+// order body names White until a colour is picked, and a picked colour
+// reaches the body and the 3D cup.
+scenarios.tundraOffersThreeColours = async (page) => {
+  await pickProduct(page, 'water bottle');
+  await page.evaluate(() => pickPreGenTravelVariant('travel-mug-30oz-tundra'));
+  await T(page, 800);
+  await dismissAlerts(page);
+  const r = await page.evaluate(() => {
+    const prod = TRAVEL_MUG_CATALOG['travel-mug-30oz-tundra'];
+    const names = (prod.colors || []).map((c) => c.name);
+    const badge = !!document.querySelector('#travelMugVariantGrid .stock-badge');
+    const colorCard = document.getElementById('travelMugColorCard');
+    const swatches = document.querySelectorAll('#travelMugColorGridGen .color-btn').length;
+    selectedTravelProductKey = 'travel-mug-30oz-tundra'; selectedTravelColor = null;
+    placements.front = null; placements.left = null; placements.right = null;
+    const d = addToRecentDesigns('http://127.0.0.1:8788/__fake/panorama.jpg'); placements.front = d;
+    const defaultBody = buildMockupRequestBody();
+    preGenTravelColor = 'Black'; selectedTravelColor = 'Black';
+    const blackBody = buildMockupRequestBody();
+    const entry = travelColorEntry();
+    return { names, badge, colorCardShown: colorCard && colorCard.style.display !== 'none', swatches,
+      defaultColor: defaultBody.colorName, blackColor: blackBody.colorName, hex: entry && entry.hex };
+  });
+  if (r.names.join() !== 'White,Black,Steel') return `FAIL: Tundra colours are ${r.names.join(', ')}`;
+  if (r.badge) return 'FAIL: the "Only White In Stock" badge is still on the Tundra tile';
+  if (!r.colorCardShown || r.swatches !== 3) return `FAIL: the colour card shows ${r.swatches} swatches: ` + JSON.stringify(r);
+  if (r.defaultColor !== 'White') return `FAIL: with no colour picked the order body says ${JSON.stringify(r.defaultColor)} — Printify would take its first variant, the black one`;
+  if (r.blackColor !== 'Black') return `FAIL: picking Black sent ${JSON.stringify(r.blackColor)}`;
+  if (r.hex !== '#111214') return `FAIL: the 3D cup would be painted ${r.hex}, not the black picked`;
+  return 'PASS: Tundra offers White, Black and Steel, no badge, White by default, Black when picked, and the cup takes the hex';
+};
+
+// BLANK BANDS COME OFF (Alyx, v101, item 8). A 21:9 file with an empty
+// fifth top and bottom loses the bands before the wrap is built, so the
+// band on the cup is all picture. A file with no bands is left alone.
+scenarios.blankBandsAreTrimmedFromTheWrap = async (page) => {
+  const r = await page.evaluate(async () => {
+    product = 'water bottle'; preGenTravelVariant = 'travel-mug-30oz-tundra'; preGenTravelColor = null;
+    const make = (banded) => {
+      const c = document.createElement('canvas'); c.width = 1536; c.height = 658;
+      const g = c.getContext('2d');
+      g.fillStyle = '#3366cc'; g.fillRect(0, 0, 1536, 658);
+      g.fillStyle = '#cc3333'; g.fillRect(0, 300, 1536, 60);
+      if (banded) { g.clearRect(0, 0, 1536, 130); g.fillStyle = '#ffffff'; g.fillRect(0, 528, 1536, 130); }
+      return c.toDataURL('image/png');
+    };
+    const size = async (u) => { const im = await loadImageFromUrl(u); return [im.naturalWidth, im.naturalHeight]; };
+    const banded = await size(await extendWrapToProductRatio(make(true)));
+    const plain = await size(await extendWrapToProductRatio(make(false)));
+    const top = await (async () => {
+      const im = await loadImageFromUrl(await extendWrapToProductRatio(make(true)));
+      const c = document.createElement('canvas'); c.width = im.naturalWidth; c.height = im.naturalHeight;
+      const g = c.getContext('2d'); g.drawImage(im, 0, 0);
+      const d = g.getImageData(Math.floor(c.width / 2), 2, 1, 1).data; return [d[0], d[1], d[2]];
+    })();
+    return { banded, plain, top };
+  });
+  if (Math.abs(r.banded[1] - 398) > 4) return `FAIL: the banded file kept ${r.banded[1]}px of height — the empty fifths were not trimmed (expected ~398)`;
+  if (Math.abs(r.banded[0] / r.banded[1] - 3.5) > 0.02) return `FAIL: the trimmed wrap is ${(r.banded[0] / r.banded[1]).toFixed(2)}:1, not 3.50:1`;
+  if (r.plain[1] !== 658) return `FAIL: a file with no bands was trimmed to ${r.plain[1]}px`;
+  if (r.top[0] > 200 && r.top[1] > 200 && r.top[2] > 200) return `FAIL: the top of the wrap is still blank: rgb(${r.top})`;
+  return `PASS: empty bands trimmed (658 -> ${r.banded[1]}px), wrap 3.50:1 and picture to the top edge; an unbanded file is untouched`;
 };
 
 // THE TOOLS BUTTON IS ON EVERY FRAME (Alyx, Sep 2026): "Almost all the
