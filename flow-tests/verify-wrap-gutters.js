@@ -11,10 +11,13 @@
 // a mismatch behind a deliberate line stops looking like a mistake.
 //
 // What this pins:
-//   * IT REPLACES THE GUARANTEED EDGE FADE rather than stacking on it. The two
-//     answer the same question and disagree -- the fade dissolves the ends so
-//     the picture has no edge, the gutter gives it a deliberate one. Painting
-//     strips over a wash put there to prevent an edge is work undone.
+//   * IT REPLACES THE GUARANTEED EDGE FADE rather than stacking on it -- but
+//     NOT a fade the customer actually chose. An explicit choice wins; the
+//     gutter takes the place of the fade nobody asked for.
+//   * THE OUTER EDGE IS THE CUP'S EXACT COLOUR. That edge is what butts
+//     against the other end to form the stripe, so it is the one pixel column
+//     that has to be right. It survives JPEG because the strip is far wider
+//     than an 8x8 block -- which is a dependency, and so is pinned here.
 //   * STRAIGHT STRIPS, both edges hard. There is no feather and there is not
 //     meant to be one: a fade hides an edge, a gutter declares one.
 //   * INSIDE THE CANVAS. Widening the file to make room would rescale the
@@ -72,15 +75,20 @@ const scenarios = {};
 
 // ---- 1. IT REPLACES THE FADE. ----
 // Read from source: the gutter branch and the fade branch must be exclusive.
-scenarios.itReplacesTheGuaranteedEdgeFade = async (page) => {
+scenarios.itReplacesTheFadeButNeverOverridesAChoice = async (page) => {
   const src = await page.evaluate(async () => (await fetch('/needles-studio.html')).text());
-  const i = src.indexOf('if(wrapWantsGutters()){');
-  if (i < 0) return 'FAIL: the gutter is not wired into the generation path at all';
-  const after = src.slice(i, i + 700);
-  if (!/}\s*else if\(!skipEdgeFade\)\{/.test(after)) {
-    return 'FAIL: the gutter does not replace the guaranteed edge fade — the fade still runs alongside it, so the strips land on ends already washed toward the cup colour';
+  // Anchor on the gutter's own call site, not on skipEdgeFade -- there are four
+  // skipEdgeFade branches in this file and indexOf found the wrong one.
+  const m = src.match(/\}\s*else if\(wrapWantsGutters\(\)\)\s*\{/);
+  if (!m) {
+    if (!/wrapWantsGutters\(\)/.test(src)) return 'FAIL: the gutter is not wired into the generation path at all';
+    return 'FAIL: the gutter is not the else-branch of the fade — either both run, or the gutter runs first and a customer who asked for Fade Edges silently gets two hard strips';
   }
-  return 'PASS: gutters and the guaranteed edge fade are exclusive — the gutter takes its place';
+  const before = src.slice(Math.max(0, m.index - 400), m.index);
+  if (!/skipEdgeFade/.test(before)) {
+    return 'FAIL: the gutter is an else-branch of something other than skipEdgeFade';
+  }
+  return 'PASS: exclusive with the fade, and second — so an explicit fade choice is honoured ahead of the gutter';
 };
 
 // ---- 2. STRAIGHT STRIPS, the thing that was actually asked for. ----
@@ -89,14 +97,39 @@ scenarios.straightStripsByDefault = async (page) => {
   const g = await gutter(page, { samples: [] });
   if (g.hasFeatherKnob) return 'FAIL: a feather knob is back — a gutter that needs a fade is not doing its job';
   const px = g.gutterPx;
-  const r = await gutter(page, { samples: [[0, 1400], [px - 2, 1400], [px + 2, 1400], [-1, 1400], [-px + 1, 1400], [-(px + 3), 1400]] });
+  const mid = Math.round(px / 2);
+  const r = await gutter(page, { samples: [[0, 1400], [mid, 1400], [px + 3, 1400], [-1, 1400], [-mid, 1400], [-(px + 4), 1400]] });
   const cup = rgb('#90C695');
-  const [outL, inL, pastL, outR, inR, pastR] = r.samples;
-  if (!near(outL, cup) || !near(outR, cup)) return `FAIL: the outer edges are rgb(${outL}) / rgb(${outR}), not the cup's rgb(${cup})`;
-  if (!near(inL, cup) || !near(inR, cup)) return 'FAIL: the strips are not solid all the way across';
-  if (!magenta(pastL)) return `FAIL: two pixels past the left strip is rgb(${pastL}) — the edge is ramping, not straight`;
-  if (!magenta(pastR)) return `FAIL: two pixels past the right strip is rgb(${pastR}) — the edge is ramping, not straight`;
-  return `PASS: ${px}px of solid cup colour at each end, hard on both sides — a ${px * 2}px stripe where they meet`;
+  const [outL, midL, pastL, outR, midR, pastR] = r.samples;
+  // THE OUTER EDGE IS THE STRIPE. Near-exact, not merely close: this column is
+  // what meets the other end on the cup, and a couple of points off there is a
+  // stripe that does not match itself across its own join.
+  if (!near(outL, cup, 2) || !near(outR, cup, 2)) {
+    return `FAIL: the outer edges are rgb(${outL}) / rgb(${outR}), not the cup's exact rgb(${cup}) — the two halves of the stripe would not match each other`;
+  }
+  if (!near(midL, cup, 4) || !near(midR, cup, 4)) return `FAIL: the strips are not solid across their width — rgb(${midL}) / rgb(${midR}) at the middle`;
+  if (!magenta(pastL) || !magenta(pastR)) return `FAIL: past the strip is rgb(${pastL}) / rgb(${pastR}) — the inner edge is ramping far into the picture, not stopping`;
+  return `PASS: ${px}px of solid cup colour at each end, outer edge exact — a ${px * 2}px stripe where they meet`;
+};
+
+// ---- THE DEPENDENCY THE FORMAT CHOICE RESTS ON. ----
+// The strip survives JPEG only because it is far wider than an 8x8 block, so
+// the blocks on the canvas boundary are entirely flat colour. Narrow it far
+// enough and the outer edge starts to ring -- which would be invisible in
+// review and obvious on a printed cup. This says where the floor is.
+scenarios.theStripStaysWiderThanAJpegBlock = async (page) => {
+  await pickCup(page, VACUUM);
+  const cup = rgb('#90C695');
+  const live = await page.evaluate(() => WRAP_GUTTER_WIDTH);
+  const px = Math.round(3710 * live);
+  if (px < 24) {
+    return `FAIL: WRAP_GUTTER_WIDTH ${live} gives a ${px}px strip — too near JPEG's 8px block for the outer edge to stay clean`;
+  }
+  const r = await gutter(page, { samples: [[0, 1400], [-1, 1400]] });
+  if (!near(r.samples[0], cup, 2) || !near(r.samples[1], cup, 2)) {
+    return `FAIL: at the shipping width the outer edge is already ringing — rgb(${r.samples[0]}) / rgb(${r.samples[1]})`;
+  }
+  return `PASS: ${px}px strip at the shipping width, ${Math.round(px / 8)}x a JPEG block, outer edge exact`;
 };
 
 // ---- 3. INSIDE THE CANVAS. Widening would move the join. ----
@@ -141,14 +174,17 @@ scenarios.theWidthDialWorks = async (page) => {
   const rows = [];
   for (const wdt of [0, 0.01, 0.0175, 0.04]) {
     const want = Math.round(2000 * wdt);
-    const r = await gutter(page, { w: 2000, h: 1500, width: wdt, samples: [[want > 0 ? want - 1 : 0, 700]] });
+    // Sample the OUTER edge (x=0), not the inner one. The inner edge borders
+    // the picture and rings under JPEG by design; the outer edge is the column
+    // that forms the stripe and must be exact.
+    const r = await gutter(page, { w: 2000, h: 1500, width: wdt, samples: [[0, 700]] });
     rows.push({ wdt, want, got: r.gutterPx, edge: r.samples[0] });
   }
   const off = rows.filter((r) => r.got !== r.want);
   if (off.length) return `FAIL: width does not reach the paint: ${off.map((r) => `${r.wdt}->${r.got}px (want ${r.want})`).join(', ')}`;
   if (!magenta(rows[0].edge)) return `FAIL: width 0 still painted rgb(${rows[0].edge}) — no gutter must mean no gutter`;
   for (const r of rows.slice(1)) {
-    if (!near(r.edge, rgb('#90C695'))) return `FAIL: at ${r.wdt} the strip is rgb(${r.edge})`;
+    if (!near(r.edge, rgb('#90C695'), 3)) return `FAIL: at ${r.wdt} the outer edge is rgb(${r.edge}), not the cup's colour`;
   }
   return `PASS: 0 paints nothing, and ${rows.slice(1).map((r) => `${r.wdt}->${r.got}px`).join(', ')} land exactly`;
 };

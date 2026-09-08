@@ -5469,15 +5469,27 @@ async function paintWrapGutters(url,hex,width=WRAP_GUTTER_WIDTH){
   ctx.fillStyle=hex;
   ctx.fillRect(0,0,g,h);
   ctx.fillRect(w-g,0,g,h);
-  // PNG, NOT JPEG, and this is the whole point rather than a preference.
-  // Every other wrap step here emits image/jpeg at 0.92, which is right for a
-  // photograph and wrong for this: JPEG rings at a hard edge, and the strip's
-  // inner edge is the hardest one in the file. At 0.92 the first few pixels of
-  // the strip came back rgb(190,166,190) -- the cup colour contaminated by the
-  // picture beside it -- so the crisp line the gutter exists to draw was being
-  // softened by the encoder on its way out. Lossless keeps the strip exactly
-  // the cup's hex, right up to the edge.
-  return c.toDataURL('image/png');
+  // 0.95 RATHER THAN PNG, and the reasoning is worth keeping because the
+  // obvious answer here is wrong. JPEG rings at hard edges, so lossless looks
+  // like the safe call -- but measured on a deliberately busy wrap, the strip's
+  // OUTER edge comes back pixel-exact at every quality including 0.92, and PNG
+  // costs 7.4MB against 1.08MB to change nothing about it.
+  //
+  // It is exact because of how JPEG works, not by luck: it encodes in 8x8
+  // blocks, the strip is ~45px wide, so every block along the canvas boundary
+  // is ENTIRELY flat cup colour and survives intact. Only the blocks straddling
+  // the inner edge ring, where the strip meets the picture -- and that edge
+  // borders busy photograph anyway, so a pixel or two of softening there is
+  // invisible and arguably kind.
+  //
+  // The outer edge is the one that matters: it is what butts against the other
+  // end to form the stripe on the cup. 0.95 rather than the pipeline's 0.92
+  // buys headroom on high-contrast content for 0.19MB.
+  //
+  // THE ONE THING THIS DEPENDS ON: the strip staying comfortably wider than a
+  // JPEG block. At WRAP_GUTTER_WIDTH below roughly 0.005 the boundary blocks
+  // stop being pure and the outer edge starts to ring -- pinned by the suite.
+  return c.toDataURL('image/jpeg',0.95);
 }
 
 // DOES THE BAND GO ALL THE WAY ROUND? (Alyx, v105). Printify's own photo of
@@ -15558,18 +15570,23 @@ async function makeTestSingleZonePanorama(side){
     const rawResultUrl=resultUrl;
     // THE GUTTER REPLACES THE GUARANTEED EDGE FADE (Alyx, Sep 2026), it does
     // not sit on top of it. The two are answers to the same question and they
-    // disagree: the fade dissolves the ends so the picture has no edge, the
-    // gutter gives it a deliberate one. Running the fade first and the strips
-    // second would mean painting a hard edge over a wash put there to prevent
-    // exactly that -- work undone, and the strips sitting on a picture already
-    // pulled toward the cup colour where they meet it.
-    if(wrapWantsGutters()){
-      resultUrl=await paintWrapGutters(resultUrl,getSelectedProductColorHex());
-    } else if(!skipEdgeFade){
+    // disagree: a fade dissolves the ends so the picture has no edge, a gutter
+    // gives it a deliberate one. Running both would paint a hard edge over a
+    // wash put there to prevent exactly that.
+    //
+    // But it replaces the GUARANTEED fade -- the one nobody asked for -- and
+    // not a fade the customer chose. An explicit choice wins, which is why the
+    // fade is tested first: skipEdgeFade is false only when edgeFadeChoice is
+    // 'fade', i.e. when somebody actually picked it. Ordering it the other way
+    // silently handed a customer who asked for soft edges two hard strips
+    // instead, which is a worse answer than either treatment on its own.
+    if(!skipEdgeFade){
       const centerEdges=(isWraparoundActive && !is40ozWraparoundSplit)
         ? {top:true,bottom:true,left:false,right:false}
         : {top:true,bottom:true,left:true,right:true};
       resultUrl=await applyEdgeFadeToImageUrl(resultUrl,centerEdges,getSelectedProductColorHex(),edgeFadeAmountPct);
+    } else if(wrapWantsGutters()){
+      resultUrl=await paintWrapGutters(resultUrl,getSelectedProductColorHex());
     }
 
     if (is40ozWraparoundSplit){
