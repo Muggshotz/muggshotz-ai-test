@@ -179,6 +179,18 @@ scenarios.tundraOpensThe3DTumbler = async (page) => {
   const stage = await page.evaluate(() => { const r = document.getElementById('mug3dStage').getBoundingClientRect(); return { w: Math.round(r.width), h: Math.round(r.height), hint: document.querySelector('#mug3dWrap .mug3d-hint').textContent }; });
   if (Math.abs(stage.w - stage.h) > 4) return `FAIL: the cup's stage is ${stage.w}x${stage.h}, not square`;
   if (!/Drag the cup/.test(stage.hint)) return `FAIL: the hint still says "${stage.hint}"`;
+  // v109: on a short window the stage gives up height so the buttons stay on screen.
+  await page.setViewportSize({ width: 1280, height: 640 });
+  await T(page, 400);
+  const fit = await page.evaluate(() => {
+    const s = document.getElementById('mug3dStage').getBoundingClientRect();
+    const a = document.getElementById('mockupLightboxActions').getBoundingClientRect();
+    return { top: Math.round(s.top), bottom: Math.round(a.bottom), h: Math.round(s.height), w: Math.round(s.width), vh: window.innerHeight };
+  });
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await T(page, 300);
+  if (fit.top < 0 || fit.bottom > fit.vh) return `FAIL: in a ${fit.vh}px window the stage starts at ${fit.top} and the buttons end at ${fit.bottom}`;
+  if (Math.abs(fit.w - fit.h) > 4) return `FAIL: the shrunk stage is ${fit.w}x${fit.h}, not square`;
   const art = await artworkFraction(page, 'tundra');
   // The band is a smaller share of the stage than a mug's whole wrap, and
   // the fake strip is pale: 2% coloured is a picture on the cup here.
