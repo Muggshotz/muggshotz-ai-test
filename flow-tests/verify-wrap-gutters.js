@@ -210,6 +210,9 @@ scenarios.theTwoEndsLineUpExactly = async (page) => {
     // A stand-in gutter strip: a black bar at 30% height (the "ribbon bow"
     // whose distance from the top must match), plus a red mark on its LEFT
     // quarter only, so the mirror is provable rather than assumed.
+    // Deliberately NOT the gutter's own 1:12.6 -- a design that overhangs is
+    // the normal case now (a bow reaching onto the picture), and it must still
+    // line up at both ends.
     const A = document.createElement('canvas'); A.width = 200; A.height = 1000;
     const ax = A.getContext('2d');
     ax.fillStyle = '#DDDDDD'; ax.fillRect(0, 0, 200, 1000);
@@ -223,6 +226,7 @@ scenarios.theTwoEndsLineUpExactly = async (page) => {
     const c = document.createElement('canvas'); c.width = im.naturalWidth; c.height = im.naturalHeight;
     const cx = c.getContext('2d'); cx.drawImage(im, 0, 0);
     const g = Math.round(im.naturalWidth * WRAP_GUTTER_WIDTH);
+    const drawW = Math.round(H * (200 / 1000));
     const barRows = (x) => {
       const d = cx.getImageData(x, 0, 1, im.naturalHeight).data;
       const rows = [];
@@ -236,13 +240,14 @@ scenarios.theTwoEndsLineUpExactly = async (page) => {
     const redY = Math.round(im.naturalHeight * 0.72);
     return {
       height: im.naturalHeight, g,
-      leftBar: barRows(Math.round(g / 2)),
-      rightBar: barRows(im.naturalWidth - Math.round(g / 2)),
+      leftBar: barRows(Math.round(drawW / 2)),
+      rightBar: barRows(im.naturalWidth - Math.round(drawW / 2)),
       // The red mark sits on the strip's OUTER portion. Unmirrored it would be
       // at the same side of both ends; mirrored it moves to the far side.
-      redNearLeftOuter:  px(Math.round(g * 0.12), redY),
-      redNearRightOuter: px(im.naturalWidth - 1 - Math.round(g * 0.12), redY),
-      redNearRightInner: px(im.naturalWidth - g + Math.round(g * 0.12), redY),
+      drawW: Math.round(im.naturalHeight * (200 / 1000)),
+      redNearLeftOuter:  px(2, redY),
+      redNearRightOuter: px(im.naturalWidth - 3, redY),
+      redNearRightInner: px(im.naturalWidth - Math.round(im.naturalHeight * 0.2) + 3, redY),
     };
   });
 
@@ -254,13 +259,19 @@ scenarios.theTwoEndsLineUpExactly = async (page) => {
   if (Math.abs(r.leftBar.first - wantTop) > 2) {
     return `FAIL: the feature landed at row ${r.leftBar.first}, expected ~${wantTop} — the strip is not drawn to the full height of the wrap`;
   }
+  // Aspect must be preserved, not squeezed into the gutter: a 1:5 asset on a
+  // 2817-tall wrap should occupy 563px, overhanging the 223px band.
+  const wantW = Math.round(r.height * 0.2);
+  if (Math.abs(r.drawW - wantW) > 2) {
+    return `FAIL: the design was drawn ${r.drawW}px wide, expected ${wantW} — it is being stretched to the gutter instead of keeping its proportions`;
+  }
   const isRed = (v) => v[0] > 150 && v[1] < 90 && v[2] < 90;
   if (!isRed(r.redNearLeftOuter)) return `FAIL: the strip did not land as drawn at the left end (rgb(${r.redNearLeftOuter}))`;
   if (!isRed(r.redNearRightOuter)) {
     return `FAIL: the right end is not mirrored — the mark drawn at the strip's outer edge came back at rgb(${r.redNearRightOuter}), so the motif would not complete itself across the join`;
   }
   if (isRed(r.redNearRightInner)) return 'FAIL: the right end was stamped unmirrored';
-  return `PASS: feature on rows ${r.leftBar.first}-${r.leftBar.last} at BOTH ends, and the right end is a true mirror`;
+  return `PASS: feature on rows ${r.leftBar.first}-${r.leftBar.last} at BOTH ends, right end a true mirror, and ${r.drawW}px wide — proportions kept, overhanging the ${r.g}px band`;
 };
 
 // ---- A MISSING ASSET MUST NOT LEAVE THE JOIN BARE. ----

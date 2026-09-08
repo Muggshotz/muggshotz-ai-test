@@ -5479,9 +5479,14 @@ const WRAP_GUTTER_WIDTH=0.06;     // per end, fraction of wrap width (~223px of 
 //
 // Left end of the wrap gets the asset as drawn; right end gets it mirrored.
 const GUTTER_CATALOG={
-  // { asset } is ONE gutter strip -- any pixel size, motif centre at its LEFT
-  // edge. Add entries as the artwork lands; an entry whose asset fails to load
-  // falls back to the plain colour gutter rather than leaving the join bare.
+  // { asset } is ONE gutter strip. Motif centre hard against its LEFT edge --
+  // that edge lands on the join and is mirrored against itself. Aspect ratio is
+  // the artist's control over how far the design reaches onto the picture: at
+  // the gutter's own 1:12.6 it stays a band, wider than that and it overhangs
+  // (which is right for a bow, a brooch, anything with a centrepiece). Never
+  // stretched, so no ratio is wrong -- it just reaches further. An entry whose
+  // asset fails to load falls back to the plain colour gutter rather than
+  // leaving the join bare.
 };
 let selectedGutter=null;   // null = the plain strip of the cup's own colour
 // Only cups confirmed to close on themselves. The vacuum 40oz's single
@@ -5493,20 +5498,35 @@ const WRAP_GUTTER_CUPS={
 function wrapWantsGutters(){
   return product==='water bottle' && WRAP_GUTTER_CUPS[preGenTravelVariant]===true;
 }
-// Draws one strip at each end, the right one mirrored. Kept separate from the
-// plain fill so the rule that matters is visible in one place: both ends use
-// the SAME source image, the SAME destination top (0) and the SAME destination
-// height (h). The only difference between them is a horizontal flip, and a
-// horizontal flip cannot move a feature up or down -- which is precisely why
-// the two ends cannot fall out of vertical alignment.
-async function drawGutterDesign(ctx,art,w,h,g){
-  // Left end: as drawn.
-  ctx.drawImage(art, 0,0, art.naturalWidth,art.naturalHeight, 0,0, g,h);
+// Draws one strip at each end, the right one mirrored. Two rules, and both are
+// load-bearing:
+//
+// ASPECT IS PRESERVED, NEVER STRETCHED TO THE GUTTER. The asset is fitted to
+// the wrap's full HEIGHT and takes whatever width that implies. Forcing it into
+// WRAP_GUTTER_WIDTH would distort every design that is not drawn at exactly the
+// gutter's 1:12.6 -- and worse, it would forbid the thing these designs want to
+// do. Bud's split bow projects sideways well past its ribbon band, and it
+// should: the band sits at the seam and the bow SPILLS ONTO THE PICTURE, the
+// same way a frame overhangs its artwork. A bow squeezed inside a 17mm column
+// looks strangled. So the artist controls the overhang purely by how wide they
+// draw relative to height, and WRAP_GUTTER_WIDTH governs only the plain colour
+// fallback.
+//
+// BOTH ENDS ARE THE SAME PICTURE, differing by a horizontal flip and nothing
+// else -- same source, same destination top, same destination height. A
+// horizontal flip cannot move a feature up or down, which is exactly why the
+// two ends cannot fall out of vertical alignment (Alyx's constraint, made
+// arithmetic rather than a rule somebody keeps).
+async function drawGutterDesign(ctx,art,w,h){
+  // Fitted to the full height; width follows from the asset's own proportions.
+  const drawW=Math.round(h*(art.naturalWidth/art.naturalHeight));
+  // Left end: as drawn, anchored to the wrap's outer edge.
+  ctx.drawImage(art, 0,0, art.naturalWidth,art.naturalHeight, 0,0, drawW,h);
   // Right end: the exact mirror, so the motif completes itself across the join.
   ctx.save();
   ctx.translate(w,0);
   ctx.scale(-1,1);
-  ctx.drawImage(art, 0,0, art.naturalWidth,art.naturalHeight, 0,0, g,h);
+  ctx.drawImage(art, 0,0, art.naturalWidth,art.naturalHeight, 0,0, drawW,h);
   ctx.restore();
 }
 
@@ -5524,7 +5544,7 @@ async function paintWrapGutters(url,hex,width=WRAP_GUTTER_WIDTH,design=null){
   if(entry&&entry.asset){
     try{
       const art=await loadImageFromUrl(entry.asset);
-      await drawGutterDesign(ctx,art,w,h,g);
+      await drawGutterDesign(ctx,art,w,h);
       return c.toDataURL('image/jpeg',0.95);
     }catch(err){
       // A missing or unreadable asset must not leave the join bare -- fall
