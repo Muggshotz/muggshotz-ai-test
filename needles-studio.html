@@ -5419,6 +5419,67 @@ function softenTopAndBottom(ctx,W,H,hex){
   fadeTo(H-F,H);
 }
 
+// GUTTERS (Alyx, Sep 2026). A cup whose wrap closes has its two ends meet on
+// the body, and nothing guarantees the scene lines up across that meeting --
+// the picture simply stops on one side and starts again on the other, and the
+// eye reads the mismatch as a fault.
+//
+// A gutter is the trade's answer: stop the artwork short of the join and put a
+// straight strip of the CUP'S OWN COLOUR at each extreme end. Brought together
+// on the body the two strips read as one small intentional stripe, and a
+// mismatch behind a deliberate line stops looking like a mistake -- there is
+// nothing for the eye to measure the two sides against. It also gives the
+// printer room to be a millimetre out without it showing.
+//
+// NO FEATHER, DELIBERATELY (Alyx: "you don't need the fade with the gutter,
+// the purpose of the gutter is to not need a fade"). That is the whole idea
+// and it is worth stating rather than leaving as a zero somebody later reads
+// as an oversight: a fade hides an edge, a gutter declares one. Softening the
+// strip where it meets the picture would blur the declaration back into the
+// thing it replaced. Both edges of the strip are hard.
+//
+// WIDTH is per end, as a fraction of the wrap. Two of them meet, so the stripe
+// on the cup is twice this.
+//
+// This does NOT go through extendWrapToProductRatio: that runs only on the
+// panorama path, and the cups this is for sit below PANORAMA_MIN_WRAP_RATIO,
+// so they reach the mockup with no end treatment at all. Applied in place on
+// the finished wrap, inside its existing canvas -- widening the file would
+// rescale the whole wrap and move the join, which is the thing a gutter exists
+// to settle.
+const WRAP_GUTTER_WIDTH=0.012;    // per end, fraction of wrap width (~45px of 3710)
+// Only cups confirmed to close on themselves. The vacuum 40oz's single
+// 3710x2817 area covers the whole tumbler (products-catalog.js), so its ends
+// meet. Anything absent is left exactly as it is today.
+const WRAP_GUTTER_CUPS={
+  'travel-mug-40oz-vacuum': true
+};
+function wrapWantsGutters(){
+  return product==='water bottle' && WRAP_GUTTER_CUPS[preGenTravelVariant]===true;
+}
+async function paintWrapGutters(url,hex,width=WRAP_GUTTER_WIDTH){
+  const img=await loadImageFromUrl(url);
+  const w=img.naturalWidth,h=img.naturalHeight;
+  const g=Math.round(w*width);
+  if(g<=0)return url;
+  const c=document.createElement('canvas');
+  c.width=w; c.height=h;
+  const ctx=c.getContext('2d');
+  ctx.drawImage(img,0,0);
+  ctx.fillStyle=hex;
+  ctx.fillRect(0,0,g,h);
+  ctx.fillRect(w-g,0,g,h);
+  // PNG, NOT JPEG, and this is the whole point rather than a preference.
+  // Every other wrap step here emits image/jpeg at 0.92, which is right for a
+  // photograph and wrong for this: JPEG rings at a hard edge, and the strip's
+  // inner edge is the hardest one in the file. At 0.92 the first few pixels of
+  // the strip came back rgb(190,166,190) -- the cup colour contaminated by the
+  // picture beside it -- so the crisp line the gutter exists to draw was being
+  // softened by the encoder on its way out. Lossless keeps the strip exactly
+  // the cup's hex, right up to the edge.
+  return c.toDataURL('image/png');
+}
+
 // DOES THE BAND GO ALL THE WAY ROUND? (Alyx, v105). Printify's own photo of
 // the Gator shows a bare strip down the back: its 11.28" band is shorter
 // than the bottle is round. The Tundra's 12.11" band is wider than its cup
@@ -15495,7 +15556,16 @@ async function makeTestSingleZonePanorama(side){
     // pre-faded center panel would show up as a fake white band the
     // "continue this scene" generation might mistake for real content.
     const rawResultUrl=resultUrl;
-    if(!skipEdgeFade){
+    // THE GUTTER REPLACES THE GUARANTEED EDGE FADE (Alyx, Sep 2026), it does
+    // not sit on top of it. The two are answers to the same question and they
+    // disagree: the fade dissolves the ends so the picture has no edge, the
+    // gutter gives it a deliberate one. Running the fade first and the strips
+    // second would mean painting a hard edge over a wash put there to prevent
+    // exactly that -- work undone, and the strips sitting on a picture already
+    // pulled toward the cup colour where they meet it.
+    if(wrapWantsGutters()){
+      resultUrl=await paintWrapGutters(resultUrl,getSelectedProductColorHex());
+    } else if(!skipEdgeFade){
       const centerEdges=(isWraparoundActive && !is40ozWraparoundSplit)
         ? {top:true,bottom:true,left:false,right:false}
         : {top:true,bottom:true,left:true,right:true};
