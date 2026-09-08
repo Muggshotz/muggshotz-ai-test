@@ -1082,7 +1082,10 @@ scenarios.tundraWrapIsMirroredAndFaded = async (page) => {
     const src = 'http://127.0.0.1:8788/__fake/panorama.jpg';
     product = 'water bottle'; preGenTravelColor = null;
     preGenTravelVariant = 'travel-mug-14oz-handle';
-    const narrow = await extendWrapToProductRatio(src);
+    // v105: a picture wider than a band is cropped to the band rather than
+    // handed back for the server to letterbox; the 14oz is 2.15:1.
+    const narrowIm = await loadImageFromUrl(await extendWrapToProductRatio(src));
+    const narrow = narrowIm.naturalWidth / narrowIm.naturalHeight;
     preGenTravelVariant = 'travel-mug-30oz-tundra';
     const out = await extendWrapToProductRatio(src);
     const orig = await loadImageFromUrl(src);
@@ -1095,7 +1098,7 @@ scenarios.tundraWrapIsMirroredAndFaded = async (page) => {
     const w = orig.naturalWidth, h = orig.naturalHeight, W = ext.naturalWidth;
     const flank = (W - w) / 2, y = h * 0.35;
     return {
-      narrowUnchanged: narrow === src,
+      narrowRatio: narrow,
       ratio: W / ext.naturalHeight, flank, w, h,
       centreOrig: px(orig, w / 2, h / 2), centreExt: px(ext, flank + w / 2, h / 2),
       edgeOrig: px(orig, 4, y), mirrorExt: px(ext, flank - 5, y),
@@ -1121,7 +1124,7 @@ scenarios.tundraWrapIsMirroredAndFaded = async (page) => {
     };
   });
   const near = (a, b, tol) => a.every((v, i) => Math.abs(v - b[i]) <= tol);
-  if (!r.narrowUnchanged) return 'FAIL: the 14oz (narrower than the picture) was rebuilt when it should pass straight through';
+  if (Math.abs(r.narrowRatio - 2.15) > 0.02) return `FAIL: the 14oz wrap came out ${r.narrowRatio.toFixed(3)}:1, not its band's 2.15:1`;
   if (Math.abs(r.ratio - 3.5) > 0.02) return `FAIL: the Tundra wrap came out ${r.ratio.toFixed(3)}:1, not 3.50:1`;
   if (!near(r.centreOrig, r.centreExt, 6)) return `FAIL: the scene moved or changed in the middle: rgb(${r.centreOrig}) vs rgb(${r.centreExt})`;
   if (!near(r.edgeOrig, r.mirrorExt, 14)) return `FAIL: the flank beside the seam is not a mirror of the scene's edge: rgb(${r.edgeOrig}) vs rgb(${r.mirrorExt}) ` + JSON.stringify(r);
@@ -1132,7 +1135,7 @@ scenarios.tundraWrapIsMirroredAndFaded = async (page) => {
     return 'FAIL: the ends still fade to white — the old fade-to-cup is back';
   }
   if (r.whiteColumns.length) return `FAIL: white hairline(s) down the wrap at x=${r.whiteColumns.slice(0, 6).join(',')} — a gap between flank and picture`;
-  return `PASS: Tundra wrap is ${r.ratio.toFixed(2)}:1, scene untouched in the middle, flanks mirror the edges, and the two ends meet each other at the back; the 14oz passes straight through`;
+  return `PASS: Tundra wrap is ${r.ratio.toFixed(2)}:1, scene untouched in the middle, flanks mirror the edges, and the two ends meet each other at the back; the 14oz is cropped to its own band`;
 };
 
 // And through the real flow: a Tundra wraparound order carries the full
@@ -1369,6 +1372,34 @@ scenarios.theCupsPaletteComesNext = async (page) => {
   const idea = await page.evaluate(() => { const t = document.getElementById('ideaDesc'); const r = t.getBoundingClientRect(); return r.height > 0 && r.bottom > 0 && r.top < window.innerHeight; });
   if (!idea) return 'FAIL: Print Style with an empty idea box did not land on the idea box';
   return 'PASS: Tundra -> colour card -> Print Style -> idea box, each the next open question';
+};
+
+// A BAND THAT STOPS SHORT FADES TO THE CUP (Alyx, v105). The Gator's band
+// does not meet itself at the back, so its wrap's ends fade to the bottle's
+// colour instead of dissolving into each other; the centre stays untouched.
+scenarios.gatorWrapFadesToTheBottle = async (page) => {
+  const r = await page.evaluate(async () => {
+    const src = 'http://127.0.0.1:8788/__fake/panorama.jpg';
+    product = 'water bottle'; preGenTravelColor = null;
+    preGenTravelVariant = 'travel-mug-32oz-gator';
+    const out = await extendWrapToProductRatio(src);
+    const orig = await loadImageFromUrl(src);
+    const ext = await loadImageFromUrl(out);
+    const px = (im, x, y) => {
+      const c = document.createElement('canvas'); c.width = im.naturalWidth; c.height = im.naturalHeight;
+      const ctx = c.getContext('2d'); ctx.drawImage(im, 0, 0);
+      const d = ctx.getImageData(Math.round(x), Math.round(y), 1, 1).data; return [d[0], d[1], d[2]];
+    };
+    const W = ext.naturalWidth, H = ext.naturalHeight, y = H * 0.35;
+    return { closes: travelWrapCloses(preGenTravelVariant), ratio: W / H,
+      left: px(ext, 1, y), right: px(ext, W - 2, y), centre: px(ext, W / 2, H / 2), origCentre: px(orig, orig.naturalWidth / 2, orig.naturalHeight / 2) };
+  });
+  const near = (a, b, tol) => a.every((v, i) => Math.abs(v - b[i]) <= tol);
+  if (r.closes) return 'FAIL: the Gator is marked as a band that meets itself';
+  if (Math.abs(r.ratio - 1.75) > 0.02) return `FAIL: the Gator wrap is ${r.ratio.toFixed(3)}:1, not 1.75:1`;
+  if (!near(r.left, [255, 255, 255], 8) || !near(r.right, [255, 255, 255], 8)) return `FAIL: the ends did not fade to the bottle's white: rgb(${r.left}) / rgb(${r.right})`;
+  if (!near(r.centre, r.origCentre, 8)) return `FAIL: the centre of the picture changed: rgb(${r.origCentre}) -> rgb(${r.centre})`;
+  return 'PASS: the Gator wrap is 1.75:1 with both ends faded to the bottle and the centre untouched';
 };
 
 // THE TOOLS BUTTON IS ON EVERY FRAME (Alyx, Sep 2026): "Almost all the
