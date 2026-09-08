@@ -1454,15 +1454,24 @@ scenarios.pickingACupIsolatesIt = async (page) => {
   const one = await page.evaluate(() => ({
     tiles: document.querySelectorAll('#travelMugVariantGrid .theme-btn').length,
     change: !!document.getElementById('travelChangeCupBtn'),
-    stillShown: (() => { const im = document.getElementById('travelCupStill'); return !!im && im.offsetParent !== null; })(),
+    // v109: the swatches share the row with the chosen cup, inside the picker card.
+    beside: (() => {
+      const tile = document.querySelector('#travelMugVariantGrid .theme-btn');
+      const pal = document.getElementById('travelMugColorCard');
+      if (!tile || !pal || pal.style.display === 'none') return false;
+      if (!document.getElementById('travelMugVariantCard').contains(pal)) return false;
+      const a = tile.getBoundingClientRect(), b = pal.getBoundingClientRect();
+      return b.left >= a.right - 2 && b.top < a.bottom && b.bottom > a.top;
+    })(),
   }));
   if (one.tiles !== 1) return `FAIL: ${one.tiles} cups still showing after a pick`;
   if (!one.change) return 'FAIL: no way back to the six cups';
+  if (!one.beside) return 'FAIL: the colour swatches are not beside the chosen cup';
   await page.evaluate(() => changeTravelCup());
   await T(page, 800);
   const back = await page.evaluate(() => document.querySelectorAll('#travelMugVariantGrid .theme-btn').length);
   if (back !== 6) return `FAIL: Change cup brought back ${back} cups`;
-  return `PASS: one cup after a pick (still beside the swatches: ${one.stillShown ? 'yes' : 'not without WebGL'}), six again after Change cup`;
+  return 'PASS: one cup after a pick with its swatches beside it, six again after Change cup';
 };
 
 // THE TOOLS BUTTON IS ON EVERY FRAME (Alyx, Sep 2026): "Almost all the

@@ -2,7 +2,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head><link rel="manifest" href="needles-manifest.json">
-<!-- BUILD-MARKER: ONE-CUP-BOTH-FACES-v108 -->
+<!-- BUILD-MARKER: PALETTE-BESIDE-THE-CUP-v109 -->
 <!-- If you can see this comment on GitHub, this exact paste landed. -->
 <!-- If your live site's page source does NOT say -->
 <!-- "INSTANT-FIT-SCREEN-v47" right here, the upload/deploy did -->
@@ -519,7 +519,7 @@ body #accessorizeCard{opacity:1!important;filter:none!important;pointer-events:a
    step: inside the frame studio. */
 #frameStudio #frameSectionCard{opacity:1!important;filter:none!important;pointer-events:auto!important}
 /* THE PALETTE IS A STEP OF ITS OWN (Alyx, v102). */
-body.travel-color-focus .card:not(#travelMugColorCard){opacity:.35;filter:brightness(.6) saturate(.75);transition:opacity .5s,filter .5s}
+body.travel-color-focus .card:not(#travelMugVariantCard){opacity:.35;filter:brightness(.6) saturate(.75);transition:opacity .5s,filter .5s}
 /* THE GENERATE STEP IS A PANEL OF ITS OWN (Alyx, v101). */
 body.generate-focus .card:not(#likenessSectionCard){opacity:.35;filter:brightness(.6) saturate(.75);transition:opacity .5s,filter .5s}
 /* A DIM IS A GUIDE, NOT A CAGE -- and that goes for going BACK.
@@ -1513,20 +1513,20 @@ Tell Needles <span style="color:#7ab8ff">what you have in mind</span>
 <div class="card" id="travelMugVariantCard" style="display:none">
 <div class="card-title">🍶 Which Travel Mug?</div>
 <div class="note" style="margin-top:0;margin-bottom:.9rem">Pick which travel mug you're getting before generating — the shape and print layout differ enough between them that we need this locked in first.</div>
-<div class="theme-grid" id="travelMugVariantGrid"></div>
-<button type="button" class="download-btn" id="travelVariantBackBtn" style="margin-top:1rem" onclick="travelVariantBack()">← Back</button>
-</div>
-
-<div class="card" id="travelMugColorCard" style="display:none">
-<div class="card-title">🎨 Travel Mug Color</div>
+<!-- THE PALETTE BESIDE THE CUP (Alyx, v109: "if I clicked on the color
+     palette which is below I won't be able to see them change in real
+     time"). Once a cup is picked the six collapse to that one tile, and its
+     swatches sit in the same row, so a tap repaints the cup in view. The
+     colour block keeps its old id; it is no longer a card of its own. -->
+<div id="travelPickRow" style="display:flex;flex-wrap:wrap;gap:18px;align-items:flex-start">
+<div class="theme-grid" id="travelMugVariantGrid" style="flex:1 1 100%"></div>
+<div id="travelMugColorCard" style="display:none;flex:1 1 240px;min-width:200px">
+<div class="card-title" style="font-size:1rem;margin-top:0">🎨 Travel Mug Color</div>
 <div class="note" style="margin-top:0;margin-bottom:.75rem">Optional — pick your mug color now so the automatic edge fade can match it exactly, instead of assuming white. You can still change this later.</div>
-<!-- THE CHOSEN CUP, PINNED BESIDE THE SWATCHES (Alyx, v108): drawn by the
-     engine in the chosen colour and repainted as the swatches are tapped,
-     so the colour is seen on the cup without scrolling back up. -->
-<div style="display:flex;gap:14px;align-items:flex-start">
-<img id="travelCupStill" alt="Your cup" style="display:none;width:38%;max-width:220px;border-radius:10px;background:#fff;flex:none"/>
 <div class="color-grid" id="travelMugColorGridGen"></div>
 </div>
+</div>
+<button type="button" class="download-btn" id="travelVariantBackBtn" style="margin-top:1rem" onclick="travelVariantBack()">← Back</button>
 </div>
 
 <div class="card" id="photoPosterOptionsCard" style="display:none">
@@ -5481,16 +5481,6 @@ function refreshMugPrintModeVisibility(){
 }
 
 // Variant must be known before generating — 40oz uses a different strategy than 20oz/14oz.
-// The still of the chosen cup in the chosen colour, for the colour card.
-function refreshTravelCupStill(){
-  const img=document.getElementById('travelCupStill');
-  if(!img)return;
-  const key=preGenTravelVariant;
-  if(!key || typeof MUG3D==='undefined' || !MUG3D.hasTumbler(key)){ img.style.display='none'; return; }
-  const prod=TRAVEL_MUG_CATALOG[key];
-  const c=(prod.colors && preGenTravelColor)?prod.colors.find(x=>x.name===preGenTravelColor):null;
-  requestMugStill({tumblerKey:key, px:560, colorHex:c?c.hex:'#ffffff', finish:c&&c.finish?c.finish:'coat'}, url=>{ img.src=url; img.style.display='block'; });
-}
 // Back to all six cups.
 function changeTravelCup(){
   preGenTravelVariant=null;
@@ -5498,7 +5488,6 @@ function changeTravelCup(){
   refreshTravelMugColorVisibility();
   refreshMugPrintModeVisibility();
   renderTravelMugVariantGrid();
-  refreshTravelCupStill();
   smoothScrollToTarget('travelMugVariantCard','center');
 }
 function renderTravelMugVariantGrid(){
@@ -5510,6 +5499,10 @@ function renderTravelMugVariantGrid(){
   // of the six, the others should disappear"). The chosen cup stays, in its
   // colour, with a way back to the six.
   const entries=Object.entries(TRAVEL_MUG_CATALOG).filter(([key])=>!preGenTravelVariant||key===preGenTravelVariant);
+  // One cup: a single tile the size of one of the six, with the palette
+  // taking the rest of the row (v109). Six cups: the full-width grid.
+  if(preGenTravelVariant){ grid.style.flex='0 0 auto'; grid.style.width='min(100%,230px)'; grid.style.gridTemplateColumns='1fr'; }
+  else { grid.style.flex='1 1 100%'; grid.style.width=''; grid.style.gridTemplateColumns=''; }
   entries.forEach(([key,prod])=>{
     const btn=document.createElement('div');
     btn.className='theme-btn'+(key===preGenTravelVariant?' selected':'');
@@ -5586,19 +5579,23 @@ function pickPreGenTravelVariant(key){
     // color (if this variant has one) or Style, same "next real decision
     // point" pattern used elsewhere.
     const colorCard=document.getElementById('travelMugColorCard');
-    const scrollTarget=(colorCard && colorCard.style.display!=='none') ? 'travelMugColorCard' : 'styleSectionCard';
-    smoothScrollToTarget(scrollTarget,scrollTarget==='styleSectionCard'?'start':'center');
+    if(colorCard && colorCard.style.display!=='none'){
+      // The palette sits beside the cup on the picker card (v109).
+      setOptionSpotlight('travel-color-focus');
+      smoothScrollToTarget('travelMugVariantCard','center');
+    } else {
+      smoothScrollToTarget('styleSectionCard','start');
+    }
   } else {
     // THE PALETTE COMES NEXT (Alyx, v102: "what I never did get was a
     // color palette"). A cup with colours lands on its colour card first;
     // Print Style follows from there. A cup without colours goes straight
     // to Print Style, as before. The "Pick your print format" explainer
     // that used to fire here is gone (v97).
-    refreshTravelCupStill();
     const prodPicked=TRAVEL_MUG_CATALOG[key];
     if(prodPicked && prodPicked.colors && !preGenTravelColor){
       setOptionSpotlight('travel-color-focus');
-      smoothScrollToTarget('travelMugColorCard','center');
+      smoothScrollToTarget('travelMugVariantCard','center');
     } else {
       smoothScrollToTarget('mugPrintModeCard','center');
     }
@@ -8946,7 +8943,6 @@ function pickTravelMugColorGen(el,colorName){
   }
   // The picker tile follows the colour (v101).
   renderTravelMugVariantGrid();
-  refreshTravelCupStill();
 }
 
 function refreshTravelMugColorVisibility(){
@@ -12454,11 +12450,35 @@ function toggleMug3DTilt(){
   MUG3D.setLookDown(on);
 }
 
+// THE WHOLE LIGHTBOX FITS THE SCREEN (Alyx, v109: "the add a frame and
+// looks good buttons are so far down on the page that they're almost
+// cropped out"). The stage keeps its CSS size when there is room, and gives
+// up height when the slider, hint, nudge and buttons would not fit under
+// it. Runs on open and on resize; MUG3D's own resize follows it.
+function fitMug3DStage(){
+  const wrap=document.getElementById('mug3dWrap'), stage=document.getElementById('mug3dStage');
+  if(!wrap||!stage||wrap.style.display==='none')return;
+  const h=el=>el?el.getBoundingClientRect().height:0;
+  const taken=h(wrap.querySelector('.mug3d-controls'))+h(wrap.querySelector('.mug3d-hint'))+h(document.getElementById('mockupLightboxActions'))
+    +34   /* the gaps between stage, controls, hint and buttons */
+    +44;  /* breathing room above and below */
+  const avail=Math.max(200,Math.floor(window.innerHeight-taken));
+  stage.style.width=''; stage.style.height='';
+  const nat=stage.getBoundingClientRect();
+  if(nat.height>avail){
+    if(wrap.classList.contains('mug3d-square'))stage.style.width=avail+'px';
+    stage.style.height=avail+'px';
+  }
+}
+window.addEventListener('resize',fitMug3DStage);
+
 function hideMug3D(){
   if(!mug3dShowing)return;
   mug3dShowing=false;
   const wrap=document.getElementById('mug3dWrap');
   if(wrap)wrap.style.display='none';
+  const stage=document.getElementById('mug3dStage');
+  if(stage){ stage.style.width=''; stage.style.height=''; }
   const img=document.getElementById('mockupLightboxImg');
   if(img)img.style.display='';
   try{ MUG3D.close(); }catch(e){}
@@ -12506,6 +12526,7 @@ function openMug3DMockup(){
   if(hint)hint.textContent=tumblerKey?'Drag the cup to turn it · click it to stop or start the spin':'Drag the mug to turn it · click it to stop or start the spin';
   const angleInput=document.getElementById('mug3dAngle');
   if(angleInput)angleInput.setAttribute('aria-label',tumblerKey?'Turn the cup':'Turn the mug');
+  fitMug3DStage();
   const openOpts=tumblerKey?{
     tumblerKey,
     colorHex: cupColor?cupColor.hex:'#ffffff',
