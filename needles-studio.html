@@ -2,7 +2,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head><link rel="manifest" href="needles-manifest.json">
-<!-- BUILD-MARKER: NO-HAIRLINES-v104 -->
+<!-- BUILD-MARKER: SOFT-ENDS-v105 -->
 <!-- If you can see this comment on GitHub, this exact paste landed. -->
 <!-- If your live site's page source does NOT say -->
 <!-- "INSTANT-FIT-SCREEN-v47" right here, the upload/deploy did -->
@@ -5302,7 +5302,10 @@ async function extendWrapToProductRatio(url){
   let img=trimBlankBands(raw);
   let w=img.naturalWidth,h=img.naturalHeight;
   let targetW=Math.round(h*ratio);
-  if(targetW<=w*1.02 && img===raw)return url;
+  // Already the band's own shape, untrimmed: nothing to do. Wider than the
+  // band is NOT nothing to do: the server would letterbox it with white
+  // bands, so it is centre-cropped to the band below, like a trimmed one.
+  if(Math.abs(targetW-w)<=w*0.02 && img===raw && travelWrapCloses(preGenTravelVariant))return url;
   // THE ENDS MEET EACH OTHER, NOT THE CUP (Alyx, v102: "can we change that
   // from matching the colour of the cup to matching the colour of the
   // opposite end?"). The wrap is built an inch or so wider than the band,
@@ -5310,7 +5313,8 @@ async function extendWrapToProductRatio(url){
   // into the left end's start, so the back seam is a cross-fade of scenery
   // into scenery and never white. Seamless by construction, whatever the
   // picture: the last pixel of the file is the neighbour of the first.
-  const X=Math.round(h*0.30);
+  const closes=travelWrapCloses(preGenTravelVariant);
+  const X=closes?Math.round(h*0.30):0;
   const bigW=targetW+X;
   if(bigW<w){
     // A picture wider than the band (a trimmed one, usually): take its
@@ -5346,12 +5350,31 @@ async function extendWrapToProductRatio(url){
     bctx.drawImage(img,w-fw,0,fw,h,-fw,0,fw,h);
     bctx.restore();
   }
-  // The fold: the band-wide file, with the tail past targetW dissolved
-  // over its first X columns.
   const c=document.createElement('canvas');
   c.width=targetW; c.height=h;
   const ctx=c.getContext('2d');
   ctx.drawImage(big,0,0,targetW,h,0,0,targetW,h);
+  if(!closes){
+    // THE ENDS FADE TO THE CUP (Alyx, v105: "fade towards the colour of
+    // the bottle around the edges so that it doesn't have that sharp
+    // abrupt line"). The band stops short of meeting itself on this cup,
+    // so each end dissolves into the cup's colour over the outer sixth.
+    const hex=getSelectedProductColorHex();
+    const F=Math.round(targetW/6);
+    const fadeTo=(x0,x1)=>{
+      const g=ctx.createLinearGradient(x0,0,x1,0);
+      g.addColorStop(0,hex+'00');
+      g.addColorStop(0.45,hex+'80');
+      g.addColorStop(1,hex+'FF');
+      ctx.fillStyle=g;
+      ctx.fillRect(Math.min(x0,x1),0,Math.abs(x1-x0),h);
+    };
+    fadeTo(F,0);
+    fadeTo(targetW-F,targetW);
+    return c.toDataURL('image/jpeg',0.92);
+  }
+  // The fold: the band-wide file, with the tail past targetW dissolved
+  // over its first X columns.
   const tail=document.createElement('canvas');
   tail.width=X; tail.height=h;
   const tctx=tail.getContext('2d');
@@ -5365,6 +5388,19 @@ async function extendWrapToProductRatio(url){
   ctx.drawImage(tail,0,0);
   return c.toDataURL('image/jpeg',0.92);
 }
+
+// DOES THE BAND GO ALL THE WAY ROUND? (Alyx, v105). Printify's own photo of
+// the Gator shows a bare strip down the back: its 11.28" band is shorter
+// than the bottle is round. The Tundra's 12.11" band is wider than its cup
+// is round, so its ends meet. Where the ends meet, the wrap's two ends are
+// dissolved into each other; where they do not, each end fades to the
+// cup's own colour so the bare strip has soft edges, not two hard ones.
+// Unknown cups are treated as open: a soft edge on a band that happens to
+// close is far less of a surprise than a hard edge on one that does not.
+const TRAVEL_WRAP_CLOSES = {
+  'travel-mug-30oz-tundra': true
+};
+function travelWrapCloses(key){ return TRAVEL_WRAP_CLOSES[key]===true; }
 
 function wrapIsPanoramic(){
   if(product==='mug')return true;
