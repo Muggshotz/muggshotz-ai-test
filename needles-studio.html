@@ -2,7 +2,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head><link rel="manifest" href="needles-manifest.json">
-<!-- BUILD-MARKER: EDGES-THAT-JOIN-v106 -->
+<!-- BUILD-MARKER: SIX-CUPS-TURN-v107 -->
 <!-- If you can see this comment on GitHub, this exact paste landed. -->
 <!-- If your live site's page source does NOT say -->
 <!-- "INSTANT-FIT-SCREEN-v47" right here, the upload/deploy did -->
@@ -10557,7 +10557,10 @@ async function approveDesign(allThree){
   // That last click should take me directly to our new mockup"). A cup the
   // engine can draw has one picture and nothing to place, so the placement
   // panel and Printify's blank preview are skipped: Yes opens the 3D cup.
-  if(product==='water bottle' && typeof tumbler3dKey==='function' && tumbler3dKey()){
+  // A front-and-back cup has a second face to fill, so it keeps its
+  // placement panel; only a one-picture cup goes straight to the mockup.
+  if(product==='water bottle' && typeof tumbler3dKey==='function' && tumbler3dKey()
+     && (TRAVEL_MUG_CATALOG[tumbler3dKey()]||{}).layoutType!=='front-back'){
     const ph=document.getElementById('positionHolderCard');
     if(ph)ph.style.display='none';
     beginFinalMockupFetch();
@@ -12410,6 +12413,8 @@ function openMug3DMockup(){
   const tumblerKey=tumbler3dKey();
   const urlOf=pos=>placements[pos]?((findDesignById(placements[pos])||{}).url||null):null;
   const cupColor=travelColorEntry();
+  const cupProduct=tumblerKey?TRAVEL_MUG_CATALOG[tumblerKey]:null;
+  const cupIsFrontBack=!!(cupProduct&&cupProduct.layoutType==='front-back');
   // The stage is square for a cup, and the hint names a cup (v103).
   wrap.classList.toggle('mug3d-square',!!tumblerKey);
   const hint=wrap.querySelector('.mug3d-hint');
@@ -12420,7 +12425,10 @@ function openMug3DMockup(){
     tumblerKey,
     colorHex: cupColor?cupColor.hex:'#ffffff',
     finish: cupColor&&cupColor.finish?cupColor.finish:'coat',
-    panoramaUrl: urlOf('left')||urlOf('front')||urlOf('right')||null
+    // A front-and-back cup carries two pictures, the same two the order
+    // sends (see buildMockupRequestBody); a one-picture cup carries one.
+    panoramaUrl: cupIsFrontBack?null:(urlOf('left')||urlOf('front')||urlOf('right')||null),
+    panelUrls: cupIsFrontBack?[urlOf('left')||urlOf('front')||null, urlOf('right')||null]:[]
   }:{
     sizeLabel: selectedGenSize,
     styleName: selectedGenStyle,
@@ -12483,6 +12491,7 @@ const MUG3D = (function(){
 
   let three=null, mounted=false, host=null;
   let renderer, scene, camera, mugGroup, printMesh, designTex, designCanvas;
+  let bandStates=[];   // one {canvas, tex, aspect} per print band on a tumbler
   let spin=0, spinning=true, dragging=false, lookDown=false, rafId=0, visible=true;
   let onSpinChange=null;
 
@@ -12741,13 +12750,96 @@ const MUG3D = (function(){
         // the steel lip and the inside of an open cup
         { mat:'steel', pts:()=>[[1.62,6.75],[1.62,6.90],[1.50,6.90],[1.48,6.60],[1.30,0.45],[0,0.45]] }
       ]
+    },
+    // THE HANDLED CUPS (Alyx, Sep 2026: "let's just do the two remaining").
+    // Traced off Printify's photos like the first three. A handle is a
+    // rounded loop from y1 down to y0, standing `reach` off the wall, at
+    // `angle` around the cup (0 faces the viewer, PI is the back).
+    //   14oz handle   band 1995 x 930 px  = 6.65" x 3.10", ~64% of the way round
+    //   40oz insulated (Brumate Era): two 3" x 4" panels, front and back
+    //   40oz vacuum   band 3710 x 2817 px = 12.37" x 9.39", the whole body
+    'travel-mug-14oz-handle': {
+      totalH:7.02, maxR:1.66, bandR:1.65, snapAngle:-90,
+      band:{ h:3.10, y:4.30, wrapIn:6.65 },
+      handle:{ y0:3.00, y1:6.25, reach:1.15, r:0.16, angle:Math.PI, mat:'cap' },
+      parts:[
+        { mat:'steel', pts:()=>[[0,0],[1.26,0],[1.32,0.05],[1.32,0.50],[1.28,0.52]] },
+        { mat:'body',  pts:()=>{
+            const p=[[0,0.5],[1.30,0.5],[1.30,1.6]];
+            for(let i=1;i<=8;i++){ const t=i/8, e=t*t*(3-2*t); p.push([1.30+(1.65-1.30)*e, 1.6+0.6*t]); }
+            p.push([1.65,6.40]);
+            return p; } },
+        { mat:'steel', pts:()=>[[1.65,6.40],[1.66,6.56],[1.56,6.62],[0,6.62]] },
+        { mat:'cap',   pts:()=>[[0,6.60],[1.58,6.60],[1.58,6.85],[1.45,6.98],[0.6,7.02],[0,7.02]] }
+      ]
+    },
+    'travel-mug-40oz-insulated': {
+      totalH:11.2, maxR:1.87, bandR:1.80, snapAngle:0,
+      bands:[ { h:4.0, y:5.6, wrapIn:3.0, angle:0 }, { h:4.0, y:5.6, wrapIn:3.0, angle:Math.PI } ],
+      handle:{ y0:5.0, y1:9.0, reach:1.35, r:0.18, angle:Math.PI/2, mat:'body' },
+      straw:{ r:0.16, y0:9.85, y1:11.2, x:0.35, mat:'body' },
+      parts:[
+        { mat:'body', pts:()=>{
+            const p=[[0,0],[1.30,0]];
+            for(let i=1;i<=6;i++){ const t=i/6*Math.PI/2; p.push([1.30+Math.sin(t)*0.20, 0.20-Math.cos(t)*0.20]); }
+            for(let i=1;i<=10;i++){ const t=i/10; p.push([1.50+(1.85-1.50)*Math.sin(t*Math.PI/2), 0.20+5.0*t]); }
+            p.push([1.85,9.60]);
+            return p; } },
+        { mat:'body', pts:()=>[[0,9.60],[1.87,9.60],[1.87,9.85],[1.75,9.95],[0,9.95]] }
+      ]
+    },
+    'travel-mug-40oz-vacuum': {
+      totalH:12.0, maxR:1.96, bandR:1.85, snapAngle:0,
+      band:{ h:9.39, y:5.20, wrapIn:12.37 },
+      handle:{ y0:5.30, y1:9.60, reach:1.50, r:0.19, angle:-Math.PI/2, mat:'body' },
+      straw:{ r:0.15, y0:10.5, y1:12.0, x:0, mat:'lid' },
+      parts:[
+        { mat:'body',  pts:()=>{
+            const p=[[0,0],[1.35,0]];
+            for(let i=1;i<=6;i++){ const t=i/6*Math.PI/2; p.push([1.35+Math.sin(t)*0.20, 0.20-Math.cos(t)*0.20]); }
+            p.push([1.55,3.00]);
+            for(let i=1;i<=8;i++){ const t=i/8, e=t*t*(3-2*t); p.push([1.55+(1.95-1.55)*e, 3.0+1.2*t]); }
+            p.push([1.95,10.0]);
+            return p; } },
+        { mat:'steel',   pts:()=>[[1.95,10.0],[1.95,10.25],[1.86,10.28]] },
+        { mat:'lidBlue', pts:()=>[[0,10.25],[1.92,10.25],[1.92,10.50],[1.80,10.60],[0.8,10.65],[0,10.65]] }
+      ]
     }
   };
+  // The cup's outer radius at a height, read off its body profile, so a
+  // band and a handle can follow a taper.
+  function profileR(T,y){
+    const body=T.parts.find(p=>p.mat==='body');
+    const pts=body.pts();
+    let best=pts[0][0];
+    for(let i=0;i<pts.length-1;i++){
+      const [r0,y0]=pts[i], [r1,y1]=pts[i+1];
+      if(y1===y0)continue;
+      if((y>=y0&&y<=y1)||(y>=y1&&y<=y0)){ const t=(y-y0)/(y1-y0); return r0+(r1-r0)*t; }
+      if(y>y0&&y>y1)best=r1;
+    }
+    return best;
+  }
+  // A print band that follows the body: the profile sampled at even
+  // heights, lathed just outside the wall, around the band's own share of
+  // the circumference and centred on its angle. Even rows keep the texture's
+  // v linear in height, so nothing stretches on a taper.
+  function bandGeo(THREE,T,band){
+    const rows=48, pts=[];
+    const y0=band.y-band.h/2, y1=band.y+band.h/2;
+    for(let i=0;i<=rows;i++){ const y=y0+(y1-y0)*i/rows; pts.push(new THREE.Vector2(profileR(T,y)+0.006, y)); }
+    const R=profileR(T,band.y);
+    const wrap=Math.min(1, band.wrapIn/(2*Math.PI*R));
+    const start=(band.angle||0)-wrap*Math.PI;
+    return new THREE.LatheGeometry(pts,200,start,wrap*2*Math.PI);
+  }
+  function tumblerBands(T){ return T.bands||[T.band]; }
   function hasTumbler(key){ return !!(key && TUMBLERS[key]); }
   function tumblerMaterials(THREE,mats,opts){
     const steel=new THREE.MeshStandardMaterial({color:0xc9ced4, metalness:0.92, roughness:0.32, envMapIntensity:1.1, side:THREE.DoubleSide});
     const lid=new THREE.MeshPhysicalMaterial({color:0xdfe7f1, transparent:true, opacity:0.55, roughness:0.12, metalness:0.0, clearcoat:0.6, envMapIntensity:1.0, side:THREE.DoubleSide, depthWrite:false});
     const cap=new THREE.MeshPhysicalMaterial({color:0x0a0b0d, roughness:0.6, metalness:0.0, clearcoat:0.1, envMapIntensity:0.35, side:THREE.DoubleSide});
+    const lidBlue=new THREE.MeshPhysicalMaterial({color:0x8fb4ff, transparent:true, opacity:0.6, roughness:0.15, metalness:0.0, clearcoat:0.5, envMapIntensity:0.9, side:THREE.DoubleSide, depthWrite:false});
     // THE CUP'S OWN COLOUR (Alyx, v101). White is the glazed white the mug
     // uses; Steel is bare metal; anything else is a powder coat in that hex.
     const hex=(opts&&opts.colorHex)||'#ffffff';
@@ -12756,7 +12848,7 @@ const MUG3D = (function(){
     else if(hex.toLowerCase()!=='#ffffff'){
       body=new THREE.MeshPhysicalMaterial({color:new THREE.Color(hex).convertSRGBToLinear(), roughness:0.42, metalness:0.05, clearcoat:0.25, clearcoatRoughness:0.3, envMapIntensity:0.6, side:THREE.DoubleSide});
     }
-    return { body, steel, lid, cap };
+    return { body, steel, lid, lidBlue, cap };
   }
   function assembleTumbler(THREE,T,mats,opts){
     const g=new THREE.Group();
@@ -12764,17 +12856,38 @@ const MUG3D = (function(){
     T.parts.forEach(part=>{
       const pts=part.pts().map(([r,y])=>new THREE.Vector2(r,y));
       const m=new THREE.Mesh(new THREE.LatheGeometry(pts,160),tm[part.mat]);
-      m.castShadow=(part.mat!=='lid'); m.receiveShadow=true;
-      if(part.mat==='lid')m.renderOrder=2;
+      const clear=(part.mat==='lid'||part.mat==='lidBlue');
+      m.castShadow=!clear; m.receiveShadow=true;
+      if(clear)m.renderOrder=2;
       g.add(m);
     });
+    if(T.handle){
+      // A rounded loop, drawn at the back and turned to its angle. The
+      // ends sit just inside the wall so the joins never show.
+      const h=T.handle, Rt=profileR(T,h.y1), Rb=profileR(T,h.y0), ym=(h.y0+h.y1)/2;
+      const path=[[Rt-0.08,h.y1],[Rt+h.reach*0.55,h.y1+0.02],[Rt+h.reach,h.y1-0.25],[Rt+h.reach,ym],[Rb+h.reach,h.y0+0.25],[Rb+h.reach*0.55,h.y0-0.02],[Rb-0.08,h.y0]];
+      const curve=new THREE.CatmullRomCurve3(path.map(([x,y])=>new THREE.Vector3(0,y,-x)),false,'centripetal');
+      const mat=tm[h.mat]||tm.body;
+      const hand=new THREE.Mesh(flaredTube(THREE,curve,120,20,()=>h.r,0),[mat,mat]);
+      hand.rotation.y=h.angle+Math.PI;
+      hand.castShadow=true; hand.receiveShadow=true;
+      g.add(hand);
+    }
+    if(T.straw){
+      const st=T.straw;
+      const straw=new THREE.Mesh(new THREE.CylinderGeometry(st.r,st.r,st.y1-st.y0,24),tm[st.mat]||tm.body);
+      straw.position.set(st.x||0,(st.y0+st.y1)/2,0);
+      straw.castShadow=true;
+      g.add(straw);
+    }
     g.userData.tumblerMats=tm;
     return g;
   }
   // The stand-in for SIZES on a tumbler: what the camera, the floor shadow
   // and the band need to know.
   function tumblerSize(T){
-    return { R:T.maxR, H:T.totalH, wrapIn:T.band.wrapIn, bandH:T.band.h, band:T.band, tumbler:true };
+    const b0=tumblerBands(T)[0];
+    return { R:T.maxR, H:T.totalH, wrapIn:b0.wrapIn, bandH:b0.h, band:b0, tumbler:true };
   }
 
   // The studio: environment light, a key light with shadows, a contact
@@ -12837,33 +12950,50 @@ const MUG3D = (function(){
     const mats=makeMaterials(THREE,opts);
     mugGroup=T?assembleTumbler(THREE,T,mats,opts):assembleMug(THREE,S,opts,mats); scene.add(mugGroup);
 
-    designCanvas=document.createElement('canvas');
     // POWER OF TWO, ALWAYS (Alyx, v104: "little tiny white strings"). A
     // tumbler's texture used to be cut to the band's own proportions,
     // 2048 x 585 for the Tundra, and a texture that is not a power of two
     // loses its mipmaps on some graphics stacks: fine bright detail then
     // sparkles into dotted threads as it is shrunk onto the band. The
-    // canvas is 2048 x 1024 for every cup; the band's proportions are
+    // canvas is 2048 x 1024 for every band; the band's proportions are
     // applied by paint() when it crops, and the wrap's UVs stretch the
     // picture back to true on the cup.
-    designCanvas.width=2048; designCanvas.height=1024;
-    designCanvas.__aspect=T?(T.band.wrapIn/T.band.h):2;
-    designTex=new THREE.CanvasTexture(designCanvas);
-    designTex.encoding=THREE.sRGBEncoding;
-    designTex.generateMipmaps=true;
-    designTex.minFilter=THREE.LinearMipmapLinearFilter;
-    designTex.anisotropy=renderer.capabilities.getMaxAnisotropy();
-
-    const rTop=T?T.band.rTop+0.004:S.R+0.004, rBot=T?T.band.rBot+0.004:S.R+0.004;
-    printMesh=new THREE.Mesh(
-      new THREE.CylinderGeometry(rTop,rBot,S.bandH,200,1,true,
-        -wrap*Math.PI, wrap*2*Math.PI),
-      new THREE.MeshPhysicalMaterial(Object.assign(
-        {map:designTex, side:THREE.FrontSide, transparent:true},mats.glaze))
-    );
-    printMesh.position.y=T?T.band.y:S.H/2;   // a CylinderGeometry is centred on its position
-    printMesh.receiveShadow=true;
-    mugGroup.add(printMesh);
+    const makeTex=(aspect)=>{
+      const canvas=document.createElement('canvas');
+      canvas.width=2048; canvas.height=1024;
+      const tex=new THREE.CanvasTexture(canvas);
+      tex.encoding=THREE.sRGBEncoding;
+      tex.generateMipmaps=true;
+      tex.minFilter=THREE.LinearMipmapLinearFilter;
+      tex.anisotropy=renderer.capabilities.getMaxAnisotropy();
+      return {canvas,tex,aspect};
+    };
+    bandStates=[];
+    if(T){
+      // Every band a tumbler has (one, or front and back), each following
+      // the body's own taper.
+      tumblerBands(T).forEach(band=>{
+        const st=makeTex(band.wrapIn/band.h);
+        const mesh=new THREE.Mesh(bandGeo(THREE,T,band),
+          new THREE.MeshPhysicalMaterial(Object.assign({map:st.tex, side:THREE.FrontSide, transparent:true},mats.glaze)));
+        mesh.receiveShadow=true;
+        mugGroup.add(mesh);
+        bandStates.push(st);
+      });
+      designCanvas=bandStates[0].canvas; designTex=bandStates[0].tex; printMesh=null;
+    } else {
+      const st=makeTex(2);
+      designCanvas=st.canvas; designTex=st.tex; bandStates.push(st);
+      printMesh=new THREE.Mesh(
+        new THREE.CylinderGeometry(S.R+0.004,S.R+0.004,S.bandH,200,1,true,
+          -wrap*Math.PI, wrap*2*Math.PI),
+        new THREE.MeshPhysicalMaterial(Object.assign(
+          {map:designTex, side:THREE.FrontSide, transparent:true},mats.glaze))
+      );
+      printMesh.position.y=S.H/2;   // a CylinderGeometry is centred on its position
+      printMesh.receiveShadow=true;
+      mugGroup.add(printMesh);
+    }
 
     scene.userData.S=S;
     placeCamera();
@@ -12882,7 +13012,8 @@ const MUG3D = (function(){
   const snapCache=new Map();
   function snapshot(opts){
     const px=opts.px||560;
-    const angle=(opts.angle==null)?-90:opts.angle;      // handle to the right
+    const Tq=hasTumbler(opts.tumblerKey)?TUMBLERS[opts.tumblerKey]:null;
+    const angle=(opts.angle==null)?((Tq&&Tq.snapAngle!=null)?Tq.snapAngle:-90):opts.angle;      // handle to the right
     const el=(opts.el==null)?0.18:opts.el;               // a little above
     const key=[opts.tumblerKey||'',opts.finish||'',opts.sizeLabel,opts.styleName,opts.colorHex,angle,el,px,opts.background||'#ffffff'].join('|');
     if(snapCache.has(key))return snapCache.get(key);
@@ -12911,7 +13042,9 @@ const MUG3D = (function(){
       // the 15oz with its handle and leaves the 11oz honestly smaller.
       // The tumblers share one distance too, 66" back, so the 9.4" Gator
       // fills its tile and the 20oz is honestly the small one.
-      const d=T?66:43, lookY=S.H*0.5, lookX=T?0:S.R*0.42;
+      // The tumblers share one distance, 80" back, so the 12" Stanley fits
+      // its tile and the 20oz is honestly the small one.
+      const d=T?80:43, lookY=S.H*0.5, lookX=T?0:S.R*0.42;
       cam.position.set(lookX, lookY+Math.sin(el)*d, Math.cos(el)*d);
       cam.lookAt(lookX,lookY,0);
       snapRenderer.render(sc,cam);
@@ -12957,20 +13090,21 @@ const MUG3D = (function(){
   // the file fills the print area, and whatever does not fit is cropped
   // rather than letterboxed, so the customer never sees a white bar that
   // will not be on the mug.
-  function paint(img){
-    if(!designCanvas)return;
-    const W=designCanvas.width, Hc=designCanvas.height;
-    const g=designCanvas.getContext('2d');
+  function paint(img,idx){
+    const st=bandStates[idx||0];
+    if(!st)return;
+    const W=st.canvas.width, Hc=st.canvas.height;
+    const g=st.canvas.getContext('2d');
     g.clearRect(0,0,W,Hc);
     if(img){
       // The crop follows the BAND's proportions, not the canvas's.
-      const want=designCanvas.__aspect||(W/Hc), have=img.width/img.height;
+      const want=st.aspect||(W/Hc), have=img.width/img.height;
       let sw,sh,sx,sy;
       if(have>want){ sh=img.height; sw=sh*want; sx=(img.width-sw)/2; sy=0; }
       else { sw=img.width; sh=sw/want; sx=0; sy=(img.height-sh)/2; }
       g.drawImage(img,sx,sy,sw,sh,0,0,W,Hc);
     }
-    if(designTex)designTex.needsUpdate=true;
+    st.tex.needsUpdate=true;
   }
 
   // Three-panel mugs arrive as three separate images. Printify joins them
@@ -13081,8 +13215,14 @@ const MUG3D = (function(){
         setSpinning(spinning);
         visible=!document.hidden;
         resize();
+        if(bandStates.length>1){
+          // Front and back: one picture per band, nothing joined.
+          const urls=opts.panelUrls||[];
+          return Promise.all(bandStates.map((_,i)=>joinPanels(urls[i]?[urls[i]]:[])))
+            .then(imgs=>{ imgs.forEach((im,i)=>paint(im,i)); return true; });
+        }
         const source = opts.panoramaUrl ? [opts.panoramaUrl] : (opts.panelUrls||[]);
-        return joinPanels(source).then(img=>{ paint(img); return true; });
+        return joinPanels(source).then(img=>{ paint(img,0); return true; });
       });
     },
 
@@ -13095,7 +13235,7 @@ const MUG3D = (function(){
       if(renderer){ renderer.dispose(); if(renderer.domElement&&renderer.domElement.parentNode)
         renderer.domElement.parentNode.removeChild(renderer.domElement); }
       renderer=null; scene=null; camera=null; mugGroup=null; printMesh=null;
-      designTex=null; designCanvas=null; mounted=false; host=null;
+      designTex=null; designCanvas=null; bandStates=[]; mounted=false; host=null;
     }
   };
 })();

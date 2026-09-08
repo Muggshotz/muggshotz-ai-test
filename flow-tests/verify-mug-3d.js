@@ -186,13 +186,46 @@ scenarios.tundraOpensThe3DTumbler = async (page) => {
   return `PASS: Yes opens the Tundra as a black 3D tumbler wearing its wrap on a ${stage.w}px square stage, placement panel skipped (${(art*100).toFixed(0)}% of the stage is artwork)`;
 };
 
+// ---- THE HANDLED CUPS (v107). The 40oz insulated is a front-and-back cup:
+// it keeps its placement panel, and Continue to Order opens the 3D cup with
+// two pictures, one per face. ----
+OPTS.fortyOunceInsulatedOpensWithTwoFaces = { chromiumArgs: GL };
+scenarios.fortyOunceInsulatedOpensWithTwoFaces = async (page) => {
+  await pickProduct(page, 'water bottle');
+  await page.evaluate(() => pickPreGenTravelVariant('travel-mug-40oz-insulated'));
+  await T(page, 1000);
+  await dismissAlerts(page);
+  await page.evaluate(() => { const b = document.querySelector('#travelMugColorGridGen .color-btn'); if (b) b.click(); });
+  await T(page, 600);
+  await describeAndGenerate(page, 'a lighthouse in a storm');
+  await waitLanded(page);
+  await T(page, 1200);
+  await page.evaluate(() => approveDesign(true));
+  await T(page, 1500);
+  await dismissAlerts(page);
+  const placement = await page.evaluate(() => { const c = document.getElementById('positionHolderCard'); return c && c.style.display !== 'none'; });
+  if (!placement) return 'FAIL: a front-and-back cup lost its placement panel — there is a second face to fill';
+  await spyOnMug3D(page);
+  await page.locator('button:has-text("Continue to Order")').first().click({ timeout: 10000 });
+  await page.waitForFunction(() => document.querySelector('#mug3dStage canvas'), null, { timeout: 15000 });
+  await T(page, 1500);
+  const opens = await page.evaluate(() => window.__mug3dOpens);
+  if (!opens.length) return 'FAIL: MUG3D.open was never called for the 40oz';
+  if (opens[0].tumblerKey !== 'travel-mug-40oz-insulated') return `FAIL: opened as ${JSON.stringify(opens[0])}`;
+  if (!Array.isArray(opens[0].panelUrls) || opens[0].panelUrls.length !== 2 || !opens[0].panelUrls[0] || !opens[0].panelUrls[1]) return 'FAIL: the 40oz was not handed its two faces: ' + JSON.stringify(opens[0].panelUrls);
+  const art = await artworkFraction(page, '40oz');
+  if (art < 0.02) return `FAIL: only ${(art*100).toFixed(1)}% of the stage is coloured — no artwork on the cup`;
+  return `PASS: the 40oz insulated keeps its placement panel and opens as a 3D cup wearing both faces (${(art*100).toFixed(0)}% of the stage is artwork)`;
+};
+
 // ---- The travel picker draws its own tumblers: the three the engine knows
 // become renders, the two handled cups keep their photos for now. ----
 OPTS.theTravelPickerDrawsItsOwnTumblers = { chromiumArgs: GL };
 scenarios.theTravelPickerDrawsItsOwnTumblers = async (page) => {
   await pickProduct(page, 'water bottle');
-  const drawn = ['Tundra Tumbler, 30oz', 'Gator Tumbler, 32oz', 'Travel Mug, 20oz'];
-  const kept = ['Travel Mug with Handle, 14oz', 'Insulated Travel Mug, 40oz'];
+  // v107: all six cups have bodies now; nothing keeps a catalogue photo.
+  const drawn = ['Tundra Tumbler, 30oz', 'Gator Tumbler, 32oz', 'Travel Mug, 20oz', 'Travel Mug with Handle, 14oz', 'Insulated Travel Mug, 40oz', 'Vacuum Thermal Tumbler, 40oz'];
+  const kept = [];
   await page.waitForFunction((names) => names.every((n) => {
     const im = document.querySelector(`#travelMugVariantGrid img[alt="${n}"]`);
     return im && im.src.startsWith('data:');
@@ -205,7 +238,7 @@ scenarios.theTravelPickerDrawsItsOwnTumblers = async (page) => {
   if (cold.length) return `FAIL: still a catalogue photo: ${cold.map(([n]) => n).join(', ')}`;
   const swapped = r.kept.filter(([, s]) => s === 'data:');
   if (swapped.length) return `FAIL: a handled cup got a render it has no body for: ${swapped.map(([n]) => n).join(', ')}`;
-  return 'PASS: Tundra, Gator and 20oz tiles are drawn by the engine; the 14oz and 40oz keep their photos';
+  return 'PASS: all six travel-cup tiles are drawn by the engine';
 };
 
 // ---- 3. 15oz builds too. ----
