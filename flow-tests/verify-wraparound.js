@@ -1103,6 +1103,20 @@ scenarios.tundraWrapIsMirroredAndFaded = async (page) => {
       // first (v102), and neither end is the cup's white any more.
       seamLeft: px(ext, 0, y), seamRight: px(ext, W - 1, y),
       outerLeft: px(ext, 1, y), outerRight: px(ext, W - 2, y),
+      // NO HAIRLINES (v104): no column of the wrap may be white from top to
+      // bottom -- that is the cup showing through a gap between flank and
+      // picture, and it prints.
+      whiteColumns: (() => {
+        const c = document.createElement('canvas'); c.width = ext.naturalWidth; c.height = ext.naturalHeight;
+        const g = c.getContext('2d'); g.drawImage(ext, 0, 0);
+        const d = g.getImageData(0, 0, c.width, c.height).data; const cols = [];
+        for (let x = 0; x < c.width; x++) {
+          let white = 0;
+          for (let yy = 0; yy < c.height; yy += 4) { const i = (yy * c.width + x) * 4; if (d[i] > 235 && d[i + 1] > 235 && d[i + 2] > 235) white++; }
+          if (white > (c.height / 4) * 0.6) cols.push(x);
+        }
+        return cols;
+      })(),
       hex: getSelectedProductColorHex(),
     };
   });
@@ -1117,6 +1131,7 @@ scenarios.tundraWrapIsMirroredAndFaded = async (page) => {
   if (near(r.outerLeft, [255, 255, 255], 8) && near(r.outerRight, [255, 255, 255], 8)) {
     return 'FAIL: the ends still fade to white — the old fade-to-cup is back';
   }
+  if (r.whiteColumns.length) return `FAIL: white hairline(s) down the wrap at x=${r.whiteColumns.slice(0, 6).join(',')} — a gap between flank and picture`;
   return `PASS: Tundra wrap is ${r.ratio.toFixed(2)}:1, scene untouched in the middle, flanks mirror the edges, and the two ends meet each other at the back; the 14oz passes straight through`;
 };
 
