@@ -175,11 +175,15 @@ scenarios.tundraOpensThe3DTumbler = async (page) => {
   if (opens[0].colorHex !== '#111214') return `FAIL: Black was picked but the cup opened in ${opens[0].colorHex}`;
   const placement = await page.evaluate(() => { const c = document.getElementById('positionHolderCard'); return c && c.style.display !== 'none'; });
   if (placement) return 'FAIL: the placement panel is still showing behind the cup — Yes was supposed to skip it';
+  // v103: a square stage, and the hint names a cup.
+  const stage = await page.evaluate(() => { const r = document.getElementById('mug3dStage').getBoundingClientRect(); return { w: Math.round(r.width), h: Math.round(r.height), hint: document.querySelector('#mug3dWrap .mug3d-hint').textContent }; });
+  if (Math.abs(stage.w - stage.h) > 4) return `FAIL: the cup's stage is ${stage.w}x${stage.h}, not square`;
+  if (!/Drag the cup/.test(stage.hint)) return `FAIL: the hint still says "${stage.hint}"`;
   const art = await artworkFraction(page, 'tundra');
   // The band is a smaller share of the stage than a mug's whole wrap, and
   // the fake strip is pale: 2% coloured is a picture on the cup here.
   if (art < 0.02) return `FAIL: only ${(art*100).toFixed(1)}% of the stage is coloured — no artwork on the tumbler`;
-  return `PASS: Yes opens the Tundra as a black 3D tumbler wearing its wrap, placement panel skipped (${(art*100).toFixed(0)}% of the stage is artwork)`;
+  return `PASS: Yes opens the Tundra as a black 3D tumbler wearing its wrap on a ${stage.w}px square stage, placement panel skipped (${(art*100).toFixed(0)}% of the stage is artwork)`;
 };
 
 // ---- The travel picker draws its own tumblers: the three the engine knows

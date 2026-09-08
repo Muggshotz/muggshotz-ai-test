@@ -1291,10 +1291,12 @@ scenarios.tundraOffersThreeColours = async (page) => {
   if (r.names.join() !== 'White,Black,Steel') return `FAIL: Tundra colours are ${r.names.join(', ')}`;
   if (r.badge) return 'FAIL: the "Only White In Stock" badge is still on the Tundra tile';
   if (!r.colorCardShown || r.swatches !== 3) return `FAIL: the colour card shows ${r.swatches} swatches: ` + JSON.stringify(r);
+  const labels = await page.evaluate(() => Array.from(document.querySelectorAll('#travelMugColorGridGen .color-cell')).map((c) => [c.querySelector('.color-name')?.textContent, c.querySelector('.color-btn')?.title]));
+  if (labels.map((l) => l[0]).join() !== 'White,Black,Steel' || labels.some((l) => l[0] !== l[1])) return 'FAIL: the swatches are not labelled by name: ' + JSON.stringify(labels);
   if (r.defaultColor !== 'White') return `FAIL: with no colour picked the order body says ${JSON.stringify(r.defaultColor)} — Printify would take its first variant, the black one`;
   if (r.blackColor !== 'Black') return `FAIL: picking Black sent ${JSON.stringify(r.blackColor)}`;
   if (r.hex !== '#111214') return `FAIL: the 3D cup would be painted ${r.hex}, not the black picked`;
-  return 'PASS: Tundra offers White, Black and Steel, no badge, White by default, Black when picked, and the cup takes the hex';
+  return 'PASS: Tundra offers White, Black and Steel, each labelled, no badge, White by default, Black when picked, and the cup takes the hex';
 };
 
 // BLANK BANDS COME OFF (Alyx, v101, item 8). A 21:9 file with an empty
