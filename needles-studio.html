@@ -45,6 +45,7 @@
 .needles-polaroid{background:#faf8f2!important;border:none!important;padding:14px 14px 20px!important;box-shadow:0 4px 10px rgba(0,0,0,0.35)}
 .needles-polaroid .upload-text{font-family:'Caveat',cursive;font-weight:600;font-size:20px;color:#333}
 .needles-polaroid .upload-sub{color:#29a3ff}
+.ai-collab-icon{height:32px;width:auto;display:block;margin:0 auto 8px}
 .needles-stage-wrap{margin-top:1rem;display:none}
 .needles-stage-wrap.visible{display:block}
 .needles-stage{position:relative;width:100%;aspect-ratio:1448/1086;border-radius:12px;overflow:hidden;background:#000;box-shadow:0 4px 16px rgba(0,0,0,0.5)}
@@ -967,7 +968,7 @@ const HERO_SETTLE_MS = 1000;
 <div class="needles-clipboard">
 <div class="needles-board board-free"><div class="needles-clip"></div><div class="upload-zone needles-polaroid" id="uploadZone" onclick="startUploadWithIntent('byo')"><div style="font-size:32px;color:#555;margin-bottom:8px">👤</div><div class="upload-text">Tap here to upload a photo</div><div class="upload-sub">Upload your picture — free</div></div></div>
 <div class="boards-or" aria-hidden="true">OR</div>
-<div class="needles-board board-ai" id="aiCollabBoard"><div class="needles-clip"></div><div class="upload-zone needles-polaroid" id="aiCollabUploadBtn" onclick="startUploadWithIntent('ai')"><div style="font-size:32px;margin-bottom:8px">🤝</div><div class="upload-text">Tap here to collaborate with our AI</div><div class="upload-sub">1 token — upload a photo, then tell Needles what to make of it</div></div>
+<div class="needles-board board-ai" id="aiCollabBoard"><div class="needles-clip"></div><div class="upload-zone needles-polaroid" id="aiCollabUploadBtn" onclick="startUploadWithIntent('ai')"><img src="ai-collab-handshake.png" alt="" class="ai-collab-icon"/><div class="upload-text">Tap here to collaborate with our AI</div><div class="upload-sub">1 token — upload a photo, then tell Needles what to make of it</div></div>
 <div class="ref-pin-zone" id="refAZone" onclick="document.getElementById('refAInput').click()"><div style="font-size:16px;color:#555;margin-bottom:1px">➕</div><div class="upload-text" style="font-size:8px;line-height:1.1">Reference A</div></div>
 <input type="file" id="refAInput" accept="image/*" style="display:none"/>
 <img id="refAPreview" class="preview-img" style="display:none;max-height:140px"/>
