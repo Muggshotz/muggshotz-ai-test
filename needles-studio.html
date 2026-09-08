@@ -5419,6 +5419,79 @@ function softenTopAndBottom(ctx,W,H,hex){
   fadeTo(H-F,H);
 }
 
+// GUTTERS (Alyx, Sep 2026). A cup whose wrap closes has its two ends meet on
+// the body, and nothing guarantees the scene lines up across that meeting --
+// the picture simply stops on one side and starts again on the other, and the
+// eye reads the mismatch as a fault.
+//
+// A gutter is the trade's answer: stop the artwork short of the join and put a
+// straight strip of the CUP'S OWN COLOUR at each extreme end. Brought together
+// on the body the two strips read as one small intentional stripe, and a
+// mismatch behind a deliberate line stops looking like a mistake -- there is
+// nothing for the eye to measure the two sides against. It also gives the
+// printer room to be a millimetre out without it showing.
+//
+// NO FEATHER, DELIBERATELY (Alyx: "you don't need the fade with the gutter,
+// the purpose of the gutter is to not need a fade"). That is the whole idea
+// and it is worth stating rather than leaving as a zero somebody later reads
+// as an oversight: a fade hides an edge, a gutter declares one. Softening the
+// strip where it meets the picture would blur the declaration back into the
+// thing it replaced. Both edges of the strip are hard.
+//
+// WIDTH is per end, as a fraction of the wrap. Two of them meet, so the stripe
+// on the cup is twice this.
+//
+// This does NOT go through extendWrapToProductRatio: that runs only on the
+// panorama path, and the cups this is for sit below PANORAMA_MIN_WRAP_RATIO,
+// so they reach the mockup with no end treatment at all. Applied in place on
+// the finished wrap, inside its existing canvas -- widening the file would
+// rescale the whole wrap and move the join, which is the thing a gutter exists
+// to settle.
+const WRAP_GUTTER_WIDTH=0.012;    // per end, fraction of wrap width (~45px of 3710)
+// Only cups confirmed to close on themselves. The vacuum 40oz's single
+// 3710x2817 area covers the whole tumbler (products-catalog.js), so its ends
+// meet. Anything absent is left exactly as it is today.
+const WRAP_GUTTER_CUPS={
+  'travel-mug-40oz-vacuum': true
+};
+function wrapWantsGutters(){
+  return product==='water bottle' && WRAP_GUTTER_CUPS[preGenTravelVariant]===true;
+}
+async function paintWrapGutters(url,hex,width=WRAP_GUTTER_WIDTH){
+  const img=await loadImageFromUrl(url);
+  const w=img.naturalWidth,h=img.naturalHeight;
+  const g=Math.round(w*width);
+  if(g<=0)return url;
+  const c=document.createElement('canvas');
+  c.width=w; c.height=h;
+  const ctx=c.getContext('2d');
+  ctx.drawImage(img,0,0);
+  ctx.fillStyle=hex;
+  ctx.fillRect(0,0,g,h);
+  ctx.fillRect(w-g,0,g,h);
+  // 0.95 RATHER THAN PNG, and the reasoning is worth keeping because the
+  // obvious answer here is wrong. JPEG rings at hard edges, so lossless looks
+  // like the safe call -- but measured on a deliberately busy wrap, the strip's
+  // OUTER edge comes back pixel-exact at every quality including 0.92, and PNG
+  // costs 7.4MB against 1.08MB to change nothing about it.
+  //
+  // It is exact because of how JPEG works, not by luck: it encodes in 8x8
+  // blocks, the strip is ~45px wide, so every block along the canvas boundary
+  // is ENTIRELY flat cup colour and survives intact. Only the blocks straddling
+  // the inner edge ring, where the strip meets the picture -- and that edge
+  // borders busy photograph anyway, so a pixel or two of softening there is
+  // invisible and arguably kind.
+  //
+  // The outer edge is the one that matters: it is what butts against the other
+  // end to form the stripe on the cup. 0.95 rather than the pipeline's 0.92
+  // buys headroom on high-contrast content for 0.19MB.
+  //
+  // THE ONE THING THIS DEPENDS ON: the strip staying comfortably wider than a
+  // JPEG block. At WRAP_GUTTER_WIDTH below roughly 0.005 the boundary blocks
+  // stop being pure and the outer edge starts to ring -- pinned by the suite.
+  return c.toDataURL('image/jpeg',0.95);
+}
+
 // DOES THE BAND GO ALL THE WAY ROUND? (Alyx, v105). Printify's own photo of
 // the Gator shows a bare strip down the back: its 11.28" band is shorter
 // than the bottle is round. The Tundra's 12.11" band is wider than its cup
@@ -15495,11 +15568,25 @@ async function makeTestSingleZonePanorama(side){
     // pre-faded center panel would show up as a fake white band the
     // "continue this scene" generation might mistake for real content.
     const rawResultUrl=resultUrl;
+    // THE GUTTER REPLACES THE GUARANTEED EDGE FADE (Alyx, Sep 2026), it does
+    // not sit on top of it. The two are answers to the same question and they
+    // disagree: a fade dissolves the ends so the picture has no edge, a gutter
+    // gives it a deliberate one. Running both would paint a hard edge over a
+    // wash put there to prevent exactly that.
+    //
+    // But it replaces the GUARANTEED fade -- the one nobody asked for -- and
+    // not a fade the customer chose. An explicit choice wins, which is why the
+    // fade is tested first: skipEdgeFade is false only when edgeFadeChoice is
+    // 'fade', i.e. when somebody actually picked it. Ordering it the other way
+    // silently handed a customer who asked for soft edges two hard strips
+    // instead, which is a worse answer than either treatment on its own.
     if(!skipEdgeFade){
       const centerEdges=(isWraparoundActive && !is40ozWraparoundSplit)
         ? {top:true,bottom:true,left:false,right:false}
         : {top:true,bottom:true,left:true,right:true};
       resultUrl=await applyEdgeFadeToImageUrl(resultUrl,centerEdges,getSelectedProductColorHex(),edgeFadeAmountPct);
+    } else if(wrapWantsGutters()){
+      resultUrl=await paintWrapGutters(resultUrl,getSelectedProductColorHex());
     }
 
     if (is40ozWraparoundSplit){
