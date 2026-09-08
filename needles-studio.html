@@ -2,7 +2,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head><link rel="manifest" href="needles-manifest.json">
-<!-- BUILD-MARKER: THE-ENDS-MEET-v102 -->
+<!-- BUILD-MARKER: TUNDRA-COMPLETE-v103 -->
 <!-- If you can see this comment on GitHub, this exact paste landed. -->
 <!-- If your live site's page source does NOT say -->
 <!-- "INSTANT-FIT-SCREEN-v47" right here, the upload/deploy did -->
@@ -158,6 +158,7 @@ body.frame-tools-open #accessorizeCancelBtn{padding:.45rem;font-size:12px;margin
 .color-btn .ball{width:100%;height:100%;border-radius:50%;position:relative;box-shadow:inset 0 -5px 9px rgba(0,0,0,0.35),inset 0 3px 7px rgba(255,255,255,0.35)}
 .color-btn .ball::after{content:'';position:absolute;top:18%;left:22%;width:30%;height:18%;background:rgba(255,255,255,0.55);border-radius:50%;filter:blur(2px);transform:rotate(-30deg)}
 .color-btn.selected{box-shadow:0 0 0 3px #003c8c,0 0 14px 2px rgba(0,60,140,0.7)}
+.color-cell{text-align:center}.color-name{font-size:11px;color:#29a3ff;margin-top:4px;line-height:1.1}
 .theme-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
 .theme-btn{position:relative;border-radius:10px;overflow:hidden;cursor:pointer;border:2px solid #333;display:flex;flex-direction:column}
 .theme-btn img{width:100%;aspect-ratio:1;object-fit:cover;display:block}
@@ -302,6 +303,10 @@ body.frame-tools-open #accessorizeCancelBtn{padding:.45rem;font-size:12px;margin
 .mockup-lightbox-arrow-left{left:16px}
 .mockup-lightbox-arrow-right{right:16px}
 .mockup-lightbox-arrow:hover,.mockup-lightbox-close:hover{border-color:#7888b4;background:#1c2636}
+/* A SQUARE STAGE FOR A TALL CUP (Alyx, v103: "it could just be one big
+   square just like it is on the mugs"). The 4:3 box suits a mug that is
+   wider than tall; a tumbler in it comes out small. */
+#mug3dWrap.mug3d-square .mug3d-stage{width:min(86vw,72vh,640px);height:min(86vw,72vh,640px)}
 .mug3d-stage{width:min(86vw,780px);height:min(62vh,560px);background:#f2f4f7;border-radius:10px;overflow:hidden;cursor:grab;touch-action:none;box-shadow:0 8px 30px rgba(0,0,0,.45)}.mug3d-stage:active{cursor:grabbing}.mug3d-stage canvas{display:block;width:100%;height:100%}.mug3d-controls{display:flex;align-items:center;gap:14px;width:min(86vw,780px);padding:2px 4px}#mug3dAngle{flex:1;accent-color:#29a3ff}.mug3d-tilt{background:#151b24;border:1px solid #003c8c;border-radius:8px;color:#7ab8ff;font-size:12px;font-weight:700;padding:8px 12px;cursor:pointer;white-space:nowrap}.mug3d-tilt[aria-pressed=true]{background:#0e2036;border-color:#29a3ff;color:#29a3ff}.mug3d-hint{color:#7ab8ff;font-size:12px;font-weight:600;text-align:center;margin:0}@media(max-width:640px){.mug3d-stage{width:94vw;height:52vh}.mug3d-controls{width:94vw}}.mockup-lightbox-counter{position:fixed;top:22px;left:50%;transform:translateX(-50%);background:#151b24;border:1px solid #003c8c;border-radius:20px;padding:6px 16px;color:#7ab8ff;font-size:13px;font-weight:700;z-index:1701;display:none}
 @media (max-width:520px){
   .mockup-lightbox-arrow{width:42px;height:42px;font-size:24px}
@@ -8786,11 +8791,22 @@ function renderTravelMugColorGridGen(){
     btn.className='color-btn'+(c.name===preGenTravelColor?' selected':'');
     btn.dataset.color=c.name;
     btn.onclick=()=>pickTravelMugColorGen(btn,c.name);
+    // NAMED (Alyx, v103: "they have no way of knowing that what looks
+    // like grey is actually stainless steel"). The name sits under the
+    // ball and on hover.
+    btn.title=c.name;
     const ball=document.createElement('div');
     ball.className='ball';
     ball.style.background=c.hex;
     btn.appendChild(ball);
-    grid.appendChild(btn);
+    const cell=document.createElement('div');
+    cell.className='color-cell';
+    cell.appendChild(btn);
+    const label=document.createElement('div');
+    label.className='color-name';
+    label.textContent=c.name;
+    cell.appendChild(label);
+    grid.appendChild(cell);
   });
 }
 
@@ -12350,6 +12366,12 @@ function openMug3DMockup(){
   const tumblerKey=tumbler3dKey();
   const urlOf=pos=>placements[pos]?((findDesignById(placements[pos])||{}).url||null):null;
   const cupColor=travelColorEntry();
+  // The stage is square for a cup, and the hint names a cup (v103).
+  wrap.classList.toggle('mug3d-square',!!tumblerKey);
+  const hint=wrap.querySelector('.mug3d-hint');
+  if(hint)hint.textContent=tumblerKey?'Drag the cup to turn it · click it to stop or start the spin':'Drag the mug to turn it · click it to stop or start the spin';
+  const angleInput=document.getElementById('mug3dAngle');
+  if(angleInput)angleInput.setAttribute('aria-label',tumblerKey?'Turn the cup':'Turn the mug');
   const openOpts=tumblerKey?{
     tumblerKey,
     colorHex: cupColor?cupColor.hex:'#ffffff',
@@ -12862,7 +12884,9 @@ const MUG3D = (function(){
     // it, and he was right. This is a 9-degree lens from ten mug-heights
     // back, which is roughly a studio shot from four feet: about 4%, which
     // is what a real product photo carries.
-    const d=S.H*10.5;                   // ~39" from an 11oz: a studio distance
+    // A tumbler has no handle to leave room for and sits in a square stage,
+    // so it is framed closer: about 80% of the height (v103).
+    const d=S.H*(S.tumbler?8.0:10.5);   // ~39" from an 11oz: a studio distance
     const el=lookDown?0.40:0.10;
     const lookY=S.H*0.47;
     camera.position.set(0, lookY+Math.sin(el)*d, Math.cos(el)*d);
