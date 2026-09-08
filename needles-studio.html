@@ -2,7 +2,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head><link rel="manifest" href="needles-manifest.json">
-<!-- BUILD-MARKER: TUNDRA-COMPLETE-v103 -->
+<!-- BUILD-MARKER: NO-HAIRLINES-v104 -->
 <!-- If you can see this comment on GitHub, this exact paste landed. -->
 <!-- If your live site's page source does NOT say -->
 <!-- "INSTANT-FIT-SCREEN-v47" right here, the upload/deploy did -->
@@ -5325,17 +5325,25 @@ async function extendWrapToProductRatio(url){
   const big=document.createElement('canvas');
   big.width=flank*2+w; big.height=h;
   const bctx=big.getContext('2d');
+  // NO HAIRLINES (Alyx, v104: "little tiny white strings"). Where a
+  // mirrored flank met the picture, a fraction of a pixel was left
+  // unpainted, and the cup showed through it as a dotted white line down
+  // the band. Two guards: the whole strip is first covered with the
+  // picture stretched to fit, so nothing underneath is ever bare, and each
+  // flank is drawn a pixel wider so it overlaps the picture's edge.
+  bctx.drawImage(img,0,0,big.width,h);
   bctx.drawImage(img,flank,0);
   if(flank>0){
     // B: each flank is the scene's own edge, mirrored, so the seam is
     // continuous by construction.
+    const fw=Math.min(w,flank+1);
     bctx.save();
-    bctx.translate(flank,0); bctx.scale(-1,1);
-    bctx.drawImage(img,0,0,flank,h,0,0,flank,h);
+    bctx.translate(flank+1,0); bctx.scale(-1,1);
+    bctx.drawImage(img,0,0,fw,h,0,0,fw,h);
     bctx.restore();
     bctx.save();
-    bctx.translate(flank+w,0); bctx.scale(-1,1);
-    bctx.drawImage(img,w-flank,0,flank,h,-flank,0,flank,h);
+    bctx.translate(flank+w-1,0); bctx.scale(-1,1);
+    bctx.drawImage(img,w-fw,0,fw,h,-fw,0,fw,h);
     bctx.restore();
   }
   // The fold: the band-wide file, with the tail past targetW dissolved
@@ -12794,12 +12802,20 @@ const MUG3D = (function(){
     mugGroup=T?assembleTumbler(THREE,T,mats,opts):assembleMug(THREE,S,opts,mats); scene.add(mugGroup);
 
     designCanvas=document.createElement('canvas');
-    // The band's own proportions, so the artwork is cropped the way the
-    // print is: a mug's 2:1 stays as it was; a tumbler's band is measured.
-    designCanvas.width=2048;
-    designCanvas.height=T?Math.round(2048/(T.band.wrapIn/T.band.h)):1024;
+    // POWER OF TWO, ALWAYS (Alyx, v104: "little tiny white strings"). A
+    // tumbler's texture used to be cut to the band's own proportions,
+    // 2048 x 585 for the Tundra, and a texture that is not a power of two
+    // loses its mipmaps on some graphics stacks: fine bright detail then
+    // sparkles into dotted threads as it is shrunk onto the band. The
+    // canvas is 2048 x 1024 for every cup; the band's proportions are
+    // applied by paint() when it crops, and the wrap's UVs stretch the
+    // picture back to true on the cup.
+    designCanvas.width=2048; designCanvas.height=1024;
+    designCanvas.__aspect=T?(T.band.wrapIn/T.band.h):2;
     designTex=new THREE.CanvasTexture(designCanvas);
     designTex.encoding=THREE.sRGBEncoding;
+    designTex.generateMipmaps=true;
+    designTex.minFilter=THREE.LinearMipmapLinearFilter;
     designTex.anisotropy=renderer.capabilities.getMaxAnisotropy();
 
     const rTop=T?T.band.rTop+0.004:S.R+0.004, rBot=T?T.band.rBot+0.004:S.R+0.004;
@@ -12911,7 +12927,8 @@ const MUG3D = (function(){
     const g=designCanvas.getContext('2d');
     g.clearRect(0,0,W,Hc);
     if(img){
-      const want=W/Hc, have=img.width/img.height;
+      // The crop follows the BAND's proportions, not the canvas's.
+      const want=designCanvas.__aspect||(W/Hc), have=img.width/img.height;
       let sw,sh,sx,sy;
       if(have>want){ sh=img.height; sw=sh*want; sx=(img.width-sw)/2; sy=0; }
       else { sw=img.width; sh=sw/want; sx=0; sy=(img.height-sh)/2; }
