@@ -72,7 +72,11 @@ async function driveVariant(page, mockupBodies, key) {
   await waitApprove(page);
   await page.locator('#approveRow button:has-text("Yes")').first().click();
   await page.waitForTimeout(1500);
-  await page.locator('button:has-text("Continue to Order")').first().click({ timeout: 8000 });
+  // v101: a cup the 3D engine draws (Tundra, Gator, 20oz) goes straight from
+  // Yes to the mockup, so there is no Continue to Order to press. The others
+  // still have it.
+  const cont = page.locator('button:has-text("Continue to Order")').first();
+  if (await cont.isVisible().catch(() => false)) await cont.click({ timeout: 8000 });
   await page.waitForTimeout(6000);
   return { start: mockupBodies.find(b => b && b.action === 'start'), pickedColor: picked };
 }
@@ -109,7 +113,9 @@ const VARIANTS = {
   // resolveVariant() needs a colorName the way the insulated one does.
   'travel-mug-40oz-vacuum':    ['40oz', false, true],
   'travel-mug-32oz-gator':     ['32oz', false, false],
-  'travel-mug-30oz-tundra':    ['30oz', false, false],
+  // v101: Printify lists Black / White / Steel for the Tundra (pulled live),
+  // so it carries colours now and the body must name one (White by default).
+  'travel-mug-30oz-tundra':    ['30oz', false, true],
 };
 
 const scenarios = {};

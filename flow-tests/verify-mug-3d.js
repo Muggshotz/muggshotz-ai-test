@@ -157,25 +157,29 @@ scenarios.tundraOpensThe3DTumbler = async (page) => {
   await page.evaluate(() => pickMugPrintMode('wraparound'));
   await T(page, 1000);
   await dismissAlerts(page);
+  // Black, so the cup's colour is checked all the way through to the engine.
+  await page.evaluate(() => { const b = document.querySelector('#travelMugColorGridGen .color-btn[data-color="Black"]'); if (b) b.click(); });
+  await T(page, 500);
   await describeAndGenerate(page, 'a wide desert canyon at sunrise');
   await waitLanded(page);
   await T(page, 1200);
-  await page.evaluate(() => approveDesign(true));
-  await T(page, 1500);
-  await dismissAlerts(page);
   await spyOnMug3D(page);
-  page.evaluate(() => beginFinalMockupFetch());
+  // v101: the real Yes button, and nothing else. Yes opens the cup.
+  await page.locator('#approveRow button:has-text("Yes")').first().click();
   await page.waitForFunction(() => document.querySelector('#mug3dStage canvas'), null, { timeout: 15000 });
   await T(page, 1500);
   const opens = await page.evaluate(() => window.__mug3dOpens);
   if (!opens.length) return 'FAIL: MUG3D.open was never called for the Tundra';
   if (opens[0].tumblerKey !== 'travel-mug-30oz-tundra') return `FAIL: opened as ${JSON.stringify(opens[0])}, not the Tundra body`;
   if (!opens[0].panoramaUrl) return 'FAIL: the Tundra was not handed its wrap';
+  if (opens[0].colorHex !== '#111214') return `FAIL: Black was picked but the cup opened in ${opens[0].colorHex}`;
+  const placement = await page.evaluate(() => { const c = document.getElementById('positionHolderCard'); return c && c.style.display !== 'none'; });
+  if (placement) return 'FAIL: the placement panel is still showing behind the cup — Yes was supposed to skip it';
   const art = await artworkFraction(page, 'tundra');
   // The band is a smaller share of the stage than a mug's whole wrap, and
   // the fake strip is pale: 2% coloured is a picture on the cup here.
   if (art < 0.02) return `FAIL: only ${(art*100).toFixed(1)}% of the stage is coloured — no artwork on the tumbler`;
-  return `PASS: the Tundra opens as a 3D tumbler wearing its wrap (${(art*100).toFixed(0)}% of the stage is artwork)`;
+  return `PASS: Yes opens the Tundra as a black 3D tumbler wearing its wrap, placement panel skipped (${(art*100).toFixed(0)}% of the stage is artwork)`;
 };
 
 // ---- The travel picker draws its own tumblers: the three the engine knows
