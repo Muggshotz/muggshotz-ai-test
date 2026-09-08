@@ -399,6 +399,7 @@ The scene must fill the ENTIRE height of the canvas everywhere, including direct
 Any continuous physical structure that appears in the scene — a fence, wall, tree line, mountain range, roofline, or similar — must behave as ONE real object running the full width of the image: same height, same spacing, same angle, same material, with no jump, reset, or restart at any point, as if it were photographed in a single unbroken panoramic shot rather than painted separately in different regions.
 If the attached reference image already shows a background environment (not just a plain backdrop behind the person), any large environmental feature visible in it — a mountain range, tree line, skyline, or similar — must appear at that EXACT SAME apparent scale and distance everywhere across the width. Do not draw a larger, closer, or more dramatic version of it near the subject and a smaller, more distant version elsewhere, or the reverse. Match the reference image's own scale first, then continue outward from it at that same scale.
 The sky is a single sky: its color, gradient, and cloud shapes must blend smoothly across the entire width with no abrupt shift in hue, brightness, or cloud pattern anywhere.
+The far left edge and the far right edge of the image must continue into each other, so the picture joins seamlessly when wrapped around a cylinder.
 
 ${referenceLine}
 
