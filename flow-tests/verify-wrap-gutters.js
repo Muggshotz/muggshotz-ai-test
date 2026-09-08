@@ -189,6 +189,101 @@ scenarios.theWidthDialWorks = async (page) => {
   return `PASS: 0 paints nothing, and ${rows.slice(1).map((r) => `${r.wdt}->${r.got}px`).join(', ')} land exactly`;
 };
 
+// ---- THE TWO ENDS LINE UP, BY CONSTRUCTION. ----
+// Alyx: "an exact mirror opposite... that way when they come together on the
+// other side they'll line up perfectly. There's no reason why it just has to
+// be a shot in the dark."
+//
+// Right, so it is not left to care: one strip, mirrored onto the other end. A
+// horizontal flip cannot move a feature up or down, so vertical alignment is
+// arithmetic. This paints a marker at a known height and insists it returns on
+// the same rows at both ends -- exactly -- and that the mirror actually
+// happened rather than the same strip being stamped twice.
+scenarios.theTwoEndsLineUpExactly = async (page) => {
+  await pickCup(page, VACUUM);
+  const r = await page.evaluate(async () => {
+    const W = 3710, H = 2817;
+    const base = document.createElement('canvas'); base.width = W; base.height = H;
+    const bx = base.getContext('2d'); bx.fillStyle = '#FF00FF'; bx.fillRect(0, 0, W, H);
+    const baseUrl = base.toDataURL('image/png');
+
+    // A stand-in gutter strip: a black bar at 30% height (the "ribbon bow"
+    // whose distance from the top must match), plus a red mark on its LEFT
+    // quarter only, so the mirror is provable rather than assumed.
+    const A = document.createElement('canvas'); A.width = 200; A.height = 1000;
+    const ax = A.getContext('2d');
+    ax.fillStyle = '#DDDDDD'; ax.fillRect(0, 0, 200, 1000);
+    ax.fillStyle = '#000000'; ax.fillRect(0, 300, 200, 40);
+    ax.fillStyle = '#FF0000'; ax.fillRect(0, 700, 50, 40);
+    GUTTER_CATALOG.__probe = { asset: A.toDataURL('image/png') };
+    const out = await paintWrapGutters(baseUrl, '#90C695', WRAP_GUTTER_WIDTH, '__probe');
+    delete GUTTER_CATALOG.__probe;
+
+    const im = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = out; });
+    const c = document.createElement('canvas'); c.width = im.naturalWidth; c.height = im.naturalHeight;
+    const cx = c.getContext('2d'); cx.drawImage(im, 0, 0);
+    const g = Math.round(im.naturalWidth * WRAP_GUTTER_WIDTH);
+    const barRows = (x) => {
+      const d = cx.getImageData(x, 0, 1, im.naturalHeight).data;
+      const rows = [];
+      for (let y = 0; y < im.naturalHeight; y++) {
+        const i = y * 4;
+        if (d[i] < 60 && d[i + 1] < 60 && d[i + 2] < 60) rows.push(y);
+      }
+      return rows.length ? { first: rows[0], last: rows[rows.length - 1] } : null;
+    };
+    const px = (x, y) => Array.from(cx.getImageData(x, y, 1, 1).data).slice(0, 3);
+    const redY = Math.round(im.naturalHeight * 0.72);
+    return {
+      height: im.naturalHeight, g,
+      leftBar: barRows(Math.round(g / 2)),
+      rightBar: barRows(im.naturalWidth - Math.round(g / 2)),
+      // The red mark sits on the strip's OUTER portion. Unmirrored it would be
+      // at the same side of both ends; mirrored it moves to the far side.
+      redNearLeftOuter:  px(Math.round(g * 0.12), redY),
+      redNearRightOuter: px(im.naturalWidth - 1 - Math.round(g * 0.12), redY),
+      redNearRightInner: px(im.naturalWidth - g + Math.round(g * 0.12), redY),
+    };
+  });
+
+  if (!r.leftBar || !r.rightBar) return 'FAIL: the design did not paint onto one or both ends';
+  if (r.leftBar.first !== r.rightBar.first || r.leftBar.last !== r.rightBar.last) {
+    return `FAIL: the feature sits at rows ${r.leftBar.first}-${r.leftBar.last} on the left end and ${r.rightBar.first}-${r.rightBar.last} on the right — butted on the cup they would step`;
+  }
+  const wantTop = Math.round(r.height * 0.30);
+  if (Math.abs(r.leftBar.first - wantTop) > 2) {
+    return `FAIL: the feature landed at row ${r.leftBar.first}, expected ~${wantTop} — the strip is not drawn to the full height of the wrap`;
+  }
+  const isRed = (v) => v[0] > 150 && v[1] < 90 && v[2] < 90;
+  if (!isRed(r.redNearLeftOuter)) return `FAIL: the strip did not land as drawn at the left end (rgb(${r.redNearLeftOuter}))`;
+  if (!isRed(r.redNearRightOuter)) {
+    return `FAIL: the right end is not mirrored — the mark drawn at the strip's outer edge came back at rgb(${r.redNearRightOuter}), so the motif would not complete itself across the join`;
+  }
+  if (isRed(r.redNearRightInner)) return 'FAIL: the right end was stamped unmirrored';
+  return `PASS: feature on rows ${r.leftBar.first}-${r.leftBar.last} at BOTH ends, and the right end is a true mirror`;
+};
+
+// ---- A MISSING ASSET MUST NOT LEAVE THE JOIN BARE. ----
+scenarios.aBrokenDesignFallsBackToThePlainGutter = async (page) => {
+  await pickCup(page, VACUUM);
+  const edge = await page.evaluate(async () => {
+    const W = 1200, H = 900;
+    const b = document.createElement('canvas'); b.width = W; b.height = H;
+    const bx = b.getContext('2d'); bx.fillStyle = '#FF00FF'; bx.fillRect(0, 0, W, H);
+    GUTTER_CATALOG.__broken = { asset: '/no-such-gutter-asset.png' };
+    const out = await paintWrapGutters(b.toDataURL('image/png'), '#90C695', WRAP_GUTTER_WIDTH, '__broken');
+    delete GUTTER_CATALOG.__broken;
+    const im = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = out; });
+    const c = document.createElement('canvas'); c.width = im.naturalWidth; c.height = im.naturalHeight;
+    const cx = c.getContext('2d'); cx.drawImage(im, 0, 0);
+    return Array.from(cx.getImageData(0, Math.round(im.naturalHeight / 2), 1, 1).data).slice(0, 3);
+  });
+  if (!near(edge, rgb('#90C695'), 3)) {
+    return `FAIL: a design whose asset will not load left the end as rgb(${edge}) — the join is bare, which is worse than either treatment`;
+  }
+  return 'PASS: an unloadable design falls back to the plain gutter rather than leaving the join bare';
+};
+
 (async () => {
   let fails = 0;
   for (const [name, fn] of Object.entries(scenarios)) {
@@ -202,7 +297,13 @@ scenarios.theWidthDialWorks = async (page) => {
       console.log(`[${name}] ERROR: ${String(e).split('\n')[0]}`);
       fails++;
     }
-    const errs = log.consoleErrors.filter((e) => !/ERR_TUNNEL/.test(e));
+    // aBrokenDesignFallsBackToThePlainGutter loads a deliberately missing asset,
+    // so its 404 and the handler's own message are the scenario succeeding, not
+    // console noise from a fault.
+    const errs = log.consoleErrors.filter((e) => !/ERR_TUNNEL/.test(e)
+      && !/no-such-gutter-asset/.test(e)
+      && !/Gutter design "__broken"/.test(e)
+      && !(/Failed to load resource/.test(e) && name === 'aBrokenDesignFallsBackToThePlainGutter'));
     if (errs.length) { console.log(`  CONSOLE: ${JSON.stringify(errs)}`); fails++; }
     if (log.pageErrors.length) { console.log(`  PAGE ERRORS: ${JSON.stringify(log.pageErrors)}`); fails++; }
     await browser.close();

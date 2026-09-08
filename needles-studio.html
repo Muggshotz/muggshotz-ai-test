@@ -5447,7 +5447,43 @@ function softenTopAndBottom(ctx,W,H,hex){
 // the finished wrap, inside its existing canvas -- widening the file would
 // rescale the whole wrap and move the join, which is the thing a gutter exists
 // to settle.
-const WRAP_GUTTER_WIDTH=0.012;    // per end, fraction of wrap width (~45px of 3710)
+const WRAP_GUTTER_WIDTH=0.06;     // per end, fraction of wrap width (~223px of 3710, ~17mm)
+
+// THE DECORATIVE GUTTERS (Alyx + Bud, Sep 2026). Twelve concepts, and what
+// makes them work is that every one is a FASTENING OR A HEM -- zip, stitching,
+// lace, rope, buttons, curtains, chain, a torn edge. Objects whose entire
+// purpose in the world is to be the place two edges meet. So the join stops
+// being something to hide and becomes the subject: two zip halves interlock
+// into one zip, two curtains meet and they are closed, stitching is what you
+// do to two edges. They also carry their own colour, which sidesteps the
+// stored-hex problem entirely -- see the note on the colour list in
+// products-catalog.js.
+//
+// ONE STRIP, MIRRORED (Alyx: "an exact mirror opposite... that way when they
+// come together on the other side they'll line up perfectly"). The artist draws
+// ONE gutter; the opposite seam is its exact horizontal mirror.
+//
+// This is the strongest version of Alyx's constraint -- "if it's 184 pixels
+// from the very top of the ribbon bow until the end of the ribbon bow on one
+// side, then it should be the same distance down on the other" -- because a
+// horizontal flip cannot move anything VERTICALLY. A feature 184px down is
+// 184px down on the other side by arithmetic, not by anybody keeping a rule.
+// There is no free parameter left to drift.
+//
+// WHERE THE MOTIF'S CENTRE GOES, which is the one thing to get right when
+// drawing one: the middle of the finished stripe on the cup IS the join, and
+// the join is where the wrap's two extreme edges meet. So the centre of the
+// motif belongs at the LEFT edge of the asset -- draw half a bow with the cut
+// running down the left of your file, and the mirror completes it across the
+// seam. The outer parts of the motif then face inward, toward the picture.
+//
+// Left end of the wrap gets the asset as drawn; right end gets it mirrored.
+const GUTTER_CATALOG={
+  // { asset } is ONE gutter strip -- any pixel size, motif centre at its LEFT
+  // edge. Add entries as the artwork lands; an entry whose asset fails to load
+  // falls back to the plain colour gutter rather than leaving the join bare.
+};
+let selectedGutter=null;   // null = the plain strip of the cup's own colour
 // Only cups confirmed to close on themselves. The vacuum 40oz's single
 // 3710x2817 area covers the whole tumbler (products-catalog.js), so its ends
 // meet. Anything absent is left exactly as it is today.
@@ -5457,7 +5493,24 @@ const WRAP_GUTTER_CUPS={
 function wrapWantsGutters(){
   return product==='water bottle' && WRAP_GUTTER_CUPS[preGenTravelVariant]===true;
 }
-async function paintWrapGutters(url,hex,width=WRAP_GUTTER_WIDTH){
+// Draws one strip at each end, the right one mirrored. Kept separate from the
+// plain fill so the rule that matters is visible in one place: both ends use
+// the SAME source image, the SAME destination top (0) and the SAME destination
+// height (h). The only difference between them is a horizontal flip, and a
+// horizontal flip cannot move a feature up or down -- which is precisely why
+// the two ends cannot fall out of vertical alignment.
+async function drawGutterDesign(ctx,art,w,h,g){
+  // Left end: as drawn.
+  ctx.drawImage(art, 0,0, art.naturalWidth,art.naturalHeight, 0,0, g,h);
+  // Right end: the exact mirror, so the motif completes itself across the join.
+  ctx.save();
+  ctx.translate(w,0);
+  ctx.scale(-1,1);
+  ctx.drawImage(art, 0,0, art.naturalWidth,art.naturalHeight, 0,0, g,h);
+  ctx.restore();
+}
+
+async function paintWrapGutters(url,hex,width=WRAP_GUTTER_WIDTH,design=null){
   const img=await loadImageFromUrl(url);
   const w=img.naturalWidth,h=img.naturalHeight;
   const g=Math.round(w*width);
@@ -5466,6 +5519,19 @@ async function paintWrapGutters(url,hex,width=WRAP_GUTTER_WIDTH){
   c.width=w; c.height=h;
   const ctx=c.getContext('2d');
   ctx.drawImage(img,0,0);
+  const pick=design===undefined?selectedGutter:design;
+  const entry=pick?GUTTER_CATALOG[pick]:null;
+  if(entry&&entry.asset){
+    try{
+      const art=await loadImageFromUrl(entry.asset);
+      await drawGutterDesign(ctx,art,w,h,g);
+      return c.toDataURL('image/jpeg',0.95);
+    }catch(err){
+      // A missing or unreadable asset must not leave the join bare -- fall
+      // through to the plain gutter, which is always available.
+      console.error('Gutter design "'+pick+'" could not be drawn, using the plain gutter:',err);
+    }
+  }
   ctx.fillStyle=hex;
   ctx.fillRect(0,0,g,h);
   ctx.fillRect(w-g,0,g,h);
@@ -15586,7 +15652,7 @@ async function makeTestSingleZonePanorama(side){
         : {top:true,bottom:true,left:true,right:true};
       resultUrl=await applyEdgeFadeToImageUrl(resultUrl,centerEdges,getSelectedProductColorHex(),edgeFadeAmountPct);
     } else if(wrapWantsGutters()){
-      resultUrl=await paintWrapGutters(resultUrl,getSelectedProductColorHex());
+      resultUrl=await paintWrapGutters(resultUrl,getSelectedProductColorHex(),WRAP_GUTTER_WIDTH,selectedGutter);
     }
 
     if (is40ozWraparoundSplit){
