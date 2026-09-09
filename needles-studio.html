@@ -2,7 +2,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head><link rel="manifest" href="needles-manifest.json">
-<!-- BUILD-MARKER: A-BIGGER-CUP-AND-LESS-AROUND-IT-v136 -->
+<!-- BUILD-MARKER: MAKE-THAT-PUPPY-BIG-v136 -->
 <!-- If you can see this comment on GitHub, this exact paste landed. -->
 <!-- If your live site's page source does NOT say -->
 <!-- "INSTANT-FIT-SCREEN-v47" right here, the upload/deploy did -->
@@ -298,7 +298,11 @@ body.frame-tools-open #accessorizeCancelBtn{padding:.45rem;font-size:12px;margin
 
 .mockup-lightbox-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:1700;align-items:center;justify-content:center}
 .mockup-lightbox-overlay.visible{display:flex;flex-direction:column;gap:14px}
-.mockup-lightbox-img{max-width:88vw;max-height:min(82vh,calc(100vh - 170px));object-fit:contain;border-radius:10px;background:#fff}
+/* FOR ALL PRODUCTS (Alyx). A coaster, a tote and a phone case have no body to
+   spin, so the only thing that can be given to them is size -- and the reveal
+   matters just as much there. 88vw/82vh left a visible margin all round on a
+   screen that had nothing else on it. */
+.mockup-lightbox-img{max-width:94vw;max-height:min(88vh,calc(100vh - 150px));object-fit:contain;border-radius:10px;background:#fff}
 .mockup-lightbox-close{position:fixed;top:16px;right:16px;width:40px;height:40px;border-radius:50%;background:#151b24;border:1px solid #003c8c;color:#fff;font-size:18px;cursor:pointer;z-index:1701;display:flex;align-items:center;justify-content:center}
 .mockup-lightbox-arrow{position:fixed;top:50%;transform:translateY(-50%);width:52px;height:52px;border-radius:50%;background:#151b24;border:1px solid #003c8c;color:#fff;font-size:30px;line-height:1;cursor:pointer;z-index:1701;align-items:center;justify-content:center;display:flex}
 .mockup-lightbox-arrow-left{left:16px}
@@ -13549,22 +13553,25 @@ function fitMug3DStage(){
   stage.style.width=''; stage.style.height='';
   const nat=stage.getBoundingClientRect();
   const square=wrap.classList.contains('mug3d-square');
-  if(nat.height>avail){
-    if(square)stage.style.width=avail+'px';
-    stage.style.height=avail+'px';
-  }else if(avail>nat.height+8&&nat.height>0){
-    // SPEND WHAT THE CLUTTER GAVE BACK (Alyx: "you can use all that extra space
-    // to enlarge the photo"). This only ever shrank the stage to fit; with the
-    // frame offer, its nudge line, the redundant trimming button and the hint
-    // all gone from a trimmed cup, the room they were using was simply left
-    // empty. Growing into it is the entire point of having removed them.
-    const wCap=Math.floor(window.innerWidth*0.92);
-    const grow=Math.min(avail,square?wCap:Math.floor(nat.height*(wCap/Math.max(1,nat.width))));
-    if(grow>nat.height){
-      if(square)stage.style.width=grow+'px';
-      else stage.style.width=Math.round(nat.width*(grow/nat.height))+'px';
-      stage.style.height=grow+'px';
-    }
+  // AS BIG AS THE ROOM ALLOWS, ALWAYS (Alyx: "on that last panel, the final
+  // mockup, find all available space that you can and make the mockup the
+  // maximum size you can reasonably make it. It is EVERYTHING about the sale.
+  // It is what will sell the cup. Make that puppy big. For all products!").
+  //
+  // This used to only ever SHRINK the stage to fit, with the stylesheet's caps
+  // -- 640px, 780px, 62vh -- deciding the upper bound. Those caps were written
+  // for a stage sharing a screen with other furniture. On the final reveal
+  // nothing else is competing for the space, so whatever the controls and
+  // buttons do not use belongs to the cup. `taken` already counts every control
+  // row, the hint and the action buttons, so `avail` is exactly what is left.
+  const wCap=Math.floor(window.innerWidth*0.94);
+  const target=square
+    ? Math.min(avail,wCap)
+    : Math.min(avail,Math.floor(nat.height*(wCap/Math.max(1,nat.width))));
+  if(nat.height>0&&Math.abs(target-nat.height)>4){
+    if(square)stage.style.width=target+'px';
+    else stage.style.width=Math.round(nat.width*(target/nat.height))+'px';
+    stage.style.height=target+'px';
   }
 }
 window.addEventListener('resize',fitMug3DStage);

@@ -545,6 +545,72 @@ scenarios.theTiltButtonSaysWhatItWillDo = async (page) => {
 OPTS.theTiltButtonSaysWhatItWillDo = { chromiumArgs: GL };
 
 
+// ---- THE FINAL REVEAL IS THE BIGGEST PICTURE IN THE PROCESS. ----
+// Alyx: "on that last panel, the final mockup, find all available space that you
+// can and make the mockup the maximum size you can reasonably make it. It is
+// EVERYTHING about the sale. It is what will sell the cup. Make that puppy big."
+//
+// fitMug3DStage only ever shrank the stage to fit, with the stylesheet's caps
+// -- 640px, 780px, 62vh -- setting the ceiling. Those were written for a stage
+// sharing a screen with other furniture; on the final reveal nothing else wants
+// the space.
+//
+// The failure this has to catch is the obvious one and it is worse than a small
+// cup: growing until the buttons are pushed off the bottom. A customer who
+// cannot reach Satisfied? cannot buy anything, so both halves are held here --
+// big AND every button still on screen, at a tall window and a short one.
+scenarios.theFinalRevealFillsTheScreen = async (page) => {
+  await pickProduct(page, 'water bottle');
+  await page.evaluate(() => pickPreGenTravelVariant('travel-mug-30oz-tundra'));
+  await T(page, 1000);
+  await dismissAlerts(page);
+  await page.evaluate(() => pickMugPrintMode('wraparound'));
+  await T(page, 1000);
+  await dismissAlerts(page);
+  await describeAndGenerate(page, 'a wide desert canyon at sunrise');
+  await waitLanded(page);
+  await T(page, 1200);
+  await page.locator('#approveRow button:has-text("Yes")').first().click();
+  await page.waitForFunction(() => document.querySelector('#mug3dStage canvas'), null, { timeout: 20000 });
+  await T(page, 1500);
+
+  const measure = () => page.evaluate(() => {
+    const st = document.getElementById('mug3dStage').getBoundingClientRect();
+    const onScreen = (el) => { if (!el) return true; const r = el.getBoundingClientRect(); return r.height < 2 || (r.top >= -2 && r.bottom <= innerHeight + 2); };
+    const actions = document.getElementById('mockupLightboxActions');
+    const btns = actions ? Array.from(actions.querySelectorAll('button')).filter((b) => b.getBoundingClientRect().height > 2) : [];
+    return {
+      vh: innerHeight, vw: innerWidth,
+      h: Math.round(st.height), w: Math.round(st.width),
+      share: +(st.height / innerHeight).toFixed(2),
+      buttons: btns.map((b) => ({ txt: (b.textContent || '').trim().slice(0, 18), ok: onScreen(b) })),
+      allButtonsOn: btns.every(onScreen),
+      count: btns.length
+    };
+  });
+
+  for (const vp of [{ width: 1280, height: 900 }, { width: 390, height: 780 }]) {
+    await page.setViewportSize(vp);
+    await page.evaluate(() => fitMug3DStage());
+    await T(page, 700);
+    const m = await measure();
+    if (!m.count) return `FAIL: no action buttons found at ${vp.width}x${vp.height} — this measures nothing`;
+    if (!m.allButtonsOn) {
+      const off = m.buttons.filter((b) => !b.ok).map((b) => b.txt).join(', ');
+      return `FAIL: at ${vp.width}x${vp.height} the cup grew until these went off screen: ${off}. A customer who cannot reach Satisfied? cannot buy anything, which is a worse outcome than a small picture`;
+    }
+    // The old caps left roughly half the height unused on a desktop.
+    if (m.share < 0.5) {
+      return `FAIL: at ${vp.width}x${vp.height} the cup is ${m.h}px in a ${m.vh}px window — ${Math.round(m.share * 100)}% of the height, with the rest empty. This is the screen that sells the cup`;
+    }
+    if (m.w > vp.width) return `FAIL: at ${vp.width}px wide the stage is ${m.w}px — wider than the window`;
+  }
+
+  return 'PASS: the final reveal fills the height it is given at both a 900px desktop and a 780px phone, without pushing a single button off the bottom';
+};
+OPTS.theFinalRevealFillsTheScreen = { chromiumArgs: GL };
+
+
 (async () => {
   let fails = 0;
   for (const [name, fn] of Object.entries(scenarios)) {
