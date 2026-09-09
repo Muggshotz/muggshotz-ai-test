@@ -448,6 +448,52 @@ scenarios.aTrimmingCanBeColouredThreeWays = async (page) => {
   return `PASS: a gradient strip, a full picker, and a tap on the picture returning ${st.sampled} exactly — and left off the designs that must not take one`;
 };
 
+// ---- THE TRIMMING RUNS THE FULL HEIGHT OF THE BAND. ----
+// Alyx: "it doesn't work well unless the trimming goes from the top all the way
+// to the bottom of the seam. Have you cut it off short like that, it ruins the
+// effect."
+//
+// The cause was not the trimming. Generation returns a SQUARE and this cup's
+// print area is a 1.32 band, so a square handed over as-is gets letterboxed --
+// artwork in a stripe, bare cup above and below, and a trimming painted to the
+// square's full height stopping well short of the seam. This pins the wrap
+// being cropped to the band before anything is painted on it, and the trimming
+// reaching the very first and very last row of what prints.
+scenarios.theTrimmingRunsTheWholeSeam = async (page) => {
+  await pickCup(page, VACUUM);
+  const r = await page.evaluate(async () => {
+    // A square, exactly as generation hands one back.
+    const src = document.createElement('canvas'); src.width = 1024; src.height = 1024;
+    const x = src.getContext('2d'); x.fillStyle = '#FF00FF'; x.fillRect(0, 0, 1024, 1024);
+    const out = await paintWrapGutters(src.toDataURL('image/png'), '#90C695', WRAP_GUTTER_WIDTH, null);
+    const im = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = out; });
+    const c = document.createElement('canvas'); c.width = im.naturalWidth; c.height = im.naturalHeight;
+    const cx = c.getContext('2d'); cx.drawImage(im, 0, 0);
+    const px = (sx, sy) => Array.from(cx.getImageData(sx, sy, 1, 1).data).slice(0, 3);
+    const g = Math.round(im.naturalWidth * WRAP_GUTTER_WIDTH);
+    return {
+      w: im.naturalWidth, h: im.naturalHeight,
+      ratio: +(im.naturalWidth / im.naturalHeight).toFixed(3),
+      wanted: TRAVEL_WRAP_RATIO['travel-mug-40oz-vacuum'],
+      topRow: px(Math.round(g / 2), 0),
+      bottomRow: px(Math.round(g / 2), im.naturalHeight - 1),
+      topRowRight: px(im.naturalWidth - 1 - Math.round(g / 2), 0),
+      bottomRowRight: px(im.naturalWidth - 1 - Math.round(g / 2), im.naturalHeight - 1),
+    };
+  });
+
+  if (Math.abs(r.ratio - r.wanted) > 0.02) {
+    return `FAIL: the wrap came back ${r.w}x${r.h} (ratio ${r.ratio}), not the band's ${r.wanted} — a square handed to a wide band is letterboxed, which is what left bare cup above and below the artwork`;
+  }
+  const cup = rgb('#90C695');
+  for (const [nm, v] of [['top left', r.topRow], ['bottom left', r.bottomRow], ['top right', r.topRowRight], ['bottom right', r.bottomRowRight]]) {
+    if (!near(v, cup, 3)) {
+      return `FAIL: the trimming does not reach the ${nm} corner of the band — rgb(${v}). Cut short like that, the two ends do not meet down the whole seam and the effect is lost`;
+    }
+  }
+  return `PASS: the wrap is cropped to the band's ${r.ratio} and the trimming reaches the very first and last row at both ends`;
+};
+
 (async () => {
   let fails = 0;
   for (const [name, fn] of Object.entries(scenarios)) {
