@@ -2,7 +2,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head><link rel="manifest" href="needles-manifest.json">
-<!-- BUILD-MARKER: EVERY-REDUCTION-FILTERED-v129 -->
+<!-- BUILD-MARKER: THE-BAND-STOPS-FIGHTING-THE-BODY-v130 -->
 <!-- If you can see this comment on GitHub, this exact paste landed. -->
 <!-- If your live site's page source does NOT say -->
 <!-- "INSTANT-FIT-SCREEN-v47" right here, the upload/deploy did -->
@@ -5910,7 +5910,25 @@ async function drawGutterDesign(ctx,art,w,h,entry){
   paintEnd(true);
 }
 
-async function paintWrapGutters(url,hex,width=WRAP_GUTTER_WIDTH,design=null){
+// SOFTEN THE PREVIEW, NEVER THE PRINT (Alyx, describing it properly at last:
+// "it dances... like numbers rolling down the screen... a really lazy
+// sparkler").
+//
+// Rolling DOWN is the tell, and it rules out everything tried so far. These
+// designs carry a fine pattern repeating VERTICALLY -- lace scallops, sprocket
+// holes, stitches. As the cup turns, the stripe compresses horizontally, and
+// the interference between that vertical pattern and the screen's pixel grid
+// shifts with it: a moire beat that appears to travel down the stripe. It is
+// not the band, not transparent black, and not an unfiltered downscale. It is
+// detail sitting at the screen's sampling limit, and past that limit no number
+// of samples wins -- Nyquist is not a budget you can outspend.
+//
+// The answer is to take the frequency out. A touch of blur on the design, ONLY
+// where it is going onto a preview: the moire has nothing left to beat against.
+// The printed file is untouched and stays razor sharp, which costs nothing --
+// a printed cup does not move, so it cannot shimmer.
+const GUTTER_PREVIEW_SOFTEN=70;   // divisor of the design's own width
+async function paintWrapGutters(url,hex,width=WRAP_GUTTER_WIDTH,design=null,forPreview=false){
   const img=await loadImageFromUrl(url);
   // THE BAND'S SHAPE, NOT THE PICTURE'S (Alyx: "it doesn't work well unless the
   // trimming goes from the top all the way to the bottom of the seam. Have you
@@ -5994,10 +6012,48 @@ async function paintWrapGutters(url,hex,width=WRAP_GUTTER_WIDTH,design=null){
       // for. It also stops the spine being an all-or-nothing requirement: a
       // design that is 88% solid down its left edge is now usable, where
       // before it had to be 100% or be held back.
-      ctx.fillStyle=hex;
-      ctx.fillRect(0,0,backW,h);
-      ctx.fillRect(w-backW,0,backW,h);
+      // NO FOREIGN COLOUR ANYWHERE (Alyx, on his phone, twice: "as you can see,
+      // the bleed through is still fairly significant").
+      //
+      // He was looking at a thing I put there on purpose. The outer 45px of the
+      // trimming sat on a solid stripe of cup colour, so that a hole in the
+      // lace landing exactly on the seam could not reveal the two mismatched
+      // ends through it. The two ends MEET, so on the back that is a 90px core
+      // of cup colour with lace over it, flanked by lace-over-photograph --
+      // which on a blue cup is a blue column announcing itself.
+      //
+      // The sliver's job is to stop a hole showing THE MISMATCH, not to be a
+      // colour. So it is filled with a softened mirror of the photograph
+      // immediately inboard of it instead. A hole over the seam now shows a
+      // blurred echo of its own neighbour rather than the opposite end of the
+      // picture -- same protection, and the trimming sits on the customer's own
+      // photograph across its whole width with no foreign colour at all.
+      //
+      // At the exact seam the left end's echo meets the right end's echo. Both
+      // are soft, so that reads as a gentle blur rather than a hard cut, which
+      // is the entire point of a gutter and strictly better than a hard stripe.
+      const echo=(sx)=>{
+        const t=document.createElement('canvas');
+        t.width=backW; t.height=h;
+        const tg=t.getContext('2d');
+        tg.translate(backW,0); tg.scale(-1,1);
+        tg.drawImage(c, sx,0, backW,h, 0,0, backW,h);
+        return t;
+      };
+      // Read both before either is written: each mirrors the picture that is
+      // still under it, and writing the left first would feed the right its own
+      // output on a very narrow wrap.
+      const echoL=echo(backW), echoR=echo(Math.max(0,w-2*backW));
+      const soft='blur('+Math.max(2,Math.round(backW/6))+'px)';
+      const canFilter=('filter' in ctx);
+      if(canFilter)ctx.filter=soft;
+      ctx.drawImage(echoL,0,0);
+      ctx.drawImage(echoR,w-backW,0);
+      if(canFilter)ctx.filter='none';
+      const softenPx=forPreview?Math.max(1,Math.round(gutterDesignWidth(art,w,h)/GUTTER_PREVIEW_SOFTEN)):0;
+      if(softenPx&&canFilter)ctx.filter='blur('+softenPx+'px)';
       await drawGutterDesign(ctx,art,w,h,entry);
+      if(canFilter)ctx.filter='none';
       return c.toDataURL('image/jpeg',0.95);
     }catch(err){
       // A missing or unreadable asset must not leave the join bare -- fall
@@ -13994,7 +14050,13 @@ const MUG3D = (function(){
       tumblerBands(T).forEach(band=>{
         const st=makeTex(band.wrapIn/band.h);
         const mesh=new THREE.Mesh(bandGeo(THREE,T,band),
-          new THREE.MeshPhysicalMaterial(Object.assign({map:st.tex, side:THREE.FrontSide, transparent:true},mats.glaze)));
+          new THREE.MeshPhysicalMaterial(Object.assign({map:st.tex, side:THREE.FrontSide, transparent:true,
+            // The other half of the fix, and the one that does not depend on
+            // how many depth bits the device happens to give us: bias the band
+            // toward the camera in depth space so it wins the test outright,
+            // whatever the buffer's precision. Costs nothing and cannot be
+            // defeated by a phone with a shallow depth buffer.
+            polygonOffset:true, polygonOffsetFactor:-4, polygonOffsetUnits:-4},mats.glaze)));
         mesh.receiveShadow=true;
         mugGroup.add(mesh);
         bandStates.push(st);
@@ -14007,7 +14069,8 @@ const MUG3D = (function(){
         new THREE.CylinderGeometry(S.R+0.004,S.R+0.004,S.bandH,200,1,true,
           -wrap*Math.PI, wrap*2*Math.PI),
         new THREE.MeshPhysicalMaterial(Object.assign(
-          {map:designTex, side:THREE.FrontSide, transparent:true},mats.glaze))
+          {map:designTex, side:THREE.FrontSide, transparent:true,
+           polygonOffset:true, polygonOffsetFactor:-4, polygonOffsetUnits:-4},mats.glaze))
       );
       printMesh.position.y=S.H/2;   // a CylinderGeometry is centred on its position
       printMesh.receiveShadow=true;
@@ -14104,6 +14167,28 @@ const MUG3D = (function(){
     // telephoto zoom: it magnifies and leaves the perspective exactly where it
     // was, so a seam inspected at 4x is the same shape as the one that prints.
     camera.fov=9/mug3dZoom;
+    // NEAR AND FAR, WRAPPED TIGHT AROUND THE CUP (Alyx, on his phone: "the
+    // sparks always come in the exact same color as the underlying mug... it's
+    // like the color underneath is trying to show through and it's fighting
+    // it"). That is a literal description of Z-FIGHTING, and it was the answer
+    // all along -- not the texture, which is where three rounds of filtering
+    // went.
+    //
+    // The printed band is a separate surface sitting 0.006 off the body. The
+    // camera ran near 0.1 / far 400 from about fifty units back, and a depth
+    // buffer spends nearly all its precision just in front of the near plane.
+    // A desktop's 24-bit buffer still resolves 0.006 at that range; a phone
+    // commonly gets SIXTEEN bits, where the smallest gap it can tell apart out
+    // there is hundreds of times larger. So on a phone the band and the body
+    // are in the same place as far as the depth test is concerned, and they
+    // trade pixels as the cup turns -- speckles and short lines, in the body's
+    // own colour, moving. Which is exactly what he described, and why nothing
+    // done to the texture ever touched it.
+    //
+    // Pulling the planes in around the cup is the cheap half of the fix: the
+    // same buffer now spends its whole range on the few units that matter.
+    camera.near=Math.max(0.1,d*0.4);
+    camera.far=d*3;
     camera.updateProjectionMatrix();
   }
 
@@ -14265,6 +14350,18 @@ const MUG3D = (function(){
     onSpin(fn){ onSpinChange=fn; },
     resize,
     mounted(){ return mounted; },
+    // Read-only, for the suite. The z-fighting that made the band trade pixels
+    // with the body on a phone is invisible to a headless renderer -- it is a
+    // depth-precision artifact of the device -- so what can be guarded is the
+    // CONFIGURATION that prevents it: planes wrapped tight around the cup, and
+    // a band biased forward in depth space.
+    depthSettings(){
+      if(!camera)return null;
+      const band=bandStates.length&&mugGroup?mugGroup.children.find(o=>o.material&&o.material.map&&o.material.polygonOffset!==undefined):null;
+      return { near:camera.near, far:camera.far, ratio:camera.far/camera.near,
+               polygonOffset:!!(band&&band.material.polygonOffset),
+               offsetFactor:band?band.material.polygonOffsetFactor:null };
+    },
 
     // REPAINT IN PLACE (Alyx, Sep 2026): "why can't we apply the trimmings
     // directly to the spinning mockup? By clicking on the trimming we want it
@@ -18052,7 +18149,7 @@ async function updateTrimmingsPreview(){
   if(!trimmingsBaseUrl)return;
   try{
     // Always from the ORIGINAL, never from what is on screen.
-    const painted=await paintWrapGutters(trimmingsFastUrl||trimmingsBaseUrl,getSelectedProductColorHex(),WRAP_GUTTER_WIDTH,selectedGutter);
+    const painted=await paintWrapGutters(trimmingsFastUrl||trimmingsBaseUrl,getSelectedProductColorHex(),WRAP_GUTTER_WIDTH,selectedGutter,true);
     if(img)img.src=painted;
     // The cup takes the same wrap without pausing, rebuilding or reloading --
     // one canvas draw and one texture upload.

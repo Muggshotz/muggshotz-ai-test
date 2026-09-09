@@ -720,65 +720,94 @@ scenarios.theWholeChoiceIsOnScreenAtOnce = async (page) => {
   return `PASS: at 1280x900 the cup (a square ${wide.stageW}px box), all ${wide.tiles} trimmings and Continue are on screen together with nothing scrolling; on a 390px phone the cup sticks to the top and the tiles pass under it`;
 };
 
-// ---- THE PICTURE SHOWS THROUGH THE OPENWORK, AND THE JOIN STILL DOES NOT. ----
-// Alyx, on a phone: "the problem with how they come together is the black
-// background bleeds through, and that should be an alpha."
+// ---- THE JOIN IS COVERED BY THE PICTURE, NOT BY CUP COLOUR. ----
+// Alyx, on his phone, twice: "as you can see, the bleed through is still fairly
+// significant."
 //
-// The assets DO have alpha -- measured -- and transparent black cannot bleed,
-// because canvas and GL both filter premultiplied. The black was the CUP, and
-// the backing band was putting it there: the band ran the design's whole width,
-// so every hole in an openwork trimming showed cup colour, and on a black cup
-// that is a black-filled lace.
+// He was looking at something I put there deliberately. The outer sliver of the
+// trimming sat on solid cup colour so a hole landing on the seam could not
+// reveal the two mismatched ends through it -- and the two ends MEET, so on the
+// back that is a double-width core of cup colour with lace over it. On a blue
+// cup, a blue column announcing itself.
 //
-// The band exists for one reason: a hole falling over the SEAM would show the
-// two mismatched ends of the picture through it. The seam is the extreme outer
-// edge, so only the outermost sliver has to be solid. This holds both halves,
-// because getting either wrong is worse than the fault it replaced:
-//   * the outer sliver is still completely solid at BOTH ends, top to bottom --
-//     the join stays hidden, which is the whole reason a gutter works;
-//   * and beyond it the customer's own picture really does show through the
-//     gaps, which is what an openwork trim does in life.
-scenarios.theOpenworkShowsThePictureNotTheCup = async (page) => {
+// The sliver's job is to hide THE MISMATCH, not to be a colour. It carries a
+// softened mirror of the photograph immediately inboard of it now. What this
+// pins is the property that makes that safe, which is not obvious and is easy
+// to get backwards:
+//   * each end echoes ITS OWN neighbour. An echo taken from the far end would
+//     be the very mismatch the sliver exists to hide, and would look correct in
+//     every screenshot;
+//   * no cup colour is painted anywhere under a trimming;
+//   * and the picture still shows through the openwork beyond the sliver.
+scenarios.theJoinIsCoveredByThePictureNotByCupColour = async (page) => {
   await pickCup(page, VACUUM);
   const r = await page.evaluate(async () => {
     const load = (u) => new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = u; });
     const W = 3710, H = 2817;
+    // The two ends are unmistakably different colours, so an echo taken from
+    // the wrong end is not a subtle failure -- it is the wrong colour outright.
     const base = document.createElement('canvas'); base.width = W; base.height = H;
-    const bx = base.getContext('2d'); bx.fillStyle = '#FF00FF'; bx.fillRect(0, 0, W, H);
+    const bx = base.getContext('2d');
+    bx.fillStyle = '#FFFFFF'; bx.fillRect(0, 0, W, H);
+    bx.fillStyle = '#FF0000'; bx.fillRect(0, 0, Math.round(W * 0.15), H);
+    bx.fillStyle = '#0000FF'; bx.fillRect(W - Math.round(W * 0.15), 0, Math.round(W * 0.15), H);
     const baseUrl = base.toDataURL('image/jpeg', 0.95);
+    // A cup colour no design contains, so any of it in the sliver is the band.
+    const CUP = '#00FF00';
     const band = Math.round(W * WRAP_GUTTER_MIN_WIDTH);
     const out = {};
-    // A BLACK cup, which is the one he was holding, and the three most open
-    // designs in the catalogue.
     for (const name of ['Doily', 'Soft Country', 'Ivy Vine']) {
-      const im = await load(await paintWrapGutters(baseUrl, '#000000', WRAP_GUTTER_WIDTH, name));
+      const im = await load(await paintWrapGutters(baseUrl, CUP, WRAP_GUTTER_WIDTH, name));
       const c = document.createElement('canvas'); c.width = im.naturalWidth; c.height = im.naturalHeight;
       const g = c.getContext('2d', { willReadFrequently: true }); g.drawImage(im, 0, 0);
       const d = g.getImageData(0, 0, c.width, c.height).data;
-      const isArt = (x, y) => { const i = (y * c.width + x) * 4; return d[i] > 170 && d[i + 1] < 110 && d[i + 2] > 170; };
-
-      let leaks = 0;
-      for (let y = 0; y < c.height; y += 3) {
-        for (let x = 0; x < band; x += 2) { if (isArt(x, y)) leaks++; if (isArt(c.width - 1 - x, y)) leaks++; }
-      }
+      const px = (x, y) => { const i = (y * c.width + x) * 4; return [d[i], d[i + 1], d[i + 2]]; };
+      const isRed = (v) => v[0] > 130 && v[1] < 90 && v[2] < 90;
+      const isBlue = (v) => v[2] > 130 && v[0] < 90 && v[1] < 90;
+      const isCup = (v) => v[1] > 150 && v[0] < 110 && v[2] < 110;
+      const tally = (x0, x1) => {
+        const t = { red: 0, blue: 0, cup: 0, n: 0 };
+        for (let y = 0; y < c.height; y += 3) for (let x = x0; x < x1; x += 2) {
+          const v = px(x, y); t.n++;
+          if (isRed(v)) t.red++; if (isBlue(v)) t.blue++; if (isCup(v)) t.cup++;
+        }
+        return t;
+      };
       const art = await load(GUTTER_CATALOG[name].asset);
       const span = Math.min(Math.round(c.height * (art.naturalWidth / art.naturalHeight)), Math.round(c.width * WRAP_GUTTER_MAX_WIDTH));
-      let through = 0, looked = 0;
-      for (let y = 0; y < c.height; y += 3) {
-        for (let x = band + 4; x < span; x += 2) { looked++; if (isArt(x, y)) through++; }
-      }
-      out[name] = { band, span, leaks, through, looked, pct: looked ? +(100 * through / looked).toFixed(1) : 0 };
+      out[name] = { band, left: tally(0, band), right: tally(c.width - band, c.width), beyond: tally(band + 4, span) };
     }
     return out;
   });
 
   for (const [name, v] of Object.entries(r)) {
-    if (v.leaks) return `FAIL: ${name} lets the picture through the outermost ${v.band}px at ${v.leaks} places — that sliver sits ON the join, and the two mismatched ends would show through it`;
-    if (v.looked < 100) return `FAIL: ${name} has no openwork to measure between ${v.band}px and ${v.span}px`;
-    if (v.pct < 3) return `FAIL: ${name} shows the picture through only ${v.pct}% of its openwork — the band is still filling the gaps with cup colour, which on a black cup is a black-filled lace`;
+    const pct = (a, b) => 100 * a / b;
+    if (pct(v.left.cup, v.left.n) > 0.5 || pct(v.right.cup, v.right.n) > 0.5) {
+      return `FAIL: ${name} still paints cup colour into the join sliver (left ${pct(v.left.cup, v.left.n).toFixed(1)}%, right ${pct(v.right.cup, v.right.n).toFixed(1)}%) — that is the column he can see, doubled where the two ends meet`;
+    }
+    if (pct(v.left.blue, v.left.n) > 1) {
+      return `FAIL: ${name}'s LEFT sliver carries ${pct(v.left.blue, v.left.n).toFixed(1)}% of the far end's colour — it is echoing the wrong end, which is the exact mismatch the sliver exists to hide`;
+    }
+    if (pct(v.right.red, v.right.n) > 1) {
+      return `FAIL: ${name}'s RIGHT sliver carries ${pct(v.right.red, v.right.n).toFixed(1)}% of the far end's colour — it is echoing the wrong end`;
+    }
+    if (v.beyond.n > 100 && pct(v.beyond.cup, v.beyond.n) > 0.5) {
+      return `FAIL: ${name} shows cup colour through its openwork beyond the sliver (${pct(v.beyond.cup, v.beyond.n).toFixed(1)}%)`;
+    }
   }
-  const say = Object.entries(r).map(([n, v]) => `${n} ${v.pct}%`).join(', ');
-  return `PASS: on a BLACK cup the outermost ${r.Doily.band}px stays solid at both ends so the join is still hidden, and the picture shows through the openwork beyond it (${say})`;
+  // PRESENCE, MEASURED WHERE IT CAN BE SEEN. A dense design covers its own
+  // sliver almost completely -- Soft Country's lace is solid down its spine, so
+  // nothing of the picture underneath shows there and requiring it per design
+  // was asking the wrong question. The absence checks above are the safety
+  // ones and they hold for every design; the echo only has to be PROVABLE
+  // somewhere, on the openwork designs where there are holes to see it through.
+  const shows = Object.entries(r).filter(([, v]) => 100 * v.left.red / v.left.n > 5 && 100 * v.right.blue / v.right.n > 5);
+  if (!shows.length) {
+    const all = Object.entries(r).map(([n, v]) => `${n} ${Math.round(100 * v.left.red / v.left.n)}%/${Math.round(100 * v.right.blue / v.right.n)}%`).join(', ');
+    return `FAIL: not one design shows its own end's picture through its sliver (${all}) — nothing proves the echo is there at all, only that cup colour is not`;
+  }
+  const say = shows.map(([n, v]) => `${n} ${Math.round(100 * v.left.red / v.left.n)}%/${Math.round(100 * v.right.blue / v.right.n)}%`).join(', ');
+  return `PASS: no cup colour anywhere under a trimming and no design carrying the far end's picture, and through the openwork the sliver is visibly its OWN end's (left-red/right-blue ${say})`;
 };
 
 // ---- THE FLAT WRAP EARNS ITS PLACE, OR IT IS NOT THERE. ----
@@ -1062,31 +1091,29 @@ scenarios.noTrimExceedsTheCeiling = async (page) => {
         }
         return last;
       };
-      // The very first and very last rows of the wrap, at both ends: the trim
-      // has to be there, not just in the middle.
-      const covered = (y) => {
-        const d = cx.getImageData(0, y, im.naturalWidth, 1).data;
-        const l = !isArt(d, 0), rr = !isArt(d, (im.naturalWidth - 1) * 4);
-        return l && rr;
-      };
-      out[name] = { natural, want, got: row(), top: covered(0), bottom: covered(im.naturalHeight - 1) };
+      // NOT the outermost column any more. The join sliver carries a softened
+      // echo of the photograph rather than a flat colour, so "is the outer edge
+      // non-picture" no longer means anything -- and it never measured the
+      // DESIGN in the first place, only the band underneath it. Reaching both
+      // ends is held by everyTrimmingReachesBothEndsOfTheSeam, which looks
+      // inside the design's own span where the customer looks.
+      out[name] = { natural, want, got: row() };
     }
     return { ceiling, out };
   });
 
-  const over = [], wrong = [], gaps = [];
+  const over = [], wrong = [];
   for (const [name, v] of Object.entries(r.out)) {
     if (v.got > r.ceiling + 6) over.push(`${name} ${v.got}px`);
     if (Math.abs(v.got - v.want) > 6) wrong.push(`${name} ${v.got}px where its design is ${v.want}px`);
-    if (!v.top || !v.bottom) gaps.push(`${name}${v.top ? '' : ' top'}${v.bottom ? '' : ' bottom'}`);
+
   }
   if (over.length) return `FAIL: over the ${r.ceiling}px ceiling — ${over.join(', ')}. A trim that wide is a panel, and two of them meeting takes a third of the cup`;
   if (wrong.length) return `FAIL: the band no longer follows its design — ${wrong.join('; ')}`;
-  if (gaps.length) return `FAIL: the trim does not reach the end of the seam on ${gaps.join(', ')} — narrowing must not shorten it`;
 
   const film = r.out['Film Reel'], lace = r.out['Soft Country'];
   if (film && film.got > film.natural + 6) return `FAIL: Film Reel was widened from ${film.natural}px to ${film.got}px — the cap is a ceiling, not a target`;
-  return `PASS: all ${Object.keys(r.out).length} trims at or under the ${r.ceiling}px ceiling (10% where they meet), each band still its own design's width, every one reaching both ends of the seam${lace ? `; Soft Country came down from ${lace.natural}px` : ''}${film ? `, Film Reel left alone at ${film.got}px` : ''}`;
+  return `PASS: all ${Object.keys(r.out).length} trims at or under the ${r.ceiling}px ceiling (10% where they meet), each band still its own design's width${lace ? `; Soft Country came down from ${lace.natural}px` : ''}${film ? `, Film Reel left alone at ${film.got}px` : ''}`;
 };
 
 (async () => {

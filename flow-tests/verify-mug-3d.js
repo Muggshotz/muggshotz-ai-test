@@ -432,6 +432,55 @@ scenarios.noWebGLFallsBackToThePhoto = async (page, log) => {
   return 'PASS: without WebGL the flat Printify photo path runs as before';
 };
 
+// ---- THE BAND DOES NOT FIGHT THE BODY FOR PIXELS. ----
+// Alyx, on his phone, after three rounds of me chasing the texture: "the sparks
+// always come in the exact same color as the underlying mug... it's like the
+// color underneath is trying to show through and it's fighting it" -- and then
+// the confirming detail, "it's as it's turning that this activity becomes the
+// most incited."
+//
+// That is z-fighting, described exactly. The printed band is a separate surface
+// 0.006 off the body; the camera ran near 0.1 / far 400 from fifty units back,
+// and a depth buffer spends nearly all its precision just in front of the near
+// plane. A desktop's 24-bit buffer still resolves 0.006 out there. A phone
+// commonly gets SIXTEEN, where it cannot -- so the two surfaces trade pixels as
+// the cup turns, and the loser showing through is the body, in the body's own
+// colour. Nothing done to the texture could ever have touched it.
+//
+// The artifact itself needs a shallow depth buffer to appear, so a headless
+// renderer will never show it. What can be held is the configuration that
+// prevents it, which is the thing that would quietly regress.
+scenarios.theBandDoesNotFightTheBodyForPixels = async (page) => {
+  await pickProduct(page, 'water bottle');
+  await page.evaluate(() => pickPreGenTravelVariant('travel-mug-30oz-tundra'));
+  await T(page, 1000);
+  await dismissAlerts(page);
+  await page.evaluate(() => pickMugPrintMode('wraparound'));
+  await T(page, 1000);
+  await dismissAlerts(page);
+  await describeAndGenerate(page, 'a wide desert canyon at sunrise');
+  await waitLanded(page);
+  await T(page, 1200);
+  await page.locator('#approveRow button:has-text("Yes")').first().click();
+  await page.waitForFunction(() => document.querySelector('#mug3dStage canvas'), null, { timeout: 20000 });
+  await T(page, 1500);
+  const d = await page.evaluate(() => MUG3D.depthSettings());
+  if (!d) return 'FAIL: no camera — the cup never built, so this measures nothing';
+  // 400:1 was the old ratio and it is what made a 16-bit buffer useless out at
+  // the cup. Anything of that order is the bug back.
+  if (!(d.ratio <= 12)) {
+    return `FAIL: the camera spans near ${d.near} to far ${d.far}, a ratio of ${Math.round(d.ratio)} — the depth buffer spends its precision in front of the cup instead of on it, and a 16-bit device will fight for every pixel of the band`;
+  }
+  if (d.near < 1) return `FAIL: near is ${d.near}; wrapped around a cup fifty units away it should be tens, not a fraction`;
+  if (!d.polygonOffset) {
+    return 'FAIL: the band no longer biases itself forward in depth space — that is the half of the fix that does not depend on how many depth bits the device gives us';
+  }
+  if (!(d.offsetFactor < 0)) return `FAIL: the band's depth bias is ${d.offsetFactor}, which pushes it AWAY from the camera — backwards, so the body wins outright`;
+  return `PASS: near ${Math.round(d.near)} to far ${Math.round(d.far)} (ratio ${d.ratio.toFixed(1)}), and the band biased forward at ${d.offsetFactor} — the body cannot trade pixels with it however few depth bits the device has`;
+};
+OPTS.theBandDoesNotFightTheBodyForPixels = { chromiumArgs: GL };
+
+
 (async () => {
   let fails = 0;
   for (const [name, fn] of Object.entries(scenarios)) {
