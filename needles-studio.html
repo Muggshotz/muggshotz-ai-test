@@ -5512,6 +5512,9 @@ const GUTTER_CATALOG={
   "Rope":               { asset:"gutter-rope.png",            thumb:"gutter-thumb-rope.png" },
   "Laced Leather":      { asset:"gutter-leather-laces.png",   thumb:"gutter-thumb-leather-laces.png" },
   "Astral":             { asset:"gutter-astral.png",          thumb:"gutter-thumb-astral.png" },
+  "Zipper":             { asset:"gutter-zipper.png",          thumb:"gutter-thumb-zipper.png" },
+  "Rivets":             { asset:"gutter-rivots.png",          thumb:"gutter-thumb-rivots.png" },
+  "Film Reel":          { asset:"gutter-film.png",            thumb:"gutter-thumb-film.png" },
   // CURATED DOWN, not thrown away (Alyx). The set had three near-duplicate
   // pairs and was showing the same idea twice: Vintage Lace beside Doily,
   // Roses & Pearls beside Soft Country, Ivy Vine beside Fern. One of each
@@ -5522,16 +5525,17 @@ const GUTTER_CATALOG={
   // The assets are all still in the repo. Putting any of them back is one
   // line here, which is why they were unwired rather than deleted.
   //
-  // FILM REEL IS STILL OUT, and not for the reason it was before. The colour
-  // backing fixed its spine -- but the reel sat as a full circle near the left
-  // edge, so cropping cut it off-centre and the mirror pairs two part-circles
-  // into an almond-shaped mask. It is not broken, it is just not a film reel,
-  // and nobody would call it one. Rendered before wiring it, which is the only
-  // reason this was caught rather than shipped.
+  // ZIPPER AND RIVETS NEEDED NO CROP AT ALL -- the first two assets to arrive
+  // with the spine already hard against the left edge. The zipper mirrors into
+  // one closed zip with a single symmetric pull tab, and the rivets were drawn
+  // as HALF domes on that edge, so the mirror completes each one. That is the
+  // rule this feature kept teaching, applied first time.
   //
-  // The fix is the one this feature keeps teaching: anything round and central
-  // must be drawn as a HALF, cut by the left edge, so the mirror completes it.
-  // Same rule that applied to the lace pearl and would apply to a rivet.
+  // FILM REEL is in, with a caveat recorded rather than smoothed over: its
+  // reel sits inset from the edge instead of cut in half by it, so the mirror
+  // gives two reels facing each other rather than one whole reel at the seam.
+  // Symmetrical and coherent, so it ships -- but the single-reel version is
+  // still the better design if it is ever redrawn.
   //
   // FERN WAS HELD BACK AND IS NOW IN: gutter-fern.png and gutter-film.png had no
   // full-height element down their left edge -- measured, not guessed. Every
