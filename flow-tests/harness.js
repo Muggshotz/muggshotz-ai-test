@@ -82,6 +82,19 @@ async function launch(opts = {}) {
           panoramaUrl: `${BASE}/__fake/panorama.jpg`,
         }});
       }
+      // AN HONEST UPLOAD, when a suite asks for one. The default stub hands
+      // back the same fixed URL whatever you post, which means the picture the
+      // studio believes it has uploaded is not the picture it uploaded -- and
+      // that is precisely the shape of bug the trimmings hit: baking a
+      // trimming replaces finalImageUrl, and painting the NEXT one on top of
+      // that instead of on the original stacks them. With a fixed stub the
+      // round trip cannot be seen at all. Echoing the posted image back makes
+      // the second bake's input the first bake's real output, so stacking
+      // shows up in the pixels. Opt-in, because verify-exact-transfer asserts
+      // on the fixed URL by name.
+      if (opts.echoUploads && body.action === 'uploadComposite' && typeof body.image === 'string') {
+        return route.fulfill({ json: { imageUrl: body.image } });
+      }
       return route.fulfill({ json: { imageUrl: `${BASE}/__fake/generated.jpg` } });
     }
     if (p === '/api/start-mockup') {

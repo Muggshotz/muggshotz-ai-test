@@ -2,7 +2,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head><link rel="manifest" href="needles-manifest.json">
-<!-- BUILD-MARKER: TRY-IT-ON-THE-SPINNING-CUP-v123 -->
+<!-- BUILD-MARKER: A-TRIM-NOT-A-PANEL-v124 -->
 <!-- If you can see this comment on GitHub, this exact paste landed. -->
 <!-- If your live site's page source does NOT say -->
 <!-- "INSTANT-FIT-SCREEN-v47" right here, the upload/deploy did -->
@@ -5583,6 +5583,18 @@ const WRAP_GUTTER_WIDTH=0.06;     // per end, fraction of wrap width (~223px of 
 // registration drift the gutter exists to hide. Above that the band follows
 // the design, so a trimming is its own width rather than sitting on a mat.
 const WRAP_GUTTER_MIN_WIDTH=0.012;
+// AND THE CEILING (Alyx, Sep 2026): "my original estimate was that none of them
+// should actually exceed 10%. It's supposed to be a trim, not a panel."
+//
+// The band followed each design's own proportions, which was right for the
+// narrow ones and a disaster for the wide ones -- Bud drew several of these as
+// single tall panels, so the lace ran 19.1% per end and the two ends MEET, so
+// 38% of the way round the cup was trimming. The photograph the customer paid
+// to generate was the minority of their own cup.
+//
+// 5% per end is his 10% where they meet. Only the film strip (3.2%) is
+// naturally under it; everything else is brought down to it.
+const WRAP_GUTTER_MAX_WIDTH=0.05;
 
 // THE DECORATIVE GUTTERS (Alyx + Bud, Sep 2026). Twelve concepts, and what
 // makes them work is that every one is a FASTENING OR A HEM -- zip, stitching,
@@ -5614,8 +5626,8 @@ const WRAP_GUTTER_MIN_WIDTH=0.012;
 //
 // Left end of the wrap gets the asset as drawn; right end gets it mirrored.
 const GUTTER_CATALOG={
-  "Blue Satin Ribbon":  { asset:"gutter-ribbon-blue.png",     thumb:"gutter-thumb-ribbon-blue.png", colorable:true, defaultColor:"#003c8c" },
-  "Tasselled Ribbon":   { asset:"gutter-tassled-ribbon.png",  thumb:"gutter-thumb-tassled-ribbon.png", colorable:true, defaultColor:"#003c8c" },
+  "Blue Satin Ribbon":  { asset:"gutter-ribbon-blue.png",     thumb:"gutter-thumb-ribbon-blue.png", colorable:true, defaultColor:"#003c8c" , repeats:false},
+  "Tasselled Ribbon":   { asset:"gutter-tassled-ribbon.png",  thumb:"gutter-thumb-tassled-ribbon.png", colorable:true, defaultColor:"#003c8c" , repeats:false},
   "Roses & Pearls":     { asset:"gutter-rose-pearl.png",      thumb:"gutter-thumb-rose-pearl.png" },
   "Doily":              { asset:"gutter-doily.png",           thumb:"gutter-thumb-doily.png", colorable:true },
   "Ivy Vine":           { asset:"gutter-ivy.png",             thumb:"gutter-thumb-ivy.png", colorable:true, defaultColor:"#1F7A45" },
@@ -5773,17 +5785,58 @@ async function recolouredGutter(entry,hex){
   return url;
 }
 
-async function drawGutterDesign(ctx,art,w,h){
-  // Fitted to the full height; width follows from the asset's own proportions.
-  const drawW=Math.round(h*(art.naturalWidth/art.naturalHeight));
-  // Left end: as drawn, anchored to the wrap's outer edge.
-  ctx.drawImage(art, 0,0, art.naturalWidth,art.naturalHeight, 0,0, drawW,h);
-  // Right end: the exact mirror, so the motif completes itself across the join.
-  ctx.save();
-  ctx.translate(w,0);
-  ctx.scale(-1,1);
-  ctx.drawImage(art, 0,0, art.naturalWidth,art.naturalHeight, 0,0, drawW,h);
-  ctx.restore();
+// The width the design is actually drawn at: its own proportions at the band's
+// full height, but never past the ceiling.
+function gutterDesignWidth(art,w,h){
+  const natural=Math.round(h*(art.naturalWidth/art.naturalHeight));
+  return Math.min(natural, Math.round(w*WRAP_GUTTER_MAX_WIDTH));
+}
+
+async function drawGutterDesign(ctx,art,w,h,entry){
+  const drawW=gutterDesignWidth(art,w,h);
+  // At the capped width the design is no longer tall enough to reach the seam's
+  // ends by itself, and it MUST reach them -- "it doesn't work well unless the
+  // trimming goes from the top all the way to the bottom of the seam."
+  //
+  // So a continuous border is REPEATED down the seam, which is what a trimming
+  // is in the first place: a length of material cut to fit, not one ornament
+  // stretched over three feet of cup. Lace, rope, ivy, lacing and a zip all
+  // read more true this way, not less.
+  //
+  // NOTHING IS EVER SQUASHED to make it fit. Alternate repeats are flipped top
+  // to bottom instead, so every join is the motif meeting its own reflection --
+  // which the eye reads as pattern rather than as a cut -- and the run is
+  // centred so the part-tiles at the ends are equal.
+  //
+  // A SINGLE ORNAMENT CANNOT DO THAT. The two ribbons are one bow each, and two
+  // bows stacked is not a narrower ribbon, it is a different and worse design.
+  // Those are drawn once, centred, on a colour band that still runs the full
+  // height -- a ribbon tied round the cup, which is exactly what they are.
+  const tileH=Math.round(drawW*(art.naturalHeight/art.naturalWidth));
+  const single=(entry&&entry.repeats===false)||tileH>=h;
+  const paintEnd=(flipX)=>{
+    ctx.save();
+    if(flipX){ ctx.translate(w,0); ctx.scale(-1,1); }
+    ctx.beginPath(); ctx.rect(0,0,drawW,h); ctx.clip();
+    if(single){
+      ctx.drawImage(art, 0,0, art.naturalWidth,art.naturalHeight, 0,Math.round((h-tileH)/2), drawW,tileH);
+    }else{
+      const n=Math.ceil(h/tileH)+1;
+      const y0=Math.round((h-n*tileH)/2);
+      for(let i=0;i<n;i++){
+        const y=y0+i*tileH;
+        ctx.save();
+        if(i%2){ ctx.translate(0,y+tileH); ctx.scale(1,-1); ctx.drawImage(art, 0,0, art.naturalWidth,art.naturalHeight, 0,0, drawW,tileH); }
+        else ctx.drawImage(art, 0,0, art.naturalWidth,art.naturalHeight, 0,y, drawW,tileH);
+        ctx.restore();
+      }
+    }
+    ctx.restore();
+  };
+  // Left end as drawn; right end its exact mirror, so the motif completes
+  // itself across the join.
+  paintEnd(false);
+  paintEnd(true);
 }
 
 async function paintWrapGutters(url,hex,width=WRAP_GUTTER_WIDTH,design=null){
@@ -5843,7 +5896,7 @@ async function paintWrapGutters(url,hex,width=WRAP_GUTTER_WIDTH,design=null){
       // Floored at WRAP_GUTTER_MIN_WIDTH so a very narrow design still covers
       // the join and the printer's drift, which is the band's first job and
       // does not care how the artwork looks.
-      const designW=Math.round(h*(art.naturalWidth/art.naturalHeight));
+      const designW=gutterDesignWidth(art,w,h);
       const backW=Math.max(designW,Math.round(w*WRAP_GUTTER_MIN_WIDTH));
       // BACKING FIRST. The plain colour band goes underneath every design, and
       // it is not belt-and-braces: openwork is the norm here, not the
@@ -5858,7 +5911,7 @@ async function paintWrapGutters(url,hex,width=WRAP_GUTTER_WIDTH,design=null){
       ctx.fillStyle=hex;
       ctx.fillRect(0,0,backW,h);
       ctx.fillRect(w-backW,0,backW,h);
-      await drawGutterDesign(ctx,art,w,h);
+      await drawGutterDesign(ctx,art,w,h,entry);
       return c.toDataURL('image/jpeg',0.95);
     }catch(err){
       // A missing or unreadable asset must not leave the join bare -- fall

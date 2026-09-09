@@ -222,14 +222,14 @@ scenarios.theTwoEndsLineUpExactly = async (page) => {
     // A stand-in gutter strip: a black bar at 30% height (the "ribbon bow"
     // whose distance from the top must match), plus a red mark on its LEFT
     // quarter only, so the mirror is provable rather than assumed.
-    // Deliberately NOT the gutter's own 1:12.6 -- a design that overhangs is
-    // the normal case now (a bow reaching onto the picture), and it must still
-    // line up at both ends.
-    const A = document.createElement('canvas'); A.width = 200; A.height = 1000;
+    // Its 1:25 keeps it under WRAP_GUTTER_MAX_WIDTH at the wrap's full height,
+    // so this measures ALIGNMENT rather than the ceiling -- the ceiling has a
+    // scenario of its own.
+    const A = document.createElement('canvas'); A.width = 100; A.height = 2500;
     const ax = A.getContext('2d');
-    ax.fillStyle = '#DDDDDD'; ax.fillRect(0, 0, 200, 1000);
-    ax.fillStyle = '#000000'; ax.fillRect(0, 300, 200, 40);
-    ax.fillStyle = '#FF0000'; ax.fillRect(0, 700, 50, 40);
+    ax.fillStyle = '#DDDDDD'; ax.fillRect(0, 0, 100, 2500);
+    ax.fillStyle = '#000000'; ax.fillRect(0, 750, 100, 100);
+    ax.fillStyle = '#FF0000'; ax.fillRect(0, 1750, 25, 100);
     GUTTER_CATALOG.__probe = { asset: A.toDataURL('image/png') };
     const out = await paintWrapGutters(baseUrl, '#90C695', WRAP_GUTTER_WIDTH, '__probe');
     delete GUTTER_CATALOG.__probe;
@@ -238,7 +238,7 @@ scenarios.theTwoEndsLineUpExactly = async (page) => {
     const c = document.createElement('canvas'); c.width = im.naturalWidth; c.height = im.naturalHeight;
     const cx = c.getContext('2d'); cx.drawImage(im, 0, 0);
     const g = Math.round(im.naturalWidth * WRAP_GUTTER_WIDTH);
-    const drawW = Math.round(H * (200 / 1000));
+    const drawW = Math.round(H * (100 / 2500));
     const barRows = (x) => {
       const d = cx.getImageData(x, 0, 1, im.naturalHeight).data;
       const rows = [];
@@ -256,10 +256,10 @@ scenarios.theTwoEndsLineUpExactly = async (page) => {
       rightBar: barRows(im.naturalWidth - Math.round(drawW / 2)),
       // The red mark sits on the strip's OUTER portion. Unmirrored it would be
       // at the same side of both ends; mirrored it moves to the far side.
-      drawW: Math.round(im.naturalHeight * (200 / 1000)),
+      drawW: Math.round(im.naturalHeight * (100 / 2500)),
       redNearLeftOuter:  px(2, redY),
       redNearRightOuter: px(im.naturalWidth - 3, redY),
-      redNearRightInner: px(im.naturalWidth - Math.round(im.naturalHeight * 0.2) + 3, redY),
+      redNearRightInner: px(im.naturalWidth - Math.round(im.naturalHeight * 0.04) + 3, redY),
     };
   });
 
@@ -271,9 +271,9 @@ scenarios.theTwoEndsLineUpExactly = async (page) => {
   if (Math.abs(r.leftBar.first - wantTop) > 2) {
     return `FAIL: the feature landed at row ${r.leftBar.first}, expected ~${wantTop} — the strip is not drawn to the full height of the wrap`;
   }
-  // Aspect must be preserved, not squeezed into the gutter: a 1:5 asset on a
-  // 2817-tall wrap should occupy 563px, overhanging the 223px band.
-  const wantW = Math.round(r.height * 0.2);
+  // Aspect must be preserved, never squeezed to fit: a 1:25 asset on a
+  // 2817-tall wrap occupies 113px, which is under the ceiling.
+  const wantW = Math.round(r.height * 0.04);
   if (Math.abs(r.drawW - wantW) > 2) {
     return `FAIL: the design was drawn ${r.drawW}px wide, expected ${wantW} — it is being stretched to the gutter instead of keeping its proportions`;
   }
@@ -283,7 +283,7 @@ scenarios.theTwoEndsLineUpExactly = async (page) => {
     return `FAIL: the right end is not mirrored — the mark drawn at the strip's outer edge came back at rgb(${r.redNearRightOuter}), so the motif would not complete itself across the join`;
   }
   if (isRed(r.redNearRightInner)) return 'FAIL: the right end was stamped unmirrored';
-  return `PASS: feature on rows ${r.leftBar.first}-${r.leftBar.last} at BOTH ends, right end a true mirror, and ${r.drawW}px wide — proportions kept, overhanging the ${r.g}px band`;
+  return `PASS: feature on rows ${r.leftBar.first}-${r.leftBar.last} at BOTH ends, right end a true mirror, and ${r.drawW}px wide — proportions kept`;
 };
 
 // ---- A MISSING ASSET MUST NOT LEAVE THE JOIN BARE. ----
@@ -469,6 +469,101 @@ scenarios.theCupWearsItTheMomentYouTapIt = async (page) => {
   if (r.releasedMounted) return 'FAIL: the panel kept hold of MUG3D on the way out — the mockup would render into a hidden div and come up blank';
 
   return `PASS: the real cup runs inside the panel and is repainted on every tap (${r.trimBytes} bytes of wrap for Rope), No Thanks puts the bare join back so the comparison is live, and the cup is released on the way out`;
+};
+
+// ---- THE SAME THING AGAIN, THROUGH THE REAL BAKE, IN PIXELS. ----
+// Alyx, seeing it happen on the live site: "I went to switch gutters, and it
+// kept the old one there and put the new one on top of it. You have to make
+// sure that it's a replacement when you click on a different option, not just a
+// pile over."
+//
+// The scenario above proves the panel goes back to the right BASE. This one
+// refuses to take that as proof of the outcome: it bakes for real, comes back
+// the way a customer comes back, bakes again, and then LOOKS at the wrap. A
+// wide trim followed by a narrow one is the giveaway -- if the second was
+// painted over the first, the strip left of the narrow one is still the wide
+// one's colour instead of the photograph.
+//
+// It needs an upload stub that hands back what it was given (echoUploads),
+// because a stub that returns a fixed URL whatever you post cannot express
+// this bug at all -- which is why the suite did not catch it the first time.
+scenarios.aSecondChoiceIsNotPaintedOverTheFirst = async (page) => {
+  await pickCup(page, VACUUM);
+  await T(page, 300);
+  await dismissAlerts(page);
+
+  const r = await page.evaluate(async () => {
+    const load = (u) => new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = u; });
+    // Magenta stands for "the customer's photograph": anywhere it shows through
+    // is somewhere no trimming is painted.
+    const c = document.createElement('canvas'); c.width = 3710; c.height = 2817;
+    const x = c.getContext('2d'); x.fillStyle = '#FF00FF'; x.fillRect(0, 0, 3710, 2817);
+    resultUrl = c.toDataURL('image/jpeg', 0.95); finalImageUrl = null;
+    trimmingsSettledFor = null; trimmingsBakedTo = null; trimmingsBakedFrom = null;
+    // This scenario drives the bake directly rather than walking the whole
+    // journey, so it has to stand the cup up itself: Continue hands on to the
+    // mockup request, and that reads the SETTLED product key, which only the
+    // full journey would have written.
+    selectedTravelProductKey = 'travel-mug-40oz-vacuum';
+
+    // A deliberately wide first choice and a deliberately narrow second, both
+    // solid, so the region between them is unambiguous.
+    const strip = (w, h, fill) => { const s = document.createElement('canvas'); s.width = w; s.height = h; const g = s.getContext('2d'); g.fillStyle = fill; g.fillRect(0, 0, w, h); return s.toDataURL('image/png'); };
+    GUTTER_CATALOG.__wide = { asset: strip(200, 2817, '#1133FF') };   // blue, at the ceiling
+    GUTTER_CATALOG.__narrow = { asset: strip(40, 2817, '#FFCC00') };  // gold, well under it
+
+    // First pass, exactly as a customer drives it.
+    await openTrimmingsPanel();
+    await new Promise((s) => setTimeout(s, 1500));
+    await pickTrimming('__wide');
+    await new Promise((s) => setTimeout(s, 800));
+    await confirmTrimmingAndContinue();
+    await new Promise((s) => setTimeout(s, 2500));
+    const afterFirst = finalImageUrl;
+
+    // ...and back again, the way Change Trimming brings them back.
+    trimmingsSettledFor = null;
+    await openTrimmingsPanel();
+    await new Promise((s) => setTimeout(s, 1500));
+    await pickTrimming('__narrow');
+    await new Promise((s) => setTimeout(s, 800));
+    await confirmTrimmingAndContinue();
+    await new Promise((s) => setTimeout(s, 2500));
+    const afterSecond = finalImageUrl;
+
+    const im = await load(afterSecond);
+    const cv = document.createElement('canvas'); cv.width = im.naturalWidth; cv.height = im.naturalHeight;
+    const g = cv.getContext('2d'); g.drawImage(im, 0, 0);
+    const at = (px) => Array.from(g.getImageData(px < 0 ? im.naturalWidth + px : px, Math.round(im.naturalHeight / 2), 1, 1).data).slice(0, 3);
+    const narrowW = Math.round(im.naturalHeight * (40 / 2817));
+    const wideW = Math.min(Math.round(im.naturalHeight * (200 / 2817)), Math.round(im.naturalWidth * WRAP_GUTTER_MAX_WIDTH));
+
+    delete GUTTER_CATALOG.__wide; delete GUTTER_CATALOG.__narrow;
+    closeTrimmings3D();
+    document.body.classList.remove('step-locked');
+    return {
+      baked: afterFirst !== afterSecond && !!afterSecond,
+      narrowW, wideW,
+      insideNarrow: at(Math.round(narrowW / 2)),
+      betweenLeft: at(Math.round((narrowW + wideW) / 2)),
+      betweenRight: at(-Math.round((narrowW + wideW) / 2)),
+      deepInside: at(Math.round(im.naturalWidth / 2))
+    };
+  });
+
+  if (!r.baked) return 'FAIL: the second bake produced nothing, or the same file as the first — the round trip never happened, so this measures nothing';
+  const near = (v, want) => Math.abs(v[0] - want[0]) + Math.abs(v[1] - want[1]) + Math.abs(v[2] - want[2]) < 110;
+  const GOLD = [255, 204, 0], BLUE = [17, 51, 255], ART = [255, 0, 255];
+  if (!near(r.insideNarrow, GOLD)) return `FAIL: the second trimming is not on the seam — rgb(${r.insideNarrow}) at ${Math.round(r.narrowW / 2)}px in`;
+  if (near(r.betweenLeft, BLUE) || near(r.betweenRight, BLUE)) {
+    return `FAIL: the FIRST trimming is still there behind the second — left rgb(${r.betweenLeft}), right rgb(${r.betweenRight}) between ${r.narrowW}px and ${r.wideW}px. That is the pile-over: the new choice was painted on top of the old one instead of replacing it`;
+  }
+  if (!near(r.betweenLeft, ART) || !near(r.betweenRight, ART)) {
+    return `FAIL: neither the old trimming nor the photograph is between ${r.narrowW}px and ${r.wideW}px — left rgb(${r.betweenLeft}), right rgb(${r.betweenRight})`;
+  }
+  if (!near(r.deepInside, ART)) return `FAIL: the middle of the picture is rgb(${r.deepInside}), not the artwork — something painted over the whole wrap`;
+
+  return `PASS: baked a ${r.wideW}px trim, came back, baked a ${r.narrowW}px one, and the wrap that ships carries ONLY the second — the photograph is back at both ends where the first one used to be`;
 };
 
 // ---- CHANGING YOUR MIND REPLACES THE TRIMMING, IT DOES NOT ADD ONE. ----
@@ -724,49 +819,73 @@ scenarios.theTrimmingRunsTheWholeSeam = async (page) => {
   return `PASS: the wrap is cropped to the band's ${r.ratio} and the trimming reaches the very first and last row at both ends`;
 };
 
-// ---- THE BAND IS THE DESIGN'S OWN WIDTH. ----
-// The colour band behind a trimming used to be a fixed 6% while the designs
-// run from 3.2% (the film strip) to 9.8%. So the narrow ones sat on a visible
-// mat of cup colour half as wide again as the trimming itself, and the wide
-// ones had their backing cropped short. Following the design means a trimming
-// is exactly as wide as it looks -- floored, because covering the join and the
-// printer's drift is the band's first job and does not care how it looks.
-scenarios.theBandFollowsTheDesign = async (page) => {
+// ---- NO TRIM EXCEEDS THE CEILING, AND NONE OF THEM STOPS SHORT. ----
+// Alyx, after seeing a Tasselled Ribbon take a third of his cup: "my original
+// estimate was that none of them should actually exceed 10%. It's supposed to
+// be a trim, not a panel."
+//
+// The two ends MEET, so 10% where they meet is 5% each -- and the old rule let
+// the design's own proportions set the band, which put the lace at 19.1% per
+// end and 38% of the way round the cup. What this holds:
+//   * every installed trimming lands at or under the ceiling;
+//   * a design narrower than the ceiling is left exactly as it was -- the cap
+//     is a ceiling, not a target, and the film strip must not be widened to it;
+//   * the band still follows the design, so a narrow trim is not sitting on a
+//     mat of cup colour;
+//   * and it still runs the whole height at both ends, which is the entire
+//     reason a gutter works. Narrowing that stopped short would trade one
+//     visible fault for a worse one.
+scenarios.noTrimExceedsTheCeiling = async (page) => {
   await pickCup(page, VACUUM);
   const r = await page.evaluate(async () => {
     const load = (u) => new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = u; });
     const src = document.createElement('canvas'); src.width = 3710; src.height = 2817;
     const x = src.getContext('2d'); x.fillStyle = '#FF00FF'; x.fillRect(0, 0, 3710, 2817);
     const base = src.toDataURL('image/jpeg', 0.95);
+    const ceiling = Math.round(3710 * WRAP_GUTTER_MAX_WIDTH);
     const out = {};
-    for (const name of ['Film Reel', 'Astral']) {
+    for (const name of Object.keys(GUTTER_CATALOG)) {
       const art = await load(GUTTER_CATALOG[name].asset);
-      const want = Math.max(Math.round(2817 * (art.naturalWidth / art.naturalHeight)), Math.round(3710 * WRAP_GUTTER_MIN_WIDTH));
+      const natural = Math.round(2817 * (art.naturalWidth / art.naturalHeight));
+      const want = Math.max(Math.min(natural, ceiling), Math.round(3710 * WRAP_GUTTER_MIN_WIDTH));
       const im = await load(await paintWrapGutters(base, '#90C695', WRAP_GUTTER_WIDTH, name));
       const c = document.createElement('canvas'); c.width = im.naturalWidth; c.height = im.naturalHeight;
       const cx = c.getContext('2d'); cx.drawImage(im, 0, 0);
+      const isArt = (d, i) => d[i] > 200 && d[i + 1] < 90 && d[i + 2] > 200;
       // Walk in from the outer edge until the artwork shows through: that is
       // where the band stops.
-      const d = cx.getImageData(0, 40, im.naturalWidth, 1).data;
-      let edge = 0;
-      while (edge < im.naturalWidth && !(d[edge * 4] > 200 && d[edge * 4 + 1] < 90 && d[edge * 4 + 2] > 200)) edge++;
-      out[name] = { want, got: edge };
+      const row = (y) => { const d = cx.getImageData(0, y, im.naturalWidth, 1).data; let e = 0; while (e < im.naturalWidth && !isArt(d, e * 4)) e++; return e; };
+      // The very first and very last rows of the wrap, at both ends: the trim
+      // has to be there, not just in the middle.
+      const covered = (y) => {
+        const d = cx.getImageData(0, y, im.naturalWidth, 1).data;
+        const l = !isArt(d, 0), rr = !isArt(d, (im.naturalWidth - 1) * 4);
+        return l && rr;
+      };
+      out[name] = { natural, want, got: row(40), top: covered(0), bottom: covered(im.naturalHeight - 1) };
     }
-    return out;
+    return { ceiling, out };
   });
 
-  for (const [name, v] of Object.entries(r)) {
-    if (Math.abs(v.got - v.want) > 6) {
-      return `FAIL: ${name}'s band runs ${v.got}px where the design is ${v.want}px — a band wider than its design is a visible mat of cup colour behind the trimming, and one narrower leaves the design overhanging bare artwork`;
-    }
+  const over = [], wrong = [], gaps = [];
+  for (const [name, v] of Object.entries(r.out)) {
+    if (v.got > r.ceiling + 6) over.push(`${name} ${v.got}px`);
+    if (Math.abs(v.got - v.want) > 6) wrong.push(`${name} ${v.got}px where its design is ${v.want}px`);
+    if (!v.top || !v.bottom) gaps.push(`${name}${v.top ? '' : ' top'}${v.bottom ? '' : ' bottom'}`);
   }
-  return `PASS: each band matches its own design (${Object.entries(r).map(([n, v]) => n + ' ' + v.got + 'px').join(', ')})`;
+  if (over.length) return `FAIL: over the ${r.ceiling}px ceiling — ${over.join(', ')}. A trim that wide is a panel, and two of them meeting takes a third of the cup`;
+  if (wrong.length) return `FAIL: the band no longer follows its design — ${wrong.join('; ')}`;
+  if (gaps.length) return `FAIL: the trim does not reach the end of the seam on ${gaps.join(', ')} — narrowing must not shorten it`;
+
+  const film = r.out['Film Reel'], lace = r.out['Soft Country'];
+  if (film && film.got > film.natural + 6) return `FAIL: Film Reel was widened from ${film.natural}px to ${film.got}px — the cap is a ceiling, not a target`;
+  return `PASS: all ${Object.keys(r.out).length} trims at or under the ${r.ceiling}px ceiling (10% where they meet), each band still its own design's width, every one reaching both ends of the seam${lace ? `; Soft Country came down from ${lace.natural}px` : ''}${film ? `, Film Reel left alone at ${film.got}px` : ''}`;
 };
 
 (async () => {
   let fails = 0;
   for (const [name, fn] of Object.entries(scenarios)) {
-    const { browser, page, log } = await launch({ chromiumArgs: GL });
+    const { browser, page, log } = await launch({ chromiumArgs: GL, echoUploads: true });
     try {
       await openStudio(page); await uploadPhoto(page); await dismissAlerts(page);
       const result = await fn(page, log);
