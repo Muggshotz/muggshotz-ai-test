@@ -992,6 +992,97 @@ scenarios.thereIsAWayBackOutOfTrimmings = async (page) => {
   return 'PASS: Back closes the panel, unlocks the page, undoes the approval and puts the design decision back, reopens the gate and lets go of the cup';
 };
 
+// ---- THE OTHER ANSWER: DISSOLVE THE EDGE INSTEAD OF DECLARING IT. ----
+// Alyx: "would it be beneficial to put next to the No Thank You button a button
+// which says no thank you but FADE to product colour?"
+//
+// It is the real alternative philosophy. A trimming declares the edge; a fade
+// dissolves it. This cup only ever offered the first, because the gutter was
+// built to replace the guaranteed fade and the fade stopped being reachable
+// here at all -- and some pictures genuinely do not want a border.
+//
+// What this holds:
+//   * it really dissolves. The outer edge reaches the cup's colour, and the
+//     picture is untouched in the middle;
+//   * it is GRADUAL. A fade that jumps to cup colour is just a band with extra
+//     steps, and would be the very thing he objected to;
+//   * it fades the ENDS only. This wrap closes, so the ends are what meet; the
+//     top and bottom are the rim and base and the picture must run to them;
+//   * and it is a choice among the others -- picking it drops any trimming, and
+//     picking a trimming drops it.
+scenarios.theFadeIsOfferedBesideTheTrimmings = async (page) => {
+  await pickCup(page, VACUUM);
+  await T(page, 300);
+  await dismissAlerts(page);
+
+  const r = await page.evaluate(async () => {
+    const load = (u) => new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = u; });
+    const W = 3710, H = 2817;
+    const base = document.createElement('canvas'); base.width = W; base.height = H;
+    const bx = base.getContext('2d'); bx.fillStyle = '#FF00FF'; bx.fillRect(0, 0, W, H);
+    const CUP = '#1133FF';
+    const im = await load(await paintWrapGutters(base.toDataURL('image/jpeg', 0.95), CUP, WRAP_GUTTER_WIDTH, WRAP_EDGE_FADE));
+    const c = document.createElement('canvas'); c.width = im.naturalWidth; c.height = im.naturalHeight;
+    const g = c.getContext('2d', { willReadFrequently: true }); g.drawImage(im, 0, 0);
+    const at = (x, y) => { const i = (y * c.width + x) * 4; const d = g.getImageData(x, y, 1, 1).data; return [d[0], d[1], d[2]]; };
+    const midY = Math.round(c.height / 2);
+    const fw = Math.round(c.width * WRAP_FADE_WIDTH);
+    const ramp = [0, 0.25, 0.5, 0.75, 1].map((t) => at(Math.min(c.width - 1, Math.round(t * fw)), midY));
+
+    // The UI half, driven the way a customer drives it.
+    resultUrl = base.toDataURL('image/jpeg', 0.95); finalImageUrl = null;
+    trimmingsSettledFor = null; trimmingsBakedTo = null; trimmingsBakedFrom = null;
+    await openTrimmingsPanel();
+    await new Promise((s) => setTimeout(s, 2000));
+    const btn = document.getElementById('trimmingsFadeBtn');
+    const present = !!btn && getComputedStyle(btn).display !== 'none';
+    await pickTrimming('Rope');
+    await new Promise((s) => setTimeout(s, 700));
+    await pickTrimming(WRAP_EDGE_FADE);
+    await new Promise((s) => setTimeout(s, 900));
+    const onFade = {
+      lit: !!btn && btn.classList.contains('selected'),
+      tileStillLit: !!document.querySelector('#trimmingsGrid .btn-select.selected'),
+      paletteShown: getComputedStyle(document.getElementById('trimmingsColourRow')).display !== 'none'
+    };
+    await pickTrimming('Rope');
+    await new Promise((s) => setTimeout(s, 700));
+    const backOnRope = { fadeLit: !!btn && btn.classList.contains('selected'), tileLit: !!document.querySelector('#trimmingsGrid .btn-select.selected') };
+
+    closeTrimmings3D();
+    document.getElementById('trimmingsOverlay').style.display = 'none';
+    document.body.classList.remove('step-locked');
+    return {
+      present, onFade, backOnRope, fw, ramp,
+      outerTop: at(0, 2), outerBottom: at(0, c.height - 3),
+      middle: at(Math.round(c.width / 2), midY),
+      topEdgeMid: at(Math.round(c.width / 2), 2)
+    };
+  });
+
+  const near = (v, want, tol) => Math.abs(v[0] - want[0]) + Math.abs(v[1] - want[1]) + Math.abs(v[2] - want[2]) < tol;
+  const CUP = [17, 51, 255], ART = [255, 0, 255];
+  if (!r.present) return 'FAIL: there is no Fade to Cup button — the only answer on offer is a border, and some pictures do not want one';
+  if (!near(r.ramp[0], CUP, 90)) return `FAIL: the outer edge is rgb(${r.ramp[0]}), not the cup's colour — it does not actually reach the cup`;
+  if (!near(r.middle, ART, 90)) return `FAIL: the middle of the picture is rgb(${r.middle}) — the fade is eating the artwork, not just its ends`;
+  if (!near(r.topEdgeMid, ART, 90)) {
+    return `FAIL: the TOP edge mid-wrap is rgb(${r.topEdgeMid}) — the fade is working on the top and bottom too. This wrap closes: the ends are what meet, and the top and bottom are the rim and base, where the picture must run right up`;
+  }
+  // Gradual: each step toward the picture must be closer to it than the last.
+  const dist = (v) => Math.abs(v[0] - ART[0]) + Math.abs(v[1] - ART[1]) + Math.abs(v[2] - ART[2]);
+  for (let i = 1; i < r.ramp.length; i++) {
+    if (dist(r.ramp[i]) > dist(r.ramp[i - 1]) - 8) {
+      return `FAIL: the fade is not gradual across its ${r.fw}px — ${r.ramp.map((v) => `rgb(${v})`).join(' → ')}. A fade that jumps is a band with extra steps, which is the thing it exists to avoid`;
+    }
+  }
+  if (!r.onFade.lit) return 'FAIL: choosing the fade did not light its button — the customer cannot see what they have chosen';
+  if (r.onFade.tileStillLit) return 'FAIL: a trimming stayed selected alongside the fade — two contradictory answers held at once';
+  if (r.onFade.paletteShown) return 'FAIL: the colour palette is offered for a fade, which has no colour of its own to pick — it goes to the cup\'s, and that is the point of it';
+  if (r.backOnRope.fadeLit || !r.backOnRope.tileLit) return 'FAIL: picking a trimming again did not take the fade back off';
+
+  return `PASS: Fade to Cup sits beside No Thanks, dissolves both ENDS to the cup's colour gradually across ${r.fw}px (${r.ramp.map((v) => `rgb(${v})`).join(' → ')}), leaves the top, bottom and middle of the picture alone, and trades places cleanly with a trimming`;
+};
+
 // ---- COLOURING A TRIMMING, THREE WAYS. ----
 // Alyx: "rather than have set colors I would actually rather have that color
 // gradient thing... I would want to match the ribbon color to the maroon of his

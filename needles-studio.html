@@ -2,7 +2,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head><link rel="manifest" href="needles-manifest.json">
-<!-- BUILD-MARKER: A-WAY-BACK-OUT-v131 -->
+<!-- BUILD-MARKER: DECLARE-IT-OR-DISSOLVE-IT-v132 -->
 <!-- If you can see this comment on GitHub, this exact paste landed. -->
 <!-- If your live site's page source does NOT say -->
 <!-- "INSTANT-FIT-SCREEN-v47" right here, the upload/deploy did -->
@@ -1823,9 +1823,14 @@ Tell Needles <span style="color:#7ab8ff">what you have in mind</span>
 <!-- SIDE BY SIDE (Alyx). A full-width Continue with the pill stacked above it
      cost two rows of height, which was the difference between the twelve
      options and the way forward being on screen together or not. -->
+<!-- THREE WAYS OUT, ALL PREVIEWABLE (Alyx, Sep 2026). A trimming DECLARES the
+     edge; a fade DISSOLVES it. They are opposite answers to the same problem
+     and both are legitimate, so both are offered -- and the cup does the
+     explaining, which is the whole reason it is in this panel. -->
 <div class="bi-row" style="margin-top:.2rem">
-<button type="button" class="download-btn" id="trimmingsNoneBtn" style="flex:1;width:auto;margin:0" onclick="pickTrimming(null)">No Thanks</button>
-<button type="button" class="generate-btn" id="trimmingsContinueBtn" style="flex:1;width:auto;margin:0" onclick="confirmTrimmingAndContinue()">✅ Continue</button>
+<button type="button" class="download-btn" id="trimmingsNoneBtn" style="flex:1;width:auto;margin:0;padding:.8rem .3rem" onclick="pickTrimming(null)">No Thanks</button>
+<button type="button" class="download-btn" id="trimmingsFadeBtn" style="flex:1;width:auto;margin:0;padding:.8rem .3rem" onclick="pickTrimming(WRAP_EDGE_FADE)">🌫️ Fade to Cup</button>
+<button type="button" class="generate-btn" id="trimmingsContinueBtn" style="flex:1;width:auto;margin:0;padding:.8rem .3rem" onclick="confirmTrimmingAndContinue()">✅ Continue</button>
 </div>
 <button type="button" class="download-btn" id="trimmingsBackBtn" style="margin-top:.6rem" onclick="trimmingsBack()">← Back</button>
 </div>
@@ -5634,6 +5639,27 @@ const WRAP_GUTTER_MIN_WIDTH=0.012;
 // naturally under it; everything else is brought down to it.
 const WRAP_GUTTER_MAX_WIDTH=0.05;
 
+// DISSOLVE THE EDGE INSTEAD OF DECLARING IT (Alyx, Sep 2026: "would it be
+// beneficial to put next to the No Thank You button a button which says no
+// thank you but FADE to product colour?").
+//
+// It is the real alternative philosophy, and until now this cup only offered
+// one of them -- the gutter was built specifically to replace the guaranteed
+// fade, so the fade stopped being reachable here at all. But some pictures do
+// not want a border: a soft misty landscape with a rope trim down it looks like
+// somebody stapled a belt to a watercolour. For those, dissolving into the cup
+// is the better answer and the customer had no way to ask for it.
+//
+// HORIZONTAL ONLY. This is a wrap that closes, so the two ENDS are what meet;
+// the top and bottom are the cup's rim and base and the picture should run
+// right to them. A four-sided vignette here would fade edges that have nothing
+// on the other side of them.
+const WRAP_EDGE_FADE='__fade';
+// Per end, so the soft stripe where the two ends meet is twice this. Wider than
+// a trimming because a fade needs room to be gradual -- at a trimming's width
+// it reads as a smudge rather than a dissolve.
+const WRAP_FADE_WIDTH=0.075;
+
 // THE DECORATIVE GUTTERS (Alyx + Bud, Sep 2026). Twelve concepts, and what
 // makes them work is that every one is a FASTENING OR A HEM -- zip, stitching,
 // lace, rope, buttons, curtains, chain, a torn edge. Objects whose entire
@@ -5971,6 +5997,16 @@ async function paintWrapGutters(url,hex,width=WRAP_GUTTER_WIDTH,design=null,forP
   const dw=img.naturalWidth*sc, dh=img.naturalHeight*sc;
   ctx.drawImage(img,(w-dw)/2,(h-dh)/2,dw,dh);
   const pick=design===undefined?selectedGutter:design;
+  if(pick===WRAP_EDGE_FADE){
+    const fw=Math.round(w*WRAP_FADE_WIDTH);
+    const gl=ctx.createLinearGradient(0,0,fw,0);
+    gl.addColorStop(0,hex+'FF'); gl.addColorStop(1,hex+'00');
+    ctx.fillStyle=gl; ctx.fillRect(0,0,fw,h);
+    const gr=ctx.createLinearGradient(w,0,w-fw,0);
+    gr.addColorStop(0,hex+'FF'); gr.addColorStop(1,hex+'00');
+    ctx.fillStyle=gr; ctx.fillRect(w-fw,0,fw,h);
+    return c.toDataURL('image/jpeg',0.95);
+  }
   const entry=pick?GUTTER_CATALOG[pick]:null;
   if(entry&&entry.asset){
     try{
@@ -18008,6 +18044,8 @@ async function pickTrimming(key){
   // decision somebody made rather than one nobody got round to.
   const none=document.getElementById('trimmingsNoneBtn');
   if(none)none.classList.toggle('selected',selectedGutter===null);
+  const fadeBtn=document.getElementById('trimmingsFadeBtn');
+  if(fadeBtn)fadeBtn.classList.toggle('selected',selectedGutter===WRAP_EDGE_FADE);
   await updateTrimmingsPreview();
   // JUMP TO CONTINUE (Alyx). Picking a trimming is the moment the customer is
   // ready to move on, and on a phone the button was below the fold behind
@@ -18015,7 +18053,9 @@ async function pickTrimming(key){
   // A colourable trimming's next decision is its COLOUR, and that is decided by
   // looking at the picture -- so go to the picture, not to the way out. Anything
   // else is finished being chosen, so the way out is exactly right.
-  if(key&&GUTTER_CATALOG[key]&&GUTTER_CATALOG[key].colorable)scrollTrimmingsToPreview();
+  // A fade has no colour of its own to choose -- it goes to the CUP'S, which is
+  // the point of it -- so it is finished being chosen the moment it is picked.
+  if(key&&key!==WRAP_EDGE_FADE&&GUTTER_CATALOG[key]&&GUTTER_CATALOG[key].colorable)scrollTrimmingsToPreview();
   else if(key)scrollTrimmingsToContinue();
 }
 
@@ -18039,7 +18079,7 @@ function renderTrimmingsSwatches(){
   const row=document.getElementById('trimmingsColourRow');
   const host=document.getElementById('trimmingsSwatches');
   if(!row||!host)return;
-  const entry=selectedGutter?GUTTER_CATALOG[selectedGutter]:null;
+  const entry=(selectedGutter&&selectedGutter!==WRAP_EDGE_FADE)?GUTTER_CATALOG[selectedGutter]:null;
   // The strip, the note under it and the palette are one thing now: the colour
   // picker. They appear and disappear together.
   const strip=document.getElementById('trimmingsPreviewImg');
@@ -18134,7 +18174,7 @@ let trimmingsColourDebounce=0;
 // the preview reads the pixel under the finger and uses it.
 async function eyedropTrimmingColour(ev){
   const img=document.getElementById('trimmingsPreviewImg');
-  const entry=selectedGutter?GUTTER_CATALOG[selectedGutter]:null;
+  const entry=(selectedGutter&&selectedGutter!==WRAP_EDGE_FADE)?GUTTER_CATALOG[selectedGutter]:null;
   if(!img||!img.src||!entry||!entry.colorable)return;
   const r=img.getBoundingClientRect();
   // A box with no size means the panel is not laid out. Without this the scale
