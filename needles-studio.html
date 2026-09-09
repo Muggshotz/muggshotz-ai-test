@@ -2,7 +2,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head><link rel="manifest" href="needles-manifest.json">
-<!-- BUILD-MARKER: THE-CHOICES-GET-THEIR-OWN-ROW-v134 -->
+<!-- BUILD-MARKER: THE-FADE-GETS-ITS-SHARE-v135 -->
 <!-- If you can see this comment on GitHub, this exact paste landed. -->
 <!-- If your live site's page source does NOT say -->
 <!-- "INSTANT-FIT-SCREEN-v47" right here, the upload/deploy did -->
@@ -1757,6 +1757,10 @@ Tell Needles <span style="color:#7ab8ff">what you have in mind</span>
      two ways it can be kept. -->
 <style>
 #trimmingsLeftCol{position:sticky;top:0;z-index:3;background:#151b24;padding-bottom:.4rem}
+/* Brighter than No Thanks beside it, and unmistakably a live option rather
+   than a way of declining one. */
+.trim-fade-btn{border-color:#29a3ff!important;color:#8fd4ff!important;box-shadow:0 0 12px rgba(41,163,255,.35)}
+.trim-fade-btn.selected{color:#fff!important;box-shadow:0 0 16px rgba(41,163,255,.6)}
 @media (min-width:900px){
   #trimmingsCard{max-width:900px!important}
   #trimmingsBody{display:flex;gap:16px;align-items:flex-start}
@@ -1847,7 +1851,22 @@ Tell Needles <span style="color:#7ab8ff">what you have in mind</span>
      things that are not it. -->
 <div class="bi-row" style="margin-top:.2rem">
 <button type="button" class="download-btn" id="trimmingsNoneBtn" style="flex:1;width:auto;margin:0;padding:.8rem .3rem" onclick="pickTrimming(null)">No Thanks</button>
-<button type="button" class="download-btn" id="trimmingsFadeBtn" style="flex:1;width:auto;margin:0;padding:.8rem .3rem" onclick="pickTrimming(WRAP_EDGE_FADE)">🌫️ Fade to Cup</button>
+<!-- DRAWN, NOT TYPED (Alyx read the missing-glyph box as a checkbox and was
+     counting on it for visual weight; then, told what it really was: "your
+     cloud icon is probably even better than a check box... what do we have to
+     do to get your icon back?").
+     An emoji is a CHARACTER: it appears only if the device's font happens to
+     carry it, and his does not carry fog -- hence the tofu box. Any emoji is a
+     bet on somebody else's font. This is three mist bands drawn inline as SVG,
+     so it is part of the page rather than a character: no font can fail to have
+     it, it scales cleanly, and it takes the button's own colour, which an emoji
+     cannot.
+     And Alyx: "keep No Thanks exactly as it is -- if they really don't wanna
+     avail themselves of our hospitality they're going to have to search for
+     that one a little bit. And then you do the Fade to Cup button in a
+     noticeably brighter neon blue and have it blinking." So declining stays
+     modest and the fade gets to compete. -->
+<button type="button" class="download-btn trim-fade-btn" id="trimmingsFadeBtn" style="flex:1;width:auto;margin:0;padding:.8rem .3rem" onclick="pickTrimming(WRAP_EDGE_FADE)"><svg viewBox="0 0 24 16" width="17" height="12" aria-hidden="true" focusable="false" style="vertical-align:-1px;margin-right:5px;overflow:visible"><g fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M3 3.5h13"/><path d="M7 8h15"/><path d="M2 12.5h11"/></g></svg>Fade to Cup</button>
 </div>
 <button type="button" class="generate-btn" id="trimmingsContinueBtn" style="margin-top:.6rem" onclick="confirmTrimmingAndContinue()">✅ Continue</button>
 <button type="button" class="download-btn" id="trimmingsBackBtn" style="margin-top:.6rem" onclick="trimmingsBack()">← Back</button>
@@ -18079,7 +18098,14 @@ async function pickTrimming(key){
   const none=document.getElementById('trimmingsNoneBtn');
   if(none)none.classList.toggle('selected',selectedGutter===null);
   const fadeBtn=document.getElementById('trimmingsFadeBtn');
-  if(fadeBtn)fadeBtn.classList.toggle('selected',selectedGutter===WRAP_EDGE_FADE);
+  if(fadeBtn){
+    fadeBtn.classList.toggle('selected',selectedGutter===WRAP_EDGE_FADE);
+    // PULSES UNTIL SOMETHING HAS BEEN TRIED, THEN SETTLES. A blink that never
+    // stops is a blink people stop seeing, and it would go on competing with
+    // Continue after the decision it exists to advertise has been made. The
+    // frame offer on the mockup already behaves exactly this way.
+    fadeBtn.classList.toggle('cta-flash',selectedGutter===null);
+  }
   await updateTrimmingsPreview();
   // JUMP TO CONTINUE (Alyx). Picking a trimming is the moment the customer is
   // ready to move on, and on a phone the button was below the fold behind

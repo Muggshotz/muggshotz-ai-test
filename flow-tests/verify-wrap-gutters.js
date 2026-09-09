@@ -679,6 +679,16 @@ scenarios.theWholeChoiceIsOnScreenAtOnce = async (page) => {
       // row with Continue). Both choices on screen, and NOT on Continue's row:
       // sharing one says they are peers, and the styling then says otherwise.
       fadeOnScreen: onScreen(document.getElementById('trimmingsFadeBtn')),
+      // Alyx read the missing-glyph box on this button as a checkbox and was
+      // counting on it for visual weight. It was tofu -- Edge has no fog
+      // character -- so the label must not carry a glyph that can go missing.
+      fadeLabel: (document.getElementById('trimmingsFadeBtn') || {}).textContent || '',
+      // Drawn, not typed. An emoji only appears if the device's font carries
+      // it; an inline SVG is part of the page and cannot go missing.
+      fadeIconDrawn: !!document.querySelector('#trimmingsFadeBtn svg'),
+      // Pulses while nothing has been tried, and stops once something has: a
+      // blink that never stops is a blink people stop seeing.
+      fadePulsing: !!document.getElementById('trimmingsFadeBtn') && document.getElementById('trimmingsFadeBtn').classList.contains('cta-flash'),
       noneOnScreen: onScreen(document.getElementById('trimmingsNoneBtn')),
       sharesRowWithContinue: (() => {
         const f = document.getElementById('trimmingsFadeBtn'), c = document.getElementById('trimmingsContinueBtn');
@@ -704,11 +714,30 @@ scenarios.theWholeChoiceIsOnScreenAtOnce = async (page) => {
   if (!wide.fadeOnScreen || !wide.noneOnScreen) {
     return `FAIL: a way of declining is off screen (No Thanks ${wide.noneOnScreen}, Fade ${wide.fadeOnScreen}) — the choices have to be as findable as the way out`;
   }
+  // U+1F32B (fog) has no glyph in several common stacks and renders as tofu.
+  if (/\u{1F32B}/u.test(wide.fadeLabel)) {
+    return `FAIL: the fade button label is "${wide.fadeLabel.trim()}" — that fog character has no glyph in every font, and where it is missing the button shows an empty box, which reads as something that failed to load`;
+  }
+  if (!wide.fadeIconDrawn) {
+    return 'FAIL: the fade button has no drawn icon — if it is back to an emoji it is a bet on the device having that character, and the one it had before rendered as an empty box on the machine it was designed on';
+  }
+  if (!wide.fadePulsing) {
+    return 'FAIL: the fade button is not pulsing while nothing has been chosen — it is the option the customer does not know to look for, which is the whole reason it was given a pulse';
+  }
   if (wide.sharesRowWithContinue) {
     return 'FAIL: Fade to Cup is back on Continue\'s row — the layout calls them peers and the styling then shouts down the one that is a choice, which is how the fade became invisible on a screen it was already on';
   }
   if (!wide.preview || !wide.lastTile || !wide.continue) {
     return `FAIL: at 1280x900 not everything is on screen together — cup ${wide.preview}, last tile ${wide.lastTile}, Continue ${wide.continue}`;
+  }
+
+  const settled = await page.evaluate(async () => {
+    await pickTrimming('Rope');
+    await new Promise((s) => setTimeout(s, 700));
+    return !document.getElementById('trimmingsFadeBtn').classList.contains('cta-flash');
+  });
+  if (!settled) {
+    return 'FAIL: the fade button keeps pulsing after a trimming has been chosen — it goes on advertising a decision that has been made, and competes with Continue while it does';
   }
 
   // --- On a phone, where two columns will not fit. ---
