@@ -2,7 +2,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head><link rel="manifest" href="needles-manifest.json">
-<!-- BUILD-MARKER: CUPS-FILL-THEIR-BAND-v119 -->
+<!-- BUILD-MARKER: FILM-REEL-THREADED-v120 -->
 <!-- If you can see this comment on GitHub, this exact paste landed. -->
 <!-- If your live site's page source does NOT say -->
 <!-- "INSTANT-FIT-SCREEN-v47" right here, the upload/deploy did -->
@@ -5586,11 +5586,21 @@ const GUTTER_CATALOG={
   // as HALF domes on that edge, so the mirror completes each one. That is the
   // rule this feature kept teaching, applied first time.
   //
-  // FILM REEL is in, with a caveat recorded rather than smoothed over: its
-  // reel sits inset from the edge instead of cut in half by it, so the mirror
-  // gives two reels facing each other rather than one whole reel at the seam.
-  // Symmetrical and coherent, so it ships -- but the single-reel version is
-  // still the better design if it is ever redrawn.
+  // FILM REEL, resolved. The earlier note here said its reel sat inset from the
+  // edge so the mirror gave two reels facing each other, and that the single
+  // reel version would be better. Both were wrong, and Alyx said so: one reel
+  // with film feeding off it in BOTH directions is not a thing a reel does.
+  //
+  // The answer was neither. A film strip is already symmetrical about its own
+  // vertical centre line -- sprockets both sides, frames down the middle -- so
+  // cutting it there and mirroring rebuilds it exactly. The asset is now the
+  // right half of a strip with a reel at each END, both seen edge-on. Alyx's
+  // way of getting that view across to the artist, after several tries at
+  // describing it: "picture the reel stood up on its edge, ready to roll across
+  // the floor." Mirrored, it reads as one length of film running from a feed
+  // reel at the rim, down the seam, onto a take-up reel at the base.
+  //
+  // Measured at 99.9% symmetrical about the axis it was cut on.
   //
   // FERN WAS HELD BACK AND IS NOW IN: gutter-fern.png and gutter-film.png had no
   // full-height element down their left edge -- measured, not guessed. Every
