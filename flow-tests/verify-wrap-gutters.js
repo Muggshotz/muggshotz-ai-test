@@ -347,19 +347,25 @@ scenarios.theCustomerReachesThePanelAndGetsPastIt = async (page) => {
   await T(page, 2500);
   await dismissAlerts(page);
 
-  const clicked = await page.evaluate(() => {
-    const b = document.getElementById('orderMugBtn');
-    if (!b || b.style.display === 'none') return false;
-    b.scrollIntoView({ block: 'center' }); b.click(); return true;
-  });
-  if (!clicked) return 'FAIL: never reached Continue to Order';
-  await T(page, 3500);
+  // NOT via Continue to Order. That was the route this test used to take, and
+  // taking it is exactly why the real bug shipped: after generating, a travel
+  // cup reaches its mockup through revealFlowActive -> beginFinalMockupFetch()
+  // without anybody touching that button, so the customer went straight to
+  // Checkout and never saw the panel. The test walked a road the product does
+  // not use. It waits for whatever the studio does on its own now.
+  await T(page, 4000);
 
-  const open = await page.evaluate(() => {
+  const open = await page.waitForFunction(() => {
     const o = document.getElementById('trimmingsOverlay');
     return !!o && getComputedStyle(o).display !== 'none';
-  });
-  if (!open) return 'FAIL: the Trimmings panel never opened — the seam decoration is unreachable, so the whole section is';
+  }, null, { timeout: 25000 }).then(() => true).catch(() => false);
+  if (!open) {
+    const where = await page.evaluate(() => {
+      const vis = (id) => { const e = document.getElementById(id); return !!e && getComputedStyle(e).display !== 'none'; };
+      return { mockupLightbox: vis('mockupLightbox'), whatsNext: vis('whatsNextOverlay'), settled: typeof trimmingsSettledFor !== 'undefined' ? trimmingsSettledFor : 'n/a' };
+    }).catch(() => ({}));
+    return `FAIL: the Trimmings panel never opened — the customer went past it to ${JSON.stringify(where)}. The seam decoration is unreachable, so the whole section is.`;
+  }
 
   const tiles = await page.evaluate(() => document.querySelectorAll('#trimmingsGrid .btn-select').length);
   if (tiles < 2) return `FAIL: the grid drew ${tiles} tiles — None plus one installed design was expected`;
@@ -378,7 +384,7 @@ scenarios.theCustomerReachesThePanelAndGetsPastIt = async (page) => {
   });
   if (!st.closed) return 'FAIL: Continue left the panel open — the customer is stranded short of their mockup';
   if (st.locked) return 'FAIL: the page is still step-locked after the panel closed — nothing else can be touched';
-  return 'PASS: upload -> cup -> generate -> approve -> Continue opens Trimmings, the preview follows the choice, and Continue lets go into the mockup';
+  return 'PASS: upload -> cup -> generate -> approve, and the studio opens Trimmings by itself on the way to the mockup; the preview follows the choice and Continue lets go';
 };
 
 (async () => {

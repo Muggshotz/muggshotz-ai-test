@@ -12152,7 +12152,36 @@ function hideWaitOverlay(){
   if(o){o.style.display='none';document.body.classList.remove('step-locked');}
   if(t)t.textContent=WAIT_OVERLAY_DEFAULT;
 }
+// TRIMMINGS GATE (Sep 2026). This sits INSIDE the mockup fetch on purpose.
+//
+// The panel was first hooked onto continueToRealMockup(), which was the route
+// this cup does not take: after generating, a travel cup reaches its mockup
+// through revealFlowActive -> beginFinalMockupFetch() directly, so the customer
+// went straight past Trimmings to Checkout and never saw it. Fourteen different
+// places call this fetch, and hooking any one of them was always going to miss
+// the others.
+//
+// So the gate goes where they all converge. Anything that wants a mockup for a
+// cup whose wrap closes is diverted once into the panel, and the panel calls
+// back here when the customer is done. Same reasoning as the seam branch living
+// inside renderFadedArtwork: one arbiter beats fourteen hooks.
+//
+// Keyed to the artwork rather than a flag, so it re-asks for a SECOND design in
+// the same session but never nags about one already settled. Baking a trimming
+// replaces finalImageUrl, which is why confirmTrimmingAndContinue records the
+// url it ends up with.
+let trimmingsSettledFor=null;
+
 async function beginFinalMockupFetch(){
+  const finishedForTrim=finalImageUrl||resultUrl;
+  if(wrapWantsGutters() && finishedForTrim && trimmingsSettledFor!==finishedForTrim){
+    await openTrimmingsPanel();
+    return;
+  }
+  return reallyBeginFinalMockupFetch();
+}
+
+async function reallyBeginFinalMockupFetch(){
   frameOfferFromMockup=false;
 
   // A CERAMIC MUG DOES NOT WAIT (Sep 2026, Alyx). Everything below polls
@@ -16996,13 +17025,14 @@ function trimmingsAvailable(){
 async function openTrimmingsPanel(){
   const finished=finalImageUrl||resultUrl;
   if(!finished||!wrapWantsGutters()){
-    beginFinalMockupFetch();
+    // Straight through, and past the gate rather than back into it.
+    reallyBeginFinalMockupFetch();
     return;
   }
   trimmingsBaseUrl=finished;
   selectedGutter=null;
   const overlay=document.getElementById('trimmingsOverlay');
-  if(!overlay){ beginFinalMockupFetch(); return; }
+  if(!overlay){ reallyBeginFinalMockupFetch(); return; }
   document.body.classList.add('step-locked');
   overlay.style.display='flex';
   const card=document.getElementById('trimmingsCard');
@@ -17097,8 +17127,12 @@ async function confirmTrimmingAndContinue(){
   const overlay=document.getElementById('trimmingsOverlay');
   if(overlay)overlay.style.display='none';
   document.body.classList.remove('step-locked');
-  preMockupBack=()=>{openTrimmingsPanel();};
-  beginFinalMockupFetch();
+  // Record the artwork we are moving on WITH -- after any bake, since baking a
+  // trimming replaces finalImageUrl. Without this the gate would see a new url
+  // and re-open the panel on top of the mockup it just let through.
+  trimmingsSettledFor=finalImageUrl||resultUrl;
+  preMockupBack=()=>{trimmingsSettledFor=null;openTrimmingsPanel();};
+  reallyBeginFinalMockupFetch();
 }
 // ---------------------------------------------------------------------------
 
