@@ -5497,6 +5497,25 @@ const WRAP_GUTTER_WIDTH=0.06;     // per end, fraction of wrap width (~223px of 
 //
 // Left end of the wrap gets the asset as drawn; right end gets it mirrored.
 const GUTTER_CATALOG={
+  "Blue Satin Ribbon":  { asset:"gutter-ribbon-blue.png",     thumb:"gutter-thumb-ribbon-blue.png" },
+  "Tasselled Ribbon":   { asset:"gutter-tassled-ribbon.png",  thumb:"gutter-thumb-tassled-ribbon.png" },
+  "Roses & Pearls":     { asset:"gutter-rose-pearl.png",      thumb:"gutter-thumb-rose-pearl.png" },
+  "Vintage Lace":       { asset:"gutter-lace.png",            thumb:"gutter-thumb-lace.png" },
+  "Doily":              { asset:"gutter-doily.png",           thumb:"gutter-thumb-doily.png" },
+  "Ivy Vine":           { asset:"gutter-ivy.png",             thumb:"gutter-thumb-ivy.png" },
+  "Soft Country":       { asset:"gutter-soft-country.png",    thumb:"gutter-thumb-soft-country.png" },
+  "Rope":               { asset:"gutter-rope.png",            thumb:"gutter-thumb-rope.png" },
+  "Laced Leather":      { asset:"gutter-leather-laces.png",   thumb:"gutter-thumb-leather-laces.png" },
+  "Astral":             { asset:"gutter-astral.png",          thumb:"gutter-thumb-astral.png" },
+  // HELD BACK, not forgotten: gutter-fern.png and gutter-film.png have no
+  // full-height element down their left edge -- measured, not guessed. Every
+  // other design has one, and that spine is the part which actually covers
+  // the join; without it the seam shows through at whatever heights the
+  // artwork happens to be open, which is worse than fitting no trimming at
+  // all. Both go in as soon as they are redrawn with a spine. The film reel
+  // wants drawing as a HALF reel cut by the left edge, so the mirror makes it
+  // whole at the seam rather than giving two reels side by side.
+  //
   // { asset } is ONE gutter strip. Motif centre hard against its LEFT edge --
   // that edge lands on the join and is mirrored against itself. Aspect ratio is
   // the artist's control over how far the design reaches onto the picture: at
