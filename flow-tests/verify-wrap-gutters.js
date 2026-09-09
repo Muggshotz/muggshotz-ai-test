@@ -935,6 +935,63 @@ scenarios.everyTrimmingReachesBothEndsOfTheSeam = async (page) => {
   return `PASS: all ${Object.keys(r).length} trimmings carry design at the top AND bottom tenth of the seam inside their own span (thinnest is ${worst.n} at ${worst.v})`;
 };
 
+// ---- THERE IS A WAY BACK OUT OF IT. ----
+// Alyx, on the live panel: "I noticed that there's no back button on this
+// panel." Every other panel in the studio has one and this had none, so once
+// the picture was approved the customer was committed to going forward, with No
+// Thanks the only way past -- and declining a trimming is not the same thing as
+// changing your mind about the picture.
+//
+// Back is the design decision it came from, the same place Edge Fade's Back
+// goes. What this holds is the whole of that, because a Back that only closes
+// the panel is worse than none: it strands somebody on a dead screen.
+scenarios.thereIsAWayBackOutOfTrimmings = async (page) => {
+  await pickCup(page, VACUUM);
+  await T(page, 300);
+  await dismissAlerts(page);
+
+  const r = await page.evaluate(async () => {
+    const c = document.createElement('canvas'); c.width = 1024; c.height = 776;
+    const x = c.getContext('2d'); x.fillStyle = '#7a2b2b'; x.fillRect(0, 0, 1024, 776);
+    const art = c.toDataURL('image/png');
+    resultUrl = art; finalImageUrl = null;
+    trimmingsSettledFor = null; trimmingsBakedTo = null; trimmingsBakedFrom = null;
+    // The state Yes leaves behind, which is what Back has to undo.
+    currentDesignId = 'design-under-test';
+    approveUndoSnapshot = { designId: 'design-before-yes', placements: { left: null, front: null, right: null } };
+
+    await openTrimmingsPanel();
+    await new Promise((s) => setTimeout(s, 2000));
+    const btn = document.getElementById('trimmingsBackBtn');
+    const open = { hasBack: !!btn, visible: !!btn && getComputedStyle(btn).display !== 'none', mounted: MUG3D.mounted() };
+
+    if (btn) btn.click();
+    await new Promise((s) => setTimeout(s, 1200));
+    const after = {
+      panelClosed: getComputedStyle(document.getElementById('trimmingsOverlay')).display === 'none',
+      unlocked: !document.body.classList.contains('step-locked'),
+      approveShown: getComputedStyle(document.getElementById('approveRow')).display !== 'none',
+      designRestored: currentDesignId,
+      gateReopened: trimmingsSettledFor === null,
+      cupReleased: !MUG3D.mounted()
+    };
+    return { open, after };
+  });
+
+  if (!r.open.hasBack) return 'FAIL: the Trimmings panel has no Back button — once the picture is approved the customer can only go forward';
+  if (!r.open.visible) return 'FAIL: the Back button is there but not shown';
+  if (!r.after.panelClosed) return 'FAIL: Back left the panel open';
+  if (!r.after.unlocked) return 'FAIL: Back left the page step-locked — the screen behind it cannot be touched, which is a worse dead end than no Back at all';
+  if (!r.after.approveShown) return 'FAIL: Back closed the panel without putting the design decision back — the customer lands on a screen with nothing to do';
+  if (r.after.designRestored !== 'design-before-yes') {
+    return `FAIL: Back did not undo the approval (design is ${r.after.designRestored}) — the picture stays committed while the question is asked again`;
+  }
+  if (!r.after.gateReopened) return 'FAIL: Back left the trimmings gate settled, so coming forward again would sail straight past the panel';
+  if (!r.after.cupReleased) return 'FAIL: Back kept hold of MUG3D — whatever opens next renders into a hidden div';
+
+  return 'PASS: Back closes the panel, unlocks the page, undoes the approval and puts the design decision back, reopens the gate and lets go of the cup';
+};
+
 // ---- COLOURING A TRIMMING, THREE WAYS. ----
 // Alyx: "rather than have set colors I would actually rather have that color
 // gradient thing... I would want to match the ribbon color to the maroon of his

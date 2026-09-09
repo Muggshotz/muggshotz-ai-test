@@ -2,7 +2,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head><link rel="manifest" href="needles-manifest.json">
-<!-- BUILD-MARKER: THE-BAND-STOPS-FIGHTING-THE-BODY-v130 -->
+<!-- BUILD-MARKER: A-WAY-BACK-OUT-v131 -->
 <!-- If you can see this comment on GitHub, this exact paste landed. -->
 <!-- If your live site's page source does NOT say -->
 <!-- "INSTANT-FIT-SCREEN-v47" right here, the upload/deploy did -->
@@ -1827,6 +1827,7 @@ Tell Needles <span style="color:#7ab8ff">what you have in mind</span>
 <button type="button" class="download-btn" id="trimmingsNoneBtn" style="flex:1;width:auto;margin:0" onclick="pickTrimming(null)">No Thanks</button>
 <button type="button" class="generate-btn" id="trimmingsContinueBtn" style="flex:1;width:auto;margin:0" onclick="confirmTrimmingAndContinue()">✅ Continue</button>
 </div>
+<button type="button" class="download-btn" id="trimmingsBackBtn" style="margin-top:.6rem" onclick="trimmingsBack()">← Back</button>
 </div>
 </div>
 <div class="note" id="trimmingsSavingNote" style="display:none;margin-top:.75rem;text-align:center"><span class="spinner"></span>Saving your design...</div>
@@ -13045,21 +13046,46 @@ function ideaStepBack(){
 // picture back the way it was before Yes and ask again. Only offered on the
 // single-image route, where the fade sits directly between approve and the
 // mockup -- the mug's panel route has its own way back.
-function frameFadeBack(){
+// Put the picture back the way it was before Yes and ask the question again.
+// Shared, because two screens now sit between approve and the mockup -- Edge
+// Fade and Trimmings -- and a customer backing out of either is going to the
+// same place. Written once so they cannot drift apart.
+function restoreApproveDecision(){
   const snap=approveUndoSnapshot;
-  if(!snap){ closeFrameFadeOverlay(); return; }
+  if(!snap)return false;
   approveUndoSnapshot=null;
   placements.left=snap.placements.left;
   placements.front=snap.placements.front;
   placements.right=snap.placements.right;
   currentDesignId=snap.designId;
-  closeFrameFadeOverlay();
   const approveRow=document.getElementById('approveRow');
   if(approveRow)approveRow.style.display='';
   const dl=document.getElementById('downloadDesignBtn');
   if(dl)dl.style.display='';
   try{ renderRecentDesigns(); renderPositionHolder(); updatePlacementSummary(); saveMugState(); }catch(e){}
   if(approveRow)scrollToStableTop(approveRow,Math.max(0,(window.innerHeight-approveRow.offsetHeight)/2),20);
+  return true;
+}
+
+function frameFadeBack(){
+  if(!approveUndoSnapshot){ closeFrameFadeOverlay(); return; }
+  closeFrameFadeOverlay();
+  restoreApproveDecision();
+}
+
+// BACK OUT OF TRIMMINGS (Alyx, Sep 2026: "I noticed that there's no back button
+// on this panel"). Every other panel in the studio has one and this had none --
+// once the picture was approved the customer was committed to going forward,
+// with No Thanks the only way past. That is not the same thing as a way back.
+function trimmingsBack(){
+  const overlay=document.getElementById('trimmingsOverlay');
+  if(overlay)overlay.style.display='none';
+  closeTrimmings3D();
+  document.body.classList.remove('step-locked');
+  // The gate must forget it settled anything, or coming forward again would
+  // sail straight past the panel.
+  trimmingsSettledFor=null;
+  restoreApproveDecision();
 }
 
 // Shared by Continue and Back so the overlay always leaves the same way.
