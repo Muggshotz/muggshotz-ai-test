@@ -523,10 +523,128 @@ scenarios.theFadeSliderMeansWhatItSays = async (page) => {
   return `PASS: the slider tracks coverage 1:1 across ${rows.length} points (worst error ${worst}%), 0 untouched, 100 completely gone, corners first`;
 };
 
+// ---- THE FADE IS TRIED ON, NOT IMAGINED. ----
+// Alyx: "when we have these attachable items that can be attached even after
+// mockup, we should present them with the mockup and afford them the
+// opportunity to see the enhancements applied in real time. That would be
+// dramatically more effective than having them imagine what it would look like
+// before deciding."
+//
+// Edge Fade is the strongest case of the three, because it is a SLIDER: the old
+// screen asked somebody to drag it against a flat square and picture how that
+// melts into glaze. What this pins:
+//   * the real cup is running on the fade screen, in the flat picture's own
+//     slot -- and the flat picture only stands down once the cup is actually up,
+//     so a machine with no WebGL keeps the preview it always had;
+//   * moving the slider repaints the cup, and further along the slider really
+//     is more of the picture gone -- the cup is not showing a stale wrap;
+//   * Back gives the picture back and RELEASES MUG3D, which is a singleton:
+//     hold it here and whatever opens next renders into a hidden div.
+scenarios.theFadeIsTriedOnTheCup = async (page) => {
+  await pickProduct(page, 'water bottle');
+  await page.evaluate(() => pickPreGenTravelVariant('travel-mug-40oz-vacuum'));
+  await T(page, 900);
+  await dismissAlerts(page);
+
+  const r = await page.evaluate(async () => {
+    const load = (u) => new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = u; });
+    // A picture with a strong, uniform colour right out to its corners, so
+    // "how much has been eaten by the fade" is a straight pixel count.
+    const c = document.createElement('canvas'); c.width = 1400; c.height = 1063;
+    const x = c.getContext('2d'); x.fillStyle = '#1188FF'; x.fillRect(0, 0, 1400, 1063);
+    const art = c.toDataURL('image/jpeg', 0.95);
+
+    selectedTravelProductKey = 'travel-mug-40oz-vacuum';
+    revealFlowThreePanel = false;
+    revealOriginalArtworkUrls = [art];
+    wrapDisplayOverrideUrl = null;
+    revealFadeSliderTouched = false;
+    revealFadePreviewFor = null;
+
+    const seen = [];
+    const real = MUG3D.setArtwork;
+    MUG3D.setArtwork = function (a) { seen.push(a); return real.call(MUG3D, a); };
+
+    chooseFadeEdges();
+    await new Promise((s) => setTimeout(s, 3000));
+
+    const stage = document.getElementById('revealFade3DStage');
+    const img = document.getElementById('revealArtworkImg');
+    const canvas = stage ? stage.querySelector('canvas') : null;
+    const up = {
+      stageShown: !!stage && getComputedStyle(stage).display !== 'none',
+      flatHidden: !!img && img.style.display === 'none',
+      mounted: MUG3D.mounted(),
+      canvas: !!canvas && canvas.width > 4 && canvas.height > 4
+    };
+
+    // How much of the picture is left, measured on the very wrap the cup was
+    // handed -- not on some other render made for the test.
+    const survives = async (u) => {
+      const im = await load(u);
+      const cv = document.createElement('canvas'); cv.width = im.naturalWidth; cv.height = im.naturalHeight;
+      const g = cv.getContext('2d'); g.drawImage(im, 0, 0);
+      const d = g.getImageData(0, 0, cv.width, cv.height).data;
+      let keep = 0, total = 0;
+      for (let i = 0; i < d.length; i += 4 * 97) { total++; if (d[i] < 120 && d[i + 2] > 180) keep++; }
+      return Math.round(100 * keep / total);
+    };
+
+    const setTo = async (v) => {
+      seen.length = 0;
+      document.getElementById('revealFadeAmountSlider').value = String(v);
+      await updateRevealFadePreview();
+      await new Promise((s) => setTimeout(s, 900));
+      return seen.length ? seen[seen.length - 1] : null;
+    };
+
+    const at0 = await setTo(0);
+    const at40 = await setTo(40);
+    const at90 = await setTo(90);
+
+    const out = {
+      up,
+      repaints: { zero: !!at0, forty: !!at40, ninety: !!at90 },
+      left: { zero: at0 ? await survives(at0) : -1, forty: at40 ? await survives(at40) : -1, ninety: at90 ? await survives(at90) : -1 }
+    };
+
+    revealFadeBack();
+    await new Promise((s) => setTimeout(s, 600));
+    out.after = {
+      stageShown: !!stage && getComputedStyle(stage).display !== 'none',
+      flatBack: !!img && img.style.display !== 'none',
+      released: !MUG3D.mounted()
+    };
+    MUG3D.setArtwork = real;
+    return out;
+  });
+
+  if (!r.up.stageShown) return 'FAIL: the cup is not on the fade screen — the customer is still imagining it';
+  if (!r.up.mounted || !r.up.canvas) return `FAIL: the stage is there but nothing is rendering in it (mounted ${r.up.mounted}, canvas ${r.up.canvas})`;
+  if (!r.up.flatHidden) return 'FAIL: the flat picture is still in the card alongside the cup — two previews of the same thing, and the card grew to hold both';
+  if (!r.repaints.zero || !r.repaints.forty || !r.repaints.ninety) {
+    return `FAIL: moving the slider did not repaint the cup (${JSON.stringify(r.repaints)}) — it shows a stale wrap while the number underneath changes`;
+  }
+  if (r.left.zero < 90) return `FAIL: at 0 only ${r.left.zero}% of the picture survives — untouched must mean untouched`;
+  if (!(r.left.forty < r.left.zero - 10 && r.left.ninety < r.left.forty - 10)) {
+    return `FAIL: further along the slider is not more fade — ${r.left.zero}% left at 0, ${r.left.forty}% at 40, ${r.left.ninety}% at 90`;
+  }
+  if (r.after.stageShown) return 'FAIL: Back left the cup on screen';
+  if (!r.after.flatBack) return 'FAIL: Back did not give the flat picture back — the card is left with an empty slot';
+  if (!r.after.released) return 'FAIL: the fade screen kept hold of MUG3D — whatever opens next would render into a hidden div and come up blank';
+
+  return `PASS: the real cup runs on the fade slider in the picture's own slot, repaints on every move (${r.left.zero}% of the picture left at 0, ${r.left.forty}% at 40, ${r.left.ninety}% at 90), and Back gives the picture back and releases the cup`;
+};
+
+// The fade slider now spins the real cup, which needs a software GL in this
+// headless sandbox. Only the scenario that opens it pays for one.
+const GL = ['--use-gl=swiftshader', '--enable-unsafe-swiftshader'];
+const OPTS = { theFadeIsTriedOnTheCup: { chromiumArgs: GL } };
+
 (async () => {
   let fails = 0;
   for (const [name, fn] of Object.entries(scenarios)) {
-    const { browser, page, log } = await launch();
+    const { browser, page, log } = await launch(OPTS[name] || {});
     try {
       await openStudio(page); await uploadPhoto(page); await dismissAlerts(page);
       const result = await fn(page, log);

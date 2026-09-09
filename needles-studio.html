@@ -2,7 +2,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head><link rel="manifest" href="needles-manifest.json">
-<!-- BUILD-MARKER: A-TRIM-NOT-A-PANEL-v124 -->
+<!-- BUILD-MARKER: TRY-THE-FADE-ON-THE-CUP-v125 -->
 <!-- If you can see this comment on GitHub, this exact paste landed. -->
 <!-- If your live site's page source does NOT say -->
 <!-- "INSTANT-FIT-SCREEN-v47" right here, the upload/deploy did -->
@@ -1691,6 +1691,21 @@ Tell Needles <span style="color:#7ab8ff">what you have in mind</span>
 <!-- Mug panels: the ONE picture, in the true shape of its print area, with
      the fade drawn on it exactly as the Fit Your Picture box draws it. The
      same picture on two or three panels is shown once (Alyx, Sep 2026). -->
+<!-- THE FADE, TRIED ON (Alyx, Sep 2026): "this should probably be our method of
+     operation for all of our products. When we have these attachable items that
+     can be attached even after mockup, we should present them with the mockup
+     and afford them the opportunity to see the enhancements applied in real
+     time. That would be dramatically more effective than having them imagine
+     what it would look like before deciding."
+     Edge Fade is the strongest case of the three, and it is not close, because
+     it is a SLIDER: dragging it against a flat square and imagining how that
+     melts into glaze is the exact act he is describing. Here the cup turns
+     while the slider moves and the edges dissolve into the real body colour.
+     It stands in the picture's own slot rather than beside it, so the card
+     does not grow -- and the flat picture comes back the moment the slider
+     panel closes. -->
+<div id="revealFade3DStage" class="mug3d-stage" style="display:none;width:100%;height:auto;aspect-ratio:1/1;max-height:38vh;margin:.9rem auto .3rem"></div>
+<div class="note" id="revealFade3DHint" style="display:none;margin:0 0 .5rem;font-size:11px">Drag it to turn it &middot; click it to stop or start the spin</div>
 <div id="revealFitHost" style="display:none;margin:.9rem 0"></div>
 <div class="note" id="revealFitNote" style="display:none;margin-top:0;margin-bottom:.6rem;color:#7ab8ff;font-size:11px"></div>
 <div class="note" id="revealEdgeQuestionNote" style="margin-top:0;margin-bottom:.9rem">How should the edges of your picture look on the mug?</div>
@@ -11636,6 +11651,10 @@ function chooseRevealPath(choice){
 // since it travels as its own layer above the fade.
 let revealFitState=null;
 function showEdgeQuestion(){
+  // Re-entering the screen starts from the flat picture: the slider panel is
+  // closed at this point, and a cup left over from a previous visit would be
+  // sitting where the picture belongs.
+  unmountRevealFade3D();
   const overlay=document.getElementById('revealOverlay');
   if(!overlay)return;
   document.body.classList.add('step-locked');
@@ -12027,6 +12046,119 @@ function paintOvalFadeOnRect(ctx,x,y,w,h,hexColor,fadeAmountPct){
   ctx.restore();
 }
 
+// THE CUP ON THE FADE SLIDER.
+//
+// SMALL ENOUGH TO KEEP UP WITH A DRAG, for the same reason the trimmings are:
+// the slider fires continuously, and re-fading a full-size file on every event
+// makes the drag feel like it is fighting back. The cup's texture is 2048px and
+// the flat picture is shown at a few hundred, so both previews run off a scaled
+// copy -- and bakeFadeIntoDesigns still renders from revealOriginalArtworkUrls,
+// untouched, so what ships is never the scaled one.
+const REVEAL_FADE_PREVIEW_WIDTH=1400;
+let revealFadePreviewUrls=null;
+let revealFadePreviewFor=null;
+let revealFade3DMounted=false;
+
+async function scaledForPreview(url,maxW){
+  try{
+    const img=await loadImageFromUrl(url);
+    if(img.naturalWidth<=maxW)return url;
+    const w=maxW,h=Math.round(img.naturalHeight*(maxW/img.naturalWidth));
+    const c=document.createElement('canvas');
+    c.width=w; c.height=h;
+    c.getContext('2d').drawImage(img,0,0,w,h);
+    return c.toDataURL('image/jpeg',0.92);
+  }catch(err){ return url; }
+}
+
+function revealFadeSources(){
+  return revealFlowThreePanel
+    ? revealOriginalArtworkUrls.slice(0,3)
+    : [wrapDisplayOverrideUrl||revealOriginalArtworkUrls[0]];
+}
+
+async function ensureRevealFadePreviewUrls(){
+  const key=revealFadeSources().join('|');
+  if(revealFadePreviewFor===key && revealFadePreviewUrls)return revealFadePreviewUrls;
+  revealFadePreviewUrls=await Promise.all(revealFadeSources().map(u=>u?scaledForPreview(u,REVEAL_FADE_PREVIEW_WIDTH):Promise.resolve(null)));
+  revealFadePreviewFor=key;
+  return revealFadePreviewUrls;
+}
+
+function revealFadePanelOpen(){
+  const panel=document.getElementById('revealFadeSliderPanel');
+  return !!panel && getComputedStyle(panel).display!=='none';
+}
+
+// Mounted from updateRevealFadePreview rather than from the buttons, because
+// there are two ways into this slider -- choosing Fade Edges, and a frame that
+// comes with a fade and skips the question -- and both of them land here. One
+// hook covers both, and any third way in gets it for free.
+async function mountRevealFade3D(){
+  const stage=document.getElementById('revealFade3DStage');
+  const hint=document.getElementById('revealFade3DHint');
+  const img=document.getElementById('revealArtworkImg');
+  if(!stage||revealFade3DMounted)return revealFade3DMounted;
+  if(!has3DBody()||!revealOriginalArtworkUrls.length)return false;
+  try{
+    try{ MUG3D.close(); }catch(e){}
+    stage.style.display='';
+    if(hint)hint.style.display='';
+    const art=await ensureRevealFadePreviewUrls();
+    await MUG3D.open(stage,Object.assign(mug3DBodyOpts(),
+      revealFlowThreePanel?{panelUrls:art,panoramaUrl:null}:{panoramaUrl:art[0],panelUrls:[]}));
+    MUG3D.resize();
+    // Only now does the flat picture stand down -- if the cup had failed, it is
+    // still the only preview there is.
+    if(img)img.style.display='none';
+    revealFade3DMounted=true;
+    return true;
+  }catch(err){
+    console.error('The cup could not start on the fade slider; the flat picture stands in:',err);
+    stage.style.display='none';
+    if(hint)hint.style.display='none';
+    return false;
+  }
+}
+
+function unmountRevealFade3D(){
+  const stage=document.getElementById('revealFade3DStage');
+  const hint=document.getElementById('revealFade3DHint');
+  const img=document.getElementById('revealArtworkImg');
+  if(stage)stage.style.display='none';
+  if(hint)hint.style.display='none';
+  if(revealFade3DMounted&&img)img.style.display='';
+  revealFade3DMounted=false;
+  // MUG3D is a singleton; anything that opens it next must be free to build.
+  try{ if(MUG3D.mounted())MUG3D.close(); }catch(e){}
+}
+
+// Coalesced rather than timed: a render in flight is never interrupted, and the
+// moment it finishes it re-runs if the slider moved while it was working. So
+// the last frame drawn is always the value under the customer's finger, without
+// a delay anybody has to sit through and without a timer for a test to guess at.
+let revealFadeRenderBusy=false, revealFadeRenderAgain=false;
+async function renderRevealFadeSurfaces(){
+  if(revealFadeRenderBusy){ revealFadeRenderAgain=true; return; }
+  revealFadeRenderBusy=true;
+  try{
+    do{
+      revealFadeRenderAgain=false;
+      const hex=getSelectedProductColorHex();
+      const pct=revealFadeAmountPct;
+      const art=await ensureRevealFadePreviewUrls();
+      const faded=await Promise.all(art.map(u=>u?renderFadedArtwork(u,hex,pct):Promise.resolve(null)));
+      if(!revealFlowThreePanel){
+        const img=document.getElementById('revealArtworkImg');
+        if(img&&faded[0])img.src=faded[0];
+      }
+      try{ if(MUG3D.mounted()&&revealFade3DMounted)await MUG3D.setArtwork(revealFlowThreePanel?faded:faded[0]); }catch(e){}
+    }while(revealFadeRenderAgain);
+  }catch(err){
+    console.error('Could not preview that fade:',err);
+  }finally{ revealFadeRenderBusy=false; }
+}
+
 async function updateRevealFadePreview(){
   const slider=document.getElementById('revealFadeAmountSlider');
   const readout=document.getElementById('revealFadeAmountVal');
@@ -12036,17 +12168,14 @@ async function updateRevealFadePreview(){
   if(revealFlowThreePanel){
     // Same fade mask the print gets, drawn over the fitted picture.
     if(revealFitState){revealFitState.fadeOverride=revealFadeAmountPct;revealFitState.apply();}
-    return;
   }
   if(!revealOriginalArtworkUrls.length)return;
-  const hex=getSelectedProductColorHex();
-  if(false){
-  } else {
-    const img=document.getElementById('revealArtworkImg');
-    if(!img)return;
-    const faded=await renderFadedArtwork(wrapDisplayOverrideUrl||revealOriginalArtworkUrls[0],hex,revealFadeAmountPct);
-    img.src=faded;
-  }
+  if(revealFadePanelOpen())await mountRevealFade3D();
+  // The three-panel path keeps its fitted-picture preview above; this adds the
+  // cup to it rather than replacing it, and on every other product it IS the
+  // preview.
+  if(revealFlowThreePanel&&!revealFade3DMounted)return;
+  await renderRevealFadeSurfaces();
 }
 
 // Slices a stitched three-panel-wide panorama back into its three equal
@@ -12144,6 +12273,9 @@ async function bakeFadeIntoDesigns(fadeAmountPct){
 }
 
 async function confirmFadeAndContinue(){
+  // Before anything else: whatever opens next -- the mockup, Trimmings, the
+  // panel placer -- has to find MUG3D free to build in its own stage.
+  unmountRevealFade3D();
   if(revealFlowThreePanel){
     // The fade is a placement setting the server draws on the print --
     // nothing is baked or uploaded here (a captioned picture aside).
@@ -14033,9 +14165,13 @@ const MUG3D = (function(){
     // dirty, so a new wrap costs one draw and one upload to the GPU -- no
     // rebuild, no reload, and the cup does not so much as pause its spin. This
     // was always possible; it just had no way in from outside.
-    setArtwork(url){
+    // Takes one picture or a list of panels -- the same two shapes open()
+    // takes, joined the same way, so a three-panel mug can be repainted from
+    // its three faded panels exactly as it was first built from its three.
+    setArtwork(art){
       if(!mounted)return Promise.resolve(false);
-      return joinPanels(url?[url]:[]).then(img=>{ paint(img,0); return true; });
+      const list=Array.isArray(art)?art.filter(Boolean):(art?[art]:[]);
+      return joinPanels(list).then(img=>{ paint(img,0); return true; });
     },
 
     // opts: { sizeLabel, styleName, colorHex, panelUrls[], panoramaUrl }
@@ -17433,12 +17569,36 @@ function trimmingsAvailable(){
 // way out; the mockup then opens it in the mockup's stage as it always did.
 // Dragging and the spin are wired to whichever host it is mounted in, so both
 // work in here without a line of extra code.
+// THE BODY, without the picture on it. Three panels now open MUG3D on three
+// different screens -- the mockup, Trimmings, and the fade slider -- and the
+// body they open is the same body every time. Written once so it cannot drift
+// between them; the artwork is the only thing any caller supplies.
+function mug3DBodyOpts(){
+  const key=(typeof tumbler3dKey==='function')?tumbler3dKey():null;
+  if(key){
+    const c=(typeof travelColorEntry==='function')?travelColorEntry():null;
+    return { tumblerKey:key, colorHex:c?c.hex:'#ffffff', finish:(c&&c.finish)?c.finish:'coat' };
+  }
+  const sizeColors=(GEN_MUG_STYLES[selectedGenStyle]||{}).colors;
+  const list=sizeColors?sizeColors[selectedGenSize]:null;
+  const match=Array.isArray(list)?list.find(c=>c.name===selectedGenColor):null;
+  return { sizeLabel:selectedGenSize, styleName:selectedGenStyle, colorHex:match?match.hex:'#ffffff' };
+}
+
+// Does this product have something to spin at all? A coaster or a phone case
+// has no local body, only Printify's photographs, so nothing can be tried on
+// in real time there and the flat picture stays the only preview.
+function has3DBody(){
+  try{
+    if(tumbler3dKey())return true;
+    return typeof MUG3D!=='undefined' && MUG3D.isCeramicMug();
+  }catch(e){ return false; }
+}
+
 function trimmings3DOpts(artUrl){
   const key=(typeof tumbler3dKey==='function')?tumbler3dKey():null;
   if(!key)return null;
-  const c=(typeof travelColorEntry==='function')?travelColorEntry():null;
-  return { tumblerKey:key, colorHex:c?c.hex:'#ffffff', finish:(c&&c.finish)?c.finish:'coat',
-           panoramaUrl:artUrl, panelUrls:[] };
+  return Object.assign(mug3DBodyOpts(),{ panoramaUrl:artUrl, panelUrls:[] });
 }
 
 // SMALL ENOUGH TO KEEP UP WITH A FINGER. The wrap is 3710px wide and the
@@ -18438,6 +18598,7 @@ function accessorizeOfferBack(){
   showCoverMePanelCard();
 }
 function revealEdgeBack(){
+  unmountRevealFade3D();
   const overlay=document.getElementById('revealOverlay');
   if(overlay)overlay.style.display='none';
   document.body.classList.remove('step-locked');
@@ -18448,6 +18609,7 @@ function revealEdgeBack(){
   showAccessorizeChoiceState();
 }
 function revealFadeBack(){
+  unmountRevealFade3D();
   // On a frame that comes with a fade there is no Hard/Fade row to go back
   // to -- showEdgeQuestion skipped it. Back means back a whole screen, not
   // back to a choice that was never offered.
