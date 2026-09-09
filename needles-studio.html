@@ -5507,14 +5507,29 @@ const GUTTER_CATALOG={
   "Rope":               { asset:"gutter-rope.png",            thumb:"gutter-thumb-rope.png" },
   "Laced Leather":      { asset:"gutter-leather-laces.png",   thumb:"gutter-thumb-leather-laces.png" },
   "Astral":             { asset:"gutter-astral.png",          thumb:"gutter-thumb-astral.png" },
-  // HELD BACK, not forgotten: gutter-fern.png and gutter-film.png have no
+  "Fern":               { asset:"gutter-fern.png",            thumb:"gutter-thumb-fern.png" },
+  // FILM REEL IS STILL OUT, and not for the reason it was before. The colour
+  // backing fixed its spine -- but the reel sat as a full circle near the left
+  // edge, so cropping cut it off-centre and the mirror pairs two part-circles
+  // into an almond-shaped mask. It is not broken, it is just not a film reel,
+  // and nobody would call it one. Rendered before wiring it, which is the only
+  // reason this was caught rather than shipped.
+  //
+  // The fix is the one this feature keeps teaching: anything round and central
+  // must be drawn as a HALF, cut by the left edge, so the mirror completes it.
+  // Same rule that applied to the lace pearl and would apply to a rivet.
+  //
+  // FERN WAS HELD BACK AND IS NOW IN: gutter-fern.png and gutter-film.png had no
   // full-height element down their left edge -- measured, not guessed. Every
-  // other design has one, and that spine is the part which actually covers
-  // the join; without it the seam shows through at whatever heights the
-  // artwork happens to be open, which is worse than fitting no trimming at
-  // all. Both go in as soon as they are redrawn with a spine. The film reel
-  // wants drawing as a HALF reel cut by the left edge, so the mirror makes it
-  // whole at the seam rather than giving two reels side by side.
+  // other design has one, and that spine is what covers the join. The colour
+  // backing painted under every design (see paintWrapGutters) does that job
+  // instead, so a densest column of 77% and 88% respectively is no longer
+  // disqualifying -- the gaps show the cup rather than the two mismatched
+  // ends of the picture. Cropped to those densest columns.
+  //
+  // The film reel would still be better redrawn as a HALF reel cut by the
+  // left edge, so the mirror makes it whole at the seam instead of leaving
+  // two reels side by side further in. Usable as it stands, not yet ideal.
   //
   // { asset } is ONE gutter strip. Motif centre hard against its LEFT edge --
   // that edge lands on the join and is mirrored against itself. Aspect ratio is
@@ -5581,6 +5596,19 @@ async function paintWrapGutters(url,hex,width=WRAP_GUTTER_WIDTH,design=null){
   if(entry&&entry.asset){
     try{
       const art=await loadImageFromUrl(entry.asset);
+      // BACKING FIRST. The plain colour band goes underneath every design, and
+      // it is not belt-and-braces: openwork is the norm here, not the
+      // exception -- lace, vines and film all have holes in them by design.
+      // Where a hole falls over the SEAM you would see the two mismatched ends
+      // of the picture through it, which is the one thing the trimming exists
+      // to prevent. Backed, a hole near the join shows the cup instead, and a
+      // hole further in still shows the photograph, which is what openwork is
+      // for. It also stops the spine being an all-or-nothing requirement: a
+      // design that is 88% solid down its left edge is now usable, where
+      // before it had to be 100% or be held back.
+      ctx.fillStyle=hex;
+      ctx.fillRect(0,0,g,h);
+      ctx.fillRect(w-g,0,g,h);
       await drawGutterDesign(ctx,art,w,h);
       return c.toDataURL('image/jpeg',0.95);
     }catch(err){
