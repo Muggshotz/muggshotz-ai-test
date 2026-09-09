@@ -835,6 +835,77 @@ scenarios.theFlatWrapIsOnlyThereToPickAColour = async (page) => {
   return 'PASS: the cup is the preview throughout, and the flat wrap appears only alongside the palette, as the unlit surface a colour is taken from';
 };
 
+// ---- THE DESIGN ITSELF REACHES BOTH ENDS, NOT JUST THE BAND. ----
+// Alyx, going through the catalogue one by one on the live site: "both the blue
+// ribbon and the other ribbon need to be fixed. As you can see they don't
+// extend the height of the cup, they're just in the middle."
+//
+// He was right and the suite was no help, which is the part worth fixing. Two
+// scenarios already checked that a trimming reaches the first and last row --
+// but they read the OUTERMOST column, where the solid colour band is, and the
+// band always reaches the ends. So a bow hanging in the middle of the seam with
+// bare photograph above and below it passed both of them.
+//
+// This looks where the customer looks: inside the design's own span, past the
+// band. If the top and bottom tenth of the seam there is untouched photograph,
+// the trimming does not run the seam, whatever the band is doing.
+scenarios.everyTrimmingReachesBothEndsOfTheSeam = async (page) => {
+  await pickCup(page, VACUUM);
+  const r = await page.evaluate(async () => {
+    const load = (u) => new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = u; });
+    const W = 3710, H = 2817;
+    const base = document.createElement('canvas'); base.width = W; base.height = H;
+    const bx = base.getContext('2d'); bx.fillStyle = '#FF00FF'; bx.fillRect(0, 0, W, H);
+    const baseUrl = base.toDataURL('image/jpeg', 0.95);
+    const band = Math.round(W * WRAP_GUTTER_MIN_WIDTH);
+    const out = {};
+    for (const name of Object.keys(GUTTER_CATALOG)) {
+      const art = await load(GUTTER_CATALOG[name].asset);
+      const im = await load(await paintWrapGutters(baseUrl, '#90C695', WRAP_GUTTER_WIDTH, name));
+      const c = document.createElement('canvas'); c.width = im.naturalWidth; c.height = im.naturalHeight;
+      const g = c.getContext('2d', { willReadFrequently: true }); g.drawImage(im, 0, 0);
+      const d = g.getImageData(0, 0, c.width, c.height).data;
+      const isArt = (x, y) => { const i = (y * c.width + x) * 4; return d[i] > 170 && d[i + 1] < 110 && d[i + 2] > 170; };
+      const span = Math.min(Math.round(c.height * (art.naturalWidth / art.naturalHeight)), Math.round(c.width * WRAP_GUTTER_MAX_WIDTH));
+      // Trimming pixels inside the design's own span, past the band sliver.
+      const covered = (y0, y1) => {
+        let n = 0, looked = 0;
+        for (let y = y0; y < y1; y += 2) for (let x = band + 4; x < span; x += 2) { looked++; if (!isArt(x, y)) n++; }
+        return looked ? n / looked : 0;
+      };
+      const tenth = Math.round(c.height * 0.1);
+      out[name] = {
+        span,
+        top: +covered(0, tenth).toFixed(3),
+        mid: +covered(Math.round(c.height * 0.45), Math.round(c.height * 0.55)).toFixed(3),
+        bottom: +covered(c.height - tenth, c.height).toFixed(3)
+      };
+    }
+    return out;
+  });
+
+  const bad = [];
+  for (const [name, v] of Object.entries(r)) {
+    if (v.mid < 0.05) { bad.push(`${name} has almost nothing at its middle either (${v.mid})`); continue; }
+    // PRESENT, not proportional. Measuring the ends against the middle failed
+    // Roses & Pearls, and it was wrong to: that one is a SWAG, densest at its
+    // centre and tapering away by design, so it carries less at the ends
+    // without stopping short of them. A design that stops short reads as zero
+    // there, so an absolute floor is what separates the two. 5% of the sampled
+    // area is comfortably above the nothing a floating ornament leaves and
+    // comfortably below the 15% the thinnest honest taper still carries.
+    const floor = 0.05;
+    if (v.top < floor || v.bottom < floor) {
+      bad.push(`${name} top ${v.top} / middle ${v.mid} / bottom ${v.bottom}`);
+    }
+  }
+  if (bad.length) {
+    return `FAIL: these trimmings stop short of the seam's ends — ${bad.join('; ')}. Inside the design's own span the top and bottom of the wrap are bare photograph, so the trimming hangs in the middle of the cup`;
+  }
+  const worst = Object.entries(r).reduce((a, [n, v]) => Math.min(v.top, v.bottom) < a.v ? { n, v: Math.min(v.top, v.bottom) } : a, { n: null, v: 1 });
+  return `PASS: all ${Object.keys(r).length} trimmings carry design at the top AND bottom tenth of the seam inside their own span (thinnest is ${worst.n} at ${worst.v})`;
+};
+
 // ---- COLOURING A TRIMMING, THREE WAYS. ----
 // Alyx: "rather than have set colors I would actually rather have that color
 // gradient thing... I would want to match the ribbon color to the maroon of his

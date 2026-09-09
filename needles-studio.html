@@ -2,7 +2,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head><link rel="manifest" href="needles-manifest.json">
-<!-- BUILD-MARKER: THE-CUP-BOX-IS-A-SQUARE-v127 -->
+<!-- BUILD-MARKER: RIBBONS-RUN-THE-SEAM-v128 -->
 <!-- If you can see this comment on GitHub, this exact paste landed. -->
 <!-- If your live site's page source does NOT say -->
 <!-- "INSTANT-FIT-SCREEN-v47" right here, the upload/deploy did -->
@@ -5663,8 +5663,8 @@ const WRAP_GUTTER_MAX_WIDTH=0.05;
 //
 // Left end of the wrap gets the asset as drawn; right end gets it mirrored.
 const GUTTER_CATALOG={
-  "Blue Satin Ribbon":  { asset:"gutter-ribbon-blue.png",     thumb:"gutter-thumb-ribbon-blue.png", colorable:true, defaultColor:"#003c8c" , repeats:false},
-  "Tasselled Ribbon":   { asset:"gutter-tassled-ribbon.png",  thumb:"gutter-thumb-tassled-ribbon.png", colorable:true, defaultColor:"#003c8c" , repeats:false},
+  "Blue Satin Ribbon":  { asset:"gutter-ribbon-blue.png",     thumb:"gutter-thumb-ribbon-blue.png", colorable:true, defaultColor:"#003c8c" , repeats:"stack"},
+  "Tasselled Ribbon":   { asset:"gutter-tassled-ribbon.png",  thumb:"gutter-thumb-tassled-ribbon.png", colorable:true, defaultColor:"#003c8c" , repeats:"stack"},
   "Roses & Pearls":     { asset:"gutter-rose-pearl.png",      thumb:"gutter-thumb-rose-pearl.png" },
   "Doily":              { asset:"gutter-doily.png",           thumb:"gutter-thumb-doily.png", colorable:true },
   "Ivy Vine":           { asset:"gutter-ivy.png",             thumb:"gutter-thumb-ivy.png", colorable:true, defaultColor:"#1F7A45" },
@@ -5867,7 +5867,24 @@ async function drawGutterDesign(ctx,art,w,h,entry){
   // Those are drawn once, centred, on a colour band that still runs the full
   // height -- a ribbon tied round the cup, which is exactly what they are.
   const tileH=Math.round(drawW*(art.naturalHeight/art.naturalWidth));
-  const single=(entry&&entry.repeats===false)||tileH>=h;
+  // A BOW THE RIGHT WAY UP (Alyx, Sep 2026): "both the blue ribbon and the
+  // other ribbon need to be fixed -- they don't extend the height of the cup,
+  // they're just in the middle."
+  //
+  // My fault, in two steps. Capping the widths left a single ornament too short
+  // to reach the ends, so the two ribbons were drawn once and centred on a
+  // colour band that still ran full height. Then narrowing the band to the join
+  // sliver took that band away, and the bow was left hanging in mid-air with
+  // the photograph above and below it.
+  //
+  // So they repeat after all -- three bows down the seam reads as a garland,
+  // which is a real thing and reaches both ends. What they must NOT do is
+  // mirror: flipping alternate repeats is right for lace and rope, where the
+  // join reads as pattern, and absurd for a bow, which would be upside down
+  // every other time. 'stack' repeats them all the right way up.
+  const mode=(entry&&entry.repeats!==undefined)?entry.repeats:true;
+  const single=(mode==='once')||tileH>=h;
+  const mirrorTiles=(mode!=='stack');
   const paintEnd=(flipX)=>{
     ctx.save();
     if(flipX){ ctx.translate(w,0); ctx.scale(-1,1); }
@@ -5880,7 +5897,7 @@ async function drawGutterDesign(ctx,art,w,h,entry){
       for(let i=0;i<n;i++){
         const y=y0+i*tileH;
         ctx.save();
-        if(i%2){ ctx.translate(0,y+tileH); ctx.scale(1,-1); ctx.drawImage(art, 0,0, art.naturalWidth,art.naturalHeight, 0,0, drawW,tileH); }
+        if(mirrorTiles&&i%2){ ctx.translate(0,y+tileH); ctx.scale(1,-1); ctx.drawImage(art, 0,0, art.naturalWidth,art.naturalHeight, 0,0, drawW,tileH); }
         else ctx.drawImage(art, 0,0, art.naturalWidth,art.naturalHeight, 0,y, drawW,tileH);
         ctx.restore();
       }
