@@ -355,6 +355,29 @@ scenarios.theCustomerReachesThePanelAndGetsPastIt = async (page) => {
   // not use. It waits for whatever the studio does on its own now.
   await T(page, 4000);
 
+  // THE EXPLAINER COMES FIRST (Alyx, Sep 2026). The route to the grid now runs
+  // through a panel that shows the join before it offers to dress it, so the
+  // test walks that panel rather than reaching around it -- reaching around is
+  // how the last unreachable-panel bug got through.
+  const why = await page.waitForFunction(() => {
+    const o = document.getElementById('trimmingsWhyOverlay');
+    return !!o && getComputedStyle(o).display !== 'none';
+  }, null, { timeout: 25000 }).then(() => true).catch(() => false);
+  if (!why) {
+    const where = await page.evaluate(() => {
+      const vis = (id) => { const e = document.getElementById(id); return !!e && getComputedStyle(e).display !== 'none'; };
+      return { grid: vis('trimmingsOverlay'), mockupLightbox: vis('mockupLightbox'), whatsNext: vis('whatsNextOverlay') };
+    }).catch(() => ({}));
+    return `FAIL: the explainer never opened — the customer reached ${JSON.stringify(where)} without ever being shown what a trimming is for`;
+  }
+  const gridHiddenFirst = await page.evaluate(() => {
+    const g = document.getElementById('trimmingsOverlay');
+    return !g || getComputedStyle(g).display === 'none';
+  });
+  if (!gridHiddenFirst) return 'FAIL: the grid was on screen underneath the explainer — two panels at once, and the customer answers the question before reading it';
+  await page.evaluate(() => document.getElementById('trimmingsWhyGoBtn').click());
+  await T(page, 1500);
+
   const open = await page.waitForFunction(() => {
     const o = document.getElementById('trimmingsOverlay');
     return !!o && getComputedStyle(o).display !== 'none';
@@ -384,7 +407,258 @@ scenarios.theCustomerReachesThePanelAndGetsPastIt = async (page) => {
   });
   if (!st.closed) return 'FAIL: Continue left the panel open — the customer is stranded short of their mockup';
   if (st.locked) return 'FAIL: the page is still step-locked after the panel closed — nothing else can be touched';
-  return 'PASS: upload -> cup -> generate -> approve, and the studio opens Trimmings by itself on the way to the mockup; the preview follows the choice and Continue lets go';
+  return 'PASS: upload -> cup -> generate -> approve, and the studio opens the explainer by itself, then the grid; the preview follows the choice and Continue lets go';
+};
+
+// ---- THE PROBLEM IS SHOWN BEFORE THE FIX. ----
+// Alyx: "somewhere in this process, probably a panel before we introduce these
+// trimmings, we should give some kind of a coherent explanation of what these
+// trimmings are for and what they do, and why they are necessary. Maybe even a
+// side by side with and without, showing them blocking the gap."
+//
+// The panel used to assert "a join you can see" and ask the customer to take it
+// on faith. What this pins is that the demonstration is HONEST and is THEIRS:
+//   * the bare half really shows a mismatch, drawn from the artwork in hand --
+//     not an illustration, not an offset invented to make the case;
+//   * the trimmed half really covers it, at the same place, from the same
+//     picture -- the photograph still runs either side of the band, which is
+//     what proves the two crops are the same cup and not a stock before/after;
+//   * it is shown once. A second pass is somebody who has already read it.
+scenarios.theProblemIsShownBeforeTheFix = async (page) => {
+  await pickCup(page, VACUUM);
+  await page.evaluate(() => {
+    const b = Array.from(document.querySelectorAll('#travelMugColorGridGen .color-btn'))
+      .find((x) => x.dataset.color && !/white/i.test(x.dataset.color));
+    if (b) b.click();
+  });
+  await T(page, 500);
+  await dismissAlerts(page);
+
+  const r = await page.evaluate(async () => {
+    // A picture whose two ends could not be more different: red at one end,
+    // blue at the other. On the cup those two come together, and that meeting
+    // is the whole thing the explainer has to be able to show.
+    const c = document.createElement('canvas'); c.width = 1024; c.height = 1024;
+    const x = c.getContext('2d');
+    x.fillStyle = '#FF0000'; x.fillRect(0, 0, 512, 1024);
+    x.fillStyle = '#0000FF'; x.fillRect(512, 0, 512, 1024);
+    const src = c.toDataURL('image/png');
+
+    resultUrl = src; finalImageUrl = null;
+    trimmingsWhyShownFor = null; trimmingsSettledFor = null;
+    await openTrimmingsPanel();
+    const vis = (id) => { const e = document.getElementById(id); return !!e && getComputedStyle(e).display !== 'none'; };
+    const opened = { why: vis('trimmingsWhyOverlay'), grid: vis('trimmingsOverlay') };
+
+    // Wait for the two crops to finish drawing -- they are deliberately not
+    // awaited by the panel, so the words appear before the pictures do.
+    const settled = async () => {
+      for (let i = 0; i < 60; i++) {
+        const a = document.getElementById('seamDemoWithout'), b = document.getElementById('seamDemoWith');
+        if (a && b && a.naturalWidth > 0 && b.naturalWidth > 0) return true;
+        await new Promise((s) => setTimeout(s, 250));
+      }
+      return false;
+    };
+    const drew = await settled();
+
+    const read = (id) => {
+      const im = document.getElementById(id);
+      const cv = document.createElement('canvas');
+      cv.width = im.naturalWidth; cv.height = im.naturalHeight;
+      cv.getContext('2d').drawImage(im, 0, 0);
+      const g = cv.getContext('2d');
+      const at = (fx) => Array.from(g.getImageData(Math.max(0, Math.min(cv.width - 1, Math.round(cv.width * fx))), Math.round(cv.height / 2), 1, 1).data).slice(0, 3);
+      return { w: cv.width, h: cv.height, farLeft: at(0.08), leftOfJoin: at(0.46), atJoin: at(0.5), rightOfJoin: at(0.54), farRight: at(0.92) };
+    };
+
+    const bare = drew ? read('seamDemoWithout') : null;
+    const trimmed = drew ? read('seamDemoWith') : null;
+
+    // Second time through, on the same picture: straight to the options.
+    document.getElementById('trimmingsWhyGoBtn').click();
+    await new Promise((s) => setTimeout(s, 400));
+    document.getElementById('trimmingsOverlay').style.display = 'none';
+    await openTrimmingsPanel();
+    const again = { why: vis('trimmingsWhyOverlay'), grid: vis('trimmingsOverlay') };
+    document.getElementById('trimmingsOverlay').style.display = 'none';
+    document.body.classList.remove('step-locked');
+    return { opened, drew, bare, trimmed, again };
+  });
+
+  if (!r.opened.why) return 'FAIL: the explainer did not open ahead of the grid — the fix is offered before the problem is shown';
+  if (r.opened.grid) return 'FAIL: the grid was open at the same time as the explainer';
+  if (!r.drew) return 'FAIL: neither side of the comparison drew — the panel makes a claim and shows nothing';
+
+  const far = (a, b) => Math.abs(a[0] - b[0]) + Math.abs(a[1] - b[1]) + Math.abs(a[2] - b[2]) > 120;
+  // The bare join really is a mismatch, and it is the real one: the wrap's last
+  // slice against its first, which on this source is blue meeting red.
+  if (!far(r.bare.leftOfJoin, r.bare.rightOfJoin)) {
+    return `FAIL: the bare half shows no join at all — rgb(${r.bare.leftOfJoin}) against rgb(${r.bare.rightOfJoin}). There is nothing for the customer to see, so the panel argues for a fix to an invisible problem`;
+  }
+  // And the trimmed half covers that same spot.
+  if (!far(r.trimmed.atJoin, r.bare.atJoin)) {
+    return `FAIL: the trimmed half is the same at the join as the bare one — rgb(${r.trimmed.atJoin}). It does not demonstrate blocking the gap`;
+  }
+  // Both crops are the customer's own picture: the photograph still runs out to
+  // either side of the band. A stock before/after would fail this.
+  if (far(r.trimmed.farLeft, r.bare.farLeft) || far(r.trimmed.farRight, r.bare.farRight)) {
+    return `FAIL: the two halves are not the same picture away from the join — left rgb(${r.bare.farLeft}) vs rgb(${r.trimmed.farLeft}), right rgb(${r.bare.farRight}) vs rgb(${r.trimmed.farRight})`;
+  }
+  if (r.again.why) return 'FAIL: the explainer opened a second time on the same picture — a toll rather than an explanation';
+  if (!r.again.grid) return 'FAIL: the second pass reached neither panel';
+
+  return `PASS: the explainer opens first and shows the real join from the customer's own picture (rgb(${r.bare.leftOfJoin}) meeting rgb(${r.bare.rightOfJoin})), the trimmed half covers that same spot, the photograph runs either side of both, and it is shown once`;
+};
+
+// ---- CHANGING YOUR MIND REPLACES THE TRIMMING, IT DOES NOT ADD ONE. ----
+// Baking a trimming replaces finalImageUrl with the trimmed upload, and the
+// panel takes its base from finalImageUrl -- so Back from the mockup handed the
+// painter a picture that already had a trimming on it and painted a second one
+// over the first. Every single step looked right, which is why this needs a
+// test rather than an eye: the fault is only visible after the round trip.
+scenarios.changingYourMindReplacesTheTrimming = async (page) => {
+  await pickCup(page, VACUUM);
+  await T(page, 300);
+  await dismissAlerts(page);
+
+  const r = await page.evaluate(async () => {
+    const paint = (fill) => {
+      const c = document.createElement('canvas'); c.width = 512; c.height = 388;
+      const x = c.getContext('2d'); x.fillStyle = fill; x.fillRect(0, 0, 512, 388);
+      return c.toDataURL('image/png');
+    };
+    const original = paint('#FF0000');
+    const baked = paint('#00FF00');   // stands in for the trimmed upload
+
+    // The state the studio is in after a bake, then a Back from the mockup.
+    trimmingsBakedFrom = original;
+    trimmingsBakedTo = baked;
+    trimmingsBakedChoice = 'Rope';
+    trimmingsBakedColour = '#8a2e3b';
+    finalImageUrl = baked; resultUrl = original;
+    trimmingsWhyShownFor = null; trimmingsSettledFor = null;
+
+    await openTrimmingsPanel();
+    const afterWhy = { base: trimmingsBaseUrl === original ? 'original' : (trimmingsBaseUrl === baked ? 'baked' : 'other') };
+    document.getElementById('trimmingsWhyGoBtn').click();
+    await new Promise((s) => setTimeout(s, 900));
+    const state = {
+      base: trimmingsBaseUrl === original ? 'original' : (trimmingsBaseUrl === baked ? 'baked' : 'other'),
+      choice: selectedGutter,
+      colour: selectedGutterColor,
+      whyRepeated: getComputedStyle(document.getElementById('trimmingsWhyOverlay')).display !== 'none'
+    };
+
+    // And a genuinely new picture is treated as new: no restoration, no choice
+    // carried over from somebody else's artwork.
+    const fresh = paint('#0000FF');
+    finalImageUrl = fresh; trimmingsSettledFor = null; trimmingsWhyShownFor = null;
+    document.getElementById('trimmingsOverlay').style.display = 'none';
+    await openTrimmingsPanel();
+    const onFresh = { base: trimmingsBaseUrl === fresh ? 'fresh' : 'wrong', choice: selectedGutter };
+    document.getElementById('trimmingsWhyOverlay').style.display = 'none';
+    document.getElementById('trimmingsOverlay').style.display = 'none';
+    document.body.classList.remove('step-locked');
+    return { afterWhy, state, onFresh };
+  });
+
+  if (r.state.base !== 'original') {
+    return `FAIL: coming back to the panel took its base from the ${r.state.base} picture — a second trimming would be painted on top of the first`;
+  }
+  if (r.state.choice !== 'Rope') return `FAIL: the trimming already chosen came back as ${JSON.stringify(r.state.choice)} — the panel forgot what it was left on`;
+  if (r.state.colour !== '#8a2e3b') return `FAIL: the colour came back as ${JSON.stringify(r.state.colour)} rather than the one that was baked`;
+  if (r.state.whyRepeated) return 'FAIL: the explainer opened again on a return visit';
+  if (r.onFresh.base !== 'fresh') return 'FAIL: a brand new picture was not used as its own base';
+  if (r.onFresh.choice !== null) return `FAIL: a brand new picture arrived with ${JSON.stringify(r.onFresh.choice)} already chosen — a decision nobody made about artwork they have not seen`;
+
+  return 'PASS: Back from the mockup re-opens on the UNTRIMMED original with the previous choice and colour intact, so a change of mind replaces the trimming; a new picture starts clean';
+};
+
+// ---- THE PICTURE AND THE TWELVE, TOGETHER. ----
+// Alyx: "there's gotta be some way to recompose this so that you can look at
+// all of the available trimmings, and the image it would go on to,
+// simultaneously as you're applying different options. Just like everything
+// before."
+//
+// Stacked, the preview sat above twelve tiles: reaching the tiles pushed the
+// picture off the top, so the customer was choosing a trimming for something
+// they could no longer see -- which is the one thing this panel exists to let
+// them do. Two shapes keep the promise and this pins both, because a fix that
+// only works on a desktop is not a fix for a shop most people reach on a phone:
+//   * with room, two columns and nothing scrolls at all;
+//   * without room, the picture sticks to the top and the tiles pass under it.
+scenarios.theWholeChoiceIsOnScreenAtOnce = async (page) => {
+  await pickCup(page, VACUUM);
+  await T(page, 300);
+  await dismissAlerts(page);
+
+  const seed = async () => page.evaluate(async () => {
+    const c = document.createElement('canvas'); c.width = 1024; c.height = 776;
+    const x = c.getContext('2d');
+    x.fillStyle = '#7a2b2b'; x.fillRect(0, 0, 1024, 776);
+    x.fillStyle = '#e8c56a'; x.fillRect(400, 100, 224, 576);
+    resultUrl = c.toDataURL('image/png'); finalImageUrl = null;
+    trimmingsWhyShownFor = null; trimmingsSettledFor = null;
+    trimmingsBakedTo = null; trimmingsBakedFrom = null;
+    await openTrimmingsPanel();
+    document.getElementById('trimmingsWhyGoBtn').click();
+    await new Promise((s) => setTimeout(s, 1200));
+  });
+
+  const measure = () => page.evaluate(() => {
+    const card = document.getElementById('trimmingsCard');
+    const tiles = document.querySelectorAll('#trimmingsGrid .btn-select');
+    const onScreen = (el) => {
+      if (!el) return false;
+      const r = el.getBoundingClientRect();
+      return r.width > 4 && r.height > 4 && r.top >= -2 && r.bottom <= window.innerHeight + 2;
+    };
+    return {
+      tiles: tiles.length,
+      overflow: card.scrollHeight - card.clientHeight,
+      preview: onScreen(document.getElementById('trimmingsPreviewImg')),
+      lastTile: onScreen(tiles[tiles.length - 1]),
+      continue: onScreen(document.getElementById('trimmingsContinueBtn')),
+      twoCol: getComputedStyle(document.getElementById('trimmingsBody')).display === 'flex'
+    };
+  });
+
+  // --- With room on the screen. ---
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await seed();
+  const wide = await measure();
+  if (wide.tiles < 12) return `FAIL: the grid drew ${wide.tiles} tiles — the twelve trimmings are not all installed, so this measures nothing`;
+  if (!wide.twoCol) return 'FAIL: at 1280px the panel is still stacked in one column';
+  if (wide.overflow > 4) return `FAIL: the panel still scrolls by ${wide.overflow}px at 1280x900 — something is off the bottom`;
+  if (!wide.preview || !wide.lastTile || !wide.continue) {
+    return `FAIL: at 1280x900 not everything is on screen together — preview ${wide.preview}, last tile ${wide.lastTile}, Continue ${wide.continue}`;
+  }
+
+  // --- On a phone, where two columns will not fit. ---
+  await page.setViewportSize({ width: 390, height: 844 });
+  await seed();
+  await page.evaluate(() => { const c = document.getElementById('trimmingsCard'); c.scrollTop = c.scrollHeight; });
+  await T(page, 500);
+  const phone = await page.evaluate(() => {
+    const card = document.getElementById('trimmingsCard');
+    const img = document.getElementById('trimmingsPreviewImg');
+    const tiles = document.querySelectorAll('#trimmingsGrid .btn-select');
+    const r = img.getBoundingClientRect();
+    const last = tiles[tiles.length - 1].getBoundingClientRect();
+    return {
+      stacked: getComputedStyle(document.getElementById('trimmingsBody')).display !== 'flex',
+      scrolled: card.scrollTop,
+      previewVisible: r.height > 4 && r.bottom > 0 && r.top < window.innerHeight,
+      lastTileVisible: last.height > 4 && last.bottom > 0 && last.top < window.innerHeight
+    };
+  });
+  if (!phone.stacked) return 'FAIL: two columns were forced onto a 390px phone';
+  if (phone.scrolled < 20) return `FAIL: the phone panel did not scroll (${phone.scrolled}px) — this measures nothing`;
+  if (!phone.previewVisible) return 'FAIL: on a phone the picture left the screen as soon as the tiles were scrolled to — the customer chooses a trimming for something they cannot see';
+  if (!phone.lastTileVisible) return 'FAIL: the last tile was not reachable on a phone';
+
+  return `PASS: at 1280x900 the picture, all ${wide.tiles} trimmings and Continue are on screen together with nothing scrolling; on a 390px phone the picture sticks to the top and the tiles pass under it`;
 };
 
 // ---- COLOURING A TRIMMING, THREE WAYS. ----

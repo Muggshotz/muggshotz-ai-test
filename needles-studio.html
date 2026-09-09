@@ -2,7 +2,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head><link rel="manifest" href="needles-manifest.json">
-<!-- BUILD-MARKER: BAND-FITS-THE-TRIMMING-v121 -->
+<!-- BUILD-MARKER: SHOW-THE-JOIN-BEFORE-THE-FIX-v122 -->
 <!-- If you can see this comment on GitHub, this exact paste landed. -->
 <!-- If your live site's page source does NOT say -->
 <!-- "INSTANT-FIT-SCREEN-v47" right here, the upload/deploy did -->
@@ -1705,6 +1705,37 @@ Tell Needles <span style="color:#7ab8ff">what you have in mind</span>
 </div>
 </div>
 
+<!-- WHY THE TRIMMING (Alyx, Sep 2026): "somewhere in this process, probably a
+     panel before we introduce these trimmings, we should give some kind of a
+     coherent explanation of what these trimmings are for and what they do, and
+     why they are necessary. Maybe even a side by side with and without,
+     showing them blocking the gap."
+     The panel that followed asserted "a join you can see" and asked the
+     customer to take it on faith. Nobody buys the fix before they have seen
+     the problem -- so the problem is shown, from THEIR OWN picture, at the
+     place it actually happens: the back of the cup, where the wrap's right
+     end butts against its left. Nothing here is illustrated or staged; both
+     halves are the real render, one with the trimming and one without. -->
+<div id="trimmingsWhyOverlay" class="step-lock-overlay" style="display:none">
+<div class="card" id="trimmingsWhyCard" style="max-width:560px;width:100%;margin:auto;position:relative;max-height:92vh;overflow-y:auto;text-align:center">
+<div class="card-title">✂️ Where your picture meets itself</div>
+<div class="note" style="margin-top:0;margin-bottom:.7rem;text-align:left;line-height:1.55">Your picture goes <b>all the way around</b> this cup, so its two ends come back and meet on the back. Whatever ends the picture and whatever starts it were never the same thing &mdash; and a flat sheet wrapped onto a round cup is always a hair out besides. The eye reads that meeting as a fault.</div>
+<div id="seamDemoRow" style="display:flex;gap:8px;margin:.2rem 0 .5rem;align-items:flex-start">
+<div style="flex:1;min-width:0">
+<img id="seamDemoWithout" style="width:100%;border-radius:8px;border:1px solid #003c8c;background:#0d0d0d;display:block"/>
+<div class="note" style="margin:.35rem 0 0;font-size:11px">The join, bare</div>
+</div>
+<div style="flex:1;min-width:0">
+<img id="seamDemoWith" style="width:100%;border-radius:8px;border:1px solid #2f7fe0;background:#0d0d0d;display:block"/>
+<div class="note" style="margin:.35rem 0 0;font-size:11px;color:#7ab8ff">The same join, trimmed</div>
+</div>
+</div>
+<div class="note" id="seamDemoNote" style="margin:0 0 .7rem;font-size:11px;color:#7ab8ff"><span class="spinner"></span>Drawing the back of your cup...</div>
+<div class="note" style="margin-top:0;margin-bottom:.9rem;text-align:left;line-height:1.55">A <b>trimming</b> is a narrow strip in the cup&rsquo;s own colour, at each end of the picture. Brought together on the back they form one deliberate line. The mismatch is still behind it &mdash; it just stopped being visible, because the eye now reads a border instead of a break. It also gives the printer room to be a millimetre out without it showing.</div>
+<button type="button" class="generate-btn" id="trimmingsWhyGoBtn" onclick="showTrimmingsGridPanel()">See the trimmings →</button>
+</div>
+</div>
+
 <!-- TRIMMINGS (Alyx, Sep 2026). The seam decoration, chosen AFTER generating:
      "he's gonna have to see what design the AI came up with to see which gutter
      best matches his motif." So this is a stage on the finished picture, not a
@@ -1714,6 +1745,30 @@ Tell Needles <span style="color:#7ab8ff">what you have in mind</span>
 <div class="card" id="trimmingsCard" style="max-width:560px;width:100%;margin:auto;position:relative;max-height:92vh;overflow-y:auto;text-align:center">
 <div class="card-title">🎀 Trimmings</div>
 <div class="note" style="margin-top:0;margin-bottom:.6rem;text-align:left;line-height:1.5">Your picture goes all the way around this cup, so its two ends meet in a join you can see. A trimming turns that join into something you meant. Tap one to try it on &mdash; it's free to look.</div>
+<!-- SIDE BY SIDE (Alyx, Sep 2026): "there's gotta be some way to recompose
+     this so that you can look at all of the available trimmings, and the image
+     it would go on to, simultaneously as you're applying different options.
+     Just like everything before."
+     Stacked, the picture was above twelve tiles, so reaching the tiles pushed
+     the picture off the top -- you were choosing a trimming for something you
+     could no longer see. On a screen with the room, the picture takes a column
+     of its own and the grid takes the other, and neither one moves. On a phone
+     there is no room for two columns, so the picture STICKS to the top of the
+     scroller instead and the tiles pass underneath it. Same promise, the only
+     two ways it can be kept. -->
+<style>
+#trimmingsLeftCol{position:sticky;top:0;z-index:3;background:#151b24;padding-bottom:.4rem}
+@media (min-width:900px){
+  #trimmingsCard{max-width:900px!important}
+  #trimmingsBody{display:flex;gap:16px;align-items:flex-start}
+  #trimmingsLeftCol{flex:0 0 42%;min-width:0;position:sticky;top:0;padding-bottom:0}
+  #trimmingsRightCol{flex:1;min-width:0}
+  #trimmingsPreviewImg{max-height:38vh!important}
+  #trimmingsBody .note{text-align:left}
+}
+</style>
+<div id="trimmingsBody">
+<div id="trimmingsLeftCol">
 <!-- Capped so the grid is not pushed off the bottom (Alyx: "fit all of the
      options into the frame and the continue button"). The wrap is very wide
      and very short, so at full width it ate half the panel on its own. -->
@@ -1727,6 +1782,8 @@ Tell Needles <span style="color:#7ab8ff">what you have in mind</span>
 <div class="note" id="trimmingsEyedropNote" style="margin:.45rem 0 0;font-size:11px;color:#7ab8ff">Or tap anywhere in the picture above to take that exact colour.</div>
 </div>
 <div class="note" id="trimmingsSeamNote" style="margin-top:0;margin-bottom:.6rem;color:#7ab8ff;font-size:11px">The wrap laid flat &mdash; the trimming appears at both ends and they meet on the back of the cup.</div>
+</div>
+<div id="trimmingsRightCol">
 <div id="trimmingsGrid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:.7rem"></div>
 <!-- A pill, not a tile (Alyx). A full-width box gave the absence of a trimming
      the same visual weight as the twelve designs, and made twelve render as
@@ -1740,6 +1797,8 @@ Tell Needles <span style="color:#7ab8ff">what you have in mind</span>
 <div class="bi-row" style="margin-top:.2rem">
 <button type="button" class="download-btn" id="trimmingsNoneBtn" style="flex:1;width:auto;margin:0" onclick="pickTrimming(null)">No Thanks</button>
 <button type="button" class="generate-btn" id="trimmingsContinueBtn" style="flex:1;width:auto;margin:0" onclick="confirmTrimmingAndContinue()">✅ Continue</button>
+</div>
+</div>
 </div>
 <div class="note" id="trimmingsSavingNote" style="display:none;margin-top:.75rem;text-align:center"><span class="spinner"></span>Saving your design...</div>
 </div>
@@ -17264,13 +17323,89 @@ async function runAutoMockupFetch(){
 // happening because each single step looks right.
 let trimmingsBaseUrl=null;
 let trimmingsBakeInFlight=false;
+// STACKING, and why these three exist. Baking a trimming REPLACES
+// finalImageUrl with the trimmed upload -- and openTrimmingsPanel takes its
+// base from finalImageUrl. So coming Back from the mockup to change your mind
+// handed the painter a picture that already had a trimming on it, and painted
+// a second one over the first. Each single step looked right, which is exactly
+// why nobody would have caught it by looking.
+//
+// Remembering what was baked FROM, and what it became, makes the round trip
+// exact rather than approximate: if the artwork on the way in is the thing we
+// produced last time, we know what it was made from, and we go back to that.
+// The choice comes back with it -- somebody returning to change their mind
+// should find the panel the way they left it, not blank.
+let trimmingsBakedFrom=null;
+let trimmingsBakedTo=null;
+let trimmingsBakedChoice=null;
+let trimmingsBakedColour=null;
 
 function trimmingsAvailable(){
   return wrapWantsGutters() && Object.keys(GUTTER_CATALOG).length>0;
 }
 
+// THE DEMONSTRATION TRIMMING -- the one that stands in the "with" half of the
+// explainer. Solid down its whole length and legible at thumbnail size, which
+// is what that picture has to survive; an openwork design shrunk to 240px
+// reads as texture rather than as a line, and the line is the entire point.
+const SEAM_DEMO_PREFERENCE=['Rope','Laced Leather','Zipper','Blue Satin Ribbon'];
+function seamDemoTrimming(){
+  for(const k of SEAM_DEMO_PREFERENCE) if(GUTTER_CATALOG[k])return k;
+  return Object.keys(GUTTER_CATALOG)[0]||null;
+}
+
+// The back of the cup, from a flat wrap. The wrap's RIGHT end and its LEFT end
+// are the two things that come together there, so the crop is exactly that:
+// the last slice of the picture, then the first, butted the way the cup butts
+// them. Nothing is offset, faked or exaggerated -- the mismatch on show is
+// whatever this customer's own picture really does at that meeting.
+async function seamJoinCrop(srcUrl){
+  const img=await loadImageFromUrl(srcUrl);
+  const w=img.naturalWidth,h=img.naturalHeight;
+  const half=Math.min(Math.round(h*0.42),Math.floor(w/2));
+  if(half<=0)return srcUrl;
+  const c=document.createElement('canvas');
+  c.width=half*2; c.height=h;
+  const ctx=c.getContext('2d');
+  ctx.drawImage(img, w-half,0, half,h, 0,0, half,h);
+  ctx.drawImage(img, 0,0, half,h, half,0, half,h);
+  return c.toDataURL('image/jpeg',0.92);
+}
+
+// Both halves are real renders of the real artwork: the bare one is the wrap
+// exactly as it would print with no trimming at all, the trimmed one comes off
+// the same painter the preview and the final bake use. If either fails to
+// draw, the words stand on their own rather than the panel showing a broken
+// promise -- the explanation is still true without the picture.
+async function renderSeamComparison(){
+  const a=document.getElementById('seamDemoWithout');
+  const b=document.getElementById('seamDemoWith');
+  const note=document.getElementById('seamDemoNote');
+  const row=document.getElementById('seamDemoRow');
+  if(!a||!b||!trimmingsBaseUrl)return;
+  try{
+    const hex=getSelectedProductColorHex();
+    const bare=await fitWrapToBand(trimmingsBaseUrl);
+    a.src=await seamJoinCrop(bare);
+    const demo=seamDemoTrimming();
+    const trimmed=await paintWrapGutters(trimmingsBaseUrl,hex,WRAP_GUTTER_WIDTH,demo);
+    b.src=await seamJoinCrop(trimmed);
+    if(note)note.innerHTML='The back of your own cup &mdash; the picture&rsquo;s last inch meeting its first.';
+  }catch(err){
+    console.error('Could not draw the seam comparison:',err);
+    if(row)row.style.display='none';
+    if(note)note.style.display='none';
+  }
+}
+
+// Shown once per finished picture. A second pass through the panel -- a retry,
+// a change of mind at the grid -- is somebody who has already read it, and
+// making them read it again is a toll, not an explanation.
+let trimmingsWhyShownFor=null;
+
 // Opens the panel if this product has a seam worth dressing; otherwise carries
-// straight on, so the caller does not have to know the rule.
+// straight on, so the caller does not have to know the rule. The explainer
+// comes first the first time; after that it goes straight to the options.
 async function openTrimmingsPanel(){
   const finished=finalImageUrl||resultUrl;
   if(!finished||!wrapWantsGutters()){
@@ -17278,8 +17413,37 @@ async function openTrimmingsPanel(){
     reallyBeginFinalMockupFetch();
     return;
   }
-  trimmingsBaseUrl=finished;
-  selectedGutter=null;
+  // Back to the ORIGINAL artwork if what we were handed is our own last bake,
+  // so a change of mind replaces the trimming instead of adding to it.
+  const returning=(trimmingsBakedTo&&finished===trimmingsBakedTo);
+  trimmingsBaseUrl=returning?trimmingsBakedFrom:finished;
+  selectedGutter=returning?trimmingsBakedChoice:null;
+  selectedGutterColor=returning?trimmingsBakedColour:null;
+  const overlay=document.getElementById('trimmingsOverlay');
+  if(!overlay){ reallyBeginFinalMockupFetch(); return; }
+  const why=document.getElementById('trimmingsWhyOverlay');
+  if(why&&trimmingsWhyShownFor!==trimmingsBaseUrl){
+    trimmingsWhyShownFor=trimmingsBaseUrl;
+    document.body.classList.add('step-locked');
+    overlay.style.display='none';
+    const wcard=document.getElementById('trimmingsWhyCard');
+    if(wcard)wcard.scrollTop=0;
+    const note=document.getElementById('seamDemoNote');
+    if(note){note.style.display='block';note.innerHTML='<span class="spinner"></span>Drawing the back of your cup...';}
+    const row=document.getElementById('seamDemoRow');
+    if(row)row.style.display='flex';
+    why.style.display='flex';
+    // Not awaited: the words are readable while the two crops are drawn, and a
+    // slow asset must not hold the panel off the screen.
+    renderSeamComparison();
+    return;   // the grid opens when they tap through
+  }
+  await showTrimmingsGridPanel();
+}
+
+async function showTrimmingsGridPanel(){
+  const why=document.getElementById('trimmingsWhyOverlay');
+  if(why)why.style.display='none';
   const overlay=document.getElementById('trimmingsOverlay');
   if(!overlay){ reallyBeginFinalMockupFetch(); return; }
   document.body.classList.add('step-locked');
@@ -17287,7 +17451,9 @@ async function openTrimmingsPanel(){
   const card=document.getElementById('trimmingsCard');
   if(card)card.scrollTop=0;
   renderTrimmingsGrid();
-  await pickTrimming(null);
+  // Opens on whatever is current: nothing on a first visit, and the trimming
+  // they already chose if they have come back to change it.
+  await pickTrimming(selectedGutter);
   // LAND ON THE OPTIONS (Alyx: "I should be sent here"). Opening at the top put
   // the heading and the preview on screen with the twelve trimmings below the
   // fold, so the panel's whole purpose was somewhere the customer had to go
@@ -17529,6 +17695,12 @@ async function confirmTrimmingAndContinue(){
     try{
       const painted=await paintWrapGutters(trimmingsBaseUrl,getSelectedProductColorHex(),WRAP_GUTTER_WIDTH,selectedGutter);
       const uploaded=await uploadCompositedImage(painted,{strict:true});
+      // Recorded before anything else consumes it, so a Back from the mockup
+      // can find its way to the untrimmed original.
+      trimmingsBakedFrom=trimmingsBaseUrl;
+      trimmingsBakedTo=uploaded;
+      trimmingsBakedChoice=selectedGutter;
+      trimmingsBakedColour=selectedGutterColor;
       const slotId=placements.front||placements.left||placements.right;
       const design=slotId?findDesignById(slotId):null;
       if(design)design.url=uploaded;
