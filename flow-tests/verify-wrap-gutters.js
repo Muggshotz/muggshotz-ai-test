@@ -75,20 +75,29 @@ const scenarios = {};
 
 // ---- 1. IT REPLACES THE FADE. ----
 // Read from source: the gutter branch and the fade branch must be exclusive.
-scenarios.itReplacesTheFadeButNeverOverridesAChoice = async (page) => {
+scenarios.theSeamIsNotDecidedDuringGeneration = async (page) => {
   const src = await page.evaluate(async () => (await fetch('/needles-studio.html')).text());
-  // Anchor on the gutter's own call site, not on skipEdgeFade -- there are four
-  // skipEdgeFade branches in this file and indexOf found the wrong one.
-  const m = src.match(/\}\s*else if\(wrapWantsGutters\(\)\)\s*\{/);
-  if (!m) {
-    if (!/wrapWantsGutters\(\)/.test(src)) return 'FAIL: the gutter is not wired into the generation path at all';
-    return 'FAIL: the gutter is not the else-branch of the fade — either both run, or the gutter runs first and a customer who asked for Fade Edges silently gets two hard strips';
+  // The gutter used to run inside generate(), which meant the trimming had to
+  // be chosen before the artwork existed. Alyx: "he's gonna have to see what
+  // design the AI came up with to see which gutter best matches his motif."
+  // This pins the move rather than the old ordering, because the old ordering
+  // is exactly what is no longer there -- and a well-meant revert would put it
+  // back without anything complaining.
+  const gen = src.indexOf('const rawResultUrl=resultUrl;');
+  if (gen < 0) return 'FAIL: could not find the generation path to check';
+  const window_ = src.slice(gen, gen + 1200);
+  if (/paintWrapGutters\(/.test(window_)) {
+    return 'FAIL: the seam is being painted during generation again — that forces the customer to choose a trimming for a picture they have not seen yet';
   }
-  const before = src.slice(Math.max(0, m.index - 400), m.index);
-  if (!/skipEdgeFade/.test(before)) {
-    return 'FAIL: the gutter is an else-branch of something other than skipEdgeFade';
+  if (!/if\(!skipEdgeFade\)\{/.test(window_)) {
+    return 'FAIL: the guaranteed edge fade has gone missing from the generation path';
   }
-  return 'PASS: exclusive with the fade, and second — so an explicit fade choice is honoured ahead of the gutter';
+  // And it must still be reachable from somewhere: a painter nothing calls is
+  // the failure mode this whole feature started with.
+  if (!/openTrimmingsPanel|confirmTrimmingAndContinue/.test(src) || !/paintWrapGutters\(/.test(src)) {
+    return 'FAIL: nothing calls the gutter painter any more — it has been orphaned';
+  }
+  return 'PASS: the seam is decided on the finished picture, not during generation, and the fade path is untouched';
 };
 
 // ---- 2. STRAIGHT STRIPS, the thing that was actually asked for. ----
@@ -293,6 +302,83 @@ scenarios.aBrokenDesignFallsBackToThePlainGutter = async (page) => {
     return `FAIL: a design whose asset will not load left the end as rgb(${edge}) — the join is bare, which is worse than either treatment`;
   }
   return 'PASS: an unloadable design falls back to the plain gutter rather than leaving the join bare';
+};
+
+// ---- THE PANEL, DRIVEN THE WAY A CUSTOMER DRIVES IT. ----
+// Alyx: "he definitely chooses it after generating. He's gonna have to see
+// what design the AI came up with to see which gutter best matches his motif."
+// So this is not a unit test of the painter -- it walks upload to mockup and
+// insists the panel appears in the middle of it, works, and lets go again. The
+// failure that matters here is not a wrong-looking trimming: it is a panel
+// that opens and does not close, which strands a paying customer short of
+// their mockup with no way forward.
+scenarios.theCustomerReachesThePanelAndGetsPastIt = async (page) => {
+  await pickCup(page, VACUUM);
+  await page.evaluate(() => {
+    const b = Array.from(document.querySelectorAll('#travelMugColorGridGen .color-btn'))
+      .find((x) => x.dataset.color && !/white/i.test(x.dataset.color));
+    if (b) b.click();
+  });
+  await T(page, 500);
+  await dismissAlerts(page);
+  // A stand-in design, so the grid has something in it on a machine with no
+  // artwork installed yet.
+  await page.evaluate(() => {
+    const c = document.createElement('canvas'); c.width = 200; c.height = 1000;
+    const x = c.getContext('2d');
+    x.fillStyle = '#B8860B'; x.fillRect(0, 0, 120, 1000);
+    x.fillStyle = '#000000'; x.fillRect(0, 300, 200, 60);
+    GUTTER_CATALOG['Test Braid'] = { asset: c.toDataURL('image/png') };
+  });
+
+  await page.evaluate(() => { window.confirm = () => false; });
+  await page.evaluate(() => document.getElementById('generateBtn')?.scrollIntoView({ block: 'center' }));
+  await page.click('#generateBtn');
+  await T(page, 1400);
+  await dismissAlerts(page);
+  await page.fill('#ideaDesc', 'a harbour at blue hour');
+  await T(page, 400);
+  await dismissAlerts(page);
+  await page.evaluate(() => document.getElementById('generateBtn')?.scrollIntoView({ block: 'center' }));
+  await page.click('#generateBtn');
+  await page.waitForFunction(() => document.getElementById('approveRow')?.style.display !== 'none', null, { timeout: 90000 });
+  await T(page, 800);
+  await page.locator('#approveRow button:has-text("Yes")').first().click();
+  await T(page, 2500);
+  await dismissAlerts(page);
+
+  const clicked = await page.evaluate(() => {
+    const b = document.getElementById('orderMugBtn');
+    if (!b || b.style.display === 'none') return false;
+    b.scrollIntoView({ block: 'center' }); b.click(); return true;
+  });
+  if (!clicked) return 'FAIL: never reached Continue to Order';
+  await T(page, 3500);
+
+  const open = await page.evaluate(() => {
+    const o = document.getElementById('trimmingsOverlay');
+    return !!o && getComputedStyle(o).display !== 'none';
+  });
+  if (!open) return 'FAIL: the Trimmings panel never opened — the seam decoration is unreachable, so the whole section is';
+
+  const tiles = await page.evaluate(() => document.querySelectorAll('#trimmingsGrid .btn-select').length);
+  if (tiles < 2) return `FAIL: the grid drew ${tiles} tiles — None plus one installed design was expected`;
+
+  const before = await page.evaluate(() => document.getElementById('trimmingsPreviewImg')?.src?.length || 0);
+  await page.evaluate(() => pickTrimming('Test Braid'));
+  await T(page, 2000);
+  const changed = await page.evaluate((b) => (document.getElementById('trimmingsPreviewImg')?.src?.length || 0) !== b, before);
+  if (!changed) return 'FAIL: choosing a trimming did not change the preview — the customer cannot see what they are picking';
+
+  await page.evaluate(() => document.getElementById('trimmingsContinueBtn').click());
+  await T(page, 5000);
+  const st = await page.evaluate(() => {
+    const o = document.getElementById('trimmingsOverlay');
+    return { closed: !o || getComputedStyle(o).display === 'none', locked: document.body.classList.contains('step-locked') };
+  });
+  if (!st.closed) return 'FAIL: Continue left the panel open — the customer is stranded short of their mockup';
+  if (st.locked) return 'FAIL: the page is still step-locked after the panel closed — nothing else can be touched';
+  return 'PASS: upload -> cup -> generate -> approve -> Continue opens Trimmings, the preview follows the choice, and Continue lets go into the mockup';
 };
 
 (async () => {
