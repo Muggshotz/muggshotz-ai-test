@@ -2,7 +2,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head><link rel="manifest" href="needles-manifest.json">
-<!-- BUILD-MARKER: NO-BLACK-LEFT-TO-BLEED-v126 -->
+<!-- BUILD-MARKER: THE-CUP-BOX-IS-A-SQUARE-v127 -->
 <!-- If you can see this comment on GitHub, this exact paste landed. -->
 <!-- If your live site's page source does NOT say -->
 <!-- "INSTANT-FIT-SCREEN-v47" right here, the upload/deploy did -->
@@ -1704,7 +1704,7 @@ Tell Needles <span style="color:#7ab8ff">what you have in mind</span>
      It stands in the picture's own slot rather than beside it, so the card
      does not grow -- and the flat picture comes back the moment the slider
      panel closes. -->
-<div id="revealFade3DStage" class="mug3d-stage" style="display:none;width:100%;height:auto;aspect-ratio:1/1;max-height:38vh;margin:.9rem auto .3rem"></div>
+<div id="revealFade3DStage" class="mug3d-stage" style="display:none;width:min(100%,38vh);height:auto;aspect-ratio:1/1;margin:.9rem auto .3rem"></div>
 <div class="note" id="revealFade3DHint" style="display:none;margin:0 0 .5rem;font-size:11px">Drag it to turn it &middot; click it to stop or start the spin</div>
 <div id="revealFitHost" style="display:none;margin:.9rem 0"></div>
 <div class="note" id="revealFitNote" style="display:none;margin-top:0;margin-bottom:.6rem;color:#7ab8ff;font-size:11px"></div>
@@ -1774,7 +1774,13 @@ Tell Needles <span style="color:#7ab8ff">what you have in mind</span>
      singleton, so the panel opens it here and closes it on the way out, and
      the mockup opens it again in its own stage. Dragging and the spin are
      wired to whatever host it is mounted in, so both work here for free. -->
-<div id="trimmings3DStage" class="mug3d-stage" style="width:100%;height:auto;aspect-ratio:1/1;max-height:34vh;margin:0 auto .45rem"></div>
+<!-- SQUARE, and sized by whichever runs out first (Alyx, Sep 2026: "there's
+     no reason why the box isn't a square"). aspect-ratio with a max-height on
+     top of it is not a square at all: the cap wins, the width stays full, and
+     the box letterboxes with the cup marooned in the middle of it. min() picks
+     the smaller of the column and the height budget, and the ratio then has
+     nothing to fight. -->
+<div id="trimmings3DStage" class="mug3d-stage" style="width:min(100%,34vh);height:auto;aspect-ratio:1/1;margin:0 auto .45rem"></div>
 <div class="note" id="trimmings3DHint" style="margin:0 0 .5rem;font-size:11px">Drag the cup to turn it &middot; click it to stop or start the spin</div>
 <!-- Capped so the grid is not pushed off the bottom (Alyx: "fit all of the
      options into the frame and the continue button"). The wrap is very wide

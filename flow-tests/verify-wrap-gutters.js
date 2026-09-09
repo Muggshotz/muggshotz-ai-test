@@ -665,9 +665,14 @@ scenarios.theWholeChoiceIsOnScreenAtOnce = async (page) => {
       const r = el.getBoundingClientRect();
       return r.width > 4 && r.height > 4 && r.top >= -2 && r.bottom <= window.innerHeight + 2;
     };
+    const stage = document.getElementById('trimmings3DStage').getBoundingClientRect();
     return {
       tiles: tiles.length,
       overflow: card.scrollHeight - card.clientHeight,
+      // A SQUARE (Alyx: "there's no reason why the box isn't a square").
+      // aspect-ratio with a max-height on top of it is not one: the cap wins,
+      // the width stays full, and the cup sits marooned in a letterbox.
+      stageW: Math.round(stage.width), stageH: Math.round(stage.height),
       preview: onScreen(document.getElementById('trimmings3DStage')),
       lastTile: onScreen(tiles[tiles.length - 1]),
       continue: onScreen(document.getElementById('trimmingsContinueBtn')),
@@ -682,6 +687,9 @@ scenarios.theWholeChoiceIsOnScreenAtOnce = async (page) => {
   if (wide.tiles < 12) return `FAIL: the grid drew ${wide.tiles} tiles — the twelve trimmings are not all installed, so this measures nothing`;
   if (!wide.twoCol) return 'FAIL: at 1280px the panel is still stacked in one column';
   if (wide.overflow > 4) return `FAIL: the panel still scrolls by ${wide.overflow}px at 1280x900 — something is off the bottom`;
+  if (Math.abs(wide.stageW - wide.stageH) > 4) {
+    return `FAIL: the cup's box is ${wide.stageW}x${wide.stageH} — not square, so the cup is marooned in a letterbox with dead space either side of it`;
+  }
   if (!wide.preview || !wide.lastTile || !wide.continue) {
     return `FAIL: at 1280x900 not everything is on screen together — cup ${wide.preview}, last tile ${wide.lastTile}, Continue ${wide.continue}`;
   }
@@ -709,7 +717,7 @@ scenarios.theWholeChoiceIsOnScreenAtOnce = async (page) => {
   if (!phone.previewVisible) return 'FAIL: on a phone the cup left the screen as soon as the tiles were scrolled to — the customer chooses a trimming for something they cannot see';
   if (!phone.lastTileVisible) return 'FAIL: the last tile was not reachable on a phone';
 
-  return `PASS: at 1280x900 the cup, all ${wide.tiles} trimmings and Continue are on screen together with nothing scrolling; on a 390px phone the cup sticks to the top and the tiles pass under it`;
+  return `PASS: at 1280x900 the cup (a square ${wide.stageW}px box), all ${wide.tiles} trimmings and Continue are on screen together with nothing scrolling; on a 390px phone the cup sticks to the top and the tiles pass under it`;
 };
 
 // ---- THE PICTURE SHOWS THROUGH THE OPENWORK, AND THE JOIN STILL DOES NOT. ----
