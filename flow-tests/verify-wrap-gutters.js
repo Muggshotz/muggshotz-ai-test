@@ -387,6 +387,67 @@ scenarios.theCustomerReachesThePanelAndGetsPastIt = async (page) => {
   return 'PASS: upload -> cup -> generate -> approve, and the studio opens Trimmings by itself on the way to the mockup; the preview follows the choice and Continue lets go';
 };
 
+// ---- COLOURING A TRIMMING, THREE WAYS. ----
+// Alyx: "rather than have set colors I would actually rather have that color
+// gradient thing... I would want to match the ribbon color to the maroon of his
+// jacket" -- then, separately: "what if the color you want isn't present in the
+// picture? Can we give them sampling AND a color gradient palette?"
+//
+// So all three exist and this holds them there: presets for speed, a full
+// picker for any colour at all, and sampling straight off the artwork for the
+// case a palette cannot serve -- matching a particular maroon that is already
+// on screen. It also pins the row STAYING AWAY from the designs whose several
+// colours mean different things.
+scenarios.aTrimmingCanBeColouredThreeWays = async (page) => {
+  await pickCup(page, VACUUM);
+  const st = await page.evaluate(async () => {
+    // Stand in for the flow: the panel's controls are what is under test here.
+    const c = document.createElement('canvas'); c.width = 1200; c.height = 900;
+    const x = c.getContext('2d'); x.fillStyle = '#8a2e3b'; x.fillRect(0, 0, 1200, 900);
+    trimmingsBaseUrl = c.toDataURL('image/png');
+    // The panel has to be ON SCREEN: sampling maps the tap through the
+    // element's box, and a hidden element has none. The first run of this
+    // test failed here and it was right to -- the code threw rather than
+    // refusing, which is now guarded.
+    const ov = document.getElementById('trimmingsOverlay');
+    ov.style.display = 'flex';
+    const img = document.getElementById('trimmingsPreviewImg');
+    img.src = trimmingsBaseUrl;
+    await new Promise(r => { if (img.complete && img.naturalWidth) r(); else img.onload = r; });
+
+    await pickTrimming('Blue Satin Ribbon');
+    const vis = (id) => { const e = document.getElementById(id); return !!e && getComputedStyle(e).display !== 'none'; };
+    const out = {
+      rowForColourable: vis('trimmingsColourRow'),
+      hasPicker: !!document.getElementById('trimmingsColourPicker'),
+      hasGradient: !!document.querySelector('#trimmingsSwatches canvas'),
+    };
+    // Preset
+    await pickTrimmingColour('#1F7A45');
+    out.afterPreset = selectedGutterColor;
+    // Sampled from the picture: the whole canvas is one maroon, so whatever
+    // pixel the tap lands on must come back as that maroon.
+    const r = img.getBoundingClientRect();
+    img.dispatchEvent(new MouseEvent('click', { clientX: r.left + r.width / 2, clientY: r.top + r.height / 2, bubbles: true }));
+    await new Promise(res => setTimeout(res, 1200));
+    out.sampled = selectedGutterColor;
+    // And a design whose colours carry meaning is left alone
+    await pickTrimming('Film Reel');
+    out.rowForNonColourable = vis('trimmingsColourRow');
+    return out;
+  });
+
+  if (!st.rowForColourable) return 'FAIL: no colour row on a trimming marked colorable';
+  if (!st.hasPicker) return 'FAIL: the full colour picker is missing — presets alone cannot match a particular colour';
+  if (!st.hasGradient) return 'FAIL: the gradient strip is missing — sixteen circles cost three rows and still could not offer a particular colour';
+  if (st.afterPreset !== '#1F7A45') return `FAIL: setting a colour directly did not take (got ${st.afterPreset})`;
+  if (!/^#8a2e3b$/i.test(st.sampled || '')) {
+    return `FAIL: sampling the picture returned ${st.sampled}, expected the #8a2e3b it was tapped on — the eyedropper is reading the wrong pixel, which is the whole point of it`;
+  }
+  if (st.rowForNonColourable) return 'FAIL: the colour row is offered on a design whose several colours mean different things';
+  return `PASS: a gradient strip, a full picker, and a tap on the picture returning ${st.sampled} exactly — and left off the designs that must not take one`;
+};
+
 (async () => {
   let fails = 0;
   for (const [name, fn] of Object.entries(scenarios)) {

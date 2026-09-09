@@ -2,7 +2,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head><link rel="manifest" href="needles-manifest.json">
-<!-- BUILD-MARKER: TRIMMINGS-ON-ONE-SCREEN-v116 -->
+<!-- BUILD-MARKER: TRIMMINGS-COLOUR-GRADIENT-v117 -->
 <!-- If you can see this comment on GitHub, this exact paste landed. -->
 <!-- If your live site's page source does NOT say -->
 <!-- "INSTANT-FIT-SCREEN-v47" right here, the upload/deploy did -->
@@ -1718,6 +1718,14 @@ Tell Needles <span style="color:#7ab8ff">what you have in mind</span>
      options into the frame and the continue button"). The wrap is very wide
      and very short, so at full width it ate half the panel on its own. -->
 <img id="trimmingsPreviewImg" style="width:100%;max-height:26vh;object-fit:contain;border-radius:10px;border:1px solid #003c8c;margin:.3rem 0 .5rem;background:#0d0d0d"/>
+<!-- Directly under the picture, so a colour change is seen the instant it is
+     made (Alyx: "when you click the color it should immediately affect the
+     items so you can see what it looks like"). Only drawn for a trimming whose
+     colour can change without destroying what it is -- see colorable. -->
+<div id="trimmingsColourRow" style="display:none;margin:0 0 .6rem">
+<div id="trimmingsSwatches" style="display:flex;flex-wrap:wrap;gap:6px;justify-content:center;align-items:center"></div>
+<div class="note" id="trimmingsEyedropNote" style="margin:.45rem 0 0;font-size:11px;color:#7ab8ff">Or tap anywhere in the picture above to take that exact colour.</div>
+</div>
 <div class="note" id="trimmingsSeamNote" style="margin-top:0;margin-bottom:.6rem;color:#7ab8ff;font-size:11px">The wrap laid flat &mdash; the trimming appears at both ends and they meet on the back of the cup.</div>
 <div id="trimmingsGrid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:.7rem"></div>
 <!-- A pill, not a tile (Alyx). A full-width box gave the absence of a trimming
@@ -1725,10 +1733,6 @@ Tell Needles <span style="color:#7ab8ff">what you have in mind</span>
      thirteen cells so the grid never sat square. -->
 <!-- Only shown for a trimming whose colour can be changed without destroying
      what it is -- see colorable in GUTTER_CATALOG. -->
-<div id="trimmingsColourRow" style="display:none;margin:0 0 .8rem">
-<div class="note" style="margin:0 0 .45rem;font-size:11px">Colour this trimming</div>
-<div id="trimmingsSwatches" style="display:flex;flex-wrap:wrap;gap:6px;justify-content:center"></div>
-</div>
 <div class="note" id="trimmingsEmptyNote" style="display:none;margin:0 0 .6rem;color:#7ab8ff;font-size:11px">No trimmings are installed yet.</div>
 <!-- SIDE BY SIDE (Alyx). A full-width Continue with the pill stacked above it
      cost two rows of height, which was the difference between the twelve
@@ -17237,7 +17241,18 @@ async function pickTrimming(key){
   // JUMP TO CONTINUE (Alyx). Picking a trimming is the moment the customer is
   // ready to move on, and on a phone the button was below the fold behind
   // twelve tiles -- the choice was made and the way forward was invisible.
-  if(key)scrollTrimmingsToContinue();
+  // A colourable trimming's next decision is its COLOUR, and that is decided by
+  // looking at the picture -- so go to the picture, not to the way out. Anything
+  // else is finished being chosen, so the way out is exactly right.
+  if(key&&GUTTER_CATALOG[key]&&GUTTER_CATALOG[key].colorable)scrollTrimmingsToPreview();
+  else if(key)scrollTrimmingsToContinue();
+}
+
+function scrollTrimmingsToPreview(){
+  const card=document.getElementById('trimmingsCard');
+  const img=document.getElementById('trimmingsPreviewImg');
+  if(!card||!img)return;
+  card.scrollTo({top:Math.max(0,img.offsetTop-card.offsetTop-8),behavior:'smooth'});
 }
 
 function scrollTrimmingsToContinue(){
@@ -17256,20 +17271,115 @@ function renderTrimmingsSwatches(){
   const entry=selectedGutter?GUTTER_CATALOG[selectedGutter]:null;
   if(!entry||!entry.colorable){ row.style.display='none'; host.innerHTML=''; return; }
   row.style.display='block';
+  const prev=document.getElementById('trimmingsPreviewImg');
+  if(prev&&!prev.dataset.eyedrop){
+    prev.dataset.eyedrop='1';
+    prev.style.cursor='crosshair';
+    prev.addEventListener('click',eyedropTrimmingColour);
+  }
   host.innerHTML='';
   // "As drawn" first, so the artist's own colours are always one tap away and
   // are not treated as just another swatch.
-  const opts=[{name:'As drawn',hex:null}].concat(FRAME_COLOR_SWATCHES);
-  for(const c of opts){
-    const on=(selectedGutterColor||null)===(c.hex||null);
-    const el=document.createElement('span');
-    el.title=c.name;
-    el.onclick=()=>pickTrimmingColour(c.hex);
-    el.style.cssText='cursor:pointer;width:26px;height:26px;border-radius:50%;display:inline-block;'
-      +'border:'+(on?'3px solid #29a3ff':'2px solid #003c8c')+';'
-      +(c.hex?('background:'+c.hex):'background:linear-gradient(135deg,#8a6f4a 0 50%,#c9b79a 50% 100%)');
-    host.appendChild(el);
-  }
+  // A GRADIENT, NOT SIXTEEN CIRCLES (Alyx: "the beauty of a color gradient
+  // rather than have individual color circles is that it is extremely space
+  // economical"). Sixteen swatches took three rows on a phone and still could
+  // not offer a particular maroon. One strip carries every hue in a single row,
+  // with the neutrals a circle palette always had to spend slots on -- white
+  // through black, and the golds this catalogue leans on -- at its right end.
+  const bar=document.createElement('canvas');
+  bar.width=512; bar.height=1;
+  const bx=bar.getContext('2d');
+  const grad=bx.createLinearGradient(0,0,512,0);
+  const stops=['#ff0000','#ff8000','#ffff00','#00ff00','#00ffff','#0080ff','#0000ff','#8000ff','#ff00ff','#ff0080'];
+  stops.forEach((c,i)=>grad.addColorStop(i/(stops.length-1)*0.78,c));
+  grad.addColorStop(0.80,'#ffffff');
+  grad.addColorStop(0.86,'#d4af37');
+  grad.addColorStop(0.92,'#8a6f4a');
+  grad.addColorStop(1,'#111111');
+  bx.fillStyle=grad; bx.fillRect(0,0,512,1);
+  bar.style.cssText='flex:1;min-width:120px;height:26px;border-radius:6px;border:2px solid #003c8c;cursor:crosshair;display:block';
+  bar.title='Drag for any colour';
+  const readBar=(ev)=>{
+    const r=bar.getBoundingClientRect();
+    if(!(r.width>0))return;
+    const px=Math.max(0,Math.min(511,Math.round((ev.clientX-r.left)/r.width*512)));
+    const d=bar.getContext('2d').getImageData(px,0,1,1).data;
+    setTrimmingColourLive('#'+[d[0],d[1],d[2]].map(v=>v.toString(16).padStart(2,'0')).join(''));
+  };
+  bar.onpointerdown=(e)=>{ try{bar.setPointerCapture(e.pointerId);}catch(_){} readBar(e); };
+  bar.onpointermove=(e)=>{ if(e.buttons)readBar(e); };
+  host.appendChild(bar);
+
+  // "As drawn" stays: the artist's own colours are not a point on a gradient
+  // and must always be one tap away.
+  const asDrawn=document.createElement('span');
+  asDrawn.title='As drawn';
+  asDrawn.onclick=()=>pickTrimmingColour(null);
+  asDrawn.style.cssText='cursor:pointer;width:26px;height:26px;border-radius:50%;display:inline-block;flex:0 0 auto;'
+    +'border:'+(selectedGutterColor?'2px solid #003c8c':'3px solid #29a3ff')+';'
+    +'background:linear-gradient(135deg,#8a6f4a 0 50%,#c9b79a 50% 100%)';
+  host.appendChild(asDrawn);
+
+  // ANY COLOUR, NOT SIXTEEN (Alyx: "rather than have set colors I would
+  // actually rather have that color gradient thing... in this case I would
+  // want to match the ribbon color to the maroon of his jacket"). Sixteen
+  // presets cannot match a particular maroon; a picker can, and the browser's
+  // own is a full gradient with an eyedropper on most desktops.
+  const pick=document.createElement('input');
+  pick.type='color';
+  pick.id='trimmingsColourPicker';
+  pick.title='Any colour';
+  pick.value=selectedGutterColor||'#8a2e3b';
+  pick.style.cssText='width:32px;height:30px;padding:0;border:2px solid #003c8c;border-radius:8px;background:transparent;cursor:pointer';
+  // Dragging inside the picker fires continuously and each change repaints a
+  // 3710x2817 wrap, so the preview follows the last value to settle rather
+  // than every value on the way to it.
+  pick.oninput=()=>setTrimmingColourLive(pick.value);
+  host.appendChild(pick);
+}
+
+// Every live control funnels through here. Dragging the gradient or the picker
+// fires continuously and each change repaints a 3710x2817 wrap, so the preview
+// follows the last value to settle rather than every value on the way to it.
+// The row is deliberately NOT rebuilt here: replacing the bar mid-drag would
+// pull it out from under the finger.
+function setTrimmingColourLive(hex){
+  selectedGutterColor=hex;
+  clearTimeout(trimmingsColourDebounce);
+  trimmingsColourDebounce=setTimeout(()=>{ updateTrimmingsPreview(); },140);
+}
+let trimmingsColourDebounce=0;
+
+// TAKE THE COLOUR OFF THE PICTURE ITSELF. Alyx wanted the ribbon to match the
+// maroon of the jacket in his artwork, and no palette can be relied on to hold
+// that exact maroon -- but the artwork can, because it is right there. Tapping
+// the preview reads the pixel under the finger and uses it.
+async function eyedropTrimmingColour(ev){
+  const img=document.getElementById('trimmingsPreviewImg');
+  const entry=selectedGutter?GUTTER_CATALOG[selectedGutter]:null;
+  if(!img||!img.src||!entry||!entry.colorable)return;
+  const r=img.getBoundingClientRect();
+  // A box with no size means the panel is not laid out. Without this the scale
+  // below is zero, the coordinates come out Infinity, and getImageData throws
+  // "Value is not of type 'long'" -- found by the suite, not by a customer.
+  if(!(r.width>0&&r.height>0))return;
+  // The picture is object-fit:contain, so it is letterboxed inside its box --
+  // mapping the tap straight onto the bitmap would sample the wrong pixel
+  // wherever the bars are.
+  const natW=img.naturalWidth,natH=img.naturalHeight;
+  if(!natW||!natH)return;
+  const scale=Math.min(r.width/natW,r.height/natH);
+  const dw=natW*scale,dh=natH*scale;
+  const x=(ev.clientX-r.left-(r.width-dw)/2)/scale;
+  const y=(ev.clientY-r.top-(r.height-dh)/2)/scale;
+  if(x<0||y<0||x>=natW||y>=natH)return;
+  const c=document.createElement('canvas');
+  c.width=natW;c.height=natH;
+  const cx=c.getContext('2d');
+  cx.drawImage(img,0,0);
+  const d=cx.getImageData(Math.round(x),Math.round(y),1,1).data;
+  const hex='#'+[d[0],d[1],d[2]].map(v=>v.toString(16).padStart(2,'0')).join('');
+  await pickTrimmingColour(hex);
 }
 
 async function pickTrimmingColour(hex){
@@ -17300,7 +17410,17 @@ async function confirmTrimmingAndContinue(){
   if(selectedGutter){
     trimmingsBakeInFlight=true;
     if(btn)btn.disabled=true;
-    if(saving)saving.style.display='block';
+    // THE BLACK WAIT SCREEN, the same one the mockup fetch itself uses (Alyx).
+    // The panel used to sit there with a small "Saving..." line under the
+    // button while a full-size upload ran, which reads as nothing happening.
+    // Hand the screen over instead: the panel goes, the wait comes up, and
+    // beginFinalMockupFetch keeps the very same overlay when it takes over --
+    // so it never blinks between the two.
+    const trimOverlay=document.getElementById('trimmingsOverlay');
+    if(trimOverlay)trimOverlay.style.display='none';
+    const wait=document.getElementById('mockupLoadingOverlay');
+    if(wait){wait.style.display='flex';document.body.classList.add('step-locked');}
+    if(saving)saving.style.display='none';
     let err=null;
     try{
       const painted=await paintWrapGutters(trimmingsBaseUrl,getSelectedProductColorHex(),WRAP_GUTTER_WIDTH,selectedGutter);
@@ -17316,8 +17436,18 @@ async function confirmTrimmingAndContinue(){
       if(saving)saving.style.display='none';
     }
     // Stay on the page for a retry rather than carrying a raw data URL forward
-    // as the design, which breaks at checkout.
-    if(err){ showGuidanceAlert(describeUploadFailure(err)); return; }
+    // as the design, which breaks at checkout. The wait screen comes down and
+    // the panel comes back, or the customer is left staring at a black screen
+    // that will never resolve.
+    if(err){
+      const wait2=document.getElementById('mockupLoadingOverlay');
+      if(wait2)wait2.style.display='none';
+      const trim2=document.getElementById('trimmingsOverlay');
+      if(trim2)trim2.style.display='flex';
+      document.body.classList.add('step-locked');
+      showGuidanceAlert(describeUploadFailure(err));
+      return;
+    }
   }
   const overlay=document.getElementById('trimmingsOverlay');
   if(overlay)overlay.style.display='none';
