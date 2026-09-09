@@ -1715,6 +1715,12 @@ Tell Needles <span style="color:#7ab8ff">what you have in mind</span>
 <!-- A pill, not a tile (Alyx). A full-width box gave the absence of a trimming
      the same visual weight as the twelve designs, and made twelve render as
      thirteen cells so the grid never sat square. -->
+<!-- Only shown for a trimming whose colour can be changed without destroying
+     what it is -- see colorable in GUTTER_CATALOG. -->
+<div id="trimmingsColourRow" style="display:none;margin:0 0 .8rem">
+<div class="note" style="margin:0 0 .45rem;font-size:11px">Colour this trimming</div>
+<div id="trimmingsSwatches" style="display:flex;flex-wrap:wrap;gap:6px;justify-content:center"></div>
+</div>
 <div style="display:flex;justify-content:center;margin:0 0 .9rem">
 <span id="trimmingsNoneBtn" onclick="pickTrimming(null)" style="cursor:pointer;display:inline-block;padding:.42rem 1.1rem;border-radius:999px;border:1.5px solid #003c8c;background:#12233a;color:#29a3ff;font-size:12px;font-weight:700;user-select:none">No Thanks</span>
 </div>
@@ -5503,15 +5509,15 @@ const WRAP_GUTTER_WIDTH=0.06;     // per end, fraction of wrap width (~223px of 
 //
 // Left end of the wrap gets the asset as drawn; right end gets it mirrored.
 const GUTTER_CATALOG={
-  "Blue Satin Ribbon":  { asset:"gutter-ribbon-blue.png",     thumb:"gutter-thumb-ribbon-blue.png" },
-  "Tasselled Ribbon":   { asset:"gutter-tassled-ribbon.png",  thumb:"gutter-thumb-tassled-ribbon.png" },
+  "Blue Satin Ribbon":  { asset:"gutter-ribbon-blue.png",     thumb:"gutter-thumb-ribbon-blue.png", colorable:true, defaultColor:"#003c8c" },
+  "Tasselled Ribbon":   { asset:"gutter-tassled-ribbon.png",  thumb:"gutter-thumb-tassled-ribbon.png", colorable:true, defaultColor:"#003c8c" },
   "Roses & Pearls":     { asset:"gutter-rose-pearl.png",      thumb:"gutter-thumb-rose-pearl.png" },
-  "Doily":              { asset:"gutter-doily.png",           thumb:"gutter-thumb-doily.png" },
-  "Ivy Vine":           { asset:"gutter-ivy.png",             thumb:"gutter-thumb-ivy.png" },
+  "Doily":              { asset:"gutter-doily.png",           thumb:"gutter-thumb-doily.png", colorable:true },
+  "Ivy Vine":           { asset:"gutter-ivy.png",             thumb:"gutter-thumb-ivy.png", colorable:true, defaultColor:"#1F7A45" },
   "Soft Country":       { asset:"gutter-soft-country.png",    thumb:"gutter-thumb-soft-country.png" },
-  "Rope":               { asset:"gutter-rope.png",            thumb:"gutter-thumb-rope.png" },
-  "Laced Leather":      { asset:"gutter-leather-laces.png",   thumb:"gutter-thumb-leather-laces.png" },
-  "Astral":             { asset:"gutter-astral.png",          thumb:"gutter-thumb-astral.png" },
+  "Rope":               { asset:"gutter-rope.png",            thumb:"gutter-thumb-rope.png", colorable:true, defaultColor:"#c9a05a" },
+  "Laced Leather":      { asset:"gutter-leather-laces.png",   thumb:"gutter-thumb-leather-laces.png", colorable:true, defaultColor:"#B08D57" },
+  "Astral":             { asset:"gutter-astral.png",          thumb:"gutter-thumb-astral.png", colorable:true, defaultColor:"#1B3D7A" },
   "Zipper":             { asset:"gutter-zipper.png",          thumb:"gutter-thumb-zipper.png" },
   "Rivets":             { asset:"gutter-rivots.png",          thumb:"gutter-thumb-rivots.png" },
   "Film Reel":          { asset:"gutter-film.png",            thumb:"gutter-thumb-film.png" },
@@ -5558,7 +5564,8 @@ const GUTTER_CATALOG={
   // asset fails to load falls back to the plain colour gutter rather than
   // leaving the join bare.
 };
-let selectedGutter=null;   // null = the plain strip of the cup's own colour
+let selectedGutter=null;        // null = the plain strip of the cup's own colour
+let selectedGutterColor=null;   // null = the design's own colours, as drawn
 // Only cups confirmed to close on themselves. The vacuum 40oz's single
 // 3710x2817 area covers the whole tumbler (products-catalog.js), so its ends
 // meet. Anything absent is left exactly as it is today.
@@ -5587,6 +5594,70 @@ function wrapWantsGutters(){
 // horizontal flip cannot move a feature up or down, which is exactly why the
 // two ends cannot fall out of vertical alignment (Alyx's constraint, made
 // arithmetic rather than a rule somebody keeps).
+// RECOLOURING A TRIMMING (Alyx: "we should have some input as to whether we
+// want the ribbon to be blue, or red, to match what's going on in the image").
+//
+// Not a flat tint. Painting a colour over blue satin would fill in every fold
+// and highlight and leave a flat ribbon-shaped sticker -- the shading IS the
+// satin. So this keeps each pixel's LIGHTNESS, which is what carries the folds,
+// the sheen and the shadow, and takes only hue and saturation from the swatch.
+// Blue satin becomes red satin with its own light intact.
+//
+// Keeping lightness is also what makes it work on the near-white designs. A
+// hue rotation does nothing to cream lace, because there is no hue there to
+// rotate; assigning saturation outright gives it one.
+//
+// Only designs marked colorable get this. Roses & Pearls, the zipper and the
+// film reel each carry several colours that mean different things -- pearls
+// against ribbon, gold teeth against black tape -- and forcing one hue across
+// them flattens exactly what makes them read.
+const gutterTintCache={};
+function hexToHsl(hex){
+  const r=parseInt(hex.substr(1,2),16)/255,g=parseInt(hex.substr(3,2),16)/255,b=parseInt(hex.substr(5,2),16)/255;
+  const mx=Math.max(r,g,b),mn=Math.min(r,g,b);
+  let h=0,sAt=0;const l=(mx+mn)/2;
+  if(mx!==mn){
+    const d=mx-mn;
+    sAt=l>0.5?d/(2-mx-mn):d/(mx+mn);
+    if(mx===r)h=((g-b)/d+(g<b?6:0));else if(mx===g)h=(b-r)/d+2;else h=(r-g)/d+4;
+    h/=6;
+  }
+  return {h,s:sAt,l};
+}
+function hue2rgb(p,q,t){
+  if(t<0)t+=1; if(t>1)t-=1;
+  if(t<1/6)return p+(q-p)*6*t;
+  if(t<1/2)return q;
+  if(t<2/3)return p+(q-p)*(2/3-t)*6;
+  return p;
+}
+async function recolouredGutter(entry,hex){
+  const key=entry.asset+'|'+hex;
+  if(gutterTintCache[key])return gutterTintCache[key];
+  const art=await loadImageFromUrl(entry.asset);
+  const c=document.createElement('canvas');
+  c.width=art.naturalWidth; c.height=art.naturalHeight;
+  const ctx=c.getContext('2d');
+  ctx.drawImage(art,0,0);
+  const img=ctx.getImageData(0,0,c.width,c.height);
+  const d=img.data;
+  const t=hexToHsl(hex);
+  for(let i=0;i<d.length;i+=4){
+    if(d[i+3]===0)continue;                       // leave transparency alone
+    const r=d[i]/255,g=d[i+1]/255,b=d[i+2]/255;
+    const mx=Math.max(r,g,b),mn=Math.min(r,g,b);
+    const l=(mx+mn)/2;                            // the pixel's own light, kept
+    const q=l<0.5?l*(1+t.s):l+t.s-l*t.s, pp=2*l-q;
+    d[i]=Math.round(hue2rgb(pp,q,t.h+1/3)*255);
+    d[i+1]=Math.round(hue2rgb(pp,q,t.h)*255);
+    d[i+2]=Math.round(hue2rgb(pp,q,t.h-1/3)*255);
+  }
+  ctx.putImageData(img,0,0);
+  const url=c.toDataURL('image/png');
+  gutterTintCache[key]=url;
+  return url;
+}
+
 async function drawGutterDesign(ctx,art,w,h){
   // Fitted to the full height; width follows from the asset's own proportions.
   const drawW=Math.round(h*(art.naturalWidth/art.naturalHeight));
@@ -5613,7 +5684,8 @@ async function paintWrapGutters(url,hex,width=WRAP_GUTTER_WIDTH,design=null){
   const entry=pick?GUTTER_CATALOG[pick]:null;
   if(entry&&entry.asset){
     try{
-      const art=await loadImageFromUrl(entry.asset);
+      const src=(entry.colorable&&selectedGutterColor)?await recolouredGutter(entry,selectedGutterColor):entry.asset;
+      const art=await loadImageFromUrl(src);
       // BACKING FIRST. The plain colour band goes underneath every design, and
       // it is not belt-and-braces: openwork is the norm here, not the
       // exception -- lace, vines and film all have holes in them by design.
@@ -17069,8 +17141,14 @@ function renderTrimmingsGrid(){
 }
 
 async function pickTrimming(key){
+  const changed=selectedGutter!==key;
   selectedGutter=key;
+  // A colour belongs to the trimming that was wearing it, not to the panel --
+  // carrying red from a ribbon onto the leather would apply a choice nobody
+  // made to a design they have not seen yet.
+  if(changed)selectedGutterColor=(key&&GUTTER_CATALOG[key]&&GUTTER_CATALOG[key].colorable)?(GUTTER_CATALOG[key].defaultColor||null):null;
   renderTrimmingsGrid();
+  renderTrimmingsSwatches();
   // The pill lights the same way a tile does, so "no trimming" reads as a
   // choice that has been made rather than one nobody got round to.
   const none=document.getElementById('trimmingsNoneBtn');
@@ -17080,6 +17158,48 @@ async function pickTrimming(key){
     none.style.color=on?'#ffffff':'#29a3ff';
     none.style.borderColor=on?'#29a3ff':'#003c8c';
   }
+  await updateTrimmingsPreview();
+  // JUMP TO CONTINUE (Alyx). Picking a trimming is the moment the customer is
+  // ready to move on, and on a phone the button was below the fold behind
+  // twelve tiles -- the choice was made and the way forward was invisible.
+  if(key)scrollTrimmingsToContinue();
+}
+
+function scrollTrimmingsToContinue(){
+  const card=document.getElementById('trimmingsCard');
+  const btn=document.getElementById('trimmingsContinueBtn');
+  if(!card||!btn)return;
+  // Scroll the CARD, not the page: the panel is its own scrolling box, and
+  // scrollIntoView here would move the page behind the overlay instead.
+  card.scrollTo({top:card.scrollHeight,behavior:'smooth'});
+}
+
+function renderTrimmingsSwatches(){
+  const row=document.getElementById('trimmingsColourRow');
+  const host=document.getElementById('trimmingsSwatches');
+  if(!row||!host)return;
+  const entry=selectedGutter?GUTTER_CATALOG[selectedGutter]:null;
+  if(!entry||!entry.colorable){ row.style.display='none'; host.innerHTML=''; return; }
+  row.style.display='block';
+  host.innerHTML='';
+  // "As drawn" first, so the artist's own colours are always one tap away and
+  // are not treated as just another swatch.
+  const opts=[{name:'As drawn',hex:null}].concat(FRAME_COLOR_SWATCHES);
+  for(const c of opts){
+    const on=(selectedGutterColor||null)===(c.hex||null);
+    const el=document.createElement('span');
+    el.title=c.name;
+    el.onclick=()=>pickTrimmingColour(c.hex);
+    el.style.cssText='cursor:pointer;width:26px;height:26px;border-radius:50%;display:inline-block;'
+      +'border:'+(on?'3px solid #29a3ff':'2px solid #003c8c')+';'
+      +(c.hex?('background:'+c.hex):'background:linear-gradient(135deg,#8a6f4a 0 50%,#c9b79a 50% 100%)');
+    host.appendChild(el);
+  }
+}
+
+async function pickTrimmingColour(hex){
+  selectedGutterColor=hex||null;
+  renderTrimmingsSwatches();
   await updateTrimmingsPreview();
 }
 
