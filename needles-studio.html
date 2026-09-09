@@ -1711,7 +1711,13 @@ Tell Needles <span style="color:#7ab8ff">what you have in mind</span>
 <div class="note" style="margin-top:0;margin-bottom:.9rem;text-align:left;line-height:1.6">Your picture goes all the way around this cup, so its two ends meet in a join you can see. A trimming turns that join into something you meant &mdash; the two halves come together to make one ribbon, one zip, one length of rope. Tap one to try it on. It's free to look.</div>
 <img id="trimmingsPreviewImg" style="width:100%;border-radius:10px;border:1px solid #003c8c;margin:.4rem 0 .8rem;background:#0d0d0d"/>
 <div class="note" id="trimmingsSeamNote" style="margin-top:0;margin-bottom:.8rem;color:#7ab8ff;font-size:11px">The picture above is the wrap laid flat &mdash; the trimming appears at both ends, and they meet on the back of the cup.</div>
-<div id="trimmingsGrid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:.9rem"></div>
+<div id="trimmingsGrid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:.7rem"></div>
+<!-- A pill, not a tile (Alyx). A full-width box gave the absence of a trimming
+     the same visual weight as the twelve designs, and made twelve render as
+     thirteen cells so the grid never sat square. -->
+<div style="display:flex;justify-content:center;margin:0 0 .9rem">
+<span id="trimmingsNoneBtn" onclick="pickTrimming(null)" style="cursor:pointer;display:inline-block;padding:.42rem 1.1rem;border-radius:999px;border:1.5px solid #003c8c;background:#12233a;color:#29a3ff;font-size:12px;font-weight:700;user-select:none">No Thanks</span>
+</div>
 <div class="note" id="trimmingsEmptyNote" style="display:none;margin:0 0 .9rem;color:#7ab8ff;font-size:11px">No trimmings are installed yet.</div>
 <button type="button" class="generate-btn" id="trimmingsContinueBtn" style="margin-top:.3rem" onclick="confirmTrimmingAndContinue()">✅ Continue</button>
 <div class="note" id="trimmingsSavingNote" style="display:none;margin-top:.75rem;text-align:center"><span class="spinner"></span>Saving your design...</div>
@@ -5502,6 +5508,7 @@ const GUTTER_CATALOG={
   "Roses & Pearls":     { asset:"gutter-rose-pearl.png",      thumb:"gutter-thumb-rose-pearl.png" },
   "Doily":              { asset:"gutter-doily.png",           thumb:"gutter-thumb-doily.png" },
   "Ivy Vine":           { asset:"gutter-ivy.png",             thumb:"gutter-thumb-ivy.png" },
+  "Soft Country":       { asset:"gutter-soft-country.png",    thumb:"gutter-thumb-soft-country.png" },
   "Rope":               { asset:"gutter-rope.png",            thumb:"gutter-thumb-rope.png" },
   "Laced Leather":      { asset:"gutter-leather-laces.png",   thumb:"gutter-thumb-leather-laces.png" },
   "Astral":             { asset:"gutter-astral.png",          thumb:"gutter-thumb-astral.png" },
@@ -16997,7 +17004,7 @@ async function openTrimmingsPanel(){
   const card=document.getElementById('trimmingsCard');
   if(card)card.scrollTop=0;
   renderTrimmingsGrid();
-  await updateTrimmingsPreview();
+  await pickTrimming(null);
 }
 
 function renderTrimmingsGrid(){
@@ -17006,10 +17013,13 @@ function renderTrimmingsGrid(){
   if(!grid)return;
   const names=Object.keys(GUTTER_CATALOG);
   if(empty)empty.style.display=names.length?'none':'block';
-  // "None" is always first and always available -- a plain seam is a real
-  // choice, not a failure to choose.
-  const tiles=[{key:null,label:'None',thumb:null}]
-    .concat(names.map(n=>({key:n,label:n,thumb:GUTTER_CATALOG[n].thumb||GUTTER_CATALOG[n].asset})));
+  // "None" is NOT a tile (Alyx: "I want 4 rows of three or 3 rows of four").
+  // As a tile it made twelve designs render as thirteen cells, which never
+  // sits in a clean grid. It is a button under the grid instead, which is also
+  // the truer description of it: None is not a design, it is the absence of
+  // one. Still always available -- a plain seam is a real choice, not a
+  // failure to choose.
+  const tiles=names.map(n=>({key:n,label:n,thumb:GUTTER_CATALOG[n].thumb||GUTTER_CATALOG[n].asset}));
   grid.innerHTML='';
   for(const t of tiles){
     const el=document.createElement('div');
@@ -17027,6 +17037,15 @@ function renderTrimmingsGrid(){
 async function pickTrimming(key){
   selectedGutter=key;
   renderTrimmingsGrid();
+  // The pill lights the same way a tile does, so "no trimming" reads as a
+  // choice that has been made rather than one nobody got round to.
+  const none=document.getElementById('trimmingsNoneBtn');
+  if(none){
+    const on=selectedGutter===null;
+    none.style.background=on?'#003c8c':'#12233a';
+    none.style.color=on?'#ffffff':'#29a3ff';
+    none.style.borderColor=on?'#29a3ff':'#003c8c';
+  }
   await updateTrimmingsPreview();
 }
 
