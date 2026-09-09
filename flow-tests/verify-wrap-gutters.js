@@ -494,6 +494,45 @@ scenarios.theTrimmingRunsTheWholeSeam = async (page) => {
   return `PASS: the wrap is cropped to the band's ${r.ratio} and the trimming reaches the very first and last row at both ends`;
 };
 
+// ---- THE BAND IS THE DESIGN'S OWN WIDTH. ----
+// The colour band behind a trimming used to be a fixed 6% while the designs
+// run from 3.2% (the film strip) to 9.8%. So the narrow ones sat on a visible
+// mat of cup colour half as wide again as the trimming itself, and the wide
+// ones had their backing cropped short. Following the design means a trimming
+// is exactly as wide as it looks -- floored, because covering the join and the
+// printer's drift is the band's first job and does not care how it looks.
+scenarios.theBandFollowsTheDesign = async (page) => {
+  await pickCup(page, VACUUM);
+  const r = await page.evaluate(async () => {
+    const load = (u) => new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = u; });
+    const src = document.createElement('canvas'); src.width = 3710; src.height = 2817;
+    const x = src.getContext('2d'); x.fillStyle = '#FF00FF'; x.fillRect(0, 0, 3710, 2817);
+    const base = src.toDataURL('image/jpeg', 0.95);
+    const out = {};
+    for (const name of ['Film Reel', 'Astral']) {
+      const art = await load(GUTTER_CATALOG[name].asset);
+      const want = Math.max(Math.round(2817 * (art.naturalWidth / art.naturalHeight)), Math.round(3710 * WRAP_GUTTER_MIN_WIDTH));
+      const im = await load(await paintWrapGutters(base, '#90C695', WRAP_GUTTER_WIDTH, name));
+      const c = document.createElement('canvas'); c.width = im.naturalWidth; c.height = im.naturalHeight;
+      const cx = c.getContext('2d'); cx.drawImage(im, 0, 0);
+      // Walk in from the outer edge until the artwork shows through: that is
+      // where the band stops.
+      const d = cx.getImageData(0, 40, im.naturalWidth, 1).data;
+      let edge = 0;
+      while (edge < im.naturalWidth && !(d[edge * 4] > 200 && d[edge * 4 + 1] < 90 && d[edge * 4 + 2] > 200)) edge++;
+      out[name] = { want, got: edge };
+    }
+    return out;
+  });
+
+  for (const [name, v] of Object.entries(r)) {
+    if (Math.abs(v.got - v.want) > 6) {
+      return `FAIL: ${name}'s band runs ${v.got}px where the design is ${v.want}px — a band wider than its design is a visible mat of cup colour behind the trimming, and one narrower leaves the design overhanging bare artwork`;
+    }
+  }
+  return `PASS: each band matches its own design (${Object.entries(r).map(([n, v]) => n + ' ' + v.got + 'px').join(', ')})`;
+};
+
 (async () => {
   let fails = 0;
   for (const [name, fn] of Object.entries(scenarios)) {

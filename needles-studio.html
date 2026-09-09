@@ -2,7 +2,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head><link rel="manifest" href="needles-manifest.json">
-<!-- BUILD-MARKER: FILM-REEL-THREADED-v120 -->
+<!-- BUILD-MARKER: BAND-FITS-THE-TRIMMING-v121 -->
 <!-- If you can see this comment on GitHub, this exact paste landed. -->
 <!-- If your live site's page source does NOT say -->
 <!-- "INSTANT-FIT-SCREEN-v47" right here, the upload/deploy did -->
@@ -5527,6 +5527,11 @@ async function fitWrapToBand(url){
 // rescale the whole wrap and move the join, which is the thing a gutter exists
 // to settle.
 const WRAP_GUTTER_WIDTH=0.06;     // per end, fraction of wrap width (~223px of 3710, ~17mm)
+// The floor the colour band never goes below, whatever a design's own width.
+// 1.2% is roughly 3mm on this cup: enough to swallow the millimetre or two of
+// registration drift the gutter exists to hide. Above that the band follows
+// the design, so a trimming is its own width rather than sitting on a mat.
+const WRAP_GUTTER_MIN_WIDTH=0.012;
 
 // THE DECORATIVE GUTTERS (Alyx + Bud, Sep 2026). Twelve concepts, and what
 // makes them work is that every one is a FASTENING OR A HEM -- zip, stitching,
@@ -5777,6 +5782,18 @@ async function paintWrapGutters(url,hex,width=WRAP_GUTTER_WIDTH,design=null){
     try{
       const src=(entry.colorable&&selectedGutterColor)?await recolouredGutter(entry,selectedGutterColor):entry.asset;
       const art=await loadImageFromUrl(src);
+      // THE BAND IS THE DESIGN'S OWN WIDTH, not a fixed one. WRAP_GUTTER_WIDTH
+      // is 6%, and the designs run from 3.2% (the film strip) to 9.8%, so a
+      // fixed band left the narrow ones sitting on a visible mat of cup colour
+      // half as wide again as the trimming itself -- and cropped the wide ones'
+      // backing short. Following the design means a trimming is exactly as wide
+      // as it looks, whichever one is chosen.
+      //
+      // Floored at WRAP_GUTTER_MIN_WIDTH so a very narrow design still covers
+      // the join and the printer's drift, which is the band's first job and
+      // does not care how the artwork looks.
+      const designW=Math.round(h*(art.naturalWidth/art.naturalHeight));
+      const backW=Math.max(designW,Math.round(w*WRAP_GUTTER_MIN_WIDTH));
       // BACKING FIRST. The plain colour band goes underneath every design, and
       // it is not belt-and-braces: openwork is the norm here, not the
       // exception -- lace, vines and film all have holes in them by design.
@@ -5788,8 +5805,8 @@ async function paintWrapGutters(url,hex,width=WRAP_GUTTER_WIDTH,design=null){
       // design that is 88% solid down its left edge is now usable, where
       // before it had to be 100% or be held back.
       ctx.fillStyle=hex;
-      ctx.fillRect(0,0,g,h);
-      ctx.fillRect(w-g,0,g,h);
+      ctx.fillRect(0,0,backW,h);
+      ctx.fillRect(w-backW,0,backW,h);
       await drawGutterDesign(ctx,art,w,h);
       return c.toDataURL('image/jpeg',0.95);
     }catch(err){
