@@ -2,7 +2,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head><link rel="manifest" href="needles-manifest.json">
-<!-- BUILD-MARKER: RIBBONS-RUN-THE-SEAM-v128 -->
+<!-- BUILD-MARKER: EVERY-REDUCTION-FILTERED-v129 -->
 <!-- If you can see this comment on GitHub, this exact paste landed. -->
 <!-- If your live site's page source does NOT say -->
 <!-- "INSTANT-FIT-SCREEN-v47" right here, the upload/deploy did -->
@@ -12135,10 +12135,7 @@ async function scaledForPreview(url,maxW){
     const img=await loadImageFromUrl(url);
     if(img.naturalWidth<=maxW)return url;
     const w=maxW,h=Math.round(img.naturalHeight*(maxW/img.naturalWidth));
-    const c=document.createElement('canvas');
-    c.width=w; c.height=h;
-    c.getContext('2d').drawImage(img,0,0,w,h);
-    return c.toDataURL('image/jpeg',0.92);
+    return downscaledDataUrl(img,w,h,'image/jpeg',0.92);
   }catch(err){ return url; }
 }
 
@@ -14119,6 +14116,15 @@ const MUG3D = (function(){
     if(!renderer||!host)return;
     const w=host.clientWidth||640;
     const h=host.clientHeight||Math.round(w*0.75);
+    // SAMPLE A SMALL CUP HARDER (Alyx, on his phone). The cap was a flat 2,
+    // which is right for a 640px stage on a desktop and wrong for a 300px one
+    // on a phone: a phone screen is usually 3x, so the cup was being drawn at
+    // two thirds of the resolution the screen can actually show -- fewer
+    // samples across the very stripe that shimmers. Below roughly 420px the
+    // whole canvas is small enough that 3x costs a modern phone nothing, and
+    // more samples is the most direct answer there is to aliasing.
+    const cap=(w*h<=420*420)?3:2;
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,cap));
     renderer.setSize(w,h,false);
     camera.aspect=w/h; camera.updateProjectionMatrix();
   }
@@ -17710,7 +17716,42 @@ function trimmings3DOpts(artUrl){
 // hundred -- so they run off a scaled copy, and the bake that actually ships
 // still goes through the untouched original. Nobody can see the difference on
 // a cup; everybody can feel the difference in the tapping.
-const TRIMMINGS_PREVIEW_WIDTH=1600;
+// HALVED DOWN, EVERYWHERE (Alyx, on his phone, Sep 2026: "it's got a lot of
+// those little static tendrils again... is there any way we can stop this
+// problem for good?").
+//
+// The texture painter was taught to halve rather than drop -- and then this
+// path fed it an already-damaged picture. One drawImage from 3710px to 1600
+// samples roughly every other column and discards the rest, so whether a
+// sprocket hole or a lace scallop survives is luck, and the survivors crawl as
+// the cup turns. The aliasing is baked in before the GPU sees anything, which
+// is why no amount of mipmapping or anisotropy could undo it.
+//
+// Halving repeatedly averages every source pixel in instead. Same idea as a
+// mipmap chain, and it has to happen at EVERY reduction in the path, because
+// one careless one is enough to ruin the rest.
+async function downscaledDataUrl(img,W,H,type,q){
+  let src=img,sw=img.naturalWidth||img.width,sh=img.naturalHeight||img.height;
+  while(sw>W*2||sh>H*2){
+    const nw=Math.max(W,Math.round(sw/2)),nh=Math.max(H,Math.round(sh/2));
+    const t=document.createElement('canvas'); t.width=nw; t.height=nh;
+    const tg=t.getContext('2d');
+    tg.imageSmoothingEnabled=true; tg.imageSmoothingQuality='high';
+    tg.drawImage(src,0,0,sw,sh,0,0,nw,nh);
+    src=t; sw=nw; sh=nh;
+  }
+  const c=document.createElement('canvas');
+  c.width=W; c.height=H;
+  const g=c.getContext('2d');
+  g.imageSmoothingEnabled=true; g.imageSmoothingQuality='high';
+  g.drawImage(src,0,0,sw,sh,0,0,W,H);
+  return c.toDataURL(type||'image/jpeg',q||0.92);
+}
+
+// 2048 rather than 1600: the cup's texture is 4096 across, so a wider source
+// leaves the trimming with more real detail to resolve and costs a few
+// milliseconds once per picture.
+const TRIMMINGS_PREVIEW_WIDTH=2048;
 let trimmingsFastUrl=null;
 async function makeTrimmingsFastBase(url){
   try{
@@ -17720,10 +17761,7 @@ async function makeTrimmingsFastBase(url){
     // Scaled proportionally, so the band reshape inside paintWrapGutters makes
     // exactly the same decision it would on the original.
     const h=Math.round(img.naturalHeight*(w/img.naturalWidth));
-    const c=document.createElement('canvas');
-    c.width=w; c.height=h;
-    c.getContext('2d').drawImage(img,0,0,w,h);
-    return c.toDataURL('image/jpeg',0.92);
+    return downscaledDataUrl(img,w,h,'image/jpeg',0.92);
   }catch(err){ return url; }
 }
 
