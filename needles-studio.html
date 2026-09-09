@@ -2,7 +2,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head><link rel="manifest" href="needles-manifest.json">
-<!-- BUILD-MARKER: THE-FADE-GETS-ITS-SHARE-v135 -->
+<!-- BUILD-MARKER: A-BIGGER-CUP-AND-LESS-AROUND-IT-v136 -->
 <!-- If you can see this comment on GitHub, this exact paste landed. -->
 <!-- If your live site's page source does NOT say -->
 <!-- "INSTANT-FIT-SCREEN-v47" right here, the upload/deploy did -->
@@ -897,7 +897,7 @@ body.panels-active #verifyCard{display:none!important}
          actually been settled -- offering it where there was never a seam to
          dress would be a button that explains nothing. -->
     <button type="button" id="mockupLightboxTrim" class="download-btn" style="display:none;width:auto;margin:0;padding:.8rem 1.3rem;white-space:nowrap;border-color:#003c8c;color:#7ab8ff" onclick="changeTrimmingFromMockup()">🎀 Change Trimming</button>
-    <button type="button" id="mockupLightboxReturn" class="generate-btn" style="width:auto;margin:0;padding:.8rem 1.4rem;white-space:nowrap" onclick="returnFromFinalMockup()">✅ Looks Good</button>
+    <button type="button" id="mockupLightboxReturn" class="generate-btn" style="width:auto;margin:0;padding:.8rem 1.4rem;white-space:nowrap" onclick="returnFromFinalMockup()">✅ Satisfied?</button>
   </div>
 </div>
 <div class="header">
@@ -1785,7 +1785,15 @@ Tell Needles <span style="color:#7ab8ff">what you have in mind</span>
      the smaller of the column and the height budget, and the ratio then has
      nothing to fight. -->
 <div id="trimmings3DStage" class="mug3d-stage" style="width:min(100%,34vh);height:auto;aspect-ratio:1/1;margin:0 auto .45rem"></div>
-<div class="note" id="trimmings3DHint" style="margin:0 0 .5rem;font-size:11px">Drag the cup to turn it &middot; click it to stop or start the spin</div>
+<!-- ZOOM, HERE, WHERE THE DECISION IS MADE (Alyx, twice: "there's no reason why
+     this picture isn't rotating and enlargeable. We've got all the room we need
+     here"). The seam is the thing you would most want to get close to WHILE
+     choosing, and half this column was empty. -->
+<div class="mug3d-controls" id="trimmings3DZoomRow" style="align-items:center;gap:8px;margin:0 0 .35rem">
+<input type="range" id="trimmings3DZoom" min="100" max="400" value="100" step="1" aria-label="Zoom in on the cup" oninput="setTrimmings3DZoom(this.value/100)"/>
+<button type="button" class="mug3d-tilt" onclick="setTrimmings3DZoom(1,true)">Fit</button>
+</div>
+<div class="note" id="trimmings3DHint" style="margin:0 0 .5rem;font-size:11px">Drag the cup to turn it &middot; click it to stop or start the spin &middot; drag the slider to get closer</div>
 <!-- Capped so the grid is not pushed off the bottom (Alyx: "fit all of the
      options into the frame and the continue button"). The wrap is very wide
      and very short, so at full width it ate half the panel on its own. -->
@@ -12982,12 +12990,22 @@ function frameOfferAvailable(){
 // decision rather than a one-shot. Going back is safe because the bake records
 // what it was painted FROM: the new choice replaces the old one instead of
 // being layered on top of it.
+// GONE, BECAUSE BACK ALREADY DOES IT (Alyx: "you can take away the Change the
+// Trim button, because that's exactly the same as the back button. They both
+// will take you to the exact same place. They're redundant"). He is right:
+// confirmTrimmingAndContinue records preMockupBack as reopening the panel, so
+// Back on the mockup already lands there. Two buttons, one destination, and the
+// customer has to work out that they are the same thing.
 function refreshMockupLightboxTrimBtn(){
   const btn=document.getElementById('mockupLightboxTrim');
-  if(!btn)return;
-  const show=(typeof trimmingsAvailable==='function')&&trimmingsAvailable()&&!!trimmingsSettledFor;
-  btn.style.display=show?'block':'none';
-  btn.textContent=selectedGutter?'🎀 Change Trimming':'🎀 Add a Trimming';
+  if(btn)btn.style.display='none';
+}
+
+// A cup that has already been through Trimmings arrives here having made its
+// decorating decisions, and having been told how to turn a cup one screen ago.
+function cameThroughTrimmings(){
+  try{ return typeof trimmingsAvailable==='function' && trimmingsAvailable(); }
+  catch(e){ return false; }
 }
 
 function changeTrimmingFromMockup(){
@@ -13002,6 +13020,12 @@ function refreshMockupLightboxFrameBtn(){
   refreshMockupLightboxTrimBtn();
   const btn=document.getElementById('mockupLightboxFrame');
   if(!btn)return;
+  // FRAMES STAY (Alyx, on second thoughts: "the only mugs where frames would
+  // really play a huge role would be the three panels, and the two panels from
+  // one of the 40 ounces. It just seems that with wraparound frames almost
+  // becomes too busy -- now we don't have to remove it, it's just kind of an
+  // afterthought, it doesn't hurt anything"). So it is demoted by the company
+  // it keeps rather than taken away.
   const show=frameOfferAvailable();
   btn.style.display=show?'block':'none';
   btn.textContent=coverMeFrameApplied?'🖼️ Change Frame':'🖼️ Add a Frame';
@@ -13524,9 +13548,23 @@ function fitMug3DStage(){
   const avail=Math.max(200,Math.floor(window.innerHeight-taken));
   stage.style.width=''; stage.style.height='';
   const nat=stage.getBoundingClientRect();
+  const square=wrap.classList.contains('mug3d-square');
   if(nat.height>avail){
-    if(wrap.classList.contains('mug3d-square'))stage.style.width=avail+'px';
+    if(square)stage.style.width=avail+'px';
     stage.style.height=avail+'px';
+  }else if(avail>nat.height+8&&nat.height>0){
+    // SPEND WHAT THE CLUTTER GAVE BACK (Alyx: "you can use all that extra space
+    // to enlarge the photo"). This only ever shrank the stage to fit; with the
+    // frame offer, its nudge line, the redundant trimming button and the hint
+    // all gone from a trimmed cup, the room they were using was simply left
+    // empty. Growing into it is the entire point of having removed them.
+    const wCap=Math.floor(window.innerWidth*0.92);
+    const grow=Math.min(avail,square?wCap:Math.floor(nat.height*(wCap/Math.max(1,nat.width))));
+    if(grow>nat.height){
+      if(square)stage.style.width=grow+'px';
+      else stage.style.width=Math.round(nat.width*(grow/nat.height))+'px';
+      stage.style.height=grow+'px';
+    }
   }
 }
 window.addEventListener('resize',fitMug3DStage);
@@ -13583,6 +13621,13 @@ function openMug3DMockup(){
   wrap.classList.toggle('mug3d-square',!!tumblerKey);
   const hint=wrap.querySelector('.mug3d-hint');
   if(hint)hint.textContent=tumblerKey?'Drag the cup to turn it · click it to stop or start the spin':'Drag the mug to turn it · click it to stop or start the spin';
+  // Alyx: "you can also take away the 'drag the cup to turn it' wording,
+  // because you will have that on the previous panel -- by now if they don't
+  // get the trick they're too dumb to read anyway. And you can use all that
+  // extra space to enlarge the photo." Only where the previous panel actually
+  // said it: a coffee mug never sees Trimmings, so this mockup is the first
+  // place it meets a cup it can turn, and there the instruction stays.
+  if(hint)hint.style.display=cameThroughTrimmings()?'none':'';
   const angleInput=document.getElementById('mug3dAngle');
   if(angleInput)angleInput.setAttribute('aria-label',tumblerKey?'Turn the cup':'Turn the mug');
   fitMug3DStage();
@@ -17988,6 +18033,7 @@ async function mountTrimmings3D(){
     stage.style.display='';
     if(hint)hint.style.display='';
     await MUG3D.open(stage,opts);
+    setTrimmings3DZoom(1,true);
     MUG3D.resize();
     return true;
   }catch(err){
@@ -18000,7 +18046,14 @@ async function mountTrimmings3D(){
   }
 }
 
+function setTrimmings3DZoom(z,resetSlider){
+  try{ MUG3D.setZoom(z); }catch(e){}
+  const sl=document.getElementById('trimmings3DZoom');
+  if(sl&&resetSlider)sl.value=String(Math.round(z*100));
+}
+
 function closeTrimmings3D(){
+  setTrimmings3DZoom(1,true);
   const stage=document.getElementById('trimmings3DStage');
   if(!stage)return;
   try{ if(MUG3D.mounted())MUG3D.close(); }catch(e){}
