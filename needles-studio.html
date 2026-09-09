@@ -2,7 +2,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head><link rel="manifest" href="needles-manifest.json">
-<!-- BUILD-MARKER: DECLARE-IT-OR-DISSOLVE-IT-v132 -->
+<!-- BUILD-MARKER: LOOK-UP-SAYS-LOOK-UP-v133 -->
 <!-- If you can see this comment on GitHub, this exact paste landed. -->
 <!-- If your live site's page source does NOT say -->
 <!-- "INSTANT-FIT-SCREEN-v47" right here, the upload/deploy did -->
@@ -13446,10 +13446,20 @@ function wireMug3DWheelZoom(){
   },{passive:false});
 }
 
+// THE BUTTON SAYS WHAT IT WILL DO, NOT WHAT IT DID (Alyx, Sep 2026: "the word
+// should automatically switch to Look up after you click it, because now you're
+// already looking down"). It read "Look down" in both states, so once you were
+// looking down it was offering you the thing you already had.
+function setMug3DTiltLabel(on){
+  const btn=document.getElementById('mug3dTiltBtn');
+  if(!btn)return;
+  btn.setAttribute('aria-pressed',String(!!on));
+  btn.textContent=on?'Look up':'Look down';
+}
 function toggleMug3DTilt(){
   const btn=document.getElementById('mug3dTiltBtn');
   const on=btn.getAttribute('aria-pressed')!=='true';
-  btn.setAttribute('aria-pressed',String(on));
+  setMug3DTiltLabel(on);
   MUG3D.setLookDown(on);
 }
 
@@ -13564,6 +13574,12 @@ function openMug3DMockup(){
     // the last cup would greet the next one half-cropped, and nobody would
     // connect that to a slider they moved two designs ago.
     setMug3DZoom(1);
+    // Same argument for the tilt, which had no reset at all: looking down into
+    // one cup and coming back to the next one already tipped is the same
+    // surprise, and the button would be offering "Look up" on a cup that is
+    // level. Reset both the camera and the word.
+    setMug3DTiltLabel(false);
+    MUG3D.setLookDown(false);
     wireMug3DWheelZoom();
     return true;
   }).catch(err=>{
