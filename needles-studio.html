@@ -2,7 +2,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head><link rel="manifest" href="needles-manifest.json">
-<!-- BUILD-MARKER: SEAM-FULL-HEIGHT-v118 -->
+<!-- BUILD-MARKER: CUPS-FILL-THEIR-BAND-v119 -->
 <!-- If you can see this comment on GitHub, this exact paste landed. -->
 <!-- If your live site's page source does NOT say -->
 <!-- "INSTANT-FIT-SCREEN-v47" right here, the upload/deploy did -->
@@ -5462,6 +5462,40 @@ function softenTopAndBottom(ctx,W,H,hex){
   };
   fadeTo(F,0);
   fadeTo(H-F,H);
+}
+
+// FILL THE BAND (Sep 2026). Generation hands back a SQUARE -- measured,
+// 1024x1024 -- and a travel cup's print area is a wide band: 1.33 on the 20oz,
+// 1.75 on the Gator, 1.32 on the vacuum 40oz. A square given to a wide band is
+// letterboxed, so the artwork printed in a stripe with bare cup above and below
+// it. On the Gator that is 43% off the shape it should be.
+//
+// The rule already existed for the cups that pass through
+// extendWrapToProductRatio: "a picture wider than a band is centre-cropped to
+// the band rather than handed back for the server to letterbox". But that runs
+// only on the panorama path, and these three sit below PANORAMA_MIN_WRAP_RATIO,
+// so it never reached any of them. Found because a trimming stopped short of
+// the seam on one cup; it was never only that cup, and never only trimmings.
+//
+// Cover, then centre: fill the band and lose the overflow, rather than leave a
+// bare stripe nobody asked for.
+async function fitWrapToBand(url){
+  const ratio=(product==='water bottle'&&TRAVEL_WRAP_RATIO[preGenTravelVariant])||0;
+  if(!ratio)return url;
+  const img=await loadImageFromUrl(url);
+  // TRAVEL_WRAP_RATIO is rounded (1.32 where the area is really 1.3170), so a
+  // wrap already the band's shape is left exactly alone -- reshaping it would
+  // move its height by a few pixels for nothing, and on the vacuum that moves
+  // the join a gutter exists to settle.
+  if(Math.abs((img.naturalWidth/img.naturalHeight)/ratio-1)<0.02)return url;
+  const w=img.naturalWidth,h=Math.round(w/ratio);
+  const c=document.createElement('canvas');
+  c.width=w; c.height=h;
+  const ctx=c.getContext('2d');
+  const sc=Math.max(w/img.naturalWidth,h/img.naturalHeight);
+  const dw=img.naturalWidth*sc,dh=img.naturalHeight*sc;
+  ctx.drawImage(img,(w-dw)/2,(h-dh)/2,dw,dh);
+  return c.toDataURL('image/jpeg',0.95);
 }
 
 // GUTTERS (Alyx, Sep 2026). A cup whose wrap closes has its two ends meet on
@@ -15961,6 +15995,17 @@ async function makeTestSingleZonePanorama(side){
         : {top:true,bottom:true,left:true,right:true};
       resultUrl=await applyEdgeFadeToImageUrl(resultUrl,centerEdges,getSelectedProductColorHex(),edgeFadeAmountPct);
     }
+    // Fill the band before anything else looks at the wrap, so the artwork is
+    // the right shape whether or not a trimming is ever chosen. Skipped on the
+    // panorama path, which crops to the band itself; on the insulated 40oz,
+    // whose front/back split is a different geometry entirely; and on an exact
+    // transfer, where the customer asked for their photo as it is and cropping
+    // it would be us deciding otherwise.
+    if(product==='water bottle' && !wrapIsPanoramic() && !is40ozWraparoundSplit && !exactTransfer){
+      try{ resultUrl=await fitWrapToBand(resultUrl); }
+      catch(err){ console.error('Could not fit the wrap to the band, using it as generated:',err); }
+    }
+
     // The trimming used to be applied right here, at generation time, which
     // meant choosing one before the artwork existed. Alyx: "he's gonna have to
     // see what design the AI came up with to see which gutter best matches his
