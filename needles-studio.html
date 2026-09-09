@@ -13564,14 +13564,21 @@ function fitMug3DStage(){
   // nothing else is competing for the space, so whatever the controls and
   // buttons do not use belongs to the cup. `taken` already counts every control
   // row, the hint and the action buttons, so `avail` is exactly what is left.
+  // THE HEIGHT IS ALWAYS TAKEN; THE WIDTH IS WHAT THE SCREEN ALLOWS. The square
+  // stage came in at v103 because a cup in a wide box on a desktop sat small
+  // with dead space either side. On a PHONE that same rule does the opposite
+  // harm: a 390px screen caps a square at 366px and leaves half the height
+  // empty -- and a tumbler is a tall object, so the dimension being thrown away
+  // is the one it actually needs. Caught by the suite at 390x780.
+  //
+  // So the stage takes the full height either way and is square only when the
+  // width can afford it. On a desktop that is the same square as before; on a
+  // phone it goes portrait, which is the shape of the thing inside it.
   const wCap=Math.floor(window.innerWidth*0.94);
-  const target=square
-    ? Math.min(avail,wCap)
-    : Math.min(avail,Math.floor(nat.height*(wCap/Math.max(1,nat.width))));
-  if(nat.height>0&&Math.abs(target-nat.height)>4){
-    if(square)stage.style.width=target+'px';
-    else stage.style.width=Math.round(nat.width*(target/nat.height))+'px';
-    stage.style.height=target+'px';
+  const w=square?Math.min(avail,wCap):Math.min(wCap,Math.round(nat.width*(avail/Math.max(1,nat.height))));
+  if(nat.height>0&&(Math.abs(avail-nat.height)>4||Math.abs(w-nat.width)>4)){
+    stage.style.width=w+'px';
+    stage.style.height=avail+'px';
   }
 }
 window.addEventListener('resize',fitMug3DStage);
