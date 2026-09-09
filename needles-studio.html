@@ -1700,6 +1700,24 @@ Tell Needles <span style="color:#7ab8ff">what you have in mind</span>
 </div>
 </div>
 
+<!-- TRIMMINGS (Alyx, Sep 2026). The seam decoration, chosen AFTER generating:
+     "he's gonna have to see what design the AI came up with to see which gutter
+     best matches his motif." So this is a stage on the finished picture, not a
+     question asked of somebody who has not seen their artwork yet. Only opens
+     for a cup whose wrap actually closes -- see wrapWantsGutters(). -->
+<div id="trimmingsOverlay" class="step-lock-overlay" style="display:none">
+<div class="card" id="trimmingsCard" style="max-width:560px;width:100%;margin:auto;position:relative;max-height:92vh;overflow-y:auto;text-align:center">
+<div class="card-title">🎀 Trimmings</div>
+<div class="note" style="margin-top:0;margin-bottom:.9rem;text-align:left;line-height:1.6">Your picture goes all the way around this cup, so its two ends meet in a join you can see. A trimming turns that join into something you meant &mdash; the two halves come together to make one ribbon, one zip, one length of rope. Tap one to try it on. It's free to look.</div>
+<img id="trimmingsPreviewImg" style="width:100%;border-radius:10px;border:1px solid #003c8c;margin:.4rem 0 .8rem;background:#0d0d0d"/>
+<div class="note" id="trimmingsSeamNote" style="margin-top:0;margin-bottom:.8rem;color:#7ab8ff;font-size:11px">The picture above is the wrap laid flat &mdash; the trimming appears at both ends, and they meet on the back of the cup.</div>
+<div id="trimmingsGrid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:.9rem"></div>
+<div class="note" id="trimmingsEmptyNote" style="display:none;margin:0 0 .9rem;color:#7ab8ff;font-size:11px">No trimmings are installed yet.</div>
+<button type="button" class="generate-btn" id="trimmingsContinueBtn" style="margin-top:.3rem" onclick="confirmTrimmingAndContinue()">✅ Continue</button>
+<div class="note" id="trimmingsSavingNote" style="display:none;margin-top:.75rem;text-align:center"><span class="spinner"></span>Saving your design...</div>
+</div>
+</div>
+
 <div id="frameFadeOverlay" class="step-lock-overlay" style="display:none">
 <div class="card" id="frameFadeCard" style="max-width:520px;width:100%;margin:auto;position:relative;max-height:92vh;overflow-y:auto;text-align:center">
 <div class="card-title">🌫️ Edge Fade</div>
@@ -5479,6 +5497,25 @@ const WRAP_GUTTER_WIDTH=0.06;     // per end, fraction of wrap width (~223px of 
 //
 // Left end of the wrap gets the asset as drawn; right end gets it mirrored.
 const GUTTER_CATALOG={
+  "Blue Satin Ribbon":  { asset:"gutter-ribbon-blue.png",     thumb:"gutter-thumb-ribbon-blue.png" },
+  "Tasselled Ribbon":   { asset:"gutter-tassled-ribbon.png",  thumb:"gutter-thumb-tassled-ribbon.png" },
+  "Roses & Pearls":     { asset:"gutter-rose-pearl.png",      thumb:"gutter-thumb-rose-pearl.png" },
+  "Vintage Lace":       { asset:"gutter-lace.png",            thumb:"gutter-thumb-lace.png" },
+  "Doily":              { asset:"gutter-doily.png",           thumb:"gutter-thumb-doily.png" },
+  "Ivy Vine":           { asset:"gutter-ivy.png",             thumb:"gutter-thumb-ivy.png" },
+  "Soft Country":       { asset:"gutter-soft-country.png",    thumb:"gutter-thumb-soft-country.png" },
+  "Rope":               { asset:"gutter-rope.png",            thumb:"gutter-thumb-rope.png" },
+  "Laced Leather":      { asset:"gutter-leather-laces.png",   thumb:"gutter-thumb-leather-laces.png" },
+  "Astral":             { asset:"gutter-astral.png",          thumb:"gutter-thumb-astral.png" },
+  // HELD BACK, not forgotten: gutter-fern.png and gutter-film.png have no
+  // full-height element down their left edge -- measured, not guessed. Every
+  // other design has one, and that spine is the part which actually covers
+  // the join; without it the seam shows through at whatever heights the
+  // artwork happens to be open, which is worse than fitting no trimming at
+  // all. Both go in as soon as they are redrawn with a spine. The film reel
+  // wants drawing as a HALF reel cut by the left edge, so the mirror makes it
+  // whole at the seam rather than giving two reels side by side.
+  //
   // { asset } is ONE gutter strip. Motif centre hard against its LEFT edge --
   // that edge lands on the join and is mirrored against itself. Aspect ratio is
   // the artist's control over how far the design reaches onto the picture: at
@@ -15671,9 +15708,12 @@ async function makeTestSingleZonePanorama(side){
         ? {top:true,bottom:true,left:false,right:false}
         : {top:true,bottom:true,left:true,right:true};
       resultUrl=await applyEdgeFadeToImageUrl(resultUrl,centerEdges,getSelectedProductColorHex(),edgeFadeAmountPct);
-    } else if(wrapWantsGutters()){
-      resultUrl=await paintWrapGutters(resultUrl,getSelectedProductColorHex(),WRAP_GUTTER_WIDTH,selectedGutter);
     }
+    // The trimming used to be applied right here, at generation time, which
+    // meant choosing one before the artwork existed. Alyx: "he's gonna have to
+    // see what design the AI came up with to see which gutter best matches his
+    // motif." It is now its own stage on the finished picture -- see
+    // openTrimmingsPanel() -- so nothing is painted on the seam here.
 
     if (is40ozWraparoundSplit){
       pending40ozRaw = { panorama: resultUrl };
@@ -16890,8 +16930,124 @@ async function runAutoMockupFetch(){
 // beginFinalMockupFetch() and buildMockupRequestBody() already build
 // their request generically from whatever placements are actually
 // filled, so this needed no changes there -- only a new way in.
-function continueToRealMockup(){
+// ---------------------------------------------------------------------------
+// THE TRIMMINGS PANEL. Chosen after generating, on the finished picture.
+//
+// Non-destructive by construction: trimmingsBaseUrl holds the artwork as it
+// came out of generation, and every preview re-renders from THAT rather than
+// from the last preview. Painting each choice onto the previous one would
+// stack trimmings on top of each other, and the customer would never see it
+// happening because each single step looks right.
+let trimmingsBaseUrl=null;
+let trimmingsBakeInFlight=false;
+
+function trimmingsAvailable(){
+  return wrapWantsGutters() && Object.keys(GUTTER_CATALOG).length>0;
+}
+
+// Opens the panel if this product has a seam worth dressing; otherwise carries
+// straight on, so the caller does not have to know the rule.
+async function openTrimmingsPanel(){
+  const finished=finalImageUrl||resultUrl;
+  if(!finished||!wrapWantsGutters()){
+    beginFinalMockupFetch();
+    return;
+  }
+  trimmingsBaseUrl=finished;
+  selectedGutter=null;
+  const overlay=document.getElementById('trimmingsOverlay');
+  if(!overlay){ beginFinalMockupFetch(); return; }
+  document.body.classList.add('step-locked');
+  overlay.style.display='flex';
+  const card=document.getElementById('trimmingsCard');
+  if(card)card.scrollTop=0;
+  renderTrimmingsGrid();
+  await updateTrimmingsPreview();
+}
+
+function renderTrimmingsGrid(){
+  const grid=document.getElementById('trimmingsGrid');
+  const empty=document.getElementById('trimmingsEmptyNote');
+  if(!grid)return;
+  const names=Object.keys(GUTTER_CATALOG);
+  if(empty)empty.style.display=names.length?'none':'block';
+  // "None" is always first and always available -- a plain seam is a real
+  // choice, not a failure to choose.
+  const tiles=[{key:null,label:'None',thumb:null}]
+    .concat(names.map(n=>({key:n,label:n,thumb:GUTTER_CATALOG[n].thumb||GUTTER_CATALOG[n].asset})));
+  grid.innerHTML='';
+  for(const t of tiles){
+    const el=document.createElement('div');
+    el.className='btn-select'+(selectedGutter===t.key?' selected':'');
+    el.style.cssText='padding:.5rem .35rem;font-size:11px;line-height:1.25';
+    el.dataset.trimming=t.key===null?'':t.key;
+    el.innerHTML=(t.thumb
+      ?'<img src="'+t.thumb+'" alt="" style="width:100%;height:74px;object-fit:contain;display:block;margin-bottom:5px"/>'
+      :'<div style="height:74px;display:flex;align-items:center;justify-content:center;font-size:22px">\u2014</div>')+t.label;
+    el.onclick=()=>pickTrimming(t.key);
+    grid.appendChild(el);
+  }
+}
+
+async function pickTrimming(key){
+  selectedGutter=key;
+  renderTrimmingsGrid();
+  await updateTrimmingsPreview();
+}
+
+async function updateTrimmingsPreview(){
+  const img=document.getElementById('trimmingsPreviewImg');
+  if(!img||!trimmingsBaseUrl)return;
+  try{
+    // Always from the ORIGINAL, never from what is on screen.
+    img.src=await paintWrapGutters(trimmingsBaseUrl,getSelectedProductColorHex(),WRAP_GUTTER_WIDTH,selectedGutter);
+  }catch(err){
+    console.error('Could not preview that trimming:',err);
+    img.src=trimmingsBaseUrl;
+  }
+}
+
+async function confirmTrimmingAndContinue(){
+  if(trimmingsBakeInFlight)return;
+  const btn=document.getElementById('trimmingsContinueBtn');
+  const saving=document.getElementById('trimmingsSavingNote');
+  // "None" changes nothing about the picture, so there is nothing to re-encode
+  // or upload -- the design keeps its existing hosted URL at full quality.
+  // This is also the way past a connection that cannot complete an upload.
+  if(selectedGutter){
+    trimmingsBakeInFlight=true;
+    if(btn)btn.disabled=true;
+    if(saving)saving.style.display='block';
+    let err=null;
+    try{
+      const painted=await paintWrapGutters(trimmingsBaseUrl,getSelectedProductColorHex(),WRAP_GUTTER_WIDTH,selectedGutter);
+      const uploaded=await uploadCompositedImage(painted,{strict:true});
+      const slotId=placements.front||placements.left||placements.right;
+      const design=slotId?findDesignById(slotId):null;
+      if(design)design.url=uploaded;
+      finalImageUrl=uploaded;
+    }catch(e){ err=e; console.error('Could not save the trimmed design:',e); }
+    finally{
+      trimmingsBakeInFlight=false;
+      if(btn)btn.disabled=false;
+      if(saving)saving.style.display='none';
+    }
+    // Stay on the page for a retry rather than carrying a raw data URL forward
+    // as the design, which breaks at checkout.
+    if(err){ showGuidanceAlert(describeUploadFailure(err)); return; }
+  }
+  const overlay=document.getElementById('trimmingsOverlay');
+  if(overlay)overlay.style.display='none';
+  document.body.classList.remove('step-locked');
+  preMockupBack=()=>{openTrimmingsPanel();};
   beginFinalMockupFetch();
+}
+// ---------------------------------------------------------------------------
+
+function continueToRealMockup(){
+  // Cups whose wrap closes stop at Trimmings on the way to the mockup; the
+  // panel sends them on itself. Everything else is unaffected.
+  openTrimmingsPanel();
 }
 
 function goToOrder(){
