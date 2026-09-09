@@ -481,6 +481,70 @@ scenarios.theBandDoesNotFightTheBodyForPixels = async (page) => {
 OPTS.theBandDoesNotFightTheBodyForPixels = { chromiumArgs: GL };
 
 
+// ---- THE TILT BUTTON SAYS WHAT IT WILL DO. ----
+// Alyx: "the word should automatically switch to Look up after you click it,
+// because now you're already looking down." It read "Look down" in both states,
+// so once you were looking down it was offering you the thing you already had.
+//
+// And while fixing it: the tilt had no reset on open, which the zoom got long
+// ago for exactly the same reason -- looking down into one cup and meeting the
+// next one already tipped is a surprise nobody would connect to a button they
+// pressed two designs back.
+scenarios.theTiltButtonSaysWhatItWillDo = async (page) => {
+  await pickProduct(page, 'water bottle');
+  await page.evaluate(() => pickPreGenTravelVariant('travel-mug-30oz-tundra'));
+  await T(page, 1000);
+  await dismissAlerts(page);
+  await page.evaluate(() => pickMugPrintMode('wraparound'));
+  await T(page, 1000);
+  await dismissAlerts(page);
+  await describeAndGenerate(page, 'a wide desert canyon at sunrise');
+  await waitLanded(page);
+  await T(page, 1200);
+  await page.locator('#approveRow button:has-text("Yes")').first().click();
+  await page.waitForFunction(() => document.querySelector('#mug3dStage canvas'), null, { timeout: 20000 });
+  await T(page, 1200);
+
+  const read = () => page.evaluate(() => {
+    const b = document.getElementById('mug3dTiltBtn');
+    return { text: (b.textContent || '').trim(), pressed: b.getAttribute('aria-pressed') };
+  });
+  const level = await read();
+  if (!/look down/i.test(level.text)) return `FAIL: a level cup offers "${level.text}"`;
+  if (level.pressed !== 'false') return `FAIL: a level cup reports aria-pressed=${level.pressed}`;
+
+  await page.click('#mug3dTiltBtn');
+  await T(page, 700);
+  const tipped = await read();
+  if (!/look up/i.test(tipped.text)) {
+    return `FAIL: after looking down the button still says "${tipped.text}" — it is offering the thing the customer already has`;
+  }
+  if (tipped.pressed !== 'true') return `FAIL: looking down reports aria-pressed=${tipped.pressed}, so a screen reader is told the opposite`;
+
+  await page.click('#mug3dTiltBtn');
+  await T(page, 700);
+  const back = await read();
+  if (!/look down/i.test(back.text)) return `FAIL: coming back level left the button saying "${back.text}"`;
+
+  // Left looking down, then reopened: the next cup must be level, with the
+  // word to match.
+  await page.click('#mug3dTiltBtn');
+  await T(page, 500);
+  await page.evaluate(() => { hideMug3D(); });
+  await T(page, 500);
+  await page.evaluate(() => openMug3DMockup());
+  await page.waitForFunction(() => document.querySelector('#mug3dStage canvas'), null, { timeout: 20000 });
+  await T(page, 1000);
+  const reopened = await read();
+  if (!/look down/i.test(reopened.text) || reopened.pressed !== 'false') {
+    return `FAIL: reopening after looking down left the cup tipped ("${reopened.text}", pressed=${reopened.pressed}) — a tilt carried over from the last design`;
+  }
+
+  return 'PASS: level offers Look down, looking down offers Look up, aria-pressed follows both, and reopening starts level with the word to match';
+};
+OPTS.theTiltButtonSaysWhatItWillDo = { chromiumArgs: GL };
+
+
 (async () => {
   let fails = 0;
   for (const [name, fn] of Object.entries(scenarios)) {
