@@ -2,7 +2,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head><link rel="manifest" href="needles-manifest.json">
-<!-- BUILD-MARKER: MOCKUP-ZOOM-v115 -->
+<!-- BUILD-MARKER: TRIMMINGS-ON-ONE-SCREEN-v116 -->
 <!-- If you can see this comment on GitHub, this exact paste landed. -->
 <!-- If your live site's page source does NOT say -->
 <!-- "INSTANT-FIT-SCREEN-v47" right here, the upload/deploy did -->
@@ -1713,9 +1713,12 @@ Tell Needles <span style="color:#7ab8ff">what you have in mind</span>
 <div id="trimmingsOverlay" class="step-lock-overlay" style="display:none">
 <div class="card" id="trimmingsCard" style="max-width:560px;width:100%;margin:auto;position:relative;max-height:92vh;overflow-y:auto;text-align:center">
 <div class="card-title">🎀 Trimmings</div>
-<div class="note" style="margin-top:0;margin-bottom:.9rem;text-align:left;line-height:1.6">Your picture goes all the way around this cup, so its two ends meet in a join you can see. A trimming turns that join into something you meant &mdash; the two halves come together to make one ribbon, one zip, one length of rope. Tap one to try it on. It's free to look.</div>
-<img id="trimmingsPreviewImg" style="width:100%;border-radius:10px;border:1px solid #003c8c;margin:.4rem 0 .8rem;background:#0d0d0d"/>
-<div class="note" id="trimmingsSeamNote" style="margin-top:0;margin-bottom:.8rem;color:#7ab8ff;font-size:11px">The picture above is the wrap laid flat &mdash; the trimming appears at both ends, and they meet on the back of the cup.</div>
+<div class="note" style="margin-top:0;margin-bottom:.6rem;text-align:left;line-height:1.5">Your picture goes all the way around this cup, so its two ends meet in a join you can see. A trimming turns that join into something you meant. Tap one to try it on &mdash; it's free to look.</div>
+<!-- Capped so the grid is not pushed off the bottom (Alyx: "fit all of the
+     options into the frame and the continue button"). The wrap is very wide
+     and very short, so at full width it ate half the panel on its own. -->
+<img id="trimmingsPreviewImg" style="width:100%;max-height:26vh;object-fit:contain;border-radius:10px;border:1px solid #003c8c;margin:.3rem 0 .5rem;background:#0d0d0d"/>
+<div class="note" id="trimmingsSeamNote" style="margin-top:0;margin-bottom:.6rem;color:#7ab8ff;font-size:11px">The wrap laid flat &mdash; the trimming appears at both ends and they meet on the back of the cup.</div>
 <div id="trimmingsGrid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:.7rem"></div>
 <!-- A pill, not a tile (Alyx). A full-width box gave the absence of a trimming
      the same visual weight as the twelve designs, and made twelve render as
@@ -1726,11 +1729,14 @@ Tell Needles <span style="color:#7ab8ff">what you have in mind</span>
 <div class="note" style="margin:0 0 .45rem;font-size:11px">Colour this trimming</div>
 <div id="trimmingsSwatches" style="display:flex;flex-wrap:wrap;gap:6px;justify-content:center"></div>
 </div>
-<div style="display:flex;justify-content:center;margin:0 0 .9rem">
-<span id="trimmingsNoneBtn" onclick="pickTrimming(null)" style="cursor:pointer;display:inline-block;padding:.42rem 1.1rem;border-radius:999px;border:1.5px solid #003c8c;background:#12233a;color:#29a3ff;font-size:12px;font-weight:700;user-select:none">No Thanks</span>
+<div class="note" id="trimmingsEmptyNote" style="display:none;margin:0 0 .6rem;color:#7ab8ff;font-size:11px">No trimmings are installed yet.</div>
+<!-- SIDE BY SIDE (Alyx). A full-width Continue with the pill stacked above it
+     cost two rows of height, which was the difference between the twelve
+     options and the way forward being on screen together or not. -->
+<div class="bi-row" style="margin-top:.2rem">
+<button type="button" class="download-btn" id="trimmingsNoneBtn" style="flex:1;width:auto;margin:0" onclick="pickTrimming(null)">No Thanks</button>
+<button type="button" class="generate-btn" id="trimmingsContinueBtn" style="flex:1;width:auto;margin:0" onclick="confirmTrimmingAndContinue()">✅ Continue</button>
 </div>
-<div class="note" id="trimmingsEmptyNote" style="display:none;margin:0 0 .9rem;color:#7ab8ff;font-size:11px">No trimmings are installed yet.</div>
-<button type="button" class="generate-btn" id="trimmingsContinueBtn" style="margin-top:.3rem" onclick="confirmTrimmingAndContinue()">✅ Continue</button>
 <div class="note" id="trimmingsSavingNote" style="display:none;margin-top:.75rem;text-align:center"><span class="spinner"></span>Saving your design...</div>
 </div>
 </div>
@@ -17174,6 +17180,15 @@ async function openTrimmingsPanel(){
   if(card)card.scrollTop=0;
   renderTrimmingsGrid();
   await pickTrimming(null);
+  // LAND ON THE OPTIONS (Alyx: "I should be sent here"). Opening at the top put
+  // the heading and the preview on screen with the twelve trimmings below the
+  // fold, so the panel's whole purpose was somewhere the customer had to go
+  // looking for. Deferred a frame so the grid is laid out and its offset real.
+  requestAnimationFrame(()=>{
+    const card=document.getElementById('trimmingsCard');
+    const grid=document.getElementById('trimmingsGrid');
+    if(card&&grid)card.scrollTo({top:Math.max(0,grid.offsetTop-card.offsetTop-8),behavior:'auto'});
+  });
 }
 
 function renderTrimmingsGrid(){
@@ -17214,13 +17229,10 @@ async function pickTrimming(key){
   renderTrimmingsSwatches();
   // The pill lights the same way a tile does, so "no trimming" reads as a
   // choice that has been made rather than one nobody got round to.
+  // No Thanks lights when it is the current choice, so a plain seam reads as a
+  // decision somebody made rather than one nobody got round to.
   const none=document.getElementById('trimmingsNoneBtn');
-  if(none){
-    const on=selectedGutter===null;
-    none.style.background=on?'#003c8c':'#12233a';
-    none.style.color=on?'#ffffff':'#29a3ff';
-    none.style.borderColor=on?'#29a3ff':'#003c8c';
-  }
+  if(none)none.classList.toggle('selected',selectedGutter===null);
   await updateTrimmingsPreview();
   // JUMP TO CONTINUE (Alyx). Picking a trimming is the moment the customer is
   // ready to move on, and on a phone the button was below the fold behind
