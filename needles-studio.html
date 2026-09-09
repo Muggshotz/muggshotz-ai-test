@@ -2,7 +2,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head><link rel="manifest" href="needles-manifest.json">
-<!-- BUILD-MARKER: TRY-THE-FADE-ON-THE-CUP-v125 -->
+<!-- BUILD-MARKER: NO-BLACK-LEFT-TO-BLEED-v126 -->
 <!-- If you can see this comment on GitHub, this exact paste landed. -->
 <!-- If your live site's page source does NOT say -->
 <!-- "INSTANT-FIT-SCREEN-v47" right here, the upload/deploy did -->
@@ -1779,16 +1779,32 @@ Tell Needles <span style="color:#7ab8ff">what you have in mind</span>
 <!-- Capped so the grid is not pushed off the bottom (Alyx: "fit all of the
      options into the frame and the continue button"). The wrap is very wide
      and very short, so at full width it ate half the panel on its own. -->
-<img id="trimmingsPreviewImg" style="width:100%;max-height:15vh;object-fit:contain;border-radius:10px;border:1px solid #003c8c;margin:.3rem 0 .5rem;background:#0d0d0d"/>
+<!-- THE FLAT WRAP, DOWN TO ONE JOB (Alyx, Sep 2026): "if you have the mockup in
+     3D rotating above, you don't need the image in the middle. It doesn't
+     really add anything -- it just shows you how the divided trimmings fit on
+     the panel. You don't really care to see that; what you care about is how
+     they come together."
+     He is right, and the cup answers that question better than the flat wrap
+     ever did. So the strip is gone from the panel -- except for the one thing
+     the cup cannot do: give an honest colour to sample. The cup is lit and
+     tone-mapped, so a colour taken off it is a SHADED colour, and painting a
+     ribbon with it and rendering that through the same lighting again would
+     shift it twice. The flat wrap is the artwork as it is, so it appears only
+     when a colourable trimming is chosen, directly above the palette, as the
+     surface being sampled. -->
+<!-- No black behind it: the wrap is far wider than this box is tall, so
+     object-fit left a black bar at each end and the trimming appeared to be
+     sitting ON black. That was never the artwork, it was this element. -->
+<img id="trimmingsPreviewImg" style="display:none;width:100%;max-height:15vh;object-fit:contain;border-radius:10px;border:1px solid #003c8c;margin:.3rem 0 .5rem;background:transparent"/>
 <!-- Directly under the picture, so a colour change is seen the instant it is
      made (Alyx: "when you click the color it should immediately affect the
      items so you can see what it looks like"). Only drawn for a trimming whose
      colour can change without destroying what it is -- see colorable. -->
 <div id="trimmingsColourRow" style="display:none;margin:0 0 .6rem">
 <div id="trimmingsSwatches" style="display:flex;flex-wrap:wrap;gap:6px;justify-content:center;align-items:center"></div>
-<div class="note" id="trimmingsEyedropNote" style="margin:.45rem 0 0;font-size:11px;color:#7ab8ff">Or tap anywhere in the picture above to take that exact colour.</div>
+<div class="note" id="trimmingsEyedropNote" style="margin:.45rem 0 0;font-size:11px;color:#7ab8ff">Or tap anywhere in the strip above to take that exact colour.</div>
 </div>
-<div class="note" id="trimmingsSeamNote" style="margin-top:0;margin-bottom:.6rem;color:#7ab8ff;font-size:11px">The wrap laid flat &mdash; the only view where you can see <i>both</i> ends at once.</div>
+<div class="note" id="trimmingsSeamNote" style="display:none;margin-top:0;margin-bottom:.6rem;color:#7ab8ff;font-size:11px">Your picture laid flat, unlit &mdash; so the colour you take off it is the true one.</div>
 </div>
 <div id="trimmingsRightCol">
 <div id="trimmingsGrid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:.7rem"></div>
@@ -5773,6 +5789,23 @@ function hue2rgb(p,q,t){
   if(t<2/3)return p+(q-p)*(2/3-t)*6;
   return p;
 }
+// TRANSPARENT BLACK CANNOT BLEED, and it is worth writing down because the
+// opposite is a very persuasive theory. Every transparent pixel in these assets
+// really does carry pure black RGB, and the pipeline really does filter them
+// three times (asset into band, wrap onto the texture, texture into mipmaps) --
+// so a dark halo looked like the obvious explanation for Alyx's "little black
+// snowy fingers, sizzling vaguely" as the cup turns.
+//
+// It is not. Canvas and GL both filter in PREMULTIPLIED space, where a fully
+// transparent pixel contributes nothing at all whatever its RGB. Measured on
+// the composite that actually ships: the fraction of very dark pixels is the
+// same at 186px as at 600px (Ivy 5.81% against 6.15%, Laced Leather 15.42%
+// against 16.58%), so downscaling is creating no darkness whatsoever. An alpha
+// bleed was written, measured, and removed again -- it moved those numbers by
+// a fifth of a percent, in the wrong direction.
+//
+// The black he was seeing is the CUP, through the openwork, which is what the
+// backing band was doing on purpose -- see paintWrapGutters.
 async function recolouredGutter(entry,hex){
   const key=entry.asset+'|'+hex;
   if(gutterTintCache[key])return gutterTintCache[key];
@@ -5912,7 +5945,22 @@ async function paintWrapGutters(url,hex,width=WRAP_GUTTER_WIDTH,design=null){
       // the join and the printer's drift, which is the band's first job and
       // does not care how the artwork looks.
       const designW=gutterDesignWidth(art,w,h);
-      const backW=Math.max(designW,Math.round(w*WRAP_GUTTER_MIN_WIDTH));
+      // ONLY AS WIDE AS THE JOIN (Alyx, on a phone, Sep 2026): "the problem with
+      // how they come together is the black background bleeds through."
+      //
+      // It was the CUP bleeding through, and the band was putting it there. The
+      // band used to run the design's whole width, so every hole in an openwork
+      // trimming -- and openwork is the norm here: lace, vines, film, ivy --
+      // showed cup colour. On a black cup that is a black-filled lace, which is
+      // exactly what he was looking at.
+      //
+      // The band exists for ONE reason: a hole falling over the seam would show
+      // the two mismatched ends of the picture through it. The seam is at the
+      // extreme outer edge, so only the outermost sliver has to be solid.
+      // Everything further in can show the photograph -- which is what a real
+      // openwork trim does, you see what is behind it. Same protection at the
+      // join, the customer's own picture through the gaps instead of a fill.
+      const backW=Math.round(w*WRAP_GUTTER_MIN_WIDTH);
       // BACKING FIRST. The plain colour band goes underneath every design, and
       // it is not belt-and-braces: openwork is the norm here, not the
       // exception -- lace, vines and film all have holes in them by design.
@@ -13899,9 +13947,19 @@ const MUG3D = (function(){
     // canvas is 2048 x 1024 for every band; the band's proportions are
     // applied by paint() when it crops, and the wrap's UVs stretch the
     // picture back to true on the cup.
+    // 4096 ACROSS (Alyx, Sep 2026): "little black snowy fingers dancing around
+    // the picture as it's spinning, fading in and out, sizzling vaguely."
+    //
+    // A trimming is a THIN VERTICAL STRIPE of high-contrast detail -- lace,
+    // sprocket holes, stitching -- and horizontal texel density is the only
+    // thing that resolves it. At 2048 across, a 186px trimming on a 3710px wrap
+    // landed on about 103 texels, right at the sampling limit, so it shimmered
+    // between mip levels as the cup turned. Doubling the width doubles exactly
+    // the axis that was short. Height is untouched: the detail runs the other
+    // way, and this keeps the texture at 16MB rather than 32.
     const makeTex=(aspect)=>{
       const canvas=document.createElement('canvas');
-      canvas.width=2048; canvas.height=1024;
+      canvas.width=4096; canvas.height=1024;
       const tex=new THREE.CanvasTexture(canvas);
       tex.encoding=THREE.sRGBEncoding;
       tex.generateMipmaps=true;
@@ -14058,7 +14116,28 @@ const MUG3D = (function(){
       let sw,sh,sx,sy;
       if(have>want){ sh=img.height; sw=sh*want; sx=(img.width-sw)/2; sy=0; }
       else { sw=img.width; sh=sw/want; sx=0; sy=(img.height-sh)/2; }
-      g.drawImage(img,sx,sy,sw,sh,0,0,W,Hc);
+      // HALVED DOWN, NOT DROPPED DOWN (Alyx, Sep 2026): "little tiny fingers...
+      // it only happens when it's spinning."
+      //
+      // One drawImage from 2817 rows to 1024 samples roughly every third row and
+      // throws the rest away, so fine horizontal detail -- a lace scallop, a
+      // sprocket hole -- lands or misses depending on where it happens to fall.
+      // That is decided before the GPU ever sees the texture, so no amount of
+      // mipmapping or anisotropy can undo it, and as the cup turns the aliased
+      // detail crawls. Halving repeatedly averages every source pixel in
+      // instead, which is what a mipmap chain does and what this was missing.
+      let srcImg=img, sx0=sx, sy0=sy, sw0=sw, sh0=sh;
+      while(sw0>W*2 || sh0>Hc*2){
+        const nw=Math.max(W,Math.round(sw0/2)), nh=Math.max(Hc,Math.round(sh0/2));
+        const tmp=document.createElement('canvas');
+        tmp.width=nw; tmp.height=nh;
+        const tg=tmp.getContext('2d');
+        tg.imageSmoothingEnabled=true; tg.imageSmoothingQuality='high';
+        tg.drawImage(srcImg,sx0,sy0,sw0,sh0,0,0,nw,nh);
+        srcImg=tmp; sx0=0; sy0=0; sw0=nw; sh0=nh;
+      }
+      g.imageSmoothingEnabled=true; g.imageSmoothingQuality='high';
+      g.drawImage(srcImg,sx0,sy0,sw0,sh0,0,0,W,Hc);
     }
     st.tex.needsUpdate=true;
   }
@@ -17777,7 +17856,14 @@ function renderTrimmingsSwatches(){
   const host=document.getElementById('trimmingsSwatches');
   if(!row||!host)return;
   const entry=selectedGutter?GUTTER_CATALOG[selectedGutter]:null;
-  if(!entry||!entry.colorable){ row.style.display='none'; host.innerHTML=''; return; }
+  // The strip, the note under it and the palette are one thing now: the colour
+  // picker. They appear and disappear together.
+  const strip=document.getElementById('trimmingsPreviewImg');
+  const seam=document.getElementById('trimmingsSeamNote');
+  const colourable=!!(entry&&entry.colorable);
+  if(strip)strip.style.display=colourable?'':'none';
+  if(seam)seam.style.display=colourable?'':'none';
+  if(!colourable){ row.style.display='none'; host.innerHTML=''; return; }
   row.style.display='block';
   const prev=document.getElementById('trimmingsPreviewImg');
   if(prev&&!prev.dataset.eyedrop){

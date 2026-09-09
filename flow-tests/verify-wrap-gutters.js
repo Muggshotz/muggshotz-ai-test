@@ -668,7 +668,7 @@ scenarios.theWholeChoiceIsOnScreenAtOnce = async (page) => {
     return {
       tiles: tiles.length,
       overflow: card.scrollHeight - card.clientHeight,
-      preview: onScreen(document.getElementById('trimmingsPreviewImg')),
+      preview: onScreen(document.getElementById('trimmings3DStage')),
       lastTile: onScreen(tiles[tiles.length - 1]),
       continue: onScreen(document.getElementById('trimmingsContinueBtn')),
       twoCol: getComputedStyle(document.getElementById('trimmingsBody')).display === 'flex'
@@ -683,7 +683,7 @@ scenarios.theWholeChoiceIsOnScreenAtOnce = async (page) => {
   if (!wide.twoCol) return 'FAIL: at 1280px the panel is still stacked in one column';
   if (wide.overflow > 4) return `FAIL: the panel still scrolls by ${wide.overflow}px at 1280x900 — something is off the bottom`;
   if (!wide.preview || !wide.lastTile || !wide.continue) {
-    return `FAIL: at 1280x900 not everything is on screen together — preview ${wide.preview}, last tile ${wide.lastTile}, Continue ${wide.continue}`;
+    return `FAIL: at 1280x900 not everything is on screen together — cup ${wide.preview}, last tile ${wide.lastTile}, Continue ${wide.continue}`;
   }
 
   // --- On a phone, where two columns will not fit. ---
@@ -693,7 +693,7 @@ scenarios.theWholeChoiceIsOnScreenAtOnce = async (page) => {
   await T(page, 500);
   const phone = await page.evaluate(() => {
     const card = document.getElementById('trimmingsCard');
-    const img = document.getElementById('trimmingsPreviewImg');
+    const img = document.getElementById('trimmings3DStage');
     const tiles = document.querySelectorAll('#trimmingsGrid .btn-select');
     const r = img.getBoundingClientRect();
     const last = tiles[tiles.length - 1].getBoundingClientRect();
@@ -706,10 +706,125 @@ scenarios.theWholeChoiceIsOnScreenAtOnce = async (page) => {
   });
   if (!phone.stacked) return 'FAIL: two columns were forced onto a 390px phone';
   if (phone.scrolled < 20) return `FAIL: the phone panel did not scroll (${phone.scrolled}px) — this measures nothing`;
-  if (!phone.previewVisible) return 'FAIL: on a phone the picture left the screen as soon as the tiles were scrolled to — the customer chooses a trimming for something they cannot see';
+  if (!phone.previewVisible) return 'FAIL: on a phone the cup left the screen as soon as the tiles were scrolled to — the customer chooses a trimming for something they cannot see';
   if (!phone.lastTileVisible) return 'FAIL: the last tile was not reachable on a phone';
 
-  return `PASS: at 1280x900 the picture, all ${wide.tiles} trimmings and Continue are on screen together with nothing scrolling; on a 390px phone the picture sticks to the top and the tiles pass under it`;
+  return `PASS: at 1280x900 the cup, all ${wide.tiles} trimmings and Continue are on screen together with nothing scrolling; on a 390px phone the cup sticks to the top and the tiles pass under it`;
+};
+
+// ---- THE PICTURE SHOWS THROUGH THE OPENWORK, AND THE JOIN STILL DOES NOT. ----
+// Alyx, on a phone: "the problem with how they come together is the black
+// background bleeds through, and that should be an alpha."
+//
+// The assets DO have alpha -- measured -- and transparent black cannot bleed,
+// because canvas and GL both filter premultiplied. The black was the CUP, and
+// the backing band was putting it there: the band ran the design's whole width,
+// so every hole in an openwork trimming showed cup colour, and on a black cup
+// that is a black-filled lace.
+//
+// The band exists for one reason: a hole falling over the SEAM would show the
+// two mismatched ends of the picture through it. The seam is the extreme outer
+// edge, so only the outermost sliver has to be solid. This holds both halves,
+// because getting either wrong is worse than the fault it replaced:
+//   * the outer sliver is still completely solid at BOTH ends, top to bottom --
+//     the join stays hidden, which is the whole reason a gutter works;
+//   * and beyond it the customer's own picture really does show through the
+//     gaps, which is what an openwork trim does in life.
+scenarios.theOpenworkShowsThePictureNotTheCup = async (page) => {
+  await pickCup(page, VACUUM);
+  const r = await page.evaluate(async () => {
+    const load = (u) => new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = u; });
+    const W = 3710, H = 2817;
+    const base = document.createElement('canvas'); base.width = W; base.height = H;
+    const bx = base.getContext('2d'); bx.fillStyle = '#FF00FF'; bx.fillRect(0, 0, W, H);
+    const baseUrl = base.toDataURL('image/jpeg', 0.95);
+    const band = Math.round(W * WRAP_GUTTER_MIN_WIDTH);
+    const out = {};
+    // A BLACK cup, which is the one he was holding, and the three most open
+    // designs in the catalogue.
+    for (const name of ['Doily', 'Soft Country', 'Ivy Vine']) {
+      const im = await load(await paintWrapGutters(baseUrl, '#000000', WRAP_GUTTER_WIDTH, name));
+      const c = document.createElement('canvas'); c.width = im.naturalWidth; c.height = im.naturalHeight;
+      const g = c.getContext('2d', { willReadFrequently: true }); g.drawImage(im, 0, 0);
+      const d = g.getImageData(0, 0, c.width, c.height).data;
+      const isArt = (x, y) => { const i = (y * c.width + x) * 4; return d[i] > 170 && d[i + 1] < 110 && d[i + 2] > 170; };
+
+      let leaks = 0;
+      for (let y = 0; y < c.height; y += 3) {
+        for (let x = 0; x < band; x += 2) { if (isArt(x, y)) leaks++; if (isArt(c.width - 1 - x, y)) leaks++; }
+      }
+      const art = await load(GUTTER_CATALOG[name].asset);
+      const span = Math.min(Math.round(c.height * (art.naturalWidth / art.naturalHeight)), Math.round(c.width * WRAP_GUTTER_MAX_WIDTH));
+      let through = 0, looked = 0;
+      for (let y = 0; y < c.height; y += 3) {
+        for (let x = band + 4; x < span; x += 2) { looked++; if (isArt(x, y)) through++; }
+      }
+      out[name] = { band, span, leaks, through, looked, pct: looked ? +(100 * through / looked).toFixed(1) : 0 };
+    }
+    return out;
+  });
+
+  for (const [name, v] of Object.entries(r)) {
+    if (v.leaks) return `FAIL: ${name} lets the picture through the outermost ${v.band}px at ${v.leaks} places — that sliver sits ON the join, and the two mismatched ends would show through it`;
+    if (v.looked < 100) return `FAIL: ${name} has no openwork to measure between ${v.band}px and ${v.span}px`;
+    if (v.pct < 3) return `FAIL: ${name} shows the picture through only ${v.pct}% of its openwork — the band is still filling the gaps with cup colour, which on a black cup is a black-filled lace`;
+  }
+  const say = Object.entries(r).map(([n, v]) => `${n} ${v.pct}%`).join(', ');
+  return `PASS: on a BLACK cup the outermost ${r.Doily.band}px stays solid at both ends so the join is still hidden, and the picture shows through the openwork beyond it (${say})`;
+};
+
+// ---- THE FLAT WRAP EARNS ITS PLACE, OR IT IS NOT THERE. ----
+// Alyx: "if you have the mockup in 3D rotating above, you don't need the image
+// in the middle. It doesn't really add anything -- it just shows you how the
+// divided trimmings fit on the panel. You don't really care to see that; what
+// you care about is how they come together."
+//
+// Right, and the cup answers that better than the flat wrap ever did. It stays
+// only for the one thing the cup cannot do: give an HONEST colour to sample.
+// The cup is lit and tone-mapped, so a colour taken off it is a shaded colour,
+// and painting a ribbon with it and rendering that through the same lighting
+// would shift it twice.
+scenarios.theFlatWrapIsOnlyThereToPickAColour = async (page) => {
+  await pickCup(page, VACUUM);
+  await T(page, 300);
+  await dismissAlerts(page);
+  const r = await page.evaluate(async () => {
+    const c = document.createElement('canvas'); c.width = 1024; c.height = 776;
+    const x = c.getContext('2d'); x.fillStyle = '#7a2b2b'; x.fillRect(0, 0, 1024, 776);
+    resultUrl = c.toDataURL('image/png'); finalImageUrl = null;
+    trimmingsSettledFor = null; trimmingsBakedTo = null; trimmingsBakedFrom = null;
+    await openTrimmingsPanel();
+    await new Promise((s) => setTimeout(s, 2500));
+
+    const vis = (id) => { const e = document.getElementById(id); return !!e && getComputedStyle(e).display !== 'none'; };
+    const snap = () => ({ strip: vis('trimmingsPreviewImg'), note: vis('trimmingsSeamNote'), palette: vis('trimmingsColourRow'), cup: vis('trimmings3DStage') });
+
+    const none = snap();
+    await pickTrimming('Film Reel');          // not colourable
+    await new Promise((s) => setTimeout(s, 900));
+    const plain = snap();
+    await pickTrimming('Blue Satin Ribbon');  // colourable
+    await new Promise((s) => setTimeout(s, 900));
+    const colourable = snap();
+    const stripSrc = (document.getElementById('trimmingsPreviewImg') || {}).src || '';
+    await pickTrimming(null);
+    await new Promise((s) => setTimeout(s, 900));
+    const back = snap();
+
+    closeTrimmings3D();
+    document.getElementById('trimmingsOverlay').style.display = 'none';
+    document.body.classList.remove('step-locked');
+    return { none, plain, colourable, back, hasStripSrc: stripSrc.length > 100 };
+  });
+
+  if (r.none.strip || r.plain.strip) return `FAIL: the flat wrap is on screen with nothing to sample (none ${r.none.strip}, Film Reel ${r.plain.strip}) — it is back to being a second picture of what the cup already shows`;
+  if (!r.colourable.strip) return 'FAIL: choosing a colourable trimming did not bring the strip up — there is nothing honest left to take a colour from';
+  if (!r.colourable.palette || !r.colourable.note) return `FAIL: the strip came up without the rest of the picker (palette ${r.colourable.palette}, note ${r.colourable.note})`;
+  if (!r.hasStripSrc) return 'FAIL: the strip is shown but carries no picture, so sampling it would return nothing';
+  if (r.back.strip) return 'FAIL: the strip stayed up after the colourable trimming was dropped';
+  if (!r.none.cup || !r.plain.cup || !r.colourable.cup) return 'FAIL: the cup is not on screen throughout — it is the preview now';
+
+  return 'PASS: the cup is the preview throughout, and the flat wrap appears only alongside the palette, as the unlit surface a colour is taken from';
 };
 
 // ---- COLOURING A TRIMMING, THREE WAYS. ----
@@ -852,9 +967,22 @@ scenarios.noTrimExceedsTheCeiling = async (page) => {
       const c = document.createElement('canvas'); c.width = im.naturalWidth; c.height = im.naturalHeight;
       const cx = c.getContext('2d'); cx.drawImage(im, 0, 0);
       const isArt = (d, i) => d[i] > 200 && d[i + 1] < 90 && d[i + 2] > 200;
-      // Walk in from the outer edge until the artwork shows through: that is
-      // where the band stops.
-      const row = (y) => { const d = cx.getImageData(0, y, im.naturalWidth, 1).data; let e = 0; while (e < im.naturalWidth && !isArt(d, e * 4)) e++; return e; };
+      // THE DESIGN'S OWN EXTENT, not the band's. The band is only as wide as the
+      // join now, and the picture shows through the openwork beyond it -- so
+      // walking in until the artwork appears stops at the first hole rather
+      // than at the edge of the trimming. The outermost column that still
+      // carries any trimming at all is the honest measure.
+      const row = () => {
+        let last = 0;
+        const lim = Math.min(im.naturalWidth >> 1, Math.round(im.naturalWidth * 0.2));
+        for (let x = 0; x < lim; x++) {
+          const d = cx.getImageData(x, 0, 1, im.naturalHeight).data;
+          let solid = false;
+          for (let y = 0; y < im.naturalHeight; y += 5) { if (!isArt(d, y * 4)) { solid = true; break; } }
+          if (solid) last = x + 1;
+        }
+        return last;
+      };
       // The very first and very last rows of the wrap, at both ends: the trim
       // has to be there, not just in the middle.
       const covered = (y) => {
@@ -862,7 +990,7 @@ scenarios.noTrimExceedsTheCeiling = async (page) => {
         const l = !isArt(d, 0), rr = !isArt(d, (im.naturalWidth - 1) * 4);
         return l && rr;
       };
-      out[name] = { natural, want, got: row(40), top: covered(0), bottom: covered(im.naturalHeight - 1) };
+      out[name] = { natural, want, got: row(), top: covered(0), bottom: covered(im.naturalHeight - 1) };
     }
     return { ceiling, out };
   });
