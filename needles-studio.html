@@ -2,7 +2,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head><link rel="manifest" href="needles-manifest.json">
-<!-- BUILD-MARKER: TRIMMINGS-COLOURED-v114 -->
+<!-- BUILD-MARKER: MOCKUP-ZOOM-v115 -->
 <!-- If you can see this comment on GitHub, this exact paste landed. -->
 <!-- If your live site's page source does NOT say -->
 <!-- "INSTANT-FIT-SCREEN-v47" right here, the upload/deploy did -->
@@ -870,7 +870,12 @@ body.panels-active #verifyCard{display:none!important}
     <input type="range" id="mug3dAngle" min="-180" max="180" value="0" aria-label="Turn the mug"/>
     <button type="button" id="mug3dTiltBtn" class="mug3d-tilt" aria-pressed="false" onclick="toggleMug3DTilt()">Look down</button>
   </div>
-  <p class="mug3d-hint">Drag the mug to turn it · click it to stop or start the spin</p>
+  <div class="mug3d-controls" style="align-items:center;gap:8px">
+    <span style="font-size:14px;opacity:.85">&#128269;</span>
+    <input type="range" id="mug3dZoomSlider" min="100" max="400" value="100" step="1" aria-label="Zoom in on the mug" oninput="setMug3DZoom(this.value/100)"/>
+    <button type="button" class="mug3d-tilt" id="mug3dZoomReset" onclick="setMug3DZoom(1)">Fit</button>
+  </div>
+  <p class="mug3d-hint">Drag the mug to turn it &middot; click it to stop or start the spin &middot; scroll on it to zoom</p>
 </div>
   <button class="mockup-lightbox-arrow mockup-lightbox-arrow-right" id="mockupLightboxNext" onclick="mockupLightboxNext()" aria-label="Next angle">›</button>
   <div class="mockup-lightbox-counter" id="mockupLightboxCounter"></div>
@@ -12872,6 +12877,29 @@ function tumbler3dKey(){
   return (typeof MUG3D!=='undefined' && MUG3D.hasTumbler(key))?key:null;
 }
 
+// Zoom is a lens change, not a walk toward the cup -- see placeCamera for why
+// that distinction is the whole point. Kept in step with the slider so the
+// scroll wheel and the Fit button agree with it.
+function setMug3DZoom(z){
+  const v=Math.max(1,Math.min(4,Number(z)||1));
+  const sl=document.getElementById('mug3dZoomSlider');
+  if(sl)sl.value=String(Math.round(v*100));
+  if(typeof MUG3D!=='undefined'&&MUG3D.setZoom)MUG3D.setZoom(v);
+}
+
+// Scroll to zoom, on the cup itself. preventDefault so the lightbox behind
+// does not scroll away underneath while the customer is looking closely.
+function wireMug3DWheelZoom(){
+  const stage=document.getElementById('mug3dStage');
+  if(!stage||stage.dataset.wheelZoom)return;
+  stage.dataset.wheelZoom='1';
+  stage.addEventListener('wheel',(e)=>{
+    e.preventDefault();
+    const cur=(typeof MUG3D!=='undefined'&&MUG3D.zoom)?MUG3D.zoom():1;
+    setMug3DZoom(cur*(e.deltaY<0?1.12:1/1.12));
+  },{passive:false});
+}
+
 function toggleMug3DTilt(){
   const btn=document.getElementById('mug3dTiltBtn');
   const on=btn.getAttribute('aria-pressed')!=='true';
@@ -12888,9 +12916,18 @@ function fitMug3DStage(){
   const wrap=document.getElementById('mug3dWrap'), stage=document.getElementById('mug3dStage');
   if(!wrap||!stage||wrap.style.display==='none')return;
   const h=el=>el?el.getBoundingClientRect().height:0;
-  const taken=h(wrap.querySelector('.mug3d-controls'))+h(wrap.querySelector('.mug3d-hint'))+h(document.getElementById('mockupLightboxActions'))
-    +34   /* the gaps between stage, controls, hint and buttons */
-    +44;  /* breathing room above and below */
+  // EVERY control row, not just the first. This read querySelector, so adding
+  // the zoom row as a second .mug3d-controls left its height uncounted and the
+  // buttons fell off the bottom of a 640px window -- caught by
+  // verify-mug-3d.js, which measures exactly that. Summing them means the next
+  // row added here needs no change at all.
+  const rows=Array.from(wrap.querySelectorAll('.mug3d-controls'));
+  const rowsH=rows.reduce((a,el)=>a+h(el),0);
+  const gap=parseFloat(getComputedStyle(wrap).rowGap||getComputedStyle(wrap).gap)||10;
+  const taken=rowsH+h(wrap.querySelector('.mug3d-hint'))+h(document.getElementById('mockupLightboxActions'))
+    +gap*(rows.length+1)   /* one gap between each child of the wrap */
+    +24                    /* the buttons sit outside the wrap, with their own gap */
+    +44;                   /* breathing room above and below */
   const avail=Math.max(200,Math.floor(window.innerHeight-taken));
   stage.style.width=''; stage.style.height='';
   const nat=stage.getBoundingClientRect();
@@ -12977,6 +13014,11 @@ function openMug3DMockup(){
       slider.oninput=function(){ MUG3D.setAngle(+slider.value); };
       MUG3D.onSpin(function(deg){ slider.value=deg; });
     }
+    // Every open starts at the product-photo framing. A zoom left over from
+    // the last cup would greet the next one half-cropped, and nobody would
+    // connect that to a slider they moved two designs ago.
+    setMug3DZoom(1);
+    wireMug3DWheelZoom();
     return true;
   }).catch(err=>{
     console.error('The 3D mug could not start; falling back to the photo mockup:',err);
@@ -13028,6 +13070,10 @@ const MUG3D = (function(){
   let renderer, scene, camera, mugGroup, printMesh, designTex, designCanvas;
   let bandStates=[];   // one {canvas, tex, aspect} per print band on a tumbler
   let spin=0, spinning=true, dragging=false, lookDown=false, rafId=0, visible=true;
+  // 1 = the framing every product photo here has used. Up to 4 for a close
+  // look at the seam, done by narrowing the lens rather than moving in --
+  // see placeCamera.
+  let mug3dZoom=1;
   let onSpinChange=null;
 
   function reducedMotion(){
@@ -13611,6 +13657,21 @@ const MUG3D = (function(){
     const lookY=S.H*0.47;
     camera.position.set(0, lookY+Math.sin(el)*d, Math.cos(el)*d);
     camera.lookAt(0,lookY,0);
+    // ZOOM BY NARROWING THE LENS, NEVER BY MOVING IN (Alyx asked to be able to
+    // get closer to the seam). Walking the camera forward would undo the whole
+    // reason it is out at ten mug-heights: at close range the front of the cup
+    // is enough nearer than its sides that the artwork draws ~15% taller in the
+    // middle, and a rectangle bulges into a barrel -- the taper Alyx spotted
+    // and this distance was chosen to cure. Narrowing the field of view is a
+    // telephoto zoom: it magnifies and leaves the perspective exactly where it
+    // was, so a seam inspected at 4x is the same shape as the one that prints.
+    camera.fov=9/mug3dZoom;
+    camera.updateProjectionMatrix();
+  }
+
+  function setZoom(z){
+    mug3dZoom=Math.max(1,Math.min(4,z));
+    placeCamera();
   }
 
   function resize(){
@@ -13728,6 +13789,8 @@ const MUG3D = (function(){
     warm(){ return loadThree().catch(()=>null); },
     snapshot,
     setLookDown(v){ lookDown=!!v; if(scene)placeCamera(); },
+    setZoom(z){ if(scene)setZoom(z); else mug3dZoom=Math.max(1,Math.min(4,z)); },
+    zoom(){ return mug3dZoom; },
     setSpinning,
     spinning(){ return spinning; },
     setAngle(deg){ setSpin(deg); },
