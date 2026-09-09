@@ -2,7 +2,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head><link rel="manifest" href="needles-manifest.json">
-<!-- BUILD-MARKER: SHOW-THE-JOIN-BEFORE-THE-FIX-v122 -->
+<!-- BUILD-MARKER: TRY-IT-ON-THE-SPINNING-CUP-v123 -->
 <!-- If you can see this comment on GitHub, this exact paste landed. -->
 <!-- If your live site's page source does NOT say -->
 <!-- "INSTANT-FIT-SCREEN-v47" right here, the upload/deploy did -->
@@ -891,6 +891,12 @@ body.panels-active #verifyCard{display:none!important}
          mockup, where a frame can be judged against the real mug. Mug
          three-panel flow only. -->
     <button type="button" id="mockupLightboxFrame" class="download-btn" style="display:none;width:auto;margin:0;padding:.8rem 1.3rem;white-space:nowrap;border-color:#003c8c;color:#7ab8ff" onclick="offerFrameFromMockup()">🖼️ Add a Frame</button>
+    <!-- A CHANGE OF MIND AFTER SEEING THE CUP (Alyx, Sep 2026): "even after
+         they've seen the mockup, we can still give them the option to change
+         the trimming." Only on a cup whose wrap closes, and only once one has
+         actually been settled -- offering it where there was never a seam to
+         dress would be a button that explains nothing. -->
+    <button type="button" id="mockupLightboxTrim" class="download-btn" style="display:none;width:auto;margin:0;padding:.8rem 1.3rem;white-space:nowrap;border-color:#003c8c;color:#7ab8ff" onclick="changeTrimmingFromMockup()">🎀 Change Trimming</button>
     <button type="button" id="mockupLightboxReturn" class="generate-btn" style="width:auto;margin:0;padding:.8rem 1.4rem;white-space:nowrap" onclick="returnFromFinalMockup()">✅ Looks Good</button>
   </div>
 </div>
@@ -1705,37 +1711,6 @@ Tell Needles <span style="color:#7ab8ff">what you have in mind</span>
 </div>
 </div>
 
-<!-- WHY THE TRIMMING (Alyx, Sep 2026): "somewhere in this process, probably a
-     panel before we introduce these trimmings, we should give some kind of a
-     coherent explanation of what these trimmings are for and what they do, and
-     why they are necessary. Maybe even a side by side with and without,
-     showing them blocking the gap."
-     The panel that followed asserted "a join you can see" and asked the
-     customer to take it on faith. Nobody buys the fix before they have seen
-     the problem -- so the problem is shown, from THEIR OWN picture, at the
-     place it actually happens: the back of the cup, where the wrap's right
-     end butts against its left. Nothing here is illustrated or staged; both
-     halves are the real render, one with the trimming and one without. -->
-<div id="trimmingsWhyOverlay" class="step-lock-overlay" style="display:none">
-<div class="card" id="trimmingsWhyCard" style="max-width:560px;width:100%;margin:auto;position:relative;max-height:92vh;overflow-y:auto;text-align:center">
-<div class="card-title">✂️ Where your picture meets itself</div>
-<div class="note" style="margin-top:0;margin-bottom:.7rem;text-align:left;line-height:1.55">Your picture goes <b>all the way around</b> this cup, so its two ends come back and meet on the back. Whatever ends the picture and whatever starts it were never the same thing &mdash; and a flat sheet wrapped onto a round cup is always a hair out besides. The eye reads that meeting as a fault.</div>
-<div id="seamDemoRow" style="display:flex;gap:8px;margin:.2rem 0 .5rem;align-items:flex-start">
-<div style="flex:1;min-width:0">
-<img id="seamDemoWithout" style="width:100%;border-radius:8px;border:1px solid #003c8c;background:#0d0d0d;display:block"/>
-<div class="note" style="margin:.35rem 0 0;font-size:11px">The join, bare</div>
-</div>
-<div style="flex:1;min-width:0">
-<img id="seamDemoWith" style="width:100%;border-radius:8px;border:1px solid #2f7fe0;background:#0d0d0d;display:block"/>
-<div class="note" style="margin:.35rem 0 0;font-size:11px;color:#7ab8ff">The same join, trimmed</div>
-</div>
-</div>
-<div class="note" id="seamDemoNote" style="margin:0 0 .7rem;font-size:11px;color:#7ab8ff"><span class="spinner"></span>Drawing the back of your cup...</div>
-<div class="note" style="margin-top:0;margin-bottom:.9rem;text-align:left;line-height:1.55">A <b>trimming</b> is a narrow strip in the cup&rsquo;s own colour, at each end of the picture. Brought together on the back they form one deliberate line. The mismatch is still behind it &mdash; it just stopped being visible, because the eye now reads a border instead of a break. It also gives the printer room to be a millimetre out without it showing.</div>
-<button type="button" class="generate-btn" id="trimmingsWhyGoBtn" onclick="showTrimmingsGridPanel()">See the trimmings →</button>
-</div>
-</div>
-
 <!-- TRIMMINGS (Alyx, Sep 2026). The seam decoration, chosen AFTER generating:
      "he's gonna have to see what design the AI came up with to see which gutter
      best matches his motif." So this is a stage on the finished picture, not a
@@ -1744,7 +1719,16 @@ Tell Needles <span style="color:#7ab8ff">what you have in mind</span>
 <div id="trimmingsOverlay" class="step-lock-overlay" style="display:none">
 <div class="card" id="trimmingsCard" style="max-width:560px;width:100%;margin:auto;position:relative;max-height:92vh;overflow-y:auto;text-align:center">
 <div class="card-title">🎀 Trimmings</div>
-<div class="note" style="margin-top:0;margin-bottom:.6rem;text-align:left;line-height:1.5">Your picture goes all the way around this cup, so its two ends meet in a join you can see. A trimming turns that join into something you meant. Tap one to try it on &mdash; it's free to look.</div>
+<!-- THE EXPLANATION IS THE CUP (Alyx, Sep 2026): "you wouldn't even need as
+     comprehensive an explanation at this point, because all they do is click
+     on a trimming and they immediately see what it does."
+     Right, and it goes further: NO THANKS IS THE COMPARISON. Tap it and the
+     seam is bare and the picture visibly collides with itself; tap a trimming
+     and it closes. Back and forth, on their own cup, as often as they like.
+     That beats any pair of crops, because it is the actual object and they are
+     the one working it -- so the panel of before-and-afters that used to stand
+     in front of this one is gone, and two sentences take its place. -->
+<div class="note" style="margin-top:0;margin-bottom:.6rem;text-align:left;line-height:1.5">Your picture goes <b>all the way around</b> this cup, so its two ends come back and meet on the back. Tap a trimming and the cup wears it straight away &mdash; tap <b>No Thanks</b> to see the join bare. It's free to look either way.</div>
 <!-- SIDE BY SIDE (Alyx, Sep 2026): "there's gotta be some way to recompose
      this so that you can look at all of the available trimmings, and the image
      it would go on to, simultaneously as you're applying different options.
@@ -1769,10 +1753,18 @@ Tell Needles <span style="color:#7ab8ff">what you have in mind</span>
 </style>
 <div id="trimmingsBody">
 <div id="trimmingsLeftCol">
+<!-- THE LIVE CUP. It is the real 3D mockup -- the same engine, the same
+     object the customer meets after this -- borrowed into the panel and
+     repainted on every tap. Its own host, not the mockup's: MUG3D is a
+     singleton, so the panel opens it here and closes it on the way out, and
+     the mockup opens it again in its own stage. Dragging and the spin are
+     wired to whatever host it is mounted in, so both work here for free. -->
+<div id="trimmings3DStage" class="mug3d-stage" style="width:100%;height:auto;aspect-ratio:1/1;max-height:34vh;margin:0 auto .45rem"></div>
+<div class="note" id="trimmings3DHint" style="margin:0 0 .5rem;font-size:11px">Drag the cup to turn it &middot; click it to stop or start the spin</div>
 <!-- Capped so the grid is not pushed off the bottom (Alyx: "fit all of the
      options into the frame and the continue button"). The wrap is very wide
      and very short, so at full width it ate half the panel on its own. -->
-<img id="trimmingsPreviewImg" style="width:100%;max-height:26vh;object-fit:contain;border-radius:10px;border:1px solid #003c8c;margin:.3rem 0 .5rem;background:#0d0d0d"/>
+<img id="trimmingsPreviewImg" style="width:100%;max-height:15vh;object-fit:contain;border-radius:10px;border:1px solid #003c8c;margin:.3rem 0 .5rem;background:#0d0d0d"/>
 <!-- Directly under the picture, so a colour change is seen the instant it is
      made (Alyx: "when you click the color it should immediately affect the
      items so you can see what it looks like"). Only drawn for a trimming whose
@@ -1781,7 +1773,7 @@ Tell Needles <span style="color:#7ab8ff">what you have in mind</span>
 <div id="trimmingsSwatches" style="display:flex;flex-wrap:wrap;gap:6px;justify-content:center;align-items:center"></div>
 <div class="note" id="trimmingsEyedropNote" style="margin:.45rem 0 0;font-size:11px;color:#7ab8ff">Or tap anywhere in the picture above to take that exact colour.</div>
 </div>
-<div class="note" id="trimmingsSeamNote" style="margin-top:0;margin-bottom:.6rem;color:#7ab8ff;font-size:11px">The wrap laid flat &mdash; the trimming appears at both ends and they meet on the back of the cup.</div>
+<div class="note" id="trimmingsSeamNote" style="margin-top:0;margin-bottom:.6rem;color:#7ab8ff;font-size:11px">The wrap laid flat &mdash; the only view where you can see <i>both</i> ends at once.</div>
 </div>
 <div id="trimmingsRightCol">
 <div id="trimmingsGrid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:.7rem"></div>
@@ -12603,7 +12595,28 @@ function frameOfferAvailable(){
   if(selectedDesignMethod||windowSillChoice)return false;
   return ['left','front','right'].some(pos=>placements[pos]&&findDesignById(placements[pos]));
 }
+// Shown on the finished mockup for a cup with a seam, so the trimming stays a
+// decision rather than a one-shot. Going back is safe because the bake records
+// what it was painted FROM: the new choice replaces the old one instead of
+// being layered on top of it.
+function refreshMockupLightboxTrimBtn(){
+  const btn=document.getElementById('mockupLightboxTrim');
+  if(!btn)return;
+  const show=(typeof trimmingsAvailable==='function')&&trimmingsAvailable()&&!!trimmingsSettledFor;
+  btn.style.display=show?'block':'none';
+  btn.textContent=selectedGutter?'🎀 Change Trimming':'🎀 Add a Trimming';
+}
+
+function changeTrimmingFromMockup(){
+  // The gate reopens because the picture we settled on is no longer settled.
+  trimmingsSettledFor=null;
+  try{ hideMug3D(); }catch(e){}
+  try{ closeMockupLightbox(); }catch(e){}
+  openTrimmingsPanel();
+}
+
 function refreshMockupLightboxFrameBtn(){
+  refreshMockupLightboxTrimBtn();
   const btn=document.getElementById('mockupLightboxFrame');
   if(!btn)return;
   const show=frameOfferAvailable();
@@ -13958,6 +13971,19 @@ const MUG3D = (function(){
     setAngle(deg){ setSpin(deg); },
     onSpin(fn){ onSpinChange=fn; },
     resize,
+    mounted(){ return mounted; },
+
+    // REPAINT IN PLACE (Alyx, Sep 2026): "why can't we apply the trimmings
+    // directly to the spinning mockup? By clicking on the trimming we want it
+    // gets applied directly to the mockup that we're watching in real time."
+    // The band is already a canvas texture that paint() rewrites and flags
+    // dirty, so a new wrap costs one draw and one upload to the GPU -- no
+    // rebuild, no reload, and the cup does not so much as pause its spin. This
+    // was always possible; it just had no way in from outside.
+    setArtwork(url){
+      if(!mounted)return Promise.resolve(false);
+      return joinPanels(url?[url]:[]).then(img=>{ paint(img,0); return true; });
+    },
 
     // opts: { sizeLabel, styleName, colorHex, panelUrls[], panoramaUrl }
     //   or, for a travel cup: { tumblerKey, colorHex, panoramaUrl }
@@ -17344,64 +17370,76 @@ function trimmingsAvailable(){
   return wrapWantsGutters() && Object.keys(GUTTER_CATALOG).length>0;
 }
 
-// THE DEMONSTRATION TRIMMING -- the one that stands in the "with" half of the
-// explainer. Solid down its whole length and legible at thumbnail size, which
-// is what that picture has to survive; an openwork design shrunk to 240px
-// reads as texture rather than as a line, and the line is the entire point.
-const SEAM_DEMO_PREFERENCE=['Rope','Laced Leather','Zipper','Blue Satin Ribbon'];
-function seamDemoTrimming(){
-  for(const k of SEAM_DEMO_PREFERENCE) if(GUTTER_CATALOG[k])return k;
-  return Object.keys(GUTTER_CATALOG)[0]||null;
+// THE LIVE CUP IN THE PANEL (Alyx, Sep 2026): "why can't we apply the
+// trimmings directly to the spinning mockup? It can be spinning right next to
+// all of the trimmings, and by clicking on the trimming we want it gets
+// applied directly to the mockup that we're watching in real time."
+//
+// MUG3D is a singleton -- one renderer, one host -- so the panel does not run a
+// second copy of it. It opens it on its OWN stage and closes it again on the
+// way out; the mockup then opens it in the mockup's stage as it always did.
+// Dragging and the spin are wired to whichever host it is mounted in, so both
+// work in here without a line of extra code.
+function trimmings3DOpts(artUrl){
+  const key=(typeof tumbler3dKey==='function')?tumbler3dKey():null;
+  if(!key)return null;
+  const c=(typeof travelColorEntry==='function')?travelColorEntry():null;
+  return { tumblerKey:key, colorHex:c?c.hex:'#ffffff', finish:(c&&c.finish)?c.finish:'coat',
+           panoramaUrl:artUrl, panelUrls:[] };
 }
 
-// The back of the cup, from a flat wrap. The wrap's RIGHT end and its LEFT end
-// are the two things that come together there, so the crop is exactly that:
-// the last slice of the picture, then the first, butted the way the cup butts
-// them. Nothing is offset, faked or exaggerated -- the mismatch on show is
-// whatever this customer's own picture really does at that meeting.
-async function seamJoinCrop(srcUrl){
-  const img=await loadImageFromUrl(srcUrl);
-  const w=img.naturalWidth,h=img.naturalHeight;
-  const half=Math.min(Math.round(h*0.42),Math.floor(w/2));
-  if(half<=0)return srcUrl;
-  const c=document.createElement('canvas');
-  c.width=half*2; c.height=h;
-  const ctx=c.getContext('2d');
-  ctx.drawImage(img, w-half,0, half,h, 0,0, half,h);
-  ctx.drawImage(img, 0,0, half,h, half,0, half,h);
-  return c.toDataURL('image/jpeg',0.92);
-}
-
-// Both halves are real renders of the real artwork: the bare one is the wrap
-// exactly as it would print with no trimming at all, the trimmed one comes off
-// the same painter the preview and the final bake use. If either fails to
-// draw, the words stand on their own rather than the panel showing a broken
-// promise -- the explanation is still true without the picture.
-async function renderSeamComparison(){
-  const a=document.getElementById('seamDemoWithout');
-  const b=document.getElementById('seamDemoWith');
-  const note=document.getElementById('seamDemoNote');
-  const row=document.getElementById('seamDemoRow');
-  if(!a||!b||!trimmingsBaseUrl)return;
+// SMALL ENOUGH TO KEEP UP WITH A FINGER. The wrap is 3710px wide and the
+// customer is now going to tap through twelve of them; repainting the full
+// file each time makes the tiles feel stuck. Both previews here are for
+// looking at -- the cup's own texture is 2048px and the flat strip is a few
+// hundred -- so they run off a scaled copy, and the bake that actually ships
+// still goes through the untouched original. Nobody can see the difference on
+// a cup; everybody can feel the difference in the tapping.
+const TRIMMINGS_PREVIEW_WIDTH=1600;
+let trimmingsFastUrl=null;
+async function makeTrimmingsFastBase(url){
   try{
-    const hex=getSelectedProductColorHex();
-    const bare=await fitWrapToBand(trimmingsBaseUrl);
-    a.src=await seamJoinCrop(bare);
-    const demo=seamDemoTrimming();
-    const trimmed=await paintWrapGutters(trimmingsBaseUrl,hex,WRAP_GUTTER_WIDTH,demo);
-    b.src=await seamJoinCrop(trimmed);
-    if(note)note.innerHTML='The back of your own cup &mdash; the picture&rsquo;s last inch meeting its first.';
+    const img=await loadImageFromUrl(url);
+    if(img.naturalWidth<=TRIMMINGS_PREVIEW_WIDTH)return url;
+    const w=TRIMMINGS_PREVIEW_WIDTH;
+    // Scaled proportionally, so the band reshape inside paintWrapGutters makes
+    // exactly the same decision it would on the original.
+    const h=Math.round(img.naturalHeight*(w/img.naturalWidth));
+    const c=document.createElement('canvas');
+    c.width=w; c.height=h;
+    c.getContext('2d').drawImage(img,0,0,w,h);
+    return c.toDataURL('image/jpeg',0.92);
+  }catch(err){ return url; }
+}
+
+async function mountTrimmings3D(){
+  const stage=document.getElementById('trimmings3DStage');
+  const hint=document.getElementById('trimmings3DHint');
+  if(!stage)return false;
+  const opts=trimmings3DOpts(trimmingsFastUrl||trimmingsBaseUrl);
+  if(!opts){ stage.style.display='none'; if(hint)hint.style.display='none'; return false; }
+  try{
+    try{ MUG3D.close(); }catch(e){}
+    stage.style.display='';
+    if(hint)hint.style.display='';
+    await MUG3D.open(stage,opts);
+    MUG3D.resize();
+    return true;
   }catch(err){
-    console.error('Could not draw the seam comparison:',err);
-    if(row)row.style.display='none';
-    if(note)note.style.display='none';
+    // The flat strip is still there and still shows both ends, so a machine
+    // that cannot run WebGL loses the spin and keeps the choice.
+    console.error('The cup could not start inside Trimmings; the flat wrap stands in:',err);
+    stage.style.display='none';
+    if(hint)hint.style.display='none';
+    return false;
   }
 }
 
-// Shown once per finished picture. A second pass through the panel -- a retry,
-// a change of mind at the grid -- is somebody who has already read it, and
-// making them read it again is a toll, not an explanation.
-let trimmingsWhyShownFor=null;
+function closeTrimmings3D(){
+  const stage=document.getElementById('trimmings3DStage');
+  if(!stage)return;
+  try{ if(MUG3D.mounted())MUG3D.close(); }catch(e){}
+}
 
 // Opens the panel if this product has a seam worth dressing; otherwise carries
 // straight on, so the caller does not have to know the rule. The explainer
@@ -17421,29 +17459,11 @@ async function openTrimmingsPanel(){
   selectedGutterColor=returning?trimmingsBakedColour:null;
   const overlay=document.getElementById('trimmingsOverlay');
   if(!overlay){ reallyBeginFinalMockupFetch(); return; }
-  const why=document.getElementById('trimmingsWhyOverlay');
-  if(why&&trimmingsWhyShownFor!==trimmingsBaseUrl){
-    trimmingsWhyShownFor=trimmingsBaseUrl;
-    document.body.classList.add('step-locked');
-    overlay.style.display='none';
-    const wcard=document.getElementById('trimmingsWhyCard');
-    if(wcard)wcard.scrollTop=0;
-    const note=document.getElementById('seamDemoNote');
-    if(note){note.style.display='block';note.innerHTML='<span class="spinner"></span>Drawing the back of your cup...';}
-    const row=document.getElementById('seamDemoRow');
-    if(row)row.style.display='flex';
-    why.style.display='flex';
-    // Not awaited: the words are readable while the two crops are drawn, and a
-    // slow asset must not hold the panel off the screen.
-    renderSeamComparison();
-    return;   // the grid opens when they tap through
-  }
+  trimmingsFastUrl=await makeTrimmingsFastBase(trimmingsBaseUrl);
   await showTrimmingsGridPanel();
 }
 
 async function showTrimmingsGridPanel(){
-  const why=document.getElementById('trimmingsWhyOverlay');
-  if(why)why.style.display='none';
   const overlay=document.getElementById('trimmingsOverlay');
   if(!overlay){ reallyBeginFinalMockupFetch(); return; }
   document.body.classList.add('step-locked');
@@ -17463,6 +17483,11 @@ async function showTrimmingsGridPanel(){
     const grid=document.getElementById('trimmingsGrid');
     if(card&&grid)card.scrollTo({top:Math.max(0,grid.offsetTop-card.offsetTop-8),behavior:'auto'});
   });
+  // Started after the panel is on screen and NOT awaited above it: three.js may
+  // still be downloading on a first visit, and the twelve options must not wait
+  // behind it. Whatever is chosen before the cup arrives is painted on by
+  // mountTrimmings3D, since it opens with the wrap as it currently stands.
+  await mountTrimmings3D();
 }
 
 function renderTrimmingsGrid(){
@@ -17658,15 +17683,23 @@ async function pickTrimmingColour(hex){
   await updateTrimmingsPreview();
 }
 
+// ONE PAINT, TWO SURFACES. The flat strip and the cup show the same wrap, so
+// painting it twice would be twice the work for the same picture -- and worse,
+// they could disagree for a frame, which is exactly the moment somebody is
+// deciding whether they like it.
 async function updateTrimmingsPreview(){
   const img=document.getElementById('trimmingsPreviewImg');
-  if(!img||!trimmingsBaseUrl)return;
+  if(!trimmingsBaseUrl)return;
   try{
     // Always from the ORIGINAL, never from what is on screen.
-    img.src=await paintWrapGutters(trimmingsBaseUrl,getSelectedProductColorHex(),WRAP_GUTTER_WIDTH,selectedGutter);
+    const painted=await paintWrapGutters(trimmingsFastUrl||trimmingsBaseUrl,getSelectedProductColorHex(),WRAP_GUTTER_WIDTH,selectedGutter);
+    if(img)img.src=painted;
+    // The cup takes the same wrap without pausing, rebuilding or reloading --
+    // one canvas draw and one texture upload.
+    try{ if(MUG3D.mounted())await MUG3D.setArtwork(painted); }catch(e){}
   }catch(err){
     console.error('Could not preview that trimming:',err);
-    img.src=trimmingsBaseUrl;
+    if(img)img.src=trimmingsBaseUrl;
   }
 }
 
@@ -17688,6 +17721,7 @@ async function confirmTrimmingAndContinue(){
     // so it never blinks between the two.
     const trimOverlay=document.getElementById('trimmingsOverlay');
     if(trimOverlay)trimOverlay.style.display='none';
+    closeTrimmings3D();
     const wait=document.getElementById('mockupLoadingOverlay');
     if(wait){wait.style.display='flex';document.body.classList.add('step-locked');}
     if(saving)saving.style.display='none';
@@ -17721,6 +17755,7 @@ async function confirmTrimmingAndContinue(){
       const trim2=document.getElementById('trimmingsOverlay');
       if(trim2)trim2.style.display='flex';
       document.body.classList.add('step-locked');
+      await mountTrimmings3D();
       showGuidanceAlert(describeUploadFailure(err));
       return;
     }
@@ -17728,6 +17763,10 @@ async function confirmTrimmingAndContinue(){
   const overlay=document.getElementById('trimmingsOverlay');
   if(overlay)overlay.style.display='none';
   document.body.classList.remove('step-locked');
+  // MUG3D is a singleton: leaving it mounted on the panel's stage would send
+  // the mockup's own open() straight past its build and carry on rendering
+  // into a hidden div, so the customer would reach a blank mockup.
+  closeTrimmings3D();
   // Record the artwork we are moving on WITH -- after any bake, since baking a
   // trimming replaces finalImageUrl. Without this the gate would see a new url
   // and re-open the panel on top of the mockup it just let through.

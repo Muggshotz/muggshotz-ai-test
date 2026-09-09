@@ -28,6 +28,9 @@ const { launch, openStudio, uploadPhoto, dismissAlerts } = require('./harness');
 
 const T = (page, ms) => page.waitForTimeout(ms);
 const VACUUM = 'travel-mug-40oz-vacuum';
+// The panel now spins the real 3D cup, so every scenario that opens it needs a
+// software GL in this headless sandbox -- the same one verify-mug-3d uses.
+const GL = ['--use-gl=swiftshader', '--enable-unsafe-swiftshader'];
 
 async function pickCup(page, key) {
   await page.click('#postUploadForkRow button:has-text("Select Your Product")');
@@ -355,29 +358,6 @@ scenarios.theCustomerReachesThePanelAndGetsPastIt = async (page) => {
   // not use. It waits for whatever the studio does on its own now.
   await T(page, 4000);
 
-  // THE EXPLAINER COMES FIRST (Alyx, Sep 2026). The route to the grid now runs
-  // through a panel that shows the join before it offers to dress it, so the
-  // test walks that panel rather than reaching around it -- reaching around is
-  // how the last unreachable-panel bug got through.
-  const why = await page.waitForFunction(() => {
-    const o = document.getElementById('trimmingsWhyOverlay');
-    return !!o && getComputedStyle(o).display !== 'none';
-  }, null, { timeout: 25000 }).then(() => true).catch(() => false);
-  if (!why) {
-    const where = await page.evaluate(() => {
-      const vis = (id) => { const e = document.getElementById(id); return !!e && getComputedStyle(e).display !== 'none'; };
-      return { grid: vis('trimmingsOverlay'), mockupLightbox: vis('mockupLightbox'), whatsNext: vis('whatsNextOverlay') };
-    }).catch(() => ({}));
-    return `FAIL: the explainer never opened — the customer reached ${JSON.stringify(where)} without ever being shown what a trimming is for`;
-  }
-  const gridHiddenFirst = await page.evaluate(() => {
-    const g = document.getElementById('trimmingsOverlay');
-    return !g || getComputedStyle(g).display === 'none';
-  });
-  if (!gridHiddenFirst) return 'FAIL: the grid was on screen underneath the explainer — two panels at once, and the customer answers the question before reading it';
-  await page.evaluate(() => document.getElementById('trimmingsWhyGoBtn').click());
-  await T(page, 1500);
-
   const open = await page.waitForFunction(() => {
     const o = document.getElementById('trimmingsOverlay');
     return !!o && getComputedStyle(o).display !== 'none';
@@ -407,108 +387,88 @@ scenarios.theCustomerReachesThePanelAndGetsPastIt = async (page) => {
   });
   if (!st.closed) return 'FAIL: Continue left the panel open — the customer is stranded short of their mockup';
   if (st.locked) return 'FAIL: the page is still step-locked after the panel closed — nothing else can be touched';
-  return 'PASS: upload -> cup -> generate -> approve, and the studio opens the explainer by itself, then the grid; the preview follows the choice and Continue lets go';
+  return 'PASS: upload -> cup -> generate -> approve, and the studio opens Trimmings by itself on the way to the mockup; the preview follows the choice and Continue lets go';
 };
 
-// ---- THE PROBLEM IS SHOWN BEFORE THE FIX. ----
-// Alyx: "somewhere in this process, probably a panel before we introduce these
-// trimmings, we should give some kind of a coherent explanation of what these
-// trimmings are for and what they do, and why they are necessary. Maybe even a
-// side by side with and without, showing them blocking the gap."
+// ---- THE CUP WEARS IT THE MOMENT YOU TAP IT. ----
+// Alyx: "why can't we apply the trimmings directly to the spinning mockup? By
+// clicking on the trimming we want it gets applied directly to the mockup that
+// we're watching in real time" -- and then the consequence: "you wouldn't even
+// need as comprehensive an explanation, because all they do is click on a
+// trimming and they immediately see what it does."
 //
-// The panel used to assert "a join you can see" and ask the customer to take it
-// on faith. What this pins is that the demonstration is HONEST and is THEIRS:
-//   * the bare half really shows a mismatch, drawn from the artwork in hand --
-//     not an illustration, not an offset invented to make the case;
-//   * the trimmed half really covers it, at the same place, from the same
-//     picture -- the photograph still runs either side of the band, which is
-//     what proves the two crops are the same cup and not a stock before/after;
-//   * it is shown once. A second pass is somebody who has already read it.
-scenarios.theProblemIsShownBeforeTheFix = async (page) => {
+// So the explanation IS the interaction, and this pins the interaction:
+//   * the real 3D cup is running inside the panel, not a picture of one;
+//   * a tap repaints it, with the wrap that trimming actually makes;
+//   * NO THANKS IS THE COMPARISON -- it puts the bare join back, so the
+//     before-and-after is live and the customer works it themselves;
+//   * the cup is let go of on the way out. MUG3D is a singleton, and leaving
+//     it mounted here sends the mockup's own open() past its build and leaves
+//     it rendering into a hidden div -- a blank mockup, from a panel that
+//     looked like it worked.
+scenarios.theCupWearsItTheMomentYouTapIt = async (page) => {
   await pickCup(page, VACUUM);
-  await page.evaluate(() => {
-    const b = Array.from(document.querySelectorAll('#travelMugColorGridGen .color-btn'))
-      .find((x) => x.dataset.color && !/white/i.test(x.dataset.color));
-    if (b) b.click();
-  });
-  await T(page, 500);
+  await T(page, 300);
   await dismissAlerts(page);
 
   const r = await page.evaluate(async () => {
-    // A picture whose two ends could not be more different: red at one end,
-    // blue at the other. On the cup those two come together, and that meeting
-    // is the whole thing the explainer has to be able to show.
-    const c = document.createElement('canvas'); c.width = 1024; c.height = 1024;
+    const c = document.createElement('canvas'); c.width = 1024; c.height = 776;
     const x = c.getContext('2d');
-    x.fillStyle = '#FF0000'; x.fillRect(0, 0, 512, 1024);
-    x.fillStyle = '#0000FF'; x.fillRect(512, 0, 512, 1024);
-    const src = c.toDataURL('image/png');
+    x.fillStyle = '#7a2b2b'; x.fillRect(0, 0, 1024, 776);
+    x.fillStyle = '#e8c56a'; x.fillRect(400, 100, 224, 576);
+    resultUrl = c.toDataURL('image/png'); finalImageUrl = null;
+    trimmingsSettledFor = null; trimmingsBakedTo = null; trimmingsBakedFrom = null;
 
-    resultUrl = src; finalImageUrl = null;
-    trimmingsWhyShownFor = null; trimmingsSettledFor = null;
+    // Watch what the cup is actually handed, rather than trusting that it was.
+    const seen = [];
+    const real = MUG3D.setArtwork;
+    MUG3D.setArtwork = function (u) { seen.push(u); return real.call(MUG3D, u); };
+
     await openTrimmingsPanel();
-    const vis = (id) => { const e = document.getElementById(id); return !!e && getComputedStyle(e).display !== 'none'; };
-    const opened = { why: vis('trimmingsWhyOverlay'), grid: vis('trimmingsOverlay') };
+    await new Promise((s) => setTimeout(s, 2500));
 
-    // Wait for the two crops to finish drawing -- they are deliberately not
-    // awaited by the panel, so the words appear before the pictures do.
-    const settled = async () => {
-      for (let i = 0; i < 60; i++) {
-        const a = document.getElementById('seamDemoWithout'), b = document.getElementById('seamDemoWith');
-        if (a && b && a.naturalWidth > 0 && b.naturalWidth > 0) return true;
-        await new Promise((s) => setTimeout(s, 250));
-      }
-      return false;
-    };
-    const drew = await settled();
-
-    const read = (id) => {
-      const im = document.getElementById(id);
-      const cv = document.createElement('canvas');
-      cv.width = im.naturalWidth; cv.height = im.naturalHeight;
-      cv.getContext('2d').drawImage(im, 0, 0);
-      const g = cv.getContext('2d');
-      const at = (fx) => Array.from(g.getImageData(Math.max(0, Math.min(cv.width - 1, Math.round(cv.width * fx))), Math.round(cv.height / 2), 1, 1).data).slice(0, 3);
-      return { w: cv.width, h: cv.height, farLeft: at(0.08), leftOfJoin: at(0.46), atJoin: at(0.5), rightOfJoin: at(0.54), farRight: at(0.92) };
+    const stage = document.getElementById('trimmings3DStage');
+    const canvas = stage ? stage.querySelector('canvas') : null;
+    const live = {
+      mounted: MUG3D.mounted(),
+      canvas: !!canvas && canvas.width > 4 && canvas.height > 4,
+      onScreen: !!stage && getComputedStyle(stage).display !== 'none'
     };
 
-    const bare = drew ? read('seamDemoWithout') : null;
-    const trimmed = drew ? read('seamDemoWith') : null;
+    seen.length = 0;
+    await pickTrimming('Rope');
+    await new Promise((s) => setTimeout(s, 1500));
+    const afterTrim = seen.slice();
 
-    // Second time through, on the same picture: straight to the options.
-    document.getElementById('trimmingsWhyGoBtn').click();
-    await new Promise((s) => setTimeout(s, 400));
-    document.getElementById('trimmingsOverlay').style.display = 'none';
-    await openTrimmingsPanel();
-    const again = { why: vis('trimmingsWhyOverlay'), grid: vis('trimmingsOverlay') };
+    seen.length = 0;
+    await pickTrimming(null);
+    await new Promise((s) => setTimeout(s, 1500));
+    const afterNone = seen.slice();
+
+    // And the cup is handed back before the mockup asks for it.
+    closeTrimmings3D();
+    const releasedMounted = MUG3D.mounted();
+
+    MUG3D.setArtwork = real;
     document.getElementById('trimmingsOverlay').style.display = 'none';
     document.body.classList.remove('step-locked');
-    return { opened, drew, bare, trimmed, again };
+    return {
+      live, releasedMounted,
+      trimPaints: afterTrim.length, nonePaints: afterNone.length,
+      differ: afterTrim.length > 0 && afterNone.length > 0 && afterTrim[afterTrim.length - 1] !== afterNone[afterNone.length - 1],
+      trimBytes: afterTrim.length ? afterTrim[afterTrim.length - 1].length : 0
+    };
   });
 
-  if (!r.opened.why) return 'FAIL: the explainer did not open ahead of the grid — the fix is offered before the problem is shown';
-  if (r.opened.grid) return 'FAIL: the grid was open at the same time as the explainer';
-  if (!r.drew) return 'FAIL: neither side of the comparison drew — the panel makes a claim and shows nothing';
+  if (!r.live.onScreen) return 'FAIL: the 3D stage is not on screen in the panel — the cup never started, so there is nothing to try a trimming on';
+  if (!r.live.mounted) return 'FAIL: MUG3D is not mounted inside the Trimmings panel';
+  if (!r.live.canvas) return 'FAIL: the panel has a 3D stage but no rendered canvas in it';
+  if (r.trimPaints < 1) return 'FAIL: tapping a trimming did not repaint the cup — the customer taps and nothing on the cup changes';
+  if (r.nonePaints < 1) return 'FAIL: No Thanks did not repaint the cup, so the bare join never comes back and there is no comparison to make';
+  if (!r.differ) return 'FAIL: the wrap handed to the cup was identical with and without a trimming — the cup shows the same thing either way';
+  if (r.releasedMounted) return 'FAIL: the panel kept hold of MUG3D on the way out — the mockup would render into a hidden div and come up blank';
 
-  const far = (a, b) => Math.abs(a[0] - b[0]) + Math.abs(a[1] - b[1]) + Math.abs(a[2] - b[2]) > 120;
-  // The bare join really is a mismatch, and it is the real one: the wrap's last
-  // slice against its first, which on this source is blue meeting red.
-  if (!far(r.bare.leftOfJoin, r.bare.rightOfJoin)) {
-    return `FAIL: the bare half shows no join at all — rgb(${r.bare.leftOfJoin}) against rgb(${r.bare.rightOfJoin}). There is nothing for the customer to see, so the panel argues for a fix to an invisible problem`;
-  }
-  // And the trimmed half covers that same spot.
-  if (!far(r.trimmed.atJoin, r.bare.atJoin)) {
-    return `FAIL: the trimmed half is the same at the join as the bare one — rgb(${r.trimmed.atJoin}). It does not demonstrate blocking the gap`;
-  }
-  // Both crops are the customer's own picture: the photograph still runs out to
-  // either side of the band. A stock before/after would fail this.
-  if (far(r.trimmed.farLeft, r.bare.farLeft) || far(r.trimmed.farRight, r.bare.farRight)) {
-    return `FAIL: the two halves are not the same picture away from the join — left rgb(${r.bare.farLeft}) vs rgb(${r.trimmed.farLeft}), right rgb(${r.bare.farRight}) vs rgb(${r.trimmed.farRight})`;
-  }
-  if (r.again.why) return 'FAIL: the explainer opened a second time on the same picture — a toll rather than an explanation';
-  if (!r.again.grid) return 'FAIL: the second pass reached neither panel';
-
-  return `PASS: the explainer opens first and shows the real join from the customer's own picture (rgb(${r.bare.leftOfJoin}) meeting rgb(${r.bare.rightOfJoin})), the trimmed half covers that same spot, the photograph runs either side of both, and it is shown once`;
+  return `PASS: the real cup runs inside the panel and is repainted on every tap (${r.trimBytes} bytes of wrap for Rope), No Thanks puts the bare join back so the comparison is live, and the cup is released on the way out`;
 };
 
 // ---- CHANGING YOUR MIND REPLACES THE TRIMMING, IT DOES NOT ADD ONE. ----
@@ -537,30 +497,28 @@ scenarios.changingYourMindReplacesTheTrimming = async (page) => {
     trimmingsBakedChoice = 'Rope';
     trimmingsBakedColour = '#8a2e3b';
     finalImageUrl = baked; resultUrl = original;
-    trimmingsWhyShownFor = null; trimmingsSettledFor = null;
+    trimmingsSettledFor = null;
 
     await openTrimmingsPanel();
-    const afterWhy = { base: trimmingsBaseUrl === original ? 'original' : (trimmingsBaseUrl === baked ? 'baked' : 'other') };
-    document.getElementById('trimmingsWhyGoBtn').click();
-    await new Promise((s) => setTimeout(s, 900));
+    await new Promise((s) => setTimeout(s, 1200));
     const state = {
       base: trimmingsBaseUrl === original ? 'original' : (trimmingsBaseUrl === baked ? 'baked' : 'other'),
       choice: selectedGutter,
-      colour: selectedGutterColor,
-      whyRepeated: getComputedStyle(document.getElementById('trimmingsWhyOverlay')).display !== 'none'
+      colour: selectedGutterColor
     };
 
     // And a genuinely new picture is treated as new: no restoration, no choice
     // carried over from somebody else's artwork.
     const fresh = paint('#0000FF');
-    finalImageUrl = fresh; trimmingsSettledFor = null; trimmingsWhyShownFor = null;
+    finalImageUrl = fresh; trimmingsSettledFor = null;
     document.getElementById('trimmingsOverlay').style.display = 'none';
     await openTrimmingsPanel();
+    await new Promise((s) => setTimeout(s, 800));
     const onFresh = { base: trimmingsBaseUrl === fresh ? 'fresh' : 'wrong', choice: selectedGutter };
-    document.getElementById('trimmingsWhyOverlay').style.display = 'none';
+    closeTrimmings3D();
     document.getElementById('trimmingsOverlay').style.display = 'none';
     document.body.classList.remove('step-locked');
-    return { afterWhy, state, onFresh };
+    return { state, onFresh };
   });
 
   if (r.state.base !== 'original') {
@@ -568,7 +526,6 @@ scenarios.changingYourMindReplacesTheTrimming = async (page) => {
   }
   if (r.state.choice !== 'Rope') return `FAIL: the trimming already chosen came back as ${JSON.stringify(r.state.choice)} — the panel forgot what it was left on`;
   if (r.state.colour !== '#8a2e3b') return `FAIL: the colour came back as ${JSON.stringify(r.state.colour)} rather than the one that was baked`;
-  if (r.state.whyRepeated) return 'FAIL: the explainer opened again on a return visit';
   if (r.onFresh.base !== 'fresh') return 'FAIL: a brand new picture was not used as its own base';
   if (r.onFresh.choice !== null) return `FAIL: a brand new picture arrived with ${JSON.stringify(r.onFresh.choice)} already chosen — a decision nobody made about artwork they have not seen`;
 
@@ -599,11 +556,10 @@ scenarios.theWholeChoiceIsOnScreenAtOnce = async (page) => {
     x.fillStyle = '#7a2b2b'; x.fillRect(0, 0, 1024, 776);
     x.fillStyle = '#e8c56a'; x.fillRect(400, 100, 224, 576);
     resultUrl = c.toDataURL('image/png'); finalImageUrl = null;
-    trimmingsWhyShownFor = null; trimmingsSettledFor = null;
+    trimmingsSettledFor = null;
     trimmingsBakedTo = null; trimmingsBakedFrom = null;
     await openTrimmingsPanel();
-    document.getElementById('trimmingsWhyGoBtn').click();
-    await new Promise((s) => setTimeout(s, 1200));
+    await new Promise((s) => setTimeout(s, 2500));
   });
 
   const measure = () => page.evaluate(() => {
@@ -810,7 +766,7 @@ scenarios.theBandFollowsTheDesign = async (page) => {
 (async () => {
   let fails = 0;
   for (const [name, fn] of Object.entries(scenarios)) {
-    const { browser, page, log } = await launch();
+    const { browser, page, log } = await launch({ chromiumArgs: GL });
     try {
       await openStudio(page); await uploadPhoto(page); await dismissAlerts(page);
       const result = await fn(page, log);
