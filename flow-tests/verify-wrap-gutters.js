@@ -674,6 +674,17 @@ scenarios.theWholeChoiceIsOnScreenAtOnce = async (page) => {
       // the width stays full, and the cup sits marooned in a letterbox.
       stageW: Math.round(stage.width), stageH: Math.round(stage.height),
       preview: onScreen(document.getElementById('trimmings3DStage')),
+      // THE CHOICES MUST BE FINDABLE (Alyx went looking for the fade button
+      // while it was on his screen and could not see it, because it shared a
+      // row with Continue). Both choices on screen, and NOT on Continue's row:
+      // sharing one says they are peers, and the styling then says otherwise.
+      fadeOnScreen: onScreen(document.getElementById('trimmingsFadeBtn')),
+      noneOnScreen: onScreen(document.getElementById('trimmingsNoneBtn')),
+      sharesRowWithContinue: (() => {
+        const f = document.getElementById('trimmingsFadeBtn'), c = document.getElementById('trimmingsContinueBtn');
+        if (!f || !c) return false;
+        return Math.abs(f.getBoundingClientRect().top - c.getBoundingClientRect().top) < 8;
+      })(),
       lastTile: onScreen(tiles[tiles.length - 1]),
       continue: onScreen(document.getElementById('trimmingsContinueBtn')),
       twoCol: getComputedStyle(document.getElementById('trimmingsBody')).display === 'flex'
@@ -689,6 +700,12 @@ scenarios.theWholeChoiceIsOnScreenAtOnce = async (page) => {
   if (wide.overflow > 4) return `FAIL: the panel still scrolls by ${wide.overflow}px at 1280x900 — something is off the bottom`;
   if (Math.abs(wide.stageW - wide.stageH) > 4) {
     return `FAIL: the cup's box is ${wide.stageW}x${wide.stageH} — not square, so the cup is marooned in a letterbox with dead space either side of it`;
+  }
+  if (!wide.fadeOnScreen || !wide.noneOnScreen) {
+    return `FAIL: a way of declining is off screen (No Thanks ${wide.noneOnScreen}, Fade ${wide.fadeOnScreen}) — the choices have to be as findable as the way out`;
+  }
+  if (wide.sharesRowWithContinue) {
+    return 'FAIL: Fade to Cup is back on Continue\'s row — the layout calls them peers and the styling then shouts down the one that is a choice, which is how the fade became invisible on a screen it was already on';
   }
   if (!wide.preview || !wide.lastTile || !wide.continue) {
     return `FAIL: at 1280x900 not everything is on screen together — cup ${wide.preview}, last tile ${wide.lastTile}, Continue ${wide.continue}`;

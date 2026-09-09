@@ -2,7 +2,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head><link rel="manifest" href="needles-manifest.json">
-<!-- BUILD-MARKER: LOOK-UP-SAYS-LOOK-UP-v133 -->
+<!-- BUILD-MARKER: THE-CHOICES-GET-THEIR-OWN-ROW-v134 -->
 <!-- If you can see this comment on GitHub, this exact paste landed. -->
 <!-- If your live site's page source does NOT say -->
 <!-- "INSTANT-FIT-SCREEN-v47" right here, the upload/deploy did -->
@@ -1827,11 +1827,29 @@ Tell Needles <span style="color:#7ab8ff">what you have in mind</span>
      edge; a fade DISSOLVES it. They are opposite answers to the same problem
      and both are legitimate, so both are offered -- and the cup does the
      explaining, which is the whole reason it is in this panel. -->
+<!-- GROUPED BY FUNCTION, NOT PACKED BY SPACE (Alyx, Sep 2026, after hunting for
+     the fade button while it was on his screen: "that continue button draws all
+     attention... you're giving them basically equal value. You either put the
+     continue button separate and highlight it -- which is what you should
+     always do, because it's a completely different function, to move you on
+     rather than to keep you here -- or you give the other two buttons at least
+     a chance for some attention.")
+     He is right and it is structural rather than cosmetic. No Thanks and Fade
+     are CHOICES and belong with the twelve tiles; Continue is a WAY OUT. On one
+     row the layout calls them peers and the styling then says "but really, this
+     one", so the choices vanish beside it.
+     For the record on how they came to share a row: he asked for it -- "you
+     could cut that continue button in half and have it side by side with a no
+     thank you button" -- back when the panel was one column and the twelve
+     tiles were pushing the way forward off the bottom. The panel is not that
+     shape any more, so the reason has expired and the cost has not. Continue
+     keeps its prominence, which it has earned; it just stops competing with
+     things that are not it. -->
 <div class="bi-row" style="margin-top:.2rem">
 <button type="button" class="download-btn" id="trimmingsNoneBtn" style="flex:1;width:auto;margin:0;padding:.8rem .3rem" onclick="pickTrimming(null)">No Thanks</button>
 <button type="button" class="download-btn" id="trimmingsFadeBtn" style="flex:1;width:auto;margin:0;padding:.8rem .3rem" onclick="pickTrimming(WRAP_EDGE_FADE)">🌫️ Fade to Cup</button>
-<button type="button" class="generate-btn" id="trimmingsContinueBtn" style="flex:1;width:auto;margin:0;padding:.8rem .3rem" onclick="confirmTrimmingAndContinue()">✅ Continue</button>
 </div>
+<button type="button" class="generate-btn" id="trimmingsContinueBtn" style="margin-top:.6rem" onclick="confirmTrimmingAndContinue()">✅ Continue</button>
 <button type="button" class="download-btn" id="trimmingsBackBtn" style="margin-top:.6rem" onclick="trimmingsBack()">← Back</button>
 </div>
 </div>
