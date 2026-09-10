@@ -18952,6 +18952,19 @@ function goToOrder(){
     // The greeting card's inside page. null means blank, which is what every
     // card printed before this existed and is still the default.
     insideImage: (product==='greeting card') ? cardInsideImage : null,
+    // THE CHOICE MUST SURVIVE THE HOP (found Sep 2026 by
+    // verify-studio-to-payment.js, the first suite to drive this hand-off
+    // without seeding it). order.html keeps a hard default for each of these
+    // -- puzzle "96 pcs", suitcase "Small", tote 13" x 13" and its first
+    // colour -- and nothing here carried the customer's pick across. So a
+    // customer who chose a Medium suitcase in this studio was charged for a
+    // Small on the next page and would have been shipped one, with nothing
+    // on screen to say so. Same pattern as the travel cup and the phone
+    // model above, which already made the trip.
+    preselectedPuzzleSize: (product==='puzzle') ? selectedPuzzleSize : null,
+    preselectedSuitcaseSize: (product==='suitcase') ? selectedSuitcaseSize : null,
+    preselectedToteSize: (product==='tote bag') ? selectedToteSize : null,
+    preselectedToteColor: (product==='tote bag') ? selectedToteColorGen : null,
     posterFramed: posterFramed,
     posterSize: posterSize,
     posterOrientation: posterOrientation,

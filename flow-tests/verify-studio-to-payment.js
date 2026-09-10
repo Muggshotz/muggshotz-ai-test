@@ -102,7 +102,7 @@ const PRODUCTS = [
   // so if the choice does not survive the hop, the customer pays for the
   // default and gets the default, silently. Picking the default in the test
   // would hide exactly that. ----
-  { tile: 'coaster',        key: 'coaster-set-round', sizeLabel: 'Round 3.7"',
+  { tile: 'coaster', slug: 'round_coaster', key: 'coaster-set-round', sizeLabel: 'Round 3.7"',
     settle: async (page) => { await page.evaluate(() => pickCoasterShape('round')); await T(page, 900); } },
   { tile: 'puzzle',         key: 'photo-puzzle',   sizeLabel: '252 pcs',
     settle: async (page) => { await page.click('#puzzleSizeGrid .btn-select[data-puzzle-size="252 pcs"]'); await T(page, 900); } },
@@ -136,7 +136,7 @@ const PRODUCTS = [
 const scenarios = {};
 
 for (const P of PRODUCTS) {
-  const slug = P.tile.replace(/\W+/g, '_');
+  const slug = P.slug || P.tile.replace(/\W+/g, '_');
 
   scenarios['studioToPayment_' + slug] = async (page, log, bodies) => {
     await pickProduct(page, P.tile);

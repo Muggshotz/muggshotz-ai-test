@@ -976,6 +976,12 @@ const PUZZLE_SIZES = {
   "1000 pcs": { price: 43.95 }
 };
 let selectedPuzzleSize = "96 pcs";
+// Restored from the studio's hand-off (Sep 2026). Before this the studio's
+// choice never arrived and the customer paid for -- and got -- the default.
+// Validated against the table so an unknown label cannot break the grid.
+if (pendingOrder?.preselectedPuzzleSize && PUZZLE_SIZES[pendingOrder.preselectedPuzzleSize]) {
+  selectedPuzzleSize = pendingOrder.preselectedPuzzleSize;
+}
 
 const SUITCASE_SIZES = {
   "Small": { price: 169.95 },
@@ -983,6 +989,9 @@ const SUITCASE_SIZES = {
   "Large": { price: 214.95 }
 };
 let selectedSuitcaseSize = "Small";
+if (pendingOrder?.preselectedSuitcaseSize && SUITCASE_SIZES[pendingOrder.preselectedSuitcaseSize]) {
+  selectedSuitcaseSize = pendingOrder.preselectedSuitcaseSize;
+}
 
 const PHONE_CASE_MODELS = [
   "iPhone 11","iPhone 11 Pro","iPhone 11 Pro Max",
@@ -1022,6 +1031,9 @@ const TOTE_BAG_SIZES = {
   ]}
 };
 let selectedToteSize = "13\" x 13\"";
+if (pendingOrder?.preselectedToteSize && TOTE_BAG_SIZES[pendingOrder.preselectedToteSize]) {
+  selectedToteSize = pendingOrder.preselectedToteSize;
+}
 let selectedToteColor = null;
 
 const BRIDGE_GRID_PRODUCTS = [
@@ -2226,6 +2238,16 @@ if (isTravelMug()) {
       'Whichever design you placed first (Left, Center, or Right) will be printed on your tote bag.';
     renderToteBagSizeGrid();
     renderToteBagColorGrid();
+    // renderToteBagColorGrid() always selects colour #0. If the studio sent
+    // the customer's colour, pick it the way a tap would -- same by-name
+    // lookup the travel cup's restore uses above -- so it shows selected,
+    // prices, and reaches the order.
+    if (pendingOrder?.preselectedToteColor) {
+      const tc = TOTE_BAG_SIZES[selectedToteSize].colors;
+      const ti = tc.findIndex(c => c.name === pendingOrder.preselectedToteColor);
+      const tbtn = document.querySelectorAll('#toteBagColorGrid .color-btn')[ti];
+      if (ti >= 0 && tbtn) pickToteBagColor(tbtn, tc[ti]);
+    }
   } else if (isPuzzle()) {
     hideAllProductCards();
     document.getElementById('puzzleSizeCard').style.display = 'block';
