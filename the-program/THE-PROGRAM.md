@@ -390,6 +390,44 @@ winning anything.
 
 ---
 
+## What the order is really building: the crossfire
+
+Read as four separate rules, the order of leads looks like a list of safe
+openings. It is not. It is an engine, and voids are what it manufactures.
+
+**A singleton King that actually wins is worth double.** It is a trick *and* a
+void, delivered by the same card. Ordinarily a lone King is a card you dread —
+you have no choice but to play it the moment the suit is led, and it dies under
+an Ace having achieved nothing. The order exists so that when it goes down, it
+goes down under the best conditions available:
+
+    Priority 3  ->  into a suit where the Ace has not shown
+                    and your Queen is standing behind it
+    Priority 4  ->  into a suit where the Ace is in YOUR OWN hand
+                    and therefore cannot touch it
+
+**And your Ace-Queen does not merely protect that suit — it releases your
+partner from it.** He does not need to keep guards in a suit where you already
+hold the top. His low cards there are dead weight and he can throw them freely.
+So he voids himself in a *second* suit at no cost, because you are covering it.
+
+    Suit A   solo King wins    ->  a trick taken, and partner is VOID
+    Suit B   your A-Q covers   ->  partner sheds freely, and is VOID
+
+Two voids on one side of the table. Now every lead the opponents make walks into
+a ruff from one of you and there is no safe exit — whatever they open, somebody
+trumps it. That is the **crossfire.** They are not losing tricks to better
+cards. They are losing them to cards that are not in the suit at all, and every
+one of those is a trick subtracted from a contract they have already declared
+out loud.
+
+Which reframes what the honours are for. They are not primarily trick-takers.
+**They are cover.** They exist so that your partner can afford to become void,
+and so that his honours can commit without dying. The voids do the killing. The
+honours are what make the voids affordable.
+
+---
+
 ## Appendix — The record
 
 Case's Ladder, Spades (Yahoo) ladder, handle `qyetstormm`. The searchable
