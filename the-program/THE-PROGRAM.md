@@ -1048,6 +1048,64 @@ build, and cutting with it early throws away the ending.
 
 > **Never cut with the two — or only if it is the last.**
 
+---
+
+## Handcuffing
+
+Everything above is one track. There is a second, and the great advantage of the
+position is that **you do not have to choose between them early.** Work the nil,
+and if it starts to look unsettable, pivot — and go set their *bid* instead. Same
+cards, same seat, no commitment required.
+
+### Why the cover is helpless
+
+A proper nil cover has to husband his high cards. He cannot spend a King on a
+medium card, because if he does he is left holding only low ones and cannot cover
+his partner later, which is the single job he has.
+
+And here is the engine, which most players never notice: **the nil bidder's play
+carries no information.** He always plays his lowest card. Always. So when he
+follows suit, the cover learns *nothing* about what else his partner is holding —
+a nil sitting on the Queen and a nil sitting on the 3 look exactly alike from
+across the table.
+
+The cover is therefore permanently guessing, about the one thing he cannot afford
+to be wrong about.
+
+### The technique
+
+    You hold  Q J 7 4 of clubs
+    The nil is on your LEFT (2nd chair)
+    The cover is on your RIGHT (4th chair), holding the King
+
+    You lead the JACK - the LOWER of your sequence - and keep the Queen.
+
+    The cover's problem:
+      Take it with the King  ->  if the nil holds the Queen he is naked later
+      Duck                   ->  you steal the trick
+
+    He ducks. He has to. You win a trick with the Jack while sitting on the
+    very Queen he was afraid of.
+
+The general form: **lead into the cover, past the nil, out of a sequence in which
+you hold the middle cards and he holds the top one.** He owns the best card in
+the suit and is structurally forbidden from playing it, because playing it might
+cost him the ability to do his job.
+
+That is the handcuff. He is not beaten. He is *restrained.*
+
+### Why this is not a consolation prize
+
+**Their nil is what creates the handcuff.**
+
+Bidding nil does not merely put a hundred points at risk on the nil itself. It
+**structurally disables their defence of their own contract**, because one of
+their two players now spends the hand hoarding cards instead of taking tricks.
+
+So the pivot is not what you fall back on when the nil survives. It is a second,
+independent line of attack that their own bid opened up for you — and it is
+available from the first trick, whether you end up needing it or not.
+
 > **Never cut with the two of spades while an opponent is nil.**
 
 Ruffing with it trades the hand's decisive card for one ordinary trick — and
