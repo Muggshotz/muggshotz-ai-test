@@ -960,13 +960,36 @@ a trick.** Which is exactly why it can force somebody else to. Lead it, and any
 spade in the nil bidder's hand beats it. He must follow. He must beat you. He
 takes the trick — and the nil is dead.
 
-Unless somebody covers him. Which is what the bleeding is for:
+Unless somebody covers him. Which is what the bleeding is for.
 
-    1. Bleed out the high spades first
-       -> so that nothing is left to cover him with
+### The bleeding — and it is not what it sounds like
+
+The man you are bleeding is **the nil bidder's partner.** He is the cover. He is
+the only reason the nil survives at all, and every trick the nil bidder is about
+to be stuck with, that partner has to come and rescue him from.
+
+**You do not strip him by leading spades.** Leading trumps is a *gift* to him —
+it lets him shed his small spades cheaply and keeps his high ones intact for
+precisely the moment you needed them gone.
+
+**You strip him by forcing him to cut.** Put the nil bidder in a position where
+he is about to win a middle trick, and the partner has no choice: he must ruff to
+take it off him. That spade is spent on your terms, on a trick you chose, and it
+has to be a real one — big enough to actually win — not a throwaway.
+
+Which makes every attack on the nil a **free roll**:
+
+    He fails to cover     ->  the nil is SET. Hand over.
+    He covers by ruffing  ->  he is one spade poorer, and you go again.
+
+There is no third outcome and no cost to you. You keep squeezing until either the
+nil dies or the cover is out of trumps.
+
+    1. Force cuts until the cover has no spades left
 
     2. Then lead the deuce
-       -> he must play a spade, it must beat the deuce, and it is his trick
+       -> the nil bidder must play a spade, it must beat the deuce,
+          and there is nobody left to come and get him
 
 By that point it is not a card. It is an execution.
 
