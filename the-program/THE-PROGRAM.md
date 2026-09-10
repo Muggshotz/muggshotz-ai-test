@@ -244,6 +244,58 @@ So the two laws are one law, seen from both sides:
 You broach the suits where you have neither something to lose nor something to
 catch.
 
+### The leader's duty
+
+Before anything else about Priority 3, understand what the leader is actually
+for.
+
+**Your job when you lead is to protect your partner's bid, not your own.** You
+can see your own cards; you already know roughly how you intend to make your
+number. His plan is invisible to you. So every lead is a decision taken on
+behalf of a hand you cannot read, and the question is never "what helps me" —
+it is "what is least likely to wreck something he is counting on."
+
+The entire order of leads follows from that. It is a list of the suits least
+likely to damage a partner you cannot see, ranked.
+
+### The cost of Priority 3, stated honestly
+
+The low lead from a Queen suit can **trap your partner's King.**
+
+    You lead low from Q x x
+    Partner sits 3rd holding the KING
+    The ACE sits 4th - behind him
+
+Partner has to commit before the Ace does. If he plays the King, the Ace eats
+it — and that King may be a trick he **bid.** The promotion play has then set
+your own side.
+
+The mitigation belongs to him, and it is positional: **never feed a King to an
+Ace sitting behind you.** Duck. Let fourth chair take it as cheaply as he
+likes, because now he has to lead — and when the Ace is forced to *lead* the
+suit instead of *following* it, the whole position inverts:
+
+    Ace leads the suit   ->  catches two low cards. Nothing.
+    Next round           ->  partner's King is master
+    Round after          ->  your Queen is master
+
+Surrender one cheap trick, collect two. The King was never in danger once the
+Ace had to speak first. Third chair's responsibility is to make fourth chair
+pay as much for that trick as rational play allows — and sometimes the price
+is set highest by letting him have it.
+
+Which is the same law as the K-Q-x proof and the Ace rule, stated a third way:
+
+> **An honour is only vulnerable when it must commit before the honour above
+> it.** Everything in this system is about controlling who speaks first.
+
+**This lead is not safe with an untrained partner.** An ordinary player in third
+chair sees his King, sees his chance, and plays it — and the promotion becomes a
+dead King and a broken contract. The lead is correct only because you can trust
+the man in third chair to duck. It is also why a false bid is catastrophic
+here: you are taking real risk to protect a contract, and if the contract was a
+lie you are protecting nothing.
+
 **What partner reads.** Priorities 1 and 2 did not fire, so a low lead here says,
 precisely: *I hold the Queen of this suit.* Not "something" — the specific card.
 If he holds the King, he now knows the suit belongs to the two of you. If he
