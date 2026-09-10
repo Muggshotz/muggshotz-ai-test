@@ -1170,6 +1170,48 @@ get rid of your spades.
 
 ---
 
+## They thought we were cheating
+
+We heard it constantly. Every day. *There is no way in the world you could have
+known to play that — you must be cheating, you must be on the phone with him.*
+
+They were right about the important half. Information really was moving between
+us, in quantities that should not have been possible across a table where nobody
+is allowed to speak. They simply had the wrong channel. The way he played
+triggered my knowledge of what was in his hand.
+
+But the thing that convinced them was never a single clever play. It was the
+**turn.**
+
+We made it at the same time. Both of us recognising the same moment — the trick
+at which the bid had made itself vulnerable — and both switching from setting the
+nil to setting the bid, together, without a word.
+
+And that is not signalling. Nobody sent anything. Two people looked at the same
+public table, ran the same evaluation, and arrived at the same non-obvious
+conclusion on the same trick.
+
+Which is the end state of a shared model, and it is a stranger thing than a code.
+**A code still requires a sender and a receiver. This does not.** Once the model
+is complete enough on both sides you stop needing to communicate at all, because
+you are both computing the same answer from the same visible facts. The message
+becomes redundant. You are not reading each other — you are reading the table,
+identically.
+
+That is exactly why it looked like a phone call. There is no innocent explanation
+available to a spectator for two people changing plans in unison without
+speaking. They could see the effect, and they knew of only one mechanism that
+produced it.
+
+It was not cheating. It was something built out of nothing but public information
+and a list we had both memorised — which happened to leave the same signature.
+
+And the part a lesser pair never reaches: **we were still safe for another hand.**
+Pivoting off the nil to take the bid never put our own number at risk. We did not
+gamble the contract to make the attempt.
+
+---
+
 ## A note on the games we gave away
 
 We never threw a game and we never cheated. What we did was accept every
