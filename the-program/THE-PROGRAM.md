@@ -625,7 +625,21 @@ So he voids himself in a *second* suit at no cost, because you are covering it.
 
 Two voids on one side of the table. Now every lead the opponents make walks into
 a ruff from one of you and there is no safe exit — whatever they open, somebody
-trumps it. That is the **crossfire.** They are not losing tricks to better
+trumps it. That is the **crossfire.**
+
+Count what is actually left to them:
+
+    Four suits. Spades is trump, so three side suits.
+
+      You are void in one       ->  you trump it
+      Partner is void in another ->  he trumps it
+                                    --------------------
+      Side suits neither of you can cut:      ONE
+
+**Exactly one safe lead exists on the whole board.** Everything else they touch
+is ruffed by somebody. And when that single suit is exhausted or blocked they
+have no safe lead at all — every remaining option costs them a trick they have
+already declared out loud. They are not losing tricks to better
 cards. They are losing them to cards that are not in the suit at all, and every
 one of those is a trick subtracted from a contract they have already declared
 out loud.
