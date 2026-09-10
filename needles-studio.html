@@ -14690,8 +14690,21 @@ function goBackFromFinalMockup(){
   const finalOverlay=document.getElementById('finalChoiceOverlay');
   if(finalOverlay)finalOverlay.style.display='none';
   document.body.classList.remove('step-locked');
+  // BACK MUST NEVER GO FORWARD (Alyx, Sep 2026: "I tried to push Back and it
+  // took me here, which is not exactly where I came from, so I pushed Back
+  // again and it just took me back to Checkout").
+  //
+  // Two faults, and together they produced exactly that. First, the memory of
+  // where the customer came from was ERASED the moment it was used, so a second
+  // Back had nothing left to go on. Second -- and this is the one that matters
+  // -- the fallback when there was nothing to go on was returnFromFinalMockup(),
+  // which opens What's Next. That is the FORWARD screen, the one with Checkout
+  // on it. A Back that lands somebody one tap from paying is how a person buys
+  // the wrong thing.
+  //
+  // The memory is kept now rather than consumed: coming back to the mockup and
+  // pressing Back again should land in the same place, not somewhere else.
   const back=preMockupBack;
-  preMockupBack=null;
   if(typeof back==='function'){ back(); return; }
   if(product==='mug' && typeof showCoverMePanelCard==='function'){ showCoverMePanelCard(); return; }
   // Back from a two-face cup is the faces panel (v108): take a side off,
@@ -14700,7 +14713,17 @@ function goBackFromFinalMockup(){
     const ph=document.getElementById('positionHolderCard');
     if(ph){ ph.style.display='block'; scrollToStableTop(ph,0,20); return; }
   }
-  returnFromFinalMockup();
+  // The last resort is the screen BEFORE the mockup, never the one after it.
+  // On every route that reaches a mockup with no recorded way back, the edge
+  // question is what preceded it.
+  if(typeof showEdgeQuestion==='function' && revealOriginalArtworkUrls && revealOriginalArtworkUrls.length){
+    showEdgeQuestion();
+    return;
+  }
+  // And with no reveal behind it either, the product screen -- still backward.
+  clearAllFocusModes();
+  const pc=document.getElementById('productCard');
+  if(pc){ pc.style.display='block'; smoothScrollToTarget('productCard','start'); }
 }
 // Undo a baked-on decorative frame so a return to the frame offer starts
 // from the plain designs again (the frame is re-composited from these
