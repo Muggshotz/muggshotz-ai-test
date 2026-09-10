@@ -161,9 +161,87 @@ Return to Chapter 0 and read the partner's bid again.
 
 ---
 
-### Priority 3
+### The seating
 
-*(to be written)*
+Referred to throughout, and always relative to whoever leads the current trick:
+
+    1st chair   the leader
+    2nd chair   the player to the leader's west, acting immediately after
+    3rd chair   the leader's PARTNER
+    4th chair   the last player to act
+
+Note what that means on your own lead: your partner commits in third chair,
+**before** the final opponent. The last word — the cheap-trick seat — belongs to
+them. Leading hands the opposition positional advantage on that trick, which is
+itself an argument for leading suits you do not mind losing.
+
+---
+
+### Priority 3 — A suit you hold the Queen in. Do not lead the Queen.
+
+If you have no lone card and no King-Queen-plus-two, lead **low** from a suit in
+which you hold the Queen.
+
+The exception: a Queen that is the sole card of its suit is a lone card, and is
+handled by the lone-card rule above.
+
+**Why not simply lead the Queen.** Leading her feeds her to whichever honour sits
+above. You hand them a capture and collect nothing. The Queen stays home, hidden
+behind low cards, while a low card does the work of drawing fire.
+
+**What the low lead actually does.**
+
+    You lead low from  Q x x
+
+    2nd chair, wanting the trick, plays the KING
+    3rd chair (partner) plays low
+    4th chair must beat that King to take the trick - out comes the ACE
+
+Their Ace and their King collide on a single trick. Two honours spent to win one
+trick, and the highest card remaining in that suit is now in your hand. Your
+Queen has been promoted to master, at the cost of a card that was never winning
+anything.
+
+That is the cheap trick. Not a trick you take — a trick you **manufacture** by
+arranging for the opponents to beat each other.
+
+**Why the Queen and no lower card.** Only two cards outrank her. That is the
+shortest possible ladder above your card, which is what makes the collision
+likely rather than wishful. With a Jack there are three cards above, and the
+chance that the relevant ones crash together falls away sharply. The Queen is the
+highest card you can hold that still has something worth clearing out above her.
+
+**Never a suit you hold the Ace in.** This is the companion law, and it is
+Priority 1 seen from the other side. Compare what your Ace does in each case:
+
+    You LEAD the Ace   ->  you win a trick. Opponents discard trash.
+                           Their honours survive untouched.
+
+    You HOLD the Ace   ->  somebody else must open the suit eventually.
+                           When they do, an opponent's King or Queen walks
+                           into it. You win the SAME single trick - and
+                           their honour is dead.
+
+Identical value to you. Completely different cost to them. Leading your Ace wins
+a trick and kills nothing; holding it wins a trick **and removes one from their
+contract.** Held, the Ace is also your entry — the card that takes the lead back
+when you want to steer.
+
+So the two laws are one law, seen from both sides:
+
+> **Never open a suit where opening it exposes your own honours to capture.**
+> **Never open a suit where opening it forfeits your capture of theirs.**
+
+You broach the suits where you have neither something to lose nor something to
+catch.
+
+**What partner reads.** Priorities 1 and 2 did not fire, so a low lead here says,
+precisely: *I hold the Queen of this suit.* Not "something" — the specific card.
+If he holds the King, he now knows the suit belongs to the two of you. If he
+holds the Ace, he knows to duck and let the opponents crash into each other.
+
+And by elimination, every suit you decline to open is a suit you may hold an Ace
+in. Over a few leads your partner locates your Aces from cards you never played.
 
 ---
 
