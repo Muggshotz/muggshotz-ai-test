@@ -211,15 +211,24 @@ scenarios.frameOfferOnTheMockup = async (page, log) => {
   if (!sel) return `FAIL: could not select a frame from the catalogue (clicked ${picked})`;
   const calls0 = log.apiCalls.length;
   await page.click('#accessorizeSatisfiedBtn');
+  // THE 3D MUG OPENS INSTANTLY (Sep 2026) and the Printify request fires
+  // BEHIND it, several seconds later -- so "lightbox visible" no longer
+  // means the rebuild has been requested, and counting at that moment
+  // found 0 every time (a probe saw the request land ~7s after Satisfied).
+  // Wait for the rebuilt mockup's own request: a start-mockup carrying a
+  // picture that is NOT the unframed one, since the first mockup's request
+  // can also arrive late and must not be mistaken for the rebuild.
+  const rebuilt = async () => log.apiCalls.slice(calls0).some(c =>
+    c.path === '/api/start-mockup' && c.action === 'start' &&
+    (c.body?.placements?.left || c.body?.image) !== beforeUrls.left);
+  for (let i = 0; i < 60 && !(await rebuilt()); i++) await T(page, 500);
+  if (!(await rebuilt())) return 'FAIL: no rebuilt mockup was requested within 30s of applying the frame';
   await page.waitForFunction(() => document.getElementById('mockupLightboxOverlay').classList.contains('visible'), null, { timeout: 30000 });
   await T(page, 300);
   const after = await page.evaluate(() => ({
     label: document.getElementById('mockupLightboxFrame').textContent.trim(),
     url: findDesignById(placements.left).url, fade: placementAdjust.left.fade,
-    mockups: log => null,
   }));
-  const mockupStarts = log.apiCalls.slice(calls0).filter(c => c.path === '/api/start-mockup' && c.action === 'start').length;
-  if (mockupStarts !== 1) return `FAIL: expected one rebuilt mockup, got ${mockupStarts}`;
   const framedUploads = log.apiCalls.slice(calls0).filter(c => c.path === '/api/generate').length;
   const applied = await page.evaluate(() => coverMeFrameApplied && !!unframedDesignSnapshot);
   if (!applied) return 'FAIL: the frame was not baked into the picture';
