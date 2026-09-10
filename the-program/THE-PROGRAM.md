@@ -993,6 +993,51 @@ nil dies or the cover is out of trumps.
 
 By that point it is not a card. It is an execution.
 
+### A worked hand
+
+Your hearts: **A Q 7 4 3.** The nil bidder is on your right. His partner — the
+cover — is on your left, and you know or suspect he is void in hearts and
+cutting.
+
+**Do not lead the 3.**
+
+    lead the 7   ->  the cover must ruff.  Spade #1 spent.   You keep 4, 3
+    lead the 4   ->  the cover must ruff.  Spade #2 spent.   You keep 3
+    lead the 3   ->  the cover must ruff.  Spade #3 spent.
+
+The order is the entire lesson, and it looks arbitrary until you see what it is
+protecting. **Every heart you lead, you keep the ones below it.** Lead the 3
+first and it dies under a ruff having achieved nothing, and your lowest heart is
+now the 4. Lead from the middle downward and you arrive at the kill still holding
+the smallest card you own.
+
+Three of his trumps are now gone, spent on tricks *you* chose. Even a good hand
+usually holds about four spades, so he is down to one — his Ace — and he is not
+spending that on you.
+
+### Then drain the board
+
+Do not stop when the cover runs dry. **Take the spades out of every hand except
+the nil bidder's.**
+
+Feed your partner things to cut. He does the same for you. The two of you
+deliberately spend your own trumps down, because **the nil bidder's spades are
+only harmless while bigger ones still exist.** Strip the board and his become the
+biggest thing left.
+
+    End state:   you 1 spade  .  partner 1 spade  .  nil still holding 2
+
+    He cannot avoid winning one of them. Instant set.
+
+And the best version of that ending is the one where **your last spade is the
+deuce.** He must beat it. There is no card in the deck he can duck with.
+
+Which is the real reason behind the rule. It is not superstition about a small
+card. The deuce is the closing move of a plan that takes the entire hand to
+build, and cutting with it early throws away the ending.
+
+> **Never cut with the two — or only if it is the last.**
+
 > **Never cut with the two of spades while an opponent is nil.**
 
 Ruffing with it trades the hand's decisive card for one ordinary trick — and
