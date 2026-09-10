@@ -20,20 +20,23 @@ const path = require('path');
 
 const ROOT = path.join(__dirname, '..');
 const src = fs.readFileSync(path.join(ROOT, 'order.html'), 'utf8');
+// The studio keeps copies of its own -- a drift THERE is what puts a colour
+// on offer that the order page has never heard of.
+const studio = fs.readFileSync(path.join(ROOT, 'needles-studio.html'), 'utf8');
 
-// Pull `const NAME = {...};` / `[...]` out of the page by brace matching,
+// Pull `const NAME = {...};` / `[...]` out of a page by brace matching,
 // skipping strings and line comments, and evaluate it in isolation.
-function extract(name) {
-  const m = new RegExp('const ' + name + ' = ([\\[{])').exec(src);
-  if (!m) throw new Error(`order.html has no const ${name}`);
+function extract(name, from = src) {
+  const m = new RegExp('const ' + name + ' = ([\\[{])').exec(from);
+  if (!m) throw new Error(`no const ${name} in that file`);
   let i = m.index + m[0].length - 1, depth = 0, j = i, instr = null;
-  while (j < src.length) {
-    const c = src[j];
+  while (j < from.length) {
+    const c = from[j];
     if (instr) { if (c === '\\') { j += 2; continue; } if (c === instr) instr = null; }
     else if (c === '"' || c === "'" || c === '`') instr = c;
-    else if (src.startsWith('//', j)) { j = src.indexOf('\n', j); continue; }
+    else if (from.startsWith('//', j)) { j = from.indexOf('\n', j); continue; }
     else if (c === '[' || c === '{') depth++;
-    else if (c === ']' || c === '}') { depth--; if (depth === 0) return new Function('return ' + src.slice(i, j + 1))(); }
+    else if (c === ']' || c === '}') { depth--; if (depth === 0) return new Function('return ' + from.slice(i, j + 1))(); }
     j++;
   }
   throw new Error(`unterminated const ${name}`);
@@ -113,6 +116,51 @@ const firstSize = (p) => Object.values(p.sizes || {})[0] || {};
     const pc = cat['phone-case-tough'];
     drift(bad, 'phone-case-tough price', O.PHONE, pc.price ?? firstSize(pc).price);
     return bad.length ? `FAIL: ${bad.join('; ')}` : 'PASS: the six flat prices match the catalog';
+  };
+
+  // ---- The studio's own copies. ----
+  const S = {
+    GEN: extract('GEN_MUG_STYLES', studio),
+    TRAVEL: extract('TRAVEL_MUG_CATALOG', studio),
+    TOTE_COLOURS: extract('TOTE_BAG_COLORS_GEN', studio),
+  };
+
+  scenarios.studioMugColoursMatch = () => {
+    const bad = []; let n = 0;
+    for (const [style, key] of Object.entries(O.STYLE_KEY)) {
+      const g = S.GEN[style], c = cat[key];
+      if (!g || !c) { bad.push(`studio style ${style} -> ${key}: missing on one side`); continue; }
+      for (const [size, cols] of Object.entries(g.colors || {})) {
+        const cs = (c.sizes || {})[size];
+        if (!cs) { bad.push(`${key} ${size}: offered in the studio, not in the catalog`); continue; }
+        n++;
+        drift(bad, `studio ${key} ${size} colours`, names(cols), names(cs.colors));
+      }
+    }
+    return bad.length ? `FAIL: ${bad.join('; ')}` : `PASS: the studio's ${n} mug style/size colour lists match the catalog`;
+  };
+
+  scenarios.studioTravelCupsMatch = () => {
+    const bad = [];
+    for (const [key, o] of Object.entries(S.TRAVEL)) {
+      const c = cat[key];
+      if (!c) { bad.push(`${key} is in the studio but not in the catalog`); continue; }
+      drift(bad, `studio ${key} colours`, names(o.colors), names(c.colors));
+      drift(bad, `studio ${key} layout`, o.layoutType, c.layoutType);
+      drift(bad, `studio ${key} sizeLabel`, o.sizeLabel, c.sizeLabel ?? Object.keys(c.sizes || {})[0]);
+    }
+    for (const key of Object.keys(cat).filter((k) => k.startsWith('travel-mug-')))
+      if (!S.TRAVEL[key]) bad.push(`${key} is in the catalog but not offered in the studio`);
+    return bad.length ? `FAIL: ${bad.join('; ')}` : `PASS: the studio's ${Object.keys(S.TRAVEL).length} travel cups match the catalog on colours, layout and size`;
+  };
+
+  scenarios.studioToteColoursMatch = () => {
+    const bad = [];
+    const want = names(cat['tote-bag'].colors || firstSize(cat['tote-bag']).colors);
+    drift(bad, 'studio tote colours', names(S.TOTE_COLOURS), want);
+    for (const [size, cs] of Object.entries(cat['tote-bag'].sizes || {}))
+      if (cs.colors) drift(bad, `studio tote colours vs catalog ${size}`, names(S.TOTE_COLOURS), names(cs.colors));
+    return bad.length ? `FAIL: ${bad.join('; ')}` : 'PASS: the studio\'s tote colour list matches the catalog for every size';
   };
 
   let fails = 0;
