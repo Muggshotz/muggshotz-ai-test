@@ -2032,6 +2032,11 @@ async function submitOrder(){
         : isPostIt() ? '3" x 3"'
         : (roundCoaster ? 'Round 3.7"' : '4" x 4"'),
       image,
+      // The greeting card's inside page. Null for a blank inside (the
+      // default, and every card this shop printed before Sep 2026) and for
+      // every other product in this branch, none of which has a second
+      // placement to print into.
+      insideImage: isGreetingCard() ? (pendingOrder?.insideImage || null) : null,
       customerName: fullName,
       giftMessage: giftMessageEnabled ? document.getElementById('giftMessageText').value.trim() : null,
       shippingAddress,
@@ -2066,21 +2071,44 @@ async function submitOrder(){
     };
 
   } else {
+    // THE LAST BRANCH IS ALSO THE FALLBACK (found Sep 2026 by
+    // verify-studio-to-payment.js, which is the first test to arrive at this
+    // page WITHOUT writing a pending order for itself).
+    //
+    // selectedProductFamily defaults to 'mug' when there is no pending order
+    // at all, so this branch is where a customer with no live design lands --
+    // bookmarked the page, came back after the success screen cleared the
+    // record, opened a second tab. Every other branch above guards with
+    // `pendingOrder?.` and refuses politely when there is no design. This one
+    // read `pendingOrder.deviceId` straight, so it threw a TypeError inside
+    // submitOrder: no status message, no error on screen, the button still
+    // live. They filled in their whole address, pressed Continue to Payment,
+    // and NOTHING happened -- a silent dead end at the point of sale, which
+    // is the worst place in the shop to have one.
+    const mugPlacements = pendingOrder?.placements || null;
+    if (!mugPlacements || !(mugPlacements.left || mugPlacements.front || mugPlacements.right)) {
+      setStatus('No design found — please go back to the studio and make one first.', true);
+      return;
+    }
     if (MUG_STYLES[selectedStyle].sizes[selectedSize].colors && !selectedColor) {
       setStatus('Please pick a mug color.', true);
       return;
     }
     body = {
       type: 'mug_order',
-      deviceId: pendingOrder.deviceId,
-      placements: pendingOrder.placements,
-      placementAdjust: pendingOrder.placementAdjust || {},
+      // The page-level deviceId, which already prefers pendingOrder.deviceId
+      // when there is one (see getDeviceId) and has a real fallback when
+      // there is not -- so this is the same value as before on every normal
+      // order, and a working one on the path that used to throw.
+      deviceId,
+      placements: mugPlacements,
+      placementAdjust: pendingOrder?.placementAdjust || {},
       mugType: selectedStyle,
       sizeLabel: selectedSize,
       color: selectedColor,
       printMode: fullWrapEnabled ? 'fullBleed' : 'standard',
-      panoramaImage: pendingOrder.panoramaImage || null,
-      isWraparoundSet: !!pendingOrder.isWraparoundSet,
+      panoramaImage: pendingOrder?.panoramaImage || null,
+      isWraparoundSet: !!pendingOrder?.isWraparoundSet,
       customerName: fullName,
       giftMessage: giftMessageEnabled ? document.getElementById('giftMessageText').value.trim() : null,
       shippingAddress,

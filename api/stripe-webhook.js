@@ -645,6 +645,10 @@ async function handleMugOrderPayment(session) {
     orderInput.backImage = m.image_url_b || null;
   } else {
     orderInput.image = m.image_url_a || null;
+    // The greeting card's inside page, when one was chosen. Empty string ->
+    // null -> a blank inside, which is what every card printed before this
+    // existed, so an old session replaying through here is unchanged.
+    orderInput.insideImage = m.image_url_inside || null;
   }
 
   try {

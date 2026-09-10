@@ -1022,6 +1022,12 @@ export async function placeProductOrder({
   frontImage,
   backImage,
   image,
+  // The greeting card's inside page. Optional everywhere and legal only on a
+  // product whose catalog entry declares supportsInsidePrint -- an inside
+  // image sent for anything else is ignored rather than guessed at, because
+  // uploading to a placeholder the blueprint does not have is a rejected
+  // order at Printify with the customer's money already taken.
+  insideImage = null,
   shippingAddress,
   customerName,
   orderId,
@@ -1118,6 +1124,23 @@ export async function placeProductOrder({
       : await getPlaceholderDimensions(effectiveBlueprintId, effectivePrintProviderId, variantId);
     const buffer = await buildSingleImage(image, width, height);
     printifyImages[position] = await uploadImageToPrintify(buffer, `muggshotz-${Date.now()}.png`);
+
+    // THE INSIDE PAGE (Sep 2026). Blank is still the default and still the
+    // normal card; this only runs when the customer asked for something on
+    // the inside. The dimensions are looked up live because the inside
+    // placeholder has never been confirmed by hand -- getPlaceholderDimensions
+    // also hands back the position's real name, so we address the placeholder
+    // the blueprint actually has rather than assuming it is called "inside".
+    if (insideImage && product.supportsInsidePrint) {
+      const insideDims = product.printDimensions?.inside
+        ? { ...product.printDimensions.inside, position: "inside" }
+        : await getPlaceholderDimensions(
+            effectiveBlueprintId, effectivePrintProviderId, variantId, "inside"
+          );
+      const insideBuf = await buildSingleImage(insideImage, insideDims.width, insideDims.height);
+      printifyImages[insideDims.position] =
+        await uploadImageToPrintify(insideBuf, `muggshotz-inside-${Date.now()}.png`);
+    }
 
   } else if (product.layoutType === "full-bleed") {
     if (!image) throw new Error("An image is required.");

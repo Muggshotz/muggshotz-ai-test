@@ -1917,6 +1917,67 @@ Tell Needles <span style="color:#7ab8ff">what you have in mind</span>
 </div>
 </div>
 
+<!-- ============ THE INSIDE OF THE CARD ============
+     A greeting card has two printable pages and until Sep 2026 this shop only
+     ever used one: every card shipped blank inside. Blank is still a perfectly
+     good card and is still what happens if the customer does nothing, so this
+     screen never demands a decision -- it offers one, and Leave It Blank is a
+     real answer sitting first among equals rather than a way of declining.
+
+     WHAT COSTS A TOKEN, AND WHAT DOES NOT (Alyx): "they can use any image that
+     they want, they can get it from anywhere that they want ... as long as
+     they don't use our generator." So the same picture as the front, one they
+     already made this session, and one off their own phone are all free. Only
+     asking the generator for something NEW spends the one token that a
+     generation costs everywhere else in this studio, and the button says so
+     before it is pressed. -->
+<div id="cardInsideOverlay" class="step-lock-overlay" style="display:none">
+<div class="card" id="cardInsideCard" style="max-width:900px;width:100%;margin:auto;position:relative;max-height:92vh;overflow-y:auto;text-align:center">
+<div class="card-title">💌 Inside of the Card</div>
+<div class="note" style="margin-top:0;margin-bottom:.7rem;text-align:left;line-height:1.5">Your design prints on the <b>front</b>. The inside is a second page you can print on too &mdash; or leave blank so there's room to write. Most cards are blank inside, and that's free either way.</div>
+
+<div id="cardInsideBody">
+  <div id="cardInsideLeftCol">
+    <div class="note" style="margin:0 0 .35rem;opacity:.8">Inside preview</div>
+    <div id="cardInsidePreviewWrap" style="width:100%;aspect-ratio:3/2;border:1px solid #2a3442;border-radius:10px;background:#fff;display:flex;align-items:center;justify-content:center;overflow:hidden">
+      <img id="cardInsidePreviewImg" alt="" style="display:none;max-width:100%;max-height:100%;object-fit:contain">
+      <div id="cardInsideBlankNote" style="color:#8b97a6;font-size:12px;padding:1rem;line-height:1.5">Blank &mdash; room to write your own message</div>
+    </div>
+  </div>
+
+  <div id="cardInsideRightCol">
+    <div class="grid2" id="cardInsideChoiceGrid">
+      <div class="btn-select selected" id="cardInsideBlankBtn" onclick="pickCardInside('blank')"><span class="icon">📄</span>Leave It Blank</div>
+      <div class="btn-select" id="cardInsideSameBtn" onclick="pickCardInside('front')"><span class="icon">🖼️</span>Same as the Front</div>
+    </div>
+    <div class="note" style="margin:.6rem 0 .3rem;text-align:left">Or use one you already have &mdash; free:</div>
+    <div id="cardInsideDesignGrid" class="grid3"></div>
+    <div id="cardInsideNoDesignsNote" class="note" style="display:none;text-align:left;opacity:.75">Designs you make in this session show up here.</div>
+
+    <label class="btn-select" for="cardInsideFile" style="display:block;margin-top:.6rem;cursor:pointer"><span class="icon">📤</span>Upload My Own Picture</label>
+    <input type="file" id="cardInsideFile" accept="image/*" style="display:none" onchange="cardInsideUploadPicked(this)">
+
+    <div class="note" style="margin:.9rem 0 .3rem;text-align:left">Or have us draw something new for the inside:</div>
+    <textarea id="cardInsideDesc" rows="2" placeholder="e.g. a small bunch of wildflowers"></textarea>
+    <button type="button" class="download-btn" id="cardInsideGenBtn" style="margin-top:.45rem" onclick="generateCardInside()">🎨 Generate for the Inside &mdash; 1 token</button>
+    <div class="note" id="cardInsideGenNote" style="margin-top:.3rem;opacity:.75;text-align:left">Only this one costs a token. Everything above is free.</div>
+  </div>
+</div>
+
+<button type="button" class="generate-btn" id="cardInsideContinueBtn" style="margin-top:.9rem" onclick="confirmCardInside()">✅ Continue</button>
+<button type="button" class="download-btn" style="margin-top:.6rem" onclick="cardInsideBack()">← Back</button>
+</div>
+</div>
+<style>
+@media (min-width:900px){
+  #cardInsideBody{display:flex;gap:18px;align-items:flex-start;text-align:left}
+  #cardInsideLeftCol{flex:0 0 44%;min-width:0;position:sticky;top:0}
+  #cardInsideRightCol{flex:1;min-width:0}
+}
+#cardInsideDesignGrid .btn-select{padding:.3rem}
+#cardInsideDesignGrid img{width:100%;aspect-ratio:3/2;object-fit:cover;border-radius:6px;display:block}
+</style>
+
 <div id="frameFadeOverlay" class="step-lock-overlay" style="display:none">
 <div class="card" id="frameFadeCard" style="max-width:520px;width:100%;margin:auto;position:relative;max-height:92vh;overflow-y:auto;text-align:center">
 <div class="card-title">🌫️ Edge Fade</div>
@@ -12916,10 +12977,189 @@ function hideWaitOverlay(){
 // url it ends up with.
 let trimmingsSettledFor=null;
 
+// ================= THE INSIDE OF THE GREETING CARD =================
+// Same arbiter pattern as Trimmings above, and for the same reason: the mockup
+// is started from several places, so the one place they all converge is the
+// only place a new step can be inserted without missing some of them. Keyed to
+// the artwork rather than a flag, so a SECOND design in the same session gets
+// asked again while one already settled is never nagged about.
+//
+// insideImage is a HOSTED url or null. Never a data URL: a raw data URL
+// carried forward as the design breaks at checkout (same lesson the trimmings
+// bake learned the hard way), so anything the customer supplies here goes
+// through uploadCompositedImage first and a failure keeps them on this screen.
+let cardInsideImage=null;
+let cardInsideChoice='blank';   // 'blank' | 'front' | 'design' | 'upload' | 'generated'
+let cardInsideSettledFor=null;
+
+function productHasCardInside(){ return product==='greeting card'; }
+
+function renderCardInsidePreview(){
+  const img=document.getElementById('cardInsidePreviewImg');
+  const blank=document.getElementById('cardInsideBlankNote');
+  if(!img||!blank)return;
+  if(cardInsideImage){
+    img.src=cardInsideImage;
+    img.style.display='block';
+    blank.style.display='none';
+  }else{
+    img.removeAttribute('src');
+    img.style.display='none';
+    blank.style.display='block';
+  }
+}
+
+function renderCardInsideChoiceState(){
+  const blankBtn=document.getElementById('cardInsideBlankBtn');
+  const sameBtn=document.getElementById('cardInsideSameBtn');
+  if(blankBtn)blankBtn.classList.toggle('selected',cardInsideChoice==='blank');
+  if(sameBtn)sameBtn.classList.toggle('selected',cardInsideChoice==='front');
+  document.querySelectorAll('#cardInsideDesignGrid .btn-select').forEach(t=>{
+    t.classList.toggle('selected',cardInsideChoice==='design'&&t.dataset.url===cardInsideImage);
+  });
+  renderCardInsidePreview();
+}
+
+function renderCardInsideDesigns(){
+  const grid=document.getElementById('cardInsideDesignGrid');
+  const none=document.getElementById('cardInsideNoDesignsNote');
+  if(!grid)return;
+  grid.innerHTML='';
+  // The front's own picture already has its own button, so it is not repeated
+  // here -- two controls that do the same thing is how a customer ends up
+  // wondering which one they pressed.
+  const frontUrl=finalImageUrl||resultUrl;
+  const others=recentDesigns.filter(d=>d&&d.url&&d.url!==frontUrl);
+  if(!others.length){
+    grid.style.display='none';
+    if(none)none.style.display='block';
+    return;
+  }
+  grid.style.display='';
+  if(none)none.style.display='none';
+  others.slice(0,9).forEach(d=>{
+    const tile=document.createElement('div');
+    tile.className='btn-select';
+    tile.dataset.url=d.url;
+    tile.onclick=()=>pickCardInside('design',d.url);
+    const im=document.createElement('img');
+    im.src=d.url; im.alt='';
+    tile.appendChild(im);
+    grid.appendChild(tile);
+  });
+}
+
+function pickCardInside(kind,url){
+  if(kind==='blank'){ cardInsideChoice='blank'; cardInsideImage=null; }
+  else if(kind==='front'){ cardInsideChoice='front'; cardInsideImage=finalImageUrl||resultUrl||null; }
+  else if(kind==='design'){ cardInsideChoice='design'; cardInsideImage=url||null; }
+  else if(kind==='upload'){ cardInsideChoice='upload'; cardInsideImage=url||null; }
+  else if(kind==='generated'){ cardInsideChoice='generated'; cardInsideImage=url||null; }
+  renderCardInsideChoiceState();
+}
+
+// The customer's own picture. Free -- it never touches the generator -- but it
+// still has to be hosted before it can be printed, so the upload happens here
+// and not at checkout, where a failure would be somebody's money already gone.
+async function cardInsideUploadPicked(input){
+  const file=input&&input.files&&input.files[0];
+  if(!file)return;
+  input.value='';
+  const btn=document.getElementById('cardInsideContinueBtn');
+  if(btn)btn.disabled=true;
+  try{
+    const dataUrl=await new Promise((res,rej)=>{
+      const fr=new FileReader();
+      fr.onload=()=>res(fr.result);
+      fr.onerror=()=>rej(new Error('Could not read that file.'));
+      fr.readAsDataURL(file);
+    });
+    const hosted=await uploadCompositedImage(dataUrl,{strict:true});
+    pickCardInside('upload',hosted);
+  }catch(err){
+    console.error('Could not use that picture for the inside:',err);
+    showGuidanceAlert(describeUploadFailure(err));
+  }finally{
+    if(btn)btn.disabled=false;
+  }
+}
+
+// The ONE paid option on this screen, and the only one that touches the
+// generator. Costs exactly what a generation costs anywhere else -- one token.
+async function generateCardInside(){
+  const box=document.getElementById('cardInsideDesc');
+  const desc=(box&&box.value||'').trim();
+  if(!desc){
+    showGuidanceAlert("Tell us what you'd like on the inside first — a few words is plenty.");
+    return;
+  }
+  const btn=document.getElementById('cardInsideGenBtn');
+  const cont=document.getElementById('cardInsideContinueBtn');
+  if(btn){btn.disabled=true;btn.textContent='🎨 Drawing…';}
+  if(cont)cont.disabled=true;
+  try{
+    const url=await callGenerateAPI({workingImage:workingImageData,prompt:desc});
+    pickCardInside('generated',typeof url==='string'?url:(url&&url.imageUrl)||null);
+    if(!cardInsideImage)throw new Error('No image returned.');
+    // It goes in the library like every other generation, so a change of mind
+    // can come back to it without paying twice.
+    recentDesigns.unshift({id:'inside-'+Date.now(),url:cardInsideImage});
+    renderCardInsideDesigns();
+    renderCardInsideChoiceState();
+    refreshBalance();
+  }catch(err){
+    console.error('Could not generate the inside:',err);
+    showGuidanceAlert(err&&err.message?err.message:'That generation did not go through. Nothing was charged — please try again.');
+  }finally{
+    if(btn){btn.disabled=false;btn.textContent='🎨 Generate for the Inside — 1 token';}
+    if(cont)cont.disabled=false;
+  }
+}
+
+function openCardInsidePanel(){
+  const overlay=document.getElementById('cardInsideOverlay');
+  if(!overlay){ reallyBeginFinalMockupFetch(); return; }
+  document.body.classList.add('step-locked');
+  overlay.style.display='flex';
+  const card=document.getElementById('cardInsideCard');
+  if(card)card.scrollTop=0;
+  renderCardInsideDesigns();
+  renderCardInsideChoiceState();
+}
+
+function confirmCardInside(){
+  const overlay=document.getElementById('cardInsideOverlay');
+  if(overlay)overlay.style.display='none';
+  document.body.classList.remove('step-locked');
+  cardInsideSettledFor=finalImageUrl||resultUrl;
+  // So a Back out of the mockup lands on this screen rather than skipping past
+  // it -- the same contract every other pre-mockup screen keeps.
+  preMockupBack=()=>{cardInsideSettledFor=null;openCardInsidePanel();};
+  reallyBeginFinalMockupFetch();
+}
+
+// Back means the design decision again, exactly like the fade page's Back.
+function cardInsideBack(){
+  const overlay=document.getElementById('cardInsideOverlay');
+  if(overlay)overlay.style.display='none';
+  document.body.classList.remove('step-locked');
+  cardInsideSettledFor=null;
+  restoreApproveDecision();
+}
+// ================= END INSIDE OF THE GREETING CARD =================
+
 async function beginFinalMockupFetch(){
   const finishedForTrim=finalImageUrl||resultUrl;
   if(wrapWantsGutters() && finishedForTrim && trimmingsSettledFor!==finishedForTrim){
     await openTrimmingsPanel();
+    return;
+  }
+  // A greeting card has a second printable page. Offered here for the same
+  // reason Trimmings is: this is the last point where the decision can still
+  // be made against the finished artwork, and it is the one place every route
+  // to a mockup passes through.
+  if(productHasCardInside() && finishedForTrim && cardInsideSettledFor!==finishedForTrim){
+    openCardInsidePanel();
     return;
   }
   return reallyBeginFinalMockupFetch();
@@ -18679,6 +18919,9 @@ function goToOrder(){
     // survive the hop to order.html or the customer gets whichever one the
     // code names by default.
     coasterShape: (product==='coaster') ? selectedCoasterShape : null,
+    // The greeting card's inside page. null means blank, which is what every
+    // card printed before this existed and is still the default.
+    insideImage: (product==='greeting card') ? cardInsideImage : null,
     posterFramed: posterFramed,
     posterSize: posterSize,
     posterOrientation: posterOrientation,

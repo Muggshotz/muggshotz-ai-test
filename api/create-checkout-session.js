@@ -237,6 +237,13 @@ async function handleProductOrder(req, res) {
   // server falls back to reassembling the three thirds -- same pixels, but
   // the strip is the source of truth and it must survive the payment hop.
   const imageUrlD = req.body.panoramaImage || "";
+  // The greeting card's inside page, when the customer asked for one. It gets
+  // a NAMED key rather than borrowing image_url_b: on a single-image product
+  // b and c happen to be empty today, but "empty today" is how a future
+  // second placement silently overwrites somebody's card. Blank inside -- the
+  // default and the ordinary card -- stores an empty string and prints
+  // nothing, exactly as before.
+  const imageUrlInside = req.body.insideImage || "";
   // The customer PAYS for the gift message (GIFT_MESSAGE_PRICE above), so the
   // text itself must survive into the order record -- it used to be charged
   // and then dropped on the floor, never stored anywhere. Stripe metadata
@@ -279,6 +286,7 @@ async function handleProductOrder(req, res) {
       image_url_b: imageUrlB,
       image_url_c: imageUrlC,
       image_url_d: imageUrlD,
+      image_url_inside: imageUrlInside,
       placement_adjust: placementAdjustChunks[0] || "",
       placement_adjust_2: placementAdjustChunks[1] || "",
       placement_adjust_3: placementAdjustChunks[2] || "",
