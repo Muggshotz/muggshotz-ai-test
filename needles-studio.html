@@ -1766,9 +1766,14 @@ Tell Needles <span style="color:#7ab8ff">what you have in mind</span>
 .trim-fade-btn{border-color:#29a3ff!important;color:#8fd4ff!important;box-shadow:0 0 12px rgba(41,163,255,.35)}
 .trim-fade-btn.selected{color:#fff!important;box-shadow:0 0 16px rgba(41,163,255,.6)}
 @media (min-width:900px){
-  #trimmingsCard{max-width:900px!important}
-  #trimmingsBody{display:flex;gap:16px;align-items:flex-start}
-  #trimmingsLeftCol{flex:0 0 42%;min-width:0;position:sticky;top:0;padding-bottom:0}
+  /* WIDER CARD, WIDER COLUMN (Alyx: "I thought we agreed that we were going to
+     make this much larger -- you've got that whole left side there"). The cup
+     was capped at 34vh inside a 42% column, so it sat small with the rest of
+     the column empty beneath it. The card goes to 1100 and the column to half,
+     so the cup is limited by nothing but the height of the window. */
+  #trimmingsCard{max-width:1100px!important}
+  #trimmingsBody{display:flex;gap:18px;align-items:flex-start}
+  #trimmingsLeftCol{flex:0 0 50%;min-width:0;position:sticky;top:0;padding-bottom:0}
   #trimmingsRightCol{flex:1;min-width:0}
   #trimmingsPreviewImg{max-height:38vh!important}
   #trimmingsBody .note{text-align:left}
@@ -1788,7 +1793,7 @@ Tell Needles <span style="color:#7ab8ff">what you have in mind</span>
      the box letterboxes with the cup marooned in the middle of it. min() picks
      the smaller of the column and the height budget, and the ratio then has
      nothing to fight. -->
-<div id="trimmings3DStage" class="mug3d-stage" style="width:min(100%,34vh);height:auto;aspect-ratio:1/1;margin:0 auto .45rem"></div>
+<div id="trimmings3DStage" class="mug3d-stage" style="width:min(100%,60vh);height:auto;aspect-ratio:1/1;margin:0 auto .45rem"></div>
 <!-- ZOOM, HERE, WHERE THE DECISION IS MADE (Alyx, twice: "there's no reason why
      this picture isn't rotating and enlargeable. We've got all the room we need
      here"). The seam is the thing you would most want to get close to WHILE
@@ -13483,7 +13488,30 @@ function scrollToFinishedImage(elementId,block){
 
 // True once the 3D mug has failed on this device (no WebGL, driver refusal).
 // From then on the flat Printify photos are used, exactly as before.
+// A FAILED OPEN IS NOT A VERDICT ON THE DEVICE (Alyx: "it tried to send me to
+// the checkout and I tried to go back again and then it defaulted to the old
+// mockup. It does that a lot -- it's not supposed to do that at all. You should
+// be able to go backwards and forwards, backwards and forwards, over and over,
+// and they should always be in sequence").
+//
+// This flag was set once and never cleared, so a SINGLE failed open disabled
+// the spinning cup for the rest of the session and every mockup after it --
+// including ones that would have worked perfectly -- fell back to Printify's
+// photographs. That is not a fallback, it is a one-way door, and a back-and-
+// forward round trip is exactly the kind of moment that trips it.
+//
+// The distinction that was missing: a device with NO WEBGL can never render the
+// cup and remembering that is right; an open that happened to throw says
+// nothing about the next one. So the latch is now reserved for the first case,
+// established by asking the device directly, and a thrown open simply falls
+// back this once and tries again next time.
 let mug3dFailed=false;
+function deviceHasWebGL(){
+  try{
+    const c=document.createElement('canvas');
+    return !!(c.getContext('webgl2')||c.getContext('webgl')||c.getContext('experimental-webgl'));
+  }catch(e){ return false; }
+}
 let mug3dShowing=false;
 
 function travelDefaultColorName(){
@@ -13697,7 +13725,9 @@ function openMug3DMockup(){
     return true;
   }).catch(err=>{
     console.error('The 3D mug could not start; falling back to the photo mockup:',err);
-    mug3dFailed=true;
+    // Latched only when the device genuinely cannot do it. Otherwise this open
+    // falls back and the next one is free to succeed.
+    if(!deviceHasWebGL())mug3dFailed=true;
     hideMug3D();
     throw err;
   });

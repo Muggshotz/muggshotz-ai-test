@@ -611,6 +611,98 @@ scenarios.theFinalRevealFillsTheScreen = async (page) => {
 OPTS.theFinalRevealFillsTheScreen = { chromiumArgs: GL };
 
 
+// ---- BACKWARDS AND FORWARDS, OVER AND OVER, ALWAYS IN SEQUENCE. ----
+// Alyx, and this is the requirement stated properly: "you should be able to go
+// backwards and forwards, backwards and forwards, over and over, backwards and
+// backwards and backwards and forwards and forwards and forwards -- they should
+// always be in sequence."
+//
+// What he actually hit: Back, then forward, then it tried to send him to
+// Checkout, then Back again and "it defaulted to the old mockup. It does that a
+// lot." Two separate faults conspiring --
+//   * goBackFromFinalMockup consumed its memory of where the customer came
+//     from, then fell through to What's Next, the FORWARD screen with Checkout
+//     on it;
+//   * and mug3dFailed was set once and never cleared, so a single failed open
+//     disabled the spinning cup for the rest of the session and every mockup
+//     after it fell back to Printify's photographs. A one-way door, and a
+//     back-and-forward round trip is exactly what trips it.
+//
+// One round proves nothing here: the whole complaint is that it degrades over
+// repetitions. So this walks the loop several times and insists every lap is
+// identical to the first.
+scenarios.backAndForwardStayInSequence = async (page) => {
+  await pickProduct(page, 'water bottle');
+  await page.evaluate(() => pickPreGenTravelVariant('travel-mug-30oz-tundra'));
+  await T(page, 1000);
+  await dismissAlerts(page);
+  await page.evaluate(() => pickMugPrintMode('wraparound'));
+  await T(page, 1000);
+  await dismissAlerts(page);
+  await describeAndGenerate(page, 'a wide desert canyon at sunrise');
+  await waitLanded(page);
+  await T(page, 1200);
+  await page.locator('#approveRow button:has-text("Yes")').first().click();
+  await page.waitForFunction(() => document.querySelector('#mug3dStage canvas'), null, { timeout: 20000 });
+  await T(page, 1500);
+
+  const snap = () => page.evaluate(() => {
+    const vis = (id) => { const e = document.getElementById(id); return !!e && getComputedStyle(e).display !== 'none'; };
+    const canvas = document.querySelector('#mug3dStage canvas');
+    // Any button that would take money, anywhere on screen.
+    const checkoutOnScreen = Array.from(document.querySelectorAll('button')).some((b) => {
+      if (!/checkout/i.test(b.textContent || '')) return false;
+      const r = b.getBoundingClientRect();
+      return r.width > 2 && r.height > 2 && getComputedStyle(b).display !== 'none' && getComputedStyle(b).visibility !== 'hidden';
+    });
+    return {
+      cup: !!canvas && canvas.width > 4,
+      photo: vis('mockupLightboxImg'),
+      whatsNext: vis('finalChoiceOverlay'),
+      reveal: vis('revealOverlay'),
+      panels: (document.getElementById('coverMePanelCard') || {}).style?.display === 'block',
+      checkoutOnScreen
+    };
+  });
+
+  const laps = [];
+  for (let i = 0; i < 4; i++) {
+    await page.evaluate(() => goBackFromFinalMockup());
+    await T(page, 1400);
+    const back = await snap();
+    if (back.checkoutOnScreen) {
+      return `FAIL: on lap ${i + 1}, Back put a Checkout button on screen. A Back that walks somebody toward paying is how a person buys the wrong thing`;
+    }
+    if (back.whatsNext) return `FAIL: on lap ${i + 1}, Back landed on What's Next — that is the screen AFTER the mockup, not before it`;
+
+    // ...and forward again, the way the customer comes forward.
+    await page.evaluate(() => beginFinalMockupFetch());
+    await page.waitForFunction(() => {
+      const c = document.querySelector('#mug3dStage canvas');
+      const img = document.getElementById('mockupLightboxImg');
+      return (!!c && c.width > 4) || (img && getComputedStyle(img).display !== 'none');
+    }, null, { timeout: 25000 }).catch(() => {});
+    await T(page, 1200);
+    const fwd = await snap();
+    laps.push({ back: back.reveal ? 'reveal' : back.panels ? 'panels' : 'other', cup: fwd.cup, photo: fwd.photo });
+  }
+
+  const first = laps[0];
+  for (let i = 1; i < laps.length; i++) {
+    if (laps[i].back !== first.back) {
+      return `FAIL: Back landed on "${first.back}" on lap 1 and "${laps[i].back}" on lap ${i + 1} — the same button, the same screen, a different destination. That is the "sometimes" he reported`;
+    }
+    if (first.cup && !laps[i].cup) {
+      return `FAIL: the spinning cup came back on lap 1 but not on lap ${i + 1} (photo path: ${laps[i].photo}) — a round trip quietly demoted the customer to the old flat mockup and never gave it back`;
+    }
+  }
+  if (!first.cup) return 'FAIL: the cup never came back even on the first lap';
+
+  return `PASS: four full back-and-forward laps, every one identical — Back lands on "${first.back}" each time, never on What's Next, never with Checkout on screen, and the spinning cup comes back every lap`;
+};
+OPTS.backAndForwardStayInSequence = { chromiumArgs: GL };
+
+
 (async () => {
   let fails = 0;
   for (const [name, fn] of Object.entries(scenarios)) {
