@@ -5,6 +5,68 @@
 
 ---
 
+## The contention
+
+> **Playing Spades correctly is more akin than anything to speaking a language.
+> It is a series of signalling.**
+
+Everything in this book follows from that sentence, so it is worth being precise
+about what *kind* of language it is — because it is not the kind most people
+picture when they hear the word.
+
+Linguistics gives language two axes:
+
+    X - the SYNTAGMATIC axis:   combination. How signs are strung together.
+                                Grammar, sequence, word order.
+
+    Y - the PARADIGMATIC axis:  selection. Which sign you chose out of the
+                                set you could have chosen instead.
+
+Ordinary speech runs on both at once. **The Program runs on the Y axis alone.**
+
+It has to. The rules of the game forbid the other one — you may not combine
+symbols at a Spades table, you may not sequence them, you may not talk. Every
+avenue but one is closed. What remains is *choosing*, in full view of everybody,
+from a list. So the choosing was made to carry everything.
+
+There is no vocabulary here in the ordinary sense, and no grammar. There is a
+known ranked set of options and a meaning produced entirely by which one was
+taken. That is why leading the third suit on the list says *one and two were
+false* — pure paradigmatic meaning. **The selection is the sentence.**
+
+### Why there is nothing to intercept
+
+This is the property that makes it unbreakable, and it is not secrecy.
+
+**There is no message in the cards.** The meaning does not live in the King of
+hearts. It lives in the *difference* between the King you played and the four
+other cards you could legally have played instead. Take away the shared list and
+the message is not encrypted — it stops existing, while every card on the table
+remains a perfectly sensible play on its own terms.
+
+Opponents are not failing to break a code. They are searching a place where
+information was never stored.
+
+Two other names for it, each catching a different face:
+
+**Steganography.** Not the hiding of a message, but the hiding of *the fact that
+a message exists*, inside a carrier that is completely meaningful by itself.
+These are not ciphers dressed up as cards. They are cards that also happen to be
+speech.
+
+**A zero-cost covert channel.** Information travelling through a mechanism built
+for something else entirely. Covert channels normally cost the sender something
+— you do a slightly wrong thing on purpose in order to signal. This one costs
+nothing, because the system was built so that **the signal is the correct play.**
+You never pay to speak. That is the rarest property in the whole design, and
+every rule in this book was chosen to preserve it.
+
+> The Program is a language with no words and no grammar — only choices, made
+> from a list both players know, in which the thing selected and the thing done
+> are the same act.
+
+---
+
 ## What this is
 
 Almost every book written about Spades is a tactics book: when to bid nil,
