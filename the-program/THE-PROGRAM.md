@@ -1124,19 +1124,30 @@ So your partner does **not** cut the cover's King with the King of spades. He
 recognises that you have switched from setting the nil to setting the cover, and
 he saves his high spades to go on handcuffing with you.
 
-### The mode is signalled by the shape of the play
+### How the switch is actually signalled
 
-Nobody announces the switch. There is no convention for it, no card that means
-*"I am changing plans."*
+There is no card that means *"I am changing plans."* Nothing on the list says it,
+and no convention covers it. So the message is carried by the **list itself.**
 
-Your partner reads it off the **shape** of what you are doing — middle-of-sequence
-cards going into the cover — and independently reverses his own spade policy to
-match.
+> **You take a trick LOW, in a spot where the rules oblige you to take it HIGH.**
 
-That is a different order of communication from everything else in this book. The
-order of leads tells your partner about your *cards*. This tells him about your
-**plan.** He is not only decoding what you hold; he is decoding what you have
-decided to do with it.
+Rule 3 of play is mandatory: never give fourth chair a cheap win — take it
+expensive, or take it outright. So a deliberate low take, in a position where
+high was compulsory, **cannot be an accident** between two players who both know
+the rule. It can only be a sentence.
+
+That is the whole trick, and it is the paradigmatic axis taken all the way down.
+The vocabulary is not the cards. **The vocabulary is the rules**, used as a
+background against which a deviation means something. Meaning out of the
+difference between what you did and what you were supposed to do.
+
+And it hides where everything else in this book hides — **inside their contempt.**
+An opponent sees a weak take. Timid. A misplay. He files it under *he blinked* and
+moves on, because reading it would require knowing that the low take was
+forbidden.
+
+Your partner reverses his spade policy on the spot. He is not merely decoding
+what you hold any more; he is decoding what you have **decided to do with it.**
 
 The general form: **lead into the cover, past the nil, out of a sequence in which
 you hold the middle cards and he holds the top one.** He owns the best card in
@@ -1187,21 +1198,40 @@ We made it at the same time. Both of us recognising the same moment — the tric
 at which the bid had made itself vulnerable — and both switching from setting the
 nil to setting the bid, together, without a word.
 
-And that is not signalling. Nobody sent anything. Two people looked at the same
-public table, ran the same evaluation, and arrived at the same non-obvious
-conclusion on the same trick.
+A message did pass. It simply was not in a card.
 
-Which is the end state of a shared model, and it is a stranger thing than a code.
-**A code still requires a sender and a receiver. This does not.** Once the model
-is complete enough on both sides you stop needing to communicate at all, because
-you are both computing the same answer from the same visible facts. The message
-becomes redundant. You are not reading each other — you are reading the table,
-identically.
+It was a **trick taken low where the rules demanded it be taken high** — a
+deliberate breach of a mandatory rule, which between two people who both know the
+rule can only be deliberate, and therefore can only be speech. That is why no
+observer ever found it. They were watching the cards. The message was in the gap
+between the card and the rule.
 
-That is exactly why it looked like a phone call. There is no innocent explanation
-available to a spectator for two people changing plans in unison without
-speaking. They could see the effect, and they knew of only one mechanism that
-produced it.
+And it is exactly why it looked like a phone call. There is no innocent
+explanation available to a spectator for two people changing plans in unison
+without speaking. They could see the effect, and they knew of only one mechanism
+that produced it.
+
+### The complete read
+
+The best of it came near the end of a hand.
+
+Six cards left. Some seemingly inconsequential discard — a card that mattered to
+nobody watching — and suddenly **the complete read was in.** Both of us knew
+every card that was going to fall and exactly how the hand would close. There was
+nothing left to decide. The hand had stopped being played and started being
+executed.
+
+And one of us would type, out loud, in front of everybody:
+
+> *"lol — good job"*
+
+He knew it was over. I knew it was over. And those three words are the only
+speech in this entire system — spoken in plain English, in public, to a room full
+of people, and completely undecodable, because they carry nothing whatsoever to
+anyone who does not already know everything.
+
+It was almost like telepathy. It was not. It was a list, memorised by two people,
+and a discard nobody else thought was worth looking at.
 
 It was not cheating. It was something built out of nothing but public information
 and a list we had both memorised — which happened to leave the same signature.
