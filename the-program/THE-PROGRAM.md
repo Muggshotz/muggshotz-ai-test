@@ -1075,8 +1075,8 @@ to be wrong about.
 ### The technique
 
     You hold  Q J 7 4 of clubs
-    The nil is on your RIGHT  - so he plays 4th, LAST
-    The cover is on your LEFT - so he plays 2nd, holding the King
+    The nil is on your LEFT   - he follows you immediately
+    The cover is on your RIGHT - he acts LAST, holding the King
 
     You lead the JACK - the LOWER of your sequence - and keep the Queen.
 
@@ -1087,14 +1087,33 @@ to be wrong about.
     He ducks. He has to. You win a trick with the Jack while sitting on the
     very Queen he was afraid of.
 
-**The seat is what makes it lethal.** Second chair commits with exactly one card
-on the table — yours. He cannot wait and see. He must decide whether to spend his
-King knowing nothing about what your partner will do, and nothing about where the
-Queen sits, because the only man who could tell him is his own nil partner, who
-plays **last** and has not spoken yet and never will.
+**And notice it works even though he acts last.** Acting last normally means full
+information. But the one fact he needs is not on the table, because **the nil's
+card tells him nothing** — his partner follows with a small club, exactly as he
+would whether he held the Queen or the 3. The cover is sitting in the best seat
+at the table and is still blind about the only card that matters to him.
 
-He is not choosing between two known outcomes. He is guessing blind, immediately,
-about the one card he cannot afford to waste.
+### What the handcuff actually buys
+
+Not the stolen trick. **Time.**
+
+    You keep him from spending the King
+            |
+    until your partner is VOID in that suit
+            |
+    then the King finally comes out - and your partner CUTS it
+            with the King of spades
+            |
+      -> steals the cover's book
+      -> dumps one of the highest spades around the nil
+
+Restraining his King does not merely win you a trick in clubs. It **delays** that
+King until the moment it can be ruffed off the table — and the ruff that kills it
+is the same play that strips a high spade off the board and moves the nil one
+step closer to holding the biggest thing left.
+
+So the two lines are not alternatives. The handcuff advances both with the same
+cards: it steals books from their contract *and* it feeds the drain.
 
 The general form: **lead into the cover, past the nil, out of a sequence in which
 you hold the middle cards and he holds the top one.** He owns the best card in
