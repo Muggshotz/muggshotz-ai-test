@@ -196,8 +196,9 @@ job in this rule — you keep her so that you have his back if his King is
 sacrificed. Leading her forfeits the only thing she was being saved for.
 
 The exception: **a Queen that is the sole card of its suit reverts to the
-lone-card rule** and is led naked. There is no low card to lead, and a singleton
-is a singleton whatever its rank.
+lone-card rule** and is led alone. There is no low card to lead, and a singleton
+is a singleton whatever its rank. She keeps her robes on — but she goes out by
+herself.
 
 Which extends to the top of the deck. **A lone Ace is led too** — the one Ace
 lead that is not a waste. A led Ace normally kills nothing, but a *singleton*
