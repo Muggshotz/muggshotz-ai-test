@@ -58,7 +58,12 @@ async function calculateShippingCharge(product, basePrice, countryCode) {
   let printifyShippingCost = null;
 
   try {
-    printifyShippingCost = await getRealShippingCost(product.blueprintId, product.printProviderId, countryCode);
+    // The poster keeps its blueprint/provider under product.base (see
+    // resolvePrice); reading the top level here silently shipped posters
+    // for $0 -- $6.79 of real cost, the entire margin. Found Sep 2026.
+    const blueprintId = product.base?.blueprintId ?? product.blueprintId;
+    const printProviderId = product.base?.printProviderId ?? product.printProviderId;
+    printifyShippingCost = await getRealShippingCost(blueprintId, printProviderId, countryCode);
   } catch (err) {
     console.error(`CRITICAL: Live shipping lookup failed for "${product.displayName}": ${err.message}`);
   }
@@ -113,7 +118,25 @@ function feeLineCents(subtotalCents) {
   return Math.ceil(STRIPE_FEE_RATE * subtotalCents + STRIPE_FEE_FIXED_CENTS + HANDLING_FEE_CENTS);
 }
 
-function resolvePrice(product, sizeLabel, colorName) {
+function resolvePrice(product, sizeLabel, colorName, posterChoice) {
+  // The poster keeps its sizes one level down (product.base.sizes) because
+  // it once carried a framed upsell tree beside them. Found Sep 2026 by the
+  // back-half suite: every poster checkout answered 400 "Unknown size" at
+  // the Pay click, so no poster was ever purchasable. Orientation and finish
+  // are checked here too, so a bad pair fails BEFORE the card is charged
+  // rather than inside the webhook after it.
+  if (product.base?.sizes) {
+    const tree = product.base;
+    const sizeEntry = tree.sizes[sizeLabel];
+    if (!sizeEntry) throw new Error(`Unknown poster size "${sizeLabel}".`);
+    const orientation = posterChoice?.orientation;
+    if (!orientation || !sizeEntry.orientations.includes(orientation))
+      throw new Error(`Unknown or missing orientation "${orientation}" for size "${sizeLabel}".`);
+    const finish = posterChoice?.finish;
+    if (!finish || !tree.finishes.includes(finish))
+      throw new Error(`Unknown or missing finish "${finish}".`);
+    return sizeEntry.price;
+  }
   const sizeEntry = product.sizes?.[sizeLabel];
   if (!sizeEntry) throw new Error(`Unknown size "${sizeLabel}" for this product.`);
   return sizeEntry.price;
@@ -158,7 +181,9 @@ async function handleProductOrder(req, res) {
 
   let basePrice;
   try {
-    basePrice = resolvePrice(product, sizeLabel, colorName);
+    basePrice = resolvePrice(product, sizeLabel, colorName, {
+      orientation: req.body.posterOrientation, finish: req.body.posterFinish
+    });
   } catch (err) {
     return res.status(400).json({ error: err.message });
   }
@@ -287,6 +312,10 @@ async function handleProductOrder(req, res) {
       image_url_c: imageUrlC,
       image_url_d: imageUrlD,
       image_url_inside: imageUrlInside,
+      // The poster's variant is picked by orientation + finish, not by size
+      // alone; without these the webhook could not place a poster at all.
+      poster_orientation: req.body.posterOrientation || "",
+      poster_finish: req.body.posterFinish || "",
       placement_adjust: placementAdjustChunks[0] || "",
       placement_adjust_2: placementAdjustChunks[1] || "",
       placement_adjust_3: placementAdjustChunks[2] || "",

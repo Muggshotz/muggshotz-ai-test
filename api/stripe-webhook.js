@@ -650,6 +650,13 @@ async function handleMugOrderPayment(session) {
     // existed, so an old session replaying through here is unchanged.
     orderInput.insideImage = m.image_url_inside || null;
   }
+  if (productKey === "photo-poster") {
+    // Never framed (the upsell tree was retired Aug 2026); orientation and
+    // finish were validated by create-checkout-session before payment.
+    orderInput.posterFramed = false;
+    orderInput.posterOrientation = m.poster_orientation || null;
+    orderInput.posterFinish = m.poster_finish || null;
+  }
 
   try {
     const result = await placeProductOrder(orderInput);
