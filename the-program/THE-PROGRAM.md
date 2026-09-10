@@ -65,6 +65,32 @@ every rule in this book was chosen to preserve it.
 > from a list both players know, in which the thing selected and the thing done
 > are the same act.
 
+### Every play is a message
+
+And here is the consequence that closes off the escape hatch:
+
+> **If you and your partner both share the code, every play is a message to your
+> partner.**
+
+Not the special plays. Not the conventions. *Every* play. There is no neutral
+card, no throwaway, no quiet move — because your partner is reading against the
+whole list, and what you did **not** do is as loud as what you did.
+
+**You cannot decline to speak.** The only genuine choice at the table is whether
+what you are saying is true.
+
+That also settles the question of bandwidth. Most people hear "signalling
+system" and picture a handful of conventions — two or three special plays that
+carry meaning, and the rest of the hand as ordinary cards. This is not that.
+Fifty-two cards go down in a hand and **every one of them transmits.** It is not
+a set of signals embedded in a game. It is a continuous channel that also happens
+to win tricks.
+
+Which is the real reason the system cannot be half-taught. A partner who does not
+know the code simply fails to *receive*. A partner who half-knows it **transmits
+constantly, and most of it is noise** — and you will act on it, because you
+cannot tell his accidents from his sentences.
+
 ---
 
 ## What this is
