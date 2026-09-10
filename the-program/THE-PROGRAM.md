@@ -627,6 +627,11 @@ him the last word in his own project, with three cards face up in front of him
 before he has to commit. You have taken the one suit at the table he had already
 thought about and given him the best possible seat from which to finish it.
 
+Understand what his lead actually was: **a request.** He was asking to get that
+suit back. Return it and you have granted it — and you have given him the chance
+to **survey the entire board** in exactly the suit he asked for. It is nothing
+but asking for trouble.
+
 The second half is worse, because your partner pays it:
 
     Partner must commit in THIRD chair - ahead of the very man who chose the suit
