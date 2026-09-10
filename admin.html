@@ -114,6 +114,9 @@ select{width:100%;background:#0d0d0d;border:1px solid #444;border-radius:8px;pad
   <label>Contact Phone (optional)</label>
   <input type="tel" id="betaContactPhone" placeholder="e.g. (555) 123-4567"/>
 
+  <label>Campaign (optional — sets the product and counts a pack)</label>
+  <select id="betaCampaign"><option value="">No campaign — an individual beta</option></select>
+
   <label>What do they want to sell? (their flyers lead with it)</label>
   <select id="betaFeaturedProduct">
     <option value="classic-white-mug" selected>Coffee mug (phase 1 default — earns the most per sale)</option>
@@ -145,6 +148,34 @@ select{width:100%;background:#0d0d0d;border:1px solid #444;border-radius:8px;pad
     <div id="reprintCodesList" style="font-family:monospace;font-size:12px;line-height:1.7;color:#ccc;margin:.5rem 0 1rem"></div>
     <button class="btn-full" onclick="openFlyerSheet()">🖨️ Print the QR flyers</button>
   </div>
+</div>
+
+<div class="card">
+  <h2 class="section-title">📣 Campaigns</h2>
+  <div class="sub">One product, one audience, a fixed number of packs. Full when every pack is handed out.</div>
+  <label>Name</label>
+  <input type="text" id="campaignName" placeholder="e.g. Lincoln High Band Boosters — fall"/>
+  <label>Product the flyers feature</label>
+  <select id="campaignProduct">
+    <option value="classic-white-mug" selected>Coffee mug</option>
+    <option value="travel-mug-40oz-insulated">Travel mug</option>
+    <option value="coaster-set">Coasters</option>
+    <option value="phone-case-tough">Phone case</option>
+  </select>
+  <label>Packs available</label>
+  <input type="number" id="campaignPacks" value="20" min="0" step="1"/>
+  <button class="btn-full" onclick="createCampaign()">➕ Create Campaign</button>
+  <div class="result" id="campaignResult"></div>
+  <div id="campaignList" style="margin-top:1rem;font-size:13px;color:#ccc;line-height:1.7"></div>
+</div>
+
+<div class="card">
+  <h2 class="section-title">💵 Commissions</h2>
+  <div class="sub">What every beta has earned, what you have paid them, and what is still owed</div>
+  <button class="btn-full" onclick="loadLedger()">🔄 Refresh the ledger</button>
+  <div class="result" id="ledgerResult"></div>
+  <div id="ledgerTotals" style="margin-top:1rem;font-size:13px;color:#ff6a00;font-weight:600"></div>
+  <div id="ledgerTable" style="margin-top:.75rem"></div>
   <div class="codes-output" id="onboardCodesOutput"></div>
 </div>
 
@@ -243,6 +274,7 @@ async function checkPw(){
     try{ localStorage.removeItem(REMEMBER_KEY); }catch(e){}
   }
   document.getElementById('lockScreen').style.display = 'none';
+  loadLedger();
 }
 
 // On page load, if a password was previously remembered on this
@@ -258,6 +290,7 @@ async function checkPw(){
   if(ok){
     enteredPassword = saved;
     document.getElementById('lockScreen').style.display = 'none';
+    loadLedger();
   } else {
     try{ localStorage.removeItem(REMEMBER_KEY); }catch(e){}
   }
@@ -474,7 +507,7 @@ async function onboardBeta(){
   try{
     const resp = await fetch('/api/admin', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'onboard', password: enteredPassword, fullName, baseCode, contactEmail, contactPhone, featuredProduct })
+      body: JSON.stringify({ action: 'onboard', password: enteredPassword, fullName, baseCode, contactEmail, contactPhone, featuredProduct, campaignId: document.getElementById('betaCampaign').value || null })
     });
     const data = await resp.json();
     if (resp.status === 403) { relockWithError('Wrong password.'); return; }
@@ -486,6 +519,7 @@ async function onboardBeta(){
     renderCodeList(document.getElementById('onboardCodesList'), data.codes);
     document.getElementById('onboardCodes').style.display = 'block';
     addLog(`Onboarded ${data.beta.fullName} (${data.beta.baseCode}), ${data.codes.length} codes`);
+    loadLedger();
     document.getElementById('betaFullName').value = ''; document.getElementById('betaBaseCode').value = '';
     document.getElementById('betaContactEmail').value = ''; document.getElementById('betaContactPhone').value = '';
   }catch(err){
@@ -523,6 +557,95 @@ function openFlyerSheet(){
   if(!lastBetaForPrinting) return;
   const q = new URLSearchParams({ name: lastBetaForPrinting.name, base: lastBetaForPrinting.baseCode, codes: lastBetaForPrinting.codes.join(',') });
   window.open('flyer-sheet.html?' + q.toString(), '_blank');
+}
+
+// ===== Commissions ledger + campaigns (Sep 2026) =====
+let ledgerCache = null;
+const PRODUCT_LABELS = { 'classic-white-mug': 'Coffee mug', 'travel-mug-40oz-insulated': 'Travel mug', 'coaster-set': 'Coasters', 'phone-case-tough': 'Phone case' };
+const money = (n) => '$' + Number(n || 0).toFixed(2);
+
+async function adminPost(body){
+  const resp = await fetch('/api/admin', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password: enteredPassword, ...body }) });
+  const data = await resp.json();
+  if (resp.status === 403) { relockWithError('Wrong password.'); throw new Error('Wrong password.'); }
+  if (!resp.ok) throw new Error(data.error || 'Request failed.');
+  return data;
+}
+
+function renderCampaigns(){
+  const list = document.getElementById('campaignList');
+  const sel = document.getElementById('betaCampaign');
+  const cs = (ledgerCache && ledgerCache.campaigns) || [];
+  sel.innerHTML = '<option value="">No campaign — an individual beta</option>' + cs.map(c =>
+    `<option value="${c.id}" ${c.full ? 'disabled' : ''}>${c.name} — ${PRODUCT_LABELS[c.productKey] || c.productKey}, ${c.packsUsed}/${c.packsAvailable} packs${c.full ? ' (FULL)' : ''}</option>`).join('');
+  list.innerHTML = cs.length ? cs.map(c =>
+    `<div><b style="color:${c.full ? '#e07070' : '#5ddb7a'}">${c.name}</b> · ${PRODUCT_LABELS[c.productKey] || c.productKey} · ${c.packsUsed}/${c.packsAvailable} packs${c.full ? ' · FULL' : ''} · earned ${money(c.earned)}</div>`).join('')
+    : '<span style="color:#555">No campaigns yet.</span>';
+}
+
+async function createCampaign(){
+  const name = document.getElementById('campaignName').value.trim();
+  const productKey = document.getElementById('campaignProduct').value;
+  const packsAvailable = parseInt(document.getElementById('campaignPacks').value, 10);
+  if(!name){ showResultIn('campaignResult','Give the campaign a name.','error'); return; }
+  try{
+    const data = await adminPost({ action: 'campaign-create', name, productKey, packsAvailable });
+    showResultIn('campaignResult', `✅ "${data.campaign.name}" created with ${data.campaign.packsAvailable} packs.`, 'success');
+    document.getElementById('campaignName').value = '';
+    addLog(`Campaign "${data.campaign.name}" created`);
+    await loadLedger();
+  }catch(err){ showResultIn('campaignResult', err.message, 'error'); }
+}
+
+async function loadLedger(){
+  try{
+    ledgerCache = await adminPost({ action: 'ledger' });
+    renderCampaigns();
+    const t = ledgerCache.totals;
+    document.getElementById('ledgerTotals').textContent = `${t.betas} beta${t.betas === 1 ? '' : 's'} · earned ${money(t.earned)} · paid ${money(t.paid)} · owed ${money(t.owed)}`;
+    if (ledgerCache.missingTables.length) {
+      showResultIn('ledgerResult', `⚠️ Table${ledgerCache.missingTables.length > 1 ? 's' : ''} not created yet: ${ledgerCache.missingTables.join(', ')}. Run supabase/flyer-ledger.sql in the Supabase SQL editor once — payouts and campaigns need it.`, 'error');
+    } else {
+      document.getElementById('ledgerResult').style.display = 'none';
+    }
+    const table = document.getElementById('ledgerTable');
+    if (!ledgerCache.betas.length) { table.innerHTML = '<div style="color:#555;font-size:13px">No betas yet.</div>'; return; }
+    table.innerHTML = ledgerCache.betas.map(b => `
+      <div style="border:1px solid #333;border-radius:8px;padding:.75rem;margin-bottom:.6rem;font-size:13px">
+        <div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:center">
+          <div><b style="color:#fff">${b.fullName}</b> <span style="color:#888;font-family:monospace">${b.baseCode}</span> · ${b.currentTier}${b.campaign ? ' · ' + b.campaign.name : ''}<br>
+            <span style="color:#aaa">earned ${money(b.earned)} · paid ${money(b.paid)} · <b style="color:${b.available > 0 ? '#5ddb7a' : '#888'}">owed ${money(b.available)}</b> · ${b.codesMatured}/${b.codesTotal} codes matured</span></div>
+          <div style="display:flex;gap:6px">
+            <button onclick="toggleCodes('${b.id}')" style="background:#333;border:none;border-radius:8px;padding:.5rem .8rem;color:#ccc;cursor:pointer;font-size:12px">Codes</button>
+            <button onclick="recordPayout('${b.id}')" ${b.available > 0 ? '' : 'disabled'} style="background:${b.available > 0 ? '#ff6a00' : '#333'};border:none;border-radius:8px;padding:.5rem .8rem;color:#fff;cursor:pointer;font-size:12px">Pay</button>
+          </div>
+        </div>
+        <div id="codes-${b.id}" style="display:none;margin-top:.6rem;font-family:monospace;font-size:12px;line-height:1.7;color:#bbb"></div>
+      </div>`).join('');
+  }catch(err){ showResultIn('ledgerResult', 'Ledger failed: ' + err.message, 'error'); }
+}
+
+function toggleCodes(betaId){
+  const b = ledgerCache.betas.find(x => String(x.id) === String(betaId)); if(!b) return;
+  const el = document.getElementById('codes-' + betaId);
+  if (el.style.display === 'block') { el.style.display = 'none'; return; }
+  renderCodeList(el, b.codes);
+  if (b.payouts.length) el.innerHTML += '<br><span style="color:#ff9a3c">Payouts:</span><br>' + b.payouts.map(p => `${new Date(p.paidAt).toLocaleDateString()} — ${money(p.amount)}${p.note ? ' · ' + p.note : ''}`).join('<br>');
+  el.style.display = 'block';
+}
+
+async function recordPayout(betaId){
+  const b = ledgerCache.betas.find(x => String(x.id) === String(betaId)); if(!b) return;
+  const raw = prompt(`Pay ${b.fullName}. They are owed ${money(b.available)}. Amount:`, b.available.toFixed(2));
+  if (raw === null) return;
+  const amount = Number(raw);
+  if (!(amount > 0)) { alert('Enter an amount greater than zero.'); return; }
+  const note = prompt('Note (how you paid — Venmo, cash, check #…):', '') || '';
+  try{
+    const data = await adminPost({ action: 'payout', betaId, amount, note });
+    addLog(`Paid ${money(data.payout.amount)} to ${b.fullName}${note ? ' (' + note + ')' : ''}`);
+    await loadLedger();
+  }catch(err){ showResultIn('ledgerResult', err.message, 'error'); }
 }
 </script>
 </body>

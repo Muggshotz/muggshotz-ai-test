@@ -547,6 +547,7 @@ async function handleOnboard(req, res) {
   const contactEmail = String(req.body.contactEmail || '').trim() || null;
   const contactPhone = String(req.body.contactPhone || '').trim() || null;
   const featuredProduct = String(req.body.featuredProduct || '').trim() || null;
+  const campaignId = req.body.campaignId ? String(req.body.campaignId) : null;
   const tier = TIER_SEQUENCE[0]; // every new beta enters at PotShotz
 
   if (!fullName) return res.status(400).json({ error: 'Full name is required.' });
@@ -558,9 +559,23 @@ async function handleOnboard(req, res) {
     if (existing.length)
       return res.status(409).json({ error: `Base code ${baseCode} already belongs to ${existing[0].full_name}. Pick another.` });
 
+    // A campaign has a fixed number of packs; the pack that would exceed
+    // it is refused here, before anything is written, so "full" is a
+    // visible reason and never a silent overflow.
+    let campaign = null;
+    if (campaignId) {
+      const rows = await sb('GET', `campaigns?id=eq.${encodeURIComponent(campaignId)}&select=*`);
+      campaign = rows[0];
+      if (!campaign) return res.status(404).json({ error: `No campaign with id ${campaignId}.` });
+      const members = await sb('GET', `flyer_betas?campaign_id=eq.${encodeURIComponent(campaignId)}&select=id`);
+      if (members.length >= campaign.packs_available)
+        return res.status(409).json({ error: `"${campaign.name}" is full: all ${campaign.packs_available} packs are handed out. Open more packs on the campaign, or onboard without one.` });
+    }
+
     const betaRow = { full_name: fullName, base_code: baseCode, contact_email: contactEmail, current_tier: tier };
     if (contactPhone) betaRow.contact_phone = contactPhone;
-    if (featuredProduct) betaRow.featured_product = featuredProduct;
+    if (featuredProduct || campaign) betaRow.featured_product = featuredProduct || campaign.product_key;
+    if (campaign) betaRow.campaign_id = campaign.id;
     let beta, warning = null;
     try {
       [beta] = await sb('POST', 'flyer_betas', betaRow);
@@ -568,11 +583,11 @@ async function handleOnboard(req, res) {
       // The phone and featured-product columns may not exist yet on the
       // live table; the beta is still worth creating. Say so rather than
       // failing the whole onboarding over an optional field.
-      const missing = /column/i.test(err.message) && /(contact_phone|featured_product)/.test(err.message);
+      const missing = /column/i.test(err.message) && /(contact_phone|featured_product|campaign_id)/.test(err.message);
       if (!missing) throw err;
-      delete betaRow.contact_phone; delete betaRow.featured_product;
+      delete betaRow.contact_phone; delete betaRow.featured_product; delete betaRow.campaign_id;
       [beta] = await sb('POST', 'flyer_betas', betaRow);
-      warning = 'Saved without phone/featured product: that column is not on the flyer_betas table yet.';
+      warning = 'Saved without phone/featured product/campaign: that column is not on the flyer_betas table yet (run supabase/flyer-ledger.sql).';
     }
 
     const codes = await sb('POST', 'flyer_codes', buildTierCodes(beta.id, baseCode, tier));
@@ -624,6 +639,123 @@ async function handleBetas(req, res) {
   }
 }
 
+
+// A table this project has not created yet (supabase/flyer-ledger.sql not
+// run) answers 404 / "Could not find the table". The ledger still works
+// without it -- payouts read as none, campaigns as none -- and says which
+// tables are missing so the panel can point at the SQL file.
+const isMissingTable = (err) => err.status === 404 || /Could not find the table|does not exist/i.test(err.message || '');
+async function sbOptional(path, missing, tableName) {
+  try { return await sb('GET', path); }
+  catch (err) { if (isMissingTable(err)) { missing.push(tableName); return []; } throw err; }
+}
+
+// Every beta with what their codes have earned, what has been paid out,
+// and what is still owed; every campaign with how many packs are gone.
+async function buildLedger() {
+  const missing = [];
+  const betas = await sb('GET', 'flyer_betas?select=*&order=created_at.desc');
+  const ids = betas.map(b => b.id);
+  const codes = ids.length ? await sb('GET', `flyer_codes?beta_id=in.(${ids.join(',')})&select=*&order=tier,flyer_number`) : [];
+  const payouts = await sbOptional('flyer_payouts?select=*&order=paid_at.desc', missing, 'flyer_payouts');
+  const campaigns = await sbOptional('campaigns?select=*&order=created_at.desc', missing, 'campaigns');
+
+  const round = (n) => Math.round(n * 100) / 100;
+  const betaRows = betas.map(b => {
+    const mine = codes.filter(c => c.beta_id === b.id);
+    const paidRows = payouts.filter(p => String(p.beta_id) === String(b.id));
+    const earned = round(mine.reduce((s, c) => s + Number(c.commission_total || 0), 0));
+    const paid = round(paidRows.reduce((s, p) => s + Number(p.amount || 0), 0));
+    const campaign = campaigns.find(c => String(c.id) === String(b.campaign_id)) || null;
+    return {
+      id: b.id, fullName: b.full_name, baseCode: b.base_code, currentTier: b.current_tier,
+      contactEmail: b.contact_email || null, contactPhone: b.contact_phone || null,
+      featuredProduct: b.featured_product || null, createdAt: b.created_at || null,
+      campaign: campaign ? { id: campaign.id, name: campaign.name, productKey: campaign.product_key } : null,
+      earned, paid, available: round(earned - paid),
+      codesMatured: mine.filter(c => c.matured).length, codesTotal: mine.length,
+      codes: mine.map(c => ({
+        code: c.code, tier: c.tier, flyerNumber: c.flyer_number,
+        earned: Number(c.commission_total || 0), cap: Number(c.cap_amount || 0),
+        rate: Number(c.commission_rate || 0), matured: !!c.matured
+      })),
+      payouts: paidRows.map(p => ({ id: p.id, amount: Number(p.amount), note: p.note || null, paidAt: p.paid_at }))
+    };
+  });
+  const campaignRows = campaigns.map(c => {
+    const members = betas.filter(b => String(b.campaign_id) === String(c.id));
+    return {
+      id: c.id, name: c.name, productKey: c.product_key, packsAvailable: c.packs_available,
+      packsUsed: members.length, full: members.length >= c.packs_available, notes: c.notes || null,
+      earned: round(members.reduce((s, m) => s + (betaRows.find(r => r.id === m.id)?.earned || 0), 0))
+    };
+  });
+  return {
+    betas: betaRows, campaigns: campaignRows, missingTables: missing,
+    totals: {
+      betas: betaRows.length,
+      earned: round(betaRows.reduce((s, b) => s + b.earned, 0)),
+      paid: round(betaRows.reduce((s, b) => s + b.paid, 0)),
+      owed: round(betaRows.reduce((s, b) => s + b.available, 0))
+    }
+  };
+}
+
+async function handleLedger(req, res) {
+  const { password } = req.body || {};
+  if (password !== ADMIN_PASSWORD) return res.status(403).json({ error: 'Unauthorized.' });
+  try { return res.status(200).json(await buildLedger()); }
+  catch (err) { console.error('Admin ledger error:', err.message, err.detail || ''); return res.status(500).json({ error: err.message }); }
+}
+
+// Records that a beta was paid. Refuses to pay more than they are owed,
+// so the ledger can never go negative by a typo.
+async function handlePayout(req, res) {
+  const { password } = req.body || {};
+  if (password !== ADMIN_PASSWORD) return res.status(403).json({ error: 'Unauthorized.' });
+  const betaId = req.body.betaId != null ? String(req.body.betaId) : '';
+  const amount = Math.round(Number(req.body.amount) * 100) / 100;
+  const note = String(req.body.note || '').trim() || null;
+  if (!betaId) return res.status(400).json({ error: 'betaId is required.' });
+  if (!(amount > 0)) return res.status(400).json({ error: 'Enter an amount greater than zero.' });
+  try {
+    const ledger = await buildLedger();
+    if (ledger.missingTables.includes('flyer_payouts'))
+      return res.status(409).json({ error: 'The flyer_payouts table does not exist yet — run supabase/flyer-ledger.sql in the Supabase SQL editor first.' });
+    const beta = ledger.betas.find(b => String(b.id) === betaId);
+    if (!beta) return res.status(404).json({ error: `No beta with id ${betaId}.` });
+    if (amount > beta.available + 0.005)
+      return res.status(409).json({ error: `${beta.fullName} is owed $${beta.available.toFixed(2)}; cannot record a $${amount.toFixed(2)} payout.` });
+    const [row] = await sb('POST', 'flyer_payouts', { beta_id: betaId, amount, note });
+    console.log(`Payout recorded: $${amount} to beta ${betaId} (${beta.baseCode})${note ? ' — ' + note : ''}.`);
+    return res.status(200).json({ payout: { id: row.id, amount: Number(row.amount), note: row.note || null, paidAt: row.paid_at }, available: Math.round((beta.available - amount) * 100) / 100 });
+  } catch (err) {
+    console.error('Admin payout error:', err.message, err.detail || '');
+    return res.status(500).json({ error: err.message });
+  }
+}
+
+async function handleCampaignCreate(req, res) {
+  const { password } = req.body || {};
+  if (password !== ADMIN_PASSWORD) return res.status(403).json({ error: 'Unauthorized.' });
+  const name = String(req.body.name || '').trim();
+  const productKey = String(req.body.productKey || '').trim();
+  const packsAvailable = parseInt(req.body.packsAvailable, 10);
+  const notes = String(req.body.notes || '').trim() || null;
+  if (!name) return res.status(400).json({ error: 'Campaign name is required.' });
+  if (!productKey) return res.status(400).json({ error: 'Pick the product this campaign features.' });
+  if (!(packsAvailable >= 0)) return res.status(400).json({ error: 'Packs available must be a whole number.' });
+  try {
+    const [row] = await sb('POST', 'campaigns', { name, product_key: productKey, packs_available: packsAvailable, notes });
+    console.log(`Campaign created: ${row.id} "${name}" (${productKey}, ${packsAvailable} packs).`);
+    return res.status(200).json({ campaign: { id: row.id, name: row.name, productKey: row.product_key, packsAvailable: row.packs_available, packsUsed: 0, full: packsAvailable === 0 } });
+  } catch (err) {
+    if (isMissingTable(err)) return res.status(409).json({ error: 'The campaigns table does not exist yet — run supabase/flyer-ledger.sql in the Supabase SQL editor first.' });
+    console.error('Admin campaign error:', err.message, err.detail || '');
+    return res.status(500).json({ error: err.message });
+  }
+}
+
 export default async function handler(req, res) {
   // Printify catalog reads are GET requests (read-only, no password
   // needed) — check this first, before the POST/action routing below.
@@ -645,6 +777,9 @@ export default async function handler(req, res) {
   if (action === 'storage-cleanup') return handleStorageCleanup(req, res);
   if (action === 'onboard') return handleOnboard(req, res);
   if (action === 'betas') return handleBetas(req, res);
+  if (action === 'ledger') return handleLedger(req, res);
+  if (action === 'payout') return handlePayout(req, res);
+  if (action === 'campaign-create') return handleCampaignCreate(req, res);
 
   return res.status(400).json({ error: `Unknown action "${action}".` });
 }

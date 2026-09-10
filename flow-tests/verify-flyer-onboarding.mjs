@@ -16,6 +16,8 @@ globalThis.fetch = async (url, opts = {}) => {
   const u = String(url); const m = opts.method || 'GET';
   const json = (b, status = 200) => new Response(JSON.stringify(b), { status, headers: { 'content-type': 'application/json' } });
   const table = (u.match(/\/rest\/v1\/([a-z_]+)/) || [])[1];
+  if (/\/rpc\/fn_beta_available_balance/.test(u)) return json(24.5);
+  if (table && !db[table] && /^(flyer_payouts|campaigns)$/.test(table)) return json({ code: 'PGRST205', message: `Could not find the table 'public.${table}' in the schema cache` }, 404);
   if (!table || !db[table]) return json({ message: `unstubbed ${m} ${u}` }, 500);
   if (m === 'POST') {
     const rows = [].concat(JSON.parse(opts.body)).map((r) => ({ id: nextId++, created_at: new Date().toISOString(), ...r }));
@@ -108,6 +110,63 @@ await check('unknownBaseCodeIs404', async () => {
   const r = await call({ action: 'betas', password: 'pw', baseCode: 'NOBODY' });
   if (r.code !== 404) throw new Error(`answered ${r.code}`);
   return '404';
+});
+
+// ===== Ledger, payouts, campaigns =====
+await check('ledgerWorksBeforeTheSqlIsRun', async () => {
+  const r = await call({ action: 'ledger', password: 'pw' });
+  if (r.code !== 200) throw new Error(`answered ${r.code}: ${JSON.stringify(r.body)}`);
+  const miss = r.body.missingTables;
+  if (!miss.includes('flyer_payouts') || !miss.includes('campaigns')) throw new Error(`missingTables=${JSON.stringify(miss)}`);
+  if (r.body.totals.earned !== 24.5 || r.body.totals.owed !== 24.5) throw new Error(`totals ${JSON.stringify(r.body.totals)}`);
+  const p = await call({ action: 'payout', password: 'pw', betaId: db.flyer_betas[0].id, amount: 5 });
+  if (p.code !== 409 || !/flyer-ledger\.sql/.test(p.body.error)) throw new Error(`payout answered ${p.code}: ${JSON.stringify(p.body)}`);
+  const c = await call({ action: 'campaign-create', password: 'pw', name: 'X', productKey: 'coaster-set', packsAvailable: 5 });
+  if (c.code !== 409 || !/flyer-ledger\.sql/.test(c.body.error)) throw new Error(`campaign answered ${c.code}: ${JSON.stringify(c.body)}`);
+  return 'ledger answers with earned/owed and names both missing tables; payout and campaign point at the SQL file';
+});
+db.flyer_payouts = []; db.campaigns = [];
+let campaignId;
+await check('campaignFillsAndCloses', async () => {
+  const c = await call({ action: 'campaign-create', password: 'pw', name: 'Lincoln Band', productKey: 'coaster-set', packsAvailable: 1 });
+  if (c.code !== 200) throw new Error(`create answered ${c.code}: ${JSON.stringify(c.body)}`);
+  campaignId = c.body.campaign.id;
+  const a = await call({ action: 'onboard', password: 'pw', fullName: 'Drum Major', baseCode: 'DRUM', campaignId });
+  if (a.code !== 200) throw new Error(`first onboard answered ${a.code}: ${JSON.stringify(a.body)}`);
+  const beta = db.flyer_betas.find((b) => b.base_code === 'DRUM');
+  if (String(beta.campaign_id) !== String(campaignId)) throw new Error('campaign_id not saved');
+  if (beta.featured_product !== 'coaster-set') throw new Error(`featured_product=${beta.featured_product}, expected the campaign's product`);
+  const b = await call({ action: 'onboard', password: 'pw', fullName: 'Second Chair', baseCode: 'FLUTE', campaignId });
+  if (b.code !== 409 || !/full/.test(b.body.error)) throw new Error(`second onboard answered ${b.code}: ${JSON.stringify(b.body)}`);
+  if (db.flyer_betas.some((x) => x.base_code === 'FLUTE')) throw new Error('the refused beta was written anyway');
+  const l = await call({ action: 'ledger', password: 'pw' });
+  const camp = l.body.campaigns.find((x) => String(x.id) === String(campaignId));
+  if (!camp || camp.packsUsed !== 1 || !camp.full) throw new Error(`ledger campaign ${JSON.stringify(camp)}`);
+  return 'one pack: the first beta takes it (inheriting the campaign product), the second is refused as full, the ledger shows 1/1 FULL';
+});
+await check('payoutReducesWhatIsOwed', async () => {
+  const chipper = db.flyer_betas.find((b) => b.base_code === 'CHIPPER');
+  const over = await call({ action: 'payout', password: 'pw', betaId: chipper.id, amount: 30, note: 'oops' });
+  if (over.code !== 409) throw new Error(`overpay answered ${over.code}: ${JSON.stringify(over.body)}`);
+  const p = await call({ action: 'payout', password: 'pw', betaId: chipper.id, amount: 10, note: 'Venmo' });
+  if (p.code !== 200 || p.body.available !== 14.5) throw new Error(`payout answered ${p.code}: ${JSON.stringify(p.body)}`);
+  const l = await call({ action: 'ledger', password: 'pw' });
+  const b = l.body.betas.find((x) => x.baseCode === 'CHIPPER');
+  if (b.earned !== 24.5 || b.paid !== 10 || b.available !== 14.5) throw new Error(`ledger row ${JSON.stringify({ e: b.earned, p: b.paid, a: b.available })}`);
+  if (b.payouts.length !== 1 || b.payouts[0].note !== 'Venmo') throw new Error('payout not listed on the beta');
+  if (l.body.totals.paid !== 10 || l.body.totals.owed !== 14.5) throw new Error(`totals ${JSON.stringify(l.body.totals)}`);
+  const zero = await call({ action: 'payout', password: 'pw', betaId: chipper.id, amount: 0 });
+  if (zero.code !== 400) throw new Error(`zero payout answered ${zero.code}`);
+  return '$30 refused against $24.50 owed; $10 Venmo recorded -> owed $14.50, totals follow, $0 refused';
+});
+await check('theBetaBalancePageSubtractsPayouts', async () => {
+  const { default: getBalance } = await import(pathToFileURL(path.join(ROOT, 'api', 'get-balance.js')).href);
+  const r = { code: 0, body: null, status(c) { this.code = c; return this; }, json(b) { this.body = b; return this; } };
+  await getBalance({ method: 'GET', query: { referralCode: 'CHIPPER-07' } }, r);
+  if (r.code !== 200) throw new Error(`answered ${r.code}: ${JSON.stringify(r.body)}`);
+  if (r.body.totalBalance !== 14.5) throw new Error(`totalBalance=${r.body.totalBalance}, expected 24.50 earned - 10 paid`);
+  if (r.body.fullName !== 'Jane Smith') throw new Error('name missing (the landing page reads it)');
+  return `flyer-balance shows ${r.body.totalBalance} after the $10 payout, name "${r.body.fullName}" for the landing page`;
 });
 
 console.error = origErr;

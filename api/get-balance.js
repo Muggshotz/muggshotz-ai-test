@@ -69,7 +69,21 @@ async function handleReferralLookup(req, res) {
     });
     const balanceRaw = await balResp.json();
     if (!balResp.ok) throw new Error("fn_beta_available_balance failed: " + JSON.stringify(balanceRaw));
-    const totalBalance = Number(balanceRaw) || 0;
+    let totalBalance = Number(balanceRaw) || 0;
+    // Money already paid out (recorded from the admin ledger) comes off the
+    // balance the beta sees. The table may not exist yet on a project that
+    // has not run supabase/flyer-ledger.sql -- then nothing is subtracted.
+    try {
+      const payResp = await fetch(`${SUPABASE_URL}/rest/v1/flyer_payouts?beta_id=eq.${encodeURIComponent(String(beta.id))}&select=amount`, {
+        headers: { apikey: SUPABASE_SERVICE_ROLE_KEY, Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}` }
+      });
+      if (payResp.ok) {
+        const paid = (await payResp.json()).reduce((s, p) => s + Number(p.amount || 0), 0);
+        totalBalance = Math.max(0, Math.round((totalBalance - paid) * 100) / 100);
+      }
+    } catch (err) {
+      console.error("Payout lookup failed (balance shown unreduced):", err.message);
+    }
 
     const tierCodesUrl = `${SUPABASE_URL}/rest/v1/flyer_codes?beta_id=eq.${beta.id}&tier=eq.${encodeURIComponent(beta.current_tier)}&select=matured`;
     const tierCodesResp = await fetch(tierCodesUrl, {
