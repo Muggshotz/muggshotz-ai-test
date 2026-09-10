@@ -328,6 +328,68 @@ in. Over a few leads your partner locates your Aces from cards you never played.
 
 ---
 
+### Priority 4 (last) — Ace-Queen or Ace-Jack
+
+The bottom of the order, and the single exception to the Ace ban. If none of the
+above is available, lead from a suit holding **Ace-Queen** or **Ace-Jack**.
+An **Ace-King-Ten** is deferred on the same reasoning.
+
+This lead sits last because two of the book's principles disagree about it, and
+the order is how the disagreement gets settled.
+
+**It is the safest lead in the book for your partner.** You hold the Ace, so his
+King in that suit **cannot be captured** — the only card that beats a King is in
+your own hand, and you will never play it on him. By the leader's-duty
+principle alone this ought to rank near the top.
+
+**It is the worst lead in the book for you.** First chair is the worst seat on
+earth for a finesse. Everybody acts after you. The finesse requires the King to
+commit *before* your Queen, and leading the suit yourself guarantees precisely
+the opposite.
+
+So you defer, and you hope the suit is opened by someone else — ideally by the
+player to your west, which places you in the last chair:
+
+    Suit led from your west. You act LAST holding A Q.
+
+      King holder plays low    ->  your Queen wins. TWO tricks from the suit.
+      King holder plays King   ->  your Ace takes it. Their honour is dead.
+
+Only when nothing else is available do you open it yourself, accepting that you
+have spent the finesse to make a safe lead.
+
+**The bidding discipline that goes with it.** Holding A-Q you count the **Ace**
+as a trick and the **Queen as a possible only.** You do not bid a finesse as
+though it were already made. This follows from the bid being a declared word:
+a word that assumes a finesse is a word that is not true yet.
+
+**Why any of this matters.** *Finesses lead directly to sets.* A successful
+finesse does not merely win you a trick — it kills their King. That is a trick
+**subtracted from their contract**, not added to yours. The same arithmetic as
+the duck in Priority 1, and the same as an Ace held in ambush. Everything in
+this system is engineered to make the opponents' honours die without ever
+winning anything.
+
+---
+
+## The order of leads, in full
+
+    1.  King-Queen plus two or more others   ->  lead the KING
+                                                 (never from exactly K Q x)
+
+    2.  A lone card                          ->  lead it
+                                                 (bid of 1 disambiguates)
+
+    3.  A suit you hold the Queen in         ->  lead LOW, never the Queen
+                                                 (the promise: play your King)
+
+    4.  Ace-Queen or Ace-Jack                ->  last resort only
+                                                 (A-K-10 deferred likewise)
+
+    Never a suit you hold the Ace in, until rule 4 leaves you no choice.
+
+---
+
 ## Appendix — The record
 
 Case's Ladder, Spades (Yahoo) ladder, handle `qyetstormm`. The searchable
