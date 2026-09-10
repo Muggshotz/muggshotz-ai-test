@@ -546,7 +546,21 @@ const TRAVEL_MUG_CATALOG = {
     layoutType: "single-image",
     sizeLabel: "30oz",
     price: 34.95,
-    colors: null
+    // STALE COPY, FOUND BY THE HAND-OFF SUITE (Sep 2026). This page keeps
+    // its own copy of every product, and this entry still said
+    // `colors: null` from before the Tundra gained its three colours (pulled
+    // live from Printify: blueprint 1662 / provider 86 lists Black / White /
+    // Steel). The studio offered the customer White; this page, believing
+    // the cup had no colours, never asked and sent colorName: null -- and
+    // the server's resolver throws "A color selection is required" for any
+    // product with a colour list. That throw runs in the webhook, AFTER
+    // payment. Paid, and no order placed. Same three colours, same names,
+    // as lib/products-catalog.js and the studio's own catalogue.
+    colors: [
+      { name: "White", hex: "#FFFFFF" },
+      { name: "Black", hex: "#111214" },
+      { name: "Steel", hex: "#B8BCC2" }
+    ]
   },
   "travel-mug-40oz-vacuum": {
     displayName: "Vacuum Thermal Tumbler, 40oz",
