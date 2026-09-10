@@ -1048,6 +1048,19 @@ his behalf.
 Which makes this the sharpest form of a rule already in this book — *never open a
 suit you hold the Ace in.* Against a nil it stops being a preference.
 
+And if you want the proof without any of the reasoning, look at the same fact
+from inside the hand you are trying to beat:
+
+> **Most of the time when you are nil, you are sitting there begging that
+> someone — anyone — please start leading Aces.**
+
+Everyone who has ever bid nil knows that feeling. The whole hand spent hoping
+somebody will start cashing high cards so you can throw your problems away in
+safety.
+
+That is what your partner is doing for the opponent. He is granting the exact
+prayer you would be saying in that seat.
+
 ---
 
 ### The bleeding — and it is not what it sounds like
