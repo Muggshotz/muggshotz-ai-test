@@ -140,6 +140,45 @@ downstream of it dies.
 Which is why an underbid, and *"well, I had to make my tricks first,"* are not
 errors of judgement. They are corruptions of the accounting.
 
+### Worse than that: they are lies to your partner
+
+Corruption of the ledger is the polite description. The true one is simpler.
+
+**The only communication at that table that matters is the communication between
+you and your partner.** Deception buys nothing against the opponents, because a
+competent opponent has to play as though you hold the Ace whether you do or not.
+They cannot afford the assumption. It is already priced in. Your falsecard tells
+them nothing they were not already assuming.
+
+Your partner is the only person at the table *trying to act on what you tell
+him.* So a lie in this game has exactly one recipient, and he is on your side.
+
+Leading the Queen when you hold the King. Leading the King when you hold the
+Ace. These do not fool anybody but the man you need.
+
+    You hold   A K of hearts
+    Partner is VOID in hearts
+    You lead the KING
+
+    Partner cannot know where the Ace is.
+    So he does the correct thing with the information he has - he CUTS it.
+
+He has just trumped his own partner's winner. A trump spent, a trick stolen from
+your own side, and his void — the thing the entire crossfire is built on — burned
+for nothing. Three resources destroyed by one card.
+
+**And it is on you.** He played correctly given what he knew, and you are the one
+who chose what he knew. That is the accountability rule of The Program, and it is
+the right one:
+
+> A disaster caused by bad information belongs to whoever supplied the
+> information, not to the partner who acted rationally on it.
+
+Note that this is also why Priority 1 leading the King is not itself a lie. The
+King lead is *defined* as denying the Ace. **The convention is the truth.**
+Departing from it is the falsehood — and it is a falsehood that can only ever
+reach one person.
+
 **Why K Q x is banned.** Your King and Queen cannot be captured by the Ace
 unless you are the one who opens the suit. You are the only person who can hand
 the Ace a clean shot at your honours.
