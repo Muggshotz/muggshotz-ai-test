@@ -974,32 +974,36 @@ left when the real one arrived.
 
 ### And it is worse than that — it is one-to-three
 
-The count above misses the largest part, because the real question is not which
-card wins the trick. **It is who is left holding the lead.**
+The count above still misses the largest part. Remember that the King was your
+**only** heart, so from the moment it is played you are void in the suit — and a
+void means that every further round of hearts hands you a **free discard.**
 
     BAD LINE
-      Partner's Ace beats your King      ->  PARTNER holds the lead
-      Queen appears, he has only the 8   ->  the opponents take it
+      Partner's Ace beats your King        ->  1 trick
+      Queen appears, he holds only the 8   ->  the opponents take it
+        you discard, but on a trick you LOST
                                                              TOTAL:  1
 
     GOOD LINE
-      Partner plays the 8, your King wins ->  YOU hold the lead
-        -> you lead your singleton and go VOID in a second suit
-      Queen appears, his Ace takes it                        TOTAL:  2
-        -> plus a void that cuts a trick later                       3
+      Partner plays the 8, your King wins  ->  1 trick
+      Queen appears, partner takes it with the ACE  ->  1 more
+        and while he is winning it, you are void - so you DISCARD,
+        and get short in a SECOND suit at no cost whatsoever
+                                                             TOTAL:  2
+        -> plus the cut that second void produces later              3
 
-Winning with the *correct* card does not merely bank the trick. It hands **you**
-the lead — and the lead is the only thing that lets you choose which suit to
-strip yourself out of. That singleton never gets played unless you are the one on
-lead.
+The discard is the part nobody counts. It rides along **on the trick your partner
+is winning with the Ace** — you are shortening yourself toward a second void
+while your own side is taking the book. It costs nothing, because the trick was
+already secured by somebody else.
 
-So the King winning is not one trick. It is a trick, plus the tempo, plus the
-down payment on a cut that cannot happen any other way. **One to three.**
+So the sequence is not one trick against two. It is one trick against a trick,
+plus a trick, plus a down payment on a cut that could not have been arranged any
+other way. **One to three.**
 
-He did not cost you a trick. He cost you a trick, your tempo, and the second
-barrel of the crossfire — and that third one is invisible, because it is a trick
-that never appears in the hand at all rather than one you watch somebody else
-take.
+He did not cost you a trick. He cost you a trick and the second barrel of the
+crossfire — and that third one is invisible, because it is a trick that never
+appears in the hand at all, rather than one you watch somebody else take.
 
 Which is why the excuse is so enraging. **The damage he cannot see is larger than
 the damage he can.**
