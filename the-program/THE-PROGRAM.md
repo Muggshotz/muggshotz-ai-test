@@ -976,6 +976,8 @@ And then you ask him: *"Partner, why did you take my trick?"*
 
 > ### *"It's all I had."*
 
+I literally feel like coming across the table.
+
 Which is **false on its face.** He produced the 8 two tricks later, so he had the
 8 the whole time. The sentence is not a defence, it is a confession — he was not
 tracking anything then and he is not tracking anything now, because a man who
