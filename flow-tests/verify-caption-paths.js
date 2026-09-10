@@ -226,6 +226,9 @@ scenarios.nudgeSitsBelowTheMug = async (page) => {
 //     the customer nor the prompt they write could tell A from B.
 scenarios.theTwoReferencePinsKeepTheirIdentities = async (page) => {
   const T2 = (ms) => page.waitForTimeout(ms);
+  // Every scenario in this suite opens the studio itself; the runner does not.
+  await openStudio(page);
+  await T2(400);
 
   // Both pins carry a picture, so the prompt has to bind both.
   const sent = await page.evaluate(() => {
@@ -240,15 +243,26 @@ scenarios.theTwoReferencePinsKeepTheirIdentities = async (page) => {
   if (!sent.a || !sent.b) return 'FAIL: could not seed both reference pins';
 
   // The binding sentence must exist in the studio's own reference block.
-  // The inline script text, not documentElement.innerHTML -- this page is
-  // ~800KB and serialising the whole thing through evaluate does not survive.
-  const html = await page.evaluate(() => Array.from(document.scripts).map((s) => s.textContent || '').join('\n'));
-  if (!/FIRST image attached after the customer's main photo is Reference A/i.test(html)) {
-    return 'FAIL: nothing in the prompt binds Reference A to a position. The names and the pictures are both there, and nothing says which picture is which — so the model has to guess, and guessing wrong is the reported bug';
+  // SEARCHED IN THE BROWSER, not brought back. This page carries ~800KB of
+  // inline script and handing the whole thing across the evaluate boundary does
+  // not survive the trip -- two earlier versions of this check failed for that
+  // reason while the text was sitting in the file all along. Return a boolean.
+  // READ THE SHIPPED FILE. Two earlier versions of this check tried to pull the
+  // page's own script text back through evaluate and both came home empty --
+  // this page carries ~800KB of inline script and it does not survive the trip.
+  // The binding is a property of the artifact we ship, so assert on the
+  // artifact: same file the server above is serving.
+  const src = require('fs').readFileSync(require('path').join(__dirname, '..', 'needles-studio.html'), 'utf8');
+  const bound = {
+    len: src.length,
+    a: /FIRST image attached after the customer's main photo is Reference A/i.test(src),
+    b: /SECOND image attached after the main photo is Reference B/i.test(src)
+  };
+  if (!bound.len) return 'FAIL: no inline script found at all — this measures nothing';
+  if (!bound.a) {
+    return `FAIL: nothing in the prompt binds Reference A to a position (searched ${bound.len} chars of script). The names and the pictures are both there, and nothing says which picture is which — so the model has to guess, and guessing wrong is the reported bug`;
   }
-  if (!/SECOND image attached after the main photo is Reference B/i.test(html)) {
-    return 'FAIL: Reference B is named but never bound to a position';
-  }
+  if (!bound.b) return 'FAIL: Reference B is named but never bound to a position';
 
   // And the boxes keep their identities when emptied.
   const labels = await page.evaluate(() => {
