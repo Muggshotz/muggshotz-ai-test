@@ -163,17 +163,26 @@ Return to Chapter 0 and read the partner's bid again.
 
 ### The seating
 
-Referred to throughout, and always relative to whoever leads the current trick:
+These are **positions, not people.** They describe the order of play on the
+trick in front of you, and they rotate with every trick.
 
-    1st chair   the leader
-    2nd chair   the player to the leader's west, acting immediately after
-    3rd chair   the leader's PARTNER
-    4th chair   the last player to act
+    1st chair   whoever leads
+    2nd chair   the player to first chair's west - acts immediately after
+    3rd chair   whoever plays third in the rotation
+    4th chair   whoever acts last
 
-Note what that means on your own lead: your partner commits in third chair,
-**before** the final opponent. The last word — the cheap-trick seat — belongs to
-them. Leading hands the opposition positional advantage on that trick, which is
-itself an argument for leading suits you do not mind losing.
+Third chair is not "your partner." Third chair is third chair. Whose it is
+changes every trick, and so does yours. When this book says *second chair* or
+*fourth chair* it is talking about **when you have to commit relative to
+everyone else**, and nothing more.
+
+That is the whole reason the positions matter. Fourth chair acts with complete
+information — three cards already on the table — and can therefore win as
+cheaply as the trick allows, or decline it at no cost. Second chair commits
+almost blind. The same thirteen cards are worth different amounts depending on
+which chair you are sitting in when they have to be played, and much of what
+follows is about arranging for your cards and your partner's to be spent from
+the good chairs and preserved from the bad ones.
 
 ---
 
