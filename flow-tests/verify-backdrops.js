@@ -166,6 +166,78 @@ scenarios.frameGoesOnThePrintPanel = async (page, log) => {
   return 'PASS: the frame is laid over the print panel (size, position, fade and backdrop inside it), fills the panel edge to edge, and Back restores the placement';
 };
 
+// ---- SIXTEEN SWATCHES, SIXTEEN FRAMES. ----
+// Alyx: "the colors are bogus, the actual colors do not correspond with the
+// buttons you push... several variations of red that do the same thing."
+//
+// Measured on the real asset with the real transform, the sixteen swatches
+// produced SIX outcomes. Gold, Champagne, Bronze, Orange, Tan and Yellow all
+// gave the same gold. Silver, Black, White, Red and Pink all gave the same
+// coral -- so a customer choosing a BLACK frame got pink.
+//
+// The cause was hue-rotate, which can only spin the hue: what separates Gold
+// from Champagne is LIGHTNESS, and Silver, Black and White have no hue at all,
+// so they collapsed onto whatever gold's hue minus theirs happened to be.
+//
+// This holds the three things that were actually wrong, not just "they differ":
+//   * every swatch produces a distinguishable frame;
+//   * the ACHROMATIC ones land achromatic -- black dark, white light, silver
+//     neutral -- which is the failure a customer notices first;
+//   * and the relief survives, because a frame flooded to one flat tone is a
+//     different bug wearing the same fix.
+scenarios.everySwatchGivesItsOwnFrame = async (page) => {
+  const r = await page.evaluate(async () => {
+    const load = (u) => new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = u; });
+    const img = await load('frame-ornate-gold.png');
+    const out = [];
+    for (const sw of FRAME_COLOR_SWATCHES) {
+      const c = recolouredFrameCanvas(img, 'frame-ornate-gold.png', sw.hex);
+      const g = c.getContext('2d', { willReadFrequently: true });
+      const d = g.getImageData(0, 0, c.width, c.height).data;
+      let r0 = 0, g0 = 0, b0 = 0, n = 0, lo = 255, hi = 0;
+      for (let i = 0; i < d.length; i += 4 * 37) {
+        if (d[i + 3] < 200) continue;
+        r0 += d[i]; g0 += d[i + 1]; b0 += d[i + 2]; n++;
+        const lum = d[i] * 0.299 + d[i + 1] * 0.587 + d[i + 2] * 0.114;
+        if (lum < lo) lo = lum; if (lum > hi) hi = lum;
+      }
+      if (!n) continue;
+      out.push({ name: sw.name, avg: [Math.round(r0 / n), Math.round(g0 / n), Math.round(b0 / n)], relief: Math.round(hi - lo) });
+    }
+    return out;
+  });
+
+  if (r.length < 16) return `FAIL: only measured ${r.length} swatches`;
+  const by = (n) => r.find((x) => x.name === n);
+  const near = (a, b) => Math.abs(a.avg[0] - b.avg[0]) + Math.abs(a.avg[1] - b.avg[1]) + Math.abs(a.avg[2] - b.avg[2]) < 26;
+
+  const collide = [];
+  for (let i = 0; i < r.length; i++) for (let j = i + 1; j < r.length; j++) {
+    if (near(r[i], r[j])) collide.push(`${r[i].name}/${r[j].name}`);
+  }
+  if (collide.length) return `FAIL: these swatches still produce the same frame — ${collide.join(', ')}. Sixteen buttons, fewer than sixteen results`;
+
+  // The achromatics are the ones a customer notices, and the ones hue-rotate
+  // could never do at all.
+  const grey = (x) => Math.max(...x.avg) - Math.min(...x.avg) < 26;
+  for (const n of ['Black', 'White', 'Silver']) {
+    const v = by(n);
+    if (!grey(v)) return `FAIL: ${n} came out as rgb(${v.avg}) — it has a colour cast, and this is the group that used to land on pink`;
+  }
+  if (by('Black').avg[0] > 90) return `FAIL: Black is rgb(${by('Black').avg}) — not black`;
+  if (by('White').avg[0] < 190) return `FAIL: White is rgb(${by('White').avg}) — not white`;
+  // Champagne must be PALER than Bronze: lightness is exactly what the old
+  // transform could not express, and why those two were identical.
+  if (!(by('Champagne').avg[0] > by('Bronze').avg[0] + 20)) {
+    return `FAIL: Champagne rgb(${by('Champagne').avg}) is not meaningfully paler than Bronze rgb(${by('Bronze').avg}) — lightness is still being ignored`;
+  }
+  const flat = r.filter((x) => x.relief < 60).map((x) => `${x.name} (${x.relief})`);
+  if (flat.length) return `FAIL: the carving is washed out on ${flat.join(', ')} — recoloured to one flat tone instead of a coloured frame`;
+
+  return `PASS: all ${r.length} swatches give distinguishable frames, Black rgb(${by('Black').avg}), White rgb(${by('White').avg}) and Silver rgb(${by('Silver').avg}) are achromatic, Champagne is paler than Bronze, and the relief survives everywhere`;
+};
+
+
 (async () => {
   let failed = 0;
   for (const [name, fn] of Object.entries(scenarios)) {
