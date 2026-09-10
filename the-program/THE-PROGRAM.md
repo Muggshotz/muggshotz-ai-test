@@ -677,38 +677,6 @@ unplayed in your hand — which is exactly the shape of a set.
 
 ---
 
-## Appendix — The record
-
-Case's Ladder, Spades (Yahoo) ladder, handle `qyetstormm`. The searchable
-record spans **2 Dec 1998 – 26 Apr 1999**: 1,381 opponent rows across 1,213
-distinct games.
-
-It is not a career record. It is a five-month window cut out of the middle,
-bounded at the front by the day the Case's account was created and at the back
-by the day people stopped bothering to report losses. It cannot show a
-number-one run, for two reasons:
-
-1. **The ladder is loser-reported.** Their rules: *"a loss must be promptly
-   reported to the Ladder"*, and *"your opponents are not required to report any
-   losses to you."* The better you play, the less of your record gets written
-   down. A dominant pair at 1 and 2 generates the fewest rows of anyone.
-2. **The window is a descent, not a climb.** In January the median rank was
-   **8**, and **85% of games were against lower-ranked players** — from whom,
-   by the ladder's own half-the-distance rule, no rank can be gained. The win
-   rate rose across the window (55% → 62% → 65%) while the rank fell from 3 to
-   2,618. Winning more, ranking less. That is a player taking all comers at the
-   top, not a player climbing toward it. Median gap between consecutive games:
-   240 seconds, with 301 games beginning within two minutes of the one before.
-
-The first recorded day already shows rank 12, twenty-four minutes after the
-account existed, against a rule that starts new members unranked at the bottom
-— where another player on the same ladder duly entered at 2,694.
-
-Whatever happened before 2 December 1998 is not in this record, and the record
-itself says that is where it must have happened.
-
----
-
 ## The prohibitions
 
 Plays you do not make. Not "prefer to avoid" — do not make them, unless the hand
@@ -836,6 +804,50 @@ So when you have the choice, **play the boss and let him dump another suit**
 instead. The discard builds the second void at no cost to his trump holding. The
 cut spends the very resource the crossfire runs on.
 
+---
+
+### Rule 3 of play — trust your partner
+
+This is the reciprocal of the leader's duty, and the book needs both halves or
+neither works. The leader is obliged to protect a hand he cannot see. **Third
+chair is obliged to believe that he did.**
+
+The instruction is uncompromising:
+
+> **When your partner leads a suit — particularly a spade — never give fourth
+> chair a cheap win. Make it expensive, or win the trick outright if you can.**
+
+Fourth chair sits in the best seat at the table with three cards face up in
+front of him. Play small and he takes it with something small, and the opponents
+have collected a trick for nothing. That is the one gift you must never make.
+Especially in spades, where a cheap trump trick is the most expensive thing you
+can hand away.
+
+Which means putting your King down with the Ace possibly sitting behind you.
+
+**You do it anyway.** Your partner chose that suit, and the entire order of leads
+exists to make that choice safe for you. Sometimes the King dies regardless. That
+is the premium on the policy, not evidence against it — and the accountability
+rule already says whose it is: *the death of that King belongs to whoever led
+blind, not to the man who trusted the lead.*
+
+### And if he cannot be trusted
+
+> If he does this consistently — get a new partner.
+
+That is structural, not bitterness. A system whose signals are **commitments**
+takes trust as an input. You cannot compensate for an untrustworthy partner by
+playing better, because playing better *means acting on what he tells you.* There
+is no defensive crouch available inside this system. Either he can be believed or
+the system is switched off.
+
+A partner who cannot be believed is not a weakness to be played around. He is a
+defect with no patch.
+
+---
+
+## Against a nil
+
 *(chapter to be dictated)*
 
 A nil changes everything, because the nil becomes the priority. Before any
@@ -882,6 +894,38 @@ cards.
 
 That is why we could afford to be generous about it. The information was never
 the edge.
+
+---
+
+## Appendix — The record
+
+Case's Ladder, Spades (Yahoo) ladder, handle `qyetstormm`. The searchable
+record spans **2 Dec 1998 – 26 Apr 1999**: 1,381 opponent rows across 1,213
+distinct games.
+
+It is not a career record. It is a five-month window cut out of the middle,
+bounded at the front by the day the Case's account was created and at the back
+by the day people stopped bothering to report losses. It cannot show a
+number-one run, for two reasons:
+
+1. **The ladder is loser-reported.** Their rules: *"a loss must be promptly
+   reported to the Ladder"*, and *"your opponents are not required to report any
+   losses to you."* The better you play, the less of your record gets written
+   down. A dominant pair at 1 and 2 generates the fewest rows of anyone.
+2. **The window is a descent, not a climb.** In January the median rank was
+   **8**, and **85% of games were against lower-ranked players** — from whom,
+   by the ladder's own half-the-distance rule, no rank can be gained. The win
+   rate rose across the window (55% → 62% → 65%) while the rank fell from 3 to
+   2,618. Winning more, ranking less. That is a player taking all comers at the
+   top, not a player climbing toward it. Median gap between consecutive games:
+   240 seconds, with 301 games beginning within two minutes of the one before.
+
+The first recorded day already shows rank 12, twenty-four minutes after the
+account existed, against a rule that starts new members unranked at the bottom
+— where another player on the same ladder duly entered at 2,694.
+
+Whatever happened before 2 December 1998 is not in this record, and the record
+itself says that is where it must have happened.
 
 ---
 
