@@ -1102,6 +1102,13 @@ It is the inverse of the golden rule:
 
 > ### Do unto others exactly what they are hoping you don't do.
 
+Or, said the way that shows you how to actually work it out at the table —
+
+> ### Do exactly what you would hope they don't do, if they were you and you were them.
+
+Which requires no mind-reading at all. You are not guessing at his hopes. You are
+swapping seats and consulting your own.
+
 ---
 
 ### The bleeding — and it is not what it sounds like
