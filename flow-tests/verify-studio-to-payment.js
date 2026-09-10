@@ -201,6 +201,53 @@ scenarios.aBlankInsideStaysBlankAllTheWayToPayment = async (page, log, bodies) =
   return 'PASS: blank inside stays blank, and costs exactly the one generation the front cost';
 };
 
+// ---- Back out of the inside panel, and forward again. ----
+// Alyx's rule for every screen in this studio: "you should be able to go
+// backwards and forwards, backwards and forwards, over and over ... they
+// should always be in sequence." A greeting card's real order is approve ->
+// Edge Fade -> inside -> mockup, so Back from the inside panel is the FADE
+// PAGE. Landing on the approve decision instead would be skipping a screen
+// backwards, which is how somebody ends up re-deciding a thing they never
+// touched -- and the forward trip has to still work afterwards, which is the
+// half that a "clear the flag" fix usually breaks.
+scenarios.theInsidePanelGoesBackOneScreenAndForwardAgain = async (page) => {
+  await pickProduct(page, 'greeting card');
+  await page.fill('#ideaDesc', 'a lighthouse in a storm');
+  await T(page, 600);
+  await dismissAlerts(page);
+  await page.evaluate(() => document.getElementById('generateBtn')?.scrollIntoView({ block: 'center' }));
+  await page.click('#generateBtn');
+  await waitApprove(page);
+  await page.locator('#approveRow button:has-text("Yes")').first().click();
+
+  const sawFade = await passFadePage(page);
+  if (!sawFade) return 'FAIL: a greeting card never reached the Edge Fade page';
+  const opened = await passCardInside(page, async (p) => {
+    await p.click('#cardInsideOverlay button:has-text("Back")');
+    await T(p, 1400);
+  }).catch(() => false);
+  // passCardInside clicked Back, so its own Continue click is the thing that
+  // must NOT have happened -- check where Back actually landed instead.
+  const afterBack = await page.evaluate(() => ({
+    inside: getComputedStyle(document.getElementById('cardInsideOverlay')).display !== 'none',
+    fade: getComputedStyle(document.getElementById('frameFadeOverlay')).display !== 'none',
+    approving: document.getElementById('approveRow')?.style.display !== 'none',
+  }));
+  if (afterBack.inside) return 'FAIL: Back left the inside panel open';
+  if (!afterBack.fade)
+    return `FAIL: Back skipped the fade page it came from (approve row back on screen: ${afterBack.approving})`;
+
+  // And forward again: the fade page's Continue must land on the inside panel
+  // once more, not sail past it to the mockup.
+  await page.click('#frameFadeOverlay button:has-text("Continue")');
+  const backAgain = await page.waitForFunction(() => {
+    const o = document.getElementById('cardInsideOverlay');
+    return !!(o && getComputedStyle(o).display !== 'none');
+  }, null, { timeout: 15000 }).then(() => true).catch(() => false);
+  if (!backAgain) return 'FAIL: going forward again sailed past the inside panel to the mockup';
+  return 'PASS: Back lands on the fade page, and forward comes back to the inside panel';
+};
+
 // ---- The travel cup, which is the one with an identity to lose. ----
 // Art generated for the insulated 40oz's front/back split is not
 // interchangeable with any other cup's, so the cup and its colour have to

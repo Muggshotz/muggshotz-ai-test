@@ -12991,6 +12991,18 @@ let trimmingsSettledFor=null;
 let cardInsideImage=null;
 let cardInsideChoice='blank';   // 'blank' | 'front' | 'design' | 'upload' | 'generated'
 let cardInsideSettledFor=null;
+// BACK MEANS THE SCREEN BEFORE THIS ONE (Alyx, Sep 2026: "you should be able
+// to go backwards and forwards, backwards and forwards, over and over ...
+// they should always be in sequence").
+//
+// A greeting card's real order is approve -> Edge Fade -> here -> mockup, so
+// Back out of this panel is the FADE PAGE, not the approve decision two
+// screens further up. The route in is already recorded in preMockupBack by
+// whoever sent us here (the fade page records "reopen the fade page" right
+// before it starts the mockup), so the gate hands it over rather than this
+// screen guessing. Falls back to the approve decision when nothing recorded
+// a route, which is the old behaviour and still better than a dead end.
+let cardInsideCameFrom=null;
 
 function productHasCardInside(){ return product==='greeting card'; }
 
@@ -13102,8 +13114,12 @@ async function generateCardInside(){
     pickCardInside('generated',typeof url==='string'?url:(url&&url.imageUrl)||null);
     if(!cardInsideImage)throw new Error('No image returned.');
     // It goes in the library like every other generation, so a change of mind
-    // can come back to it without paying twice.
-    recentDesigns.unshift({id:'inside-'+Date.now(),url:cardInsideImage});
+    // can come back to it without paying twice. Same record shape and same
+    // append order the rest of the file uses, and saved with the rest of the
+    // state -- a generation the customer paid for should survive a reload.
+    recentDesigns.push({id:'inside-'+Date.now(),url:cardInsideImage});
+    try{ saveMugState(); }catch(e){}
+    try{ renderRecentDesigns(); }catch(e){}
     renderCardInsideDesigns();
     renderCardInsideChoiceState();
     refreshBalance();
@@ -13138,12 +13154,21 @@ function confirmCardInside(){
   reallyBeginFinalMockupFetch();
 }
 
-// Back means the design decision again, exactly like the fade page's Back.
 function cardInsideBack(){
   const overlay=document.getElementById('cardInsideOverlay');
   if(overlay)overlay.style.display='none';
   document.body.classList.remove('step-locked');
+  // The gate must forget it settled anything, or coming forward again would
+  // sail straight past this panel -- same rule as trimmingsBack.
   cardInsideSettledFor=null;
+  if(cardInsideCameFrom){
+    const back=cardInsideCameFrom;
+    // Hand the route back to whoever owns it, so a second Back from THAT
+    // screen still knows where it came from.
+    preMockupBack=back;
+    back();
+    return;
+  }
   restoreApproveDecision();
 }
 // ================= END INSIDE OF THE GREETING CARD =================
@@ -13159,6 +13184,11 @@ async function beginFinalMockupFetch(){
   // be made against the finished artwork, and it is the one place every route
   // to a mockup passes through.
   if(productHasCardInside() && finishedForTrim && cardInsideSettledFor!==finishedForTrim){
+    // Captured HERE and not inside the panel: confirmCardInside replaces
+    // preMockupBack with its own "reopen this panel", so a capture taken on
+    // open would, the second time round, record the panel as its own
+    // previous screen and Back would never leave it.
+    cardInsideCameFrom=preMockupBack;
     openCardInsidePanel();
     return;
   }
