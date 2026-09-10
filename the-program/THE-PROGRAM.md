@@ -972,6 +972,38 @@ Now the same three cards played correctly:
 break. He spent a winner buying a trick he already owned, and then had nothing
 left when the real one arrived.
 
+### And it is worse than that — it is one-to-three
+
+The count above misses the largest part, because the real question is not which
+card wins the trick. **It is who is left holding the lead.**
+
+    BAD LINE
+      Partner's Ace beats your King      ->  PARTNER holds the lead
+      Queen appears, he has only the 8   ->  the opponents take it
+                                                             TOTAL:  1
+
+    GOOD LINE
+      Partner plays the 8, your King wins ->  YOU hold the lead
+        -> you lead your singleton and go VOID in a second suit
+      Queen appears, his Ace takes it                        TOTAL:  2
+        -> plus a void that cuts a trick later                       3
+
+Winning with the *correct* card does not merely bank the trick. It hands **you**
+the lead — and the lead is the only thing that lets you choose which suit to
+strip yourself out of. That singleton never gets played unless you are the one on
+lead.
+
+So the King winning is not one trick. It is a trick, plus the tempo, plus the
+down payment on a cut that cannot happen any other way. **One to three.**
+
+He did not cost you a trick. He cost you a trick, your tempo, and the second
+barrel of the crossfire — and that third one is invisible, because it is a trick
+that never appears in the hand at all rather than one you watch somebody else
+take.
+
+Which is why the excuse is so enraging. **The damage he cannot see is larger than
+the damage he can.**
+
 And then you ask him: *"Partner, why did you take my trick?"*
 
 > ### *"It's all I had."*
