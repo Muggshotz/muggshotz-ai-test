@@ -1015,22 +1015,32 @@ Three of his trumps are now gone, spent on tricks *you* chose. Even a good hand
 usually holds about four spades, so he is down to one — his Ace — and he is not
 spending that on you.
 
-### Then drain the board
+### Then dump the high spades around the nil
 
-Do not stop when the cover runs dry. **Take the spades out of every hand except
-the nil bidder's.**
+The cover is down to his Ace, and notice that his last spade is not really a
+choice any more. He will not cut with it — spending the Ace of spades on a ruff
+is throwing it away — so the only thing left to do with it is **lead** it. And
+the instant he does, he is dry.
 
-Feed your partner things to cut. He does the same for you. The two of you
-deliberately spend your own trumps down, because **the nil bidder's spades are
-only harmless while bigger ones still exist.** Strip the board and his become the
-biggest thing left.
+Meanwhile you and your partner do the same thing on purpose. **Dump the high
+spades around the nil.** Feed each other things to cut, spend your own big
+trumps, get them off the table.
 
-    End state:   you 1 spade  .  partner 1 spade  .  nil still holding 2
+Because the nil bidder's spades are only harmless while bigger ones still exist.
+He does not have to be holding a good spade — he only has to be holding **the
+best remaining one.** And that is a condition you manufacture by emptying the
+other three hands, not something you hope for about his.
 
-    He cannot avoid winning one of them. Instant set.
+    Every high spade gone from the other three hands
+        -> whatever the nil is still holding is now the biggest thing on the table
+        -> he cannot avoid winning with it
 
-And the best version of that ending is the one where **your last spade is the
-deuce.** He must beat it. There is no card in the deck he can duck with.
+    That is the set.
+
+The prettiest version of the ending is the one where **your own last spade is the
+deuce.** Lead it and he must beat it; there is no card in the deck he can duck
+with. But that is the best case, not the requirement — the requirement is simply
+that nothing above him is left anywhere else.
 
 Which is the real reason behind the rule. It is not superstition about a small
 card. The deuce is the closing move of a plan that takes the entire hand to
