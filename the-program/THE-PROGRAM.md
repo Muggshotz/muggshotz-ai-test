@@ -1109,6 +1109,24 @@ Or, said the way that shows you how to actually work it out at the table —
 Which requires no mind-reading at all. You are not guessing at his hopes. You are
 swapping seats and consulting your own.
 
+I do not know how it could be made any easier than this. Sit in the seat and ask
+the question:
+
+> *If **I** am nil, what is the one thing I am hoping the man on my left does
+> when he has the first lead?*
+>
+> *I am hoping he comes out firing the biggest Ace in his hand.*
+>
+> *So why on earth would I do that exact thing when **he** is the one sitting
+> nil?*
+
+Note what that asks of you: nothing. No analysis of the position, no counting, no
+rule from this book. Only *what am I hoping for when I am the one sitting nil* —
+and you already know the answer, instantly, from your own hands. It arrives
+before the reasoning does.
+
+Then the play indicts itself.
+
 ---
 
 ### The bleeding — and it is not what it sounds like
