@@ -51,7 +51,14 @@ scenarios.paymentChainCarriesEverything = async () => {
     bad.push('the webhook never hands the panorama to the Printify order');
   if (!/panoramaImage\s*=\s*null/.test(printify) || !/buildSeamlessWrapFromPanorama/.test(printify))
     bad.push('placeProductOrder cannot receive or use the panorama');
-  if (!/panoramaImage:\s*pendingOrder\.panoramaImage/.test(order))
+  // Optional chaining allowed on purpose: the mug branch is ALSO order.html's
+  // fallback when there is no pending order at all, and reading it straight
+  // threw a TypeError inside submitOrder where nobody could see it -- address
+  // filled in, button pressed, nothing happened. Pinning the un-guarded spelling
+  // here would have made fixing that a test failure. What matters is that the
+  // strip is sent, and submitSendsTheWholeOrder below reads the real body over
+  // the wire to prove it actually arrives.
+  if (!/panoramaImage:\s*pendingOrder\??\.panoramaImage/.test(order))
     bad.push('order.html does not send the panorama with the payment body');
 
   // The safety pair: test-mode events are discarded, and Printify orders are

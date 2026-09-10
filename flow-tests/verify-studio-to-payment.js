@@ -17,7 +17,7 @@
 // walks the real rail to the real Checkout button, lets the browser navigate
 // to order.html on its own, and reads the body that would reach Stripe.
 // Everything in between is the shipping code.
-const { launch, openStudio, uploadPhoto, dismissAlerts, passFadePage, BASE } = require('./harness');
+const { launch, openStudio, uploadPhoto, dismissAlerts, passFadePage, passCardInside, BASE } = require('./harness');
 
 const T = (page, ms) => page.waitForTimeout(ms);
 
@@ -34,23 +34,6 @@ async function pickProduct(page, tile) {
 
 // Walks approve -> fade -> mockup -> What's Next, and presses the studio's
 // one and only Checkout button. Returns nothing: the navigation IS the result.
-// The greeting card's inside page (Sep 2026) stands between the fade page and
-// the mockup. Blank is the default and the ordinary card, so passing straight
-// through it is what most customers do -- but it is a real screen and every
-// walk to a card mockup has to go through it. Silent on products that do not
-// have one.
-async function passCardInside(page, choose) {
-  const opened = await page.waitForFunction(() => {
-    const o = document.getElementById('cardInsideOverlay');
-    return !!(o && getComputedStyle(o).display !== 'none');
-  }, null, { timeout: 8000 }).then(() => true).catch(() => false);
-  if (!opened) return false;
-  if (choose) await choose(page);
-  await page.click('#cardInsideOverlay button:has-text("Continue")');
-  await T(page, 1200);
-  return true;
-}
-
 async function reachCheckoutButton(page, insideChoice) {
   await page.locator('#approveRow button:has-text("Yes")').first().click();
   await passFadePage(page);

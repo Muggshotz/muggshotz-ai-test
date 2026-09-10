@@ -254,4 +254,28 @@ async function passFadePage(page, { timeout = 20000 } = {}) {
   return true;
 }
 
-module.exports = { launch, openStudio, uploadPhoto, uploadPhotoAndChooseBYO, waitForIntentGate, interactable, bodyFocusClasses, dismissAlerts, passFadePage, BASE };
+// THE GREETING CARD'S INSIDE PAGE (Sep 2026) stands between the fade page and
+// the mockup, exactly as passFadePage's screen does. Blank is the default and
+// the ordinary card, so passing straight through is what most customers do --
+// but it IS a screen now, and a suite that walks a card to its mockup without
+// going through it sits waiting for a start-mockup that is never coming and
+// reports a working product as broken. That is precisely how this helper's
+// older sibling came to exist; same lesson, so it lives in the harness rather
+// than in one suite.
+//
+// Optional `choose` runs while the panel is open, for suites that want to
+// settle something other than blank. Tolerant like passFadePage: products
+// without an inside are not an error here, they just return false.
+async function passCardInside(page, choose, { timeout = 10000 } = {}) {
+  const opened = await page.waitForFunction(() => {
+    const o = document.getElementById('cardInsideOverlay');
+    return !!(o && getComputedStyle(o).display !== 'none');
+  }, null, { timeout }).then(() => true).catch(() => false);
+  if (!opened) return false;
+  if (choose) await choose(page);
+  await page.click('#cardInsideOverlay button:has-text("Continue")');
+  await page.waitForTimeout(1200);
+  return true;
+}
+
+module.exports = { launch, openStudio, uploadPhoto, uploadPhotoAndChooseBYO, waitForIntentGate, interactable, bodyFocusClasses, dismissAlerts, passFadePage, passCardInside, BASE };

@@ -6,7 +6,7 @@
 // US printers with sane rates. This suite pins the full path for both:
 // studio pick -> description -> generate -> approve -> fade -> mockup body,
 // and the paid-order body on the order page.
-const { launch, openStudio, uploadPhoto, dismissAlerts, passFadePage } = require('./harness');
+const { launch, openStudio, uploadPhoto, dismissAlerts, passFadePage, passCardInside } = require('./harness');
 
 const T = (page, ms) => page.waitForTimeout(ms);
 const BASE = 'http://127.0.0.1:8788';
@@ -52,6 +52,10 @@ for (const P of PRODUCTS) {
     // approve and the mockup, same as every other single-image product.
     const faded = await passFadePage(page);
     if (!faded) return 'FAIL: the fade page never opened — the product is not on the auto-mockup rail';
+    // A greeting card is offered its inside page here now. Left blank, which
+    // is the default and what this suite has always been asserting about --
+    // a card printed front-only. Post-it pads have no inside and skip it.
+    await passCardInside(page);
     await T(page, 8000);
     const start = mockupBodies.find(b => b && b.action === 'start');
     if (!start) return 'FAIL: no start-mockup fired after the fade page';
