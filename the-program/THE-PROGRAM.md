@@ -1095,25 +1095,48 @@ at the table and is still blind about the only card that matters to him.
 
 ### What the handcuff actually buys
 
-Not the stolen trick. **Time.**
+Not the stolen trick. **Time** — and a restraint that stays on as long as you
+decline to spend it.
 
-    You keep him from spending the King
-            |
-    until your partner is VOID in that suit
-            |
-    then the King finally comes out - and your partner CUTS it
-            with the King of spades
-            |
-      -> steals the cover's book
-      -> dumps one of the highest spades around the nil
+### The two modes, and they contradict each other
 
-Restraining his King does not merely win you a trick in clubs. It **delays** that
-King until the moment it can be ruffed off the table — and the ruff that kills it
-is the same play that strips a high spade off the board and moves the nil one
-step closer to holding the biggest thing left.
+This is the part that must not be got wrong, because the two lines of attack give
+**opposite instructions about the same cards.**
 
-So the two lines are not alternatives. The handcuff advances both with the same
-cards: it steals books from their contract *and* it feeds the drain.
+    SETTING THE NIL     ->  DUMP your high spades around him,
+                            so that his become the biggest thing left
+
+    SETTING THE COVER   ->  HOARD your high spades,
+                            because a high spade held is a standing
+                            restraint on every book he wants to take
+
+Playing the wrong mode is not a small error. It is doing precisely the opposite
+of the correct thing with every trump you own.
+
+**Why you hoard in cover mode.** Same principle as everything else in this book:
+*the threat is worth more than the execution.* A high spade still in your hand
+means none of the cover's winners are ever safe — he cannot cash, cannot run
+trumps, cannot relax. Ruff with it and you have bought one book and handed him
+his freedom back. It is the deuce again, and the held Ace, and the Queen kept as
+backup. **Spent, it is a trick. Held, it is a leash.**
+
+So your partner does **not** cut the cover's King with the King of spades. He
+recognises that you have switched from setting the nil to setting the cover, and
+he saves his high spades to go on handcuffing with you.
+
+### The mode is signalled by the shape of the play
+
+Nobody announces the switch. There is no convention for it, no card that means
+*"I am changing plans."*
+
+Your partner reads it off the **shape** of what you are doing — middle-of-sequence
+cards going into the cover — and independently reverses his own spade policy to
+match.
+
+That is a different order of communication from everything else in this book. The
+order of leads tells your partner about your *cards*. This tells him about your
+**plan.** He is not only decoding what you hold; he is decoding what you have
+decided to do with it.
 
 The general form: **lead into the cover, past the nil, out of a sequence in which
 you hold the middle cards and he holds the top one.** He owns the best card in
