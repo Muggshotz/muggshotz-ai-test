@@ -148,6 +148,13 @@ are the easiest things in it to leave out of a book — because after enough yea
 they stop feeling like steps at all. They are not optional and they are not
 advanced. They are the floor.
 
+A word on that, because it applies to more than this chapter. Several of the
+rules in this book felt too obvious to be worth writing down — and then I would
+go to the tables and watch players violate them constantly and consistently. If
+a thing is broken that often it is not intuitive; it was *learned*, long enough
+ago that the learning has been forgotten. The embarrassment of writing something
+down is a reliable signal that it belongs in.
+
 ### Habit one: COUNT SPADES
 
 **Thirteen spades exist.** You can see yours. Every one that reaches the table is
@@ -941,6 +948,38 @@ rounding error beside the thing that was ignored.
 
 The nil also suspends parts of the order of leads — the lone-card lead among
 them. And there is a psychological mechanism to it that needs its own treatment.
+
+### The two of spades
+
+**Against a nil, the two of spades is perhaps the most valuable card in the
+deck.** And for the first nine tricks it looks like the least valuable card in
+the deck, which is precisely why people throw it away.
+
+Understand what makes it a weapon: **the deuce is the only spade that cannot win
+a trick.** Which is exactly why it can force somebody else to. Lead it, and any
+spade in the nil bidder's hand beats it. He must follow. He must beat you. He
+takes the trick — and the nil is dead.
+
+Unless somebody covers him. Which is what the bleeding is for:
+
+    1. Bleed out the high spades first
+       -> so that nothing is left to cover him with
+
+    2. Then lead the deuce
+       -> he must play a spade, it must beat the deuce, and it is his trick
+
+By that point it is not a card. It is an execution.
+
+> **Never cut with the two of spades while an opponent is nil.**
+
+Ruffing with it trades the hand's decisive card for one ordinary trick — and
+people do it early, automatically, precisely because the deuce *looks* like
+rubbish for the first two thirds of the hand. Its entire value is deferred to the
+tenth or eleventh card.
+
+**The one exception:** if the deuce is your *only* spade, it cannot do the job —
+you have nothing to bleed with and no way to set the position up. In that case
+get rid of your spades.
 
 ---
 
