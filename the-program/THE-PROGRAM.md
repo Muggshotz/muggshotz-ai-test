@@ -141,6 +141,49 @@ to him was three words long:
 
 ---
 
+## The two habits
+
+These are done continuously, underneath everything else in this book, and they
+are the easiest things in it to leave out of a book — because after enough years
+they stop feeling like steps at all. They are not optional and they are not
+advanced. They are the floor.
+
+### Habit one: COUNT SPADES
+
+**Thirteen spades exist.** You can see yours. Every one that reaches the table is
+subtracted, and what remains is the number that decides whether anything else in
+this system still works.
+
+Half the rules in this book are unenforceable without it:
+
+**"Do not milk the cut"** cannot be obeyed unless you are tracking what your
+partner has left. Stripping him bare is only avoidable if you know how close to
+bare he is.
+
+**"Run spades to break a crossfire"** requires the count both ways — to know you
+can do it, and to know when it is being done to you.
+
+**The crossfire itself decays.** Two voids in different suits are worth
+everything at a trump count of nine and worth nothing at zero. The value of your
+whole position is a pure function of trumps outstanding, so a player who is not
+counting does not know what his own hand is worth.
+
+**And your side-suit bosses are not tricks until the trumps are gone.** An Ace
+with spades still live is a *hope*. An Ace after the last trump falls is a
+*certainty*. Counting is what tells you which of the two you are holding.
+
+That last point is the largest, because it means every hand contains a **phase
+change** — one specific trick at which the hand stops being a ruffing game and
+becomes a high-card game. Everything in every hand at the table revalues at that
+moment. The player who is counting knows when it arrives. Everybody else finds
+out afterwards.
+
+### Habit two
+
+*(to be dictated)*
+
+---
+
 ## Part One — The Order of Leads
 
 The **order of leads** is the priority list you use to choose which suit to
