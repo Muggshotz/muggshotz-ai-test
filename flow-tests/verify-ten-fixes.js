@@ -265,7 +265,14 @@ scenarios.looksGoodReachesCheckout = async (page) => {
 (async () => {
   let failed = 0;
   for (const [name, fn] of Object.entries(scenarios)) {
-    const { browser, page, log } = await launch({ viewport: { width: 420, height: 800 } });
+    // frameOfferOnTheMockup tells the rebuilt mockup from the first one by
+    // the picture it carries. The default upload stub returns the same
+    // fixed URL for every upload, so framed and unframed look identical;
+    // echoUploads hands back the real data URL and the two differ.
+    const { browser, page, log } = await launch({
+      viewport: { width: 420, height: 800 },
+      ...(name === 'frameOfferOnTheMockup' ? { echoUploads: true } : {}),
+    });
     let result;
     try {
       await openStudio(page);
@@ -276,5 +283,7 @@ scenarios.looksGoodReachesCheckout = async (page) => {
     if (!/^PASS/.test(result) || log.pageErrors.length) failed++;
     await browser.close();
   }
+  // run-all.sh counts a suite green only by this line.
+  console.log(failed ? `\n${failed} FAILURE(S)` : '\nALL TEN-FIXES VERIFICATIONS PASSED');
   process.exit(failed ? 1 : 0);
 })();

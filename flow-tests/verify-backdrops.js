@@ -250,5 +250,7 @@ scenarios.everySwatchGivesItsOwnFrame = async (page) => {
     if (!/^PASS/.test(result) || log.pageErrors.length) failed++;
     await browser.close();
   }
+  // run-all.sh counts a suite green only by this line.
+  console.log(failed ? `\n${failed} FAILURE(S)` : '\nALL BACKDROPS VERIFICATIONS PASSED');
   process.exit(failed ? 1 : 0);
 })();

@@ -50,5 +50,8 @@ const T = (page, ms) => page.waitForTimeout(ms);
   const errs = log.pageErrors.length ? ' | pageErrors: ' + log.pageErrors.join(' ; ') : '';
   console.log('recallLastDesignAfterReload: ' + result + errs);
   await browser.close();
-  process.exit(/^PASS/.test(result) && !log.pageErrors.length ? 0 : 1);
+  const ok = /^PASS/.test(result) && !log.pageErrors.length;
+  // run-all.sh counts a suite green only by this line.
+  console.log(ok ? '\nALL RECALL VERIFICATIONS PASSED' : '\n1 FAILURE(S)');
+  process.exit(ok ? 0 : 1);
 })();
