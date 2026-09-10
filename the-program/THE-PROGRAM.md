@@ -270,19 +270,41 @@ Partner has to commit before the Ace does. If he plays the King, the Ace eats
 it — and that King may be a trick he **bid.** The promotion play has then set
 your own side.
 
-The mitigation belongs to him, and it is positional: **never feed a King to an
-Ace sitting behind you.** Duck. Let fourth chair take it as cheaply as he
-likes, because now he has to lead — and when the Ace is forced to *lead* the
-suit instead of *following* it, the whole position inverts:
+And here is the answer, and it is the reason the rule exists at all.
 
-    Ace leads the suit   ->  catches two low cards. Nothing.
-    Next round           ->  partner's King is master
-    Round after          ->  your Queen is master
+**The Queen lead is a promise.** The lead itself is a sentence spoken to your
+partner:
 
-Surrender one cheap trick, collect two. The King was never in danger once the
-Ace had to speak first. Third chair's responsibility is to make fourth chair
-pay as much for that trick as rational play allows — and sometimes the price
-is set highest by letting him have it.
+> *I hold the Queen of this suit. Play your King if the Ace has not shown.
+> I have got your back.*
+
+That is what makes it a **compromise** rather than a free roll. You cannot
+broach a suit with zero risk to a hand you cannot see. So you pick the one suit
+where you are able to **compensate** for the risk you are asking him to take.
+
+Without that promise, third chair holding a King must play scared — the Ace may
+be sitting behind him, so he ducks, and a trick the partnership owned is
+deferred or lost to timidity. The Queen lead **unlocks his King.**
+
+And look at the outcomes, because there are only two:
+
+    Ace does not show          ->  partner's King WINS the trick outright
+
+    Ace shows and eats the King ->  Ace and King are both dead,
+                                    and your Queen is now master of the suit
+
+**Either way the suit yields a trick to your side.** It is not a lead that is
+likely to work. It is a lead that **cannot lose the suit** — which is precisely
+what a man who cannot see his partner's cards ought to be choosing.
+
+His King was never lost in the bad branch. It was **traded**, and the Queen
+behind it collects the debt one round later.
+
+Third chair still has judgement to exercise — his standing responsibility is to
+make fourth chair pay as much for any trick as rational play allows, and there
+are positions where the price is set highest by letting him have it cheaply so
+that he must lead back. But the baseline instruction under this lead is not
+caution. It is: **the King goes down if the Ace has not appeared.**
 
 Which is the same law as the K-Q-x proof and the Ace rule, stated a third way:
 
