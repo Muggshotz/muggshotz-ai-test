@@ -18,8 +18,17 @@
 // to order.html on its own, and reads the body that would reach Stripe.
 // Everything in between is the shipping code.
 const { launch, openStudio, uploadPhoto, dismissAlerts, passFadePage, passCardInside, BASE } = require('./harness');
+// The mug's click path is shared with the 3D suite so both drive the exact
+// same sequence a customer does.
+const { mugToPrintStyle, describeAndGenerate, approveAllThree, waitLanded } = require('./verify-mug-3d-helpers');
 
 const T = (page, ms) => page.waitForTimeout(ms);
+
+// The 3D mug needs a software GL in this headless sandbox; without it the
+// studio falls back to the flat Printify mockup, which is a different path
+// from the one a desktop customer walks.
+const GL = ['--use-gl=swiftshader', '--enable-unsafe-swiftshader'];
+const OPTS = {};
 
 const waitApprove = (page, t = 90000) =>
   page.waitForFunction(() => document.getElementById('approveRow')?.style.display !== 'none', null, { timeout: t });
@@ -86,6 +95,42 @@ const PRODUCTS = [
   { tile: 'mouse pad',      key: 'mouse-pad',      sizeLabel: '9" x 8"' },
   { tile: 'greeting card',  key: 'greeting-card',  sizeLabel: '8-Pack' },
   { tile: 'post-it note',   key: 'post-it-notes',  sizeLabel: '3" x 3"' },
+
+  // ---- The rest of the flat products, each choosing a NON-default option on
+  // purpose. order.html keeps hard defaults for some of these (puzzle "96 pcs",
+  // suitcase "Small") and the studio's goToOrder() writes nothing for them --
+  // so if the choice does not survive the hop, the customer pays for the
+  // default and gets the default, silently. Picking the default in the test
+  // would hide exactly that. ----
+  { tile: 'coaster',        key: 'coaster-set-round', sizeLabel: 'Round 3.7"',
+    settle: async (page) => { await page.evaluate(() => pickCoasterShape('round')); await T(page, 900); } },
+  { tile: 'puzzle',         key: 'photo-puzzle',   sizeLabel: '252 pcs',
+    settle: async (page) => { await page.click('#puzzleSizeGrid .btn-select[data-puzzle-size="252 pcs"]'); await T(page, 900); } },
+  { tile: 'suitcase',       key: 'suitcase',       sizeLabel: 'Medium',
+    settle: async (page) => { await page.click('#suitcaseSizeGrid .btn-select[data-suitcase-size="Medium"]'); await T(page, 900); } },
+  { tile: 'tote bag',       key: 'tote-bag',
+    sizeLabel: '16" x 16"',
+    colour: (page) => page.evaluate(() => typeof selectedToteColorGen !== 'undefined' ? selectedToteColorGen : null),
+    settle: async (page) => {
+      await page.click('#toteSizeGrid .btn-select[data-tote-size=\'16" x 16"\']');
+      await T(page, 600);
+      await page.evaluate(() => { const b = document.querySelector('#toteBagColorGridGen .color-btn'); if (b) b.click(); });
+      await T(page, 1000);
+      await dismissAlerts(page);
+    } },
+  { tile: 'phone case',     key: 'phone-case-tough',
+    // The model is whatever the studio settled on (the harness's compatibility
+    // stub answers "iPhone 15 Pro"); what matters is that the SAME model
+    // reaches payment, not which one it is.
+    sizeLabel: (page) => page.evaluate(() => typeof selectedPhoneCaseModel !== 'undefined' ? selectedPhoneCaseModel : null),
+    settle: async (page) => {
+      await page.fill('#phoneModelSearchInputGen', 'iPhone 15 Pro Max');
+      await page.press('#phoneModelSearchInputGen', 'Enter');
+      await T(page, 900);
+      await page.click('#phoneModelConfirmGen button:has-text("Yes")');
+      await T(page, 900);
+      await dismissAlerts(page);
+    } },
 ];
 
 const scenarios = {};
@@ -102,6 +147,10 @@ for (const P of PRODUCTS) {
     await page.evaluate(() => document.getElementById('generateBtn')?.scrollIntoView({ block: 'center' }));
     await page.click('#generateBtn');
     await waitApprove(page);
+    // What the studio believes, read before the hop -- some expectations are
+    // the studio's own settled choice rather than a constant.
+    const wantSize = typeof P.sizeLabel === 'function' ? await P.sizeLabel(page) : P.sizeLabel;
+    const wantColour = P.colour ? await P.colour(page) : null;
     await reachCheckoutButton(page);
     await payFrom(page);
 
@@ -117,7 +166,8 @@ for (const P of PRODUCTS) {
     }
     const bad = [];
     if (b.productKey !== P.key) bad.push(`productKey=${b.productKey}, expected ${P.key}`);
-    if (b.sizeLabel !== P.sizeLabel) bad.push(`sizeLabel=${JSON.stringify(b.sizeLabel)}, expected ${JSON.stringify(P.sizeLabel)}`);
+    if (b.sizeLabel !== wantSize) bad.push(`sizeLabel=${JSON.stringify(b.sizeLabel)}, the studio had ${JSON.stringify(wantSize)} — the choice did not survive the hop`);
+    if (wantColour && b.colorName !== wantColour) bad.push(`colorName=${JSON.stringify(b.colorName)}, the studio had ${JSON.stringify(wantColour)}`);
     if (!b.image) bad.push('no image — the design did not survive the hop');
     if (!b.shippingAddress || b.shippingAddress.zip !== '48185') bad.push('shipping address incomplete');
     if (bad.length) return `FAIL: ${P.tile}: ${bad.join('; ')}`;
@@ -231,6 +281,152 @@ scenarios.theInsidePanelGoesBackOneScreenAndForwardAgain = async (page) => {
   return 'PASS: Back lands on the fade page, and forward comes back to the inside panel';
 };
 
+// ---- The ceramic mug: the most-travelled rail in the shop, and the one the
+// new suite had left out. ----
+//
+// Both halves of the mug's checkout were already tested -- verify-wraparound
+// drives a real mug to goToOrder() and checks the record it writes, and
+// verify-checkout-wiring drives order.html's submit from a SEEDED record. What
+// had never been driven is the join: that the record the studio writes is the
+// record order.html reads. That join is exactly where this suite found the
+// order page's silent TypeError, so it is not a formality.
+//
+// The mug reaches its mockup through more screens than any flat product --
+// approve, panel placement, the fade page, the frame offer, the edge question
+// -- and which of them appear depends on print mode and on earlier choices.
+// Rather than hard-code one sequence, this presses the obvious forward button
+// of whatever screen is up, the way a customer does, and records the route.
+// A stall then names the screen it stuck on instead of a bare timeout.
+async function walkForwardToMockup(page, { maxSteps = 30, settleMs = 900 } = {}) {
+  const route = [];
+  for (let i = 0; i < maxSteps; i++) {
+    const screen = await page.evaluate(() => {
+      // Rendered, not merely styled: getComputedStyle(child).display does
+      // NOT inherit a hidden ancestor's display:none, so a check on the
+      // child alone saw the mockup's Satisfied? button as visible while its
+      // action row was still hidden -- and walked to Checkout without ever
+      // pressing Yes. getClientRects() is empty for anything not laid out.
+      const vis = (id) => { const e = document.getElementById(id); return !!e && e.getClientRects().length > 0; };
+      const shown = vis;
+      if (vis('mockupLightboxReturn')) return 'mockup';
+      if (vis('mockupLoadingOverlay')) return 'waiting';
+      if (vis('frameFadeOverlay')) return 'fade';
+      if (vis('revealOverlay')) return 'edge';
+      if (vis('accessorizeCard') && vis('accessorizeChoicePanel')) return 'frameOffer';
+      if (vis('trimmingsOverlay')) return 'trimmings';
+      const done = document.getElementById('coverMePanelDoneBtn');
+      if (shown('coverMePanelCard') && done && !done.disabled) return 'panels';
+      if (shown('coverMePanelCard')) return 'panelsDisabled';
+      if (shown('approveRow')) return 'approve';
+      return 'other';
+    });
+    if (route[route.length - 1] !== screen) route.push(screen);
+    if (screen === 'mockup') return { ok: true, route };
+    switch (screen) {
+      case 'approve':      await approveAllThree(page); break;
+      case 'panels':       await page.click('#coverMePanelDoneBtn'); break;
+      case 'fade':         await page.click('#frameFadeOverlay button:has-text("Continue")'); break;
+      case 'frameOffer':   await page.click('#accessorizeCard button:has-text("No Thank You")'); break;
+      case 'edge':         await page.click('#revealOverlay button:has-text("Hard Edges")'); break;
+      case 'trimmings':    await page.click('#trimmingsOverlay button:has-text("No Thanks")').catch(() => {}); 
+                           await page.click('#trimmingsOverlay button:has-text("Continue")').catch(() => {}); break;
+      default: break; // waiting / panelsDisabled / other: let it settle
+    }
+    await dismissAlerts(page);
+    await T(page, settleMs);
+  }
+  return { ok: false, route };
+}
+
+// What the studio believes at the moment of the hop -- captured right before
+// Checkout, since the fade and frame screens can replace URLs on the way.
+const studioMugState = (page) => page.evaluate(() => ({
+  style: typeof selectedGenStyle !== 'undefined' ? selectedGenStyle : null,
+  size: typeof selectedGenSize !== 'undefined' ? selectedGenSize : null,
+  colour: typeof selectedGenColor !== 'undefined' ? selectedGenColor : null,
+  printMode: typeof mugPrintMode !== 'undefined' ? mugPrintMode : null,
+  panorama: typeof wraparoundPanoramaUrl !== 'undefined' ? wraparoundPanoramaUrl : null,
+  placements: ['left', 'front', 'right'].map((p) => {
+    const d = placements[p] ? findDesignById(placements[p]) : null;
+    return d ? d.url : null;
+  }),
+}));
+
+async function checkoutFromMockup(page) {
+  await page.evaluate(() => returnFromFinalMockup());
+  await page.waitForFunction(() => {
+    const o = document.getElementById('finalChoiceOverlay');
+    return !!(o && getComputedStyle(o).display !== 'none');
+  }, null, { timeout: 15000 });
+  await page.click('#finalChoiceOverlay button:has-text("Checkout")');
+}
+
+async function driveMug(page, printMode) {
+  await mugToPrintStyle(page, '11oz');
+  await page.evaluate((m) => pickMugPrintMode(m), printMode);
+  await T(page, 1200);
+  await dismissAlerts(page);
+  await describeAndGenerate(page, printMode === 'wraparound' ? 'a wide desert canyon at sunrise' : 'a lighthouse in a storm');
+  await waitLanded(page);
+  await T(page, 1200);
+  const walk = await walkForwardToMockup(page);
+  if (!walk.ok) return { walk };
+  await T(page, 1200);
+  const before = await studioMugState(page);
+  await checkoutFromMockup(page);
+  await payFrom(page);
+  return { walk, before };
+}
+
+OPTS.threePanelMugKeepsItsChoicesAcrossTheHop = { chromiumArgs: GL };
+scenarios.threePanelMugKeepsItsChoicesAcrossTheHop = async (page, log, bodies) => {
+  const { walk, before } = await driveMug(page, 'three-panel');
+  if (!walk.ok) return `FAIL: three-panel mug never reached its mockup — stuck at "${walk.route[walk.route.length - 1]}" via ${walk.route.join(' → ')}`;
+  const b = bodies[bodies.length - 1];
+  if (!b) {
+    const st = await page.evaluate(() => ({ url: location.pathname, status: document.getElementById('status')?.textContent || '' }));
+    return `FAIL: three-panel mug: no payment body. at=${st.url} status="${st.status.trim()}" (route ${walk.route.join(' → ')})`;
+  }
+  const bad = [];
+  if (b.type !== 'mug_order') bad.push(`type=${b.type}`);
+  if (b.mugType !== before.style) bad.push(`style changed across the hop: studio ${before.style}, payment ${b.mugType}`);
+  if (b.sizeLabel !== before.size) bad.push(`size changed: studio ${before.size}, payment ${b.sizeLabel}`);
+  if (before.colour && b.color !== before.colour) bad.push(`colour changed: studio ${before.colour}, payment ${b.color}`);
+  if (b.printMode !== 'standard') bad.push(`printMode=${b.printMode} on a three-panel mug`);
+  if (b.isWraparoundSet) bad.push('isWraparoundSet on a three-panel mug — the $3 wrap surcharge would be charged');
+  const sent = b.placements || {};
+  if (!(sent.left || sent.front || sent.right)) bad.push('no placements reached payment');
+  if (sent.left !== before.placements[0] || sent.right !== before.placements[2])
+    bad.push('the left/right panels the studio held are not the ones that reached payment');
+  if (!b.shippingAddress || b.shippingAddress.zip !== '48185') bad.push('shipping address incomplete');
+  if (bad.length) return `FAIL: three-panel mug: ${bad.join('; ')}`;
+  return `PASS: three-panel mug keeps {${b.mugType}, ${b.sizeLabel}, ${b.color}} across the hop via ${walk.route.join(' → ')}`;
+};
+
+OPTS.wraparoundMugCarriesTheStripAcrossTheHop = { chromiumArgs: GL };
+scenarios.wraparoundMugCarriesTheStripAcrossTheHop = async (page, log, bodies) => {
+  const { walk, before } = await driveMug(page, 'wraparound');
+  if (!walk.ok) return `FAIL: wraparound mug never reached its mockup — stuck at "${walk.route[walk.route.length - 1]}" via ${walk.route.join(' → ')}`;
+  const b = bodies[bodies.length - 1];
+  if (!b) {
+    const st = await page.evaluate(() => ({ url: location.pathname, status: document.getElementById('status')?.textContent || '' }));
+    return `FAIL: wraparound mug: no payment body. at=${st.url} status="${st.status.trim()}" (route ${walk.route.join(' → ')})`;
+  }
+  const bad = [];
+  if (b.type !== 'mug_order') bad.push(`type=${b.type}`);
+  if (b.mugType !== before.style) bad.push(`style changed across the hop: studio ${before.style}, payment ${b.mugType}`);
+  if (b.sizeLabel !== before.size) bad.push(`size changed: studio ${before.size}, payment ${b.sizeLabel}`);
+  if (b.printMode !== 'fullBleed') bad.push(`printMode=${b.printMode} on a wraparound`);
+  if (!b.isWraparoundSet) bad.push('isWraparoundSet lost — the wrap surcharge would not apply');
+  if (!before.panorama) bad.push('the studio held no panorama at the hop (test precondition)');
+  else if (b.panoramaImage !== before.panorama) bad.push(`the uncut strip changed across the hop: studio ${before.panorama}, payment ${b.panoramaImage}`);
+  const sent = b.placements || {};
+  if (!(sent.left && sent.front && sent.right)) bad.push('a wraparound needs all three thirds and not all three reached payment');
+  if (!b.shippingAddress || b.shippingAddress.zip !== '48185') bad.push('shipping address incomplete');
+  if (bad.length) return `FAIL: wraparound mug: ${bad.join('; ')}`;
+  return `PASS: wraparound mug carries the uncut strip and all three thirds across the hop via ${walk.route.join(' → ')}`;
+};
+
 // ---- The travel cup, which is the one with an identity to lose. ----
 // Art generated for the insulated 40oz's front/back split is not
 // interchangeable with any other cup's, so the cup and its colour have to
@@ -299,6 +495,73 @@ scenarios.travelCupKeepsItsIdentityAcrossTheHop = async (page, log, bodies) => {
   return `PASS: travel cup keeps its identity across the hop (${b.productKey}, ${b.colorName})`;
 };
 
+// ---- The other five travel cups. ----
+// Same hop as the 40oz insulated, but each cup has its own body shape, its own
+// size label, and (for two of them) a colour to keep. The 40oz vacuum is also
+// the one whose wrap closes, so it meets the Trimmings panel on the way to its
+// mockup; the walk helper answers it the way a customer who wants none does.
+const TRAVEL = [
+  { key: 'travel-mug-20oz',        sizeLabel: '20oz' },
+  { key: 'travel-mug-14oz-handle', sizeLabel: '14oz' },
+  { key: 'travel-mug-32oz-gator',  sizeLabel: '32oz' },
+  { key: 'travel-mug-30oz-tundra', sizeLabel: '30oz' },
+  { key: 'travel-mug-40oz-vacuum', sizeLabel: '40oz' },
+];
+for (const C of TRAVEL) {
+  const name = 'travelCup_' + C.key.replace(/^travel-mug-/, '').replace(/\W+/g, '_');
+  OPTS[name] = { chromiumArgs: GL };
+  scenarios[name] = async (page, log, bodies) => {
+    await pickProduct(page, 'water bottle');
+    await page.evaluate((k) => pickPreGenTravelVariant(k), C.key);
+    await T(page, 1200);
+    await dismissAlerts(page);
+    await page.evaluate(() => {
+      const card = document.getElementById('mugPrintModeCard');
+      if (card && card.style.display !== 'none') pickMugPrintMode('three-panel');
+    });
+    await T(page, 700);
+    await dismissAlerts(page);
+    await page.evaluate(() => {
+      const card = document.getElementById('travelMugColorCard');
+      if (!card || card.style.display === 'none') return;
+      const btn = document.querySelector('#travelMugColorGridGen .color-btn');
+      if (btn) btn.click();
+    });
+    await T(page, 800);
+    await dismissAlerts(page);
+    const chosen = await page.evaluate(() => ({
+      key: (typeof selectedTravelProductKey !== 'undefined' && selectedTravelProductKey)
+        || (typeof preGenTravelVariant !== 'undefined' && preGenTravelVariant) || null,
+      colour: (typeof selectedTravelColor !== 'undefined' && selectedTravelColor)
+        || (typeof preGenTravelColor !== 'undefined' && preGenTravelColor) || null,
+    }));
+    if (chosen.key !== C.key) return `FAIL: asked for ${C.key}, the studio settled on ${chosen.key}`;
+
+    await describeAndGenerate(page, 'a lighthouse in a storm');
+    await waitLanded(page);
+    await T(page, 1200);
+    const walk = await walkForwardToMockup(page);
+    if (!walk.ok) return `FAIL: ${C.key} never reached its mockup — stuck at "${walk.route[walk.route.length - 1]}" via ${walk.route.join(' → ')}`;
+    await T(page, 1200);
+    await checkoutFromMockup(page);
+    await payFrom(page);
+
+    const b = bodies[bodies.length - 1];
+    if (!b) {
+      const st = await page.evaluate(() => ({ url: location.pathname, status: document.getElementById('status')?.textContent || '' }));
+      return `FAIL: ${C.key}: no payment body. at=${st.url} status="${st.status.trim()}" (route ${walk.route.join(' → ')})`;
+    }
+    const bad = [];
+    if (b.productKey !== C.key) bad.push(`the cup changed across the hop: studio ${C.key}, payment ${b.productKey}`);
+    if (b.sizeLabel !== C.sizeLabel) bad.push(`sizeLabel=${JSON.stringify(b.sizeLabel)}, expected ${JSON.stringify(C.sizeLabel)}`);
+    if (chosen.colour && b.colorName !== chosen.colour) bad.push(`colour changed: studio ${chosen.colour}, payment ${b.colorName}`);
+    if (!(b.image || b.frontImage || b.backImage)) bad.push('the design did not survive the hop');
+    if (!b.shippingAddress || b.shippingAddress.zip !== '48185') bad.push('shipping address incomplete');
+    if (bad.length) return `FAIL: ${C.key}: ${bad.join('; ')}`;
+    return `PASS: ${C.key} keeps its identity across the hop (${b.sizeLabel}${b.colorName ? ', ' + b.colorName : ''}) via ${walk.route.join(' → ')}`;
+  };
+}
+
 // ---- A record the studio never wrote must not be guessed at. ----
 // order.html falls back to 'mug' when there is no pending order at all
 // (selectedProductFamily = pendingOrder?.productIcon || 'mug'). That is fine
@@ -324,8 +587,12 @@ scenarios.anEmptyOrderPageCannotCharge = async (page, log, bodies) => {
 
 (async () => {
   let fails = 0;
+  // ONLY=regex runs a subset, for iterating on one scenario without paying
+  // for the other dozen every time.
+  const only = process.env.ONLY ? new RegExp(process.env.ONLY) : null;
   for (const [name, fn] of Object.entries(scenarios)) {
-    const { browser, page, log } = await launch();
+    if (only && !only.test(name)) continue;
+    const { browser, page, log } = await launch(OPTS[name] || {});
     const bodies = [];
     page.on('request', (r) => {
       if (r.url().includes('/api/create-checkout-session')) {
