@@ -214,9 +214,43 @@ The phase change is a moment you can be wrong about in **both** directions:
 The count, plus the map of who holds what, is what puts you on the correct trick.
 Everybody else is guessing, and finding out afterwards which way they guessed.
 
-### Habit two
+### Habit two: KNOW WHEN A CARD IS BOSS
 
-*(to be dictated)*
+**I do not care if it is an eight. Know when a card is boss.**
+
+This is not an instruction to count every card in every suit. Doing that while
+also counting spades is extremely difficult and most players cannot manage both.
+So do not track the *history*. Track the **state**:
+
+    hearts     the 8 is boss
+    diamonds   the jack is boss
+    clubs      the 7 is boss
+    spades     everything above the 9 is gone
+
+Four facts, carried forward, updated whenever an honour falls. That is the whole
+of it.
+
+Not *"which cards have been played"* — fifty-two things to hold in your head.
+Only **"what is boss now?"** — four. And it is the only question that has ever
+mattered, because **a card's value was never its rank. It is the rank of what
+remains above it.** An eight with nothing higher outstanding is not an eight. It
+is an Ace, and it wins exactly like one.
+
+### The two habits interlock
+
+    Habit two  ->  tells you WHICH of your cards is boss
+    Habit one  ->  tells you WHETHER being boss means anything yet
+                   (a side-suit boss is only a hope while spades are live)
+
+Together they give you the true value of everything in your hand, on every
+trick. Neither one alone does it. That is why they are the floor and not the
+finishing touches.
+
+It is also the difference between a partner who is merely slower and a partner
+who is unreachable. A player without this is holding a winning card and does not
+know it. He will duck with a boss, or spend a trump protecting something that was
+already unbeatable — and no amount of signalling can repair it, because you can
+tell him what **you** hold and you cannot tell him what **he** holds.
 
 ---
 
