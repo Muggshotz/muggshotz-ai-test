@@ -186,8 +186,9 @@ number-one run, for two reasons:
    **8**, and **85% of games were against lower-ranked players** — from whom,
    by the ladder's own half-the-distance rule, no rank can be gained. The win
    rate rose across the window (55% → 62% → 65%) while the rank fell from 3 to
-   2,618. Winning more, ranking less. That is a player handing out games at the
-   top, not a player climbing toward it.
+   2,618. Winning more, ranking less. That is a player taking all comers at the
+   top, not a player climbing toward it. Median gap between consecutive games:
+   240 seconds, with 301 games beginning within two minutes of the one before.
 
 The first recorded day already shows rank 12, twenty-four minutes after the
 account existed, against a rule that starts new members unranked at the bottom
@@ -195,6 +196,31 @@ account existed, against a rule that starts new members unranked at the bottom
 
 Whatever happened before 2 December 1998 is not in this record, and the record
 itself says that is where it must have happened.
+
+---
+
+## A note on the games we gave away
+
+We never threw a game and we never cheated. What we did was accept every
+challenge. Anyone who wanted a game got one, and we played light — we were not
+trying to farm rank off friends, we were passing the time at the top.
+
+We also told people, plainly, that we did not care if *they* cheated. If you
+and your partner want to text each other your hands, go ahead. People did it
+anyway. It made no difference, and the reason it made no difference is the
+whole thesis of this book:
+
+**Knowing the cards is not the same as knowing what to do with them.**
+
+An opponent pair with perfect information about each other's hands still has
+to decide, on every trick, which card to play and why. The Program is not a
+method for discovering cards. It is a method for two people to *act as one
+player*. You can hand the other side full knowledge and they will still be two
+people making two separate plans, while we are one player holding twenty-six
+cards.
+
+That is why we could afford to be generous about it. The information was never
+the edge.
 
 ---
 
