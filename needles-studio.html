@@ -11217,7 +11217,13 @@ function resetRefSlot(zoneId, previewId, inputId){
   if(!z)return;
   z.classList.remove('has-image');
   z.style.padding='';
-  z.innerHTML='<div style="font-size:16px;color:#555;margin-bottom:1px">\u2795</div><div class="upload-text" style="font-size:8px;line-height:1.1">Add ref</div>';
+  // "Add ref" on BOTH boxes (Alyx: "I tried to pull an image off of Reference
+  // photo A and Reference photo B, and only the image from B appeared"). Remove
+  // a reference and the box forgot which one it was, so both read "Add ref" --
+  // and from then on neither the customer nor the prompt they write can tell A
+  // from B. The zone knows its own identity; it just was not using it.
+  const which=(zoneId==='refAZone')?'Reference A':(zoneId==='refBZone'?'Reference B':'Add ref');
+  z.innerHTML='<div style="font-size:16px;color:#555;margin-bottom:1px">\u2795</div><div class="upload-text" style="font-size:8px;line-height:1.1">'+which+'</div>';
   const oldImg=document.getElementById(previewId);
   if(oldImg)oldImg.remove();
   const fresh=document.createElement('img');
@@ -16380,6 +16386,7 @@ document.getElementById('cancelBtn').style.display='block';
     const referenceLine = (refASnapshot || refBSnapshot)
       ? `
 REFERENCE IMAGES: Additional photos have been provided beyond the main photo. Customers name these pins loosely — treat any reasonable variation as the same pin, not just the exact label.
+WHICH ATTACHED IMAGE IS WHICH — this is the binding, and nothing else establishes it: the FIRST image attached after the customer's main photo is Reference A. The SECOND image attached after the main photo is Reference B. Bind the names below to the images in that order. Do not infer the order from anything else.
 ${refASnapshot ? 'This image is "Reference A". The customer may call it: Reference A, Ref A, reference 1, the first reference, photo A, picture A, image A, box A, button A, pin A, the first pin, the second photo, Photo 2, or similar. When the customer idea above refers to it by ANY such name, use this exact image for the element described (e.g. a face, an object, a scene, a setting).' : ''}
 ${refBSnapshot ? 'This image is "Reference B". The customer may call it: Reference B, Ref B, reference 2, the second reference, photo B, picture B, image B, box B, button B, pin B, the second pin, the third photo, Photo 3, or similar. When the customer idea above refers to it by ANY such name, use this exact image for the element described.' : ''}
 ${refASnapshot && refBSnapshot ? 'If a name is ambiguous between the two (e.g. just "the reference"), prefer the one whose content matches what the idea asks for.' : ''}

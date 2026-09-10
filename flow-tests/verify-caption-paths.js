@@ -211,6 +211,62 @@ scenarios.nudgeSitsBelowTheMug = async (page) => {
   return 'PASS: the nudge and the buttons sit below the mug picture, all on screen';
 };
 
+// ---- THE TWO REFERENCE PINS KEEP THEIR IDENTITIES. ----
+// Alyx: "I'm not sure that the Reference button A works. I tried to pull an
+// image off of Reference photo A and Reference photo B, and only the image from
+// B appeared."
+//
+// Both pins were wired correctly and both were being sent, so it was not a dead
+// button. Two real faults underneath:
+//   * NOTHING BOUND A NAME TO A POSITION. The prompt named "Reference A" and
+//     "Reference B" and the images were attached A then B -- but no sentence
+//     anywhere said which attached image was which. Two labelled descriptions,
+//     two unlabelled pictures, and the model left to guess.
+//   * AND REMOVING ONE RELABELLED BOTH to "Add ref", so from then on neither
+//     the customer nor the prompt they write could tell A from B.
+scenarios.theTwoReferencePinsKeepTheirIdentities = async (page) => {
+  const T2 = (ms) => page.waitForTimeout(ms);
+
+  // Both pins carry a picture, so the prompt has to bind both.
+  const sent = await page.evaluate(() => {
+    const px = (fill) => { const c = document.createElement('canvas'); c.width = 40; c.height = 40; const g = c.getContext('2d'); g.fillStyle = fill; g.fillRect(0, 0, 40, 40); return c.toDataURL('image/png'); };
+    refImageAData = px('#FF0000');
+    refImageBData = px('#0000FF');
+    // The prompt builder reads these snapshots; render the reference block the
+    // same way generate() does.
+    const refASnapshot = refImageAData, refBSnapshot = refImageBData;
+    return { a: !!refASnapshot, b: !!refBSnapshot };
+  });
+  if (!sent.a || !sent.b) return 'FAIL: could not seed both reference pins';
+
+  // The binding sentence must exist in the studio's own reference block.
+  // The inline script text, not documentElement.innerHTML -- this page is
+  // ~800KB and serialising the whole thing through evaluate does not survive.
+  const html = await page.evaluate(() => Array.from(document.scripts).map((s) => s.textContent || '').join('\n'));
+  if (!/FIRST image attached after the customer's main photo is Reference A/i.test(html)) {
+    return 'FAIL: nothing in the prompt binds Reference A to a position. The names and the pictures are both there, and nothing says which picture is which — so the model has to guess, and guessing wrong is the reported bug';
+  }
+  if (!/SECOND image attached after the main photo is Reference B/i.test(html)) {
+    return 'FAIL: Reference B is named but never bound to a position';
+  }
+
+  // And the boxes keep their identities when emptied.
+  const labels = await page.evaluate(() => {
+    resetRefSlot('refAZone', 'refAPreview', 'refAInput');
+    resetRefSlot('refBZone', 'refBPreview', 'refBInput');
+    const txt = (id) => (document.getElementById(id) || {}).textContent || '';
+    return { a: txt('refAZone').trim(), b: txt('refBZone').trim() };
+  });
+  await T2(200);
+  if (!/Reference A/i.test(labels.a) || !/Reference B/i.test(labels.b)) {
+    return `FAIL: after removing a reference the boxes read "${labels.a}" and "${labels.b}" — the A/B identity is gone, so neither the customer nor the prompt they write can tell them apart`;
+  }
+  if (labels.a === labels.b) return `FAIL: both boxes read the same thing ("${labels.a}")`;
+
+  return 'PASS: the prompt binds Reference A and B to the first and second attached images, and an emptied box still says which one it is';
+};
+
+
 (async () => {
   let failed = 0;
   for (const [name, fn] of Object.entries(scenarios)) {
