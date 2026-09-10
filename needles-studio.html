@@ -2,7 +2,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head><link rel="manifest" href="needles-manifest.json">
-<!-- BUILD-MARKER: CHECKOUT-DRIVEN-CARD-INSIDE-v139 -->
+<!-- BUILD-MARKER: SCROLL-PIN-RESUMES-v140 -->
 <!-- If you can see this comment on GitHub, this exact paste landed. -->
 <!-- If your live site's page source does NOT say -->
 <!-- "INSTANT-FIT-SCREEN-v47" right here, the upload/deploy did -->
@@ -2746,6 +2746,7 @@ let previousImageData=null;
 let currentDesignId=null;
 
 let guidedScrollInProgress=false;
+let guidedScrollSettleTimer=0;
 let guidedScrollClearTimer=null;
 
 let openingGuideTimer=null;
@@ -13717,7 +13718,18 @@ function scrollPinOnScroll(){
   // The pin exists to keep the lit panel on screen once the customer is
   // scrolling it themselves; it has no business fighting the rail's own
   // landing, which already knows where it is going.
-  if(guidedScrollInProgress)return;
+  //
+  // BUT IT MUST COME BACK WHEN THE LANDING IS OVER (Sep 2026, second pass).
+  // Standing down for a fixed 1.2-2.2s left the customer's own first
+  // scroll unpinned if it came inside that window -- the wraparound suite
+  // caught the page sitting at the top with the lit panel 1500px below.
+  // A guided scroll is a stream of scroll events; when they stop for a
+  // beat it has landed, and from that moment the pin is back on duty.
+  if(guidedScrollInProgress){
+    clearTimeout(guidedScrollSettleTimer);
+    guidedScrollSettleTimer=setTimeout(()=>{guidedScrollInProgress=false;scrollPinOnScroll();},160);
+    return;
+  }
   if(scrollPinRaf)return;
   scrollPinRaf=requestAnimationFrame(()=>{
     scrollPinRaf=0;

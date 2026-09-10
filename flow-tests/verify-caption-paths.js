@@ -147,9 +147,11 @@ scenarios.frameStudioTwoColumns = async (page) => {
   if (!wide.sideBySide || wide.sticky !== 'sticky') return 'FAIL: not two columns with a pinned preview: ' + JSON.stringify(wide);
   if (!wide.previewInLeft || !wide.gridInRight || !wide.applyInLeft) return 'FAIL: pieces in the wrong columns: ' + JSON.stringify(wide);
   // Apply and Back stay on screen under the preview, even on a short window; the pre-generation furniture is gone.
+  // (The preview that has to be showing is the studio's own strip: the old
+  // #frameSectionIntroMockup note is an empty div since the 3D mug era.)
   for (const h of [900, 680]) {
     await page.setViewportSize({ width: 1280, height: h }); await T(page, 400);
-    const fit = await page.evaluate(() => { const a = document.getElementById('accessorizeSatisfiedBtn').getBoundingClientRect(), b = document.getElementById('accessorizeCancelBtn').getBoundingClientRect(); const vis = (el) => el && getComputedStyle(el).display !== 'none' && el.getBoundingClientRect().height > 0; return { applyBottom: Math.round(a.bottom), backBottom: Math.round(b.bottom), vh: innerHeight, arrow: vis(document.querySelector('#frameStudio .snap-arrow-btn')), promo: vis(document.getElementById('frameSillCrossPromoBanner')), preGen: vis(document.getElementById('frameSectionIntro')), mock: vis(document.getElementById('frameSectionIntroMockup')) }; });
+    const fit = await page.evaluate(() => { const a = document.getElementById('accessorizeSatisfiedBtn').getBoundingClientRect(), b = document.getElementById('accessorizeCancelBtn').getBoundingClientRect(); const vis = (el) => el && getComputedStyle(el).display !== 'none' && el.getBoundingClientRect().height > 0; return { applyBottom: Math.round(a.bottom), backBottom: Math.round(b.bottom), vh: innerHeight, arrow: vis(document.querySelector('#frameStudio .snap-arrow-btn')), promo: vis(document.getElementById('frameSillCrossPromoBanner')), preGen: vis(document.getElementById('frameSectionIntro')), mock: vis(document.getElementById('accessorizePreviewStrip')) }; });
     if (fit.applyBottom > fit.vh || fit.backBottom > fit.vh) return `FAIL: Apply/Back off screen at ${h}px tall: ` + JSON.stringify(fit);
     if (fit.arrow || fit.promo || fit.preGen || !fit.mock) return 'FAIL: pre-generation furniture showing in the studio: ' + JSON.stringify(fit);
   }
@@ -187,8 +189,13 @@ scenarios.captionTravelsAsLayer = async (page, log) => {
   await page.waitForFunction(() => document.getElementById('mockupLightboxOverlay').classList.contains('visible'), null, { timeout: 20000 });
   const late = log.apiCalls.slice(seen2).filter((c) => c.action === 'uploadComposite');
   if (late.length) return `FAIL: the edge screen uploaded ${late.length} file(s) for a captioned picture`;
-  const mock = log.apiCalls.slice(seen2).find((c) => c.path === '/api/start-mockup' && c.placementAdjust);
-  if (!mock) return 'FAIL: no mockup request carrying placementAdjust';
+  // The 3D mug opens the lightbox instantly and the Printify request fires
+  // behind it, several seconds later (same timing verify-ten-fixes waits
+  // on) -- so poll for the request rather than expecting it at "visible".
+  const findMock = () => log.apiCalls.slice(seen2).find((c) => c.path === '/api/start-mockup' && c.placementAdjust);
+  for (let i = 0; i < 60 && !findMock(); i++) await T(page, 500);
+  const mock = findMock();
+  if (!mock) return 'FAIL: no mockup request carrying placementAdjust within 30s of the edge screen';
   const fa = mock.placementAdjust[pos] || {};
   if (!(fa.fade > 0)) return 'FAIL: the soft edge did not reach the mockup request: ' + JSON.stringify(fa);
   if (fa.caption !== after.caption) return 'FAIL: the caption layer did not reach the mockup request: ' + JSON.stringify(fa);
