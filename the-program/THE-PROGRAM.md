@@ -200,6 +200,25 @@ lone-card rule** and is led alone. There is no low card to lead, and a singleton
 is a singleton whatever its rank. She keeps her robes on — but she goes out by
 herself.
 
+And lead her by all means, because holding her back preserves nothing. Under
+ordinary bidding — no nil in the picture — a lone Queen has **exactly one** path
+to winning a trick:
+
+> Your partner holds both the Ace and the King.
+
+That is the entire list. If either opponent holds either card she dies the
+moment that suit is played, and it *will* be played, because she is your only
+one. There is no line where waiting saves her.
+
+So leading her is a **free probe**. You test the one condition under which she
+lives, and if the answer is no you were losing her regardless — and you are void
+either way, which was the real prize from the beginning. You cannot lose by
+asking.
+
+(No one wants to see a naked Queen. Cleopatra, possibly. Helen of Troy, at a
+push. Galadriel would decline on principle — she is the one queen in the deck
+who, handed absolute power, looks at it and does not play it.)
+
 Which extends to the top of the deck. **A lone Ace is led too** — the one Ace
 lead that is not a waste. A led Ace normally kills nothing, but a *singleton*
 Ace takes the trick, voids the suit, and leaves the lead in your own hand.
