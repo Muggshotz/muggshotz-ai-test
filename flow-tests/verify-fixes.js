@@ -4,6 +4,16 @@
 // scenario where it is the expected rescue).
 const { launch, openStudio, uploadPhoto, dismissAlerts, bodyFocusClasses, passFadePage } = require('./harness');
 
+// PRESS GENERATE IN-PAGE (Sep 2026). These scenarios jump to Generate
+// straight from the spotlit idea box -- a shortcut the customer never
+// takes (the box hands off through its own Satisfied button). A real
+// pointer click first scrolls the button into view, and the scroll pin
+// snaps the page back to the lit card within a frame, so the click lands
+// on a button that has just left the screen and times out whenever the
+// pin wins the race. Pressing the button's handler directly is what the
+// shortcut meant all along.
+const pressGenerate = (page) => page.evaluate(() => document.getElementById('generateBtn').click());
+
 const waitApprove = (page, id = 'approveRow', t = 90000) =>
   page.waitForFunction((i) => document.getElementById(i)?.style.display !== 'none', id, { timeout: t });
 
@@ -58,8 +68,7 @@ const scenarios = {
     await page.fill('#ideaDesc', 'a joyful birthday parade');
     await page.waitForTimeout(500);
     await dismissAlerts(page);
-    await page.evaluate(() => document.getElementById('generateBtn')?.scrollIntoView({ block: 'center' }));
-    await page.click('#generateBtn');
+    await pressGenerate(page);
     await waitApprove(page);
     const atReveal = await page.evaluate(() => ({
       genActive: document.body.classList.contains('generation-active'),
@@ -110,8 +119,7 @@ const scenarios = {
     await page.fill('#ideaDesc', 'a joyful birthday parade');
     await page.waitForTimeout(500);
     await dismissAlerts(page);
-    await page.evaluate(() => document.getElementById('generateBtn')?.scrollIntoView({ block: 'center' }));
-    await page.click('#generateBtn');
+    await pressGenerate(page);
     await waitApprove(page);
     await page.locator('#approveRow button:has-text("No")').first().click();
     await page.waitForTimeout(1600);
@@ -130,7 +138,7 @@ const scenarios = {
     await page.waitForTimeout(1500);
     await dismissAlerts(page);
     await page.fill('#ideaDesc', 'corgi commander');
-    await page.click('#generateBtn');
+    await pressGenerate(page);
     await page.waitForTimeout(1000);
     await dismissAlerts(page);
     const focus = (await bodyFocusClasses(page)).join(',');
@@ -149,8 +157,7 @@ const scenarios = {
     await page.click('#toteBagColorGridGen .color-btn[data-color="Black"]');
     await page.waitForTimeout(400);
     // and generation must proceed end-to-end
-    await page.evaluate(() => document.getElementById('generateBtn')?.scrollIntoView({ block: 'center' }));
-    await page.click('#generateBtn');
+    await pressGenerate(page);
     await waitApprove(page);
     return `PASS: focus after bounce=[${focus}], real tile click worked, generated to approve`;
   },

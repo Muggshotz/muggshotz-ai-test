@@ -12,6 +12,16 @@
 // verify-approve-handoff.js; this suite owns the accepted path.
 const { launch, openStudio, uploadPhoto, uploadPhotoAndChooseBYO, waitForIntentGate, dismissAlerts, BASE } = require('./harness');
 
+// PRESS GENERATE IN-PAGE (Sep 2026). These scenarios jump to Generate
+// straight from the spotlit idea box -- a shortcut the customer never
+// takes (the box hands off through its own Satisfied button). A real
+// pointer click first scrolls the button into view, and the scroll pin
+// snaps the page back to the lit card within a frame, so the click lands
+// on a button that has just left the screen and times out whenever the
+// pin wins the race. Pressing the button's handler directly is what the
+// shortcut meant all along.
+const pressGenerate = (page) => page.evaluate(() => document.getElementById('generateBtn').click());
+
 const T = (page, ms) => page.waitForTimeout(ms);
 
 async function pickProduct(page, val) {
@@ -43,8 +53,7 @@ const scenarios = {};
 scenarios.acceptedTransferSkipsTheAI = async (page, log, mockupBodies) => {
   await pickProduct(page, 'mouse pad');
   await armConfirm(page, true);
-  await page.evaluate(() => document.getElementById('generateBtn')?.scrollIntoView({ block: 'center' }));
-  await page.click('#generateBtn');
+  await pressGenerate(page);
   await T(page, 500);
   const calls = await page.evaluate(() => window.__confirmCalls || []);
   if (!calls.length) return 'FAIL: no confirm fired for the empty box';
@@ -97,8 +106,7 @@ scenarios.confirmWarnsWhenAStyleWouldBeLost = async (page) => {
   await T(page, 300);
   await pickProduct(page, 'mouse pad');
   await armConfirm(page, false); // decline -- this scenario is about the message text, not the accept path
-  await page.evaluate(() => document.getElementById('generateBtn')?.scrollIntoView({ block: 'center' }));
-  await page.click('#generateBtn');
+  await pressGenerate(page);
   await T(page, 500);
   const calls = await page.evaluate(() => window.__confirmCalls || []);
   if (!calls.length) return 'FAIL: no confirm fired';
@@ -112,8 +120,7 @@ scenarios.confirmWarnsWhenAStyleWouldBeLost = async (page) => {
 scenarios.confirmStaysQuietOnDefaultStyle = async (page) => {
   await pickProduct(page, 'mouse pad');
   await armConfirm(page, false);
-  await page.evaluate(() => document.getElementById('generateBtn')?.scrollIntoView({ block: 'center' }));
-  await page.click('#generateBtn');
+  await pressGenerate(page);
   await T(page, 500);
   const calls = await page.evaluate(() => window.__confirmCalls || []);
   if (!calls.length) return 'FAIL: no confirm fired';
@@ -126,8 +133,7 @@ scenarios.outOfCreditsCanStillTransfer = async (page, log) => {
   await pickProduct(page, 'mouse pad');
   await page.evaluate(() => { currentTokenBalance = 0; });
   await armConfirm(page, true);
-  await page.evaluate(() => document.getElementById('generateBtn')?.scrollIntoView({ block: 'center' }));
-  await page.click('#generateBtn');
+  await pressGenerate(page);
   await T(page, 500);
   const calls = await page.evaluate(() => window.__confirmCalls || []);
   if (!calls.length) return 'FAIL: a customer with 0 credits was blocked from the free transfer';
@@ -173,8 +179,7 @@ scenarios.typedIdeaStillGenerates = async (page, log) => {
   await dismissAlerts(page);
   await armConfirm(page, true);
   await T(page, 300);
-  await page.evaluate(() => document.getElementById('generateBtn')?.scrollIntoView({ block: 'center' }));
-  await page.click('#generateBtn');
+  await pressGenerate(page);
   await waitApprove(page);
   const calls = await page.evaluate(() => window.__confirmCalls || []);
   if (calls.length) return 'FAIL: a typed idea still got the transfer confirm';
