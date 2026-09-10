@@ -87,10 +87,58 @@ or more** additional cards.
 
 The floor is King, Queen, plus **two** spares. One spare is not enough.
 
+**Why this outranks the lone card.** K-Q-plus-two is the one holding where
+leading costs your side nothing. You are not exposing an honour to capture, you
+are not forfeiting a capture of theirs, and you are not asking your partner to
+risk anything. The lone card is powerful but it *spends* something. The
+risk-free suit goes first.
+
 **What partner reads.** When the King appears on your first voluntary lead, your
 holding is a singleton King, or King-Queen exactly, or King-Queen with two or
 more others. It is *not* exactly K Q x. He also knows you do not hold the Ace,
 or you would have led it.
+
+**Lead the King always. If it walks, lead the Queen. Then lead another suit.**
+
+### The surplus — what the K-Q sequence really does
+
+This is the heaviest lifting in the order of leads, and it is not a card play at
+all. It is accounting.
+
+**When you bid a K-Q suit you cannot count both honours.** You do not know where
+the Ace is. One of them is going to die and you have no way of knowing which, so
+an honest bidder counts that suit as **one trick** — forced by the same
+discipline that counts an Ace but calls a finesse-dependent Queen a *possible
+only*.
+
+So when the King walks and then the Queen walks, that suit has delivered **two**
+tricks against **one** counted:
+
+    Counted from the K-Q suit        1
+    Actually delivered               2
+                                     ----
+    Surplus                         +1
+
+    Every OTHER trick he counted     still outstanding, still coming
+
+Your partner has not yet spent one of his real tricks. He is a full trick ahead
+of his own contract — and **you know it exactly.** Not as a guess. As arithmetic,
+because you know what he was permitted to count when he bid.
+
+A surplus trick is a free resource. It can cover you. It can be thrown at
+killing a nil. It can absorb a bad break in another suit. It can pay for a risk
+that would otherwise be reckless. Most partnerships never learn they had one
+until the hand is over and they are counting bags.
+
+**And this is why the bid must be honest.** The whole system is a ledger, and a
+true count at declaration is what makes it readable. Surplus is only detectable
+against an honest number. A partner who underbids does not merely cost you a
+trick — he makes it impossible to tell whether an extra trick is a *surplus* or
+merely a *correction to his lie.* The ledger stops balancing and every inference
+downstream of it dies.
+
+Which is why an underbid, and *"well, I had to make my tricks first,"* are not
+errors of judgement. They are corruptions of the accounting.
 
 **Why K Q x is banned.** Your King and Queen cannot be captured by the Ace
 unless you are the one who opens the suit. You are the only person who can hand
