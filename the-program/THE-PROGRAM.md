@@ -426,6 +426,32 @@ Which reframes what the honours are for. They are not primarily trick-takers.
 and so that his honours can commit without dying. The voids do the killing. The
 honours are what make the voids affordable.
 
+### Why the voids must be in different suits
+
+The crossfire maximises your partner's trumps and your own **without the two
+conflicting.** That is the efficiency of it, and it is why the suits have to be
+separate.
+
+Two voids in *different* suits means neither of you ever ruffs a trick the other
+one could have taken. Every trump is spent on a target only that hand could
+reach, so the partnership's trumps are doing two jobs simultaneously.
+
+Two voids in the *same* suit is waste. You are both queuing for the same ruffs —
+one trump thrown away every time the suit appears, or worse, one partner
+overruffing the other and spending two trumps to win a single trick.
+
+### If you are caught in one
+
+Crossfires almost always lead to sets. So when it is being done to **you**, it
+must be broken up immediately, and there is only one way to do it:
+
+**Run spades.**
+
+A void is worth something only while the hand holding it still has trumps.
+Strip the trumps and the void stops being a weapon and becomes an ordinary hole
+in a hand. Delay, and you feed a ruff every trick while your own honours die
+unplayed in your hand — which is exactly the shape of a set.
+
 ---
 
 ## Appendix — The record
