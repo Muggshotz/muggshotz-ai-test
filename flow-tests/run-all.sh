@@ -4,6 +4,7 @@
 cd "$(dirname "$0")"
 PASS=(); FAIL=()
 for f in verify-*.js verify-*.mjs; do
+  case "$f" in *-helpers.js) continue;; esac   # shared helpers, not a suite
   out=$(timeout 600 node "$f" 2>&1)
   if printf '%s' "$out" | grep -qE "ALL .*PASSED|ALL VERIFICATIONS PASSED"; then
     PASS+=("$f")
