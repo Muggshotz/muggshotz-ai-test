@@ -607,6 +607,41 @@ itself says that is where it must have happened.
 
 ---
 
+## The prohibitions
+
+Plays you do not make. Not "prefer to avoid" — do not make them, unless the hand
+leaves you no legal or sane alternative.
+
+### 1. Never return the suit led by the player to your right
+
+The player to your right acts **immediately before you** in the rotation. Which
+means the instant *you* take the lead, he drops to the back of the queue:
+
+    You lead   ->   you (1st) . LHO (2nd) . partner (3rd) . RHO (4th)
+
+**He gets fourth chair — in the suit he chose to open.**
+
+He led it for a reason. He has a tenace there, or he is developing something, or
+he is hunting a particular card. Whatever the plan was, returning that suit hands
+him the last word in his own project, with three cards face up in front of him
+before he has to commit. You have taken the one suit at the table he had already
+thought about and given him the best possible seat from which to finish it.
+
+The second half is worse, because your partner pays it:
+
+    Partner must commit in THIRD chair - ahead of the very man who chose the suit
+
+That is the leader's duty exactly inverted. The entire order of leads exists to
+keep your partner from committing ahead of someone who knows more than he does,
+and returning this suit walks him straight into it. You are not merely helping
+the opponent; you are feeding your partner to him.
+
+Same law as everything else in the book, stated as a prohibition: **arrange for
+them to speak first, never for your side to.** Returning the right-hand
+opponent's lead guarantees the opposite, on both counts, in one card.
+
+---
+
 ## Against a nil
 
 *(chapter to be dictated)*
