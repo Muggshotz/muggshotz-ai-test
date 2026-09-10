@@ -198,7 +198,11 @@ scenarios.frameOfferOnTheMockup = async (page, log) => {
   await page.click('#mockupLightboxFrame');
   await T(page, 800);
   const picked = await page.evaluate(() => {
-    const tile = document.querySelector('#frameSectionCard .frame-option, #frameSectionCard [data-frame], #frameGrid > *');
+    // #frameGrid stopped being the grid itself (Sep 2026): it holds two
+    // sections with a note between them, so '#frameGrid > *' clicked a
+    // section wrapper and selected nothing. The tiles are .frame-btn; skip
+    // the coming-soon ones, which deliberately do not select.
+    const tile = document.querySelector('#frameSectionCard .frame-btn:not(.coming-soon)');
     if (tile) { tile.click(); return tile.className || tile.tagName; }
     return null;
   });

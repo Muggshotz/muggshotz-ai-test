@@ -478,26 +478,28 @@ scenarios.byoMugRailLandsOnGenerateAndCanChangeStyle = async (page) => {
   await T(page, 800);
   await dismissAlerts(page);
   // Classic White is colourless, so Continue is the next real click.
-  // NEW CONTRACT (parallel session's auto-run): Continue auto-runs the
-  // transfer and lands on the FADE PAGE — no Generate button stop, no
-  // strand-at-products dead end either way.
+  // CONTRACT (Sep 2026): the mug's pre-placement fade page was retired --
+  // the fade is a slider on the Fit Your Picture box now -- so Continue
+  // auto-runs the transfer and lands on the PANELS screen with the picture
+  // placed. No Generate stop, no strand-at-products dead end either way.
+  // (This scenario waited for the fade page from the previous contract and
+  // reported the retirement as "the dead-end is back"; verify-ten-fixes'
+  // reachPanels does this same sequence and lands on the panels.)
   await page.evaluate(() => { finishPreGenMugColorPick(); });
-  const fadeOpened = await page.waitForFunction(() => {
-    const o = document.getElementById('frameFadeOverlay');
-    return !!(o && getComputedStyle(o).display !== 'none');
-  }, null, { timeout: 30000 }).then(() => true).catch(() => false);
+  const panelsOpened = await page.waitForFunction(() =>
+    document.getElementById('coverMePanelCard')?.style.display === 'block',
+  null, { timeout: 30000 }).then(() => true).catch(() => false);
   const landing = await page.evaluate(() => ({
     gimmicksShown: document.getElementById('designMethodCard').style.display === 'block',
   }));
   if (landing.gimmicksShown) return 'FAIL: the gimmick panel opened on a BYO mug rail';
-  if (!fadeOpened) return 'FAIL: Continue after Classic White did not auto-run to the fade page — the dead-end is back in a new form';
+  if (!panelsOpened) return 'FAIL: Continue after Classic White did not auto-run to the panels screen — the dead-end is back in a new form';
 
-  // The Change Style mechanism now lives on the fade page's way back:
-  // close the fade (its own Back/✕), then the Change Style button near
-  // Generate is reachable again. Exercise the state machine directly.
+  // The Change Style mechanism lives on the panels screen's way back.
+  // Exercise the state machine directly.
   await page.evaluate(() => {
-    const o = document.getElementById('frameFadeOverlay');
-    if (o) o.style.display = 'none';
+    const c = document.getElementById('coverMePanelCard');
+    if (c) c.style.display = 'none';
     document.body.classList.remove('step-locked');
     goBackToMugStyle();
   });
@@ -519,7 +521,7 @@ scenarios.byoMugRailLandsOnGenerateAndCanChangeStyle = async (page) => {
   });
   if (repicked.style !== 'Color Pop') return `FAIL: repick did not take (style=${repicked.style})`;
   if (repicked.color !== null || repicked.finished) return 'FAIL: switching styles kept stale colour state';
-  return 'PASS: BYO mug rail lands on Generate, the Change Style button rides back, and a Color Pop repick clears the old state';
+  return 'PASS: BYO mug rail auto-runs to the panels screen, the Change Style button rides back, and a Color Pop repick clears the old state';
 };
 BYO_SETUP.add('byoMugRailLandsOnGenerateAndCanChangeStyle');
 
@@ -760,19 +762,19 @@ scenarios.colourPingPongNeverThrowsYouToSize = async (page, log) => {
     if (await sizeOverlay() === 'flex')
       return `FAIL: round ${i + 1} of colour ping-pong got thrown to Size`;
   }
-  // And forward still works after all of it — the auto-run contract:
-  // Continue lands on the fade page.
+  // And forward still works after all of it — the auto-run contract
+  // (Sep 2026): Continue lands on the panels screen, the mug's fade page
+  // having been retired for a slider on the Fit Your Picture box.
   await page.evaluate(() => {
     document.querySelectorAll('#preGenMugColorGrid .color-btn')[0].click();
   });
   await T(page, 500);
   await page.evaluate(() => { finishPreGenMugColorPick(); });
-  const fadeAfter = await page.waitForFunction(() => {
-    const o = document.getElementById('frameFadeOverlay');
-    return !!(o && getComputedStyle(o).display !== 'none');
-  }, null, { timeout: 30000 }).then(() => true).catch(() => false);
-  if (!fadeAfter) return 'FAIL: after eleven ping-pongs, forward no longer reaches the fade page';
-  return 'PASS: green -> back -> red never skips to Size, eleven ping-pong rounds hold, and forward still auto-runs to the fade page';
+  const panelsAfter = await page.waitForFunction(() =>
+    document.getElementById('coverMePanelCard')?.style.display === 'block',
+  null, { timeout: 30000 }).then(() => true).catch(() => false);
+  if (!panelsAfter) return 'FAIL: after eleven ping-pongs, forward no longer reaches the panels screen';
+  return 'PASS: green -> back -> red never skips to Size, eleven ping-pong rounds hold, and forward still auto-runs to the panels screen';
 };
 BYO_SETUP.add('colourPingPongNeverThrowsYouToSize');
 

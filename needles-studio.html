@@ -2746,6 +2746,7 @@ let previousImageData=null;
 let currentDesignId=null;
 
 let guidedScrollInProgress=false;
+let guidedScrollClearTimer=null;
 
 let openingGuideTimer=null;
 let openingGuideDone=true;
@@ -2780,6 +2781,11 @@ function scrollToStableTop(el,offset,maxAttempts){
     attempts++;
     const top=el.getBoundingClientRect().top;
     if(top===lastTop||attempts>=maxAttempts){
+      // A guided scroll is in flight: the scroll pin must stand down (see
+      // scrollPinOnScroll) or it clamps the page mid-animation.
+      guidedScrollInProgress=true;
+      clearTimeout(guidedScrollClearTimer);
+      guidedScrollClearTimer=setTimeout(()=>{guidedScrollInProgress=false;},1200);
       window.scrollTo({top:window.scrollY+top-offset,behavior:'smooth'});
       return;
     }
@@ -2788,6 +2794,7 @@ function scrollToStableTop(el,offset,maxAttempts){
   }
   requestAnimationFrame(check);
 }
+
 
 // Same stability-polling approach as scrollToStableTop, but anchors the
 // BOTTOM of the element a fixed margin above the bottom of the
@@ -13700,9 +13707,21 @@ function scrollPinBounds(){
   return { minY:Math.max(0,minY), maxY:Math.max(0,maxY) };
 }
 function scrollPinOnScroll(){
+  // THE PIN WAS KILLING THE GUIDED SCROLL (Sep 2026). Art Style's landing
+  // scroll was aimed correctly at the card and the page stopped 406px short
+  // of it, every time. Not a stale aim -- a probe logged one scrollTo, the
+  // right target, and room to spare -- but THIS listener: mid-animation the
+  // page passed through a scrollY below the pin's lower bound (the lit
+  // card's bottom against the viewport bottom), so it snapped there
+  // instantly, and the smooth scroll died at 1127 with the card 420px down.
+  // The pin exists to keep the lit panel on screen once the customer is
+  // scrolling it themselves; it has no business fighting the rail's own
+  // landing, which already knows where it is going.
+  if(guidedScrollInProgress)return;
   if(scrollPinRaf)return;
   scrollPinRaf=requestAnimationFrame(()=>{
     scrollPinRaf=0;
+    if(guidedScrollInProgress)return;
     const b=scrollPinBounds();
     if(!b)return;
     // A panel taller than the window scrolls within itself (minY..maxY); a
