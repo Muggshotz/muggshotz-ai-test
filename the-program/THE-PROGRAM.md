@@ -191,8 +191,22 @@ the good chairs and preserved from the bad ones.
 If you have no lone card and no King-Queen-plus-two, lead **low** from a suit in
 which you hold the Queen.
 
-The exception: a Queen that is the sole card of its suit is a lone card, and is
-handled by the lone-card rule above.
+**The Queen is held back as backup to your partner's King.** That is her entire
+job in this rule — you keep her so that you have his back if his King is
+sacrificed. Leading her forfeits the only thing she was being saved for.
+
+The exception: **a Queen that is the sole card of its suit reverts to the
+lone-card rule** and is led naked. There is no low card to lead, and a singleton
+is a singleton whatever its rank.
+
+Which extends to the top of the deck. **A lone Ace is led too** — the one Ace
+lead that is not a waste. A led Ace normally kills nothing, but a *singleton*
+Ace takes the trick, voids the suit, and leaves the lead in your own hand.
+Trick, void and tempo from a single card. The rank of a lone card does not
+change the rule; the lone card is led.
+
+The one thing that overrides this — and it overrides a great deal else besides —
+is an opponent sitting nil. See that chapter.
 
 **Why not simply lead the Queen.** Leading her feeds her to whichever honour sits
 above. You hand them a capture and collect nothing. The Queen stays home, hidden
@@ -483,6 +497,32 @@ account existed, against a rule that starts new members unranked at the bottom
 
 Whatever happened before 2 December 1998 is not in this record, and the record
 itself says that is where it must have happened.
+
+---
+
+## Against a nil
+
+*(chapter to be dictated)*
+
+A nil changes everything, because the nil becomes the priority. Before any
+technique, the arithmetic that governs it:
+
+    Opponent bids nil and MAKES it        they score  +100
+    Opponent bids nil and you SET it      they score  -100
+                                          -----------------
+                                 the swing:            200 points
+
+    Your own contract of 4, made                        +40
+
+Which is why *"well, I had to make my tricks first"* is not a difference of
+opinion but an arithmetic error. That player is defending forty points while
+conceding two hundred. **Stopping the nil is worth roughly five times his entire
+bid** — and in a game to 100, a made nil is not a setback, it is the game. In
+most situations, if you do not stop the nil your tricks do not matter. They are
+rounding error beside the thing that was ignored.
+
+The nil also suspends parts of the order of leads — the lone-card lead among
+them. And there is a psychological mechanism to it that needs its own treatment.
 
 ---
 
