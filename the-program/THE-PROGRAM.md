@@ -959,12 +959,36 @@ defect with no patch.
 
 ---
 
-## Against a nil
+## It Changes Everything
 
-*(chapter to be dictated)*
+A nil changes everything, because the nil becomes the priority — and **the
+recognition has to be immediate.** The moment it is on the table, the hand you
+were about to play is not the hand you are now playing.
 
-A nil changes everything, because the nil becomes the priority. Before any
-technique, the arithmetic that governs it:
+### Your bid stops mattering
+
+    The worst set you can possibly take  =  your bid x 10.   FINITE.
+    A game-winning nil                   =  the game.        TERMINAL.
+
+You can come back from points. You cannot come back from the game being over.
+
+So once the nil is the thing that ends it, **every card in your hand is free.**
+Sacrifice every King you hold. Take a set of eight books. None of those are real
+costs, because every one of them is paid in a currency that only means anything
+if there is going to be another hand.
+
+> **It must be stopped at all costs, by any means necessary.**
+
+**The one caveat, and it is a real one.** Sometimes the nil is *not enough* — it
+will not win them the game even if they make it. In those hands, do not worry
+about it. Play your own hand and take your own tricks.
+
+But in a game to 100 that condition is met almost every time, because a hundred
+points **is** the game. Which is why the doctrine reads as absolute in practice,
+and why a partner who treats it as a judgement call is so maddening: he is
+weighing his forty points against a thing that is not measured in points at all.
+
+### The arithmetic that governs it
 
     Opponent bids nil and MAKES it        they score  +100
     Opponent bids nil and you SET it      they score  -100
