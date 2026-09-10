@@ -1020,6 +1020,36 @@ takes the trick — and the nil is dead.
 
 Unless somebody covers him. Which is what the bleeding is for.
 
+### Never lead an Ace into a nil
+
+In something like twenty to thirty million hands of spades I have never once quit
+on a hand and walked out of a room. Nothing has ever come closer to making me do
+it than a partner who comes out leading Aces while an opponent is sitting nil.
+
+Look at what the two leads do:
+
+    You lead a LOW card  ->  the nil may be forced to play over it and WIN.
+                             That is the entire object of the exercise.
+
+    You lead an ACE      ->  you win the trick, guaranteed.
+                             He safely discards his most dangerous card.
+
+**Every Ace you lead against a nil removes one of his danger cards for free** —
+and you pay for the privilege with the best card you own. That is not a failure
+to attack him. It is doing his laundry. Three Aces led is three high cards
+cleaned out of his hand that could have hanged him, and he never had one anxious
+moment.
+
+It is worse than a wasted trick, too, because that Ace was also the card that
+could have *forced* him later, or served as the entry you needed to set the deuce
+up. It is not one mistake. It is spending your best weapon to disarm yourself on
+his behalf.
+
+Which makes this the sharpest form of a rule already in this book — *never open a
+suit you hold the Ace in.* Against a nil it stops being a preference.
+
+---
+
 ### The bleeding — and it is not what it sounds like
 
 The man you are bleeding is **the nil bidder's partner.** He is the cover. He is
