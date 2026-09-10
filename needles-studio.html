@@ -13145,7 +13145,41 @@ function printModeBack(){
   if(product==='water bottle'){ smoothScrollToTarget('travelMugVariantCard','center'); return; }
   smoothScrollToTarget('productCard','start');
 }
+// A DEAD END (Alyx, Sep 2026: "the back button doesn't do anything... I click on
+// back again, it still doesn't move. Once you get here you're trapped. There is
+// no Continue, but the back button doesn't work -- you're completely frozen out
+// now").
+//
+// It only SCROLLED. It undid nothing, and while this card is up the studio dims
+// every other card to 35% behind a spotlight -- so it scrolled to a product card
+// that was greyed out behind the veil, and from the customer's side absolutely
+// nothing happened. Press it again, same nothing. That is not a weak Back, it is
+// a trap, and it is on the way in to every travel cup we sell.
+//
+// Back from here is the product choice, so it has to actually undo the step:
+// drop the spotlight first (or the destination is invisible), clear the cup and
+// colour that were picked, put the choices that follow away, and hand the
+// product card back the way mugSizeLockBack does for mugs. Change cup keeps its
+// own job -- a different CUP, one level down -- so the two are not redundant
+// once this one works.
 function travelVariantBack(){
+  clearAllFocusModes();
+  preGenTravelVariant=null;
+  preGenTravelColor=null;
+  if(typeof selectedTravelProductKey!=='undefined')selectedTravelProductKey=null;
+  if(typeof selectedTravelColor!=='undefined')selectedTravelColor=null;
+  try{ refreshTravelMugColorVisibility(); }catch(e){}
+  try{ refreshMugPrintModeVisibility(); }catch(e){}
+  try{ renderTravelMugVariantGrid(); }catch(e){}
+  const card=document.getElementById('travelMugVariantCard');
+  if(card)card.style.display='none';
+  document.querySelectorAll('#productCard .btn-select').forEach(b=>b.classList.remove('selected'));
+  product=null;
+  productExplicitlyChosen=false;
+  const pc=document.getElementById('productCard');
+  if(pc)pc.style.display='block';
+  const guide=document.getElementById('productGuidancePrompt');
+  if(guide)guide.classList.add('visible');
   smoothScrollToTarget('productCard','start');
 }
 

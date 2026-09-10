@@ -201,6 +201,83 @@ for (const key of GEN_LANDING) {
 }
 
 
+// ---- THE CUP PICKER IS NOT A TRAP. ----
+// Alyx, Sep 2026: "I clicked on 30oz Tundra Tumbler, but when I click the Back
+// button it doesn't do anything... I click on back again, it still doesn't
+// move. Once you get here you're trapped. There is no Continue, but the back
+// button doesn't work -- you're completely frozen out now."
+//
+// travelVariantBack only SCROLLED. It undid nothing, and while this card is up
+// the studio dims every other card to 35% behind a spotlight -- so it scrolled
+// to a product card greyed out behind the veil and, from the customer's side,
+// nothing happened at all. This is the way in to every travel cup we sell.
+//
+// The test insists on the thing a customer can actually perceive: after Back,
+// the screen must be DIFFERENT, the destination must be legible rather than
+// dimmed, and the step must genuinely be undone. Pressing it twice must not
+// leave them where they started either -- "I click on back again, it still
+// doesn't move" is the report, and a Back that works once and then stops is the
+// same trap one screen further along.
+scenarios.theCupPickerIsNotATrap = async (page) => {
+  const T = (pg, ms) => pg.waitForTimeout(ms);
+  await page.click('#postUploadForkRow button:has-text("Select Your Product")');
+  await T(page, 700);
+  await page.locator('#productCard .btn-select[data-val="water bottle"]').click({ force: true });
+  await T(page, 1200);
+  await dismissAlerts(page);
+  await page.evaluate(() => pickPreGenTravelVariant('travel-mug-30oz-tundra'));
+  await T(page, 1000);
+  await dismissAlerts(page);
+
+  const look = () => page.evaluate(() => {
+    const el = (id) => document.getElementById(id);
+    const shown = (id) => { const e = el(id); return !!e && getComputedStyle(e).display !== 'none'; };
+    const pc = el('productCard');
+    return {
+      variantCard: shown('travelMugVariantCard'),
+      productCard: shown('productCard'),
+      // A card dimmed to 35% behind the spotlight is not a destination.
+      productOpacity: pc ? +parseFloat(getComputedStyle(pc).opacity).toFixed(2) : 0,
+      spotlit: Array.from(document.body.classList).filter((c) => /-focus$/.test(c)),
+      variant: typeof preGenTravelVariant !== 'undefined' ? preGenTravelVariant : 'n/a',
+      picked: !!document.querySelector('#productCard .btn-select.selected')
+    };
+  });
+
+  const before = await look();
+  if (!before.variantCard) return 'FAIL: the cup picker never opened — this measures nothing';
+  if (before.variant !== 'travel-mug-30oz-tundra') return `FAIL: the Tundra did not take (variant=${before.variant})`;
+
+  await page.evaluate(() => travelVariantBack());
+  await T(page, 1200);
+  const after = await look();
+
+  if (after.variantCard) return 'FAIL: Back left the cup picker on screen — nothing happened, which is exactly what he saw';
+  if (!after.productCard) return 'FAIL: Back hid the cup picker without putting the product choice back — now there is nothing at all';
+  if (after.productOpacity < 0.9) {
+    return `FAIL: Back landed on the product card but it is dimmed to ${after.productOpacity} behind a spotlight (${after.spotlit.join(', ')}) — the destination is there and the customer cannot see or use it, which is indistinguishable from the button not working`;
+  }
+  if (after.variant === 'travel-mug-30oz-tundra') return 'FAIL: Back left the Tundra still chosen — it scrolled rather than undoing the step';
+  if (after.picked) return 'FAIL: Back left a product still selected, so the choice cannot be remade';
+
+  // And forward again, then Back again: a Back that works once and then stops
+  // is the same trap one screen further along.
+  await page.locator('#productCard .btn-select[data-val="water bottle"]').click({ force: true });
+  await T(page, 1200);
+  await dismissAlerts(page);
+  const again = await look();
+  if (!again.variantCard) return 'FAIL: could not get forward to the cup picker a second time';
+  await page.evaluate(() => travelVariantBack());
+  await T(page, 1200);
+  const after2 = await look();
+  if (after2.variantCard || !after2.productCard || after2.productOpacity < 0.9) {
+    return `FAIL: the second Back did not work (picker ${after2.variantCard}, product ${after2.productCard} at ${after2.productOpacity}) — it works once and then traps you`;
+  }
+
+  return 'PASS: Back leaves the cup picker, undoes the choice, lands on an undimmed product card, and does it again on the second pass';
+};
+
+
 (async () => {
   let fails = 0;
   for (const [name, fn] of Object.entries(scenarios)) {
