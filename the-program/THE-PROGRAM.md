@@ -1098,6 +1098,10 @@ And it requires no study whatsoever. Everyone who has ever bid nil already holds
 the complete table of answers, stored as a **feeling.** You are not being asked
 to learn anything here. You are being asked to remember.
 
+It is the inverse of the golden rule:
+
+> ### Do unto others exactly what they are hoping you don't do.
+
 ---
 
 ### The bleeding — and it is not what it sounds like
