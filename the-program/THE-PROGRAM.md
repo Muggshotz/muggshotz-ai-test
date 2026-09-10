@@ -178,6 +178,35 @@ becomes a high-card game. Everything in every hand at the table revalues at that
 moment. The player who is counting knows when it arrives. Everybody else finds
 out afterwards.
 
+**It is critical to know when you are no longer in danger of being cut.**
+
+### Not just how many — who
+
+A running total tells you the phase of the hand. Knowing **who is likely to hold
+the remaining spades** tells you which particular opponent can still hurt you,
+and that is the version you can act on. Being safe from the man on your left is a
+completely different hand from being safe from the man on your right.
+
+The estimate comes, above all, from **the voracity of their bid.**
+
+A bid is the one signal every player at the table is *forced* to send, whether he
+knows he is signalling or not. **You cannot bid big without trumps.** A man who
+bids five has spade length or he is a fool; a man who bids one has almost none.
+So every opponent — including opponents who have never heard of The Program and
+never will — has already described the shape of the trump suit to you before a
+single card is played, and will do it again every hand, because the rules of the
+game compel him to.
+
+### Why the trick number matters
+
+The phase change is a moment you can be wrong about in **both** directions:
+
+    Cash too early  ->  you are ruffed. The Ace you were saving dies for nothing.
+    Cash too late   ->  the hand ends with winners still in your hand, unplayed.
+
+The count, plus the map of who holds what, is what puts you on the correct trick.
+Everybody else is guessing, and finding out afterwards which way they guessed.
+
 ### Habit two
 
 *(to be dictated)*
