@@ -1793,12 +1793,24 @@ Tell Needles <span style="color:#7ab8ff">what you have in mind</span>
      the box letterboxes with the cup marooned in the middle of it. min() picks
      the smaller of the column and the height budget, and the ratio then has
      nothing to fight. -->
-<div id="trimmings3DStage" class="mug3d-stage" style="width:min(100%,60vh);height:auto;aspect-ratio:1/1;margin:0 auto .45rem"></div>
+<div id="trimmings3DStage" class="mug3d-stage" style="width:min(100%,66vh);height:auto;aspect-ratio:1/1;margin:0 auto .4rem"></div>
 <!-- ZOOM, HERE, WHERE THE DECISION IS MADE (Alyx, twice: "there's no reason why
      this picture isn't rotating and enlargeable. We've got all the room we need
      here"). The seam is the thing you would most want to get close to WHILE
      choosing, and half this column was empty. -->
-<div class="mug3d-controls" id="trimmings3DZoomRow" style="align-items:center;gap:8px;margin:0 0 .35rem">
+<!-- BOTH SLIDERS, HERE (Alyx: "the trims panel should be much bigger, it should
+     be as big as we do the final mockup... I insisted that the slider should go
+     on that panel too, especially the enlarge one, because you want to see
+     exactly what it looks like up close to decide which trim to use! The only
+     reason we even continue to the final mockup is just to finalise the choice
+     -- now you get to see it in the biggest display that we have").
+     So the decision is made here, at size, with the same controls the mockup
+     has: turn it, tip it, and get close to the seam. -->
+<div class="mug3d-controls" id="trimmings3DTurnRow" style="align-items:center;gap:8px;margin:0 0 .3rem">
+<input type="range" id="trimmings3DAngle" min="-180" max="180" value="0" step="1" aria-label="Turn the cup" oninput="MUG3D.setAngle(+this.value)"/>
+<button type="button" class="mug3d-tilt" id="trimmings3DTiltBtn" aria-pressed="false" onclick="toggleTrimmings3DTilt()">Look down</button>
+</div>
+<div class="mug3d-controls" id="trimmings3DZoomRow" style="align-items:center;gap:8px;margin:0 0 .3rem">
 <input type="range" id="trimmings3DZoom" min="100" max="400" value="100" step="1" aria-label="Zoom in on the cup" oninput="setTrimmings3DZoom(this.value/100)"/>
 <button type="button" class="mug3d-tilt" onclick="setTrimmings3DZoom(1,true)">Fit</button>
 </div>
@@ -1822,7 +1834,7 @@ Tell Needles <span style="color:#7ab8ff">what you have in mind</span>
 <!-- No black behind it: the wrap is far wider than this box is tall, so
      object-fit left a black bar at each end and the trimming appeared to be
      sitting ON black. That was never the artwork, it was this element. -->
-<img id="trimmingsPreviewImg" style="display:none;width:100%;max-height:15vh;object-fit:contain;border-radius:10px;border:1px solid #003c8c;margin:.3rem 0 .5rem;background:transparent"/>
+<img id="trimmingsPreviewImg" style="display:none;width:100%;max-height:11vh;object-fit:contain;border-radius:10px;border:1px solid #003c8c;margin:.25rem 0 .4rem;background:transparent"/>
 <!-- Directly under the picture, so a colour change is seen the instant it is
      made (Alyx: "when you click the color it should immediately affect the
      items so you can see what it looks like"). Only drawn for a trimming whose
@@ -18118,6 +18130,10 @@ async function mountTrimmings3D(){
     if(hint)hint.style.display='';
     await MUG3D.open(stage,opts);
     setTrimmings3DZoom(1,true);
+    resetTrimmings3DControls();
+    // The turn slider follows the cup as it spins, the same way the mockup's
+    // does, so the two are never telling different stories.
+    try{ MUG3D.onSpin(function(deg){ const sl=document.getElementById('trimmings3DAngle'); if(sl)sl.value=deg; }); }catch(e){}
     MUG3D.resize();
     return true;
   }catch(err){
@@ -18130,6 +18146,23 @@ async function mountTrimmings3D(){
   }
 }
 
+function toggleTrimmings3DTilt(){
+  const btn=document.getElementById('trimmings3DTiltBtn');
+  if(!btn)return;
+  const on=btn.getAttribute('aria-pressed')!=='true';
+  btn.setAttribute('aria-pressed',String(on));
+  btn.textContent=on?'Look up':'Look down';
+  try{ MUG3D.setLookDown(on); }catch(e){}
+}
+
+function resetTrimmings3DControls(){
+  const btn=document.getElementById('trimmings3DTiltBtn');
+  if(btn){ btn.setAttribute('aria-pressed','false'); btn.textContent='Look down'; }
+  const ang=document.getElementById('trimmings3DAngle');
+  if(ang)ang.value='0';
+  try{ MUG3D.setLookDown(false); }catch(e){}
+}
+
 function setTrimmings3DZoom(z,resetSlider){
   try{ MUG3D.setZoom(z); }catch(e){}
   const sl=document.getElementById('trimmings3DZoom');
@@ -18138,6 +18171,7 @@ function setTrimmings3DZoom(z,resetSlider){
 
 function closeTrimmings3D(){
   setTrimmings3DZoom(1,true);
+  resetTrimmings3DControls();
   const stage=document.getElementById('trimmings3DStage');
   if(!stage)return;
   try{ if(MUG3D.mounted())MUG3D.close(); }catch(e){}
