@@ -787,31 +787,54 @@ coming. He goes somewhere else, and the board changes hands. Returning asks him
 to guess about a card he cannot see. Voiding yourself asks him to guess nothing.
 
 **And the switch is itself a message.** Changing suits on your partner tells him,
-with certainty, one of three things:
+with certainty, one of two things:
 
     1. You are void in the suit you JUST LED - you led a lone card to make it so
     2. You are void in HIS lead suit
-    3. You hold the next boss, and you are clearing the way before returning
 
 Your reply reads: *"Understood. But I am out of something too, so rather than
 come back to you I am playing this — and now we are both out of a suit."*
 
-### The advanced line: clear first, then void
+Now **both of you know a suit the other is void in**, and that is the note to
+make: come back to that suit at the first chance you get, no matter what.
 
-With the **next boss** in hand there is a better order of operations than either
-returning or voiding immediately.
+### Which line to take
 
-    1. Cash the boss (the King, or the Ace if a finesse has run)
-       -> partner gets a free discard, moving him toward a SECOND void
+Two cases, and they do different things.
 
-    2. Now lead your lone card
-       -> you go void
+**If you hold the next boss in his suit** — you were coming back to that suit
+anyway, so do it properly:
 
-    3. Both barrels loaded, and only then do you come back to him
+    1. Play the BOSS
+       -> partner cannot follow, so he DISCARDS
+       -> that discard moves him toward a second void, free of charge
 
-Rather than returning to his suit to let him cut one trick, you have spent one
-card to build the whole crossfire first. The cut is still there afterwards. The
-second void would not have been.
+    2. Now play LOW in the same suit
+       -> and he takes his cut
+
+**If you do not hold the next boss, but you hold a lone card elsewhere** — take
+the lone card over the return. Void yourself, tell him where you are void, and
+come back to his suit later.
+
+### Do not milk the cut
+
+There is an exception and a hard limit attached to it.
+
+If you hold **all** the bosses in a suit and therefore do not need his cuts at
+all, you may run spades, or run low cards in that suit to let him cut.
+
+**Only do this once.**
+
+Do not keep running his cut suits at him. Every ruff you feed him **spends one of
+his trumps**, and if you keep feeding you will strip him bare — and then lose a
+suit you held the boss in, purely because you were busy handing out free cuts.
+
+    A ruff costs your partner a trump.
+    A discard costs him nothing.
+
+So when you have the choice, **play the boss and let him dump another suit**
+instead. The discard builds the second void at no cost to his trump holding. The
+cut spends the very resource the crossfire runs on.
 
 *(chapter to be dictated)*
 
