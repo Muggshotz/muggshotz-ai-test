@@ -607,6 +607,7 @@ function onFlyerCodeInput(){
   const input = document.getElementById('flyerCodeInput');
   referralCode = input.value.trim().toUpperCase();
   input.value = referralCode;
+  try { if (referralCode) localStorage.setItem('muggshotz_referral_code', referralCode); else localStorage.removeItem('muggshotz_referral_code'); } catch (e) {}
   const statusEl = document.getElementById('flyerCodeStatus');
   if (referralCode) {
     statusEl.className = 'flyer-status ok';
@@ -2359,6 +2360,21 @@ if (isMug()) {
     const btn = document.getElementById('submitBtn');
     if (btn) btn.disabled = false;
   }
+})();
+</script>
+<script>
+// A scanned flyer lands on start.html?ref=CODE, which remembers the code;
+// the studio remembers it too if the link went there directly. Either way
+// it is filled in here so the customer never has to type it -- and the
+// beta gets credited even if the customer never noticed the box.
+(function prefillReferralFromFlyer(){
+  const input = document.getElementById('flyerCodeInput');
+  if (!input || input.value) return;
+  let code = '';
+  try { code = (new URLSearchParams(location.search).get('ref') || localStorage.getItem('muggshotz_referral_code') || '').trim().toUpperCase(); } catch (e) {}
+  if (!code) return;
+  input.value = code;
+  onFlyerCodeInput();
 })();
 </script>
 </body>

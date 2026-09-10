@@ -1,4 +1,5 @@
 import Stripe from "stripe";
+import { TIER_SEQUENCE, TIER_RULES, TIER_UPGRADE_LABEL, buildTierCodes } from "../lib/flyer-tiers.js";
 import { placeProductOrder } from "./create-printify-order.js";
 import { getProduct } from "../lib/products-catalog.js";
 
@@ -182,37 +183,8 @@ async function tryClaimNotification(betaId, notificationType, tier) {
   return false;
 }
 
-const TIER_SEQUENCE = ["PotShotz", "HotShotz", "BiggsHotz", "Muggshotz"];
-
-// Rate, per-flyer cap, and flyer count for each tier — the same rules
-// the admin onboarding tool uses for PotShotz, extended here to cover
-// every tier so an upgrade generates the correct set of codes.
-const TIER_RULES = {
-  PotShotz:  { rate: 0.03, cap: 20.00,  flyerCount: 20 },
-  HotShotz:  { rate: 0.04, cap: 30.00,  flyerCount: 20 },
-  BiggsHotz: { rate: 0.05, cap: 50.00,  flyerCount: 20 },
-  Muggshotz: { rate: 0.05, cap: 100.00, flyerCount: 40 }
-};
-
-// A code's printed suffix needs a tier-specific prefix, because
-// flyer_codes.code is a globally unique primary key — without this, a
-// beta upgrading tiers would try to create CHIPPER-01 a second time
-// (their PotShotz tier already used it) and the insert would fail.
-// PotShotz keeps a bare number (matches flyers already onboarded/
-// printed by the admin tool before this prefix scheme existed).
-const TIER_CODE_PREFIX = {
-  PotShotz: "",
-  HotShotz: "H",
-  BiggsHotz: "B",
-  Muggshotz: "M"
-};
-
-const TIER_UPGRADE_LABEL = {
-  PotShotz: { next: "HotShotz", buyIn: "$20" },
-  HotShotz: { next: "BiggsHotz", buyIn: "$50" },
-  BiggsHotz: { next: "Muggshotz", buyIn: "$200" },
-  Muggshotz: { next: null, buyIn: null }
-};
+// Tier constants live in lib/flyer-tiers.js, shared with the admin
+// panel's onboarding so both mint codes the same way.
 
 async function maybeSendTierMaturityEmail(betaId, tier) {
   try {
@@ -391,21 +363,7 @@ async function handleTierUpgradePayment(session) {
     if (!patchResp.ok) throw new Error("Could not update current_tier: " + JSON.stringify(patchRows));
 
     // Generate the new tier's full set of codes.
-    const prefix = TIER_CODE_PREFIX[targetTier] ?? "";
-    const codesToInsert = [];
-    for (let i = 1; i <= rules.flyerCount; i++) {
-      const suffix = String(i).padStart(2, "0");
-      codesToInsert.push({
-        beta_id: betaId,
-        tier: targetTier,
-        code: `${beta.base_code}-${prefix}${suffix}`,
-        flyer_number: i,
-        commission_rate: rules.rate,
-        cap_amount: rules.cap,
-        commission_total: 0,
-        matured: false
-      });
-    }
+    const codesToInsert = buildTierCodes(betaId, beta.base_code, targetTier);
 
     const codesResp = await fetch(`${SUPABASE_URL}/rest/v1/flyer_codes`, {
       method: "POST",

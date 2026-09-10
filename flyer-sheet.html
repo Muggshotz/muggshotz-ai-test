@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Muggshotz — Flyer Sheet</title>
+<!-- Opened from admin.html after onboarding (or reprinting) a beta. Every
+     code in the pack becomes one printable flyer with its own QR. The QR
+     carries the code in the link, so a customer who scans it is credited
+     to this beta without typing anything. -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,sans-serif;background:#eee;color:#111;padding:16px}
+.toolbar{max-width:8.5in;margin:0 auto 14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:13px;color:#444}
+.toolbar button{background:#ff6a00;border:none;border-radius:8px;padding:10px 16px;color:#fff;font-weight:700;cursor:pointer;font-size:14px}
+.sheet{max-width:8.5in;margin:0 auto;display:grid;grid-template-columns:1fr 1fr;gap:0.25in}
+.flyer{background:#fff;border:1px solid #ccc;border-radius:12px;padding:.35in .3in;text-align:center;break-inside:avoid;page-break-inside:avoid;display:flex;flex-direction:column;align-items:center;gap:.12in;min-height:4.9in}
+.logo{font-size:26px;font-weight:800;letter-spacing:1px}
+.logo span{color:#ff6a00}
+.pitch{font-size:15px;font-weight:700;line-height:1.25}
+.sub{font-size:11.5px;color:#444;line-height:1.35}
+.qr{padding:6px;border:2px solid #111;border-radius:8px;background:#fff}
+.qr img,.qr canvas{display:block;width:1.6in;height:1.6in}
+.code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;font-weight:700;letter-spacing:1px}
+.hint{font-size:10px;color:#666}
+.from{font-size:10.5px;color:#333;border-top:1px dashed #bbb;padding-top:6px;width:100%}
+@media print{
+  body{background:#fff;padding:0}
+  .toolbar{display:none}
+  .sheet{max-width:none;gap:0.2in}
+  .flyer{border-color:#999}
+  @page{size:letter;margin:0.4in}
+}
+</style>
+</head>
+<body>
+<div class="toolbar">
+  <button onclick="window.print()">🖨️ Print</button>
+  <span id="summary"></span>
+</div>
+<div class="sheet" id="sheet"></div>
+<script>
+(function(){
+  const q = new URLSearchParams(location.search);
+  const name = q.get('name') || '';
+  const base = q.get('base') || '';
+  const codes = (q.get('codes') || '').split(',').map(s => s.trim()).filter(Boolean);
+  const first = name.split(' ')[0] || 'a friend';
+  document.getElementById('summary').textContent = codes.length
+    ? `${codes.length} flyers for ${name} (${base}). Two per row, Letter paper. Cut along the borders.`
+    : 'No codes in the link — open this page from the admin panel.';
+  const sheet = document.getElementById('sheet');
+  codes.forEach((code, i) => {
+    const url = `${location.origin}/start.html?ref=${encodeURIComponent(code)}`;
+    const f = document.createElement('div'); f.className = 'flyer';
+    f.innerHTML = `
+      <div class="logo">Muggs<span>Hotz</span></div>
+      <div class="pitch">Your face. Your mug.<br>Made from one photo.</div>
+      <div class="sub">Scan, snap a photo, and watch it turn into a custom caricature coffee mug — designed on your phone, shipped to your door.</div>
+      <div class="qr" id="qr${i}"></div>
+      <div class="code">${code}</div>
+      <div class="hint">Scan the code, or type it in at checkout.</div>
+      <div class="from">Brought to you by ${first} · flyer ${i + 1} of ${codes.length}</div>`;
+    sheet.appendChild(f);
+    new QRCode(document.getElementById('qr' + i), { text: url, width: 154, height: 154, correctLevel: QRCode.CorrectLevel.M });
+  });
+})();
+</script>
+</body>
+</html>

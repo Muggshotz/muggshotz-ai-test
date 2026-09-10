@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<meta name="theme-color" content="#ff6a00"/>
+<title>MuggsHotz — Your face on a mug</title>
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png"/>
+<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png"/>
+<link rel="manifest" href="needles-manifest.json">
+<!-- v1 landing page: where a scanned flyer lands. It does three jobs --
+     says who sent them, sells the mug, and gets them into the studio with
+     the flyer code remembered so checkout credits the right beta. The
+     designed page (Alyx + Bud + Claude) replaces this one at the same
+     address; printed QR codes never need to change. -->
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#111;color:#fff;font-family:system-ui,sans-serif;padding:0 16px 40px}
+.wrap{max-width:560px;margin:0 auto}
+.header{text-align:center;padding:26px 0 8px}
+.logo{font-size:30px;font-weight:800;letter-spacing:1px}
+.logo span{color:#ff6a00;text-shadow:0 0 8px rgba(255,154,0,.7)}
+.from{margin:14px auto 0;display:inline-block;background:#1a0a00;border:1px solid #ff6a00;color:#ff9a3c;border-radius:20px;padding:8px 16px;font-size:14px;font-weight:600}
+.hero{text-align:center;padding:22px 0 10px}
+.hero h1{font-size:30px;line-height:1.15;margin-bottom:10px}
+.hero p{color:#bbb;font-size:15px;line-height:1.45}
+.mug{width:100%;max-width:340px;border-radius:14px;margin:18px auto 6px;display:block;border:1px solid #333}
+.cta{display:block;width:100%;background:#ff6a00;color:#fff;text-align:center;text-decoration:none;font-weight:800;font-size:18px;padding:18px;border-radius:12px;letter-spacing:.5px;margin:16px 0 8px}
+.cta small{display:block;font-weight:500;font-size:12px;opacity:.9;margin-top:4px}
+.price{text-align:center;color:#888;font-size:13px}
+.card{background:#1a1a1a;border:1px solid #333;border-radius:12px;padding:18px;margin-top:18px}
+.card h2{font-size:13px;letter-spacing:1px;text-transform:uppercase;color:#ff6a00;margin-bottom:10px}
+.steps{list-style:none;display:grid;gap:10px}
+.steps li{display:flex;gap:12px;align-items:flex-start;font-size:14px;color:#ddd;line-height:1.4}
+.steps b{flex:none;width:28px;height:28px;border-radius:50%;background:#ff6a00;color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px}
+.tabs{display:flex;gap:6px;margin-bottom:12px}
+.tab{flex:1;background:#0d0d0d;border:1px solid #444;color:#aaa;border-radius:8px;padding:9px;font-size:13px;cursor:pointer;text-align:center}
+.tab.on{border-color:#ff6a00;color:#ff6a00;background:#1a0a00}
+.also{color:#888;font-size:13px;line-height:1.5;text-align:center;margin-top:22px}
+.also a{color:#ff9a3c}
+.code{font-family:ui-monospace,Menlo,monospace;color:#666;font-size:11px;text-align:center;margin-top:18px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="header">
+    <div class="logo">Muggs<span>Hotz</span></div>
+    <div class="from" id="from" hidden></div>
+  </div>
+
+  <div class="hero">
+    <h1>Your face. Your mug.<br>Made from one photo.</h1>
+    <p>Snap a picture, pick a style, and our studio turns it into a caricature that wraps right around a real ceramic coffee mug. Designed on your phone in about two minutes, shipped to your door.</p>
+    <img class="mug" id="heroImg" alt="A custom caricature coffee mug" src="favicon-512.png"/>
+  </div>
+
+  <a class="cta" id="cta" href="needles-studio.html">🎨 Make my mug<small>Free to design — you only pay if you order</small></a>
+  <div class="price">Ceramic mugs from $14.95 · 11 oz and 15 oz · dishwasher safe</div>
+
+  <div class="card">
+    <h2>How it works</h2>
+    <ul class="steps">
+      <li><b>1</b><span>Take or upload a photo of the face you want on the mug — you, a friend, the dog.</span></li>
+      <li><b>2</b><span>Pick a style. Watch the studio draw the caricature and wrap it on the mug in 3D.</span></li>
+      <li><b>3</b><span>Order. Your flyer code is already applied — the person who gave you this flyer gets credit for the sale.</span></li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h2>Put the studio on your phone</h2>
+    <div class="tabs">
+      <div class="tab on" onclick="showInstall('ios',this)">iPhone</div>
+      <div class="tab" onclick="showInstall('android',this)">Android</div>
+    </div>
+    <ul class="steps" id="install-ios">
+      <li><b>1</b><span>Open the studio in <b style="display:inline;width:auto;height:auto;background:none;color:#fff">Safari</b> (the button above).</span></li>
+      <li><b>2</b><span>Tap the Share button — the square with the arrow at the bottom of the screen.</span></li>
+      <li><b>3</b><span>Scroll down and tap <b style="display:inline;width:auto;height:auto;background:none;color:#fff">Add to Home Screen</b>, then <b style="display:inline;width:auto;height:auto;background:none;color:#fff">Add</b>. Needles' Studio now opens like an app.</span></li>
+    </ul>
+    <ul class="steps" id="install-android" hidden>
+      <li><b>1</b><span>Open the studio in <b style="display:inline;width:auto;height:auto;background:none;color:#fff">Chrome</b> (the button above).</span></li>
+      <li><b>2</b><span>Tap the three dots at the top right.</span></li>
+      <li><b>3</b><span>Tap <b style="display:inline;width:auto;height:auto;background:none;color:#fff">Add to Home screen</b> (or <b style="display:inline;width:auto;height:auto;background:none;color:#fff">Install app</b>), then confirm. Needles' Studio now opens like an app.</span></li>
+    </ul>
+  </div>
+
+  <div class="also">Mugs are the star this season. Travel mugs, coasters, phone cases and more are in the <a id="alsoLink" href="needles-studio.html">studio</a> too.</div>
+  <div class="code" id="codeLine"></div>
+</div>
+<script>
+(function(){
+  const ref = (new URLSearchParams(location.search).get('ref') || '').trim().toUpperCase();
+  const valid = /^[A-Z0-9]{3,16}-[A-Z]?\d{2}$/.test(ref);
+  if (valid) {
+    try { localStorage.setItem('muggshotz_referral_code', ref); } catch (e) {}
+    const target = 'needles-studio.html?ref=' + encodeURIComponent(ref);
+    document.getElementById('cta').href = target;
+    document.getElementById('alsoLink').href = target;
+    document.getElementById('codeLine').textContent = 'Flyer code ' + ref + ' — applied automatically at checkout.';
+    // Who sent them. get-balance is the public code lookup the balance
+    // page already uses; it answers with the beta's name.
+    fetch('/api/get-balance?referralCode=' + encodeURIComponent(ref))
+      .then(r => r.json())
+      .then(d => {
+        if (!d || !d.found || !d.fullName) return;
+        const first = String(d.fullName).split(' ')[0];
+        const el = document.getElementById('from');
+        el.textContent = '👋 ' + first + ' sent you';
+        el.hidden = false;
+      })
+      .catch(() => {});
+  }
+})();
+function showInstall(which, tab){
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('on'));
+  tab.classList.add('on');
+  document.getElementById('install-ios').hidden = which !== 'ios';
+  document.getElementById('install-android').hidden = which !== 'android';
+}
+</script>
+</body>
+</html>

@@ -19705,5 +19705,15 @@ window.addEventListener('scroll',function(){
   hudScrollTimer=setTimeout(()=>row.classList.remove('hud-hidden'),350);
 },{passive:true});
 </script>
+<script>
+// A flyer link that lands here directly (start.html forwards the code
+// along) is remembered so order.html can pre-fill it at checkout.
+(function rememberReferralFromLink(){
+  try {
+    const ref = (new URLSearchParams(location.search).get('ref') || '').trim().toUpperCase();
+    if (/^[A-Z0-9]{3,16}-[A-Z]?\d{2}$/.test(ref)) localStorage.setItem('muggshotz_referral_code', ref);
+  } catch (e) {}
+})();
+</script>
 </body>
 </html>

@@ -13,6 +13,8 @@
 // the project back over the 12-function cap on its own. It's a GET-only
 // job like the others are POST-only, so it's routed by HTTP method
 // first, before the action-field routing kicks in for POST requests.
+import { buildTierCodes, TIER_SEQUENCE } from '../lib/flyer-tiers.js';
+
 const SUPABASE_URL              = process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const PRINTIFY_API_TOKEN        = process.env.PRINTIFY_API_TOKEN;
@@ -506,6 +508,122 @@ async function handleStorageCleanup(req, res) {
   }
 }
 
+
+// ===== Flyer betas (Sep 2026) =====
+// The "Onboard a New Beta" card on admin.html had a button wired to
+// onboardBeta() but no such function existed anywhere, and no endpoint
+// behind it -- creating a beta meant hand-written SQL. These two actions
+// are that missing back end: 'onboard' creates the beta row and mints the
+// entry tier's codes (the same minting the webhook does on a tier
+// upgrade, via lib/flyer-tiers.js), and 'betas' reads them back with
+// their commission state so the panel can reprint flyers and, later,
+// show a ledger.
+const SB_HEADERS = () => ({
+  apikey: SUPABASE_SERVICE_ROLE_KEY,
+  Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+  'Content-Type': 'application/json',
+  Prefer: 'return=representation'
+});
+
+async function sb(method, path, body) {
+  const resp = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
+    method, headers: SB_HEADERS(), body: body === undefined ? undefined : JSON.stringify(body)
+  });
+  const text = await resp.text();
+  let data; try { data = text ? JSON.parse(text) : null; } catch { data = text; }
+  if (!resp.ok) {
+    const err = new Error((data && data.message) || `Supabase ${method} ${path} -> ${resp.status}`);
+    err.status = resp.status; err.detail = data; throw err;
+  }
+  return data;
+}
+
+async function handleOnboard(req, res) {
+  const { password } = req.body || {};
+  if (password !== ADMIN_PASSWORD) return res.status(403).json({ error: 'Unauthorized.' });
+
+  const fullName = String(req.body.fullName || '').trim();
+  const baseCode = String(req.body.baseCode || '').trim().toUpperCase();
+  const contactEmail = String(req.body.contactEmail || '').trim() || null;
+  const contactPhone = String(req.body.contactPhone || '').trim() || null;
+  const featuredProduct = String(req.body.featuredProduct || '').trim() || null;
+  const tier = TIER_SEQUENCE[0]; // every new beta enters at PotShotz
+
+  if (!fullName) return res.status(400).json({ error: 'Full name is required.' });
+  if (!/^[A-Z0-9]{3,16}$/.test(baseCode))
+    return res.status(400).json({ error: 'Base code must be 3-16 letters or numbers, nothing else (it becomes the printed code, e.g. CHIPPER-07).' });
+
+  try {
+    const existing = await sb('GET', `flyer_betas?base_code=eq.${encodeURIComponent(baseCode)}&select=id,full_name`);
+    if (existing.length)
+      return res.status(409).json({ error: `Base code ${baseCode} already belongs to ${existing[0].full_name}. Pick another.` });
+
+    const betaRow = { full_name: fullName, base_code: baseCode, contact_email: contactEmail, current_tier: tier };
+    if (contactPhone) betaRow.contact_phone = contactPhone;
+    if (featuredProduct) betaRow.featured_product = featuredProduct;
+    let beta, warning = null;
+    try {
+      [beta] = await sb('POST', 'flyer_betas', betaRow);
+    } catch (err) {
+      // The phone and featured-product columns may not exist yet on the
+      // live table; the beta is still worth creating. Say so rather than
+      // failing the whole onboarding over an optional field.
+      const missing = /column/i.test(err.message) && /(contact_phone|featured_product)/.test(err.message);
+      if (!missing) throw err;
+      delete betaRow.contact_phone; delete betaRow.featured_product;
+      [beta] = await sb('POST', 'flyer_betas', betaRow);
+      warning = 'Saved without phone/featured product: that column is not on the flyer_betas table yet.';
+    }
+
+    const codes = await sb('POST', 'flyer_codes', buildTierCodes(beta.id, baseCode, tier));
+    console.log(`Onboarded beta ${beta.id} (${baseCode}, ${fullName}) with ${codes.length} ${tier} codes.`);
+    return res.status(200).json({
+      beta: { id: beta.id, fullName: beta.full_name, baseCode: beta.base_code, currentTier: beta.current_tier },
+      codes: codes.map(c => c.code),
+      warning
+    });
+  } catch (err) {
+    console.error('Admin onboard error:', err.message, err.detail || '');
+    return res.status(500).json({ error: err.message });
+  }
+}
+
+// One beta (by base code) or every beta, each with its codes and what
+// they have earned. This is what the flyer sheet reprints from and what
+// the ledger reads.
+async function handleBetas(req, res) {
+  const { password } = req.body || {};
+  if (password !== ADMIN_PASSWORD) return res.status(403).json({ error: 'Unauthorized.' });
+  const baseCode = String(req.body.baseCode || '').trim().toUpperCase();
+  try {
+    const filter = baseCode ? `base_code=eq.${encodeURIComponent(baseCode)}&` : '';
+    const betas = await sb('GET', `flyer_betas?${filter}select=*&order=created_at.desc`);
+    if (baseCode && !betas.length) return res.status(404).json({ error: `No beta with base code ${baseCode}.` });
+    const ids = betas.map(b => b.id);
+    const codes = ids.length
+      ? await sb('GET', `flyer_codes?beta_id=in.(${ids.join(',')})&select=*&order=tier,flyer_number`)
+      : [];
+    const out = betas.map(b => {
+      const mine = codes.filter(c => c.beta_id === b.id);
+      return {
+        id: b.id, fullName: b.full_name, baseCode: b.base_code, currentTier: b.current_tier,
+        contactEmail: b.contact_email || null, contactPhone: b.contact_phone || null,
+        featuredProduct: b.featured_product || null, createdAt: b.created_at || null,
+        totalEarned: mine.reduce((s, c) => s + Number(c.commission_total || 0), 0),
+        codes: mine.map(c => ({
+          code: c.code, tier: c.tier, flyerNumber: c.flyer_number,
+          earned: Number(c.commission_total || 0), cap: Number(c.cap_amount || 0),
+          rate: Number(c.commission_rate || 0), matured: !!c.matured
+        }))
+      };
+    });
+    return res.status(200).json({ betas: out });
+  } catch (err) {
+    console.error('Admin betas error:', err.message, err.detail || '');
+    return res.status(500).json({ error: err.message });
+  }
+}
+
 export default async function handler(req, res) {
   // Printify catalog reads are GET requests (read-only, no password
   // needed) — check this first, before the POST/action routing below.
@@ -525,6 +643,8 @@ export default async function handler(req, res) {
   if (action === 'grant' || action === 'deduct') return handleAdjust(req, res);
   if (action === 'cost-probe') return handleCostProbe(req, res);
   if (action === 'storage-cleanup') return handleStorageCleanup(req, res);
+  if (action === 'onboard') return handleOnboard(req, res);
+  if (action === 'betas') return handleBetas(req, res);
 
   return res.status(400).json({ error: `Unknown action "${action}".` });
 }
