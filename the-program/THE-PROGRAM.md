@@ -1075,8 +1075,8 @@ to be wrong about.
 ### The technique
 
     You hold  Q J 7 4 of clubs
-    The nil is on your LEFT (2nd chair)
-    The cover is on your RIGHT (4th chair), holding the King
+    The nil is on your RIGHT  - so he plays 4th, LAST
+    The cover is on your LEFT - so he plays 2nd, holding the King
 
     You lead the JACK - the LOWER of your sequence - and keep the Queen.
 
@@ -1086,6 +1086,15 @@ to be wrong about.
 
     He ducks. He has to. You win a trick with the Jack while sitting on the
     very Queen he was afraid of.
+
+**The seat is what makes it lethal.** Second chair commits with exactly one card
+on the table — yours. He cannot wait and see. He must decide whether to spend his
+King knowing nothing about what your partner will do, and nothing about where the
+Queen sits, because the only man who could tell him is his own nil partner, who
+plays **last** and has not spoken yet and never will.
+
+He is not choosing between two known outcomes. He is guessing blind, immediately,
+about the one card he cannot afford to waste.
 
 The general form: **lead into the cover, past the nil, out of a sequence in which
 you hold the middle cards and he holds the top one.** He owns the best card in
