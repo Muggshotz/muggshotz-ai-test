@@ -1061,6 +1061,18 @@ safety.
 That is what your partner is doing for the opponent. He is granting the exact
 prayer you would be saying in that seat.
 
+**For your own partner to do it is like a slap in the face.**
+
+And it is worth understanding why it lands that way rather than as an ordinary
+misplay. This book established early that *every play is a message.* So in this
+system a bad play is not a neutral event occurring on the table. It is something
+**said to you**, by the only person there who is talking to you at all. An Ace
+led into a nil does not merely lose the hand — it tells you, in the language the
+two of you share, either that he does not know the code or that he is not with
+you.
+
+You cannot take it impersonally. The medium was never impersonal.
+
 ---
 
 ### The bleeding — and it is not what it sounds like
