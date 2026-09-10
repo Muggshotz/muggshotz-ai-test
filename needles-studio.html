@@ -11603,6 +11603,8 @@ async function enterRevealStage(){
     // mockup (see offerFrameFromMockup), so Done goes straight to the
     // Hard/Fade edge question.
     if(true){
+      // Done on the panels screen: that is where Back belongs.
+      revealEdgeCameFrom=()=>showCoverMePanelCard();
       showEdgeQuestion();
     } else {
       // THE FADE PAGE, AT LAST (Aug 2026, Alyx). openFrameFadeOverlay() has
@@ -11852,6 +11854,8 @@ function chooseRevealPath(choice){
     return;
   }
 
+  // This route came through the frame offer, so that IS the way back.
+  revealEdgeCameFrom=()=>showAccessorizeChoiceState();
   showEdgeQuestion();
 }
 
@@ -11863,6 +11867,19 @@ function chooseRevealPath(choice){
 // nothing is re-encoded or uploaded on the way out -- a caption included,
 // since it travels as its own layer above the fade.
 let revealFitState=null;
+// WHERE THE EDGE QUESTION WAS ENTERED FROM (Alyx: "sometimes they'll send you
+// back but then if you click back again they'll send you forward").
+//
+// This screen has TWO ways in -- Done on the panels screen, and the frame offer
+// -- and revealEdgeBack always sent a non-mug product to the frame offer. Right
+// for one route, forward for the other, so whether Back worked depended on how
+// you happened to arrive. That is the whole shape of "sometimes".
+//
+// Recorded rather than guessed, and NOT cleared when used: pressing Back,
+// coming forward again and pressing Back once more should land in the same
+// place both times.
+let revealEdgeCameFrom=null;
+
 function showEdgeQuestion(){
   // Re-entering the screen starts from the flat picture: the slider panel is
   // closed at this point, and a cup left over from a previous visit would be
@@ -19063,8 +19080,8 @@ function revealEdgeBack(){
   if(overlay)overlay.style.display='none';
   document.body.classList.remove('step-locked');
   revealFitState=null;
-  // The screen before this one is the panels screen now (the frame offer
-  // moved onto the mockup).
+  // Whichever screen actually opened this one. Kept, not consumed.
+  if(typeof revealEdgeCameFrom==='function'){ revealEdgeCameFrom(); return; }
   if(revealFlowThreePanel&&product==='mug'){showCoverMePanelCard();return;}
   showAccessorizeChoiceState();
 }
