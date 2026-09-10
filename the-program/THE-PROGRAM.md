@@ -1048,6 +1048,8 @@ his behalf.
 Which makes this the sharpest form of a rule already in this book — *never open a
 suit you hold the Ace in.* Against a nil it stops being a preference.
 
+### The view from the nil's seat
+
 And if you want the proof without any of the reasoning, look at the same fact
 from inside the hand you are trying to beat:
 
