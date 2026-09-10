@@ -990,6 +990,15 @@ const HERO_SETTLE_MS = 1000;
 <div class="ref-pin-zone ref-pin-zone-b" id="refBZone" onclick="document.getElementById('refBInput').click()"><div style="font-size:16px;color:#555;margin-bottom:1px">➕</div><div class="upload-text" style="font-size:8px;line-height:1.1">Reference B</div></div>
 <input type="file" id="refBInput" accept="image/*" style="display:none"/>
 <img id="refBPreview" class="preview-img" style="display:none;max-height:140px"/>
+<!-- WHAT WE WILL AND WILL NOT PRINT (Alyx, Sep 2026: "just make a note saying
+     we reserve the right to refuse any material that violates our vendors'
+     policies").
+     It sits on the UPLOAD board deliberately. The AI path is screened by the
+     generator, which refuses what breaks its own policy -- but the as-is route
+     never touches the generator at all (see exactTransfer, and the suite's
+     acceptedTransferSkipsTheAI, which exists to prove it). This is the only
+     notice that route ever sees. -->
+<div class="note ai-board-note" style="opacity:.85">By uploading you confirm you have the right to use this picture. We print through third-party partners and reserve the right to decline any artwork that breaches their content policies.</div>
 <div class="note ai-board-note"><u>Optional!</u> Pin extra reference photos on the sides — <b>Reference A</b> and <b>Reference B</b> — if you want to combine or pull elements from other pictures (e.g. "use the face from Reference A on the body in Reference B"). If not, no biggie.</div>
 </div>
 </div>
@@ -1597,6 +1606,9 @@ Tell Needles <span style="color:#7ab8ff">what you have in mind</span>
 <div class="card" id="finalChoiceCard" style="max-width:420px;width:100%;margin:auto;position:relative;text-align:center">
 <div class="card-title">🎉 What's Next?</div>
 <button type="button" class="generate-btn" style="margin-top:.9rem" onclick="goToOrder()">✅ Checkout</button>
+<!-- Repeated at the point of payment: the upload notice may have been seen
+     twenty minutes and several screens ago. -->
+<div class="note" style="margin-top:.7rem;font-size:10px;opacity:.75;line-height:1.4">Orders are printed by third-party partners. We reserve the right to decline any artwork that breaches their content policies.</div>
 <button type="button" class="download-btn" style="margin-top:.75rem" onclick="returnToUploadForNewPhoto()">📸 Upload a Different Photo</button>
 <button type="button" class="download-btn" style="margin-top:.6rem" onclick="finalChoiceBack()">← Back</button>
 </div>
