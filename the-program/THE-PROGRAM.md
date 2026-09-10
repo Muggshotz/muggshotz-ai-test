@@ -735,7 +735,69 @@ opponent's lead guarantees the opposite, on both counts, in one card.
 
 ---
 
-## Against a nil
+## The rules of play
+
+The order of leads governs your **first** voluntary lead. Once tricks are being
+won and the lead is changing hands, a second set of rules takes over. The first
+two are a matched pair — the same law seen from both sides of the table:
+
+    Never grant the request of the man on your right.
+    Always try to grant your partner's.
+
+### Rule 2 of play — return to your partner's lead card
+
+Your partner's lead was a sentence:
+
+> *"I am out of these. Come back to me here."*
+
+So return it. That is the default, and it is the opposite of the prohibition
+above for exactly the same reason: his lead was a request, and this is the one
+request at the table worth granting.
+
+**Which side won the first trick changes what you are doing.** If your partner
+took it, his first card is now information about his hand, and you read it before
+you decide anything.
+
+### But the order of leads still holds sway
+
+**If you hold a lone card, void yourself instead of returning.**
+
+This is the exception, and it outranks the return. Lead your singleton, go void,
+and the board now has *two* voids on your side, in different suits — which is the
+crossfire fully assembled.
+
+**Why obedience is the riskier line.** Come back to his suit and let him cut, and
+then what? He may not return your void suit — he cannot see it. Or he was never
+void at all and that was merely his short suit, in which case there is no cut
+coming. He goes somewhere else, and the board changes hands. Returning asks him
+to guess about a card he cannot see. Voiding yourself asks him to guess nothing.
+
+**And the switch is itself a message.** Changing suits on your partner tells him,
+with certainty, one of three things:
+
+    1. You are void in the suit you JUST LED - you led a lone card to make it so
+    2. You are void in HIS lead suit
+    3. You hold the next boss, and you are clearing the way before returning
+
+Your reply reads: *"Understood. But I am out of something too, so rather than
+come back to you I am playing this — and now we are both out of a suit."*
+
+### The advanced line: clear first, then void
+
+With the **next boss** in hand there is a better order of operations than either
+returning or voiding immediately.
+
+    1. Cash the boss (the King, or the Ace if a finesse has run)
+       -> partner gets a free discard, moving him toward a SECOND void
+
+    2. Now lead your lone card
+       -> you go void
+
+    3. Both barrels loaded, and only then do you come back to him
+
+Rather than returning to his suit to let him cut one trick, you have spent one
+card to build the whole crossfire first. The cut is still there afterwards. The
+second void would not have been.
 
 *(chapter to be dictated)*
 
