@@ -944,6 +944,48 @@ is the premium on the policy, not evidence against it — and the accountability
 rule already says whose it is: *the death of that King belongs to whoever led
 blind, not to the man who trusted the lead.*
 
+### Rule 4 of play — never take your partner's trick
+
+The most infuriating sentence a partner can say, and it comes attached to a
+specific bonehead play early in the hand:
+
+    You lead the King of hearts - your only one
+    Partner plays the ACE on top of it                  ->  1 trick
+
+    Two tricks later the opponent plays the QUEEN
+    Partner plays the 8                                 ->  0
+
+                                                     TOTAL:  1
+
+Now the same three cards played correctly:
+
+    You lead the King
+    Partner plays the 8 - because HE HOLDS THE ACE, which makes your
+                          King unbeatable by anybody else at the table
+                                                        ->  King wins.  1
+    Two tricks later the Queen appears
+    Partner takes it with the Ace                       ->  1 more
+
+                                                     TOTAL:  2
+
+**Same cards. Twice the tricks.** He did not lose one to bad luck or a bad
+break. He spent a winner buying a trick he already owned, and then had nothing
+left when the real one arrived.
+
+And then you ask him: *"Partner, why did you take my trick?"*
+
+> ### *"It's all I had."*
+
+Which is **false on its face.** He produced the 8 two tricks later, so he had the
+8 the whole time. The sentence is not a defence, it is a confession — he was not
+tracking anything then and he is not tracking anything now, because a man who
+was would hear himself saying it and stop halfway through.
+
+It is also **habit two failing in the cleanest way possible.** Holding the Ace,
+he was the one player at that table who knew for a certainty that your King was
+boss. The information was already in his own hand. He simply never asked the
+question.
+
 ### And if he cannot be trusted
 
 > If he does this consistently — get a new partner.
