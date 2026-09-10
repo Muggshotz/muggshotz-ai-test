@@ -1075,6 +1075,29 @@ you.
 
 You cannot take it impersonally. The medium was never impersonal.
 
+### The only thing anyone has to remember
+
+Everything in this chapter can be replaced by one question:
+
+> **What are you hoping the opponents do when you are the one sitting nil?
+> Whatever that is — do not do that.**
+
+It is better than a rule. It is a **generator**, and it produces every specific
+instruction here without anyone memorising a thing:
+
+    You pray for Ace leads                     ->  never lead an Ace
+    You pray somebody takes a trick off you
+      cheaply                                  ->  never take one off him cheaply
+    You pray nobody leads low into you         ->  lead low
+    You pray his cover is never made to burn   ->  make the cover burn
+
+It also covers the positions this book never got round to listing, which no
+finite set of rules can do.
+
+And it requires no study whatsoever. Everyone who has ever bid nil already holds
+the complete table of answers, stored as a **feeling.** You are not being asked
+to learn anything here. You are being asked to remember.
+
 ---
 
 ### The bleeding — and it is not what it sounds like
