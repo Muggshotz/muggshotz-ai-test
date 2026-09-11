@@ -623,8 +623,11 @@ const TRAVEL_MUG_CATALOG = {
 // per-product Printify rate -- so a mouse pad DISPLAYED $6.95 and CHARGED
 // $4.99, and a suitcase displayed $6.95 and charged ~$38. The number below is
 // now only a last-resort placeholder shown while the real figure is in
-// flight, or if the lookup fails; the live value comes from /api/get-shipping,
-// which calls the exact same function create-checkout-session.js bills from.
+// flight, or if the lookup fails; the live value comes from
+// /api/printify-catalog?action=shipping, which calls the exact same function
+// create-checkout-session.js bills from. (It shares that endpoint instead of
+// having its own api/get-shipping.js because Vercel's Hobby plan allows 12
+// serverless functions and a 13th file breaks every deploy.)
 const SHIPPING_FALLBACK_ESTIMATE = 6.95;
 let liveShipping = null;      // real resolved dollars, or null if not yet known
 let liveShippingKey = '';     // productKey|basePrice|country this value is for
@@ -664,11 +667,13 @@ async function refreshShipping(basePrice){
   shippingLookupInFlight = key;
 
   try {
-    const resp = await fetch('/api/get-shipping', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ productKey, basePrice, country: currentCountry() })
+    const qs = new URLSearchParams({
+      action: 'shipping',
+      productKey,
+      basePrice: String(basePrice),
+      country: currentCountry()
     });
+    const resp = await fetch('/api/printify-catalog?' + qs.toString());
     const data = await resp.json();
     if (typeof data.shipping === 'number') {
       liveShipping = data.shipping;
