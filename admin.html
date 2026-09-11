@@ -85,6 +85,7 @@ select{width:100%;background:#0d0d0d;border:1px solid #444;border-radius:8px;pad
   <label style="margin-top:1rem;display:block">When to come back (free text — leave blank if you don't know)</label>
   <input type="text" id="maintEta" placeholder="try again in about an hour"/>
 
+  <button class="btn-full" id="maintSaveBtn" onclick="saveMaintenanceMessage()" style="background:#3a3a3a;margin-top:.75rem">💾 Save this message for later</button>
   <button class="btn-full" id="maintOffBtn" onclick="setMaintenance(true)" style="background:#c0392b">🛑 Take the shop offline</button>
   <button class="btn-full" id="maintOnBtn" onclick="setMaintenance(false)" style="background:#22a845">✅ Bring the shop back</button>
 </div>
@@ -338,7 +339,10 @@ async function loadMaintenance(){
   }
 }
 
+let maintCurrentlyOn = false;
+
 function renderMaintenance(d){
+  maintCurrentlyOn = !!d.on;
   const el = document.getElementById('maintStatus');
   if (d.on){
     el.className = 'result error';
@@ -350,6 +354,16 @@ function renderMaintenance(d){
   }
   document.getElementById('maintOffBtn').disabled = !!d.on;
   document.getElementById('maintOnBtn').disabled  = !d.on;
+  // Keep the boxes showing whatever is actually stored, so the message you
+  // wrote last time is sitting there waiting the next time you need it.
+  if (typeof d.message === 'string') document.getElementById('maintMessage').value = d.message;
+  if (typeof d.eta     === 'string') document.getElementById('maintEta').value     = d.eta;
+}
+
+// Writes the message and ETA without touching whether the shop is open.
+// The point is to compose it calmly now rather than under pressure later.
+async function saveMaintenanceMessage(){
+  await postMaintenance(maintCurrentlyOn, true, 'Saving…');
 }
 
 async function setMaintenance(on){
@@ -357,22 +371,30 @@ async function setMaintenance(on){
   // emergency you do not want a dialog between you and the switch. Coming
   // back online asserts the problem is fixed, so that one asks first.
   if (!on && !confirm('Bring the shop back online? Checkout will start taking real cards again immediately.')) return;
+  // FIXED Sep 2026: this used to send the message boxes on every call, so
+  // bringing the shop back wrote whatever was in them — usually empty, since
+  // a page reload clears them — and erased the text you would want waiting
+  // for you next time. The text is now only written when you are taking the
+  // shop DOWN, or when you press Save deliberately.
+  await postMaintenance(on, on, on ? 'Taking the shop offline…' : 'Bringing the shop back…');
+}
 
+async function postMaintenance(on, includeText, busyMsg){
   const el = document.getElementById('maintStatus');
   el.className = 'result';
-  el.textContent = on ? 'Taking the shop offline…' : 'Bringing the shop back…';
+  el.textContent = busyMsg;
+
+  const payload = { action: 'maintenance-set', password: enteredPassword, on };
+  if (includeText){
+    payload.message = document.getElementById('maintMessage').value.trim();
+    payload.eta     = document.getElementById('maintEta').value.trim();
+  }
 
   try{
     const resp = await fetch('/api/admin', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        action: 'maintenance-set',
-        password: enteredPassword,
-        on,
-        message: document.getElementById('maintMessage').value.trim(),
-        eta: document.getElementById('maintEta').value.trim()
-      })
+      body: JSON.stringify(payload)
     });
     const d = await resp.json();
     if (resp.status === 403) { relockWithError('Wrong password.'); return; }
