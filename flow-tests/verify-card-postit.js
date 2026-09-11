@@ -85,6 +85,21 @@ for (const P of PRODUCTS) {
       getComputedStyle(document.getElementById('notAvailableCard')).display);
     if (na !== 'none')
       return `FAIL: order.html still treats ${P.tile} as not available`;
+    // STUDIO-DRIVEN LANDING (Sep 2026): arriving from the studio, the page
+    // opens on what they are buying and the shipping form -- no product
+    // picker, no three-slot preview, no mug cards left over for a flat
+    // product -- and the headline names the product.
+    const landing = await page.evaluate(() => {
+      const d = (id) => getComputedStyle(document.getElementById(id)).display;
+      return { studio: document.body.classList.contains('studio-driven'), bridge: d('bridgeGridCard'), preview: d('previewCard'),
+        mugStyle: d('mugStyleCard'), size: d('sizeCard'), headline: document.getElementById('orderHeadlineName').textContent.trim(), y: window.scrollY };
+    });
+    if (!landing.studio || landing.bridge !== 'none' || landing.preview !== 'none')
+      return `FAIL: the order page still shows its pickers for ${P.tile}: ${JSON.stringify(landing)}`;
+    if (landing.mugStyle !== 'none' || landing.size !== 'none')
+      return `FAIL: mug cards showing for a ${P.tile} order: ${JSON.stringify(landing)}`;
+    if (!landing.headline) return 'FAIL: the order headline is empty';
+    if (landing.y !== 0) return `FAIL: the page opened scrolled to ${landing.y}, not on the headline + shipping form`;
     await page.evaluate(() => {
       const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v; };
       set('fullName', 'Test Customer'); set('email', 'test@example.com');

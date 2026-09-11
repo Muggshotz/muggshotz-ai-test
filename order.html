@@ -78,11 +78,39 @@ label{font-size:11px;color:#888;letter-spacing:.5px;text-transform:uppercase;dis
 @keyframes mockupBannerBlink{0%,49%{opacity:1}50%,100%{opacity:0}}
 .mockup-side-cta{position:absolute;top:50%;transform:translateY(-50%);display:none;width:96px;padding:10px 8px;border-radius:10px;cursor:pointer;font-size:12px;font-weight:700;line-height:1.35;text-align:center;letter-spacing:.2px;z-index:6;background:rgba(10,10,10,0.55);backdrop-filter:blur(2px);border:1px solid rgba(255,255,255,0.2);color:#eee;transition:background .15s,border-color .15s}
 .mockup-side-cta.visible{display:block}
+/* On a phone there is no room beside the picture: the two choices were
+   hanging off both edges of the screen (Sep 2026, Alyx, coasters). Stack
+   them under the mockup instead, full width, in the order a customer
+   reads them. */
+@media (max-width:760px){
+  .mockup-side-cta{position:static;transform:none;width:100%;margin-top:.6rem;padding:14px 10px;font-size:14px}
+  .mockup-side-cta.cta-left,.mockup-side-cta.cta-right{left:auto;right:auto}
+}
 .mockup-side-cta:hover{background:rgba(10,10,10,0.72)}
 .mockup-side-cta.cta-left{right:calc(100% + 14px);color:#8fe8a0;border-color:rgba(143,232,160,0.5)}
 .mockup-side-cta.cta-left:hover{background:rgba(20,45,25,0.78)}
-.mockup-side-cta.cta-right{left:calc(100% + 14px);color:var(--accent-soft);border-color:rgba(255,178,122,0.5)}
-.mockup-side-cta.cta-right:hover{background:rgba(45,25,10,0.78)}
+.mockup-side-cta.cta-right{left:calc(100% + 14px);color:var(--accent-soft);border-color:rgba(122,184,255,0.5)}
+.mockup-side-cta.cta-right:hover{background:rgba(10,25,45,0.78)}
+/* STUDIO-DRIVEN LANDING (Sep 2026). Every choice is made in the studio now,
+   so the picker cards this page grew up with -- "where will it live", the
+   three-slot preview, style/size/colour grids -- are a second copy of
+   decisions already taken, and a live one: a tap switched the product after
+   the fact. The customer arriving from the studio sees what they are buying,
+   the mockup as it comes in, and the shipping form. Nothing to re-pick. */
+body.studio-driven #bridgeGridCard,body.studio-driven #previewCard,
+body.studio-driven #mugStyleCard,body.studio-driven #sizeCard,body.studio-driven #colorCard,body.studio-driven #fullWrapCard,
+body.studio-driven #travelColorCard,body.studio-driven #toteBagSizeCard,
+body.studio-driven #suitcaseSizeGrid,body.studio-driven #toteBagColorGrid,body.studio-driven #toteBagColorLabel,
+body.studio-driven #puzzleSizeGrid,body.studio-driven #travelMugStyleGrid,
+body.studio-driven #phoneModelSearchInput,body.studio-driven #phoneModelResults,body.studio-driven #phoneCaseCard > .note:first-of-type,
+body.studio-driven #mugPreviewSvg{display:none!important}
+#orderHeadlineCard{display:none}
+body.studio-driven #orderHeadlineCard{display:block}
+.headline-row{display:flex;align-items:center;gap:14px}
+.headline-thumb{flex:0 0 72px;width:72px;height:72px;border-radius:10px;object-fit:cover;background:#fff;border:1px solid var(--card-line);box-shadow:0 0 0 1px rgba(122,184,255,0.25),0 4px 12px rgba(0,0,0,0.4)}
+.headline-name{font-size:17px;font-weight:700;color:#fff;line-height:1.2}
+.headline-detail{font-size:13px;color:var(--steel);margin-top:4px;line-height:1.35}
+.headline-change{display:inline-block;margin-top:6px;font-size:12px;color:var(--accent);text-decoration:none}
 .select-flash-prompt{display:none;position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:2100;max-width:92vw;width:360px;text-align:center;padding:.9rem 1.1rem;border-radius:12px;background:var(--select-bg);border:2px solid var(--accent);color:var(--accent-soft);font-size:14px;font-weight:800;letter-spacing:.2px;box-shadow:0 8px 24px rgba(0,0,0,0.6);animation:selectFlashPulse 1s ease-in-out infinite}
 .select-flash-prompt.visible{display:block}
 @keyframes selectFlashPulse{0%,100%{opacity:1;box-shadow:0 0 0 rgba(41,163,255,0)}50%{opacity:.85;box-shadow:0 0 18px rgba(41,163,255,.4)}}
@@ -191,11 +219,23 @@ label{font-size:11px;color:#888;letter-spacing:.5px;text-transform:uppercase;dis
 </style>
 </head>
 <body>
-<div class="header-title">🛒 Order Your Product</div>
+<div class="header-title">Order Your Product</div>
 <div class="main">
 
+<div class="card" id="orderHeadlineCard">
+<div class="card-title">Your Order</div>
+<div class="headline-row">
+  <img class="headline-thumb" id="orderHeadlineThumb" alt=""/>
+  <div>
+    <div class="headline-name" id="orderHeadlineName"></div>
+    <div class="headline-detail" id="orderHeadlineDetail"></div>
+    <a class="headline-change" href="needles-studio.html">← Change it in the studio</a>
+  </div>
+</div>
+</div>
+
 <div class="card" id="bridgeGridCard">
-<div class="card-title">🎨 Your Artwork's Ready. Now Where Will It Live?</div>
+<div class="card-title">Your Artwork's Ready. Now Where Will It Live?</div>
 <div class="note" id="bridgeGridSubnote" style="margin-top:0;margin-bottom:.9rem"></div>
 <div class="grid3" id="bridgeGridReal"></div>
 <div id="comingSoonToggleBar" onclick="toggleComingSoonPanel()"
@@ -209,18 +249,18 @@ label{font-size:11px;color:#888;letter-spacing:.5px;text-transform:uppercase;dis
 </div>
 
 <div class="card" id="previewCard">
-<div class="card-title">🖼️ Your Design</div>
+<div class="card-title">Your Design</div>
 <div class="preview-row" id="previewRow"></div>
 <div class="note" id="previewNote" style="margin-top:.75rem;text-align:center"></div>
 </div>
 
 <div class="card" id="notAvailableCard" style="display:none">
-<div class="card-title">⏳ Not Available Yet</div>
+<div class="card-title">Not Available Yet</div>
 <div class="note" id="notAvailableText" style="margin-top:0;font-size:14px;color:#ccc"></div>
 </div>
 
 <div class="card" id="photoPosterCard" style="display:none">
-<div class="card-title">🖼️ Your Photo/Poster</div>
+<div class="card-title">Your Photo/Poster</div>
 <div class="note" style="margin-top:0;margin-bottom:.9rem">These options were locked in before you generated, since the print shape determines how the art was composed.</div>
 <div class="note" id="photoPosterSummary" style="font-size:14px;color:#fff"></div>
 <div class="note" id="photoPosterShippingNote" style="margin-top:.75rem;color:var(--accent-soft);display:none">Ships separately from outside the US — slightly longer delivery.</div>
@@ -230,7 +270,7 @@ label{font-size:11px;color:#888;letter-spacing:.5px;text-transform:uppercase;dis
 </div>
 
 <div class="card" id="suitcaseSizeCard" style="display:none">
-<div class="card-title">🧳 Suitcase Size</div>
+<div class="card-title">Suitcase Size</div>
 <div class="grid3" id="suitcaseSizeGrid"></div>
 <div class="note">Comes in Black only.</div>
 <div class="note" id="suitcaseMockupBtn" style="text-align:center;margin-top:1rem;color:var(--accent-soft);font-weight:600">🔍 Click Image To Enlarge</div>
@@ -239,12 +279,12 @@ label{font-size:11px;color:#888;letter-spacing:.5px;text-transform:uppercase;dis
 </div>
 
 <div class="card" id="toteBagSizeCard" style="display:none">
-<div class="card-title">👜 Tote Bag Size</div>
+<div class="card-title">Tote Bag Size</div>
 <div class="grid3" id="toteBagSizeGrid"></div>
 </div>
 
 <div class="card" id="toteBagColorCard" style="display:none">
-<div class="card-title">🎨 Tote Bag Color</div>
+<div class="card-title">Tote Bag Color</div>
 <div class="color-grid" id="toteBagColorGrid"></div>
 <div class="color-label" id="toteBagColorLabel">Pick a color</div>
 <div class="note" id="toteMockupBtn" style="text-align:center;margin-top:1rem;color:var(--accent-soft);font-weight:600">🔍 Click Image To Enlarge</div>
@@ -253,7 +293,7 @@ label{font-size:11px;color:#888;letter-spacing:.5px;text-transform:uppercase;dis
 </div>
 
 <div class="card" id="puzzleSizeCard" style="display:none">
-<div class="card-title">🧩 Puzzle Size</div>
+<div class="card-title">Puzzle Size</div>
 <div class="grid2" id="puzzleSizeGrid"></div>
 <div class="note" id="puzzleMockupBtn" style="text-align:center;margin-top:1rem;color:var(--accent-soft);font-weight:600">🔍 Click Image To Enlarge</div>
 <div class="note" id="puzzleMockupNote" style="margin-top:.5rem;text-align:center;display:none"></div>
@@ -261,7 +301,7 @@ label{font-size:11px;color:#888;letter-spacing:.5px;text-transform:uppercase;dis
 </div>
 
 <div class="card" id="phoneCaseCard" style="display:none">
-<div class="card-title">📱 Phone Model</div>
+<div class="card-title">Phone Model</div>
 <div class="note" style="margin-top:0;margin-bottom:.75rem">We carry cases for iPhone 11-17 and Galaxy S21-S26. Search your model below to check.</div>
 <input type="text" id="phoneModelSearchInput" placeholder="e.g. iPhone 15 Pro, Galaxy S24"
   style="width:100%;padding:.6rem;border-radius:8px;border:.5px solid #333;background:#0d0d0d;color:#fff;box-sizing:border-box"/>
@@ -273,12 +313,12 @@ label{font-size:11px;color:#888;letter-spacing:.5px;text-transform:uppercase;dis
 </div>
 
 <div class="card" id="mugStyleCard">
-<div class="card-title">☕ Mug Style</div>
+<div class="card-title">Mug Style</div>
 <div class="grid2" id="mugStyleGrid"></div>
 </div>
 
 <div class="card" id="travelMugStyleCard" style="display:none">
-<div class="card-title">🍶 Which Travel Mug?</div>
+<div class="card-title">Which Travel Mug?</div>
 <div class="grid3" id="travelMugStyleGrid"></div>
 <div class="note" id="travelMockupPreviewBtn" style="text-align:center;margin-top:1rem;color:var(--accent-soft);font-weight:600">🔍 Click Image To Enlarge</div>
 <div class="note" id="travelMockupPreviewNote" style="margin-top:.5rem;text-align:center;display:none"></div>
@@ -286,7 +326,7 @@ label{font-size:11px;color:#888;letter-spacing:.5px;text-transform:uppercase;dis
 </div>
 
 <div class="card" id="sizeCard">
-<div class="card-title">📏 Size</div>
+<div class="card-title">Size</div>
 <div class="grid2">
 <div class="btn-select selected" data-size="11oz" onclick="pickSize(this)">11oz</div>
 <div class="btn-select" data-size="15oz" onclick="pickSize(this)">15oz</div>
@@ -294,7 +334,7 @@ label{font-size:11px;color:#888;letter-spacing:.5px;text-transform:uppercase;dis
 </div>
 
 <div class="card" id="livePreviewCard">
-<div class="card-title">🖼️ Live Preview</div>
+<div class="card-title">Live Preview</div>
 <div class="note" id="mockupPreviewBtn" style="text-align:center;margin-bottom:1rem;color:var(--accent-soft);font-weight:600">🔍 Click Image To Enlarge</div>
 <div class="note" id="mockupPreviewNote" style="margin-top:-.6rem;margin-bottom:1rem;text-align:center;display:none"></div>
 <img id="mockupPreviewImg" style="display:none;width:100%;border-radius:12px;border:1px solid var(--accent);margin-bottom:1rem"/>
@@ -320,19 +360,19 @@ label{font-size:11px;color:#888;letter-spacing:.5px;text-transform:uppercase;dis
 </div>
 
 <div class="card" id="colorCard" style="display:none">
-<div class="card-title">🎨 Mug Color</div>
+<div class="card-title">Mug Color</div>
 <div class="color-grid" id="colorGrid"></div>
 <div class="color-label" id="colorLabel">Pick a color</div>
 </div>
 
 <div class="card" id="travelColorCard" style="display:none">
-<div class="card-title">🎨 Color</div>
+<div class="card-title">Color</div>
 <div class="color-grid" id="travelColorGrid"></div>
 <div class="color-label" id="travelColorLabel">Pick a color</div>
 </div>
 
 <div class="card" id="fullWrapCard">
-<div class="card-title">🌀 Full Wrap</div>
+<div class="card-title">Full Wrap</div>
 <div class="note" style="margin-top:0;margin-bottom:.75rem">Have your design stretched edge-to-edge across the mug (rather than a single front-facing panel). Best suited for designs already built for a full wraparound look. Note: this stretches ONE image across the whole print area — it's a different option from the generator's "Wraparound" scene-continuation feature, which auto-creates three matching panels instead.</div>
 <div style="display:flex;align-items:center;gap:10px">
 <input type="checkbox" id="fullWrapToggle" onchange="toggleFullWrap()" style="width:20px;height:20px;cursor:pointer"/>
@@ -341,7 +381,7 @@ label{font-size:11px;color:#888;letter-spacing:.5px;text-transform:uppercase;dis
 </div>
 
 <div class="card" id="shippingCard">
-<div class="card-title">📦 Shipping Info</div>
+<div class="card-title">Shipping Info</div>
 <label>Full Name</label>
 <input type="text" id="fullName" placeholder="Jane Smith"/>
 <label>Email</label>
@@ -381,14 +421,14 @@ label{font-size:11px;color:#888;letter-spacing:.5px;text-transform:uppercase;dis
      of whether a code is entered here; this field only affects whether
      a flyer/referral code gets credited commission. -->
 <div class="card" id="flyerCodeCard">
-<div class="card-title">🎟️ Got a Flyer Code?</div>
+<div class="card-title">Got a Flyer Code?</div>
 <div class="note" style="margin-top:0;margin-bottom:.75rem">Optional — enter it here if a flyer or referral link brought you here. Leave blank if you don't have one.</div>
 <input type="text" id="flyerCodeInput" placeholder="e.g. CHIPPER-07" oninput="onFlyerCodeInput()" style="text-transform:uppercase"/>
 <div class="flyer-status" id="flyerCodeStatus"></div>
 </div>
 
 <div class="card" id="giftMessageCard">
-<div class="card-title">💌 Gift Message</div>
+<div class="card-title">Gift Message</div>
 <div class="note" style="margin-top:0;margin-bottom:.75rem">Add a printed card with a personal message, included right in the package.</div>
 <div style="display:flex;align-items:center;gap:10px;margin-bottom:.75rem">
 <input type="checkbox" id="giftMessageToggle" onchange="toggleGiftMessage()" style="width:20px;height:20px;cursor:pointer"/>
@@ -401,7 +441,7 @@ label{font-size:11px;color:#888;letter-spacing:.5px;text-transform:uppercase;dis
 </div>
 
 <div class="card" id="summaryCard">
-<div class="card-title">💰 Order Summary</div>
+<div class="card-title">Order Summary</div>
 <div class="summary-row"><span id="summaryStyleSize">Classic White, 11oz</span><span id="summaryBase">$14.95</span></div>
 <div class="summary-row" id="summaryUpsellRow" style="display:none"><span id="summaryUpsellLabel">Extra design charge</span><span id="summaryUpsell"></span></div>
 <div class="summary-row" id="summaryGiftRow" style="display:none"><span>Gift message</span><span id="summaryGift"></span></div>
@@ -782,6 +822,11 @@ function hideMockupSideCta(){
 function goCheckoutFromMockup(e){
   if (e) e.stopPropagation();
   if (!validateMugSelectionsAndFlash()) return;
+  // FOUND Sep 2026 (Alyx, coasters on a phone): this scrolled the page
+  // BEHIND a still-open lightbox, which a phone browser ignores, so the
+  // customer closed the lightbox and was still at the top of the page.
+  closeLightbox();
+  hideMockupSideCta();
   scrollToCheckout();
 }
 
@@ -796,7 +841,8 @@ function returnToOptionsFromMockup(e){
   if (e) e.stopPropagation();
   hideMockupSideCta();
   try { localStorage.setItem('muggshotz_return_to_idea', '1'); } catch (err) {}
-  window.location.href = 'index.html';
+  // The studio is where changes are made now, not index.html.
+  window.location.href = 'needles-studio.html';
 }
 
 // Same root cause and same fix as index.html's post-generation scroll:
@@ -898,7 +944,9 @@ async function runMockupJob(body, btn, noteEl, imgEl){
     if (btn) { btn.disabled = false; }
     hideMockupWaitBanner();
 
-    anchorEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    // Studio-driven: the mockup card sits right under the headline, and a
+    // customer already typing their address must not be dragged back up.
+    if (!studioDriven) anchorEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
     showMockupSideCta(anchorEl);
 
     return mockupUrl;
@@ -1138,7 +1186,7 @@ function renderBridgeGrid(){
 
   if (pendingOrder?.isWraparoundSet) {
     gridCard.innerHTML =
-      '<div class="card-title">🎨 Your Wraparound Design</div>' +
+      '<div class="card-title">Your Wraparound Design</div>' +
       '<div class="note" style="margin-top:0">These three panels were generated as one continuous scene specifically shaped for a Coffee Mug wrap — they\'re locked to Coffee Mug and won\'t work correctly on any other product.</div>';
     return;
   }
@@ -1345,10 +1393,15 @@ function renderPreview(){
 
 const hasAnyDesign = pendingOrder && pendingOrder.placements &&
   (pendingOrder.placements.left || pendingOrder.placements.front || pendingOrder.placements.right);
+// The studio hands every order over with its product named (productIcon) and
+// a design placed. That is the ONLY way an order reaches this page now, so
+// the picker cards below stay hidden -- see body.studio-driven in the CSS.
+const studioDriven = !!(pendingOrder && pendingOrder.productIcon) && !!hasAnyDesign;
+if (studioDriven) document.body.classList.add('studio-driven');
 
 if (!hasAnyDesign) {
   document.getElementById('previewCard').innerHTML =
-    '<div class="card-title">⚠️ No Design Found</div>' +
+    '<div class="card-title">No Design Found</div>' +
     '<div class="note" style="margin-top:0">There\'s no design placed in any mug slot yet. Head back to the generator, then place a design in the Left, Center, or Right slot before ordering.</div>';
   document.getElementById('submitBtn').disabled = true;
 } else {
@@ -2289,9 +2342,33 @@ if (isTravelMug()) {
     document.getElementById('colorCard').style.display = hasColors ? 'block' : 'none';
     if (hasColors) renderColorGrid();
     renderMugPreview();
+  } else {
+    // Coasters, mouse pad, greeting cards, post-its: nothing to pick here
+    // and no mockup card. Without this branch the mug's style/size/colour
+    // cards (visible by default in the markup) stayed on screen for them.
+    hideAllProductCards();
   }
   updateSummary();
   scheduleAutoMockupFetch();
+  applyStudioDrivenLayout();
+}
+
+// What the customer is buying, in one line at the top, with the mockup
+// card (where the product has one) retitled to say what it is now that
+// the picker around it is gone.
+function applyStudioDrivenLayout(){
+  if (!studioDriven) return;
+  const fam = BRIDGE_GRID_PRODUCTS.find(p => p.key === selectedProductFamily);
+  const name = fam ? fam.label : (selectedProductFamily || 'Your product');
+  document.getElementById('orderHeadlineName').textContent = name;
+  document.getElementById('orderHeadlineDetail').textContent = document.getElementById('summaryStyleSize')?.textContent || '';
+  const pl = pendingOrder.placements || {};
+  const thumb = document.getElementById('orderHeadlineThumb');
+  const src = pendingOrder.panoramaImage || pl.front || pl.left || pl.right || '';
+  if (src) thumb.src = src; else thumb.style.display = 'none';
+  const retitle = (cardId, text) => { const t = document.querySelector('#' + cardId + ' .card-title'); if (t) t.textContent = text; };
+  ['suitcaseSizeCard','toteBagColorCard','puzzleSizeCard','phoneCaseCard','travelMugStyleCard','livePreviewCard'].forEach(id => retitle(id, 'Your Mockup'));
+  retitle('photoPosterCard', 'Your Poster');
 }
 
 renderBridgeGrid();
@@ -2307,7 +2384,11 @@ if (fullWrapCheckboxEl) fullWrapCheckboxEl.checked = fullWrapEnabled;
 // the Live Preview card immediately puts the customer where the mockup
 // and the "Yes, go to checkout" / "Not yet" choice will actually appear,
 // instead of leaving them stranded in the plain picker cards first.
-if (isMug()) {
+if (studioDriven) {
+  // The page now opens on what they are buying and the shipping form; the
+  // scroll-to-preview below was only ever needed to skip past the pickers.
+  window.scrollTo(0, 0);
+} else if (isMug()) {
   setTimeout(() => {
     const livePreview = document.getElementById('livePreviewCard');
     if (livePreview) livePreview.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -2346,7 +2427,7 @@ if (isMug()) {
       done.className = 'main';
       done.innerHTML =
         '<div class="card" style="text-align:center;margin-top:2rem">' +
-        '<div class="card-title">🎉 Order Placed!</div>' +
+        '<div class="card-title">Order Placed!</div>' +
         '<div style="font-size:16px;line-height:1.6;margin-bottom:1rem">Your payment went through and your order is on its way to production.</div>' +
         '<div class="note" style="font-size:12px;color:#888;line-height:1.6">A receipt is on its way to your email from our payment processor. Your piece is custom-made just for you, so please allow production and shipping time.</div>' +
         '<a class="generate-btn" href="needles-studio.html" style="display:block;text-decoration:none;margin-top:1.25rem">🎨 Make Another</a>' +
