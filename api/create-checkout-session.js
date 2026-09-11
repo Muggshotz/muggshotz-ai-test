@@ -1,6 +1,6 @@
 import Stripe from "stripe";
 import { getProduct } from "../lib/products-catalog.js";
-import { getRealShippingCost } from "../lib/printify-shipping.js";
+import { calculateShippingCharge } from "../lib/printify-shipping.js";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
@@ -14,10 +14,11 @@ const TOKEN_PACKS = {
 };
 
 const GIFT_MESSAGE_PRICE = 1.00;
-const WRAPAROUND_SET_SURCHARGE = 3;
-
-const SHIPPING_MARKUP_THRESHOLD = 50;
-const SHIPPING_MARKUP_RATE = 0.10;
+// Wraparound = 3 real generation runs at 50c each. Charged at cost, not
+// marked up (Alyx, Sep 2026). Was $3. NOTE: the file carrying this change
+// had been uploaded to the repo ROOT instead of api/, so it never routed
+// and customers kept paying the old $3 -- merged into the live file here.
+const WRAPAROUND_SET_SURCHARGE = 1.5;
 
 // flyer/referral code support (July 2026)
 const FLYER_DISCOUNT_RATE = 0.10;
@@ -50,39 +51,11 @@ async function checkEmailDiscountEligibility(email) {
   }
 }
 
-// Now ASYNC — calls Printify's live Catalog Shipping endpoint instead
-// of reading a static number. Falls back to product.shippingCost (the
-// placeholder field) only if the live lookup fails or returns nothing,
-// and logs loudly either way so a silent $0 never happens quietly.
-async function calculateShippingCharge(product, basePrice, countryCode) {
-  let printifyShippingCost = null;
-
-  try {
-    // The poster keeps its blueprint/provider under product.base (see
-    // resolvePrice); reading the top level here silently shipped posters
-    // for $0 -- $6.79 of real cost, the entire margin. Found Sep 2026.
-    const blueprintId = product.base?.blueprintId ?? product.blueprintId;
-    const printProviderId = product.base?.printProviderId ?? product.printProviderId;
-    printifyShippingCost = await getRealShippingCost(blueprintId, printProviderId, countryCode);
-  } catch (err) {
-    console.error(`CRITICAL: Live shipping lookup failed for "${product.displayName}": ${err.message}`);
-  }
-
-  if (printifyShippingCost === null) {
-    if (typeof product.shippingCost === "number" && product.shippingCost > 0) {
-      console.error(`Falling back to static shippingCost for "${product.displayName}" — live lookup returned nothing.`);
-      printifyShippingCost = product.shippingCost;
-    } else {
-      console.error(`CRITICAL: No shipping cost available (live or static) for "${product.displayName}" — charging $0 shipping.`);
-      return 0;
-    }
-  }
-
-  if (basePrice >= SHIPPING_MARKUP_THRESHOLD) {
-    return Math.round(printifyShippingCost * (1 + SHIPPING_MARKUP_RATE) * 100) / 100;
-  }
-  return printifyShippingCost;
-}
+// calculateShippingCharge now lives in lib/printify-shipping.js (Sep 2026)
+// so that order.html's Order Summary and this checkout session bill from
+// the SAME function. They used to disagree: the page showed a hardcoded
+// flat $6.95 for every product while this file charged the real per-product
+// Printify rate. See lib/printify-shipping.js for the markup/buffer rules.
 
 function calculateUpsellCharge(placements) {
   if (!placements) return 0;
@@ -90,8 +63,15 @@ function calculateUpsellCharge(placements) {
   const filled = [left, front, right].filter(Boolean);
   const distinctCount = new Set(filled).size;
   if (filled.length <= 1) return 0;
-  if (filled.length === 2) return distinctCount === 1 ? 3 : 5;
-  return distinctCount === 1 ? 3 : 6;
+
+  // Only charge for the real cost driver: each additional DISTINCT design
+  // actually generated beyond the first. Repeating the same finished design
+  // across 2 or 3 panels costs nothing extra -- reprinting is free, another
+  // generation run is what actually costs 50 cents. Replaces the old panel-
+  // count tiers (3/5/6), which billed up to $6 for work that could cost us
+  // nothing (Alyx, Sep 2026: "I don't want to be jacking up the cost of the
+  // bill for a mug by $6 just because they wanted to add an extra image").
+  return Math.max(0, (distinctCount - 1) * 0.5);
 }
 
 // FEES (Alyx, 2026-08-28, revised same day): originally a mysterious
@@ -220,9 +200,20 @@ async function handleProductOrder(req, res) {
 
   const productCents = Math.round((basePrice - discountAmount + upsellCharge + giftCharge) * 100);
 
-  const shippingCharge = product.shippingSeparate
-    ? await calculateShippingCharge(product, basePrice, shippingAddress.country || "US")
-    : 0;
+  // calculateShippingCharge THROWS rather than returning $0 when it can
+  // resolve no real cost (see lib/printify-shipping.js). Caught here so the
+  // customer gets a plain retry message instead of a raw internal error.
+  let shippingCharge = 0;
+  if (product.shippingSeparate) {
+    try {
+      shippingCharge = await calculateShippingCharge(product, basePrice, shippingAddress.country || "US");
+    } catch (err) {
+      console.error("Shipping resolution failed, refusing to create session:", err.message);
+      return res.status(503).json({
+        error: "We couldn't confirm the shipping cost for this order just now. Please try again in a moment."
+      });
+    }
+  }
   const shippingCents = Math.round(shippingCharge * 100);
 
   const origin = req.headers.origin || "https://muggshotz-ai-test.vercel.app";
