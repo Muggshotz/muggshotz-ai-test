@@ -317,6 +317,77 @@ scenarios.costlySwitchAsksOnce = async (page) => {
 };
 
 
+// ---- 6. Travel mug: Back from the palette is a door, not a teleporter. ----
+//
+// Alyx, Sep 2026, on the 40oz: "I clicked the back button. And got this as you
+// can see it didn't take me back to where I was before it jumped me right back
+// to the beginning ... it never allowed me to go back and change my color."
+//
+// Two bugs. travelVariantBack() reset the whole product decision even from
+// the colour step (one tap from the palette landed on the product grid with
+// nothing kept). And the "change colour" button next to Generate was gated to
+// product==='mug', so a travel-mug customer who had generated had no route
+// back to the palette at all. This walks both: back, forward again, and the
+// post-generate control.
+scenarios.travelMugPaletteBackIsADoor = async (page) => {
+  await toProduct(page);
+  await pickProduct(page, 'water bottle');
+
+  // Any cup that actually carries a palette.
+  const key = await page.evaluate(() => (Object.entries(TRAVEL_MUG_CATALOG).find(([, v]) => v.colors) || [])[0]);
+  if (!key) return 'FAIL: no travel variant in the catalog carries a colour palette';
+  await page.evaluate((k) => pickPreGenTravelVariant(k), key);
+  await T(page, 1200);
+  await dismissAlerts(page);
+  let s = await page.evaluate(() => ({
+    product, variant: preGenTravelVariant,
+    palette: getComputedStyle(document.getElementById('travelMugColorCard')).display,
+  }));
+  if (s.palette === 'none') return `FAIL: picked ${key} but the colour palette never showed`;
+
+  // Back from the palette: must un-choose the cup and KEEP the product.
+  await page.evaluate(() => travelVariantBack());
+  await T(page, 900);
+  s = await page.evaluate(() => ({
+    product, variant: preGenTravelVariant,
+    variantCard: getComputedStyle(document.getElementById('travelMugVariantCard')).display,
+    tiles: document.querySelectorAll('#travelMugVariantGrid .theme-btn').length,
+  }));
+  if (s.product !== 'water bottle')
+    return `FAIL: Back from the palette threw away the product (product=${s.product}) — teleported to the grid`;
+  if (s.variant !== null) return `FAIL: Back from the palette did not un-choose the cup (still ${s.variant})`;
+  if (s.variantCard === 'none') return 'FAIL: Back from the palette hid the cup card instead of returning to the six';
+  if (s.tiles < 2) return `FAIL: expected the six-cup grid back, saw ${s.tiles} tile(s)`;
+
+  // Forward again, and the palette returns.
+  await page.evaluate((k) => pickPreGenTravelVariant(k), key);
+  await T(page, 1200);
+  s = await page.evaluate(() => getComputedStyle(document.getElementById('travelMugColorCard')).display);
+  if (s === 'none') return 'FAIL: could not get forward to the palette again after Back';
+
+  // The change-colour control beside Generate must exist for travel mugs ...
+  const btn = await page.evaluate(() => {
+    refreshChangeMugStyleBtn();
+    const b = document.getElementById('changeMugStyleBtn');
+    return { display: getComputedStyle(b).display, label: b.textContent.trim() };
+  });
+  if (btn.display === 'none')
+    return 'FAIL: the change-colour button is hidden for travel mugs — no way back to the palette after generating';
+  if (!/Cup/.test(btn.label)) return `FAIL: change-colour button is labelled for mugs, not cups ("${btn.label}")`;
+
+  // ... and it must route to the travel palette, not the mug overlay.
+  await page.evaluate(() => goBackToMugStyle());
+  await T(page, 900);
+  const routed = await page.evaluate(() => ({
+    focus: document.body.classList.contains('travel-color-focus'),
+    mugOverlay: getComputedStyle(document.getElementById('mugStyleLockOverlay')).display,
+  }));
+  if (!routed.focus) return 'FAIL: change-colour for a travel mug did not spotlight the palette';
+  if (routed.mugOverlay !== 'none') return 'FAIL: change-colour for a travel mug opened the MUG style overlay';
+  return 'PASS: Back from the travel palette un-chooses the cup and keeps the product; colour is reachable again from Generate';
+};
+
+
 (async () => {
   let fails = 0;
   for (const [name, fn] of Object.entries(scenarios)) {

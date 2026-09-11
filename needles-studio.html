@@ -7302,9 +7302,30 @@ function finishPreGenMugColorPick(){
 function refreshChangeMugStyleBtn(){
   const btn=document.getElementById('changeMugStyleBtn');
   if(!btn)return;
-  btn.style.display=(product==='mug' && mugStyleChosenPreGen)?'block':'none';
+  // FIXED (Alyx, Sep 2026): this was gated to product==='mug' only, so a
+  // travel-mug customer who had generated had NO control anywhere that
+  // returned them to the palette. The August fix for the same complaint on
+  // mugs never got carried across to travel cups. Now it shows for either.
+  const forMug=product==='mug' && mugStyleChosenPreGen;
+  const forTravel=product==='water bottle' && !!preGenTravelVariant;
+  btn.style.display=(forMug||forTravel)?'block':'none';
+  btn.textContent=forTravel?'↩️ Change Cup / Color':'↩️ Change Mug Style / Color';
+}
+// Travel mugs keep their cup and palette on an inline card
+// (travelMugVariantCard) rather than a step-lock overlay, so "back to
+// colour" is: make sure that card is showing, redraw it with the current
+// choice highlighted, spotlight it, and go there.
+function goBackToTravelColor(){
+  refreshTravelMugVariantVisibility();
+  refreshTravelMugColorVisibility();
+  setOptionSpotlight('travel-color-focus');
+  smoothScrollToTarget('travelMugVariantCard','center');
 }
 function goBackToMugStyle(){
+  if(product==='water bottle'){
+    goBackToTravelColor();
+    return;
+  }
   // The mug Style/Color step is a step-lock OVERLAY (mugStyleLockOverlay),
   // not an inline card -- it closes itself once the colour is finished, so
   // scrolling to it would aim at a zero-height element. Re-open it through
@@ -9873,6 +9894,8 @@ function refreshTravelMugColorVisibility(){
   const show=product==='water bottle' && !!(prod?.colors);
   card.style.display=show?'block':'none';
   if(show)renderTravelMugColorGridGen();
+  // The change-colour button next to Generate follows travel state too.
+  try{ refreshChangeMugStyleBtn(); }catch(e){}
 }
 let phoneSearchListenerAttachedGen=false;
 
@@ -13526,6 +13549,18 @@ function printModeBack(){
 // once this one works.
 function travelVariantBack(){
   clearAllFocusModes();
+  // A DOOR, NOT A TELEPORTER (Alyx, Sep 2026). This one Back button serves
+  // two states of the same panel. With a cup already chosen and the palette
+  // showing, Back means "un-choose the cup" -- which is exactly what Change
+  // cup does -- NOT "throw away the whole product decision and scroll to the
+  // top." That teleport stranded a customer who only wanted a different
+  // colour: one tap put them back at the product grid with nothing kept.
+  if(preGenTravelVariant){
+    changeTravelCup();
+    return;
+  }
+  // No cup chosen yet: we're on the six-cup grid, and for a travel mug the
+  // variant IS the product, so back from here is the product grid.
   preGenTravelVariant=null;
   preGenTravelColor=null;
   if(typeof selectedTravelProductKey!=='undefined')selectedTravelProductKey=null;
