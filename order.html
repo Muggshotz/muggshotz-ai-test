@@ -409,7 +409,7 @@ body.studio-driven #orderHeadlineCard{display:block}
 </div>
 <div>
 <label>Country</label>
-<input type="text" id="country" value="US"/>
+<input type="text" id="country" value="US" oninput="onCountryChanged()"/>
 </div>
 </div>
 </div>
@@ -618,7 +618,75 @@ const TRAVEL_MUG_CATALOG = {
   }
 };
 
-const FLAT_SHIPPING = 6.95;
+// SHIPPING (rebuilt Sep 2026). This used to be `const FLAT_SHIPPING = 6.95`
+// applied to every product in the catalog, while the server billed the real
+// per-product Printify rate -- so a mouse pad DISPLAYED $6.95 and CHARGED
+// $4.99, and a suitcase displayed $6.95 and charged ~$38. The number below is
+// now only a last-resort placeholder shown while the real figure is in
+// flight, or if the lookup fails; the live value comes from /api/get-shipping,
+// which calls the exact same function create-checkout-session.js bills from.
+const SHIPPING_FALLBACK_ESTIMATE = 6.95;
+let liveShipping = null;      // real resolved dollars, or null if not yet known
+let liveShippingKey = '';     // productKey|basePrice|country this value is for
+let shippingLookupInFlight = '';
+
+// Mirrors the productKey each branch of submitOrder() sends to the server.
+// If these two ever disagree we are back to displaying one product's shipping
+// and charging another's, so they must be changed together.
+function currentProductKey(){
+  if (isTravelMug())    return selectedTravelProductKey;
+  if (isSuitcase())     return 'suitcase';
+  if (isPhoneCase())    return 'phone-case-tough';
+  if (isToteBag())      return 'tote-bag';
+  if (isPuzzle())       return 'photo-puzzle';
+  if (isMousePad())     return 'mouse-pad';
+  if (isGreetingCard()) return 'greeting-card';
+  if (isPostIt())       return 'post-it-notes';
+  if (isCoaster())      return (pendingOrder?.coasterShape === 'round') ? 'coaster-set-round' : 'coaster-set';
+  if (isPhotoPoster())  return 'photo-poster';
+  return MUG_STYLE_TO_PRODUCT_KEY[selectedStyle];
+}
+
+function currentCountry(){
+  const el = document.getElementById('country');
+  return ((el && el.value.trim()) || 'US').toUpperCase();
+}
+
+// Fetches the real charge for the current product/country and re-renders the
+// summary once it lands. Deduped by key so updateSummary() calling this on
+// every render does not spam the endpoint or loop.
+async function refreshShipping(basePrice){
+  const productKey = currentProductKey();
+  if (!productKey || !basePrice) return;
+
+  const key = productKey + '|' + basePrice + '|' + currentCountry();
+  if (key === liveShippingKey || key === shippingLookupInFlight) return;
+  shippingLookupInFlight = key;
+
+  try {
+    const resp = await fetch('/api/get-shipping', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ productKey, basePrice, country: currentCountry() })
+    });
+    const data = await resp.json();
+    if (typeof data.shipping === 'number') {
+      liveShipping = data.shipping;
+      liveShippingKey = key;
+      updateSummary();
+    }
+  } catch (err) {
+    console.error('Live shipping lookup failed, showing estimate:', err);
+  } finally {
+    if (shippingLookupInFlight === key) shippingLookupInFlight = '';
+  }
+}
+
+function onCountryChanged(){
+  liveShipping = null;
+  liveShippingKey = '';
+  updateSummary();
+}
 
 let selectedStyle = "Classic White";
 let selectedSize = "11oz";
@@ -1860,7 +1928,12 @@ function updateSummary(){
   }
 
   const giftCharge = giftMessageEnabled ? GIFT_MESSAGE_PRICE : 0;
-  const shipping = FLAT_SHIPPING;
+  // Live figure if we have one for THIS product/country, otherwise the
+  // placeholder -- and if it is the placeholder we say so rather than
+  // presenting a guess as the real total.
+  const shippingKeyNow = currentProductKey() + '|' + basePrice + '|' + currentCountry();
+  const shippingIsLive = (liveShipping !== null && liveShippingKey === shippingKeyNow);
+  const shipping = shippingIsLive ? liveShipping : SHIPPING_FALLBACK_ESTIMATE;
   // FEES (Alyx, 2026-08-28, revised same day: explained, not mysterious):
   // exactly what the note under the summary says -- the processor's
   // 2.9% + 30c passed through at cost, plus a 5c handling fee. Same
@@ -1895,9 +1968,14 @@ function updateSummary(){
     giftRow.style.display = 'none';
   }
 
-  document.getElementById('summaryShipping').textContent = '$' + shipping.toFixed(2);
+  document.getElementById('summaryShipping').textContent =
+    '$' + shipping.toFixed(2) + (shippingIsLive ? '' : ' (estimate)');
   document.getElementById('summaryFees').textContent = '$' + fees.toFixed(2);
   document.getElementById('summaryTotal').textContent = '$' + total.toFixed(2);
+
+  // Kick off (or refresh) the real lookup. Deduped inside refreshShipping,
+  // which calls updateSummary() again once a real number arrives.
+  refreshShipping(basePrice);
 
   // RESTORED: reminds the customer the 10% discount is checked
   // server-side (per email, one-time) — this note is informational
