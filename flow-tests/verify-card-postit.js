@@ -66,7 +66,7 @@ for (const P of PRODUCTS) {
   };
 
   // ---- The paid-order body on the order page. ----
-  scenarios['orderBody_' + slug] = async (page) => {
+  scenarios['orderBody_' + slug] = async (page, log) => {
     await page.addInitScript((icon) => {
       localStorage.setItem('muggshotz_pending_order', JSON.stringify({
         placements: { left: null, front: 'https://example.com/art.png', right: null },
@@ -92,8 +92,12 @@ for (const P of PRODUCTS) {
     const landing = await page.evaluate(() => {
       const d = (id) => getComputedStyle(document.getElementById(id)).display;
       return { studio: document.body.classList.contains('studio-driven'), bridge: d('bridgeGridCard'), preview: d('previewCard'),
-        mugStyle: d('mugStyleCard'), size: d('sizeCard'), headline: document.getElementById('orderHeadlineName').textContent.trim(), y: window.scrollY };
+        mugStyle: d('mugStyleCard'), size: d('sizeCard'), live: d('livePreviewCard'), headline: document.getElementById('orderHeadlineName').textContent.trim(), y: window.scrollY };
     });
+    // No second mockup: the studio approved it. The checkout line does not
+    // call Printify at all.
+    if (landing.live !== 'none') return 'FAIL: the mockup card is showing in the checkout line';
+    if (log.apiCalls.some((c) => c.path === '/api/start-mockup')) return 'FAIL: the order page asked Printify for a mockup of its own';
     if (!landing.studio || landing.bridge !== 'none' || landing.preview !== 'none')
       return `FAIL: the order page still shows its pickers for ${P.tile}: ${JSON.stringify(landing)}`;
     if (landing.mugStyle !== 'none' || landing.size !== 'none')

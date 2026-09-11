@@ -95,15 +95,15 @@ label{font-size:11px;color:#888;letter-spacing:.5px;text-transform:uppercase;dis
    so the picker cards this page grew up with -- "where will it live", the
    three-slot preview, style/size/colour grids -- are a second copy of
    decisions already taken, and a live one: a tap switched the product after
-   the fact. The customer arriving from the studio sees what they are buying,
-   the mockup as it comes in, and the shipping form. Nothing to re-pick. */
+   the fact. And the mockup was already approved in the studio ("Looks good
+   -> Checkout"), so it is not fetched or shown again here: this page is the
+   checkout line, not the shop floor. The customer arriving from the studio
+   sees what they are buying and the shipping form. Nothing to re-pick. */
 body.studio-driven #bridgeGridCard,body.studio-driven #previewCard,
-body.studio-driven #mugStyleCard,body.studio-driven #sizeCard,body.studio-driven #colorCard,body.studio-driven #fullWrapCard,
-body.studio-driven #travelColorCard,body.studio-driven #toteBagSizeCard,
-body.studio-driven #suitcaseSizeGrid,body.studio-driven #toteBagColorGrid,body.studio-driven #toteBagColorLabel,
-body.studio-driven #puzzleSizeGrid,body.studio-driven #travelMugStyleGrid,
-body.studio-driven #phoneModelSearchInput,body.studio-driven #phoneModelResults,body.studio-driven #phoneCaseCard > .note:first-of-type,
-body.studio-driven #mugPreviewSvg{display:none!important}
+body.studio-driven #mugStyleCard,body.studio-driven #sizeCard,body.studio-driven #livePreviewCard,body.studio-driven #colorCard,body.studio-driven #fullWrapCard,
+body.studio-driven #travelMugStyleCard,body.studio-driven #travelColorCard,body.studio-driven #suitcaseSizeCard,body.studio-driven #phoneCaseCard,
+body.studio-driven #toteBagSizeCard,body.studio-driven #toteBagColorCard,body.studio-driven #puzzleSizeCard,body.studio-driven #photoPosterCard,
+body.studio-driven #mockupCtaLeft,body.studio-driven #mockupCtaRight,body.studio-driven #mockupWaitBanner{display:none!important}
 #orderHeadlineCard{display:none}
 body.studio-driven #orderHeadlineCard{display:block}
 .headline-row{display:flex;align-items:center;gap:14px}
@@ -872,6 +872,9 @@ function scrollToCheckout(){
 }
 
 async function runMockupJob(body, btn, noteEl, imgEl){
+  // The studio already showed and approved the mockup; this page does not
+  // ask Printify for another one (a product created per visit, for nothing).
+  if (studioDriven) return null;
   if (btn) { btn.disabled = true; }
   noteEl.style.display = 'none';
   hideMockupSideCta();
@@ -944,9 +947,7 @@ async function runMockupJob(body, btn, noteEl, imgEl){
     if (btn) { btn.disabled = false; }
     hideMockupWaitBanner();
 
-    // Studio-driven: the mockup card sits right under the headline, and a
-    // customer already typing their address must not be dragged back up.
-    if (!studioDriven) anchorEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    anchorEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
     showMockupSideCta(anchorEl);
 
     return mockupUrl;
@@ -2353,9 +2354,9 @@ if (isTravelMug()) {
   applyStudioDrivenLayout();
 }
 
-// What the customer is buying, in one line at the top, with the mockup
-// card (where the product has one) retitled to say what it is now that
-// the picker around it is gone.
+// What the customer is buying, in one line at the top. Every product card
+// stays hidden (CSS) -- the choices were made in the studio, and so was
+// the mockup approval.
 function applyStudioDrivenLayout(){
   if (!studioDriven) return;
   const fam = BRIDGE_GRID_PRODUCTS.find(p => p.key === selectedProductFamily);
@@ -2366,9 +2367,6 @@ function applyStudioDrivenLayout(){
   const thumb = document.getElementById('orderHeadlineThumb');
   const src = pendingOrder.panoramaImage || pl.front || pl.left || pl.right || '';
   if (src) thumb.src = src; else thumb.style.display = 'none';
-  const retitle = (cardId, text) => { const t = document.querySelector('#' + cardId + ' .card-title'); if (t) t.textContent = text; };
-  ['suitcaseSizeCard','toteBagColorCard','puzzleSizeCard','phoneCaseCard','travelMugStyleCard','livePreviewCard'].forEach(id => retitle(id, 'Your Mockup'));
-  retitle('photoPosterCard', 'Your Poster');
 }
 
 renderBridgeGrid();
