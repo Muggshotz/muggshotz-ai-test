@@ -66,6 +66,29 @@ select{width:100%;background:#0d0d0d;border:1px solid #444;border-radius:8px;pad
 
 <div class="stack">
 
+<div class="card" style="border-color:#5a3a1a">
+  <h2 class="section-title">🛑 Shop Status</h2>
+  <div class="sub">The kill switch — stops checkout everywhere, instantly</div>
+  <div style="font-size:12px;color:#999;line-height:1.6;margin-bottom:1rem">
+    Taking the shop offline refuses <b>every</b> checkout at the server: product orders,
+    token purchases, everything. Anyone mid-flow sees the message below instead of a
+    Stripe page. It does not touch orders already placed, and nothing anyone has made
+    is lost. Use it the moment you spot a systematic failure — orders auto-submit to
+    Printify an hour after payment, and this is what stops the next one entering that hour.
+  </div>
+
+  <div id="maintStatus" class="result" style="display:block;margin-bottom:1rem">Checking…</div>
+
+  <label>Message customers see</label>
+  <textarea id="maintMessage" rows="3" style="width:100%;background:#0d0d0d;border:1px solid #444;border-radius:8px;padding:10px 12px;color:#fff;font-size:14px;font-family:inherit" placeholder="We've taken the studio down for a short repair. Nothing you made is lost."></textarea>
+
+  <label style="margin-top:1rem;display:block">When to come back (free text — leave blank if you don't know)</label>
+  <input type="text" id="maintEta" placeholder="try again in about an hour"/>
+
+  <button class="btn-full" id="maintOffBtn" onclick="setMaintenance(true)" style="background:#c0392b">🛑 Take the shop offline</button>
+  <button class="btn-full" id="maintOnBtn" onclick="setMaintenance(false)" style="background:#22a845">✅ Bring the shop back</button>
+</div>
+
 <div class="card">
   <h1>MuggsHotz Admin</h1>
   <div class="sub">Token grant &amp; deduct tool</div>
@@ -295,6 +318,73 @@ async function checkPw(){
     try{ localStorage.removeItem(REMEMBER_KEY); }catch(e){}
   }
 })();
+
+// ---------------------------------------------------------------------------
+// SHOP STATUS — the kill switch (Sep 2026)
+// Reading is public and needs no password, so the status loads before unlock.
+// Writing goes through /api/admin with the admin password like everything else.
+// ---------------------------------------------------------------------------
+async function loadMaintenance(){
+  const el = document.getElementById('maintStatus');
+  try{
+    const resp = await fetch('/api/admin?action=maintenance', { cache: 'no-store' });
+    const d = await resp.json();
+    renderMaintenance(d);
+    if (d.message) document.getElementById('maintMessage').value = d.message;
+    if (d.eta)     document.getElementById('maintEta').value     = d.eta;
+  }catch(err){
+    el.className = 'result error';
+    el.textContent = 'Could not read shop status: ' + err.message;
+  }
+}
+
+function renderMaintenance(d){
+  const el = document.getElementById('maintStatus');
+  if (d.on){
+    el.className = 'result error';
+    el.textContent = '🛑 OFFLINE — checkout is refused. Customers see: "' + (d.message || '') + '"'
+                   + (d.eta ? ' (' + d.eta + ')' : '');
+  } else {
+    el.className = 'result success';
+    el.textContent = '✅ OPEN — checkout is live and taking real cards.';
+  }
+  document.getElementById('maintOffBtn').disabled = !!d.on;
+  document.getElementById('maintOnBtn').disabled  = !d.on;
+}
+
+async function setMaintenance(on){
+  // Going offline is the safe direction, so it happens immediately — in an
+  // emergency you do not want a dialog between you and the switch. Coming
+  // back online asserts the problem is fixed, so that one asks first.
+  if (!on && !confirm('Bring the shop back online? Checkout will start taking real cards again immediately.')) return;
+
+  const el = document.getElementById('maintStatus');
+  el.className = 'result';
+  el.textContent = on ? 'Taking the shop offline…' : 'Bringing the shop back…';
+
+  try{
+    const resp = await fetch('/api/admin', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'maintenance-set',
+        password: enteredPassword,
+        on,
+        message: document.getElementById('maintMessage').value.trim(),
+        eta: document.getElementById('maintEta').value.trim()
+      })
+    });
+    const d = await resp.json();
+    if (resp.status === 403) { relockWithError('Wrong password.'); return; }
+    if (!resp.ok) throw new Error(d.error || 'Request failed.');
+    renderMaintenance(d);
+  }catch(err){
+    el.className = 'result error';
+    el.textContent = 'Failed: ' + err.message + ' — the shop is UNCHANGED. Check supabase/site-settings.sql has been run.';
+  }
+}
+
+loadMaintenance();
 
 async function lookupBalance(){
   const deviceId = document.getElementById('deviceId').value.trim();

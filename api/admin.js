@@ -14,6 +14,7 @@
 // job like the others are POST-only, so it's routed by HTTP method
 // first, before the action-field routing kicks in for POST requests.
 import { buildTierCodes, TIER_SEQUENCE } from '../lib/flyer-tiers.js';
+import { readMaintenance, writeMaintenance } from '../lib/maintenance.js';
 
 const SUPABASE_URL              = process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -756,11 +757,51 @@ async function handleCampaignCreate(req, res) {
   }
 }
 
+// ---------------------------------------------------------------------------
+// MAINTENANCE — the kill switch (Sep 2026)
+//
+// Reading is public and unauthenticated: it returns only the banner text a
+// customer is meant to see, and the pages need it before anyone has logged
+// into anything. Writing needs the admin password.
+//
+// Lives in admin.js rather than its own file because api/ is capped at 12
+// serverless functions on Vercel's Hobby plan and is sitting on exactly 12.
+// A 13th file fails every build silently. See api/printify-catalog.js.
+// ---------------------------------------------------------------------------
+
+async function handleMaintenanceRead(req, res) {
+  const state = await readMaintenance();
+  // No cache: a stale "we're open" is the one answer that costs money.
+  res.setHeader('Cache-Control', 'no-store, max-age=0');
+  return res.status(200).json(state);
+}
+
+async function handleMaintenanceSet(req, res) {
+  const { password, on, message, eta } = req.body || {};
+  if (password !== ADMIN_PASSWORD) return res.status(403).json({ error: 'Unauthorized.' });
+  if (typeof on !== 'boolean')      return res.status(400).json({ error: '"on" must be true or false.' });
+
+  try {
+    const state = await writeMaintenance({ on, message, eta });
+    console.log(`Maintenance mode set to ${state.on ? 'ON' : 'OFF'}.`);
+    return res.status(200).json(state);
+  } catch (err) {
+    console.error('Maintenance set failed:', err.message);
+    return res.status(500).json({ error: err.message });
+  }
+}
+
 export default async function handler(req, res) {
   // Printify catalog reads are GET requests (read-only, no password
   // needed) — check this first, before the POST/action routing below.
   if (req.method === 'GET' && req.query?.action === 'printify-catalog') {
     return handlePrintifyCatalog(req, res);
+  }
+
+  // Public, unauthenticated read of the kill switch. The order page and the
+  // studio call this on load to decide whether to show the closed banner.
+  if (req.method === 'GET' && req.query?.action === 'maintenance') {
+    return handleMaintenanceRead(req, res);
   }
 
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
@@ -780,6 +821,7 @@ export default async function handler(req, res) {
   if (action === 'ledger') return handleLedger(req, res);
   if (action === 'payout') return handlePayout(req, res);
   if (action === 'campaign-create') return handleCampaignCreate(req, res);
+  if (action === 'maintenance-set') return handleMaintenanceSet(req, res);
 
   return res.status(400).json({ error: `Unknown action "${action}".` });
 }

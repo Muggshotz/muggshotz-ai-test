@@ -1,6 +1,7 @@
 import Stripe from "stripe";
 import { getProduct } from "../lib/products-catalog.js";
 import { calculateShippingCharge } from "../lib/printify-shipping.js";
+import { readMaintenance } from "../lib/maintenance.js";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
@@ -466,6 +467,27 @@ async function handleTierUpgrade(req, res) {
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
+  }
+
+  // KILL SWITCH. Checked before anything is routed, so it stops every kind
+  // of checkout: product orders, token purchases, reservations and tier
+  // upgrades alike. If the generator is producing bad print files then
+  // selling tokens for it is also the wrong thing to do.
+  //
+  // This has to live here rather than only in the page. order.html is a
+  // static asset and the site installs as a standalone app, so a cached
+  // copy will keep posting to this endpoint long after the banner went up.
+  // Hiding the button is courtesy; this is the actual control.
+  //
+  // readMaintenance() fails open by design — see lib/maintenance.js.
+  const maintenance = await readMaintenance();
+  if (maintenance.on) {
+    console.log("Checkout refused: maintenance mode is on.");
+    return res.status(503).json({
+      maintenance: true,
+      error: maintenance.message,
+      eta: maintenance.eta
+    });
   }
 
   try {

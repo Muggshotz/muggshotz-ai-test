@@ -222,6 +222,16 @@ body.studio-driven #orderHeadlineCard{display:block}
 <div class="header-title">Checkout</div>
 <div class="main">
 
+<!-- Kill-switch banner. Hidden unless admin.html has taken the shop offline.
+     This is courtesy only: the real refusal happens server-side in
+     create-checkout-session.js, because this page is a static asset and a
+     cached or installed copy would otherwise keep posting to checkout. -->
+<div id="maintenanceBanner" style="display:none;background:#2a0d0d;border:1px solid #c0392b;border-radius:12px;padding:1.1rem 1.25rem;margin-bottom:1.25rem;color:#f0c8c8;line-height:1.55">
+  <div style="font-weight:700;margin-bottom:.4rem;color:#ff8a8a">Ordering is paused</div>
+  <div id="maintenanceBannerMsg"></div>
+  <div id="maintenanceBannerEta" style="margin-top:.5rem;opacity:.8"></div>
+</div>
+
 <div class="card" id="orderHeadlineCard">
 <div class="card-title">Your Order</div>
 <div class="headline-row">
@@ -1995,6 +2005,44 @@ function setStatus(msg, isError){
   el.textContent = msg;
 }
 
+// ---------------------------------------------------------------------------
+// KILL SWITCH (Sep 2026). Asks the server whether the shop is open and, if it
+// is not, says so before the customer fills in an address for nothing.
+//
+// This only draws the banner. The refusal that matters is server-side, in
+// create-checkout-session.js -- this file is a static asset and installs as a
+// standalone app, so a cached copy of this page can outlive the flag by a
+// long time. If the flag flips while someone is already on the page, the
+// checkout POST returns 503 and showMaintenance() gets called from there.
+// ---------------------------------------------------------------------------
+function showMaintenance(message, eta){
+  const b = document.getElementById('maintenanceBanner');
+  if (!b) return;
+  document.getElementById('maintenanceBannerMsg').textContent =
+    message || "We've taken the studio down for a short repair. Nothing you made is lost.";
+  document.getElementById('maintenanceBannerEta').textContent = eta ? 'Expected back: ' + eta : '';
+  b.style.display = 'block';
+
+  const btn = document.getElementById('submitBtn');
+  if (btn){
+    btn.disabled = true;
+    btn.textContent = 'Ordering is paused';
+  }
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+async function checkMaintenance(){
+  try{
+    const resp = await fetch('/api/admin?action=maintenance', { cache: 'no-store' });
+    if (!resp.ok) return;                 // unreadable means open, same as the server
+    const d = await resp.json();
+    if (d && d.on) showMaintenance(d.message, d.eta);
+  }catch(err){
+    // Deliberately silent. A failed check must never block a working shop.
+  }
+}
+checkMaintenance();
+
 async function submitOrder(){
   if (!validateMugSelectionsAndFlash()) return;
 
@@ -2291,6 +2339,14 @@ async function submitOrder(){
       body: JSON.stringify(body)
     });
     const data = await resp.json();
+    // 503 + maintenance:true means the shop went offline while this page was
+    // open. Raise the banner rather than showing a bare error, and leave the
+    // button disabled, because retrying cannot work.
+    if (resp.status === 503 && data.maintenance) {
+      showMaintenance(data.error, data.eta);
+      setStatus('', false);
+      return;
+    }
     if (!resp.ok) throw new Error(data.error || 'Could not start checkout.');
     if (data.url) {
       window.location.href = data.url;
