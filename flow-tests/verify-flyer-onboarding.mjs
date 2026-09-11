@@ -169,6 +169,6 @@ await check('theBetaBalancePageSubtractsPayouts', async () => {
   return `flyer-balance shows ${r.body.totalBalance} after the $10 payout, name "${r.body.fullName}" for the landing page`;
 });
 
-console.error = origErr;
+console.error = origErr; console.log = origLog;
 console.log(fails ? `\n${fails} FAILURE(S)` : '\nALL FLYER-ONBOARDING VERIFICATIONS PASSED');
 process.exit(fails ? 1 : 0);
