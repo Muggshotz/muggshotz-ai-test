@@ -2,7 +2,7 @@
 // interaction. PASS/FAIL per scenario; zero tolerated console errors
 // (Vanity 404 must be GONE; watchdog error only in the injected-stall
 // scenario where it is the expected rescue).
-const { launch, openStudio, uploadPhoto, dismissAlerts, bodyFocusClasses, passFadePage } = require('./harness');
+const { launch, openStudio, uploadPhoto, dismissAlerts, bodyFocusClasses, passFadePage, passCardInside } = require('./harness');
 
 // PRESS GENERATE IN-PAGE (Sep 2026). These scenarios jump to Generate
 // straight from the spotlit idea box -- a shortcut the customer never
@@ -92,6 +92,12 @@ const scenarios = {
     const afterYes = await page.evaluate(() => document.body.classList.contains('generation-active'));
     if (afterYes) return 'FAIL: spotlight not handed off after YES';
     await passFadePage(page);
+    // GREETING CARDS ASK ABOUT THE INSIDE (Sep 2026): between the fade
+    // page and the mockup the card offers a printed inside page. This
+    // scenario is about the spotlight, so it leaves the inside blank --
+    // but it has to answer, or the panel sits over the lightbox's Return
+    // button and the click below times out.
+    await passCardInside(page);
     // The auto-mockup opens in the lightbox; the way onward is its Return
     // button (What's Next appears behind it), same as a customer taps.
     await page.waitForFunction(() => {
