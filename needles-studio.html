@@ -5545,6 +5545,7 @@ function toggleAccessorizeEdgeStyle(){
 function pickMugPrintMode(mode){
   mugPrintMode=mode;
   mugPrintModeTouched=true;
+  try{ saveTravelChoice(); }catch(e){}
   document.body.classList.remove('print-mode-focus');
   document.body.classList.add('final-generate-focus');
   document.getElementById('printModeThreeBtn').classList.toggle('selected',mode==='three-panel');
@@ -5677,7 +5678,7 @@ function trimBlankBands(img){
 }
 async function extendWrapToProductRatio(url){
   if(product!=='water bottle')return url;
-  const ratio=TRAVEL_WRAP_RATIO[preGenTravelVariant];
+  const ratio=TRAVEL_WRAP_RATIO[selectedTravelProductKey];
   if(typeof ratio!=='number')return url;
   const raw=await loadImageFromUrl(url);
   let img=trimBlankBands(raw);
@@ -5686,7 +5687,7 @@ async function extendWrapToProductRatio(url){
   // Already the band's own shape, untrimmed: nothing to do. Wider than the
   // band is NOT nothing to do: the server would letterbox it with white
   // bands, so it is centre-cropped to the band below, like a trimmed one.
-  if(Math.abs(targetW-w)<=w*0.02 && img===raw && travelWrapCloses(preGenTravelVariant))return url;
+  if(Math.abs(targetW-w)<=w*0.02 && img===raw && travelWrapCloses(selectedTravelProductKey))return url;
   // THE ENDS MEET EACH OTHER, NOT THE CUP (Alyx, v102: "can we change that
   // from matching the colour of the cup to matching the colour of the
   // opposite end?"). The wrap is built an inch or so wider than the band,
@@ -5694,7 +5695,7 @@ async function extendWrapToProductRatio(url){
   // into the left end's start, so the back seam is a cross-fade of scenery
   // into scenery and never white. Seamless by construction, whatever the
   // picture: the last pixel of the file is the neighbour of the first.
-  const closes=travelWrapCloses(preGenTravelVariant);
+  const closes=travelWrapCloses(selectedTravelProductKey);
   const X=closes?Math.round(h*0.30):0;
   const bigW=targetW+X;
   if(bigW<w){
@@ -5807,7 +5808,7 @@ function softenTopAndBottom(ctx,W,H,hex){
 // Cover, then centre: fill the band and lose the overflow, rather than leave a
 // bare stripe nobody asked for.
 async function fitWrapToBand(url){
-  const ratio=(product==='water bottle'&&TRAVEL_WRAP_RATIO[preGenTravelVariant])||0;
+  const ratio=(product==='water bottle'&&TRAVEL_WRAP_RATIO[selectedTravelProductKey])||0;
   if(!ratio)return url;
   const img=await loadImageFromUrl(url);
   // TRAVEL_WRAP_RATIO is rounded (1.32 where the area is really 1.3170), so a
@@ -5997,7 +5998,7 @@ const WRAP_GUTTER_CUPS={
   'travel-mug-40oz-vacuum': true
 };
 function wrapWantsGutters(){
-  return product==='water bottle' && WRAP_GUTTER_CUPS[preGenTravelVariant]===true;
+  return product==='water bottle' && WRAP_GUTTER_CUPS[selectedTravelProductKey]===true;
 }
 // Draws one strip at each end, the right one mirrored. Two rules, and both are
 // load-bearing:
@@ -6208,7 +6209,7 @@ async function paintWrapGutters(url,hex,width=WRAP_GUTTER_WIDTH,design=null,forP
   // PANORAMA_MIN_WRAP_RATIO -- so the rule was never applied to it. Applied
   // here, the artwork fills the band, the trimming runs the band's full height,
   // and the preview finally shows the shape that actually prints.
-  const ratio=(product==='water bottle'&&TRAVEL_WRAP_RATIO[preGenTravelVariant])||0;
+  const ratio=(product==='water bottle'&&TRAVEL_WRAP_RATIO[selectedTravelProductKey])||0;
   const w=img.naturalWidth;
   // TRAVEL_WRAP_RATIO carries a rounded 1.32; the real area is 3710x2817,
   // which is 1.3170. Reshaping a wrap that already has the band's proportions
@@ -6373,7 +6374,7 @@ function travelWrapCloses(key){ return TRAVEL_WRAP_CLOSES[key]===true; }
 function wrapIsPanoramic(){
   if(product==='mug')return true;
   if(product!=='water bottle')return false;
-  const ratio=TRAVEL_WRAP_RATIO[preGenTravelVariant];
+  const ratio=TRAVEL_WRAP_RATIO[selectedTravelProductKey];
   return typeof ratio==='number' && ratio>=PANORAMA_MIN_WRAP_RATIO;
 }
 
@@ -6408,7 +6409,7 @@ function refreshMugPrintModeVisibility(){
   if(product==='mug'){
     show=mugColorFinishedPreGen;
   } else if(product==='water bottle'){
-    show=!!preGenTravelVariant && preGenTravelVariant!=='travel-mug-40oz-insulated';
+    show=!!selectedTravelProductKey && selectedTravelProductKey!=='travel-mug-40oz-insulated';
   } else {
     show=false;
   }
@@ -6442,14 +6443,14 @@ function renderTravelMugVariantGrid(){
   // ONE CUP ONCE ONE IS CHOSEN (Alyx, v108: "once I've picked my choice out
   // of the six, the others should disappear"). The chosen cup stays, in its
   // colour, with a way back to the six.
-  const entries=Object.entries(TRAVEL_MUG_CATALOG).filter(([key])=>!preGenTravelVariant||key===preGenTravelVariant);
+  const entries=Object.entries(TRAVEL_MUG_CATALOG).filter(([key])=>!selectedTravelProductKey||key===selectedTravelProductKey);
   // One cup: a single tile the size of one of the six, with the palette
   // taking the rest of the row (v109). Six cups: the full-width grid.
-  if(preGenTravelVariant){ grid.style.flex='0 0 auto'; grid.style.width='min(100%,230px)'; grid.style.gridTemplateColumns='1fr'; }
+  if(selectedTravelProductKey){ grid.style.flex='0 0 auto'; grid.style.width='min(100%,230px)'; grid.style.gridTemplateColumns='1fr'; }
   else { grid.style.flex='1 1 100%'; grid.style.width=''; grid.style.gridTemplateColumns=''; }
   entries.forEach(([key,prod])=>{
     const btn=document.createElement('div');
-    btn.className='theme-btn'+(key===preGenTravelVariant?' selected':'');
+    btn.className='theme-btn'+(key===selectedTravelProductKey?' selected':'');
     btn.style.position='relative';
     const img=document.createElement('img');
     img.src=prod.thumbnail;
@@ -6462,7 +6463,7 @@ function renderTravelMugVariantGrid(){
     // photo stays until the still arrives, and stays for good without WebGL.
     if(typeof MUG3D!=='undefined' && MUG3D.hasTumbler(key)){
       // The chosen cup wears the chosen colour; the others stay white.
-      const c=(key===preGenTravelVariant && prod.colors && preGenTravelColor)?prod.colors.find(x=>x.name===preGenTravelColor):null;
+      const c=(key===selectedTravelProductKey && prod.colors && selectedTravelColor)?prod.colors.find(x=>x.name===selectedTravelColor):null;
       requestMugStill({tumblerKey:key, px:560, colorHex:c?c.hex:'#ffffff', finish:c&&c.finish?c.finish:'coat'}, url=>{ img.src=url; });
     }
     btn.appendChild(img);
@@ -6479,7 +6480,7 @@ function renderTravelMugVariantGrid(){
     btn.onclick=()=>pickPreGenTravelVariant(key);
     grid.appendChild(btn);
   });
-  if(preGenTravelVariant){
+  if(selectedTravelProductKey){
     const change=document.createElement('button');
     change.type='button';
     change.className='download-btn';
@@ -6499,7 +6500,7 @@ function renderTravelMugVariantGrid(){
 // card can just not exist for the 40oz, instead of showing Wraparound
 // as clickable and then blocking it with an explanation after the fact.
 function pickPreGenTravelVariant(key){
-  const differentCup=(key!==preGenTravelVariant);
+  const differentCup=(key!==selectedTravelProductKey);
   setTravelCupVariant(key);
   // A colour belongs to one cup's palette, so a different cup starts without
   // one. Through the setter, so the post-generation half is cleared too.
@@ -6540,7 +6541,7 @@ function pickPreGenTravelVariant(key){
     // to Print Style, as before. The "Pick your print format" explainer
     // that used to fire here is gone (v97).
     const prodPicked=TRAVEL_MUG_CATALOG[key];
-    if(prodPicked && prodPicked.colors && !preGenTravelColor){
+    if(prodPicked && prodPicked.colors && !selectedTravelColor){
       setOptionSpotlight('travel-color-focus');
       smoothScrollToTarget('travelMugVariantCard','center');
     } else {
@@ -6644,8 +6645,8 @@ const PHONE_CASE_MODELS = [
   "Samsung Galaxy S24","Samsung Galaxy S25","Samsung Galaxy S26"
 ];
 let selectedPhoneCaseModel=null;
-let preGenTravelVariant=null;
-let preGenTravelColor=null;
+let selectedTravelProductKey=null;
+let selectedTravelColor=null;
 let mugSizeChosenPreGen=false;
 let mugStyleChosenPreGen=false;
 let mugColorChosenPreGen=false;
@@ -7333,7 +7334,7 @@ function refreshChangeMugStyleBtn(){
   // returned them to the palette. The August fix for the same complaint on
   // mugs never got carried across to travel cups. Now it shows for either.
   const forMug=product==='mug' && mugStyleChosenPreGen;
-  const forTravel=product==='water bottle' && !!preGenTravelVariant;
+  const forTravel=product==='water bottle' && !!selectedTravelProductKey;
   btn.style.display=(forMug||forTravel)?'block':'none';
   btn.textContent=forTravel?'↩️ Change Cup / Color':'↩️ Change Mug Style / Color';
 }
@@ -9854,12 +9855,12 @@ function renderTravelMugColorGridGen(){
   const grid=document.getElementById('travelMugColorGridGen');
   if(!grid)return;
   grid.innerHTML='';
-  const prod=preGenTravelVariant ? TRAVEL_MUG_CATALOG[preGenTravelVariant] : null;
+  const prod=selectedTravelProductKey ? TRAVEL_MUG_CATALOG[selectedTravelProductKey] : null;
   const colors=prod?.colors || null;
   if(!colors)return;
   colors.forEach(c=>{
     const btn=document.createElement('div');
-    btn.className='color-btn'+(c.name===preGenTravelColor?' selected':'');
+    btn.className='color-btn'+(c.name===selectedTravelColor?' selected':'');
     btn.dataset.color=c.name;
     btn.onclick=()=>pickTravelMugColorGen(btn,c.name);
     // NAMED (Alyx, v103: "they have no way of knowing that what looks
@@ -9929,7 +9930,7 @@ function pickTravelMugColorGen(el,colorName){
 function refreshTravelMugColorVisibility(){
   const card=document.getElementById('travelMugColorCard');
   if(!card)return;
-  const prod=preGenTravelVariant ? TRAVEL_MUG_CATALOG[preGenTravelVariant] : null;
+  const prod=selectedTravelProductKey ? TRAVEL_MUG_CATALOG[selectedTravelProductKey] : null;
   const show=product==='water bottle' && !!(prod?.colors);
   card.style.display=show?'block':'none';
   if(show)renderTravelMugColorGridGen();
@@ -10486,7 +10487,7 @@ function getSelectedProductColorHex(){
   // colour of the surface the picture is printed on". Any variant that
   // names a colour can answer that.
   // Through travelColorEntry(), which is the one reader of the cup's colour.
-  // This used to consult preGenTravelColor/preGenTravelVariant directly, so
+  // This used to consult selectedTravelColor/selectedTravelProductKey directly, so
   // after generating it answered from the pre-generation half while the cup
   // itself was drawn from the post-generation one -- meaning a cup whose
   // colour changed got its fade baked in the OLD colour and wore a halo of it.
@@ -11491,7 +11492,7 @@ function getSlotMode(){
   if (product === 'mug') return 'three';
   if (product === 'water bottle') {
     if (mugPrintMode === 'wraparound') {
-      return (preGenTravelVariant === 'travel-mug-40oz-insulated') ? 'two' : 'one';
+      return (selectedTravelProductKey === 'travel-mug-40oz-insulated') ? 'two' : 'one';
     }
     return 'two';
   }
@@ -13557,7 +13558,7 @@ function generateStepBack(){
 // The product rail is answered: nothing above Generate is still a question.
 function productRailIsComplete(){
   if(!product)return false;
-  if(product==='water bottle')return !!preGenTravelVariant;
+  if(product==='water bottle')return !!selectedTravelProductKey;
   if(product==='mug')return !!mugColorFinishedPreGen;
   return true;
 }
@@ -13582,7 +13583,7 @@ function productRailIsComplete(){
 function resultScreenBack(){
   clearAllFocusModes();
   // NO CUP REQUIRED (Alyx, Sep 2026, second pass). This first read
-  // "&& preGenTravelVariant", which made the fix fail in the exact state he
+  // "&& selectedTravelProductKey", which made the fix fail in the exact state he
   // tests in. His procedure is to close the panel and open a brand new one --
   // which runs recallLastGeneratedImage(), and that restores `product` and
   // puts the approve row back, but never restores which CUP was picked
@@ -13642,8 +13643,8 @@ function travelVariantBack(){
   // Back on this panel is UP A LEVEL. Change cup is sideways. Two controls,
   // two jobs. Colour is reached from the result screen now, which is where he
   // was actually standing when he wanted it.
-  preGenTravelVariant=null;
-  preGenTravelColor=null;
+  selectedTravelProductKey=null;
+  selectedTravelColor=null;
   if(typeof selectedTravelProductKey!=='undefined')selectedTravelProductKey=null;
   if(typeof selectedTravelColor!=='undefined')selectedTravelColor=null;
   try{ refreshTravelMugColorVisibility(); }catch(e){}
@@ -14088,37 +14089,41 @@ function deviceHasWebGL(){
 let mug3dShowing=false;
 
 function travelDefaultColorName(){
-  const key=selectedTravelProductKey||preGenTravelVariant||null;
+  const key=selectedTravelProductKey||null;
   const prod=key?TRAVEL_MUG_CATALOG[key]:null;
   return (prod&&prod.colors&&prod.colors.length)?prod.colors[0].name:null;
 }
 function travelColorEntry(){
-  const key=selectedTravelProductKey||preGenTravelVariant||null;
+  const key=selectedTravelProductKey||null;
   const prod=key?TRAVEL_MUG_CATALOG[key]:null;
   if(!prod||!prod.colors)return null;
-  const name=selectedTravelColor||preGenTravelColor||prod.colors[0].name;
+  const name=selectedTravelColor||prod.colors[0].name;
   return prod.colors.find(c=>c.name===name)||prod.colors[0];
 }
 
-// THE CUP'S COLOUR IS ONE FACT, SO ONE FUNCTION SETS IT.
+// THE CUP'S COLOUR IS ONE FACT, SO IT IS ONE VARIABLE.
 //
-// It used to be two variables. preGenTravelColor was what the palette on the
-// picker card wrote; selectedTravelColor was a copy taken of it at the moment
-// of generation. travelColorEntry() above prefers the copy -- so from the
-// instant a picture existed, every control that wrote only preGenTravelColor
-// was writing to a value nothing would ever read again. The palette still lit
-// up, the variable still changed, and the cup stayed the colour it was: the
-// 3D body, the mockup and the Printify order all read the copy.
+// It used to be two. preGenTravelColor was what the palette on the picker card
+// wrote; selectedTravelColor was a copy taken of it at the moment of
+// generation, and travelColorEntry() prefers the copy. So from the instant a
+// picture existed, the only palette a customer could reach was writing to a
+// value nothing would read again. The swatch lit, the variable changed, and
+// the cup stayed the colour it was -- the 3D body, the mockup and the Printify
+// order all read the copy.
 //
 // That is why "take me back to the colour panel" could be fixed repeatedly and
-// still do nothing. The panel was reachable and clickable the whole time; it
-// was simply wired to the half of the state that had been superseded.
+// still do nothing for anybody. The panel was reachable, lit and clickable the
+// whole time. It was wired to the half of the state that had been superseded.
 //
-// Everything that changes the colour now goes through here, so the two halves
-// cannot drift apart again, and the change is painted on whatever cup happens
-// to be on screen at the time.
+// The duplicate is gone rather than kept in step, because state kept in step
+// can fall out of step: the next person to write one half reintroduces this
+// silently. Every other product here holds one variable per decision, and so
+// do index.html and order.html, which is where these two names come from.
+// The cup was the only thing in the shop that stored one fact twice.
+//
+// Everything that changes the colour goes through here, so the change reaches
+// the pickers, the cup on screen and the seam in one place.
 function setTravelCupColour(name){
-  preGenTravelColor=name;
   selectedTravelColor=name;
   try{ renderTravelMugVariantGrid(); }catch(e){}
   try{ renderTravelMugColorGridGen(); }catch(e){}
@@ -14136,14 +14141,72 @@ function setTravelCupColour(name){
     Promise.resolve().then(()=>updateTrimmingsPreview()).catch(()=>{});
   }
   try{ saveMugState(); }catch(e){}
+  try{ saveTravelChoice(); }catch(e){}
 }
 
-// The same, for which cup it is. Held to the same rule for the same reason:
-// changeTravelCup() cleared only the pre-generation half, so after generating,
-// "Change cup" was as dead as the palette was.
+// The same, for WHICH cup it is. It had the identical defect one field over:
+// changeTravelCup() cleared only the pre-generation half, and tumbler3dKey()
+// reads the other one, so after generating "Change cup" left the old cup on
+// the mockup exactly as the palette left the old colour.
 function setTravelCupVariant(key){
-  preGenTravelVariant=key;
   selectedTravelProductKey=key;
+  try{ saveTravelChoice(); }catch(e){}
+}
+
+// WHAT IT IS PRINTED ON OUTLIVES A RELOAD, BECAUSE THE PICTURE DOES.
+//
+// saveMugState() persists {designs, placements, placementAdjust} and nothing
+// else, and recallLastGeneratedImage() brings the finished picture back and
+// puts the approve row up -- but no cup, no colour, no product. Measured: a
+// reload takes product, cup and colour from "water bottle / vacuum 40oz / Red"
+// to null, null, null. The customer then re-picks their cup and the colour
+// falls through travelColorEntry() to colors[0], which is White. That is the
+// cup coming back white after a refresh, and it is not the palette's fault.
+//
+// DELIBERATELY NARROW. The purge that wipes this storage on entry exists
+// because rehydrating `placements` once shipped somebody a DIFFERENT, older
+// picture to Printify in silence -- see the note above readWorkshopSnapshot.
+// So this stores the three answers about the OBJECT and never a design id, a
+// placement or a URL: there is nothing here that could put stale artwork back
+// on a cup. Restoring it can change what your picture is printed on; it can
+// never change which picture that is.
+const TRAVEL_CHOICE_KEY='muggshotz_travel_choice';
+function saveTravelChoice(){
+  try{
+    if(product!=='water bottle'){ localStorage.removeItem(TRAVEL_CHOICE_KEY); return; }
+    localStorage.setItem(TRAVEL_CHOICE_KEY,JSON.stringify({
+      product:'water bottle',
+      cup:selectedTravelProductKey||null,
+      colour:selectedTravelColor||null,
+      printMode:mugPrintMode||null
+    }));
+  }catch(e){}
+}
+
+// Called by the recall path once the design is back. Returns true when it put
+// a cup back, so the caller can skip sending the customer to the product grid
+// for an answer they already gave.
+function restoreTravelChoice(){
+  try{
+    const raw=localStorage.getItem(TRAVEL_CHOICE_KEY);
+    if(!raw)return false;
+    const s=JSON.parse(raw);
+    // A cup we no longer sell is not a cup. Validated against the catalogue
+    // rather than trusted, so a renamed or retired key cannot resurrect a
+    // variant the 3D engine and Printify no longer agree about.
+    if(!s||s.product!=='water bottle'||!s.cup||!TRAVEL_MUG_CATALOG[s.cup])return false;
+    product='water bottle';
+    productExplicitlyChosen=true;
+    selectedTravelProductKey=s.cup;
+    const palette=TRAVEL_MUG_CATALOG[s.cup].colors||null;
+    selectedTravelColor=(palette&&s.colour&&palette.some(c=>c.name===s.colour))?s.colour:null;
+    if(s.printMode==='wraparound'||s.printMode==='three-panel')mugPrintMode=s.printMode;
+    try{ refreshTravelMugVariantVisibility(); }catch(e){}
+    try{ refreshTravelMugColorVisibility(); }catch(e){}
+    try{ refreshMugPrintModeVisibility(); }catch(e){}
+    try{ renderCupColourRows(); }catch(e){}
+    return true;
+  }catch(e){ return false; }
 }
 
 // THE COLOUR BELONGS NEXT TO THE CUP.
@@ -14162,7 +14225,7 @@ function setTravelCupVariant(key){
 const CUP_COLOUR_ROWS=[['trimmingsCupColourRow','trimmingsCupColourGrid'],
                        ['mockupCupColourRow','mockupCupColourGrid']];
 function renderCupColourRows(){
-  const key=selectedTravelProductKey||preGenTravelVariant||null;
+  const key=selectedTravelProductKey||null;
   const prod=key?TRAVEL_MUG_CATALOG[key]:null;
   const colors=(prod&&prod.colors)?prod.colors:null;
   const current=travelColorEntry();
@@ -14221,7 +14284,7 @@ function repaintLiveCupColour(){
 // The travel cup on the screen, if it is one the 3D engine can draw.
 function tumbler3dKey(){
   if(product!=='water bottle')return null;
-  const key=selectedTravelProductKey||preGenTravelVariant||null;
+  const key=selectedTravelProductKey||null;
   return (typeof MUG3D!=='undefined' && MUG3D.hasTumbler(key))?key:null;
 }
 
@@ -16929,7 +16992,7 @@ async function generate(){
     }
   }
   lastGenerationWasExactTransfer=exactTransfer;
-  if(product==='water bottle' && !preGenTravelVariant){
+  if(product==='water bottle' && !selectedTravelProductKey){
     setStatus('Please pick which travel mug you want above first — we need it before generating so your art is composed correctly.',true);
     document.getElementById('travelMugVariantCard').scrollIntoView({behavior:'smooth',block:'center'});
     return;
@@ -17014,7 +17077,7 @@ document.getElementById('cancelBtn').style.display='block';
     // (see pickMugPrintMode/pickPreGenTravelVariant above), so this stays
     // false in practice; kept as a named flag in case that restriction
     // is ever revisited.
-    const is40ozWraparoundSplit = product==='water bottle' && mugPrintMode==='wraparound' && preGenTravelVariant==='travel-mug-40oz-insulated';
+    const is40ozWraparoundSplit = product==='water bottle' && mugPrintMode==='wraparound' && selectedTravelProductKey==='travel-mug-40oz-insulated';
 
     // THE REBUILD THE KILL-SWITCH WAS WAITING FOR (Aug 2026).
     //
@@ -17515,8 +17578,6 @@ async function makeTestSingleZonePanorama(side){
       const { leftHalf, rightHalf } = await splitImageAtCenterVertical(resultUrl);
       placements.front = addToRecentDesigns(leftHalf);
       placements.right = addToRecentDesigns(rightHalf);
-      selectedTravelProductKey = preGenTravelVariant;
-      selectedTravelColor = preGenTravelColor;
       renderRecentDesigns();
       renderPositionHolder();
       updatePlacementSummary();
@@ -17536,7 +17597,6 @@ async function makeTestSingleZonePanorama(side){
 
 
     currentDesignId=addToRecentDesigns(resultUrl);
-    if(product==='water bottle'){ selectedTravelProductKey=preGenTravelVariant; selectedTravelColor=preGenTravelColor; }
 
     if (product==='mug' && mugPrintMode==='wraparound'){
       placements.front = currentDesignId;
@@ -18276,8 +18336,6 @@ const TRAVEL_MUG_CATALOG = {
   }
 };
 
-let selectedTravelProductKey = null;
-let selectedTravelColor = null;
 
 function renderGenMugStyleGrid(){
   const grid=document.getElementById('genMugStyleGrid');
@@ -19302,8 +19360,8 @@ function goToOrder(){
     // generated for one cup's shape (the insulated 40oz's front/back split
     // most of all) could land on a different cup entirely if they picked
     // wrong the second time.
-    preselectedTravelKey: (product==='water bottle') ? (selectedTravelProductKey||preGenTravelVariant||null) : null,
-    preselectedTravelColor: (product==='water bottle') ? (selectedTravelColor||preGenTravelColor||travelDefaultColorName()||null) : null,
+    preselectedTravelKey: (product==='water bottle') ? (selectedTravelProductKey||null) : null,
+    preselectedTravelColor: (product==='water bottle') ? (selectedTravelColor||travelDefaultColorName()||null) : null,
     // Round and square coasters are different blueprints, so the shape has to
     // survive the hop to order.html or the customer gets whichever one the
     // code names by default.
@@ -19520,6 +19578,14 @@ function recallLastGeneratedImage(){
     const startOver=document.getElementById('startOverBtn');
     if(startOver)startOver.style.display='none';
     document.body.classList.remove('initial-upload-focus');
+    // Put the cup and its colour back before deciding where to send them. A
+    // recalled travel cup used to arrive with product null and be routed to
+    // the product grid to answer a question it had already been given -- and
+    // re-answering it lost the colour, because nothing persisted it and
+    // travelColorEntry() then falls through to the first colour in the
+    // catalogue. That is the white cup after a refresh. See saveTravelChoice:
+    // the object comes back, never the artwork.
+    try{ restoreTravelChoice(); }catch(e){}
     if(product){
       clearAllFocusModes();
       document.getElementById('approveRow').style.display='block';
@@ -19776,8 +19842,9 @@ function resetEverythingFreshStart(){
   refreshMugPrintModeVisibility();
   selectedTravelProductKey=null;
   selectedTravelColor=null;
-  preGenTravelVariant=null;
-  preGenTravelColor=null;
+  // A fresh start forgets the cup too, or the next session would open wearing
+  // the last one's colour.
+  try{ localStorage.removeItem(TRAVEL_CHOICE_KEY); }catch(e){}
   const travelColorGridGen=document.getElementById('travelMugColorGridGen');
   if(travelColorGridGen)travelColorGridGen.innerHTML='';
   selectedToteColorGen=null;
