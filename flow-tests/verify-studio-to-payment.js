@@ -454,14 +454,14 @@ scenarios.travelCupKeepsItsIdentityAcrossTheHop = async (page, log, bodies) => {
   await T(page, 800);
   await dismissAlerts(page);
   // Read it the way goToOrder() reads it. Before a generation the choice
-  // lives in preGenTravelVariant; selectedTravelProductKey is the post-gen
+  // lives in selectedTravelProductKey; selectedTravelProductKey is the post-gen
   // one, and the studio's own hand-off falls back from the first to the
   // second. Asserting on only one of them tests the test, not the shop.
   const chosen = await page.evaluate(() => ({
     key: (typeof selectedTravelProductKey !== 'undefined' && selectedTravelProductKey)
-      || (typeof preGenTravelVariant !== 'undefined' && preGenTravelVariant) || null,
+      || (typeof selectedTravelProductKey !== 'undefined' && selectedTravelProductKey) || null,
     colour: (typeof selectedTravelColor !== 'undefined' && selectedTravelColor)
-      || (typeof preGenTravelColor !== 'undefined' && preGenTravelColor) || null,
+      || (typeof selectedTravelColor !== 'undefined' && selectedTravelColor) || null,
   }));
   if (!chosen.key) return 'FAIL: picking a cup did not settle a cup';
   if (chosen.key !== 'travel-mug-40oz-insulated')
@@ -531,9 +531,9 @@ for (const C of TRAVEL) {
     await dismissAlerts(page);
     const chosen = await page.evaluate(() => ({
       key: (typeof selectedTravelProductKey !== 'undefined' && selectedTravelProductKey)
-        || (typeof preGenTravelVariant !== 'undefined' && preGenTravelVariant) || null,
+        || (typeof selectedTravelProductKey !== 'undefined' && selectedTravelProductKey) || null,
       colour: (typeof selectedTravelColor !== 'undefined' && selectedTravelColor)
-        || (typeof preGenTravelColor !== 'undefined' && preGenTravelColor) || null,
+        || (typeof selectedTravelColor !== 'undefined' && selectedTravelColor) || null,
     }));
     if (chosen.key !== C.key) return `FAIL: asked for ${C.key}, the studio settled on ${chosen.key}`;
 

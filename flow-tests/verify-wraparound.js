@@ -1090,13 +1090,13 @@ scenarios.artStyleHasABackButton = async (page) => {
 scenarios.tundraWrapIsMirroredAndFaded = async (page) => {
   const r = await page.evaluate(async () => {
     const src = 'http://127.0.0.1:8788/__fake/panorama.jpg';
-    product = 'water bottle'; preGenTravelColor = null;
-    preGenTravelVariant = 'travel-mug-14oz-handle';
+    product = 'water bottle'; selectedTravelColor = null;
+    selectedTravelProductKey = 'travel-mug-14oz-handle';
     // v105: a picture wider than a band is cropped to the band rather than
     // handed back for the server to letterbox; the 14oz is 2.15:1.
     const narrowIm = await loadImageFromUrl(await extendWrapToProductRatio(src));
     const narrow = narrowIm.naturalWidth / narrowIm.naturalHeight;
-    preGenTravelVariant = 'travel-mug-30oz-tundra';
+    selectedTravelProductKey = 'travel-mug-30oz-tundra';
     const out = await extendWrapToProductRatio(src);
     const orig = await loadImageFromUrl(src);
     const ext = await loadImageFromUrl(out);
@@ -1313,7 +1313,7 @@ scenarios.tundraOffersThreeColours = async (page) => {
     placements.front = null; placements.left = null; placements.right = null;
     const d = addToRecentDesigns('http://127.0.0.1:8788/__fake/panorama.jpg'); placements.front = d;
     const defaultBody = buildMockupRequestBody();
-    preGenTravelColor = 'Black'; selectedTravelColor = 'Black';
+    selectedTravelColor = 'Black'; selectedTravelColor = 'Black';
     const blackBody = buildMockupRequestBody();
     const entry = travelColorEntry();
     return { names, badge, colorCardShown: colorCard && colorCard.style.display !== 'none', swatches,
@@ -1335,7 +1335,7 @@ scenarios.tundraOffersThreeColours = async (page) => {
 // band on the cup is all picture. A file with no bands is left alone.
 scenarios.blankBandsAreTrimmedFromTheWrap = async (page) => {
   const r = await page.evaluate(async () => {
-    product = 'water bottle'; preGenTravelVariant = 'travel-mug-30oz-tundra'; preGenTravelColor = null;
+    product = 'water bottle'; selectedTravelProductKey = 'travel-mug-30oz-tundra'; selectedTravelColor = null;
     const make = (banded) => {
       const c = document.createElement('canvas'); c.width = 1536; c.height = 658;
       const g = c.getContext('2d');
@@ -1395,8 +1395,8 @@ scenarios.theCupsPaletteComesNext = async (page) => {
 scenarios.gatorWrapFadesToTheBottle = async (page) => {
   const r = await page.evaluate(async () => {
     const src = 'http://127.0.0.1:8788/__fake/panorama.jpg';
-    product = 'water bottle'; preGenTravelColor = null;
-    preGenTravelVariant = 'travel-mug-32oz-gator';
+    product = 'water bottle'; selectedTravelColor = null;
+    selectedTravelProductKey = 'travel-mug-32oz-gator';
     const out = await extendWrapToProductRatio(src);
     const orig = await loadImageFromUrl(src);
     const ext = await loadImageFromUrl(out);
@@ -1406,7 +1406,7 @@ scenarios.gatorWrapFadesToTheBottle = async (page) => {
       const d = ctx.getImageData(Math.round(x), Math.round(y), 1, 1).data; return [d[0], d[1], d[2]];
     };
     const W = ext.naturalWidth, H = ext.naturalHeight, y = H * 0.35;
-    return { closes: travelWrapCloses(preGenTravelVariant), ratio: W / H,
+    return { closes: travelWrapCloses(selectedTravelProductKey), ratio: W / H,
       left: px(ext, 1, y), right: px(ext, W - 2, y), centre: px(ext, W / 2, H / 2), origCentre: px(orig, orig.naturalWidth / 2, orig.naturalHeight / 2) };
   });
   const near = (a, b, tol) => a.every((v, i) => Math.abs(v - b[i]) <= tol);
@@ -1435,7 +1435,7 @@ scenarios.theFortyOunceLandsOnTheIdeaBox = async (page) => {
 // FRAMES ON CUPS (Alyx, v108: "why can't we put frames on this mug?").
 scenarios.framesAreOfferedOnCups = async (page) => {
   const r = await page.evaluate(() => {
-    product = 'water bottle'; preGenTravelVariant = 'travel-mug-30oz-tundra'; selectedTravelProductKey = preGenTravelVariant;
+    product = 'water bottle'; selectedTravelProductKey = 'travel-mug-30oz-tundra'; 
     mugPrintMode = 'wraparound'; windowSillChoice = null; selectedDesignMethod = null;
     placements.front = null; placements.left = null; placements.right = null;
     const before = frameOfferAvailable();

@@ -22,7 +22,7 @@ const belief = (page) => page.evaluate(() => ({
   hex: travelColorEntry() ? travelColorEntry().hex : null,
   cupBody: mug3DBodyOpts().colorHex,
   fadeBakes: getSelectedProductColorHex(),
-  orderShips: selectedTravelColor || (typeof preGenTravelColor !== 'undefined' ? preGenTravelColor : null) || travelDefaultColorName() || null,
+  orderShips: selectedTravelColor || travelDefaultColorName() || null,
 }));
 
 const agree = (b, name, hex) => {

@@ -351,7 +351,7 @@ scenarios.travelMugPaletteBackIsADoor = async (page) => {
   await page.click('#travelChangeCupBtn');
   await T(page, 900);
   s = await page.evaluate(() => ({
-    product, variant: preGenTravelVariant,
+    product, variant: selectedTravelProductKey,
     variantCard: getComputedStyle(document.getElementById('travelMugVariantCard')).display,
     tiles: document.querySelectorAll('#travelMugVariantGrid .theme-btn').length,
   }));
@@ -372,7 +372,7 @@ scenarios.travelMugPaletteBackIsADoor = async (page) => {
   s = await page.evaluate(() => {
     const pc = document.getElementById('productCard');
     return {
-      product, variant: preGenTravelVariant,
+      product, variant: selectedTravelProductKey,
       variantCard: getComputedStyle(document.getElementById('travelMugVariantCard')).display,
       productCard: getComputedStyle(pc).display,
       productOpacity: +parseFloat(getComputedStyle(pc).opacity).toFixed(2),
@@ -450,7 +450,7 @@ scenarios.travelResultBackReachesTheColourPanel = async (page) => {
     const b = document.querySelector('#travelMugColorGridGen .color-btn');
     if (!b) return null;
     b.click();
-    return preGenTravelColor || selectedTravelColor || 'picked';
+    return selectedTravelColor || 'picked';
   });
   if (!firstColour) return 'FAIL: the travel palette rendered no swatches to pick';
   await T(page, 700);
@@ -482,7 +482,7 @@ scenarios.travelResultBackReachesTheColourPanel = async (page) => {
     const card = document.getElementById('travelMugVariantCard');
     const r = card ? card.getBoundingClientRect() : null;
     return {
-      product, variant: preGenTravelVariant,
+      product, variant: selectedTravelProductKey,
       cardDisplay: card ? getComputedStyle(card).display : 'missing',
       // Is the panel actually ON SCREEN, not merely display:block somewhere
       // below the fold? "Visible in the DOM" is what made the last three
@@ -514,9 +514,9 @@ scenarios.travelResultBackReachesTheColourPanel = async (page) => {
   const changed = await page.evaluate(() => {
     const b = document.querySelectorAll('#travelMugColorGridGen .color-btn');
     if (b.length < 2) return null;
-    const before = preGenTravelColor || selectedTravelColor;
+    const before = selectedTravelColor;
     b[1].click();
-    return { before, after: preGenTravelColor || selectedTravelColor };
+    return { before, after: selectedTravelColor };
   });
   await T(page, 600);
   if (!changed) return 'FAIL: not enough swatches to change colour';
@@ -534,11 +534,11 @@ scenarios.travelResultBackReachesTheColourPanel = async (page) => {
 // brand new panel and then run the test." That is not a stale cache -- it is
 // the most thorough refresh available -- and it lands him in RECALL:
 // recallLastGeneratedImage() finds the last design, restores `product`, and
-// puts the approve row back. It does NOT restore preGenTravelVariant, which
+// puts the approve row back. It does NOT restore selectedTravelProductKey, which
 // is pre-generation state and not part of the design record.
 //
 // So the first version of the result-screen fix, guarded on
-// "product==='water bottle' && preGenTravelVariant", passed every test and
+// "product==='water bottle' && selectedTravelProductKey", passed every test and
 // failed on his screen: product was restored (the approve row correctly read
 // "press Back on the cup") and the cup was null. This scenario pins the
 // recalled shape so the guard can never tighten back up.
@@ -550,8 +550,8 @@ scenarios.backWorksAfterRecallWithNoCupRemembered = async (page) => {
 
   // Reproduce the recalled shape: product known, cup forgotten, approve row up.
   await page.evaluate(() => {
-    preGenTravelVariant = null;
-    preGenTravelColor = null;
+    selectedTravelProductKey = null;
+    selectedTravelColor = null;
     try { refreshTravelMugColorVisibility(); renderTravelMugVariantGrid(); } catch (e) {}
     clearAllFocusModes();
     const row = document.getElementById('approveRow');
@@ -560,7 +560,7 @@ scenarios.backWorksAfterRecallWithNoCupRemembered = async (page) => {
   });
   await T(page, 600);
 
-  const pre = await page.evaluate(() => ({ product, variant: preGenTravelVariant }));
+  const pre = await page.evaluate(() => ({ product, variant: selectedTravelProductKey }));
   if (pre.product !== 'water bottle') return `FAIL: setup lost the product (${pre.product})`;
   if (pre.variant !== null) return 'FAIL: setup did not reproduce the forgotten cup';
 

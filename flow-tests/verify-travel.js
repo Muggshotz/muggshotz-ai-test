@@ -239,7 +239,7 @@ scenarios.theCupPickerIsNotATrap = async (page) => {
       // A card dimmed to 35% behind the spotlight is not a destination.
       productOpacity: pc ? +parseFloat(getComputedStyle(pc).opacity).toFixed(2) : 0,
       spotlit: Array.from(document.body.classList).filter((c) => /-focus$/.test(c)),
-      variant: typeof preGenTravelVariant !== 'undefined' ? preGenTravelVariant : 'n/a',
+      variant: selectedTravelProductKey,
       picked: !!document.querySelector('#productCard .btn-select.selected')
     };
   });

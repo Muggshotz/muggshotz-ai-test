@@ -162,9 +162,9 @@ scenarios.onlyOnCupsWhoseEndsMeet = async (page) => {
   await pickCup(page, VACUUM);
   if (!(await page.evaluate(() => wrapWantsGutters()))) return 'FAIL: the vacuum 40oz did not get gutters';
   const others = await page.evaluate(() => {
-    const was = preGenTravelVariant, out = {};
-    for (const k of Object.keys(TRAVEL_MUG_CATALOG)) { preGenTravelVariant = k; out[k] = wrapWantsGutters(); }
-    preGenTravelVariant = was;
+    const was = selectedTravelProductKey, out = {};
+    for (const k of Object.keys(TRAVEL_MUG_CATALOG)) { selectedTravelProductKey = k; out[k] = wrapWantsGutters(); }
+    selectedTravelProductKey = was;
     return out;
   });
   const wrong = Object.entries(others).filter(([k, v]) => v && k !== VACUUM).map(([k]) => k);
