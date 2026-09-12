@@ -280,7 +280,10 @@ scenarios.theCupPickerIsNotATrap = async (page) => {
 
 (async () => {
   let fails = 0;
+  // Run one scenario by name: SCENARIO=theCupPickerIsNotATrap node ...
+  const only = process.env.SCENARIO;
   for (const [name, fn] of Object.entries(scenarios)) {
+    if (only && name !== only) continue;
     const { browser, page, log } = await launch();
     const mockupBodies = [];
     page.on('request', (r) => {

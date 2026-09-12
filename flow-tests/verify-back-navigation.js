@@ -340,30 +340,58 @@ scenarios.travelMugPaletteBackIsADoor = async (page) => {
   await T(page, 1200);
   await dismissAlerts(page);
   let s = await page.evaluate(() => ({
-    product, variant: preGenTravelVariant,
     palette: getComputedStyle(document.getElementById('travelMugColorCard')).display,
+    changeCup: !!document.getElementById('travelChangeCupBtn'),
   }));
   if (s.palette === 'none') return `FAIL: picked ${key} but the colour palette never showed`;
 
-  // Back from the palette: must un-choose the cup and KEEP the product.
-  await page.evaluate(() => travelVariantBack());
+  // TWO CONTROLS, TWO JOBS. "Change cup" is SIDEWAYS -- it un-chooses the cup
+  // and brings the six back without leaving the panel.
+  if (!s.changeCup) return 'FAIL: no Change cup control once a cup is chosen';
+  await page.click('#travelChangeCupBtn');
   await T(page, 900);
   s = await page.evaluate(() => ({
     product, variant: preGenTravelVariant,
     variantCard: getComputedStyle(document.getElementById('travelMugVariantCard')).display,
     tiles: document.querySelectorAll('#travelMugVariantGrid .theme-btn').length,
   }));
-  if (s.product !== 'water bottle')
-    return `FAIL: Back from the palette threw away the product (product=${s.product}) — teleported to the grid`;
-  if (s.variant !== null) return `FAIL: Back from the palette did not un-choose the cup (still ${s.variant})`;
-  if (s.variantCard === 'none') return 'FAIL: Back from the palette hid the cup card instead of returning to the six';
-  if (s.tiles < 2) return `FAIL: expected the six-cup grid back, saw ${s.tiles} tile(s)`;
+  if (s.variant !== null) return `FAIL: Change cup did not un-choose the cup (still ${s.variant})`;
+  if (s.variantCard === 'none') return 'FAIL: Change cup left the panel';
+  if (s.tiles < 2) return `FAIL: Change cup should bring the six back, saw ${s.tiles} tile(s)`;
+
+  // ... and Back is UP A LEVEL: the product grid, undimmed and usable.
+  // An earlier pass today made Back a second copy of Change cup, which broke
+  // the complaint this handler exists for ("once you get here you're
+  // trapped") -- verify-travel's theCupPickerIsNotATrap caught it. Back and
+  // Change cup are checked together here so they can never collapse into
+  // each other again without one of these two assertions going red.
+  await page.evaluate((k) => pickPreGenTravelVariant(k), key);
+  await T(page, 1000);
+  await page.evaluate(() => travelVariantBack());
+  await T(page, 1200);
+  s = await page.evaluate(() => {
+    const pc = document.getElementById('productCard');
+    return {
+      product, variant: preGenTravelVariant,
+      variantCard: getComputedStyle(document.getElementById('travelMugVariantCard')).display,
+      productCard: getComputedStyle(pc).display,
+      productOpacity: +parseFloat(getComputedStyle(pc).opacity).toFixed(2),
+      spotlit: Array.from(document.body.classList).filter((c) => /-focus$/.test(c)),
+      picked: !!document.querySelector('#productCard .btn-select.selected'),
+    };
+  });
+  if (s.variantCard !== 'none') return 'FAIL: Back left the cup picker on screen — the trap is back';
+  if (s.productCard === 'none') return 'FAIL: Back hid the cup picker without putting the product grid back';
+  if (s.productOpacity < 0.9)
+    return `FAIL: Back landed on the product grid dimmed to ${s.productOpacity} behind ${s.spotlit.join(', ') || 'nothing'} — indistinguishable from the button not working`;
+  if (s.picked) return 'FAIL: Back left a product still selected, so the choice cannot be remade';
 
   // Forward again, and the palette returns.
+  await pickProduct(page, 'water bottle');
   await page.evaluate((k) => pickPreGenTravelVariant(k), key);
   await T(page, 1200);
-  s = await page.evaluate(() => getComputedStyle(document.getElementById('travelMugColorCard')).display);
-  if (s === 'none') return 'FAIL: could not get forward to the palette again after Back';
+  const pal = await page.evaluate(() => getComputedStyle(document.getElementById('travelMugColorCard')).display);
+  if (pal === 'none') return 'FAIL: could not get forward to the palette again after Back';
 
   // The change-colour control beside Generate must exist for travel mugs ...
   const btn = await page.evaluate(() => {
@@ -384,13 +412,127 @@ scenarios.travelMugPaletteBackIsADoor = async (page) => {
   }));
   if (!routed.focus) return 'FAIL: change-colour for a travel mug did not spotlight the palette';
   if (routed.mugOverlay !== 'none') return 'FAIL: change-colour for a travel mug opened the MUG style overlay';
-  return 'PASS: Back from the travel palette un-chooses the cup and keeps the product; colour is reachable again from Generate';
+  return 'PASS: Change cup goes sideways, Back goes up a level to an undimmed product grid, and colour is reachable again from Generate';
+};
+
+
+// ---- THE BACK HE WAS ACTUALLY PRESSING ----
+//
+// Alyx, Sep 2026, chronologged across five screenshots: file, product, cup,
+// "I chose red. But then I decided that I wanted black. And so I hit the back
+// button. And it was supposed to take me back to the color panel... But it
+// takes me instead all the way back to the beginning. But then if I click on
+// yes use this image It jumps me all the way back past the color panel again."
+//
+// Three earlier fixes aimed at three other Back buttons (travelVariantBack,
+// trimmingsBack, the change-colour control beside Generate) and all three
+// passed their tests while he kept hitting the same wall, because the button
+// under his thumb was approveBackBtn -- the Back directly beneath the finished
+// picture, which is exactly where a customer stands when they decide the
+// colour was wrong. It scrolled to the idea box and Yes ran past the palette:
+// a closed loop with the one panel he wanted sitting between the two exits.
+//
+// So this scenario presses the REAL button, by click, from the real generated
+// state -- no calling the handler by name, which is how the earlier tests
+// managed to be green about the wrong thing.
+scenarios.travelResultBackReachesTheColourPanel = async (page) => {
+  await toProduct(page);
+  if (!await pickProduct(page, 'water bottle')) return 'FAIL: could not choose a travel cup';
+
+  const key = await page.evaluate(() => (Object.entries(TRAVEL_MUG_CATALOG).find(([, v]) => v.colors) || [])[0]);
+  if (!key) return 'FAIL: no travel variant in the catalog carries a colour palette';
+  await page.evaluate((k) => pickPreGenTravelVariant(k), key);
+  await T(page, 1000);
+  await dismissAlerts(page);
+
+  // Pick a colour, the way he did -- then we will come back to change it.
+  const firstColour = await page.evaluate(() => {
+    const b = document.querySelector('#travelMugColorGridGen .color-btn');
+    if (!b) return null;
+    b.click();
+    return preGenTravelColor || selectedTravelColor || 'picked';
+  });
+  if (!firstColour) return 'FAIL: the travel palette rendered no swatches to pick';
+  await T(page, 700);
+  await dismissAlerts(page);
+
+  // Forward to Generate along the rail's own path, then generate.
+  await page.evaluate(() => { window.confirm = () => false; });
+  await page.evaluate(() => handOffToIdeaAfterProductChoice());
+  await T(page, 800);
+  await page.fill('#ideaDesc', 'surfing a giant wave at sunset');
+  await T(page, 400);
+  await dismissAlerts(page);
+  await page.evaluate(() => confirmIdeaSatisfied());
+  await T(page, 1200);
+  await page.evaluate(() => document.getElementById('generateBtn')?.scrollIntoView({ block: 'center' }));
+  await page.click('#generateBtn');
+  await page.waitForFunction(() => document.getElementById('approveRow')?.style.display !== 'none',
+    null, { timeout: 90000 });
+  await T(page, 800);
+  await dismissAlerts(page);
+
+  // THE PRESS. Real click on the real button, exactly as he did it.
+  const back = await operable(page, '#approveBackBtn');
+  if (!back.visible) return 'FAIL: the result screen has no operable Back button';
+  await page.click('#approveBackBtn');
+  await T(page, 1200);
+
+  const after = await page.evaluate(() => {
+    const card = document.getElementById('travelMugVariantCard');
+    const r = card ? card.getBoundingClientRect() : null;
+    return {
+      product, variant: preGenTravelVariant,
+      cardDisplay: card ? getComputedStyle(card).display : 'missing',
+      // Is the panel actually ON SCREEN, not merely display:block somewhere
+      // below the fold? "Visible in the DOM" is what made the last three
+      // fixes look done.
+      onScreen: !!r && r.bottom > 0 && r.top < innerHeight,
+      spotlight: document.body.classList.contains('travel-color-focus'),
+      swatches: document.querySelectorAll('#travelMugColorGridGen .color-btn').length,
+      changeCup: !!document.getElementById('travelChangeCupBtn'),
+    };
+  });
+
+  if (after.product !== 'water bottle')
+    return `FAIL: Back from the result threw away the product (product=${after.product})`;
+  if (after.variant !== key)
+    return `FAIL: Back from the result threw away the chosen cup (variant=${after.variant})`;
+  if (after.cardDisplay === 'none' || after.cardDisplay === 'missing')
+    return 'FAIL: Back from the result did not bring the cup/colour panel back';
+  if (!after.onScreen)
+    return 'FAIL: Back from the result left the colour panel off screen — the teleport to the idea box';
+  if (!after.spotlight)
+    return 'FAIL: Back from the result did not spotlight the colour panel';
+  if (after.swatches < 2)
+    return `FAIL: landed on the colour panel but only ${after.swatches} swatch(es) to change to`;
+  if (!after.changeCup)
+    return 'FAIL: landed on the colour panel with no Change cup control — cup type still unreachable';
+
+  // And the swatch must actually take a second colour, so this is a door and
+  // not just a nicer-looking dead end.
+  const changed = await page.evaluate(() => {
+    const b = document.querySelectorAll('#travelMugColorGridGen .color-btn');
+    if (b.length < 2) return null;
+    const before = preGenTravelColor || selectedTravelColor;
+    b[1].click();
+    return { before, after: preGenTravelColor || selectedTravelColor };
+  });
+  await T(page, 600);
+  if (!changed) return 'FAIL: not enough swatches to change colour';
+  if (changed.after === changed.before)
+    return `FAIL: the second swatch did not take (still ${changed.after}) — the panel is reachable but frozen`;
+
+  return `PASS: Back from the result lands on the cup/colour panel, spotlit and live (${changed.before} -> ${changed.after}), with Change cup in reach`;
 };
 
 
 (async () => {
   let fails = 0;
+  // Run one scenario by name: SCENARIO=travelResultBackReachesTheColourPanel node ...
+  const only = process.env.SCENARIO;
   for (const [name, fn] of Object.entries(scenarios)) {
+    if (only && name !== only) continue;
     const { browser, page, log } = await launch({ viewport: { width: 430, height: 760 } });
     try {
       await openStudio(page); await uploadPhoto(page); await dismissAlerts(page);

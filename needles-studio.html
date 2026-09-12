@@ -13517,8 +13517,30 @@ function productRailIsComplete(){
   if(product==='mug')return !!mugColorFinishedPreGen;
   return true;
 }
+// A DOOR, NOT A TELEPORTER -- THE RESULT SCREEN (Alyx, Sep 2026: "I chose my
+// color. I chose red. But then I decided that I wanted black. And so I hit the
+// back button. And it was supposed to take me back to the color panel... But it
+// takes me instead all the way back to the beginning. But then if I click on
+// yes use this image It jumps me all the way back past the color panel again").
+//
+// This was the button. Not travelVariantBack, not trimmingsBack -- the Back on
+// approveRow, the one sitting directly under the finished picture, which is
+// where a customer stands when they decide the colour was wrong. It scrolled to
+// the idea box: the top of the rail, every product decision skipped over. And
+// forward from there, Yes runs straight past the palette to the mockup. Back
+// went too far, forward went too far, and the one panel he wanted sat between
+// them with nothing that stopped on it. A closed loop with no exit toward colour.
+//
+// For a travel cup, back from the result is the cup-and-colour card: one panel
+// carrying the chosen cup, its palette, and Change cup, so both of his answers
+// -- colour AND cup type -- are on the screen he lands on. Every other product
+// keeps the idea box it has always had.
 function resultScreenBack(){
   clearAllFocusModes();
+  if(product==='water bottle' && preGenTravelVariant){
+    goBackToTravelColor();
+    return;
+  }
   smoothScrollToTarget('ideaCard','center');
 }
 function trackForkBack(){
@@ -13549,18 +13571,19 @@ function printModeBack(){
 // once this one works.
 function travelVariantBack(){
   clearAllFocusModes();
-  // A DOOR, NOT A TELEPORTER (Alyx, Sep 2026). This one Back button serves
-  // two states of the same panel. With a cup already chosen and the palette
-  // showing, Back means "un-choose the cup" -- which is exactly what Change
-  // cup does -- NOT "throw away the whole product decision and scroll to the
-  // top." That teleport stranded a customer who only wanted a different
-  // colour: one tap put them back at the product grid with nothing kept.
-  if(preGenTravelVariant){
-    changeTravelCup();
-    return;
-  }
-  // No cup chosen yet: we're on the six-cup grid, and for a travel mug the
-  // variant IS the product, so back from here is the product grid.
+  // REVERTED (Sep 2026, same day, by the test that caught it). A pass earlier
+  // today made this Back mean "un-choose the cup" whenever a cup was chosen,
+  // on the theory that a customer wanting a different COLOUR was being
+  // teleported to the product grid by it. That theory was wrong about which
+  // button he was pressing -- it was the Back under the finished picture (see
+  // resultScreenBack) -- and the change broke the real complaint this handler
+  // exists for: "once you get here you're trapped." It also duplicated the
+  // card's own "Change cup" control, so Back stopped being a door and became
+  // a second, worse copy of the button sitting right next to it.
+  //
+  // Back on this panel is UP A LEVEL. Change cup is sideways. Two controls,
+  // two jobs. Colour is reached from the result screen now, which is where he
+  // was actually standing when he wanted it.
   preGenTravelVariant=null;
   preGenTravelColor=null;
   if(typeof selectedTravelProductKey!=='undefined')selectedTravelProductKey=null;
@@ -13709,12 +13732,38 @@ function focusCardFor(cls){
 }
 function scrollPinTargets(){
   const vis=el=>!!el&&el.offsetParent!==null;
+  const cls=Array.from(document.body.classList);
   const row=document.getElementById('approveRow');
   if(row && row.style.display!=='none' && vis(row)){
+    // A LIT SPOTLIGHT OUTRANKS THE FINISHED PICTURE (Alyx, Sep 2026).
+    //
+    // This is why three separate fixes for "take me back to the colour panel"
+    // all passed their tests and all did nothing for the customer. The approve
+    // row stays displayed behind the result screen, so this function pinned
+    // the page to the picture no matter what -- and the pin is a scroll
+    // listener, so it snapped the page straight back the instant any Back
+    // tried to leave. Instrumented: scrollIntoView fired on the right card,
+    // with room to spare, and the page moved 1213 -> 1216 -> 1213. Every route
+    // back to the palette (the Back under the picture, and the Change Cup /
+    // Color button beside Generate) was aimed correctly and then dragged home
+    // by the pin, which reads to a customer as the button doing nothing.
+    //
+    // A spotlight is the studio saying out loud "the customer is on THIS panel
+    // now", so when one is lit the picture is not where they are. Measured
+    // across the whole forward travel rail before changing this: a -focus
+    // class and a visible approveRow never once coexist going forward (9
+    // distinct states, zero overlap). Narrowed to live INSIDE this branch on
+    // purpose -- an earlier pass put it above the whole function and reordered
+    // states that had nothing to do with the result screen, which made
+    // costlySwitchAsksOnce start failing. Nothing outside "the approve row is
+    // up AND a panel is lit" changes.
+    const lit=cls.find(c=>c.endsWith('-focus'));
+    const litId=lit?focusCardFor(lit):null;
+    const litCard=litId?document.getElementById(litId):null;
+    if(vis(litCard))return [litCard,litCard];
     const pic=document.getElementById('previewImg');
     return [vis(pic)?pic:row,row];
   }
-  const cls=Array.from(document.body.classList);
   if(cls.includes('generation-active')){
     const stage=document.getElementById('needlesStageWrap');
     if(vis(stage))return [stage,stage];
