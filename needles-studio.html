@@ -880,6 +880,12 @@ body.panels-active #verifyCard{display:none!important}
     <button type="button" class="mug3d-tilt" id="mug3dZoomReset" onclick="setMug3DZoom(1)">Fit</button>
   </div>
   <p class="mug3d-hint">Drag the mug to turn it &middot; click it to stop or start the spin &middot; scroll on it to zoom</p>
+  <!-- Last look, last chance to change the colour -- on the cup itself rather
+       than back up the rail. Travel cups only; hidden otherwise. -->
+  <div id="mockupCupColourRow" style="display:none;flex-direction:column;align-items:center;gap:6px;width:min(86vw,780px)">
+    <div style="color:#7ab8ff;font-size:12px;font-weight:700">Cup colour &mdash; tap to change it</div>
+    <div class="color-grid" id="mockupCupColourGrid" style="max-width:none;width:100%"></div>
+  </div>
 </div>
   <button class="mockup-lightbox-arrow mockup-lightbox-arrow-right" id="mockupLightboxNext" onclick="mockupLightboxNext()" aria-label="Next angle">›</button>
   <div class="mockup-lightbox-counter" id="mockupLightboxCounter"></div>
@@ -1827,6 +1833,12 @@ Tell Needles <span style="color:#7ab8ff">what you have in mind</span>
 <button type="button" class="mug3d-tilt" onclick="setTrimmings3DZoom(1,true)">Fit</button>
 </div>
 <div class="note" id="trimmings3DHint" style="margin:0 0 .5rem;font-size:11px">Drag the cup to turn it &middot; click it to stop or start the spin &middot; drag the slider to get closer</div>
+<!-- The cup's own colour, on the screen where the cup is. Hidden for a cup
+     with nothing to choose between -- see renderCupColourRows(). -->
+<div id="trimmingsCupColourRow" style="display:none;margin:0 0 .6rem">
+<div class="note" style="margin:0 0 5px;text-align:left">Cup colour &mdash; tap to change it, the cup repaints as you go.</div>
+<div class="color-grid" id="trimmingsCupColourGrid" style="max-width:none"></div>
+</div>
 <!-- Capped so the grid is not pushed off the bottom (Alyx: "fit all of the
      options into the frame and the continue button"). The wrap is very wide
      and very short, so at full width it ate half the panel on its own. -->
@@ -6404,8 +6416,11 @@ function refreshMugPrintModeVisibility(){
 // Variant must be known before generating — 40oz uses a different strategy than 20oz/14oz.
 // Back to all six cups.
 function changeTravelCup(){
-  preGenTravelVariant=null;
-  preGenTravelColor=null;
+  // Both halves, or this is dead after generating for exactly the reason the
+  // palette was: tumbler3dKey() reads selectedTravelProductKey first, so
+  // clearing only the pre-generation half left the old cup on the mockup.
+  setTravelCupVariant(null);
+  setTravelCupColour(null);
   refreshTravelMugColorVisibility();
   refreshMugPrintModeVisibility();
   renderTravelMugVariantGrid();
@@ -6476,8 +6491,11 @@ function renderTravelMugVariantGrid(){
 // card can just not exist for the 40oz, instead of showing Wraparound
 // as clickable and then blocking it with an explanation after the fact.
 function pickPreGenTravelVariant(key){
-  if(key!==preGenTravelVariant)preGenTravelColor=null;
-  preGenTravelVariant=key;
+  const differentCup=(key!==preGenTravelVariant);
+  setTravelCupVariant(key);
+  // A colour belongs to one cup's palette, so a different cup starts without
+  // one. Through the setter, so the post-generation half is cleared too.
+  if(differentCup)setTravelCupColour(null);
   // UNSHELVED (Aug 2026): every variant except the 40oz gets its real
   // Three Panels vs. Wraparound choice back -- see the note in
   // refreshMugPrintModeVisibility(). The 40oz is still silently locked
@@ -9855,36 +9873,49 @@ function renderTravelMugColorGridGen(){
   });
 }
 
+// Is there already a picture of this cup? Then the colour is the only thing
+// this palette is still being asked about, and nothing below it on the rail is
+// an open question any more.
+function travelPictureExists(){
+  if(currentDesignId)return true;
+  return ['left','front','right'].some(p=>placements[p]);
+}
+
 function pickTravelMugColorGen(el,colorName){
-  const wasSelected=el.classList.contains('selected');
-  document.querySelectorAll('#travelMugColorGridGen .color-btn').forEach(b=>b.classList.remove('selected'));
-  if(wasSelected){
-    preGenTravelColor=null;
-  } else {
-    el.classList.add('selected');
-    preGenTravelColor=colorName;
-    // BUG FIX: this never scrolled anywhere after picking a color --
-    // a tumbler with color options (like the 40oz) left the customer
-    // stranded with no next-step guidance once they'd made their
-    // choice. Style is the next real decision point.
-    suspendGuidedScrollsForGeneration();
-    // Print Style is the next question when it is still open (v102);
-    // otherwise Generate, as before.
-    const printCard=document.getElementById('mugPrintModeCard');
-    if(printCard && printCard.style.display!=='none' && !mugPrintModeTouched){
-      setOptionSpotlight('print-mode-focus');
-      smoothScrollToTarget('mugPrintModeCard','center');
-    } else {
-      document.body.classList.remove('travel-color-focus');
-      // The next unanswered question (v108, the 40oz has no Print Style
-      // step to do this): the idea box when it is empty, else Generate.
-      const ideaBox=document.getElementById('ideaDesc');
-      if(ideaBox && !ideaBox.value.trim())handOffToIdeaAfterProductChoice();
-      else smoothScrollToTarget('generateTokenNote','end');
-    }
+  // A cup always has a colour, so tapping the lit swatch re-affirms it; it
+  // does not clear it. It used to toggle off to null, and since this palette
+  // has no Continue button of its own, tapping the chosen colour again to be
+  // sure of it is the obvious thing to do -- which silently un-chose it and
+  // dropped the cup back to the first colour in the catalogue (white).
+  setTravelCupColour(colorName);
+
+  // AFTER THE PICTURE EXISTS, THIS IS THE LAST QUESTION, NOT THE FIRST.
+  // Everything below -- Print Style, the idea box, Generate -- has already
+  // been answered, so handing off down the rail would be walking the customer
+  // back through their own finished decisions. Worse, the handoff dropped the
+  // spotlight, and with no panel lit the scroll pin falls back to the finished
+  // picture and hauls the page up to it: measured at 4324px -> 1187px, one
+  // jump, which is the "it threw me back to the photo" this whole trip.
+  // So: stay on the palette, keep it lit so the pin stays here too, and let
+  // the cup show the new colour.
+  if(travelPictureExists()){
+    setOptionSpotlight('travel-color-focus');
+    return;
   }
-  // The picker tile follows the colour (v101).
-  renderTravelMugVariantGrid();
+
+  suspendGuidedScrollsForGeneration();
+  // Print Style is the next question when it is still open; otherwise Generate.
+  const printCard=document.getElementById('mugPrintModeCard');
+  if(printCard && printCard.style.display!=='none' && !mugPrintModeTouched){
+    setOptionSpotlight('print-mode-focus');
+    smoothScrollToTarget('mugPrintModeCard','center');
+  } else {
+    document.body.classList.remove('travel-color-focus');
+    // The next unanswered question: the idea box when it is empty, else Generate.
+    const ideaBox=document.getElementById('ideaDesc');
+    if(ideaBox && !ideaBox.value.trim())handOffToIdeaAfterProductChoice();
+    else smoothScrollToTarget('generateTokenNote','end');
+  }
 }
 
 function refreshTravelMugColorVisibility(){
@@ -10446,9 +10477,14 @@ function getSelectedProductColorHex(){
   // tumbler. The rule above never said "the 40oz insulated"; it said "the
   // colour of the surface the picture is printed on". Any variant that
   // names a colour can answer that.
-  if(product==='water bottle' && preGenTravelColor){
-    const match=TRAVEL_MUG_CATALOG[preGenTravelVariant]?.colors?.find(c=>c.name===preGenTravelColor);
-    if(match)return match.hex;
+  // Through travelColorEntry(), which is the one reader of the cup's colour.
+  // This used to consult preGenTravelColor/preGenTravelVariant directly, so
+  // after generating it answered from the pre-generation half while the cup
+  // itself was drawn from the post-generation one -- meaning a cup whose
+  // colour changed got its fade baked in the OLD colour and wore a halo of it.
+  if(product==='water bottle'){
+    const entry=travelColorEntry();
+    if(entry)return entry.hex;
   }
   // Tote bags print straight onto the dyed canvas, so the bag's colour IS
   // the surface behind the artwork.
@@ -14055,6 +14091,125 @@ function travelColorEntry(){
   const name=selectedTravelColor||preGenTravelColor||prod.colors[0].name;
   return prod.colors.find(c=>c.name===name)||prod.colors[0];
 }
+
+// THE CUP'S COLOUR IS ONE FACT, SO ONE FUNCTION SETS IT.
+//
+// It used to be two variables. preGenTravelColor was what the palette on the
+// picker card wrote; selectedTravelColor was a copy taken of it at the moment
+// of generation. travelColorEntry() above prefers the copy -- so from the
+// instant a picture existed, every control that wrote only preGenTravelColor
+// was writing to a value nothing would ever read again. The palette still lit
+// up, the variable still changed, and the cup stayed the colour it was: the
+// 3D body, the mockup and the Printify order all read the copy.
+//
+// That is why "take me back to the colour panel" could be fixed repeatedly and
+// still do nothing. The panel was reachable and clickable the whole time; it
+// was simply wired to the half of the state that had been superseded.
+//
+// Everything that changes the colour now goes through here, so the two halves
+// cannot drift apart again, and the change is painted on whatever cup happens
+// to be on screen at the time.
+function setTravelCupColour(name){
+  preGenTravelColor=name;
+  selectedTravelColor=name;
+  try{ renderTravelMugVariantGrid(); }catch(e){}
+  try{ renderTravelMugColorGridGen(); }catch(e){}
+  try{ syncGenTravelColorGrid(); }catch(e){}
+  try{ renderCupColourRows(); }catch(e){}
+  try{ repaintLiveCupColour(); }catch(e){}
+  // A trimming and the edge fade are both painted IN the cup's colour -- that
+  // is the whole point of them, the strip that butts against itself is the
+  // cup's own colour -- so a colour change makes whatever is on the seam
+  // stale. Repaint it from the original artwork in the new colour, the same
+  // call the trimming tiles make, so the strip, the cup and the file that
+  // eventually ships never disagree about which colour they were painted for.
+  const trimOverlay=document.getElementById('trimmingsOverlay');
+  if(trimOverlay&&trimOverlay.style.display!=='none'&&typeof updateTrimmingsPreview==='function'){
+    Promise.resolve().then(()=>updateTrimmingsPreview()).catch(()=>{});
+  }
+  try{ saveMugState(); }catch(e){}
+}
+
+// The same, for which cup it is. Held to the same rule for the same reason:
+// changeTravelCup() cleared only the pre-generation half, so after generating,
+// "Change cup" was as dead as the palette was.
+function setTravelCupVariant(key){
+  preGenTravelVariant=key;
+  selectedTravelProductKey=key;
+}
+
+// THE COLOUR BELONGS NEXT TO THE CUP.
+//
+// Until now it was only ever asked BEFORE generating, on a card near the top
+// of the rail, and the question there is unanswerable: you are picking the
+// colour of a cup you have not seen carrying a picture that does not exist
+// yet. Then the two screens that DO show the finished cup -- Trimmings and the
+// final mockup -- had no way to change it, so changing your mind meant
+// travelling back up the rail to guess again.
+//
+// Same palette, rendered wherever a cup is on screen. Tap it and the cup in
+// front of you repaints; no navigation, nothing to go back to, and the
+// comparison you actually want to make -- this colour against the one you were
+// just looking at -- is a tap away in both directions.
+const CUP_COLOUR_ROWS=[['trimmingsCupColourRow','trimmingsCupColourGrid'],
+                       ['mockupCupColourRow','mockupCupColourGrid']];
+function renderCupColourRows(){
+  const key=selectedTravelProductKey||preGenTravelVariant||null;
+  const prod=key?TRAVEL_MUG_CATALOG[key]:null;
+  const colors=(prod&&prod.colors)?prod.colors:null;
+  const current=travelColorEntry();
+  CUP_COLOUR_ROWS.forEach(([rowId,gridId])=>{
+    const row=document.getElementById(rowId), grid=document.getElementById(gridId);
+    if(!row||!grid)return;
+    // Nothing to choose between on a white-only cup, so the row stays away
+    // rather than offering a palette of one.
+    if(!colors||colors.length<2){ row.style.display='none'; grid.innerHTML=''; return; }
+    // NOT ON THE MOCKUP ONCE A TRIMMING HAS BEEN BAKED IN.
+    //
+    // A trimming is painted in the cup's colour and then uploaded as the file
+    // that actually prints. Changing the colour here would repaint the body in
+    // front of the customer while that uploaded file kept the old colour on its
+    // seam -- a cup that looks right on screen and ships with a red stripe down
+    // the back of a black tumbler. The Trimmings panel is one Back away, it
+    // repaints the seam from the original on every tap, and its Continue
+    // re-bakes in whatever colour is current, so the change is free and correct
+    // there. Send them there rather than offering a control that cannot keep
+    // its promise.
+    if(rowId==='mockupCupColourRow' && typeof trimmingsBakedTo!=='undefined' && trimmingsBakedTo){
+      row.style.display='none'; grid.innerHTML=''; return;
+    }
+    row.style.display=(rowId==='mockupCupColourRow')?'flex':'block';
+    grid.innerHTML='';
+    colors.forEach(c=>{
+      const cell=document.createElement('div');
+      cell.className='color-cell';
+      const btn=document.createElement('div');
+      btn.className='color-btn'+((current&&c.name===current.name)?' selected':'');
+      btn.dataset.color=c.name;
+      btn.title=c.name;
+      btn.onclick=()=>setTravelCupColour(c.name);
+      const ball=document.createElement('div');
+      ball.className='ball';
+      ball.style.background=c.hex;
+      btn.appendChild(ball);
+      cell.appendChild(btn);
+      const label=document.createElement('div');
+      label.className='color-name';
+      label.textContent=c.name;
+      cell.appendChild(label);
+      grid.appendChild(cell);
+    });
+  });
+}
+
+// Paint the current colour onto a cup already on screen, if one is. Costs a
+// material swap and one frame; does nothing at all when no 3D cup is mounted.
+function repaintLiveCupColour(){
+  if(typeof MUG3D==='undefined'||typeof MUG3D.setBodyColor!=='function')return;
+  const c=travelColorEntry();
+  if(!c)return;
+  MUG3D.setBodyColor(c.hex,c.finish||'coat');
+}
 // The travel cup on the screen, if it is one the 3D engine can draw.
 function tumbler3dKey(){
   if(product!=='water bottle')return null;
@@ -14116,11 +14271,18 @@ function fitMug3DStage(){
   // buttons fell off the bottom of a 640px window -- caught by
   // verify-mug-3d.js, which measures exactly that. Summing them means the next
   // row added here needs no change at all.
-  const rows=Array.from(wrap.querySelectorAll('.mug3d-controls'));
-  const rowsH=rows.reduce((a,el)=>a+h(el),0);
+  // EVERY sibling of the stage, whatever it is. This counted only
+  // .mug3d-controls rows plus the hint by name, so the cup-colour row added
+  // below them was invisible to the measurement and the stage claimed its
+  // height -- the same failure the zoom row caused when it was added, and the
+  // one verify-mug-3d.js measures. Asking the wrap what is actually in it
+  // means the next row needs no change here at all, which is what the note
+  // this replaces already intended.
+  const kids=Array.from(wrap.children).filter(el=>el!==stage&&el.offsetParent!==null);
+  const kidsH=kids.reduce((a,el)=>a+h(el),0);
   const gap=parseFloat(getComputedStyle(wrap).rowGap||getComputedStyle(wrap).gap)||10;
-  const taken=rowsH+h(wrap.querySelector('.mug3d-hint'))+h(document.getElementById('mockupLightboxActions'))
-    +gap*(rows.length+1)   /* one gap between each child of the wrap */
+  const taken=kidsH+h(document.getElementById('mockupLightboxActions'))
+    +gap*kids.length       /* one gap between each child of the wrap */
     +24                    /* the buttons sit outside the wrap, with their own gap */
     +44;                   /* breathing room above and below */
   const avail=Math.max(200,Math.floor(window.innerHeight-taken));
@@ -14207,6 +14369,11 @@ function openMug3DMockup(){
   const cupIsFrontBack=!!(cupProduct&&cupProduct.layoutType==='front-back');
   // The stage is square for a cup, and the hint names a cup (v103).
   wrap.classList.toggle('mug3d-square',!!tumblerKey);
+  // The palette under the cup. Built before fitMug3DStage() below, which
+  // measures what is in this wrap to decide the stage's height, so the row
+  // has to exist by then or the stage claims its space and the buttons go
+  // off the bottom -- the failure verify-mug-3d.js measures.
+  renderCupColourRows();
   const hint=wrap.querySelector('.mug3d-hint');
   if(hint)hint.textContent=tumblerKey?'Drag the cup to turn it · click it to stop or start the spin':'Drag the mug to turn it · click it to stop or start the spin';
   // Alyx: "you can also take away the 'drag the cup to turn it' wording,
@@ -14302,6 +14469,11 @@ const MUG3D = (function(){
 
   let three=null, mounted=false, host=null;
   let renderer, scene, camera, mugGroup, printMesh, designTex, designCanvas;
+  // The shared materials the current cup was built from. Kept so the body
+  // colour can be changed later without rebuilding the scene: a white cup
+  // has to go back to the SAME glazed white the mug uses, not a fresh
+  // approximation of it.
+  let baseMats=null;
   let bandStates=[];   // one {canvas, tex, aspect} per print band on a tumbler
   let spin=0, spinning=true, dragging=false, lookDown=false, rafId=0, visible=true;
   // 1 = the framing every product photo here has used. Up to 4 for a close
@@ -14650,6 +14822,17 @@ const MUG3D = (function(){
   }
   function tumblerBands(T){ return T.bands||[T.band]; }
   function hasTumbler(key){ return !!(key && TUMBLERS[key]); }
+  // Which material a cup body wears, for one colour. White is the glazed
+  // white the mug uses; Steel is bare metal; anything else is a powder coat
+  // in that hex. Named because it is now used twice -- once when the cup is
+  // built, and again whenever the colour changes under a cup already on
+  // screen -- and the two must agree exactly or a recoloured white cup would
+  // come back a slightly different white from a freshly built one.
+  function bodyMaterialFor(THREE,mats,steel,hex,finish){
+    if(finish==='steel')return steel;
+    if(!hex||hex.toLowerCase()==='#ffffff')return mats.white;
+    return new THREE.MeshPhysicalMaterial({color:new THREE.Color(hex).convertSRGBToLinear(), roughness:0.42, metalness:0.05, clearcoat:0.25, clearcoatRoughness:0.3, envMapIntensity:0.6, side:THREE.DoubleSide});
+  }
   function tumblerMaterials(THREE,mats,opts){
     const steel=new THREE.MeshStandardMaterial({color:0xc9ced4, metalness:0.92, roughness:0.32, envMapIntensity:1.1, side:THREE.DoubleSide});
     const lid=new THREE.MeshPhysicalMaterial({color:0xdfe7f1, transparent:true, opacity:0.55, roughness:0.12, metalness:0.0, clearcoat:0.6, envMapIntensity:1.0, side:THREE.DoubleSide, depthWrite:false});
@@ -14657,12 +14840,7 @@ const MUG3D = (function(){
     const lidBlue=new THREE.MeshPhysicalMaterial({color:0x8fb4ff, transparent:true, opacity:0.6, roughness:0.15, metalness:0.0, clearcoat:0.5, envMapIntensity:0.9, side:THREE.DoubleSide, depthWrite:false});
     // THE CUP'S OWN COLOUR (Alyx, v101). White is the glazed white the mug
     // uses; Steel is bare metal; anything else is a powder coat in that hex.
-    const hex=(opts&&opts.colorHex)||'#ffffff';
-    let body=mats.white;
-    if(opts&&opts.finish==='steel')body=steel;
-    else if(hex.toLowerCase()!=='#ffffff'){
-      body=new THREE.MeshPhysicalMaterial({color:new THREE.Color(hex).convertSRGBToLinear(), roughness:0.42, metalness:0.05, clearcoat:0.25, clearcoatRoughness:0.3, envMapIntensity:0.6, side:THREE.DoubleSide});
-    }
+    const body=bodyMaterialFor(THREE,mats,steel,(opts&&opts.colorHex)||'#ffffff',opts&&opts.finish);
     return { body, steel, lid, lidBlue, cap };
   }
   function assembleTumbler(THREE,T,mats,opts){
@@ -14763,6 +14941,7 @@ const MUG3D = (function(){
     dressScene(THREE,renderer,scene,S);
 
     const mats=makeMaterials(THREE,opts);
+    baseMats=mats;
     mugGroup=T?assembleTumbler(THREE,T,mats,opts):assembleMug(THREE,S,opts,mats); scene.add(mugGroup);
 
     // POWER OF TWO, ALWAYS (Alyx, v104: "little tiny white strings"). A
@@ -15129,6 +15308,36 @@ const MUG3D = (function(){
       return joinPanels(list).then(img=>{ paint(img,0); return true; });
     },
 
+    // RECOLOUR IN PLACE. Same idea as setArtwork above, for the cup's own
+    // colour instead of the picture on it: swap the body material on every
+    // mesh wearing it and let the next frame draw. No rebuild, so the spin,
+    // the angle and the zoom all survive -- which matters, because the only
+    // reason to change a colour is to compare it against the one you were
+    // just looking at, and a rebuild would throw the cup back to its start
+    // position every tap.
+    // Returns false if there is no cup mounted, so callers can fall back to
+    // opening one.
+    setBodyColor(hex,finish){
+      const THREE=window.THREE;
+      if(!mounted||!mugGroup||!baseMats||!THREE)return false;
+      const tm=mugGroup.userData.tumblerMats;
+      if(!tm)return false;
+      const old=tm.body;
+      const next=bodyMaterialFor(THREE,baseMats,tm.steel,hex,finish);
+      if(next===old)return true;
+      mugGroup.traverse(o=>{
+        if(!o.material)return;
+        if(Array.isArray(o.material))o.material=o.material.map(m=>m===old?next:m);
+        else if(o.material===old)o.material=next;
+      });
+      tm.body=next;
+      // Only ever dispose a coat this function or the build made. white and
+      // steel are shared -- white is also the mug's glaze and the cup's rim
+      // in some styles -- and disposing either would blank other meshes.
+      if(old!==baseMats.white&&old!==tm.steel&&old.dispose)old.dispose();
+      return true;
+    },
+
     // opts: { sizeLabel, styleName, colorHex, panelUrls[], panoramaUrl }
     //   or, for a travel cup: { tumblerKey, colorHex, panoramaUrl }
     open(hostEl, opts){
@@ -15165,7 +15374,7 @@ const MUG3D = (function(){
       if(renderer){ renderer.dispose(); if(renderer.domElement&&renderer.domElement.parentNode)
         renderer.domElement.parentNode.removeChild(renderer.domElement); }
       renderer=null; scene=null; camera=null; mugGroup=null; printMesh=null;
-      designTex=null; designCanvas=null; bandStates=[]; mounted=false; host=null;
+      designTex=null; designCanvas=null; bandStates=[]; mounted=false; host=null; baseMats=null;
     }
   };
 })();
@@ -18172,10 +18381,22 @@ function renderGenTravelColorGrid(){
 }
 
 function pickGenTravelColor(el,colorName){
-  document.querySelectorAll('#genTravelColorGrid .color-btn').forEach(b=>b.classList.remove('selected'));
-  el.classList.add('selected');
-  selectedTravelColor=colorName;
+  setTravelCupColour(colorName);
   maybeAutoFetchMockup();
+}
+
+// Re-light this grid from the current colour. It is built once and then left
+// alone (see the childElementCount guard in renderGenTravelColorGrid), so when
+// the colour is changed from anywhere else its selection ring has to be moved
+// by hand or two palettes on the same page would disagree about the answer.
+function syncGenTravelColorGrid(){
+  const grid=document.getElementById('genTravelColorGrid');
+  if(!grid||!grid.childElementCount)return;
+  const prod=selectedTravelProductKey?TRAVEL_MUG_CATALOG[selectedTravelProductKey]:null;
+  const colors=prod&&prod.colors?prod.colors:[];
+  Array.from(grid.children).forEach((btn,i)=>{
+    btn.classList.toggle('selected',!!colors[i]&&colors[i].name===selectedTravelColor);
+  });
 }
 
 let autoMockupRequestId = 0;
@@ -18725,6 +18946,7 @@ async function showTrimmingsGridPanel(){
   const card=document.getElementById('trimmingsCard');
   if(card)card.scrollTop=0;
   renderTrimmingsGrid();
+  renderCupColourRows();
   // Opens on whatever is current: nothing on a first visit, and the trimming
   // they already chose if they have come back to change it.
   await pickTrimming(selectedGutter);
