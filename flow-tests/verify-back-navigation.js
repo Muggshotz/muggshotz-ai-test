@@ -527,6 +527,84 @@ scenarios.travelResultBackReachesTheColourPanel = async (page) => {
 };
 
 
+// ---- THE STATE HE ACTUALLY TESTS IN ----
+//
+// Alyx's procedure, in his words: "I function F5, then I push the recycle the
+// URL button, then I close the entire panel out, and call up a completely
+// brand new panel and then run the test." That is not a stale cache -- it is
+// the most thorough refresh available -- and it lands him in RECALL:
+// recallLastGeneratedImage() finds the last design, restores `product`, and
+// puts the approve row back. It does NOT restore preGenTravelVariant, which
+// is pre-generation state and not part of the design record.
+//
+// So the first version of the result-screen fix, guarded on
+// "product==='water bottle' && preGenTravelVariant", passed every test and
+// failed on his screen: product was restored (the approve row correctly read
+// "press Back on the cup") and the cup was null. This scenario pins the
+// recalled shape so the guard can never tighten back up.
+scenarios.backWorksAfterRecallWithNoCupRemembered = async (page) => {
+  await toProduct(page);
+  if (!await pickProduct(page, 'water bottle')) return 'FAIL: could not choose a travel cup';
+  await T(page, 800);
+  await dismissAlerts(page);
+
+  // Reproduce the recalled shape: product known, cup forgotten, approve row up.
+  await page.evaluate(() => {
+    preGenTravelVariant = null;
+    preGenTravelColor = null;
+    try { refreshTravelMugColorVisibility(); renderTravelMugVariantGrid(); } catch (e) {}
+    clearAllFocusModes();
+    const row = document.getElementById('approveRow');
+    row.style.display = 'block';
+    row.scrollIntoView({ block: 'center', behavior: 'instant' });
+  });
+  await T(page, 600);
+
+  const pre = await page.evaluate(() => ({ product, variant: preGenTravelVariant }));
+  if (pre.product !== 'water bottle') return `FAIL: setup lost the product (${pre.product})`;
+  if (pre.variant !== null) return 'FAIL: setup did not reproduce the forgotten cup';
+
+  const back = await operable(page, '#approveBackBtn');
+  if (!back.visible) return 'FAIL: the recalled result screen has no operable Back button';
+  await page.click('#approveBackBtn');
+  await T(page, 1400);
+
+  const after = await page.evaluate(() => {
+    const card = document.getElementById('travelMugVariantCard');
+    const r = card ? card.getBoundingClientRect() : null;
+    return {
+      cardDisplay: card ? getComputedStyle(card).display : 'missing',
+      onScreen: !!r && r.bottom > 0 && r.top < innerHeight,
+      spotlight: document.body.classList.contains('travel-color-focus'),
+      tiles: document.querySelectorAll('#travelMugVariantGrid .theme-btn').length,
+    };
+  });
+
+  if (after.cardDisplay === 'none' || after.cardDisplay === 'missing')
+    return 'FAIL: Back after recall did not bring the cup panel back';
+  if (!after.onScreen)
+    return 'FAIL: Back after recall left the cup panel off screen — the teleport to the idea box, which is exactly what he photographed';
+  if (!after.spotlight)
+    return 'FAIL: Back after recall did not spotlight the cup panel';
+  if (after.tiles < 2)
+    return `FAIL: no cup remembered, so all six should be offered — saw ${after.tiles} tile(s)`;
+
+  // And picking a cup from there must bring its palette, so the journey
+  // continues rather than ending on a panel that only looks right.
+  const key = await page.evaluate(() => (Object.entries(TRAVEL_MUG_CATALOG).find(([, v]) => v.colors) || [])[0]);
+  await page.evaluate((k) => pickPreGenTravelVariant(k), key);
+  await T(page, 1100);
+  const pal = await page.evaluate(() => ({
+    palette: getComputedStyle(document.getElementById('travelMugColorCard')).display,
+    swatches: document.querySelectorAll('#travelMugColorGridGen .color-btn').length,
+  }));
+  if (pal.palette === 'none') return 'FAIL: picked a cup after recall and no palette appeared';
+  if (pal.swatches < 2) return `FAIL: palette appeared with only ${pal.swatches} swatch(es)`;
+
+  return `PASS: with the cup forgotten by recall, Back still lands on the cup panel (all six, spotlit) and picking one brings ${pal.swatches} colours`;
+};
+
+
 (async () => {
   let fails = 0;
   // Run one scenario by name: SCENARIO=travelResultBackReachesTheColourPanel node ...
