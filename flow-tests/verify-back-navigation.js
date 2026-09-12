@@ -30,7 +30,44 @@ async function toProduct(page) {
 // app's. Waiting on the real state variable removes that noise without hiding
 // a genuine lock: if the click truly does nothing, this still times out and
 // the caller still fails.
+// WAIT FOR THE TILE TO STOP MOVING BEFORE TAPPING IT.
+//
+// This clicked immediately, and failed 4 times in 15 runs -- measured on code
+// from before this was touched, so it is not a regression, it is a flake that
+// has always been here. Two different faces, one cause: "Element is outside of
+// the viewport" when the tile had not scrolled in yet, and "accepting the
+// confirm did not switch" when the click landed on whatever had moved under
+// the pointer instead, so `product` never changed.
+//
+// force:true skips Playwright's actionability checks but it still needs
+// COORDINATES, and the guided rail animates its own scrolls for up to a second
+// after the previous step (see smoothScrollToTarget, which polls for exactly
+// this reason before it fires). So: bring the tile into view, then poll until
+// its position stops changing and it is fully on screen, and only then tap.
+// Same stability-polling idea the application uses on itself.
+//
+// A test that fails one run in four is worse than no test: it teaches whoever
+// runs the suite to shrug at red, which is the habit that let a dead colour
+// palette pass its tests three times.
+async function settleTile(page, val) {
+  const sel = `#productCard .btn-select[data-val="${val}"]`;
+  await page.locator(sel).scrollIntoViewIfNeeded().catch(() => {});
+  await page.evaluate(() => { delete window.__tileRect; });
+  await page.waitForFunction((s) => {
+    const el = document.querySelector(s);
+    if (!el) return false;
+    const r = el.getBoundingClientRect();
+    if (!(r.width > 4 && r.height > 4)) return false;
+    const at = Math.round(r.top) + ':' + Math.round(r.left);
+    const was = window.__tileRect;
+    window.__tileRect = at;
+    // Two consecutive identical readings, and wholly inside the window.
+    return was === at && r.top >= 0 && r.bottom <= window.innerHeight;
+  }, sel, { timeout: 8000, polling: 150 }).catch(() => {});
+}
+
 async function pickProduct(page, val, { expectChange = true } = {}) {
+  await settleTile(page, val);
   await page.locator(`#productCard .btn-select[data-val="${val}"]`).click({ force: true });
   if (expectChange) {
     try {
