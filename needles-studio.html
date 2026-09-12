@@ -806,7 +806,7 @@ body.panels-active #verifyCard{display:none!important}
 <div class="token-credits-row compact">
   <button id="hudPill" type="button" onclick="toggleHudExpanded(event)" title="Chips remaining. Tap for details and credits.">🪙 <b id="hudPillCount">—</b> CHIPS <span class="sep">·</span> CREDITS</button>
   <div id="tokenMeterWrap" style="position:relative;width:210px;flex-shrink:0">
-    <img src="meter.png" style="width:100%;display:block" alt="Chip meter"/>
+    <img src="meter.webp" style="width:100%;display:block" alt="Chip meter"/>
     <div id="tokenMeterNumber" style="position:absolute;left:44.4%;top:31.3%;width:13%;height:25.3%;display:flex;align-items:center;justify-content:center;color:#003c8c;font-family:'Anton',sans-serif;font-weight:700;font-size:clamp(14px,3.6vw,22px);text-shadow:0 0 8px rgba(0,60,140,0.7)">—</div>
   </div>
   <button id="creditsBtn" onclick="openCreditsPanel()" style="background:#003c8c;border:none;border-radius:20px;padding:.55rem 1rem;color:#fff;font-size:12px;font-weight:700;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,0.6);letter-spacing:.3px;flex-shrink:0">💳 Credits & Extras</button>
@@ -989,7 +989,7 @@ const HERO_SETTLE_MS = 1000;
 <div class="needles-clipboard">
 <div class="needles-board board-free"><div class="needles-clip"></div><div class="upload-zone needles-polaroid" id="uploadZone" onclick="startUploadWithIntent('byo')"><div style="font-size:32px;color:#555;margin-bottom:8px">👤</div><div class="upload-text">Tap here to upload a photo</div><div class="upload-sub">Upload your picture — free</div></div></div>
 <div class="boards-or" aria-hidden="true">OR</div>
-<div class="needles-board board-ai" id="aiCollabBoard"><div class="needles-clip"></div><div class="upload-zone needles-polaroid" id="aiCollabUploadBtn" onclick="startUploadWithIntent('ai')"><img src="ai-collab-handshake.png" alt="" class="ai-collab-icon"/><div class="upload-text">Tap here to collaborate with our AI</div><div class="upload-sub">1 token — upload a photo, then tell Needles what to make of it</div></div>
+<div class="needles-board board-ai" id="aiCollabBoard"><div class="needles-clip"></div><div class="upload-zone needles-polaroid" id="aiCollabUploadBtn" onclick="startUploadWithIntent('ai')"><img src="ai-collab-handshake.webp" alt="" class="ai-collab-icon"/><div class="upload-text">Tap here to collaborate with our AI</div><div class="upload-sub">1 token — upload a photo, then tell Needles what to make of it</div></div>
 <div class="ref-pin-zone" id="refAZone" onclick="document.getElementById('refAInput').click()"><div style="font-size:16px;color:#555;margin-bottom:1px">➕</div><div class="upload-text" style="font-size:8px;line-height:1.1">Reference A</div></div>
 <input type="file" id="refAInput" accept="image/*" style="display:none"/>
 <img id="refAPreview" class="preview-img" style="display:none;max-height:140px"/>
@@ -1014,7 +1014,7 @@ const HERO_SETTLE_MS = 1000;
 </div>
 <div class="needles-stage-wrap" id="needlesStageWrap">
 <div class="needles-stage">
-<img class="needles-stage-bg" src="Easel_with_reference_photo.png" alt="Needles' studio"/>
+<img class="needles-stage-bg" src="Easel_with_reference_photo.webp" alt="Needles' studio"/>
 <img class="needles-reference-photo" id="needlesReferencePhoto" alt="Customer reference photo"/>
 <img class="needles-easel-art" id="needlesEaselArt" alt="Finished artwork on the easel"/>
 <video class="needles-stage-layer" id="needlesLayerA" muted playsinline></video>
@@ -2083,13 +2083,13 @@ Tell Needles <span style="color:#7ab8ff">what you have in mind</span>
 
 <div id="accessorizeChoicePanel">
 <div style="max-width:200px;width:100%;margin:0 auto;cursor:pointer;position:relative;border-radius:10px;overflow:hidden;border:1px solid #003c8c;aspect-ratio:1;background:#0d0d0d" onclick="chooseRevealPath('frame')">
-<img src="frame-crystal-champagne.png" style="width:100%;height:100%;object-fit:cover;display:block"/>
+<img src="frame-crystal-champagne.webp" style="width:100%;height:100%;object-fit:cover;display:block"/>
 <div style="position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(255,255,255,.3)"></div>
 <div style="position:absolute;top:0;left:0;right:0;bottom:0;display:flex;align-items:center;justify-content:center;text-align:center;color:#003c8c;font-weight:800;font-size:15px;padding:.5rem;text-shadow:0 0 6px rgba(255,255,255,.9),0 0 2px rgba(255,255,255,.9);animation:mugSelectFlash 1s ease-in-out infinite">Select a Frame?</div>
 </div>
 <div id="accessorizeSillChoiceOr" style="text-align:center;color:#29a3ff;font-weight:700;margin:10px 0">or</div>
 <div id="accessorizeSillChoiceBox" style="max-width:200px;width:100%;margin:0 auto;cursor:pointer;position:relative;border-radius:10px;overflow:hidden;border:1px solid #003c8c;aspect-ratio:1;background:#0d0d0d" onclick="chooseRevealPath('sill')">
-<img src="frame-window-sill-b.png" style="width:100%;height:100%;object-fit:cover;display:block"/>
+<img src="frame-window-sill-b.webp" style="width:100%;height:100%;object-fit:cover;display:block"/>
 <div style="position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(255,255,255,.3)"></div>
 <div style="position:absolute;top:0;left:0;right:0;bottom:0;display:flex;align-items:center;justify-content:center;text-align:center;color:#003c8c;font-weight:800;font-size:15px;padding:.5rem;text-shadow:0 0 6px rgba(255,255,255,.9),0 0 2px rgba(255,255,255,.9);animation:mugSelectFlash 1s ease-in-out infinite">Select a Window Sill?</div>
 </div>
@@ -3692,14 +3692,14 @@ let captionBold=false,captionItalic=false,captionEffect="none";
 // Frame overlays are composited onto the finished, edge-faded artwork —
 // drawn during drawCaption(), same pattern as the caption text below.
 const FRAME_CATALOG = {
-  "Ornate Gold": { type:"image", asset:"frame-ornate-gold.png", defaultColor:"#D4AF37" },
-  "Walnut Gold": { type:"image", asset:"frame-walnut-gold.png", defaultColor:"#D4AF37" },
-  "Brushed Silver": { type:"image", asset:"frame-brushed-silver.png", defaultColor:"#C0C0C0" },
-  "Black Champagne": { type:"image", asset:"frame-black-champagne.png", defaultColor:"#D9C89E" },
-  "Air Mail": { type:"image", asset:"frame-air-mail.png", defaultColor:"#003c8c" },
-  "Neon Celebration": { type:"image", asset:"frame-neon-celebration.png", defaultColor:"#ff2ee0" },
-  "Retro Arcade": { type:"image", asset:"frame-retro-arcade.png", defaultColor:"#ffcc00", requiresFade:true },
-  "Neon Dreams": { type:"image", asset:"frame-neon-dreams.png", defaultColor:"#00eaff", requiresFade:true },
+  "Ornate Gold": { type:"image", asset:"frame-ornate-gold.webp", defaultColor:"#D4AF37" },
+  "Walnut Gold": { type:"image", asset:"frame-walnut-gold.webp", defaultColor:"#D4AF37" },
+  "Brushed Silver": { type:"image", asset:"frame-brushed-silver.webp", defaultColor:"#C0C0C0" },
+  "Black Champagne": { type:"image", asset:"frame-black-champagne.webp", defaultColor:"#D9C89E" },
+  "Air Mail": { type:"image", asset:"frame-air-mail.webp", defaultColor:"#003c8c" },
+  "Neon Celebration": { type:"image", asset:"frame-neon-celebration.webp", defaultColor:"#ff2ee0" },
+  "Retro Arcade": { type:"image", asset:"frame-retro-arcade.webp", defaultColor:"#ffcc00", requiresFade:true },
+  "Neon Dreams": { type:"image", asset:"frame-neon-dreams.webp", defaultColor:"#00eaff", requiresFade:true },
   "Comic Panel": { type:"procedural", draw:"comic", defaultColor:"#1c1c1c" },
   "Wanted Poster": { type:"procedural", draw:"wanted", defaultColor:"#c9a05a" },
   "Trophy Plaque": { type:"procedural", draw:"plaque", defaultColor:"#d4a017" },
@@ -3713,26 +3713,26 @@ const FRAME_CATALOG = {
   // past that original 15-tile count (Blue Floral, Crystal Champagne,
   // Pressed Flowers, Celestial Deco, and Double Mat were added after this
   // note was written) — no replacement design is still needed here.
-  "Wrought Iron": { type:"image", asset:"frame-wrought-iron.png", colorable:false, requiresFade:true },
-  "Blue Floral": { type:"image", asset:"frame-blue-floral.png", defaultColor:"#1B3D7A" },
+  "Wrought Iron": { type:"image", asset:"frame-wrought-iron.webp", colorable:false, requiresFade:true },
+  "Blue Floral": { type:"image", asset:"frame-blue-floral.webp", defaultColor:"#1B3D7A" },
   // REVERTED (Aug 2026, Alyx's request): the two-piece corner+rail test
   // above never once worked correctly, and was only built for
   // Wraparound in the first place -- which isn't being pursued anymore.
   // Back to the old single-image version, Alyx's favorite.
-  "Crystal Champagne": { type:"image", asset:"frame-crystal-champagne.png", defaultColor:"#D9C89E" },
-  "Pressed Flowers": { type:"image", asset:"frame-pressed-flowers.png", defaultColor:"#ffffff", requiresFade:true },
-  "Celestial Deco": { type:"image", asset:"frame-celestial-deco.png", defaultColor:"#D4AF37", requiresFade:true },
+  "Crystal Champagne": { type:"image", asset:"frame-crystal-champagne.webp", defaultColor:"#D9C89E" },
+  "Pressed Flowers": { type:"image", asset:"frame-pressed-flowers.webp", defaultColor:"#ffffff", requiresFade:true },
+  "Celestial Deco": { type:"image", asset:"frame-celestial-deco.webp", defaultColor:"#D4AF37", requiresFade:true },
   "Double Mat": { type:"proceduralMulti", draw:"doubleMat", layers:["Outer Frame","Upper Mat","Lower Mat"], defaultColors:["#8a5a34","#f5f0e6","#2a2a2a"] },
-  "Moonlit Ivy": { type:"image", asset:"frame-moonlit-ivy.png", colorable:false, requiresFade:true },
-  "Enchanted Grove": { type:"image", asset:"frame-enchanted-grove.png", colorable:false, requiresFade:true },
-  "Lantern Vine": { type:"image", asset:"frame-lantern-vine.png", colorable:false, requiresFade:true },
-  "Trailblazer": { type:"image", asset:"frame-biker-native.png", colorable:false, requiresFade:true },
-  "Astral": { type:"image", asset:"frame-astral.png", colorable:false, requiresFade:true },
+  "Moonlit Ivy": { type:"image", asset:"frame-moonlit-ivy.webp", colorable:false, requiresFade:true },
+  "Enchanted Grove": { type:"image", asset:"frame-enchanted-grove.webp", colorable:false, requiresFade:true },
+  "Lantern Vine": { type:"image", asset:"frame-lantern-vine.webp", colorable:false, requiresFade:true },
+  "Trailblazer": { type:"image", asset:"frame-biker-native.webp", colorable:false, requiresFade:true },
+  "Astral": { type:"image", asset:"frame-astral.webp", colorable:false, requiresFade:true },
   // The glass in these two arrived painted in (opaque), so the frame hid
-  // the photo. frame-astral.png / frame-mirror-mirror.png are the same art
+  // the photo. frame-astral.webp / frame-mirror-mirror.webp are the same art
   // with the opening cut to true transparency (Sep 2026).
-  "Mirror Mirror": { type:"image", asset:"frame-mirror-mirror.png", colorable:false, requiresFade:true },
-  "Royal": { type:"image", asset:"royal.png", colorable:false, requiresFade:true }
+  "Mirror Mirror": { type:"image", asset:"frame-mirror-mirror.webp", colorable:false, requiresFade:true },
+  "Royal": { type:"image", asset:"royal.webp", colorable:false, requiresFade:true }
 };
 
 // ================= WINDOW SILL (standalone, decoupled from Frame) =================
@@ -3740,22 +3740,22 @@ const FRAME_CATALOG = {
 // standing at a window holding a coffee mug, same motif every time.
 // Kept mutually exclusive with Frame (see pickFrame/pickWindowSill).
 const WINDOW_SILL_OPTIONS = [
-  { name:"Rustic Farmhouse", asset:"frame-window-sill-a.png" },
-  { name:"Parisian Balcony", asset:"frame-window-sill-b.png" },
-  { name:"Stained Glass Garden", asset:"frame-window-sill-c.png" },
-  { name:"Coastal Cottage", asset:"frame-window-sill-d.png" },
-  { name:"English Cottage", asset:"frame-window-sill-e.png" },
-  { name:"Southwest Adobe", asset:"frame-window-sill-f.png" },
-  { name:"Alpine Chalet", asset:"frame-window-sill-g.png" },
-  { name:"Diner Service", asset:"frame-window-sill-h.png" },
-  { name:"Art Nouveau Conservatory", asset:"frame-window-sill-i.png" },
-  { name:"Brass Porthole", asset:"frame-window-sill-j.png" },
-  { name:"Coastal Porthole", asset:"frame-window-sill-k.png" },
-  { name:"Submarine Curiosity", asset:"frame-window-sill-l.png" },
-  { name:"Moroccan Mosaic", asset:"frame-window-sill-m.png" },
-  { name:"Japanese Bonsai", asset:"frame-window-sill-n.png" },
-  { name:"Fairytale Castle", asset:"frame-window-sill-o.png" },
-  { name:"Tropical Bamboo", asset:"frame-window-sill-p.png" }
+  { name:"Rustic Farmhouse", asset:"frame-window-sill-a.webp" },
+  { name:"Parisian Balcony", asset:"frame-window-sill-b.webp" },
+  { name:"Stained Glass Garden", asset:"frame-window-sill-c.webp" },
+  { name:"Coastal Cottage", asset:"frame-window-sill-d.webp" },
+  { name:"English Cottage", asset:"frame-window-sill-e.webp" },
+  { name:"Southwest Adobe", asset:"frame-window-sill-f.webp" },
+  { name:"Alpine Chalet", asset:"frame-window-sill-g.webp" },
+  { name:"Diner Service", asset:"frame-window-sill-h.webp" },
+  { name:"Art Nouveau Conservatory", asset:"frame-window-sill-i.webp" },
+  { name:"Brass Porthole", asset:"frame-window-sill-j.webp" },
+  { name:"Coastal Porthole", asset:"frame-window-sill-k.webp" },
+  { name:"Submarine Curiosity", asset:"frame-window-sill-l.webp" },
+  { name:"Moroccan Mosaic", asset:"frame-window-sill-m.webp" },
+  { name:"Japanese Bonsai", asset:"frame-window-sill-n.webp" },
+  { name:"Fairytale Castle", asset:"frame-window-sill-o.webp" },
+  { name:"Tropical Bamboo", asset:"frame-window-sill-p.webp" }
 ];
 
 // ================= WINDOW SILL CALIBRATION =================
@@ -3773,14 +3773,14 @@ const WINDOW_SILL_OPTIONS = [
 // Any Window Sill asset NOT in this table falls back to the old
 // full-canvas behavior until it gets calibrated the same way.
 const WINDOW_SILL_CALIBRATION = {
-  "frame-window-sill-b.png": { widthPct: 54, heightPct: 81.5, offsetXPct: -2, offsetYPct: 6, sillWidthPct: 105, sillHeightPct: 105 }, // Parisian Balcony -- photo-fit values (widthPct/heightPct/offsetXPct/offsetYPct) are Alyx's final dialed-in fit, unchanged. sillWidthPct/sillHeightPct raised from 93.5/95.5 (both under 100%) to 105/105 (Aug 2026): under-100% values left the window-sill artwork smaller than the canvas, letting the white base underneath show through as a thin even margin on a real mockup. Brought in line with every other calibrated design's 96-106% overscan range.
-  "frame-window-sill-c.png": { widthPct: 42, heightPct: 78, offsetXPct: 0, offsetYPct: 0, sillWidthPct: 104, sillHeightPct: 101 }, // Stained Glass Garden -- calibrated via the on-page Preview & Fit sliders
-  "frame-window-sill-a.png": { widthPct: 93, heightPct: 150, offsetXPct: -4, offsetYPct: 19, sillWidthPct: 100, sillHeightPct: 99 }, // Rustic Farmhouse -- calibrated via the on-page Preview & Fit sliders
-  "frame-window-sill-f.png": { widthPct: 40, heightPct: 73, offsetXPct: 50, offsetYPct: 14, sillWidthPct: 101, sillHeightPct: 99 }, // Southwest Adobe -- calibrated via the on-page Preview & Fit sliders
-  "frame-window-sill-g.png": { widthPct: 70, heightPct: 72, offsetXPct: -1, offsetYPct: 10, sillWidthPct: 99, sillHeightPct: 100 }, // Alpine Chalet -- calibrated via the on-page Preview & Fit sliders
-  "frame-window-sill-h.png": { widthPct: 73, heightPct: 67, offsetXPct: 3, offsetYPct: 15, sillWidthPct: 96, sillHeightPct: 100 }, // Diner Service -- calibrated via the on-page Preview & Fit sliders
-  "frame-window-sill-d.png": { widthPct: 45, heightPct: 66, offsetXPct: -3, offsetYPct: 9, sillWidthPct: 101, sillHeightPct: 99 }, // Coastal Cottage (teal shutters/ivy/arch) -- calibrated via the on-page Preview & Fit sliders; flag if this is actually English Cottage
-  "frame-window-sill-e.png": { widthPct: 100, heightPct: 100, offsetXPct: 0, offsetYPct: 0, sillWidthPct: 98, sillHeightPct: 100 } // English Cottage (rose arch, sage shutters) -- calibrated via the on-page Preview & Fit sliders; photo-fit left at default, only window frame size adjusted
+  "frame-window-sill-b.webp": { widthPct: 54, heightPct: 81.5, offsetXPct: -2, offsetYPct: 6, sillWidthPct: 105, sillHeightPct: 105 }, // Parisian Balcony -- photo-fit values (widthPct/heightPct/offsetXPct/offsetYPct) are Alyx's final dialed-in fit, unchanged. sillWidthPct/sillHeightPct raised from 93.5/95.5 (both under 100%) to 105/105 (Aug 2026): under-100% values left the window-sill artwork smaller than the canvas, letting the white base underneath show through as a thin even margin on a real mockup. Brought in line with every other calibrated design's 96-106% overscan range.
+  "frame-window-sill-c.webp": { widthPct: 42, heightPct: 78, offsetXPct: 0, offsetYPct: 0, sillWidthPct: 104, sillHeightPct: 101 }, // Stained Glass Garden -- calibrated via the on-page Preview & Fit sliders
+  "frame-window-sill-a.webp": { widthPct: 93, heightPct: 150, offsetXPct: -4, offsetYPct: 19, sillWidthPct: 100, sillHeightPct: 99 }, // Rustic Farmhouse -- calibrated via the on-page Preview & Fit sliders
+  "frame-window-sill-f.webp": { widthPct: 40, heightPct: 73, offsetXPct: 50, offsetYPct: 14, sillWidthPct: 101, sillHeightPct: 99 }, // Southwest Adobe -- calibrated via the on-page Preview & Fit sliders
+  "frame-window-sill-g.webp": { widthPct: 70, heightPct: 72, offsetXPct: -1, offsetYPct: 10, sillWidthPct: 99, sillHeightPct: 100 }, // Alpine Chalet -- calibrated via the on-page Preview & Fit sliders
+  "frame-window-sill-h.webp": { widthPct: 73, heightPct: 67, offsetXPct: 3, offsetYPct: 15, sillWidthPct: 96, sillHeightPct: 100 }, // Diner Service -- calibrated via the on-page Preview & Fit sliders
+  "frame-window-sill-d.webp": { widthPct: 45, heightPct: 66, offsetXPct: -3, offsetYPct: 9, sillWidthPct: 101, sillHeightPct: 99 }, // Coastal Cottage (teal shutters/ivy/arch) -- calibrated via the on-page Preview & Fit sliders; flag if this is actually English Cottage
+  "frame-window-sill-e.webp": { widthPct: 100, heightPct: 100, offsetXPct: 0, offsetYPct: 0, sillWidthPct: 98, sillHeightPct: 100 } // English Cottage (rose arch, sage shutters) -- calibrated via the on-page Preview & Fit sliders; photo-fit left at default, only window frame size adjusted
 };
 
 const FRAME_COLOR_SWATCHES = [
@@ -5924,18 +5924,18 @@ const WRAP_FADE_WIDTH=0.075;
 //
 // Left end of the wrap gets the asset as drawn; right end gets it mirrored.
 const GUTTER_CATALOG={
-  "Blue Satin Ribbon":  { asset:"gutter-ribbon-blue.png",     thumb:"gutter-thumb-ribbon-blue.png", colorable:true, defaultColor:"#003c8c" , repeats:"stack"},
-  "Tasselled Ribbon":   { asset:"gutter-tassled-ribbon.png",  thumb:"gutter-thumb-tassled-ribbon.png", colorable:true, defaultColor:"#003c8c" , repeats:"stack"},
-  "Roses & Pearls":     { asset:"gutter-rose-pearl.png",      thumb:"gutter-thumb-rose-pearl.png" },
-  "Doily":              { asset:"gutter-doily.png",           thumb:"gutter-thumb-doily.png", colorable:true },
-  "Ivy Vine":           { asset:"gutter-ivy.png",             thumb:"gutter-thumb-ivy.png", colorable:true, defaultColor:"#1F7A45" },
-  "Soft Country":       { asset:"gutter-soft-country.png",    thumb:"gutter-thumb-soft-country.png" },
-  "Rope":               { asset:"gutter-rope.png",            thumb:"gutter-thumb-rope.png", colorable:true, defaultColor:"#c9a05a" },
-  "Laced Leather":      { asset:"gutter-leather-laces.png",   thumb:"gutter-thumb-leather-laces.png", colorable:true, defaultColor:"#B08D57" },
-  "Astral":             { asset:"gutter-astral.png",          thumb:"gutter-thumb-astral.png", colorable:true, defaultColor:"#1B3D7A" },
-  "Zipper":             { asset:"gutter-zipper.png",          thumb:"gutter-thumb-zipper.png" },
-  "Rivets":             { asset:"gutter-rivots.png",          thumb:"gutter-thumb-rivots.png" },
-  "Film Reel":          { asset:"gutter-film.png",            thumb:"gutter-thumb-film.png" },
+  "Blue Satin Ribbon":  { asset:"gutter-ribbon-blue.webp",     thumb:"gutter-thumb-ribbon-blue.webp", colorable:true, defaultColor:"#003c8c" , repeats:"stack"},
+  "Tasselled Ribbon":   { asset:"gutter-tassled-ribbon.webp",  thumb:"gutter-thumb-tassled-ribbon.webp", colorable:true, defaultColor:"#003c8c" , repeats:"stack"},
+  "Roses & Pearls":     { asset:"gutter-rose-pearl.webp",      thumb:"gutter-thumb-rose-pearl.webp" },
+  "Doily":              { asset:"gutter-doily.webp",           thumb:"gutter-thumb-doily.webp", colorable:true },
+  "Ivy Vine":           { asset:"gutter-ivy.webp",             thumb:"gutter-thumb-ivy.webp", colorable:true, defaultColor:"#1F7A45" },
+  "Soft Country":       { asset:"gutter-soft-country.webp",    thumb:"gutter-thumb-soft-country.webp" },
+  "Rope":               { asset:"gutter-rope.webp",            thumb:"gutter-thumb-rope.webp", colorable:true, defaultColor:"#c9a05a" },
+  "Laced Leather":      { asset:"gutter-leather-laces.webp",   thumb:"gutter-thumb-leather-laces.webp", colorable:true, defaultColor:"#B08D57" },
+  "Astral":             { asset:"gutter-astral.webp",          thumb:"gutter-thumb-astral.webp", colorable:true, defaultColor:"#1B3D7A" },
+  "Zipper":             { asset:"gutter-zipper.webp",          thumb:"gutter-thumb-zipper.webp" },
+  "Rivets":             { asset:"gutter-rivots.webp",          thumb:"gutter-thumb-rivots.webp" },
+  "Film Reel":          { asset:"gutter-film.webp",            thumb:"gutter-thumb-film.webp" },
   // CURATED DOWN, not thrown away (Alyx). The set had three near-duplicate
   // pairs and was showing the same idea twice: Vintage Lace beside Doily,
   // Roses & Pearls beside Soft Country, Ivy Vine beside Fern. One of each
@@ -5968,7 +5968,7 @@ const GUTTER_CATALOG={
   //
   // Measured at 99.9% symmetrical about the axis it was cut on.
   //
-  // FERN WAS HELD BACK AND IS NOW IN: gutter-fern.png and gutter-film.png had no
+  // FERN WAS HELD BACK AND IS NOW IN: gutter-fern.webp and gutter-film.webp had no
   // full-height element down their left edge -- measured, not guessed. Every
   // other design has one, and that spine is what covers the join. The colour
   // backing painted under every design (see paintWrapGutters) does that job
@@ -6764,11 +6764,11 @@ const MUG_UPGRADE_BASE_STYLE = "Classic White";
 const MUG_MOCKUP_PHOTOS = {
   "Trimmed": {
     "15oz": {
-      "Black": "mug-trimmed-15oz-black.png",
-      "Blue": "mug-trimmed-15oz-blue.png",
-      "Green": "mug-trimmed-15oz-green.png",
-      "Maroon": "mug-trimmed-15oz-maroon.png",
-      "Yellow": "mug-trimmed-15oz-yellow.png"
+      "Black": "mug-trimmed-15oz-black.webp",
+      "Blue": "mug-trimmed-15oz-blue.webp",
+      "Green": "mug-trimmed-15oz-green.webp",
+      "Maroon": "mug-trimmed-15oz-maroon.webp",
+      "Yellow": "mug-trimmed-15oz-yellow.webp"
     },
     // CORRECTED (Sep 2026, Alyx): the Trimmed photos come from two different
     // shoots -- a tall 15oz shape (black, yellow) and a squat 11oz shape (the
@@ -6778,66 +6778,66 @@ const MUG_MOCKUP_PHOTOS = {
     // set: 15oz blue/green/maroon recoloured from the real 15oz black photo,
     // 11oz black/yellow recoloured from the real 11oz maroon photo.
     "11oz": {
-      "Black": "mug-trimmed-11oz-black.png",
-      "Blue": "mug-trimmed-11oz-blue.png",
-      "Maroon": "mug-trimmed-11oz-maroon.png",
-      "Green": "mug-trimmed-11oz-green.png",
-      "Yellow": "mug-trimmed-11oz-yellow.png",
-      "Red": "mug-trimmed-11oz-red.png",
-      "Light Blue": "mug-trimmed-11oz-light-blue.png",
-      "Orange": "mug-trimmed-11oz-orange.png",
-      "Light Green": "mug-trimmed-11oz-light-green.png",
-      "Pink": "mug-trimmed-11oz-pink.png"
+      "Black": "mug-trimmed-11oz-black.webp",
+      "Blue": "mug-trimmed-11oz-blue.webp",
+      "Maroon": "mug-trimmed-11oz-maroon.webp",
+      "Green": "mug-trimmed-11oz-green.webp",
+      "Yellow": "mug-trimmed-11oz-yellow.webp",
+      "Red": "mug-trimmed-11oz-red.webp",
+      "Light Blue": "mug-trimmed-11oz-light-blue.webp",
+      "Orange": "mug-trimmed-11oz-orange.webp",
+      "Light Green": "mug-trimmed-11oz-light-green.webp",
+      "Pink": "mug-trimmed-11oz-pink.webp"
     }
   },
   "Accented": {
     "15oz": {
-      "Blue": "mug-accented-15oz-blue.png",
-      "Maroon": "mug-accented-15oz-maroon.png",
-      "Green": "mug-accented-15oz-green.png",
-      "Yellow": "mug-accented-15oz-yellow.png",
-      "Pink": "mug-accented-15oz-pink.png",
-      "Light Blue": "mug-accented-15oz-light-blue.png",
-      "Black": "mug-accented-15oz-black.png"
+      "Blue": "mug-accented-15oz-blue.webp",
+      "Maroon": "mug-accented-15oz-maroon.webp",
+      "Green": "mug-accented-15oz-green.webp",
+      "Yellow": "mug-accented-15oz-yellow.webp",
+      "Pink": "mug-accented-15oz-pink.webp",
+      "Light Blue": "mug-accented-15oz-light-blue.webp",
+      "Black": "mug-accented-15oz-black.webp"
     },
     "11oz": {
-      "Blue": "mug-accented-15oz-blue.png",
-      "Maroon": "mug-accented-15oz-maroon.png",
-      "Green": "mug-accented-15oz-green.png",
-      "Yellow": "mug-accented-15oz-yellow.png",
-      "Pink": "mug-accented-15oz-pink.png",
-      "Orange": "mug-accented-11oz-orange.png",
-      "Light Green": "mug-accented-11oz-light-green.png",
-      "Red": "mug-accented-11oz-red.png",
-      "Light Blue": "mug-accented-15oz-light-blue.png",
-      "Black": "mug-accented-15oz-black.png"
+      "Blue": "mug-accented-15oz-blue.webp",
+      "Maroon": "mug-accented-15oz-maroon.webp",
+      "Green": "mug-accented-15oz-green.webp",
+      "Yellow": "mug-accented-15oz-yellow.webp",
+      "Pink": "mug-accented-15oz-pink.webp",
+      "Orange": "mug-accented-11oz-orange.webp",
+      "Light Green": "mug-accented-11oz-light-green.webp",
+      "Red": "mug-accented-11oz-red.webp",
+      "Light Blue": "mug-accented-15oz-light-blue.webp",
+      "Black": "mug-accented-15oz-black.webp"
     }
   },
   "Color Pop": {
     "11oz": {
-      "Black": "mug-colorpop-black.png",
-      "Blue": "mug-colorpop-blue.png",
-      "Golden Yellow": "mug-colorpop-golden-yellow.png",
-      "Green": "mug-colorpop-green.png",
-      "Light Blue": "mug-colorpop-light-blue.png",
-      "Light Green": "mug-colorpop-light-green.png",
-      "Maroon": "mug-colorpop-maroon.png",
-      "Orange": "mug-colorpop-orange.png",
-      "Pink": "mug-colorpop-pink.png",
-      "Red": "mug-colorpop-red.png",
-      "Yellow": "mug-colorpop-yellow.png"
+      "Black": "mug-colorpop-black.webp",
+      "Blue": "mug-colorpop-blue.webp",
+      "Golden Yellow": "mug-colorpop-golden-yellow.webp",
+      "Green": "mug-colorpop-green.webp",
+      "Light Blue": "mug-colorpop-light-blue.webp",
+      "Light Green": "mug-colorpop-light-green.webp",
+      "Maroon": "mug-colorpop-maroon.webp",
+      "Orange": "mug-colorpop-orange.webp",
+      "Pink": "mug-colorpop-pink.webp",
+      "Red": "mug-colorpop-red.webp",
+      "Yellow": "mug-colorpop-yellow.webp"
     },
     "15oz": {
-      "Black": "mug-colorpop-black.png",
-      "Blue": "mug-colorpop-blue.png",
-      "Green": "mug-colorpop-green.png",
-      "Light Blue": "mug-colorpop-light-blue.png",
-      "Light Green": "mug-colorpop-light-green.png",
-      "Maroon": "mug-colorpop-maroon.png",
-      "Orange": "mug-colorpop-orange.png",
-      "Pink": "mug-colorpop-pink.png",
-      "Red": "mug-colorpop-red.png",
-      "Yellow": "mug-colorpop-yellow.png"
+      "Black": "mug-colorpop-black.webp",
+      "Blue": "mug-colorpop-blue.webp",
+      "Green": "mug-colorpop-green.webp",
+      "Light Blue": "mug-colorpop-light-blue.webp",
+      "Light Green": "mug-colorpop-light-green.webp",
+      "Maroon": "mug-colorpop-maroon.webp",
+      "Orange": "mug-colorpop-orange.webp",
+      "Pink": "mug-colorpop-pink.webp",
+      "Red": "mug-colorpop-red.webp",
+      "Yellow": "mug-colorpop-yellow.webp"
     }
   }
 };
@@ -6999,8 +6999,8 @@ function pickPreGenMugSize(size){
 // misleading names do not survive to trip up the next reader.
 const MUG_COLORLESS_SIZE_PHOTOS = {
   "Classic White": {
-    "11oz": "mug-classic-white-11oz.png",
-    "15oz": "mug-classic-white-15oz.png"
+    "11oz": "mug-classic-white-11oz.webp",
+    "15oz": "mug-classic-white-15oz.webp"
   }
 };
 
@@ -7025,14 +7025,14 @@ const PRE_GEN_MUG_STYLE_THUMBNAILS = {
 // the tile shows THAT size; the generic tile is only the fallback.
 const PRE_GEN_MUG_STYLE_THUMBNAILS_BY_SIZE = {
   "15oz": {
-    "Classic White": "mug-classic-white-15oz.png",
-    "Trimmed": "mug-trimmed-15oz-black.png",
-    "Accented": "mug-accented-15oz-black.png",
-    "Color Pop": "mug-colorpop-black.png"
+    "Classic White": "mug-classic-white-15oz.webp",
+    "Trimmed": "mug-trimmed-15oz-black.webp",
+    "Accented": "mug-accented-15oz-black.webp",
+    "Color Pop": "mug-colorpop-black.webp"
   },
   "11oz": {
-    "Classic White": "mug-classic-white-11oz.png",
-    "Trimmed": "mug-trimmed-11oz-black.png"
+    "Classic White": "mug-classic-white-11oz.webp",
+    "Trimmed": "mug-trimmed-11oz-black.webp"
   }
 };
 function preGenMugStyleThumb(styleName){
@@ -14516,7 +14516,7 @@ function openMug3DMockup(){
 // WHAT IS REAL HERE, and what is a model:
 //   - The mug's proportions are a real 11oz/15oz mug.
 //   - The handle's reach and vertical span were measured off the real
-//     product photo (mug-classic-white-11oz.png), not invented.
+//     product photo (mug-classic-white-11oz.webp), not invented.
 //   - The print wraps 8.25" of a 10.05" circumference -- Printify's actual
 //     coverage -- so the bare strip either side of the handle is the real
 //     one, and turning the mug past it shows bare mug, as it will in life.
@@ -14621,7 +14621,7 @@ const MUG3D = (function(){
   // THE HANDLE IS THE PHOTO'S HANDLE (Sep 2026, Alyx: "our mugs don't have
   // triangular handles"). The first cut was six guessed points on a curve
   // and it came out angular. This is the real handle's centreline, traced
-  // row by row off mug-classic-white-11oz.png and expressed as fractions of
+  // row by row off mug-classic-white-11oz.webp and expressed as fractions of
   // the mug's height (y) and radius (reach), so the same shape scales to the
   // 15oz. The top arm leaves the body nearly flat, sweeps out to 0.81R,
   // runs down the outside and curves back in low: a rounded D. Both ends
@@ -17804,17 +17804,17 @@ function defaultPanelAdjust(){return{zoom:1,offX:0,offY:0,fade:0,border:true,bac
 // the full-size file under the print. Thumbs and previews are small JPEG
 // copies made from these originals.
 const BACKDROPS={
-  bubbles:{file:'bubble drift.png',label:'Bubbles'},
-  clouds:{file:'clouds.png',label:'Clouds'},
-  marble:{file:'laced marble.png',label:'Marble'},
-  rose:{file:'rose crepe.png',label:'Rose'},
-  satin:{file:'satin sheets.png',label:'Satin'},
-  leaves:{file:'pastel leaf.png',label:'Leaves'},
+  bubbles:{file:'bubble drift.webp',label:'Bubbles'},
+  clouds:{file:'clouds.webp',label:'Clouds'},
+  marble:{file:'laced marble.webp',label:'Marble'},
+  rose:{file:'rose crepe.webp',label:'Rose'},
+  satin:{file:'satin sheets.webp',label:'Satin'},
+  leaves:{file:'pastel leaf.webp',label:'Leaves'},
   // Frost and Vignette have grey edges, so on a white mug they show a faint
   // rectangle at the panel edge. Pulled once, then kept (Alyx, Sep 2026):
   // "if someone doesn't like them they don't have to use them."
-  frost:{file:'frosted mirror.png',label:'Frost'},
-  vignette:{file:'fade to white.png',label:'Vignette'}
+  frost:{file:'frosted mirror.webp',label:'Frost'},
+  vignette:{file:'fade to white.webp',label:'Vignette'}
 };
 function backdropKey(v){return (v&&BACKDROPS[v])?v:null;}
 const backdropImageCache={};

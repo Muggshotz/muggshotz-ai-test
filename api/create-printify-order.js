@@ -333,14 +333,14 @@ export function computePanelFit(imgW, imgH, boxW, boxH, zoom, offX, offY) {
 // at preview size) and cover-fitted to the panel, exactly as the studio's
 // CSS cover-fits it, so the print matches the box on screen.
 const BACKDROP_FILES = {
-  bubbles: "bubble drift.png",
-  clouds: "clouds.png",
-  marble: "laced marble.png",
-  rose: "rose crepe.png",
-  satin: "satin sheets.png",
-  leaves: "pastel leaf.png",
-  frost: "frosted mirror.png",
-  vignette: "fade to white.png"
+  bubbles: "bubble drift.webp",
+  clouds: "clouds.webp",
+  marble: "laced marble.webp",
+  rose: "rose crepe.webp",
+  satin: "satin sheets.webp",
+  leaves: "pastel leaf.webp",
+  frost: "frosted mirror.webp",
+  vignette: "fade to white.webp"
 };
 function siteBaseUrl() {
   const h = process.env.SITE_BASE_URL || process.env.VERCEL_PROJECT_PRODUCTION_URL || "muggshotz-ai-test.vercel.app";

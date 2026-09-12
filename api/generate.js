@@ -24,14 +24,14 @@ export const config = {
 // Maps the theme name sent from the front end to its exact reference image
 // filename in the repo root. Filenames include spaces exactly as uploaded.
 const TEMPLATE_FILES = {
-  "Marbling": "laced marble.png",
-  "Cloud Mist": "clouds.png",
-  "Pastel Leaf": "pastel leaf.png",
-  "Satin Sheets": "satin sheets.png",
-  "Frosted Glass": "frosted mirror.png",
-  "Bubble Drift": "bubble drift.png",
-  "Rose Crepe": "rose crepe.png",
-  "Fade to White": "fade to white.png"
+  "Marbling": "laced marble.webp",
+  "Cloud Mist": "clouds.webp",
+  "Pastel Leaf": "pastel leaf.webp",
+  "Satin Sheets": "satin sheets.webp",
+  "Frosted Glass": "frosted mirror.webp",
+  "Bubble Drift": "bubble drift.webp",
+  "Rose Crepe": "rose crepe.webp",
+  "Fade to White": "fade to white.webp"
 };
 
 const SUPABASE_URL = process.env.SUPABASE_URL;

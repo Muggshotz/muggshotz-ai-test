@@ -502,7 +502,7 @@ Alyx's description (*"the thinner one is the 15 ounce and the fatter one is the 
 contradicts the filenames they arrived under. Measured body H/W of the uploads: **1.575** and
 **1.351** — the taller one is the 15oz.
 
-Renamed on the way in to `mug-classic-white-11oz.png` / `mug-classic-white-15oz.png` so the
+Renamed on the way in to `mug-classic-white-11oz.webp` / `mug-classic-white-15oz.webp` so the
 misleading names do not survive, and wired through `MUG_COLORLESS_SIZE_PHOTOS`.
 `verify-mug-styles.js` measures the two images and fails if the 15oz is ever not the taller one, so
 a future re-upload cannot silently swap them back.

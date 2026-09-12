@@ -188,10 +188,10 @@ scenarios.frameGoesOnThePrintPanel = async (page, log) => {
 scenarios.everySwatchGivesItsOwnFrame = async (page) => {
   const r = await page.evaluate(async () => {
     const load = (u) => new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = u; });
-    const img = await load('frame-ornate-gold.png');
+    const img = await load('frame-ornate-gold.webp');
     const out = [];
     for (const sw of FRAME_COLOR_SWATCHES) {
-      const c = recolouredFrameCanvas(img, 'frame-ornate-gold.png', sw.hex);
+      const c = recolouredFrameCanvas(img, 'frame-ornate-gold.webp', sw.hex);
       const g = c.getContext('2d', { willReadFrequently: true });
       const d = g.getImageData(0, 0, c.width, c.height).data;
       let r0 = 0, g0 = 0, b0 = 0, n = 0, lo = 255, hi = 0;
