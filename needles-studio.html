@@ -1833,12 +1833,6 @@ Tell Needles <span style="color:#7ab8ff">what you have in mind</span>
 <button type="button" class="mug3d-tilt" onclick="setTrimmings3DZoom(1,true)">Fit</button>
 </div>
 <div class="note" id="trimmings3DHint" style="margin:0 0 .5rem;font-size:11px">Drag the cup to turn it &middot; click it to stop or start the spin &middot; drag the slider to get closer</div>
-<!-- The cup's own colour, on the screen where the cup is. Hidden for a cup
-     with nothing to choose between -- see renderCupColourRows(). -->
-<div id="trimmingsCupColourRow" style="display:none;margin:0 0 .6rem">
-<div class="note" style="margin:0 0 5px;text-align:left">Cup colour &mdash; tap to change it, the cup repaints as you go.</div>
-<div class="color-grid" id="trimmingsCupColourGrid" style="max-width:none"></div>
-</div>
 <!-- Capped so the grid is not pushed off the bottom (Alyx: "fit all of the
      options into the frame and the continue button"). The wrap is very wide
      and very short, so at full width it ate half the panel on its own. -->
@@ -1870,6 +1864,20 @@ Tell Needles <span style="color:#7ab8ff">what you have in mind</span>
 <div class="note" id="trimmingsSeamNote" style="display:none;margin-top:0;margin-bottom:.6rem;color:#7ab8ff;font-size:11px">Your picture laid flat, unlit &mdash; so the colour you take off it is the true one.</div>
 </div>
 <div id="trimmingsRightCol">
+<!-- THE CUP'S OWN COLOUR, WITH THE OTHER CHOICES.
+     It belongs in this column, not the left one. The left column is the
+     OBJECT -- the cup, and the controls for looking at it -- and it is also
+     what sets this card's height: the stage is a square roughly 540px on a
+     1100px card, against about 450px of tiles and buttons over here, so the
+     left has no slack and this side has ~250px of it. A palette added on the
+     left pushed the card 98px past the window and took Continue off the
+     bottom, which theWholeChoiceIsOnScreenAtOnce exists to catch, and it
+     caught it. Here it costs the cup nothing.
+     Hidden for a cup with nothing to choose between -- see renderCupColourRows(). -->
+<div id="trimmingsCupColourRow" style="display:none;margin:0 0 .7rem">
+<div class="note" style="margin:0 0 5px;text-align:left">Cup colour &mdash; tap to change it, the cup repaints as you go.</div>
+<div class="color-grid" id="trimmingsCupColourGrid" style="max-width:none"></div>
+</div>
 <div id="trimmingsGrid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:.7rem"></div>
 <!-- A pill, not a tile (Alyx). A full-width box gave the absence of a trimming
      the same visual weight as the twelve designs, and made twelve render as
