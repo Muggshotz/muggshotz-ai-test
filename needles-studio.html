@@ -2296,9 +2296,14 @@ const NEEDLES_ONE_TIME_PAIRS = [
 
 // Every name here must exist on disk. A typo 404s, onerror->safeAdvance skips it
 // silently, and you lose a clip from the rotation with nothing in the console.
-// (O_final/P_final were listed here and never existed; O_transparent and
-// P_transparent are on disk, unused -- likely a third one-time pair, since P's
-// override is copied from N's.)
+// Do not write a clip filename in a comment here either: needles-calibrator.html
+// builds its clip gallery by regex-scraping every *.webm string out of THIS
+// file, so a name in a comment becomes a thumbnail cell it then cannot fetch.
+// (O_final/P_final were listed above and never existed. The real files were the
+// O and P _transparent pair -- most likely a third one-time pair, since P's
+// entry in NEEDLES_CLIP_OVERRIDES is byte-identical to N's, the back half of
+// M/N. Both were deleted as unused; `git checkout 190314a -- O_trans* P_trans*`
+// brings them back, and their framing is still in the overrides map.)
 const NEEDLES_RANDOM_POOL = [
   'D_final.webm',
   'E_final.webm',
