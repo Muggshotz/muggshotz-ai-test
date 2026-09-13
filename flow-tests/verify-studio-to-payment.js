@@ -445,25 +445,41 @@ scenarios.travelCupKeepsItsIdentityAcrossTheHop = async (page, log, bodies) => {
   });
   await T(page, 700);
   await dismissAlerts(page);
-  await page.evaluate(() => {
+  // A NON-DEFAULT COLOUR, ON PURPOSE.
+  //
+  // This used to click querySelector('#travelMugColorGridGen .color-btn') --
+  // the FIRST swatch, which is White. The colour assertion below is real, and
+  // it could never fail: travelColorEntry() falls back to colors[0] when the
+  // colour has been lost, and colors[0] is White, so "they chose White" and
+  // "we dropped their choice" arrive at payment looking identical.
+  //
+  // That is not hypothetical. The studio shipped for months with the only
+  // reachable palette writing to a variable nothing read after generation, and
+  // with nothing persisting the cup across a refresh, so a customer who picked
+  // Red got a White cup. Every travel scenario in this suite passed throughout,
+  // all six of them reporting White.
+  //
+  // So: pick something that is not the fallback. Then a lost colour reads as
+  // White, White is not Black, and the test says so.
+  const wanted = await page.evaluate(() => {
     const card = document.getElementById('travelMugColorCard');
-    if (!card || card.style.display === 'none') return;
-    const btn = document.querySelector('#travelMugColorGridGen .color-btn');
-    if (btn) btn.click();
+    if (!card || card.style.display === 'none') return null;
+    const btns = Array.from(document.querySelectorAll('#travelMugColorGridGen .color-btn'));
+    const first = btns[0] && btns[0].dataset.color;
+    const pick = btns.find(b => b.dataset.color && b.dataset.color !== first);
+    if (!pick) return null;          // a palette of one cannot carry this test
+    pick.click();
+    return pick.dataset.color;
   });
   await T(page, 800);
   await dismissAlerts(page);
-  // Read it the way goToOrder() reads it. Before a generation the choice
-  // lives in selectedTravelProductKey; selectedTravelProductKey is the post-gen
-  // one, and the studio's own hand-off falls back from the first to the
-  // second. Asserting on only one of them tests the test, not the shop.
   const chosen = await page.evaluate(() => ({
-    key: (typeof selectedTravelProductKey !== 'undefined' && selectedTravelProductKey)
-      || (typeof selectedTravelProductKey !== 'undefined' && selectedTravelProductKey) || null,
-    colour: (typeof selectedTravelColor !== 'undefined' && selectedTravelColor)
-      || (typeof selectedTravelColor !== 'undefined' && selectedTravelColor) || null,
+    key: (typeof selectedTravelProductKey !== 'undefined' && selectedTravelProductKey) || null,
+    colour: (typeof selectedTravelColor !== 'undefined' && selectedTravelColor) || null,
   }));
   if (!chosen.key) return 'FAIL: picking a cup did not settle a cup';
+  if (wanted && chosen.colour !== wanted)
+    return `FAIL: tapped ${wanted} and the studio settled on ${chosen.colour} — the palette is not writing what the shop reads`;
   if (chosen.key !== 'travel-mug-40oz-insulated')
     return `FAIL: asked for the insulated 40oz, the studio settled on ${chosen.key}`;
 
@@ -490,9 +506,14 @@ scenarios.travelCupKeepsItsIdentityAcrossTheHop = async (page, log, bodies) => {
     return `FAIL: the cup changed across the hop — studio had ${chosen.key}, payment says ${b.productKey}`;
   if (chosen.colour && b.colorName !== chosen.colour)
     return `FAIL: the colour changed across the hop — studio had ${chosen.colour}, payment says ${b.colorName}`;
+  // The whole point of picking a non-default above: say out loud that what
+  // reached payment is not merely the fallback wearing the right name.
+  if (wanted && b.colorName !== wanted)
+    return `FAIL: tapped ${wanted}, payment charges for ${b.colorName}`;
   if (!(b.image || b.frontImage || b.backImage))
     return 'FAIL: the design did not survive the hop to payment';
-  return `PASS: travel cup keeps its identity across the hop (${b.productKey}, ${b.colorName})`;
+  return `PASS: travel cup keeps its identity across the hop (${b.productKey}, ${b.colorName}`
+       + `${wanted ? ` — a non-default colour, so a lost one would read as White and fail` : ''})`;
 };
 
 // ---- The other five travel cups. ----
