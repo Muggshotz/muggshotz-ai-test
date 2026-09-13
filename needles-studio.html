@@ -2294,6 +2294,11 @@ const NEEDLES_ONE_TIME_PAIRS = [
   ['Q_transparent.webm', 'R_transparent.webm']
 ];
 
+// Every name here must exist on disk. A typo 404s, onerror->safeAdvance skips it
+// silently, and you lose a clip from the rotation with nothing in the console.
+// (O_final/P_final were listed here and never existed; O_transparent and
+// P_transparent are on disk, unused -- likely a third one-time pair, since P's
+// override is copied from N's.)
 const NEEDLES_RANDOM_POOL = [
   'D_final.webm',
   'E_final.webm',
@@ -2302,9 +2307,7 @@ const NEEDLES_RANDOM_POOL = [
   'H_final.webm',
   'I_final.webm',
   'K_final.webm',
-  'L_final.webm',
-  'O_final.webm',
-  'P_final.webm'
+  'L_final.webm'
 ];
 
 const NEEDLES_FADE_IN_DURATION = 0.35;
