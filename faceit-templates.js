@@ -793,6 +793,165 @@ const G = global.FaceItGeom, C = global.FaceItComposite, M = global.FaceItMugsho
 
 function surfaceOf(key){ return G.SURFACES[key] || G.SURFACES.mug; }
 
+/* ---------------------------------------------------------------------------
+   REPAINTING THE LINEUP'S CHART LABELS  —  FALLBACK ONLY, OFF BY DEFAULT
+   ---------------------------------------------------------------------------
+   VERDICT (Sep 2026): this gets the numbers right and the picture wrong. Keep
+   it as the fallback for a plate nobody can re-export; prefer fixing the label
+   in the artwork's own source every time.
+
+   Four techniques were tried against the delivered plate -- probe-column fill,
+   row-median fill, row-median fill inside per-label boxes, and finally
+   horizontal inpainting of the glyph runs. Each removed the numbers. Each also
+   left a visible patch, because the wall behind them is not a flat tone: it
+   carries a horizontal vignette, a pool of lamplight across the top, a warm
+   bounce off the biker's skin, and the chart rules running through it. Any
+   reconstruction good enough to fool the eye is doing real inpainting, and this
+   is not that.
+
+   Relabelling in the source file is a minute's work for whoever holds it, and
+   it is the version customers should see. This exists so that a plate whose
+   source is lost is still shippable, not because it is the better answer.
+   ---------------------------------------------------------------------------
+   The delivered plate's rules are right -- uniformly spaced, correctly drawn,
+   carrying the room's perspective and lighting. Its LABELS are not: 5'6" was
+   never written, so every number below it reads six inches low, and the bottom
+   rule says 3'0" where 3'6" belongs.
+
+   Sending that back to be relabelled would have worked and would have been
+   slower. It would also have left the same failure possible again, because the
+   numbers on the wall and the numbers the placement maths uses would still be
+   two separate sources that agree only by care.
+
+   So the labels are painted here instead, from the same array the scale is
+   built from. They cannot disagree now: the label beside a customer's head and
+   the arithmetic that put their head there are the same nine values.
+
+   This works because of where those labels sit -- two clean margin bands of
+   bare wall, no rules running under them and no figure within reach. Masking
+   is a per-row sample of the wall just inboard of each band, so the wall's
+   vertical gradient and its lamp falloff carry across the patch.
+   --------------------------------------------------------------------------- */
+const LINEUP_CHART = {
+  /* measured off lineup.webp at 2475 x 1155, top rule down */
+  ruleY:  [170.5, 239.5, 312, 387, 461.5, 536.5, 612.5, 688, 763.5],
+  inches: [    90,    84,  78,  72,    66,    60,    54,  48,    42],
+  /* The numbers occupy far less width than the margin does -- roughly 2% to 6%
+     in from each edge. The first attempt used a band out to 13.4%, which on
+     this plate reaches the biker: he stands at about 10%, so he was inside the
+     patch and bled into it. */
+  leftBand:  { x0: 0,      x1: 0.0820 },
+  rightBand: { x0: 0.9180, x1: 1 },
+  fontPx: 46,
+  color: '#141414'
+};
+
+function repaintLineupLabels(ctx, W, H, cfg){
+  const k = cfg || LINEUP_CHART;
+  const sy = H / 1155;
+
+  const top = Math.max(0, Math.floor(k.ruleY[0] * sy - 60 * sy));
+  const bot = Math.min(H, Math.ceil(k.ruleY[k.ruleY.length - 1] * sy + 60 * sy));
+
+  /* MASK BY PER-ROW MEDIAN, NOT BY A PROBE COLUMN (fixed on the bench).
+     The first version sampled one column just inboard of each band and painted
+     each row that colour. That column runs straight through the biker, so from
+     his shoulders down it was sampling skin, tattoo and black vest and laying
+     them across the margin in stripes.
+
+     The median of the row WITHIN the band needs no clean column and no guess:
+     - a plain wall row is mostly wall, so the median is the wall, gradient and
+       lamp falloff included, sampled at the exact height it is needed;
+     - a rule row is rule-coloured right across the band (the rules do run under
+       the labels here), so the median is the rule and the rule survives;
+     - a row carrying a number is wall for most of its width and text for the
+       rest, so the median is the wall and only the text goes.
+     One rule covers all three cases, which is why it is the one to use. */
+  /* INPAINT THE GLYPHS, DO NOT FILL THE BAND (fourth attempt, and the reason
+     the first three failed the same way).
+
+     Every earlier version painted whole rows a single colour -- by probe
+     column, then by row median, then by row median inside a smaller box. All
+     three removed the numbers and all three were obvious, because the wall in
+     that margin is not one colour: it carries a horizontal vignette, a pool of
+     lamplight at the top, and a warm bounce off the biker. Flatten a row and
+     you erase all of that, leaving a visible slab with a seam down its inside
+     edge -- and the rules with it.
+
+     Inpainting touches only the pixels the lettering actually occupies. Each
+     run of glyph pixels is replaced by a straight interpolation between the
+     untouched pixels either side of it, so the gradient continues through the
+     patch and a rule crossing the band is redrawn as itself. The mask is
+     symmetric, because these numbers carry a pale bevel as well as dark
+     strokes, and dilated a little so the anti-aliased rim goes with them.  */
+  const boxH = Math.round(34 * sy);
+  const DILATE = 3, THRESH = 10;
+  [k.leftBand, k.rightBand].forEach(band => {
+    const x0 = Math.floor(band.x0 * W), x1 = Math.ceil(band.x1 * W);
+    const bw = x1 - x0;
+    if (bw <= 0) return;
+    k.ruleY.forEach(ry => {
+      const y0 = Math.max(0, Math.round(ry * sy - boxH));
+      const y1 = Math.min(H, Math.round(ry * sy + boxH));
+      if (y1 - y0 <= 0) return;
+      const img = ctx.getImageData(x0, y0, bw, y1 - y0);
+      const d = img.data;
+      const lum = new Array(bw), hit = new Array(bw), grow = new Array(bw);
+      for (let r = 0; r < y1 - y0; r++){
+        for (let i = 0; i < bw; i++){
+          const o = (r * bw + i) * 4;
+          lum[i] = (d[o] + d[o+1] + d[o+2]) / 3;
+        }
+        const mid = median(lum);
+        for (let i = 0; i < bw; i++) hit[i] = Math.abs(lum[i] - mid) > THRESH;
+        for (let i = 0; i < bw; i++){
+          grow[i] = false;
+          for (let j = Math.max(0, i - DILATE); j <= Math.min(bw - 1, i + DILATE); j++)
+            if (hit[j]) { grow[i] = true; break; }
+        }
+        let i = 0;
+        while (i < bw){
+          if (!grow[i]) { i++; continue; }
+          let a = i; while (i < bw && grow[i]) i++;
+          const bEnd = i - 1;
+          const L = a - 1, R = bEnd + 1;
+          const okL = L >= 0, okR = R < bw;
+          if (!okL && !okR) continue;      // whole row is lettering: leave it
+          for (let t = a; t <= bEnd; t++){
+            const oT = (r * bw + t) * 4;
+            for (let ch = 0; ch < 3; ch++){
+              const vL = okL ? d[(r * bw + L) * 4 + ch] : d[(r * bw + R) * 4 + ch];
+              const vR = okR ? d[(r * bw + R) * 4 + ch] : vL;
+              const f = (bEnd === a) ? 0.5 : (t - a) / (bEnd - a);
+              d[oT + ch] = Math.round(vL + (vR - vL) * f);
+            }
+            d[oT + 3] = 255;
+          }
+        }
+      }
+      ctx.putImageData(img, x0, y0);
+    });
+  });
+
+  ctx.save();
+  ctx.font = 'bold ' + Math.round(k.fontPx * sy) + 'px "Arial Narrow","Helvetica Neue",Arial,sans-serif';
+  ctx.fillStyle = k.color;
+  ctx.textBaseline = 'middle';
+  const padL = Math.round(W * 0.022), padR = Math.round(W * 0.019);
+  k.ruleY.forEach((ry, i) => {
+    const label = G.formatHeight(k.inches[i]);
+    const y = ry * sy;
+    ctx.textAlign = 'left';  ctx.fillText(label, padL, y);
+    ctx.textAlign = 'right'; ctx.fillText(label, W - padR, y);
+  });
+  ctx.restore();
+}
+
+function median(arr){
+  const a = arr.slice().sort((x, y) => x - y);
+  return a[a.length >> 1];
+}
+
 /* THE MUG SHOT. The model returns one wide image holding three views side by
    side -- one generation, not three, so the three are the same animal and the
    placards read identically. Splitting it into equal thirds is the same
@@ -841,7 +1000,14 @@ function buildLineupStrip(plateImg, subjectImg, opts){
   cv.width = W; cv.height = H;
   const ctx = cv.getContext('2d');
 
-  if (plateImg) ctx.drawImage(plateImg, 0, 0, W, H);
+  if (plateImg){
+    ctx.drawImage(plateImg, 0, 0, W, H);
+    /* OFF BY DEFAULT, and see the note on repaintLineupLabels for why. The
+       function works -- it produces a chart whose numbers are correct and which
+       can never disagree with the placement maths. It does not produce a chart
+       that looks untouched, and on a plate this photographic that is the bar. */
+    if (o.repaintLabels === true) repaintLineupLabels(ctx, W, H, o.chartCfg);
+  }
 
   const scale = G.buildChartScale(
     G.CHARTS[plate.chart || 'human'],
@@ -873,6 +1039,7 @@ function sliceIntoPanels(cv, type, quality){
   return { left: out[0], center: out[1], right: out[2] };
 }
 
-global.FaceItBuild = { buildMugshotStrip, buildLineupStrip, sliceIntoPanels, surfaceOf };
+global.FaceItBuild = { buildMugshotStrip, buildLineupStrip, sliceIntoPanels, surfaceOf,
+                       repaintLineupLabels, LINEUP_CHART };
 
 })(window);
