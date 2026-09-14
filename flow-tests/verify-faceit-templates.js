@@ -193,18 +193,23 @@ studio.wraparoundNarrowsRatherThanCloses = async (page) => {
     mugPrintMode = 'wraparound';
     renderFaceItGrid();
     const ids = [...document.querySelectorAll('#faceItGrid .faceit-tile')].map(e => e.dataset.faceit);
+    const shapes = ids.map(id => (FaceItCatalog.get(id) || {}).shape);
     chosenTrack = null; byoDeclaredIntent = null;
     showDesignMethodCard();
     return {
-      three, ids,
+      three, ids, shapes,
       tiles: document.getElementById('designMethodTiles').style.display,
       coverMe: document.getElementById('designMethodCoverMeBtn').style.display,
       faceIt: document.getElementById('designMethodFaceItBtn').style.display
     };
   });
   if (r.three < 21) return `FAIL: three-panel grid lost templates (${r.three})`;
-  if (r.ids.some(id => id !== 'procedural:mug-shot'))
-    return `FAIL: a template that cannot wrap survived into Wraparound: ${r.ids.join(', ')}`;
+  /* Assert the RULE, not today's roster. Naming the one wrap-native template
+     that happened to be live made this fail the moment a second one shipped,
+     which is a test dating itself rather than a bug. */
+  const notWrap = r.ids.filter((id, i) => r.shapes[i] !== 'wrap');
+  if (notWrap.length)
+    return `FAIL: a template that cannot wrap survived into Wraparound: ${notWrap.join(', ')}`;
   if (!r.ids.length) return 'FAIL: Wraparound offered no Face It template at all';
   if (r.tiles === 'none') return 'FAIL: the prop row closed on a Wraparound Face It can serve';
   if (r.coverMe !== 'none') return 'FAIL: Cover Me survived into Wraparound — it is one fixed picture';
@@ -264,8 +269,12 @@ studio.legacyRosterReachesTheStudio = async (page) => {
     catalog: FACE_IT_CATALOG.slice(),
     text: [...FACE_IT_TEXT_TEMPLATES]
   }));
-  if (JSON.stringify(r.catalog) !== JSON.stringify(LEGACY_20))
-    return `FAIL: the studio's roster drifted from the shipped order:\n  got  ${JSON.stringify(r.catalog)}`;
+  /* The invariant is that the original twenty survive, in their original order.
+     New templates joining the roster is the point of the batch, so comparing the
+     whole array to the old one asserted that nothing may ever be added. */
+  const survivors = r.catalog.filter(f => LEGACY_20.indexOf(f) !== -1);
+  if (JSON.stringify(survivors) !== JSON.stringify(LEGACY_20))
+    return `FAIL: the original 20 drifted in content or order:\n  got  ${JSON.stringify(survivors)}`;
   if (JSON.stringify(r.text.slice().sort()) !== JSON.stringify(LEGACY_TEXT.slice().sort()))
     return `FAIL: text set drifted to ${JSON.stringify(r.text)}`;
   return 'PASS: the studio sees the original 20 in their original order';

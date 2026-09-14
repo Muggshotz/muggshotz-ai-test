@@ -651,7 +651,7 @@ const FACE_IT_TEMPLATES = [
      crop budget comes off the foreground, never the headroom. */
   { file: 'mount_rushmore.webp', name: 'The 5th Face', kind: 'stone-carve',
     shape: 'wrap', panels: 'any', poseNote: 'three-quarter',
-    needsPlate: true, awaitingArt: true },
+    needsPlate: true },
 
   /* No plate at all -- drawn by FaceItMugshot at the surface's real size.
      Restricted to the two surfaces whose wrap is actually panoramic: three
@@ -670,6 +670,22 @@ const FACE_IT_TEMPLATES = [
   /* Needs a plate: the lineup room with the empty slot moved to the CENTRE of
      the strip. At the far right the customer lands on the handle seam and gets
      bisected, with the alien and the granny across the front of the mug. */
+  // HELD BACK ON A CHART DEFECT, not on missing artwork (Sep 2026). The plate
+  // is delivered and is the right size, but its labels are wrong: the rules are
+  // uniformly spaced every 6 inches (measured at 69-76px apart across the whole
+  // chart, perspective accounting for the drift), while the labels read
+  //   7'6"  7'0"  6'6"  6'0"  5'0"  4'6"  4'0"  3'6"  3'0"
+  // The step from 6'0" to 5'0" is twelve inches and gets the same spacing as
+  // every six-inch step, so 5'6" is missing and every label below it is six
+  // inches out. The bottom rule reads 3'0" but physically sits where 3'6"
+  // belongs.
+  //
+  // That matters more here than it would on ordinary artwork, because this is
+  // the chart customers are measured against: buildChartScale anchors on the
+  // top and bottom labels, so mapping 54 inches onto a span that is really 48
+  // would stretch every figure by about 12%. Anchoring on the pitch instead
+  // would place people correctly but still print a label six inches wrong
+  // beside their own head. Fix belongs in the art.
   { file: 'lineup.webp', name: 'The Lineup', kind: 'lineup',
     shape: 'wrap', panels: 'any', needsPlate: true, awaitingArt: true,
     heightInput: true, chart: 'human', poseNote: 'frontal' }
