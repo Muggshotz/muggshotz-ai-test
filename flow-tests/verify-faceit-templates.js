@@ -173,6 +173,110 @@ scenarios.promptsAskForTheRightBackground = async (page) => {
   return 'PASS: cutout prompts ask for magenta, the repaint prompt does not, no height in the prompt';
 };
 
+/* ---------------------------------------------------------------------------
+   THE STUDIO WIRING
+   These run against needles-studio.html rather than the bench, because the
+   question they answer is whether the live flow picked the framework up -- the
+   module can be perfect and the studio still be reading a stale literal.
+   Note the bare assignments in page.evaluate: product and mugPrintMode are `let`
+   bindings at script top level, which are NOT properties of window, so
+   window.product = 'mug' silently does nothing and every gate reads as open.
+   That cost a wrong PASS the first time through.
+   --------------------------------------------------------------------------- */
+const studio = {};
+
+studio.wraparoundNarrowsRatherThanCloses = async (page) => {
+  const r = await page.evaluate(() => {
+    product = 'mug'; mugPrintMode = 'three-panel';
+    renderFaceItGrid();
+    const three = document.querySelectorAll('#faceItGrid .faceit-tile').length;
+    mugPrintMode = 'wraparound';
+    renderFaceItGrid();
+    const ids = [...document.querySelectorAll('#faceItGrid .faceit-tile')].map(e => e.dataset.faceit);
+    chosenTrack = null; byoDeclaredIntent = null;
+    showDesignMethodCard();
+    return {
+      three, ids,
+      tiles: document.getElementById('designMethodTiles').style.display,
+      coverMe: document.getElementById('designMethodCoverMeBtn').style.display,
+      faceIt: document.getElementById('designMethodFaceItBtn').style.display
+    };
+  });
+  if (r.three < 21) return `FAIL: three-panel grid lost templates (${r.three})`;
+  if (r.ids.some(id => id !== 'procedural:mug-shot'))
+    return `FAIL: a template that cannot wrap survived into Wraparound: ${r.ids.join(', ')}`;
+  if (!r.ids.length) return 'FAIL: Wraparound offered no Face It template at all';
+  if (r.tiles === 'none') return 'FAIL: the prop row closed on a Wraparound Face It can serve';
+  if (r.coverMe !== 'none') return 'FAIL: Cover Me survived into Wraparound — it is one fixed picture';
+  if (r.faceIt === 'none') return 'FAIL: the Face It tile was hidden on a wrap it can serve';
+  return 'PASS: Wraparound keeps the wrap-native template and drops the ones that cannot wrap';
+};
+
+studio.perTemplateInputsAppearAndCleanUp = async (page) => {
+  const r = await page.evaluate(() => {
+    product = 'mug'; mugPrintMode = 'three-panel'; renderFaceItGrid();
+    pickFaceItTemplate('procedural:mug-shot');
+    const placards = [...document.querySelectorAll('#faceItMultiTextWrap .faceit-placard-input')].map(e => e.value);
+    const kind = !!document.getElementById('faceItSubjectKindWrap');
+    const heightOnMugshot = !!document.getElementById('faceItHeightWrap');
+    pickFaceItTemplate('king.jpg');
+    const leftovers = document.querySelectorAll('.faceit-placard-input').length;
+    const wrapOnPlain = document.getElementById('faceItTextBoxWrap').style.display;
+    pickFaceItTemplate('on_my_mind.jpg');
+    return {
+      placards, kind, heightOnMugshot, leftovers, wrapOnPlain,
+      wrapOnText: document.getElementById('faceItTextBoxWrap').style.display,
+      legacyBox: document.getElementById('faceItTextBox').style.display !== 'none'
+    };
+  });
+  if (r.placards.length !== 3) return `FAIL: mug shot gave ${r.placards.length} placard inputs, wanted 3`;
+  if (!r.placards[0]) return 'FAIL: placards came up blank instead of pre-filled';
+  if (!r.kind) return 'FAIL: no person/pet choice — a dog would be measured on a human chart';
+  if (r.heightOnMugshot) return 'FAIL: mug shot asked for a height it does not use';
+  if (r.leftovers) return 'FAIL: placard inputs leaked onto a plain face-merge template';
+  if (r.wrapOnPlain !== 'none') return 'FAIL: text box shown on a template that takes no text';
+  if (r.wrapOnText !== 'block' || !r.legacyBox)
+    return 'FAIL: the original single text box did not come back for a text template';
+  return 'PASS: per-template inputs appear, pre-fill, and clean up behind themselves';
+};
+
+studio.mugshotSurfaceGate = async (page) => {
+  const r = await page.evaluate(() => {
+    const t = FaceItCatalog.get('procedural:mug-shot');
+    product = 'water bottle'; selectedTravelProductKey = 'travel-mug-20oz';
+    const narrow = FaceItCatalog.allowsProduct(t, faceItSurfaceKey());
+    selectedTravelProductKey = 'travel-mug-30oz-tundra';
+    const tundra = FaceItCatalog.allowsProduct(t, faceItSurfaceKey());
+    selectedTravelProductKey = 'travel-mug-14oz-handle';
+    const handle = FaceItCatalog.allowsProduct(t, faceItSurfaceKey());
+    product = 'mug';
+    const mug = FaceItCatalog.allowsProduct(t, faceItSurfaceKey());
+    return { narrow, tundra, handle, mug };
+  });
+  if (r.narrow) return 'FAIL: mug shot offered on a 20oz — three booking views on a 1.33:1 band are slivers';
+  if (r.tundra) return 'FAIL: mug shot offered on the Tundra, which mirrors its flanks and would duplicate a profile';
+  if (!r.handle || !r.mug) return 'FAIL: mug shot blocked from a surface it belongs on';
+  return 'PASS: mug shot reaches the mug and the 14oz only';
+};
+
+studio.legacyRosterReachesTheStudio = async (page) => {
+  const r = await page.evaluate(() => ({
+    catalog: FACE_IT_CATALOG.slice(),
+    text: [...FACE_IT_TEXT_TEMPLATES]
+  }));
+  if (JSON.stringify(r.catalog) !== JSON.stringify(LEGACY_20))
+    return `FAIL: the studio's roster drifted from the shipped order:\n  got  ${JSON.stringify(r.catalog)}`;
+  if (JSON.stringify(r.text.slice().sort()) !== JSON.stringify(LEGACY_TEXT.slice().sort()))
+    return `FAIL: text set drifted to ${JSON.stringify(r.text)}`;
+  return 'PASS: the studio sees the original 20 in their original order';
+};
+
+async function stubApis(page){
+  await page.route('**/api/**', r => r.fulfill({ status: 200, contentType: 'application/json', body: '{"ok":true,"balance":99}' }));
+  await page.route('**/fonts.googleapis.com/**', r => r.abort());
+  await page.route('**/images.printify.com/**', r => r.abort());
+}
+
 (async () => {
   let fails = 0;
   for (const [name, fn] of Object.entries(scenarios)) {
@@ -190,6 +294,23 @@ scenarios.promptsAskForTheRightBackground = async (page) => {
       await browser.close();
     }
   }
+  for (const [name, fn] of Object.entries(studio)) {
+    const { browser, page } = await launch();
+    try {
+      await stubApis(page);
+      await page.goto('http://127.0.0.1:8788/needles-studio.html', { waitUntil: 'domcontentloaded' });
+      await page.waitForTimeout(1800);
+      const out = await fn(page);
+      console.log(out);
+      if (out.startsWith('FAIL')) fails++;
+    } catch (e) {
+      console.log(`FAIL: ${name} threw — ${e.message}`);
+      fails++;
+    } finally {
+      await browser.close();
+    }
+  }
+
   console.log(fails ? `\n${fails} FAILING` : '\nall green');
   process.exit(fails ? 1 : 0);
 })();

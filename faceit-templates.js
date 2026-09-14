@@ -633,8 +633,8 @@ const FACE_IT_TEMPLATES = [
   face('aww_hell.jpg',    'Aww Hell'),
   face('your_future.jpg', 'Your Future'),
   face('all_hail.jpg',    'All Hail'),
-  face('cloud_9_him.jpg', 'Cloud 9'),
   face('cloud_9_her.jpg', 'Cloud 9'),
+  face('cloud_9_him.jpg', 'Cloud 9'),
   face('heavenly_host.jpg',    'Heavenly Host'),
   face('heavenly_hostess.jpg', 'Heavenly Hostess'),
 
@@ -650,7 +650,8 @@ const FACE_IT_TEMPLATES = [
      the model redraws it every run, which is the known risk on this one --
      crop budget comes off the foreground, never the headroom. */
   { file: 'mount_rushmore.webp', name: 'The 5th Face', kind: 'stone-carve',
-    shape: 'wrap', panels: 'any', poseNote: 'three-quarter', needsPlate: true },
+    shape: 'wrap', panels: 'any', poseNote: 'three-quarter',
+    needsPlate: true, awaitingArt: true },
 
   /* No plate at all -- drawn by FaceItMugshot at the surface's real size.
      Restricted to the two surfaces whose wrap is actually panoramic: three
@@ -670,7 +671,7 @@ const FACE_IT_TEMPLATES = [
      the strip. At the far right the customer lands on the handle seam and gets
      bisected, with the alien and the granny across the front of the mug. */
   { file: 'lineup.webp', name: 'The Lineup', kind: 'lineup',
-    shape: 'wrap', panels: 'any', needsPlate: true,
+    shape: 'wrap', panels: 'any', needsPlate: true, awaitingArt: true,
     heightInput: true, chart: 'human', poseNote: 'frontal' }
 ];
 
@@ -685,10 +686,38 @@ FACE_IT_TEMPLATES.forEach(t => { byId[t.id] = t; });
 /* Derived, so every existing reader keeps working unchanged. The flat array was
    the roster for three years; nothing that reads it needs to learn about objects
    on the same day the roster grows. */
-const FACE_IT_CATALOG = FACE_IT_TEMPLATES.filter(t => t.file).map(t => t.file);
+/* awaitingArt keeps a template out of the customer-facing grid until its plate
+   actually exists in the repo. Without it the grid renders an <img> pointing at
+   a file nobody has delivered yet, and a broken tile is worse than no tile --
+   it is a customer clicking something that cannot generate. Flip the flag in
+   the same commit that adds the artwork. The bench ignores it on purpose, which
+   is how the layout gets calibrated before the art arrives. */
+function isLive(t){ return !t.awaitingArt; }
+
+const FACE_IT_CATALOG = FACE_IT_TEMPLATES.filter(t => t.file && isLive(t)).map(t => t.file);
 const FACE_IT_TEXT_TEMPLATES = new Set(
   FACE_IT_TEMPLATES.filter(t => t.kind === 'text-merge' && t.file).map(t => t.file)
 );
+
+/* What the customer-facing grid should actually offer, in order. */
+function liveTemplates(){ return FACE_IT_TEMPLATES.filter(isLive); }
+
+/* The procedural template has no file to point an <img> at, so its tile is
+   drawn by the same code that draws the template. One source of truth: if the
+   placards move, the thumbnail moves with them. */
+function tileFor(t, px){
+  if (t.file) return t.file;
+  if (t.kind !== 'mugshot' || !global.FaceItMugshot) return null;
+  const mug = global.FaceItGeom.SURFACES.mug;
+  const W = px || 480, H = Math.round(W * (mug.h / mug.w));
+  const c = document.createElement('canvas');
+  c.width = W; c.height = H;
+  const ctx = c.getContext('2d');
+  const opts = Object.assign({}, global.FaceItMugshot.DEFAULTS, { chart: 'pet' });
+  global.FaceItMugshot.drawBackplate(ctx, W, H, opts);
+  global.FaceItMugshot.drawForeplate(ctx, W, H, t.textDefaults || [], opts);
+  return c.toDataURL('image/png');
+}
 
 function get(idOrFile){ return byId[idOrFile] || byFile[idOrFile] || null; }
 function isWrapNative(t){ t = (typeof t === 'string') ? get(t) : t; return !!(t && t.shape === 'wrap'); }
@@ -725,10 +754,109 @@ const PLATE_DEFAULTS = {
 };
 
 global.FaceItCatalog = {
-  PLATE_DEFAULTS,
+  PLATE_DEFAULTS, isLive, liveTemplates, tileFor,
   TEMPLATES: FACE_IT_TEMPLATES,
   FACE_IT_CATALOG, FACE_IT_TEXT_TEMPLATES,
   get, isWrapNative, textInputCount, allowsProduct
 };
+
+})(window);
+
+/* ===========================================================================
+   BUILDING THE FINISHED STRIP
+   ---------------------------------------------------------------------------
+   Both of the composited templates end up here: one canvas at the print
+   surface's real size, which the caller then cuts into thirds exactly the way
+   the panorama path already cuts a generated panorama. Returning a canvas
+   rather than writing to placements keeps this testable from the bench, which
+   has no placements to write to.
+   =========================================================================== */
+(function(global){
+'use strict';
+const G = global.FaceItGeom, C = global.FaceItComposite, M = global.FaceItMugshot;
+
+function surfaceOf(key){ return G.SURFACES[key] || G.SURFACES.mug; }
+
+/* THE MUG SHOT. The model returns one wide image holding three views side by
+   side -- one generation, not three, so the three are the same animal and the
+   placards read identically. Splitting it into equal thirds is the same
+   assumption the prompt is written around ("evenly spaced, all at exactly the
+   same scale"), and each third is then measured and placed on its own, so a
+   model that centres a view slightly off still lands right. */
+function buildMugshotStrip(subjectImg, opts){
+  const o = opts || {};
+  const S = surfaceOf(o.surface);
+  const W = S.w, H = S.h;
+  const cal = Object.assign({}, M.DEFAULTS, o.cal || {}, { chart: o.chart || 'pet' });
+
+  const cv = document.createElement('canvas');
+  cv.width = W; cv.height = H;
+  const ctx = cv.getContext('2d');
+
+  const scale = M.drawBackplate(ctx, W, H, cal);
+
+  if (subjectImg){
+    const sw = subjectImg.naturalWidth || subjectImg.width;
+    const sh = subjectImg.naturalHeight || subjectImg.height;
+    const headIn = (cal.chart === 'pet') ? 20 : 68;
+    for (let i = 0; i < 3; i++){
+      /* cut one view out of the three-up sheet, then measure THAT view */
+      const slice = document.createElement('canvas');
+      slice.width = Math.floor(sw / 3); slice.height = sh;
+      slice.getContext('2d').drawImage(subjectImg, -Math.floor(sw / 3) * i, 0);
+      C.placeBust(ctx, slice, scale, headIn, W / 3 * (i + 0.5), H, cal.subjectHPct);
+    }
+  }
+
+  M.drawForeplate(ctx, W, H, o.texts || [], cal);
+  return cv;
+}
+
+/* THE LINEUP. Plate, then one figure at the customer's real height, and that is
+   the whole composite -- the plate carries everything else and is never redrawn,
+   so the alien and the granny are identical on every mug that ships. */
+function buildLineupStrip(plateImg, subjectImg, opts){
+  const o = opts || {};
+  const S = surfaceOf(o.surface);
+  const W = S.w, H = S.h;
+  const plate = Object.assign({}, (global.FaceItCatalog && global.FaceItCatalog.PLATE_DEFAULTS.lineup) || {}, o.cal || {});
+
+  const cv = document.createElement('canvas');
+  cv.width = W; cv.height = H;
+  const ctx = cv.getContext('2d');
+
+  if (plateImg) ctx.drawImage(plateImg, 0, 0, W, H);
+
+  const scale = G.buildChartScale(
+    G.CHARTS[plate.chart || 'human'],
+    H * plate.chartTopPct, H * plate.chartBottomPct,
+    plate.floorPct ? H * plate.floorPct : null
+  );
+
+  if (subjectImg && o.heightInches){
+    /* Centre of the strip, not the end of the lineup. On a wraparound the two
+       outer edges meet at the handle, so a figure placed where the reference
+       art had its empty slot gets sawn in half by it -- with the rest of the
+       lineup across the front of the mug and the customer nowhere. */
+    C.placeFigure(ctx, subjectImg, scale, o.heightInches, W * (o.centerPct == null ? 0.5 : o.centerPct));
+  }
+  return cv;
+}
+
+/* Cut a finished strip into the three panels the mug flow expects. Same thirds
+   the panorama slicer uses, so the joins stay continuous by construction. */
+function sliceIntoPanels(cv, type, quality){
+  const W = cv.width, H = cv.height, t = W / 3;
+  const out = [];
+  for (let i = 0; i < 3; i++){
+    const p = document.createElement('canvas');
+    p.width = Math.round(t); p.height = H;
+    p.getContext('2d').drawImage(cv, Math.round(t * i), 0, Math.round(t), H, 0, 0, Math.round(t), H);
+    out.push(p.toDataURL(type || 'image/png', quality));
+  }
+  return { left: out[0], center: out[1], right: out[2] };
+}
+
+global.FaceItBuild = { buildMugshotStrip, buildLineupStrip, sliceIntoPanels, surfaceOf };
 
 })(window);

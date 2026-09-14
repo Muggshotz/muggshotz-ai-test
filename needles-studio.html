@@ -800,6 +800,10 @@ body.panels-active #verifyCard{display:none!important}
 }
 
 </style>
+<!-- Face It template definitions and shared geometry. Also loaded by
+     faceit-bench.html, which is the point -- one set of chart, placard and
+     height-scaling numbers, so what the bench previews is what ships. -->
+<script src="faceit-templates.js"></script>
 </head>
 <body class="initial-upload-focus">
 <div id="deviceIdDisplay" style="position:fixed;bottom:2px;left:2px;font-size:9px;color:#444;z-index:998;pointer-events:none"></div>
@@ -7446,15 +7450,35 @@ function showDesignMethodCard(){
   // and point to Design By Description instead when Wraparound is
   // active, rather than letting the customer pick a prop that can't
   // actually produce a wraparound result.
+  // NARROWED (Sep 2026). This used to hide all three props whenever Wraparound
+  // was active, and the reasoning above is still right about Cover Me and Home
+  // Sweet Home: each is one fixed picture of a specific real thing, and a
+  // magazine cover stretched round a mug is not a magazine cover.
+  //
+  // It was never right about the format itself, only about the templates that
+  // existed. Face It now carries templates built AS the band -- a five-head
+  // Rushmore, a lineup room, a three-view booking sheet -- for which Wraparound
+  // is the native format rather than a distortion. So Wraparound hides the props
+  // that cannot wrap and keeps the one that can, and falls back to the old
+  // behaviour whenever Face It has nothing wrap-shaped to offer, which is the
+  // honest state until those plates are delivered.
   const isMugWraparound=(product==='mug' && mugPrintMode==='wraparound');
+  const faceItSurvivesWrap=isMugWraparound && faceItOfferableCount()>0;
+  const hideAllProps=isMugWraparound && !faceItSurvivesWrap;
   const propsIntroEl=document.getElementById('designMethodPropsIntro');
   const wraparoundNoticeEl=document.getElementById('designMethodWraparoundNotice');
   const tilesEl=document.getElementById('designMethodTiles');
   const downArrowEl=document.getElementById('designMethodDownArrow');
-  if(propsIntroEl)propsIntroEl.style.display=isMugWraparound?'none':'block';
-  if(wraparoundNoticeEl)wraparoundNoticeEl.style.display=isMugWraparound?'block':'none';
-  if(tilesEl)tilesEl.style.display=isMugWraparound?'none':'flex';
-  if(downArrowEl)downArrowEl.style.display=isMugWraparound?'none':'flex';
+  if(propsIntroEl)propsIntroEl.style.display=hideAllProps?'none':'block';
+  if(wraparoundNoticeEl)wraparoundNoticeEl.style.display=hideAllProps?'block':'none';
+  if(tilesEl)tilesEl.style.display=hideAllProps?'none':'flex';
+  if(downArrowEl)downArrowEl.style.display=hideAllProps?'none':'flex';
+  // On a wraparound that Face It can serve, the other two tiles come down --
+  // they are the ones the original rule was actually about.
+  ['designMethodCoverMeBtn','designMethodHomeBtn'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el)el.style.display=faceItSurvivesWrap?'none':'';
+  });
 
   // THE BOX ABOVE HAS TO ACTUALLY BE THERE (Aug 2026). Found the moment
   // Wraparound came back off the shelf: this notice reads "describe your
@@ -7473,7 +7497,7 @@ function showDesignMethodCard(){
   // idea box: same handoff track two makes, minus the silence, since here
   // there genuinely is something to explain. design-method-focus is
   // deliberately NOT applied -- it would dim the very box being pointed at.
-  if(isMugWraparound){
+  if(hideAllProps){
     snapExpandThrough('ideaCard');
     mugDesignConfirmed=false;
     mugGuidedChangesActive=true;
@@ -7650,24 +7674,122 @@ function handleCoverMePhotoChange(event){
 // result at roughly half to a third the file size. Original .png files
 // left in the repo untouched as a fallback, just no longer referenced
 // here.
-const FACE_IT_CATALOG = [
-  "king.jpg","queen.jpg","emperor.jpg","empress.jpg","the_don.jpg","the_donna.jpg",
-  "hero_him.jpg","hero_her.jpg","home_him.jpg","home_her.jpg","its_alive.jpg",
-  "aww_hell.jpg","your_future.jpg","all_hail.jpg","cloud_9_her.jpg","cloud_9_him.jpg",
-  "heavenly_host.jpg","heavenly_hostess.jpg","on_my_mind.jpg","come_to_think_of_it.jpg"
-];
+// MOVED TO faceit-templates.js (Sep 2026). The roster is now a list of objects
+// carrying their own metadata -- prompt class, panel mode, allowed products,
+// how many text inputs, which height chart -- because three templates added in
+// this batch differ from each other in all of those at once, and a sixth
+// parallel Set alongside FACE_IT_TEXT_TEMPLATES would have been unreadable.
+//
+// These two names are DERIVED from that list rather than replaced, so every
+// existing reader keeps working unchanged. Templates whose artwork has not been
+// delivered yet are excluded here (awaitingArt), which is what keeps a broken
+// <img> out of the grid; faceit-bench.html deliberately ignores that flag so
+// the layout can be calibrated before the plate arrives.
+const FACE_IT_CATALOG = FaceItCatalog.FACE_IT_CATALOG;
 
 // These two are not simple face-swaps -- picking either one opens a
 // free-text box (the customer's own words, rendered into the piece by
 // the AI in the reference's watercolor/caption style) and shows the
 // 3/4-angle pose guidance, since a straight-on photo reads flat once
 // faded. Every other template in the catalog is a plain face-merge.
-const FACE_IT_TEXT_TEMPLATES = new Set(["on_my_mind.jpg","come_to_think_of_it.jpg"]);
+const FACE_IT_TEXT_TEMPLATES = FaceItCatalog.FACE_IT_TEXT_TEMPLATES;
+
+// Whichever template the customer is on, as the object rather than the bare
+// filename. Everything downstream branches on this instead of on a filename.
+function faceItActiveTemplate(){
+  return selectedFaceItTemplate ? FaceItCatalog.get(selectedFaceItTemplate) : null;
+}
 
 let selectedFaceItTemplate=null;
 // Mirrors coverMeOverridePhoto -- lets the customer swap in a
 // different photo than the one uploaded at the very start of the flow.
 let faceItOverridePhoto=null;
+
+// The three cut panels of a composited template, carried from generateFaceIt to
+// approveFaceIt. Null for a plain face-merge, which still produces one picture
+// the customer places wherever they like.
+let faceItPendingPanels=null;
+
+// Person or pet, for the templates that ask. It picks the height chart -- a dog
+// measured against a 3'0"-to-6'0" human chart reads as a nine-foot dog, which is
+// a different joke than the one intended.
+let faceItSubjectChoice='pet';
+function faceItSubjectKind(){
+  const t=faceItActiveTemplate();
+  if(!t||t.subjectScale!=='choice')return (t&&t.chart==='pet')?'pet':'person';
+  return faceItSubjectChoice;
+}
+
+// Two buttons, shown only for templates that declare subjectScale:'choice'.
+function renderFaceItSubjectKind(t){
+  const existing=document.getElementById('faceItSubjectKindWrap');
+  if(existing)existing.remove();
+  if(!t||t.subjectScale!=='choice')return;
+  const anchorEl=document.getElementById('faceItTextBoxWrap');
+  if(!anchorEl||!anchorEl.parentNode)return;
+  const wrap=document.createElement('div');
+  wrap.id='faceItSubjectKindWrap';
+  wrap.style.cssText='margin-top:.9rem';
+  const lab=document.createElement('div');
+  lab.className='note';
+  lab.style.cssText='color:#29a3ff;text-align:center';
+  lab.textContent='Who is being booked?';
+  const row=document.createElement('div');
+  row.style.cssText='display:flex;gap:.5rem;margin-top:.5rem';
+  [['pet','\uD83D\uDC36 A pet'],['person','\uD83E\uDDD1 A person']].forEach(([key,label])=>{
+    const b=document.createElement('div');
+    b.className='btn-select'+(faceItSubjectChoice===key?' selected':'');
+    b.style.cssText='flex:1;text-align:center;padding:.6rem .4rem;font-size:13px';
+    b.textContent=label;
+    b.onclick=()=>{ faceItSubjectChoice=key; renderFaceItSubjectKind(t); };
+    row.appendChild(b);
+  });
+  wrap.appendChild(lab);wrap.appendChild(row);
+  anchorEl.parentNode.insertBefore(wrap,anchorEl.nextSibling);
+}
+
+// Load an image the canvas is allowed to read back from. The generated result
+// arrives as a Supabase URL, and drawing a cross-origin image onto a canvas
+// taints it -- toDataURL then throws and the whole composite is lost. Asking
+// for CORS up front is the fix; if the fetch is refused we say so rather than
+// failing silently with a blank mug.
+function loadFaceItImage(src){
+  return new Promise((resolve,reject)=>{
+    const img=new Image();
+    img.crossOrigin='anonymous';
+    img.onload=()=>resolve(img);
+    img.onerror=()=>reject(new Error('could not load '+src));
+    img.src=src;
+  });
+}
+
+// Subject in, finished strip and its three panels out. The strip is what the
+// customer sees on the easel; the panels are what go onto the mug.
+async function buildFaceItComposite(kind,resultImageUrl,opts){
+  const t=faceItActiveTemplate();
+  try{
+    const subject=await loadFaceItImage(resultImageUrl);
+    const surface=faceItSurfaceKey()==='mug'?'mug':faceItSurfaceKey();
+    let strip;
+    if(kind==='mugshot'){
+      strip=FaceItBuild.buildMugshotStrip(subject,{
+        surface, chart:opts.chart, texts:opts.texts
+      });
+    } else {
+      const plate=t&&t.file?await loadFaceItImage(t.file):null;
+      strip=FaceItBuild.buildLineupStrip(plate,subject,{
+        surface, heightInches:opts.heightInches
+      });
+    }
+    return { stripUrl:strip.toDataURL('image/png'), panels:FaceItBuild.sliceIntoPanels(strip) };
+  }catch(err){
+    // Never lose the customer's generation over a compositing failure. They get
+    // the raw result and a plain explanation instead of a silent blank.
+    console.error('Face It composite failed:',err);
+    showGuidanceAlert('Your picture came out fine, but we could not lay it onto the backdrop just now — showing you the picture on its own.');
+    return null;
+  }
+}
 
 function renderFaceItGrid(){
   const grid=document.getElementById('faceItGrid');
@@ -7675,35 +7797,192 @@ function renderFaceItGrid(){
   grid.style.gridAutoFlow='dense';
   grid.querySelectorAll('.faceit-tile').forEach(el=>el.remove());
   const previewSlot=document.getElementById('faceItPreviewSlot');
-  FACE_IT_CATALOG.forEach(filename=>{
+  // Iterates templates, not filenames -- the mug shot has no file of its own,
+  // because its artwork is drawn rather than delivered. tileFor() renders its
+  // thumbnail from the same code that draws the template, so a placard that
+  // moves moves in the tile too.
+  //
+  // Also filtered by product: the mug shot is three booking views across a
+  // band, which is slivers on a 20oz and a duplicated profile on the Tundra,
+  // so it is offered only on the surfaces whose wrap is genuinely panoramic.
+  // A portrait template is one fixed 3:4 picture; stretched round a mug it
+  // distorts, which is why props were hidden under Wraparound at all. A
+  // wrap-shaped template has the opposite problem and none of that one -- it
+  // IS the band. So Wraparound narrows the grid rather than closing it.
+  const wrapOnly=faceItWraparoundActive();
+  FaceItCatalog.liveTemplates().forEach(t=>{
+    if(wrapOnly && t.shape!=='wrap')return;
+    if(!FaceItCatalog.allowsProduct(t,faceItSurfaceKey()))return;
+    const tile=FaceItCatalog.tileFor(t);
+    if(!tile)return;
     const btn=document.createElement('div');
-    btn.className='btn-select faceit-tile'+(selectedFaceItTemplate===filename?' selected':'');
+    btn.className='btn-select faceit-tile'+(selectedFaceItTemplate===t.id?' selected':'');
     btn.style.padding='4px';
-    btn.dataset.faceit=filename;
-    btn.onclick=()=>pickFaceItTemplate(filename);
+    btn.dataset.faceit=t.id;
+    btn.onclick=()=>pickFaceItTemplate(t.id);
     const img=document.createElement('img');
-    img.src=filename;
-    img.alt=filename;
+    img.src=tile;
+    img.alt=t.name;
     img.style.cssText='width:100%;border-radius:6px;background:#fff';
     btn.appendChild(img);
     grid.insertBefore(btn,previewSlot);
   });
 }
 
-function pickFaceItTemplate(filename){
-  selectedFaceItTemplate=filename;
+// Which print surface the customer is actually on, in the vocabulary the
+// template roster uses. Travel cups are not one shape -- the variant decides
+// whether a wrap is panoramic -- so the selected variant wins where there is
+// one, and a plain mug is just a mug.
+function faceItWraparoundActive(){
+  return (product==='mug' && mugPrintMode==='wraparound');
+}
+
+// How many templates Face It could actually offer right now. Drives the door
+// in showDesignMethodCard(): with none to show there is nothing to open, which
+// is also the honest state until the two plates land.
+function faceItOfferableCount(){
+  const wrapOnly=faceItWraparoundActive();
+  const key=faceItSurfaceKey();
+  return FaceItCatalog.liveTemplates().filter(t=>
+    (!wrapOnly || t.shape==='wrap') && FaceItCatalog.allowsProduct(t,key)
+  ).length;
+}
+
+function faceItSurfaceKey(){
+  if(product==='mug')return 'mug';
+  // selectedTravelProductKey is the same key TRAVEL_WRAP_RATIO is indexed by,
+  // so a template's product list and the measured wrap ratios speak the same
+  // vocabulary. The variant is chosen before Design Method is ever reached
+  // (the Aug 2026 reorder), so it is set by the time this runs; if it somehow
+  // is not, returning '' fails every product check and a fussy template stays
+  // hidden. Better a missing tile than three booking views on a 1.33:1 band.
+  if(product==='water bottle')return selectedTravelProductKey||'';
+  return product||'mug';
+}
+
+function pickFaceItTemplate(templateId){
+  selectedFaceItTemplate=templateId;
   document.querySelectorAll('#faceItGrid .faceit-tile').forEach(b=>{
-    b.classList.toggle('selected',b.dataset.faceit===filename);
+    b.classList.toggle('selected',b.dataset.faceit===templateId);
   });
-  const isTextTemplate=FACE_IT_TEXT_TEMPLATES.has(filename);
+  const t=faceItActiveTemplate();
   const poseNote=document.getElementById('faceItPoseNote');
   const textWrap=document.getElementById('faceItTextBoxWrap');
-  if(poseNote)poseNote.style.display=isTextTemplate?'block':'none';
-  if(textWrap)textWrap.style.display=isTextTemplate?'block':'none';
+
+  // Was a single boolean on a Set membership. Now every one of these is a
+  // property of the template, because the three added in Sep 2026 disagree
+  // with each other on all of them: one wants three text boxes, one wants a
+  // height, and the pose advice is the OPPOSITE of the existing one -- the
+  // watercolour templates want a 3/4 angle, the mug shot and the lineup want
+  // the customer square-on so the model has a clean front to work from.
+  const textCount=FaceItCatalog.textInputCount(t);
+  if(textWrap)textWrap.style.display=textCount?'block':'none';
+  renderFaceItTextInputs(t,textCount);
+  renderFaceItHeightInput(t);
+  renderFaceItSubjectKind(t);
+
+  if(poseNote){
+    const advice=t&&t.poseNote;
+    poseNote.style.display=advice?'block':'none';
+    if(advice==='frontal'){
+      poseNote.textContent='For this one, use a photo taken straight on, evenly lit, with your whole face visible \u2014 the artist works the side views out from the front, so a clean head-on shot gives the best likeness.';
+    } else if(advice==='three-quarter'){
+      poseNote.textContent='For best results, use a photo where you\u2019re turned slightly to the side (a 3/4 angle) rather than facing the camera head-on \u2014 it gives the artist\u2019s rendering the most natural depth and light.';
+    }
+  }
+
   document.getElementById('faceItGenerateBtn').style.display='block';
   document.body.classList.add('faceitgen-focus');
   const genBtn=document.getElementById('faceItGenerateBtn');
   if(genBtn)scrollToStableBottom(genBtn,16,15);
+}
+
+// One box for the watercolour templates, three for the mug shot -- one placard
+// per view. Three separate charges read as a sequence when the mug is turned,
+// which is a joke only a three-panel item can tell, so they are three inputs
+// rather than one repeated.
+function renderFaceItTextInputs(t,count){
+  const wrap=document.getElementById('faceItTextBoxWrap');
+  if(!wrap)return;
+  const legacy=document.getElementById('faceItTextBox');
+  const multi=document.getElementById('faceItMultiTextWrap');
+  if(multi)multi.remove();
+  if(count<=1){
+    if(legacy)legacy.style.display='';
+    return;
+  }
+  if(legacy)legacy.style.display='none';
+  const host=document.createElement('div');
+  host.id='faceItMultiTextWrap';
+  const labels=['Left profile','Front','Right profile'];
+  for(let i=0;i<count;i++){
+    const lab=document.createElement('div');
+    lab.className='note';
+    lab.style.cssText='margin-top:.6rem;color:#29a3ff';
+    lab.textContent=labels[i]||('Placard '+(i+1));
+    const inp=document.createElement('input');
+    inp.type='text';
+    inp.className='faceit-placard-input';
+    inp.dataset.idx=String(i);
+    inp.maxLength=28;
+    inp.value=(t.textDefaults&&t.textDefaults[i])||'';
+    inp.style.cssText='width:100%;margin-top:.25rem';
+    host.appendChild(lab);
+    host.appendChild(inp);
+  }
+  const shuffle=document.createElement('button');
+  shuffle.type='button';
+  shuffle.className='download-btn';
+  shuffle.style.cssText='margin-top:.75rem';
+  shuffle.textContent='\uD83C\uDFB2 Surprise me';
+  shuffle.onclick=()=>{
+    const pool=(t.textRoster||[]).slice();
+    host.querySelectorAll('.faceit-placard-input').forEach(el=>{
+      if(pool.length)el.value=pool.splice(Math.floor(Math.random()*pool.length),1)[0];
+    });
+  };
+  host.appendChild(shuffle);
+  wrap.appendChild(host);
+}
+
+// The lineup, and only the lineup. Two selects rather than a text field: on a
+// phone that is one tap each and it cannot produce garbage. The value never
+// reaches the prompt -- see the placement maths in faceit-templates.js.
+function renderFaceItHeightInput(t){
+  const existing=document.getElementById('faceItHeightWrap');
+  if(existing)existing.remove();
+  if(!t||!t.heightInput)return;
+  const anchor=document.getElementById('faceItTextBoxWrap');
+  if(!anchor||!anchor.parentNode)return;
+  const wrap=document.createElement('div');
+  wrap.id='faceItHeightWrap';
+  wrap.style.cssText='margin-top:.9rem';
+  const lab=document.createElement('div');
+  lab.className='note';
+  lab.style.cssText='color:#29a3ff;text-align:center';
+  lab.textContent='How tall are you? We line you up against the chart for real.';
+  const row=document.createElement('div');
+  row.style.cssText='display:flex;gap:.5rem;margin-top:.5rem';
+  const ft=document.createElement('select');
+  ft.id='faceItHeightFt';
+  for(let f=3;f<=7;f++)ft.appendChild(new Option(f+"'",String(f)));
+  ft.value='5';
+  const inch=document.createElement('select');
+  inch.id='faceItHeightIn';
+  for(let i=0;i<12;i++)inch.appendChild(new Option(i+'"',String(i)));
+  inch.value='10';
+  ft.style.flex=inch.style.flex='1';
+  row.appendChild(ft);row.appendChild(inch);
+  wrap.appendChild(lab);wrap.appendChild(row);
+  anchor.parentNode.insertBefore(wrap,anchor.nextSibling);
+}
+
+// Inches, or null if the template does not ask.
+function faceItSelectedHeightInches(){
+  const ft=document.getElementById('faceItHeightFt');
+  const inch=document.getElementById('faceItHeightIn');
+  if(!ft||!inch)return null;
+  return parseInt(ft.value,10)*12+parseInt(inch.value,10);
 }
 
 function updateFaceItPreviewImg(){
@@ -7729,6 +8008,7 @@ function showFaceItCard(){
   selectedFaceItTemplate=null;
   faceItOverridePhoto=null;
   faceItPendingResultUrl=null;
+  faceItPendingPanels=null;
   document.body.classList.remove('faceitgen-focus');
   document.body.classList.remove('faceitreveal-focus');
   document.getElementById('faceItGenerateBtn').style.display='none';
@@ -7788,11 +8068,25 @@ async function generateFaceIt(){
     showGuidanceAlert('Please upload a photo first.');
     return;
   }
+  const faceItTpl=faceItActiveTemplate();
   const isTextTemplate=FACE_IT_TEXT_TEMPLATES.has(selectedFaceItTemplate);
   const textBox=document.getElementById('faceItTextBox');
   const customerWords=(textBox && textBox.value.trim())||'';
   if(isTextTemplate && !customerWords){
     showGuidanceAlert('Please share a few words for this one first — that\'s what makes it yours.');
+    return;
+  }
+  // Templates that want more than one line collect them from the generated
+  // inputs instead. Blank placards are allowed -- an empty card is a legitimate
+  // look, and a customer who wants two charges rather than three should not be
+  // made to invent a third.
+  const placardTexts=[...document.querySelectorAll('#faceItMultiTextWrap .faceit-placard-input')]
+    .map(el=>el.value.trim());
+  // The lineup's whole gag is being measured against the chart, so the height
+  // is not optional. It never reaches the prompt -- see faceit-templates.js.
+  const faceItHeightIn=faceItSelectedHeightInches();
+  if(faceItTpl && faceItTpl.heightInput && !faceItHeightIn){
+    showGuidanceAlert('How tall are you? We need it to line you up against the chart.');
     return;
   }
   if(currentTokenBalance!==null && currentTokenBalance<=0 && !isAdminDevice){
@@ -7827,14 +8121,34 @@ async function generateFaceIt(){
 
   try{
     currentGenerationController=new AbortController();
-    const templateDataUrl=await magazineAssetToJpegDataURL(selectedFaceItTemplate,1024);
+    // A procedural template has no artwork to send: its furniture is drawn
+    // after the fact, and the model is asked for the subject alone. The plate
+    // templates still send theirs, at a larger max edge than the 1024 the 3:4
+    // scenes use -- 1024 on a 2.14:1 band is 1024x478, too thin to carry a
+    // face through a merge.
+    const faceItSendsPlate=!!(faceItTpl && faceItTpl.file);
+    const templateDataUrl=faceItSendsPlate
+      ? await magazineAssetToJpegDataURL(selectedFaceItTemplate, faceItTpl.shape==='wrap'?2048:1024)
+      : null;
     const descBox=document.getElementById('faceItDescriptionBox');
     const faceNote=(descBox && descBox.value.trim())
       ? ` The customer notes: "${descBox.value.trim()}" -- use this to identify which face in the photo to use if there is more than one.`
       : '';
 
     let prompt;
-    if(isTextTemplate){
+    // The three templates added in Sep 2026 each want a different kind of
+    // picture, so the branch is on the template's declared kind rather than on
+    // Set membership. The two original variants below are untouched -- they are
+    // listed as read-only in flow-tests/AUDIT-CATALOG.md and nothing here edits
+    // a character of them.
+    const faceItKind=faceItTpl?faceItTpl.kind:'face-merge';
+    if(faceItKind==='stone-carve'){
+      prompt=FaceItPrompts.stoneCarve(faceNote);
+    } else if(faceItKind==='mugshot'){
+      prompt=FaceItPrompts.mugshotSubject(faceNote, faceItSubjectKind());
+    } else if(faceItKind==='lineup'){
+      prompt=FaceItPrompts.lineupFigure(faceNote);
+    } else if(isTextTemplate){
       prompt='Merge the uploaded photo\'s face onto the provided reference image in the exact spot indicated, applying the same soft, faded watercolor/sepia wash shown in the reference -- render the face with that same delicate, translucent treatment rather than a sharp photographic look, and give the subject a thoughtful, distance-gazing expression matching the reference\'s mood. '+
         'Preserve the reference\'s overall composition, color palette, and decorative flourishes exactly as shown. '+
         'Replace the reference\'s sample text with the following words, rendered in the same elegant hand-lettered style, size, and placement as the reference text -- render this text exactly as written, verbatim, with no changes or additions: "'+customerWords.replace(/"/g,'\'')+'"'+faceNote;
@@ -7844,13 +8158,34 @@ async function generateFaceIt(){
         'Match the lighting and photographic style of the reference so the result looks like a genuine, seamlessly composited portrait, not a pasted-on face.'+faceNote;
     }
 
-    const resultImageUrl=await callGenerateAPI({
+    let resultImageUrl=await callGenerateAPI({
       workingImage:photo,
       prompt,
       refImageA:templateDataUrl,
+      // templateMerge is what turns the flat magenta field the two cutout
+      // prompts ask for into real transparency, server-side, before the image
+      // ever comes back. Keep it true for every Face It run.
       templateMerge:true,
       signal:currentGenerationController.signal
     });
+
+    // COMPOSITE TEMPLATES. What came back is a subject on transparency, not a
+    // finished picture -- the furniture goes on here, where a height chart's
+    // numbers can never be garbled and the lineup's alien is identical on every
+    // mug that ships. faceItPendingPanels carries the three cut panels through
+    // to approveFaceIt; a plain face-merge leaves it null and behaves as before.
+    faceItPendingPanels=null;
+    if(faceItKind==='mugshot'||faceItKind==='lineup'){
+      const built=await buildFaceItComposite(faceItKind,resultImageUrl,{
+        texts:placardTexts,
+        heightInches:faceItHeightIn,
+        chart:faceItSubjectKind()==='pet'?'pet':'human'
+      });
+      if(built){
+        resultImageUrl=built.stripUrl;
+        faceItPendingPanels=built.panels;
+      }
+    }
 
     document.body.classList.remove('generation-active');
     document.body.classList.add('faceitreveal-focus');
@@ -7899,6 +8234,49 @@ let faceItPendingResultUrl=null;
 // specific about it.
 async function approveFaceIt(){
   if(!faceItPendingResultUrl)return;
+
+  // A TRIPTYCH IS NOT A PICTURE THE CUSTOMER PLACES (Sep 2026). The panel card
+  // downstream is built on "one picture, three switches" -- its own comment says
+  // so -- and that premise holds for every template that produces a single
+  // image. The mug shot produces three different pictures whose positions are
+  // the whole point: a left profile in the right-hand slot is not a booking
+  // photo, and two views out of three is not one either. So the three panels are
+  // filled here, in order, and the panel picker is skipped entirely.
+  //
+  // The state set below is the same set the panorama path fills, for the same
+  // reason -- the panels ARE one strip in thirds, so the joins stay continuous
+  // and a wraparound order prints one piece rather than three.
+  if(faceItPendingPanels){
+    const panels=faceItPendingPanels;
+    faceItPendingPanels=null;
+    placements.left =addToRecentDesigns(panels.left);
+    placements.front=addToRecentDesigns(panels.center);
+    placements.right=addToRecentDesigns(panels.right);
+    ['left','front','right'].forEach(pos=>{ placementAdjust[pos]=defaultPanelAdjust(); });
+    unframedWrapDesignUrls={left:panels.left,center:panels.center,right:panels.right};
+    if(faceItWraparoundActive()){
+      wraparoundPanoramaUrl=faceItPendingResultUrl;
+      wraparoundPanoramaBaseUrl=faceItPendingResultUrl;
+      pendingWraparoundRaw={left:panels.left,center:panels.center,right:panels.right};
+      lastWraparoundMethod='panorama';
+    }
+    pendingSlotTarget=null;
+    faceItPendingResultUrl=null;
+    document.body.classList.remove('faceitreveal-focus');
+    document.getElementById('faceItEaselApproveRow').style.display='none';
+    document.getElementById('faceItGenerateBtn').disabled=false;
+    document.getElementById('faceItCard').style.display='none';
+    const clipboard=document.querySelector('.needles-clipboard');
+    if(clipboard)clipboard.style.display='';
+    panelScreenExit='mockup';
+    renderRecentDesigns();
+    renderPositionHolder();
+    updatePlacementSummary();
+    saveMugState();
+    smoothScrollToTarget('positionHolderCard','center');
+    return;
+  }
+
   const designId=addToRecentDesigns(faceItPendingResultUrl);
   const posHolder=document.getElementById('positionHolderCard');
   if(posHolder)posHolder.style.display='none';
@@ -7928,6 +8306,7 @@ function keepTweakingFaceIt(){
   document.getElementById('faceItEaselApproveRow').style.display='none';
   document.getElementById('faceItGenerateBtn').disabled=false;
   faceItPendingResultUrl=null;
+  faceItPendingPanels=null;
   const clipboard=document.querySelector('.needles-clipboard');
   if(clipboard)clipboard.style.display='';
   document.getElementById('faceItCard').style.display='block';
@@ -8121,13 +8500,34 @@ async function generateGoodMorning(){
       'Match the perspective, scale, and lighting of the reference scene so the photo reads as genuinely framed by the window, not pasted flat on top. '+
       'Preserve every other element of the reference exactly as shown -- the frame, shutters, flowers, and any props -- do not alter anything outside the window opening itself.';
 
-    const resultImageUrl=await callGenerateAPI({
+    let resultImageUrl=await callGenerateAPI({
       workingImage:photo,
       prompt,
       refImageA:templateDataUrl,
+      // templateMerge is what turns the flat magenta field the two cutout
+      // prompts ask for into real transparency, server-side, before the image
+      // ever comes back. Keep it true for every Face It run.
       templateMerge:true,
       signal:currentGenerationController.signal
     });
+
+    // COMPOSITE TEMPLATES. What came back is a subject on transparency, not a
+    // finished picture -- the furniture goes on here, where a height chart's
+    // numbers can never be garbled and the lineup's alien is identical on every
+    // mug that ships. faceItPendingPanels carries the three cut panels through
+    // to approveFaceIt; a plain face-merge leaves it null and behaves as before.
+    faceItPendingPanels=null;
+    if(faceItKind==='mugshot'||faceItKind==='lineup'){
+      const built=await buildFaceItComposite(faceItKind,resultImageUrl,{
+        texts:placardTexts,
+        heightInches:faceItHeightIn,
+        chart:faceItSubjectKind()==='pet'?'pet':'human'
+      });
+      if(built){
+        resultImageUrl=built.stripUrl;
+        faceItPendingPanels=built.panels;
+      }
+    }
 
     document.body.classList.remove('generation-active');
     document.body.classList.add('goodmorningreveal-focus');
