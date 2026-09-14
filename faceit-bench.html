@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<link rel="manifest" href="faceit-bench-manifest.json">
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Face It — Template Bench</title>
+<link rel="icon" type="image/png" sizes="192x192" href="faceit-icon-192.png"/>
+<link rel="icon" type="image/png" sizes="512x512" href="faceit-icon-512.png"/>
+<meta name="theme-color" content="#0d0d12"/>
+<style>
+  :root{--blue:#7ab8ff;--gold:#f0d98a;--line:#2a2a35;--panel:#17171f}
+  *{box-sizing:border-box}
+  body{background:#0d0d12;color:#eee;font-family:-apple-system,Segoe UI,Roboto,sans-serif;margin:0;padding:16px;line-height:1.45}
+  h1{font-size:1.25rem;margin:0 0 4px;color:var(--gold)}
+  h2{font-size:.95rem;margin:0 0 10px;color:#c9a05a;border-bottom:1px solid #333;padding-bottom:5px}
+  .sub{color:#999;font-size:.85rem;margin-bottom:16px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:14px}
+  .tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+  .tab{flex:1;min-width:120px;background:#12121a;border:1px solid var(--line);border-radius:9px;padding:.65rem .5rem;text-align:center;cursor:pointer;font-size:.85rem;color:#bbb}
+  .tab.on{border-color:#4a7dbf;background:#1b2636;color:var(--blue);font-weight:700}
+  label{display:block;margin:12px 0 4px;font-size:.82rem;color:#bbb}
+  input[type=text],select{width:100%;background:#0d0d0d;color:#eee;border:1px solid #333;border-radius:6px;padding:8px;font-size:.9rem;font-family:inherit}
+  input[type=range]{width:100%;accent-color:var(--blue)}
+  .slider-row{display:flex;align-items:center;gap:10px}
+  .slider-row output{min-width:62px;text-align:right;font-size:.78rem;color:var(--blue);font-variant-numeric:tabular-nums}
+  button{background:#2a3a52;color:#9ecbff;border:1px solid #3d5578;border-radius:8px;padding:.6rem 1rem;font-size:.88rem;cursor:pointer}
+  button:hover{background:#33455f}
+  button.wide{width:100%;margin-top:10px}
+  button.warn{background:#4a2020;color:#ffb3b3;border-color:#7a3030}
+  .note{color:#888;font-size:.78rem;margin-top:8px}
+  .warnbox{background:#3a2a1a;border:1px solid #7a5a30;border-radius:8px;padding:10px 12px;font-size:.8rem;color:#ffd9a3;margin-bottom:12px}
+  .stage{background:#555;border-radius:8px;padding:10px;overflow-x:auto}
+  .checker{background-image:linear-gradient(45deg,#3a3a3a 25%,transparent 25%),linear-gradient(-45deg,#3a3a3a 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#3a3a3a 75%),linear-gradient(-45deg,transparent 75%,#3a3a3a 75%);background-size:22px 22px;background-position:0 0,0 11px,11px -11px,-11px 0;background-color:#4a4a4a}
+  canvas{display:block;max-width:100%;height:auto;border-radius:4px}
+  .mugrow{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;margin-top:12px}
+  .mug{position:relative;width:180px}
+  .mug .body{background:#fff;border-radius:10px;overflow:hidden;aspect-ratio:825/1155;box-shadow:0 3px 14px rgba(0,0,0,.45)}
+  .mug .body canvas{width:100%;height:100%;object-fit:fill;border-radius:0}
+  .mug .handle{position:absolute;top:30%;width:30px;height:38%;border:9px solid #fff;border-radius:0 26px 26px 0;right:-40px}
+  .mug .handle.l{left:-40px;border-radius:26px 0 0 26px}
+  .mug .cap{text-align:center;font-size:.72rem;color:#999;margin-top:6px}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  pre{background:#0a0a0e;padding:10px;border-radius:6px;overflow-x:auto;font-size:.72rem;color:#aaa;white-space:pre-wrap;word-break:break-word;max-height:260px}
+  details summary{color:var(--blue);cursor:pointer;font-size:.84rem;margin-top:6px}
+  .hide{display:none!important}
+  .flag{display:inline-block;background:#3a1a1a;border:1px solid #7a3030;color:#ffb3b3;border-radius:5px;padding:1px 7px;font-size:.7rem;margin-left:6px}
+</style>
+</head>
+<body>
+
+<h1>Face It — Template Bench</h1>
+<div class="sub">Preview and calibrate the three new templates at true print size. Nothing here spends a token unless you press the red button.</div>
+
+<div class="tabs" id="tabs"></div>
+
+<div class="card">
+  <h2>Preview <span id="surfaceLabel" style="color:#666;font-weight:400;font-size:.8rem"></span></h2>
+  <div class="stage checker"><canvas id="strip"></canvas></div>
+  <div class="note" id="stripNote"></div>
+  <div class="mugrow" id="mugRow">
+    <div class="mug"><div class="body"><canvas id="mugL"></canvas></div><div class="handle l"></div><div class="cap">LEFT</div></div>
+    <div class="mug"><div class="body"><canvas id="mugF"></canvas></div><div class="cap">FRONT</div></div>
+    <div class="mug"><div class="body"><canvas id="mugR"></canvas></div><div class="handle"></div><div class="cap">RIGHT</div></div>
+  </div>
+  <label><input type="checkbox" id="guides" style="width:auto"> Show seam &amp; panel guides</label>
+</div>
+
+<div class="card">
+  <h2>Subject</h2>
+  <div id="subjectControls"></div>
+</div>
+
+<div class="card" id="controlsCard">
+  <h2>Controls</h2>
+  <div id="controls"></div>
+</div>
+
+<div class="card">
+  <h2>Calibration</h2>
+  <div id="calib"></div>
+  <button class="wide" id="copyCalib">Copy these values</button>
+  <div class="note">Tune against a real generation, then paste the result back into <code>MUGSHOT_DEFAULTS</code> / the template's plate constants in <code>faceit-templates.js</code>.</div>
+</div>
+
+<div class="card">
+  <h2>Prompt</h2>
+  <pre id="promptOut"></pre>
+  <button class="wide" id="copyPrompt">Copy prompt</button>
+</div>
+
+<script src="faceit-templates.js"></script>
+<script>
+(function(){
+'use strict';
+const G = window.FaceItGeom, M = window.FaceItMugshot, C = window.FaceItComposite,
+      P = window.FaceItPrompts, CAT = window.FaceItCatalog;
+
+const BENCH = [
+  CAT.get('procedural:mug-shot'),
+  CAT.get('lineup.webp'),
+  CAT.get('mount_rushmore.webp')
+];
+let active = BENCH[0];
+let subjectImg = null;          // uploaded or placeholder, transparent PNG
+let plateImg   = null;          // Bud's plate, once it exists
+const state = {
+  surface: 'mug',
+  chart: 'pet',
+  heightIn: 70,
+  texts: ['ATE MY UNDERWEAR','IT WAS THE CAT','WOULD DO IT AGAIN'],
+  cal: null
+};
+
+/* Reload the calibration set that belongs to this template. Sharing one object
+   across all three was what put the lineup's floor off the bottom of the strip. */
+function calFor(t){
+  const plate = CAT.PLATE_DEFAULTS[t.kind];
+  return plate ? Object.assign({}, M.DEFAULTS, plate)
+               : Object.assign({ floorPct: 0 }, M.DEFAULTS);
+}
+
+/* ---- tabs ---- */
+const tabs = document.getElementById('tabs');
+BENCH.forEach((t,i)=>{
+  const el=document.createElement('div');
+  el.className='tab'+(i===0?' on':'');
+  el.innerHTML=t.name+(t.needsPlate?'<span class="flag">plate</span>':'');
+  el.onclick=()=>{ active=t; subjectImg=null; state.cal=calFor(t); [...tabs.children].forEach(c=>c.classList.remove('on')); el.classList.add('on'); build(); };
+  tabs.appendChild(el);
+});
+
+/* ---- control builders ---- */
+function slider(host,key,label,min,max,step,fmt){
+  const wrap=document.createElement('div');
+  const id='s_'+key;
+  wrap.innerHTML='<label for="'+id+'">'+label+'</label><div class="slider-row"><input type="range" id="'+id+'" min="'+min+'" max="'+max+'" step="'+step+'"><output></output></div>';
+  host.appendChild(wrap);
+  const inp=wrap.querySelector('input'), out=wrap.querySelector('output');
+  inp.value=state.cal[key];
+  const show=()=>out.textContent=(fmt?fmt(+inp.value):(+inp.value).toFixed(3));
+  show();
+  inp.oninput=()=>{ state.cal[key]=+inp.value; show(); render(); };
+  return inp;
+}
+
+function build(){
+  const sub=document.getElementById('subjectControls');
+  const ctl=document.getElementById('controls');
+  const cal=document.getElementById('calib');
+  sub.innerHTML=''; ctl.innerHTML=''; cal.innerHTML='';
+
+  /* subject source — identical for all three */
+  sub.innerHTML =
+    '<div class="grid2">'+
+      '<button id="usePlaceholder">Use placeholder subject</button>'+
+      '<button id="useUpload">Upload a cutout PNG</button>'+
+    '</div>'+
+    '<input type="file" id="upl" accept="image/*" class="hide">'+
+    '<div class="note">The placeholder stands in for a generated subject so you can judge the furniture, the scale and the seams without spending anything. Upload a transparent PNG to check how a real cutout composites — that is where magenta fringing on hair and fur will show up.</div>'+
+    (active.needsPlate ?
+      '<div class="warnbox" style="margin-top:12px"><b>This template needs a plate from Bud.</b> What you see behind the subject is a stand-in drawn here so the layout, seams and safe areas can be judged now. Turn on the guides above — the shaded bands are what the handle eats and where the panel cuts fall.</div>'+
+      '<button class="wide" id="usePlate">Load a plate to test</button><input type="file" id="pl" accept="image/*" class="hide">'
+      : '');
+
+  sub.querySelector('#usePlaceholder').onclick=()=>{ subjectImg=makePlaceholder(); render(); };
+  sub.querySelector('#useUpload').onclick=()=>sub.querySelector('#upl').click();
+  sub.querySelector('#upl').onchange=e=>loadFile(e,i=>{subjectImg=i;render();});
+  if(active.needsPlate){
+    sub.querySelector('#usePlate').onclick=()=>sub.querySelector('#pl').click();
+    sub.querySelector('#pl').onchange=e=>loadFile(e,i=>{plateImg=i;render();});
+  }
+
+  /* surface */
+  const surf=document.createElement('div');
+  surf.innerHTML='<label>Print surface</label><select id="surf">'+
+    '<option value="mug">Coffee mug — 2475 × 1155 (2.14:1)</option>'+
+    (CAT.allowsProduct(active,'travel-mug-14oz-handle')?'<option value="travel-mug-14oz-handle">14oz travel handle — 1995 × 930 (2.15:1)</option>':'')+
+    '</select>';
+  ctl.appendChild(surf);
+  surf.querySelector('#surf').value=state.surface;
+  surf.querySelector('#surf').onchange=e=>{state.surface=e.target.value;render();};
+
+  if(active.kind==='mugshot'){
+    const t=document.createElement('div');
+    t.innerHTML='<label>Chart scale</label><select id="chartSel">'+
+      '<option value="pet">Pet — 4" to 2\'0", 4" steps</option>'+
+      '<option value="human">Human — 3\'0" to 7\'6", 6" steps</option></select>'+
+      '<label>Placard 1 — left profile</label><input type="text" id="t0">'+
+      '<label>Placard 2 — front</label><input type="text" id="t1">'+
+      '<label>Placard 3 — right profile</label><input type="text" id="t2">'+
+      '<button class="wide" id="shuffle">Shuffle from the roster</button>';
+    ctl.appendChild(t);
+    t.querySelector('#chartSel').value=state.chart;
+    t.querySelector('#chartSel').onchange=e=>{state.chart=e.target.value;render();};
+    [0,1,2].forEach(i=>{
+      const el=t.querySelector('#t'+i);
+      el.value=state.texts[i];
+      el.oninput=()=>{state.texts[i]=el.value;render();};
+    });
+    t.querySelector('#shuffle').onclick=()=>{
+      const pool=active.textRoster.slice();
+      state.texts=state.texts.map(()=>pool.splice(Math.floor(Math.random()*pool.length),1)[0]||'');
+      [0,1,2].forEach(i=>t.querySelector('#t'+i).value=state.texts[i]);
+      render();
+    };
+    ['chartTopPct','chartBottomPct','subjectHPct','placardWPct','placardHPct','placardTopPct','cordRisePct','cordSpreadPct']
+      .forEach(k=>slider(cal,k,k,0,1,0.001));
+  }
+
+  if(active.kind==='lineup'){
+    const t=document.createElement('div');
+    t.innerHTML='<label>Customer height</label><input type="text" id="ht" placeholder="5\'10&quot;, 70, or 178cm">'+
+      '<div class="note">Never goes into the prompt. The model paints a figure at whatever size it likes; the canvas scales it so the feet sit on the floor and the head lands on this line.</div>';
+    ctl.appendChild(t);
+    const el=t.querySelector('#ht');
+    el.value=G.formatHeight(state.heightIn);
+    el.oninput=()=>{const v=G.parseHeightToInches(el.value); if(v){state.heightIn=v;render();}};
+    ['chartTopPct','chartBottomPct'].forEach(k=>slider(cal,k,k,0,1,0.001));
+    slider(cal,'floorPct','floorPct (0 = derive from chart)',0,1,0.001);
+  }
+
+  if(active.kind==='stone-carve'){
+    ctl.innerHTML+='<div class="note">This one is the odd one out: the model repaints the entire picture rather than compositing, so there is no furniture to calibrate here. What the bench is good for on this template is the safe area — turn the guides on and check the headline and the alien-equivalent headroom survive the crop to 2.14:1.</div>';
+  }
+
+  document.getElementById('controlsCard').classList.toggle('hide', !ctl.innerHTML.trim());
+  if(!subjectImg) subjectImg=makePlaceholder();
+  render();
+}
+
+function loadFile(e,cb){
+  const f=e.target.files[0]; if(!f)return;
+  const r=new FileReader();
+  r.onload=()=>{ const i=new Image(); i.onload=()=>cb(i); i.src=r.result; };
+  r.readAsDataURL(f);
+}
+
+/* A deliberately crude stand-in. It is not trying to look like a person -- it is
+   trying to have a definite top, a definite bottom and a definite width so the
+   scaling maths and the seam positions can be read off the preview honestly. */
+function makePlaceholder(){
+  const bust = (active && active.kind==='mugshot');
+  const c=document.createElement('canvas');
+  c.width=420; c.height=bust?560:1000;
+  const x=c.getContext('2d');
+  x.fillStyle='#8fa6c4';
+  if(bust){
+    /* head, neck, shoulders, cropped at the bottom edge -- the shape a booking
+       photo actually is, so the framing reads honestly on the preview */
+    /* Head about a third of the visible bust -- roughly what a real booking
+       crop gives you. An oversized head made the placards look tiny and the
+       framing look broken when neither was. */
+    x.beginPath(); x.arc(210,100,88,0,7); x.fill();
+    x.fillRect(172,180,76,60);
+    x.beginPath(); x.moveTo(52,240); x.lineTo(368,240); x.lineTo(400,560); x.lineTo(20,560); x.closePath(); x.fill();
+  } else {
+    x.beginPath(); x.arc(210,130,95,0,7); x.fill();
+    x.fillRect(150,215,120,60);
+    x.beginPath(); x.moveTo(60,300); x.lineTo(360,300); x.lineTo(330,760); x.lineTo(90,760); x.closePath(); x.fill();
+    x.fillRect(95,760,90,230); x.fillRect(235,760,90,230);
+    x.fillStyle='#6b82a0'; x.fillRect(80,975,120,25); x.fillRect(220,975,120,25);
+  }
+  const i=new Image(); i.onload=render; i.src=c.toDataURL(); return i;
+}
+
+/* ---- render ---- */
+function render(){
+  const S=G.SURFACES[state.surface]||G.SURFACES.mug;
+  const W=S.w,H=S.h;
+  const cv=document.getElementById('strip');
+  cv.width=W; cv.height=H;
+  const ctx=cv.getContext('2d');
+  ctx.clearRect(0,0,W,H);
+  document.getElementById('surfaceLabel').textContent='— '+W+' × '+H+'  ('+(W/H).toFixed(2)+':1)';
+
+  let scale=null;
+  if(active.kind==='mugshot'){
+    const opts=Object.assign({},state.cal,{chart:state.chart});
+    scale=M.drawBackplate(ctx,W,H,opts);
+    if(subjectImg&&subjectImg.complete&&subjectImg.naturalWidth){
+      /* Three views across the strip. Real output is one wide image the slicer
+         cuts in thirds; the placeholder is a single figure, so it is drawn once
+         per panel to stand in for that. */
+      const headIn = state.chart==='pet' ? 20 : 68;
+      for(let i=0;i<3;i++){
+        C.placeBust(ctx,subjectImg,scale,headIn,W/3*(i+0.5),H,state.cal.subjectHPct);
+      }
+    }
+    M.drawForeplate(ctx,W,H,state.texts,opts);
+  } else {
+    scale=drawStandInRoom(ctx,W,H);
+    if(subjectImg&&subjectImg.complete&&subjectImg.naturalWidth&&active.kind==='lineup'){
+      C.placeFigure(ctx,subjectImg,scale,state.heightIn,W*0.5);
+    }
+  }
+
+  if(document.getElementById('guides').checked) drawGuides(ctx,W,H);
+  paintMugs(cv,W,H);
+  document.getElementById('stripNote').textContent = noteFor();
+  document.getElementById('promptOut').textContent = promptFor();
+}
+
+/* Stand-in room for the two templates whose plate does not exist yet. Grey box,
+   correct chart, correct floor -- enough to judge where things land, honest
+   about being a placeholder. */
+function drawStandInRoom(ctx,W,H){
+  const g=ctx.createLinearGradient(0,0,0,H);
+  g.addColorStop(0,'#c8ccd2'); g.addColorStop(1,'#9aa0a8');
+  ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+  const top=H*(state.cal.chartTopPct||0.085), bot=H*(state.cal.chartBottomPct||0.66);
+  const floorOverride=state.cal.floorPct?H*state.cal.floorPct:null;
+  const scale=G.buildChartScale(G.CHARTS[active.chart||'human'],top,bot,floorOverride);
+  G.drawHeightChart(ctx,{scale,x:0,w:W,lineColor:'#22252a',
+    lineWidth:Math.max(1.5,H*0.0025),labelSize:Math.round(H*0.042),
+    labelPad:Math.round(W*0.010),labelSides:'both'});
+  ctx.fillStyle='rgba(40,44,50,.55)';
+  ctx.fillRect(0,scale.floorY,W,H-scale.floorY);
+  ctx.fillStyle='rgba(255,255,255,.5)';
+  ctx.font='bold '+Math.round(H*0.05)+'px Arial';
+  ctx.textAlign='center';
+  ctx.fillText('STAND-IN PLATE — '+active.name.toUpperCase(),W/2,H*0.13);
+  return scale;
+}
+
+/* The two things a wrap composition can get wrong, made visible. */
+function drawGuides(ctx,W,H){
+  ctx.save();
+  ctx.fillStyle='rgba(255,60,60,.20)';
+  ctx.fillRect(0,0,W*0.055,H); ctx.fillRect(W-W*0.055,0,W*0.055,H);
+  ctx.strokeStyle='rgba(255,255,255,.85)'; ctx.lineWidth=Math.max(2,H*0.004);
+  ctx.setLineDash([H*0.03,H*0.02]);
+  [W/3,W*2/3].forEach(x=>{ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();});
+  ctx.setLineDash([]);
+  ctx.fillStyle='rgba(255,255,255,.9)';
+  ctx.font='bold '+Math.round(H*0.035)+'px Arial';
+  ctx.textAlign='center';
+  ctx.fillText('HANDLE',W*0.028,H*0.5);
+  ctx.fillText('HANDLE',W-W*0.028,H*0.5);
+  ctx.fillText('FRONT PANEL',W*0.5,H*0.96);
+  ctx.restore();
+}
+
+function paintMugs(src,W,H){
+  [['mugL',0],['mugF',1],['mugR',2]].forEach(([id,i])=>{
+    const c=document.getElementById(id);
+    c.width=Math.round(W/3); c.height=H;
+    c.getContext('2d').drawImage(src,W/3*i,0,W/3,H,0,0,W/3,H);
+  });
+}
+
+function noteFor(){
+  if(active.kind==='mugshot') return 'Drawn at full print size — no art asset involved. The chart runs the whole width in one pass, so it stays continuous through both panel seams.';
+  if(active.kind==='lineup')  return 'Figure scaled to '+G.formatHeight(Math.round(state.heightIn))+'. Feet on the floor line, head on its chart line — both from the same arithmetic.';
+  return 'Nothing to composite on this one: the model repaints the whole picture. Use the guides to check the crop.';
+}
+
+function promptFor(){
+  const note=P.faceNoteFrom('');
+  if(active.kind==='mugshot')    return P.mugshotSubject(note,state.chart==='pet'?'pet':'person');
+  if(active.kind==='lineup')     return P.lineupFigure(note);
+  return P.stoneCarve(note);
+}
+
+document.getElementById('guides').onchange=render;
+document.getElementById('copyPrompt').onclick=()=>navigator.clipboard.writeText(promptFor());
+document.getElementById('copyCalib').onclick=()=>navigator.clipboard.writeText(JSON.stringify(state.cal,null,2));
+
+state.cal = calFor(active);
+build();
+})();
+</script>
+</body>
+</html>
