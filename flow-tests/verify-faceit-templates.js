@@ -44,6 +44,25 @@ const LEGACY_TEXT = ["on_my_mind.jpg","come_to_think_of_it.jpg"];
 
 const scenarios = {};
 
+scenarios.unprovedTemplatesStayOutOfTheGrid = async (page) => {
+  const r = await page.evaluate(() => {
+    const C = window.FaceItCatalog;
+    return {
+      live: C.liveTemplates().map(t => t.id),
+      all:  C.TEMPLATES.length,
+      benchStillSeesThem: ['lineup.webp','mount_rushmore.webp'].every(f => !!C.get(f))
+    };
+  });
+  for (const id of ['lineup.webp', 'mount_rushmore.webp'])
+    if (r.live.indexOf(id) !== -1)
+      return `FAIL: ${id} is in the customer grid but its prompt has never been run`;
+  if (r.live.indexOf('procedural:mug-shot') === -1)
+    return 'FAIL: the mug shot was gated too — it is the one that WAS proved';
+  if (!r.benchStillSeesThem)
+    return 'FAIL: the gated templates vanished from the catalogue entirely; the bench needs them';
+  return `PASS: ${r.all - r.live.length} unproved templates held back, mug shot live, bench still sees all`;
+};
+
 scenarios.legacyRosterIntact = async (page) => {
   const r = await page.evaluate(() => ({
     files: window.FaceItCatalog.TEMPLATES.filter(t => t.file).map(t => t.file),
@@ -364,6 +383,35 @@ studio.perTemplateInputsAppearAndCleanUp = async (page) => {
   if (r.wrapOnText !== 'block' || !r.legacyBox)
     return 'FAIL: the original single text box did not come back for a text template';
   return 'PASS: per-template inputs appear, pre-fill, and clean up behind themselves';
+};
+
+studio.missingModuleCannotBreakTheStudio = async (page) => {
+  const errs = [];
+  page.on('pageerror', e => errs.push(e.message.split('\n')[0]));
+  await page.route('**/faceit-templates.js', r => r.abort());
+  await page.reload({ waitUntil: 'domcontentloaded' });
+  await page.waitForTimeout(1500);
+  const r = await page.evaluate(() => {
+    /* functions declared late in the same script block: if the module's absence
+       threw, the block aborts and none of these exist */
+    const late = ['generate','approveFaceIt','startNeedlesStage','continueToRealMockup',
+                  'saveMugState','resetEverythingFreshStart'];
+    const missing = late.filter(n => typeof window[n] !== 'function');
+    let door = null;
+    try {
+      product = 'mug'; mugPrintMode = 'three-panel';
+      chosenTrack = null; byoDeclaredIntent = null;
+      showDesignMethodCard();
+      door = document.getElementById('designMethodCard').style.display;
+    } catch (e) { door = 'THREW: ' + e.message; }
+    return { ok: (typeof FACEIT_MODULE_OK !== 'undefined') ? FACEIT_MODULE_OK : 'undeclared',
+             missing, door };
+  });
+  if (errs.length) return `FAIL: a missing module threw — ${errs[0]}`;
+  if (r.ok !== false) return `FAIL: FACEIT_MODULE_OK is ${r.ok}, expected false with the file blocked`;
+  if (r.missing.length) return `FAIL: the throw killed the rest of the script — ${r.missing.join(', ')} undefined`;
+  if (r.door !== 'none') return `FAIL: props offered without the module (card display "${r.door}")`;
+  return 'PASS: without the module the studio runs intact and quietly skips the props';
 };
 
 studio.mugshotSurfaceGate = async (page) => {

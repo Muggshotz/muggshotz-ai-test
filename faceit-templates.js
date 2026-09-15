@@ -741,9 +741,13 @@ const FACE_IT_TEMPLATES = [
      position, composed at 2475 x 1155. The headline is carved into the art and
      the model redraws it every run, which is the known risk on this one --
      crop budget comes off the foreground, never the headroom. */
+  // Plate delivered and correct. The prompt has never been run: turning a face
+  // into carved granite is a bigger ask than the merge that was proved, and it
+  // is the one template where the model repaints the whole picture, headline
+  // lettering included. Run one before this reaches anybody.
   { file: 'mount_rushmore.webp', name: 'The 5th Face', kind: 'stone-carve',
     shape: 'wrap', panels: 'any', poseNote: 'three-quarter',
-    needsPlate: true },
+    needsPlate: true, unvalidated: true },
 
   /* No plate at all -- drawn by FaceItMugshot at the surface's real size.
      Restricted to the two surfaces whose wrap is actually panoramic: three
@@ -771,8 +775,12 @@ const FACE_IT_TEMPLATES = [
   // That is not a cosmetic typo here. This chart is the instrument customers
   // are measured against, so relabelLineupChart moves the existing numbers onto
   // the lines they belong to before anything is composited onto the plate.
+  // Plate delivered, chart relabelled, height maths proved arithmetically. Not
+  // proved visually: no real cutout has ever been composited onto it, and the
+  // prompt has to invent a whole standing body from a head shot. The despill is
+  // also only proved on golden fur, not on skin and hair.
   { file: 'lineup.webp', name: 'The Lineup', kind: 'lineup',
-    shape: 'wrap', panels: 'any', needsPlate: true,
+    shape: 'wrap', panels: 'any', needsPlate: true, unvalidated: true,
     heightInput: true, chart: 'human', poseNote: 'frontal' }
 ];
 
@@ -793,7 +801,15 @@ FACE_IT_TEMPLATES.forEach(t => { byId[t.id] = t; });
    it is a customer clicking something that cannot generate. Flip the flag in
    the same commit that adds the artwork. The bench ignores it on purpose, which
    is how the layout gets calibrated before the art arrives. */
-function isLive(t){ return !t.awaitingArt; }
+/* unvalidated is a different thing from awaitingArt and deserves its own flag.
+   awaitingArt means the picture does not exist yet. unvalidated means it does,
+   and the code is wired and tested, but the PROMPT has never been run against
+   the real model -- so we do not know what the customer would actually get.
+   Both keep a template out of the grid; only one is fixed by a delivery.
+
+   faceit-bench.html ignores both on purpose, so all three can be previewed and
+   calibrated while the storefront offers only what has been proved. */
+function isLive(t){ return !t.awaitingArt && !t.unvalidated; }
 
 const FACE_IT_CATALOG = FACE_IT_TEMPLATES.filter(t => t.file && isLive(t)).map(t => t.file);
 const FACE_IT_TEXT_TEMPLATES = new Set(

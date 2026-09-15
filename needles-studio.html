@@ -7434,7 +7434,8 @@ function showDesignMethodCard(){
   // card (Cover Me, Face It, Home Sweet Home) IS an AI generation, which
   // is precisely what they declared against at the intent gate. Same
   // silent handling as a product the gimmicks were never meant for.
-  if(chosenTrack==='describe' || byoDeclaredIntent==='byo' || !PRODUCTS_WITH_GIMMICKS.includes(product)){
+  if(chosenTrack==='describe' || byoDeclaredIntent==='byo' || !PRODUCTS_WITH_GIMMICKS.includes(product)
+     || !FACEIT_MODULE_OK){
     goToDescribeAndGenerate();
     return;
   }
@@ -7685,18 +7686,34 @@ function handleCoverMePhotoChange(event){
 // delivered yet are excluded here (awaitingArt), which is what keeps a broken
 // <img> out of the grid; faceit-bench.html deliberately ignores that flag so
 // the layout can be calibrated before the plate arrives.
-const FACE_IT_CATALOG = FaceItCatalog.FACE_IT_CATALOG;
+// A MISSING MODULE MUST NOT TAKE THE STUDIO WITH IT (Sep 2026). faceit-templates.js
+// is a <script src> in the head, and a bare `const X = FaceItCatalog...` throws a
+// ReferenceError when it fails to load. That does not fail politely: the throw
+// aborts the rest of THIS script block, so every function declared below it never
+// exists. Reproduced by blocking the file -- pickProduct undefined, later code
+// failing on temporal-dead-zone errors, the whole studio dead, not just Face It.
+//
+// Guarded, a missing module degrades to exactly what a product the gimmicks were
+// never meant for already does: the props are not offered and the customer goes
+// down the description path without being told anything is wrong.
+const FACEIT_MODULE_OK = (typeof FaceItCatalog !== 'undefined'
+                       && typeof FaceItBuild   !== 'undefined'
+                       && typeof FaceItPrompts !== 'undefined'
+                       && typeof FaceItComposite !== 'undefined');
+if(!FACEIT_MODULE_OK)console.error('faceit-templates.js did not load — Face It props disabled, rest of studio unaffected');
+const FACE_IT_CATALOG = FACEIT_MODULE_OK ? FaceItCatalog.FACE_IT_CATALOG : [];
 
 // These two are not simple face-swaps -- picking either one opens a
 // free-text box (the customer's own words, rendered into the piece by
 // the AI in the reference's watercolor/caption style) and shows the
 // 3/4-angle pose guidance, since a straight-on photo reads flat once
 // faded. Every other template in the catalog is a plain face-merge.
-const FACE_IT_TEXT_TEMPLATES = FaceItCatalog.FACE_IT_TEXT_TEMPLATES;
+const FACE_IT_TEXT_TEMPLATES = FACEIT_MODULE_OK ? FaceItCatalog.FACE_IT_TEXT_TEMPLATES : new Set();
 
 // Whichever template the customer is on, as the object rather than the bare
 // filename. Everything downstream branches on this instead of on a filename.
 function faceItActiveTemplate(){
+  if(!FACEIT_MODULE_OK)return null;
   return selectedFaceItTemplate ? FaceItCatalog.get(selectedFaceItTemplate) : null;
 }
 
@@ -7792,6 +7809,7 @@ async function buildFaceItComposite(kind,resultImageUrl,opts){
 }
 
 function renderFaceItGrid(){
+  if(!FACEIT_MODULE_OK)return;
   const grid=document.getElementById('faceItGrid');
   if(!grid)return;
   grid.style.gridAutoFlow='dense';
@@ -7841,6 +7859,7 @@ function faceItWraparoundActive(){
 // in showDesignMethodCard(): with none to show there is nothing to open, which
 // is also the honest state until the two plates land.
 function faceItOfferableCount(){
+  if(!FACEIT_MODULE_OK)return 0;
   const wrapOnly=faceItWraparoundActive();
   const key=faceItSurfaceKey();
   return FaceItCatalog.liveTemplates().filter(t=>
