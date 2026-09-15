@@ -401,6 +401,56 @@ studio.aNarrowedGridExplainsItself = async (page) => {
   return `PASS: ${r.three.tiles} tiles unfiltered, ${r.wrap.tiles} on Wraparound with both notes shown and a route back`;
 };
 
+studio.faceItPlumbingStaysInsideFaceIt = async (page) => {
+  /* A find-and-replace wiring the composite step matched the identical API-call
+     block in generateGoodMorning as well, so Home Sweet Home threw on variables
+     that only exist in generateFaceIt -- after the server had already charged
+     the token. Shipped that way for a day. This reads each generator's source
+     and refuses any Face It plumbing outside the one function that owns it. */
+  const r = await page.evaluate(() => {
+    const leaks = [];
+    const names = ['generateGoodMorning', 'generateCoverMe', 'generate'];
+    for (const n of names) {
+      const fn = window[n];
+      if (typeof fn !== 'function') { leaks.push(`${n} missing`); continue; }
+      const src = fn.toString();
+      for (const tok of ['faceItKind', 'faceItPendingPanels', 'placardTexts', 'faceItHeightIn', 'buildFaceItComposite', 'sliceFaceItResultIntoPanels'])
+        if (src.indexOf(tok) !== -1) leaks.push(`${n} references ${tok}`);
+    }
+    const own = window.generateFaceIt.toString();
+    const ok = ['faceItKind', 'faceItPendingPanels', 'sliceFaceItResultIntoPanels'].every(t => own.indexOf(t) !== -1);
+    return { leaks, ok };
+  });
+  if (r.leaks.length) return `FAIL: Face It plumbing leaked — ${r.leaks.join('; ')}`;
+  if (!r.ok) return 'FAIL: generateFaceIt lost its own plumbing';
+  return 'PASS: Face It plumbing exists only in generateFaceIt; Good Morning and Cover Me are clean';
+};
+
+studio.aBandIsCutIntoThirdsNotCopied = async (page) => {
+  /* Rushmore is a single image the width of the whole mug. Down the single-image
+     path it lands in the front slot and autoFillCoverMePanels copies it to left
+     and right -- five heads printed three times, headline in every view. Alyx
+     read it off the mockup. Wrap-shaped results must be sliced like a panorama. */
+  const r = await page.evaluate(async () => {
+    const panels = await sliceFaceItResultIntoPanels('/mount_rushmore.webp');
+    if (!panels) return { failed: 'slice returned null' };
+    const load = src => new Promise(res => { const i = new Image(); i.onload = () => res(i); i.src = src; });
+    const [l, c, rgt] = await Promise.all([load(panels.left), load(panels.center), load(panels.right)]);
+    return {
+      widths: [l.naturalWidth, c.naturalWidth, rgt.naturalWidth],
+      heights: [l.naturalHeight, c.naturalHeight, rgt.naturalHeight],
+      distinct: new Set([panels.left, panels.center, panels.right]).size,
+      third: Math.round(2475 / 3)
+    };
+  });
+  if (r.failed) return `FAIL: ${r.failed}`;
+  if (r.distinct !== 3) return `FAIL: the three panels are not three different images (${r.distinct} distinct)`;
+  if (r.widths.some(w => Math.abs(w - r.third) > 2))
+    return `FAIL: panels are ${r.widths.join('/')}px wide, expected ~${r.third} each — not thirds of the band`;
+  if (r.heights.some(h => h !== 1155)) return `FAIL: panel height changed (${r.heights.join('/')})`;
+  return `PASS: band cut into three distinct ${r.widths[0]}px panels, full height`;
+};
+
 studio.perTemplateInputsAppearAndCleanUp = async (page) => {
   const r = await page.evaluate(() => {
     product = 'mug'; mugPrintMode = 'three-panel'; renderFaceItGrid();

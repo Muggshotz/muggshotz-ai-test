@@ -7801,6 +7801,24 @@ function loadFaceItImage(src){
   });
 }
 
+// A finished band, cut into the three panels the mug flow expects. Same thirds
+// the panorama slicer uses, so the joins stay continuous by construction.
+async function sliceFaceItResultIntoPanels(resultImageUrl){
+  try{
+    const img=await loadFaceItImage(resultImageUrl);
+    const c=document.createElement('canvas');
+    c.width=img.naturalWidth||img.width;
+    c.height=img.naturalHeight||img.height;
+    c.getContext('2d').drawImage(img,0,0);
+    return FaceItBuild.sliceIntoPanels(c);
+  }catch(err){
+    // Fall back to the single-image path rather than lose the generation. It
+    // will triple, but the customer keeps their picture and can still place it.
+    console.error('Face It band slice failed:',err);
+    return null;
+  }
+}
+
 // Subject in, finished strip and its three panels out. The strip is what the
 // customer sees on the easel; the panels are what go onto the mug.
 async function buildFaceItComposite(kind,resultImageUrl,opts){
@@ -8229,6 +8247,20 @@ async function generateFaceIt(){
         resultImageUrl=built.stripUrl;
         faceItPendingPanels=built.panels;
       }
+    } else if(faceItTpl && faceItTpl.shape==='wrap'){
+      // A BAND IS NOT A PICTURE THE CUSTOMER PLACES (Sep 2026). Left to the
+      // single-image path, a wrap-shaped result lands in the front slot and
+      // autoFillCoverMePanels copies it onto left and right as well -- the
+      // "one picture, three switches" design, correct for a portrait scene.
+      // For Rushmore it printed all five heads three times round the mug, each
+      // copy cropped to a third, with the headline showing in every view.
+      // Alyx spotted it from the mockup: Washington at one edge, his niece at
+      // the other, and the middle presidents in both. The Mug Shot already had
+      // its own slicing path; this routes every wrap-shaped template through
+      // the same one, so the band is cut into thirds exactly as the panorama
+      // path cuts a panorama.
+      const panels=await sliceFaceItResultIntoPanels(resultImageUrl);
+      if(panels)faceItPendingPanels=panels;
     }
 
     document.body.classList.remove('generation-active');
@@ -8544,34 +8576,13 @@ async function generateGoodMorning(){
       'Match the perspective, scale, and lighting of the reference scene so the photo reads as genuinely framed by the window, not pasted flat on top. '+
       'Preserve every other element of the reference exactly as shown -- the frame, shutters, flowers, and any props -- do not alter anything outside the window opening itself.';
 
-    let resultImageUrl=await callGenerateAPI({
+    const resultImageUrl=await callGenerateAPI({
       workingImage:photo,
       prompt,
       refImageA:templateDataUrl,
-      // templateMerge is what turns the flat magenta field the two cutout
-      // prompts ask for into real transparency, server-side, before the image
-      // ever comes back. Keep it true for every Face It run.
       templateMerge:true,
       signal:currentGenerationController.signal
     });
-
-    // COMPOSITE TEMPLATES. What came back is a subject on transparency, not a
-    // finished picture -- the furniture goes on here, where a height chart's
-    // numbers can never be garbled and the lineup's alien is identical on every
-    // mug that ships. faceItPendingPanels carries the three cut panels through
-    // to approveFaceIt; a plain face-merge leaves it null and behaves as before.
-    faceItPendingPanels=null;
-    if(faceItKind==='mugshot'||faceItKind==='lineup'){
-      const built=await buildFaceItComposite(faceItKind,resultImageUrl,{
-        texts:placardTexts,
-        heightInches:faceItHeightIn,
-        chart:faceItSubjectKind()==='pet'?'pet':'human'
-      });
-      if(built){
-        resultImageUrl=built.stripUrl;
-        faceItPendingPanels=built.panels;
-      }
-    }
 
     document.body.classList.remove('generation-active');
     document.body.classList.add('goodmorningreveal-focus');
