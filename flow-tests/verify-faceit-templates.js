@@ -45,22 +45,31 @@ const LEGACY_TEXT = ["on_my_mind.jpg","come_to_think_of_it.jpg"];
 const scenarios = {};
 
 scenarios.unprovedTemplatesStayOutOfTheGrid = async (page) => {
+  /* Asserts the RULE, not the roster. The first version named Rushmore and the
+     lineup as the gated pair, which was true for about an hour -- the moment a
+     template is proved and un-gated the test fails for the wrong reason. Same
+     dating mistake as naming the one wrap-native template. */
   const r = await page.evaluate(() => {
     const C = window.FaceItCatalog;
+    const live = new Set(C.liveTemplates().map(t => t.id));
+    const wrong = C.TEMPLATES.filter(t => {
+      const shouldBeLive = !t.awaitingArt && !t.unvalidated;
+      return shouldBeLive !== live.has(t.id);
+    }).map(t => `${t.id} (awaitingArt=${!!t.awaitingArt} unvalidated=${!!t.unvalidated} live=${live.has(t.id)})`);
+    const gated = C.TEMPLATES.filter(t => t.awaitingArt || t.unvalidated);
     return {
-      live: C.liveTemplates().map(t => t.id),
-      all:  C.TEMPLATES.length,
-      benchStillSeesThem: ['lineup.webp','mount_rushmore.webp'].every(f => !!C.get(f))
+      wrong,
+      gatedCount: gated.length,
+      /* whatever is gated must still be reachable by id, because the bench
+         previews it while the storefront does not */
+      benchCanStillSeeGated: gated.every(t => !!C.get(t.id))
     };
   });
-  for (const id of ['lineup.webp', 'mount_rushmore.webp'])
-    if (r.live.indexOf(id) !== -1)
-      return `FAIL: ${id} is in the customer grid but its prompt has never been run`;
-  if (r.live.indexOf('procedural:mug-shot') === -1)
-    return 'FAIL: the mug shot was gated too — it is the one that WAS proved';
-  if (!r.benchStillSeesThem)
-    return 'FAIL: the gated templates vanished from the catalogue entirely; the bench needs them';
-  return `PASS: ${r.all - r.live.length} unproved templates held back, mug shot live, bench still sees all`;
+  if (r.wrong.length)
+    return `FAIL: gate flags and the grid disagree — ${r.wrong.join('; ')}`;
+  if (!r.benchCanStillSeeGated)
+    return 'FAIL: a gated template vanished from the catalogue entirely; the bench needs it';
+  return `PASS: grid membership follows the gate flags exactly (${r.gatedCount} held back, still visible to the bench)`;
 };
 
 scenarios.legacyRosterIntact = async (page) => {

@@ -741,13 +741,28 @@ const FACE_IT_TEMPLATES = [
      position, composed at 2475 x 1155. The headline is carved into the art and
      the model redraws it every run, which is the known risk on this one --
      crop budget comes off the foreground, never the headroom. */
-  // Plate delivered and correct. The prompt has never been run: turning a face
-  // into carved granite is a bigger ask than the merge that was proved, and it
-  // is the one template where the model repaints the whole picture, headline
-  // lettering included. Run one before this reaches anybody.
+  // PROVED AGAINST THE REAL MODEL (2026-09-15). Two live runs through the
+  // face-on-template harness with this exact prompt and plate: likeness held,
+  // the four presidents and the carved headline survived, and the fifth head
+  // grew out of the cliff with no seam or cut-out edge.
+  //
+  // It does NOT come back as granite. The face stays photographic -- real skin,
+  // real teeth, real eyes -- because identityLock is prepended to every
+  // generation and insists on "the real ... skin tone" and the person's actual
+  // clothing. Two attempts to win that argument from the customer prompt both
+  // failed: three paragraphs of granite insistence, then a scoped permission to
+  // suspend skin tone, texture, eye colour and clothing. The second also
+  // loosened the likeness, drifting the face toward a generic bald archetype,
+  // so it was dropped.
+  //
+  // Shipped as-is on Alyx's call: the photographic version is instantly
+  // recognisable as the customer, which is what they are buying. The MATERIAL
+  // paragraph stays despite producing no granite -- it is what keeps the head
+  // embedded in the rock rather than pasted onto it, which Alyx had established
+  // from earlier runs of his own without it.
   { file: 'mount_rushmore.webp', name: 'The 5th Face', kind: 'stone-carve',
     shape: 'wrap', panels: 'any', poseNote: 'three-quarter',
-    needsPlate: true, unvalidated: true },
+    needsPlate: true },
 
   /* No plate at all -- drawn by FaceItMugshot at the surface's real size.
      Restricted to the two surfaces whose wrap is actually panoramic: three
