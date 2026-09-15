@@ -366,6 +366,41 @@ studio.wraparoundNarrowsRatherThanCloses = async (page) => {
   return 'PASS: Wraparound keeps the wrap-native template and drops the ones that cannot wrap';
 };
 
+studio.aNarrowedGridExplainsItself = async (page) => {
+  /* Wraparound narrowing is correct -- the twenty portrait scenes and the other
+     two props are single fixed pictures that cannot wrap. Doing it SILENTLY is
+     not: going from twenty-two tiles to two with no word of explanation reads as
+     a broken page, and did. A filter the customer cannot see the reason for is a
+     fault however right the filter is. */
+  const r = await page.evaluate(() => {
+    const shown = id => { const e = document.getElementById(id); return !!e && e.style.display !== 'none'; };
+    const read = () => {
+      product = 'mug'; chosenTrack = null; byoDeclaredIntent = null;
+      showDesignMethodCard(); renderFaceItGrid();
+      return {
+        tiles: document.querySelectorAll('#faceItGrid .faceit-tile').length,
+        faceItNote: shown('faceItWrapNote'),
+        propsNote: shown('designMethodWrapPropsNote')
+      };
+    };
+    mugPrintMode = 'three-panel'; const three = read();
+    mugPrintMode = 'wraparound';  const wrap  = read();
+    const note = document.getElementById('faceItWrapNote');
+    return { three, wrap, text: note ? note.textContent : '' };
+  });
+  if (r.wrap.tiles >= r.three.tiles)
+    return `FAIL: Wraparound did not narrow the grid (${r.three.tiles} -> ${r.wrap.tiles}) — this test proves nothing`;
+  if (!r.wrap.faceItNote)
+    return `FAIL: the grid dropped to ${r.wrap.tiles} tiles with no explanation on the Face It card`;
+  if (!r.wrap.propsNote)
+    return 'FAIL: two props were hidden with no explanation on the props card';
+  if (!/three panels/i.test(r.text))
+    return 'FAIL: the note does not tell the customer where the other scenes went';
+  if (r.three.faceItNote || r.three.propsNote)
+    return 'FAIL: the notes show on Three Panels, where nothing is hidden';
+  return `PASS: ${r.three.tiles} tiles unfiltered, ${r.wrap.tiles} on Wraparound with both notes shown and a route back`;
+};
+
 studio.perTemplateInputsAppearAndCleanUp = async (page) => {
   const r = await page.evaluate(() => {
     product = 'mug'; mugPrintMode = 'three-panel'; renderFaceItGrid();

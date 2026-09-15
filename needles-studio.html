@@ -1455,6 +1455,12 @@ Tell Needles <span style="color:#7ab8ff">what you have in mind</span>
 <div class="card" id="faceItCard" style="display:none">
 <div class="card-title">🎭 Let's Just Face It</div>
 <div class="note" style="margin-top:0;margin-bottom:.9rem">Pick the scene you want your face on.</div>
+<!-- SAY WHY THE GRID IS SHORT (Sep 2026). Wraparound narrows this grid to the
+     scenes built as a full band, which is correct -- but silently going from
+     twenty-two tiles to two reads as a broken page, not a filtered one. Alyx
+     hit exactly that and asked where everything had gone. A filter the customer
+     cannot see the reason for is a fault, however right the filter is. -->
+<div class="note" id="faceItWrapNote" style="display:none;margin-top:0;margin-bottom:.9rem;color:#29a3ff">These are the scenes built to wrap the whole way around your mug. For the other twenty, switch your print style to <b>Up to Three Panels</b>.</div>
 <div class="theme-grid" id="faceItGrid" style="grid-template-columns:repeat(4,1fr)">
 <div class="btn-select" id="faceItPreviewSlot" style="grid-column:2/4;grid-row:2/4;padding:6px;display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;cursor:pointer" onclick="triggerFaceItPhotoChange()">
 <img id="faceItPreviewImg" style="width:100%;border-radius:8px;background:#fff"/>
@@ -7480,6 +7486,21 @@ function showDesignMethodCard(){
     const el=document.getElementById(id);
     if(el)el.style.display=faceItSurvivesWrap?'none':'';
   });
+  // Same reasoning as the note on the Face It card: two props vanishing without
+  // a word looks like a fault. They are single fixed pictures and genuinely
+  // cannot wrap, so tell the customer that and where to find them.
+  {
+    let propsNote=document.getElementById('designMethodWrapPropsNote');
+    if(!propsNote && tilesEl && tilesEl.parentNode){
+      propsNote=document.createElement('div');
+      propsNote.id='designMethodWrapPropsNote';
+      propsNote.className='note';
+      propsNote.style.cssText='margin-top:.9rem;text-align:center;color:#29a3ff';
+      propsNote.innerHTML='Cover Me and Home Sweet Home are single fixed pictures, so they can\'t wrap all the way around. Switch to <b>Up to Three Panels</b> to use them.';
+      tilesEl.parentNode.insertBefore(propsNote,tilesEl.nextSibling);
+    }
+    if(propsNote)propsNote.style.display=faceItSurvivesWrap?'block':'none';
+  }
 
   // THE BOX ABOVE HAS TO ACTUALLY BE THERE (Aug 2026). Found the moment
   // Wraparound came back off the shelf: this notice reads "describe your
@@ -7828,6 +7849,10 @@ function renderFaceItGrid(){
   // wrap-shaped template has the opposite problem and none of that one -- it
   // IS the band. So Wraparound narrows the grid rather than closing it.
   const wrapOnly=faceItWraparoundActive();
+  {
+    const wrapNote=document.getElementById('faceItWrapNote');
+    if(wrapNote)wrapNote.style.display=wrapOnly?'block':'none';
+  }
   FaceItCatalog.liveTemplates().forEach(t=>{
     if(wrapOnly && t.shape!=='wrap')return;
     if(!FaceItCatalog.allowsProduct(t,faceItSurfaceKey()))return;
