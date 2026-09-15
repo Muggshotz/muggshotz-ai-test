@@ -55,7 +55,10 @@ const SURFACES = {
    --------------------------------------------------------------------------- */
 const CHARTS = {
   pet:   { minIn:  4, maxIn:  24, stepIn: 4 },
-  human: { minIn: 36, maxIn:  90, stepIn: 6 }
+  /* 3'6" to 7'6". The delivered lineup plate has nine labelled rules, and once
+     the missing 5'6" is restored the bottom one is 3'6", not the 3'0" it was
+     printed with. See relabelLineupChart. */
+  human: { minIn: 42, maxIn:  90, stepIn: 6 }
 };
 
 /* Inches -> the way a booking chart writes it. 72 -> 6'0", 20 -> 1'8", 8 -> 8". */
@@ -670,24 +673,17 @@ const FACE_IT_TEMPLATES = [
   /* Needs a plate: the lineup room with the empty slot moved to the CENTRE of
      the strip. At the far right the customer lands on the handle seam and gets
      bisected, with the alien and the granny across the front of the mug. */
-  // HELD BACK ON A CHART DEFECT, not on missing artwork (Sep 2026). The plate
-  // is delivered and is the right size, but its labels are wrong: the rules are
-  // uniformly spaced every 6 inches (measured at 69-76px apart across the whole
-  // chart, perspective accounting for the drift), while the labels read
-  //   7'6"  7'0"  6'6"  6'0"  5'0"  4'6"  4'0"  3'6"  3'0"
-  // The step from 6'0" to 5'0" is twelve inches and gets the same spacing as
-  // every six-inch step, so 5'6" is missing and every label below it is six
-  // inches out. The bottom rule reads 3'0" but physically sits where 3'6"
-  // belongs.
+  // The delivered plate's rules are uniformly spaced every six inches, but its
+  // labels read 7'6" 7'0" 6'6" 6'0" 5'0" 4'6" 4'0" 3'6" 3'0" -- the step from
+  // 6'0" to 5'0" claims twelve inches and gets the same spacing as every
+  // six-inch step either side of it. So 5'6" was never written and every label
+  // below it is six inches low; the bottom rule says 3'0" where 3'6" belongs.
   //
-  // That matters more here than it would on ordinary artwork, because this is
-  // the chart customers are measured against: buildChartScale anchors on the
-  // top and bottom labels, so mapping 54 inches onto a span that is really 48
-  // would stretch every figure by about 12%. Anchoring on the pitch instead
-  // would place people correctly but still print a label six inches wrong
-  // beside their own head. Fix belongs in the art.
+  // That is not a cosmetic typo here. This chart is the instrument customers
+  // are measured against, so relabelLineupChart moves the existing numbers onto
+  // the lines they belong to before anything is composited onto the plate.
   { file: 'lineup.webp', name: 'The Lineup', kind: 'lineup',
-    shape: 'wrap', panels: 'any', needsPlate: true, awaitingArt: true,
+    shape: 'wrap', panels: 'any', needsPlate: true,
     heightInput: true, chart: 'human', poseNote: 'frontal' }
 ];
 
@@ -760,11 +756,22 @@ function allowsProduct(t, productKey){
    --------------------------------------------------------------------------- */
 const PLATE_DEFAULTS = {
   mugshot: null,   // uses FaceItMugshot.DEFAULTS -- it draws its own furniture
+  /* MEASURED OFF lineup.webp, not chosen. The rules were found by scanning two
+     independent columns of bare wall; the floor by the strongest sustained
+     brightness step low in the frame.
+
+     Note the chart does NOT extrapolate to the floor -- its implied zero sits
+     at y=1282 on an 1155px plate. That is not an error, it is the perspective
+     of the room: the chart is on the back wall and the cast stands in front of
+     it. Because floorPct is anchored to the painted floor rather than to the
+     chart's zero, a generated figure comes out in the same relationship to the
+     chart as the painted cast. Checked: a 5'4" customer renders 533px tall and
+     the biker, whose crown sits on 5'4", is 535px. */
   lineup: {
     chart:          'human',
-    chartTopPct:    0.080,   // the 7'6" line
-    chartBottomPct: 0.572,   // the 3'0" line
-    floorPct:       0.900    // where feet meet the stage
+    chartTopPct:    0.1476,  // the 7'6" rule, y=170.5
+    chartBottomPct: 0.6610,  // the 3'6" rule, y=763.5
+    floorPct:       0.8874   // where feet meet the stage, y=1025
   },
   'stone-carve': null
 };
@@ -794,162 +801,104 @@ const G = global.FaceItGeom, C = global.FaceItComposite, M = global.FaceItMugsho
 function surfaceOf(key){ return G.SURFACES[key] || G.SURFACES.mug; }
 
 /* ---------------------------------------------------------------------------
-   REPAINTING THE LINEUP'S CHART LABELS  —  FALLBACK ONLY, OFF BY DEFAULT
+   FIXING THE LINEUP'S CHART LABELS BY MOVING THEM, NOT REDRAWING THEM
    ---------------------------------------------------------------------------
-   VERDICT (Sep 2026): this gets the numbers right and the picture wrong. Keep
-   it as the fallback for a plate nobody can re-export; prefer fixing the label
-   in the artwork's own source every time.
+   The plate's rules are evenly spaced every six inches and correct. Its labels
+   are not: 5'6" was never written, so from the fifth line down each number
+   reads six inches low and the bottom rule says 3'0" where 3'6" belongs.
 
-   Four techniques were tried against the delivered plate -- probe-column fill,
-   row-median fill, row-median fill inside per-label boxes, and finally
-   horizontal inpainting of the glyph runs. Each removed the numbers. Each also
-   left a visible patch, because the wall behind them is not a flat tone: it
-   carries a horizontal vignette, a pool of lamplight across the top, a warm
-   bounce off the biker's skin, and the chart rules running through it. Any
-   reconstruction good enough to fool the eye is doing real inpainting, and this
-   is not that.
+   Four earlier attempts tried to ERASE the wrong numbers and draw new ones --
+   probe-column fill, row-median fill, per-label boxes, then inpainting of the
+   glyph runs. All of them removed the numbers and all of them left a patch,
+   because the wall behind them carries a vignette, a pool of lamplight and a
+   warm bounce off the biker, and because a synthesised font never quite sits
+   in a photograph.
 
-   Relabelling in the source file is a minute's work for whoever holds it, and
-   it is the version customers should see. This exists so that a plate whose
-   source is lost is still shippable, not because it is the better answer.
-   ---------------------------------------------------------------------------
-   The delivered plate's rules are right -- uniformly spaced, correctly drawn,
-   carrying the room's perspective and lighting. Its LABELS are not: 5'6" was
-   never written, so every number below it reads six inches low, and the bottom
-   rule says 3'0" where 3'6" belongs.
+   Nothing has to be drawn. Line up what the chart has against what it needs:
 
-   Sending that back to be relabelled would have worked and would have been
-   slower. It would also have left the same failure possible again, because the
-   numbers on the wall and the numbers the placement maths uses would still be
-   two separate sources that agree only by care.
+       line   has     needs
+        5th   5'0"    5'6"
+        6th   4'6"    5'0"
+        7th   4'0"    4'6"
+        8th   3'6"    4'0"
+        9th   3'0"    3'6"
 
-   So the labels are painted here instead, from the same array the scale is
-   built from. They cannot disagree now: the label beside a customer's head and
-   the arithmetic that put their head there are the same nine values.
+   Every one of those except the fifth is the label from the line ABOVE it. So
+   each block moves down one position, bottom-up, and it arrives as real pixels
+   -- his typeface, his bevel, his lighting, already photographic.
 
-   This works because of where those labels sit -- two clean margin bands of
-   bare wall, no rules running under them and no figure within reach. Masking
-   is a per-row sample of the wall just inboard of each band, so the wall's
-   vertical gradient and its lamp falloff carry across the patch.
+   That leaves the fifth line wanting 5'6", which exists nowhere. Its parts do:
+   keep the 5' that is already there and borrow the 6 from 6'6" four lines up,
+   which sits at the same x, so it drops in without a nudge.
+
+   Sources are read from a snapshot of the untouched plate, so a block that has
+   already been moved can never become the source for the next one. Edges are
+   feathered because each block brings its own slice of wall down with it and
+   the wall is a shade different 75px lower.
    --------------------------------------------------------------------------- */
-const LINEUP_CHART = {
-  /* measured off lineup.webp at 2475 x 1155, top rule down */
-  ruleY:  [170.5, 239.5, 312, 387, 461.5, 536.5, 612.5, 688, 763.5],
-  inches: [    90,    84,  78,  72,    66,    60,    54,  48,    42],
-  /* The numbers occupy far less width than the margin does -- roughly 2% to 6%
-     in from each edge. The first attempt used a band out to 13.4%, which on
-     this plate reaches the biker: he stands at about 10%, so he was inside the
-     patch and bled into it. */
-  leftBand:  { x0: 0,      x1: 0.0820 },
-  rightBand: { x0: 0.9180, x1: 1 },
-  fontPx: 46,
-  color: '#141414'
+const LINEUP_LABELS = {
+  ruleY: [170.5, 239.5, 312, 387, 461.5, 536.5, 612.5, 688, 763.5],
+  /* the number blocks, clear of the rules either side of them */
+  leftRect:  { x: 48,   w: 70 },
+  rightRect: { x: 2368, w: 72 },
+  /* just the second digit, for splicing 5'6" together */
+  leftDigit2:  { x: 77,   w: 20 },
+  rightDigit2: { x: 2398, w: 20 },
+  halfH: 24,
+  feather: 7,
+  sourceOfSix: 2,     // index of 6'6", whose second digit is the 6 we borrow
+  brokenFrom: 4       // index of the first wrong label (the one reading 5'0")
 };
 
-function repaintLineupLabels(ctx, W, H, cfg){
-  const k = cfg || LINEUP_CHART;
-  const sy = H / 1155;
+function relabelLineupChart(ctx, W, H, cfg){
+  const k = cfg || LINEUP_LABELS;
+  const sx = W / 2475, sy = H / 1155;
 
-  const top = Math.max(0, Math.floor(k.ruleY[0] * sy - 60 * sy));
-  const bot = Math.min(H, Math.ceil(k.ruleY[k.ruleY.length - 1] * sy + 60 * sy));
+  /* untouched copy: every source is read from here */
+  const snap = document.createElement('canvas');
+  snap.width = W; snap.height = H;
+  snap.getContext('2d').drawImage(ctx.canvas, 0, 0);
 
-  /* MASK BY PER-ROW MEDIAN, NOT BY A PROBE COLUMN (fixed on the bench).
-     The first version sampled one column just inboard of each band and painted
-     each row that colour. That column runs straight through the biker, so from
-     his shoulders down it was sampling skin, tattoo and black vest and laying
-     them across the margin in stripes.
+  const cols = [
+    { rect: k.leftRect,  digit: k.leftDigit2  },
+    { rect: k.rightRect, digit: k.rightDigit2 }
+  ];
 
-     The median of the row WITHIN the band needs no clean column and no guess:
-     - a plain wall row is mostly wall, so the median is the wall, gradient and
-       lamp falloff included, sampled at the exact height it is needed;
-     - a rule row is rule-coloured right across the band (the rules do run under
-       the labels here), so the median is the rule and the rule survives;
-     - a row carrying a number is wall for most of its width and text for the
-       rest, so the median is the wall and only the text goes.
-     One rule covers all three cases, which is why it is the one to use. */
-  /* INPAINT THE GLYPHS, DO NOT FILL THE BAND (fourth attempt, and the reason
-     the first three failed the same way).
+  const move = (col, rect, fromIdx, toIdx) => {
+    const x = Math.round(rect.x * sx), w = Math.round(rect.w * sx);
+    const h = Math.round(k.halfH * 2 * sy);
+    const ys = Math.round(k.ruleY[fromIdx] * sy - k.halfH * sy);
+    const yd = Math.round(k.ruleY[toIdx]   * sy - k.halfH * sy);
+    ctx.drawImage(feathered(snap, x, ys, w, h, Math.round(k.feather * sy)), x, yd);
+  };
 
-     Every earlier version painted whole rows a single colour -- by probe
-     column, then by row median, then by row median inside a smaller box. All
-     three removed the numbers and all three were obvious, because the wall in
-     that margin is not one colour: it carries a horizontal vignette, a pool of
-     lamplight at the top, and a warm bounce off the biker. Flatten a row and
-     you erase all of that, leaving a visible slab with a seam down its inside
-     edge -- and the rules with it.
-
-     Inpainting touches only the pixels the lettering actually occupies. Each
-     run of glyph pixels is replaced by a straight interpolation between the
-     untouched pixels either side of it, so the gradient continues through the
-     patch and a rule crossing the band is redrawn as itself. The mask is
-     symmetric, because these numbers carry a pale bevel as well as dark
-     strokes, and dilated a little so the anti-aliased rim goes with them.  */
-  const boxH = Math.round(34 * sy);
-  const DILATE = 3, THRESH = 10;
-  [k.leftBand, k.rightBand].forEach(band => {
-    const x0 = Math.floor(band.x0 * W), x1 = Math.ceil(band.x1 * W);
-    const bw = x1 - x0;
-    if (bw <= 0) return;
-    k.ruleY.forEach(ry => {
-      const y0 = Math.max(0, Math.round(ry * sy - boxH));
-      const y1 = Math.min(H, Math.round(ry * sy + boxH));
-      if (y1 - y0 <= 0) return;
-      const img = ctx.getImageData(x0, y0, bw, y1 - y0);
-      const d = img.data;
-      const lum = new Array(bw), hit = new Array(bw), grow = new Array(bw);
-      for (let r = 0; r < y1 - y0; r++){
-        for (let i = 0; i < bw; i++){
-          const o = (r * bw + i) * 4;
-          lum[i] = (d[o] + d[o+1] + d[o+2]) / 3;
-        }
-        const mid = median(lum);
-        for (let i = 0; i < bw; i++) hit[i] = Math.abs(lum[i] - mid) > THRESH;
-        for (let i = 0; i < bw; i++){
-          grow[i] = false;
-          for (let j = Math.max(0, i - DILATE); j <= Math.min(bw - 1, i + DILATE); j++)
-            if (hit[j]) { grow[i] = true; break; }
-        }
-        let i = 0;
-        while (i < bw){
-          if (!grow[i]) { i++; continue; }
-          let a = i; while (i < bw && grow[i]) i++;
-          const bEnd = i - 1;
-          const L = a - 1, R = bEnd + 1;
-          const okL = L >= 0, okR = R < bw;
-          if (!okL && !okR) continue;      // whole row is lettering: leave it
-          for (let t = a; t <= bEnd; t++){
-            const oT = (r * bw + t) * 4;
-            for (let ch = 0; ch < 3; ch++){
-              const vL = okL ? d[(r * bw + L) * 4 + ch] : d[(r * bw + R) * 4 + ch];
-              const vR = okR ? d[(r * bw + R) * 4 + ch] : vL;
-              const f = (bEnd === a) ? 0.5 : (t - a) / (bEnd - a);
-              d[oT + ch] = Math.round(vL + (vR - vL) * f);
-            }
-            d[oT + 3] = 255;
-          }
-        }
-      }
-      ctx.putImageData(img, x0, y0);
-    });
-  });
-
-  ctx.save();
-  ctx.font = 'bold ' + Math.round(k.fontPx * sy) + 'px "Arial Narrow","Helvetica Neue",Arial,sans-serif';
-  ctx.fillStyle = k.color;
-  ctx.textBaseline = 'middle';
-  const padL = Math.round(W * 0.022), padR = Math.round(W * 0.019);
-  k.ruleY.forEach((ry, i) => {
-    const label = G.formatHeight(k.inches[i]);
-    const y = ry * sy;
-    ctx.textAlign = 'left';  ctx.fillText(label, padL, y);
-    ctx.textAlign = 'right'; ctx.fillText(label, W - padR, y);
-  });
-  ctx.restore();
+  /* bottom-up, so nothing is overwritten before it has been read */
+  for (let i = k.ruleY.length - 1; i > k.brokenFrom; i--){
+    cols.forEach(c => move(c, c.rect, i - 1, i));
+  }
+  /* and the one number the chart never had */
+  cols.forEach(c => move(c, c.digit, k.sourceOfSix, k.brokenFrom));
 }
 
-function median(arr){
-  const a = arr.slice().sort((x, y) => x - y);
-  return a[a.length >> 1];
+/* A copy whose edges fade out, so the slice of wall it carries blends into the
+   wall it lands on instead of announcing itself with four hard sides. */
+function feathered(src, x, y, w, h, f){
+  const c = document.createElement('canvas');
+  c.width = w; c.height = h;
+  const g = c.getContext('2d');
+  g.drawImage(src, x, y, w, h, 0, 0, w, h);
+  if (f > 0){
+    const img = g.getImageData(0, 0, w, h);
+    const d = img.data;
+    for (let yy = 0; yy < h; yy++){
+      for (let xx = 0; xx < w; xx++){
+        const e = Math.min(xx, yy, w - 1 - xx, h - 1 - yy);
+        if (e < f) d[(yy * w + xx) * 4 + 3] = Math.round(255 * (e / f));
+      }
+    }
+    g.putImageData(img, 0, 0);
+  }
+  return c;
 }
 
 /* THE MUG SHOT. The model returns one wide image holding three views side by
@@ -1002,11 +951,10 @@ function buildLineupStrip(plateImg, subjectImg, opts){
 
   if (plateImg){
     ctx.drawImage(plateImg, 0, 0, W, H);
-    /* OFF BY DEFAULT, and see the note on repaintLineupLabels for why. The
-       function works -- it produces a chart whose numbers are correct and which
-       can never disagree with the placement maths. It does not produce a chart
-       that looks untouched, and on a plate this photographic that is the bar. */
-    if (o.repaintLabels === true) repaintLineupLabels(ctx, W, H, o.chartCfg);
+    /* The plate ships with one label missing; relabelLineupChart moves the
+       existing numbers onto the lines they belong to. Pass relabel:false to see
+       the plate exactly as delivered. */
+    if (o.relabel !== false) relabelLineupChart(ctx, W, H, o.chartCfg);
   }
 
   const scale = G.buildChartScale(
@@ -1040,6 +988,6 @@ function sliceIntoPanels(cv, type, quality){
 }
 
 global.FaceItBuild = { buildMugshotStrip, buildLineupStrip, sliceIntoPanels, surfaceOf,
-                       repaintLineupLabels, LINEUP_CHART };
+                       relabelLineupChart, LINEUP_LABELS };
 
 })(window);

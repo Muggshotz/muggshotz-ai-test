@@ -173,6 +173,72 @@ scenarios.promptsAskForTheRightBackground = async (page) => {
   return 'PASS: cutout prompts ask for magenta, the repaint prompt does not, no height in the prompt';
 };
 
+/* The lineup plate shipped with one label missing and every number below it six
+   inches low. relabelLineupChart moves the existing numbers onto the lines they
+   belong to rather than drawing new ones -- four attempts at drawing new ones
+   all left a visible patch, because the wall behind them is photographic. */
+
+scenarios.chartConfigMatchesItsRules = async (page) => {
+  const r = await page.evaluate(() => {
+    const L = window.FaceItBuild.LINEUP_LABELS, C = window.FaceItGeom.CHARTS.human;
+    const gaps = L.ruleY.slice(1).map((v, i) => v - L.ruleY[i]);
+    return {
+      rules: L.ruleY.length,
+      minGap: Math.min(...gaps), maxGap: Math.max(...gaps),
+      steps: (C.maxIn - C.minIn) / C.stepIn + 1,
+      minIn: C.minIn, maxIn: C.maxIn,
+      plate: window.FaceItCatalog.PLATE_DEFAULTS.lineup,
+      topFrac: L.ruleY[0] / 1155,
+      botFrac: L.ruleY[L.ruleY.length - 1] / 1155
+    };
+  });
+  /* uniform pitch is the whole basis for saying a label is wrong rather than
+     the spacing being irregular on purpose */
+  if (r.maxGap - r.minGap > 8)
+    return `FAIL: rule pitch is not uniform (${r.minGap}-${r.maxGap}px) — the relabel assumes it is`;
+  if (r.steps !== r.rules)
+    return `FAIL: chart declares ${r.steps} labelled heights but the plate has ${r.rules} rules`;
+  if (r.minIn !== 42 || r.maxIn !== 90)
+    return `FAIL: human chart is ${r.minIn}-${r.maxIn}", expected 42-90 after the relabel`;
+  if (Math.abs(r.plate.chartTopPct - r.topFrac) > 0.002)
+    return `FAIL: chartTopPct ${r.plate.chartTopPct} does not sit on the top rule (${r.topFrac.toFixed(4)})`;
+  if (Math.abs(r.plate.chartBottomPct - r.botFrac) > 0.002)
+    return `FAIL: chartBottomPct ${r.plate.chartBottomPct} does not sit on the bottom rule (${r.botFrac.toFixed(4)})`;
+  return 'PASS: chart constants sit on the plate\'s own rules, pitch uniform, 9 rules for 9 heights';
+};
+
+scenarios.relabelTouchesOnlyTheNumbers = async (page) => {
+  const r = await page.evaluate(async () => {
+    const img = new Image();
+    await new Promise(res => { img.onload = res; img.src = '/lineup.webp'; });
+    const W = img.naturalWidth, H = img.naturalHeight;
+    const shot = (fix) => {
+      const c = document.createElement('canvas'); c.width = W; c.height = H;
+      const x = c.getContext('2d', { willReadFrequently: true });
+      x.drawImage(img, 0, 0);
+      if (fix) window.FaceItBuild.relabelLineupChart(x, W, H);
+      return x.getImageData(0, 0, W, H).data;
+    };
+    const a = shot(false), b = shot(true);
+    const L = window.FaceItBuild.LINEUP_LABELS;
+    const cols = [L.leftRect, L.rightRect];
+    let outside = 0, changed = 0;
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      const o = (y * W + x) * 4;
+      if (Math.abs(a[o]-b[o]) > 8 || Math.abs(a[o+1]-b[o+1]) > 8 || Math.abs(a[o+2]-b[o+2]) > 8) {
+        changed++;
+        const inCol = cols.some(c => x >= c.x - 2 && x <= c.x + c.w + 2);
+        const inRow = L.ruleY.some(ry => y >= ry - L.halfH - 2 && y <= ry + L.halfH + 2);
+        if (!(inCol && inRow)) outside++;
+      }
+    }
+    return { W, H, changed, outside };
+  });
+  if (!r.changed) return 'FAIL: the relabel changed nothing at all';
+  if (r.outside)  return `FAIL: the relabel altered ${r.outside} pixels outside the label blocks — it must not touch the room`;
+  return `PASS: ${r.changed} pixels changed, every one inside a label block`;
+};
+
 /* ---------------------------------------------------------------------------
    THE STUDIO WIRING
    These run against needles-studio.html rather than the bench, because the
