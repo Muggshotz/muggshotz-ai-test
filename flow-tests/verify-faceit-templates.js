@@ -239,6 +239,61 @@ scenarios.relabelTouchesOnlyTheNumbers = async (page) => {
   return `PASS: ${r.changed} pixels changed, every one inside a label block`;
 };
 
+/* MAGENTA FRINGING, from a real generation rather than a synthetic case.
+   fixture-cutout-fringed.png is the actual first live Mug Shot result, kept at
+   512px. The server keys its magenta field with a binary threshold, which is
+   right for the templates it was written for but leaves every half-covered fur
+   pixel fully opaque and bright pink. Composited onto the wall the dog wore a
+   pink halo round every hair, which is what despillMagenta exists to fix. */
+scenarios.magentaFringeIsRemoved = async (page) => {
+  const r = await page.evaluate(async () => {
+    const img = new Image();
+    await new Promise(res => { img.onload = res; img.src = '/flow-tests/fixture-cutout-fringed.png'; });
+    const spill = (cv) => {
+      const d = cv.getContext('2d', { willReadFrequently: true })
+                  .getImageData(0, 0, cv.width, cv.height).data;
+      let mild = 0, strong = 0;
+      for (let i = 0; i < d.length; i += 4){
+        if (d[i + 3] < 8) continue;
+        const sp = Math.min(d[i], d[i + 2]) - d[i + 1];
+        if (sp > 20) mild++;
+        if (sp > 60) strong++;
+      }
+      return { mild, strong };
+    };
+    const opts = { surface: 'mug', chart: 'pet', texts: ['A', 'B', 'C'] };
+    return {
+      raw:   spill(window.FaceItBuild.buildMugshotStrip(img, Object.assign({ despill: false }, opts))),
+      fixed: spill(window.FaceItBuild.buildMugshotStrip(img, opts))
+    };
+  });
+  if (r.raw.strong < 200)
+    return `FAIL: the fixture has almost no fringe (${r.raw.strong}px) — it cannot prove the fix does anything`;
+  if (r.fixed.strong > r.raw.strong * 0.02)
+    return `FAIL: strong magenta survives the despill (${r.raw.strong} -> ${r.fixed.strong})`;
+  if (r.fixed.mild > r.raw.mild * 0.05)
+    return `FAIL: mild magenta survives the despill (${r.raw.mild} -> ${r.fixed.mild})`;
+  return `PASS: fringe removed — strong ${r.raw.strong}->${r.fixed.strong}, mild ${r.raw.mild}->${r.fixed.mild}`;
+};
+
+/* Warm subjects must come through untouched. The gate is min(R,B)-G, and for
+   golden fur the minimum is the low blue, so an orange dog never trips it --
+   but a bug that flipped the test to max() would quietly desaturate every
+   ginger pet in the catalogue. */
+scenarios.despillLeavesWarmToneAlone = async (page) => {
+  const r = await page.evaluate(() => {
+    const c = document.createElement('canvas'); c.width = 8; c.height = 8;
+    const x = c.getContext('2d');
+    x.fillStyle = 'rgb(230,150,70)'; x.fillRect(0, 0, 8, 8);   // golden fur
+    const out = window.FaceItComposite.despillMagenta(c, { erode: false });
+    const d = out.getContext('2d').getImageData(4, 4, 1, 1).data;
+    return [d[0], d[1], d[2], d[3]];
+  });
+  if (r[0] !== 230 || r[1] !== 150 || r[2] !== 70 || r[3] !== 255)
+    return `FAIL: despill altered a warm tone with no magenta in it: ${JSON.stringify(r)}`;
+  return 'PASS: warm fur passes through the despill unchanged';
+};
+
 /* ---------------------------------------------------------------------------
    THE STUDIO WIRING
    These run against needles-studio.html rather than the bench, because the

@@ -475,7 +475,96 @@ function placeBust(ctx, img, scale, headInches, centerX, stripH, heightPct, opts
   return { x: dx, y: dy, w: drawW, h: targetH };
 }
 
-global.FaceItComposite = { opaqueBounds, placeFigure, placeBust, drawContactShadow };
+/* ---------------------------------------------------------------------------
+   SOFT-KEYING WHAT THE SERVER KEYED HARD
+   ---------------------------------------------------------------------------
+   api/generate.js drops the magenta field to transparency with a binary test --
+   r>200 && g<70 && b>200, alpha straight to zero. That is exactly right for the
+   templates it was written for, whose magenta meets the artwork along a clean
+   rectangular edge.
+
+   It is not enough for a cutout. A strand of fur covers a pixel only partly, so
+   that pixel comes back a BLEND of fur and magenta -- something like
+   (242, 90, 187), which fails the test on green and survives at full opacity.
+   Proved on the first real generation: a golden retriever composited onto the
+   wall wearing a bright pink outline round every hair.
+
+   Fixing it server-side would touch every templateMerge generation in the
+   product, including flows nobody asked me to change, so it is done here on the
+   way in instead. Nothing is lost by waiting: the edge pixels still carry their
+   blended colour, so the original is recoverable.
+
+   Two steps, and the second is the one people forget:
+     alpha  -- how magenta a pixel is, as a ramp rather than a yes/no. Magenta is
+               high red and blue against low green, so min(R,B) - G measures it.
+     colour -- having decided a pixel is半 transparent, the magenta still mixed
+               into it must come OUT, or the edge stays pink and merely fades.
+               edge = fur*a + magenta*(1-a), so fur = (edge - magenta*(1-a)) / a.
+               Unpremultiplying like that returns the true fur colour rather than
+               a desaturated guess.
+   --------------------------------------------------------------------------- */
+function despillMagenta(img, opts){
+  const o = opts || {};
+  const w = img.naturalWidth || img.width, h = img.naturalHeight || img.height;
+  const c = document.createElement('canvas');
+  c.width = w; c.height = h;
+  const ctx = c.getContext('2d', { willReadFrequently: true });
+  ctx.drawImage(img, 0, 0);
+  const id = ctx.getImageData(0, 0, w, h);
+  const d = id.data;
+  const softness = o.softness || 110;
+
+  /* WHY NOT UNPREMULTIPLY (tried first, and it went green).
+     Recovering fur = (edge - magenta*(1-a)) / a is the textbook move and it
+     assumes the pixel really is fur mixed with pure #FF00FF. These pixels are
+     not: the model paints its own soft pink rim, so dividing it back out
+     overshoots and swings the edge to green.
+
+     Suppression is the right tool for a rim that was painted rather than mixed.
+     Magenta needs a high BLUE channel; golden fur has almost none. So pulling
+     blue down to the green level kills the pink and leaves warm tones alone --
+     and the spill>0 gate means an orange dog is never touched in the first
+     place, because for fur min(R,B) is the low blue, not the high red. */
+  for (let i = 0; i < d.length; i += 4){
+    if (d[i + 3] === 0) continue;
+    const R = d[i], G = d[i + 1], B = d[i + 2];
+    const spill = Math.min(R, B) - G;
+    if (spill <= 0) continue;
+
+    let a = 1 - spill / softness;
+    if (a <= 0.02){ d[i + 3] = 0; continue; }
+    if (a > 1) a = 1;
+
+    if (B > G) d[i + 2] = G;                  // the pink comes out of blue
+    if (R > G + 90) d[i] = G + 90;            // and a little off extreme red
+    d[i + 3] = Math.round(d[i + 3] * a);
+  }
+
+  /* ERODE ONE PIXEL. Whatever survives the two passes above is the outermost
+     rim of the cutout, which is the half-covered pixel the key could never have
+     got right anyway. On fur, losing a pixel off the silhouette is invisible;
+     keeping a pink one is not. */
+  if (o.erode !== false){
+    const alpha = new Uint8ClampedArray(w * h);
+    for (let i = 0, k = 0; i < d.length; i += 4, k++) alpha[k] = d[i + 3];
+    for (let y = 0; y < h; y++){
+      for (let x = 0; x < w; x++){
+        const k = y * w + x;
+        if (alpha[k] === 0) continue;
+        const up    = y > 0     ? alpha[k - w] : 0;
+        const down  = y < h - 1 ? alpha[k + w] : 0;
+        const left  = x > 0     ? alpha[k - 1] : 0;
+        const right = x < w - 1 ? alpha[k + 1] : 0;
+        if (up < 128 || down < 128 || left < 128 || right < 128) d[k * 4 + 3] = 0;
+      }
+    }
+  }
+
+  ctx.putImageData(id, 0, 0);
+  return c;
+}
+
+global.FaceItComposite = { opaqueBounds, placeFigure, placeBust, drawContactShadow, despillMagenta };
 
 })(window);
 
@@ -920,14 +1009,15 @@ function buildMugshotStrip(subjectImg, opts){
   const scale = M.drawBackplate(ctx, W, H, cal);
 
   if (subjectImg){
-    const sw = subjectImg.naturalWidth || subjectImg.width;
-    const sh = subjectImg.naturalHeight || subjectImg.height;
+    const clean = (o.despill === false) ? subjectImg : C.despillMagenta(subjectImg);
+    const sw = clean.naturalWidth || clean.width;
+    const sh = clean.naturalHeight || clean.height;
     const headIn = (cal.chart === 'pet') ? 20 : 68;
     for (let i = 0; i < 3; i++){
       /* cut one view out of the three-up sheet, then measure THAT view */
       const slice = document.createElement('canvas');
       slice.width = Math.floor(sw / 3); slice.height = sh;
-      slice.getContext('2d').drawImage(subjectImg, -Math.floor(sw / 3) * i, 0);
+      slice.getContext('2d').drawImage(clean, -Math.floor(sw / 3) * i, 0);
       C.placeBust(ctx, slice, scale, headIn, W / 3 * (i + 0.5), H, cal.subjectHPct);
     }
   }
@@ -964,11 +1054,12 @@ function buildLineupStrip(plateImg, subjectImg, opts){
   );
 
   if (subjectImg && o.heightInches){
+    const cleanFig = (o.despill === false) ? subjectImg : C.despillMagenta(subjectImg);
     /* Centre of the strip, not the end of the lineup. On a wraparound the two
        outer edges meet at the handle, so a figure placed where the reference
        art had its empty slot gets sawn in half by it -- with the rest of the
        lineup across the front of the mug and the customer nowhere. */
-    C.placeFigure(ctx, subjectImg, scale, o.heightInches, W * (o.centerPct == null ? 0.5 : o.centerPct));
+    C.placeFigure(ctx, cleanFig, scale, o.heightInches, W * (o.centerPct == null ? 0.5 : o.centerPct));
   }
   return cv;
 }
