@@ -630,3 +630,46 @@ untouched. The old orange chip meter is re-skinned by the studio's own CSS on al
 Tagline "YOUR HONEY. OUR FUNNY." kept pending Alyx's word. checkout.html doubles as the legacy
 Muggshotz generator — its prompts are secret-sauce, read-only as ever.
 
+
+## The generator is gpt-image-2.5-sunburst now (2026-09-17)
+
+**Read the code, not this, if they disagree.** `api/generate.js` line 5 carries a BUILD line;
+today's is `2026-09-17c`. Every mention of gpt-image-2 elsewhere in this file is history.
+
+**What changed, three commits on main, each revertable on its own:**
+| build | commit | change |
+|---|---|---|
+| 2026-09-17a | 2bc7051 | model string `gpt-image-2` → `gpt-image-2.5-sunburst` on BOTH Images API edit calls (main generation and the wraparound outpaint). Same endpoints, same size handling, no `input_fidelity`, `maxDuration` untouched. |
+| 2026-09-17b | d2ef821 | clothing rule softened, Alyx's wording, all three copies: keep the photo's clothing "unless a costume change is requested or strongly implied by the set and setting." The old "specifically"/"explicitly" wording and the "do not invent a new outfit to match the scene's theme" sentence blocked implied changes (a beach scene kept the office blouse). |
+| 2026-09-17c | f31a771 | new sentence after each clothing line: keep the photo's own setting, background and pose unless a different scene or pose is requested or strongly implied by the customer's idea; no props unless requested or strongly implied. |
+
+**Why (the likeness test):** one photo (woman, long dark curls, sunglasses on head, teal blouse,
+school hallway), one prompt word for word: `Just generate an exact replication of this image with
+no changes to the photo whatsoever`. Five runs.
+- Run 1, gpt-image-2, Classic style: slimmed the face and jaw, youthened, erased the freckles,
+  tightened the curls, over-sharpened painterly finish.
+- Runs 2 and 3, Sunburst, Classic, before 17c: likeness nailed on both (jaw, age, freckles,
+  loose curls, her real smiling eyes). But both built the SAME home office, chin-on-hand pose
+  and a heart mug. Not variance, systematic: nothing in the prompt said keep the photo's scene,
+  and the STYLE block says "gift-art." Sunburst obeys the house prompt more literally than the
+  old model did. That is why 17c exists.
+- Run 4, Sunburst, Classic, after 17c: hallway, pose, crowd and framing all kept. Colour is
+  warmer and punchier than the photo (the Classic STYLE block asks for it) and the crop is square
+  (the size we send, not the model).
+- Run 5, Sunburst, Photorealistic: near-indistinguishable from the photo, sharper if anything.
+  Alyx: "no one would be displeased."
+Verdict, Alyx's: this is the new generator.
+
+**Speed:** runs finish in 20–40 s, occasionally up to a minute. The "3 minutes" and the timeout
+crash described in the generate.js header are stale history from July. The 300 s limit stays.
+The easel show now often ends before the video does; Alyx is leaving it, a short show beats a
+blank wait on the slow runs.
+
+**Cost:** same token rates as gpt-image-2. Not yet confirmed on the OpenAI usage page.
+
+**Still untested:** a real scene request under 17c (e.g. "put me on a pirate ship") to prove the
+setting rule still lets an implied scene and props through. If it comes back with her in the
+hallway holding nothing, the wording is too tight; loosen it, do not remove it.
+
+**Two things learned about working with Alyx today:** Vercel builds main in 15–18 s, not
+minutes. And a note in this file is routine, not a code change; write it without asking.
