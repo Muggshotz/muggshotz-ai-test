@@ -2,7 +2,7 @@ import fs from "fs";
 import path from "path";
 import sharp from "sharp";
 
-// BUILD: 2026-09-17c — setting/pose/props rule added (Alyx) after the clothing line in all three places: keep the photo's own setting, background and pose, and add no props, unless requested or strongly implied. Sunburst built the same home office, chin-on-hand and heart mug on two runs of a plain "exact replication" prompt. 17b: clothing rule softened. 17a: model switched to gpt-image-2.5-sunburst.
+// BUILD: 2026-09-17d — Caricature Assassination style (Alyx): the Silhouette tile is replaced by a heavy-exaggeration caricature. Two new mechanisms behind it: a style tile may name a hidden style-reference picture the server holds (STYLE_REFERENCE_FILES; the page sends the NAME only, never the image, separate from the customer Photo 2/3 slots), and a tile may carry styleExaggerate, which suspends the likeness rules that demand unchanged facial proportions. Tiles declaring neither behave exactly as before. 17c: setting/pose/props rule. 17b: clothing rule. 17a: gpt-image-2.5-sunburst.
 
 // RESTORED (July 2026): this file was found genuinely truncated — cut
 // off mid-function with no closing brackets and no export default
@@ -23,6 +23,19 @@ export const config = {
 
 // Maps the theme name sent from the front end to its exact reference image
 // filename in the repo root. Filenames include spaces exactly as uploaded.
+// Hidden style-reference images. A style tile in the studio may name one of
+// these; the PAGE SENDS ONLY THE NAME, never a picture, and only a name that
+// appears in this table resolves to a file on disk. Style tiles that name
+// nothing send nothing extra and generate exactly as they always did.
+//
+// The picture is a STYLE guide only -- never an identity reference. The
+// instruction block built from it (styleReferenceInstruction, below) says so
+// in as many words, because the collage is made of other people's faces and
+// none of them may leak into the customer's result.
+const STYLE_REFERENCE_FILES = {
+  "caricature-assassination": "Caricatures.png"
+};
+
 const TEMPLATE_FILES = {
   "Marbling": "laced marble.webp",
   "Cloud Mist": "clouds.webp",
@@ -144,7 +157,7 @@ async function deductOneToken(customerId, currentBalance) {
 // Back-compatible on purpose: a cached browser that sends neither
 // styleDirective nor styleIsDefault gets the house default, which is what it
 // would have got before.
-function buildStyleBlock(styleDirective, styleIsDefault) {
+function buildStyleBlock(styleDirective, styleIsDefault, styleExaggerate) {
   const chose = styleDirective && styleIsDefault === false;
   if (!chose) {
     return `STYLE:
@@ -163,7 +176,7 @@ Polished gift-art quality.
 ${styleDirective}
 Render the ENTIRE image in that style — the subject, the background, and every element in the scene, consistently.
 Where anything above conflicts with the style just named, the style just named wins ON RENDERING: medium, linework, shading, palette, finish.
-It does NOT win on canvas, layout or composition. Any requirement about filling the canvas edge to edge, or about not drawing borders, frames, margins, panels, gutters or captions, is a technical printing requirement and overrides the style absolutely. Render the chosen style as a full-bleed image with no frame of any kind, however that style would normally be presented.
+${styleExaggerate ? `For THIS style it also wins on FACIAL AND HEAD PROPORTIONS: exaggerate, enlarge and reshape them exactly as the style just named directs, overriding any instruction above to keep proportions natural, realistic or unchanged. Identity is carried by the SHAPE of the real features, not by realistic geometry.\n` : ``}It does NOT win on canvas, layout or composition. Any requirement about filling the canvas edge to edge, or about not drawing borders, frames, margins, panels, gutters or captions, is a technical printing requirement and overrides the style absolutely. Render the chosen style as a full-bleed image with no frame of any kind, however that style would normally be presented.
 Keep a strong, unmistakable likeness to the uploaded photo: the person must stay immediately recognizable within this style.
 Polished gift-art quality.
 `;
@@ -251,7 +264,30 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: "Method not allowed" });
   }
   try {
-    const { image, prompt, theme, deviceId, refImageA, refImageB, currentDesign, size, panelRole, action, templateMerge, styleDirective, styleIsDefault, likeness } = req.body;
+    const { image, prompt, theme, deviceId, refImageA, refImageB, currentDesign, size, panelRole, action, templateMerge, styleDirective, styleIsDefault, styleRef, styleExaggerate, likeness } = req.body;
+
+    // HIDDEN STYLE REFERENCE. The page sends a NAME (styleRef); only a name in
+    // STYLE_REFERENCE_FILES resolves to a file, so nothing the browser sends can
+    // reach an arbitrary path. Read once here and used by whichever generation
+    // path runs below. An unknown name, or a file that cannot be read, yields no
+    // reference and no instruction -- the style still works on its wording alone.
+    const styleRefFile = STYLE_REFERENCE_FILES[styleRef] || null;
+    let styleRefBuffer = null;
+    if (styleRefFile) {
+      try {
+        styleRefBuffer = fs.readFileSync(path.join(process.cwd(), styleRefFile));
+      } catch (styleRefErr) {
+        console.error("Could not load style reference file:", styleRefFile, styleRefErr.message);
+      }
+    }
+    // Only ever claim the picture is attached when it actually is.
+    const styleReferenceInstruction = styleRefBuffer ? `
+STYLE REFERENCE IMAGE (attached, labelled "style reference"):
+One extra image is attached purely as an ARTISTIC STYLE guide. Copy ONLY its rendering approach: brushwork, sculpted three-dimensional form, degree and manner of exaggeration, lighting, finish and palette handling.
+Do NOT copy any face, head, likeness, hairstyle, expression, pose, clothing, background or composition from it. The people shown in it are NOT the customer and must never appear anywhere in the result.
+The uploaded customer photo remains the ONLY source of identity.
+` : "";
+
 
     // Lightweight path: upload an already-composited image (a Frame or
     // caption baked onto the finished art in the browser via canvas) to
@@ -369,9 +405,9 @@ An additional reference image is attached. ${refImageA ? 'One is "Photo 2" — w
       const identityGuard = `
 IDENTITY PRESERVATION IS THE TOP PRIORITY, ABOVE THE SCENE AND ABOVE THE STYLE.
 Use the uploaded face as the source of truth. Do not invent a new person.
-Do NOT beautify, idealise, slim, smooth, youthen, age-shift, race-shift or gender-shift the face, and do not change the person's underlying facial structure in any way.
+Do NOT beautify, idealise, slim, smooth, youthen, age-shift, race-shift or gender-shift the face.${styleExaggerate ? "" : " Do not change the person's underlying facial structure in any way."}
 Do NOT replace the face with a generic cartoon face, a stock caricature face, a model's face, or any actor, celebrity, mascot or invented character.
-Keep the same hairline and the same bald head or hairstyle, the same forehead, the same brow shape, the same eye shape and spacing, the same nose width and shape, the same mouth and smile shape, the same teeth, the same cheeks, the same jawline, the same chin, the same ears, the same skin tone, the same apparent age, and the same overall facial proportions as the uploaded photo.
+Keep the same hairline and the same bald head or hairstyle, the same forehead, the same brow shape, the same eye shape and spacing, the same nose width and shape, the same mouth and smile shape, the same teeth, the same cheeks, the same jawline, the same chin, the same ears, the same skin tone, the same apparent age${styleExaggerate ? "" : ", and the same overall facial proportions"} as the uploaded photo.
 A stranger who knows this person must recognise them instantly. If a choice must be made between a more attractive face and a more accurate one, choose the accurate one every time.
 ${strengthLine}
 `;
@@ -387,7 +423,7 @@ the real eye shape, eye spacing, and eyelids; the real EYE COLOR (match the iris
 the real mouth shape and expression; the real jawline, cheeks, and ears;
 the real facial hair, head shape, skin tone, and age.
 If the uploaded photo shows the person smiling, study exactly how THIS person's eyes look when they smile -- most real smiles narrow and crinkle the eyes at the outer corners to some degree, and the exact amount varies person to person. Match that specific person's real smiling eye shape rather than defaulting to a generic wide-open smiling-eyes look.
-Preserve normal head-to-body proportions unless the customer asks for wild exaggeration.
+${styleExaggerate ? `This style is a HEAVY caricature: deliberately exaggerate, enlarge and reshape the head and the facial proportions exactly as the STYLE block directs. Identity must survive through the SHAPE of the real features listed above -- eye shape, nose shape, mouth shape, jaw, ears, hairline, skin tone, age -- and NOT through realistic geometry. A stranger who knows this person must still recognise them instantly.` : `Preserve normal head-to-body proportions unless the customer asks for wild exaggeration.`}
 Keep the person's actual clothing and outfit from the uploaded photo (garment type, color, and style) unless a costume change is requested or strongly implied by the set and setting. Keep the photo's own setting, background, and pose unless a different scene or pose is requested or strongly implied by the customer's idea. Do not add props unless they are requested or strongly implied by the set and setting.
 
 PANORAMA LAYOUT — ONE SINGLE UNINTERRUPTED ULTRA-WIDE SCENE:
@@ -406,7 +442,8 @@ ${referenceLine}
 CUSTOMER REQUEST:
 ${prompt}
 
-${buildStyleBlock(styleDirective, styleIsDefault)}
+${styleReferenceInstruction}
+${buildStyleBlock(styleDirective, styleIsDefault, styleExaggerate)}
 COLOR: Render with vivid, saturated, punchy color throughout the scene — rich blue skies, strong contrast in the mountains, clouds, and landscape. Avoid a muted, hazy, washed-out, sepia-tinted, or pastel palette.
 CRITICAL COMPOSITION RULES — THE ARTWORK MUST FILL THE ENTIRE CANVAS, EDGE TO EDGE:
 Do NOT draw any border, frame, matte, margin, background surround, vignette, or coloured surface behind or around the artwork.
@@ -430,6 +467,8 @@ FINAL REMINDER ON LIKENESS: Do not add facial hair, tattoos, piercings, scars, j
       }
       addGeminiRefPart(refImageA);
       addGeminiRefPart(refImageB);
+      // The hidden style reference goes last, after the customer's own photos.
+      if (styleRefBuffer) addGeminiRefPart(`data:image/png;base64,${styleRefBuffer.toString("base64")}`);
 
       const geminiResp = await fetch(
         "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent",
@@ -633,7 +672,7 @@ the real eye shape, eye spacing, and eyelids; the real EYE COLOR (match the iris
 the real mouth shape and expression; the real jawline, cheeks, and ears;
 the real facial hair, head shape, skin tone, and age.
 If the uploaded photo shows the person smiling, study exactly how THIS person's eyes look when they smile -- most real smiles narrow and crinkle the eyes at the outer corners to some degree, and the exact amount varies person to person. Match that specific person's real smiling eye shape rather than defaulting to a generic wide-open smiling-eyes look.
-Preserve normal head-to-body proportions unless the customer asks for wild exaggeration.
+${styleExaggerate ? `This style is a HEAVY caricature: deliberately exaggerate, enlarge and reshape the head and the facial proportions exactly as the STYLE block directs. Identity must survive through the SHAPE of the real features listed above -- eye shape, nose shape, mouth shape, jaw, ears, hairline, skin tone, age -- and NOT through realistic geometry. A stranger who knows this person must still recognise them instantly.` : `Preserve normal head-to-body proportions unless the customer asks for wild exaggeration.`}
 Keep the person's actual clothing and outfit from the uploaded photo (garment type, color, and style) unless a costume change is requested or strongly implied by the set and setting. Keep the photo's own setting, background, and pose unless a different scene or pose is requested or strongly implied by the customer's idea. Do not add props unless they are requested or strongly implied by the set and setting.
 `;
 
@@ -699,14 +738,15 @@ This magenta fill is a placeholder that will be programmatically removed after g
 
     const finalPrompt = isPanelContinuation
       ? `${panelContinuationPrompt}
-${buildStyleBlock(styleDirective, styleIsDefault)}`
+${buildStyleBlock(styleDirective, styleIsDefault, styleExaggerate)}`
       : `${identityLock}
+${styleReferenceInstruction}
 CUSTOMER REQUEST:
 ${prompt}
 ${backgroundInstruction}
 ${currentDesignInstruction}
 ${chromaKeyInstruction}
-${buildStyleBlock(styleDirective, styleIsDefault)}`;
+${buildStyleBlock(styleDirective, styleIsDefault, styleExaggerate)}`;
 
     // image comes in as a data URL like "data:image/png;base64,AAAA..."
     // OpenAI's edit endpoint needs the raw file bytes, not the data URL prefix.
@@ -764,6 +804,16 @@ ${buildStyleBlock(styleDirective, styleIsDefault)}`;
     if (refImageA) attachDataUrlImage(refImageA, "reference-a");
     if (refImageB) attachDataUrlImage(refImageB, "reference-b");
     if (currentDesign) attachDataUrlImage(currentDesign, "current-design");
+
+    // The hidden style reference, attached LAST so the customer's own photo and
+    // their Photo 2 / Photo 3 keep the positions the prompt text refers to.
+    if (styleRefBuffer) {
+      formData.append(
+        "image[]",
+        new Blob([styleRefBuffer], { type: "image/png" }),
+        "style-reference.png"
+      );
+    }
 
     const response = await fetch("https://api.openai.com/v1/images/edits", {
       method: "POST",

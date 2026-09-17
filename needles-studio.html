@@ -1106,7 +1106,7 @@ const HERO_SETTLE_MS = 1000;
 <div class="btn-select" data-val="savage political-satire caricature in the tradition of Mad magazine and newspaper editorial cartoons: aggressively exaggerated features, oversized head on a small body, wild expressive linework, dense comic detail packed into every corner, sharp satirical humour — push the exaggeration far, but keep the person unmistakably recognizable" onclick="pick(this,'style')">🗞️ Political Satire<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Mad magazine, dialled all the way up.</div></div>
 <div class="btn-select" data-val="flat cel-shaded comic strip illustration, bold black outlines, flat solid color fills, no gradients or painterly shading" onclick="pick(this,'style')">💥 Comic Strip<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Bold outlines, flat colour.</div></div>
 <div class="btn-select" data-val="black and white pen-and-ink line drawing, clean linework only, no color, no shading fills — cross-hatching for shadow only" onclick="pick(this,'style')">✏️ Line Art<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Elegant pen-and-ink linework.</div></div>
-<div class="btn-select" data-val="stark silhouette portrait: the subject rendered as a single solid pure-black shape against a plain pure-white background, no interior detail whatsoever, no facial features drawn, no shading, no outline — recognition comes ENTIRELY from the precise outline of the profile, so the contour of the nose, lips, chin, brow, jaw, hair and glasses must exactly match the uploaded photo. Compose it as a close-up head-and-shoulders profile facing to one side" onclick="pick(this,'style')">🖤 Silhouette<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Pure black profile, white ground.</div></div>
+<div class="btn-select" data-style-ref="caricature-assassination" data-style-exaggerate="1" data-val="Create an aggressively exaggerated caricature, not a flattering portrait. Keep the person immediately recognizable — their glasses or facial hair if they have them, their smile, their overall identity — but deliberately distort the facial proportions much more strongly. Enlarge the head, cheeks, jaw, nose, ears, brow, and smile in a humorous, artistically controlled way. Compress and reshape the skull and face so the caricature is unmistakable at first glance. Do not preserve realistic facial proportions. Preserve likeness through distinctive features, not through literal geometry. The final result should look bold, funny, sculpted, and clearly caricatured rather than photorealistic." onclick="pick(this,'style')">🎯 Caricature Assassination<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Wildly exaggerated. Still unmistakably you.</div></div>
 </div>
 <button type="button" id="styleContinueBtn" class="generate-btn" style="margin-top:.9rem;max-width:280px" onclick="confirmStyleAndContinue()">✅ Use This Style — Continue</button>
 <!-- EVERY PANEL HAS A BACK (Alyx, v94: "There is no back button anywhere on
@@ -2263,7 +2263,25 @@ Tell Needles <span style="color:#7ab8ff">what you have in mind</span>
 // "chosen" and quietly retire the house style.
 const MUGGSHOTZ_CLASSIC_STYLE='Muggshotz Classic: premium professional caricature, expressive face, rich detail, painterly shading, funny gift-art scene';
 function currentStylePayload(){
-  return { styleDirective: style, styleIsDefault: style===MUGGSHOTZ_CLASSIC_STYLE };
+  // A style tile can carry two extras beyond its directive:
+  //   data-style-ref        the NAME of a reference picture the SERVER holds
+  //                         (api/generate.js STYLE_REFERENCE_FILES). The name
+  //                         travels, never the picture, and it is separate from
+  //                         the customer's own Photo 2 / Photo 3 slots.
+  //   data-style-exaggerate permission to reshape facial proportions, which the
+  //                         server's likeness rules otherwise forbid outright.
+  // Both are read from the tile that owns the current directive rather than
+  // kept in their own variables, so they can never drift out of step with
+  // `style` -- which is set from four different places in this file.
+  // A tile carrying neither sends null/false and generates exactly as before.
+  let styleRef=null,styleExaggerate=false;
+  const styleTile=Array.from(document.querySelectorAll('#styleSectionCard .btn-select'))
+    .find(b=>b.dataset.val===style);
+  if(styleTile){
+    styleRef=styleTile.dataset.styleRef||null;
+    styleExaggerate=styleTile.dataset.styleExaggerate==='1';
+  }
+  return { styleDirective: style, styleIsDefault: style===MUGGSHOTZ_CLASSIC_STYLE, styleRef, styleExaggerate };
 }
 let product=null,style=MUGGSHOTZ_CLASSIC_STYLE,likeness='0.15',uploadedImageData=null,resultUrl=null;
 

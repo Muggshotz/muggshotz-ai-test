@@ -277,7 +277,7 @@ scenarios.styleHandsOffToTheTracks = async (page) => {
 // ---- 8. All six styles are on the panel. ----
 scenarios.sixStylesOffered = async (page) => {
   const tiles = await styleTiles(page);
-  const want = ['classic', 'photoreal', 'satire', 'comic', 'line art', 'silhouette'];
+  const want = ['classic', 'photoreal', 'satire', 'comic', 'line art', 'caricature'];
   const labels = tiles.map(t => t.label.toLowerCase());
   const missing = want.filter(w => !labels.some(l => l.includes(w.split(' ')[0])));
   if (missing.length) return `FAIL: missing style(s): ${missing.join(', ')} (found ${tiles.length})`;
