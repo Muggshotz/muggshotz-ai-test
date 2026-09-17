@@ -1106,6 +1106,21 @@ const HERO_SETTLE_MS = 1000;
      the idea box, with the picture kept in My Designs. -->
 <button type="button" class="download-btn" id="approveBackBtn" style="margin-top:.6rem" onclick="resultScreenBack()">← Back</button>
 </div>
+<!-- ARTWORK ONLY (Alyx, Sep 2026). No product means nothing to place, no
+     mockup to fetch and no order to hand off to, so approving ends the flow
+     right here at the picture. Save and Copy are repeated on this card as
+     well as under the easel, because this is the one product where keeping
+     the file IS the whole purchase. -->
+<div class="card" id="artworkOnlyDoneCard" style="display:none">
+<div class="card-title">🎉 Your Artwork Is Ready</div>
+<div class="note" style="text-align:center;margin-top:0">This one is yours to keep. There is no product to order.</div>
+<div style="display:flex;gap:8px;margin-top:.9rem">
+<button type="button" class="generate-btn" style="flex:1;padding:.8rem .4rem;font-size:14px" onclick="saveArtwork()">⬇️ Save Image</button>
+<button type="button" class="generate-btn" style="flex:1;padding:.8rem .4rem;font-size:14px" onclick="copyArtwork()">📋 Copy Image</button>
+</div>
+<div class="note" id="artworkOnlyDoneNote" style="text-align:center;margin-top:.5rem;color:#29a3ff">Saved to your downloads, or copied straight to your clipboard.</div>
+<button type="button" class="download-btn" style="margin-top:1rem" onclick="artworkOnlyMakeAnother()">🎨 Make Another</button>
+</div>
 <button class="download-btn" id="toggleImageBtn" onclick="toggleWorkingImage()" style="display:none;margin-top:.6rem">↔️ Toggle Between Previous & New Image</button>
 <div id="keepTweakingReminder" class="guidance-prompt" role="status">Made your changes? Scroll down and hit Generate again. Running low on tokens? Tap Credits &amp; Extras to top up.</div>
 <button class="download-btn" id="downloadDesignBtn" onclick="downloadImage()" style="display:none;margin-top:.6rem">⬇️ Download for Printify</button>
@@ -1309,7 +1324,7 @@ const HERO_SETTLE_MS = 1000;
 <div id="ideaGuidancePrompt" class="guidance-prompt" role="status" style="margin-top:8px;margin-bottom:0;cursor:pointer" onclick="confirmIdeaSatisfied()">Click here when you are satisfied with your descriptive requests for the image.</div>
 </div>
 </div>
-<div class="card" id="productCard"><div class="card-title">🎁 Product</div><div class="guidance-prompt soft visible" id="productGuidancePrompt" role="status" style="margin-top:0;margin-bottom:.9rem">Please select your desired product below when ready.</div><div class="grid3"><div class="btn-select" data-val="mug" onclick="pick(this,'product')"><span class="icon">☕</span>Mug</div><div class="btn-select" data-val="greeting card" onclick="pick(this,'product')"><span class="icon">💌</span>Card</div><div class="btn-select" data-val="water bottle" onclick="pick(this,'product')"><span class="icon">🍶</span>Travel Cups</div><div class="btn-select" data-val="post-it note" onclick="pick(this,'product')"><span class="icon">📝</span>Post-it</div><div class="btn-select" data-val="phone case" onclick="pick(this,'product')"><span class="icon">📱</span>Phone case</div><div class="btn-select" data-val="tote bag" onclick="pick(this,'product')"><span class="icon">👜</span>Tote bag</div><div class="btn-select" data-val="suitcase" onclick="pick(this,'product')"><span class="icon">🧳</span>Suitcase</div><div class="btn-select" data-val="puzzle" onclick="pick(this,'product')"><span class="icon">🧩</span>Puzzle</div><div class="btn-select" data-val="photo poster" onclick="pick(this,'product')"><span class="icon">🖼️</span>Photo/Poster</div><div class="btn-select" data-val="coaster" onclick="pick(this,'product')"><span class="icon">☕</span>Coasters</div><div class="btn-select" data-val="mouse pad" onclick="pick(this,'product')"><span class="icon">🖱️</span>Mouse pad</div></div>
+<div class="card" id="productCard"><div class="card-title">🎁 Product</div><div class="guidance-prompt soft visible" id="productGuidancePrompt" role="status" style="margin-top:0;margin-bottom:.9rem">Please select your desired product below when ready.</div><div class="grid3"><div class="btn-select" data-val="mug" onclick="pick(this,'product')"><span class="icon">☕</span>Mug</div><div class="btn-select" data-val="greeting card" onclick="pick(this,'product')"><span class="icon">💌</span>Card</div><div class="btn-select" data-val="water bottle" onclick="pick(this,'product')"><span class="icon">🍶</span>Travel Cups</div><div class="btn-select" data-val="post-it note" onclick="pick(this,'product')"><span class="icon">📝</span>Post-it</div><div class="btn-select" data-val="phone case" onclick="pick(this,'product')"><span class="icon">📱</span>Phone case</div><div class="btn-select" data-val="tote bag" onclick="pick(this,'product')"><span class="icon">👜</span>Tote bag</div><div class="btn-select" data-val="suitcase" onclick="pick(this,'product')"><span class="icon">🧳</span>Suitcase</div><div class="btn-select" data-val="puzzle" onclick="pick(this,'product')"><span class="icon">🧩</span>Puzzle</div><div class="btn-select" data-val="photo poster" onclick="pick(this,'product')"><span class="icon">🖼️</span>Photo/Poster</div><div class="btn-select" data-val="coaster" onclick="pick(this,'product')"><span class="icon">☕</span>Coasters</div><div class="btn-select" data-val="mouse pad" onclick="pick(this,'product')"><span class="icon">🖱️</span>Mouse pad</div><div class="btn-select" data-val="artwork only" onclick="pick(this,'product')"><span class="icon">🖼️</span>Artwork Only<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">No product. Just creates an image for you to download.</div><div class="note" style="margin-top:2px;color:#7ab8ff;font-size:10px">1 token</div></div></div>
 <button type="button" class="download-btn" id="productCardBackBtn" style="margin-top:1rem" onclick="productCardBack()">← Back</button></div>
 
 <div id="mugSizeLockOverlay" class="step-lock-overlay" style="display:none">
@@ -3343,6 +3358,7 @@ function pickTrackDescribe(){
 // no gimmicks, no frame, one variant, so the description IS the design.
 const PRODUCTS_NEEDING_IDEA=['suitcase','phone case','tote bag','puzzle','coaster','mouse pad','photo poster','greeting card','post-it note'];
 const PRODUCT_IDEA_LABEL={
+  'artwork only':'artwork',
   'suitcase':'suitcase',
   'phone case':'phone case',
   'tote bag':'tote bag',
@@ -12092,8 +12108,34 @@ function refreshApproveRowForMode(){
 }
 
 let approveUndoSnapshot=null;
+function artworkOnlyMakeAnother(){
+  const done=document.getElementById('artworkOnlyDoneCard');
+  if(done)done.style.display='none';
+  // Same road back as "No -- Let's Try Another" on any other product.
+  try{ keepTweaking(); }catch(err){
+    console.error('Could not reopen the idea box for another artwork:',err);
+    smoothScrollToTarget('ideaCard','start');
+  }
+}
+
 async function approveDesign(allThree){
   if(!currentDesignId)return;
+  // ARTWORK ONLY: there is no product, so every step below -- placements,
+  // panels, the mockup, Continue to Order -- is meaningless. The picture IS
+  // the purchase, and the customer already has it. End here.
+  if(product==='artwork only'){
+    const approveRowEl=document.getElementById('approveRow');
+    if(approveRowEl)approveRowEl.style.display='none';
+    const posHolder=document.getElementById('positionHolderCard');
+    if(posHolder)posHolder.style.display='none';
+    try{ clearAllFocusModes(); }catch(e){}
+    const done=document.getElementById('artworkOnlyDoneCard');
+    if(done){
+      done.style.display='block';
+      smoothScrollToTarget('artworkOnlyDoneCard','start');
+    }
+    return;
+  }
   // What the page looked like before Yes, so the Edge Fade page can offer a
   // way back to the design decision (v110).
   approveUndoSnapshot={ designId: currentDesignId, placements: { left: placements.left, front: placements.front, right: placements.right } };
@@ -16246,6 +16288,11 @@ function getProductRules(p){
   if(p==='tote bag')return 'tote bag artwork, bold high-impact design readable from a distance';
   if(p==='suitcase')return 'travel suitcase artwork, bold full-coverage design that reads well from a distance, adventurous or eye-catching composition';
   if(p==='puzzle')return 'photo puzzle artwork, clear central subject with good contrast between pieces, works well when cut into interlocking pieces';
+  // ARTWORK ONLY has no product to fit, so it is told so plainly: fill the
+  // frame, no print-area margins to respect, nothing shaped for a mug or a
+  // case. (Alyx has not settled the final wording for this tile -- this is a
+  // sensible default, not a decision.)
+  if(p==='artwork only')return 'a standalone picture with no product to fit: compose it to fill the whole frame edge to edge, with no safe margins, no print-area allowance and no shaping for any object -- it is being made to be looked at and downloaded on its own';
   return 'printable custom gift artwork with clean centered square composition and safe margins';
 }
 
