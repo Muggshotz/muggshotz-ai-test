@@ -1031,6 +1031,21 @@ const HERO_SETTLE_MS = 1000;
   <div id="genTimerDisplay" style="display:none;text-align:center;font-size:13px;color:#7ab8ff;font-weight:600;margin-top:.45rem;letter-spacing:.3px"></div>
 </div>
 </div>
+<!-- KEEP THE PICTURE (Alyx, Sep 2026). The finished art is an <img> that sits
+     UNDERNEATH the easel's two video layers, so a right-click lands on the video
+     and saves the easel with an empty canvas instead of the artwork. The
+     customer paid for that picture and could not keep it without screenshotting
+     and cropping. These two buttons hand over the real file. They sit directly
+     under the easel, so every flow that reveals art there is covered at once:
+     the normal generation, Cover Me, Face It, Home Sweet Home, and any prop
+     added later. -->
+<div id="saveArtBar" style="display:none;margin-top:.7rem">
+<div style="display:flex;gap:8px">
+<button type="button" class="download-btn" style="flex:1;margin-top:0;padding:.7rem .5rem;font-size:14px" onclick="saveArtwork()">⬇️ Save Image</button>
+<button type="button" class="download-btn" style="flex:1;margin-top:0;padding:.7rem .5rem;font-size:14px" onclick="copyArtwork()">📋 Copy Image</button>
+</div>
+<div class="note" id="saveArtNote" style="text-align:center;margin-top:.4rem;color:#29a3ff">This picture is yours. Save it or copy it anywhere.</div>
+</div>
 <div id="coverMeEaselApproveRow" style="display:none;margin-top:.75rem">
 <div style="display:flex;gap:8px">
 <button type="button" class="generate-btn" style="flex:1;padding:.7rem .5rem;font-size:14px" onclick="approveCoverMe()">✅ Yes — Use This Image</button>
@@ -19895,6 +19910,139 @@ function cancelGeneration(){
   a.download='muggshotz-caricature.png';
   a.click();
 }
+
+// ================= KEEP THE PICTURE =================
+// downloadImage() above is the Printify hand-off and only ever appears on some
+// screens. This pair is for the CUSTOMER, on every screen that shows finished
+// art. The URL is resolved at CLICK time rather than recorded when the art
+// appears, so no flow has to remember to register itself -- whatever is on the
+// easel right now is what gets saved.
+function currentArtworkUrl(){
+  const easel=document.getElementById('needlesEaselArt');
+  const onEasel=easel&&easel.getAttribute('src');
+  // The easel already shows the composited version (frame, caption, fade), so
+  // its own src IS the picture on screen. The rest are belt and braces.
+  return onEasel||finalImageUrl||lastHostedResultUrl||resultUrl||null;
+}
+
+function saveArtFileName(mime){
+  const ext=(mime||'').includes('png')?'png':((mime||'').includes('webp')?'webp':'jpg');
+  const d=new Date(),pad=n=>String(n).padStart(2,'0');
+  return 'muggshotz-'+d.getFullYear()+pad(d.getMonth()+1)+pad(d.getDate())+'-'+pad(d.getHours())+pad(d.getMinutes())+'.'+ext;
+}
+
+function flashSaveArtNote(msg,isError){
+  const el=document.getElementById('saveArtNote');
+  if(!el)return;
+  if(!el.dataset.resting)el.dataset.resting=el.textContent;
+  el.textContent=msg;
+  el.style.color=isError?'#e24b4a':'#29a3ff';
+  clearTimeout(flashSaveArtNote._t);
+  flashSaveArtNote._t=setTimeout(()=>{
+    el.textContent=el.dataset.resting||'';
+    el.style.color='#29a3ff';
+  },5000);
+}
+
+// Handles data: URLs and the generator's hosted results alike.
+async function artworkBlob(url){
+  const resp=await fetch(url,{mode:'cors'});
+  if(!resp.ok)throw new Error('fetch '+resp.status);
+  return await resp.blob();
+}
+
+// Chrome and Edge accept ONLY png on the clipboard, and the studio's composite
+// is a jpeg, so it is re-encoded rather than refused.
+function artworkAsPng(blob){
+  return new Promise((resolve,reject)=>{
+    const img=new Image();
+    const objUrl=URL.createObjectURL(blob);
+    img.onload=()=>{
+      const c=document.createElement('canvas');
+      c.width=img.naturalWidth;c.height=img.naturalHeight;
+      c.getContext('2d').drawImage(img,0,0);
+      URL.revokeObjectURL(objUrl);
+      c.toBlob(b=>b?resolve(b):reject(new Error('toBlob returned nothing')),'image/png');
+    };
+    img.onerror=()=>{URL.revokeObjectURL(objUrl);reject(new Error('could not decode the picture'));};
+    img.src=objUrl;
+  });
+}
+
+async function saveArtwork(){
+  const url=currentArtworkUrl();
+  if(!url){flashSaveArtNote('There is no finished picture on the easel yet.',true);return;}
+  try{
+    const blob=await artworkBlob(url);
+    const objUrl=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    a.href=objUrl;
+    a.download=saveArtFileName(blob.type);
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(()=>URL.revokeObjectURL(objUrl),20000);
+    flashSaveArtNote('Saved to your downloads.');
+  }catch(err){
+    // iPhone Safari ignores the download attribute entirely; a new tab at least
+    // lets them press and hold the real picture.
+    console.error('Save failed, opening the picture in its own tab instead:',err);
+    window.open(url,'_blank');
+    flashSaveArtNote('Opened in a new tab \u2014 press and hold the picture to save it.');
+  }
+}
+
+async function copyArtwork(){
+  const url=currentArtworkUrl();
+  if(!url){flashSaveArtNote('There is no finished picture on the easel yet.',true);return;}
+  if(!(navigator.clipboard&&navigator.clipboard.write&&window.ClipboardItem)){
+    flashSaveArtNote('This browser cannot copy pictures. Use Save Image instead.',true);
+    return;
+  }
+  const asPng=(async()=>{
+    let blob=await artworkBlob(url);
+    if(blob.type!=='image/png')blob=await artworkAsPng(blob);
+    return blob;
+  })();
+  try{
+    // Safari requires the ClipboardItem to be built synchronously from a
+    // promise inside the click; Chrome accepts that form too, so it is tried
+    // first and the already-resolved blob is the fallback.
+    await navigator.clipboard.write([new ClipboardItem({'image/png':asPng})]);
+    flashSaveArtNote('Copied. Paste it anywhere.');
+  }catch(err){
+    try{
+      await navigator.clipboard.write([new ClipboardItem({'image/png':await asPng})]);
+      flashSaveArtNote('Copied. Paste it anywhere.');
+    }catch(err2){
+      console.error('Copy failed:',err2);
+      flashSaveArtNote('This browser blocked copying. Use Save Image instead.',true);
+    }
+  }
+}
+
+// Show the bar exactly when there is a finished picture on the easel. Watching
+// the element beats hooking every reveal path by hand -- a flow added later
+// gets the buttons for free.
+(function(){
+  function syncSaveArtBar(){
+    const easel=document.getElementById('needlesEaselArt');
+    const bar=document.getElementById('saveArtBar');
+    if(!easel||!bar)return;
+    const src=easel.getAttribute('src')||'';
+    const cs=getComputedStyle(easel);
+    bar.style.display=(src&&cs.display!=='none'&&cs.visibility!=='hidden'&&cs.opacity!=='0')?'block':'none';
+  }
+  function startSaveArtWatch(){
+    const easel=document.getElementById('needlesEaselArt');
+    if(!easel)return;
+    new MutationObserver(syncSaveArtBar).observe(easel,{attributes:true,attributeFilter:['src','style','class']});
+    syncSaveArtBar();
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',startSaveArtWatch);
+  else startSaveArtWatch();
+})();
+// ================= END KEEP THE PICTURE =================
   async function sendVerification(){
   const email=document.getElementById('verifyEmailInput').value.trim();
   const statusEl=document.getElementById('verifyStatus');
