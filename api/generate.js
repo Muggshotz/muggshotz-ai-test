@@ -2,7 +2,7 @@ import fs from "fs";
 import path from "path";
 import sharp from "sharp";
 
-// BUILD: 2026-09-06h — added clothing preservation instruction (server-side, both likeness blocks + final reminder) after a real production run invented a whole cowboy outfit that the test tool never did on the same prompt -- nothing anywhere was telling the model to keep the subject's actual clothing from the photo
+// BUILD: 2026-09-17a — Sunburst likeness test: model switched from gpt-image-2 to gpt-image-2.5-sunburst on both Images API edit calls (main generation and wraparound outpaint). Nothing else changed: same endpoints, same size handling, no input_fidelity. Revert = restore the previous generate.js from GitHub history.
 
 // RESTORED (July 2026): this file was found genuinely truncated — cut
 // off mid-function with no closing brackets and no export default
@@ -539,7 +539,7 @@ FINAL REMINDER ON LIKENESS: Do not add facial hair, tattoos, piercings, scars, j
       const outpaintBuffer = Buffer.from(outpaintMatch[2], "base64");
 
       const outpaintFormData = new FormData();
-      outpaintFormData.append("model", "gpt-image-2");
+      outpaintFormData.append("model", "gpt-image-2.5-sunburst");
       outpaintFormData.append(
         "prompt",
         `OUTPAINTING TASK -- READ CAREFULLY:\nThis image is 1536x1024. Roughly half of it is real, existing content from an already-approved design. The other half is empty/transparent.\nDo NOT alter, redraw, recolor, rescale, or shift any of the existing (opaque) pixels in any way -- they must survive completely untouched.\nFill ONLY the empty/transparent area by continuing the exact same scene outward, believably, as if the camera had simply panned further in that direction: same environment, same lighting direction, same color grading, same art style.\nSCALE LOCK: any large environmental feature that touches the boundary between the existing content and the empty area -- a mountain range, tree line, building, fence, or similar -- must continue at the EXACT SAME apparent size and distance it has right at that boundary. Do not shrink it, recede it further away, or enlarge it as you move away from the boundary.\nThe join between the existing content and the new content must be seamless -- no visible seam, no gap, no shift in perspective, scale, or style at the boundary.\n\n${prompt}`
@@ -720,7 +720,7 @@ ${buildStyleBlock(styleDirective, styleIsDefault)}`;
     const extension = mimeType === "image/png" ? "png" : "jpg";
 
     const formData = new FormData();
-    formData.append("model", "gpt-image-2");
+    formData.append("model", "gpt-image-2.5-sunburst");
     formData.append("prompt", finalPrompt);
     formData.append("size", imageSize);
     formData.append(
