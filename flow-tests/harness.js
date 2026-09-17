@@ -28,6 +28,36 @@ async function launch(opts = {}) {
   });
   const page = await context.newPage();
 
+  // MZ_I18N_COLLECT=<file>: the language suite (lib/i18n.js) records every
+  // English phrase the page shows; this dumps that list when the browser
+  // closes, so a full suite run yields the complete dictionary key list.
+  // Off unless the env var is set -- suites run exactly as before.
+  if (process.env.MZ_I18N_COLLECT) {
+    await context.addInitScript(() => { try { localStorage.setItem('mz_i18n_collect', '1'); } catch (_) {} });
+    const origClose = browser.close.bind(browser);
+    browser.close = async () => {
+      try {
+        const seen = new Set();
+        for (const ctx of browser.contexts()) for (const pg of ctx.pages()) {
+          try {
+            // A page with a dialog open cannot evaluate; never let that hang the close.
+            const list = await Promise.race([
+              pg.evaluate(() => {
+                const a = JSON.parse(sessionStorage.getItem('mz_i18n_seen') || '[]');
+                if (window.MZ_I18N) window.MZ_I18N.seen.forEach((k) => a.push(k));
+                return a;
+              }),
+              new Promise((res) => setTimeout(() => res([]), 3000)),
+            ]);
+            list.forEach((k) => seen.add(k));
+          } catch (_) {}
+        }
+        fs.appendFileSync(process.env.MZ_I18N_COLLECT, Array.from(seen).map((k) => JSON.stringify(k)).join('\n') + '\n');
+      } catch (_) {}
+      return origClose();
+    };
+  }
+
   const log = { consoleErrors: [], pageErrors: [], apiCalls: [], notFound: [] };
   page.on('console', (m) => {
     if (m.type() === 'error') log.consoleErrors.push(m.text());

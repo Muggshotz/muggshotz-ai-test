@@ -804,9 +804,10 @@ body.panels-active #verifyCard{display:none!important}
      faceit-bench.html, which is the point -- one set of chart, placard and
      height-scaling numbers, so what the bench previews is what ships. -->
 <script src="faceit-templates.js"></script>
+<script src="lib/i18n.js" defer></script>
 </head>
 <body class="initial-upload-focus">
-<div id="deviceIdDisplay" style="position:fixed;bottom:2px;left:2px;font-size:9px;color:#444;z-index:998;pointer-events:none"></div>
+<div id="deviceIdDisplay" data-i18n-skip style="position:fixed;bottom:2px;left:2px;font-size:9px;color:#444;z-index:998;pointer-events:none"></div>
 <div class="token-credits-row compact">
   <button id="hudPill" type="button" onclick="toggleHudExpanded(event)" title="Chips remaining. Tap for details and credits.">🪙 <b id="hudPillCount">—</b> CHIPS <span class="sep">·</span> CREDITS</button>
   <div id="tokenMeterWrap" style="position:relative;width:210px;flex-shrink:0">
@@ -20196,12 +20197,12 @@ function resetEverythingFreshStart(){
   if(productGuideReset)productGuideReset.classList.add('visible');
   document.querySelectorAll('.card').forEach(card=>{
     const title=card.querySelector('.card-title');
-    if(title&&title.textContent.includes('🎨 Style')){
+    if(card.id==='styleSectionCard'){
       const opts=card.querySelectorAll('.btn-select');
       opts.forEach((b,i)=>b.classList.toggle('selected',i===0));
       if(opts[0])style=opts[0].dataset.val;
     }
-    if(title&&title.textContent.includes('🎭 Degree of Caricature')){
+    if(card.id==='likenessSectionCard'){
       const opts=card.querySelectorAll('.btn-select');
       opts.forEach((b,i)=>b.classList.toggle('selected',i===0));
       if(opts[0])likeness=opts[0].dataset.val;
