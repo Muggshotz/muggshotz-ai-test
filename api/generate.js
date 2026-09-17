@@ -2,7 +2,7 @@ import fs from "fs";
 import path from "path";
 import sharp from "sharp";
 
-// BUILD: 2026-09-17b — clothing rule softened (Alyx): keep the photo's clothing unless a costume change is requested or strongly implied by the set and setting. Replaces the "specifically"/"explicitly" wording in all three copies, which blocked implied changes (a beach scene kept the office blouse). 2026-09-17a: model switched to gpt-image-2.5-sunburst on both Images API edit calls.
+// BUILD: 2026-09-17c — setting/pose/props rule added (Alyx) after the clothing line in all three places: keep the photo's own setting, background and pose, and add no props, unless requested or strongly implied. Sunburst built the same home office, chin-on-hand and heart mug on two runs of a plain "exact replication" prompt. 17b: clothing rule softened. 17a: model switched to gpt-image-2.5-sunburst.
 
 // RESTORED (July 2026): this file was found genuinely truncated — cut
 // off mid-function with no closing brackets and no export default
@@ -388,7 +388,7 @@ the real mouth shape and expression; the real jawline, cheeks, and ears;
 the real facial hair, head shape, skin tone, and age.
 If the uploaded photo shows the person smiling, study exactly how THIS person's eyes look when they smile -- most real smiles narrow and crinkle the eyes at the outer corners to some degree, and the exact amount varies person to person. Match that specific person's real smiling eye shape rather than defaulting to a generic wide-open smiling-eyes look.
 Preserve normal head-to-body proportions unless the customer asks for wild exaggeration.
-Keep the person's actual clothing and outfit from the uploaded photo (garment type, color, and style) unless a costume change is requested or strongly implied by the set and setting.
+Keep the person's actual clothing and outfit from the uploaded photo (garment type, color, and style) unless a costume change is requested or strongly implied by the set and setting. Keep the photo's own setting, background, and pose unless a different scene or pose is requested or strongly implied by the customer's idea. Do not add props unless they are requested or strongly implied by the set and setting.
 
 PANORAMA LAYOUT — ONE SINGLE UNINTERRUPTED ULTRA-WIDE SCENE:
 Generate exactly ONE continuous ultra-wide image, composed as a single sweeping panoramic photograph taken in one shot.
@@ -416,7 +416,7 @@ Do NOT letterbox or pillarbox the subject — no black bars, coloured bars, or b
 Every pixel, from the far left edge to the far right edge and from the top edge to the bottom edge, is part of one single continuous scene.
 These composition rules are technical printing requirements. They override the STYLE above, and every other instruction here, without exception.
 
-FINAL REMINDER ON LIKENESS: Do not add facial hair, tattoos, piercings, scars, jewelry, or any other feature to the subject's face or head that is not clearly visible in the uploaded photo, unless the customer's request above explicitly asks for it. The subject's face must remain a faithful likeness of the real uploaded photo at all times, even while everything else in the scene is invented. Keep the subject's actual clothing from the uploaded photo (garment type, color, style) unless a costume change is requested or strongly implied by the set and setting.
+FINAL REMINDER ON LIKENESS: Do not add facial hair, tattoos, piercings, scars, jewelry, or any other feature to the subject's face or head that is not clearly visible in the uploaded photo, unless the customer's request above explicitly asks for it. The subject's face must remain a faithful likeness of the real uploaded photo at all times, even while everything else in the scene is invented. Keep the subject's actual clothing from the uploaded photo (garment type, color, style) unless a costume change is requested or strongly implied by the set and setting. Keep the photo's own setting, background, and pose unless a different scene or pose is requested or strongly implied by the customer's idea. Do not add props unless they are requested or strongly implied by the set and setting.
 `;
 
       const geminiParts = [
@@ -634,7 +634,7 @@ the real mouth shape and expression; the real jawline, cheeks, and ears;
 the real facial hair, head shape, skin tone, and age.
 If the uploaded photo shows the person smiling, study exactly how THIS person's eyes look when they smile -- most real smiles narrow and crinkle the eyes at the outer corners to some degree, and the exact amount varies person to person. Match that specific person's real smiling eye shape rather than defaulting to a generic wide-open smiling-eyes look.
 Preserve normal head-to-body proportions unless the customer asks for wild exaggeration.
-Keep the person's actual clothing and outfit from the uploaded photo (garment type, color, and style) unless a costume change is requested or strongly implied by the set and setting.
+Keep the person's actual clothing and outfit from the uploaded photo (garment type, color, and style) unless a costume change is requested or strongly implied by the set and setting. Keep the photo's own setting, background, and pose unless a different scene or pose is requested or strongly implied by the customer's idea. Do not add props unless they are requested or strongly implied by the set and setting.
 `;
 
     // Left/Right panel calls are NOT edits of the customer's photo — the
