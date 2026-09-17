@@ -2914,6 +2914,52 @@ function scrollToStableTop(el,topMargin,maxAttempts){
   requestAnimationFrame(check);
 }
 
+// ================= SETTLE, THEN SHOW THE CONTROLS =================
+// Alyx, Sep 2026: "it would be nice if they just showed us the heading, and
+// just as we were getting our bearings they auto scroll us down to this
+// position. Because everything you need is contained within this scroll
+// position." Landing on a heading orients the customer, but leaving them
+// there hides the step's controls below the fold and they have to go hunting
+// for them. So: land on the heading, hold it for a beat, then make ONE move
+// down to where the whole step sits in view at once.
+//
+// Cancelled by any real gesture from the customer -- a wheel, a touch, a key,
+// a mouse press. Someone who has already started reading or dragging must
+// never have the page yanked out from under them. Deliberately NOT listening
+// to the scroll event: that fires for the app's own smooth scrolling too, so
+// the landing scroll would cancel the follow-up before it ever ran.
+let settleScrollTimer=null;
+let settleScrollRelease=null;
+function cancelSettleScroll(){
+  if(settleScrollTimer){clearTimeout(settleScrollTimer);settleScrollTimer=null;}
+  if(settleScrollRelease){settleScrollRelease();settleScrollRelease=null;}
+}
+function scheduleSettleScroll(targetId,delayMs){
+  cancelSettleScroll();
+  const stop=()=>cancelSettleScroll();
+  const opts={passive:true};
+  window.addEventListener('wheel',stop,opts);
+  window.addEventListener('touchstart',stop,opts);
+  window.addEventListener('mousedown',stop,opts);
+  window.addEventListener('keydown',stop);
+  settleScrollRelease=()=>{
+    window.removeEventListener('wheel',stop,opts);
+    window.removeEventListener('touchstart',stop,opts);
+    window.removeEventListener('mousedown',stop,opts);
+    window.removeEventListener('keydown',stop);
+  };
+  settleScrollTimer=setTimeout(()=>{
+    settleScrollTimer=null;
+    const el=document.getElementById(targetId);
+    // Gone or hidden means the customer moved on; do nothing.
+    if(el&&el.offsetParent&&getComputedStyle(el).display!=='none'){
+      el.scrollIntoView({behavior:'smooth',block:'end'});
+    }
+    cancelSettleScroll();
+  },delayMs);
+}
+// ================= END SETTLE, THEN SHOW THE CONTROLS =================
+
 function smoothScrollToTarget(targetId,block='start',after){
   const target=document.getElementById(targetId);
   if(!target)return;
@@ -9047,6 +9093,10 @@ function showCoverMePanelCard(){
   // found the sizer, twice). Done is one flick of the thumb below.
   coverMePanelAutoScrollToken++;
   smoothScrollToTarget('coverMePanelCard','start');
+  // Done sits under the panel switches, so bringing IT to the bottom of the
+  // screen brings the picture, both sliders, the switches and the button into
+  // view in one go -- the whole step, nothing left to hunt for.
+  scheduleSettleScroll('coverMePanelDoneBtn',4000);
 }
 
 // ONE PICTURE, THREE SWITCHES (Alyx, Sep 2026): the picture is already on
@@ -12854,6 +12904,9 @@ function chooseFadeEdges(){
     slider.value=revealFadeAmountPct;
   }
   updateRevealFadePreview();
+  // Same beat as Fit Your Picture: the mockup is worth seeing first, then the
+  // slider and Continue come into view. The mockup stays one scroll above.
+  scheduleSettleScroll('revealFadeContinueBtn',3500);
 }
 
 // Renders a color fade in from all four edges of an image, using real
@@ -14906,7 +14959,7 @@ function hideMug3D(){
 }
 
 // The mug mockup, drawn here rather than fetched. Opens instantly.
-function openMug3DMockup(){
+async function openMug3DMockup(){
   const overlay=document.getElementById('mockupLightboxOverlay');
   const wrap=document.getElementById('mug3dWrap');
   const stage=document.getElementById('mug3dStage');
@@ -14938,6 +14991,25 @@ function openMug3DMockup(){
   // different body (see TUMBLERS in MUG3D).
   const tumblerKey=tumbler3dKey();
   const urlOf=pos=>placements[pos]?((findDesignById(placements[pos])||{}).url||null):null;
+  // THE MUG SHOWS THE REAL PRINT (Alyx, Sep 2026). urlOf hands over a design's
+  // stored FILE, which on the panel path is the picture BEFORE its edge fade --
+  // the fade lives with the placement and the printer draws it there
+  // (applyEdgeFadeToPlacements here, applyFadeIfNeeded in
+  // api/create-printify-order.js). So a customer set a fade, this mockup came
+  // back with hard edges, and nothing told them whether it had taken.
+  // renderPanelPrintDataUrl draws the panel exactly as it will print: surface
+  // colour, the picture at its chosen size and position, its fade through the
+  // printer's OWN fadeMaskAlpha (mirrored verbatim), its caption. Nothing is
+  // invented for the customer's benefit -- this is the print.
+  const printUrlOf=async pos=>{
+    const id=placements[pos];
+    if(!id)return null;
+    try{ return (await renderPanelPrintDataUrl(id))||urlOf(pos); }
+    catch(err){
+      console.error('Could not draw the '+pos+' panel as it will print; showing the plain design instead:',err);
+      return urlOf(pos);
+    }
+  };
   const cupColor=travelColorEntry();
   const cupProduct=tumblerKey?TRAVEL_MUG_CATALOG[tumblerKey]:null;
   const cupIsFrontBack=!!(cupProduct&&cupProduct.layoutType==='front-back');
@@ -14960,6 +15032,13 @@ function openMug3DMockup(){
   const angleInput=document.getElementById('mug3dAngle');
   if(angleInput)angleInput.setAttribute('aria-label',tumblerKey?'Turn the cup':'Turn the mug');
   fitMug3DStage();
+  // Only the ceramic mug's panels. A travel cup's band is not a panel print
+  // box (renderPanelPrintDataUrl is already excluded for it elsewhere), and
+  // under Wraparound the panorama carries its fade baked in and panelUrls is
+  // ignored anyway -- both keep the plain file.
+  const mugPanelUrls=(!tumblerKey && mugPrintMode!=='wraparound')
+    ? await Promise.all([printUrlOf('left'),printUrlOf('front'),printUrlOf('right')])
+    : [urlOf('left'),urlOf('front'),urlOf('right')];
   const openOpts=tumblerKey?{
     tumblerKey,
     colorHex: cupColor?cupColor.hex:'#ffffff',
@@ -14973,7 +15052,7 @@ function openMug3DMockup(){
     styleName: selectedGenStyle,
     colorHex: match?match.hex:'#ffffff',
     panoramaUrl: (mugPrintMode==='wraparound')?wraparoundPanoramaUrl:null,
-    panelUrls: [urlOf('left'),urlOf('front'),urlOf('right')]
+    panelUrls: mugPanelUrls
   };
   return MUG3D.open(stage,openOpts).then(()=>{
     const slider=document.getElementById('mug3dAngle');
