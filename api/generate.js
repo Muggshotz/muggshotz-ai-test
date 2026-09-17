@@ -2,7 +2,7 @@ import fs from "fs";
 import path from "path";
 import sharp from "sharp";
 
-// BUILD: 2026-09-17a — Sunburst likeness test: model switched from gpt-image-2 to gpt-image-2.5-sunburst on both Images API edit calls (main generation and wraparound outpaint). Nothing else changed: same endpoints, same size handling, no input_fidelity. Revert = restore the previous generate.js from GitHub history.
+// BUILD: 2026-09-17b — clothing rule softened (Alyx): keep the photo's clothing unless a costume change is requested or strongly implied by the set and setting. Replaces the "specifically"/"explicitly" wording in all three copies, which blocked implied changes (a beach scene kept the office blouse). 2026-09-17a: model switched to gpt-image-2.5-sunburst on both Images API edit calls.
 
 // RESTORED (July 2026): this file was found genuinely truncated — cut
 // off mid-function with no closing brackets and no export default
@@ -388,7 +388,7 @@ the real mouth shape and expression; the real jawline, cheeks, and ears;
 the real facial hair, head shape, skin tone, and age.
 If the uploaded photo shows the person smiling, study exactly how THIS person's eyes look when they smile -- most real smiles narrow and crinkle the eyes at the outer corners to some degree, and the exact amount varies person to person. Match that specific person's real smiling eye shape rather than defaulting to a generic wide-open smiling-eyes look.
 Preserve normal head-to-body proportions unless the customer asks for wild exaggeration.
-Keep the person's actual clothing and outfit from the uploaded photo (garment type, color, and style) unless the customer's request below specifically describes different clothing to wear instead.
+Keep the person's actual clothing and outfit from the uploaded photo (garment type, color, and style) unless a costume change is requested or strongly implied by the set and setting.
 
 PANORAMA LAYOUT — ONE SINGLE UNINTERRUPTED ULTRA-WIDE SCENE:
 Generate exactly ONE continuous ultra-wide image, composed as a single sweeping panoramic photograph taken in one shot.
@@ -416,7 +416,7 @@ Do NOT letterbox or pillarbox the subject — no black bars, coloured bars, or b
 Every pixel, from the far left edge to the far right edge and from the top edge to the bottom edge, is part of one single continuous scene.
 These composition rules are technical printing requirements. They override the STYLE above, and every other instruction here, without exception.
 
-FINAL REMINDER ON LIKENESS: Do not add facial hair, tattoos, piercings, scars, jewelry, or any other feature to the subject's face or head that is not clearly visible in the uploaded photo, unless the customer's request above explicitly asks for it. The subject's face must remain a faithful likeness of the real uploaded photo at all times, even while everything else in the scene is invented. Keep the subject's actual clothing from the uploaded photo (garment type, color, style) unless the customer's request explicitly asks for different clothing -- do not invent a new outfit to match the scene's theme.
+FINAL REMINDER ON LIKENESS: Do not add facial hair, tattoos, piercings, scars, jewelry, or any other feature to the subject's face or head that is not clearly visible in the uploaded photo, unless the customer's request above explicitly asks for it. The subject's face must remain a faithful likeness of the real uploaded photo at all times, even while everything else in the scene is invented. Keep the subject's actual clothing from the uploaded photo (garment type, color, style) unless a costume change is requested or strongly implied by the set and setting.
 `;
 
       const geminiParts = [
@@ -634,7 +634,7 @@ the real mouth shape and expression; the real jawline, cheeks, and ears;
 the real facial hair, head shape, skin tone, and age.
 If the uploaded photo shows the person smiling, study exactly how THIS person's eyes look when they smile -- most real smiles narrow and crinkle the eyes at the outer corners to some degree, and the exact amount varies person to person. Match that specific person's real smiling eye shape rather than defaulting to a generic wide-open smiling-eyes look.
 Preserve normal head-to-body proportions unless the customer asks for wild exaggeration.
-Keep the person's actual clothing and outfit from the uploaded photo (garment type, color, and style) unless the customer's request below specifically describes different clothing to wear instead.
+Keep the person's actual clothing and outfit from the uploaded photo (garment type, color, and style) unless a costume change is requested or strongly implied by the set and setting.
 `;
 
     // Left/Right panel calls are NOT edits of the customer's photo — the
