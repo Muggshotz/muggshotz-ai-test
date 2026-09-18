@@ -1,5 +1,5 @@
 <!-- ============================================================
-     VERSION: V305
+     VERSION: V306
      ============================================================
      THE ONE LINE THAT SAYS WHICH BUILD YOU ARE LOOKING AT.
 
@@ -271,6 +271,7 @@ body.frame-tools-open #accessorizeCancelBtn{padding:.45rem;font-size:12px;margin
 .curve-mode-row{display:flex;gap:8px;margin-top:.75rem}
 .curve-mode-btn{flex:1;background:#0d0d0d;border:.5px solid #333;border-radius:8px;padding:.6rem .4rem;text-align:center;cursor:pointer;color:#29a3ff;font-size:12px;font-weight:600}
 .curve-mode-btn.selected{border-color:#003c8c;background:#0d1b33;color:#003c8c}
+.typed-val{width:58px;background:#0d0d0d;border:1px solid #003c8c;border-radius:6px;color:#29a3ff;font-size:12px;padding:4px 6px;text-align:right}.typed-val:focus{outline:none;border-color:#29a3ff;box-shadow:0 0 6px rgba(41,163,255,.6)}
 .draw-path-wrap{position:relative;margin-top:.75rem;border-radius:10px;overflow:hidden;border:1.5px dashed #444;background:#0d0d0d;touch-action:none}
 .draw-path-wrap canvas{display:block;width:100%;height:auto;touch-action:none}
 .draw-path-actions{display:flex;gap:8px;margin-top:.6rem}
@@ -9433,6 +9434,30 @@ function paintFadeMask(canvas,boxW,boxH,pct,hex,backdrop){
 // layoutFittedImage); the fade and the thin frame both sit on THAT, so a
 // shrunk picture keeps its soft edges and its frame, exactly as the print
 // will (applyFadeIfNeeded / applyBorderIfNeeded in create-printify-order.js).
+// A number box that drives a range slider, and is driven by it. A value inside
+// the slider's range applies as it is typed; a partial or out-of-range value
+// waits for change (Enter or leaving the box) and is then clamped -- so typing
+// "8" on the way to "85" does not yank the box to the minimum mid-keystroke.
+// The slider's own input event is dispatched, so whatever the drag does, the
+// typed number does too, through the same code.
+function attachTypedValue(slider,box){
+  if(!slider||!box)return;
+  const min=Number(slider.min),max=Number(slider.max);
+  const push=v=>{ slider.value=String(v); slider.dispatchEvent(new Event('input',{bubbles:true})); };
+  box.addEventListener('input',()=>{
+    const v=Number(box.value);
+    if(box.value!==''&&Number.isFinite(v)&&v>=min&&v<=max)push(v);
+  });
+  box.addEventListener('change',()=>{
+    let v=Number(box.value);
+    if(box.value===''||!Number.isFinite(v))v=Number(slider.value);
+    v=Math.round(Math.min(max,Math.max(min,v)));
+    box.value=String(v);
+    push(v);
+  });
+  box.addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); box.blur(); } });
+}
+
 function decorateFitBox(box,adj,rect){
   if(!box)return;
   const r=rect||{left:0,top:0,w:box.clientWidth,h:box.clientHeight};
@@ -9799,7 +9824,7 @@ function buildCoverMeFitter(designId,multiple){
   row.innerHTML=`<span class="note" style="margin:0;white-space:nowrap">Smaller</span>
     <input type="range" min="50" max="200" step="1" value="${Math.round((adj.zoom||1)*100)}" id="coverMeFitZoom_${designId}" style="flex:1">
     <span class="note" style="margin:0;white-space:nowrap">Bigger</span>
-    <span class="note" id="coverMeFitZoomOut_${designId}" style="margin:0;min-width:40px;text-align:right">${Math.round((adj.zoom||1)*100)}%</span>`;
+    <input type="number" inputmode="numeric" min="50" max="200" step="1" value="${Math.round((adj.zoom||1)*100)}" id="coverMeFitZoomOut_${designId}" class="typed-val" aria-label="Size, percent"><span class="note" style="margin:0">%</span>`;
   right.appendChild(row);
 
   const fadeRow=document.createElement('div');
@@ -9807,7 +9832,7 @@ function buildCoverMeFitter(designId,multiple){
   fadeRow.innerHTML=`<span class="note" style="margin:0;white-space:nowrap">Sharp</span>
     <input type="range" min="0" max="100" step="1" value="${Math.round(adj.fade||0)}" id="coverMeFitFade_${designId}" style="flex:1">
     <span class="note" style="margin:0;white-space:nowrap">Soft</span>
-    <span class="note" id="coverMeFitFadeOut_${designId}" style="margin:0;min-width:40px;text-align:right">${Math.round(adj.fade||0)}%</span>`;
+    <input type="number" inputmode="numeric" min="0" max="100" step="1" value="${Math.round(adj.fade||0)}" id="coverMeFitFadeOut_${designId}" class="typed-val" aria-label="Fade, percent"><span class="note" style="margin:0">%</span>`;
   right.appendChild(fadeRow);
   const fadeNote=document.createElement('div');
   fadeNote.className='note';
@@ -9874,7 +9899,7 @@ function buildCoverMeFitter(designId,multiple){
   zoomEl.addEventListener('input',()=>{
     const cur=getDesignAdjust(designId);
     cur.zoom=Number(zoomEl.value)/100;
-    document.getElementById('coverMeFitZoomOut_'+designId).textContent=zoomEl.value+'%';
+    document.getElementById('coverMeFitZoomOut_'+designId).value=zoomEl.value;
     setDesignAdjust(designId,cur);
     apply();
   });
@@ -9882,10 +9907,18 @@ function buildCoverMeFitter(designId,multiple){
   fadeEl.addEventListener('input',()=>{
     const cur=getDesignAdjust(designId);
     cur.fade=Number(fadeEl.value);
-    document.getElementById('coverMeFitFadeOut_'+designId).textContent=fadeEl.value+'%';
+    document.getElementById('coverMeFitFadeOut_'+designId).value=fadeEl.value;
     setDesignAdjust(designId,cur);
     apply();
   });
+  // TYPE THE NUMBER, OR DRAG -- BOTH (Alyx, Sep 2026: "it's very hard to
+  // affect precise values, like let's say I wanted 90%, or 80%, or 85% even...
+  // if you can simply type the value that would be great. I propose having
+  // them both"). The box drives the slider and fires the slider's own input
+  // event, so the picture moves through exactly the code the drag uses.
+  attachTypedValue(zoomEl,document.getElementById('coverMeFitZoomOut_'+designId));
+  attachTypedValue(fadeEl,document.getElementById('coverMeFitFadeOut_'+designId));
+
   const borderEl=frameRow.querySelector('input');
   borderEl.addEventListener('change',()=>{
     const cur=getDesignAdjust(designId);
