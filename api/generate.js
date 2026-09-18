@@ -2,7 +2,7 @@ import fs from "fs";
 import path from "path";
 import sharp from "sharp";
 
-// BUILD: 2026-09-18b — TWO DIALS (Alyx): style and degree were one tangled switch, so two combinations could render the same picture and two others rendered nothing different at all. The style now governs ONLY how a piece is drawn and declares the exaggeration range natural to its medium (a comic book is born more exaggerated than a photograph); the Degree of Caricature card picks a position inside that range. The page sends the result as three plain numbers -- head ratio, push percentage, feature count -- and both sides build the identical face block from them, so a request can never carry two different instructions about one face. Six styles x three degrees = eighteen distinct combinations, and Photorealistic + Lifelike is a true zero. 18a: the tiers stopped being drowned out by the fifteen-item lockdown. 17d: Caricature Assassination style and the hidden style-reference mechanism. 17c: setting/pose/props rule. 17b: clothing rule. 17a: gpt-image-2.5-sunburst.
+// BUILD: 2026-09-18c — the extreme corner gets a MEDIUM, and its reference picture can no longer go missing in silence (Alyx: "I was kind of hoping to get it a whole different extreme style altogether", "I guess it didn't make a change in style any"). Caricature Assassination described a mood -- sculpted, confident brushwork, theatrical lighting -- where every other tile names a medium outright (pen-and-ink, flat cel-shaded), so it came back looking like the others. It now names one: hyperreal 3D-sculpted digital caricature, a collectible vinyl figurine, glossy rubbery skin and cinematic rim lighting, never drawn and never photographed. And the hidden reference PNG now loads by disk OR by HTTP from our own static assets, because a serverless function only carries the files the bundler chose and a readFileSync on a variable path is what it misses -- which failed silently, attaching nothing. 18b: two dials. 18a: the tiers stopped being drowned out. 17d: the style-reference mechanism. 17c: setting/pose/props. 17b: clothing. 17a: gpt-image-2.5-sunburst.
 
 // RESTORED (July 2026): this file was found genuinely truncated — cut
 // off mid-function with no closing brackets and no export default
@@ -335,10 +335,36 @@ Do not invent features the photo does not show -- no added facial hair, no added
       || null;
     let styleRefBuffer = null;
     if (styleRefFile) {
+      // TWO WAYS IN, BECAUSE THE FIRST ONE CAN SILENTLY NOT EXIST (Alyx, Sep
+      // 2026: "I guess it didn't make a change in style any").
+      //
+      // A serverless function only carries the files Vercel's tracer chose to
+      // bundle, and a readFileSync built from a VARIABLE path is exactly the
+      // shape that tracer misses. When it does, this throws, the catch eats it,
+      // and the generation goes out with no reference picture attached at all --
+      // no error, no warning, nothing on screen to say the style reference the
+      // tile promises was never there.
+      //
+      // The same PNGs are served as ordinary static assets from the site (both
+      // verified 200 with the right byte counts), so if the local read comes up
+      // empty we fetch our own file over HTTP. Config-free, and it cannot be
+      // defeated by a bundling decision.
+      const t0 = Date.now();
       try {
         styleRefBuffer = fs.readFileSync(path.join(process.cwd(), styleRefFile));
+        console.log("Style reference read from disk:", styleRefFile, styleRefBuffer.length + " bytes");
       } catch (styleRefErr) {
-        console.error("Could not load style reference file:", styleRefFile, styleRefErr.message);
+        console.error("Style reference not on disk:", styleRefFile, styleRefErr.message, "-- falling back to HTTP");
+        try {
+          const host = req.headers["x-forwarded-host"] || req.headers.host;
+          const proto = req.headers["x-forwarded-proto"] || "https";
+          const resp = await fetch(`${proto}://${host}/${styleRefFile}`);
+          if (!resp.ok) throw new Error("HTTP " + resp.status);
+          styleRefBuffer = Buffer.from(await resp.arrayBuffer());
+          console.log("Style reference fetched over HTTP:", styleRefFile, styleRefBuffer.length + " bytes", (Date.now() - t0) + "ms");
+        } catch (httpErr) {
+          console.error("Style reference unavailable by BOTH routes:", styleRefFile, httpErr.message);
+        }
       }
     }
     // Only ever claim the picture is attached when it actually is.
