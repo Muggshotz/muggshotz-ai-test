@@ -13,6 +13,23 @@
 // keeps the picture each one produces. It does NOT wait for the studio to
 // render the result -- it takes the URL out of the generate response and
 // downloads it directly, which is the part that works.
+// THE REFERENCE PHOTO IS ALYX (Sep 2026, and it should always have been).
+//
+// The first range probe used flow-tests/test-photo.jpg without anyone looking
+// at it. It is a flat oval with two dots for eyes -- a fixture for the
+// mechanical suites, not a face. So the model was inventing a plausible human
+// from nothing, differently every time, and nothing could be concluded about
+// likeness or exaggeration. Alyx spotted it from the output alone: "I could not
+// underoath testify that the two images you showed me of the guy on the
+// tricycle are supposed to be the same guy." He was right; there was no guy.
+//
+// alyx-face.jpg is a head-and-shoulders crop of the repo's own 'all me.png'.
+// Cropped rather than used whole because the studio resizes an upload to 1280
+// and the full-body original leaves the face about 85 pixels tall -- too little
+// to judge a likeness by, and an unfairly hard input for the model.
+//
+// His reasoning for the standard, which is the right one: "I can immediately
+// recognize whether an image is me or not regardless of the exaggeration level."
 const { chromium } = require('playwright');
 const fs = require('fs');
 const path = require('path');
@@ -63,7 +80,7 @@ const log = (...a) => console.log(new Date().toISOString().slice(11,19), ...a);
 
     await page.goto(PAGE + '/needles-studio.html', { waitUntil: 'domcontentloaded' });
     await page.waitForTimeout(2500);
-    await page.setInputFiles('#fileInput', path.join(__dirname, '..', 'test-photo.jpg'));
+    await page.setInputFiles('#fileInput', path.join(__dirname, '..', 'alyx-face.jpg'));
     await page.waitForTimeout(2500); await clear();
     await page.evaluate(() => { if (typeof chooseIntentAI === 'function') chooseIntentAI(); });
     await page.waitForTimeout(1200); await clear();
