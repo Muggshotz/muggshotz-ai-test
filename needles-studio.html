@@ -1,5 +1,5 @@
 <!-- ============================================================
-     VERSION: V304
+     VERSION: V305
      ============================================================
      THE ONE LINE THAT SAYS WHICH BUILD YOU ARE LOOKING AT.
 
@@ -13126,10 +13126,20 @@ function openFadeSplitLayout(){
   const stage=document.getElementById('revealFade3DStage');
   const hint=document.getElementById('revealFade3DHint');
   const panel=document.getElementById('revealFadeSliderPanel');
+  // THE FLAT PICTURE GOES UNDER THE SLIDER (Alyx, Sep 2026: "take the image
+  // that is on the bottom and shift it to the right and up so that it is
+  // underneath the slide bar instead of just kind of wandering half in the
+  // middle"). revealFitHost is the dashed print-area box; revealFitNote is the
+  // "This picture goes on Left and Right" line beneath it.
+  const fitHost=document.getElementById('revealFitHost');
+  const fitNote=document.getElementById('revealFitNote');
   if(!card||!stage||!panel)return;
   const split=document.createElement('div');
   split.id='revealFadeSplit';
-  split.style.cssText='display:flex;gap:22px;align-items:flex-start;text-align:left;margin-top:.9rem';
+  // align-items:center, not flex-start -- the cup is shorter than the stack of
+  // controls beside it, and Alyx wants it centred on that stack rather than
+  // pinned to the top with dead space under it.
+  split.style.cssText='display:flex;gap:22px;align-items:center;text-align:left;margin-top:.9rem';
   const left=document.createElement('div');
   left.style.cssText='flex:1 1 0;min-width:0';
   const right=document.createElement('div');
@@ -13145,12 +13155,17 @@ function openFadeSplitLayout(){
     stageAfter:stage.nextSibling, stageParent:stage.parentNode,
     hintAfter:hint?hint.nextSibling:null, hintParent:hint?hint.parentNode:null,
     panelAfter:panel.nextSibling, panelParent:panel.parentNode,
+    fitAfter:fitHost?fitHost.nextSibling:null, fitParent:fitHost?fitHost.parentNode:null,
+    fitNoteAfter:fitNote?fitNote.nextSibling:null, fitNoteParent:fitNote?fitNote.parentNode:null,
+    fitMargin:fitHost?fitHost.style.margin:'',
     split
   };
   stage.parentNode.insertBefore(split,stage);
   left.appendChild(stage);
   if(hint)left.appendChild(hint);
   right.appendChild(panel);
+  if(fitHost){ right.appendChild(fitHost); fitHost.style.margin='.9rem 0 0'; }
+  if(fitNote)right.appendChild(fitNote);
   split.appendChild(left);
   split.appendChild(right);
   card.style.maxWidth='980px';
@@ -13184,6 +13199,10 @@ function closeFadeSplitLayout(){
     if(stage&&r.stageParent)r.stageParent.insertBefore(stage,r.stageAfter);
     if(hint&&r.hintParent)r.hintParent.insertBefore(hint,r.hintAfter);
     if(panel&&r.panelParent)r.panelParent.insertBefore(panel,r.panelAfter);
+    const fitHost=document.getElementById('revealFitHost');
+    const fitNote=document.getElementById('revealFitNote');
+    if(fitHost&&r.fitParent){ r.fitParent.insertBefore(fitHost,r.fitAfter); fitHost.style.margin=r.fitMargin||'.9rem 0'; }
+    if(fitNote&&r.fitNoteParent)r.fitNoteParent.insertBefore(fitNote,r.fitNoteAfter);
     if(r.split&&r.split.parentNode)r.split.parentNode.removeChild(r.split);
     if(card){
       card.style.maxWidth=r.cardWidth||'520px';
