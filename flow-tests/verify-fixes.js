@@ -71,15 +71,33 @@ const scenarios = {
     await pressGenerate(page);
     await waitApprove(page);
     const atReveal = await page.evaluate(() => ({
-      genActive: document.body.classList.contains('generation-active'),
+      // EITHER reveal state counts. generation-active is the cage worn WHILE
+      // Needles paints; design-revealed is what the finished picture wears --
+      // same dim, no pointer-events lock, no scroll pin. Both mean "the studio
+      // is pointing at the picture", which is the thing this pins.
+      spotlit: document.body.classList.contains('generation-active')
+            || document.body.classList.contains('design-revealed'),
       banners: document.querySelectorAll('.generation-reminder-banner').length,
       captionPE: getComputedStyle(document.getElementById('captionCard')).pointerEvents,
+      productOpacity: Number(getComputedStyle(document.getElementById('productCard')).opacity),
       productPE: getComputedStyle(document.getElementById('productCard')).pointerEvents,
     }));
-    if (!atReveal.genActive) return 'FAIL: spotlight dropped at reveal (genActive off)';
+    if (!atReveal.spotlit) return 'FAIL: spotlight dropped at reveal (no reveal state on the body)';
     if (atReveal.banners) return `FAIL: ${atReveal.banners} patience banners left behind`;
     if (atReveal.captionPE === 'none') return 'FAIL: caption detour locked at reveal';
-    if (atReveal.productPE !== 'none') return 'FAIL: product grid not dimmed at reveal (spotlight leaking)';
+    // DIMMED, NOT DEAD (Alyx's freeze, Sep 2026). This used to require
+    // pointer-events:none on the product grid, and that lock was half of what
+    // stranded a customer on the reveal with no way to reach Yes/No. The rule
+    // here is now the one the rail spotlights already follow: a dim is a
+    // guide, not a cage. Dimming is still required -- a fully lit product grid
+    // at the reveal really would be a leaking spotlight -- but the lock is a
+    // regression to fail on, not a property to demand.
+    if (!(atReveal.productOpacity <= 0.5)) {
+      return `FAIL: product grid not dimmed at reveal (opacity ${atReveal.productOpacity} — spotlight leaking)`;
+    }
+    if (atReveal.productPE === 'none') {
+      return 'FAIL: product grid click-locked at reveal — the cage is back';
+    }
     // Caption detour genuinely usable
     await page.locator('#captionText').fill('Happy Birthday!', { timeout: 4000 });
     // YES → spotlight handoff → placement + Continue to Order live.
@@ -89,7 +107,8 @@ const scenarios = {
     // through them the way a customer does.
     await page.locator('#approveRow button:has-text("Yes")').first().click();
     await page.waitForTimeout(1500);
-    const afterYes = await page.evaluate(() => document.body.classList.contains('generation-active'));
+    const afterYes = await page.evaluate(() => document.body.classList.contains('generation-active')
+                                            || document.body.classList.contains('design-revealed'));
     if (afterYes) return 'FAIL: spotlight not handed off after YES';
     await passFadePage(page);
     // GREETING CARDS ASK ABOUT THE INSIDE (Sep 2026): between the fade
@@ -131,7 +150,8 @@ const scenarios = {
     await page.waitForTimeout(1600);
     await dismissAlerts(page); // idea-box intro "Got It" popup — normal first-visit behavior
     await page.waitForTimeout(300);
-    const genActive = await page.evaluate(() => document.body.classList.contains('generation-active'));
+    const genActive = await page.evaluate(() => document.body.classList.contains('generation-active')
+                                            || document.body.classList.contains('design-revealed'));
     if (genActive) return 'FAIL: dim still on after Try Another';
     await page.click('#ideaDesc', { timeout: 4000 }); // real click: box must be expanded AND unlocked
     await page.fill('#ideaDesc', 'make the hat bigger');
@@ -258,7 +278,8 @@ const scenarios = {
     // chain past any fixed number under load. The assertion is the
     // OUTCOME (spotlight released, panel screen up), not the timeline.
     const handedOff = await page.waitForFunction(() =>
-      !document.body.classList.contains('generation-active'), null, { timeout: 15000 }
+      !document.body.classList.contains('generation-active')
+      && !document.body.classList.contains('design-revealed'), null, { timeout: 15000 }
     ).then(() => true).catch(() => false);
     const st = await page.evaluate(() => ({
       panel: document.getElementById('coverMePanelCard')?.style.display !== 'none',

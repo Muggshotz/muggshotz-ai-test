@@ -262,7 +262,9 @@ async function dismissAlerts(page) {
 
 async function bodyFocusClasses(page) {
   return page.evaluate(() =>
-    Array.from(document.body.classList).filter((c) => c.endsWith('-focus') || c === 'generation-active'));
+    // design-revealed deliberately does not end in -focus (so the studio's own
+    // spotlight sweeps cannot clear it by accident); named here explicitly.
+    Array.from(document.body.classList).filter((c) => c.endsWith('-focus') || c === 'generation-active' || c === 'design-revealed'));
 }
 
 // Single-image products now stop at the real Edge Fade page between approve
