@@ -74,6 +74,11 @@ const log = (...a) => console.log(new Date().toISOString().slice(11,19), ...a);
       // and never wait for ever ourselves
       const r = await fetch(url, { method: req.method(), headers: h, body: bodyBuf, signal: AbortSignal.timeout(90000) });
       const buf = Buffer.from(await r.arrayBuffer());
+      // WHAT DID /api/generate ACTUALLY SAY? Seventh run showed the call
+      // returning 200 with 125 bytes and the studio then never requesting the
+      // picture at all -- the same dead stop Alyx hit. Small API bodies are
+      // printed in full so the next run answers that instead of narrowing it.
+      if (isApi && buf.length < 2000) log('     body: ' + buf.toString('utf8').slice(0, 400));
       if (isApi || buf.length > 40000) {
         const tag = isApi ? 'api ' + raw.pathname : raw.hostname + raw.pathname.slice(0, 28);
         log('  ' + tag + ' -> ' + r.status + ' in ' + Math.round((Date.now()-t)/1000) + 's, ' + buf.length + ' bytes');
@@ -140,11 +145,19 @@ const log = (...a) => console.log(new Date().toISOString().slice(11,19), ...a);
   try {
     await page.waitForFunction(() => document.getElementById('approveRow')?.style.display !== 'none', null, { timeout: 180000 });
   } catch (e) {
-    const st = await page.evaluate(() => ({
-      status: document.getElementById('statusMsg')?.textContent?.slice(0,200) || '',
-      timer: document.getElementById('genTimer')?.textContent || '',
-      alert: [...document.querySelectorAll('.big-alert-overlay.visible')].map(o=>o.textContent.slice(0,160)),
-    }));
+    const st = await page.evaluate(() => {
+      const txt = el => (el?.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 160);
+      return {
+        body: document.body.className,
+        // whatever is actually on screen, rather than ids I guessed at
+        visibleNotes: [...document.querySelectorAll('.note, .note-prominent, #statusMsg, [id*="imer"]')]
+          .filter(e => e.offsetParent !== null && (e.textContent || '').trim())
+          .map(txt).filter(Boolean).slice(0, 8),
+        resultUrl: (typeof resultUrl !== 'undefined' && resultUrl) ? String(resultUrl).slice(0, 90) : null,
+        finalUrl: (typeof finalImageUrl !== 'undefined' && finalImageUrl) ? String(finalImageUrl).slice(0, 90) : null,
+        approve: document.getElementById('approveRow')?.style.display,
+      };
+    });
     log('TIMED OUT. on screen:', JSON.stringify(st));
     await page.screenshot({ path: path.join(OUT, 'timeout.png') });
     throw e;
