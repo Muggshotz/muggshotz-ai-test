@@ -82,6 +82,23 @@ const log = (...a) => console.log(new Date().toISOString().slice(11,19), ...a);
   await page.route('**/api/**', relay);
   await page.route('https://**', relay);
 
+  const balance = async () => page.evaluate(async d => {
+    const r = await fetch('/api/get-balance?deviceId=' + encodeURIComponent(d));
+    return (await r.json()).tokenBalance;
+  }, DEVICE);
+
+  const clearAlerts = async () => {
+    for (let i = 0; i < 8; i++) {
+      const n = await page.evaluate(() => {
+        let n = 0;
+        document.querySelectorAll('.big-alert-overlay.visible').forEach(o => { o.classList.remove('visible'); o.style.display = 'none'; n++; });
+        return n;
+      });
+      if (!n) break;
+      await page.waitForTimeout(200);
+    }
+  };
+
   await page.goto(PAGE + '/needles-studio.html', { waitUntil: 'domcontentloaded' });
   await page.waitForTimeout(3000);
   const before = await balance();
