@@ -508,6 +508,24 @@ body.frame-tools-open #accessorizeCancelBtn{padding:.45rem;font-size:12px;margin
 body.generation-active .card:not(#uploadPhotoCard):not(#captionCard){opacity:.28;filter:brightness(.55) saturate(.7);pointer-events:none;transition:opacity .5s,filter .5s}
 body.generation-active #uploadPhotoCard{position:relative;z-index:5}
 body.generation-active #creditsModalOverlay .card{opacity:1!important;filter:none!important;pointer-events:auto!important}
+/* THE PICTURE IS FINISHED -- LET GO OF THE PAGE (Alyx, Sep 2026: "I can't
+   move up or down it's frozen in this place"; "I am bound to this area, to
+   this panel. Can't scroll down, can only scroll up about 1 inch").
+   generation-active is a cage on purpose: while Needles paints, every other
+   card is dimmed AND pointer-events:none, and scrollPinTargets() clamps the
+   window to the easel. Both are right for the half-minute the customer is
+   waiting with genuinely nothing else to do.
+   They were also left switched on straight THROUGH the reveal, and only
+   released when the customer pressed Yes or No -- two buttons that sit below
+   the fold on a phone, with the pin refusing to scroll down to them. A
+   customer who could not reach them had no way off the screen at all. That is
+   the freeze Alyx hit twice in a row.
+   The reveal gets its own state instead: the same dim, so the eye still goes
+   to the finished picture, but no lock and no pin. Follows the rule the rail
+   spotlights below already follow -- a dim is a guide, not a cage. */
+body.design-revealed .card:not(#uploadPhotoCard):not(#captionCard){opacity:.35;filter:brightness(.6) saturate(.75);transition:opacity .5s,filter .5s}
+body.design-revealed #uploadPhotoCard{position:relative;z-index:5}
+body.design-revealed #creditsModalOverlay .card{opacity:1!important;filter:none!important;pointer-events:auto!important}
 body .step-lock-overlay .card{opacity:1!important;filter:none!important;pointer-events:auto!important}
 body #accessorizeCard{opacity:1!important;filter:none!important;pointer-events:auto!important}
 /* FIXED (Aug 2026, Alyx's find): the pre-generation Frame section's own
@@ -2726,6 +2744,28 @@ window.addEventListener('scroll',()=>{
   generationScrollDebounce=setTimeout(handleGenerationScrollSnap,150);
 });
 
+// THE MOMENT THE PICTURE IS FINISHED (Alyx's freeze, Sep 2026).
+// Hands the page from the generation cage to the reveal's own state: the dim
+// stays, the lock and the scroll pin go. Called by every path that puts a
+// finished design on the easel, so none of them can leave the old cage up.
+function enterDesignRevealedState(){
+  document.body.classList.remove('generation-active');
+  document.body.classList.add('design-revealed');
+  // The easel snap-back exists to hold the customer on the stage WHILE the
+  // picture paints. Painting is over; disarm it for good rather than let it
+  // keep yanking the page back every four seconds.
+  generationBottomSnapArmed=false;
+  refreshScrollPin();
+}
+// design-revealed deliberately does NOT end in -focus, so setOptionSpotlight's
+// sweep and startNeedlesStage's sweep cannot see it. It is cleared here, and
+// here is called from both of those plus clearAllFocusModes().
+function leaveDesignRevealedState(){
+  if(!document.body.classList.contains('design-revealed'))return;
+  document.body.classList.remove('design-revealed');
+  refreshScrollPin();
+}
+
 function startNeedlesStage(){
   requestNeedlesWakeLock();
   // BUG FIX (Aug 2026, Alyx's phone-case run): this removed exactly ONE stale
@@ -2742,6 +2782,7 @@ function startNeedlesStage(){
   Array.from(document.body.classList)
     .filter(c=>c.endsWith('-focus'))
     .forEach(c=>document.body.classList.remove(c));
+  leaveDesignRevealedState();
   document.body.classList.add('generation-active');
   insertGenerationReminders();
   generationBottomSnapArmed=true;
@@ -9079,6 +9120,7 @@ function autoFillCoverMePanels(){
 // because the dimmer it never heard of is still on.
 function clearAllFocusModes(){
   document.body.classList.remove('generation-active');
+  leaveDesignRevealedState();
   Array.from(document.body.classList)
     .filter(c=>c.endsWith('-focus'))
     .forEach(c=>document.body.classList.remove(c));
@@ -10610,6 +10652,8 @@ function confirmPhoneModelGen(isCorrect){
 // is made. Dim-only (no pointer-events lock), so deliberate detours stay
 // clickable -- a dim is a guide, not a cage.
 function setOptionSpotlight(cls){
+  // Lighting a new panel means the customer has moved on from the reveal.
+  leaveDesignRevealedState();
   Array.from(document.body.classList)
     .filter(c=>c.endsWith('-focus'))
     .forEach(c=>document.body.classList.remove(c));
@@ -13847,7 +13891,35 @@ function cardInsideBack(){
 }
 // ================= END INSIDE OF THE GREETING CARD =================
 
+// NEVER LET GO OF THE CUSTOMER SILENTLY (Alyx's freeze report, Sep 2026).
+// Between them these two are called from sixteen places and not one of those
+// awaits or catches. A throw anywhere inside therefore became an unhandled
+// promise rejection: no alert, nothing in the customer's way to click, the
+// flow simply stopped -- with whatever black wait overlay and step-lock
+// happened to be up at that moment left up, which reads exactly like a frozen
+// page. Both entry points are shells now, so every caller gets the same
+// guarantee: either the mockup opens, or the page is handed back with the
+// reason on screen.
+function releasePageAfterMockupFailure(err,what){
+  console.error(what,err);
+  // EVERY pop-over this route can have opened, not a hand-listed few: the
+  // black wait screen, the Trimmings panel, the greeting card's inside. A
+  // throw can land at any point between them, and whichever one happens to be
+  // up is a full-screen layer over a page the customer can no longer use. The
+  // alert below is worthless behind it.
+  Array.from(document.querySelectorAll('.step-lock-overlay')).forEach(o=>{
+    if(getComputedStyle(o).display!=='none')o.style.display='none';
+  });
+  document.body.classList.remove('step-locked');
+  showBigAlert((err&&err.message)||'Something went wrong opening your mockup. Your design is safe — please try again.');
+}
+
 async function beginFinalMockupFetch(){
+  try{ return await runBeginFinalMockupFetch(); }
+  catch(err){ releasePageAfterMockupFailure(err,'Could not open the mockup:'); }
+}
+
+async function runBeginFinalMockupFetch(){
   const finishedForTrim=finalImageUrl||resultUrl;
   if(wrapWantsGutters() && finishedForTrim && trimmingsSettledFor!==finishedForTrim){
     await openTrimmingsPanel();
@@ -13870,6 +13942,11 @@ async function beginFinalMockupFetch(){
 }
 
 async function reallyBeginFinalMockupFetch(){
+  try{ return await runReallyBeginFinalMockupFetch(); }
+  catch(err){ releasePageAfterMockupFailure(err,'Could not build the mockup:'); }
+}
+
+async function runReallyBeginFinalMockupFetch(){
   frameOfferFromMockup=false;
 
   // A CERAMIC MUG DOES NOT WAIT (Sep 2026, Alyx). Everything below polls
@@ -14390,6 +14467,10 @@ function focusCardFor(cls){
 function scrollPinTargets(){
   const vis=el=>!!el&&el.offsetParent!==null;
   const cls=Array.from(document.body.classList);
+  // THE FINISHED PICTURE IS NOT A CELL (Alyx, Sep 2026). No pin at all while
+  // the reveal is up: the picture can be taller than the phone, and Yes/No,
+  // Save and Copy all have to stay reachable however far down they land.
+  if(cls.includes('design-revealed'))return null;
   const row=document.getElementById('approveRow');
   if(row && row.style.display!=='none' && vis(row)){
     // A LIT SPOTLIGHT OUTRANKS THE FINISHED PICTURE (Alyx, Sep 2026).
@@ -18366,6 +18447,10 @@ async function makeTestSingleZonePanorama(side){
     // presented. Fall back to resultUrl only if something went wrong and
     // finalImageUrl never got set.
     const revealApproveStep=()=>{
+      // The picture is on the easel and the decision is his -- release the
+      // page before anything else, so the scroll pin cannot fight the landing
+      // scroll below and cannot strand him on this screen afterwards.
+      enterDesignRevealedState();
       const approveRowEl=document.getElementById('approveRow');
       approveRowEl.style.display='block';
       document.getElementById('downloadDesignBtn').style.display='block';
