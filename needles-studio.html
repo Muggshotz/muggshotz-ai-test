@@ -4300,6 +4300,14 @@ async function pickFrame(name){
     // nothing else (Window Sill) is active to show in it.
     renderWindowSillPreviewCard();
   }
+  // AND THE CUP REDRAWS. Picking a frame changed the flat preview and left the
+  // 3D cup above it showing the old picture, because nothing told that surface
+  // to redraw. Its own cache key now carries the frame, so this just asks it to
+  // run again; if that panel is not on screen it costs nothing.
+  if(typeof revealFadePanelOpen==='function' && revealFadePanelOpen()){
+    try{ await renderRevealFadeSurfaces(); }
+    catch(err){ console.error('Could not redraw the cup with the new frame:',err); }
+  }
 }
 
 // A frame needs full-bleed artwork right up to its inner edge — a soft
@@ -9600,7 +9608,13 @@ async function renderPanelPrintDataUrl(designId){
   const adj=(design.captioned&&design.preBakeAdjust)?{...design.preBakeAdjust}:getDesignAdjust(designId);
   const hex=getSelectedProductColorHex();
   const caption=product==='mug'?currentCaptionText():'';
-  const key=JSON.stringify([designId,src,box,adj,hex,caption]);
+  // THE FRAME BELONGS IN THIS KEY (Alyx, Sep 2026: "it applied to the mockup
+  // image, but not to the mockup mug above... it's supposed to immediately go
+  // to all my cups is it not?"). Without it, swapping frames handed back the
+  // previously cached texture and the 3D mug looked broken even once the
+  // drawing below was added.
+  const key=JSON.stringify([designId,src,box,adj,hex,caption,
+    selectedFrame,windowSillChoice,frameColors,frameInsetOverridePct]);
   if(panelPrintCache[key])return panelPrintCache[key];
   const img=await loadImageFromUrl(src);
   const c=document.createElement('canvas');
@@ -9639,7 +9653,26 @@ async function renderPanelPrintDataUrl(designId){
     pctx.putImageData(id,0,0);
   }
   if(caption){ try{ drawCaptionText(pctx,pc); }catch(err){ console.error('Caption could not be drawn for framing:',err); } }
-  ctx.drawImage(pc,left,top);
+  // THE MUG SHOWS THE FRAME TOO. This function paints the mug colour, the
+  // backdrop, the picture, its fade and its caption -- and used to stop there,
+  // so a frame picked on the accessorize screen changed the flat preview below
+  // and never the 3D mug above. Same helpers the flat preview uses, so the two
+  // cannot disagree about what a frame looks like.
+  let panelLayer=pc;
+  if(selectedFrame||windowSillChoice){
+    try{
+      const fc=document.createElement('canvas');
+      fc.width=w;fc.height=h;
+      const fctx=fc.getContext('2d');
+      await drawPhotoInsetForFrame(fctx,fc,pc,w,h);
+      await drawFrameOnCanvas(fctx,fc);
+      await drawWindowSillOnCanvas(fctx,fc);
+      panelLayer=fc;
+    }catch(err){
+      console.error('Frame could not be drawn onto the panel; showing it unframed:',err);
+    }
+  }
+  ctx.drawImage(panelLayer,left,top);
   const url=c.toDataURL('image/png');
   panelPrintCache[key]=url;
   return url;
@@ -13280,10 +13313,30 @@ function revealFadeSources(){
     : [wrapDisplayOverrideUrl||revealOriginalArtworkUrls[0]];
 }
 
+// THE CUP CARRIES THE FRAME TOO (Alyx, Sep 2026, watching a narrow accent
+// frame land on the flat preview and not on the mug spinning above it: "it's
+// supposed to immediately go to all my cups is it not?... the customer won't
+// know it's there or not and he'll suspect he sees a bug that isn't there").
+//
+// This fed the 3D cup the RAW artwork, scaled and faded, with no frame step at
+// all -- while the picture below it went through compositeFrameOntoImageUrl and
+// showed the border immediately. Two previews of one thing, built by two paths,
+// only one of which knew frames existed.
+//
+// The frame goes on BEFORE the fade, which is the order the print uses:
+// applyAccessorizeFrame bakes the border into the design, and the fade lives
+// with the placement on top of it. And the frame now belongs to the cache key,
+// or swapping frames would hand back the previous picture and look broken
+// anyway.
 async function ensureRevealFadePreviewUrls(){
-  const key=revealFadeSources().join('|');
+  const key=revealFadeSources().join('|')+'|'+JSON.stringify([selectedFrame,windowSillChoice,frameColors,frameInsetOverridePct]);
   if(revealFadePreviewFor===key && revealFadePreviewUrls)return revealFadePreviewUrls;
-  revealFadePreviewUrls=await Promise.all(revealFadeSources().map(u=>u?scaledForPreview(u,REVEAL_FADE_PREVIEW_WIDTH):Promise.resolve(null)));
+  const scaled=await Promise.all(revealFadeSources().map(u=>u?scaledForPreview(u,REVEAL_FADE_PREVIEW_WIDTH):Promise.resolve(null)));
+  revealFadePreviewUrls=await Promise.all(scaled.map(async u=>{
+    if(!u||!(selectedFrame||windowSillChoice))return u;
+    try{ return await compositeFrameOntoImageUrl(u); }
+    catch(err){ console.error('Frame could not be drawn onto the cup preview; showing it unframed:',err); return u; }
+  }));
   revealFadePreviewFor=key;
   return revealFadePreviewUrls;
 }
