@@ -742,3 +742,28 @@ this is the brief, plus what a first look at the code already shows.
   prompt wording was chosen by Claude and never signed off.
 * blankIdeaOffersTransfer in verify-approve-handoff: pre-existing failure,
   proven identical before and after the freeze fix.
+
+### The prop rule, refined minutes later (same night)
+
+Alyx corrected his own first pass. Magazine covers belong with the Let's Just
+Face It templates, and window sills move the other way -- they had been lumped
+in with the excluded props and they should not be.
+
+**Group A -- the AI builds the person INTO them.**
+Let's Just Face It templates, magazine covers.
+  * They require a generation, so they are offered BEFORE the mockup. They
+    cannot be applied to a finished mockup because the mockup is downstream of
+    the picture they help create.
+  * No fade tool. The artwork already encloses the subject; there is no raw
+    edge meeting a product surface to soften.
+  * (Sizing: not stated. Ask before assuming.)
+
+**Group B -- applied AROUND a finished image.**
+Window sills, picture frames including the thin accent-colour one.
+  * Offered AFTER the mockup, immediately before checkout, applied directly
+    onto the image on the mockup. "No thank you" goes straight to checkout.
+  * Fade AND resize, both. The customer needs to size what sits inside the
+    surround and soften where the picture meets it.
+
+The test for which group something is in: does it need the AI to make it, or
+does it wrap something the AI already made.
