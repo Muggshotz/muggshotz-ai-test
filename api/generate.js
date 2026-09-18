@@ -277,8 +277,17 @@ export default async function handler(req, res) {
     // Final else rather than an equality test on the third value: the tile
     // sends 0.35 and this file used to compare against "0.4", which made Wild
     // the one setting that sent nothing at all.
-    const wildFace = styleExaggerate || (likeness !== "0.15" && likeness !== "0.25");
-    const balancedFace = !wildFace && likeness === "0.25";
+    // A LADDER, NOT A SWITCH. See the matching note in needles-studio.html:
+    // a style that simply forced WILD collapsed all three tiles into one
+    // result and left no headroom above it. The style raises the floor by two
+    // rungs instead, so the tile keeps its say.
+    //
+    //   Lifelike 0   Balanced 1   Wild 2   (+2 when the style declares itself
+    //   a heavy caricature, clamped at 4)
+    const tileLevel = likeness === "0.15" ? 0 : likeness === "0.25" ? 1 : 2;
+    const faceLevel = Math.min(4, tileLevel + (styleExaggerate ? 2 : 0));
+    const wildFace = faceLevel >= 2;
+    const balancedFace = faceLevel === 1;
 
     // HIDDEN STYLE REFERENCE. The page sends a NAME (styleRef); only a name in
     // STYLE_REFERENCE_FILES resolves to a file, so nothing the browser sends can
@@ -420,7 +429,27 @@ An additional reference image is attached. ${refImageA ? 'One is "Photo 2" — w
       // picture. The tier decides the demand itself now, in physical terms.
       const neverMoves = "Eye colour, skin tone, apparent age, hairline position, and whether the head is bald or has hair NEVER change at any strength.";
 
-      const identityDemand = wildFace
+      const FEATURE_LIST = "the head and skull, the forehead and brow, the eye shape and spacing, the nose, the mouth and smile, the teeth, the cheeks, the jawline, the chin and the ears";
+
+      const identityDemand = faceLevel >= 4
+        ? `This is a DEMOLITION caricature -- the most extreme setting offered, and it should look it. Everything below is material to be reshaped:
+${FEATURE_LIST}.
+Enlarge the head to roughly 2x its natural head-to-body ratio, and shrink the body to a small comic frame beneath it.
+Push EVERY feature listed above well past life at once, and push the three strongest to the edge of the grotesque -- a broad nose becomes enormous, a heavy jaw becomes massive, a wide smile swallows the lower face. Warp, stretch and compress the skull as a caricaturist would.
+This must not look like a photograph of a person. It should look drawn, sculpted and deliberately absurd.
+Identity survives ONLY through the SHAPE of the real features. Someone who knows this person must laugh and recognise them in the same instant.
+${neverMoves}
+Do not invent features the photo does not show -- no added facial hair, no added glasses, no added scars, no borrowed features from anyone else.`
+        : faceLevel === 3
+        ? `This is a SAVAGE caricature -- well beyond an ordinary one. The features below are raw material, not things to hold still:
+${FEATURE_LIST}.
+Enlarge the head to roughly 1.7x its natural head-to-body ratio and shrink the body markedly against it.
+Pick the FOUR most distinctive features in this particular face and roughly DOUBLE each one against life. Compress and reshape the skull, neck and shoulders to carry it.
+The result should read as an artist's caricature at a glance, never as a photograph.
+Identity is carried by the SHAPE of the real features, never by their real measurements. A stranger who knows this person must still recognise them instantly.
+${neverMoves}
+Do not invent features the photo does not show -- no added facial hair, no added glasses, no added scars, no borrowed features from anyone else.`
+        : wildFace
         ? `This is a HEAVY caricature. The features below are what you EXAGGERATE -- they are not things to hold still:
 the head and skull, the forehead and brow, the eye shape and spacing, the nose, the mouth and smile, the teeth, the cheeks, the jawline, the chin and the ears.
 Enlarge the head to roughly 1.4x its natural head-to-body ratio and shrink the body against it.
@@ -438,11 +467,8 @@ Do not invent features the photo does not show.`
         : `Keep the same hairline and the same bald head or hairstyle, the same forehead, the same brow shape, the same eye shape and spacing, the same nose width and shape, the same mouth and smile shape, the same teeth, the same cheeks, the same jawline, the same chin, the same ears, the same skin tone, the same apparent age, and the same overall facial proportions as the uploaded photo.
 Use only mild exaggeration -- this is the gentlest of the three strengths.`;
 
-      const strengthLine = wildFace
-        ? "Caricature strength: WILD."
-        : balancedFace
-        ? "Caricature strength: BALANCED."
-        : "Caricature strength: LIGHT.";
+      const strengthLine = "Caricature strength: " +
+        (faceLevel >= 4 ? "DEMOLITION" : faceLevel === 3 ? "SAVAGE" : faceLevel === 2 ? "WILD" : faceLevel === 1 ? "BALANCED" : "LIGHT") + ".";
 
       const identityGuard = `
 IDENTITY PRESERVATION IS THE TOP PRIORITY, ABOVE THE SCENE AND ABOVE THE STYLE.
