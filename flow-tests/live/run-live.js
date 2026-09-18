@@ -110,6 +110,13 @@ const log = (...a) => console.log(new Date().toISOString().slice(11,19), ...a);
   await page.setInputFiles('#fileInput', path.join(__dirname, '..', 'test-photo.jpg'));
   await page.waitForTimeout(2500); await clearAlerts();
 
+  // ANSWER THE INTENT GATE FIRST (found by screenshotting a timeout: the
+  // "HOW WILL YOU GET YOUR ART?" modal was sitting over a finished generation,
+  // so the reveal could never be seen). Calling pickTrackDescribe() directly
+  // skipped the gate rather than satisfying it, and it came back.
+  await page.evaluate(() => { if (typeof chooseIntentAI === 'function') chooseIntentAI(); });
+  await page.waitForTimeout(1500); await clearAlerts();
+
   // AI track
   await page.evaluate(() => pickTrackDescribe());
   await page.waitForTimeout(1200); await clearAlerts();
