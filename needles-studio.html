@@ -14467,11 +14467,26 @@ function focusCardFor(cls){
 function scrollPinTargets(){
   const vis=el=>!!el&&el.offsetParent!==null;
   const cls=Array.from(document.body.classList);
-  // THE FINISHED PICTURE IS NOT A CELL (Alyx, Sep 2026). No pin at all while
-  // the reveal is up: the picture can be taller than the phone, and Yes/No,
-  // Save and Copy all have to stay reachable however far down they land.
-  if(cls.includes('design-revealed'))return null;
   const row=document.getElementById('approveRow');
+  // THE PIN HOLDS YOU ON THE PICTURE, NEVER ON SOMETHING DARK (Alyx, Sep 2026:
+  // "I wouldn't have had a problem with the pin except it was subduing the
+  // whole screen, and wouldn't let you move away from the subdued screen").
+  //
+  // The pin was never the complaint. Being held between the picture and its
+  // buttons is what he asked for in the first place, and verify-wraparound
+  // pins it. What made it a cell was WHERE it held him: his screenshot of the
+  // freeze is Product, Mug Print Style and Degree of Caricature, every one of
+  // them dimmed, with GENERATE IMAGE lit at the bottom -- which is the
+  // [likenessSectionCard .. generateBackBtn] region a stale rail spotlight
+  // produces. Held over the finished design, fine. Held over three dark cards
+  // he has already answered, with no way out, is the freeze.
+  //
+  // So at the reveal the region is decided here and nowhere else: the picture
+  // down to its buttons, whatever classes happen to be left on the body.
+  if(cls.includes('design-revealed') && vis(row)){
+    const revealPic=document.getElementById('previewImg');
+    return [vis(revealPic)?revealPic:row,row];
+  }
   if(row && row.style.display!=='none' && vis(row)){
     // A LIT SPOTLIGHT OUTRANKS THE FINISHED PICTURE (Alyx, Sep 2026).
     //
@@ -17128,7 +17143,17 @@ function showSingleImageAccessorizeStep(){
   // result they just waited for -- don't yank them away to a decision
   // that's already made. Only steer them to the picker if there's
   // actually still a choice to make.
-  if(!selectedFrame && !windowSillChoice){
+  //
+  // AND NOT WHILE THE REVEAL IS PINNED (Alyx's freeze, Sep 2026). The frame
+  // picker sits thousands of pixels below the finished picture, far outside
+  // the region the reveal pins him to -- so this scroll launched him at a card
+  // the pin then dragged him straight back from, landing him between the two
+  // with nothing lit and no way onward. That is the "it auto scrolls and then
+  // I'm bound to this area" half of the report. The reveal's own landing
+  // (scrollToStandardRevealWhenReady, called right after this) is the one that
+  // should win. The frame picker is still there, expanded, the moment he
+  // decides to go to it.
+  if(!selectedFrame && !windowSillChoice && !document.body.classList.contains('design-revealed')){
     smoothScrollToTarget('frameSectionCard','center');
   }
 }

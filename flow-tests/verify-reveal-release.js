@@ -14,9 +14,14 @@
 // Yes / No are the only way out of that screen, so a customer whose screen put
 // them below the fold had no way out at all.
 //
-// These checks pin the release: the page scrolls freely, nothing is
-// click-locked, Yes is genuinely reachable, and the release is handed back
-// when the customer moves on.
+// The fix is NOT "remove the pin" -- being held between the picture and its
+// buttons is Alyx's own rule and verify-wraparound pins it. The fix is that
+// the reveal is held on ITS OWN region, lit, with nothing click-locked and
+// nothing flinging him at a card the pin will not let him reach.
+//
+// These checks pin that: held on the reveal, held on something lit, nothing
+// click-locked, Yes genuinely reachable, and the state handed back when the
+// customer moves on.
 const { launch, openStudio, uploadPhoto } = require('./harness');
 
 const clearAlerts = async page => {
@@ -80,20 +85,33 @@ const check = (ok, msg) => { results.push((ok ? 'PASS: ' : 'FAIL: ') + msg); ret
   try {
     await runToReveal(page);
 
-    // 1. THE PAGE SCROLLS. The whole failure in one number.
-    const scroll = await page.evaluate(async () => {
-      const max = document.documentElement.scrollHeight - innerHeight;
-      window.scrollTo(0, max);
-      await new Promise(r => setTimeout(r, 900));
-      return { reached: Math.round(scrollY), max: Math.round(max) };
-    });
-    check(scroll.reached >= scroll.max - 40,
-      `page scrolls to the bottom at the reveal (reached ${scroll.reached} of ${scroll.max})`);
-
-    // 2. NO PIN AT ALL while the finished picture is up.
+    // 1. THE PIN HOLDS YOU ON THE PICTURE, NOT ON A STALE RAIL PANEL.
+    //    Alyx: "I wouldn't have had a problem with the pin except it was
+    //    subduing the whole screen, and wouldn't let you move away from the
+    //    subdued screen." The pin staying is his own rule (verify-wraparound
+    //    pins it). WHERE it holds him is the bug: his screenshot of the freeze
+    //    is Degree of Caricature down to Generate -- three cards he had already
+    //    answered, all dimmed -- which is what a leftover rail spotlight
+    //    produces. So the region must be the reveal's own, every time.
     const pin = await page.evaluate(() =>
       (typeof scrollPinTargets === 'function' ? (scrollPinTargets() || []).map(e => e.id || e.tagName) : ['NO-FN']));
-    check(pin.length === 0, `no scroll pin at the reveal (got ${JSON.stringify(pin)})`);
+    const revealIds = ['previewImg', 'approveRow'];
+    check(pin.length > 0 && pin.every(id => revealIds.includes(id)),
+      `the pin holds the reveal's own region, not a stale rail panel (got ${JSON.stringify(pin)})`);
+
+    // 2. AND WHAT IT HOLDS YOU ON IS LIT. Being held is fine; being held over
+    //    something dark with no way out is the freeze. Every card the pinned
+    //    region covers has to be at full brightness.
+    const heldOn = await page.evaluate(() => {
+      const region = (typeof scrollPinTargets === 'function' ? scrollPinTargets() : null) || [];
+      return region.map(el => {
+        const card = el.closest('.card') || el;
+        return { id: el.id || el.tagName, card: card.id || '(none)', opacity: Number(getComputedStyle(card).opacity) };
+      });
+    });
+    const dark = heldOn.filter(h => h.opacity < 0.95);
+    check(dark.length === 0,
+      `the region the customer is held in is lit, not dimmed (dark: ${JSON.stringify(dark)})`);
 
     // 3. A DIM IS A GUIDE, NOT A CAGE. Dimmed is fine; dead is not.
     const cards = await page.evaluate(() => {
