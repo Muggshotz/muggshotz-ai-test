@@ -17708,33 +17708,80 @@ async function splitImageAtCenterVertical(url){
   };
 }
 
+// NOTHING HERE HAD A TIME LIMIT (Alyx, Sep 2026, after watching a spinner for
+// nearly twelve minutes: "I stopped it at 700 seconds, that was getting
+// ridiculous"). A generation takes 20-30 seconds. There was no ceiling at all,
+// so a stall was indistinguishable from patience, for ever.
+//
+// And there are TWO waits here, which fail differently. fetch() settles when
+// the HEADERS arrive -- that is the 200. resp.json() is what waits for the
+// BODY. If the connection goes quiet after the headers (a function ending, a
+// proxy dropping the stream, a phone moving from wifi to cellular), that second
+// line waits on a promise that never settles: no error, no rejection, nothing
+// to catch. Which matches the reported failure exactly -- the server returned
+// 200, the picture never appeared, and the URL it had already sent worked fine
+// when fetched by hand a minute later.
+//
+// So the clock covers both waits, not just the request.
+// let, not const, so a test can shorten them -- a suite that had to sit
+// through the real 315 seconds would never be run.
+let GEN_SLOW_NOTICE_MS=90000;   // 3x a normal generation: say something
+let GEN_HARD_TIMEOUT_MS=315000; // past the server's own 300s ceiling: give up
 async function callGenerateAPI({ workingImage, prompt, refImageA, refImageB, panelRole, templateMerge, signal }){
-  const resp=await fetch('/api/generate',{
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({
-      image:workingImage,
-      prompt,
-      theme:null,
-      deviceId,
-      refImageA:refImageA||null,
-      refImageB:refImageB||null,
-      currentDesign:null,
-      size:getImageSizeParam(),
-      panelRole:panelRole||undefined,
-      templateMerge:templateMerge||false,
-      ...currentStylePayload()
-    }),
-    signal
-  });
-  const data=await resp.json();
-  if(!resp.ok){
-    const err=new Error(data.error||data.detail||'Generation failed.');
-    err.status=resp.status;
-    throw err;
+  const ac=new AbortController();
+  let timedOut=false;
+  const relay=()=>ac.abort();
+  if(signal){
+    if(signal.aborted)ac.abort();
+    else signal.addEventListener('abort',relay,{once:true});
   }
-  if(!data.imageUrl)throw new Error('No image returned.');
-  return data.imageUrl;
+  const slowTimer=setTimeout(()=>{
+    // Only a reassurance, not a failure. The customer has paid a token and is
+    // watching a spinner; silence at this point reads as a broken product.
+    try{ setStatus('Still working on it -- this one is taking longer than usual.'); }catch(e){}
+  },GEN_SLOW_NOTICE_MS);
+  const hardTimer=setTimeout(()=>{ timedOut=true; ac.abort(); },GEN_HARD_TIMEOUT_MS);
+  try{
+    const resp=await fetch('/api/generate',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        image:workingImage,
+        prompt,
+        theme:null,
+        deviceId,
+        refImageA:refImageA||null,
+        refImageB:refImageB||null,
+        currentDesign:null,
+        size:getImageSizeParam(),
+        panelRole:panelRole||undefined,
+        templateMerge:templateMerge||false,
+        ...currentStylePayload()
+      }),
+      signal:ac.signal
+    });
+    const data=await resp.json();
+    if(!resp.ok){
+      const err=new Error(data.error||data.detail||'Generation failed.');
+      err.status=resp.status;
+      throw err;
+    }
+    if(!data.imageUrl)throw new Error('No image returned.');
+    return data.imageUrl;
+  }catch(err){
+    if(timedOut){
+      // Said plainly, and it says what happens to the token, because the
+      // customer's first question is whether they just paid for nothing.
+      const e=new Error('That took too long and we stopped waiting. Your picture may still have been made -- check your recent designs before spending another token, and tell us if it is not there.');
+      e.timedOut=true;
+      throw e;
+    }
+    throw err;
+  }finally{
+    clearTimeout(slowTimer);
+    clearTimeout(hardTimer);
+    if(signal)signal.removeEventListener('abort',relay);
+  }
 }
 
 async function generate(){
