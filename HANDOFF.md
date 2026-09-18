@@ -767,3 +767,34 @@ Window sills, picture frames including the thin accent-colour one.
 
 The test for which group something is in: does it need the AI to make it, or
 does it wrap something the AI already made.
+
+### FOUND: the resize tool does not exist outside the three-panel mug
+
+Alyx, same night: "two or three times I tried to generate an image for my
+sister and I was going to apply the fade at the end and never got the toolbar.
+I wanted to shrink the image size a little too so that the fade would look nice
+and proportionate on the final mock-up with no props."
+
+Not an intermittent failure. showEdgeQuestion() has it in black and white:
+
+    if (revealFlowThreePanel) {
+      host.style.display = 'block';       // the fit panel: zoom, position, preview
+      renderRevealFitPreview();
+    } else {
+      host.style.display = 'none';        // no fit panel at all
+      revealFitState = null;              // and the sizing state is discarded
+      revealImg.style.display = 'block';  // a flat picture and Hard/Fade only
+    }
+
+On a single-image product the fade screen hides the fit panel by design and
+nulls revealFitState. There is no toolbar to miss -- it was never built for
+that path, so every attempt goes the same way.
+
+His reasoning is also the argument for fixing it: a fade reads wrong on a
+picture that fills the frame edge to edge. You have to pull the image in a
+little so the softened edge has somewhere to land. On a mug he can. Everywhere
+else he cannot, so the fade is doing half a job.
+
+FIRST THING TO BUILD. It is much narrower than the full tools spec above --
+give the single-image fade screen the same fit panel the three-panel path
+already has, rather than designing anything new.
