@@ -1,5 +1,5 @@
 <!-- ============================================================
-     VERSION: V303
+     VERSION: V304
      ============================================================
      THE ONE LINE THAT SAYS WHICH BUILD YOU ARE LOOKING AT.
 
@@ -13498,8 +13498,10 @@ async function ensureRevealFadePreviewUrls(){
       try{ out=await compositeFrameOntoImageUrl(out); }
       catch(err){ console.error('Frame could not be drawn onto the cup preview; showing it unframed:',err); }
     }
-    try{ out=await drawAccentBorderOnImageUrl(out); }
-    catch(err){ console.error('Accent border could not be drawn onto the cup preview:',err); }
+    // The accent border is NOT drawn here. It goes on AFTER the fade, in
+    // renderRevealFadeSurfaces, because the printer does it in that order
+    // (create-printify-order.js: applyFadeIfNeeded, then applyBorderIfNeeded)
+    // and because the fade dissolves the edge -- which is where the border is.
     return out;
   }));
   revealFadePreviewFor=key;
@@ -13568,7 +13570,15 @@ async function renderRevealFadeSurfaces(){
       const hex=getSelectedProductColorHex();
       const pct=revealFadeAmountPct;
       const art=await ensureRevealFadePreviewUrls();
-      const faded=await Promise.all(art.map(u=>u?renderFadedArtwork(u,hex,pct):Promise.resolve(null)));
+      const fadedOnly=await Promise.all(art.map(u=>u?renderFadedArtwork(u,hex,pct):Promise.resolve(null)));
+      // BORDER AFTER FADE, same order as the print. V303 drew it before, and
+      // the fade ate it -- a border on the edge of a picture whose edge has
+      // just been dissolved into the mug colour is no border at all.
+      const faded=await Promise.all(fadedOnly.map(async u=>{
+        if(!u)return u;
+        try{ return await drawAccentBorderOnImageUrl(u); }
+        catch(err){ console.error('Accent border could not be drawn onto the faded cup preview:',err); return u; }
+      }));
       if(!revealFlowThreePanel){
         const img=document.getElementById('revealArtworkImg');
         if(img&&faded[0])img.src=faded[0];
