@@ -1149,12 +1149,12 @@ const HERO_SETTLE_MS = 1000;
 <div class="card" id="styleSectionCard"><div class="card-title">🎨 Art Style</div>
 <div class="note" id="styleStepIntro" style="margin-top:0;margin-bottom:.75rem;text-align:center">Every one of these draws your photo a completely different way. Pick the look you want — you can change it later.</div>
 <div class="grid2">
-<div class="btn-select selected" data-val="Muggshotz Classic: premium professional caricature, expressive face, rich detail, painterly shading, funny gift-art scene" onclick="pick(this,'style')">🦝 Muggshotz Classic<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Our signature painted caricature.</div></div>
-<div class="btn-select" data-val="photorealistic rendering, natural skin texture and lighting like a real photograph, shot on camera — not illustrated, not painted, not stylized" onclick="pick(this,'style')">📷 Photorealistic<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Looks like a real photograph.</div></div>
-<div class="btn-select" data-val="savage political-satire caricature in the tradition of Mad magazine and newspaper editorial cartoons: aggressively exaggerated features, oversized head on a small body, wild expressive linework, dense comic detail packed into every corner, sharp satirical humour — push the exaggeration far, but keep the person unmistakably recognizable" onclick="pick(this,'style')">🗞️ Political Satire<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Mad magazine, dialled all the way up.</div></div>
-<div class="btn-select" data-val="flat cel-shaded comic strip illustration, bold black outlines, flat solid color fills, no gradients or painterly shading" onclick="pick(this,'style')">💥 Comic Strip<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Bold outlines, flat colour.</div></div>
-<div class="btn-select" data-val="black and white pen-and-ink line drawing, clean linework only, no color, no shading fills — cross-hatching for shadow only" onclick="pick(this,'style')">✏️ Line Art<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Elegant pen-and-ink linework.</div></div>
-<div class="btn-select" data-style-ref="caricature-assassination" data-style-exaggerate="1" data-val="Create an aggressively exaggerated caricature, not a flattering portrait. Keep the person immediately recognizable — their glasses or facial hair if they have them, their smile, their overall identity — but deliberately distort the facial proportions much more strongly. Enlarge the head, cheeks, jaw, nose, ears, brow, and smile in a humorous, artistically controlled way. Compress and reshape the skull and face so the caricature is unmistakable at first glance. Do not preserve realistic facial proportions. Preserve likeness through distinctive features, not through literal geometry. The final result should look bold, funny, sculpted, and clearly caricatured rather than photorealistic." onclick="pick(this,'style')">🎯 Caricature Assassination<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Wildly exaggerated. Still unmistakably you.</div></div>
+<div class="btn-select selected" data-head="1.0|1.2|1.5" data-push="0|25|55" data-feat="0|2|3" data-val="Muggshotz Classic: premium professional gift-art, expressive face, rich detail, painterly shading, warm funny scene" onclick="pick(this,'style')">🦝 Muggshotz Classic<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Our signature painted caricature.</div></div>
+<div class="btn-select" data-head="1.0|1.1|1.25" data-push="0|15|30" data-feat="0|2|3" data-val="photorealistic rendering, natural skin texture and lighting like a real photograph, shot on camera — not illustrated, not painted, not stylized" onclick="pick(this,'style')">📷 Photorealistic<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Looks like a real photograph.</div></div>
+<div class="btn-select" data-head="1.1|1.4|1.8" data-push="15|45|80" data-feat="2|3|3" data-val="political-satire illustration in the tradition of Mad magazine and newspaper editorial cartoons: wild expressive linework, dense comic detail packed into every corner, sharp satirical humour" onclick="pick(this,'style')">🗞️ Political Satire<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Mad magazine, dialled all the way up.</div></div>
+<div class="btn-select" data-head="1.1|1.4|1.8" data-push="15|45|80" data-feat="2|3|3" data-val="flat cel-shaded comic strip illustration, bold black outlines, flat solid color fills, no gradients or painterly shading" onclick="pick(this,'style')">💥 Comic Strip<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Bold outlines, flat colour.</div></div>
+<div class="btn-select" data-head="1.0|1.3|1.7" data-push="0|35|70" data-feat="0|2|3" data-val="black and white pen-and-ink line drawing, clean linework only, no color, no shading fills — cross-hatching for shadow only" onclick="pick(this,'style')">✏️ Line Art<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Elegant pen-and-ink linework.</div></div>
+<div class="btn-select" data-style-ref="caricature-assassination" data-head="1.3|1.7|2.2" data-push="40|80|120" data-feat="3|3|4" data-val="Caricature Assassination: bold sculpted caricature ARTWORK — heavy three-dimensional modelling, confident brushwork, rich saturated colour, strong theatrical lighting, a finish that reads as a professional caricature artist's painting rather than a photograph." onclick="pick(this,'style')">🎯 Caricature Assassination<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Wildly exaggerated. Still unmistakably you.</div></div>
 </div>
 <button type="button" id="styleContinueBtn" class="generate-btn" style="margin-top:.9rem;max-width:280px" onclick="confirmStyleAndContinue()">✅ Use This Style — Continue</button>
 <!-- EVERY PANEL HAS A BACK (Alyx, v94: "There is no back button anywhere on
@@ -2316,20 +2316,75 @@ function currentStylePayload(){
   //                         (api/generate.js STYLE_REFERENCE_FILES). The name
   //                         travels, never the picture, and it is separate from
   //                         the customer's own Photo 2 / Photo 3 slots.
-  //   data-style-exaggerate permission to reshape facial proportions, which the
-  //                         server's likeness rules otherwise forbid outright.
-  // Both are read from the tile that owns the current directive rather than
-  // kept in their own variables, so they can never drift out of step with
-  // `style` -- which is set from four different places in this file.
-  // A tile carrying neither sends null/false and generates exactly as before.
-  let styleRef=null,styleExaggerate=false;
+  //   data-head/push/feat   THIS style's own exaggeration range, three values
+  //                         each, read at the Lifelike / Balanced / Wild
+  //                         positions of the Degree of Caricature card.
+  // Read from the tile that owns the current directive rather than kept in
+  // their own variables, so they can never drift out of step with `style` --
+  // which is set from four different places in this file.
+  //
+  // TWO DIALS, NOT ONE (Alyx, Sep 2026: "what possible good does it do us to
+  // have two different combinations render the exact same image").
+  //
+  // The style used to decide medium AND proportions, and the degree used to
+  // add an adverb on top. So Photorealistic and Muggshotz Classic said nothing
+  // about proportions and came back identical, while Caricature Assassination
+  // reached over and grabbed the proportion dial itself. Two switches, and
+  // between them they produced about two pictures.
+  //
+  // Now the style governs ONLY how it is drawn, and it declares the range of
+  // exaggeration natural to that medium -- a comic book is born more
+  // exaggerated than a photograph. The degree picks a position INSIDE that
+  // style's range. Six styles times three degrees is eighteen combinations
+  // with no two alike, and Photorealistic + Lifelike is a true zero.
+  let styleRef=null;
+  let head=1, push=0, feat=0;
   const styleTile=Array.from(document.querySelectorAll('#styleSectionCard .btn-select'))
     .find(b=>b.dataset.val===style);
+  // Lifelike / Balanced / Wild -> 0 / 1 / 2.
+  const degreeIndex = likeness==='0.15' ? 0 : likeness==='0.25' ? 1 : 2;
   if(styleTile){
     styleRef=styleTile.dataset.styleRef||null;
-    styleExaggerate=styleTile.dataset.styleExaggerate==='1';
+    const at=(attr,fallback)=>{
+      const parts=(styleTile.dataset[attr]||'').split('|');
+      const v=parseFloat(parts[degreeIndex]);
+      return isNaN(v)?fallback:v;
+    };
+    head=at('head',1); push=at('push',0); feat=at('feat',0);
   }
-  return { styleDirective: style, styleIsDefault: style===MUGGSHOTZ_CLASSIC_STYLE, styleRef, styleExaggerate };
+  return { styleDirective: style, styleIsDefault: style===MUGGSHOTZ_CLASSIC_STYLE, styleRef,
+           faceHead: head, facePush: push, faceFeat: feat, faceDegree: degreeIndex };
+}
+
+// THE FACE BLOCK, built from the numbers above. Both this file and
+// api/generate.js call an identical copy of this so a request can never carry
+// two different sets of instructions about the same face (which is exactly how
+// "same facial proportions" ended up travelling alongside "enlarge the head").
+function buildFaceBlock(head, push, feat){
+  const never = 'Eye colour, skin tone, apparent age, hairline position, and whether the head is bald or has hair NEVER change, at any setting.';
+  const features = 'the head and skull, the forehead and brow, the eye shape and spacing, the nose, the mouth and smile, the teeth, the cheeks, the jawline, the chin and the ears';
+  if(push<=0){
+    // A TRUE ZERO. No exaggeration is asked for, so the full lockdown stands.
+    return `Preserve the exact recognizable identity, with no exaggeration at all:
+same bald head or hairstyle, same hairline, same forehead, same eyebrow shape,
+same eye shape, eye spacing and eye colour (do not lighten, darken or shift the iris colour),
+same nose shape, same mouth and smile shape, same teeth characteristics, same cheeks,
+same jawline, same chin, same skin tone, same age impression, same facial proportions,
+same natural personality.
+Keep normal, true head-to-body proportions. This is the gentlest setting offered and it should look it.`;
+  }
+  const grotesque = push>=100
+    ? ' Push the strongest of them to the edge of the grotesque. This must not look like a photograph of a person -- it should look drawn, sculpted and deliberately absurd.'
+    : push>=60
+    ? ' The result should read as an artist\u2019s caricature at a glance, never as a straight photograph.'
+    : '';
+  return `Exaggerate this face. The features below are material to be reshaped, not things to hold still:
+${features}.
+Enlarge the head to roughly ${head}x its natural head-to-body ratio, and scale the body against it.
+Pick the ${feat>=4?'FOUR':feat>=3?'THREE':'TWO'} most distinctive features in this particular face and push each one about ${push}% beyond life -- if the nose is broad make it broader, if the jaw is heavy make it heavier, if the smile is wide make it wider.${grotesque}
+Identity is carried by the SHAPE of the real features, never by their real measurements. A stranger who knows this person must still recognise them instantly.
+${never}
+Do not invent features the photo does not show -- no added facial hair, no added glasses, no added scars, no borrowed features from anyone else.`;
 }
 let product=null,style=MUGGSHOTZ_CLASSIC_STYLE,likeness='0.15',uploadedImageData=null,resultUrl=null;
 
@@ -17822,84 +17877,15 @@ document.getElementById('cancelBtn').style.display='block';
     // a word to the end of it, and the instructions are physical rather than
     // adverbial: an image model acts on "enlarge the head to about 1.4x" and
     // very nearly ignores "bold".
-    // A LADDER, NOT A SWITCH (Alyx, Sep 2026: "we're getting no work from Wild
-    // under Lifelike plus character assassination. There's no way to bump that
-    // last combination up even just a little bit more?").
-    //
-    // First pass had styleExaggerate simply force WILD, which meant all three
-    // tiles collapsed to one result the moment Caricature Assassination was
-    // picked -- the tile stopped meaning anything and there was no headroom
-    // left above it. The style RAISES THE FLOOR by two rungs instead, so the
-    // tile keeps its say and the combination can go somewhere the tile alone
-    // cannot reach.
-    //
-    //   Lifelike            0        Lifelike + Assassination   2  WILD
-    //   Balanced            1        Balanced + Assassination   3  SAVAGE
-    //   Wild                2        Wild     + Assassination   4  DEMOLITION
-    const tileLevel = likeness==='0.15' ? 0 : likeness==='0.25' ? 1 : 2;
-    const faceLevel = Math.min(4, tileLevel + (currentStylePayload().styleExaggerate ? 2 : 0));
-    const wildFace = faceLevel >= 2;
-    const balancedFace = faceLevel === 1;
-
-    // The handful that never move at any tier. A caricature that shifts these
-    // stops being the customer.
-    const neverMoves = 'Eye colour, skin tone, apparent age, hairline position, and whether the head is bald or has hair NEVER change at any strength.';
-
-    const FEATURE_LIST = 'the head and skull, the forehead and brow, the eye shape and spacing, the nose, the mouth and smile, the teeth, the cheeks, the jawline, the chin and the ears';
-
-    const identityDemand = faceLevel >= 4
-      ? `This is a DEMOLITION caricature -- the most extreme setting offered, and it should look it. Everything below is material to be reshaped:
-${FEATURE_LIST}.
-Enlarge the head to roughly 2x its natural head-to-body ratio, and shrink the body to a small comic frame beneath it.
-Push EVERY feature listed above well past life at once, and push the three strongest to the edge of the grotesque -- a broad nose becomes enormous, a heavy jaw becomes massive, a wide smile swallows the lower face. Warp, stretch and compress the skull as a caricaturist would.
-This must not look like a photograph of a person. It should look drawn, sculpted and deliberately absurd.
-Identity survives ONLY through the SHAPE of the real features. Someone who knows this person must laugh and recognise them in the same instant.
-${neverMoves}
-Do not invent features the photo does not show -- no added facial hair, no added glasses, no added scars, no borrowed features from anyone else.`
-      : faceLevel === 3
-      ? `This is a SAVAGE caricature -- well beyond an ordinary one. The features below are raw material, not things to hold still:
-${FEATURE_LIST}.
-Enlarge the head to roughly 1.7x its natural head-to-body ratio and shrink the body markedly against it.
-Pick the FOUR most distinctive features in this particular face and roughly DOUBLE each one against life. Compress and reshape the skull, neck and shoulders to carry it.
-The result should read as an artist's caricature at a glance, never as a photograph.
-Identity is carried by the SHAPE of the real features, never by their real measurements. A stranger who knows this person must still recognise them instantly.
-${neverMoves}
-Do not invent features the photo does not show -- no added facial hair, no added glasses, no added scars, no borrowed features from anyone else.`
-      : wildFace
-      ? `This is a HEAVY caricature. The features below are what you EXAGGERATE -- they are not things to hold still:
-the head and skull, the forehead and brow, the eye shape and spacing, the nose, the mouth and smile, the teeth, the cheeks, the jawline, the chin and the ears.
-Enlarge the head to roughly 1.4x its natural head-to-body ratio and shrink the body against it.
-Pick the THREE most distinctive features in this particular face and push each one 50-75% beyond life -- if the nose is broad make it broader, if the jaw is heavy make it heavier, if the smile is wide make it enormous. Compress and reshape the skull to suit.
-Identity is carried by the SHAPE of the real features, never by their real measurements. A stranger who knows this person must still recognise them instantly.
-${neverMoves}
-Do not invent features the photo does not show -- no added facial hair, no added glasses, no added scars, no borrowed features from anyone else.`
-      : balancedFace
-      ? `Exaggerate this face moderately. Keep the SHAPE and CHARACTER of every feature below true to the photo -- the kind of nose, the kind of brow, the kind of jaw -- while allowing their SIZE and PROPORTION to be pushed:
-the head, the forehead and brow, the eye shape and spacing, the nose, the mouth and smile, the teeth, the cheeks, the jawline, the chin and the ears.
-Enlarge the head to roughly 1.15x its natural head-to-body ratio.
-Pick the TWO most distinctive features in this particular face and push them about 25% beyond life, leaving everything else close to true.
-${neverMoves}
-Do not invent features the photo does not show.`
-      : `Preserve the exact recognizable identity:
-same bald head or hairstyle,
-same hairline,
-same forehead,
-same eyebrow shape,
-same eye shape, eye spacing, and eye color (do not lighten, darken, or shift the iris color),
-same nose shape,
-same mouth and smile shape,
-same teeth characteristics,
-same cheeks,
-same jawline,
-same chin,
-same skin tone,
-same age impression,
-same facial proportions,
-same natural personality.
-Use only mild exaggeration -- this is the gentlest of the three strengths.`;
-
-    const likenessDesc = 'Caricature strength: ' +
-      (faceLevel >= 4 ? 'DEMOLITION' : faceLevel === 3 ? 'SAVAGE' : faceLevel === 2 ? 'WILD' : faceLevel === 1 ? 'BALANCED' : 'LIGHT') + '.';
+    // TWO DIALS. The style said how it is drawn and declared its own range of
+    // exaggeration; the degree picked a position inside that range. Both
+    // arrived here as plain numbers, so there is nothing left to interpret.
+    const facePlan = currentStylePayload();
+    const identityDemand = buildFaceBlock(facePlan.faceHead, facePlan.facePush, facePlan.faceFeat);
+    const wildFace = facePlan.facePush > 0;
+    const likenessDesc = 'Caricature dial: ' +
+      ['Lifelike','Balanced','Wild'][facePlan.faceDegree] +
+      ' for this style (head ' + facePlan.faceHead + 'x, features +' + facePlan.facePush + '%).';
 
     const isWraparoundActive = (product==='mug'||product==='water bottle') && mugPrintMode==='wraparound';
     // 40oz is front+back (2 zones) — Wraparound is disabled for the 40oz

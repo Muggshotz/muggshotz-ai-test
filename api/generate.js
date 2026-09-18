@@ -2,7 +2,7 @@ import fs from "fs";
 import path from "path";
 import sharp from "sharp";
 
-// BUILD: 2026-09-18a — Degree of Caricature actually bites (Alyx): the three tiers used to add one adverb on top of an identical fifteen-item "keep the same X" lockdown, so all three produced the same face. Each tier now REWRITES that lockdown in physical terms (head 1.4x and the three strongest features pushed 50-75% for Wild, 1.15x and two features at 25% for Balanced, the full lockdown for Lifelike), the tier is derived once and read everywhere, and Wild is audible again: the tile sends 0.35 and the server compared against "0.4", so Wild was the one setting sending no instruction at all. 17d — Caricature Assassination style (Alyx): the Silhouette tile is replaced by a heavy-exaggeration caricature. Two new mechanisms behind it: a style tile may name a hidden style-reference picture the server holds (STYLE_REFERENCE_FILES; the page sends the NAME only, never the image, separate from the customer Photo 2/3 slots), and a tile may carry styleExaggerate, which suspends the likeness rules that demand unchanged facial proportions. Tiles declaring neither behave exactly as before. 17c: setting/pose/props rule. 17b: clothing rule. 17a: gpt-image-2.5-sunburst.
+// BUILD: 2026-09-18b — TWO DIALS (Alyx): style and degree were one tangled switch, so two combinations could render the same picture and two others rendered nothing different at all. The style now governs ONLY how a piece is drawn and declares the exaggeration range natural to its medium (a comic book is born more exaggerated than a photograph); the Degree of Caricature card picks a position inside that range. The page sends the result as three plain numbers -- head ratio, push percentage, feature count -- and both sides build the identical face block from them, so a request can never carry two different instructions about one face. Six styles x three degrees = eighteen distinct combinations, and Photorealistic + Lifelike is a true zero. 18a: the tiers stopped being drowned out by the fifteen-item lockdown. 17d: Caricature Assassination style and the hidden style-reference mechanism. 17c: setting/pose/props rule. 17b: clothing rule. 17a: gpt-image-2.5-sunburst.
 
 // RESTORED (July 2026): this file was found genuinely truncated — cut
 // off mid-function with no closing brackets and no export default
@@ -35,6 +35,21 @@ export const config = {
 const STYLE_REFERENCE_FILES = {
   "caricature-assassination": "Caricatures.png"
 };
+
+// A SECOND REFERENCE FOR THE TOP CORNER (Alyx, Sep 2026: "it might not hurt to
+// even throw in that separate collage for the Caricature Assassination + Wild
+// category just to ensure that we potentially get a completely different look
+// with that combination than all of the others").
+//
+// The corner that is meant to be unmistakable gets its own picture to aim at,
+// so it does not rely on wording alone to separate itself from the seventeen
+// other combinations. Gated on the DIAL, not the style: the collage's faces
+// are pushed extremely hard, which is the right target at the top of a style's
+// range and the wrong one anywhere below it.
+const STYLE_REFERENCE_FILES_EXTREME = {
+  "caricature-assassination": "Caricatures-extreme.png"
+};
+const EXTREME_PUSH_THRESHOLD = 100;
 
 const TEMPLATE_FILES = {
   "Marbling": "laced marble.webp",
@@ -157,7 +172,7 @@ async function deductOneToken(customerId, currentBalance) {
 // Back-compatible on purpose: a cached browser that sends neither
 // styleDirective nor styleIsDefault gets the house default, which is what it
 // would have got before.
-function buildStyleBlock(styleDirective, styleIsDefault, styleExaggerate) {
+function buildStyleBlock(styleDirective, styleIsDefault) {
   const chose = styleDirective && styleIsDefault === false;
   if (!chose) {
     return `STYLE:
@@ -176,7 +191,8 @@ Polished gift-art quality.
 ${styleDirective}
 Render the ENTIRE image in that style — the subject, the background, and every element in the scene, consistently.
 Where anything above conflicts with the style just named, the style just named wins ON RENDERING: medium, linework, shading, palette, finish.
-${styleExaggerate ? `For THIS style it also wins on FACIAL AND HEAD PROPORTIONS: exaggerate, enlarge and reshape them exactly as the style just named directs, overriding any instruction above to keep proportions natural, realistic or unchanged. Identity is carried by the SHAPE of the real features, not by realistic geometry.\n` : ``}It does NOT win on canvas, layout or composition. Any requirement about filling the canvas edge to edge, or about not drawing borders, frames, margins, panels, gutters or captions, is a technical printing requirement and overrides the style absolutely. Render the chosen style as a full-bleed image with no frame of any kind, however that style would normally be presented.
+It does NOT win on FACIAL OR HEAD PROPORTIONS either -- how far the face is exaggerated is set by the caricature dial above and by nothing else, so that two customers on the same dial get the same amount of exaggeration whichever style they picked.
+It does NOT win on canvas, layout or composition. Any requirement about filling the canvas edge to edge, or about not drawing borders, frames, margins, panels, gutters or captions, is a technical printing requirement and overrides the style absolutely. Render the chosen style as a full-bleed image with no frame of any kind, however that style would normally be presented.
 Keep a strong, unmistakable likeness to the uploaded photo: the person must stay immediately recognizable within this style.
 Polished gift-art quality.
 `;
@@ -266,35 +282,57 @@ export default async function handler(req, res) {
   try {
     const { image, prompt, theme, deviceId, refImageA, refImageB, currentDesign, size, panelRole, action, templateMerge, styleDirective, styleIsDefault, styleRef, styleExaggerate, likeness } = req.body;
 
-    // WHICH DEGREE OF CARICATURE THIS IS (Alyx, Sep 2026). Derived once, here,
-    // because three separate blocks downstream each used to decide it for
-    // themselves and two of them only ever looked at the STYLE -- so a
-    // customer who picked Wild on an ordinary style was still being told to
-    // "preserve normal head-to-body proportions" while the rest of the prompt
-    // was being told to enlarge the head. A style that declares
-    // styleExaggerate (Caricature Assassination) is Wild by definition.
-    //
-    // Final else rather than an equality test on the third value: the tile
-    // sends 0.35 and this file used to compare against "0.4", which made Wild
-    // the one setting that sent nothing at all.
-    // A LADDER, NOT A SWITCH. See the matching note in needles-studio.html:
-    // a style that simply forced WILD collapsed all three tiles into one
-    // result and left no headroom above it. The style raises the floor by two
-    // rungs instead, so the tile keeps its say.
-    //
-    //   Lifelike 0   Balanced 1   Wild 2   (+2 when the style declares itself
-    //   a heavy caricature, clamped at 4)
-    const tileLevel = likeness === "0.15" ? 0 : likeness === "0.25" ? 1 : 2;
-    const faceLevel = Math.min(4, tileLevel + (styleExaggerate ? 2 : 0));
-    const wildFace = faceLevel >= 2;
-    const balancedFace = faceLevel === 1;
+    // TWO DIALS, ARRIVING AS NUMBERS (Alyx, Sep 2026: "what possible good does
+    // it do us to have two different combinations render the exact same
+    // image"). The style tile declares its own exaggeration range -- a comic
+    // book is born more exaggerated than a photograph -- and the Degree card
+    // picks a position inside it. The page sends the result as three plain
+    // numbers, so this file has nothing left to interpret and cannot disagree
+    // with the page about the same face.
+    const faceHead = Number(req.body.faceHead) > 0 ? Number(req.body.faceHead) : 1;
+    const facePush = Number(req.body.facePush) > 0 ? Number(req.body.facePush) : 0;
+    const faceFeat = Number(req.body.faceFeat) > 0 ? Number(req.body.faceFeat) : 0;
+    const wildFace = facePush > 0;
+    const balancedFace = facePush > 0 && facePush < 60;
+
+    // Identical copy of buildFaceBlock() in needles-studio.html, kept in step
+    // by hand: the two files share no code, and a request carrying two
+    // different sets of instructions about one face is exactly how "same
+    // facial proportions" used to travel alongside "enlarge the head".
+    const buildFaceBlock = (head, push, feat) => {
+      const never = "Eye colour, skin tone, apparent age, hairline position, and whether the head is bald or has hair NEVER change, at any setting.";
+      const features = "the head and skull, the forehead and brow, the eye shape and spacing, the nose, the mouth and smile, the teeth, the cheeks, the jawline, the chin and the ears";
+      if (push <= 0) {
+        return `Preserve the exact recognizable identity, with no exaggeration at all:
+same bald head or hairstyle, same hairline, same forehead, same eyebrow shape,
+same eye shape, eye spacing and eye colour (do not lighten, darken or shift the iris colour),
+same nose shape, same mouth and smile shape, same teeth characteristics, same cheeks,
+same jawline, same chin, same skin tone, same age impression, same facial proportions,
+same natural personality.
+Keep normal, true head-to-body proportions. This is the gentlest setting offered and it should look it.`;
+      }
+      const grotesque = push >= 100
+        ? " Push the strongest of them to the edge of the grotesque. This must not look like a photograph of a person -- it should look drawn, sculpted and deliberately absurd."
+        : push >= 60
+        ? " The result should read as an artist's caricature at a glance, never as a straight photograph."
+        : "";
+      return `Exaggerate this face. The features below are material to be reshaped, not things to hold still:
+${features}.
+Enlarge the head to roughly ${head}x its natural head-to-body ratio, and scale the body against it.
+Pick the ${feat >= 4 ? "FOUR" : feat >= 3 ? "THREE" : "TWO"} most distinctive features in this particular face and push each one about ${push}% beyond life -- if the nose is broad make it broader, if the jaw is heavy make it heavier, if the smile is wide make it wider.${grotesque}
+Identity is carried by the SHAPE of the real features, never by their real measurements. A stranger who knows this person must still recognise them instantly.
+${never}
+Do not invent features the photo does not show -- no added facial hair, no added glasses, no added scars, no borrowed features from anyone else.`;
+    };
 
     // HIDDEN STYLE REFERENCE. The page sends a NAME (styleRef); only a name in
     // STYLE_REFERENCE_FILES resolves to a file, so nothing the browser sends can
     // reach an arbitrary path. Read once here and used by whichever generation
     // path runs below. An unknown name, or a file that cannot be read, yields no
     // reference and no instruction -- the style still works on its wording alone.
-    const styleRefFile = STYLE_REFERENCE_FILES[styleRef] || null;
+    const styleRefFile = (facePush >= EXTREME_PUSH_THRESHOLD && STYLE_REFERENCE_FILES_EXTREME[styleRef])
+      || STYLE_REFERENCE_FILES[styleRef]
+      || null;
     let styleRefBuffer = null;
     if (styleRefFile) {
       try {
@@ -423,52 +461,8 @@ An additional reference image is attached. ${refImageA ? 'One is "Photo 2" — w
       // the bug because it uses a final else. Same shape here now, so the two
       // cannot drift apart again: a value this does not recognise lands on
       // WILD rather than on silence.
-      // HOW FAR THE FACE MAY MOVE. See the matching note in needles-studio.html:
-      // all three tiers used to receive the same thirteen "keep the same X"
-      // commands and differ only by an adverb, so all three produced the same
-      // picture. The tier decides the demand itself now, in physical terms.
-      const neverMoves = "Eye colour, skin tone, apparent age, hairline position, and whether the head is bald or has hair NEVER change at any strength.";
-
-      const FEATURE_LIST = "the head and skull, the forehead and brow, the eye shape and spacing, the nose, the mouth and smile, the teeth, the cheeks, the jawline, the chin and the ears";
-
-      const identityDemand = faceLevel >= 4
-        ? `This is a DEMOLITION caricature -- the most extreme setting offered, and it should look it. Everything below is material to be reshaped:
-${FEATURE_LIST}.
-Enlarge the head to roughly 2x its natural head-to-body ratio, and shrink the body to a small comic frame beneath it.
-Push EVERY feature listed above well past life at once, and push the three strongest to the edge of the grotesque -- a broad nose becomes enormous, a heavy jaw becomes massive, a wide smile swallows the lower face. Warp, stretch and compress the skull as a caricaturist would.
-This must not look like a photograph of a person. It should look drawn, sculpted and deliberately absurd.
-Identity survives ONLY through the SHAPE of the real features. Someone who knows this person must laugh and recognise them in the same instant.
-${neverMoves}
-Do not invent features the photo does not show -- no added facial hair, no added glasses, no added scars, no borrowed features from anyone else.`
-        : faceLevel === 3
-        ? `This is a SAVAGE caricature -- well beyond an ordinary one. The features below are raw material, not things to hold still:
-${FEATURE_LIST}.
-Enlarge the head to roughly 1.7x its natural head-to-body ratio and shrink the body markedly against it.
-Pick the FOUR most distinctive features in this particular face and roughly DOUBLE each one against life. Compress and reshape the skull, neck and shoulders to carry it.
-The result should read as an artist's caricature at a glance, never as a photograph.
-Identity is carried by the SHAPE of the real features, never by their real measurements. A stranger who knows this person must still recognise them instantly.
-${neverMoves}
-Do not invent features the photo does not show -- no added facial hair, no added glasses, no added scars, no borrowed features from anyone else.`
-        : wildFace
-        ? `This is a HEAVY caricature. The features below are what you EXAGGERATE -- they are not things to hold still:
-the head and skull, the forehead and brow, the eye shape and spacing, the nose, the mouth and smile, the teeth, the cheeks, the jawline, the chin and the ears.
-Enlarge the head to roughly 1.4x its natural head-to-body ratio and shrink the body against it.
-Pick the THREE most distinctive features in this particular face and push each one 50-75% beyond life -- if the nose is broad make it broader, if the jaw is heavy make it heavier, if the smile is wide make it enormous. Compress and reshape the skull to suit.
-Identity is carried by the SHAPE of the real features, never by their real measurements. A stranger who knows this person must still recognise them instantly.
-${neverMoves}
-Do not invent features the photo does not show -- no added facial hair, no added glasses, no added scars, no borrowed features from anyone else.`
-        : balancedFace
-        ? `Exaggerate this face moderately. Keep the SHAPE and CHARACTER of every feature below true to the photo -- the kind of nose, the kind of brow, the kind of jaw -- while allowing their SIZE and PROPORTION to be pushed:
-the head, the forehead and brow, the eye shape and spacing, the nose, the mouth and smile, the teeth, the cheeks, the jawline, the chin and the ears.
-Enlarge the head to roughly 1.15x its natural head-to-body ratio.
-Pick the TWO most distinctive features in this particular face and push them about 25% beyond life, leaving everything else close to true.
-${neverMoves}
-Do not invent features the photo does not show.`
-        : `Keep the same hairline and the same bald head or hairstyle, the same forehead, the same brow shape, the same eye shape and spacing, the same nose width and shape, the same mouth and smile shape, the same teeth, the same cheeks, the same jawline, the same chin, the same ears, the same skin tone, the same apparent age, and the same overall facial proportions as the uploaded photo.
-Use only mild exaggeration -- this is the gentlest of the three strengths.`;
-
-      const strengthLine = "Caricature strength: " +
-        (faceLevel >= 4 ? "DEMOLITION" : faceLevel === 3 ? "SAVAGE" : faceLevel === 2 ? "WILD" : faceLevel === 1 ? "BALANCED" : "LIGHT") + ".";
+      const identityDemand = buildFaceBlock(faceHead, facePush, faceFeat);
+      const strengthLine = `Caricature dial: head ${faceHead}x, features +${facePush}%.`;
 
       const identityGuard = `
 IDENTITY PRESERVATION IS THE TOP PRIORITY, ABOVE THE SCENE AND ABOVE THE STYLE.
@@ -511,7 +505,7 @@ CUSTOMER REQUEST:
 ${prompt}
 
 ${styleReferenceInstruction}
-${buildStyleBlock(styleDirective, styleIsDefault, styleExaggerate)}
+${buildStyleBlock(styleDirective, styleIsDefault)}
 COLOR: Render with vivid, saturated, punchy color throughout the scene — rich blue skies, strong contrast in the mountains, clouds, and landscape. Avoid a muted, hazy, washed-out, sepia-tinted, or pastel palette.
 CRITICAL COMPOSITION RULES — THE ARTWORK MUST FILL THE ENTIRE CANVAS, EDGE TO EDGE:
 Do NOT draw any border, frame, matte, margin, background surround, vignette, or coloured surface behind or around the artwork.
@@ -806,7 +800,7 @@ This magenta fill is a placeholder that will be programmatically removed after g
 
     const finalPrompt = isPanelContinuation
       ? `${panelContinuationPrompt}
-${buildStyleBlock(styleDirective, styleIsDefault, styleExaggerate)}`
+${buildStyleBlock(styleDirective, styleIsDefault)}`
       : `${identityLock}
 ${styleReferenceInstruction}
 CUSTOMER REQUEST:
@@ -814,7 +808,7 @@ ${prompt}
 ${backgroundInstruction}
 ${currentDesignInstruction}
 ${chromaKeyInstruction}
-${buildStyleBlock(styleDirective, styleIsDefault, styleExaggerate)}`;
+${buildStyleBlock(styleDirective, styleIsDefault)}`;
 
     // image comes in as a data URL like "data:image/png;base64,AAAA..."
     // OpenAI's edit endpoint needs the raw file bytes, not the data URL prefix.
