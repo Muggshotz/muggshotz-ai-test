@@ -17723,12 +17723,26 @@ async function splitImageAtCenterVertical(url){
 // when fetched by hand a minute later.
 //
 // So the clock covers both waits, not just the request.
+// Asks storage whether a picture belonging to THIS device was saved since the
+// moment Generate was pressed. A couple of seconds' grace either side, because
+// the browser's clock and the server's are not the same clock.
+async function recoverRecentGeneration(startedAt){
+  const resp=await fetch('/api/get-balance?recent=1&deviceId='+encodeURIComponent(deviceId)+
+                         '&since='+encodeURIComponent(Math.max(0,(startedAt||0)-5000)),
+                         {signal:AbortSignal.timeout(20000)});
+  if(!resp.ok)return null;
+  const data=await resp.json();
+  const hit=(data&&Array.isArray(data.recent))?data.recent[0]:null;
+  return hit&&hit.url?hit.url:null;
+}
+
 // let, not const, so a test can shorten them -- a suite that had to sit
 // through the real 315 seconds would never be run.
 let GEN_SLOW_NOTICE_MS=90000;   // 3x a normal generation: say something
 let GEN_HARD_TIMEOUT_MS=315000; // past the server's own 300s ceiling: give up
 async function callGenerateAPI({ workingImage, prompt, refImageA, refImageB, panelRole, templateMerge, signal }){
   const ac=new AbortController();
+  const startedAt=Date.now();
   let timedOut=false;
   const relay=()=>ac.abort();
   if(signal){
@@ -17770,9 +17784,17 @@ async function callGenerateAPI({ workingImage, prompt, refImageA, refImageB, pan
     return data.imageUrl;
   }catch(err){
     if(timedOut){
-      // Said plainly, and it says what happens to the token, because the
-      // customer's first question is whether they just paid for nothing.
-      const e=new Error('That took too long and we stopped waiting. Your picture may still have been made -- check your recent designs before spending another token, and tell us if it is not there.');
+      // THE PICTURE MAY ALREADY EXIST. The server finishes and stores the image
+      // BEFORE it answers, so a stall on the way back does not mean no
+      // generation -- it means a generation the customer paid for and never
+      // saw. Ask storage whether anything of theirs landed since they pressed
+      // Generate, and if so hand it over: the stall becomes invisible instead
+      // of expensive. Only then, if there is genuinely nothing, say so.
+      try{
+        const found=await recoverRecentGeneration(startedAt);
+        if(found)return found;
+      }catch(e){ console.error('Could not check for a recovered generation:',e); }
+      const e=new Error('That took too long and we stopped waiting. We checked and no picture was saved, so your token should not have been spent -- tell us if your balance looks wrong.');
       e.timedOut=true;
       throw e;
     }
