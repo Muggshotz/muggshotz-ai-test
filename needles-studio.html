@@ -17800,106 +17800,12 @@ document.getElementById('cancelBtn').style.display='block';
       ? 'TEXT RULE: The customer idea above includes text inside quotation marks -- render that exact quoted text in the scene, spelled exactly as written, and do not add any other caption, slogan, sign, or lettering beyond what is quoted.'
       : 'TEXT RULE: Do not add any caption, slogan, sign, lettering, or text of any kind anywhere in this image unless the customer explicitly wrote it inside quotation marks in their idea description above. No quoted text was provided here, so this scene should contain no text or lettering at all.';
 
-    // HOW FAR THE FACE MAY MOVE (Alyx, Sep 2026: "it's not significantly
-    // different. What can we do to further exaggerate the difference between
-    // those three styles?").
-    //
-    // The three Degree of Caricature tiles used to contribute ONE adjective --
-    // mild, moderate, bold -- and then every tier got the same fifteen-line
-    // "same hairline, same forehead, same eyebrow shape, same nose shape..."
-    // lockdown underneath it. Fifteen specific named commands to change
-    // nothing, against one adverb. The list won every time, which is exactly
-    // why all three tiles produced the same picture.
-    //
-    // A style carrying styleExaggerate was overruled the same way. It strips
-    // the proportion clause out of the SERVER's guard, but this client-side
-    // list was never conditioned on anything at all, so "same facial
-    // proportions" went out with every request regardless -- flatly
-    // contradicting the HEAVY CARICATURE paragraph the server was adding in
-    // the same breath.
-    //
-    // So the tier decides what the lockdown DEMANDS now, instead of appending
-    // a word to the end of it, and the instructions are physical rather than
-    // adverbial: an image model acts on "enlarge the head to about 1.4x" and
-    // very nearly ignores "bold".
-    // A LADDER, NOT A SWITCH (Alyx, Sep 2026: "we're getting no work from Wild
-    // under Lifelike plus character assassination. There's no way to bump that
-    // last combination up even just a little bit more?").
-    //
-    // First pass had styleExaggerate simply force WILD, which meant all three
-    // tiles collapsed to one result the moment Caricature Assassination was
-    // picked -- the tile stopped meaning anything and there was no headroom
-    // left above it. The style RAISES THE FLOOR by two rungs instead, so the
-    // tile keeps its say and the combination can go somewhere the tile alone
-    // cannot reach.
-    //
-    //   Lifelike            0        Lifelike + Assassination   2  WILD
-    //   Balanced            1        Balanced + Assassination   3  SAVAGE
-    //   Wild                2        Wild     + Assassination   4  DEMOLITION
-    const tileLevel = likeness==='0.15' ? 0 : likeness==='0.25' ? 1 : 2;
-    const faceLevel = Math.min(4, tileLevel + (currentStylePayload().styleExaggerate ? 2 : 0));
-    const wildFace = faceLevel >= 2;
-    const balancedFace = faceLevel === 1;
-
-    // The handful that never move at any tier. A caricature that shifts these
-    // stops being the customer.
-    const neverMoves = 'Eye colour, skin tone, apparent age, hairline position, and whether the head is bald or has hair NEVER change at any strength.';
-
-    const FEATURE_LIST = 'the head and skull, the forehead and brow, the eye shape and spacing, the nose, the mouth and smile, the teeth, the cheeks, the jawline, the chin and the ears';
-
-    const identityDemand = faceLevel >= 4
-      ? `This is a DEMOLITION caricature -- the most extreme setting offered, and it should look it. Everything below is material to be reshaped:
-${FEATURE_LIST}.
-Enlarge the head to roughly 2x its natural head-to-body ratio, and shrink the body to a small comic frame beneath it.
-Push EVERY feature listed above well past life at once, and push the three strongest to the edge of the grotesque -- a broad nose becomes enormous, a heavy jaw becomes massive, a wide smile swallows the lower face. Warp, stretch and compress the skull as a caricaturist would.
-This must not look like a photograph of a person. It should look drawn, sculpted and deliberately absurd.
-Identity survives ONLY through the SHAPE of the real features. Someone who knows this person must laugh and recognise them in the same instant.
-${neverMoves}
-Do not invent features the photo does not show -- no added facial hair, no added glasses, no added scars, no borrowed features from anyone else.`
-      : faceLevel === 3
-      ? `This is a SAVAGE caricature -- well beyond an ordinary one. The features below are raw material, not things to hold still:
-${FEATURE_LIST}.
-Enlarge the head to roughly 1.7x its natural head-to-body ratio and shrink the body markedly against it.
-Pick the FOUR most distinctive features in this particular face and roughly DOUBLE each one against life. Compress and reshape the skull, neck and shoulders to carry it.
-The result should read as an artist's caricature at a glance, never as a photograph.
-Identity is carried by the SHAPE of the real features, never by their real measurements. A stranger who knows this person must still recognise them instantly.
-${neverMoves}
-Do not invent features the photo does not show -- no added facial hair, no added glasses, no added scars, no borrowed features from anyone else.`
-      : wildFace
-      ? `This is a HEAVY caricature. The features below are what you EXAGGERATE -- they are not things to hold still:
-the head and skull, the forehead and brow, the eye shape and spacing, the nose, the mouth and smile, the teeth, the cheeks, the jawline, the chin and the ears.
-Enlarge the head to roughly 1.4x its natural head-to-body ratio and shrink the body against it.
-Pick the THREE most distinctive features in this particular face and push each one 50-75% beyond life -- if the nose is broad make it broader, if the jaw is heavy make it heavier, if the smile is wide make it enormous. Compress and reshape the skull to suit.
-Identity is carried by the SHAPE of the real features, never by their real measurements. A stranger who knows this person must still recognise them instantly.
-${neverMoves}
-Do not invent features the photo does not show -- no added facial hair, no added glasses, no added scars, no borrowed features from anyone else.`
-      : balancedFace
-      ? `Exaggerate this face moderately. Keep the SHAPE and CHARACTER of every feature below true to the photo -- the kind of nose, the kind of brow, the kind of jaw -- while allowing their SIZE and PROPORTION to be pushed:
-the head, the forehead and brow, the eye shape and spacing, the nose, the mouth and smile, the teeth, the cheeks, the jawline, the chin and the ears.
-Enlarge the head to roughly 1.15x its natural head-to-body ratio.
-Pick the TWO most distinctive features in this particular face and push them about 25% beyond life, leaving everything else close to true.
-${neverMoves}
-Do not invent features the photo does not show.`
-      : `Preserve the exact recognizable identity:
-same bald head or hairstyle,
-same hairline,
-same forehead,
-same eyebrow shape,
-same eye shape, eye spacing, and eye color (do not lighten, darken, or shift the iris color),
-same nose shape,
-same mouth and smile shape,
-same teeth characteristics,
-same cheeks,
-same jawline,
-same chin,
-same skin tone,
-same age impression,
-same facial proportions,
-same natural personality.
-Use only mild exaggeration -- this is the gentlest of the three strengths.`;
-
-    const likenessDesc = 'Caricature strength: ' +
-      (faceLevel >= 4 ? 'DEMOLITION' : faceLevel === 3 ? 'SAVAGE' : faceLevel === 2 ? 'WILD' : faceLevel === 1 ? 'BALANCED' : 'LIGHT') + '.';
+    const likenessDesc =
+      likeness==='0.15'
+        ? 'Caricature strength: LIGHT. Preserve identity very strongly. Use only mild exaggeration.'
+        : likeness==='0.25'
+        ? 'Caricature strength: BALANCED. Use moderate exaggeration, but identity must remain unmistakable.'
+        : 'Caricature strength: WILD. Use bold exaggeration only on the person\u2019s real existing features. Do not invent new facial features.';
 
     const isWraparoundActive = (product==='mug'||product==='water bottle') && mugPrintMode==='wraparound';
     // 40oz is front+back (2 zones) — Wraparound is disabled for the 40oz
@@ -17988,16 +17894,31 @@ IDENTITY PRESERVATION IS THE TOP PRIORITY.
 Use the uploaded face as the source of truth.
 Do not invent a new person.
 Do not replace the face with a generic cartoon face.
-Do not beautify, age-shift, race-shift or gender-shift the face.${wildFace ? '' : ' Do not change the person\u2019s underlying facial structure.'}
+Do not beautify, age-shift, race-shift, gender-shift, or change the person's facial structure.
 
-${identityDemand}
+Preserve the exact recognizable identity:
+same bald head or hairstyle,
+same hairline,
+same forehead,
+same eyebrow shape,
+same eye shape, eye spacing, and eye color (do not lighten, darken, or shift the iris color),
+same nose shape,
+same mouth and smile shape,
+same teeth characteristics,
+same cheeks,
+same jawline,
+same chin,
+same skin tone,
+same age impression,
+same facial proportions,
+same natural personality.
 
 Do NOT add facial hair (beard, mustache, stubble) that is not clearly visible in the uploaded photo, and do not remove facial hair that is visible.
 Keep the person's actual clothing and outfit from the uploaded photo (garment type, color, and style) unless the customer's idea below specifically describes different clothing to wear instead.
 If the customer is smiling in the uploaded photo, match how THIS person's eyes actually look when they smile (most real smiles narrow the eyes at the outer corners to some degree) rather than a generic wide-open smiling-eyes look.
 
 Caricature this exact person only.
-Exaggerate existing real features, but keep the person immediately recognizable as the uploaded person.${wildFace ? ' At this strength, "recognizable" means recognizable through exaggeration -- do not retreat to a realistic face to achieve it.' : ''}
+Exaggerate existing real features, but keep the person immediately recognizable as the uploaded person.
 
 ${likenessDesc}
 
