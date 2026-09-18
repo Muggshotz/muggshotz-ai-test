@@ -67,7 +67,12 @@ const log = (...a) => console.log(new Date().toISOString().slice(11,19), ...a);
       const h = { ...req.headers() };
       delete h.host; delete h.origin; delete h.referer; delete h['content-length'];
       const t = Date.now();
-      const r = await fetch(url, { method: req.method(), headers: h, body: bodyBuf });
+      // LOG BEFORE, NOT ONLY AFTER. A relayed request that never resolves logs
+      // nothing at all on the old scheme, and the page simply waits for ever --
+      // which looks exactly like the studio hanging when it is the harness.
+      if (!isApi) log('  -> ' + raw.hostname + raw.pathname.slice(0, 40));
+      // and never wait for ever ourselves
+      const r = await fetch(url, { method: req.method(), headers: h, body: bodyBuf, signal: AbortSignal.timeout(90000) });
       const buf = Buffer.from(await r.arrayBuffer());
       if (isApi || buf.length > 40000) {
         const tag = isApi ? 'api ' + raw.pathname : raw.hostname + raw.pathname.slice(0, 28);
