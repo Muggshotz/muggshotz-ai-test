@@ -176,7 +176,10 @@ async function handleRecentLookup(req, res) {
         url: `${SUPABASE_URL}/storage/v1/object/public/generations/${r.name}`,
         madeAt: r.madeAt
       }));
-    return res.status(200).json({ recent });
+    // A build marker, so a caller can tell which version answered. Polling a
+    // deploy for "did my fix land" is guesswork without one -- an empty list
+    // looks identical before and after.
+    return res.status(200).json({ recent, listed: Array.isArray(rows) ? rows.length : 0, mode: "recent-v2" });
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }
