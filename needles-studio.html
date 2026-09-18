@@ -1,5 +1,5 @@
 <!-- ============================================================
-     VERSION: V300
+     VERSION: V301
      ============================================================
      THE ONE LINE THAT SAYS WHICH BUILD YOU ARE LOOKING AT.
 
@@ -13118,7 +13118,10 @@ function openFadeSplitLayout(){
   right.style.cssText='flex:1 1 0;min-width:0';
   fadeSplitRestore={
     cardWidth:card.style.maxWidth,
+    cardMaxH:card.style.maxHeight,
+    cardOverflow:card.style.overflowY,
     stageWidth:stage.style.width,
+    stageMaxW:stage.style.maxWidth,
     stageMargin:stage.style.margin,
     panelMargin:panel.style.marginTop,
     stageAfter:stage.nextSibling, stageParent:stage.parentNode,
@@ -13133,7 +13136,21 @@ function openFadeSplitLayout(){
   split.appendChild(left);
   split.appendChild(right);
   card.style.maxWidth='980px';
+  // ONE SCROLLBAR, NOT TWO (Alyx, Sep 2026: "what is that slide bar to the far
+  // right doing... It is 100 percent totally superfluous. Because all I have to
+  // do is roll my mouse and the screen scrolls up and down. But it's cutting
+  // off about 22% of the screen going to the right").
+  //
+  // The card carries max-height:92vh with its own overflow, so it scrolled
+  // INSIDE the overlay, which already scrolls. Two bars doing one job, and the
+  // inner one eats width the layout needs. The overlay keeps the scrolling.
+  card.style.maxHeight='none';
+  card.style.overflowY='visible';
+  // And the cup is capped so the whole panel -- cup, slider, Continue -- fits
+  // in one screen. It used to size off its own width and push everything else
+  // out of view, which defeats a side-by-side built for seeing both at once.
   stage.style.width='100%';
+  stage.style.maxWidth='min(100%,44vh)';
   stage.style.margin='0 auto .3rem';
   panel.style.marginTop='0';
 }
@@ -13150,8 +13167,16 @@ function closeFadeSplitLayout(){
     if(hint&&r.hintParent)r.hintParent.insertBefore(hint,r.hintAfter);
     if(panel&&r.panelParent)r.panelParent.insertBefore(panel,r.panelAfter);
     if(r.split&&r.split.parentNode)r.split.parentNode.removeChild(r.split);
-    if(card)card.style.maxWidth=r.cardWidth||'520px';
-    if(stage){stage.style.width=r.stageWidth||'min(100%,38vh)';stage.style.margin=r.stageMargin||'.9rem auto .3rem';}
+    if(card){
+      card.style.maxWidth=r.cardWidth||'520px';
+      card.style.maxHeight=r.cardMaxH||'92vh';
+      card.style.overflowY=r.cardOverflow||'auto';
+    }
+    if(stage){
+      stage.style.width=r.stageWidth||'min(100%,38vh)';
+      stage.style.maxWidth=r.stageMaxW||'';
+      stage.style.margin=r.stageMargin||'.9rem auto .3rem';
+    }
     if(panel)panel.style.marginTop=r.panelMargin||'.9rem';
   }catch(err){ console.error('Could not restore the stacked fade layout:',err); }
 }
