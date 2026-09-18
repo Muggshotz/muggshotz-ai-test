@@ -13067,11 +13067,84 @@ function chooseEdgeStyleAndContinue(isHard){
   beginFinalMockupFetch();
 }
 
+
+// SIDE BY SIDE ON A BIG SCREEN (Alyx, Sep 2026, dragging the fade slider with
+// the cup scrolled off the top: "why can't you put these tools on the side of
+// the image. Do them side by side, so that I can see the changes as I move the
+// slide?").
+//
+// The reveal card is built at phone width -- 520px -- and on a desktop it sits
+// in the middle with half the screen empty either side while the customer
+// scrolls between the picture and the control that changes it. Which defeats
+// the point of a live preview.
+//
+// So on a wide window the cup and the slider are moved into one flex row and
+// the card is allowed to grow. Nothing is rebuilt: the same two elements are
+// reparented and put back exactly where they were on the way out, so a phone
+// (and every existing test) sees the original stacked layout untouched.
+const FADE_SPLIT_MIN_WIDTH=900;
+let fadeSplitRestore=null;
+function openFadeSplitLayout(){
+  if(fadeSplitRestore)return;
+  if(window.innerWidth<FADE_SPLIT_MIN_WIDTH)return;
+  const card=document.getElementById('revealCard');
+  const stage=document.getElementById('revealFade3DStage');
+  const hint=document.getElementById('revealFade3DHint');
+  const panel=document.getElementById('revealFadeSliderPanel');
+  if(!card||!stage||!panel)return;
+  const split=document.createElement('div');
+  split.id='revealFadeSplit';
+  split.style.cssText='display:flex;gap:22px;align-items:flex-start;text-align:left;margin-top:.9rem';
+  const left=document.createElement('div');
+  left.style.cssText='flex:1 1 0;min-width:0';
+  const right=document.createElement('div');
+  right.style.cssText='flex:1 1 0;min-width:0';
+  fadeSplitRestore={
+    cardWidth:card.style.maxWidth,
+    stageWidth:stage.style.width,
+    stageMargin:stage.style.margin,
+    panelMargin:panel.style.marginTop,
+    stageAfter:stage.nextSibling, stageParent:stage.parentNode,
+    hintAfter:hint?hint.nextSibling:null, hintParent:hint?hint.parentNode:null,
+    panelAfter:panel.nextSibling, panelParent:panel.parentNode,
+    split
+  };
+  stage.parentNode.insertBefore(split,stage);
+  left.appendChild(stage);
+  if(hint)left.appendChild(hint);
+  right.appendChild(panel);
+  split.appendChild(left);
+  split.appendChild(right);
+  card.style.maxWidth='980px';
+  stage.style.width='100%';
+  stage.style.margin='0 auto .3rem';
+  panel.style.marginTop='0';
+}
+function closeFadeSplitLayout(){
+  const r=fadeSplitRestore;
+  if(!r)return;
+  fadeSplitRestore=null;
+  const card=document.getElementById('revealCard');
+  const stage=document.getElementById('revealFade3DStage');
+  const hint=document.getElementById('revealFade3DHint');
+  const panel=document.getElementById('revealFadeSliderPanel');
+  try{
+    if(stage&&r.stageParent)r.stageParent.insertBefore(stage,r.stageAfter);
+    if(hint&&r.hintParent)r.hintParent.insertBefore(hint,r.hintAfter);
+    if(panel&&r.panelParent)r.panelParent.insertBefore(panel,r.panelAfter);
+    if(r.split&&r.split.parentNode)r.split.parentNode.removeChild(r.split);
+    if(card)card.style.maxWidth=r.cardWidth||'520px';
+    if(stage){stage.style.width=r.stageWidth||'min(100%,38vh)';stage.style.margin=r.stageMargin||'.9rem auto .3rem';}
+    if(panel)panel.style.marginTop=r.panelMargin||'.9rem';
+  }catch(err){ console.error('Could not restore the stacked fade layout:',err); }
+}
+
 function chooseFadeEdges(){
   const buttonsRow=document.getElementById('revealEdgeButtonsRow');
   const fadePanel=document.getElementById('revealFadeSliderPanel');
   if(buttonsRow)buttonsRow.style.display='none';
   if(fadePanel)fadePanel.style.display='block';
+  openFadeSplitLayout();
   if(revealFlowThreePanel){
     // Start from the fade the picture already carries; Sharp means the
     // house default, since they just asked for a fade.
@@ -13529,6 +13602,7 @@ async function bakeFadeIntoDesigns(fadeAmountPct){
 }
 
 async function confirmFadeAndContinue(){
+  closeFadeSplitLayout();
   // Before anything else: whatever opens next -- the mockup, Trimmings, the
   // panel placer -- has to find MUG3D free to build in its own stage.
   unmountRevealFade3D();
@@ -21094,6 +21168,7 @@ function revealEdgeBack(){
   showAccessorizeChoiceState();
 }
 function revealFadeBack(){
+  closeFadeSplitLayout();
   unmountRevealFade3D();
   // On a frame that comes with a fade there is no Hard/Fade row to go back
   // to -- showEdgeQuestion skipped it. Back means back a whole screen, not
