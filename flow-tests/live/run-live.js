@@ -38,18 +38,26 @@ const log = (...a) => console.log(new Date().toISOString().slice(11,19), ...a);
   }, DEVICE);
   const page = await ctx.newPage();
   page.on('pageerror', e => log('PAGEERROR:', e.message));
+  page.on('console', m => { if (m.type()==='error') log('CONSOLE-ERR:', m.text().slice(0,160)); });
 
   // every /api/ call goes to the real thing, relayed through Node
   await page.route('**/api/**', async route => {
     const req = route.request();
     const url = API + new URL(req.url()).pathname + new URL(req.url()).search;
     try {
-      const r = await fetch(url, {
-        method: req.method(),
-        headers: { ...req.headers(), host: undefined, origin: undefined, referer: undefined },
-        body: ['GET','HEAD'].includes(req.method()) ? undefined : req.postData(),
-      });
+      // postDataBuffer(), not postData(): a generate request carries the photo
+      // as base64 and can run to hundreds of kilobytes, and the string form is
+      // not reliable for a body that size.
+      const bodyBuf = ['GET','HEAD'].includes(req.method()) ? undefined : req.postDataBuffer();
+      // DELETE the hop-by-hop headers rather than setting them undefined -- a
+      // spread leaves the key present with an undefined value, which fetch
+      // does not treat as absent.
+      const h = { ...req.headers() };
+      delete h.host; delete h.origin; delete h.referer; delete h['content-length'];
+      const t = Date.now();
+      const r = await fetch(url, { method: req.method(), headers: h, body: bodyBuf });
       const buf = Buffer.from(await r.arrayBuffer());
+      log('  api ' + new URL(req.url()).pathname + ' -> ' + r.status + ' in ' + Math.round((Date.now()-t)/1000) + 's, ' + buf.length + ' bytes');
       await route.fulfill({ status: r.status, headers: { 'content-type': r.headers.get('content-type') || 'application/json' }, body: buf });
     } catch (e) {
       log('API relay failed:', url, e.message);
@@ -90,7 +98,18 @@ const log = (...a) => console.log(new Date().toISOString().slice(11,19), ...a);
   log('generating (real API, ~25s)...');
   const t0 = Date.now();
   await page.evaluate(() => document.getElementById('generateBtn').click());
-  await page.waitForFunction(() => document.getElementById('approveRow')?.style.display !== 'none', null, { timeout: 180000 });
+  try {
+    await page.waitForFunction(() => document.getElementById('approveRow')?.style.display !== 'none', null, { timeout: 180000 });
+  } catch (e) {
+    const st = await page.evaluate(() => ({
+      status: document.getElementById('statusMsg')?.textContent?.slice(0,200) || '',
+      timer: document.getElementById('genTimer')?.textContent || '',
+      alert: [...document.querySelectorAll('.big-alert-overlay.visible')].map(o=>o.textContent.slice(0,160)),
+    }));
+    log('TIMED OUT. on screen:', JSON.stringify(st));
+    await page.screenshot({ path: path.join(OUT, 'timeout.png') });
+    throw e;
+  }
   log('generated in ' + Math.round((Date.now()-t0)/1000) + 's');
   await page.waitForTimeout(4000); await clearAlerts();
 
