@@ -2,7 +2,7 @@ import fs from "fs";
 import path from "path";
 import sharp from "sharp";
 
-// BUILD: 2026-09-17d — Caricature Assassination style (Alyx): the Silhouette tile is replaced by a heavy-exaggeration caricature. Two new mechanisms behind it: a style tile may name a hidden style-reference picture the server holds (STYLE_REFERENCE_FILES; the page sends the NAME only, never the image, separate from the customer Photo 2/3 slots), and a tile may carry styleExaggerate, which suspends the likeness rules that demand unchanged facial proportions. Tiles declaring neither behave exactly as before. 17c: setting/pose/props rule. 17b: clothing rule. 17a: gpt-image-2.5-sunburst.
+// BUILD: 2026-09-18a — Degree of Caricature actually bites (Alyx): the three tiers used to add one adverb on top of an identical fifteen-item "keep the same X" lockdown, so all three produced the same face. Each tier now REWRITES that lockdown in physical terms (head 1.4x and the three strongest features pushed 50-75% for Wild, 1.15x and two features at 25% for Balanced, the full lockdown for Lifelike), the tier is derived once and read everywhere, and Wild is audible again: the tile sends 0.35 and the server compared against "0.4", so Wild was the one setting sending no instruction at all. 17d — Caricature Assassination style (Alyx): the Silhouette tile is replaced by a heavy-exaggeration caricature. Two new mechanisms behind it: a style tile may name a hidden style-reference picture the server holds (STYLE_REFERENCE_FILES; the page sends the NAME only, never the image, separate from the customer Photo 2/3 slots), and a tile may carry styleExaggerate, which suspends the likeness rules that demand unchanged facial proportions. Tiles declaring neither behave exactly as before. 17c: setting/pose/props rule. 17b: clothing rule. 17a: gpt-image-2.5-sunburst.
 
 // RESTORED (July 2026): this file was found genuinely truncated — cut
 // off mid-function with no closing brackets and no export default
@@ -266,6 +266,20 @@ export default async function handler(req, res) {
   try {
     const { image, prompt, theme, deviceId, refImageA, refImageB, currentDesign, size, panelRole, action, templateMerge, styleDirective, styleIsDefault, styleRef, styleExaggerate, likeness } = req.body;
 
+    // WHICH DEGREE OF CARICATURE THIS IS (Alyx, Sep 2026). Derived once, here,
+    // because three separate blocks downstream each used to decide it for
+    // themselves and two of them only ever looked at the STYLE -- so a
+    // customer who picked Wild on an ordinary style was still being told to
+    // "preserve normal head-to-body proportions" while the rest of the prompt
+    // was being told to enlarge the head. A style that declares
+    // styleExaggerate (Caricature Assassination) is Wild by definition.
+    //
+    // Final else rather than an equality test on the third value: the tile
+    // sends 0.35 and this file used to compare against "0.4", which made Wild
+    // the one setting that sent nothing at all.
+    const wildFace = styleExaggerate || (likeness !== "0.15" && likeness !== "0.25");
+    const balancedFace = !wildFace && likeness === "0.25";
+
     // HIDDEN STYLE REFERENCE. The page sends a NAME (styleRef); only a name in
     // STYLE_REFERENCE_FILES resolves to a file, so nothing the browser sends can
     // reach an arbitrary path. Read once here and used by whichever generation
@@ -393,22 +407,50 @@ An additional reference image is attached. ${refImageA ? 'One is "Photo 2" — w
       // recognisably the customer has no reason to exist, so the identity
       // half comes back here -- server-side, where it can never drag panel
       // wording along with it -- while the prompt field stays the raw idea.
-      const strengthLine =
-        likeness === "0.15"
-          ? "Caricature strength: LIGHT. Preserve identity very strongly. Use only mild exaggeration."
-          : likeness === "0.25"
-          ? "Caricature strength: BALANCED. Use moderate exaggeration, but identity must remain unmistakable."
-          : likeness === "0.4"
-          ? "Caricature strength: WILD. Use bold exaggeration only on the person's real existing features. Do not invent new facial features."
-          : "";
+      // WILD WAS DEAF HERE (Alyx's find, Sep 2026). The tile sends 0.35 and
+      // this compared against "0.4", so Wild matched nothing and fell through
+      // to the empty string -- the one setting that promised the most was the
+      // only one sending no caricature instruction at all. The page never had
+      // the bug because it uses a final else. Same shape here now, so the two
+      // cannot drift apart again: a value this does not recognise lands on
+      // WILD rather than on silence.
+      // HOW FAR THE FACE MAY MOVE. See the matching note in needles-studio.html:
+      // all three tiers used to receive the same thirteen "keep the same X"
+      // commands and differ only by an adverb, so all three produced the same
+      // picture. The tier decides the demand itself now, in physical terms.
+      const neverMoves = "Eye colour, skin tone, apparent age, hairline position, and whether the head is bald or has hair NEVER change at any strength.";
+
+      const identityDemand = wildFace
+        ? `This is a HEAVY caricature. The features below are what you EXAGGERATE -- they are not things to hold still:
+the head and skull, the forehead and brow, the eye shape and spacing, the nose, the mouth and smile, the teeth, the cheeks, the jawline, the chin and the ears.
+Enlarge the head to roughly 1.4x its natural head-to-body ratio and shrink the body against it.
+Pick the THREE most distinctive features in this particular face and push each one 50-75% beyond life -- if the nose is broad make it broader, if the jaw is heavy make it heavier, if the smile is wide make it enormous. Compress and reshape the skull to suit.
+Identity is carried by the SHAPE of the real features, never by their real measurements. A stranger who knows this person must still recognise them instantly.
+${neverMoves}
+Do not invent features the photo does not show -- no added facial hair, no added glasses, no added scars, no borrowed features from anyone else.`
+        : balancedFace
+        ? `Exaggerate this face moderately. Keep the SHAPE and CHARACTER of every feature below true to the photo -- the kind of nose, the kind of brow, the kind of jaw -- while allowing their SIZE and PROPORTION to be pushed:
+the head, the forehead and brow, the eye shape and spacing, the nose, the mouth and smile, the teeth, the cheeks, the jawline, the chin and the ears.
+Enlarge the head to roughly 1.15x its natural head-to-body ratio.
+Pick the TWO most distinctive features in this particular face and push them about 25% beyond life, leaving everything else close to true.
+${neverMoves}
+Do not invent features the photo does not show.`
+        : `Keep the same hairline and the same bald head or hairstyle, the same forehead, the same brow shape, the same eye shape and spacing, the same nose width and shape, the same mouth and smile shape, the same teeth, the same cheeks, the same jawline, the same chin, the same ears, the same skin tone, the same apparent age, and the same overall facial proportions as the uploaded photo.
+Use only mild exaggeration -- this is the gentlest of the three strengths.`;
+
+      const strengthLine = wildFace
+        ? "Caricature strength: WILD."
+        : balancedFace
+        ? "Caricature strength: BALANCED."
+        : "Caricature strength: LIGHT.";
 
       const identityGuard = `
 IDENTITY PRESERVATION IS THE TOP PRIORITY, ABOVE THE SCENE AND ABOVE THE STYLE.
 Use the uploaded face as the source of truth. Do not invent a new person.
-Do NOT beautify, idealise, slim, smooth, youthen, age-shift, race-shift or gender-shift the face.${styleExaggerate ? "" : " Do not change the person's underlying facial structure in any way."}
+Do NOT beautify, idealise, slim, smooth, youthen, age-shift, race-shift or gender-shift the face.${wildFace ? "" : " Do not change the person's underlying facial structure in any way."}
 Do NOT replace the face with a generic cartoon face, a stock caricature face, a model's face, or any actor, celebrity, mascot or invented character.
-Keep the same hairline and the same bald head or hairstyle, the same forehead, the same brow shape, the same eye shape and spacing, the same nose width and shape, the same mouth and smile shape, the same teeth, the same cheeks, the same jawline, the same chin, the same ears, the same skin tone, the same apparent age${styleExaggerate ? "" : ", and the same overall facial proportions"} as the uploaded photo.
-A stranger who knows this person must recognise them instantly. If a choice must be made between a more attractive face and a more accurate one, choose the accurate one every time.
+${identityDemand}
+A stranger who knows this person must recognise them instantly.${wildFace ? " At this strength, recognisable means recognisable THROUGH the exaggeration -- do not retreat to a realistic face to achieve it." : " If a choice must be made between a more attractive face and a more accurate one, choose the accurate one every time."}
 ${strengthLine}
 `;
 
@@ -423,7 +465,7 @@ the real eye shape, eye spacing, and eyelids; the real EYE COLOR (match the iris
 the real mouth shape and expression; the real jawline, cheeks, and ears;
 the real facial hair, head shape, skin tone, and age.
 If the uploaded photo shows the person smiling, study exactly how THIS person's eyes look when they smile -- most real smiles narrow and crinkle the eyes at the outer corners to some degree, and the exact amount varies person to person. Match that specific person's real smiling eye shape rather than defaulting to a generic wide-open smiling-eyes look.
-${styleExaggerate ? `This style is a HEAVY caricature: deliberately exaggerate, enlarge and reshape the head and the facial proportions exactly as the STYLE block directs. Identity must survive through the SHAPE of the real features listed above -- eye shape, nose shape, mouth shape, jaw, ears, hairline, skin tone, age -- and NOT through realistic geometry. A stranger who knows this person must still recognise them instantly.` : `Preserve normal head-to-body proportions unless the customer asks for wild exaggeration.`}
+${wildFace ? `This is a HEAVY caricature: deliberately exaggerate, enlarge and reshape the head and the facial proportions as directed above. Identity must survive through the SHAPE of the real features listed above -- eye shape, nose shape, mouth shape, jaw, ears, hairline, skin tone, age -- and NOT through realistic geometry. A stranger who knows this person must still recognise them instantly.` : balancedFace ? `Push the head and facial proportions moderately beyond life as directed above, keeping every feature's own character intact.` : `Preserve normal head-to-body proportions.`}
 Keep the person's actual clothing and outfit from the uploaded photo (garment type, color, and style) unless a costume change is requested or strongly implied by the set and setting. Keep the photo's own setting, background, and pose unless a different scene or pose is requested or strongly implied by the customer's idea. Do not add props unless they are requested or strongly implied by the set and setting.
 
 PANORAMA LAYOUT — ONE SINGLE UNINTERRUPTED ULTRA-WIDE SCENE:
@@ -672,7 +714,7 @@ the real eye shape, eye spacing, and eyelids; the real EYE COLOR (match the iris
 the real mouth shape and expression; the real jawline, cheeks, and ears;
 the real facial hair, head shape, skin tone, and age.
 If the uploaded photo shows the person smiling, study exactly how THIS person's eyes look when they smile -- most real smiles narrow and crinkle the eyes at the outer corners to some degree, and the exact amount varies person to person. Match that specific person's real smiling eye shape rather than defaulting to a generic wide-open smiling-eyes look.
-${styleExaggerate ? `This style is a HEAVY caricature: deliberately exaggerate, enlarge and reshape the head and the facial proportions exactly as the STYLE block directs. Identity must survive through the SHAPE of the real features listed above -- eye shape, nose shape, mouth shape, jaw, ears, hairline, skin tone, age -- and NOT through realistic geometry. A stranger who knows this person must still recognise them instantly.` : `Preserve normal head-to-body proportions unless the customer asks for wild exaggeration.`}
+${wildFace ? `This is a HEAVY caricature: deliberately exaggerate, enlarge and reshape the head and the facial proportions as directed above. Identity must survive through the SHAPE of the real features listed above -- eye shape, nose shape, mouth shape, jaw, ears, hairline, skin tone, age -- and NOT through realistic geometry. A stranger who knows this person must still recognise them instantly.` : balancedFace ? `Push the head and facial proportions moderately beyond life as directed above, keeping every feature's own character intact.` : `Preserve normal head-to-body proportions.`}
 Keep the person's actual clothing and outfit from the uploaded photo (garment type, color, and style) unless a costume change is requested or strongly implied by the set and setting. Keep the photo's own setting, background, and pose unless a different scene or pose is requested or strongly implied by the customer's idea. Do not add props unless they are requested or strongly implied by the set and setting.
 `;
 
