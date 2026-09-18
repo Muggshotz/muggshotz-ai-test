@@ -46,7 +46,6 @@
  "Aww Hell": "Ay, caramba",
  "Back": "Reverso",
  "Backpack": "Mochila",
- "Balanced": "Equilibrado",
  "Beige": "Beige",
  "Bend": "Curva",
  "Bigger": "Más grande",
@@ -269,7 +268,6 @@
  "Left/Right Position": "Posición izquierda/derecha",
  "Let Needles work his magic!": "¡Deja que Needles haga su magia!",
  "Let's Just Face It": "Pongámosle cara",
- "Lifelike": "Realista",
  "Light Blue": "Azul claro",
  "Light Green": "Verde claro",
  "Light Pink": "Rosa claro",
@@ -626,7 +624,6 @@
  "White": "Blanco",
  "white": "blanco",
  "Width": "Ancho",
- "Wild": "Salvaje",
  "Window Frame Size (adjusts the balcony artwork itself, not your photo)": "Tamaño del marco de la ventana (ajusta la ilustración del balcón, no tu foto)",
  "Window Height": "Alto de la ventana",
  "Window Width": "Ancho de la ventana",
@@ -850,5 +847,8 @@
  "🪟 Don't see what you're looking for? Window Sill Portrait is also available — just below!": "🪟 ¿No ves lo que buscas? El Retrato en la ventana también está disponible — ¡justo abajo!",
  "🪟 Good Morning Mugs": "🪟 Tazas de buenos días",
  "🪟 Preview & Fit Your Photo": "🪟 Previsualiza y ajusta tu foto",
- "🪟 Window Sill Portrait": "🪟 Retrato en la ventana"
+ "🪟 Window Sill Portrait": "🪟 Retrato en la ventana",
+ "Natural": "Natural",
+ "Exaggerated": "Exagerado",
+ "Outrageous": "Escandaloso"
 }

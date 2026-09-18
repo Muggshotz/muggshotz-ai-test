@@ -46,7 +46,6 @@
  "Aww Hell": "아이고, 지옥이야",
  "Back": "뒷면",
  "Backpack": "백팩",
- "Balanced": "균형",
  "Beige": "베이지",
  "Bend": "굽힘",
  "Bigger": "크게",
@@ -269,7 +268,6 @@
  "Left/Right Position": "좌우 위치",
  "Let Needles work his magic!": "Needles가 마법을 부리게 해 주세요!",
  "Let's Just Face It": "얼굴만 쏙",
- "Lifelike": "실물 같은",
  "Light Blue": "라이트 블루",
  "Light Green": "라이트 그린",
  "Light Pink": "라이트 핑크",
@@ -626,7 +624,6 @@
  "White": "화이트",
  "white": "흰색",
  "Width": "너비",
- "Wild": "과감",
  "Window Frame Size (adjusts the balcony artwork itself, not your photo)": "창틀 크기 (사진이 아니라 발코니 그림 자체를 조절해요)",
  "Window Height": "창문 높이",
  "Window Width": "창문 너비",
@@ -850,5 +847,8 @@
  "🪟 Don't see what you're looking for? Window Sill Portrait is also available — just below!": "🪟 찾는 게 안 보이세요? 창가 초상화도 있어요 — 바로 아래에요!",
  "🪟 Good Morning Mugs": "🪟 굿모닝 머그",
  "🪟 Preview & Fit Your Photo": "🪟 사진 미리보기 및 맞춤",
- "🪟 Window Sill Portrait": "🪟 창가 초상화"
+ "🪟 Window Sill Portrait": "🪟 창가 초상화",
+ "Natural": "자연스럽게",
+ "Exaggerated": "과장되게",
+ "Outrageous": "과감하게"
 }

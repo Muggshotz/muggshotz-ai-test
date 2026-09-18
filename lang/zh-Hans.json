@@ -46,7 +46,6 @@
  "Aww Hell": "哎呀见鬼",
  "Back": "背面",
  "Backpack": "背包",
- "Balanced": "均衡",
  "Beige": "米色",
  "Bend": "弯折",
  "Bigger": "放大",
@@ -269,7 +268,6 @@
  "Left/Right Position": "左右位置",
  "Let Needles work his magic!": "让 Needles 施展魔法吧！",
  "Let's Just Face It": "就看这张脸",
- "Lifelike": "写实",
  "Light Blue": "浅蓝",
  "Light Green": "浅绿",
  "Light Pink": "浅粉",
@@ -626,7 +624,6 @@
  "White": "白色",
  "white": "白色",
  "Width": "宽度",
- "Wild": "狂野",
  "Window Frame Size (adjusts the balcony artwork itself, not your photo)": "窗框大小（调整的是阳台画面本身，不是你的照片）",
  "Window Height": "窗户高度",
  "Window Width": "窗户宽度",
@@ -850,5 +847,8 @@
  "🪟 Don't see what you're looking for? Window Sill Portrait is also available — just below!": "🪟 没找到想要的？窗台肖像也可以选 — 就在下方！",
  "🪟 Good Morning Mugs": "🪟 早安马克杯",
  "🪟 Preview & Fit Your Photo": "🪟 预览并调整你的照片",
- "🪟 Window Sill Portrait": "🪟 窗台肖像"
+ "🪟 Window Sill Portrait": "🪟 窗台肖像",
+ "Natural": "自然",
+ "Exaggerated": "夸张",
+ "Outrageous": "超夸张"
 }
