@@ -16,7 +16,8 @@
 // Push is held proportional to head so only ONE thing is moving. The shipped
 // top rung is head 2.8 with push 160, so push ~= (head - 1) * 89, rounded.
 //
-//   usage: node probe-subject.js <photo.jpg> <outdir>
+//   usage: node probe-subject.js <photo.jpg> <outdir> [headRatios]
+//   e.g.  node probe-subject.js face.jpg out 1.0,2.0,3.0,4.0
 const { chromium } = require('playwright');
 const fs = require('fs');
 const path = require('path');
@@ -33,12 +34,22 @@ const STYLE = 'Caricature Assassination';
 if (!PHOTO || !fs.existsSync(PHOTO)) { console.error('need a photo path'); process.exit(1); }
 
 // label : head : push : features
-const RUNS = [
-  ['r1-1.0x-000', 1.0, 0, 0],
-  ['r2-2.0x-090', 2.0, 90, 4],
-  ['r3-3.0x-180', 3.0, 180, 4],
-  ['r4-4.0x-270', 4.0, 270, 4],
+//
+// The default ladder is the one Alyx called for -- 1.0 with no push at all as
+// the control, then 2.0, 3.0, 4.0. A third argument overrides it with a
+// comma-separated list of head ratios ("6.0,8.0"), because the ceiling hunt
+// keeps wanting one more rung and copying this file to get it is how you end
+// up with two probes that disagree.
+const SLOPE = 89; // push = (head - 1) * SLOPE, from the shipped 2.8/160 rung
+const rung = h => [
+  'r-' + h.toFixed(1) + 'x-' + String(Math.round((h - 1) * SLOPE)).padStart(3, '0'),
+  h,
+  Math.round((h - 1) * SLOPE),
+  h <= 1 ? 0 : 4,
 ];
+const RUNS = (process.argv[4] ? process.argv[4].split(',').map(Number) : [1.0, 2.0, 3.0, 4.0])
+  .filter(h => h > 0)
+  .map(rung);
 
 const log = (...a) => console.log(new Date().toISOString().slice(11,19), ...a);
 
