@@ -63,14 +63,82 @@ const no = (n, d) => { fail++; console.log(`FAIL: ${n}`, d === undefined ? '' : 
   /longer|stopped waiting|took too long/i.test(res.message || '')
     ? ok('the customer is told in plain words', { message: res.message })
     : no('the message would not mean anything to a customer', res);
-  /check your recent designs/i.test(res.message || '')
-    ? ok('it says what to do about the token before spending another')
+  /token/i.test(res.message || '')
+    ? ok('the message accounts for the token, rather than leaving them to wonder')
     : no('it leaves the customer guessing about the token', res);
   res.noticeSeen ? ok('a reassurance appears before the hard stop')
                  : no('nothing was said during the long wait', res);
   (res.elapsed >= 1000 && res.elapsed < 4000)
     ? ok('it waits the configured time, no longer', { elapsed: res.elapsed })
     : no('the wait does not match the configured timeout', res);
+
+
+  // RECOVERY: the same stall, but this time a picture really was saved. The
+  // customer should get it and never learn anything went wrong.
+  const rec = await page.evaluate(async () => {
+    GEN_SLOW_NOTICE_MS = 300;
+    GEN_HARD_TIMEOUT_MS = 800;
+    const realFetch = window.fetch;
+    const SAVED = 'https://example.test/storage/v1/object/public/generations/dev-123.png';
+    let askedRecent = false;
+    window.fetch = (url, opts) => {
+      const u = String(url);
+      if (u.includes('/api/get-balance') && u.includes('recent=1')) {
+        askedRecent = true;
+        return Promise.resolve({ ok: true, status: 200,
+          json: async () => ({ recent: [{ url: SAVED, madeAt: Date.now() }] }) });
+      }
+      if (u.includes('/api/generate')) {
+        return Promise.resolve({ ok: true, status: 200,
+          json: () => new Promise((_, reject) => {
+            const s = opts && opts.signal;
+            if (s) s.addEventListener('abort', () => reject(new DOMException('aborted', 'AbortError')), { once: true });
+          }) });
+      }
+      return realFetch(url, opts);
+    };
+    let returned = null, threw = null;
+    try { returned = await callGenerateAPI({ workingImage: 'data:,', prompt: 'x' }); }
+    catch (e) { threw = e.message; }
+    window.fetch = realFetch;
+    return { returned, threw, askedRecent, SAVED };
+  });
+
+  rec.askedRecent ? ok('a stall asks storage whether the picture was saved')
+                  : no('it gave up without checking storage', rec);
+  rec.returned === rec.SAVED
+    ? ok('a picture that was saved is handed over, stall and all')
+    : no('the saved picture was not recovered', rec);
+
+  // And when there genuinely is nothing, it must not claim there is.
+  const none = await page.evaluate(async () => {
+    GEN_SLOW_NOTICE_MS = 300;
+    GEN_HARD_TIMEOUT_MS = 800;
+    const realFetch = window.fetch;
+    window.fetch = (url, opts) => {
+      const u = String(url);
+      if (u.includes('/api/get-balance') && u.includes('recent=1'))
+        return Promise.resolve({ ok: true, status: 200, json: async () => ({ recent: [] }) });
+      if (u.includes('/api/generate'))
+        return Promise.resolve({ ok: true, status: 200,
+          json: () => new Promise((_, reject) => {
+            const s = opts && opts.signal;
+            if (s) s.addEventListener('abort', () => reject(new DOMException('aborted', 'AbortError')), { once: true });
+          }) });
+      return realFetch(url, opts);
+    };
+    let returned = null, message = null;
+    try { returned = await callGenerateAPI({ workingImage: 'data:,', prompt: 'x' }); }
+    catch (e) { message = e.message; }
+    window.fetch = realFetch;
+    return { returned, message };
+  });
+
+  none.returned === null ? ok('nothing saved means nothing is invented')
+                         : no('it returned a picture that does not exist', none);
+  /no picture was saved/i.test(none.message || '')
+    ? ok('and the customer is told the token should not have been spent', { message: none.message })
+    : no('the empty case does not explain the token', none);
 
   console.log(fail ? `\n${fail} FAILURE(S)` : '\nALL GENERATE-TIMEOUT VERIFICATIONS PASSED');
   await browser.close();

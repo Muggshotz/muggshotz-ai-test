@@ -114,6 +114,63 @@ async function handleReferralLookup(req, res) {
   }
 }
 
+// RECOVER A GENERATION THAT WAS MADE BUT NEVER ARRIVED (Sep 2026).
+//
+// A generation can finish on the server and still never reach the customer:
+// fetch() settles on the response HEADERS, and reading the BODY is a second
+// wait that a dropped stream leaves hanging for ever. The picture exists, the
+// token is spent, and the customer has nothing.
+//
+// Every generated image is already stored as `${deviceId}-${Date.now()}.png`
+// in the public `generations` bucket -- the device is in the filename, so
+// finding a customer's own recent work needs no table and no new endpoint.
+// This rides on get-balance rather than standing alone because the Hobby plan
+// caps this project at 12 serverless functions and it is sitting on exactly 12.
+//
+// Only that device's own files are listed, and only ones it produced, so this
+// hands back nothing a customer did not already pay for.
+async function handleRecentLookup(req, res) {
+  const { deviceId } = req.query;
+  if (!deviceId) return res.status(400).json({ error: "Missing device ID." });
+  const since = Number(req.query.since) || 0;
+  try {
+    const resp = await fetch(`${SUPABASE_URL}/storage/v1/object/list/generations`, {
+      method: "POST",
+      headers: {
+        apikey: SUPABASE_SERVICE_ROLE_KEY,
+        Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        prefix: `${deviceId}-`,
+        limit: 20,
+        sortBy: { column: "created_at", order: "desc" }
+      })
+    });
+    const rows = await resp.json();
+    if (!resp.ok) throw new Error("Storage list failed: " + JSON.stringify(rows));
+    // The timestamp in the NAME is the one to trust: it is stamped at the
+    // moment of upload by the same code that made the picture, so it lines up
+    // with when the customer pressed Generate. created_at can drift.
+    const recent = (Array.isArray(rows) ? rows : [])
+      .map(r => {
+        const m = /-(\d{10,})\.png$/.exec(r.name || "");
+        return m ? { name: r.name, madeAt: Number(m[1]) } : null;
+      })
+      .filter(Boolean)
+      .filter(r => r.madeAt >= since)
+      .sort((a, b) => b.madeAt - a.madeAt)
+      .slice(0, 10)
+      .map(r => ({
+        url: `${SUPABASE_URL}/storage/v1/object/public/generations/${r.name}`,
+        madeAt: r.madeAt
+      }));
+    return res.status(200).json({ recent });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+}
+
 export default async function handler(req, res) {
   if (req.method !== "GET") {
     return res.status(405).json({ error: "Method not allowed" });
@@ -121,6 +178,10 @@ export default async function handler(req, res) {
 
   if (req.query.referralCode) {
     return handleReferralLookup(req, res);
+  }
+
+  if (req.query.recent) {
+    return handleRecentLookup(req, res);
   }
 
   try {
