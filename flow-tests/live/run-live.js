@@ -40,37 +40,47 @@ const log = (...a) => console.log(new Date().toISOString().slice(11,19), ...a);
   page.on('pageerror', e => log('PAGEERROR:', e.message));
   page.on('console', m => { if (m.type()==='error') log('CONSOLE-ERR:', m.text().slice(0,160)); });
 
-  // every /api/ call goes to the real thing, relayed through Node
-  await page.route('**/api/**', async route => {
+  // EVERYTHING that leaves the page goes through Node, not just /api/.
+  //
+  // First diagnosed run: /api/generate came back 200 in 20s with a 125-byte
+  // body -- the JSON carrying the image URL. The picture itself lives on
+  // Supabase, and when the browser went to fetch THAT, Chromium refused it
+  // (ERR_CERT_AUTHORITY_INVALID) because this session's egress proxy
+  // re-terminates TLS and the bundled browser does not read the CA store. The
+  // studio worked perfectly and the harness could not see the result.
+  //
+  // Node trusts the bundle, so every outbound request is relayed through it.
+  // Certificate verification stays fully on; it just happens in the process
+  // that is configured for it.
+  //
+  // TWO patterns, one handler: the page's own /api/ calls are RELATIVE, so
+  // they resolve against the local origin and are http -- matching only
+  // https:// silently stopped intercepting them and the python file server
+  // answered with 404 HTML.
+  const relay = async route => {
     const req = route.request();
-    const url = API + new URL(req.url()).pathname + new URL(req.url()).search;
+    const raw = new URL(req.url());
+    const isApi = raw.pathname.startsWith('/api/');
+    const url = isApi ? API + raw.pathname + raw.search : req.url();
     try {
-      // postDataBuffer(), not postData(): a generate request carries the photo
-      // as base64 and can run to hundreds of kilobytes, and the string form is
-      // not reliable for a body that size.
       const bodyBuf = ['GET','HEAD'].includes(req.method()) ? undefined : req.postDataBuffer();
-      // DELETE the hop-by-hop headers rather than setting them undefined -- a
-      // spread leaves the key present with an undefined value, which fetch
-      // does not treat as absent.
       const h = { ...req.headers() };
       delete h.host; delete h.origin; delete h.referer; delete h['content-length'];
       const t = Date.now();
       const r = await fetch(url, { method: req.method(), headers: h, body: bodyBuf });
       const buf = Buffer.from(await r.arrayBuffer());
-      log('  api ' + new URL(req.url()).pathname + ' -> ' + r.status + ' in ' + Math.round((Date.now()-t)/1000) + 's, ' + buf.length + ' bytes');
-      await route.fulfill({ status: r.status, headers: { 'content-type': r.headers.get('content-type') || 'application/json' }, body: buf });
+      if (isApi || buf.length > 40000) {
+        const tag = isApi ? 'api ' + raw.pathname : raw.hostname + raw.pathname.slice(0, 28);
+        log('  ' + tag + ' -> ' + r.status + ' in ' + Math.round((Date.now()-t)/1000) + 's, ' + buf.length + ' bytes');
+      }
+      await route.fulfill({ status: r.status, headers: { 'content-type': r.headers.get('content-type') || 'application/octet-stream' }, body: buf });
     } catch (e) {
-      log('API relay failed:', url, e.message);
+      log('RELAY FAILED:', url.slice(0, 90), e.message);
       await route.fulfill({ status: 502, body: JSON.stringify({ error: 'relay failed: ' + e.message }) });
     }
-  });
-
-  const balance = async () => page.evaluate(async d => {
-    const r = await fetch('/api/get-balance?deviceId=' + encodeURIComponent(d));
-    return (await r.json()).tokenBalance;
-  }, DEVICE);
-
-  const clearAlerts = async () => { for (let i=0;i<8;i++){ const n = await page.evaluate(()=>{let n=0;document.querySelectorAll('.big-alert-overlay.visible').forEach(o=>{o.classList.remove('visible');o.style.display='none';n++;});return n;}); if(!n)break; await page.waitForTimeout(200);} };
+  };
+  await page.route('**/api/**', relay);
+  await page.route('https://**', relay);
 
   await page.goto(PAGE + '/needles-studio.html', { waitUntil: 'domcontentloaded' });
   await page.waitForTimeout(3000);
