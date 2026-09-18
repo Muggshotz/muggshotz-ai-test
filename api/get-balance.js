@@ -141,9 +141,15 @@ async function handleRecentLookup(req, res) {
         Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
         "Content-Type": "application/json"
       },
+      // `prefix` in Supabase storage is a FOLDER path, not a filename prefix --
+      // these files sit at the bucket root, so a prefix of "deviceId-" matches
+      // a directory that does not exist and returns nothing. `search` is the
+      // one that filters on the name. The JS filter below still enforces the
+      // device boundary, so a loose search can never widen what comes back.
       body: JSON.stringify({
-        prefix: `${deviceId}-`,
-        limit: 20,
+        prefix: "",
+        search: `${deviceId}-`,
+        limit: 100,
         sortBy: { column: "created_at", order: "desc" }
       })
     });
@@ -154,8 +160,13 @@ async function handleRecentLookup(req, res) {
     // with when the customer pressed Generate. created_at can drift.
     const recent = (Array.isArray(rows) ? rows : [])
       .map(r => {
-        const m = /-(\d{10,})\.png$/.exec(r.name || "");
-        return m ? { name: r.name, madeAt: Number(m[1]) } : null;
+        const name = r.name || "";
+        // The device boundary is enforced HERE, on the name itself, so that
+        // however the listing is filtered upstream nothing belonging to another
+        // customer can come back.
+        if (!name.startsWith(`${deviceId}-`)) return null;
+        const m = /-(\d{10,})\.png$/.exec(name);
+        return m ? { name, madeAt: Number(m[1]) } : null;
       })
       .filter(Boolean)
       .filter(r => r.madeAt >= since)
