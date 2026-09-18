@@ -1,5 +1,5 @@
 <!-- ============================================================
-     VERSION: V301
+     VERSION: V302
      ============================================================
      THE ONE LINE THAT SAYS WHICH BUILD YOU ARE LOOKING AT.
 
@@ -9631,7 +9631,8 @@ async function renderPanelPrintDataUrl(designId){
   // previously cached texture and the 3D mug looked broken even once the
   // drawing below was added.
   const key=JSON.stringify([designId,src,box,adj,hex,caption,
-    selectedFrame,windowSillChoice,frameColors,frameInsetOverridePct]);
+    selectedFrame,windowSillChoice,frameColors,frameInsetOverridePct,
+    getMugAccentHex()]);
   if(panelPrintCache[key])return panelPrintCache[key];
   const img=await loadImageFromUrl(src);
   const c=document.createElement('canvas');
@@ -9690,6 +9691,23 @@ async function renderPanelPrintDataUrl(designId){
     }
   }
   ctx.drawImage(panelLayer,left,top);
+  // THE THIN ACCENT FRAME, ON THE CUP (Alyx, Sep 2026: "fix the thin frame so
+  // that it shows on the mug"). It was drawn only as a CSS border on the Fit
+  // Your Picture box -- styling on one element on screen, nothing in the
+  // picture -- so the cup beside it had nothing to show and looked broken.
+  //
+  // It DOES print: create-printify-order.js strokes a real one via
+  // applyBorderIfNeeded. So this is the preview catching up with the product,
+  // and it copies that function's geometry rather than inventing its own --
+  // stroke 0.8% of the shorter side, traced on the picture's own edge, inset by
+  // half the stroke so it sits ON the edge instead of outside it.
+  const borderHex=getMugAccentHex();
+  if(borderHex && adj.border!==false){
+    const sw=Math.max(2,Math.round(Math.min(w,h)*0.008));
+    ctx.strokeStyle=borderHex;
+    ctx.lineWidth=sw;
+    ctx.strokeRect(left+sw/2,top+sw/2,Math.max(1,w-sw),Math.max(1,h-sw));
+  }
   const url=c.toDataURL('image/png');
   panelPrintCache[key]=url;
   return url;
