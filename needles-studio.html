@@ -2076,6 +2076,18 @@ Tell Needles <span style="color:#7ab8ff">what you have in mind</span>
 <span class="note" style="margin:0;white-space:nowrap;font-size:11px">Soft</span>
 </div>
 <div class="note" style="margin-top:.25rem;margin-bottom:0;text-align:center"><span id="frameFadeAmountVal">30%</span></div>
+<!-- PICTURE SIZE (Alyx, Sep 2026). Until now this screen offered a fade and
+     nothing to fade INTO: the picture filled the print area edge to edge, so
+     the softening had to start at the boundary. The mug's three-panel screen
+     has had a size control all along; every other product reached this screen
+     with the fade alone. Same slider, same idea, now everywhere. -->
+<div style="display:flex;align-items:center;gap:10px;margin-top:1.1rem">
+<span class="note" style="margin:0;white-space:nowrap;font-size:11px">Smaller</span>
+<input type="range" id="frameFadeSizeSlider" min="40" max="100" step="1" value="100" oninput="updateFrameFadePreview()" style="flex:1"/>
+<span class="note" style="margin:0;white-space:nowrap;font-size:11px">Full</span>
+</div>
+<div class="note" style="margin-top:.25rem;margin-bottom:0;text-align:center"><span id="frameFadeSizeVal">Full size</span></div>
+<div class="note" style="margin-top:.35rem;margin-bottom:0;text-align:left;font-size:11px;line-height:1.5">Pull the picture in a little and the fade has somewhere to land — it settles into your product instead of stopping at the edge. The space around it prints in your product's colour.</div>
 <!-- Shown only while the faded picture is being saved after Continue. The
      save is a real upload of the full-size photo, which on a slow phone
      connection can take a while -- without this the button looked dead. -->
@@ -13055,7 +13067,36 @@ function chooseFadeEdges(){
 // so the fade genuinely reaches full transparency rather than an
 // approximated blend. fadeAmountPct controls how far the fade reaches
 // in from each edge, as a percentage of the shorter image dimension.
-async function renderFadedArtwork(sourceUrl,hexColor,fadeAmountPct){
+async function renderFadedArtwork(sourceUrl,hexColor,fadeAmountPct,sizePct){
+  // SHRINK FIRST, THEN FADE (Alyx, Sep 2026: "I wanted to shrink the image size
+  // a little too so that the fade would look nice and proportionate on the
+  // final mock-up").
+  //
+  // A fade needs somewhere to land. On a picture that fills the print area edge
+  // to edge the softening starts at the very boundary, so it reads as a blurry
+  // border rather than the picture settling INTO the product. Pull the picture
+  // in a little and the faded edge has room to happen inside the frame.
+  //
+  // Done here, in the one function BOTH the live preview and the saved file
+  // call, so the two cannot disagree -- the same rule the fade itself already
+  // follows. The picture is faded at its own full resolution first and then
+  // placed, so the softening belongs to the PICTURE's edges rather than to the
+  // print area's, and it lands on the product colour it is fading into anyway,
+  // which is why the join is invisible.
+  const size=Math.max(20,Math.min(100,Number(sizePct)||100));
+  if(size<100){
+    const fadedFull=await renderFadedArtwork(sourceUrl,hexColor,fadeAmountPct,100);
+    const inner=await loadImageFromUrl(fadedFull);
+    const c=document.createElement('canvas');
+    c.width=inner.naturalWidth;
+    c.height=inner.naturalHeight;
+    const cx2=c.getContext('2d');
+    cx2.fillStyle=hexColor;
+    cx2.fillRect(0,0,c.width,c.height);
+    const dw=c.width*(size/100), dh=c.height*(size/100);
+    cx2.drawImage(inner,(c.width-dw)/2,(c.height-dh)/2,dw,dh);
+    return c.toDataURL('image/jpeg',0.92);
+  }
   const img=await loadImageFromUrl(sourceUrl);
   const canvas=document.createElement('canvas');
   canvas.width=img.naturalWidth;
@@ -13369,7 +13410,7 @@ async function bakeFadeIntoDesigns(fadeAmountPct){
   const strict={strict:true};
   if(revealFlowThreePanel){
     const [leftFaded,centerFaded,rightFaded]=await Promise.all(
-      revealOriginalArtworkUrls.map(u=>u?renderFadedArtwork(u,hex,fadeAmountPct):Promise.resolve(null))
+      revealOriginalArtworkUrls.map(u=>u?renderFadedArtwork(u,hex,fadeAmountPct,frameFadeSizePct):Promise.resolve(null))
     );
     const [leftUrl,centerUrl,rightUrl]=await Promise.all([
       uploadCompositedImage(leftFaded,strict),
@@ -13389,7 +13430,7 @@ async function bakeFadeIntoDesigns(fadeAmountPct){
     // thirds and spreads it across left/front/right, which is right for a mug
     // wraparound and catastrophic for a coaster -- it would print one third of
     // the design. These products have exactly one design; replace it in place.
-    const faded=await renderFadedArtwork(revealOriginalArtworkUrls[0],hex,fadeAmountPct);
+    const faded=await renderFadedArtwork(revealOriginalArtworkUrls[0],hex,fadeAmountPct,frameFadeSizePct);
     const uploaded=await uploadCompositedImage(faded,strict);
     const slotId=placements.front||placements.left||placements.right;
     const design=slotId?findDesignById(slotId):null;
@@ -13400,12 +13441,12 @@ async function bakeFadeIntoDesigns(fadeAmountPct){
     // hasn't been placed on any panel yet -- placements.left/front/right are
     // all still empty at this point, so the target has to come from
     // pendingPanelPlacementDesignId instead of being derived from them.
-    const faded=await renderFadedArtwork(revealOriginalArtworkUrls[0],hex,fadeAmountPct);
+    const faded=await renderFadedArtwork(revealOriginalArtworkUrls[0],hex,fadeAmountPct,frameFadeSizePct);
     const uploaded=await uploadCompositedImage(faded,strict);
     const design=pendingPanelPlacementDesignId?findDesignById(pendingPanelPlacementDesignId):null;
     if(design)design.url=uploaded;
   } else {
-    const faded=await renderFadedArtwork(revealOriginalArtworkUrls[0],hex,fadeAmountPct);
+    const faded=await renderFadedArtwork(revealOriginalArtworkUrls[0],hex,fadeAmountPct,frameFadeSizePct);
     const slices=await sliceStitchedIntoThirds(faded);
     const [leftUrl,centerUrl,rightUrl,wholeUrl]=await Promise.all([
       uploadCompositedImage(slices.left,strict),
@@ -13464,6 +13505,10 @@ async function confirmFadeAndContinue(){
 // dragging to 0% already gives hard edges), and continues into the
 // Frame/Window Sill catalog afterward instead of the final mockup fetch.
 let frameFadeAmountPct=0;
+// 100 = the picture fills the print area, which is how it has always behaved.
+// Anything less pulls it in so the fade has somewhere to land; see
+// renderFadedArtwork(). Reset on every open, like the fade.
+let frameFadeSizePct=100;
 
 const DEFAULT_FADE_PCT=30;
 let frameFadeSettled=false;
@@ -13587,6 +13632,11 @@ function openFrameFadeOverlay(){
   const openingFadePct=lastGenerationWasExactTransfer?0:DEFAULT_FADE_PCT;
   frameFadeAmountPct=openingFadePct;
   document.getElementById('frameFadeAmountSlider').value=openingFadePct;
+  // Opens at full size every visit. A size carried over from a previous design
+  // would silently shrink the next one.
+  frameFadeSizePct=100;
+  const sizeSliderEl=document.getElementById('frameFadeSizeSlider');
+  if(sizeSliderEl)sizeSliderEl.value=100;
   document.getElementById('frameFadeAmountVal').textContent=openingFadePct+'%';
   // ONE IMAGE, AS LARGE AS WE CAN MAKE IT. Alyx: "when I tried to apply the
   // fade to the cup that I had created it gave me two images instead of just
@@ -13622,6 +13672,10 @@ async function updateFrameFadePreview(){
   const readout=document.getElementById('frameFadeAmountVal');
   frameFadeAmountPct=slider?parseFloat(slider.value):20;
   if(readout)readout.textContent=frameFadeAmountPct+'%';
+  const sizeSlider=document.getElementById('frameFadeSizeSlider');
+  frameFadeSizePct=sizeSlider?parseFloat(sizeSlider.value):100;
+  const sizeReadout=document.getElementById('frameFadeSizeVal');
+  if(sizeReadout)sizeReadout.textContent=frameFadeSizePct>=100?'Full size':frameFadeSizePct+'%';
   if(!revealOriginalArtworkUrls.length)return;
   const hex=getSelectedProductColorHex();
   // One preview, whatever the product. Fading three thumbnails to show one
@@ -13631,7 +13685,7 @@ async function updateFrameFadePreview(){
   if(!img)return;
   const src=revealOriginalArtworkUrls[framefadePreviewIndex]||revealOriginalArtworkUrls.find(Boolean);
   if(!src)return;
-  const faded=await renderFadedArtwork(src,hex,frameFadeAmountPct);
+  const faded=await renderFadedArtwork(src,hex,frameFadeAmountPct,frameFadeSizePct);
   img.src=faded;
 }
 
