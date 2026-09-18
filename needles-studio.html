@@ -1,5 +1,5 @@
 <!-- ============================================================
-     VERSION: V306
+     VERSION: V307
      ============================================================
      THE ONE LINE THAT SAYS WHICH BUILD YOU ARE LOOKING AT.
 
@@ -9650,14 +9650,8 @@ async function renderPanelPrintDataUrl(designId){
   const adj=(design.captioned&&design.preBakeAdjust)?{...design.preBakeAdjust}:getDesignAdjust(designId);
   const hex=getSelectedProductColorHex();
   const caption=product==='mug'?currentCaptionText():'';
-  // THE FRAME BELONGS IN THIS KEY (Alyx, Sep 2026: "it applied to the mockup
-  // image, but not to the mockup mug above... it's supposed to immediately go
-  // to all my cups is it not?"). Without it, swapping frames handed back the
-  // previously cached texture and the 3D mug looked broken even once the
-  // drawing below was added.
-  const key=JSON.stringify([designId,src,box,adj,hex,caption,
-    selectedFrame,windowSillChoice,frameColors,frameInsetOverridePct,
-    getMugAccentHex()]);
+  // The accent border is drawn here, so its colour is part of the key.
+  const key=JSON.stringify([designId,src,box,adj,hex,caption,getMugAccentHex()]);
   if(panelPrintCache[key])return panelPrintCache[key];
   const img=await loadImageFromUrl(src);
   const c=document.createElement('canvas');
@@ -9696,26 +9690,15 @@ async function renderPanelPrintDataUrl(designId){
     pctx.putImageData(id,0,0);
   }
   if(caption){ try{ drawCaptionText(pctx,pc); }catch(err){ console.error('Caption could not be drawn for framing:',err); } }
-  // THE MUG SHOWS THE FRAME TOO. This function paints the mug colour, the
-  // backdrop, the picture, its fade and its caption -- and used to stop there,
-  // so a frame picked on the accessorize screen changed the flat preview below
-  // and never the 3D mug above. Same helpers the flat preview uses, so the two
-  // cannot disagree about what a frame looks like.
-  let panelLayer=pc;
-  if(selectedFrame||windowSillChoice){
-    try{
-      const fc=document.createElement('canvas');
-      fc.width=w;fc.height=h;
-      const fctx=fc.getContext('2d');
-      await drawPhotoInsetForFrame(fctx,fc,pc,w,h);
-      await drawFrameOnCanvas(fctx,fc);
-      await drawWindowSillOnCanvas(fctx,fc);
-      panelLayer=fc;
-    }catch(err){
-      console.error('Frame could not be drawn onto the panel; showing it unframed:',err);
-    }
-  }
-  ctx.drawImage(panelLayer,left,top);
+  // NO FRAME HERE, EVER. This is the panel as it prints -- surface colour,
+  // fit, fade, caption, accent border. The catalogue frame goes on AFTERWARDS,
+  // by whoever needs it (updateAccessorizePreview, applyAccessorizeFrame),
+  // through compositeFrameOntoImageUrl. For one afternoon in Sep 2026 this
+  // function drew the frame too, to make the lightbox cup preview it, and
+  // every caller that framed the result afterwards stacked a second frame
+  // inside the first -- and applyAccessorizeFrame would have SAVED it that
+  // way. Alyx: "what he inadvertently did was applied the frames twice."
+  ctx.drawImage(pc,left,top);
   // THE THIN ACCENT FRAME, ON THE CUP (Alyx, Sep 2026: "fix the thin frame so
   // that it shows on the mug"). It was drawn only as a CSS border on the Fit
   // Your Picture box -- styling on one element on screen, nothing in the
@@ -17708,7 +17691,10 @@ async function applyAccessorizeFrame(){
         const panelUrl=product==='water bottle'?null:await renderPanelPrintDataUrl(id);
         const framed=await compositeFrameOntoImageUrl(panelUrl||snap.urls[id]||d.url);
         d.url=await uploadCompositedImage(framed);
-        setDesignAdjust(id,{...getDesignAdjust(id),zoom:1,offX:0,offY:0,fade:0,backdrop:null,caption:null});
+        // The uploaded file now carries fit, fade, caption AND the accent border
+        // (renderPanelPrintDataUrl draws it). border:false, like fade:0 beside
+        // it, so the printer does not stroke a second one on top.
+        setDesignAdjust(id,{...getDesignAdjust(id),zoom:1,offX:0,offY:0,fade:0,backdrop:null,caption:null,border:false});
       }));
       ['left','front','right'].forEach(pos=>{if(placementAdjust[pos])placementAdjust[pos].fade=0;});
       coverMeFrameApplied=true;
