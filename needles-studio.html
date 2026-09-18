@@ -1,5 +1,5 @@
 <!-- ============================================================
-     VERSION: V302
+     VERSION: V303
      ============================================================
      THE ONE LINE THAT SAYS WHICH BUILD YOU ARE LOOKING AT.
 
@@ -13461,14 +13461,46 @@ function revealFadeSources(){
 // with the placement on top of it. And the frame now belongs to the cache key,
 // or swapping frames would hand back the previous picture and look broken
 // anyway.
+// THE THIN ACCENT FRAME, ON THIS CUP TOO (Alyx, Sep 2026: "why is my frame
+// still not present?").
+//
+// There are two 3D cups in this studio fed by two different functions, and the
+// accent border was fixed on the wrong one first. This is the cup under "Your
+// Finished Artwork" -- the one on screen while the fade slider moves.
+//
+// Same geometry as the printer's applyBorderIfNeeded and as the panel render:
+// stroke 0.8% of the shorter side, traced on the picture's own edge.
+async function drawAccentBorderOnImageUrl(url){
+  const hex=getMugAccentHex();
+  if(!hex||!url)return url;
+  const img=await loadImageFromUrl(url);
+  const w=img.naturalWidth,h=img.naturalHeight;
+  if(!w||!h)return url;
+  const c=document.createElement('canvas');
+  c.width=w;c.height=h;
+  const ctx=c.getContext('2d');
+  ctx.drawImage(img,0,0,w,h);
+  const sw=Math.max(2,Math.round(Math.min(w,h)*0.008));
+  ctx.strokeStyle=hex;
+  ctx.lineWidth=sw;
+  ctx.strokeRect(sw/2,sw/2,Math.max(1,w-sw),Math.max(1,h-sw));
+  return c.toDataURL('image/png');
+}
+
 async function ensureRevealFadePreviewUrls(){
-  const key=revealFadeSources().join('|')+'|'+JSON.stringify([selectedFrame,windowSillChoice,frameColors,frameInsetOverridePct]);
+  const key=revealFadeSources().join('|')+'|'+JSON.stringify([selectedFrame,windowSillChoice,frameColors,frameInsetOverridePct,getMugAccentHex()]);
   if(revealFadePreviewFor===key && revealFadePreviewUrls)return revealFadePreviewUrls;
   const scaled=await Promise.all(revealFadeSources().map(u=>u?scaledForPreview(u,REVEAL_FADE_PREVIEW_WIDTH):Promise.resolve(null)));
   revealFadePreviewUrls=await Promise.all(scaled.map(async u=>{
-    if(!u||!(selectedFrame||windowSillChoice))return u;
-    try{ return await compositeFrameOntoImageUrl(u); }
-    catch(err){ console.error('Frame could not be drawn onto the cup preview; showing it unframed:',err); return u; }
+    if(!u)return u;
+    let out=u;
+    if(selectedFrame||windowSillChoice){
+      try{ out=await compositeFrameOntoImageUrl(out); }
+      catch(err){ console.error('Frame could not be drawn onto the cup preview; showing it unframed:',err); }
+    }
+    try{ out=await drawAccentBorderOnImageUrl(out); }
+    catch(err){ console.error('Accent border could not be drawn onto the cup preview:',err); }
+    return out;
   }));
   revealFadePreviewFor=key;
   return revealFadePreviewUrls;
