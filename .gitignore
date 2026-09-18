@@ -3,3 +3,5 @@ flow-tests/shot-*.png
 flow-tests/diag-*
 shot-*.png
 flow-tests/recall-board.png
+flow-tests/probe-out/
+flow-tests/laura-face.jpg
