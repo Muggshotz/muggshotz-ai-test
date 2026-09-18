@@ -3,3 +3,8 @@ flow-tests/shot-*.png
 flow-tests/diag-*
 shot-*.png
 flow-tests/recall-board.png
+flow-tests/probe-out/
+# Test-subject photos stay local: someone else's face is theirs to publish,
+# not ours. alyx-face.jpg is committed because it is Alyx's own.
+flow-tests/laura-face.jpg
+flow-tests/subject*-face.jpg

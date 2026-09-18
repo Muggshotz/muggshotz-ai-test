@@ -673,3 +673,128 @@ hallway holding nothing, the wording is too tight; loosen it, do not remove it.
 
 **Two things learned about working with Alyx today:** Vercel builds main in 15–18 s, not
 minutes. And a note in this file is routine, not a code change; write it without asking.
+
+## Alyx's tools-on-every-image spec (2026-09-18, ~3:40am)
+
+Given verbatim at the end of the caricature-dial session. Nothing built yet --
+this is the brief, plus what a first look at the code already shows.
+
+### What he asked for
+
+1. **A fade slider and a size slider on every image that is not a prop or
+   template.** Window sills, doorways and the Let's Just Face It templates are
+   excluded -- those are fixed artwork. Everything else gets both.
+
+2. **Especially on the free / BYO track.** His words: "These tools do not cost
+   any money, and these tracks will have the most likely need for fading rough
+   edges than any other images that we generate. How have we left this option
+   off for people holding nothing more than just their do-it-yourself art? They
+   should at least be able to fade their image before deciding how they go on
+   their coffee mug."
+
+3. **Frames offered as well**, including the existing thin narrow frame that
+   matches the accent-box colour.
+
+4. **Frames come AFTER the mockup, not before.** Offered once the mockup has
+   been generated, immediately before checkout, applied directly to the image
+   on the mockup. "No thank you" goes straight to checkout.
+
+5. **Generalise that:** every prop offering EXCEPT the Let's Just Face It
+   templates should be offered at that same point -- after mockups, just before
+   checkout, applied onto the mockup image. He believes this may already be the
+   arrangement and wants it confirmed rather than assumed.
+
+### What the code already has (first pass, not exhaustive)
+
+* The free track is NOT toolless. A declared-BYO customer on a mug reaches Fit
+  Your Picture and the Fade Edges screen -- Alyx used both himself earlier the
+  same night. So the gap is narrower than "BYO has no tools" and needs mapping
+  product by product, path by path, before anything is built.
+* The thin accent-colour frame exists: `border` on every panel adjust, labelled
+  "Thin frame around the picture in your mug's colour" with a live colour
+  swatch, defaulting to on (defaultPanelAdjust). It is only wired to the mug
+  panel adjuster, not offered as a general option.
+* An after-the-mockup frame offer already exists: `frameOfferFromMockup` opens
+  the frame picker from the mockup lightbox, keeps `preFrameMockupUrls` so a
+  change of mind restores the unframed design, and returns to the lightbox.
+  Whether it is reachable on every product that should have it is unknown.
+
+### Open, and he asked to be reminded
+
+* **Wraparound flow** on coffee mugs AND travel cups -- double-check it end to
+  end.
+* **Back buttons everywhere.** His instruction: "constantly remind me tomorrow
+  to make sure I test back buttons everywhere I go. They should all work so it
+  shouldn't take me very long to just simply hit the back and then go forward
+  again."
+
+### Also still open from the same session
+
+* The 700-second generation stall, never explained. Vercel logs from that
+  window would still hold it.
+* No timeout on the generation fetch -- why 700 seconds showed a spinner
+  instead of an error. Proposal drafted: a "taking longer than usual" line at
+  ~90s, an abort with a real message at ~315s (past the 300s maxDuration).
+* "Element is outside of the viewport" -- one scroll-pin cause behind three
+  separate test failures (canLeave_mouse_pad, and intermittent failures in
+  verify-reveal-release).
+* Artwork Only: live since the morning, still never actually run. Its hidden
+  prompt wording was chosen by Claude and never signed off.
+* blankIdeaOffersTransfer in verify-approve-handoff: pre-existing failure,
+  proven identical before and after the freeze fix.
+
+### The prop rule, refined minutes later (same night)
+
+Alyx corrected his own first pass. Magazine covers belong with the Let's Just
+Face It templates, and window sills move the other way -- they had been lumped
+in with the excluded props and they should not be.
+
+**Group A -- the AI builds the person INTO them.**
+Let's Just Face It templates, magazine covers.
+  * They require a generation, so they are offered BEFORE the mockup. They
+    cannot be applied to a finished mockup because the mockup is downstream of
+    the picture they help create.
+  * No fade tool. The artwork already encloses the subject; there is no raw
+    edge meeting a product surface to soften.
+  * (Sizing: not stated. Ask before assuming.)
+
+**Group B -- applied AROUND a finished image.**
+Window sills, picture frames including the thin accent-colour one.
+  * Offered AFTER the mockup, immediately before checkout, applied directly
+    onto the image on the mockup. "No thank you" goes straight to checkout.
+  * Fade AND resize, both. The customer needs to size what sits inside the
+    surround and soften where the picture meets it.
+
+The test for which group something is in: does it need the AI to make it, or
+does it wrap something the AI already made.
+
+### FOUND: the resize tool does not exist outside the three-panel mug
+
+Alyx, same night: "two or three times I tried to generate an image for my
+sister and I was going to apply the fade at the end and never got the toolbar.
+I wanted to shrink the image size a little too so that the fade would look nice
+and proportionate on the final mock-up with no props."
+
+Not an intermittent failure. showEdgeQuestion() has it in black and white:
+
+    if (revealFlowThreePanel) {
+      host.style.display = 'block';       // the fit panel: zoom, position, preview
+      renderRevealFitPreview();
+    } else {
+      host.style.display = 'none';        // no fit panel at all
+      revealFitState = null;              // and the sizing state is discarded
+      revealImg.style.display = 'block';  // a flat picture and Hard/Fade only
+    }
+
+On a single-image product the fade screen hides the fit panel by design and
+nulls revealFitState. There is no toolbar to miss -- it was never built for
+that path, so every attempt goes the same way.
+
+His reasoning is also the argument for fixing it: a fade reads wrong on a
+picture that fills the frame edge to edge. You have to pull the image in a
+little so the softened edge has somewhere to land. On a mug he can. Everywhere
+else he cannot, so the fade is doing half a job.
+
+FIRST THING TO BUILD. It is much narrower than the full tools spec above --
+give the single-image fade screen the same fit panel the three-panel path
+already has, rather than designing anything new.

@@ -319,7 +319,7 @@ Keep normal, true head-to-body proportions. This is the gentlest setting offered
       return `Exaggerate this face. The features below are material to be reshaped, not things to hold still:
 ${features}.
 Enlarge the head to roughly ${head}x its natural head-to-body ratio, and scale the body against it.
-Pick the ${feat >= 4 ? "FOUR" : feat >= 3 ? "THREE" : "TWO"} most distinctive features in this particular face and push each one about ${push}% beyond life -- if the nose is broad make it broader, if the jaw is heavy make it heavier, if the smile is wide make it wider.${grotesque}
+Pick the ${feat >= 4 ? "FOUR" : feat >= 3 ? "THREE" : "TWO"} most distinctive features in this particular face and push each one about ${push}% beyond life. When choosing which ${feat >= 4 ? "four" : feat >= 3 ? "three" : "two"}, give slight preference to small identifying quirks over sheer bulk -- a gap between the front teeth, dimples, bushy or uneven eyebrows, a cleft chin, prominent ears, a crooked smile, a widow's peak, deep laugh lines, heavy-lidded eyes -- but only where this face genuinely has them; a face whose defining feature really is a heavy jaw still gets the heavy jaw.${grotesque}
 Identity is carried by the SHAPE of the real features, never by their real measurements. A stranger who knows this person must still recognise them instantly.
 ${never}
 Do not invent features the photo does not show -- no added facial hair, no added glasses, no added scars, no borrowed features from anyone else.`;

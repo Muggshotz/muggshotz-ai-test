@@ -46,7 +46,6 @@
  "Aww Hell": "Aww Hell",
  "Back": "Back",
  "Backpack": "Backpack",
- "Balanced": "Balanced",
  "Beige": "Beige",
  "Bend": "Bend",
  "Bigger": "Bigger",
@@ -269,7 +268,6 @@
  "Left/Right Position": "Left/Right Position",
  "Let Needles work his magic!": "Let Needles work his magic!",
  "Let's Just Face It": "Let's Just Face It",
- "Lifelike": "Lifelike",
  "Light Blue": "Light Blue",
  "Light Green": "Light Green",
  "Light Pink": "Light Pink",
@@ -626,7 +624,6 @@
  "White": "White",
  "white": "white",
  "Width": "Width",
- "Wild": "Wild",
  "Window Frame Size (adjusts the balcony artwork itself, not your photo)": "Window Frame Size (adjusts the balcony artwork itself, not your photo)",
  "Window Height": "Window Height",
  "Window Width": "Window Width",
@@ -861,5 +858,8 @@
  "This browser blocked copying. Use Save Image instead.": "This browser blocked copying. Use Save Image instead.",
  "Opened in a new tab — press and hold the picture to save it.": "Opened in a new tab — press and hold the picture to save it.",
  "🎯 Caricature Assassination": "🎯 Caricature Assassination",
- "Wildly exaggerated. Still unmistakably you.": "Wildly exaggerated. Still unmistakably you."
+ "Wildly exaggerated. Still unmistakably you.": "Wildly exaggerated. Still unmistakably you.",
+ "Natural": "Natural",
+ "Exaggerated": "Exaggerated",
+ "Outrageous": "Outrageous"
 }
