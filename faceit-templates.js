@@ -702,7 +702,7 @@ function mirrorPrompt(note){
   'a stock beauty, do not invent a new person. A stranger who knows them must recognise them ' +
   'instantly and think only that they have never looked better.\n\n' +
   'PRESERVE EXACTLY: the mirror, its carved gilt frame and the face carved into the crest at the ' +
-  'top, the candlelight, the room, the gown, and the pose of the figure before the glass. Change ' +
+  'top, the candlelight, the room, the clothing, and the pose of the figure before the glass. Change ' +
   'nothing but the reflected face.' + note;
 }
 
@@ -732,13 +732,13 @@ function courtPainterPrompt(note){
   'THE PORTRAIT FLATTERS, AND THAT IS THE ENTIRE POINT OF THIS PICTURE. Paint them as the court ' +
   'painter would have: more powerful, more stately, more commanding and wiser than they appear ' +
   'in the photograph. A face that belongs above ermine and a laurel -- composed, unhurried, ' +
-  'certain of itself, lit the way a master lights a patron he wants to keep. This idealisation is ' +
+  'certain of itself, lit the way a master lights a patron they want to keep. This idealisation is ' +
   'deliberate and requested, and it overrides any general instruction not to beautify.\n\n' +
   'IT MUST STILL BE UNMISTAKABLY THEM. Keep the real bone structure, the real nose, the real eye ' +
   'shape and eye colour, the real mouth, the real jaw width, the real hairline, the real age and ' +
   'skin tone, and any distinctive features. Do not slim the face, do not substitute a model or a ' +
-  'noble-looking stranger, do not invent a new person. The joke only works if the man in the ' +
-  'ermine is recognisably the man in the snapshot.\n\n' +
+  'noble-looking stranger, do not invent a new person. The joke only works if the figure in the ' +
+  'ermine is recognisably the person in the snapshot.\n\n' +
   'Render it as OIL PAINT, matching the canvas it sits in -- visible brushwork, the same palette ' +
   'and the same light as the rest of the painting. It is a painting of them, not a photograph ' +
   'pasted into one.\n\n' +
@@ -900,12 +900,21 @@ const FACE_IT_TEMPLATES = [
      something they ask for by name, which is the difference between a gag and a
      defect.
 
-     `tile` is new to the roster and this is why it exists. The plate plays the
-     scene completely straight -- nobody in it acknowledges the viewer -- because
-     a printed object that winks announces the vanity the customer bought
-     deniability about. The tile is allowed to wink, because it has half a second
-     in a product grid to land the joke. Measured at 140px: the wink survives in
-     the cropped tile and does not survive in the plate.
+     THE WINK SHIPS. This template briefly had two paintings: a straight-faced
+     plate to print and a winking one to advertise, on my reasoning that an
+     object that winks announces the vanity the customer paid not to have to
+     admit. That reasoning was wrong, and Alyx had already said why before I
+     wrote it: "the face carved at the top of the mirror, that was the thing
+     that immediately sold me. It was not just decoration, it was a clue...
+     almost an invocation."
+     Deniability was never what the carving was for. The gag is a lie, a lie
+     needs a liar, and the wink is the liar's tell -- it is the one mark in the
+     picture that says something is IN there, choosing what to show. Sell the
+     device and ship a mirror that merely flatters and you have sold the joke
+     and delivered the defect. So the winking painting is the plate now, and it
+     is the tile too, because a picture good enough to sell the thing is good
+     enough to be the thing. It is also the better merge target: its reflection
+     sits larger in frame, which is more paint on the only slot we fill.
 
      Portrait only, deliberately. A wrap version would need the mirror composed
      to a band, and a mirror that wide stops reading as a mirror.
@@ -916,7 +925,7 @@ const FACE_IT_TEMPLATES = [
      while at a mirror the customer is LOOKING so the same photo indicts them for
      believing it; a photograph is the wrong century for a fairy tale; and it is
      a plot hole -- put a camera in the room and the magic mirror has no job. */
-  { file: 'mirror_mirror.webp', tile: 'mirror_mirror_tile.webp',
+  { file: 'mirror_mirror.webp',
     name: 'Mirror Mirror', kind: 'mirror',
     shape: 'portrait', panels: 'any', poseNote: 'three-quarter',
     idealise: true },
@@ -1096,12 +1105,14 @@ function liveTemplates(){ return FACE_IT_TEMPLATES.filter(isLive); }
    drawn by the same code that draws the template. One source of truth: if the
    placards move, the thumbnail moves with them. */
 function tileFor(t, px){
-  // THE ADVERT NEED NOT BE THE ARTWORK (Sep 2026). Every template until Mirror
-  // Mirror showed the customer exactly what it would print, so the plate served
-  // as its own thumbnail. That one cannot: its plate plays the scene straight,
-  // because an object that winks is announcing the vanity the customer paid not
-  // to have to admit -- while its tile has half a second in a product grid and
-  // has to tell the joke outright. One picture sells, another ships.
+  // THE ADVERT NEED NOT BE THE ARTWORK (Sep 2026) -- a capability, currently
+  // with no takers. It was added for Mirror Mirror, which shipped a straight
+  // plate and a winking tile until Alyx caught the swap and pointed out that
+  // the wink is the device, not the advertising for it (see that template's
+  // note). Every template now prints the picture it shows, which is the
+  // healthier default: a tile that differs from its plate is a promise the
+  // parcel has to keep. Kept, because a genuinely croppable advert is a fair
+  // use of it -- but the bar is that the plate must not be the weaker picture.
   if (t.tile) return t.tile;
   if (t.file) return t.file;
   if (t.kind !== 'mugshot' || !global.FaceItMugshot) return null;
