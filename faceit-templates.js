@@ -675,8 +675,39 @@ function lineupFigurePrompt(note){
   'frame and not cropped at any edge.\n\n' + MAGENTA_FIELD + note;
 }
 
+/* MIRROR MIRROR. The one prompt in here that asks for a BETTER face than the
+   photograph, which is why its template carries `idealise` and why the server's
+   identityLock steps aside for it. Everything else in the roster is defending a
+   likeness; this is spending one, on purpose, with the customer's consent.
+
+   Two things it must not do, and both are load-bearing. It must not give the
+   figure standing with her back to us a face -- she has none by design, and the
+   whole composition depends on it. And it must not idealise so far that the
+   person stops being recognisable: a lie needs a subject, and "you, at your
+   best" is the product where "somebody else entirely" is a refund. */
+function mirrorPrompt(note){
+  return 'The reference image shows a figure standing with their BACK to us before a large ' +
+  'ornate storybook mirror, and the mirror is showing them a flattering reflection.\n\n' +
+  'Replace the face in the MIRROR\'S REFLECTION with the face of the person in the uploaded ' +
+  'photo. The reflection only. The figure standing in front of the glass is seen from behind ' +
+  'and must never be given a face -- leave them exactly as painted.\n\n' +
+  'THE MIRROR FLATTERS, AND THAT IS THE ENTIRE POINT OF THIS PICTURE. Paint the reflected face ' +
+  'as the finest version of this person: more radiant, more poised, more powerful, more stately ' +
+  'and wiser than they look in the photograph. Light them the way a court painter lights someone ' +
+  'they admire -- warm, generous, a little golden. This idealisation is deliberate and requested, ' +
+  'and it overrides any general instruction not to beautify.\n\n' +
+  'IT MUST STILL BE UNMISTAKABLY THEM. Keep the real bone structure, the real nose, the real eye ' +
+  'shape and eye colour, the real mouth, the real jaw width, the real hairline, the real age and ' +
+  'skin tone, and any distinctive features. Do not narrow the face, do not substitute a model or ' +
+  'a stock beauty, do not invent a new person. A stranger who knows them must recognise them ' +
+  'instantly and think only that they have never looked better.\n\n' +
+  'PRESERVE EXACTLY: the mirror, its carved gilt frame and the face carved into the crest at the ' +
+  'top, the candlelight, the room, the gown, and the pose of the figure before the glass. Change ' +
+  'nothing but the reflected face.' + note;
+}
+
 global.FaceItPrompts = {
-  MAGENTA_FIELD, faceNoteFrom,
+  MAGENTA_FIELD, faceNoteFrom, mirror: mirrorPrompt,
   stoneCarve: stoneCarvePrompt,
   mugshotSubject: mugshotSubjectPrompt,
   lineupFigure: lineupFigurePrompt
@@ -790,6 +821,40 @@ const FACE_IT_TEMPLATES = [
     subjectScale: 'choice',
     products: ['mug', 'travel-mug-14oz-handle'],
     poseNote: 'frontal' },
+
+  /* MIRROR MIRROR (Sep 2026, Alyx's idea end to end).
+     A figure stands with their back to us at an ornate storybook mirror, and the
+     reflection is flattering them. The gag is the lie -- and a lie needs a liar,
+     which is what the face carved into the crest of the frame supplies. Without
+     it a generous reflection is just a bad mirror; with it, something lives in
+     the glass and is CHOOSING what to show. That carved face is the whole device.
+
+     `idealise` is the switch that lets the server's identityLock stand down, and
+     this is one of only two templates that carries it. Flattery stopped being
+     something that happens to customers by accident this afternoon; here it is
+     something they ask for by name, which is the difference between a gag and a
+     defect.
+
+     `tile` is new to the roster and this is why it exists. The plate plays the
+     scene completely straight -- nobody in it acknowledges the viewer -- because
+     a printed object that winks announces the vanity the customer bought
+     deniability about. The tile is allowed to wink, because it has half a second
+     in a product grid to land the joke. Measured at 140px: the wink survives in
+     the cropped tile and does not survive in the plate.
+
+     Portrait only, deliberately. A wrap version would need the mirror composed
+     to a band, and a mirror that wide stops reading as a mirror.
+
+     A photograph of the customer was tried here as the evidence, the way the
+     court painter uses one, and Alyx killed it on three counts worth recording:
+     at an easel the customer is being DEPICTED so the photo indicts the painter,
+     while at a mirror the customer is LOOKING so the same photo indicts them for
+     believing it; a photograph is the wrong century for a fairy tale; and it is
+     a plot hole -- put a camera in the room and the magic mirror has no job. */
+  { file: 'mirror_mirror.webp', tile: 'mirror_mirror_tile.webp',
+    name: 'Mirror Mirror', kind: 'mirror',
+    shape: 'portrait', panels: 'any', poseNote: 'three-quarter',
+    idealise: true },
 
   /* ON MY MIND, AS THE BAND (Sep 2026). Not a variant of the 3:4 plate -- a
      second painting of the same idea, composed wide from the start, which is
@@ -920,6 +985,13 @@ function liveTemplates(){ return FACE_IT_TEMPLATES.filter(isLive); }
    drawn by the same code that draws the template. One source of truth: if the
    placards move, the thumbnail moves with them. */
 function tileFor(t, px){
+  // THE ADVERT NEED NOT BE THE ARTWORK (Sep 2026). Every template until Mirror
+  // Mirror showed the customer exactly what it would print, so the plate served
+  // as its own thumbnail. That one cannot: its plate plays the scene straight,
+  // because an object that winks is announcing the vanity the customer paid not
+  // to have to admit -- while its tile has half a second in a product grid and
+  // has to tell the joke outright. One picture sells, another ships.
+  if (t.tile) return t.tile;
   if (t.file) return t.file;
   if (t.kind !== 'mugshot' || !global.FaceItMugshot) return null;
   const mug = global.FaceItGeom.SURFACES.mug;

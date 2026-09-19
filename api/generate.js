@@ -280,7 +280,7 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: "Method not allowed" });
   }
   try {
-    const { image, prompt, theme, deviceId, refImageA, refImageB, currentDesign, size, panelRole, action, templateMerge, styleDirective, styleIsDefault, styleRef, styleExaggerate, likeness } = req.body;
+    const { image, prompt, theme, deviceId, refImageA, refImageB, currentDesign, size, panelRole, action, templateMerge, idealise, styleDirective, styleIsDefault, styleRef, styleExaggerate, likeness } = req.body;
 
     // TWO DIALS, ARRIVING AS NUMBERS (Alyx, Sep 2026: "what possible good does
     // it do us to have two different combinations render the exact same
@@ -749,6 +749,14 @@ FINAL REMINDER ON LIKENESS: Do not add facial hair, tattoos, piercings, scars, j
       // --- END TOKEN CHECK ---
     }
 
+    // THE DELUSION PACT (Sep 2026, Alyx). Flattery is off by default -- see the
+    // note below -- and exactly one thing can switch it on: a template that
+    // declares `idealise` in the catalog, because its whole joke IS the
+    // flattery. Mirror Mirror and the court painter are those templates. A
+    // customer who picks one has asked to be lied to, which is the difference
+    // between a gag and a defect, and it is why this is a template property
+    // rather than anything a prompt can talk its way into.
+    //
     // WHAT NOT TO DO, WHICH THIS BLOCK NEVER SAID (Sep 2026, Alyx, on a Face It
     // portrait of his niece: "I fear that he made my niece look prettier than
     // she actually is to the point where it's almost unusable").
@@ -779,9 +787,12 @@ FINAL REMINDER ON LIKENESS: Do not add facial hair, tattoos, piercings, scars, j
     const identityLock = `
 CRITICAL MUGGSHOTZ LIKENESS RULE:
 This is a caricature of the exact person in the uploaded photo.
-Do NOT beautify, idealise, slim, smooth, youthen, age-shift, race-shift or gender-shift the face.${wildFace ? "" : " Do not narrow the jaw, sculpt the cheekbones, reduce the chin, or otherwise change the person's underlying facial structure in any way."}
+${idealise ? `THIS TEMPLATE IS ALLOWED TO FLATTER, AND IS THE ONLY KIND THAT IS.
+The customer chose a scene whose entire joke is that it depicts them more grandly than life, and they chose it knowing that. So idealise deliberately: render them more radiant, more poised, more powerful, more stately and wiser than the photograph shows. Light them the way a painter lights someone they admire.
+This permission is narrow and it stops at the bone. The likeness must survive it completely: same bone structure, same nose, same eye shape and colour, same mouth, same jaw width, same hairline, same age, same skin tone, same distinctive marks. Do NOT substitute a model, a stock beauty, a celebrity or an invented face, and do NOT slim or reshape the head.
+The lie only lands if the person is unmistakable inside it. A stranger who knows them must recognise them instantly and think only that they have never looked better.` : `Do NOT beautify, idealise, slim, smooth, youthen, age-shift, race-shift or gender-shift the face.${wildFace ? "" : " Do not narrow the jaw, sculpt the cheekbones, reduce the chin, or otherwise change the person's underlying facial structure in any way."}
 Do NOT replace the face with a generic cartoon face, a stock caricature face, a model's face, or any actor, celebrity, mascot or invented character.
-A fuller face stays full, a softer jaw stays soft, and every line, mark and asymmetry the photo shows belongs to this person and stays where it is. The result must read as this person on an ordinary day, not as a flattering version of them.
+A fuller face stays full, a softer jaw stays soft, and every line, mark and asymmetry the photo shows belongs to this person and stays where it is. The result must read as this person on an ordinary day, not as a flattering version of them.`}
 Study the uploaded face first. Capture the spark and personality behind the eyes.
 Keep the same attitude, expression, mood, and presence as the real photo.
 The eyes are the center of the likeness — a good result must feel like the same person is looking back at you.

@@ -8597,8 +8597,11 @@ async function generateFaceIt(){
     // scenes use -- 1024 on a 2.14:1 band is 1024x478, too thin to carry a
     // face through a merge.
     const faceItSendsPlate=!!(faceItTpl && faceItTpl.file);
+    // t.file, deliberately, never tileFor(). A template with its own advert has
+    // two pictures and only one of them is the artwork -- sending the tile would
+    // merge the customer onto the version that winks.
     const templateDataUrl=faceItSendsPlate
-      ? await magazineAssetToJpegDataURL(selectedFaceItTemplate, faceItTpl.shape==='wrap'?2048:1024)
+      ? await magazineAssetToJpegDataURL(faceItTpl.file, faceItTpl.shape==='wrap'?2048:1024)
       : null;
     const descBox=document.getElementById('faceItDescriptionBox');
     const faceNote=(descBox && descBox.value.trim())
@@ -8618,6 +8621,8 @@ async function generateFaceIt(){
       prompt=FaceItPrompts.mugshotSubject(faceNote, faceItSubjectKind());
     } else if(faceItKind==='lineup'){
       prompt=FaceItPrompts.lineupFigure(faceNote);
+    } else if(faceItKind==='mirror'){
+      prompt=FaceItPrompts.mirror(faceNote);
     } else if(isTextTemplate){
       prompt='Merge the uploaded photo\'s face onto the provided reference image in the exact spot indicated, applying the same soft, faded watercolor/sepia wash shown in the reference -- render the face with that same delicate, translucent treatment rather than a sharp photographic look, and give the subject a thoughtful, distance-gazing expression matching the reference\'s mood. '+
         'Preserve the reference\'s overall composition, color palette, and decorative flourishes exactly as shown. '+
@@ -8636,6 +8641,9 @@ async function generateFaceIt(){
       // prompts ask for into real transparency, server-side, before the image
       // ever comes back. Keep it true for every Face It run.
       templateMerge:true,
+      // Declared by the template, never by the customer's words. The server
+      // reads it to decide whether identityLock forbids flattery or permits it.
+      idealise:!!(faceItTpl && faceItTpl.idealise),
       signal:currentGenerationController.signal
     });
 
@@ -18261,7 +18269,7 @@ async function recoverRecentGeneration(startedAt){
 // through the real 315 seconds would never be run.
 let GEN_SLOW_NOTICE_MS=90000;   // 3x a normal generation: say something
 let GEN_HARD_TIMEOUT_MS=315000; // past the server's own 300s ceiling: give up
-async function callGenerateAPI({ workingImage, prompt, refImageA, refImageB, panelRole, templateMerge, signal }){
+async function callGenerateAPI({ workingImage, prompt, refImageA, refImageB, panelRole, templateMerge, idealise, signal }){
   const ac=new AbortController();
   const startedAt=Date.now();
   let timedOut=false;
@@ -18291,6 +18299,9 @@ async function callGenerateAPI({ workingImage, prompt, refImageA, refImageB, pan
         size:getImageSizeParam(),
         panelRole:panelRole||undefined,
         templateMerge:templateMerge||false,
+        // Set by exactly one kind of template -- see the delusion-pact note in
+        // api/generate.js. Absent everywhere else, which is the point.
+        idealise:idealise||false,
         ...currentStylePayload()
       }),
       signal:ac.signal
