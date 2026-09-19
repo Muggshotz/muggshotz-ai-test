@@ -8623,6 +8623,8 @@ async function generateFaceIt(){
       prompt=FaceItPrompts.lineupFigure(faceNote);
     } else if(faceItKind==='mirror'){
       prompt=FaceItPrompts.mirror(faceNote);
+    } else if(faceItKind==='painter'){
+      prompt=FaceItPrompts.courtPainter(faceNote);
     } else if(isTextTemplate){
       prompt='Merge the uploaded photo\'s face onto the provided reference image in the exact spot indicated, applying the same soft, faded watercolor/sepia wash shown in the reference -- render the face with that same delicate, translucent treatment rather than a sharp photographic look, and give the subject a thoughtful, distance-gazing expression matching the reference\'s mood. '+
         'Preserve the reference\'s overall composition, color palette, and decorative flourishes exactly as shown. '+
@@ -8709,6 +8711,36 @@ async function generateFaceIt(){
       if(bandPrintsInThirds){
         const panels=await sliceFaceItResultIntoPanels(resultImageUrl);
         if(panels)faceItPendingPanels=panels;
+      }
+    }
+
+    // THE SNAPSHOT ON THE EASEL (Sep 2026). The court painter's whole joke is the
+    // distance between the photograph clipped to his easel and the coronation on
+    // his canvas -- so that photograph has to be the customer's, and exact. The
+    // model never paints it: it would invent a second face for the merge to
+    // confuse itself with, and it would have to be told to render somebody
+    // deliberately plainer, which is the one instruction identityLock exists to
+    // forbid. Composited here instead, from the same photo that went in, the way
+    // the mug shot draws its own placards rather than trusting the model with
+    // lettering. The quad travels as fractions of the plate, so whatever size the
+    // generation comes back at, the card is where the card is.
+    if(faceItTpl && faceItTpl.photoQuad && FACEIT_MODULE_OK){
+      try{
+        const [scene,snap]=await Promise.all([
+          loadFaceItImage(resultImageUrl),
+          loadFaceItImage(photo)
+        ]);
+        const cw=scene.naturalWidth||scene.width, ch=scene.naturalHeight||scene.height;
+        const cv=document.createElement('canvas');
+        cv.width=cw; cv.height=ch;
+        const cx2=cv.getContext('2d');
+        cx2.drawImage(scene,0,0);
+        FaceItBuild.drawPhotoIntoQuad(cx2,snap,faceItTpl.photoQuad,cw,ch);
+        resultImageUrl=cv.toDataURL('image/png');
+      }catch(err){
+        // Keep the picture. Without the snapshot the joke is thinner, but a
+        // coronation portrait is still a coronation portrait.
+        console.error('Could not composite the reference photo onto the easel:',err);
       }
     }
 
