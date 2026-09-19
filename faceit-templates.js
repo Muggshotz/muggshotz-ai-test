@@ -704,6 +704,18 @@ global.FaceItPrompts = {
 
    products      omitted means every product the gimmicks run on. Present means
                  this template is fussy about its surface -- see the mug shot.
+
+   preferredStyle  the Art Style this template is painted for, matched against the
+                 style tiles' data-val prefix. Picking the template switches the
+                 customer to it and says so; they can switch back. Present only
+                 where the HOUSE DEFAULT actively fights the template: Muggshotz
+                 Classic asks for "a premium painted caricature" with
+                 "caricature-level exaggeration" and "funny but respectful
+                 exaggeration", which is the wrong instruction to hand a soft
+                 watercolour memorial portrait -- and it is what a customer gets
+                 by scrolling past the Art Style card without choosing, which
+                 many do. Not a lock: the style block still reads whatever is
+                 selected at generation time.
    =========================================================================== */
 (function(global){
 'use strict';
@@ -731,7 +743,8 @@ const FACE_IT_TEMPLATES = [
   face('heavenly_hostess.jpg', 'Heavenly Hostess'),
 
   { file: 'on_my_mind.jpg', name: 'On My Mind', kind: 'text-merge',
-    shape: 'portrait', panels: 'any', textInputs: 1, poseNote: 'three-quarter' },
+    shape: 'portrait', panels: 'any', textInputs: 1, poseNote: 'three-quarter',
+    preferredStyle: 'photorealistic' },
   { file: 'come_to_think_of_it.jpg', name: 'Come To Think Of It', kind: 'text-merge',
     shape: 'portrait', panels: 'any', textInputs: 1, poseNote: 'three-quarter' },
 
@@ -831,16 +844,20 @@ const FACE_IT_TEMPLATES = [
      the day one cup has two plates claiming it. */
   { file: 'on_my_mind_narrow_left.webp', name: 'On My Mind', kind: 'text-merge',
     shape: 'wrap', panels: 'any', textInputs: 1, poseNote: 'three-quarter',
+    preferredStyle: 'photorealistic',
     products: ['travel-mug-40oz-vacuum', 'travel-mug-20oz'] },
   { file: 'on_my_mind_narrow_right.webp', name: 'On My Mind', kind: 'text-merge',
     shape: 'wrap', panels: 'any', textInputs: 1, poseNote: 'three-quarter',
+    preferredStyle: 'photorealistic',
     products: ['travel-mug-40oz-vacuum', 'travel-mug-20oz'] },
 
   { file: 'on_my_mind_left.webp', name: 'On My Mind', kind: 'text-merge',
     shape: 'wrap', panels: 'any', textInputs: 1, poseNote: 'three-quarter',
+    preferredStyle: 'photorealistic',
     products: ['mug', 'travel-mug-14oz-handle'] },
   { file: 'on_my_mind_right.webp', name: 'On My Mind', kind: 'text-merge',
     shape: 'wrap', panels: 'any', textInputs: 1, poseNote: 'three-quarter',
+    preferredStyle: 'photorealistic',
     products: ['mug', 'travel-mug-14oz-handle'] },
 
   /* Needs a plate: the lineup room with the empty slot moved to the CENTRE of

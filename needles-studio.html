@@ -8223,12 +8223,55 @@ function faceItSurfaceKey(){
   return product||'mug';
 }
 
+// The label a style tile shows, which is its first child node -- the notes
+// under it are separate elements. Same reading the exact-transfer confirm does.
+function styleTileLabel(tile){
+  return tile ? ((tile.childNodes[0]?.textContent||'').trim()) : '';
+}
+
+// A TEMPLATE CAN ASK FOR AN ART STYLE (Sep 2026, Alyx).
+//
+// Face It generations carry the customer's style choice like any other -- see
+// the ...currentStylePayload() in callGenerateAPI -- and a customer who scrolls
+// past the Art Style card without choosing is not styleless. They are on
+// Muggshotz Classic, whose block asks the model for "a premium painted
+// caricature" with "caricature-level exaggeration" and "funny but respectful
+// exaggeration". On a soft watercolour memorial portrait that is not a neutral
+// default, it is an argument: the template prompt asks in the same breath for a
+// "delicate, translucent treatment" and a "thoughtful, distance-gazing
+// expression". Alyx has hand-picked Photorealistic on every one of these runs
+// for exactly that reason.
+//
+// SWITCHED, NOT LOCKED, AND NEVER SILENTLY. Alyx's call, and it is the right one
+// for the reason he gave -- most customers never touch that card at all, so a
+// hint they have already scrolled past helps nobody. The switch is announced
+// and trivially undone, which is the same bargain pickMugPrintMode() strikes
+// when Wraparound clears a Window Sill choice. It also does not survive to
+// generation on its own: the style block reads whatever is selected when
+// Generate is pressed, so switching back is genuinely switching back.
+function applyFaceItPreferredStyle(t){
+  const want=t&&t.preferredStyle;
+  if(!want)return;
+  // Matched on the data-val prefix rather than a tile id, because the tiles
+  // carry their whole style directive in that attribute and have no ids.
+  const tile=document.querySelector('#styleSectionCard .btn-select[data-val^="'+want+'"]');
+  if(!tile || tile.classList.contains('selected'))return;
+  const from=styleTileLabel(document.querySelector('#styleSectionCard .btn-select.selected'));
+  pick(tile,'style');
+  const to=styleTileLabel(tile);
+  showGuidanceAlert('This scene is painted as a soft watercolour portrait, so we\'ve set your Art Style to '+
+    (to||'Photorealistic')+' \u2014 it suits this one best'+
+    (from?' (you were on '+from+')':'')+
+    '. If you meant to use a different style, just pick it again on the Art Style card.');
+}
+
 function pickFaceItTemplate(templateId){
   selectedFaceItTemplate=templateId;
   document.querySelectorAll('#faceItGrid .faceit-tile').forEach(b=>{
     b.classList.toggle('selected',b.dataset.faceit===templateId);
   });
   const t=faceItActiveTemplate();
+  applyFaceItPreferredStyle(t);
   const poseNote=document.getElementById('faceItPoseNote');
   const textWrap=document.getElementById('faceItTextBoxWrap');
 
