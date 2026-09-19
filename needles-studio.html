@@ -5810,50 +5810,30 @@ function pickMugPrintMode(mode){
   }
   refreshPanoramaFadeCardVisibility();
   suspendGuidedScrollsForGeneration();
-  if(product==='water bottle'){
-    // LAND ON GENERATE. Alyx: "When I pick the type of mug I wanted the
-    // screen just went subdued, veiled, and did nothing. I scrolled further
-    // down and I found a lit up generate button. But I shouldn't have had to
-    // scroll down."
-    //
-    // The veil was right and the scroll was wrong, and they disagreed with
-    // each other. 'final-generate-focus' (added above) dims every card but
-    // Upload Photo, which is the rail saying "Generate is the last step" --
-    // and then this scrolled BACK to the colour or Style card, which the
-    // veil had just dimmed. So the customer landed on a greyed-out card with
-    // the only lit control somewhere below the fold.
-    //
-    // Stale, not wrong-headed: it dates from before variant was moved ahead
-    // of print style. pickPreGenTravelVariant and the travel colour picker
-    // both already end on generateTokenNote, so this is the third route into
-    // the same landing and now agrees with them.
-    //
-    // 'end' anchors to the bottom-most content (the token note UNDER
-    // Generate) rather than a card's top, which is what guarantees the
-    // button itself is on screen regardless of card heights. Style and
-    // colour stay reachable by scrolling up -- a dim is a guide, not a cage.
-    //
-    // THE NEXT UNANSWERED QUESTION (Alyx, v102: "it jumped completely over
-    // it"). On Track 1 nothing has been described yet, so Print Style lands
-    // on the idea box; with words already in the box, on Generate as above.
-    const ideaBox=document.getElementById('ideaDesc');
-    if(ideaBox && !ideaBox.value.trim()){
-      document.body.classList.remove('final-generate-focus');
-      handOffToIdeaAfterProductChoice();
-    } else {
-      smoothScrollToTarget('generateTokenNote','end');
-    }
-  } else {
-    // Coffee mug: Print Style is now the real decision made right
-    // before Design Method (Cover Me / Face It / Home Sweet Home /
-    // description) -- move on to that card next. 'final-generate-focus'
-    // (added above) dims every card except Upload Photo -- meant for
-    // the old flow where Generate came right after this, which left
-    // Design Method's tiles dimmed and unclickable here since that's
-    // an earlier step, not the final one. Remove it before moving on.
-    document.body.classList.remove('final-generate-focus');
-    showDesignMethodCard();
-  }
+  // ONE DOOR FOR BOTH PRODUCTS (Sep 2026). This used to fork here: a coffee
+  // mug went on to Design Method, and a travel cup landed on the idea box or
+  // on Generate and stopped. So showDesignMethodCard() -- "the single door
+  // every route into those panels has to come through" -- was never called
+  // for a cup at all, and Cover Me / Face It / Home Sweet Home were
+  // unreachable on every travel cup, in BOTH print styles, with no note
+  // saying why. Silently: the two notes that explain a missing prop both
+  // live on cards a cup never reached.
+  //
+  // That contradicted the rest of the code, which had been built for this
+  // and was only ever missing its caller: PRODUCTS_WITH_GIMMICKS lists
+  // 'water bottle' under a comment reading "track one continues only for a
+  // mug or a travel cup", faceItSurfaceKey() has a whole travel branch that
+  // resolves selectedTravelProductKey, and the Mug Shot template restricts
+  // itself to ['mug', 'travel-mug-14oz-handle'] -- a cup key, named by a
+  // template that could never be offered on a cup.
+  //
+  // The landings this branch used to own are not lost. The door's own
+  // describe path now owns them (see goToDescribeAndGenerate), which is
+  // where they belong for the same reason the gimmick guard does: there is
+  // one describe path and eleven ways into it, and a landing written into
+  // one caller only holds for that caller.
+  document.body.classList.remove('final-generate-focus');
+  showDesignMethodCard();
 }
 
 // MEASURED WRAP RATIOS (Aug 2026), pulled live from Printify's
@@ -7633,6 +7613,41 @@ function goToDescribeAndGenerate(){
     byoAutoGenerate();
     return;
   }
+  // THE TRAVEL LANDING, MOVED TO THE DOOR (Sep 2026). This block is lifted
+  // verbatim out of pickMugPrintMode()'s travel branch, which stopped being
+  // the end of the road when travel cups started going through Design Method
+  // like mugs. Left where it was it would only have covered the one route it
+  // was written for; here it covers every way a cup reaches the describe
+  // path, which is what it was always describing.
+  //
+  // Alyx's two findings, both still load-bearing:
+  //
+  // LAND ON GENERATE. "When I pick the type of mug I wanted the screen just
+  // went subdued, veiled, and did nothing. I scrolled further down and I
+  // found a lit up generate button. But I shouldn't have had to scroll down."
+  // The veil was right and the scroll was wrong: 'final-generate-focus' dims
+  // every card but Upload Photo -- the rail saying "Generate is the last
+  // step" -- and the scroll then went BACK to a card the veil had just
+  // dimmed. 'end' anchors to the token note UNDER Generate rather than a
+  // card's top, which is what guarantees the button is on screen regardless
+  // of card heights. Style and colour stay reachable by scrolling up -- a
+  // dim is a guide, not a cage. The veil is ADDED here rather than assumed:
+  // pickMugPrintMode used to set it on the way in and this branch simply
+  // never removed it, which only worked because that was the sole caller.
+  //
+  // "IT JUMPED COMPLETELY OVER IT" (v102). With nothing described yet the
+  // landing is the idea box, not Generate -- hence the split.
+  if(product==='water bottle'){
+    const ideaBox=document.getElementById('ideaDesc');
+    if(ideaBox && !ideaBox.value.trim()){
+      document.body.classList.remove('final-generate-focus');
+      handOffToIdeaAfterProductChoice();
+    } else {
+      document.body.classList.add('final-generate-focus');
+      smoothScrollToTarget('generateTokenNote','end');
+    }
+    return;
+  }
   smoothScrollToTarget('ideaCard','center');
 }
 
@@ -7699,9 +7714,15 @@ function showDesignMethodCard(){
   // that cannot wrap and keeps the one that can, and falls back to the old
   // behaviour whenever Face It has nothing wrap-shaped to offer, which is the
   // honest state until those plates are delivered.
-  const isMugWraparound=(product==='mug' && mugPrintMode==='wraparound');
-  const faceItSurvivesWrap=isMugWraparound && faceItOfferableCount()>0;
-  const hideAllProps=isMugWraparound && !faceItSurvivesWrap;
+  // SAME QUESTION, SO THE SAME FUNCTION (Sep 2026). This was a second,
+  // independent copy of the mug-only wraparound test, and faceItOfferableCount()
+  // on the next line already routes through faceItWraparoundActive() -- so the
+  // two could disagree, and with travel cups added they did: this said "not a
+  // wraparound" for a cup while the count below filtered as though it were.
+  // One reading of one condition now, and no way for them to drift again.
+  const isWraparound=faceItWraparoundActive();
+  const faceItSurvivesWrap=isWraparound && faceItOfferableCount()>0;
+  const hideAllProps=isWraparound && !faceItSurvivesWrap;
   const propsIntroEl=document.getElementById('designMethodPropsIntro');
   const wraparoundNoticeEl=document.getElementById('designMethodWraparoundNotice');
   const tilesEl=document.getElementById('designMethodTiles');
@@ -7726,7 +7747,7 @@ function showDesignMethodCard(){
       propsNote.id='designMethodWrapPropsNote';
       propsNote.className='note';
       propsNote.style.cssText='margin-top:.9rem;text-align:center;color:#29a3ff';
-      propsNote.innerHTML='Cover Me and Home Sweet Home are single pictures, so they can\'t wrap around a mug. Switch your print style to <b>Up to Three Panels</b> to use them.';
+      propsNote.innerHTML='Cover Me and Home Sweet Home are single pictures, so they can\'t wrap around a '+wrapSurfaceNoun()+'. Switch your print style to <b>Up to Three Panels</b> to use them.';
       tilesEl.parentNode.insertBefore(propsNote,tilesEl.nextSibling);
     }
     if(propsNote)propsNote.style.display=faceItSurvivesWrap?'block':'none';
@@ -7827,6 +7848,25 @@ function continueWithDescriptionOnly(){
 function designMethodBack(){
   document.getElementById('designMethodCard').style.display='none';
   document.body.classList.remove('design-method-focus');
+  // BACK HAS TO LAND ON SOMETHING VISIBLE (Sep 2026). Everything below was
+  // written when a mug was the only thing that could reach this screen, and it
+  // aims at preGenMugMockupImg -- which lives inside mugStyleCard, a card
+  // refreshMugStyleCardVisibility() keeps hidden for every product that is not
+  // a mug. Travel cups arrive here now, so left alone this would have scrolled
+  // a cup customer at an invisible element and undone nothing: precisely the
+  // dead end Alyx reported on printModeBack ("once you get here you're
+  // trapped... you're completely frozen out now"), rebuilt one card further in.
+  //
+  // The step before this one for a cup is Print Style -- or, for the 40oz
+  // insulated, which is locked to Three Panels and never shown that card, the
+  // cup picker itself. Read off the card's own visibility rather than the
+  // variant key, so it stays correct if that rule ever moves.
+  if(product==='water bottle'){
+    const printCard=document.getElementById('mugPrintModeCard');
+    const printVisible=printCard && printCard.style.display!=='none';
+    smoothScrollToTarget(printVisible?'mugPrintModeCard':'travelMugVariantCard','center');
+    return;
+  }
   mugColorFinishedPreGen=false;
   refreshMugStyleCardVisibility();
   smoothScrollToTarget('preGenMugMockupImg','center');
@@ -8099,7 +8139,13 @@ function renderFaceItGrid(){
   const wrapOnly=faceItWraparoundActive();
   {
     const wrapNote=document.getElementById('faceItWrapNote');
-    if(wrapNote)wrapNote.style.display=wrapOnly?'block':'none';
+    if(wrapNote){
+      // Written fresh each render rather than left as the markup's fixed
+      // string: the same card serves a mug and a cup, and which one it is
+      // isn't known until here.
+      wrapNote.innerHTML='These are the scenes that wrap all the way around your '+wrapSurfaceNoun()+'. To choose from every scene we have, switch your print style to <b>Up to Three Panels</b>.';
+      wrapNote.style.display=wrapOnly?'block':'none';
+    }
   }
   FaceItCatalog.liveTemplates().forEach(t=>{
     if(wrapOnly && t.shape!=='wrap')return;
@@ -8124,8 +8170,33 @@ function renderFaceItGrid(){
 // template roster uses. Travel cups are not one shape -- the variant decides
 // whether a wrap is panoramic -- so the selected variant wins where there is
 // one, and a plain mug is just a mug.
+// Both wraparound notes had "a mug" written into them, which was true for as
+// long as a mug was the only product that reached them. A cup customer reading
+// "can't wrap around a mug" while holding a travel cup would reasonably decide
+// the note was about some other product and that the missing tiles were a
+// fault -- which is the exact misreading the notes exist to prevent. Same
+// shape as describeFadeColorSource(): name the surface being bought.
+function wrapSurfaceNoun(){
+  if(product==='water bottle')return 'cup';
+  return 'mug';
+}
+
+// WHAT "WRAPAROUND IS ACTIVE" MEANS (widened Sep 2026). This read
+// product==='mug' from the day it was written, back when a mug was the only
+// product that ever reached Design Method. Travel cups now do too, and a cup
+// on Wraparound is every bit as much a continuous band as a mug is -- so the
+// mug-only test would have handed a cup the unfiltered roster: the portrait
+// face-merges offered for a seam-to-seam print, and Cover Me and Home Sweet
+// Home left standing on the one format they genuinely cannot do.
+//
+// The travel keys are not all the same band, and this deliberately does not
+// try to be: WIDTH is the templates' business (each carries its own shape,
+// and allowsProduct narrows the fussy ones per cup), while this answers only
+// whether the print is continuous at all. The 40oz insulated never gets here
+// -- refreshMugPrintModeVisibility keeps the print-style card away from it,
+// because its handle breaks the front face.
 function faceItWraparoundActive(){
-  return (product==='mug' && mugPrintMode==='wraparound');
+  return ((product==='mug' || product==='water bottle') && mugPrintMode==='wraparound');
 }
 
 // How many templates Face It could actually offer right now. Drives the door
@@ -10674,6 +10745,25 @@ function pickTravelMugColorGen(el,colorName){
   if(printCard && printCard.style.display!=='none' && !mugPrintModeTouched){
     setOptionSpotlight('print-mode-focus');
     smoothScrollToTarget('mugPrintModeCard','center');
+  } else if(printCard && printCard.style.display==='none'){
+    // THE 40OZ INSULATED'S ONLY ROAD TO THE PROPS (Sep 2026). Every other cup
+    // reaches Design Method through pickMugPrintMode. This one cannot: its
+    // handle breaks up the front face, so it is locked to Three Panels and the
+    // print-style card is kept off it entirely -- which left it the single cup
+    // still walled off from the props once the other five were wired, for a
+    // reason that has nothing to do with props. Three Panels is the mode they
+    // want anyway.
+    //
+    // Deliberately gated on the print card being ABSENT, not merely unanswered:
+    // when it is on screen but already answered, the customer has been through
+    // Design Method and is only changing a colour, and reopening the props on
+    // them would walk them back through a decision they have made.
+    //
+    // The door turns away anyone it should (declared BYO, track two, no Face It
+    // module) and its describe path owns the landing this branch used to do
+    // inline -- which is where that landing now lives for every travel route.
+    document.body.classList.remove('travel-color-focus');
+    showDesignMethodCard();
   } else {
     document.body.classList.remove('travel-color-focus');
     // The next unanswered question: the idea box when it is empty, else Generate.
