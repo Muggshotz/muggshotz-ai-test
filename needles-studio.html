@@ -8597,8 +8597,11 @@ async function generateFaceIt(){
     // scenes use -- 1024 on a 2.14:1 band is 1024x478, too thin to carry a
     // face through a merge.
     const faceItSendsPlate=!!(faceItTpl && faceItTpl.file);
+    // t.file, deliberately, never tileFor(). A template with its own advert has
+    // two pictures and only one of them is the artwork -- sending the tile would
+    // merge the customer onto the version that winks.
     const templateDataUrl=faceItSendsPlate
-      ? await magazineAssetToJpegDataURL(selectedFaceItTemplate, faceItTpl.shape==='wrap'?2048:1024)
+      ? await magazineAssetToJpegDataURL(faceItTpl.file, faceItTpl.shape==='wrap'?2048:1024)
       : null;
     const descBox=document.getElementById('faceItDescriptionBox');
     const faceNote=(descBox && descBox.value.trim())
@@ -8618,6 +8621,10 @@ async function generateFaceIt(){
       prompt=FaceItPrompts.mugshotSubject(faceNote, faceItSubjectKind());
     } else if(faceItKind==='lineup'){
       prompt=FaceItPrompts.lineupFigure(faceNote);
+    } else if(faceItKind==='mirror'){
+      prompt=FaceItPrompts.mirror(faceNote);
+    } else if(faceItKind==='painter'){
+      prompt=FaceItPrompts.courtPainter(faceNote);
     } else if(isTextTemplate){
       prompt='Merge the uploaded photo\'s face onto the provided reference image in the exact spot indicated, applying the same soft, faded watercolor/sepia wash shown in the reference -- render the face with that same delicate, translucent treatment rather than a sharp photographic look, and give the subject a thoughtful, distance-gazing expression matching the reference\'s mood. '+
         'Preserve the reference\'s overall composition, color palette, and decorative flourishes exactly as shown. '+
@@ -8636,6 +8643,9 @@ async function generateFaceIt(){
       // prompts ask for into real transparency, server-side, before the image
       // ever comes back. Keep it true for every Face It run.
       templateMerge:true,
+      // Declared by the template, never by the customer's words. The server
+      // reads it to decide whether identityLock forbids flattery or permits it.
+      idealise:!!(faceItTpl && faceItTpl.idealise),
       signal:currentGenerationController.signal
     });
 
@@ -8701,6 +8711,36 @@ async function generateFaceIt(){
       if(bandPrintsInThirds){
         const panels=await sliceFaceItResultIntoPanels(resultImageUrl);
         if(panels)faceItPendingPanels=panels;
+      }
+    }
+
+    // THE SNAPSHOT ON THE EASEL (Sep 2026). The court painter's whole joke is the
+    // distance between the photograph clipped to his easel and the coronation on
+    // his canvas -- so that photograph has to be the customer's, and exact. The
+    // model never paints it: it would invent a second face for the merge to
+    // confuse itself with, and it would have to be told to render somebody
+    // deliberately plainer, which is the one instruction identityLock exists to
+    // forbid. Composited here instead, from the same photo that went in, the way
+    // the mug shot draws its own placards rather than trusting the model with
+    // lettering. The quad travels as fractions of the plate, so whatever size the
+    // generation comes back at, the card is where the card is.
+    if(faceItTpl && faceItTpl.photoQuad && FACEIT_MODULE_OK){
+      try{
+        const [scene,snap]=await Promise.all([
+          loadFaceItImage(resultImageUrl),
+          loadFaceItImage(photo)
+        ]);
+        const cw=scene.naturalWidth||scene.width, ch=scene.naturalHeight||scene.height;
+        const cv=document.createElement('canvas');
+        cv.width=cw; cv.height=ch;
+        const cx2=cv.getContext('2d');
+        cx2.drawImage(scene,0,0);
+        FaceItBuild.drawPhotoIntoQuad(cx2,snap,faceItTpl.photoQuad,cw,ch);
+        resultImageUrl=cv.toDataURL('image/png');
+      }catch(err){
+        // Keep the picture. Without the snapshot the joke is thinner, but a
+        // coronation portrait is still a coronation portrait.
+        console.error('Could not composite the reference photo onto the easel:',err);
       }
     }
 
@@ -18261,7 +18301,7 @@ async function recoverRecentGeneration(startedAt){
 // through the real 315 seconds would never be run.
 let GEN_SLOW_NOTICE_MS=90000;   // 3x a normal generation: say something
 let GEN_HARD_TIMEOUT_MS=315000; // past the server's own 300s ceiling: give up
-async function callGenerateAPI({ workingImage, prompt, refImageA, refImageB, panelRole, templateMerge, signal }){
+async function callGenerateAPI({ workingImage, prompt, refImageA, refImageB, panelRole, templateMerge, idealise, signal }){
   const ac=new AbortController();
   const startedAt=Date.now();
   let timedOut=false;
@@ -18291,6 +18331,9 @@ async function callGenerateAPI({ workingImage, prompt, refImageA, refImageB, pan
         size:getImageSizeParam(),
         panelRole:panelRole||undefined,
         templateMerge:templateMerge||false,
+        // Set by exactly one kind of template -- see the delusion-pact note in
+        // api/generate.js. Absent everywhere else, which is the point.
+        idealise:idealise||false,
         ...currentStylePayload()
       }),
       signal:ac.signal

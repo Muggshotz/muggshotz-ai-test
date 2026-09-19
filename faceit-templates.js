@@ -675,8 +675,80 @@ function lineupFigurePrompt(note){
   'frame and not cropped at any edge.\n\n' + MAGENTA_FIELD + note;
 }
 
+/* MIRROR MIRROR. The one prompt in here that asks for a BETTER face than the
+   photograph, which is why its template carries `idealise` and why the server's
+   identityLock steps aside for it. Everything else in the roster is defending a
+   likeness; this is spending one, on purpose, with the customer's consent.
+
+   Two things it must not do, and both are load-bearing. It must not give the
+   figure standing with her back to us a face -- she has none by design, and the
+   whole composition depends on it. And it must not idealise so far that the
+   person stops being recognisable: a lie needs a subject, and "you, at your
+   best" is the product where "somebody else entirely" is a refund. */
+function mirrorPrompt(note){
+  return 'The reference image shows a figure standing with their BACK to us before a large ' +
+  'ornate storybook mirror, and the mirror is showing them a flattering reflection.\n\n' +
+  'Replace the face in the MIRROR\'S REFLECTION with the face of the person in the uploaded ' +
+  'photo. The reflection only. The figure standing in front of the glass is seen from behind ' +
+  'and must never be given a face -- leave them exactly as painted.\n\n' +
+  'THE MIRROR FLATTERS, AND THAT IS THE ENTIRE POINT OF THIS PICTURE. Paint the reflected face ' +
+  'as the finest version of this person: more radiant, more poised, more powerful, more stately ' +
+  'and wiser than they look in the photograph. Light them the way a court painter lights someone ' +
+  'they admire -- warm, generous, a little golden. This idealisation is deliberate and requested, ' +
+  'and it overrides any general instruction not to beautify.\n\n' +
+  'IT MUST STILL BE UNMISTAKABLY THEM. Keep the real bone structure, the real nose, the real eye ' +
+  'shape and eye colour, the real mouth, the real jaw width, the real hairline, the real age and ' +
+  'skin tone, and any distinctive features. Do not narrow the face, do not substitute a model or ' +
+  'a stock beauty, do not invent a new person. A stranger who knows them must recognise them ' +
+  'instantly and think only that they have never looked better.\n\n' +
+  'PRESERVE EXACTLY: the mirror, its carved gilt frame and the face carved into the crest at the ' +
+  'top, the candlelight, the room, the gown, and the pose of the figure before the glass. Change ' +
+  'nothing but the reflected face.' + note;
+}
+
+/* THE COURT PAINTER. The masculine half of the pair, and the difference is the
+   delivery system rather than the subject: a mirror returns you to yourself,
+   while a portrait presents you to everyone else. So this one flatters along a
+   different axis -- not beauty but STATURE, which is the thing the motif has
+   always adjudicated for men. Powerful, stately, wise.
+
+   Its evidence is the photograph clipped to the easel, and the photograph only
+   works HERE. At an easel the customer is the one being depicted, so the picture
+   indicts the painter for taking liberties. At a mirror the customer is the one
+   looking, so the same picture would indict them for believing it. Alyx caught
+   that, and the plot hole underneath it: put a camera in the room and a magic
+   mirror has no job at all.
+
+   Two faces are in the scene and only one is a slot. The painter is turned away
+   on purpose so there is nothing on him to merge onto, and the prompt says so
+   twice, because a model that picks wrong paints the customer as the help. */
+function courtPainterPrompt(note){
+  return 'The reference image shows a painter standing back from an easel, considering a grand ' +
+  'state portrait they have just finished. A small photograph is clipped to the easel beside it.\n\n' +
+  'Replace the face in the PAINTED PORTRAIT ON THE CANVAS with the face of the person in the ' +
+  'uploaded photo. That canvas face is the only face you may change. The painter standing in the ' +
+  'foreground is turned away from us -- do NOT give the painter this face, do not alter the ' +
+  'painter at all, and do not touch the small photograph clipped to the easel.\n\n' +
+  'THE PORTRAIT FLATTERS, AND THAT IS THE ENTIRE POINT OF THIS PICTURE. Paint them as the court ' +
+  'painter would have: more powerful, more stately, more commanding and wiser than they appear ' +
+  'in the photograph. A face that belongs above ermine and a laurel -- composed, unhurried, ' +
+  'certain of itself, lit the way a master lights a patron he wants to keep. This idealisation is ' +
+  'deliberate and requested, and it overrides any general instruction not to beautify.\n\n' +
+  'IT MUST STILL BE UNMISTAKABLY THEM. Keep the real bone structure, the real nose, the real eye ' +
+  'shape and eye colour, the real mouth, the real jaw width, the real hairline, the real age and ' +
+  'skin tone, and any distinctive features. Do not slim the face, do not substitute a model or a ' +
+  'noble-looking stranger, do not invent a new person. The joke only works if the man in the ' +
+  'ermine is recognisably the man in the snapshot.\n\n' +
+  'Render it as OIL PAINT, matching the canvas it sits in -- visible brushwork, the same palette ' +
+  'and the same light as the rest of the painting. It is a painting of them, not a photograph ' +
+  'pasted into one.\n\n' +
+  'PRESERVE EXACTLY: the painter, the easel, the studio, the robes, the crown, the sceptre, the ' +
+  'column and landscape behind, and the small clipped photograph. Change nothing but the face on ' +
+  'the canvas.' + note;
+}
+
 global.FaceItPrompts = {
-  MAGENTA_FIELD, faceNoteFrom,
+  MAGENTA_FIELD, faceNoteFrom, mirror: mirrorPrompt, courtPainter: courtPainterPrompt,
   stoneCarve: stoneCarvePrompt,
   mugshotSubject: mugshotSubjectPrompt,
   lineupFigure: lineupFigurePrompt
@@ -790,6 +862,64 @@ const FACE_IT_TEMPLATES = [
     subjectScale: 'choice',
     products: ['mug', 'travel-mug-14oz-handle'],
     poseNote: 'frontal' },
+
+  /* THE COURT PAINTER (Sep 2026, Alyx). Mirror Mirror's companion and its
+     opposite. The mirror is private, reflexive and about beauty, so it is bought
+     for yourself; this is public, testimonial and about stature, so it can be
+     GIVEN. That difference is not decoration -- it decides who the joke lands on.
+     Flattery that comes from a third party leaves the customer innocent by
+     construction: nobody is caught being vain, they are being honoured by
+     somebody who evidently got carried away.
+
+     THE WINK IS THE PHOTOGRAPH, and it needs no second asset. A wink announces a
+     joke and costs the customer the deniability they bought; the snapshot clipped
+     to the easel merely proves the painter had the truth six inches from his
+     brush and painted something else. Evidence rather than announcement, which is
+     why this template ships one picture where Mirror Mirror needs two.
+
+     photoQuad is that snapshot's four corners as fractions of the plate, so it
+     scales to whatever size the model returns. Measured off the delivered art and
+     proved by compositing a test pattern into it: 113 x 187 px on the 1086 x 1448
+     plate, tilted 3.5 degrees, which is why it is a quad and not a rectangle.
+     A replacement plate needs this re-measured; nothing detects it at runtime. */
+  { file: 'court_painter.webp', name: 'The Court Painter', kind: 'painter',
+    shape: 'portrait', panels: 'any', poseNote: 'three-quarter',
+    idealise: true,
+    photoQuad: [[0.8306,0.0760],[0.9346,0.0711],[0.9411,0.1989],[0.8352,0.2051]] },
+
+  /* MIRROR MIRROR (Sep 2026, Alyx's idea end to end).
+     A figure stands with their back to us at an ornate storybook mirror, and the
+     reflection is flattering them. The gag is the lie -- and a lie needs a liar,
+     which is what the face carved into the crest of the frame supplies. Without
+     it a generous reflection is just a bad mirror; with it, something lives in
+     the glass and is CHOOSING what to show. That carved face is the whole device.
+
+     `idealise` is the switch that lets the server's identityLock stand down, and
+     this is one of only two templates that carries it. Flattery stopped being
+     something that happens to customers by accident this afternoon; here it is
+     something they ask for by name, which is the difference between a gag and a
+     defect.
+
+     `tile` is new to the roster and this is why it exists. The plate plays the
+     scene completely straight -- nobody in it acknowledges the viewer -- because
+     a printed object that winks announces the vanity the customer bought
+     deniability about. The tile is allowed to wink, because it has half a second
+     in a product grid to land the joke. Measured at 140px: the wink survives in
+     the cropped tile and does not survive in the plate.
+
+     Portrait only, deliberately. A wrap version would need the mirror composed
+     to a band, and a mirror that wide stops reading as a mirror.
+
+     A photograph of the customer was tried here as the evidence, the way the
+     court painter uses one, and Alyx killed it on three counts worth recording:
+     at an easel the customer is being DEPICTED so the photo indicts the painter,
+     while at a mirror the customer is LOOKING so the same photo indicts them for
+     believing it; a photograph is the wrong century for a fairy tale; and it is
+     a plot hole -- put a camera in the room and the magic mirror has no job. */
+  { file: 'mirror_mirror.webp', tile: 'mirror_mirror_tile.webp',
+    name: 'Mirror Mirror', kind: 'mirror',
+    shape: 'portrait', panels: 'any', poseNote: 'three-quarter',
+    idealise: true },
 
   /* ON MY MIND, AS THE BAND (Sep 2026). Not a variant of the 3:4 plate -- a
      second painting of the same idea, composed wide from the start, which is
@@ -920,6 +1050,13 @@ function liveTemplates(){ return FACE_IT_TEMPLATES.filter(isLive); }
    drawn by the same code that draws the template. One source of truth: if the
    placards move, the thumbnail moves with them. */
 function tileFor(t, px){
+  // THE ADVERT NEED NOT BE THE ARTWORK (Sep 2026). Every template until Mirror
+  // Mirror showed the customer exactly what it would print, so the plate served
+  // as its own thumbnail. That one cannot: its plate plays the scene straight,
+  // because an object that winks is announcing the vanity the customer paid not
+  // to have to admit -- while its tile has half a second in a product grid and
+  // has to tell the joke outright. One picture sells, another ships.
+  if (t.tile) return t.tile;
   if (t.file) return t.file;
   if (t.kind !== 'mugshot' || !global.FaceItMugshot) return null;
   const mug = global.FaceItGeom.SURFACES.mug;
@@ -1191,7 +1328,66 @@ function sliceIntoPanels(cv, type, quality){
   return { left: out[0], center: out[1], right: out[2] };
 }
 
+/* ---------------------------------------------------------------------------
+   THE REFERENCE PHOTOGRAPH ON THE EASEL
+   ---------------------------------------------------------------------------
+   The court painter's joke is the distance between the snapshot clipped to his
+   easel and the coronation on his canvas -- so the snapshot has to be the
+   CUSTOMER'S, and it has to be exact. Asking the model for it fails twice: it
+   would invent a second face for the merge to confuse itself with, and it would
+   have to be told to paint somebody deliberately plainer, which is the exact
+   instruction identityLock exists to forbid.
+
+   So the model never sees it. It paints the scene, and the real photograph is
+   dropped in afterwards, the same way the mug shot draws its own placards rather
+   than trusting the model with lettering. Exact every run, by construction.
+
+   The quad is stored as fractions of the plate so it survives whatever size the
+   generation comes back at. It is very nearly a rotated rectangle -- a couple of
+   pixels of taper over 187 -- so this rotates and scales rather than doing a
+   real perspective warp, which canvas has no native support for and which nobody
+   could tell apart at this size.
+   --------------------------------------------------------------------------- */
+function quadGeometry(quad, W, H){
+  const p = quad.map(([fx,fy]) => [fx*W, fy*H]);
+  const [tl,tr,br,bl] = p;
+  const mid = (a,b) => [(a[0]+b[0])/2, (a[1]+b[1])/2];
+  const top = mid(tl,tr), bot = mid(bl,br);
+  const left = mid(tl,bl), right = mid(tr,br);
+  return {
+    cx: (tl[0]+tr[0]+br[0]+bl[0])/4,
+    cy: (tl[1]+tr[1]+br[1]+bl[1])/4,
+    w: Math.hypot(right[0]-left[0], right[1]-left[1]),
+    h: Math.hypot(bot[0]-top[0], bot[1]-top[1]),
+    angle: Math.atan2(tr[1]-tl[1], tr[0]-tl[0])
+  };
+}
+
+/* Centre-cropped to the card's own proportions first, so a portrait phone photo
+   and a square one both fill it without stretching anybody sideways. */
+function drawPhotoIntoQuad(ctx, photo, quad, W, H){
+  const g = quadGeometry(quad, W, H);
+  const want = g.w / g.h;
+  const pw = photo.naturalWidth || photo.width, ph = photo.naturalHeight || photo.height;
+  let sx=0, sy=0, sw=pw, sh=ph;
+  if (pw/ph > want) { sw = Math.round(ph*want); sx = Math.round((pw-sw)/2); }
+  else              { sh = Math.round(pw/want); sy = Math.round((ph-sh)/2); }
+  ctx.save();
+  ctx.translate(g.cx, g.cy);
+  ctx.rotate(g.angle);
+  ctx.drawImage(photo, sx, sy, sw, sh, -g.w/2, -g.h/2, g.w, g.h);
+  // A breath of the studio's warmth over it. Without this a phone snapshot sits
+  // on the painting like a sticker; with it, it reads as a print in candlelight.
+  ctx.globalCompositeOperation = 'multiply';
+  ctx.globalAlpha = 0.12;
+  ctx.fillStyle = '#c99a5e';
+  ctx.fillRect(-g.w/2, -g.h/2, g.w, g.h);
+  ctx.restore();
+  return g;
+}
+
 global.FaceItBuild = { buildMugshotStrip, buildLineupStrip, sliceIntoPanels, surfaceOf,
-                       relabelLineupChart, LINEUP_LABELS };
+                       relabelLineupChart, LINEUP_LABELS,
+                       quadGeometry, drawPhotoIntoQuad };
 
 })(window);
