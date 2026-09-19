@@ -1573,10 +1573,15 @@ Tell Needles <span style="color:#7ab8ff">what you have in mind</span>
      setting, applied to every panel that carries the picture -- the old
      per-panel "Adjust" bars were both redundant and invisible. -->
 <div id="coverMeFitWrap"></div>
+<!-- THE CHOOSER IS THE MUG'S HALF OF THIS CARD (Sep 2026). Wrapped so a cup
+     can hide the panel question and keep Fit Your Picture, which is exactly
+     what it had been losing -- see cupUsesFitStep(). -->
+<div id="coverMePanelChooser">
 <div class="card-title">SELECT THE PANELS</div>
 <div class="note" style="margin-top:0;margin-bottom:1rem;text-align:center;color:#7ab8ff">WHERE DO YOU WISH TO PLACE YOUR IMAGE? Switch each side of the mug on or off. The picture above, with its size, position, fade and caption, goes on every panel that is on.</div>
 <div id="coverMePanelRows" style="display:flex;flex-direction:column;gap:12px"></div>
 <div class="note" id="coverMePanelHint" style="margin-top:.9rem;text-align:center">At least one panel needs an image before you can continue.</div>
+</div>
 <button type="button" class="generate-btn" id="coverMePanelDoneBtn" style="margin-top:.75rem" disabled onclick="coverMePanelDone()">✅ Done</button>
 <button type="button" class="download-btn" id="coverMePanelBackBtn" style="margin-top:.6rem;display:none" onclick="coverMePanelBack()">← Back</button>
 </div>
@@ -8950,7 +8955,10 @@ async function approveFaceIt(){
   panelScreenExit='mockup';
   saveMugState();
   showCoverMePanelCard();
-  if(target==='front' && placements.front){
+  // Parking the picture OFF is the right opening move for a mug, where the
+  // customer is about to switch panels on and off. A cup has no switches, so
+  // the same move would hand it an empty fitter and nothing to size.
+  if(target==='front' && placements.front && !cupUsesFitStep()){
     coverMeLastRemoved.front=placements.front;
     placements.front=null;
     saveMugState();
@@ -9571,6 +9579,26 @@ function clearAllFocusModes(){
     .forEach(c=>document.body.classList.remove(c));
 }
 
+// A CUP GETS THE FITTER, NOT THE PANEL QUESTION (Sep 2026, Alyx: "there
+// should be a sizer in the very least, there should be an edge fader. All of
+// that. They're giving you nothing but the raw image").
+//
+// approveDesign() sent every cup the 3D engine can draw straight to
+// beginFinalMockupFetch(), and it was right about the half it was aiming at:
+// a cup has no left/centre/right to choose between, so the mug's panel picker
+// genuinely does not apply to it. What it missed is that Fit Your Picture
+// lives in the SAME card, so the sizer, the Sharp/Soft fade, the backdrops,
+// the thin accent frame and the caption box all went out with the picker. A
+// cup customer was handed the raw picture at whatever size it happened to be,
+// with hard edges and no way to change any of it.
+//
+// A portrait plate on a cup made it visible -- Mirror Mirror arriving as a
+// patch -- but it was never about Face It: an uploaded photo on a travel mug
+// came out the same way, which is how this was finally pinned down.
+function cupUsesFitStep(){
+  return product==='water bottle' && typeof tumbler3dKey==='function' && !!tumbler3dKey();
+}
+
 function showCoverMePanelCard(){
   // Was removing covermegen-focus and covermereveal-focus only -- the two
   // Cover Me sets. Arriving from the design-first track, the live class is
@@ -9583,6 +9611,8 @@ function showCoverMePanelCard(){
   autoFillCoverMePanels();
   renderCoverMePanelRows();
   document.getElementById('coverMePanelCard').style.display='block';
+  const chooser=document.getElementById('coverMePanelChooser');
+  if(chooser)chooser.style.display=cupUsesFitStep()?'none':'';
   const panelBack=document.getElementById('coverMePanelBackBtn');
   if(panelBack)panelBack.style.display=(product==='mug'&&byoDeclaredIntent==='byo')?'block':'none';
   // A design already exists by this point -- Generate sitting further down
@@ -9660,8 +9690,19 @@ function getMugPrintArea(){
   return bySize[selectedGenSize]||bySize['11oz'];
 }
 // The print box for one panel, in real print pixels.
+//
+// A CUP HAS NO THIRDS (Sep 2026). getMugPrintArea() keys off the mug's style
+// and size, so on a cup it answers with some mug's area and the box comes out
+// the wrong shape -- then a third of it. A cup prints one continuous band, so
+// its box is that whole band: TRAVEL_WRAP_RATIO is the shape of it, scaled to
+// the same height the mug areas are quoted in so everything downstream (the
+// fit maths, the thumbnails, the server's mirrored copy) keeps one unit.
 function getPanelPrintBox(pos){
   const area=getMugPrintArea();
+  if(cupUsesFitStep()){
+    const ratio=TRAVEL_WRAP_RATIO[selectedTravelProductKey];
+    if(ratio>0)return {w:Math.round(area.h*ratio),h:area.h};
+  }
   const section=Math.round(area.w/3);
   const w=Math.min(area.w,Math.round(section*coverMePanelWidthMultiplier(pos)));
   return {w,h:area.h};
@@ -9722,6 +9763,17 @@ function setDesignAdjust(designId,adj){
 // the style has no colour choice (Classic White), which also means no
 // frame is possible, so the switch is hidden.
 function getMugAccentHex(){
+  // A CUP HAS A FINISH TOO (Sep 2026). This returned null for anything that
+  // was not a mug, which quietly took the thin frame away from cups the
+  // moment they reached Fit Your Picture -- the row hides itself when there
+  // is no accent to draw it in. A cup's finish is the same kind of fact as a
+  // mug's accent colour, and the same rule applies to both: white on white
+  // draws nothing, so white means no frame, exactly as Classic White does.
+  if(cupUsesFitStep()){
+    const hex=(typeof getSelectedProductColorHex==='function')?getSelectedProductColorHex():null;
+    if(!hex)return null;
+    return (String(hex).toUpperCase()==='#FFFFFF')?null:hex;
+  }
   if(product!=='mug'||!selectedGenColor)return null;
   const list=GEN_MUG_STYLES[selectedGenStyle]?.colors?.[selectedGenSize];
   const m=Array.isArray(list)?list.find(c=>c.name===selectedGenColor):null;
@@ -10135,7 +10187,7 @@ function buildCoverMeFitter(designId,multiple){
   const note=document.createElement('div');
   note.className='note';
   note.style.cssText='margin-top:0;margin-bottom:.7rem;text-align:center;color:#7ab8ff';
-  note.textContent=(multiple?'Picture on '+panelsWithDesign(designId).map(p=>p==='front'?'CENTER':p.toUpperCase()).join(' & ')+'. ':'')+'The box is the print area on your mug. What\'s inside it prints; what\'s outside is cut off. Drag the picture to move it, size it with the first slider, soften its edges with the second, and choose whether you want the thin frame.';
+  note.textContent=(multiple?'Picture on '+panelsWithDesign(designId).map(p=>p==='front'?'CENTER':p.toUpperCase()).join(' & ')+'. ':'')+'The box is the print area on your '+wrapSurfaceNoun()+'. What\'s inside it prints; what\'s outside is cut off. Drag the picture to move it, size it with the first slider, soften its edges with the second'+(getMugAccentHex()?', and choose whether you want the thin frame':'')+'.';
   card.appendChild(note);
   card.appendChild(left);
   card.appendChild(right);
@@ -10172,7 +10224,7 @@ function buildCoverMeFitter(designId,multiple){
   const fadeNote=document.createElement('div');
   fadeNote.className='note';
   fadeNote.style.cssText='margin-top:2px;text-align:center';
-  fadeNote.textContent='Any setting above Sharp melts every edge of the picture into the mug so no hard line remains. Further toward Soft, the melt reaches further in.';
+  fadeNote.textContent='Any setting above Sharp melts every edge of the picture into the '+wrapSurfaceNoun()+' so no hard line remains. Further toward Soft, the melt reaches further in.';
   right.appendChild(fadeNote);
 
   // Backdrop tiles: shown once there is something for a backdrop to do --
@@ -10204,7 +10256,7 @@ function buildCoverMeFitter(designId,multiple){
   const accent=getMugAccentHex();
   const frameRow=document.createElement('label');
   frameRow.style.cssText='display:flex;align-items:center;justify-content:center;gap:8px;margin-top:10px;cursor:pointer;font-size:13px;color:#ddd';
-  frameRow.innerHTML=`<input type="checkbox" id="coverMeFitBorder_${designId}" ${adj.border!==false?'checked':''} style="width:18px;height:18px"><span>Thin frame around the picture in your mug\'s colour</span><span style="display:inline-block;width:14px;height:14px;border-radius:3px;background:${accent||'#fff'};border:1px solid #666"></span>`;
+  frameRow.innerHTML=`<input type="checkbox" id="coverMeFitBorder_${designId}" ${adj.border!==false?'checked':''} style="width:18px;height:18px"><span>Thin frame around the picture in your ${wrapSurfaceNoun()}\'s colour</span><span style="display:inline-block;width:14px;height:14px;border-radius:3px;background:${accent||'#fff'};border:1px solid #666"></span>`;
   if(!accent)frameRow.style.display='none'; // Classic White has no accent colour, so no frame
   right.appendChild(frameRow);
 
@@ -10451,7 +10503,10 @@ function refreshCoverMePanelDoneState(){
   const filledCount=['left','front','right'].filter(pos=>placements[pos]).length;
   const btn=document.getElementById('coverMePanelDoneBtn');
   const hint=document.getElementById('coverMePanelHint');
-  const resolved=filledCount>0;
+  // A cup is never shown the switches, so "at least one panel needs an image"
+  // would be an unanswerable condition holding Done disabled forever. Its
+  // picture is already placed by the time this card opens.
+  const resolved=cupUsesFitStep()?true:(filledCount>0);
   if(btn)btn.disabled=!resolved;
   if(hint)hint.style.display=resolved?'none':'block';
   // Every change to which panels are filled changes the SHAPE of a panel's
@@ -10475,7 +10530,10 @@ async function coverMePanelDone(){
   // (see startByoUploadInBackground). Everything after this screen needs
   // the hosted copy, so wait for it here -- with the button saying so --
   // and stay put with a real message if it cannot be saved.
-  if(product==='mug'){
+  // A cup's picture needs saving and captioning exactly as a mug's does --
+  // these were mug-only for as long as a cup never reached this screen.
+  const fitStep=(product==='mug'||cupUsesFitStep());
+  if(fitStep){
     const label=doneBtn?doneBtn.innerHTML:'';
     let waiting=false;
     try{
@@ -10499,7 +10557,7 @@ async function coverMePanelDone(){
   // Caption first (Sep 2026): bake it into the fitted picture, or put the
   // un-captioned original back if the box was emptied. A failed save keeps
   // the customer here with a real message instead of moving on without it.
-  const needsBake=product==='mug'&&(currentCaptionText()||['left','front','right'].some(pos=>{const d=placements[pos]?findDesignById(placements[pos]):null;return !!(d&&d.captioned)||!!(placementAdjust[pos]&&placementAdjust[pos].caption);}));
+  const needsBake=fitStep&&(currentCaptionText()||['left','front','right'].some(pos=>{const d=placements[pos]?findDesignById(placements[pos]):null;return !!(d&&d.captioned)||!!(placementAdjust[pos]&&placementAdjust[pos].caption);}));
   if(needsBake){
     const label=doneBtn?doneBtn.innerHTML:'';
     if(doneBtn){doneBtn.disabled=true;doneBtn.innerHTML='<span class="spinner"></span>Saving your caption...';}
@@ -10517,6 +10575,12 @@ async function coverMePanelDone(){
       if(doneBtn){doneBtn.disabled=false;doneBtn.innerHTML=label;}
   }
   document.getElementById('coverMePanelCard').style.display='none';
+  // Straight to the 3D cup, which is where approveDesign() used to land
+  // before this card was put back in front of it.
+  if(cupUsesFitStep()){
+    beginFinalMockupFetch();
+    return;
+  }
   if(panelScreenExit==='reveal'){
     // Design-first flow: reveal, Edge Fade and the frame offer are still
     // ahead of it, exactly as they were before this screen was shared.
@@ -12786,12 +12850,17 @@ async function approveDesign(allThree){
   // That last click should take me directly to our new mockup"). A cup the
   // engine can draw has one picture and nothing to place, so the placement
   // panel and Printify's blank preview are skipped: Yes opens the 3D cup.
-  // Every cup the engine draws goes straight to the mockup (v108: a
-  // two-face cup wears the picture on both faces by default).
-  if(product==='water bottle' && typeof tumbler3dKey==='function' && tumbler3dKey()){
+  // A two-face cup wears the picture on both faces by default (v108).
+  //
+  // It used to call beginFinalMockupFetch() from here and that is what cost
+  // cups the whole fit step -- see cupUsesFitStep(). The panel picker is still
+  // skipped, because a cup has nothing to pick; Fit Your Picture is not, and
+  // its Done button is what opens the 3D cup now.
+  if(cupUsesFitStep()){
     const ph=document.getElementById('positionHolderCard');
     if(ph)ph.style.display='none';
-    beginFinalMockupFetch();
+    panelScreenExit='mockup';
+    showCoverMePanelCard();
     return;
   }
 
