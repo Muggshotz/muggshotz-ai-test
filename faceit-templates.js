@@ -778,6 +778,43 @@ const FACE_IT_TEMPLATES = [
     products: ['mug', 'travel-mug-14oz-handle'],
     poseNote: 'frontal' },
 
+  /* ON MY MIND, AS THE BAND (Sep 2026). Not a variant of the 3:4 plate -- a
+     second painting of the same idea, composed wide from the start, which is
+     the only honest way a portrait template becomes a wraparound. The 3:4 one
+     stays exactly where it is for Three Panels.
+     
+     Proof that this was always an artwork problem and never a code one: these
+     go through the text-merge branch untouched. Nothing in that prompt, or in
+     the merge path, or in FACE_IT_TEXT_TEMPLATES, asks what shape the plate
+     is -- the branch keys off `kind`. The only thing that changes downstream
+     is the plate being sent at 2048px instead of 1024.
+
+     Composed for the seam rather than for a frame, which is the one demand a
+     3:4 plate never has to meet: the far left and far right thirds are empty
+     uniform wash, ending at the same tone as each other, so the two edges meet
+     at the back of the cup with nothing at the join to misalign. Measured on
+     delivery at a mean row deviation of 2.7/255 across the full height, worst
+     row under 9. Judge any replacement plate the same way -- it is the only
+     property here that the 3:4 original does not already prove.
+
+     Two of them, mirrored, for the same reason king/queen and home_him/home_her
+     are two: same name in the grid, customer picks the side. Named for where
+     the SUBJECT sits, not the text.
+
+     Restricted, on the Mug Shot's precedent and for the Mug Shot's reason. The
+     band is 2.14:1 and these are painted to it -- the coffee mug (2.14) and the
+     14oz handle (2.15) are the two surfaces that wear it without distortion.
+     The 20oz and the vacuum 40oz are 1.33:1 and 1.32:1, so the plate would have
+     to lose a third of its width; the Tundra is 3.50:1 and mirrors its flanks,
+     which here would be harmless (those flanks are bare wash) but has never
+     been printed. Widen this list from a real print, not from arithmetic. */
+  { file: 'on_my_mind_left.webp', name: 'On My Mind', kind: 'text-merge',
+    shape: 'wrap', panels: 'any', textInputs: 1, poseNote: 'three-quarter',
+    products: ['mug', 'travel-mug-14oz-handle'] },
+  { file: 'on_my_mind_right.webp', name: 'On My Mind', kind: 'text-merge',
+    shape: 'wrap', panels: 'any', textInputs: 1, poseNote: 'three-quarter',
+    products: ['mug', 'travel-mug-14oz-handle'] },
+
   /* Needs a plate: the lineup room with the empty slot moved to the CENTRE of
      the strip. At the far right the customer lands on the handle seam and gets
      bisected, with the alien and the granny across the front of the mug. */
