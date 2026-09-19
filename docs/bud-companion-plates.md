@@ -23,6 +23,9 @@ gilded mirror. We never see his face — only the back of his head and shoulders
 He is dressed for a grand period evening: a deep bottle-green or midnight-blue
 velvet frock coat with gold braid at the collar and cuffs, dark hair tied at the
 nape with a black ribbon. He is well built and stands squarely, unhurried.
+(The hair and build here are only a starting point — the merge repaints the back
+of this figure to match each customer. What must be right in the plate is the
+costume, the placement and the framing, because those stay.)
 
 The mirror is tall and oval, in an extravagantly carved gilt frame of scrolling
 acanthus leaves. Carved into the crest at the very top of the frame is a
@@ -115,3 +118,30 @@ coordinates for the clipped snapshot (`photoQuad`). The companion will need its
 own measured the same way, so this plate costs one extra step the mirror
 companion does not. Asking Bud to keep the snapshot in the same place keeps that
 measurement close, but it still has to be taken.
+
+---
+
+## Not a Bud job: the figure follows the customer
+
+Alyx, Sep 2026: *"the person standing looking in the mirror should approximate
+the pose of the person in the picture, except it would show what it looked like
+from behind."*
+
+Right, and it cannot come from Bud — Bud paints one plate for every customer and
+has never seen any of them. It is a merge-time instruction, and it now lives in
+`mirrorPrompt`: the back of the figure is repainted to the customer's hair,
+build, age and carriage, while the costume, placement and framing stay exactly
+as painted.
+
+Worth being precise about what the model is being asked for. A silhouette can be
+computed — same viewpoint, detail discarded. A back view is inferred: the nape,
+the crown, the fall of hair behind the ear are invented. That is acceptable here
+and nowhere else in the roster, because this figure is not the identity slot.
+The reflection carries the whole recognition burden, and nobody can check a
+back. It does not have to be provably them; it only has to stop being somebody
+else.
+
+This does not retire the companion plates. The merge changes the person, not the
+wardrobe — a gown repainted to a frock coat is most of the picture and would
+cost the plate its quality. The two compose: the companion plate supplies the
+right clothes, the merge supplies the right person.

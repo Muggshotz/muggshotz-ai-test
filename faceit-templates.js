@@ -689,8 +689,20 @@ function mirrorPrompt(note){
   return 'The reference image shows a figure standing with their BACK to us before a large ' +
   'ornate storybook mirror, and the mirror is showing them a flattering reflection.\n\n' +
   'Replace the face in the MIRROR\'S REFLECTION with the face of the person in the uploaded ' +
-  'photo. The reflection only. The figure standing in front of the glass is seen from behind ' +
-  'and must never be given a face -- leave them exactly as painted.\n\n' +
+  'photo. That reflection is the only FACE in this picture you may change.\n\n' +
+  'THE FIGURE AT THE GLASS IS THE SAME PERSON, SEEN FROM BEHIND, so repaint the back of them to ' +
+  'match the person in the photo: hair colour, length, texture and the way it is worn; the build ' +
+  'and width of the shoulders; the apparent age; the skin tone of the neck and any visible arm. ' +
+  'Short hair in the photo means short hair on the figure. Let their stance and carriage follow ' +
+  'the person too -- how someone holds themselves reads from behind.\n\n' +
+  'THE FIGURE AND THE REFLECTION ARE ONE HEAD AT ONE MOMENT. Whatever hair the figure has from ' +
+  'behind is the same hair the reflection has from the front -- same colour, same length, same ' +
+  'style, same day. They must agree exactly, or the mirror is showing somebody else.\n\n' +
+  'BUT THE FIGURE NEVER GETS A FACE. We see the back of the head and shoulders only. Do not turn ' +
+  'them, do not show a profile, do not let one eye or the line of a nose come into view, and do ' +
+  'not put a second face anywhere in the room. Keep them in the costume they are painted in and ' +
+  'standing where they are painted standing, at the same size and the same distance from the ' +
+  'glass -- this is a change of PERSON, not of wardrobe, framing or staging.\n\n' +
   'THE MIRROR FLATTERS, AND THAT IS THE ENTIRE POINT OF THIS PICTURE. Paint the reflected face ' +
   'as the finest version of this person: more radiant, more poised, more powerful, more stately ' +
   'and wiser than they look in the photograph. Light them the way a court painter lights someone ' +
@@ -701,9 +713,9 @@ function mirrorPrompt(note){
   'skin tone, and any distinctive features. Do not narrow the face, do not substitute a model or ' +
   'a stock beauty, do not invent a new person. A stranger who knows them must recognise them ' +
   'instantly and think only that they have never looked better.\n\n' +
-  'PRESERVE EXACTLY: the mirror, its carved gilt frame and the face carved into the crest at the ' +
-  'top, the candlelight, the room, the clothing, and the pose of the figure before the glass. Change ' +
-  'nothing but the reflected face.' + note;
+  'PRESERVE EXACTLY: the mirror, its carved gilt frame and the WINKING face carved into the crest ' +
+  'at the top, the candlelight, the room, the furniture, and the costume the figure is wearing. ' +
+  'The two things that change are the reflected face and the back of the figure wearing it.' + note;
 }
 
 /* THE COURT PAINTER. The masculine half of the pair, and the difference is the
@@ -915,6 +927,23 @@ const FACE_IT_TEMPLATES = [
      is the tile too, because a picture good enough to sell the thing is good
      enough to be the thing. It is also the better merge target: its reflection
      sits larger in frame, which is more paint on the only slot we fill.
+
+     THE BACK OF THE HEAD IS THE ONE PLACE WE CAN AFFORD TO BE WRONG, and that
+     is exactly why the merge is allowed to repaint it (Alyx, Sep 2026: "the
+     person standing looking in the mirror should approximate the pose of the
+     person in the picture, except it would show what it looked like from
+     behind"). The prompt used to freeze that figure -- "leave them exactly as
+     painted" -- which left every customer watching a stranger with their own
+     face in the glass.
+     Note what is being asked of the model: a back view is INFERRED, not
+     derived. A silhouette is the same viewpoint with the detail thrown away,
+     so it can be computed; the nape, the crown, the way hair falls behind the
+     ear are invented. That is fine here and nowhere else in the roster,
+     because this figure is not the identity slot -- the reflection is, and it
+     carries the whole recognition burden. Nobody can check a back. It does not
+     have to be provably them, it only has to stop being somebody else.
+     The hard line is the face: a figure that turns even to a profile puts two
+     faces in the picture and the mirror stops being a mirror.
 
      Portrait only, deliberately. A wrap version would need the mirror composed
      to a band, and a mirror that wide stops reading as a mirror.
