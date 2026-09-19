@@ -951,6 +951,52 @@ const FACE_IT_TEMPLATES = [
      to lose a third of its width; the Tundra is 3.50:1 and mirrors its flanks,
      which here would be harmless (those flanks are bare wash) but has never
      been printed. Widen this list from a real print, not from arithmetic. */
+  /* AND THE TUNDRA, THE WIDEST BAND WE SELL (Sep 2026). 3.50:1, nearly twice the
+     coffee mug's, and the first plate in this set with room to spare: she and
+     the lettering sit well apart with a broad stretch of open wash between them
+     instead of shoulder to shoulder.
+
+     DELIVERED AT 3.00, NOT 3.50, and it does not matter -- which is worth
+     recording so nobody "fixes" it later. The model returns 1536x1024 whatever
+     shape the plate is (getImageSizeParam asks for that on every wraparound),
+     and extendWrapToProductRatio then widens the RESULT to the cup's band by
+     clamping the bare flanks outward. So a plate's ratio guides the composition
+     it suggests; it does not constrain the output. Any reference between about
+     2.5 and 3.5 lands in the same place here.
+
+     Seams 1.52 and 1.61 out of 255, worst rows 4.5 and 3.5, margins 21/23 and
+     22/24 per cent. Every band we sell now has a plate painted for it. */
+  { file: 'on_my_mind_tundra_left.webp', name: 'On My Mind', kind: 'text-merge',
+    shape: 'wrap', panels: 'any', textInputs: 1, poseNote: 'three-quarter',
+    preferredStyle: 'photorealistic',
+    products: ['travel-mug-30oz-tundra'] },
+  { file: 'on_my_mind_tundra_right.webp', name: 'On My Mind', kind: 'text-merge',
+    shape: 'wrap', panels: 'any', textInputs: 1, poseNote: 'three-quarter',
+    preferredStyle: 'photorealistic',
+    products: ['travel-mug-30oz-tundra'] },
+
+  /* AND AGAIN FOR THE GATOR (Sep 2026). The third band, and the last one that
+     needed its own composition rather than a crop: 1.75 sits between the 2.14
+     pair and the 1.32 pair, so she and the lettering sit further apart than on
+     the narrow plates and closer than on the wide ones. Nothing else changes.
+
+     Tightest seams delivered so far, and the left-facing one is the best plate
+     in the roster: mean row deviation 1.38 and 1.88 out of 255, worst rows 4.2
+     and 4.8, on a ratio that measured 1.750 against a 1.75 band. Margins 24/20
+     and 22/25 per cent, comfortably past the 15 asked for.
+
+     One cup wears this band today. Named for it rather than for the ratio
+     because that is how the other two pairs ended up named, and consistency
+     beats precision in a filename. */
+  { file: 'on_my_mind_gator_left.webp', name: 'On My Mind', kind: 'text-merge',
+    shape: 'wrap', panels: 'any', textInputs: 1, poseNote: 'three-quarter',
+    preferredStyle: 'photorealistic',
+    products: ['travel-mug-32oz-gator'] },
+  { file: 'on_my_mind_gator_right.webp', name: 'On My Mind', kind: 'text-merge',
+    shape: 'wrap', panels: 'any', textInputs: 1, poseNote: 'three-quarter',
+    preferredStyle: 'photorealistic',
+    products: ['travel-mug-32oz-gator'] },
+
   /* THE SAME PAINTING AGAIN, FOR THE NARROW BANDS (Sep 2026). The pair above is
      painted to 2.14:1 and wears the mug and the 14oz. The 20oz and the vacuum
      40oz are 1.33:1 and 1.32:1 -- barely wider than tall -- so putting a 2.14
