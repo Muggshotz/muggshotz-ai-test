@@ -5943,6 +5943,10 @@ async function extendWrapToProductRatio(url,opts){
   const closes=(opts && typeof opts.closes==='boolean')
     ? opts.closes
     : travelWrapCloses(selectedTravelProductKey);
+  // 'mirror' (the default) continues a panorama's scenery outward. 'edge'
+  // clamps the outermost column instead -- see the flank block below for why a
+  // picture with a person in it must never be mirrored.
+  const flankMode=(opts && opts.flanks==='edge') ? 'edge' : 'mirror';
   const X=closes?Math.round(h*0.30):0;
   const bigW=targetW+X;
   if(bigW<w){
@@ -5966,7 +5970,25 @@ async function extendWrapToProductRatio(url,opts){
   // flank is drawn a pixel wider so it overlaps the picture's edge.
   bctx.drawImage(img,0,0,big.width,h);
   bctx.drawImage(img,flank,0);
-  if(flank>0){
+  if(flank>0 && flankMode==='edge'){
+    // MIRRORING A PORTRAIT GIVES YOU TWO OF HER (Alyx, Sep 2026: "why did they
+    // give an echo of her hair and blouse at the far end? that's not necessary
+    // because the image doesn't meet at the handle anyway").
+    //
+    // Exactly right, on both counts. Mirroring was written for a PANORAMA,
+    // where the flank is scenery and continuing it outward is the whole point.
+    // A Face It plate is a portrait with a subject in it, so the same move
+    // reflects her hair and shoulder out to the far end of the band -- and on
+    // the 14oz the band does not close anyway (TRAVEL_WRAP_CLOSES holds only
+    // the Tundra), so there is no seam being served by it either.
+    //
+    // These plates are painted with uniform wash at both ends precisely so the
+    // flanks have nothing in them. Clamping the outermost column outward
+    // continues that wash flat and invisibly -- the band simply gets wider,
+    // which is what it needed.
+    bctx.drawImage(img,0,0,1,h, 0,0,flank+1,h);
+    bctx.drawImage(img,w-1,0,1,h, flank+w-1,0,flank+1,h);
+  } else if(flank>0){
     // B: each flank is the scene's own edge, mirrored, so the seam is
     // continuous by construction.
     const fw=Math.min(w,flank+1);
@@ -8668,7 +8690,9 @@ async function generateFaceIt(){
       // these plates because their outer thirds are bare wash by design.
       try{
         const fitted=await extendWrapToProductRatio(resultImageUrl,
-          bandPrintsInThirds?{ratio:MUG_WRAP_RATIO,closes:true}:undefined);
+          bandPrintsInThirds
+            ? {ratio:MUG_WRAP_RATIO,closes:true,flanks:'edge'}
+            : {flanks:'edge'});
         if(fitted)resultImageUrl=fitted;
       }catch(err){
         // Keep the picture. An unfitted band still prints, just letterboxed.
