@@ -8828,6 +8828,21 @@ async function approveFaceIt(){
     renderPositionHolder();
     updatePlacementSummary();
     saveMugState();
+    // STRAIGHT TO THE CUP, the same ending approveDesign() already gives a cup
+    // the engine can draw -- Alyx, v101: "This panel should not even exist...
+    // That last click should take me directly to our new mockup." A band on a
+    // cup is one picture with nothing to place, so the placement panel has
+    // nothing to offer and Printify's four fixed angles are the old way round.
+    // The first version of this branch landed on positionHolderCard because it
+    // was copied from the triptych ending, where a mug really does have three
+    // panels to show; on a cup that put the customer back on the panel they
+    // should never see and left the 3D cup unopened behind it.
+    if(typeof tumbler3dKey==='function' && tumbler3dKey()){
+      const ph=document.getElementById('positionHolderCard');
+      if(ph)ph.style.display='none';
+      beginFinalMockupFetch();
+      return;
+    }
     smoothScrollToTarget('positionHolderCard','center');
     return;
   }
