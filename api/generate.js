@@ -749,9 +749,39 @@ FINAL REMINDER ON LIKENESS: Do not add facial hair, tattoos, piercings, scars, j
       // --- END TOKEN CHECK ---
     }
 
+    // WHAT NOT TO DO, WHICH THIS BLOCK NEVER SAID (Sep 2026, Alyx, on a Face It
+    // portrait of his niece: "I fear that he made my niece look prettier than
+    // she actually is to the point where it's almost unusable").
+    //
+    // The identical failure was found and fixed on the wraparound panorama
+    // earlier -- read the note on identityGuard below, which says it outright:
+    // "that template was also the only place these NEGATIVE identity
+    // constraints lived, and the block below has none of them: it says what to
+    // capture, never what not to do. The faces started coming back beautified,
+    // smoothed and generically handsome."
+    //
+    // That was true of THIS block too and nobody noticed, because the panorama
+    // got the guard and the merge path did not. Everything below is a
+    // beautifully detailed instruction on what to capture -- the eye shape, the
+    // brow angle, the real jawline -- and not one line telling the model to
+    // leave a face it would rather improve. A model asked only to "capture the
+    // likeness" will happily capture a slimmer, smoother, younger likeness and
+    // consider the job done.
+    //
+    // Worse here than anywhere, because the watercolour templates ask in the
+    // same breath for a "delicate, translucent treatment", which reads as
+    // permission to smooth. Same constraints as identityGuard, same wildFace
+    // carve-out: a heavy caricature is SUPPOSED to reshape the face, and this
+    // must not argue with the dial.
+    //
+    // Flattering somebody on purpose is a fine feature. It is not this one, and
+    // it is not a thing that should happen to a customer without them asking.
     const identityLock = `
 CRITICAL MUGGSHOTZ LIKENESS RULE:
 This is a caricature of the exact person in the uploaded photo.
+Do NOT beautify, idealise, slim, smooth, youthen, age-shift, race-shift or gender-shift the face.${wildFace ? "" : " Do not narrow the jaw, sculpt the cheekbones, reduce the chin, or otherwise change the person's underlying facial structure in any way."}
+Do NOT replace the face with a generic cartoon face, a stock caricature face, a model's face, or any actor, celebrity, mascot or invented character.
+A fuller face stays full, a softer jaw stays soft, and every line, mark and asymmetry the photo shows belongs to this person and stays where it is. The result must read as this person on an ordinary day, not as a flattering version of them.
 Study the uploaded face first. Capture the spark and personality behind the eyes.
 Keep the same attitude, expression, mood, and presence as the real photo.
 The eyes are the center of the likeness — a good result must feel like the same person is looking back at you.
