@@ -9763,17 +9763,23 @@ function setDesignAdjust(designId,adj){
 // the style has no colour choice (Classic White), which also means no
 // frame is possible, so the switch is hidden.
 function getMugAccentHex(){
-  // A CUP HAS A FINISH TOO (Sep 2026). This returned null for anything that
-  // was not a mug, which quietly took the thin frame away from cups the
-  // moment they reached Fit Your Picture -- the row hides itself when there
-  // is no accent to draw it in. A cup's finish is the same kind of fact as a
-  // mug's accent colour, and the same rule applies to both: white on white
-  // draws nothing, so white means no frame, exactly as Classic White does.
-  if(cupUsesFitStep()){
-    const hex=(typeof getSelectedProductColorHex==='function')?getSelectedProductColorHex():null;
-    if(!hex)return null;
-    return (String(hex).toUpperCase()==='#FFFFFF')?null:hex;
-  }
+  // AN ACCENT IS A SECOND COLOUR, AND A CUP HAS ONLY ONE (Sep 2026, Alyx:
+  // "I don't see how it could be. I think it's not even available on
+  // anything except coffee mugs. Know why?").
+  //
+  // This briefly answered for cups too, reading getSelectedProductColorHex()
+  // -- and that is the FADE colour, which the note on that function defines
+  // as the colour of the surface the picture is printed ON, explicitly "never
+  // a trim, accent or accessory colour". Drawing a frame in it means drawing
+  // a frame in the background: on a red tumbler, a red outline around a
+  // picture sitting on red. Invisible by construction.
+  //
+  // A mug works because its accent is a DIFFERENT colour from its printable
+  // surface -- white body, coloured interior and handle -- so the stroke both
+  // reads against the print and echoes the object. A travel cup is one colour
+  // all over and the print goes straight onto it, so there is no second
+  // colour to draw with and no frame to offer. That is a fact about the
+  // object, not a gap in the feature.
   if(product!=='mug'||!selectedGenColor)return null;
   const list=GEN_MUG_STYLES[selectedGenStyle]?.colors?.[selectedGenSize];
   const m=Array.isArray(list)?list.find(c=>c.name===selectedGenColor):null;
