@@ -5858,6 +5858,11 @@ function pickMugPrintMode(mode){
 // Same principle as the 40oz insulated's exclusion: a fact about the cup,
 // not about the generator.
 const PANORAMA_MIN_WRAP_RATIO = 2.0;
+// The coffee mug's own band, named so the wrap-fitting below can serve it the
+// way TRAVEL_WRAP_RATIO serves the cups. 2475 x 1155, the same print area the
+// wrap plates are painted to.
+const MUG_WRAP_RATIO = 2.14;
+
 const TRAVEL_WRAP_RATIO = {
   'travel-mug-20oz': 1.33,
   'travel-mug-32oz-gator': 1.75,
@@ -5904,9 +5909,18 @@ function trimBlankBands(img){
   out.naturalWidth=w; out.naturalHeight=kept;
   return out;
 }
-async function extendWrapToProductRatio(url){
-  if(product!=='water bottle')return url;
-  const ratio=TRAVEL_WRAP_RATIO[selectedTravelProductKey];
+// OPENED UP TO ANY BAND (Sep 2026). Everything below was already the general
+// solution -- fit a picture to a band, mirror its own edges outward to fill any
+// shortfall, fold the ends into each other so the back seam is scenery meeting
+// scenery -- and it was reachable only by a travel cup. The coffee mug's wrap
+// needs the identical treatment now that a Face It band can land on one, so the
+// surface is a parameter rather than an assumption. Called with no opts it
+// behaves exactly as it always did, including returning the url untouched for
+// any product that has no band of its own.
+async function extendWrapToProductRatio(url,opts){
+  const ratio=(opts && typeof opts.ratio==='number')
+    ? opts.ratio
+    : (product==='water bottle' ? TRAVEL_WRAP_RATIO[selectedTravelProductKey] : undefined);
   if(typeof ratio!=='number')return url;
   const raw=await loadImageFromUrl(url);
   let img=trimBlankBands(raw);
@@ -5915,7 +5929,10 @@ async function extendWrapToProductRatio(url){
   // Already the band's own shape, untrimmed: nothing to do. Wider than the
   // band is NOT nothing to do: the server would letterbox it with white
   // bands, so it is centre-cropped to the band below, like a trimmed one.
-  if(Math.abs(targetW-w)<=w*0.02 && img===raw && travelWrapCloses(selectedTravelProductKey))return url;
+  const closesEarly=(opts && typeof opts.closes==='boolean')
+    ? opts.closes
+    : travelWrapCloses(selectedTravelProductKey);
+  if(Math.abs(targetW-w)<=w*0.02 && img===raw && closesEarly)return url;
   // THE ENDS MEET EACH OTHER, NOT THE CUP (Alyx, v102: "can we change that
   // from matching the colour of the cup to matching the colour of the
   // opposite end?"). The wrap is built an inch or so wider than the band,
@@ -5923,7 +5940,9 @@ async function extendWrapToProductRatio(url){
   // into the left end's start, so the back seam is a cross-fade of scenery
   // into scenery and never white. Seamless by construction, whatever the
   // picture: the last pixel of the file is the neighbour of the first.
-  const closes=travelWrapCloses(selectedTravelProductKey);
+  const closes=(opts && typeof opts.closes==='boolean')
+    ? opts.closes
+    : travelWrapCloses(selectedTravelProductKey);
   const X=closes?Math.round(h*0.30):0;
   const bigW=targetW+X;
   if(bigW<w){
@@ -8147,8 +8166,11 @@ function renderFaceItGrid(){
       wrapNote.style.display=wrapOnly?'block':'none';
     }
   }
+  const bandFits=faceItBandHasSomewhereToGo();
   FaceItCatalog.liveTemplates().forEach(t=>{
     if(wrapOnly && t.shape!=='wrap')return;
+    // The other direction, which was missing -- see faceItBandHasSomewhereToGo.
+    if(!bandFits && t.shape==='wrap')return;
     if(!FaceItCatalog.allowsProduct(t,faceItSurfaceKey()))return;
     const tile=FaceItCatalog.tileFor(t);
     if(!tile)return;
@@ -8202,12 +8224,32 @@ function faceItWraparoundActive(){
 // How many templates Face It could actually offer right now. Drives the door
 // in showDesignMethodCard(): with none to show there is nothing to open, which
 // is also the honest state until the two plates land.
+// WHERE A BAND CAN ACTUALLY GO (Sep 2026).
+//
+// The grid filter used to read one way only -- it hid portrait templates under
+// Wraparound and never asked the opposite question, so under Up to Three Panels
+// the whole roster showed, wrap templates included. Picking one on a travel cup
+// then dropped a 2.14:1 band into a portrait panel, which is the first broken
+// print Alyx reported: a narrow sliver of the verse, cut off mid-word.
+//
+// A wrap template's output is one continuous band, so it needs a surface that
+// prints one. Wraparound is that by definition. A coffee mug on Three Panels is
+// too, because its three panels ARE the band in thirds and reassemble into it.
+// A travel cup on Three Panels is not: that is Front and Back, two separate
+// faces, and no cutting of a band produces them.
+function faceItBandHasSomewhereToGo(){
+  return faceItWraparoundActive() || product==='mug';
+}
+
 function faceItOfferableCount(){
   if(!FACEIT_MODULE_OK)return 0;
   const wrapOnly=faceItWraparoundActive();
   const key=faceItSurfaceKey();
+  const bandFits=faceItBandHasSomewhereToGo();
   return FaceItCatalog.liveTemplates().filter(t=>
-    (!wrapOnly || t.shape==='wrap') && FaceItCatalog.allowsProduct(t,key)
+    (!wrapOnly || t.shape==='wrap') &&
+    (bandFits || t.shape!=='wrap') &&
+    FaceItCatalog.allowsProduct(t,key)
   ).length;
 }
 
@@ -8223,12 +8265,55 @@ function faceItSurfaceKey(){
   return product||'mug';
 }
 
+// The label a style tile shows, which is its first child node -- the notes
+// under it are separate elements. Same reading the exact-transfer confirm does.
+function styleTileLabel(tile){
+  return tile ? ((tile.childNodes[0]?.textContent||'').trim()) : '';
+}
+
+// A TEMPLATE CAN ASK FOR AN ART STYLE (Sep 2026, Alyx).
+//
+// Face It generations carry the customer's style choice like any other -- see
+// the ...currentStylePayload() in callGenerateAPI -- and a customer who scrolls
+// past the Art Style card without choosing is not styleless. They are on
+// Muggshotz Classic, whose block asks the model for "a premium painted
+// caricature" with "caricature-level exaggeration" and "funny but respectful
+// exaggeration". On a soft watercolour memorial portrait that is not a neutral
+// default, it is an argument: the template prompt asks in the same breath for a
+// "delicate, translucent treatment" and a "thoughtful, distance-gazing
+// expression". Alyx has hand-picked Photorealistic on every one of these runs
+// for exactly that reason.
+//
+// SWITCHED, NOT LOCKED, AND NEVER SILENTLY. Alyx's call, and it is the right one
+// for the reason he gave -- most customers never touch that card at all, so a
+// hint they have already scrolled past helps nobody. The switch is announced
+// and trivially undone, which is the same bargain pickMugPrintMode() strikes
+// when Wraparound clears a Window Sill choice. It also does not survive to
+// generation on its own: the style block reads whatever is selected when
+// Generate is pressed, so switching back is genuinely switching back.
+function applyFaceItPreferredStyle(t){
+  const want=t&&t.preferredStyle;
+  if(!want)return;
+  // Matched on the data-val prefix rather than a tile id, because the tiles
+  // carry their whole style directive in that attribute and have no ids.
+  const tile=document.querySelector('#styleSectionCard .btn-select[data-val^="'+want+'"]');
+  if(!tile || tile.classList.contains('selected'))return;
+  const from=styleTileLabel(document.querySelector('#styleSectionCard .btn-select.selected'));
+  pick(tile,'style');
+  const to=styleTileLabel(tile);
+  showGuidanceAlert('This scene is painted as a soft watercolour portrait, so we\'ve set your Art Style to '+
+    (to||'Photorealistic')+' \u2014 it suits this one best'+
+    (from?' (you were on '+from+')':'')+
+    '. If you meant to use a different style, just pick it again on the Art Style card.');
+}
+
 function pickFaceItTemplate(templateId){
   selectedFaceItTemplate=templateId;
   document.querySelectorAll('#faceItGrid .faceit-tile').forEach(b=>{
     b.classList.toggle('selected',b.dataset.faceit===templateId);
   });
   const t=faceItActiveTemplate();
+  applyFaceItPreferredStyle(t);
   const poseNote=document.getElementById('faceItPoseNote');
   const textWrap=document.getElementById('faceItTextBoxWrap');
 
@@ -8538,6 +8623,19 @@ async function generateFaceIt(){
     // mug that ships. faceItPendingPanels carries the three cut panels through
     // to approveFaceIt; a plain face-merge leaves it null and behaves as before.
     faceItPendingPanels=null;
+    // WHICH SURFACES ACTUALLY PRINT IN THIRDS (Sep 2026, Alyx: "the offering is
+    // all wrong, the mockups are wrong").
+    //
+    // Only the coffee mug does. Its wrap IS three panels that reassemble, which
+    // is what the slicing below is for. A travel cup's wrap is ONE file --
+    // getSlotMode() returns 'one' for every cup on Wraparound -- so cutting the
+    // band into thirds there does not divide the print, it destroys it: the
+    // three pieces go into three slots the cup does not have, and the mockup
+    // reads urlOf('left') first and prints that third as the entire wrap. A
+    // narrow sliver of the left of the picture, wrapped round the whole cup.
+    // Alyx's first broken print was exactly that -- the verse's left edge, cut
+    // off mid-word, with the woman missing because she lives on the right.
+    const bandPrintsInThirds=(product==='mug');
     if(faceItKind==='mugshot'||faceItKind==='lineup'){
       const built=await buildFaceItComposite(faceItKind,resultImageUrl,{
         texts:placardTexts,
@@ -8546,7 +8644,7 @@ async function generateFaceIt(){
       });
       if(built){
         resultImageUrl=built.stripUrl;
-        faceItPendingPanels=built.panels;
+        if(bandPrintsInThirds)faceItPendingPanels=built.panels;
       }
     } else if(faceItTpl && faceItTpl.shape==='wrap'){
       // A BAND IS NOT A PICTURE THE CUSTOMER PLACES (Sep 2026). Left to the
@@ -8560,8 +8658,26 @@ async function generateFaceIt(){
       // its own slicing path; this routes every wrap-shaped template through
       // the same one, so the band is cut into thirds exactly as the panorama
       // path cuts a panorama.
-      const panels=await sliceFaceItResultIntoPanels(resultImageUrl);
-      if(panels)faceItPendingPanels=panels;
+      // FIT THE BAND BEFORE CUTTING IT. getImageSizeParam() asks for 1536x1024
+      // on any wraparound -- 1.5:1, the widest that endpoint offers -- while
+      // these plates are painted to their surface's band, 2.14:1 and up. So
+      // what comes back is the band recomposed into a narrower frame, and
+      // something has to stretch it back out or the print is letterboxed. The
+      // describe path has always done this with extendWrapToProductRatio(); it
+      // was simply never called here. Mirroring the flanks costs nothing on
+      // these plates because their outer thirds are bare wash by design.
+      try{
+        const fitted=await extendWrapToProductRatio(resultImageUrl,
+          bandPrintsInThirds?{ratio:MUG_WRAP_RATIO,closes:true}:undefined);
+        if(fitted)resultImageUrl=fitted;
+      }catch(err){
+        // Keep the picture. An unfitted band still prints, just letterboxed.
+        console.error('Could not fit the Face It band to the surface:',err);
+      }
+      if(bandPrintsInThirds){
+        const panels=await sliceFaceItResultIntoPanels(resultImageUrl);
+        if(panels)faceItPendingPanels=panels;
+      }
     }
 
     document.body.classList.remove('generation-active');
@@ -8612,6 +8728,34 @@ let faceItPendingResultUrl=null;
 async function approveFaceIt(){
   if(!faceItPendingResultUrl)return;
 
+  // A BAND IS NOT A PANEL PICTURE EITHER (Sep 2026, Alyx: "the offering is all
+  // wrong, the mockups are wrong. There's no rotating 3D panel").
+  //
+  // The note below this one states the old premise out loud -- the panel card
+  // is "one picture, three switches", and that "holds for every template that
+  // produces a single image". It held for as long as every single-image
+  // template was a fixed 3:4 portrait. The wrap plates broke it: they produce
+  // ONE image that IS the band, so they matched neither branch. They fell to
+  // the panel path and were placed in the front slot like a postcard, which is
+  // exactly what the customer saw printed -- a small patch on the front of a
+  // cup, no wrap, and no 3D view, that last one because the rotating preview is
+  // gated on lastWraparoundMethod and nothing had set it.
+  //
+  // TWO THINGS WERE MISSING, and the second is the one that made it small.
+  // getImageSizeParam() asks for 1536x1024 on any wraparound -- 1.5:1, the
+  // widest that endpoint offers -- while these plates are painted to 2.14:1. So
+  // the model hands back a band recomposed into a narrower frame, and something
+  // has to stretch it back out to the surface. The describe path has always
+  // done that with extendWrapToProductRatio(); this path never called it. Now
+  // it does, for the mug as well, which is why that function takes a band.
+  //
+  // After fitting, each product wants the shape it prints in: a mug's wrap is
+  // three panels that reassemble, so the strip is cut into thirds and handed to
+  // the triptych branch below, which already registers a panorama correctly. A
+  // cup's wrap is one piece, so it is placed whole.
+  const faceItBandTpl=faceItActiveTemplate();
+  const faceItIsBand=!!(faceItWraparoundActive() && faceItBandTpl && faceItBandTpl.shape==='wrap');
+
   // A TRIPTYCH IS NOT A PICTURE THE CUSTOMER PLACES (Sep 2026). The panel card
   // downstream is built on "one picture, three switches" -- its own comment says
   // so -- and that premise holds for every template that produces a single
@@ -8645,6 +8789,40 @@ async function approveFaceIt(){
     document.getElementById('faceItCard').style.display='none';
     const clipboard=document.querySelector('.needles-clipboard');
     if(clipboard)clipboard.style.display='';
+    panelScreenExit='mockup';
+    renderRecentDesigns();
+    renderPositionHolder();
+    updatePlacementSummary();
+    saveMugState();
+    smoothScrollToTarget('positionHolderCard','center');
+    return;
+  }
+
+  // A CUP'S BAND, PLACED WHOLE. Not the panel path: there is one slot on a cup
+  // wraparound and it is the whole wrap, so there is nothing to choose. The
+  // panel path would also have handed it straight back -- it places the picture
+  // in `front` and then immediately nulls it, which is the right opening move
+  // for a 3:4 portrait the customer is about to switch on and off, and simply
+  // loses a band. lastWraparoundMethod says this is one continuous strip, which
+  // lights the rotating preview and keeps Fix The Seams away from a picture
+  // that has no seams to fix.
+  if(faceItIsBand && product!=='mug'){
+    const bandId=addToRecentDesigns(faceItPendingResultUrl);
+    placements.front=bandId;
+    placements.left=null;
+    placements.right=null;
+    placementAdjust.front=defaultPanelAdjust();
+    wraparoundPanoramaUrl=faceItPendingResultUrl;
+    wraparoundPanoramaBaseUrl=faceItPendingResultUrl;
+    lastWraparoundMethod='panorama';
+    pendingSlotTarget=null;
+    faceItPendingResultUrl=null;
+    document.body.classList.remove('faceitreveal-focus');
+    document.getElementById('faceItEaselApproveRow').style.display='none';
+    document.getElementById('faceItGenerateBtn').disabled=false;
+    document.getElementById('faceItCard').style.display='none';
+    const bandClipboard=document.querySelector('.needles-clipboard');
+    if(bandClipboard)bandClipboard.style.display='';
     panelScreenExit='mockup';
     renderRecentDesigns();
     renderPositionHolder();

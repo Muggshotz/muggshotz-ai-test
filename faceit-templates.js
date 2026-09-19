@@ -704,6 +704,18 @@ global.FaceItPrompts = {
 
    products      omitted means every product the gimmicks run on. Present means
                  this template is fussy about its surface -- see the mug shot.
+
+   preferredStyle  the Art Style this template is painted for, matched against the
+                 style tiles' data-val prefix. Picking the template switches the
+                 customer to it and says so; they can switch back. Present only
+                 where the HOUSE DEFAULT actively fights the template: Muggshotz
+                 Classic asks for "a premium painted caricature" with
+                 "caricature-level exaggeration" and "funny but respectful
+                 exaggeration", which is the wrong instruction to hand a soft
+                 watercolour memorial portrait -- and it is what a customer gets
+                 by scrolling past the Art Style card without choosing, which
+                 many do. Not a lock: the style block still reads whatever is
+                 selected at generation time.
    =========================================================================== */
 (function(global){
 'use strict';
@@ -731,7 +743,8 @@ const FACE_IT_TEMPLATES = [
   face('heavenly_hostess.jpg', 'Heavenly Hostess'),
 
   { file: 'on_my_mind.jpg', name: 'On My Mind', kind: 'text-merge',
-    shape: 'portrait', panels: 'any', textInputs: 1, poseNote: 'three-quarter' },
+    shape: 'portrait', panels: 'any', textInputs: 1, poseNote: 'three-quarter',
+    preferredStyle: 'photorealistic' },
   { file: 'come_to_think_of_it.jpg', name: 'Come To Think Of It', kind: 'text-merge',
     shape: 'portrait', panels: 'any', textInputs: 1, poseNote: 'three-quarter' },
 
@@ -808,11 +821,43 @@ const FACE_IT_TEMPLATES = [
      to lose a third of its width; the Tundra is 3.50:1 and mirrors its flanks,
      which here would be harmless (those flanks are bare wash) but has never
      been printed. Widen this list from a real print, not from arithmetic. */
+  /* THE SAME PAINTING AGAIN, FOR THE NARROW BANDS (Sep 2026). The pair above is
+     painted to 2.14:1 and wears the mug and the 14oz. The 20oz and the vacuum
+     40oz are 1.33:1 and 1.32:1 -- barely wider than tall -- so putting a 2.14
+     plate on one means throwing away a third of its width, and the first thing
+     lost is the empty flank the seam depends on. Hence a second pair rather
+     than a crop.
+
+     Not a resize: at 1.32 there is no room for a third of the width at each
+     end, so she and the lettering sit closer together and the margins come down
+     to roughly a fifth. Same wash, same hand, same face treatment.
+
+     Measured on delivery, and these are the tightest plates in the roster:
+     mean row deviation 1.37 and 1.54 out of 255, worst rows 4.6 and 3.9 -- half
+     the wide pair's. They also carry 1091px of height against the wide pair's
+     857, which is the dimension a face has to survive the merge on.
+
+     NO PLATE-PICKER NEEDED, and that is worth saying because it looks like it
+     should be: one template still means one plate. These four entries never
+     compete, because `products` keeps each pair on the surfaces it was painted
+     for, and no surface appears in both lists. A picker only becomes necessary
+     the day one cup has two plates claiming it. */
+  { file: 'on_my_mind_narrow_left.webp', name: 'On My Mind', kind: 'text-merge',
+    shape: 'wrap', panels: 'any', textInputs: 1, poseNote: 'three-quarter',
+    preferredStyle: 'photorealistic',
+    products: ['travel-mug-40oz-vacuum', 'travel-mug-20oz'] },
+  { file: 'on_my_mind_narrow_right.webp', name: 'On My Mind', kind: 'text-merge',
+    shape: 'wrap', panels: 'any', textInputs: 1, poseNote: 'three-quarter',
+    preferredStyle: 'photorealistic',
+    products: ['travel-mug-40oz-vacuum', 'travel-mug-20oz'] },
+
   { file: 'on_my_mind_left.webp', name: 'On My Mind', kind: 'text-merge',
     shape: 'wrap', panels: 'any', textInputs: 1, poseNote: 'three-quarter',
+    preferredStyle: 'photorealistic',
     products: ['mug', 'travel-mug-14oz-handle'] },
   { file: 'on_my_mind_right.webp', name: 'On My Mind', kind: 'text-merge',
     shape: 'wrap', panels: 'any', textInputs: 1, poseNote: 'three-quarter',
+    preferredStyle: 'photorealistic',
     products: ['mug', 'travel-mug-14oz-handle'] },
 
   /* Needs a plate: the lineup room with the empty slot moved to the CENTRE of
