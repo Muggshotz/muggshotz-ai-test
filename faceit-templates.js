@@ -951,6 +951,30 @@ const FACE_IT_TEMPLATES = [
      to lose a third of its width; the Tundra is 3.50:1 and mirrors its flanks,
      which here would be harmless (those flanks are bare wash) but has never
      been printed. Widen this list from a real print, not from arithmetic. */
+  /* AND THE TUNDRA, THE WIDEST BAND WE SELL (Sep 2026). 3.50:1, nearly twice the
+     coffee mug's, and the first plate in this set with room to spare: she and
+     the lettering sit well apart with a broad stretch of open wash between them
+     instead of shoulder to shoulder.
+
+     DELIVERED AT 3.00, NOT 3.50, and it does not matter -- which is worth
+     recording so nobody "fixes" it later. The model returns 1536x1024 whatever
+     shape the plate is (getImageSizeParam asks for that on every wraparound),
+     and extendWrapToProductRatio then widens the RESULT to the cup's band by
+     clamping the bare flanks outward. So a plate's ratio guides the composition
+     it suggests; it does not constrain the output. Any reference between about
+     2.5 and 3.5 lands in the same place here.
+
+     Seams 1.52 and 1.61 out of 255, worst rows 4.5 and 3.5, margins 21/23 and
+     22/24 per cent. Every band we sell now has a plate painted for it. */
+  { file: 'on_my_mind_tundra_left.webp', name: 'On My Mind', kind: 'text-merge',
+    shape: 'wrap', panels: 'any', textInputs: 1, poseNote: 'three-quarter',
+    preferredStyle: 'photorealistic',
+    products: ['travel-mug-30oz-tundra'] },
+  { file: 'on_my_mind_tundra_right.webp', name: 'On My Mind', kind: 'text-merge',
+    shape: 'wrap', panels: 'any', textInputs: 1, poseNote: 'three-quarter',
+    preferredStyle: 'photorealistic',
+    products: ['travel-mug-30oz-tundra'] },
+
   /* AND AGAIN FOR THE GATOR (Sep 2026). The third band, and the last one that
      needed its own composition rather than a crop: 1.75 sits between the 2.14
      pair and the 1.32 pair, so she and the lettering sit further apart than on
