@@ -8234,6 +8234,47 @@ async function buildFaceItStage(t,resultImageUrl){
   }
 }
 
+// THE PAINTING GOES INTO THE FRAME (Sep 2026, Alyx). The Court Painter's band
+// is the mirror's trick with the layers the other way round: the room is fixed
+// AND the actor is fixed -- Bud's painter and easel are one prop, baked into
+// painter_stage.webp once, offline -- so what the merge returns is only the
+// state portrait, alone on magenta. It is keyed, bounded and set into the
+// canvas's four corners, and the customer's own photo goes onto the card
+// clipped beside it, exactly as the portrait plate does with photoQuad. Done
+// HERE, before the band is fitted to the cup, because extendWrapToProductRatio
+// moves every fraction on the plate and the photoQuad block runs after it.
+// Fails the way its siblings do: the customer keeps the picture.
+async function buildFaceItPlate(t,resultImageUrl,photoUrl){
+  try{
+    const [plate,result,snap]=await Promise.all([
+      loadFaceItImage(t.plate),
+      loadFaceItImage(resultImageUrl),
+      loadFaceItImage(photoUrl)
+    ]);
+    const W=plate.naturalWidth||plate.width, H=plate.naturalHeight||plate.height;
+    const c=document.createElement('canvas');
+    c.width=W; c.height=H;
+    const ctx=c.getContext('2d');
+    ctx.drawImage(plate,0,0,W,H);
+    const keyed=FaceItComposite.despillMagenta(result,{});
+    const b=FaceItComposite.opaqueBounds(keyed,8);
+    if(!b.empty && b.w>=8 && b.h>=8){
+      // Crop to what came back, so the slot sees the painting and not the
+      // magenta margin around it, then let the quad fit and turn it.
+      const painting=document.createElement('canvas');
+      painting.width=b.w; painting.height=b.h;
+      painting.getContext('2d').drawImage(keyed,b.x,b.y,b.w,b.h,0,0,b.w,b.h);
+      FaceItBuild.drawPhotoIntoQuad(ctx,painting,t.canvasQuad,W,H,{wash:false});
+    }
+    if(t.cardQuad)FaceItBuild.drawPhotoIntoQuad(ctx,snap,t.cardQuad,W,H);
+    return c.toDataURL('image/png');
+  }catch(err){
+    console.error('Face It plate composite failed:',err);
+    showGuidanceAlert('Your picture came out fine, but we could not set it onto the easel just now — showing you the picture on its own.');
+    return null;
+  }
+}
+
 async function buildFaceItComposite(kind,resultImageUrl,opts){
   const t=faceItActiveTemplate();
   try{
@@ -8733,7 +8774,12 @@ async function generateFaceIt(){
         ? FaceItPrompts.mirrorStage(faceNote)
         : FaceItPrompts.mirror(faceNote);
     } else if(faceItKind==='painter'){
-      prompt=FaceItPrompts.courtPainter(faceNote);
+      // Same fork as the mirror's: the portrait plate wants the finished
+      // scene; the band wants the painting alone, to go into a frame that is
+      // already standing in the room.
+      prompt=(faceItTpl&&faceItTpl.plate)
+        ? FaceItPrompts.courtPainterStage(faceNote)
+        : FaceItPrompts.courtPainter(faceNote);
     } else if(isTextTemplate){
       prompt='Merge the uploaded photo\'s face onto the provided reference image in the exact spot indicated, applying the same soft, faded watercolor/sepia wash shown in the reference -- render the face with that same delicate, translucent treatment rather than a sharp photographic look, and give the subject a thoughtful, distance-gazing expression matching the reference\'s mood. '+
         'Preserve the reference\'s overall composition, color palette, and decorative flourishes exactly as shown. '+
@@ -8785,6 +8831,13 @@ async function generateFaceIt(){
     if(faceItTpl && faceItTpl.stage){
       const staged=await buildFaceItStage(faceItTpl,resultImageUrl);
       if(staged)resultImageUrl=staged;
+    }
+    // THE PLATE GOES DOWN FIRST TOO. A plated template is the stage's inverse:
+    // the room and the actor are both painted, and what came back is the one
+    // picture that goes into the frame. Same contract -- a band leaves here.
+    if(faceItTpl && faceItTpl.plate){
+      const plated=await buildFaceItPlate(faceItTpl,resultImageUrl,photo);
+      if(plated)resultImageUrl=plated;
     }
     if(faceItKind==='mugshot'||faceItKind==='lineup'){
       const built=await buildFaceItComposite(faceItKind,resultImageUrl,{

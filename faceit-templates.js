@@ -850,9 +850,44 @@ function courtPainterPrompt(note){
   'the canvas.' + note;
 }
 
+/* THE PAINTING AS AN ACTOR (Sep 2026). The band version of the court painter
+   keeps the painter out of the generation entirely -- he is a fixed prop on a
+   fixed stage -- so all the merge has to return is the picture on his easel.
+   Same flattery, same likeness lock, same oil paint as courtPainterPrompt; only
+   the delivery changes. It comes back as a flat upright rectangle on magenta,
+   is keyed and bounded, and is set into the canvas's four corners. */
+function courtPainterStagePrompt(note){
+  return 'The reference image shows a painter standing back from an easel, considering a grand ' +
+  'state portrait he has just finished, in a studio.\n\n' +
+  'CUT EVERYTHING AWAY BUT THE PAINTING. Give me ONLY the portrait that is on the canvas -- the ' +
+  'painted picture itself, the whole rectangle of it, edge to edge. No frame around it, no easel, ' +
+  'no painter, no studio, no column outside the picture, no clipped photograph, no floor. Just the ' +
+  'painting, as one flat upright rectangle, and nothing else.\n\n' +
+  'Replace the face in that portrait with the face of the person in the uploaded photo. It is the ' +
+  'only face in this picture.\n\n' +
+  'THE PORTRAIT FLATTERS, AND THAT IS THE ENTIRE POINT OF THIS PICTURE. Paint them as the court ' +
+  'painter would have: more powerful, more stately, more commanding and wiser than they appear ' +
+  'in the photograph. A face that belongs above ermine and a laurel -- composed, unhurried, ' +
+  'certain of itself, lit the way a master lights a patron they want to keep. This idealisation is ' +
+  'deliberate and requested, and it overrides any general instruction not to beautify.\n\n' +
+  'IT MUST STILL BE UNMISTAKABLY THEM. Keep the real bone structure, the real nose, the real eye ' +
+  'shape and eye colour, the real mouth, the real jaw width, the real hairline, the real age and ' +
+  'skin tone, and any distinctive features. Do not slim the face, do not substitute a model or a ' +
+  'noble-looking stranger, do not invent a new person. The joke only works if the figure in the ' +
+  'ermine is recognisably the person in the photo.\n\n' +
+  'Render it as OIL PAINT -- visible brushwork, the same palette and the same light as the ' +
+  'painting in the reference. It is a painting of them, not a photograph.\n\n' +
+  'KEEP INSIDE THE PAINTING EXACTLY AS PAINTED: the robes, the crown, the sceptre, the column ' +
+  'and landscape behind the sitter. Fill the rectangle of the painting completely, to all four ' +
+  'edges, with no border, no margin, no mat and no vignette -- it is going into a frame that ' +
+  'already exists.\n\n' +
+  'LIGHTING: warm candlelight falling from the LEFT, gold on the left side of the sitter, deeper ' +
+  'shadow on their right.\n\n' + MAGENTA_FIELD + note;
+}
+
 global.FaceItPrompts = {
   MAGENTA_FIELD, faceNoteFrom, mirror: mirrorPrompt, mirrorStage: mirrorStagePrompt,
-  courtPainter: courtPainterPrompt,
+  courtPainter: courtPainterPrompt, courtPainterStage: courtPainterStagePrompt,
   stoneCarve: stoneCarvePrompt,
   mugshotSubject: mugshotSubjectPrompt,
   lineupFigure: lineupFigurePrompt
@@ -991,6 +1026,44 @@ const FACE_IT_TEMPLATES = [
     idealise: true,
     photoQuad: [[0.8306,0.0760],[0.9346,0.0711],[0.9411,0.1989],[0.8352,0.2051]] },
 
+  /* THE COURT PAINTER, AS THE BAND (Sep 2026, Alyx: "the only thing we need to
+     replace is the canvas and the painter. We can use the same background").
+     Mirror Mirror's trick with the layers the other way round. There the room
+     is fixed and the merge returns the actor; here the actor is fixed as well.
+     Bud painted the painter and his easel as ONE prop (painter_prop.webp), and
+     nothing about him is the customer's, so he never goes near a generation.
+     He stands in the mirror's own room, baked once into painter_stage.webp with
+     buildStagedWrap's numbers (fillHeight .96, feet on the floor, centred), so
+     the seam is still the room's 5.5/255 and the Stone Pillar still matches it.
+
+     What the merge returns is the state portrait ALONE on magenta
+     (courtPainterStagePrompt), and it is set into the canvas the way the
+     portrait plate sets the snapshot onto the card: four corners as fractions
+     of the plate, measured once. Both slots came back blank and square-on,
+     which is what makes them quads rather than guesses. canvasQuad is 246 x 348
+     px on the 1837 x 856 band, tilted 2 degrees; cardQuad is the photograph
+     clipped beside it, 46 x 67, tilted the other way. Mapped through the bake's
+     exact transform from the prop and then proved by compositing test patterns
+     into both. Re-measure both if either asset is replaced.
+
+     Done in buildFaceItPlate BEFORE the band is fitted to the cup, because
+     extendWrapToProductRatio moves every fraction on the plate -- which is why
+     these are not called photoQuad: that block runs after the fit.
+
+     `tile` is the stage itself. The painter at a blank canvas is an honest
+     advert for what happens next, and there is no second picture to mislead. */
+  { file: 'court_painter.webp', id: 'court_painter.webp#band',
+    tile: 'painter_stage.webp',
+    plate: 'painter_stage.webp',
+    canvasQuad: [[0.5383,0.1663],[0.6708,0.1563],[0.6676,0.5690],[0.5326,0.5654]],
+    cardQuad:   [[0.6739,0.1823],[0.6989,0.1849],[0.6960,0.2633],[0.6710,0.2606]],
+    name: 'The Court Painter', kind: 'painter',
+    shape: 'wrap', panels: 'any', poseNote: 'three-quarter',
+    idealise: true,
+    gutter: 'Stone Pillar',
+    products: ['mug', 'travel-mug-20oz', 'travel-mug-32oz-gator',
+               'travel-mug-40oz-vacuum', 'travel-mug-14oz-handle'] },
+
   /* MIRROR MIRROR (Sep 2026, Alyx's idea end to end).
      A figure stands with their back to us at an ornate storybook mirror, and the
      reflection is flattering them. The gag is the lie -- and a lie needs a liar,
@@ -1080,7 +1153,8 @@ const FACE_IT_TEMPLATES = [
      is the presence this template needs. Both surfaces that share the 2.14-2.15
      band are listed; the narrower cups would crowd it and the Tundra's 3.50
      would strand it in the middle of a very long room. */
-  { file: 'mirror_mirror.webp', tile: 'mirror_stage_tile.webp',
+  { file: 'mirror_mirror.webp', id: 'mirror_mirror.webp#band',
+    tile: 'mirror_stage_tile.webp',
     stage: 'mirror_stage.webp',
     name: 'Mirror Mirror', kind: 'mirror',
     shape: 'wrap', panels: 'any', poseNote: 'three-quarter',
@@ -1232,8 +1306,14 @@ const FACE_IT_TEMPLATES = [
 const byFile = {};
 FACE_IT_TEMPLATES.forEach(t => { if (t.file) byFile[t.file] = t; });
 
-/* Stable key for templates with no file of their own. */
-FACE_IT_TEMPLATES.forEach(t => { t.id = t.file || ('procedural:' + t.name.toLowerCase().replace(/\s+/g, '-')); });
+/* Stable key for templates with no file of their own.
+   A template may also declare its own id. It has to, when two entries share a
+   plate: Mirror Mirror's band sends the same mirror_mirror.webp to the merge as
+   its portrait does, and with id = file the second one written into byId was
+   the only one get() could ever return -- so on a mug in Three Panels both
+   Mirror Mirror tiles selected the band, and the portrait was unreachable.
+   Caught while giving The Court Painter the same pair (Sep 2026). */
+FACE_IT_TEMPLATES.forEach(t => { t.id = t.id || t.file || ('procedural:' + t.name.toLowerCase().replace(/\s+/g, '-')); });
 const byId = {};
 FACE_IT_TEMPLATES.forEach(t => { byId[t.id] = t; });
 
@@ -1585,7 +1665,8 @@ function quadGeometry(quad, W, H){
 
 /* Centre-cropped to the card's own proportions first, so a portrait phone photo
    and a square one both fill it without stretching anybody sideways. */
-function drawPhotoIntoQuad(ctx, photo, quad, W, H){
+function drawPhotoIntoQuad(ctx, photo, quad, W, H, opts){
+  const o = opts || {};
   const g = quadGeometry(quad, W, H);
   const want = g.w / g.h;
   const pw = photo.naturalWidth || photo.width, ph = photo.naturalHeight || photo.height;
@@ -1598,10 +1679,14 @@ function drawPhotoIntoQuad(ctx, photo, quad, W, H){
   ctx.drawImage(photo, sx, sy, sw, sh, -g.w/2, -g.h/2, g.w, g.h);
   // A breath of the studio's warmth over it. Without this a phone snapshot sits
   // on the painting like a sticker; with it, it reads as a print in candlelight.
-  ctx.globalCompositeOperation = 'multiply';
-  ctx.globalAlpha = 0.12;
-  ctx.fillStyle = '#c99a5e';
-  ctx.fillRect(-g.w/2, -g.h/2, g.w, g.h);
+  // wash:false is for the one thing that is not a snapshot -- a painting going
+  // into its own frame already carries the room's light.
+  if (o.wash !== false){
+    ctx.globalCompositeOperation = 'multiply';
+    ctx.globalAlpha = 0.12;
+    ctx.fillStyle = '#c99a5e';
+    ctx.fillRect(-g.w/2, -g.h/2, g.w, g.h);
+  }
   ctx.restore();
   return g;
 }

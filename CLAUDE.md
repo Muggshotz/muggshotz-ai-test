@@ -38,6 +38,16 @@ The last is the clearest: he named the fix in his first sentence on the subject.
 Hours went into ratios, crops, fades and four separate edits to a cup list that
 was never wrong — because the reply came before the reading.
 
+### The narrower rule underneath it
+
+Every one of those six was a claim about something not in the repo: what a cup
+looks like, what is in a frame, where a file came from. The code I can read, and
+when I read it I get it right. It is the moment I narrate his side of the screen
+that I invent, because there is nothing to check against and I fill it in anyway.
+
+**If it is not in the repo, I don't get to say what it is.** I can ask, or say I
+don't know. Never state a cause I could not have observed.
+
 ## Scope
 
 **A discussion is not an order.** Do the thing asked, at the size asked.
