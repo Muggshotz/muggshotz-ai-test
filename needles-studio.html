@@ -6299,7 +6299,19 @@ let selectedGutterColor=null;   // null = the design's own colours, as drawn
 // Only cups confirmed to close on themselves. The vacuum 40oz's single
 // 3710x2817 area covers the whole tumbler (products-catalog.js), so its ends
 // meet. Anything absent is left exactly as it is today.
+// EVERY WRAP CUP CAN CARRY A TRIMMING (Sep 2026, Alyx). This listed the
+// vacuum 40oz alone, so on every other cup the Trimmings step never appeared
+// and the seam had nothing to cover it -- which is what put a clear white line
+// down the back of his Mirror Mirror cup. The trimming was designed for
+// precisely this: "if their union is in any way irregular, we can mask it by
+// placing an exact same pillar over it."
+// It costs 5-6% of the wrap per end, measured, so it is cheap enough to offer
+// anywhere a band meets itself.
 const WRAP_GUTTER_CUPS={
+  'travel-mug-20oz': true,
+  'travel-mug-32oz-gator': true,
+  'travel-mug-14oz-handle': true,
+  'travel-mug-30oz-tundra': true,
   'travel-mug-40oz-vacuum': true
 };
 function wrapWantsGutters(){
