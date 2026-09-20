@@ -206,6 +206,42 @@ for (const [label, tableName, catalogKey] of [
     checks.push(bad
       ? `FAIL: travel cups: ${bad}`
       : `PASS: travel cups: every price agrees between the catalog and the order page`);
+
+    // --- and the price the PICKER shows (Sep 2026) ------------------------
+    // The studio's cup tiles print TRAVEL_MUG_PRICES, a fifth hand-kept copy.
+    // Until it existed the tiles showed no price at all -- Alyx: "why are the
+    // prices not on the product panel for the travel cups?" -- so a customer
+    // chose between a $24.95 tumbler and a $44.95 one with neither number on
+    // screen. A copy that can drift is worth having only if something checks
+    // it, so: every cup the studio sells must carry a price here, and it must
+    // be the one the server bills.
+    const priceBlock = blockAfter(studioSrc, 'const TRAVEL_MUG_PRICES');
+    if (!priceBlock) {
+      checks.push('FAIL: TRAVEL_MUG_PRICES not found in needles-studio.html — the cup tiles show no price');
+    } else {
+      const shown = new Map(
+        [...priceBlock.matchAll(/"(travel-mug-[a-z0-9-]+)":\s*([0-9.]+)/g)].map(m => [m[1], parseFloat(m[2])])
+      );
+      const noPrice = studioKeys.filter(k => !shown.has(k));
+      checks.push(noPrice.length
+        ? `FAIL: travel cups: no tile price for ${noPrice.join(', ')} — the customer picks that cup blind`
+        : `PASS: travel cups: all ${studioKeys.length} tiles carry a price`);
+
+      let drift = null;
+      for (const [k, tilePrice] of shown) {
+        if (!travelKeys.includes(k)) { drift = `${k}: on the tiles, not in the server catalog`; break; }
+        const catBlock = blockAfter(catSrc, `"${k}":`);
+        const sizes = catBlock && blockAfter(catBlock, 'sizes:');
+        const catPrice = sizes && sizes.match(/price:\s*([0-9.]+)/);
+        if (!catPrice) { drift = `${k}: could not read the catalog price`; break; }
+        if (parseFloat(catPrice[1]) !== tilePrice) {
+          drift = `${k}: tile says $${tilePrice.toFixed(2)}, the server bills $${catPrice[1]}`; break;
+        }
+      }
+      checks.push(drift
+        ? `FAIL: travel cups: ${drift}`
+        : `PASS: travel cups: every tile price is the price the server bills`);
+    }
   }
 }
 

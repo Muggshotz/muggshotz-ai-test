@@ -1630,7 +1630,7 @@ Tell Needles <span style="color:#7ab8ff">what you have in mind</span>
 
 <div class="card" id="travelMugVariantCard" style="display:none">
 <div class="card-title">🍶 Which Travel Mug?</div>
-<div class="note" style="margin-top:0;margin-bottom:.9rem">Pick which travel mug you're getting before generating — the shape and print layout differ enough between them that we need this locked in first.</div>
+<div class="note" style="margin-top:0;margin-bottom:.9rem">Pick which travel mug you're getting before generating — the shape and print layout differ enough between them that we need this locked in first. Real price shown under each.</div>
 <!-- THE PALETTE BESIDE THE CUP (Alyx, v109: "if I clicked on the color
      palette which is below I won't be able to see them change in real
      time"). Once a cup is picked the six collapse to that one tile, and its
@@ -6834,6 +6834,17 @@ function renderTravelMugVariantGrid(){
     label.className='theme-label';
     label.textContent=prod.displayName;
     btn.appendChild(label);
+    // The price, under the name, exactly as the coffee mug's style tiles do it
+    // (renderPreGenMugStyleGrid). One real number and nothing else -- no "from",
+    // no ladder, no delta line: a cup is one size at one price.
+    const price=TRAVEL_MUG_PRICES[key];
+    if(typeof price==='number'){
+      const priceNote=document.createElement('div');
+      priceNote.className='note travel-tile-price';
+      priceNote.style.cssText='margin-top:4px;color:#7ab8ff;font-weight:700;font-size:11px';
+      priceNote.textContent='$'+price.toFixed(2);
+      btn.appendChild(priceNote);
+    }
     btn.onclick=()=>pickPreGenTravelVariant(key);
     grid.appendChild(btn);
   });
@@ -20149,6 +20160,29 @@ const GEN_STYLE_TO_PRODUCT_KEY = {
 let selectedGenStyle='Classic White';
 let selectedGenSize='11oz';
 let selectedGenColor=null;
+
+// WHAT EACH CUP COSTS (Alyx, Sep 2026: "why are the prices not on the product
+// panel for the travel cups? They are for the coffee mugs").
+//
+// It was a display gap and nothing more -- these prices have always been in
+// lib/products-catalog.js and create-checkout-session.js has always billed
+// them. The coffee mug's picker appends a price under every tile
+// (renderPreGenMugStyleGrid) and the cup picker built thumbnail + name and
+// stopped, so a customer read "from $24.95" on the Product card and then chose
+// blind between a $24.95 tumbler and a $44.95 one.
+//
+// A fifth hand-kept copy of numbers that live in the catalog, which is how
+// Classic White went missing from a picker for a thousand iterations --
+// verify-price-parity.mjs recomputes every one of these straight from
+// lib/products-catalog.js and fails on any drift, so it cannot go stale.
+const TRAVEL_MUG_PRICES = {
+  "travel-mug-20oz": 34.95,
+  "travel-mug-14oz-handle": 34.95,
+  "travel-mug-40oz-insulated": 44.95,
+  "travel-mug-40oz-vacuum": 24.95,
+  "travel-mug-32oz-gator": 34.95,
+  "travel-mug-30oz-tundra": 34.95
+};
 
 const TRAVEL_MUG_CATALOG = {
   "travel-mug-20oz": {
