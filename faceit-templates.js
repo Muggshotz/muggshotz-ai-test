@@ -1085,7 +1085,7 @@ const FACE_IT_TEMPLATES = [
     name: 'Mirror Mirror', kind: 'mirror',
     shape: 'wrap', panels: 'any', poseNote: 'three-quarter',
     idealise: true,
-    products: ['mug', 'travel-mug-14oz-handle'] },
+    products: ['mug', 'travel-mug-20oz', 'travel-mug-14oz-handle'] },
 
   /* ON MY MIND, AS THE BAND (Sep 2026). Not a variant of the 3:4 plate -- a
      second painting of the same idea, composed wide from the start, which is
