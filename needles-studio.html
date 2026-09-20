@@ -6331,8 +6331,20 @@ let selectedGutterColor=null;   // null = the design's own colours, as drawn
 // 3710x2817 area covers the whole tumbler (products-catalog.js), so its ends
 // meet. Anything absent is left exactly as it is today.
 const WRAP_GUTTER_CUPS={
-  'travel-mug-40oz-vacuum': true
+  'travel-mug-40oz-vacuum': true,
+  // THE CUPS MIRROR MIRROR PRINTS ON REACH THE PANEL TOO (Sep 2026, Alyx).
+  // Without these the cup got neither a fade nor a trimming: the Trimmings
+  // step simply never opened, so the band's ends were left raw with no screen
+  // on which to say otherwise. Both surfaces the stage is painted for.
+  'travel-mug-20oz': true,
+  'travel-mug-14oz-handle': true
 };
+function templateGutterChoice(){
+  if(typeof faceItActiveTemplate!=='function')return null;
+  const t=faceItActiveTemplate();
+  const g=t&&t.gutter;
+  return (g && GUTTER_CATALOG[g]) ? g : null;
+}
 function wrapWantsGutters(){
   return product==='water bottle' && WRAP_GUTTER_CUPS[selectedTravelProductKey]===true;
 }
@@ -20714,7 +20726,12 @@ async function openTrimmingsPanel(){
   // so a change of mind replaces the trimming instead of adding to it.
   const returning=(trimmingsBakedTo&&finished===trimmingsBakedTo);
   trimmingsBaseUrl=returning?trimmingsBakedFrom:finished;
-  selectedGutter=returning?trimmingsBakedChoice:null;
+  // ARRIVES ON THE STONE PILLAR (Alyx: "have it defaulted to the stone pillar
+  // trimming when they arrive at the options. And they have to physically
+  // switch it from the stone pillar in order to get a different trimming").
+  // A template may name the trimming it was painted for; the customer can
+  // still pick any of the others, or No Thanks.
+  selectedGutter=returning?trimmingsBakedChoice:(templateGutterChoice()||null);
   selectedGutterColor=returning?trimmingsBakedColour:null;
   const overlay=document.getElementById('trimmingsOverlay');
   if(!overlay){ reallyBeginFinalMockupFetch(); return; }
