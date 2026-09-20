@@ -21279,7 +21279,55 @@ function continueToRealMockup(){
   openTrimmingsPanel();
 }
 
-function goToOrder(){
+// NOTHING RAW LEAVES THE STUDIO (Sep 2026, Alyx, trying to buy his own
+// tumbler: "it keeps sending me back to the same screen and won't go through").
+//
+// Stripe caps every metadata value at 500 characters, and the order page
+// hands the design straight into one. The generator returns a hosted link,
+// so a picture printed as it came is a short URL and always was. But every
+// step that REDRAWS the picture in the browser -- the band fit in
+// extendWrapToProductRatio, the stage and plate composites, a caption, a
+// frame -- hands back raw image data, and only some of those steps upload
+// it again. Fade uploads. A trimming uploads. Hard Edges, then No Thanks,
+// uploads nothing, and half a megabyte of base64 went to Stripe:
+//   "Metadata values can have up to 500 characters, but you passed in a
+//    value that is 453211 characters."
+// The No Thanks branch even says why it skips the upload: "the design keeps
+// its existing hosted URL". For a cup band there never was one. Reachable
+// since d800cff (09-19), the commit that gave bands to cups.
+//
+// So the check lives here, at the one door every product walks through to
+// checkout: anything still raw is uploaded first, written back onto the
+// design so a Back or a retry does not upload it twice, and a failure keeps
+// the customer on this page with a plain sentence rather than a Stripe error
+// under the button. Every route is covered, including the ones nobody has
+// found yet.
+function isRawImageUrl(u){ return typeof u==='string' && /^data:/i.test(u); }
+async function hostRawDesignsBeforeCheckout(){
+  const jobs=[];
+  ['left','front','right'].forEach(pos=>{
+    const id=placements[pos]; const d=id?findDesignById(id):null;
+    if(d && isRawImageUrl(d.url)) jobs.push(uploadCompositedImage(d.url,{strict:true}).then(u=>{ d.url=u; }));
+  });
+  if(product==='mug' && mugPrintMode==='wraparound' && isRawImageUrl(wraparoundPanoramaUrl)){
+    jobs.push(uploadCompositedImage(wraparoundPanoramaUrl,{strict:true}).then(u=>{ wraparoundPanoramaUrl=u; if(wraparoundPanoramaBaseUrl===wraparoundPanoramaUrl)wraparoundPanoramaBaseUrl=u; }));
+  }
+  if(jobs.length)await Promise.all(jobs);
+  return jobs.length;
+}
+async function goToOrder(){
+  const btn=document.querySelector('button[onclick="goToOrder()"]');
+  const label=btn?btn.textContent:'';
+  if(btn){ btn.disabled=true; btn.textContent='Saving your picture…'; }
+  try{
+    await hostRawDesignsBeforeCheckout();
+  }catch(err){
+    console.error('Could not save the design before checkout:',err);
+    if(btn){ btn.disabled=false; btn.textContent=label; }
+    showGuidanceAlert('We couldn\'t save your picture for checkout just now'+(err&&err.message?' ('+String(err.message).slice(0,120)+')':'')+'. Nothing is lost — tap Checkout to try again.');
+    return;
+  }
+  if(btn){ btn.disabled=false; btn.textContent=label; }
   const orderData = {
     placements: {
       left: placements.left ? findDesignById(placements.left).url : null,
