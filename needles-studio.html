@@ -14828,7 +14828,7 @@ async function beginFinalMockupFetch(){
 }
 
 async function runBeginFinalMockupFetch(){
-  const finishedForTrim=finalImageUrl||resultUrl;
+  const finishedForTrim=finishedArtworkForTrimmings();
   if(wrapWantsGutters() && finishedForTrim && trimmingsSettledFor!==finishedForTrim){
     await openTrimmingsPanel();
     return;
@@ -20719,8 +20719,22 @@ function closeTrimmings3D(){
 // Opens the panel if this product has a seam worth dressing; otherwise carries
 // straight on, so the caller does not have to know the rule. The explainer
 // comes first the first time; after that it goes straight to the options.
+// THE FINISHED ARTWORK, WHICHEVER ROUTE MADE IT (Sep 2026, Alyx: a 20oz cup
+// came back with a white seam and no Trimmings step offered at all).
+//
+// The gate and the panel both read finalImageUrl||resultUrl, and a Face It
+// band sets NEITHER -- approveFaceIt's band branch carries its picture in
+// wraparoundPanoramaUrl instead. So on the one path whose artwork is a band
+// that meets itself, the step could never open: the cup list was right, the
+// question asked of it was about a variable that route does not use.
+//
+// Written once so the gate and the panel cannot drift apart again.
+function finishedArtworkForTrimmings(){
+  return finalImageUrl||resultUrl||wraparoundPanoramaUrl||null;
+}
+
 async function openTrimmingsPanel(){
-  const finished=finalImageUrl||resultUrl;
+  const finished=finishedArtworkForTrimmings();
   if(!finished||!wrapWantsGutters()){
     // Straight through, and past the gate rather than back into it.
     reallyBeginFinalMockupFetch();
