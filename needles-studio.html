@@ -6302,8 +6302,22 @@ let selectedGutterColor=null;   // null = the design's own colours, as drawn
 const WRAP_GUTTER_CUPS={
   'travel-mug-40oz-vacuum': true
 };
+// A TEMPLATE MAY ASK FOR ITS OWN TRIMMING (Sep 2026, Alyx: put the trimming on
+// this design on this cup). WRAP_GUTTER_CUPS stays exactly as it was -- a
+// per-cup list, unchanged -- and this adds one narrow case beside it: a Face It
+// template that declares `gutter` brings the Trimmings step with it wherever it
+// is printed, because the seam it covers belongs to that artwork rather than to
+// the cup.
+function activeTemplateGutter(){
+  if(typeof faceItActiveTemplate!=='function')return null;
+  const t=faceItActiveTemplate();
+  const g=t&&t.gutter;
+  return (g && typeof GUTTER_CATALOG!=='undefined' && GUTTER_CATALOG[g]) ? g : null;
+}
 function wrapWantsGutters(){
-  return product==='water bottle' && WRAP_GUTTER_CUPS[selectedTravelProductKey]===true;
+  if(product!=='water bottle')return false;
+  if(WRAP_GUTTER_CUPS[selectedTravelProductKey]===true)return true;
+  return !!activeTemplateGutter();
 }
 // Draws one strip at each end, the right one mirrored. Two rules, and both are
 // load-bearing:
@@ -20683,7 +20697,9 @@ async function openTrimmingsPanel(){
   // so a change of mind replaces the trimming instead of adding to it.
   const returning=(trimmingsBakedTo&&finished===trimmingsBakedTo);
   trimmingsBaseUrl=returning?trimmingsBakedFrom:finished;
-  selectedGutter=returning?trimmingsBakedChoice:null;
+  // A template that names a trimming opens with it already picked -- the seam
+  // it covers is not the customer's problem to notice and solve.
+  selectedGutter=returning?trimmingsBakedChoice:(activeTemplateGutter()||null);
   selectedGutterColor=returning?trimmingsBakedColour:null;
   const overlay=document.getElementById('trimmingsOverlay');
   if(!overlay){ reallyBeginFinalMockupFetch(); return; }

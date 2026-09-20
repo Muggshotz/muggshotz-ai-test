@@ -1085,6 +1085,12 @@ const FACE_IT_TEMPLATES = [
     name: 'Mirror Mirror', kind: 'mirror',
     shape: 'wrap', panels: 'any', poseNote: 'three-quarter',
     idealise: true,
+    // THE TRIMMING THIS TEMPLATE ASKS FOR (Sep 2026, Alyx). The stage's two
+    // ends meet well but not invisibly, and a pillar cut from the room's own
+    // stone covers the join as architecture rather than as a patch. Declared
+    // here, on the template, because that is the scope asked for: this design
+    // on the cups it prints on, and nothing else anywhere.
+    gutter: 'Stone Pillar',
     products: ['mug', 'travel-mug-20oz', 'travel-mug-14oz-handle'] },
 
   /* ON MY MIND, AS THE BAND (Sep 2026). Not a variant of the 3:4 plate -- a
