@@ -1630,7 +1630,7 @@ Tell Needles <span style="color:#7ab8ff">what you have in mind</span>
 
 <div class="card" id="travelMugVariantCard" style="display:none">
 <div class="card-title">🍶 Which Travel Mug?</div>
-<div class="note" style="margin-top:0;margin-bottom:.9rem">Pick which travel mug you're getting before generating — the shape and print layout differ enough between them that we need this locked in first. Real price shown under each.</div>
+<div class="note" style="margin-top:0;margin-bottom:.9rem">Pick which travel mug you're getting before generating — the shape and print layout differ enough between them that we need this locked in first. Real price shown under each; shipping and any tax are calculated at checkout, before you're charged.</div>
 <!-- THE PALETTE BESIDE THE CUP (Alyx, v109: "if I clicked on the color
      palette which is below I won't be able to see them change in real
      time"). Once a cup is picked the six collapse to that one tile, and its
@@ -7068,7 +7068,7 @@ let mugColorFinishedPreGen=false;
 // whether they become real products or art-only is a product decision.
 const PRODUCT_TILE_PRICES = {
   'mug':           { from: 14.95, ladder: true  },
-  'water bottle':  { from: 24.95, ladder: true  },
+  'water bottle':  { from: 21.95, ladder: true  },
   'phone case':    { from: 19.95, ladder: false },
   'tote bag':      { from: 23.95, ladder: true  },
   'suitcase':      { from: 169.95, ladder: true },
@@ -20176,12 +20176,12 @@ let selectedGenColor=null;
 // verify-price-parity.mjs recomputes every one of these straight from
 // lib/products-catalog.js and fails on any drift, so it cannot go stale.
 const TRAVEL_MUG_PRICES = {
-  "travel-mug-20oz": 34.95,
-  "travel-mug-14oz-handle": 34.95,
+  "travel-mug-20oz": 29.95,
+  "travel-mug-14oz-handle": 24.95,
   "travel-mug-40oz-insulated": 44.95,
-  "travel-mug-40oz-vacuum": 24.95,
-  "travel-mug-32oz-gator": 34.95,
-  "travel-mug-30oz-tundra": 34.95
+  "travel-mug-40oz-vacuum": 21.95,
+  "travel-mug-32oz-gator": 26.95,
+  "travel-mug-30oz-tundra": 30.95
 };
 
 const TRAVEL_MUG_CATALOG = {
