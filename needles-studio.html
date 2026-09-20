@@ -16905,8 +16905,27 @@ const MUG3D = (function(){
       const g=c.getContext('2d');
       let x=0;
       ok.forEach(i=>{ const w=h*(i.width/i.height); g.drawImage(i,x,0,w,h); x+=w; });
-      const out=new Image(); out.src=c.toDataURL('image/png');
-      return new Promise(res=>{ out.onload=()=>res(out); });
+      // A PROMISE THAT CANNOT FAIL TO SETTLE (Sep 2026, Alyx: "the generator
+      // will not send me the final mock-up. It seems to be stuck spinning").
+      //
+      // This read: out.src = ...; return new Promise(res => out.onload = ...).
+      // Two ways to hang forever, either one enough:
+      //   - no onerror, so an image that fails to decode never resolves;
+      //   - the handler attached AFTER src, so a load that completes first is
+      //     never heard.
+      // Nothing above catches it, because nothing throws and nothing times
+      // out. openMug3DMockup awaits MUG3D.open, runReallyBeginFinalMockupFetch
+      // awaits that, and the spinner simply spins.
+      // The loader twelve lines up already does this correctly. This one was
+      // missed. Handlers first, src last, and a failure resolves with the
+      // joined canvas ungeared rather than stranding the caller.
+      const out=new Image();
+      return new Promise(res=>{
+        out.onload=()=>res(out);
+        out.onerror=()=>res(ok[0]||null);
+        try{ out.src=c.toDataURL('image/png'); }
+        catch(err){ console.error('Could not join the panels:',err); res(ok[0]||null); }
+      });
     });
   }
 
