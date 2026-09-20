@@ -71,3 +71,19 @@ three to check when the art comes back:
 - **ends that meet, and nothing important in the last tenth of either.** The
   join lands behind the handle on the 14oz cup, which is forgiving, but the
   coffee mug shares this band and is not.
+
+---
+
+## Correction: there is no second face
+
+I reported a second carved face in the cartouche at the foot of the frame and
+said the device needed one face, not two. Alyx went looking for it, could not
+find it at any magnification, and asked me to check. He was right.
+
+At 3x there is no face there. It is acanthus scrollwork around a central
+palmette, and at thumbnail size the bulb with the leaves fanning beneath it
+reads as a head with hair. I had seen it small and not verified before calling
+it a flaw.
+
+The crest is the only face in the frame, which is what the device requires.
+Nothing to paint out.
