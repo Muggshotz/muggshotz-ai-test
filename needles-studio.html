@@ -6332,12 +6332,16 @@ let selectedGutterColor=null;   // null = the design's own colours, as drawn
 // meet. Anything absent is left exactly as it is today.
 const WRAP_GUTTER_CUPS={
   'travel-mug-40oz-vacuum': true,
-  // THE CUPS MIRROR MIRROR PRINTS ON REACH THE PANEL TOO (Sep 2026, Alyx).
-  // Without these the cup got neither a fade nor a trimming: the Trimmings
-  // step simply never opened, so the band's ends were left raw with no screen
-  // on which to say otherwise. Both surfaces the stage is painted for.
-  'travel-mug-20oz': true,
-  'travel-mug-14oz-handle': true
+  // A TRIMMING COVERS A SEAM, SO IT GOES WHERE THERE IS ONE (Sep 2026, Alyx:
+  // "any run on the 14oz mug should have nothing to do with trimmings, because
+  // trimmings are only for items which meet at a seam. And the 14oz mug doesn't
+  // ever meet the image ends together. It puts the handle there instead.").
+  //
+  // I had added the 14oz here, having called its absence a gap in my own
+  // report a few minutes earlier. It was not a gap. That cup's ends are held
+  // apart by the handle, so there is no join for a pillar to stand on and
+  // nothing for the step to decide.
+  'travel-mug-20oz': true
 };
 function templateGutterChoice(){
   if(typeof faceItActiveTemplate!=='function')return null;
