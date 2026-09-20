@@ -12498,6 +12498,10 @@ function loadBaseImageForCaption(url){
       await drawCaption();
       resolve();
     };
+    // A FAILURE MUST RESOLVE (Sep 2026). Without this a picture that will not
+    // decode leaves the caption bake waiting forever -- no throw, no timeout,
+    // just a caller that never continues.
+    img.onerror=()=>{ console.error('Could not load the picture for the caption:',url); resolve(); };
     img.src=url;
   });
 }
@@ -12636,8 +12640,14 @@ function resizeImageFile(file, maxDimension){
         img.onload = function(){
           drawAndResolve(img.width, img.height, img, resolve);
         };
+        // Both halves need a way out. Neither had one, so a photo that would
+        // not decode -- or a file that would not read -- left this promise
+        // pending for the life of the page, with the upload simply never
+        // finishing and nothing on screen to say why.
+        img.onerror = function(){ console.error('Could not decode that photo.'); resolve(null); };
         img.src = ev.target.result;
       };
+      reader.onerror = function(){ console.error('Could not read that file.'); resolve(null); };
       reader.readAsDataURL(file);
     });
   }
@@ -12671,6 +12681,10 @@ function resizeDataUrl(dataUrl, maxDimension){
       ctx.drawImage(img, 0, 0, width, height);
       resolve(canvas.toDataURL('image/jpeg', 0.85));
     };
+    // Hands back the original rather than stranding the caller: an image that
+    // will not decode is a picture we cannot shrink, not a reason to stop the
+    // upload dead.
+    img.onerror = function(){ console.error('Could not decode the picture to resize it.'); resolve(dataUrl); };
     img.src = dataUrl;
   });
 }
