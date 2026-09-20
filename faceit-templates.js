@@ -564,7 +564,47 @@ function despillMagenta(img, opts){
   return c;
 }
 
-global.FaceItComposite = { opaqueBounds, placeFigure, placeBust, drawContactShadow, despillMagenta };
+/* SET THE ACTOR DOWN ON THE STAGE (Sep 2026, Alyx's design).
+   The band is a fixed painting and the merge returns its subject on magenta, so
+   all that is left is to key it and stand it in the room. Nothing here has to
+   agree with anything generated -- that is the entire point of a static stage,
+   and why this is three dozen lines rather than a seam-matching problem.
+
+   Height, not width, decides the scale: the figure is a person standing in a
+   room, so what must be right is how tall they are against that wall. On the
+   14oz band the mirror comes out around a third of the wrap, which is the
+   presence the template needs to carry.
+
+   The stage is drawn at its own size and never stretched. Fitting the band to
+   the product is extendWrapToProductRatio()'s job downstream, exactly as it is
+   for every other wrap plate. */
+function buildStagedWrap(stage, cutout, opts){
+  const o = opts || {};
+  const W = stage.naturalWidth || stage.width;
+  const H = stage.naturalHeight || stage.height;
+  const c = document.createElement('canvas');
+  c.width = W; c.height = H;
+  const ctx = c.getContext('2d');
+  ctx.drawImage(stage, 0, 0, W, H);
+
+  const keyed = despillMagenta(cutout, o.despill || {});
+  const b = opaqueBounds(keyed, 8);
+  // A key that took everything is a bad generation, not a reason to hand the
+  // customer a crash. The empty room is a poor design; a broken page is worse.
+  if (b.empty || b.w < 8 || b.h < 8) return c;
+
+  const targetH = Math.round(H * (o.fillHeight || 0.96));
+  const drawW = Math.max(1, Math.round(b.w * (targetH / b.h)));
+  const floorY = Math.round(H * (o.floorY || 1));
+  const x = Math.round((W - drawW) / 2 + (o.offsetX || 0) * W);
+  const y = floorY - targetH;
+
+  if (o.contactShadow !== false) drawContactShadow(ctx, x + drawW / 2, floorY, drawW, targetH);
+  ctx.drawImage(keyed, b.x, b.y, b.w, b.h, x, y, drawW, targetH);
+  return c;
+}
+
+global.FaceItComposite = { opaqueBounds, placeFigure, placeBust, drawContactShadow, despillMagenta, buildStagedWrap };
 
 })(window);
 
@@ -718,6 +758,57 @@ function mirrorPrompt(note){
   'The two things that change are the reflected face and the back of the figure wearing it.' + note;
 }
 
+/* THE MIRROR AS AN ACTOR, NOT A PICTURE (Sep 2026, Alyx).
+   A 3:4 portrait cannot fill a 2.15:1 band, so on a cup Mirror Mirror could
+   only ever be a small picture marooned in a lot of nothing. Alyx's way out was
+   the trick his own studio already runs: "all we're using is the same technique
+   as we used to make our little theater where Needles paints his little studio
+   images. That background is static. It's the foreground image that does all
+   the moving."
+   So the band is a painted stage (mirror_stage.webp) and this prompt returns
+   the mirror and the figure alone on magenta, to be keyed and set down on it.
+   Everything about the merge itself is unchanged from mirrorPrompt -- the same
+   flattery, the same likeness lock, the same never-a-face-on-the-figure, the
+   same back-of-the-head following the customer. Only the delivery changes.
+   The stage is fixed, which is the whole reason this works: the lighting here
+   can be written to match a painting that exists rather than hoped into
+   agreement with a second generation. Candles at the LEFT, in both. */
+function mirrorStagePrompt(note){
+  return 'The reference image shows a figure standing with their BACK to us before a large ' +
+  'ornate storybook mirror, in a candlelit room.\n\n' +
+  'CUT THEM OUT OF THAT ROOM. Give me ONLY the mirror and the figure standing at it. Do not ' +
+  'paint the room around them: no wall, no tapestry, no curtain, no candelabra, no table, no ' +
+  'vase, no flowers, no books, no floor. Everything that is not the mirror itself or the person ' +
+  'in front of it is gone.\n\n' +
+  'Replace the face in the MIRROR\'S REFLECTION with the face of the person in the uploaded ' +
+  'photo. That reflection is the only FACE in this picture you may change.\n\n' +
+  'THE FIGURE AT THE GLASS IS THE SAME PERSON, SEEN FROM BEHIND, so repaint the back of them to ' +
+  'match the person in the photo: hair colour, length, texture and the way it is worn; the build ' +
+  'and width of the shoulders; the apparent age; the skin tone of the neck and any visible arm. ' +
+  'Short hair in the photo means short hair on the figure. Let their stance and carriage follow ' +
+  'the person too.\n\n' +
+  'THE FIGURE AND THE REFLECTION ARE ONE HEAD AT ONE MOMENT. Whatever hair the figure has from ' +
+  'behind is the same hair the reflection has from the front -- same colour, same length, same ' +
+  'style, same day.\n\n' +
+  'BUT THE FIGURE NEVER GETS A FACE. We see the back of the head and shoulders only. Do not turn ' +
+  'them, do not show a profile, do not let one eye or the line of a nose come into view, and do ' +
+  'not put a second face anywhere in the picture. Keep them in the costume they are painted in ' +
+  'and standing where they are painted standing relative to the glass.\n\n' +
+  'THE MIRROR FLATTERS, AND THAT IS THE ENTIRE POINT OF THIS PICTURE. Paint the reflected face ' +
+  'as the finest version of this person: more radiant, more poised, more powerful, more stately ' +
+  'and wiser than they look in the photograph. Light them the way a court painter lights someone ' +
+  'they admire -- warm, generous, a little golden. This idealisation is deliberate and requested, ' +
+  'and it overrides any general instruction not to beautify.\n\n' +
+  'IT MUST STILL BE UNMISTAKABLY THEM. Keep the real bone structure, the real nose, the real eye ' +
+  'shape and eye colour, the real mouth, the real jaw width, the real hairline, the real age and ' +
+  'skin tone, and any distinctive features. Do not narrow the face, do not substitute a model or ' +
+  'a stock beauty, do not invent a new person.\n\n' +
+  'KEEP THE MIRROR EXACTLY AS PAINTED: its carved gilt frame, and the WINKING face carved into ' +
+  'the crest at the top, which must survive intact -- one eye closed, the knowing smile.\n\n' +
+  'LIGHTING: warm candlelight falling from the LEFT, gold on the left side of the mirror and the ' +
+  'figure, deeper shadow on their right. The glass still glows from within.\n\n' + MAGENTA_FIELD + note;
+}
+
 /* THE COURT PAINTER. The masculine half of the pair, and the difference is the
    delivery system rather than the subject: a mirror returns you to yourself,
    while a portrait presents you to everyone else. So this one flatters along a
@@ -760,7 +851,8 @@ function courtPainterPrompt(note){
 }
 
 global.FaceItPrompts = {
-  MAGENTA_FIELD, faceNoteFrom, mirror: mirrorPrompt, courtPainter: courtPainterPrompt,
+  MAGENTA_FIELD, faceNoteFrom, mirror: mirrorPrompt, mirrorStage: mirrorStagePrompt,
+  courtPainter: courtPainterPrompt,
   stoneCarve: stoneCarvePrompt,
   mugshotSubject: mugshotSubjectPrompt,
   lineupFigure: lineupFigurePrompt
@@ -958,6 +1050,42 @@ const FACE_IT_TEMPLATES = [
     name: 'Mirror Mirror', kind: 'mirror',
     shape: 'portrait', panels: 'any', poseNote: 'three-quarter',
     idealise: true },
+
+  /* MIRROR MIRROR, AS THE BAND (Sep 2026, Alyx). Not a wider painting of the
+     same scene, the way On My Mind's band is -- a 3:4 mirror stretched to
+     2.15:1 stops being a mirror. This is the portrait STANDING IN A ROOM that
+     was painted to be a band.
+
+     Alyx's design, and it is the studio's own trick turned on a template:
+     "all we're using is the same technique as we used to make our little
+     theater where Needles paints his little studio images. That background is
+     static. It's the foreground image that does all the moving."
+
+     `stage` is what makes it work. The merge returns the mirror and the figure
+     alone on magenta (mirrorStagePrompt), and buildStagedWrap keys them and
+     stands them in this room. Nothing has to agree with anything generated,
+     which is why a seam that would otherwise be a per-run gamble is settled
+     once, by the painter: the stage's far edges measure 5.5/255 apart.
+
+     It also fixes the lighting the honest way round. Two generated halves can
+     only be hoped into agreement about where the candles are; against a fixed
+     painting the cut-out's prompt is written to match what is already there.
+     Candles at the LEFT, in both.
+
+     `tile` earns its exemption here -- see tileFor(). The plate is a portrait
+     reference for the merge and would advertise the wrong shape entirely, so
+     the tile shows the band the customer is actually buying.
+
+     The mirror lands at about a third of the wrap at full band height, which
+     is the presence this template needs. Both surfaces that share the 2.14-2.15
+     band are listed; the narrower cups would crowd it and the Tundra's 3.50
+     would strand it in the middle of a very long room. */
+  { file: 'mirror_mirror.webp', tile: 'mirror_stage_tile.webp',
+    stage: 'mirror_stage.webp',
+    name: 'Mirror Mirror', kind: 'mirror',
+    shape: 'wrap', panels: 'any', poseNote: 'three-quarter',
+    idealise: true,
+    products: ['mug', 'travel-mug-14oz-handle'] },
 
   /* ON MY MIND, AS THE BAND (Sep 2026). Not a variant of the 3:4 plate -- a
      second painting of the same idea, composed wide from the start, which is

@@ -6233,6 +6233,13 @@ const GUTTER_CATALOG={
   "Astral":             { asset:"gutter-astral.webp",          thumb:"gutter-thumb-astral.webp", colorable:true, defaultColor:"#1B3D7A" },
   "Zipper":             { asset:"gutter-zipper.webp",          thumb:"gutter-thumb-zipper.webp" },
   "Rivets":             { asset:"gutter-rivots.webp",          thumb:"gutter-thumb-rivots.webp" },
+  // STANDS ON THE SEAM (Sep 2026, Alyx): "if their union is in any way
+  // irregular, we can mask it by placing an exact same pillar over it of the
+  // same material that is in the image." Cut from the same stone as the
+  // columns in mirror_stage.webp, so on that band it reads as the room's own
+  // architecture rather than as a trimming laid over a join. Not colourable --
+  // recolouring stone only ever makes it look like plastic.
+  "Stone Pillar":       { asset:"gutter-stone-pillar.webp",    thumb:"gutter-thumb-stone-pillar.webp" },
   "Film Reel":          { asset:"gutter-film.webp",            thumb:"gutter-thumb-film.webp" },
   // CURATED DOWN, not thrown away (Alyx). The set had three near-duplicate
   // pairs and was showing the same idea twice: Vintage Lace beside Doily,
@@ -8161,6 +8168,25 @@ async function sliceFaceItResultIntoPanels(resultImageUrl){
 
 // Subject in, finished strip and its three panels out. The strip is what the
 // customer sees on the easel; the panels are what go onto the mug.
+// KEY THE ACTOR, STAND IT ON THE STAGE. The sibling of buildFaceItComposite
+// below, and it fails the same way on purpose: a compositing problem must never
+// cost the customer the generation they paid for. They get the picture on its
+// own and a plain sentence, not a blank screen.
+async function buildFaceItStage(t,resultImageUrl){
+  try{
+    const [stage,cutout]=await Promise.all([
+      loadFaceItImage(t.stage),
+      loadFaceItImage(resultImageUrl)
+    ]);
+    const c=FaceItComposite.buildStagedWrap(stage,cutout,t.stageFit||{});
+    return c.toDataURL('image/png');
+  }catch(err){
+    console.error('Face It stage composite failed:',err);
+    showGuidanceAlert('Your picture came out fine, but we could not set it into the scene just now — showing you the picture on its own.');
+    return null;
+  }
+}
+
 async function buildFaceItComposite(kind,resultImageUrl,opts){
   const t=faceItActiveTemplate();
   try{
@@ -8651,7 +8677,14 @@ async function generateFaceIt(){
     } else if(faceItKind==='lineup'){
       prompt=FaceItPrompts.lineupFigure(faceNote);
     } else if(faceItKind==='mirror'){
-      prompt=FaceItPrompts.mirror(faceNote);
+      // TWO MIRRORS, TWO DELIVERIES (Sep 2026). The portrait plate wants a
+      // finished picture; the band wants the mirror and the figure alone on
+      // magenta, to be keyed and stood on a painted stage. Same merge, same
+      // flattery, same likeness lock -- only what comes back differs, so the
+      // branch is on whether the template carries a stage.
+      prompt=(faceItTpl&&faceItTpl.stage)
+        ? FaceItPrompts.mirrorStage(faceNote)
+        : FaceItPrompts.mirror(faceNote);
     } else if(faceItKind==='painter'){
       prompt=FaceItPrompts.courtPainter(faceNote);
     } else if(isTextTemplate){
@@ -8697,6 +8730,15 @@ async function generateFaceIt(){
     // Alyx's first broken print was exactly that -- the verse's left edge, cut
     // off mid-word, with the woman missing because she lives on the right.
     const bandPrintsInThirds=(product==='mug');
+    // THE STAGE GOES DOWN FIRST. What comes back from a staged template is an
+    // actor on magenta, not a design: it is keyed and set into its painted room
+    // here, and what leaves this block is an ordinary band. Everything below --
+    // the fit to the surface, the cut into thirds for a mug -- then treats it
+    // exactly as it treats any other wrap plate, because by then it is one.
+    if(faceItTpl && faceItTpl.stage){
+      const staged=await buildFaceItStage(faceItTpl,resultImageUrl);
+      if(staged)resultImageUrl=staged;
+    }
     if(faceItKind==='mugshot'||faceItKind==='lineup'){
       const built=await buildFaceItComposite(faceItKind,resultImageUrl,{
         texts:placardTexts,
