@@ -361,6 +361,16 @@ async function loadBackdropCover(key, width, height) {
   return await sharp(buf).resize(width, height, { fit: "cover" }).removeAlpha().png().toBuffer();
 }
 
+// The thin accent-colour frame, as one SVG stroke. Module-level because two
+// print builders draw it now: the per-panel one below, and the seamless wrap
+// (finishWrapStrip), where it goes on AFTER the circumference crop so it lands
+// on the print's true edge rather than inside it.
+function buildBorderSvg(width, height, hex, strokeWidth) {
+  return Buffer.from(
+    `<svg width="${width}" height="${height}"><rect x="${strokeWidth / 2}" y="${strokeWidth / 2}" width="${width - strokeWidth}" height="${height - strokeWidth}" fill="none" stroke="${hex}" stroke-width="${strokeWidth}"/></svg>`
+  );
+}
+
 export async function buildWraparoundImage(placements, canvasWidth, canvasHeight, borderHex = null, adjustments = {}) {
   const { left, front, right } = placements;
   const WHITE = { r: 255, g: 255, b: 255 };
@@ -505,11 +515,6 @@ export async function buildWraparoundImage(placements, canvasWidth, canvasHeight
   // entirely. Deliberately plain: a solid stroke, no ornamentation,
   // sized as a small fraction of the panel so it reads as a clean line
   // regardless of the print's actual resolution.
-  function buildBorderSvg(width, height, hex, strokeWidth) {
-    return Buffer.from(
-      `<svg width="${width}" height="${height}"><rect x="${strokeWidth / 2}" y="${strokeWidth / 2}" width="${width - strokeWidth}" height="${height - strokeWidth}" fill="none" stroke="${hex}" stroke-width="${strokeWidth}"/></svg>`
-    );
-  }
 
   // EDGE FADE, per panel (Sep 2026, Alyx): the fade used to be baked into
   // the photo before placement, so zooming in could crop the soft edge
@@ -724,7 +729,7 @@ export async function buildFullBleedImage(imageSource, canvasWidth, canvasHeight
 // printMode === "allCup" should ever call buildFullBleedImage going
 // forward; printMode === "fullBleed" (the Wraparound scene-continuation
 // customers actually use today) calls this one instead.
-export async function buildSeamlessWrapImage(placements, canvasWidth, canvasHeight) {
+export async function buildSeamlessWrapImage(placements, canvasWidth, canvasHeight, borderHex = null) {
   // UPDATED (Aug 2026, Alyx's request/correction): a real single-angle
   // photo of a wraparound mug can only ever show roughly 85-90% of its
   // true circumference -- the outer few percent on each side always
@@ -779,7 +784,7 @@ export async function buildSeamlessWrapImage(placements, canvasWidth, canvasHeig
     .png()
     .toBuffer();
 
-  return await finishWrapStrip(stripBuffer, canvasWidth, canvasHeight);
+  return await finishWrapStrip(stripBuffer, canvasWidth, canvasHeight, borderHex);
 }
 
 // THE UNCUT PANORAMA GOES STRAIGHT THROUGH. Alyx: "Why you keep talking about
@@ -801,15 +806,30 @@ export async function buildSeamlessWrapImage(placements, canvasWidth, canvasHeig
 // buildSeamlessWrapImage above stays for the paths that really do hold three
 // separate pictures: Three Panels mode, and the classic per-panel fallback
 // when the panorama call fails.
-export async function buildSeamlessWrapFromPanorama(panoramaSource, canvasWidth, canvasHeight) {
+// The wrap's one frame flag. The client stores border on every placement it
+// fills, so front is the one to read; absent = on, exactly as the panels.
+export function wrapBorderHex(hex, adjustments) {
+  const front = (adjustments || {}).front || {};
+  return front.border === false ? null : (hex || null);
+}
+
+export async function buildSeamlessWrapFromPanorama(panoramaSource, canvasWidth, canvasHeight, borderHex = null) {
   if (!panoramaSource) throw new Error("No panorama provided for seamless wrap.");
   const stripBuffer = await resolveImageBuffer(panoramaSource);
-  return await finishWrapStrip(stripBuffer, canvasWidth, canvasHeight);
+  return await finishWrapStrip(stripBuffer, canvasWidth, canvasHeight, borderHex);
 }
 
 // The shared tail: takes ONE wide strip, however it was arrived at, and fits
 // it to the print canvas.
-async function finishWrapStrip(stripBuffer, canvasWidth, canvasHeight) {
+// THE THIN FRAME ON A WRAPAROUND (Sep 2026, Alyx: "I see no reason why this
+// couldn't be added to the coffee mugs for wrap around whenever any accent is
+// chosen"). Three Panels has had the accent-colour frame as a placement flag
+// since the Fit box got its checkbox; the wrap never drew one because this
+// tail is a crop and a stretch and nothing else. Same rule as the panels --
+// on unless the placement says border:false, the colour from the variant --
+// drawn after the crop so it traces the print's real edge, which on a mug is
+// where the picture stops short of the handle.
+async function finishWrapStrip(stripBuffer, canvasWidth, canvasHeight, borderHex = null) {
   const CROP_FRACTION = 0.10;
   const meta = await sharp(stripBuffer).metadata();
   // Intentional circumference-compensation crop (10% total, 5% each side).
@@ -839,12 +859,18 @@ async function finishWrapStrip(stripBuffer, canvasWidth, canvasHeight) {
     cropHeight = Math.round(preCropWidth / targetAspect);
     cropTop = Math.round((meta.height - cropHeight) / 2);
   }
-  return await sharp(stripBuffer)
+  const fitted = await sharp(stripBuffer)
     .extract({ left: cropLeft, top: cropTop, width: cropWidth, height: cropHeight })
     // "fill" is now safe (no distortion) since the extract above already
     // matches canvasWidth/canvasHeight's exact aspect ratio -- this is
     // purely a scale, not a second crop.
     .resize(canvasWidth, canvasHeight, { fit: "fill" })
+    .png()
+    .toBuffer();
+  if (!/^#[0-9a-fA-F]{6}$/.test(String(borderHex || ""))) return fitted;
+  const strokeWidth = Math.max(6, Math.round(Math.min(canvasWidth, canvasHeight) * 0.008));
+  return await sharp(fitted)
+    .composite([{ input: buildBorderSvg(canvasWidth, canvasHeight, borderHex, strokeWidth), top: 0, left: 0 }])
     .png()
     .toBuffer();
 }
@@ -1124,8 +1150,8 @@ export async function placeProductOrder({
       ? await buildFullBleedImage(placements.front || placements.left || placements.right, width, height)
       : isSeamlessWrap
       ? (panoramaImage
-          ? await buildSeamlessWrapFromPanorama(panoramaImage, width, height)
-          : await buildSeamlessWrapImage(placements, width, height))
+          ? await buildSeamlessWrapFromPanorama(panoramaImage, width, height, wrapBorderHex(hex, placementAdjust))
+          : await buildSeamlessWrapImage(placements, width, height, wrapBorderHex(hex, placementAdjust)))
       : await buildWraparoundImage(placements, width, height, hex || null, placementAdjust || {});
     const imageId = await uploadImageToPrintify(buffer, `muggshotz-${Date.now()}.png`);
     printifyImages[position] = imageId;

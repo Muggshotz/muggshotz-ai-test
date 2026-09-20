@@ -1817,6 +1817,11 @@ Tell Needles <span style="color:#7ab8ff">what you have in mind</span>
 <div id="revealFitHost" style="display:none;margin:.9rem 0"></div>
 <div class="note" id="revealFitNote" style="display:none;margin-top:0;margin-bottom:.6rem;color:#7ab8ff;font-size:11px"></div>
 <div class="note" id="revealEdgeQuestionNote" style="margin-top:0;margin-bottom:.9rem">How should the edges of your picture look on the mug?</div>
+<!-- THE THIN FRAME, ON A WRAPAROUND (Alyx, Sep 2026). The same switch the Fit
+     box offers on Three Panels, on the one screen a wraparound has for its
+     edges. Shown only on a mug with an accent colour; a wrap on a cup has no
+     second colour to draw with (see getMugAccentHex). -->
+<label id="revealAccentFrameRow" style="display:none;align-items:center;justify-content:center;gap:8px;margin:0 0 .9rem;font-size:12px;color:#7ab8ff;cursor:pointer"><input type="checkbox" id="revealAccentFrameBox" style="width:18px;height:18px" onchange="setWrapAccentFrame(this.checked)"><span>Thin frame around the picture in your mug's colour</span><span id="revealAccentFrameSwatch" style="display:inline-block;width:14px;height:14px;border-radius:3px;border:1px solid #666"></span></label>
 <div class="note" id="revealRequiredFadeNote" style="display:none;margin-top:0;margin-bottom:.9rem;color:#7ab8ff">This frame comes with a soft edge built in — its decoration reaches into the opening, and a hard edge would cut across it. Choose how far the fade reaches below.</div>
 <div class="bi-row" id="revealEdgeButtonsRow">
 <button type="button" class="generate-btn" style="flex:1;width:auto;padding:.9rem .4rem" onclick="chooseEdgeStyleAndContinue(true)">◻️ Hard Edges</button>
@@ -13554,6 +13559,7 @@ function showEdgeQuestion(){
   const fadePanel=document.getElementById('revealFadeSliderPanel');
   const saving=document.getElementById('revealSavingNote');
   if(saving)saving.style.display='none';
+  renderWrapAccentFrameRow();
   // A FRAME THAT COMES WITH A FADE DOESN'T ASK (Alyx, Sep 2026).
   // Offering Hard Edges here and then overruling it would read as a bug.
   // Skip the question entirely, say why in one line, and land straight on
@@ -13575,6 +13581,42 @@ function showEdgeQuestion(){
     if(sl){sl.min='0';sl.max='100';}
   }
   overlay.scrollTop=0;
+}
+// THE WRAP'S THIN FRAME (Alyx, Sep 2026: "I see no reason why this couldn't be
+// added to the coffee mugs for wrap around whenever any accent is chosen. On
+// mirror mirror and the court [painter] in particular").
+//
+// Three Panels has had it since the Fit box got its checkbox: a placement flag
+// the printer draws. A wraparound never shows Fit, so nothing asked -- and the
+// three things that could draw it disagreed: the edge screen's preview drew it
+// always, the 3D mockup never, the print never. Now it is one flag, read by all
+// three, stored on every placement the wrap fills, exactly as the Fit box
+// stores it. Absent = on, so a wrap made before the switch existed keeps
+// printing as the panels always have.
+function wrapAccentFrameWanted(){
+  if(!getMugAccentHex())return false;
+  const id=placements.front||placements.left||placements.right;
+  if(!id)return false;
+  return getDesignAdjust(id).border!==false;
+}
+function setWrapAccentFrame(on){
+  const seen=[];
+  ['left','front','right'].forEach(pos=>{const id=placements[pos]; if(id&&!seen.includes(id)&&findDesignById(id))seen.push(id);});
+  seen.forEach(id=>{const cur=getDesignAdjust(id);cur.border=!!on;setDesignAdjust(id,cur);});
+  saveMugState();
+  renderRevealFadeSurfaces();
+}
+function renderWrapAccentFrameRow(){
+  const row=document.getElementById('revealAccentFrameRow');
+  if(!row)return;
+  const hex=getMugAccentHex();
+  const show=!revealFlowThreePanel && !!hex;
+  row.style.display=show?'flex':'none';
+  if(!show)return;
+  const box=document.getElementById('revealAccentFrameBox');
+  if(box)box.checked=wrapAccentFrameWanted();
+  const sw=document.getElementById('revealAccentFrameSwatch');
+  if(sw)sw.style.background=hex;
 }
 // The fade the picture carries right now (a picture captioned the old
 // way, words inside the file, keeps its real fade on preBakeAdjust).
@@ -14224,8 +14266,11 @@ async function renderRevealFadeSurfaces(){
       // BORDER AFTER FADE, same order as the print. V303 drew it before, and
       // the fade ate it -- a border on the edge of a picture whose edge has
       // just been dissolved into the mug colour is no border at all.
+      // On a wraparound the frame is the customer's switch on this screen; on
+      // the panels it is the Fit box's, already on the placement.
+      const wantFrame=revealFlowThreePanel || wrapAccentFrameWanted();
       const faded=await Promise.all(fadedOnly.map(async u=>{
-        if(!u)return u;
+        if(!u||!wantFrame)return u;
         try{ return await drawAccentBorderOnImageUrl(u); }
         catch(err){ console.error('Accent border could not be drawn onto the faded cup preview:',err); return u; }
       }));
@@ -16179,7 +16224,13 @@ async function openMug3DMockup(){
     sizeLabel: selectedGenSize,
     styleName: selectedGenStyle,
     colorHex: match?match.hex:'#ffffff',
-    panoramaUrl: (mugPrintMode==='wraparound')?wraparoundPanoramaUrl:null,
+    // The wrap's thin frame, drawn on the strip the way the print draws it
+    // on the file -- the placement flag says whether (see wrapAccentFrameWanted).
+    panoramaUrl: (mugPrintMode==='wraparound')
+      ? ((wraparoundPanoramaUrl && wrapAccentFrameWanted())
+          ? await drawAccentBorderOnImageUrl(wraparoundPanoramaUrl).catch(()=>wraparoundPanoramaUrl)
+          : wraparoundPanoramaUrl)
+      : null,
     panelUrls: mugPanelUrls
   };
   return MUG3D.open(stage,openOpts).then(()=>{

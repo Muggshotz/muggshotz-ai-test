@@ -11,6 +11,7 @@ import {
   buildFullBleedImage,
   buildSeamlessWrapImage,
   buildSeamlessWrapFromPanorama,
+  wrapBorderHex,
   buildFrontBackImages,
   buildSingleImage,
   resolveVariant,
@@ -84,8 +85,8 @@ async function handleStart(req, res) {
       ? await buildFullBleedImage(placements.front || placements.left || placements.right, width, height)
       : isSeamlessWrap
       ? (panoramaImage
-          ? await buildSeamlessWrapFromPanorama(panoramaImage, width, height)
-          : await buildSeamlessWrapImage(placements, width, height))
+          ? await buildSeamlessWrapFromPanorama(panoramaImage, width, height, wrapBorderHex(hex, placementAdjust))
+          : await buildSeamlessWrapImage(placements, width, height, wrapBorderHex(hex, placementAdjust)))
       : await buildWraparoundImage(placements, width, height, hex || null, placementAdjust || {});
     const imageId = await uploadImageToPrintify(buffer, `muggshotz-mockup-preview-${Date.now()}.png`);
     printifyImages[position] = imageId;
