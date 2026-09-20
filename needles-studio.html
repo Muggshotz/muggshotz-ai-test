@@ -6034,11 +6034,30 @@ async function extendWrapToProductRatio(url,opts){
   c.width=targetW; c.height=h;
   const ctx=c.getContext('2d');
   ctx.drawImage(big,0,0,targetW,h,0,0,targetW,h);
-  if(!closes){
+  // A painted band keeps its own top and bottom as well. softenTopAndBottom
+  // eats the outer tenth into the cup's colour, which is right for artwork
+  // that was never composed for a band and wrong for artwork that was.
+  if(!closes && flankMode==='edge'){
+    return c.toDataURL('image/jpeg',0.92);
+  }
+  if(!closes && flankMode!=='edge'){
     // THE ENDS FADE TO THE CUP (Alyx, v105: "fade towards the colour of
     // the bottle around the edges so that it doesn't have that sharp
     // abrupt line"). The band stops short of meeting itself on this cup,
     // so each end dissolves into the cup's colour over the outer sixth.
+    //
+    // NOT ON A PAINTED BAND (Alyx, Sep 2026: "we realized that the fade
+    // didn't belong there and we had it removed... take it off"). This is
+    // the same call he made about the flanks -- "the image doesn't meet at
+    // the handle anyway" -- and it applies here for the same reason: a fade
+    // at the ends exists to soften a join, and there is no join. On a plate
+    // painted to end on a plain wash it dissolved a sixth of the artwork at
+    // each end for nothing, and on a stage painted to meet itself it
+    // destroyed the very join it was meant to serve.
+    //
+    // Keyed off flanks:'edge' because only the Face It band path asks for
+    // that, and it asks for it for exactly this reason. A panorama still
+    // fades: its ends are scenery that really does stop.
     const hex=getSelectedProductColorHex();
     const F=Math.round(targetW/6);
     const fadeTo=(x0,x1)=>{
