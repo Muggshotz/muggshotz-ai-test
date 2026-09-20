@@ -364,6 +364,31 @@ async function loadBackdropCover(key, width, height) {
 export async function buildWraparoundImage(placements, canvasWidth, canvasHeight, borderHex = null, adjustments = {}) {
   const { left, front, right } = placements;
   const WHITE = { r: 255, g: 255, b: 255 };
+  // THE SURFACE UNDER THE PICTURE IS THE PRODUCT, NOT WHITE (Sep 2026).
+  //
+  // Wherever the picture does not reach -- a photo shrunk below 100%, or a
+  // portrait on a band far wider than it is -- something has to fill the rest,
+  // and that something was hardcoded white. It went unnoticed for as long as
+  // every product was a white mug: white padding on a white surface is
+  // invisible. It is not invisible on a red tumbler, where it prints as white
+  // bars around the picture.
+  //
+  // The rule was already written down one function over, on the fade: "a fade
+  // is a BACKGROUND, so it takes the colour of the surface the picture is
+  // printed ON." The fade was taught that in Aug 2026 and carries fadeHex to
+  // prove it. The layer underneath the fade never was, so the two disagreed
+  // about what colour the cup is. Same fact, same source, now.
+  const hexToRgb = (hex) => {
+    const m = /^#([0-9a-fA-F]{6})$/.exec(String(hex || ""));
+    if (!m) return WHITE;
+    const n = parseInt(m[1], 16);
+    return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
+  };
+  const SURFACE = hexToRgb(
+    ["front", "left", "right"]
+      .map((p) => (adjustments[p] || {}).fadeHex)
+      .find((h) => /^#[0-9a-fA-F]{6}$/.test(String(h || "")))
+  );
   const sectionWidth = Math.round(canvasWidth / 3);
   const lastSectionWidth = canvasWidth - sectionWidth * 2;
 
@@ -630,7 +655,7 @@ export async function buildWraparoundImage(placements, canvasWidth, canvasHeight
     }
     const pieceInput = (base && fadePct > 0) ? await applyFadeAsAlpha(piece, fadePct) : piece;
     const buffer = await sharp(base || {
-      create: { width: targetW, height: targetH, channels: 3, background: WHITE }
+      create: { width: targetW, height: targetH, channels: 3, background: hexToRgb(fadeHex) }
     })
       .composite([{ input: pieceInput, left: pasteLeft, top: pasteTop }])
       .png()
@@ -671,7 +696,7 @@ export async function buildWraparoundImage(placements, canvasWidth, canvasHeight
   const composites = [leftComposite, frontComposite, rightComposite].filter(Boolean);
 
   return await sharp({
-    create: { width: canvasWidth, height: canvasHeight, channels: 3, background: WHITE }
+    create: { width: canvasWidth, height: canvasHeight, channels: 3, background: SURFACE }
   })
     .composite(composites)
     .png()
