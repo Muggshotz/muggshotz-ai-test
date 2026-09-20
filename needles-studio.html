@@ -6034,13 +6034,26 @@ async function extendWrapToProductRatio(url,opts){
   c.width=targetW; c.height=h;
   const ctx=c.getContext('2d');
   ctx.drawImage(big,0,0,targetW,h,0,0,targetW,h);
-  // A painted band keeps its own top and bottom as well. softenTopAndBottom
-  // eats the outer tenth into the cup's colour, which is right for artwork
-  // that was never composed for a band and wrong for artwork that was.
-  if(!closes && flankMode==='edge'){
+  // FADE IS NOT A DEFAULT (Alyx, Sep 2026: "you need to take the fade off of
+  // the 20oz mug unless specifically requested. It should not be a default
+  // setting.").
+  //
+  // This branch used to fade every band that does not close: the outer SIXTH
+  // at each end into the cup's colour, plus softenTopAndBottom's outer tenth
+  // at top and bottom. Nobody asked for it per design; it simply happened,
+  // and on a picture with its subject dead centre the two compounded into a
+  // wash across the whole cup.
+  //
+  // The rest of this file settled this argument once already, on edgeFadeChoice
+  // -- a tri-state where fade requires the POSITIVE value 'fade', precisely so
+  // that no path which merely clears a flag can switch it on. The wrap builder
+  // was the one place still fading on its own initiative. It now asks the same
+  // question everything else asks.
+  const fadeWasAskedFor=(typeof edgeFadeChoice!=='undefined' && edgeFadeChoice==='fade');
+  if(!closes && !fadeWasAskedFor){
     return c.toDataURL('image/jpeg',0.92);
   }
-  if(!closes && flankMode!=='edge'){
+  if(!closes){
     // THE ENDS FADE TO THE CUP (Alyx, v105: "fade towards the colour of
     // the bottle around the edges so that it doesn't have that sharp
     // abrupt line"). The band stops short of meeting itself on this cup,
@@ -6055,9 +6068,8 @@ async function extendWrapToProductRatio(url,opts){
     // each end for nothing, and on a stage painted to meet itself it
     // destroyed the very join it was meant to serve.
     //
-    // Keyed off flanks:'edge' because only the Face It band path asks for
-    // that, and it asks for it for exactly this reason. A panorama still
-    // fades: its ends are scenery that really does stop.
+    // Reached only when the customer has actually chosen a fade on the Edge
+    // Fade control. Then it is theirs to have, on any band, painted or not.
     const hex=getSelectedProductColorHex();
     const F=Math.round(targetW/6);
     const fadeTo=(x0,x1)=>{
