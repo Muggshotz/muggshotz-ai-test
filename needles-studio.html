@@ -9029,7 +9029,20 @@ async function approveFaceIt(){
     renderPositionHolder();
     updatePlacementSummary();
     saveMugState();
-    smoothScrollToTarget('positionHolderCard','center');
+    // THE SAME ENDING AS THE PANORAMA (Sep 2026, Alyx: "I need a mock up on a
+    // rotating 3D carousel"). The state above is the set the describe path's
+    // panorama fills, and that path then calls enterRevealStage(), which on a
+    // panorama goes to the frame offer and the mockup -- where the 3D mug
+    // opens. This branch stopped one call short: it scrolled to the panel
+    // card, whose Continue button is hidden on a panorama by design, and the
+    // customer sat there with a finished band and no way forward. The first
+    // Court Painter band on a mug is what showed it; Mirror Mirror's band had
+    // only ever been run on cups, which take the branch below.
+    if(faceItWraparoundActive()){
+      enterRevealStage();
+    } else {
+      smoothScrollToTarget('positionHolderCard','center');
+    }
     return;
   }
 
