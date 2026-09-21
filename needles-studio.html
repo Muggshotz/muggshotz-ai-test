@@ -14585,7 +14585,22 @@ function openFrameFadeOverlay(){
   // "exactly as it is", so defaulting a 30% fade onto it is meddling.
   // A transfer opens at 0% -- the slider is still right there for anyone
   // who decides they want a fade after all.
-  const openingFadePct=lastGenerationWasExactTransfer?0:DEFAULT_FADE_PCT;
+  // A BAND THAT MEETS ITSELF ASKS FOR NOTHING (Alyx, Sep 2026: "why does it
+  // have to have fades in the end at all? In the original mugs there was no
+  // fade, it just blended perfectly at the seams. This was one of the few
+  // mugs that didn't need trimmings because this blend at the seams was so
+  // good.").
+  //
+  // This page opened every design at DEFAULT_FADE_PCT, so a customer who
+  // pressed Continue without touching the slider got a 30% fade nobody asked
+  // for -- the cup's colour washed into both ends of a band composed to meet
+  // itself. On a wrapped cup that is the one thing the artwork already solves,
+  // and it is the rule this file settled on edgeFadeChoice and states in
+  // CLAUDE.md: fade is opt-in everywhere. So a cup's wrap opens at 0, exactly
+  // as an exact transfer does, with the slider right there for anyone who
+  // wants one after all.
+  const bandMeetsItself=(product==='water bottle' && mugPrintMode==='wraparound');
+  const openingFadePct=(lastGenerationWasExactTransfer||bandMeetsItself)?0:DEFAULT_FADE_PCT;
   frameFadeAmountPct=openingFadePct;
   document.getElementById('frameFadeAmountSlider').value=openingFadePct;
   // Opens at full size every visit. A size carried over from a previous design
