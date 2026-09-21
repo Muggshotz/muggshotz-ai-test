@@ -1874,7 +1874,24 @@ Tell Needles <span style="color:#7ab8ff">what you have in mind</span>
 #trimmingsLeftCol{position:sticky;top:0;z-index:3;background:#151b24;padding-bottom:.4rem}
 /* Brighter than No Thanks beside it, and unmistakably a live option rather
    than a way of declining one. */
-.trim-fade-btn{border-color:#29a3ff!important;color:#8fd4ff!important;box-shadow:0 0 12px rgba(41,163,255,.35)}
+/* WHAT IS CHOSEN MUST LOOK CHOSEN (Alyx, Sep 2026: "why is fade to cup still
+   highlighted and flashing?"). It was not his click and it was not the
+   selection logic, which was right all along. .download-btn had NO .selected
+   rule anywhere in this file -- only .btn-select.selected, and these two are
+   .download-btn -- so toggling 'selected' on No Thanks added a class that
+   styled nothing. The chosen option rendered identically to an unchosen one,
+   in #003c8c on near-black, while the option NOBODY had chosen carried a neon
+   border, a halo and a pulse. The panel was advertising the wrong answer, and
+   anyone would read it the way he did.
+   Same visual language as .btn-select.selected, which is what the twelve tiles
+   above already use, so "chosen" means one thing on this screen. */
+.download-btn.selected{border-color:#29a3ff!important;border-width:3px!important;background:#0e2036!important;color:#fff!important;box-shadow:0 0 14px rgba(41,163,255,.75)}
+/* His call, and it stands: "you do the Fade to Cup button in a noticeably
+   brighter neon blue" -- so the brighter blue stays. The permanent HALO does
+   not, and neither does the pulse (see pickTrimming): a glow is how this page
+   says "active" everywhere else, which is precisely how it came to be read as
+   active. Brighter than its neighbour, not lit. */
+.trim-fade-btn{border-color:#29a3ff!important;color:#8fd4ff!important}
 .trim-fade-btn.selected{color:#fff!important;box-shadow:0 0 16px rgba(41,163,255,.6)}
 @media (min-width:900px){
   /* WIDER CARD, WIDER COLUMN (Alyx: "I thought we agreed that we were going to
@@ -21176,11 +21193,18 @@ async function pickTrimming(key){
   const fadeBtn=document.getElementById('trimmingsFadeBtn');
   if(fadeBtn){
     fadeBtn.classList.toggle('selected',selectedGutter===WRAP_EDGE_FADE);
-    // PULSES UNTIL SOMETHING HAS BEEN TRIED, THEN SETTLES. A blink that never
-    // stops is a blink people stop seeing, and it would go on competing with
-    // Continue after the decision it exists to advertise has been made. The
-    // frame offer on the mockup already behaves exactly this way.
-    fadeBtn.classList.toggle('cta-flash',selectedGutter===null);
+    // AND THE PULSE GOES (Alyx, twice, the second time on the deployed site:
+    // "why is fade to cup still highlighted and flashing?").
+    //
+    // The comment that used to stand here said it pulses "until something has
+    // been tried, then settles", and the condition it was written under is
+    // selectedGutter===null. But null is not "nothing has been tried" -- null
+    // is No Thanks, which is a real choice AND the default the panel opens on.
+    // So it pulsed from the moment the screen appeared and went on pulsing if
+    // you chose No Thanks, which is to say: it advertised itself hardest
+    // exactly when the customer had already decided against it.
+    // Intent and condition never agreed. The condition is gone.
+    fadeBtn.classList.remove('cta-flash');
   }
   await updateTrimmingsPreview();
   // JUMP TO CONTINUE (Alyx). Picking a trimming is the moment the customer is
