@@ -14381,6 +14381,12 @@ async function bakeFadeIntoDesigns(fadeAmountPct){
     // the design. These products have exactly one design; replace it in place.
     const faded=await renderFadedArtwork(revealOriginalArtworkUrls[0],hex,fadeAmountPct,frameFadeSizePct);
     const uploaded=await uploadCompositedImage(faded,strict);
+    // Remembered for Turn the Picture (Trimmings): a fade lives at the band's
+    // ENDS, so turning the faded band would carry it into the middle of the
+    // picture -- Alyx saw exactly that, a soft red gap between the face and
+    // the words. The turn is built from this unfaded copy and faded again at
+    // the new ends instead.
+    cupFadeBaked={from:revealOriginalArtworkUrls[0],to:uploaded,hex,pct:fadeAmountPct,size:frameFadeSizePct};
     const slotId=placements.front||placements.left||placements.right;
     const design=slotId?findDesignById(slotId):null;
     if(design)design.url=uploaded;
@@ -20748,6 +20754,23 @@ function cupHandleSitsOnPrint(){ return product==='water bottle' && !!WRAP_HANDL
 // without one), and remembered so a Back restores the slider.
 let wrapRollPct=0;
 let trimmingsBakedRoll=0;
+// The cup's fade bake, when one ran: the band before it, the band after it,
+// and what it applied -- see bakeFadeIntoDesigns. null when no fade was baked.
+let cupFadeBaked=null;
+let trimmingsFastUnfaded=null;
+// The turned band, built the right way round: if the band on this panel is a
+// faded one, turn the UNFADED copy and fade it again at the new ends, so the
+// fade stays at the seam instead of travelling into the picture. With no fade
+// baked, turning the band itself is the same thing.
+async function turnedWrapForTrimmings(pct,forPreview){
+  const base=forPreview?(trimmingsFastUrl||trimmingsBaseUrl):trimmingsBaseUrl;
+  if(!pct)return base;
+  const faded=cupFadeBaked&&cupFadeBaked.to&&cupFadeBaked.to===trimmingsBaseUrl&&cupFadeBaked.from;
+  if(!faded)return rollWrapImage(base,pct);
+  const src=forPreview?(trimmingsFastUnfaded||cupFadeBaked.from):cupFadeBaked.from;
+  const turned=await rollWrapImage(src,pct);
+  return renderFadedArtwork(turned,getSelectedProductColorHex()||cupFadeBaked.hex,cupFadeBaked.pct,cupFadeBaked.size);
+}
 // Slide the picture sideways by pct% of its width and wrap what falls off one
 // end back onto the other. The band's physical seam stays at the back of the
 // cup; the picture's own join moves to wherever the roll leaves it, which on a
@@ -20998,6 +21021,7 @@ async function openTrimmingsPanel(){
   const overlay=document.getElementById('trimmingsOverlay');
   if(!overlay){ reallyBeginFinalMockupFetch(); return; }
   trimmingsFastUrl=await makeTrimmingsFastBase(trimmingsBaseUrl);
+  trimmingsFastUnfaded=(cupFadeBaked&&cupFadeBaked.to===trimmingsBaseUrl&&cupFadeBaked.from)?await makeTrimmingsFastBase(cupFadeBaked.from):null;
   await showTrimmingsGridPanel();
 }
 
@@ -21250,7 +21274,7 @@ async function updateTrimmingsPreview(){
   if(!trimmingsBaseUrl)return;
   try{
     // Always from the ORIGINAL, never from what is on screen.
-    const turned=await rollWrapImage(trimmingsFastUrl||trimmingsBaseUrl,cupHandleSitsOnPrint()?wrapRollPct:0);
+    const turned=await turnedWrapForTrimmings(cupHandleSitsOnPrint()?wrapRollPct:0,true);
     const painted=await paintWrapGutters(turned,getSelectedProductColorHex(),WRAP_GUTTER_WIDTH,selectedGutter,true);
     if(img)img.src=painted;
     // The cup takes the same wrap without pausing, rebuilding or reloading --
@@ -21288,7 +21312,7 @@ async function confirmTrimmingAndContinue(){
     if(saving)saving.style.display='none';
     let err=null;
     try{
-      const turned=await rollWrapImage(trimmingsBaseUrl,rolled?wrapRollPct:0);
+      const turned=await turnedWrapForTrimmings(rolled?wrapRollPct:0,false);
       const painted=await paintWrapGutters(turned,getSelectedProductColorHex(),WRAP_GUTTER_WIDTH,selectedGutter);
       const uploaded=await uploadCompositedImage(painted,{strict:true});
       // Recorded before anything else consumes it, so a Back from the mockup
