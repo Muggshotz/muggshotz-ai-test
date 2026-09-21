@@ -20800,7 +20800,9 @@ async function rollWrapImage(url,pct){
   const c=document.createElement('canvas'); c.width=w; c.height=h;
   const ctx=c.getContext('2d');
   ctx.drawImage(img,dx,0); ctx.drawImage(img,dx>0?dx-w:dx+w,0);
-  return c.toDataURL('image/jpeg',0.92);
+  // 0.95, not the pipeline's working 0.92: a turn is the ONLY redraw this
+  // picture gets on its way to the print, so it is not a working copy.
+  return c.toDataURL('image/jpeg',0.95);
 }
 let wrapRollTimer=null;
 function setWrapRoll(pct,resetSlider){
@@ -21290,7 +21292,27 @@ async function updateTrimmingsPreview(){
   try{
     // Always from the ORIGINAL, never from what is on screen.
     const turned=await turnedWrapForTrimmings(cupHandleSitsOnPrint()?wrapRollPct:0,true);
-    const painted=await paintWrapGutters(turned,getSelectedProductColorHex(),WRAP_GUTTER_WIDTH,selectedGutter,true);
+    // THE WRAP THAT ALREADY WORKS (Alyx, Sep 2026, after three wrong answers
+    // from me: "whatever your diagnosis is, if it is the correct diagnosis it
+    // should be able to answer why the image wraps completely around the mug
+    // when it first begins ... learning how it does that trick is the key to
+    // learning how to make the rotation work").
+    //
+    // It was the right instruction and the trick is simply that the cup mounts
+    // with trimmingsBaseUrl and never goes near paintWrapGutters -- so it wraps
+    // 360 degrees with nothing painted on it, which is the result a turn is
+    // supposed to preserve. paintWrapGutters ends in an unconditional plain
+    // gutter, 6% of cup colour at both ends, so routing a turn through it
+    // stamped a strip nobody chose. Its own comment calls that a fallback for a
+    // chosen trimming whose asset will not load; it was running for "nothing
+    // chosen" too.
+    //
+    // So: nothing chosen, nothing painted, and the painter is not called. The
+    // turn hands over exactly what it was given, rolled -- end becoming
+    // beginning -- which is what he asked for in the first place.
+    const painted=selectedGutter
+      ? await paintWrapGutters(turned,getSelectedProductColorHex(),WRAP_GUTTER_WIDTH,selectedGutter,true)
+      : turned;
     if(img)img.src=painted;
     // The cup takes the same wrap without pausing, rebuilding or reloading --
     // one canvas draw and one texture upload.
@@ -21328,7 +21350,11 @@ async function confirmTrimmingAndContinue(){
     let err=null;
     try{
       const turned=await turnedWrapForTrimmings(rolled?wrapRollPct:0,false);
-      const painted=await paintWrapGutters(turned,getSelectedProductColorHex(),WRAP_GUTTER_WIDTH,selectedGutter);
+      // As the preview above: nothing chosen means the painter is not called,
+      // so the print is the turned band and nothing else.
+      const painted=selectedGutter
+        ? await paintWrapGutters(turned,getSelectedProductColorHex(),WRAP_GUTTER_WIDTH,selectedGutter)
+        : turned;
       const uploaded=await uploadCompositedImage(painted,{strict:true});
       // Recorded before anything else consumes it, so a Back from the mockup
       // can find its way to the untrimmed original.
