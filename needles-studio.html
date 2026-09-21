@@ -1846,7 +1846,7 @@ Tell Needles <span style="color:#7ab8ff">what you have in mind</span>
      for a cup whose wrap actually closes -- see wrapWantsGutters(). -->
 <div id="trimmingsOverlay" class="step-lock-overlay" style="display:none">
 <div class="card" id="trimmingsCard" style="max-width:560px;width:100%;margin:auto;position:relative;max-height:92vh;overflow-y:auto;text-align:center">
-<div class="card-title">🎀 Trimmings</div>
+<div class="card-title" id="trimmingsCardTitle">🎀 Trimmings</div>
 <!-- THE EXPLANATION IS THE CUP (Alyx, Sep 2026): "you wouldn't even need as
      comprehensive an explanation at this point, because all they do is click
      on a trimming and they immediately see what it does."
@@ -1856,7 +1856,9 @@ Tell Needles <span style="color:#7ab8ff">what you have in mind</span>
      That beats any pair of crops, because it is the actual object and they are
      the one working it -- so the panel of before-and-afters that used to stand
      in front of this one is gone, and two sentences take its place. -->
-<div class="note" style="margin-top:0;margin-bottom:.6rem;text-align:left;line-height:1.5">Your picture goes <b>all the way around</b> this cup, so its two ends come back and meet on the back. Tap a trimming and the cup wears it straight away &mdash; tap <b>No Thanks</b> to see the join bare. It's free to look either way.</div>
+<div class="note" id="trimmingsIntroNote" style="margin-top:0;margin-bottom:.6rem;text-align:left;line-height:1.5">Your picture goes <b>all the way around</b> this cup, so its two ends come back and meet on the back. Tap a trimming and the cup wears it straight away &mdash; tap <b>No Thanks</b> to see the join bare. It's free to look either way.</div>
+<!-- What the same screen says on a cup with NO join -- see renderTrimmingsChoices(). -->
+<div class="note" id="trimmingsNoSeamNote" style="display:none;margin-top:0;margin-bottom:.6rem;text-align:left;line-height:1.5">Your picture goes <b>right the way round</b> this cup and its two ends <b>overlap</b>, so there is no join to cover and nothing here to trim. What there is to decide is <b>where the handle lands</b> &mdash; turn the picture below until it sits where you want it.</div>
 <!-- SIDE BY SIDE (Alyx, Sep 2026): "there's gotta be some way to recompose
      this so that you can look at all of the available trimmings, and the image
      it would go on to, simultaneously as you're applying different options.
@@ -2016,7 +2018,7 @@ Tell Needles <span style="color:#7ab8ff">what you have in mind</span>
      shape any more, so the reason has expired and the cost has not. Continue
      keeps its prominence, which it has earned; it just stops competing with
      things that are not it. -->
-<div class="bi-row" style="margin-top:.2rem">
+<div class="bi-row" id="trimmingsChoiceRow" style="margin-top:.2rem">
 <button type="button" class="download-btn" id="trimmingsNoneBtn" style="flex:1;width:auto;margin:0;padding:.8rem .3rem" onclick="pickTrimming(null)">No Thanks</button>
 <!-- DRAWN, NOT TYPED (Alyx read the missing-glyph box as a checkbox and was
      counting on it for visual weight; then, told what it really was: "your
@@ -6347,11 +6349,23 @@ const GUTTER_CATALOG={
 };
 let selectedGutter=null;        // null = the plain strip of the cup's own colour
 let selectedGutterColor=null;   // null = the design's own colours, as drawn
-// Only cups confirmed to close on themselves. The vacuum 40oz's single
-// 3710x2817 area covers the whole tumbler (products-catalog.js), so its ends
-// meet. Anything absent is left exactly as it is today.
+// Only cups confirmed to close on themselves WITH A BARE JOIN TO COVER. A
+// trimming hides a seam, so it needs a seam. Anything absent is left exactly
+// as it is today.
+//
+// THE VACUUM 40OZ HAS NO SEAM (Alyx, Sep 2026: "there should not even be
+// trimmings on this particular cup. Because the image covers the gap").
+// Measured this time rather than assumed. Its print area is 12.37in wide
+// (3710px at 300dpi, products-catalog.js) and its band sits at bandR 1.85,
+// where the cup's circumference is 11.62in -- 12.32in even at the cup's
+// widest, maxR 1.96. So the picture goes 100.4% to 106.4% of the way round
+// and its two ends OVERLAP. There is no bare join for a pillar to stand on.
+// I had put this cup here on the strength of "the area covers the whole
+// tumbler", which is true and is not the same statement.
+//
+// It still goes through the Trimmings screen, because the turn slider lives
+// there -- see wrapNeedsTrimmingsStep(), which is what the screen is gated on.
 const WRAP_GUTTER_CUPS={
-  'travel-mug-40oz-vacuum': true,
   // A TRIMMING COVERS A SEAM, SO IT GOES WHERE THERE IS ONE (Sep 2026, Alyx:
   // "any run on the 14oz mug should have nothing to do with trimmings, because
   // trimmings are only for items which meet at a seam. And the 14oz mug doesn't
@@ -6371,6 +6385,16 @@ function templateGutterChoice(){
 }
 function wrapWantsGutters(){
   return product==='water bottle' && WRAP_GUTTER_CUPS[selectedTravelProductKey]===true;
+}
+// TWO QUESTIONS, NOT ONE. "Has this cup a seam a trimming could cover?" is
+// wrapWantsGutters(). "Does this cup need the Trimmings screen at all?" is
+// this -- because that screen also carries the turn slider, and the Vacuum
+// 40oz needs the slider precisely BECAUSE its picture closes on itself with
+// no join to decorate. One flag answering both is what put trimmings on a
+// cup that has no seam; taking the cup off the list without this would have
+// taken the slider away with them.
+function wrapNeedsTrimmingsStep(){
+  return wrapWantsGutters() || cupHandleSitsOnPrint();
 }
 // Draws one strip at each end, the right one mirrored. Two rules, and both are
 // load-bearing:
@@ -15001,7 +15025,7 @@ async function beginFinalMockupFetch(){
 
 async function runBeginFinalMockupFetch(){
   const finishedForTrim=finishedArtworkForTrimmings();
-  if(wrapWantsGutters() && finishedForTrim && trimmingsSettledFor!==finishedForTrim){
+  if(wrapNeedsTrimmingsStep() && finishedForTrim && trimmingsSettledFor!==finishedForTrim){
     await openTrimmingsPanel();
     return;
   }
@@ -20812,6 +20836,35 @@ function setWrapRoll(pct,resetSlider){
   clearTimeout(wrapRollTimer);
   wrapRollTimer=setTimeout(()=>{ updateTrimmingsPreview(); },60);
 }
+// A CUP WITH NO JOIN HAS NOTHING TO TRIM, so this screen stops offering
+// trimmings on one: no grid, no No Thanks, no Fade to Cup, and a heading and a
+// sentence that describe what is actually being decided. What stays is the cup
+// itself, the cup's colour, the looking controls and the turn slider -- the
+// only real decisions left on such a cup.
+//
+// Hidden rather than removed, because the very same screen still carries the
+// full twelve for the 20oz, whose ends genuinely do stop short of each other.
+function renderTrimmingsChoices(){
+  const seam=wrapWantsGutters();
+  // The grid's own display is 'grid' and it is set inline; clearing it to ''
+  // would drop it to block and the four columns with it.
+  const show=(id,on,as)=>{ const el=document.getElementById(id); if(el)el.style.display=on?(as||''):'none'; };
+  show('trimmingsGrid',seam,'grid');
+  show('trimmingsChoiceRow',seam);
+  show('trimmingsIntroNote',seam);
+  show('trimmingsNoSeamNote',!seam);
+  if(!seam){
+    const empty=document.getElementById('trimmingsEmptyNote');
+    if(empty)empty.style.display='none';
+    const colour=document.getElementById('trimmingsColourRow');
+    if(colour)colour.style.display='none';
+  }
+  const title=document.getElementById('trimmingsCardTitle');
+  if(title)title.textContent=seam?'\u{1F380} Trimmings':'\u{1F504} Where the Handle Lands';
+  // The grid is what the panel scrolls to on open; with no grid there is
+  // nothing below the fold to go looking for.
+  return seam;
+}
 function renderWrapRollRow(){
   const row=document.getElementById('trimmingsRollRow');
   if(!row)return;
@@ -20839,7 +20892,7 @@ let trimmingsBakedChoice=null;
 let trimmingsBakedColour=null;
 
 function trimmingsAvailable(){
-  return wrapWantsGutters() && Object.keys(GUTTER_CATALOG).length>0;
+  return wrapNeedsTrimmingsStep() && (wrapWantsGutters()?Object.keys(GUTTER_CATALOG).length>0:true);
 }
 
 // THE LIVE CUP IN THE PANEL (Alyx, Sep 2026): "why can't we apply the
@@ -21018,7 +21071,7 @@ function finishedArtworkForTrimmings(){
 
 async function openTrimmingsPanel(){
   const finished=finishedArtworkForTrimmings();
-  if(!finished||!wrapWantsGutters()){
+  if(!finished||!wrapNeedsTrimmingsStep()){
     // Straight through, and past the gate rather than back into it.
     reallyBeginFinalMockupFetch();
     return;
@@ -21034,6 +21087,12 @@ async function openTrimmingsPanel(){
   // still pick any of the others, or No Thanks.
   selectedGutter=returning?trimmingsBakedChoice:(templateGutterChoice()||null);
   selectedGutterColor=returning?trimmingsBakedColour:null;
+  // A TEMPLATE MAY NAME A TRIMMING IT WAS PAINTED FOR -- Mirror Mirror and the
+  // Court Painter both ask for the Stone Pillar -- and a cup with no join has
+  // nowhere to put one. The cup wins: the pillar is for a seam, and this cup's
+  // ends overlap. (Also clears a stale choice baked before this cup came off
+  // WRAP_GUTTER_CUPS.)
+  if(!wrapWantsGutters()){ selectedGutter=null; selectedGutterColor=null; }
   wrapRollPct=returning?(trimmingsBakedRoll||0):0;
   const overlay=document.getElementById('trimmingsOverlay');
   if(!overlay){ reallyBeginFinalMockupFetch(); return; }
@@ -21052,6 +21111,7 @@ async function showTrimmingsGridPanel(){
   renderTrimmingsGrid();
   renderCupColourRows();
   renderWrapRollRow();
+  const hasSeam=renderTrimmingsChoices();
   // Opens on whatever is current: nothing on a first visit, and the trimming
   // they already chose if they have come back to change it.
   await pickTrimming(selectedGutter);
@@ -21062,7 +21122,7 @@ async function showTrimmingsGridPanel(){
   requestAnimationFrame(()=>{
     const card=document.getElementById('trimmingsCard');
     const grid=document.getElementById('trimmingsGrid');
-    if(card&&grid)card.scrollTo({top:Math.max(0,grid.offsetTop-card.offsetTop-8),behavior:'auto'});
+    if(card&&grid&&hasSeam)card.scrollTo({top:Math.max(0,grid.offsetTop-card.offsetTop-8),behavior:'auto'});
   });
   // Started after the panel is on screen and NOT awaited above it: three.js may
   // still be downloading on a first visit, and the twelve options must not wait
@@ -21076,7 +21136,7 @@ function renderTrimmingsGrid(){
   const empty=document.getElementById('trimmingsEmptyNote');
   if(!grid)return;
   const names=Object.keys(GUTTER_CATALOG);
-  if(empty)empty.style.display=names.length?'none':'block';
+  if(empty)empty.style.display=(names.length||!wrapWantsGutters())?'none':'block';
   // "None" is NOT a tile (Alyx: "I want 4 rows of three or 3 rows of four").
   // As a tile it made twelve designs render as thirteen cells, which never
   // sits in a clean grid. It is a button under the grid instead, which is also
