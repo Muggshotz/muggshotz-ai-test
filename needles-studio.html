@@ -1923,6 +1923,21 @@ Tell Needles <span style="color:#7ab8ff">what you have in mind</span>
 <input type="range" id="trimmings3DZoom" min="100" max="400" value="100" step="1" aria-label="Zoom in on the cup" oninput="setTrimmings3DZoom(this.value/100)"/>
 <button type="button" class="mug3d-tilt" onclick="setTrimmings3DZoom(1,true)">Fit</button>
 </div>
+<!-- TURN THE PICTURE (Alyx, Sep 2026: "it gives me complete control over the
+     exact placement. And for every picture, every amount of text, I can
+     always pick and choose the best place to land the handle").
+     On a cup whose handle sits ON the print, the handle covers the same spot
+     of every design -- a quarter of the way in from the picture's left edge
+     on the Vacuum 40oz, measured on the cup. This rolls the picture round the
+     band so that spot lands wherever the customer wants it, live on the cup.
+     Only drawn for such cups (WRAP_HANDLE_ON_PRINT). -->
+<div id="trimmingsRollRow" style="display:none;margin:0 0 .3rem">
+<div class="mug3d-controls" style="align-items:center;gap:8px;margin:0">
+<input type="range" id="trimmingsRollSlider" min="-50" max="50" value="0" step="1" aria-label="Turn the picture round the cup" oninput="setWrapRoll(+this.value)"/>
+<button type="button" class="mug3d-tilt" onclick="setWrapRoll(0,true)">Centre</button>
+</div>
+<div class="note" style="margin:.3rem 0 0;font-size:11px;color:#7ab8ff">Turn the <b>picture</b> round the cup until the handle sits where you want it. Its two ends meet wherever this leaves them.</div>
+</div>
 <div class="note" id="trimmings3DHint" style="margin:0 0 .5rem;font-size:11px">Drag the cup to turn it &middot; click it to stop or start the spin &middot; drag the slider to get closer</div>
 <!-- Capped so the grid is not pushed off the bottom (Alyx: "fit all of the
      options into the frame and the continue button"). The wrap is very wide
@@ -20721,6 +20736,50 @@ async function runAutoMockupFetch(){
 // stack trimmings on top of each other, and the customer would never see it
 // happening because each single step looks right.
 let trimmingsBaseUrl=null;
+// THE HANDLE ON THE PRINT. A cup whose band goes the whole way round wears its
+// handle on top of the picture, always at the same spot: on the Vacuum 40oz
+// the handle's centre covers the picture one quarter in from its left edge
+// (numbered-stripe test on the cup, Sep 2026). Every other cup keeps its
+// handle in the gap between the band's ends, so there is nothing to turn.
+const WRAP_HANDLE_ON_PRINT={ 'travel-mug-40oz-vacuum': { at: 0.25 } };
+function cupHandleSitsOnPrint(){ return product==='water bottle' && !!WRAP_HANDLE_ON_PRINT[selectedTravelProductKey]; }
+// How far the picture has been turned round the band, as a percentage of its
+// width, -50..50. 0 is as generated. Baked on Continue with the trimming (or
+// without one), and remembered so a Back restores the slider.
+let wrapRollPct=0;
+let trimmingsBakedRoll=0;
+// Slide the picture sideways by pct% of its width and wrap what falls off one
+// end back onto the other. The band's physical seam stays at the back of the
+// cup; the picture's own join moves to wherever the roll leaves it, which on a
+// band composed for the seam (the same wash at both ends) is invisible.
+async function rollWrapImage(url,pct){
+  const p=Math.max(-50,Math.min(50,Number(pct)||0));
+  if(!p||!url)return url;
+  const img=await loadImageFromUrl(url);
+  const w=img.naturalWidth,h=img.naturalHeight;
+  if(!w||!h)return url;
+  const dx=Math.round(w*p/100);
+  const c=document.createElement('canvas'); c.width=w; c.height=h;
+  const ctx=c.getContext('2d');
+  ctx.drawImage(img,dx,0); ctx.drawImage(img,dx>0?dx-w:dx+w,0);
+  return c.toDataURL('image/jpeg',0.92);
+}
+let wrapRollTimer=null;
+function setWrapRoll(pct,resetSlider){
+  wrapRollPct=Math.max(-50,Math.min(50,Math.round(Number(pct)||0)));
+  const sl=document.getElementById('trimmingsRollSlider');
+  if(sl&&resetSlider)sl.value=String(wrapRollPct);
+  clearTimeout(wrapRollTimer);
+  wrapRollTimer=setTimeout(()=>{ updateTrimmingsPreview(); },60);
+}
+function renderWrapRollRow(){
+  const row=document.getElementById('trimmingsRollRow');
+  if(!row)return;
+  const show=cupHandleSitsOnPrint();
+  row.style.display=show?'block':'none';
+  const sl=document.getElementById('trimmingsRollSlider');
+  if(sl)sl.value=String(show?wrapRollPct:0);
+}
 let trimmingsBakeInFlight=false;
 // STACKING, and why these three exist. Baking a trimming REPLACES
 // finalImageUrl with the trimmed upload -- and openTrimmingsPanel takes its
@@ -20935,6 +20994,7 @@ async function openTrimmingsPanel(){
   // still pick any of the others, or No Thanks.
   selectedGutter=returning?trimmingsBakedChoice:(templateGutterChoice()||null);
   selectedGutterColor=returning?trimmingsBakedColour:null;
+  wrapRollPct=returning?(trimmingsBakedRoll||0):0;
   const overlay=document.getElementById('trimmingsOverlay');
   if(!overlay){ reallyBeginFinalMockupFetch(); return; }
   trimmingsFastUrl=await makeTrimmingsFastBase(trimmingsBaseUrl);
@@ -20950,6 +21010,7 @@ async function showTrimmingsGridPanel(){
   if(card)card.scrollTop=0;
   renderTrimmingsGrid();
   renderCupColourRows();
+  renderWrapRollRow();
   // Opens on whatever is current: nothing on a first visit, and the trimming
   // they already chose if they have come back to change it.
   await pickTrimming(selectedGutter);
@@ -21189,7 +21250,8 @@ async function updateTrimmingsPreview(){
   if(!trimmingsBaseUrl)return;
   try{
     // Always from the ORIGINAL, never from what is on screen.
-    const painted=await paintWrapGutters(trimmingsFastUrl||trimmingsBaseUrl,getSelectedProductColorHex(),WRAP_GUTTER_WIDTH,selectedGutter,true);
+    const turned=await rollWrapImage(trimmingsFastUrl||trimmingsBaseUrl,cupHandleSitsOnPrint()?wrapRollPct:0);
+    const painted=await paintWrapGutters(turned,getSelectedProductColorHex(),WRAP_GUTTER_WIDTH,selectedGutter,true);
     if(img)img.src=painted;
     // The cup takes the same wrap without pausing, rebuilding or reloading --
     // one canvas draw and one texture upload.
@@ -21205,9 +21267,11 @@ async function confirmTrimmingAndContinue(){
   const btn=document.getElementById('trimmingsContinueBtn');
   const saving=document.getElementById('trimmingsSavingNote');
   // "None" changes nothing about the picture, so there is nothing to re-encode
-  // or upload -- the design keeps its existing hosted URL at full quality.
-  // This is also the way past a connection that cannot complete an upload.
-  if(selectedGutter){
+  // or upload -- the design keeps whatever URL it has. (goToOrder hosts a raw
+  // one before checkout since Sep 2026.) A turned picture IS a change, so it
+  // bakes and uploads here exactly as a trimming does, trimming or not.
+  const rolled=cupHandleSitsOnPrint()&&wrapRollPct!==0;
+  if(selectedGutter||rolled){
     trimmingsBakeInFlight=true;
     if(btn)btn.disabled=true;
     // THE BLACK WAIT SCREEN, the same one the mockup fetch itself uses (Alyx).
@@ -21224,7 +21288,8 @@ async function confirmTrimmingAndContinue(){
     if(saving)saving.style.display='none';
     let err=null;
     try{
-      const painted=await paintWrapGutters(trimmingsBaseUrl,getSelectedProductColorHex(),WRAP_GUTTER_WIDTH,selectedGutter);
+      const turned=await rollWrapImage(trimmingsBaseUrl,rolled?wrapRollPct:0);
+      const painted=await paintWrapGutters(turned,getSelectedProductColorHex(),WRAP_GUTTER_WIDTH,selectedGutter);
       const uploaded=await uploadCompositedImage(painted,{strict:true});
       // Recorded before anything else consumes it, so a Back from the mockup
       // can find its way to the untrimmed original.
@@ -21232,6 +21297,7 @@ async function confirmTrimmingAndContinue(){
       trimmingsBakedTo=uploaded;
       trimmingsBakedChoice=selectedGutter;
       trimmingsBakedColour=selectedGutterColor;
+      trimmingsBakedRoll=rolled?wrapRollPct:0;
       const slotId=placements.front||placements.left||placements.right;
       const design=slotId?findDesignById(slotId):null;
       if(design)design.url=uploaded;
