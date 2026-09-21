@@ -1,5 +1,5 @@
 <!-- ============================================================
-     VERSION: V310
+     VERSION: V313
      ============================================================
      THE ONE LINE THAT SAYS WHICH BUILD YOU ARE LOOKING AT.
 
@@ -69,8 +69,21 @@
 .ai-board-note{color:#f5ead8!important;-webkit-text-fill-color:#f5ead8!important;background:none!important;font-size:11px;line-height:1.35;margin:10px 0 0;text-align:center}
 .ai-board-note b,.ai-board-note u{color:#ffd9a8}
 .boards-or{flex:0 0 46px;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:900;letter-spacing:2px;color:#7ab8ff;animation:orFlash 1s ease-in-out infinite;user-select:none}
+/* THE LEFT COLUMN IS NOW A STACK OF TWO (see the markup note). It takes the
+   flex slot the single free board used to hold, so the row is still
+   [ stack ] OR [ ai board ] and the AI board's width is untouched. The two
+   boards inside share the height the one board used to waste, which is why
+   each drops its 4/5 aspect ratio -- forced 4/5 twice over would make the
+   column twice as tall as the board beside it. */
+.needles-board-stack{flex:1 1 0;min-width:0;display:flex;flex-direction:column;gap:2px}
+.needles-board-stack .needles-board{aspect-ratio:auto;flex:1 1 0}
+.boards-or-stacked{flex:0 0 auto;font-size:17px;letter-spacing:1px;padding:3px 0}
+/* Marked like the AI board -- it costs a token too, so it should not look
+   like the free one -- but NOT set flashing. One pulsing board on a screen is
+   an invitation; two is a fairground. */
+.board-describe{border:1px solid #29a3ff}
 @keyframes orFlash{0%,100%{opacity:1;text-shadow:0 0 14px rgba(41,163,255,.95)}50%{opacity:.2;text-shadow:none}}
-@media (max-width:520px){.needles-clipboard{flex-direction:column;gap:4px}.needles-board{aspect-ratio:auto}.board-ai{margin-top:14px}.boards-or{flex:none;padding:8px 0 4px}}
+@media (max-width:520px){.needles-clipboard{flex-direction:column;gap:4px}.needles-board{aspect-ratio:auto}.board-ai{margin-top:14px}.boards-or{flex:none;padding:8px 0 4px}.needles-board-stack{gap:4px}.board-describe{margin-top:14px}}
 .needles-clip{position:absolute;top:-14px;left:50%;transform:translateX(-50%);width:70px;height:28px;background:linear-gradient(180deg,#e8e8e8,#a8a8a8 55%,#7a7a7a);border-radius:6px;box-shadow:0 3px 6px rgba(0,0,0,0.5);border:1px solid #666;z-index:2}.ref-pin-zone{position:absolute;top:34px;left:-14px;transform:rotate(-9deg);width:56px;height:56px;border-radius:8px;background:#faf8f2;border:1.5px dashed #444;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;z-index:3;box-shadow:0 3px 8px rgba(0,0,0,.5);overflow:hidden}.ref-pin-zone::before{content:'';position:absolute;top:-4px;left:50%;transform:translateX(-50%);width:9px;height:9px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#ff8a7a,#c23b2c);box-shadow:0 1px 3px rgba(0,0,0,.6);z-index:4}.ref-pin-zone.has-image{border-style:solid;border-color:#003c8c}.ref-pin-zone-b{left:auto;right:-14px;transform:rotate(9deg)}.ref-pin-zone img.preview-img{width:100%;height:100%;max-height:none;object-fit:cover}
 .needles-clip::after{content:'';position:absolute;top:50%;left:50%;width:10px;height:10px;background:#555;border-radius:50%;transform:translate(-50%,-50%);box-shadow:inset 0 1px 2px rgba(0,0,0,0.6)}
 .needles-polaroid{background:#faf8f2!important;border:none!important;padding:14px 14px 20px!important;box-shadow:0 4px 10px rgba(0,0,0,0.35)}
@@ -1046,7 +1059,19 @@ const HERO_SETTLE_MS = 1000;
      declared intent; the old post-upload gate remains only as the fallback
      for photos that arrive with no declaration, e.g. workshop recall). -->
 <div class="needles-clipboard">
-<div class="needles-board board-free"><div class="needles-clip"></div><div class="upload-zone needles-polaroid" id="uploadZone" onclick="startUploadWithIntent('byo')"><div style="font-size:32px;color:#555;margin-bottom:8px">👤</div><div class="upload-text">Tap here to upload a photo</div><div class="upload-sub">Upload your picture — free</div></div></div>
+<!-- TWO BOARDS IN THE LEFT COLUMN (Alyx, Sep 2026: "the free clipboard is
+     awfully long for no reason. Why can't you cut that in half and make it
+     into two clipboards... the second clipboard can be nothing but the text
+     prompt box").
+     It was long because this column is flexed to match the AI board beside
+     it, which carries a polaroid PLUS two paragraphs of notes -- so the free
+     board had one small photo floating in a lot of empty brown. That space
+     is now the third door: no photo at all, just words. -->
+<div class="needles-board-stack">
+<div class="needles-board board-free"><div class="needles-clip"></div><div class="upload-zone needles-polaroid" id="uploadZone" onclick="startUploadWithIntent('byo')"><svg viewBox="0 0 48 48" width="44" height="44" aria-hidden="true" focusable="false" style="overflow:visible;margin-bottom:8px"><g transform="rotate(-6 24 24)"><rect x="7" y="5" width="34" height="38" rx="2.5" fill="#fff" stroke="#2b2b2b" stroke-width="2"/><rect x="11" y="9" width="26" height="22" fill="#cfd8e3" stroke="#2b2b2b" stroke-width="1.6"/><circle cx="18" cy="16" r="3" fill="#8aa6c8"/><path d="M11 31 L20 21 L26 27 L31 23 L37 31 Z" fill="#8aa6c8" stroke="#2b2b2b" stroke-width="1.4" stroke-linejoin="round"/></g></svg><div class="upload-text">Tap here to upload a photo</div><div class="upload-sub">Upload your picture — free</div></div></div>
+<div class="boards-or boards-or-stacked" aria-hidden="true">OR</div>
+<div class="needles-board board-describe"><div class="needles-clip"></div><div class="upload-zone needles-polaroid" id="describeOnlyZone" onclick="startDescribeOnly()"><svg viewBox="0 0 54 50" width="48" height="44" aria-hidden="true" focusable="false" style="overflow:visible;margin-bottom:8px"><g fill="none" stroke="#2b2b2b" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="24" width="17" height="14" rx="3.5" fill="#fff"/><path d="M6 31 h-3"/><path d="M23 27 h6"/><circle cx="30.5" cy="27" r="1.6" fill="#2b2b2b" stroke="none"/><path d="M23 31.5 h7"/><circle cx="31.5" cy="31.5" r="1.6" fill="#2b2b2b" stroke="none"/><path d="M23 36 h5"/><circle cx="29.5" cy="36" r="1.6" fill="#2b2b2b" stroke="none"/><path d="M14 24 v-4"/><path d="M14.5 21 l14 -13"/><path d="M27 6 l5 4 -3.5 4.5 -5 -4 Z" fill="#8aa6c8"/><path d="M8 45 q12 5 22 0 q8 -3 15 1" stroke-width="2.8"/></g></svg><div class="upload-text">Tap here if you have no picture</div><div class="upload-sub">1 token — just describe it and Needles draws it from scratch</div></div></div>
+</div>
 <div class="boards-or" aria-hidden="true">OR</div>
 <div class="needles-board board-ai" id="aiCollabBoard"><div class="needles-clip"></div><div class="upload-zone needles-polaroid" id="aiCollabUploadBtn" onclick="startUploadWithIntent('ai')"><img src="ai-collab-handshake.webp" alt="" class="ai-collab-icon"/><div class="upload-text">Tap here to collaborate with our AI</div><div class="upload-sub">1 token — upload a photo, then tell Needles what to make of it</div></div>
 <div class="ref-pin-zone" id="refAZone" onclick="document.getElementById('refAInput').click()"><div style="font-size:16px;color:#555;margin-bottom:1px">➕</div><div class="upload-text" style="font-size:8px;line-height:1.1">Reference A</div></div>
@@ -1179,7 +1204,19 @@ const HERO_SETTLE_MS = 1000;
 <div id="keepTweakingReminder" class="guidance-prompt" role="status">Made your changes? Scroll down and hit Generate again. Running low on tokens? Tap Credits &amp; Extras to top up.</div>
 <button class="download-btn" id="downloadDesignBtn" onclick="downloadImage()" style="display:none;margin-top:.6rem">⬇️ Download for Printify</button>
 
-<button type="button" class="snap-arrow-btn snap-arrow-down" id="snapDown0" onclick="snapExpand(1)">⌄</button>
+<!-- THE ROUND ARROW IS GONE (Alyx, Sep 2026: "that arrow underneath can just
+     go away... there's nothing underneath there and if you click it it won't
+     move you anywhere").
+     He was right that it should go and I was wrong about why. It was not a
+     throwback to a dead layout -- it called snapExpand(1), and SNAP_ORDER[1]
+     is frameSectionCard, so its one job was to open ADD A FRAME. A round
+     button sitting under the upload boards whose only destination is the
+     frame step is a large part of why, in his words, "add a frame seems to be
+     persistently defaulted to". A frame has a few specific uses; it was being
+     offered as the next thing everybody does. So the arrow goes and the frame
+     step stops advertising itself from a screen it has nothing to do with.
+     The space it held now does honest work: what the second board costs. -->
+<div class="note" id="describeCostNote" style="text-align:center;margin-top:.9rem;font-size:12px;line-height:1.5">No picture to upload? Use the second clipboard — tell Needles what to draw and it draws it from nothing. <b>That one costs 1 token</b>, the same as collaborating on a photo. Uploading your own art is still free.</div>
 </div>
 
 <div class="card" id="styleSectionCard"><div class="card-title">🎨 Art Style</div>
@@ -1858,6 +1895,24 @@ Tell Needles <span style="color:#7ab8ff">what you have in mind</span>
      best matches his motif." So this is a stage on the finished picture, not a
      question asked of somebody who has not seen their artwork yet. Only opens
      for a cup whose wrap actually closes -- see wrapWantsGutters(). -->
+<!-- WHAT ARE WE MAKING (Alyx, Sep 2026). The describe lane's first question,
+     and it is not "which product" -- it is whether there IS a product. Asked
+     here rather than by dropping the customer into a grid of twelve physical
+     objects, because "I just want the picture" is not a thirteenth product,
+     it is the other answer to a different question. Artwork Only is still the
+     thing it selects; this just stops that choice hiding among the mugs. -->
+<div id="describeForkOverlay" class="step-lock-overlay" style="display:none">
+<div class="card" style="max-width:520px;width:100%;margin:auto">
+<div class="card-title">✍️ What are we making?</div>
+<div class="note" style="margin-top:0;margin-bottom:.9rem;text-align:center">Needles will draw whatever you describe. First &mdash; is it going on something, or do you just want the picture?</div>
+<div class="grid2">
+<div class="btn-select" style="padding:1.1rem .6rem" onclick="describeForkPickProduct()"><span class="icon">🎁</span>Put it on something<div class="note" style="margin-top:6px;font-size:10px;line-height:1.35">Mug, travel cup, phone case, poster&hellip; we'll draw it to fit that exact product.</div></div>
+<div class="btn-select" style="padding:1.1rem .6rem" onclick="describeForkPickArtworkOnly()"><span class="icon">🖼️</span>Just the picture<div class="note" style="margin-top:6px;font-size:10px;line-height:1.35">No product. Describe it, we draw it, you save it. About a minute.</div></div>
+</div>
+<div class="note" style="text-align:center;margin-top:.9rem;font-size:11px">Either way it's <b>1 token</b>.</div>
+<button type="button" class="download-btn" style="margin-top:.9rem" onclick="closeDescribeFork()">← Back</button>
+</div>
+</div>
 <div id="trimmingsOverlay" class="step-lock-overlay" style="display:none">
 <div class="card" id="trimmingsCard" style="max-width:560px;width:100%;margin:auto;position:relative;max-height:92vh;overflow-y:auto;text-align:center">
 <div class="card-title" id="trimmingsCardTitle">🎀 Trimmings</div>
@@ -3281,6 +3336,100 @@ function startPhotoGuide(){
 // (both buttons here, null for the preview-image re-tap), so a stale value
 // can never leak into a different upload.
 let pendingUploadIntent=null;
+// THE THIRD DOOR (Alyx, Sep 2026): "what if they just want the AI to make a
+// design for them? Right now everything requires photo first."
+//
+// byoDeclaredIntent has always been a two-way switch -- 'byo' (print my file
+// as it is) or 'ai' (take my photo and work on it). Both start with a file.
+// This is the third value, and the only one that never has a subject:
+// 'describe', where the customer types what they want and nothing is
+// uploaded at all. It is checked in exactly two places -- the photo gate in
+// generate(), and the request it builds -- so a value this file has never
+// seen before cannot leak into a lane that assumes a photograph.
+function describeOnlyMode(){ return byoDeclaredIntent==='describe'; }
+
+// WHAT A DESCRIBED DESIGN ACTUALLY SENDS. The studio's normal prompt builder
+// composes around a photograph -- it opens "Transform the uploaded person",
+// then layers style tiles, likeness and exaggeration on top. Every one of
+// those sentences is about somebody who is not in this request. So a described
+// design does not use it: it sends the customer's own words, and api/generate.js
+// adds only the composition rules for the product it is going on.
+function describePromptText(){
+  const box=document.getElementById('ideaDesc');
+  return box ? box.value.trim() : '';
+}
+
+// The bottom board's tap. It opens no picker -- there is no picture -- and it
+// does NOT jump to the idea box either, which was my first version and was
+// the wrong order.
+//
+// PRODUCT FIRST (Alyx, Sep 2026): "clicking the product selection first could
+// solve all the problems you asked downstream as to what orientation to draw
+// the picture in... the fact that they're on my app doesn't make it
+// unreasonable to assume that they're there to buy a product."
+//
+// Right, and it buys something a later product choice cannot: the picture
+// comes back already composed for the thing it is going on -- a seamless band
+// for a wrap, a centred square for a coaster -- instead of being drawn square
+// and then cropped to fit. Same token, better picture. And if the picture IS
+// the product, Artwork Only is a tile in that same grid, so "no thanks, just
+// the artwork" is a choice they make in the normal way rather than a special
+// case somebody had to build.
+//
+// From here the existing pick() does all the work: it sends a phone case to
+// the model list, a coaster to its shape, a mug to size and style, and
+// everything else to the idea box. Nothing about that had to change.
+function startDescribeOnly(){
+  byoDeclaredIntent='describe';
+  uploadedImageData=null;
+  const overlay=document.getElementById('describeForkOverlay');
+  if(!overlay){ describeForkPickProduct(); return; }
+  document.body.classList.add('step-locked');
+  overlay.style.display='flex';
+}
+
+function closeDescribeFork(){
+  const overlay=document.getElementById('describeForkOverlay');
+  if(overlay)overlay.style.display='none';
+  document.body.classList.remove('step-locked');
+  byoDeclaredIntent=null;
+}
+
+// "Put it on something" -- the product decides the shape of the picture, so it
+// is chosen first and pick() then routes onward exactly as it always has.
+function describeForkPickProduct(){
+  const overlay=document.getElementById('describeForkOverlay');
+  if(overlay)overlay.style.display='none';
+  document.body.classList.remove('step-locked');
+  document.body.classList.remove('idea-focus');
+  document.body.classList.add('product-focus');
+  const guide=document.getElementById('productGuidancePrompt');
+  if(guide)guide.classList.add('visible');
+  smoothScrollToTarget('productCard','center');
+}
+
+// "Just the picture" -- there is no product, so the product IS 'artwork only'
+// and the grid is skipped entirely. Straight to the words.
+function describeForkPickArtworkOnly(){
+  const overlay=document.getElementById('describeForkOverlay');
+  if(overlay)overlay.style.display='none';
+  document.body.classList.remove('step-locked');
+  product='artwork only';
+  productExplicitlyChosen=true;
+  const tile=document.querySelector('#productCard .btn-select[data-val="artwork only"]');
+  if(tile){
+    document.querySelectorAll('#productCard .btn-select').forEach(b=>b.classList.remove('selected'));
+    tile.classList.add('selected');
+  }
+  try{ refreshApproveRowForMode(); }catch(e){}
+  try{ updatePlacementSummary(); }catch(e){}
+  document.body.classList.remove('product-focus');
+  smoothScrollToTarget('ideaCard','center',()=>{
+    const box=document.getElementById('ideaDesc');
+    if(box)try{ box.focus(); }catch(e){}
+  });
+}
+
 function startUploadWithIntent(intent){
   byoPanelsLive=false;
   pendingUploadIntent=intent;
@@ -3920,7 +4069,7 @@ function toggleWorkingImage(){
 // Two copies of a number is exactly how the marker rotted in the first place,
 // so they are not trusted to agree: .githooks/pre-commit moves both together
 // and REFUSES the commit if it ever finds them apart.
-const APP_VERSION='V310';
+const APP_VERSION='V313';
 try{ console.log('%cNeedles\u2019 Studio '+APP_VERSION,'color:#29a3ff;font-weight:700'); }catch(e){}
 
 function getDeviceId(){
@@ -15802,7 +15951,7 @@ function showRecalledDesignOnAiBoard(){
   if(aiBoardBlankHtml===null)aiBoardBlankHtml=ai.innerHTML;
   z.classList.remove('has-image');
   z.style.padding='';
-  z.innerHTML='<div style="font-size:32px;color:#555;margin-bottom:8px">\ud83d\udc64</div><div class="upload-text">Tap here to upload a photo</div><div class="upload-sub">Upload your picture \u2014 free</div>';
+  z.innerHTML='<svg viewBox="0 0 48 48" width="44" height="44" aria-hidden="true" focusable="false" style="overflow:visible;margin-bottom:8px"><g transform="rotate(-6 24 24)"><rect x="7" y="5" width="34" height="38" rx="2.5" fill="#fff" stroke="#2b2b2b" stroke-width="2"/><rect x="11" y="9" width="26" height="22" fill="#cfd8e3" stroke="#2b2b2b" stroke-width="1.6"/><circle cx="18" cy="16" r="3" fill="#8aa6c8"/><path d="M11 31 L20 21 L26 27 L31 23 L37 31 Z" fill="#8aa6c8" stroke="#2b2b2b" stroke-width="1.4" stroke-linejoin="round"/></g></svg><div class="upload-text">Tap here to upload a photo</div><div class="upload-sub">Upload your picture \u2014 free</div>';
   ai.classList.add('has-image');
   ai.style.padding='0';
   ai.innerHTML='';
@@ -15825,7 +15974,7 @@ function resetMainSlot(){
   const z=document.getElementById('uploadZone');
   z.classList.remove('has-image');
   z.style.padding='2rem';
-  z.innerHTML='<div style="font-size:32px;color:#555;margin-bottom:8px">👤</div><div class="upload-text">Tap here to upload a photo</div><div class="upload-sub">Clear face photo works best</div>';
+  z.innerHTML='<svg viewBox="0 0 48 48" width="44" height="44" aria-hidden="true" focusable="false" style="overflow:visible;margin-bottom:8px"><g transform="rotate(-6 24 24)"><rect x="7" y="5" width="34" height="38" rx="2.5" fill="#fff" stroke="#2b2b2b" stroke-width="2"/><rect x="11" y="9" width="26" height="22" fill="#cfd8e3" stroke="#2b2b2b" stroke-width="1.6"/><circle cx="18" cy="16" r="3" fill="#8aa6c8"/><path d="M11 31 L20 21 L26 27 L31 23 L37 31 Z" fill="#8aa6c8" stroke="#2b2b2b" stroke-width="1.4" stroke-linejoin="round"/></g></svg><div class="upload-text">Tap here to upload a photo</div><div class="upload-sub">Clear face photo works best</div>';
   const oldImg=document.getElementById('previewImg');
   if(oldImg)oldImg.remove();
   const fresh=document.createElement('img');
@@ -18814,7 +18963,18 @@ async function callGenerateAPI({ workingImage, prompt, refImageA, refImageB, pan
         // Set by exactly one kind of template -- see the delusion-pact note in
         // api/generate.js. Absent everywhere else, which is the point.
         idealise:idealise||false,
-        ...currentStylePayload()
+        // A DESCRIBED DESIGN TAKES A DIFFERENT LANE. action:'textOnly' routes
+        // it to the branch in api/generate.js that calls /images/generations
+        // with no picture at all, rather than /images/edits, which exists to
+        // modify one and must be handed something to modify. shapingRule is
+        // the single piece of context that lane keeps -- what the artwork has
+        // to fit -- computed here, where getProductRules already lives, so
+        // there is never a second copy of that rule on the server to drift.
+        // Style payload is deliberately NOT spread in: those tiles describe
+        // how to draw a person, and there is no person.
+        ...(describeOnlyMode()
+            ? { action:'textOnly', shapingRule:getProductRules(product) }
+            : currentStylePayload())
       }),
       signal:ac.signal
     });
@@ -18866,9 +19026,16 @@ async function generate(){
     showTokenInfoPopup(document.getElementById('generateBtn'));
     return;
   }
-  if(!uploadedImageData){
+  // A described design has no photo BY DEFINITION, so this gate cannot apply
+  // to it. It still applies to everything else, unchanged.
+  if(!uploadedImageData && !describeOnlyMode()){
     setStatus('Please upload a photo first.',true);
     document.getElementById('uploadZone').scrollIntoView({behavior:'smooth',block:'center'});
+    return;
+  }
+  if(describeOnlyMode() && !document.getElementById('ideaDesc').value.trim()){
+    setStatus('Tell Needles what to draw first.',true);
+    smoothScrollToTarget('ideaCard','center');
     return;
   }
   if(!product){
@@ -19455,7 +19622,16 @@ Use rich environmental storytelling while keeping the face as the primary focal 
       const resp=await fetch('/api/generate',{
         method:'POST',
         headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({image:workingImage,prompt,theme:null,deviceId,refImageA:refASnapshot,refImageB:refBSnapshot,currentDesign:null,size:getImageSizeParam(),...currentStylePayload()}),
+        // THE LANE IS CHOSEN HERE, NOT ONLY IN callGenerateAPI. generate() does
+        // not go through that helper for an ordinary single design -- it posts
+        // its own request, right here -- which is why wiring the helper alone
+        // left a described design travelling down the photo lane carrying a
+        // prompt that opens "Transform the uploaded person". There is no
+        // uploaded person. Both sites now ask the same question.
+        body:JSON.stringify(describeOnlyMode()
+          ? {image:null,prompt:describePromptText(),theme:null,deviceId,refImageA:null,refImageB:null,currentDesign:null,
+             size:getImageSizeParam(),action:'textOnly',shapingRule:getProductRules(product)}
+          : {image:workingImage,prompt,theme:null,deviceId,refImageA:refASnapshot,refImageB:refBSnapshot,currentDesign:null,size:getImageSizeParam(),...currentStylePayload()}),
         signal:currentGenerationController.signal
       });
 

@@ -280,7 +280,7 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: "Method not allowed" });
   }
   try {
-    const { image, prompt, theme, deviceId, refImageA, refImageB, currentDesign, size, panelRole, action, templateMerge, idealise, styleDirective, styleIsDefault, styleRef, styleExaggerate, likeness } = req.body;
+    const { image, prompt, theme, deviceId, refImageA, refImageB, currentDesign, size, panelRole, action, templateMerge, idealise, styleDirective, styleIsDefault, styleRef, styleExaggerate, likeness, shapingRule } = req.body;
 
     // TWO DIALS, ARRIVING AS NUMBERS (Alyx, Sep 2026: "what possible good does
     // it do us to have two different combinations render the exact same
@@ -708,6 +708,106 @@ FINAL REMINDER ON LIKENESS: Do not add facial hair, tattoos, piercings, scars, j
       // policy as the existing panelRole continuations it's being compared
       // against.
       return res.status(200).json({ imageUrl: outpaintResultUrl });
+    }
+
+    // ---------------------------------------------------------------------
+    // NO PHOTO AT ALL (Alyx, Sep 2026): "what if they just want the AI to make
+    // a design for them? Right now everything requires photo first."
+    //
+    // He was right and the lock was in two places, not one. The studio refused
+    // at its Generate button, and every lane in THIS file refused too -- four
+    // separate `if (!image)` guards -- so lifting the front-end gate alone
+    // would only have turned a polite message into a 400.
+    //
+    // This is the lane that has no subject. It is deliberately NOT the main
+    // path with the photo bits removed: that path runs on /images/edits, which
+    // exists to modify a picture and must be given one, and its prompt is built
+    // almost entirely around a face -- identity preservation, the exaggeration
+    // dials, likeness, the delusion pact. None of that has anything to hold on
+    // to when nobody is in the picture, and feeding a face prompt to a request
+    // with no face is how you get a model inventing one.
+    //
+    // So: /images/generations, the customer's own words, the product's shaping
+    // rule, and nothing else. Same token check, same deduction, same Supabase
+    // upload and hosted URL as every other lane, because it is worth exactly
+    // what they are: one token.
+    if (action === "textOnly") {
+      if (!prompt || !String(prompt).trim()) {
+        return res.status(400).json({ error: "Tell Needles what to draw." });
+      }
+      if (!deviceId) {
+        return res.status(400).json({ error: "Missing device ID." });
+      }
+
+      const TEXT_ONLY_SIZES = ["1024x1024", "1536x1024", "1024x1536"];
+      const textOnlySize = TEXT_ONLY_SIZES.includes(size) ? size : "1024x1024";
+
+      // The same token gate the main path uses, in the same order: look the
+      // device up, refuse at zero unless admin, and deduct only after a
+      // picture actually comes back.
+      let textCustomer = await findCustomerByDeviceId(deviceId);
+      if (!textCustomer) {
+        textCustomer = await createCustomerForDevice(deviceId);
+      }
+      if (textCustomer.role !== "admin" && textCustomer.token_balance <= 0) {
+        return res.status(403).json({
+          error: "You're out of free tokens. Verify your email to unlock another, or grab the $5 Preview Reservation for 4 more."
+        });
+      }
+
+      // The ONE thing carried over, because it is not about faces: what the
+      // picture has to fit. A mug wrap and a standalone download want
+      // different compositions and the model cannot know which unless it is
+      // told. The studio already computes that sentence (productShapingRule in
+      // needles-studio.html) and sends it as `shapingRule`; there is
+      // deliberately no second copy of that rule on this side to drift out of
+      // step with the first. Everything else -- style tiles, likeness, the
+      // face block -- stays out.
+      const shaping = typeof shapingRule === "string" ? shapingRule.trim() : "";
+      const textOnlyPrompt = [
+        String(prompt).trim(),
+        "",
+        "Draw this as an original illustration. Do not include any real person's likeness unless the description itself asks for a specific public figure.",
+        "Fill the whole canvas edge to edge. Do not draw a border, frame, margin, panel, gutter, caption, watermark or signature of any kind.",
+        shaping ? `This artwork is for ${shaping}` : ""
+      ].filter(Boolean).join("\n");
+
+      const textOnlyResp = await fetch("https://api.openai.com/v1/images/generations", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          model: "gpt-image-2.5-sunburst",
+          prompt: textOnlyPrompt,
+          size: textOnlySize,
+          n: 1
+        })
+      });
+
+      const textOnlyData = await textOnlyResp.json();
+      if (!textOnlyResp.ok) {
+        const rawErr = textOnlyData?.error;
+        const readable =
+          typeof rawErr === "string"
+            ? rawErr
+            : rawErr?.message || JSON.stringify(rawErr) || "Unknown error from image service.";
+        return res.status(textOnlyResp.status).json({ error: readable });
+      }
+
+      const textOnlyB64 = textOnlyData?.data?.[0]?.b64_json;
+      if (!textOnlyB64) {
+        return res.status(502).json({ error: "No image returned from OpenAI.", raw: textOnlyData });
+      }
+
+      const textOnlyBuffer = Buffer.from(textOnlyB64, "base64");
+      const textOnlyUrl = await uploadGenerationToStorage(textOnlyBuffer, deviceId);
+
+      await saveGenerationRecord(textCustomer.id, prompt, theme, textOnlyUrl);
+      await deductOneToken(textCustomer.id, textCustomer.token_balance);
+
+      return res.status(200).json({ imageUrl: textOnlyUrl });
     }
 
     if (!image || !prompt) {
