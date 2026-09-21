@@ -1,5 +1,5 @@
 <!-- ============================================================
-     VERSION: V309
+     VERSION: V310
      ============================================================
      THE ONE LINE THAT SAYS WHICH BUILD YOU ARE LOOKING AT.
 
@@ -861,7 +861,7 @@ body.panels-active #verifyCard{display:none!important}
 <script src="lib/i18n.js" defer></script>
 </head>
 <body class="initial-upload-focus">
-<div id="deviceIdDisplay" data-i18n-skip style="position:fixed;bottom:2px;left:2px;font-size:9px;color:#444;z-index:998;pointer-events:none"></div>
+<div id="deviceIdDisplay" data-i18n-skip style="position:fixed;bottom:6px;left:6px;font-size:9px;color:#666;z-index:998;pointer-events:none;display:flex;align-items:center"></div>
 <div class="token-credits-row compact">
   <button id="hudPill" type="button" onclick="toggleHudExpanded(event)" title="Chips remaining. Tap for details and credits.">🪙 <b id="hudPillCount">—</b> CHIPS <span class="sep">·</span> CREDITS</button>
   <div id="tokenMeterWrap" style="position:relative;width:210px;flex-shrink:0">
@@ -3920,7 +3920,7 @@ function toggleWorkingImage(){
 // Two copies of a number is exactly how the marker rotted in the first place,
 // so they are not trusted to agree: .githooks/pre-commit moves both together
 // and REFUSES the commit if it ever finds them apart.
-const APP_VERSION='V309';
+const APP_VERSION='V310';
 try{ console.log('%cNeedles\u2019 Studio '+APP_VERSION,'color:#29a3ff;font-weight:700'); }catch(e){}
 
 function getDeviceId(){
@@ -3932,7 +3932,31 @@ function getDeviceId(){
   return id;
 }
 const deviceId=getDeviceId();
-{const el=document.getElementById('deviceIdDisplay');if(el)el.textContent=APP_VERSION+' \u00b7 Device: '+deviceId;}
+// READABLE, NOT MERELY PRESENT (Alyx, Sep 2026: "it says 309 but I don't see
+// anything in a corner", then "why don't you put it in bright red or in white
+// so that I can read it? ... I can't read anything").
+//
+// Twice my fault and the second time was worse. The first attempt appended the
+// version to this label and inherited its styling -- 9px in #444, right for a
+// device id nobody is meant to notice, useless for the one number he is meant
+// to check. The second gave it #29a3ff at 12px, which on a near-black page is
+// still dim text in a far corner, and I shipped it without once LOOKING at a
+// render of it.
+//
+// White, bold, 14px, on its own dark pill with an accent border, so it cannot
+// sink into whatever the page is showing behind it. The device id keeps the
+// whisper it was designed as, because it is not the thing being read.
+{
+  const el=document.getElementById('deviceIdDisplay');
+  if(el){
+    el.textContent='';
+    const v=document.createElement('b');
+    v.textContent=APP_VERSION;
+    v.style.cssText='color:#fff;background:#0a0a0a;border:1px solid #29a3ff;border-radius:5px;padding:2px 7px;font-size:14px;font-weight:700;letter-spacing:.6px;margin-right:5px';
+    el.appendChild(v);
+    el.appendChild(document.createTextNode(' \u00b7 Device: '+deviceId));
+  }
+}
 
 let hasPurchased=false;
 let isAdminDevice=false;
