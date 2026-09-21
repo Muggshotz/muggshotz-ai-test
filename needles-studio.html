@@ -1,5 +1,5 @@
 <!-- ============================================================
-     VERSION: V308
+     VERSION: V309
      ============================================================
      THE ONE LINE THAT SAYS WHICH BUILD YOU ARE LOOKING AT.
 
@@ -3909,6 +3909,20 @@ function toggleWorkingImage(){
   saveWorkshop();
 }
 
+// THE BUILD, WHERE IT CAN BE READ WITHOUT CTRL+U (Alyx, Sep 2026, after V307
+// had stood for 32 commits: "I like both of those suggestions").
+//
+// The comment at the top of this file stays the source of truth -- it is what
+// Ctrl+U shows and it is the first thing on the page. This constant exists so
+// the number is also readable WITHOUT viewing source: it is printed in the
+// corner beside the device id and logged to the console on load.
+//
+// Two copies of a number is exactly how the marker rotted in the first place,
+// so they are not trusted to agree: .githooks/pre-commit moves both together
+// and REFUSES the commit if it ever finds them apart.
+const APP_VERSION='V309';
+try{ console.log('%cNeedles\u2019 Studio '+APP_VERSION,'color:#29a3ff;font-weight:700'); }catch(e){}
+
 function getDeviceId(){
   let id=localStorage.getItem('muggshotz_device_id');
   if(!id){
@@ -3918,7 +3932,7 @@ function getDeviceId(){
   return id;
 }
 const deviceId=getDeviceId();
-{const el=document.getElementById('deviceIdDisplay');if(el)el.textContent='Device: '+deviceId;}
+{const el=document.getElementById('deviceIdDisplay');if(el)el.textContent=APP_VERSION+' \u00b7 Device: '+deviceId;}
 
 let hasPurchased=false;
 let isAdminDevice=false;

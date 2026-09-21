@@ -1,0 +1,67 @@
+#!/bin/sh
+# ---------------------------------------------------------------------------
+# THE VERSION MARKER MOVES BY ITSELF.
+#
+# Alyx, 21 Sep 2026, having read V307 off the live site: "look at the previous
+# commit, not this commit and see if that one was 307 or 306. If that was 307,
+# then it just means you haven't been updating the version number every time
+# you do a new push."
+#
+# It was 307, and so were the thirty-one commits before it. The marker had
+# stood still since 18 September while being cited as proof of which build was
+# running. Doing it by hand had a record of 0 for 32, so it stopped being done
+# by hand.
+#
+# What this does, whenever needles-studio.html is part of a commit:
+#   * if the commit already moves the number, leave it alone -- and check the
+#     two copies agree, refusing the commit if they do not;
+#   * otherwise bump both by one and stage the result.
+#
+# Installed with:  git config core.hooksPath .githooks
+# ---------------------------------------------------------------------------
+set -e
+F=needles-studio.html
+
+git diff --cached --name-only --diff-filter=ACM | grep -qx "$F" || exit 0
+git rev-parse --verify HEAD >/dev/null 2>&1 || exit 0
+
+marker_of(){ sed -n 's/^ *VERSION: V\([0-9][0-9]*\).*/\1/p' | head -1; }
+const_of(){  sed -n "s/^const APP_VERSION='V\([0-9][0-9]*\)';.*/\1/p" | head -1; }
+
+prev=$(git show HEAD:"$F" | marker_of)
+cur=$(git show :"$F" | marker_of)
+curconst=$(git show :"$F" | const_of)
+
+if [ -z "$prev" ] || [ -z "$cur" ]; then
+  echo "pre-commit: cannot find the VERSION marker in $F -- refusing." >&2
+  exit 1
+fi
+
+if [ "$cur" != "$prev" ]; then
+  # The change already moves it. Both copies must say the same thing.
+  if [ -n "$curconst" ] && [ "$curconst" != "$cur" ]; then
+    echo "pre-commit: VERSION says V$cur but APP_VERSION says V$curconst." >&2
+    echo "            Two numbers that disagree is how the marker rotted before." >&2
+    exit 1
+  fi
+  echo "pre-commit: version already moved to V$cur."
+  exit 0
+fi
+
+next=$((prev + 1))
+tmp=$(mktemp)
+sed -e "s/^\( *VERSION: V\)[0-9][0-9]*/\1$next/" \
+    -e "s/^const APP_VERSION='V[0-9][0-9]*';/const APP_VERSION='V$next';/" \
+    "$F" > "$tmp"
+
+newmarker=$(marker_of < "$tmp")
+newconst=$(const_of < "$tmp")
+if [ "$newmarker" != "$next" ] || [ "$newconst" != "$next" ]; then
+  rm -f "$tmp"
+  echo "pre-commit: could not move both copies to V$next (marker=V$newmarker const=V$newconst)." >&2
+  exit 1
+fi
+
+mv "$tmp" "$F"
+git add "$F"
+echo "pre-commit: V$prev -> V$next"
