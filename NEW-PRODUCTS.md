@@ -23,7 +23,7 @@ from Claude and Bud for eleven and twelve.
 9. Sticker sheet
 10. Gift certificate
 11. Claude's pick: beer stein (1088; frosted glass beer mug 1131 as its twin) — the mug's cousin, wrap/frame/fade carry over
-12. Bud's pick: to come
+12. Bud's pick: the Muggshotz Glow-Up — Custom Shape Night Light (UV), Printify 4742, Printdoors: a custom-cut acrylic panel on a wood base, lit from below. Face It's cut-out becomes the lamp. Real, in the catalog, UV like the Tundra.
 
 ## The consolidated nine
 
