@@ -1,5 +1,5 @@
 <!-- ============================================================
-     VERSION: V317
+     VERSION: V318
      ============================================================
      THE ONE LINE THAT SAYS WHICH BUILD YOU ARE LOOKING AT.
 
@@ -90,6 +90,10 @@
 .needles-polaroid .upload-text{font-family:'Caveat',cursive;font-weight:600;font-size:20px;color:#333}
 .needles-polaroid .upload-sub{color:#29a3ff}
 .ai-collab-icon{height:32px;width:auto;display:block;margin:0 auto 8px}
+/* BUD'S SET (Sep 2026). All three icons come off one sheet, so they share a
+   light source, a weight and a palette -- which is the thing my flat line
+   placeholders could never do against his rendered handshake. */
+.board-icon{width:auto;display:block;margin:0 auto 8px;object-fit:contain}
 .needles-stage-wrap{margin-top:1rem;display:none}
 .needles-stage-wrap.visible{display:block}
 .needles-stage{position:relative;width:100%;aspect-ratio:1448/1086;border-radius:12px;overflow:hidden;background:#000;box-shadow:0 4px 16px rgba(0,0,0,0.5)}
@@ -1068,7 +1072,7 @@ const HERO_SETTLE_MS = 1000;
      board had one small photo floating in a lot of empty brown. That space
      is now the third door: no photo at all, just words. -->
 <div class="needles-board-stack">
-<div class="needles-board board-free"><div class="needles-clip"></div><div class="upload-zone needles-polaroid" id="uploadZone" onclick="startUploadWithIntent('byo')"><svg viewBox="0 0 48 48" width="44" height="44" aria-hidden="true" focusable="false" style="overflow:visible;margin-bottom:8px"><g transform="rotate(-6 24 24)"><rect x="7" y="5" width="34" height="38" rx="2.5" fill="#fff" stroke="#2b2b2b" stroke-width="2"/><rect x="11" y="9" width="26" height="22" fill="#cfd8e3" stroke="#2b2b2b" stroke-width="1.6"/><circle cx="18" cy="16" r="3" fill="#8aa6c8"/><path d="M11 31 L20 21 L26 27 L31 23 L37 31 Z" fill="#8aa6c8" stroke="#2b2b2b" stroke-width="1.4" stroke-linejoin="round"/></g></svg><div class="upload-text">Tap here to upload a photo</div><div class="upload-sub">Your own picture, used exactly as it is</div></div></div>
+<div class="needles-board board-free"><div class="needles-clip"></div><div class="upload-zone needles-polaroid" id="uploadZone" onclick="startUploadWithIntent('byo')"><img src="icon-photo.webp" alt="" class="board-icon" style="height:56px"/><div class="upload-text">Tap here to upload a photo</div><div class="upload-sub">Your own picture, used exactly as it is</div></div></div>
 <div class="boards-or boards-or-stacked" aria-hidden="true">OR</div>
 <div class="needles-board board-describe"><div class="needles-clip"></div><div class="upload-zone needles-polaroid" id="describeOnlyZone" onclick="startDescribeOnly()"><!-- ONE HAND, THREE BOARDS (Alyx, Sep 2026): "I like that 'cause it's got
      continuity -- the 1st is a photo, the 2nd is an easel with a hand about
@@ -1085,10 +1089,10 @@ const HERO_SETTLE_MS = 1000;
      polaroid ("you can't have the half circle cropped out, it's a hot
      mess"). Drawn rather than an emoji, for the reason the Fade to Cup icon
      already records: an emoji is a bet on the device's font. -->
-<svg viewBox="0 0 58 56" width="50" height="50" aria-hidden="true" focusable="false" style="overflow:visible;margin-bottom:8px"><g fill="none" stroke="#2b2b2b" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"> <path d="M13 31 L8 51"/><path d="M31 31 L36 51"/><path d="M22 32 L22 48"/> <path d="M11 42 H33"/> <rect x="7" y="6" width="30" height="25" rx="1.5" fill="#ffffff"/> <path d="M4 31 H40"/> <path d="M12 25 q6 -10 13 -3" stroke="#8aa6c8" stroke-width="2.6"/> <path d="M25.5 18 L43 6.5"/> <path d="M22.5 19.6 l4.2 -2.8 2.1 3.2 -4.2 2.8 Z" fill="#8aa6c8" stroke-width="1.7"/> <g transform="rotate(-33 37 11)"> <rect x="31.5" y="6" width="13" height="7.5" rx="3" fill="#ffffff"/> <path d="M34 13.5 v3.2"/><circle cx="34" cy="17.8" r="1.35" fill="#2b2b2b" stroke="none"/> <path d="M38 13.5 v3.2"/><circle cx="38" cy="17.8" r="1.35" fill="#2b2b2b" stroke="none"/> <path d="M42 13.5 v3.2"/><circle cx="42" cy="17.8" r="1.35" fill="#2b2b2b" stroke="none"/> <path d="M44.5 9.7 h5.5"/> <path d="M50 6.6 v6.2"/> </g> </g></svg><div class="upload-text">Tap here if you have no picture</div><div class="upload-sub">Needles draws it from your words — nothing to upload</div></div></div>
+<img src="icon-easel.webp" alt="" class="board-icon" style="height:56px"/><div class="upload-text">Tap here if you have no picture</div><div class="upload-sub">Needles draws it from your words — nothing to upload</div></div></div>
 </div>
 <div class="boards-or" aria-hidden="true">OR</div>
-<div class="needles-board board-ai" id="aiCollabBoard"><div class="needles-clip"></div><div class="upload-zone needles-polaroid" id="aiCollabUploadBtn" onclick="startUploadWithIntent('ai')"><img src="ai-collab-handshake.webp" alt="" class="ai-collab-icon"/><div class="upload-text">Tap here to collaborate with our AI</div><div class="upload-sub">Upload a photo, then tell Needles what to make of it</div></div>
+<div class="needles-board board-ai" id="aiCollabBoard"><div class="needles-clip"></div><div class="upload-zone needles-polaroid" id="aiCollabUploadBtn" onclick="startUploadWithIntent('ai')"><img src="icon-handshake.webp" alt="" class="ai-collab-icon"/><div class="upload-text">Tap here to collaborate with our AI</div><div class="upload-sub">Upload a photo, then tell Needles what to make of it</div></div>
 <div class="ref-pin-zone" id="refAZone" onclick="document.getElementById('refAInput').click()"><div style="font-size:16px;color:#555;margin-bottom:1px">➕</div><div class="upload-text" style="font-size:8px;line-height:1.1">Reference A</div></div>
 <input type="file" id="refAInput" accept="image/*" style="display:none"/>
 <img id="refAPreview" class="preview-img" style="display:none;max-height:140px"/>
@@ -4122,7 +4126,7 @@ function toggleWorkingImage(){
 // Two copies of a number is exactly how the marker rotted in the first place,
 // so they are not trusted to agree: .githooks/pre-commit moves both together
 // and REFUSES the commit if it ever finds them apart.
-const APP_VERSION='V317';
+const APP_VERSION='V318';
 try{ console.log('%cNeedles\u2019 Studio '+APP_VERSION,'color:#29a3ff;font-weight:700'); }catch(e){}
 
 function getDeviceId(){
@@ -16004,7 +16008,7 @@ function showRecalledDesignOnAiBoard(){
   if(aiBoardBlankHtml===null)aiBoardBlankHtml=ai.innerHTML;
   z.classList.remove('has-image');
   z.style.padding='';
-  z.innerHTML='<svg viewBox="0 0 48 48" width="44" height="44" aria-hidden="true" focusable="false" style="overflow:visible;margin-bottom:8px"><g transform="rotate(-6 24 24)"><rect x="7" y="5" width="34" height="38" rx="2.5" fill="#fff" stroke="#2b2b2b" stroke-width="2"/><rect x="11" y="9" width="26" height="22" fill="#cfd8e3" stroke="#2b2b2b" stroke-width="1.6"/><circle cx="18" cy="16" r="3" fill="#8aa6c8"/><path d="M11 31 L20 21 L26 27 L31 23 L37 31 Z" fill="#8aa6c8" stroke="#2b2b2b" stroke-width="1.4" stroke-linejoin="round"/></g></svg><div class="upload-text">Tap here to upload a photo</div><div class="upload-sub">Your own picture, used exactly as it is</div>';
+  z.innerHTML='<img src="icon-photo.webp" alt="" class="board-icon" style="height:56px"/><div class="upload-text">Tap here to upload a photo</div><div class="upload-sub">Your own picture, used exactly as it is</div>';
   ai.classList.add('has-image');
   ai.style.padding='0';
   ai.innerHTML='';
@@ -16027,7 +16031,7 @@ function resetMainSlot(){
   const z=document.getElementById('uploadZone');
   z.classList.remove('has-image');
   z.style.padding='2rem';
-  z.innerHTML='<svg viewBox="0 0 48 48" width="44" height="44" aria-hidden="true" focusable="false" style="overflow:visible;margin-bottom:8px"><g transform="rotate(-6 24 24)"><rect x="7" y="5" width="34" height="38" rx="2.5" fill="#fff" stroke="#2b2b2b" stroke-width="2"/><rect x="11" y="9" width="26" height="22" fill="#cfd8e3" stroke="#2b2b2b" stroke-width="1.6"/><circle cx="18" cy="16" r="3" fill="#8aa6c8"/><path d="M11 31 L20 21 L26 27 L31 23 L37 31 Z" fill="#8aa6c8" stroke="#2b2b2b" stroke-width="1.4" stroke-linejoin="round"/></g></svg><div class="upload-text">Tap here to upload a photo</div><div class="upload-sub">Clear face photo works best</div>';
+  z.innerHTML='<img src="icon-photo.webp" alt="" class="board-icon" style="height:56px"/><div class="upload-text">Tap here to upload a photo</div><div class="upload-sub">Clear face photo works best</div>';
   const oldImg=document.getElementById('previewImg');
   if(oldImg)oldImg.remove();
   const fresh=document.createElement('img');
