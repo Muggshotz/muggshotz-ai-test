@@ -950,6 +950,18 @@ export async function uploadLargeImageToPrintify(buffer, fileName) {
   return data.id;
 }
 
+// CUT TO SHAPE (22 Sep 2026, the standee): Printify cuts along the artwork's
+// outline, so the figure is fitted into the print area on a TRANSPARENT field
+// and sent as PNG. buildSingleImage below flattens onto white and would have
+// cut a rectangle.
+export async function buildCutoutImage(imageSource, canvasWidth, canvasHeight) {
+  return await sharp(await resolveImageBuffer(imageSource))
+    .ensureAlpha()
+    .resize(canvasWidth, canvasHeight, { fit: "contain", background: { r: 0, g: 0, b: 0, alpha: 0 } })
+    .png({ compressionLevel: 9 })
+    .toBuffer();
+}
+
 export async function buildSingleImage(imageSource, canvasWidth, canvasHeight) {
   const WHITE = { r: 255, g: 255, b: 255 };
   return await sharp(await resolveImageBuffer(imageSource))
@@ -1244,7 +1256,9 @@ export async function placeProductOrder({
       : await getPlaceholderDimensions(effectiveBlueprintId, effectivePrintProviderId, variantId);
     const buffer = product.tilePattern
       ? await buildTiledPattern(image, width, height)
-      : await buildSingleImage(image, width, height);
+      : product.cutToShape
+        ? await buildCutoutImage(image, width, height)
+        : await buildSingleImage(image, width, height);
     printifyImages[position] = product.tilePattern
       ? await uploadLargeImageToPrintify(buffer, `muggshotz-wrap-${Date.now()}.jpg`)
       : await uploadImageToPrintify(buffer, `muggshotz-${Date.now()}.png`);

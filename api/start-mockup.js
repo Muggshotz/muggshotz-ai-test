@@ -15,6 +15,7 @@ import {
   buildFrontBackImages,
   buildSingleImage,
   buildTiledPattern,
+  buildCutoutImage,
   resolveVariant,
   resolvePhotoPosterSelection,
   resolveVariantIdByTitleMatch,
@@ -110,7 +111,9 @@ async function handleStart(req, res) {
     // the picture on the preview is what prints, and the upload stays small.
     const buffer = product.tilePattern
       ? await buildTiledPattern(image, width, height, 3, 1450)
-      : await buildSingleImage(image, width, height);
+      : product.cutToShape
+        ? await buildCutoutImage(image, width, height)
+        : await buildSingleImage(image, width, height);
     printifyImages[position] = await uploadImageToPrintify(buffer, `muggshotz-mockup-preview-${Date.now()}.png`);
 
   } else {

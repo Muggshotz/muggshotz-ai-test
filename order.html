@@ -704,6 +704,7 @@ function currentProductKey(){
   if (isPuzzle())       return 'photo-puzzle';
   if (isWrap())         return 'wrapping-paper';
   if (isOrnament())     return 'ceramic-ornament';
+  if (isStandee())      return 'custom-standee';
   if (isMousePad())     return 'mouse-pad';
   if (isGreetingCard()) return 'greeting-card';
   if (isPostIt())       return 'post-it-notes';
@@ -1134,6 +1135,7 @@ function isToteBag(){ return selectedProductFamily === 'tote bag'; }
 function isPuzzle(){ return selectedProductFamily === 'puzzle'; }
 function isWrap(){ return selectedProductFamily === 'wrapping paper'; }
 function isOrnament(){ return selectedProductFamily === 'ornament'; }
+function isStandee(){ return selectedProductFamily === 'standee'; }
 function isPhotoPoster(){ return selectedProductFamily === 'photo poster'; }
 function isCoaster(){ return selectedProductFamily === 'coaster'; }
 function isMousePad(){ return selectedProductFamily === 'mouse pad'; }
@@ -1146,6 +1148,7 @@ function isPostIt(){ return selectedProductFamily === 'post-it note'; }
 // the other shows the customer one number while the server charges another.
 const COASTER_PRICE = 29.95;
 const MOUSE_PAD_PRICE = 9.95;
+const STANDEE_PRICE = 16.95; // From Where I Stand, one size (22 Sep 2026)
 // Reflex-buy pricing (Alyx, 2026-08-28): ~$2 over wholesale on purpose,
 // "not a profit generator" — do not round these upward.
 const GREETING_CARD_PRICE = 15.95; // 8-pack, CatPrint (wholesale $13.96)
@@ -1264,6 +1267,7 @@ const BRIDGE_GRID_PRODUCTS = [
   { key: 'puzzle', icon: '🧩', label: 'Photo Puzzle', priceFrom: '$38.95' },
   { key: 'wrapping paper', icon: '🎁', label: "It's a Wrap", priceFrom: '$8.95' },
   { key: 'ornament', icon: '🎄', label: 'Ceramic Ornament', priceFrom: '$9.95' },
+  { key: 'standee', icon: '🧍', label: 'From Where I Stand', priceFrom: '$16.95' },
   { key: 'coaster', icon: '☕', label: 'Coasters', priceFrom: '$29.95' },
   { key: 'mouse pad', icon: '🖱️', label: 'Mouse Pad', priceFrom: '$9.95' },
   { key: 'greeting card', icon: '💌', label: 'Greeting Cards', priceFrom: '$15.95' },
@@ -2099,6 +2103,9 @@ function updateSummary(){
     styleSizeLabel = (pendingOrder?.coasterShape === 'round')
       ? 'Round Coasters, Set of 4 (3.7")'
       : 'Coasters, Set of 4 (4" x 4")';
+  } else if (isStandee()) {
+    basePrice = STANDEE_PRICE;
+    styleSizeLabel = 'From Where I Stand, acrylic standee';
   } else if (isMousePad()) {
     basePrice = MOUSE_PAD_PRICE;
     styleSizeLabel = 'Mouse Pad (9" x 8")';
@@ -2434,7 +2441,7 @@ async function submitOrder(){
       referralCode
     };
 
-  } else if (isCoaster() || isMousePad() || isGreetingCard() || isPostIt()) {
+  } else if (isCoaster() || isMousePad() || isGreetingCard() || isPostIt() || isStandee()) {
     // ADDED 2026-08-27. Both products could be configured, priced and shown a
     // summary here, and then had NO branch of their own -- so they fell
     // through to the final else, which is the MUG branch, and a coaster order
@@ -2464,10 +2471,12 @@ async function submitOrder(){
       type: 'mug_order',
       deviceId,
       productKey: isMousePad() ? 'mouse-pad'
+        : isStandee() ? 'custom-standee'
         : isGreetingCard() ? 'greeting-card'
         : isPostIt() ? 'post-it-notes'
         : (roundCoaster ? 'coaster-set-round' : 'coaster-set'),
       sizeLabel: isMousePad() ? '9" x 8"'
+        : isStandee() ? 'One size'
         : isGreetingCard() ? '8-Pack'
         : isPostIt() ? '3" x 3"'
         : (roundCoaster ? 'Round 3.7"' : '4" x 4"'),
