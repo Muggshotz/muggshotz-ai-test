@@ -1,5 +1,5 @@
 <!-- ============================================================
-     VERSION: V319
+     VERSION: V320
      ============================================================
      THE ONE LINE THAT SAYS WHICH BUILD YOU ARE LOOKING AT.
 
@@ -1211,13 +1211,26 @@ const HERO_SETTLE_MS = 1000;
      the file IS the whole purchase. -->
 <div class="card" id="artworkOnlyDoneCard" style="display:none">
 <div class="card-title">🎉 Your Artwork Is Ready</div>
-<div class="note" style="text-align:center;margin-top:0">This one is yours to keep. There is no product to order.</div>
+<div class="note" style="text-align:center;margin-top:0">This one is yours to keep &mdash; save it, or put it on something.</div>
 <div style="display:flex;gap:8px;margin-top:.9rem">
 <button type="button" class="generate-btn" style="flex:1;padding:.8rem .4rem;font-size:14px" onclick="saveArtwork()">⬇️ Save Image</button>
 <button type="button" class="generate-btn" style="flex:1;padding:.8rem .4rem;font-size:14px" onclick="copyArtwork()">📋 Copy Image</button>
 </div>
 <div class="note" id="artworkOnlyDoneNote" style="text-align:center;margin-top:.5rem;color:#29a3ff">Saved to your downloads, or copied straight to your clipboard.</div>
-<button type="button" class="download-btn" style="margin-top:1rem" onclick="artworkOnlyMakeAnother()">🎨 Make Another</button>
+<!-- "NOW PUT IT ON SOMETHING" (Alyx, Sep 2026): he made a picture on this
+     path, liked it, and wanted it on a mug -- and this card had no button for
+     that. "After I clicked Use this design it took me here. I had to scroll
+     and scroll until I found this... it was way at the bottom."
+     Worse, when he got to the grid, pick() warned him that "switching sets
+     that design aside", which is the opposite of what he was doing: he was
+     carrying the design forward, not abandoning it. That warning exists for a
+     real case (swapping products after paying for artwork shaped for the old
+     one) and it fires here only because product is still 'artwork only'.
+     Clearing the product before handing him the grid makes the warning
+     correctly not apply -- pick() skips it when product is falsy -- and the
+     design stays exactly where it is. -->
+<button type="button" class="generate-btn" style="margin-top:1rem" onclick="artworkOnlyPutOnProduct()">🎁 Put This On A Product</button>
+<button type="button" class="download-btn" style="margin-top:.6rem" onclick="artworkOnlyMakeAnother()">🎨 Make Another</button>
 </div>
 <button class="download-btn" id="toggleImageBtn" onclick="toggleWorkingImage()" style="display:none;margin-top:.6rem">↔️ Toggle Between Previous & New Image</button>
 <div id="keepTweakingReminder" class="guidance-prompt" role="status">Made your changes? Scroll down and hit Generate again. Running low on tokens? Tap Credits &amp; Extras to top up.</div>
@@ -4170,7 +4183,7 @@ function toggleWorkingImage(){
 // Two copies of a number is exactly how the marker rotted in the first place,
 // so they are not trusted to agree: .githooks/pre-commit moves both together
 // and REFUSES the commit if it ever finds them apart.
-const APP_VERSION='V319';
+const APP_VERSION='V320';
 try{ console.log('%cNeedles\u2019 Studio '+APP_VERSION,'color:#29a3ff;font-weight:700'); }catch(e){}
 
 function getDeviceId(){
@@ -13287,6 +13300,27 @@ function refreshApproveRowForMode(){
 }
 
 let approveUndoSnapshot=null;
+// Carries the finished picture into the product flow. The design itself is
+// untouched -- currentDesignId, resultUrl and Recent Designs all stand -- so
+// this is purely "which object should it go on", asked at the one moment the
+// customer has actually seen what they made.
+function artworkOnlyPutOnProduct(){
+  const done=document.getElementById('artworkOnlyDoneCard');
+  if(done)done.style.display='none';
+  // Clearing the product is what makes pick()'s "sets that design aside"
+  // warning correctly stay silent: it only fires when switching AWAY from a
+  // product, and there is no longer one to switch away from.
+  product=null;
+  productExplicitlyChosen=false;
+  document.querySelectorAll('#productCard .btn-select').forEach(b=>b.classList.remove('selected'));
+  try{ clearAllFocusModes(); }catch(e){}
+  document.body.classList.remove('initial-upload-focus');
+  document.body.classList.add('product-focus');
+  const guide=document.getElementById('productGuidancePrompt');
+  if(guide)guide.classList.add('visible');
+  smoothScrollToTarget('productCard','center');
+}
+
 function artworkOnlyMakeAnother(){
   const done=document.getElementById('artworkOnlyDoneCard');
   if(done)done.style.display='none';
