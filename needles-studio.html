@@ -1,5 +1,5 @@
 <!-- ============================================================
-     VERSION: V330
+     VERSION: V331
      ============================================================
      THE ONE LINE THAT SAYS WHICH BUILD YOU ARE LOOKING AT.
 
@@ -1385,9 +1385,9 @@ const HERO_SETTLE_MS = 1000;
 <div class="card-title">🎁 Sheet or Roll?</div>
 <div class="note" style="margin-top:0;margin-bottom:.75rem">Your picture becomes a repeating pattern across the whole sheet. Pick the size before generating — each is a different roll with its own price.</div>
 <div class="grid3" id="wrapSizeGrid">
-<div class="btn-select" data-wrap-size="Sheet 29&quot; x 20&quot;" onclick="pickWrapSize('Sheet 29&quot; x 20&quot;')">Sheet<div class="note" style="margin-top:4px">29" x 20"</div><div class="note" style="margin-top:4px">$14.95</div></div>
-<div class="btn-select" data-wrap-size="Roll 29&quot; x 72&quot;" onclick="pickWrapSize('Roll 29&quot; x 72&quot;')">Roll<div class="note" style="margin-top:4px">29" x 6 ft</div><div class="note" style="margin-top:4px">$29.95</div></div>
-<div class="btn-select" data-wrap-size="Roll 29&quot; x 144&quot;" onclick="pickWrapSize('Roll 29&quot; x 144&quot;')">Long roll<div class="note" style="margin-top:4px">29" x 12 ft</div><div class="note" style="margin-top:4px">$44.95</div></div>
+<div class="btn-select" data-wrap-size="Sheet 29&quot; x 20&quot;" onclick="pickWrapSize('Sheet 29&quot; x 20&quot;')">Sheet<div class="note" style="margin-top:4px">29" x 20"</div><div class="note" style="margin-top:4px">$8.95</div></div>
+<div class="btn-select" data-wrap-size="Roll 29&quot; x 72&quot;" onclick="pickWrapSize('Roll 29&quot; x 72&quot;')">Roll<div class="note" style="margin-top:4px">29" x 6 ft</div><div class="note" style="margin-top:4px">$15.95</div></div>
+<div class="btn-select" data-wrap-size="Roll 29&quot; x 144&quot;" onclick="pickWrapSize('Roll 29&quot; x 144&quot;')">Long roll<div class="note" style="margin-top:4px">29" x 12 ft</div><div class="note" style="margin-top:4px">$24.95</div></div>
 </div>
 <div class="note" id="wrapSizeSelectedNote" style="margin-top:.6rem"></div>
 </div>
@@ -4252,7 +4252,7 @@ function toggleWorkingImage(){
 // Two copies of a number is exactly how the marker rotted in the first place,
 // so they are not trusted to agree: .githooks/pre-commit moves both together
 // and REFUSES the commit if it ever finds them apart.
-const APP_VERSION='V330';
+const APP_VERSION='V331';
 try{ console.log('%cNeedles\u2019 Studio '+APP_VERSION,'color:#29a3ff;font-weight:700'); }catch(e){}
 
 function getDeviceId(){
@@ -7525,8 +7525,8 @@ const PRODUCT_TILE_PRICES = {
   // single price undersells the product. The unit rides the tile.
   'coaster':       { from: 29.95, ladder: false, unit: 'set of 4' },
   'mouse pad':     { from: 9.95,  ladder: false },
-  // It's a Wrap (22 Sep 2026): sheet 14.95, 6 ft roll 29.95, 12 ft roll 44.95.
-  'wrapping paper': { from: 14.95, ladder: true },
+  // It's a Wrap (22 Sep 2026): sheet 8.95, 6 ft roll 15.95, 12 ft roll 24.95.
+  'wrapping paper': { from: 8.95, ladder: true },
   // Plugged in 2026-08-28 -- see lib/products-catalog.js for the printer
   // story (chosen on US shipping, not unit cost).
   'greeting card': { from: 15.95, ladder: false, unit: 'pack of 8' },
