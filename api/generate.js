@@ -280,7 +280,7 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: "Method not allowed" });
   }
   try {
-    const { image, prompt, theme, deviceId, refImageA, refImageB, currentDesign, size, panelRole, action, templateMerge, idealise, styleDirective, styleIsDefault, styleRef, styleExaggerate, likeness, shapingRule } = req.body;
+    const { image, prompt, theme, deviceId, refImageA, refImageB, currentDesign, size, panelRole, action, templateMerge, idealise, styleDirective, styleIsDefault, styleRef, styleExaggerate, likeness, shapingRule, bandRatio } = req.body;
 
     // TWO DIALS, ARRIVING AS NUMBERS (Alyx, Sep 2026: "what possible good does
     // it do us to have two different combinations render the exact same
@@ -764,11 +764,23 @@ FINAL REMINDER ON LIKENESS: Do not add facial hair, tattoos, piercings, scars, j
       // step with the first. Everything else -- style tiles, likeness, the
       // face block -- stays out.
       const shaping = typeof shapingRule === "string" ? shapingRule.trim() : "";
+      // A WRAPAROUND BAND IS A STRIP, NOT A CANVAS (Alyx, V326). The widest
+      // canvas this endpoint draws is 3:2, and a Tundra band is 3.5:1. Told to
+      // fill the canvas, the model paints a centred 3:2 scene and the studio
+      // has to mirror the other 57% of the cup. When the studio sends the
+      // band's ratio, the fill line is swapped for a letterbox: paint the
+      // strip at its true proportion across the middle, leave pure white
+      // above and below, and the studio trims the white rows off. One token,
+      // real horizon end to end, at the resolution the strip's height allows.
+      const strip = Number(bandRatio) > 1.6 ? Number(bandRatio) : 0;
+      const fillLine = strip
+        ? `Compose the picture as ONE continuous panoramic strip exactly ${strip} times wider than it is tall, centred vertically on the canvas and running the full width from the left edge to the right edge. The canvas above and below the strip must be left completely empty: flat, pure, solid white (#FFFFFF) with no gradient, texture, shadow, border line or anything drawn in it. Inside the strip, draw no border, frame, margin, panel, gutter, caption, watermark or signature of any kind.`
+        : "Fill the whole canvas edge to edge. Do not draw a border, frame, margin, panel, gutter, caption, watermark or signature of any kind.";
       const textOnlyPrompt = [
         String(prompt).trim(),
         "",
         "Draw this as an original illustration. Do not include any real person's likeness unless the description itself asks for a specific public figure.",
-        "Fill the whole canvas edge to edge. Do not draw a border, frame, margin, panel, gutter, caption, watermark or signature of any kind.",
+        fillLine,
         shaping ? `This artwork is for ${shaping}` : ""
       ].filter(Boolean).join("\n");
 

@@ -1,5 +1,5 @@
 <!-- ============================================================
-     VERSION: V325
+     VERSION: V326
      ============================================================
      THE ONE LINE THAT SAYS WHICH BUILD YOU ARE LOOKING AT.
 
@@ -3396,6 +3396,33 @@ function describeOnlyMode(){ return byoDeclaredIntent==='describe'; }
 // those sentences is about somebody who is not in this request. So a described
 // design does not use it: it sends the customer's own words, and api/generate.js
 // adds only the composition rules for the product it is going on.
+// THE BAND'S TRUE SHAPE (Alyx, V326: "whatever mechanism makes the 20oz
+// seamless must be possible on this mug"). It was not a mechanism; the 20oz
+// band is narrower than the picture, so it crops and invents nothing. The
+// Tundra is wider than any picture the model draws, and the describe lane was
+// sending it getProductRules('water bottle') -- 'tall-feeling centered
+// design' -- so the model painted a centred 1.5:1 scene and the mirror had to
+// fill the other 57% of the cup: two lighthouses, two suns. Alyx picked one
+// token over two, so the model is told the strip's real proportion and asked
+// to paint it letterboxed inside its widest canvas; trimBlankBands, which
+// already runs inside extendWrapToProductRatio, takes the blank rows off and
+// what is left is real horizon end to end. Only the panoramic cups need it:
+// the 20oz, the Gator and both 40s are narrower than the picture and crop.
+function describeBandRatio(){
+  if(product!=='water bottle' || mugPrintMode!=='wraparound' || !wrapIsPanoramic())return null;
+  const r=TRAVEL_WRAP_RATIO[selectedTravelProductKey];
+  return (typeof r==='number' && r>1.6) ? Math.round(r*100)/100 : null;
+}
+function describeShapingRule(){
+  const r=describeBandRatio();
+  if(r==null)return getProductRules(product);
+  const closes=travelWrapCloses(selectedTravelProductKey);
+  return 'a wraparound band printed all the way round a travel cup, one continuous panoramic scene '+r+' times wider than it is tall, the scenery and sky running the full width'+(closes?', with the two ends meant to meet at the back':'')+'; bold simple details, no tall or centred composition';
+}
+function describeTextOnlyPayload(){
+  const r=describeBandRatio();
+  return Object.assign({ action:'textOnly', shapingRule:describeShapingRule() }, r!=null ? { bandRatio:r } : {});
+}
 function describePromptText(){
   const box=document.getElementById('ideaDesc');
   return box ? box.value.trim() : '';
@@ -4183,7 +4210,7 @@ function toggleWorkingImage(){
 // Two copies of a number is exactly how the marker rotted in the first place,
 // so they are not trusted to agree: .githooks/pre-commit moves both together
 // and REFUSES the commit if it ever finds them apart.
-const APP_VERSION='V325';
+const APP_VERSION='V326';
 try{ console.log('%cNeedles\u2019 Studio '+APP_VERSION,'color:#29a3ff;font-weight:700'); }catch(e){}
 
 function getDeviceId(){
@@ -6273,7 +6300,12 @@ const TRAVEL_WRAP_RATIO = {
 // band. Rows that are blank edge to edge are trimmed from the top and the
 // bottom before the wrap is built; the scene itself is never touched, and
 // nothing is trimmed unless a real band is there.
-function trimBlankBands(img){
+// minKeep: the smallest share of the height a real picture can be and still
+// be trusted. 45% guards a Gemini wrap against a mostly-empty file; a strip
+// the studio itself asked for letterboxed (V326) is expected to be smaller,
+// 43% of the canvas on the Tundra, so that caller lowers the floor.
+function trimBlankBands(img,minKeep){
+  const floor=(typeof minKeep==='number')?minKeep:0.45;
   const w=img.naturalWidth||img.width, h=img.naturalHeight||img.height;
   const c=document.createElement('canvas'); c.width=w; c.height=h;
   const g=c.getContext('2d'); g.drawImage(img,0,0);
@@ -6286,7 +6318,7 @@ function trimBlankBands(img){
   let top=0; while(top<h&&blankRow(top))top++;
   let bottom=h; while(bottom>top&&blankRow(bottom-1))bottom--;
   const kept=bottom-top;
-  if(top+(h-bottom)<h*0.02||kept<h*0.45)return img;
+  if(top+(h-bottom)<h*0.02||kept<h*floor)return img;
   const out=document.createElement('canvas'); out.width=w; out.height=kept;
   out.getContext('2d').drawImage(c,0,top,w,kept,0,0,w,kept);
   out.naturalWidth=w; out.naturalHeight=kept;
@@ -19125,7 +19157,7 @@ async function callGenerateAPI({ workingImage, prompt, refImageA, refImageB, pan
         // Style payload is deliberately NOT spread in: those tiles describe
         // how to draw a person, and there is no person.
         ...(describeOnlyMode()
-            ? { action:'textOnly', shapingRule:getProductRules(product) }
+            ? describeTextOnlyPayload()
             : currentStylePayload())
       }),
       signal:ac.signal
@@ -19607,7 +19639,19 @@ Use rich environmental storytelling while keeping the face as the primary focal 
         // down widens it with extendWrapToProductRatio's own defaults: this
         // cup's band ratio, whether its ends meet, and the Tundra's mirrored
         // flanks. Nothing downstream changed.
-        panoramaData={panoramaUrl:flatUrl};
+        let bandUrl=flatUrl;
+        if(describeBandRatio()!=null){
+          // The strip came back letterboxed on purpose (see describeBandRatio):
+          // take the white rows off here, with a floor low enough for a 3.5:1
+          // strip, so the widener below receives real picture only.
+          setStatus('Cutting the strip to the band...');
+          try{
+            const raw=await loadImageFromUrl(flatUrl);
+            const cut=trimBlankBands(raw,0.2);
+            if(cut!==raw)bandUrl=cut.toDataURL('image/jpeg',0.95);
+          }catch(err){ console.error('Could not trim the strip, widening it as drawn:',err); }
+        }
+        panoramaData={panoramaUrl:bandUrl};
       }
     } else if(usePanorama){
       document.getElementById('approveRow').style.display='none';
@@ -19815,7 +19859,7 @@ Use rich environmental storytelling while keeping the face as the primary focal 
         // uploaded person. Both sites now ask the same question.
         body:JSON.stringify(describeOnlyMode()
           ? {image:null,prompt:describePromptText(),theme:null,deviceId,refImageA:null,refImageB:null,currentDesign:null,
-             size:getImageSizeParam(),action:'textOnly',shapingRule:getProductRules(product)}
+             size:getImageSizeParam(),...describeTextOnlyPayload()}
           : {image:workingImage,prompt,theme:null,deviceId,refImageA:refASnapshot,refImageB:refBSnapshot,currentDesign:null,size:getImageSizeParam(),...currentStylePayload()}),
         signal:currentGenerationController.signal
       });
