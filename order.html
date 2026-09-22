@@ -52,6 +52,7 @@ body{background:#111;font-family:system-ui,sans-serif;color:#fff}
 .mug-preview-wrap{width:100%;max-width:260px;margin:0 auto 1rem;text-align:center}
 #mugPreviewSvg{width:100%;height:auto;transition:transform 250ms ease;transform-origin:bottom center}
 #mugPreviewSvg.size-15oz{transform:scaleY(1.14)}
+#mugPreviewSvg.size-20oz{transform:scale(1.08,1.2)}
 .view-toggle-row{display:flex;gap:6px;justify-content:center;margin-top:1rem}
 .view-toggle-btn{flex:1;max-width:90px;background:#0d0d0d;border:.5px solid #333;border-radius:8px;padding:.5rem .4rem;text-align:center;cursor:pointer;color:#888;font-size:12px;font-weight:600}
 .view-toggle-btn.selected{border-color:var(--accent-deep);background:var(--select-bg);color:var(--steel)}
@@ -341,6 +342,7 @@ body.studio-driven #orderHeadlineCard{display:block}
 <div class="grid2">
 <div class="btn-select selected" data-size="11oz" onclick="pickSize(this)">11oz</div>
 <div class="btn-select" data-size="15oz" onclick="pickSize(this)">15oz</div>
+<div class="btn-select" data-size="20oz" onclick="pickSize(this)">20oz</div>
 </div>
 </div>
 
@@ -564,6 +566,12 @@ const MUG_STYLES = {
         { name: "Wedgewood Blue", hex: "#3a486a" },
         { name: "Purple", hex: "#862470" }
       ] }
+    }
+  },
+  // THE ALL-NIGHTER (22 Sep 2026): 20oz jumbo, white only (bp 1126).
+  "All-Nighter": {
+    sizes: {
+      "20oz": { price: 24.95, colors: null }
     }
   }
 };
@@ -1557,6 +1565,7 @@ function renderMugPreview(){
 
   const svg = document.getElementById('mugPreviewSvg');
   svg.classList.toggle('size-15oz', selectedSize === '15oz');
+  svg.classList.toggle('size-20oz', selectedSize === '20oz');
 }
 
 const MUG_STYLE_TO_PRODUCT_KEY = {
@@ -1564,7 +1573,8 @@ const MUG_STYLE_TO_PRODUCT_KEY = {
   "Color Pop": "color-pop-mug",
   "Trimmed": "trimmed-mug",
   "Accented": "accented-mug",
-  "Color Burst": "color-burst-mug"
+  "Color Burst": "color-burst-mug",
+  "All-Nighter": "all-nighter-mug"
 };
 
 async function fetchSingleImageMockup(productKey, sizeLabel, colorName, btnId, noteId, imgId){
@@ -1773,7 +1783,8 @@ function renderMugStyleGrid(){
     const btn = document.createElement('div');
     btn.className = 'btn-select' + (styleName === selectedStyle ? ' selected' : '');
     btn.dataset.style = styleName;
-    const startPrice = MUG_STYLES[styleName].sizes['11oz'].price;
+    const firstSize = Object.keys(MUG_STYLES[styleName].sizes)[0];
+    const startPrice = MUG_STYLES[styleName].sizes[firstSize].price;
     btn.innerHTML = styleName + '<span class="price">from $' + startPrice.toFixed(2) + '</span>';
     btn.onclick = () => pickStyle(btn);
     grid.appendChild(btn);

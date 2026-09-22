@@ -255,6 +255,10 @@ scenarios.everyStyleLeavesAReachableNextStepOnAShortWindow = async (page) => {
   }, { sel, nth });
 
   for (const style of styles) {
+    // A style is only on the grid at a size it is made in (Color Burst 11oz,
+    // the All-Nighter 20oz), so step to one of its sizes first.
+    await page.evaluate((st) => { const sizes = Object.keys(PRE_GEN_MUG_STYLE_PRICES[st]); if (!sizes.includes(selectedGenSize)) pickPreGenMugSize(sizes[0]); }, style);
+    await T(page, 300);
     await page.locator(`#preGenMugStyleGrid .btn-select[data-style="${style}"]`).click();
     await T(page, 1100);
 
@@ -318,6 +322,8 @@ scenarios.theMockupSlotStillShowsAMug = async (page) => {
   const bad = [];
   const styles = await page.evaluate(() => Object.keys(PRE_GEN_MUG_STYLE_PRICES));
   for (const style of styles) {
+    await page.evaluate((st) => { const sizes = Object.keys(PRE_GEN_MUG_STYLE_PRICES[st]); if (!sizes.includes(selectedGenSize)) pickPreGenMugSize(sizes[0]); }, style);
+    await T(page, 300);
     await page.locator(`#preGenMugStyleGrid .btn-select[data-style="${style}"]`).click();
     await T(page, 900);
     const n = await page.evaluate(() => document.querySelectorAll('#preGenMugColorGrid .color-btn').length);

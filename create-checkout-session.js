@@ -103,7 +103,8 @@ const MUG_TYPE_TO_PRODUCT_KEY = {
   "Color Pop": "color-pop-mug",
   "Trimmed": "trimmed-mug",
   "Accented": "accented-mug",
-  "Color Burst": "color-burst-mug"
+  "Color Burst": "color-burst-mug",
+  "All-Nighter": "all-nighter-mug"
 };
 
 async function handleReservation(req, res) {

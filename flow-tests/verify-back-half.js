@@ -102,14 +102,14 @@ const rawReq = (obj) => { const r = Readable.from([Buffer.from(JSON.stringify(ob
 const ADDRESS = { first_name: 'Alyx', last_name: 'Tester', email: 'alyx@example.com', phone: '5555550100', country: 'US', region: 'MI', address1: '123 Test St', address2: '', city: 'Westland', zip: '48185' };
 const base = (extra) => ({ type: 'mug_order', deviceId: 'dev_test', customerName: 'Alyx Tester', giftMessage: null, shippingAddress: ADDRESS, referralCode: null, ...extra });
 
-const MUG_TYPE = { 'classic-white-mug': 'Classic White', 'color-pop-mug': 'Color Pop', 'trimmed-mug': 'Trimmed', 'accented-mug': 'Accented', 'color-burst-mug': 'Color Burst' };
+const MUG_TYPE = { 'classic-white-mug': 'Classic White', 'color-pop-mug': 'Color Pop', 'trimmed-mug': 'Trimmed', 'accented-mug': 'Accented', 'color-burst-mug': 'Color Burst', 'all-nighter-mug': 'All-Nighter' };
 
 // One payment body per product, built the way order.html builds them.
 function bodiesFor(key, p) {
   const firstSize = Object.keys(p.sizes || {})[0];
   if (p.layoutType === 'three-slot-wrap') {
-    const colour = p.sizes['11oz'].colors ? p.sizes['11oz'].colors[0].name : null;
-    const three = base({ mugType: MUG_TYPE[key], sizeLabel: '11oz', color: colour, placements: { left: IMG, front: IMG, right: IMG }, placementAdjust: {}, printMode: 'standard', panoramaImage: null, isWraparoundSet: false });
+    const colour = p.sizes[firstSize].colors ? p.sizes[firstSize].colors[0].name : null;
+    const three = base({ mugType: MUG_TYPE[key], sizeLabel: firstSize, color: colour, placements: { left: IMG, front: IMG, right: IMG }, placementAdjust: {}, printMode: 'standard', panoramaImage: null, isWraparoundSet: false });
     if (key !== 'classic-white-mug') return [[key, three]];
     return [[key, three], [key + ' (wraparound)', { ...three, printMode: 'fullBleed', panoramaImage: IMG, isWraparoundSet: true }]];
   }

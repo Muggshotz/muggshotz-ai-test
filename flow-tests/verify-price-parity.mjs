@@ -311,7 +311,7 @@ checks.push(missing.length
 
   // Which catalog keys sit behind each tile on the picker.
   const TILE_SOURCES = {
-    'mug':          ['classic-white-mug', 'color-pop-mug', 'trimmed-mug', 'accented-mug', 'color-burst-mug'],
+    'mug':          ['classic-white-mug', 'color-pop-mug', 'trimmed-mug', 'accented-mug', 'color-burst-mug', 'all-nighter-mug'],
     'water bottle': ['travel-mug-20oz', 'travel-mug-14oz-handle', 'travel-mug-40oz-insulated',
                      'travel-mug-32oz-gator', 'travel-mug-30oz-tundra', 'travel-mug-40oz-vacuum'],
     'phone case':   ['phone-case-tough'],

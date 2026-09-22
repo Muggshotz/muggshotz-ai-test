@@ -1,5 +1,5 @@
 <!-- ============================================================
-     VERSION: V327
+     VERSION: V328
      ============================================================
      THE ONE LINE THAT SAYS WHICH BUILD YOU ARE LOOKING AT.
 
@@ -913,12 +913,13 @@ body.panels-active #verifyCard{display:none!important}
     <button class="quick-btn" onclick="togglePriceTable()" id="priceTableToggleBtn" style="width:100%;text-align:center;padding:.65rem;border-radius:8px;margin-top:.5rem">💰 See what a mug actually costs ▼</button>
     <div id="priceTablePanel" style="display:none;margin-top:.85rem">
       <table style="width:100%;border-collapse:collapse;font-size:12px">
-        <tr style="color:#003c8c;text-align:left"><th style="padding:4px 0">Style</th><th style="padding:4px 0;text-align:right">11oz</th><th style="padding:4px 0;text-align:right">15oz</th></tr>
-        <tr style="border-top:1px solid #333"><td style="padding:6px 0;color:#29a3ff">Classic White</td><td style="padding:6px 0;text-align:right;color:#29a3ff">$14.95</td><td style="padding:6px 0;text-align:right;color:#29a3ff">$16.95</td></tr>
-        <tr style="border-top:1px solid #333"><td style="padding:6px 0;color:#29a3ff">Trimmed</td><td style="padding:6px 0;text-align:right;color:#29a3ff">$17.95</td><td style="padding:6px 0;text-align:right;color:#29a3ff">$19.95</td></tr>
-        <tr style="border-top:1px solid #333"><td style="padding:6px 0;color:#29a3ff">Accented</td><td style="padding:6px 0;text-align:right;color:#29a3ff">$17.95</td><td style="padding:6px 0;text-align:right;color:#29a3ff">$19.95</td></tr>
-        <tr style="border-top:1px solid #333"><td style="padding:6px 0;color:#29a3ff">Color Pop</td><td style="padding:6px 0;text-align:right;color:#29a3ff">$19.95</td><td style="padding:6px 0;text-align:right;color:#29a3ff">$21.95</td></tr>
-        <tr style="border-top:1px solid #333"><td style="padding:6px 0;color:#29a3ff">Color Burst</td><td style="padding:6px 0;text-align:right;color:#29a3ff">$21.95</td><td style="padding:6px 0;text-align:right;color:#29a3ff">—</td></tr>
+        <tr style="color:#003c8c;text-align:left"><th style="padding:4px 0">Style</th><th style="padding:4px 0;text-align:right">11oz</th><th style="padding:4px 0;text-align:right">15oz</th><th style="padding:4px 0;text-align:right">20oz</th></tr>
+        <tr style="border-top:1px solid #333"><td style="padding:6px 0;color:#29a3ff">Classic White</td><td style="padding:6px 0;text-align:right;color:#29a3ff">$14.95</td><td style="padding:6px 0;text-align:right;color:#29a3ff">$16.95</td><td style="padding:6px 0;text-align:right;color:#29a3ff">—</td></tr>
+        <tr style="border-top:1px solid #333"><td style="padding:6px 0;color:#29a3ff">Trimmed</td><td style="padding:6px 0;text-align:right;color:#29a3ff">$17.95</td><td style="padding:6px 0;text-align:right;color:#29a3ff">$19.95</td><td style="padding:6px 0;text-align:right;color:#29a3ff">—</td></tr>
+        <tr style="border-top:1px solid #333"><td style="padding:6px 0;color:#29a3ff">Accented</td><td style="padding:6px 0;text-align:right;color:#29a3ff">$17.95</td><td style="padding:6px 0;text-align:right;color:#29a3ff">$19.95</td><td style="padding:6px 0;text-align:right;color:#29a3ff">—</td></tr>
+        <tr style="border-top:1px solid #333"><td style="padding:6px 0;color:#29a3ff">Color Pop</td><td style="padding:6px 0;text-align:right;color:#29a3ff">$19.95</td><td style="padding:6px 0;text-align:right;color:#29a3ff">$21.95</td><td style="padding:6px 0;text-align:right;color:#29a3ff">—</td></tr>
+        <tr style="border-top:1px solid #333"><td style="padding:6px 0;color:#29a3ff">Color Burst</td><td style="padding:6px 0;text-align:right;color:#29a3ff">$21.95</td><td style="padding:6px 0;text-align:right;color:#29a3ff">—</td><td style="padding:6px 0;text-align:right;color:#29a3ff">—</td></tr>
+        <tr style="border-top:1px solid #333"><td style="padding:6px 0;color:#29a3ff">All-Nighter</td><td style="padding:6px 0;text-align:right;color:#29a3ff">—</td><td style="padding:6px 0;text-align:right;color:#29a3ff">—</td><td style="padding:6px 0;text-align:right;color:#29a3ff">$24.95</td></tr>
       </table>
       <div class="note" style="margin-top:.6rem">Prices shown are for the mug itself — shipping and handling is calculated and added at checkout.</div>
     </div>
@@ -1473,6 +1474,10 @@ const HERO_SETTLE_MS = 1000;
 <div class="btn-select" id="preGenSize15Btn" style="padding:.5rem" onclick="pickPreGenMugSize('15oz')">
 <img src="size-15oz.jpg" style="width:100%;border-radius:6px;background:#fff;margin-bottom:6px"/>
 15oz
+</div>
+<div class="btn-select" id="preGenSize20Btn" style="padding:.5rem" onclick="pickPreGenMugSize('20oz')">
+<img src="size-20oz.jpg" style="width:100%;border-radius:6px;background:#fff;margin-bottom:6px"/>
+20oz
 </div>
 </div>
 <button type="button" class="download-btn" style="margin-top:1rem" onclick="mugSizeLockBack()">← Back</button>
@@ -2295,6 +2300,7 @@ Tell Needles <span style="color:#7ab8ff">what you have in mind</span>
 <div class="grid2">
 <div class="btn-select selected" id="genSize11Btn" onclick="pickGenMugSize('11oz')">11oz</div>
 <div class="btn-select" id="genSize15Btn" onclick="pickGenMugSize('15oz')">15oz</div>
+<div class="btn-select" id="genSize20Btn" onclick="pickGenMugSize('20oz')">20oz</div>
 </div>
 <div id="genMugColorWrap" style="display:none;margin-top:.75rem">
 <div class="note" style="margin-bottom:6px">Color</div>
@@ -4211,7 +4217,7 @@ function toggleWorkingImage(){
 // Two copies of a number is exactly how the marker rotted in the first place,
 // so they are not trusted to agree: .githooks/pre-commit moves both together
 // and REFUSES the commit if it ever finds them apart.
-const APP_VERSION='V327';
+const APP_VERSION='V328';
 try{ console.log('%cNeedles\u2019 Studio '+APP_VERSION,'color:#29a3ff;font-weight:700'); }catch(e){}
 
 function getDeviceId(){
@@ -7520,8 +7526,15 @@ const PRE_GEN_MUG_STYLE_PRICES = {
   // COLOR BURST (Alyx, 22 Sep 2026): the whole mug is the colour. ONE size --
   // Printify's blueprint 10725 has no 15oz -- so there is no 15oz price, and
   // renderPreGenMugStyleGrid() leaves the tile out when 15oz is the size.
-  "Color Burst": { "11oz": 21.95 }
+  "Color Burst": { "11oz": 21.95 },
+  // THE ALL-NIGHTER (Alyx, 22 Sep 2026): Printify's 20oz Jumbo Mug, white
+  // only, and the first mug in a third size. Its 20oz tile on the size step
+  // leads to this style alone.
+  "All-Nighter": { "20oz": 24.95 }
 };
+function firstMugStyleAtSize(size){
+  return Object.keys(PRE_GEN_MUG_STYLE_PRICES).find(k=>typeof PRE_GEN_MUG_STYLE_PRICES[k][size]==='number')||'Classic White';
+}
 
 // The base every upgrade is measured against. A name, not a number, so the
 // deltas cannot drift out of step with the table above.
@@ -7760,11 +7773,13 @@ function pickPreGenMugSize(size){
   selectedGenSize=size;
   mugSizeChosenPreGen=true;
   if(typeof (PRE_GEN_MUG_STYLE_PRICES[selectedGenStyle]||{})[size]!=='number'){
-    // Color Burst is 11oz only: switching to 15oz with it chosen cannot stand.
-    selectedGenStyle='Classic White'; selectedGenColor=null; mugStyleChosenPreGen=false;
+    // A style not made at the new size cannot stand (Color Burst is 11oz only,
+    // the All-Nighter 20oz only): fall to the first style that is.
+    selectedGenStyle=firstMugStyleAtSize(size); selectedGenColor=null; mugStyleChosenPreGen=false;
   }
   document.getElementById('preGenSize11Btn').classList.toggle('selected',size==='11oz');
   document.getElementById('preGenSize15Btn').classList.toggle('selected',size==='15oz');
+  document.getElementById('preGenSize20Btn').classList.toggle('selected',size==='20oz');
   mugColorFinishedPreGen=false;
   updatePreGenMugMockupImg();
   refreshMugSizeCardVisibility();
@@ -7801,7 +7816,8 @@ const MUG_COLORLESS_SIZE_PHOTOS = {
   "Classic White": {
     "11oz": "mug-classic-white-11oz.webp",
     "15oz": "mug-classic-white-15oz.webp"
-  }
+  },
+  "All-Nighter": { "20oz": "mug-all-nighter-20oz.webp" }
 };
 
 const PRE_GEN_MUG_STYLE_THUMBNAILS = {
@@ -7818,7 +7834,8 @@ const PRE_GEN_MUG_STYLE_THUMBNAILS = {
   "Trimmed": "style-trimmed.jpg",
   "Accented": "style-accented.jpg",
   "Color Pop": "style-color-pop.jpg",
-  "Color Burst": "style-color-burst.jpg"
+  "Color Burst": "style-color-burst.jpg",
+  "All-Nighter": "style-all-nighter.jpg"
 };
 // CORRECTED (Sep 2026, Alyx): "even though I clicked the 15 ounce mug, all
 // three of these thumbnails seem to be 11 ounce mugs." The generic tiles
@@ -10296,7 +10313,9 @@ const MUG_PRINT_AREA={
   'trimmed-mug':     {'11oz':{w:2538,h:1088},'15oz':{w:2475,h:1275}},
   'accented-mug':    {'11oz':{w:2538,h:1088},'15oz':{w:2475,h:1275}},
   // bp 10725 / prov 228: one front placeholder, 11oz only, a 2.74:1 band.
-  'color-burst-mug': {'11oz':{w:4725,h:1725}}
+  'color-burst-mug': {'11oz':{w:4725,h:1725}},
+  // bp 1126 / prov 59: one front placeholder, 20oz only, a 2.25:1 band.
+  'all-nighter-mug': {'20oz':{w:2700,h:1200}}
 };
 // THE BAND'S RATIO COMES FROM THE PRINT AREA (22 Sep 2026). MUG_WRAP_RATIO
 // (2.14) was the one number for every mug while every mug was 2475 x 1155.
@@ -16818,7 +16837,11 @@ const MUG3D = (function(){
     // rim, so the band goes less far round instead: 71% of the way, a
     // wider bare strip at the handle. The 15oz already sits at 2.15.
     '11oz': { R:1.600, H:3.70, wrapIn:7.17, bandH:3.35 },
-    '15oz': { R:1.675, H:4.36, wrapIn:8.50, bandH:3.95 }   // height/width 1.30, measured off mug-cambridge-blue.jpg
+    '15oz': { R:1.675, H:4.36, wrapIn:8.50, bandH:3.95 },
+    // The All-Nighter's 20oz jumbo (22 Sep 2026): 2700 x 1200 print, 2.25:1.
+    // Not measured off a photo yet; proportions from the print area and the
+    // listing's 20oz body.
+    '20oz': { R:1.875, H:4.50, wrapIn:9.00, bandH:4.00 }   // height/width 1.30, measured off mug-cambridge-blue.jpg
   };
 
   let three=null, mounted=false, host=null;
@@ -20741,6 +20764,7 @@ const GEN_MUG_STYLES = {
   // COLOR BURST (22 Sep 2026): the day the comment above waited for. The
   // colour IS the exterior, so surfaceColored is on: the edge fade samples
   // it, and the 3D mug paints its whole body with it. 11oz only.
+  "All-Nighter": { colors: { "20oz": null } },
   "Color Burst": { surfaceColored: true, colors: { "11oz": [
     { name: "Black", hex: "#000000" }, { name: "Red", hex: "#cc141b" }, { name: "Burgundy", hex: "#67161b" }, { name: "Almond", hex: "#e3cfb4" }, { name: "Orange", hex: "#f97000" }, { name: "Bright Yellow", hex: "#d4b245" }, { name: "Light Yellow", hex: "#f9e38a" }, { name: "Green", hex: "#006400" }, { name: "Forest Green", hex: "#07463b" }, { name: "Cobalt", hex: "#313da6" }, { name: "Ocean Blue", hex: "#264f86" }, { name: "Navy Blue", hex: "#35405a" }, { name: "Wedgewood Blue", hex: "#3a486a" }, { name: "Purple", hex: "#862470" }
   ]}}
@@ -20750,7 +20774,8 @@ const GEN_STYLE_TO_PRODUCT_KEY = {
   "Color Pop": "color-pop-mug",
   "Trimmed": "trimmed-mug",
   "Accented": "accented-mug",
-  "Color Burst": "color-burst-mug"
+  "Color Burst": "color-burst-mug",
+  "All-Nighter": "all-nighter-mug"
 };
 
 let selectedGenStyle='Classic White';
@@ -20884,11 +20909,12 @@ function pickGenMugSize(size){
   const wasTouched=mugOptionsTouched;
   selectedGenSize=size;
   if(typeof (PRE_GEN_MUG_STYLE_PRICES[selectedGenStyle]||{})[size]!=='number'){
-    selectedGenStyle='Classic White';
+    selectedGenStyle=firstMugStyleAtSize(size);
     renderGenMugStyleGrid();
   }
   document.getElementById('genSize11Btn').classList.toggle('selected', size==='11oz');
   document.getElementById('genSize15Btn').classList.toggle('selected', size==='15oz');
+  document.getElementById('genSize20Btn').classList.toggle('selected', size==='20oz');
   selectedGenColor=null;
   renderGenMugColorGrid();
   mugOptionsTouched=true;
@@ -22689,6 +22715,7 @@ function resetEverythingFreshStart(){
   mugColorFinishedPreGen=false;
   document.getElementById('preGenSize11Btn').classList.remove('selected');
   document.getElementById('preGenSize15Btn').classList.remove('selected');
+  document.getElementById('preGenSize20Btn').classList.remove('selected');
   document.getElementById('preGenMugStyleGrid').innerHTML='';
   document.getElementById('preGenMugColorGrid').innerHTML='';
   document.getElementById('preGenMugColorWrap').style.display='none';
@@ -22722,6 +22749,7 @@ function resetEverythingFreshStart(){
   if(genTravelColorGrid)genTravelColorGrid.innerHTML='';
   document.getElementById('genSize11Btn').classList.add('selected');
   document.getElementById('genSize15Btn').classList.remove('selected');
+  document.getElementById('genSize20Btn').classList.remove('selected');
 
   resetCaptionSettings();
   document.getElementById('captionCard').className='card caption-card';
