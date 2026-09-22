@@ -5,6 +5,26 @@ sell, from which he picks three. Costs are unprobed on everything here until
 a product is circled; probe the same way as the mugs (cost-probe action in
 The Portal, blueprint + provider).
 
+## Page two — the list of ten, two seats open
+
+Alyx, 22 Sep 2026: "Every last one of these items are too good to pass on.
+We're just gonna have to have a page two." Twelve seats: the nine below, the
+gift certificate (see GIFT-CERTIFICATES.md) as the tenth, and one pick each
+from Claude and Bud for eleven and twelve.
+
+1. Wrapping paper
+2. Custom cut standee
+3. Playing cards
+4. Car air freshener
+5. Ceramic ornament
+6. Doormat
+7. Desk calendar
+8. Unisex T-shirt
+9. Sticker sheet
+10. Gift certificate
+11. Claude's pick: beer stein (1088; frosted glass beer mug 1131 as its twin) — the mug's cousin, wrap/frame/fade carry over
+12. Bud's pick: to come
+
 ## The consolidated nine
 
 Bud's real ones plus Claude's left standing, overlaps counted once. Bud also
