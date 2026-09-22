@@ -9,7 +9,7 @@
 //   * the Add-a-Frame round trip comes back to the 3D mug, not the photo;
 //   * every exit tears the renderer down;
 //   * and with no WebGL at all, the old photo path runs untouched.
-const { launch, openStudio, uploadPhoto, dismissAlerts } = require('./harness');
+const { launch, openStudio, uploadPhoto, dismissAlerts, passFadePage } = require('./harness');
 const fs = require('fs');
 
 const T = (page, ms) => page.waitForTimeout(ms);
@@ -196,6 +196,49 @@ scenarios.tundraOpensThe3DTumbler = async (page) => {
   // the fake strip is pale: 2% coloured is a picture on the cup here.
   if (art < 0.02) return `FAIL: only ${(art*100).toFixed(1)}% of the stage is coloured — no artwork on the tumbler`;
   return `PASS: Yes opens the Tundra as a black 3D tumbler wearing its wrap on a ${stage.w}px square stage, placement panel skipped (${(art*100).toFixed(0)}% of the stage is artwork)`;
+};
+
+// ---- THE STEIN TURNS (22 Sep 2026, Alyx: "Why does a Stein not have the 3D
+// model?"). Approving a stein design opens the 3D stein, white, wearing the
+// design, with no cup palette under it -- and Printify still fires behind. ----
+OPTS.steinOpensThe3DStein = { chromiumArgs: GL };
+scenarios.steinOpensThe3DStein = async (page, log) => {
+  // A travel cup picked first, so a palette left over from it would show.
+  await page.evaluate(() => { selectedTravelProductKey = 'travel-mug-30oz-tundra'; });
+  await pickProduct(page, 'beer stein');
+  await T(page, 1200);
+  await dismissAlerts(page);
+  await describeAndGenerate(page, 'a lighthouse in a storm');
+  await page.waitForFunction(() => document.getElementById('approveRow')?.style.display !== 'none', null, { timeout: 90000 });
+  await T(page, 800);
+  await spyOnMug3D(page);
+  await page.locator('#approveRow button:has-text("Yes")').first().click();
+  await passFadePage(page);
+  await page.waitForFunction(() => document.querySelector('#mug3dStage canvas'), null, { timeout: 20000 });
+  await T(page, 1500);
+  const opens = await page.evaluate(() => window.__mug3dOpens);
+  if (!opens.length) return 'FAIL: MUG3D.open was never called for the stein';
+  const o = opens[0];
+  if (o.tumblerKey !== 'beer-stein') return `FAIL: opened as ${JSON.stringify(o)}, not the stein body`;
+  if (!o.panoramaUrl) return 'FAIL: the stein was not handed its design';
+  if (o.colorHex !== '#ffffff') return `FAIL: the stein opened in ${o.colorHex}, not white`;
+  const s = await stageState(page);
+  if (!s.wrap || !s.canvas || s.photo) return 'FAIL: the 3D stein is not what is on screen';
+  if (s.waitOverlay) return 'FAIL: the "please be patient" overlay is up over the 3D stein';
+  if (!s.actions) return 'FAIL: the action row is missing from the 3D stein';
+  const ui = await page.evaluate(() => ({
+    hint: document.querySelector('#mug3dWrap .mug3d-hint').textContent,
+    palette: CUP_COLOUR_ROWS.some(([id]) => { const r = document.getElementById(id); return r && getComputedStyle(r).display !== 'none'; }),
+  }));
+  if (!/stein/.test(ui.hint)) return `FAIL: the hint says "${ui.hint}"`;
+  if (ui.palette) return 'FAIL: a cup colour palette is showing under a white-only stein';
+  const art = await artworkFraction(page, 'stein');
+  if (art < 0.02) return `FAIL: only ${(art*100).toFixed(1)}% of the stage is coloured — no design on the stein`;
+  await T(page, 6000);
+  if (!log.apiCalls.some((c) => c.path === '/api/start-mockup')) return 'FAIL: the Printify mockup request no longer fires for the stein';
+  const after = await stageState(page);
+  if (!after.wrap || after.photo) return 'FAIL: Printify answering replaced the 3D stein with the flat photo';
+  return `PASS: Yes opens a white 3D stein wearing the design (${(art*100).toFixed(0)}% of the stage), no palette, hint names the stein; Printify still fired and did not replace it`;
 };
 
 // ---- THE HANDLED CUPS (v107). The 40oz insulated is a front-and-back cup:

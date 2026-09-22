@@ -1,5 +1,5 @@
 <!-- ============================================================
-     VERSION: V344
+     VERSION: V345
      ============================================================
      THE ONE LINE THAT SAYS WHICH BUILD YOU ARE LOOKING AT.
 
@@ -4365,7 +4365,7 @@ function toggleWorkingImage(){
 // Two copies of a number is exactly how the marker rotted in the first place,
 // so they are not trusted to agree: .githooks/pre-commit moves both together
 // and REFUSES the commit if it ever finds them apart.
-const APP_VERSION='V344';
+const APP_VERSION='V345';
 try{ console.log('%cNeedles\u2019 Studio '+APP_VERSION,'color:#29a3ff;font-weight:700'); }catch(e){}
 
 function getDeviceId(){
@@ -15862,7 +15862,7 @@ async function runReallyBeginFinalMockupFetch(){
   // what actually validates that Printify accepted this artwork, and a
   // failure there predicts a failed order, so it must still be heard.
   let usingMug3D=false;
-  if((product==='mug'||tumbler3dKey()) && !mug3dFailed){
+  if((product==='mug'||tumbler3dKey()||stein3dKey()) && !mug3dFailed){
     try{ await openMug3DMockup(); usingMug3D=true; }
     catch(err){ usingMug3D=false; }
   }
@@ -16111,7 +16111,7 @@ function reopenMockupLightboxFromFrameOffer(){
   // was taken off. Reopening the flat photo here would have handed the
   // customer a downgrade for accepting the frame offer, and, if Printify
   // had not yet answered, bounced them out to What's Next entirely.
-  if((product==='mug'||tumbler3dKey()) && !mug3dFailed){
+  if((product==='mug'||tumbler3dKey()||stein3dKey()) && !mug3dFailed){
     openMug3DMockup().catch(()=>{ reopenFlatMockupFromFrameOffer(); });
     return;
   }
@@ -16887,6 +16887,13 @@ function tumbler3dKey(){
   const key=selectedTravelProductKey||null;
   return (typeof MUG3D!=='undefined' && MUG3D.hasTumbler(key))?key:null;
 }
+// The beer stein, drawn by the same engine as the cups (see 'beer-stein' in
+// TUMBLERS). Kept apart from tumbler3dKey on purpose: that one also switches
+// on the cup palette, Trimmings and the fade slider, none of which the stein
+// has. This opens the 3D mockup and nothing else.
+function stein3dKey(){
+  return (product==='beer stein' && typeof MUG3D!=='undefined' && MUG3D.hasTumbler('beer-stein'))?'beer-stein':null;
+}
 
 // Zoom is a lens change, not a walk toward the cup -- see placeCamera for why
 // that distinction is the whole point. Kept in step with the slider so the
@@ -17033,7 +17040,9 @@ async function openMug3DMockup(){
 
   // A travel cup carries one picture, the whole band. Same engine, a
   // different body (see TUMBLERS in MUG3D).
-  const tumblerKey=tumbler3dKey();
+  // The stein rides the same path with its own body, in white.
+  const steinKey=stein3dKey();
+  const tumblerKey=tumbler3dKey()||steinKey;
   const urlOf=pos=>placements[pos]?((findDesignById(placements[pos])||{}).url||null):null;
   // THE MUG SHOWS THE REAL PRINT (Alyx, Sep 2026). urlOf hands over a design's
   // stored FILE, which on the panel path is the picture BEFORE its edge fade --
@@ -17054,7 +17063,7 @@ async function openMug3DMockup(){
       return urlOf(pos);
     }
   };
-  const cupColor=travelColorEntry();
+  const cupColor=steinKey?null:travelColorEntry();
   const cupProduct=tumblerKey?TRAVEL_MUG_CATALOG[tumblerKey]:null;
   const cupIsFrontBack=!!(cupProduct&&cupProduct.layoutType==='front-back');
   // The stage is square for a cup, and the hint names a cup (v103).
@@ -17064,8 +17073,10 @@ async function openMug3DMockup(){
   // has to exist by then or the stage claims its space and the buttons go
   // off the bottom -- the failure verify-mug-3d.js measures.
   renderCupColourRows();
+  // A stein is white only: no palette under it, whatever cup was last picked.
+  if(steinKey)CUP_COLOUR_ROWS.forEach(([rowId])=>{ const row=document.getElementById(rowId); if(row)row.style.display='none'; });
   const hint=wrap.querySelector('.mug3d-hint');
-  if(hint)hint.textContent=tumblerKey?'Drag the cup to turn it · click it to stop or start the spin':'Drag the mug to turn it · click it to stop or start the spin';
+  if(hint)hint.textContent=steinKey?'Drag the stein to turn it · click it to stop or start the spin':tumblerKey?'Drag the cup to turn it · click it to stop or start the spin':'Drag the mug to turn it · click it to stop or start the spin';
   // Alyx: "you can also take away the 'drag the cup to turn it' wording,
   // because you will have that on the previous panel -- by now if they don't
   // get the trick they're too dumb to read anyway. And you can use all that
@@ -17519,6 +17530,51 @@ const MUG3D = (function(){
         { mat:'steel',   pts:()=>[[1.95,10.0],[1.95,10.25],[1.86,10.28]] },
         { mat:'lidBlue', pts:()=>[[0,10.25],[1.92,10.25],[1.92,10.50],[1.80,10.60],[0.8,10.65],[0,10.65]] }
       ]
+    },
+    // THE BEER STEIN (22 Sep 2026, Alyx: "Why does a Stein not have the 3D
+    // model?"). Blueprint 1088, not a travel cup, but the same engine: a
+    // lathed white body, a band, a handle. Traced off Printify's straight-on
+    // product photo (blueprint image 66d5b18e...): a plain wall between two
+    // raised bead bands, a flared foot, gold lines on the rim and the foot
+    // (Printify: "Gold-tone trim on rim and base"), a big D handle.
+    // Scale: the photo gives proportions only. The band is sized from
+    // Printify's own rendered mockup, where the print is ~1.12x the body's
+    // diameter tall and runs round to the handle, and its length is the
+    // print file's own 2175 x 863 (2.52:1), so paint() crops nothing. That
+    // puts the print 90% of the way round, the gap at the handle.
+    'beer-stein': {
+      totalH:6.58, maxR:1.97, bandR:1.65,
+      band:{ h:3.70, y:2.95, wrapIn:9.325 },
+      // The bead rows on the two raised bands, as beads rather than a smooth
+      // roll: [height, radius the beads sit at, bead size, beads round].
+      beads:[[0.72,1.665,0.062,84],[0.88,1.665,0.062,84],[5.00,1.660,0.060,86],[5.14,1.660,0.060,86],
+             [5.72,1.655,0.052,98],[5.85,1.655,0.052,98]],
+      handle:{ angle:Math.PI, mat:'body', r:0.26,
+        // [radius from the axis, height], the photo's handle centreline
+        path:[[1.55,4.88],[2.47,4.83],[3.18,4.72],[3.49,3.58],[3.37,2.64],[2.90,1.84],[2.24,1.37],[1.55,1.20]] },
+      parts:[
+        { mat:'body', pts:()=>{
+            const p=[[0,0],[1.88,0],[1.96,0.04],[1.97,0.12]];
+            // the foot flares in to the lower bead band
+            for(let i=1;i<=6;i++){ const t=i/6, e=t*t*(3-2*t); p.push([1.97-(1.97-1.75)*e, 0.12+0.21*t]); }
+            // a bead band: a raised band, then a row of beads as a ridge
+            const ridge=(r0,rTop,y0,y1)=>{ for(let i=0;i<=6;i++){ const t=i/6; p.push([r0+(rTop-r0)*Math.sin(t*Math.PI), y0+(y1-y0)*t]); } };
+            p.push([1.75,0.61]); p.push([1.66,0.64]);
+            ridge(1.66,1.675,0.66,0.94);
+            p.push([1.65,0.99]);
+            p.push([1.65,4.91]);                       // the plain wall the band prints on
+            ridge(1.65,1.67,4.93,5.21);
+            p.push([1.66,5.24]); p.push([1.76,5.28]); p.push([1.76,5.59]); p.push([1.66,5.63]);
+            ridge(1.66,1.665,5.66,5.90);
+            p.push([1.62,5.94]);
+            p.push([1.57,6.50]);                       // the collar tapers a little to the rim
+            p.push([1.555,6.56],[1.52,6.58],[1.47,6.565],[1.45,6.50]);   // over the rim
+            p.push([1.43,0.50],[0,0.45]);              // the inside wall and floor
+            return p; } },
+        // The gold lines, laid a hair outside the glaze
+        { mat:'gold', pts:()=>[[1.588,6.28],[1.590,6.31],[1.588,6.34]] },
+        { mat:'gold', pts:()=>[[1.972,0.05],[1.976,0.08],[1.973,0.11]] }
+      ]
     }
   };
   // The cup's outer radius at a height, read off its body profile, so a
@@ -17566,10 +17622,12 @@ const MUG3D = (function(){
     const lid=new THREE.MeshPhysicalMaterial({color:0xdfe7f1, transparent:true, opacity:0.55, roughness:0.12, metalness:0.0, clearcoat:0.6, envMapIntensity:1.0, side:THREE.DoubleSide, depthWrite:false});
     const cap=new THREE.MeshPhysicalMaterial({color:0x0a0b0d, roughness:0.6, metalness:0.0, clearcoat:0.1, envMapIntensity:0.35, side:THREE.DoubleSide});
     const lidBlue=new THREE.MeshPhysicalMaterial({color:0x8fb4ff, transparent:true, opacity:0.6, roughness:0.15, metalness:0.0, clearcoat:0.5, envMapIntensity:0.9, side:THREE.DoubleSide, depthWrite:false});
+    // The stein's gold lines.
+    const gold=new THREE.MeshStandardMaterial({color:new THREE.Color('#d4a73c').convertSRGBToLinear(), metalness:1.0, roughness:0.28, envMapIntensity:1.2, side:THREE.DoubleSide});
     // THE CUP'S OWN COLOUR (Alyx, v101). White is the glazed white the mug
     // uses; Steel is bare metal; anything else is a powder coat in that hex.
     const body=bodyMaterialFor(THREE,mats,steel,(opts&&opts.colorHex)||'#ffffff',opts&&opts.finish);
-    return { body, steel, lid, lidBlue, cap };
+    return { body, steel, lid, lidBlue, cap, gold };
   }
   function assembleTumbler(THREE,T,mats,opts){
     const g=new THREE.Group();
@@ -17585,14 +17643,34 @@ const MUG3D = (function(){
     if(T.handle){
       // A rounded loop, drawn at the back and turned to its angle. The
       // ends sit just inside the wall so the joins never show.
-      const h=T.handle, Rt=profileR(T,h.y1), Rb=profileR(T,h.y0), ym=(h.y0+h.y1)/2;
-      const path=[[Rt-0.08,h.y1],[Rt+h.reach*0.55,h.y1+0.02],[Rt+h.reach,h.y1-0.25],[Rt+h.reach,ym],[Rb+h.reach,h.y0+0.25],[Rb+h.reach*0.55,h.y0-0.02],[Rb-0.08,h.y0]];
+      // A handle traced off a photo brings its own path (the stein's), and
+      // swells at the feet the way the mug's does.
+      const h=T.handle;
+      let path, radiusAt=()=>h.r;
+      if(h.path){
+        path=h.path;
+        const ease=x=>x*x*(3-2*x);
+        radiusAt=t=>{ const e=Math.min(t,1-t); return h.r*(1+0.45*(e<0.15?ease(1-e/0.15):0)); };
+      } else {
+        const Rt=profileR(T,h.y1), Rb=profileR(T,h.y0), ym=(h.y0+h.y1)/2;
+        path=[[Rt-0.08,h.y1],[Rt+h.reach*0.55,h.y1+0.02],[Rt+h.reach,h.y1-0.25],[Rt+h.reach,ym],[Rb+h.reach,h.y0+0.25],[Rb+h.reach*0.55,h.y0-0.02],[Rb-0.08,h.y0]];
+      }
       const curve=new THREE.CatmullRomCurve3(path.map(([x,y])=>new THREE.Vector3(0,y,-x)),false,'centripetal');
       const mat=tm[h.mat]||tm.body;
-      const hand=new THREE.Mesh(flaredTube(THREE,curve,120,20,()=>h.r,0),[mat,mat]);
+      const hand=new THREE.Mesh(flaredTube(THREE,curve,120,20,radiusAt,0),[mat,mat]);
       hand.rotation.y=h.angle+Math.PI;
       hand.castShadow=true; hand.receiveShadow=true;
       g.add(hand);
+    }
+    if(T.beads){
+      // One instanced mesh per row: a hundred-odd beads for the cost of one draw.
+      const m4=new THREE.Matrix4();
+      T.beads.forEach(([y,r,size,n])=>{
+        const beads=new THREE.InstancedMesh(new THREE.SphereGeometry(size,10,8),tm.body,n);
+        for(let i=0;i<n;i++){ const a=i/n*Math.PI*2; m4.makeTranslation(Math.sin(a)*r,y,Math.cos(a)*r); beads.setMatrixAt(i,m4); }
+        beads.receiveShadow=true;
+        g.add(beads);
+      });
     }
     if(T.straw){
       const st=T.straw;
