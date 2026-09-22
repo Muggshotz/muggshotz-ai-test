@@ -5,17 +5,28 @@ sell, from which he picks three. Costs are unprobed on everything here until
 a product is circled; probe the same way as the mugs (cost-probe action in
 The Portal, blueprint + provider).
 
-## Alyx's front runners
+## The consolidated nine
 
-Five so far, all from Claude's list:
+Bud's real ones plus Claude's left standing, overlaps counted once. Bud also
+had doormat and ornament; Alyx credited Claude for saying them first.
 
-1. Doormat (Printify 1346 / 1601)
-2. Sticker sheet (661)
-3. Desk calendar, blank (952 / 1170) — twelve pictures, twelve tokens
-4. Unisex T-shirt (145 / 6)
-5. Ceramic Christmas ornament (531 / 537) — on both lists
+| # | Product | Whose | Printify | Note |
+| --- | --- | --- | --- | --- |
+| 1 | Wrapping paper | Bud | 845 rolls, 848 sheets, 1367 (5 providers incl. Taylor), 1100 | print files ~9000 px wide: a tiled pattern of the caricature, a new layout |
+| 2 | Custom cut standee | Bud | 2770, UV by Chill (the Tundra's printer) | 1200 x 1800, cut to the outline |
+| 3 | Playing cards | Bud | 675, Imagine Your Photos | ONE design on the card back; fronts are standard |
+| 4 | Car air freshener | Bud | 1482 | |
+| 5 | Ceramic ornament | both | 531 set of 4 shapes (Imagine Your Photos); 537 single, two-sided (Duplium) | |
+| 6 | Doormat | both | 1346, 1601 | |
+| 7 | Desk calendar, blank | Claude | 952, 1170 | twelve pictures, twelve tokens |
+| 8 | Unisex T-shirt | Claude | 145, 6 | |
+| 9 | Sticker sheet | Claude | 661 | |
 
-Bud's picks still to come.
+Set aside: puzzle and phone case (already sold); bobbleheads and comic books
+(not print-on-demand products; no blueprint anywhere in the catalog).
+
+Alyx's first five front runners, before Bud's list arrived: doormat, sticker
+sheet, desk calendar, T-shirt, ornament.
 
 ## Claude's ten
 
