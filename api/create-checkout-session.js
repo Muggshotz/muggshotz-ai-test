@@ -137,13 +137,20 @@ const MUG_TYPE_TO_PRODUCT_KEY = {
 // product: the webhook credits the tokens and mints a $5 credit code on the
 // gift-certificate ledger, the studio saves that code on the device when the
 // buyer returns, and the order page applies it at checkout by itself.
+const RESERVATION_CENTS = 500;
 async function handleReservation(req, res) {
   const { email, deviceId } = req.body || {};
   if (!deviceId) return res.status(400).json({ error: "Missing device ID." });
   const origin = req.headers.origin || process.env.PUBLIC_SITE_URL || "https://muggshotz-ai-test.vercel.app";
   const session = await stripe.checkout.sessions.create({
     mode: "payment",
-    line_items: [{ price: process.env.STRIPE_PRICE_ID, quantity: 1 }],
+    // Priced inline, like every other product. It used to name a saved Stripe
+    // price (STRIPE_PRICE_ID) that does not exist in the live account --
+    // "No such price", checked 22 Sep 2026 -- so every reservation failed.
+    line_items: [
+      { price_data: { currency: "usd", product_data: { name: "$5 Preview Reservation", description: "Tokens now, and $5 off your product at checkout." }, unit_amount: RESERVATION_CENTS }, quantity: 1 },
+      { price_data: { currency: "usd", product_data: { name: "Card Processing & Handling", description: "Payment processing at our processor's standard rate (2.9% + 30¢) plus a 5¢ handling fee" }, unit_amount: feeLineCents(RESERVATION_CENTS) }, quantity: 1 }
+    ],
     customer_email: email || undefined,
     metadata: { order_type: "reservation", device_id: deviceId },
     success_url: `${origin}/needles-studio.html?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
