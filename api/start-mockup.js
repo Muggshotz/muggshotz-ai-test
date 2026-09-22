@@ -114,7 +114,8 @@ async function handleStart(req, res) {
       : product.cutToShape
         ? await buildCutoutImage(image, width, height)
         : await buildSingleImage(image, width, height);
-    printifyImages[position] = await uploadImageToPrintify(buffer, `muggshotz-mockup-preview-${Date.now()}.png`);
+    const uploadedId = await uploadImageToPrintify(buffer, `muggshotz-mockup-preview-${Date.now()}.png`);
+    for (const pos of (product.repeatPositions || [position])) printifyImages[pos] = uploadedId;
 
   } else {
     throw new Error("Real-photo mockups aren't available for this product type yet.");

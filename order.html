@@ -103,7 +103,7 @@ label{font-size:11px;color:#888;letter-spacing:.5px;text-transform:uppercase;dis
 body.studio-driven #bridgeGridCard,body.studio-driven #previewCard,
 body.studio-driven #mugStyleCard,body.studio-driven #sizeCard,body.studio-driven #livePreviewCard,body.studio-driven #colorCard,body.studio-driven #fullWrapCard,
 body.studio-driven #travelMugStyleCard,body.studio-driven #travelColorCard,body.studio-driven #suitcaseSizeCard,body.studio-driven #phoneCaseCard,
-body.studio-driven #toteBagSizeCard,body.studio-driven #toteBagColorCard,body.studio-driven #puzzleSizeCard,body.studio-driven #wrapSizeCard,body.studio-driven #ornamentShapeCard,body.studio-driven #airFreshenerOptionCard,body.studio-driven #photoPosterCard,
+body.studio-driven #toteBagSizeCard,body.studio-driven #toteBagColorCard,body.studio-driven #puzzleSizeCard,body.studio-driven #wrapSizeCard,body.studio-driven #ornamentShapeCard,body.studio-driven #stickerSheetOptionCard,body.studio-driven #nightBuddyOptionCard,body.studio-driven #airFreshenerOptionCard,body.studio-driven #photoPosterCard,
 body.studio-driven #mockupCtaLeft,body.studio-driven #mockupCtaRight,body.studio-driven #mockupWaitBanner{display:none!important}
 #orderHeadlineCard{display:none}
 body.studio-driven #orderHeadlineCard{display:block}
@@ -310,6 +310,20 @@ body.studio-driven #orderHeadlineCard{display:block}
 <div class="note" id="airFreshenerMockupBtn" style="text-align:center;margin-top:1rem;color:var(--accent-soft);font-weight:600">🔍 Click Image To Enlarge</div>
 <div class="note" id="airFreshenerMockupNote" style="margin-top:.5rem;text-align:center;display:none"></div>
 <img id="airFreshenerMockupImg" style="display:none;width:100%;border-radius:12px;border:1px solid var(--accent);margin-top:.75rem"/>
+</div>
+<div class="card" id="nightBuddyOptionCard" style="display:none">
+<div class="card-title">💡 Full Colour or Warm Glow?</div>
+<div class="grid2" id="nightBuddyOptionGrid"></div>
+<div class="note" id="nightBuddyMockupBtn" style="text-align:center;margin-top:1rem;color:var(--accent-soft);font-weight:600">🔍 Click Image To Enlarge</div>
+<div class="note" id="nightBuddyMockupNote" style="margin-top:.5rem;text-align:center;display:none"></div>
+<img id="nightBuddyMockupImg" style="display:none;width:100%;border-radius:12px;border:1px solid var(--accent);margin-top:.75rem"/>
+</div>
+<div class="card" id="stickerSheetOptionCard" style="display:none">
+<div class="card-title">⭐ Small or Large Sheet?</div>
+<div class="grid2" id="stickerSheetOptionGrid"></div>
+<div class="note" id="stickerSheetMockupBtn" style="text-align:center;margin-top:1rem;color:var(--accent-soft);font-weight:600">🔍 Click Image To Enlarge</div>
+<div class="note" id="stickerSheetMockupNote" style="margin-top:.5rem;text-align:center;display:none"></div>
+<img id="stickerSheetMockupImg" style="display:none;width:100%;border-radius:12px;border:1px solid var(--accent);margin-top:.75rem"/>
 </div>
 <div class="card" id="ornamentShapeCard" style="display:none">
 <div class="card-title">🎄 Which Shape?</div>
@@ -712,6 +726,8 @@ function currentProductKey(){
   if (isWrap())         return 'wrapping-paper';
   if (isOrnament())     return 'ceramic-ornament';
   if (isStandee())      return 'custom-standee';
+  if (isStickerSheet()) return 'sticker-sheet';
+  if (isNightBuddy()) return 'night-buddy';
   if (isBeerStein()) return 'beer-stein';
   if (isDoormat()) return 'doormat';
   if (isAirFreshener()) return 'car-air-freshener';
@@ -1147,6 +1163,8 @@ function isPuzzle(){ return selectedProductFamily === 'puzzle'; }
 function isWrap(){ return selectedProductFamily === 'wrapping paper'; }
 function isOrnament(){ return selectedProductFamily === 'ornament'; }
 function isStandee(){ return selectedProductFamily === 'standee'; }
+function isStickerSheet(){ return selectedProductFamily === 'sticker sheet'; }
+function isNightBuddy(){ return selectedProductFamily === 'night light'; }
 function isBeerStein(){ return selectedProductFamily === 'beer stein'; }
 function isDoormat(){ return selectedProductFamily === 'doormat'; }
 function isAirFreshener(){ return selectedProductFamily === 'air freshener'; }
@@ -1204,6 +1222,20 @@ const AIRFRESHENER_OPTIONS = { "New Car": { price: 9.95 }, "Pine": { price: 9.95
 let selectedAirFreshener = "New Car";
 if (pendingOrder?.preselectedAirFreshener && AIRFRESHENER_OPTIONS[pendingOrder.preselectedAirFreshener]) {
   selectedAirFreshener = pendingOrder.preselectedAirFreshener;
+}
+
+// NIGHT-BUDDY (22 Sep 2026). Keys match lib/products-catalog.js.
+const NIGHTBUDDY_OPTIONS = { "Full Colour": { price: 15.95 }, "Warm Glow": { price: 12.95 } };
+let selectedNightBuddy = "Full Colour";
+if (pendingOrder?.preselectedNightBuddy && NIGHTBUDDY_OPTIONS[pendingOrder.preselectedNightBuddy]) {
+  selectedNightBuddy = pendingOrder.preselectedNightBuddy;
+}
+
+// STICKER SHEET (22 Sep 2026). Keys match lib/products-catalog.js.
+const STICKERSHEET_OPTIONS = { "Small 6 x 4 in": { price: 9.95 }, "Large 11 x 8.5 in": { price: 13.95 } };
+let selectedStickerSheet = "Small 6 x 4 in";
+if (pendingOrder?.preselectedStickerSheet && STICKERSHEET_OPTIONS[pendingOrder.preselectedStickerSheet]) {
+  selectedStickerSheet = pendingOrder.preselectedStickerSheet;
 }
 
 // CERAMIC ORNAMENT (22 Sep 2026). Keys match lib/products-catalog.js.
@@ -1293,6 +1325,8 @@ const BRIDGE_GRID_PRODUCTS = [
   { key: 'wrapping paper', icon: '🎁', label: "It's a Wrap", priceFrom: '$8.95' },
   { key: 'ornament', icon: '🎄', label: 'Ceramic Ornament', priceFrom: '$9.95' },
   { key: 'standee', icon: '🧍', label: 'From Where I Stand', priceFrom: '$16.95' },
+  { key: 'sticker sheet', icon: '⭐', label: 'Sticker Sheet', priceFrom: '$9.95' },
+  { key: 'night light', icon: '💡', label: 'Night-Buddy', priceFrom: '$12.95' },
   { key: 'beer stein', icon: '🍺', label: 'Beer Stein', priceFrom: '$24.95' },
   { key: 'doormat', icon: '🚪', label: 'Doormat', priceFrom: '$16.95' },
   { key: 'air freshener', icon: '🌲', label: 'Car Air Freshener', priceFrom: '$9.95' },
@@ -1510,6 +1544,46 @@ function pickAirFreshener(name){
   selectedAirFreshener = name;
   renderAirFreshenerGrid();
   const img=document.getElementById('airFreshenerMockupImg'); if(img) img.style.display='none';
+  hideMockupSideCta();
+  updateSummary();
+  scheduleAutoMockupFetch();
+}
+
+function renderNightBuddyGrid(){
+  const grid = document.getElementById('nightBuddyOptionGrid');
+  grid.innerHTML = '';
+  Object.keys(NIGHTBUDDY_OPTIONS).forEach(name => {
+    const btn = document.createElement('div');
+    btn.className = 'btn-select' + (name === selectedNightBuddy ? ' selected' : '');
+    btn.innerHTML = name + '<span class="price">$' + NIGHTBUDDY_OPTIONS[name].price.toFixed(2) + '</span>';
+    btn.onclick = () => pickNightBuddy(name);
+    grid.appendChild(btn);
+  });
+}
+function pickNightBuddy(name){
+  selectedNightBuddy = name;
+  renderNightBuddyGrid();
+  const img=document.getElementById('nightBuddyMockupImg'); if(img) img.style.display='none';
+  hideMockupSideCta();
+  updateSummary();
+  scheduleAutoMockupFetch();
+}
+
+function renderStickerSheetGrid(){
+  const grid = document.getElementById('stickerSheetOptionGrid');
+  grid.innerHTML = '';
+  Object.keys(STICKERSHEET_OPTIONS).forEach(name => {
+    const btn = document.createElement('div');
+    btn.className = 'btn-select' + (name === selectedStickerSheet ? ' selected' : '');
+    btn.innerHTML = name + '<span class="price">$' + STICKERSHEET_OPTIONS[name].price.toFixed(2) + '</span>';
+    btn.onclick = () => pickStickerSheet(name);
+    grid.appendChild(btn);
+  });
+}
+function pickStickerSheet(name){
+  selectedStickerSheet = name;
+  renderStickerSheetGrid();
+  const img=document.getElementById('stickerSheetMockupImg'); if(img) img.style.display='none';
   hideMockupSideCta();
   updateSummary();
   scheduleAutoMockupFetch();
@@ -1936,6 +2010,12 @@ function runAutoMockupForMode(){
   } else if (isAirFreshener()) {
     if (!selectedAirFreshener) return;
     fetchSingleImageMockup('car-air-freshener', selectedAirFreshener, null, 'airFreshenerMockupBtn', 'airFreshenerMockupNote', 'airFreshenerMockupImg');
+  } else if (isNightBuddy()) {
+    if (!selectedNightBuddy) return;
+    fetchSingleImageMockup('night-buddy', selectedNightBuddy, null, 'nightBuddyMockupBtn', 'nightBuddyMockupNote', 'nightBuddyMockupImg');
+  } else if (isStickerSheet()) {
+    if (!selectedStickerSheet) return;
+    fetchSingleImageMockup('sticker-sheet', selectedStickerSheet, null, 'stickerSheetMockupBtn', 'stickerSheetMockupNote', 'stickerSheetMockupImg');
   } else if (isOrnament()) {
     if (!selectedOrnamentShape) return;
     fetchSingleImageMockup('ceramic-ornament', selectedOrnamentShape, null, 'ornamentMockupBtn', 'ornamentMockupNote', 'ornamentMockupImg');
@@ -2147,6 +2227,12 @@ function updateSummary(){
   } else if (isAirFreshener()) {
     basePrice = AIRFRESHENER_OPTIONS[selectedAirFreshener].price;
     styleSizeLabel = 'Car Air Freshener' + ', ' + selectedAirFreshener;
+  } else if (isNightBuddy()) {
+    basePrice = NIGHTBUDDY_OPTIONS[selectedNightBuddy].price;
+    styleSizeLabel = 'Night-Buddy' + ', ' + selectedNightBuddy;
+  } else if (isStickerSheet()) {
+    basePrice = STICKERSHEET_OPTIONS[selectedStickerSheet].price;
+    styleSizeLabel = 'Sticker Sheet' + ', ' + selectedStickerSheet;
   } else if (isOrnament()) {
     basePrice = ORNAMENT_SHAPES[selectedOrnamentShape].price;
     styleSizeLabel = 'Ceramic Ornament, ' + selectedOrnamentShape;
@@ -2464,6 +2550,42 @@ async function submitOrder(){
       referralCode
     };
 
+  } else if (isNightBuddy()) {
+    const image = pendingOrder?.placements?.left || pendingOrder?.placements?.front || pendingOrder?.placements?.right || null;
+    if (!image) {
+      setStatus('No design found — please go back and place a design first.', true);
+      return;
+    }
+    body = {
+      type: 'mug_order',
+      deviceId,
+      productKey: 'night-buddy',
+      sizeLabel: selectedNightBuddy,
+      image,
+      customerName: fullName,
+      giftMessage: giftMessageEnabled ? document.getElementById('giftMessageText').value.trim() : null,
+      shippingAddress,
+      referralCode
+    };
+
+  } else if (isStickerSheet()) {
+    const image = pendingOrder?.placements?.left || pendingOrder?.placements?.front || pendingOrder?.placements?.right || null;
+    if (!image) {
+      setStatus('No design found — please go back and place a design first.', true);
+      return;
+    }
+    body = {
+      type: 'mug_order',
+      deviceId,
+      productKey: 'sticker-sheet',
+      sizeLabel: selectedStickerSheet,
+      image,
+      customerName: fullName,
+      giftMessage: giftMessageEnabled ? document.getElementById('giftMessageText').value.trim() : null,
+      shippingAddress,
+      referralCode
+    };
+
   } else if (isOrnament()) {
     const image = pendingOrder?.placements?.left || pendingOrder?.placements?.front || pendingOrder?.placements?.right || null;
     if (!image) {
@@ -2711,7 +2833,7 @@ function setupPageForMode(){
 const ALL_PRODUCT_SPECIFIC_CARDS = [
   'mugStyleCard','sizeCard','livePreviewCard','colorCard','fullWrapCard',
   'travelMugStyleCard','travelColorCard','suitcaseSizeCard','phoneCaseCard',
-  'toteBagSizeCard','toteBagColorCard','puzzleSizeCard','wrapSizeCard','ornamentShapeCard','airFreshenerOptionCard','photoPosterCard'
+  'toteBagSizeCard','toteBagColorCard','puzzleSizeCard','wrapSizeCard','ornamentShapeCard','stickerSheetOptionCard','nightBuddyOptionCard','airFreshenerOptionCard','photoPosterCard'
 ];
 function hideAllProductCards(){
   ALL_PRODUCT_SPECIFIC_CARDS.forEach(id => {
@@ -2792,6 +2914,14 @@ if (isTravelMug()) {
     hideAllProductCards();
     document.getElementById('airFreshenerOptionCard').style.display = 'block';
     renderAirFreshenerGrid();
+  } else if (isNightBuddy()) {
+    hideAllProductCards();
+    document.getElementById('nightBuddyOptionCard').style.display = 'block';
+    renderNightBuddyGrid();
+  } else if (isStickerSheet()) {
+    hideAllProductCards();
+    document.getElementById('stickerSheetOptionCard').style.display = 'block';
+    renderStickerSheetGrid();
   } else if (isOrnament()) {
     hideAllProductCards();
     document.getElementById('ornamentShapeCard').style.display = 'block';

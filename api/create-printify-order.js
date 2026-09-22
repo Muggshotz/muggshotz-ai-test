@@ -1259,9 +1259,12 @@ export async function placeProductOrder({
       : product.cutToShape
         ? await buildCutoutImage(image, width, height)
         : await buildSingleImage(image, width, height);
-    printifyImages[position] = product.tilePattern
+    const uploadedId = product.tilePattern
       ? await uploadLargeImageToPrintify(buffer, `muggshotz-wrap-${Date.now()}.jpg`)
       : await uploadImageToPrintify(buffer, `muggshotz-${Date.now()}.png`);
+    // A sticker sheet has several sticker slots (front_1..front_4); the same
+    // cutout goes into each. Everything else prints into its one position.
+    for (const pos of (product.repeatPositions || [position])) printifyImages[pos] = uploadedId;
 
     // THE INSIDE PAGE (Sep 2026). Blank is still the default and still the
     // normal card; this only runs when the customer asked for something on
