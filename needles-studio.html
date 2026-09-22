@@ -1,5 +1,5 @@
 <!-- ============================================================
-     VERSION: V323
+     VERSION: V324
      ============================================================
      THE ONE LINE THAT SAYS WHICH BUILD YOU ARE LOOKING AT.
 
@@ -4183,7 +4183,7 @@ function toggleWorkingImage(){
 // Two copies of a number is exactly how the marker rotted in the first place,
 // so they are not trusted to agree: .githooks/pre-commit moves both together
 // and REFUSES the commit if it ever finds them apart.
-const APP_VERSION='V323';
+const APP_VERSION='V324';
 try{ console.log('%cNeedles\u2019 Studio '+APP_VERSION,'color:#29a3ff;font-weight:700'); }catch(e){}
 
 function getDeviceId(){
@@ -16725,7 +16725,14 @@ const MUG3D = (function(){
   // Real mugs, in inches. wrapIn is how much of the circumference Printify
   // actually prints; the remainder is the bare strip at the handle.
   const SIZES = {
-    '11oz': { R:1.600, H:3.70, wrapIn:8.25, bandH:3.35 },
+    // wrapIn 7.17, not Printify's 8.25 (V324): the strip is cut at
+    // MUG_WRAP_RATIO (2.14) for both mugs, and the band must be that shape
+    // or paint() crops it. 8.25 x 3.35 is 2.46, which trimmed the top and
+    // bottom of every 11oz wrap and took the frame's rails with it. The
+    // mug's height is measured and a 3.85in band will not fit under its
+    // rim, so the band goes less far round instead: 71% of the way, a
+    // wider bare strip at the handle. The 15oz already sits at 2.15.
+    '11oz': { R:1.600, H:3.70, wrapIn:7.17, bandH:3.35 },
     '15oz': { R:1.675, H:4.36, wrapIn:8.50, bandH:3.95 }   // height/width 1.30, measured off mug-cambridge-blue.jpg
   };
 
