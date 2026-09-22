@@ -885,6 +885,71 @@ async function finishWrapStrip(stripBuffer, canvasWidth, canvasHeight, borderHex
 // and JPEG is safe here. 4:4:4 chroma keeps full colour resolution, which
 // matters for print: the default 4:2:0 would throw away three quarters of the
 // colour detail to save about half a megabyte.
+// IT'S A WRAP (22 Sep 2026): wrapping paper is a pattern, not a picture.
+// The customer's tile is repeated across the sheet as drawn, upright, about
+// three repeats to the width.
+//
+// BUILT AT 150 DPI, NOT PRINTIFY'S 200 (measured 22 Sep 2026). The source is
+// a 1536 px picture spread over ~9.7 in, so it carries ~158 dpi of real
+// detail; building at 200 only enlarges it. At full size the 144" roll is
+// 170 MP, which exceeded sharp's pixel limit outright and would not fit an
+// upload. At 150 dpi it is 94 MP; Printify scales it to the placeholder
+// (placement scale 1 fills the width). Sheets and rolls go to Printify by
+// URL, not base64 -- see uploadLargeImageToPrintify below.
+export async function buildTiledPattern(imageSource, canvasWidth, canvasHeight, repeatsAcross = 3, maxWidthPx = 4350) {
+  const scale = Math.min(1, maxWidthPx / canvasWidth);
+  const W = Math.round(canvasWidth * scale), H = Math.round(canvasHeight * scale);
+  const big = { limitInputPixels: false };
+  const src = sharp(await resolveImageBuffer(imageSource), big);
+  const meta = await src.metadata();
+  const tileW = Math.max(64, Math.round(W / repeatsAcross));
+  const tileH = Math.max(64, Math.round(tileW * (meta.height / meta.width)));
+  const tile = await src.resize(tileW, tileH, { fit: "fill" }).png().toBuffer();
+  // STRAIGHT REPEATS, NOT MIRRORED (22 Sep 2026, first render). Mirroring
+  // hid seams but turned every other face upside down and wrote "Merry
+  // Christmas" backwards. The describe lane asks the model for a seamless
+  // repeat, and Bud's sample sheet is one, so the tile is laid as drawn.
+  const block = tile, bw = tileW, bh = tileH;
+  // sharp runs extract BEFORE composite in one pipeline, so each step that
+  // needs cropping is its own call. The row is cropped to the sheet's width;
+  // rows are then laid down the sheet, the last one cropped to what is left.
+  const cols = Math.ceil(W / bw), rows = Math.ceil(H / bh);
+  const rowWide = await sharp({ create: { width: cols * bw, height: bh, channels: 3, background: { r: 255, g: 255, b: 255 } }, ...big })
+    .composite(Array.from({ length: cols }, (_, i) => ({ input: block, left: i * bw, top: 0 })))
+    .png().toBuffer();
+  const row = await sharp(rowWide, big).extract({ left: 0, top: 0, width: W, height: bh }).png().toBuffer();
+  const lastH = H - (rows - 1) * bh;
+  const lastRow = lastH === bh ? row : await sharp(row, big).extract({ left: 0, top: 0, width: W, height: lastH }).png().toBuffer();
+  return await sharp({ create: { width: W, height: H, channels: 3, background: { r: 255, g: 255, b: 255 } }, ...big })
+    .composite(Array.from({ length: rows }, (_, j) => ({ input: j === rows - 1 ? lastRow : row, left: 0, top: j * bh })))
+    .jpeg({ quality: 85, chromaSubsampling: "4:4:4" })
+    .toBuffer();
+}
+
+// A print file too big for the base64 upload (Printify's "POST data is too
+// large", see compressForPrintify) goes to Supabase storage first and Printify
+// fetches it by URL. Same bucket the generator already writes to.
+export async function uploadLargeImageToPrintify(buffer, fileName) {
+  const SUPA = process.env.SUPABASE_URL, KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!SUPA || !KEY) return uploadImageToPrintify(buffer, fileName);
+  const path = `print-files/${Date.now()}-${fileName}`;
+  const put = await fetch(`${SUPA}/storage/v1/object/generations/${path}`, {
+    method: "POST",
+    headers: { "apikey": KEY, "Authorization": `Bearer ${KEY}`, "Content-Type": "image/jpeg" },
+    body: buffer
+  });
+  if (!put.ok) throw new Error("Print file storage upload failed: " + await put.text());
+  const url = `${SUPA}/storage/v1/object/public/generations/${path}`;
+  const response = await fetch("https://api.printify.com/v1/uploads/images.json", {
+    method: "POST",
+    headers: { "Authorization": `Bearer ${process.env.PRINTIFY_API_TOKEN}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ file_name: fileName, url })
+  });
+  const data = await response.json();
+  if (!response.ok) throw new Error("Printify image upload (by URL) failed: " + JSON.stringify(data));
+  return data.id;
+}
+
 export async function buildSingleImage(imageSource, canvasWidth, canvasHeight) {
   const WHITE = { r: 255, g: 255, b: 255 };
   return await sharp(await resolveImageBuffer(imageSource))
@@ -1171,12 +1236,18 @@ export async function placeProductOrder({
 
   } else if (product.layoutType === "single-image") {
     if (!image) throw new Error("An image is required.");
-    const dims = product.printDimensions?.front;
+    // A size can carry its own print area (wrapping paper: every size is a
+    // different sheet), else the product's, else Printify's live answer.
+    const dims = product.sizes?.[sizeLabel]?.printDimensions?.front || product.printDimensions?.front;
     const { width, height, position } = dims
       ? { ...dims, position: "front" }
       : await getPlaceholderDimensions(effectiveBlueprintId, effectivePrintProviderId, variantId);
-    const buffer = await buildSingleImage(image, width, height);
-    printifyImages[position] = await uploadImageToPrintify(buffer, `muggshotz-${Date.now()}.png`);
+    const buffer = product.tilePattern
+      ? await buildTiledPattern(image, width, height)
+      : await buildSingleImage(image, width, height);
+    printifyImages[position] = product.tilePattern
+      ? await uploadLargeImageToPrintify(buffer, `muggshotz-wrap-${Date.now()}.jpg`)
+      : await uploadImageToPrintify(buffer, `muggshotz-${Date.now()}.png`);
 
     // THE INSIDE PAGE (Sep 2026). Blank is still the default and still the
     // normal card; this only runs when the customer asked for something on

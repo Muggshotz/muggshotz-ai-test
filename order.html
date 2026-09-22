@@ -103,7 +103,7 @@ label{font-size:11px;color:#888;letter-spacing:.5px;text-transform:uppercase;dis
 body.studio-driven #bridgeGridCard,body.studio-driven #previewCard,
 body.studio-driven #mugStyleCard,body.studio-driven #sizeCard,body.studio-driven #livePreviewCard,body.studio-driven #colorCard,body.studio-driven #fullWrapCard,
 body.studio-driven #travelMugStyleCard,body.studio-driven #travelColorCard,body.studio-driven #suitcaseSizeCard,body.studio-driven #phoneCaseCard,
-body.studio-driven #toteBagSizeCard,body.studio-driven #toteBagColorCard,body.studio-driven #puzzleSizeCard,body.studio-driven #photoPosterCard,
+body.studio-driven #toteBagSizeCard,body.studio-driven #toteBagColorCard,body.studio-driven #puzzleSizeCard,body.studio-driven #wrapSizeCard,body.studio-driven #photoPosterCard,
 body.studio-driven #mockupCtaLeft,body.studio-driven #mockupCtaRight,body.studio-driven #mockupWaitBanner{display:none!important}
 #orderHeadlineCard{display:none}
 body.studio-driven #orderHeadlineCard{display:block}
@@ -304,6 +304,13 @@ body.studio-driven #orderHeadlineCard{display:block}
 <img id="toteMockupImg" style="display:none;width:100%;border-radius:12px;border:1px solid var(--accent);margin-top:.75rem"/>
 </div>
 
+<div class="card" id="wrapSizeCard" style="display:none">
+<div class="card-title">🎁 Sheet or Roll?</div>
+<div class="grid3" id="wrapSizeGrid"></div>
+<div class="note" id="wrapMockupBtn" style="text-align:center;margin-top:1rem;color:var(--accent-soft);font-weight:600">🔍 Click Image To Enlarge</div>
+<div class="note" id="wrapMockupNote" style="margin-top:.5rem;text-align:center;display:none"></div>
+<img id="wrapMockupImg" style="display:none;width:100%;border-radius:12px;border:1px solid var(--accent);margin-top:.75rem"/>
+</div>
 <div class="card" id="puzzleSizeCard" style="display:none">
 <div class="card-title">Puzzle Size</div>
 <div class="grid2" id="puzzleSizeGrid"></div>
@@ -682,6 +689,7 @@ function currentProductKey(){
   if (isPhoneCase())    return 'phone-case-tough';
   if (isToteBag())      return 'tote-bag';
   if (isPuzzle())       return 'photo-puzzle';
+  if (isWrap())         return 'wrapping-paper';
   if (isMousePad())     return 'mouse-pad';
   if (isGreetingCard()) return 'greeting-card';
   if (isPostIt())       return 'post-it-notes';
@@ -1110,6 +1118,7 @@ function isSuitcase(){ return selectedProductFamily === 'suitcase'; }
 function isPhoneCase(){ return selectedProductFamily === 'phone case'; }
 function isToteBag(){ return selectedProductFamily === 'tote bag'; }
 function isPuzzle(){ return selectedProductFamily === 'puzzle'; }
+function isWrap(){ return selectedProductFamily === 'wrapping paper'; }
 function isPhotoPoster(){ return selectedProductFamily === 'photo poster'; }
 function isCoaster(){ return selectedProductFamily === 'coaster'; }
 function isMousePad(){ return selectedProductFamily === 'mouse pad'; }
@@ -1153,6 +1162,17 @@ const PUZZLE_SIZES = {
   "1000 pcs": { price: 43.95 }
 };
 let selectedPuzzleSize = "96 pcs";
+
+// IT'S A WRAP (22 Sep 2026). Keys match lib/products-catalog.js exactly.
+const WRAP_SIZES = {
+  "Sheet 29\" x 20\"": { price: 14.95, label: 'Sheet, 29" x 20"' },
+  "Roll 29\" x 72\"":  { price: 29.95, label: 'Roll, 29" x 6 ft' },
+  "Roll 29\" x 144\"": { price: 44.95, label: 'Long roll, 29" x 12 ft' }
+};
+let selectedWrapSize = "Sheet 29\" x 20\"";
+if (pendingOrder?.preselectedWrapSize && WRAP_SIZES[pendingOrder.preselectedWrapSize]) {
+  selectedWrapSize = pendingOrder.preselectedWrapSize;
+}
 // Restored from the studio's hand-off (Sep 2026). Before this the studio's
 // choice never arrived and the customer paid for -- and got -- the default.
 // Validated against the table so an unknown label cannot break the grid.
@@ -1220,6 +1240,7 @@ const BRIDGE_GRID_PRODUCTS = [
   { key: 'phone case', icon: '📱', label: 'Phone Case', priceFrom: '$19.95' },
   { key: 'tote bag', icon: '👜', label: 'Tote Bag', priceFrom: '$23.95' },
   { key: 'puzzle', icon: '🧩', label: 'Photo Puzzle', priceFrom: '$38.95' },
+  { key: 'wrapping paper', icon: '🎁', label: "It's a Wrap", priceFrom: '$14.95' },
   { key: 'coaster', icon: '☕', label: 'Coasters', priceFrom: '$29.95' },
   { key: 'mouse pad', icon: '🖱️', label: 'Mouse Pad', priceFrom: '$9.95' },
   { key: 'greeting card', icon: '💌', label: 'Greeting Cards', priceFrom: '$15.95' },
@@ -1386,6 +1407,26 @@ function pickToteBagColor(el, colorData){
   selectedToteColor = colorData.name;
   document.getElementById('toteBagColorLabel').textContent = selectedToteColor;
   const img=document.getElementById('toteMockupImg'); if(img) img.style.display='none';
+  hideMockupSideCta();
+  updateSummary();
+  scheduleAutoMockupFetch();
+}
+
+function renderWrapSizeGrid(){
+  const grid = document.getElementById('wrapSizeGrid');
+  grid.innerHTML = '';
+  Object.keys(WRAP_SIZES).forEach(sizeName => {
+    const btn = document.createElement('div');
+    btn.className = 'btn-select' + (sizeName === selectedWrapSize ? ' selected' : '');
+    btn.innerHTML = WRAP_SIZES[sizeName].label + '<span class="price">$' + WRAP_SIZES[sizeName].price.toFixed(2) + '</span>';
+    btn.onclick = () => pickWrapSize(sizeName);
+    grid.appendChild(btn);
+  });
+}
+function pickWrapSize(sizeName){
+  selectedWrapSize = sizeName;
+  renderWrapSizeGrid();
+  const img=document.getElementById('wrapMockupImg'); if(img) img.style.display='none';
   hideMockupSideCta();
   updateSummary();
   scheduleAutoMockupFetch();
@@ -1769,6 +1810,9 @@ function runAutoMockupForMode(){
   } else if (isPuzzle()) {
     if (!selectedPuzzleSize) return;
     fetchSingleImageMockup('photo-puzzle', selectedPuzzleSize, null, 'puzzleMockupBtn', 'puzzleMockupNote', 'puzzleMockupImg');
+  } else if (isWrap()) {
+    if (!selectedWrapSize) return;
+    fetchSingleImageMockup('wrapping-paper', selectedWrapSize, null, 'wrapMockupBtn', 'wrapMockupNote', 'wrapMockupImg');
   } else if (isPhotoPoster()) {
     fetchPosterMockup();
   }
@@ -1971,6 +2015,9 @@ function updateSummary(){
   } else if (isPuzzle()) {
     basePrice = PUZZLE_SIZES[selectedPuzzleSize].price;
     styleSizeLabel = 'Photo Puzzle, ' + selectedPuzzleSize;
+  } else if (isWrap()) {
+    basePrice = WRAP_SIZES[selectedWrapSize].price;
+    styleSizeLabel = "It's a Wrap, " + WRAP_SIZES[selectedWrapSize].label;
   } else if (isCoaster()) {
     basePrice = COASTER_PRICE;
     styleSizeLabel = (pendingOrder?.coasterShape === 'round')
@@ -2238,6 +2285,24 @@ async function submitOrder(){
       referralCode
     };
 
+  } else if (isWrap()) {
+    const image = pendingOrder?.placements?.left || pendingOrder?.placements?.front || pendingOrder?.placements?.right || null;
+    if (!image) {
+      setStatus('No design found — please go back and place a design first.', true);
+      return;
+    }
+    body = {
+      type: 'mug_order',
+      deviceId,
+      productKey: 'wrapping-paper',
+      sizeLabel: selectedWrapSize,
+      image,
+      customerName: fullName,
+      giftMessage: giftMessageEnabled ? document.getElementById('giftMessageText').value.trim() : null,
+      shippingAddress,
+      referralCode
+    };
+
   } else if (isPuzzle()) {
     const left = pendingOrder?.placements?.left || null;
     const front = pendingOrder?.placements?.front || null;
@@ -2440,7 +2505,7 @@ function setupPageForMode(){
 const ALL_PRODUCT_SPECIFIC_CARDS = [
   'mugStyleCard','sizeCard','livePreviewCard','colorCard','fullWrapCard',
   'travelMugStyleCard','travelColorCard','suitcaseSizeCard','phoneCaseCard',
-  'toteBagSizeCard','toteBagColorCard','puzzleSizeCard','photoPosterCard'
+  'toteBagSizeCard','toteBagColorCard','puzzleSizeCard','wrapSizeCard','photoPosterCard'
 ];
 function hideAllProductCards(){
   ALL_PRODUCT_SPECIFIC_CARDS.forEach(id => {
@@ -2517,6 +2582,12 @@ if (isTravelMug()) {
     document.getElementById('previewNote').textContent =
       'Whichever design you placed first (Left, Center, or Right) will be printed on your puzzle.';
     renderPuzzleSizeGrid();
+  } else if (isWrap()) {
+    hideAllProductCards();
+    document.getElementById('wrapSizeCard').style.display = 'block';
+    document.getElementById('previewNote').textContent =
+      'Your design repeats as a pattern across the whole sheet.';
+    renderWrapSizeGrid();
   } else if (isPhotoPoster()) {
     hideAllProductCards();
     document.getElementById('photoPosterCard').style.display = 'block';

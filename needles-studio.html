@@ -1,5 +1,5 @@
 <!-- ============================================================
-     VERSION: V329
+     VERSION: V330
      ============================================================
      THE ONE LINE THAT SAYS WHICH BUILD YOU ARE LOOKING AT.
 
@@ -635,6 +635,7 @@ body.idea-focus .card:not(#ideaCard){opacity:.35;filter:brightness(.6) saturate(
 body.product-focus .card:not(#productCard):not(#uploadPhotoCard){opacity:.35;filter:brightness(.6) saturate(.75);transition:opacity .5s,filter .5s}
 body.suitcase-size-focus .card:not(#suitcaseSizeCard){opacity:.35;filter:brightness(.6) saturate(.75);transition:opacity .5s,filter .5s}
 body.puzzle-size-focus .card:not(#puzzleSizeCard){opacity:.35;filter:brightness(.6) saturate(.75);transition:opacity .5s,filter .5s}
+body.wrap-size-focus .card:not(#wrapSizeCard){opacity:.35;filter:brightness(.6) saturate(.75);transition:opacity .5s,filter .5s}
 body.tote-size-focus .card:not(#toteSizeCard){opacity:.35;filter:brightness(.6) saturate(.75);transition:opacity .5s,filter .5s}
 body.tote-color-focus .card:not(#toteBagColorCard){opacity:.35;filter:brightness(.6) saturate(.75);transition:opacity .5s,filter .5s}
 body.phone-model-focus .card:not(#phoneCaseModelCard){opacity:.35;filter:brightness(.6) saturate(.75);transition:opacity .5s,filter .5s}
@@ -1380,6 +1381,17 @@ const HERO_SETTLE_MS = 1000;
 <div class="note" id="puzzleSizeSelectedNote" style="margin-top:.6rem"></div>
 </div>
 
+<div class="card" id="wrapSizeCard" style="display:none">
+<div class="card-title">🎁 Sheet or Roll?</div>
+<div class="note" style="margin-top:0;margin-bottom:.75rem">Your picture becomes a repeating pattern across the whole sheet. Pick the size before generating — each is a different roll with its own price.</div>
+<div class="grid3" id="wrapSizeGrid">
+<div class="btn-select" data-wrap-size="Sheet 29&quot; x 20&quot;" onclick="pickWrapSize('Sheet 29&quot; x 20&quot;')">Sheet<div class="note" style="margin-top:4px">29" x 20"</div><div class="note" style="margin-top:4px">$14.95</div></div>
+<div class="btn-select" data-wrap-size="Roll 29&quot; x 72&quot;" onclick="pickWrapSize('Roll 29&quot; x 72&quot;')">Roll<div class="note" style="margin-top:4px">29" x 6 ft</div><div class="note" style="margin-top:4px">$29.95</div></div>
+<div class="btn-select" data-wrap-size="Roll 29&quot; x 144&quot;" onclick="pickWrapSize('Roll 29&quot; x 144&quot;')">Long roll<div class="note" style="margin-top:4px">29" x 12 ft</div><div class="note" style="margin-top:4px">$44.95</div></div>
+</div>
+<div class="note" id="wrapSizeSelectedNote" style="margin-top:.6rem"></div>
+</div>
+
 <div class="card" id="suitcaseSizeCard" style="display:none">
 <div class="card-title">🧳 Which Suitcase Size?</div>
 <div class="note" style="margin-top:0;margin-bottom:.75rem">We need this before generating — each size is a different physical case with its own price, and your art gets composed to fit it exactly.</div>
@@ -1459,7 +1471,7 @@ const HERO_SETTLE_MS = 1000;
 <div id="ideaGuidancePrompt" class="guidance-prompt" role="status" style="margin-top:8px;margin-bottom:0;cursor:pointer" onclick="ideaPromptClicked()">Click here when you are satisfied with your descriptive requests for the image.</div>
 </div>
 </div>
-<div class="card" id="productCard"><div class="card-title">🎁 Product</div><div class="guidance-prompt soft visible" id="productGuidancePrompt" role="status" style="margin-top:0;margin-bottom:.9rem">Please select your desired product below when ready.</div><div class="grid3"><div class="btn-select" data-val="mug" onclick="pick(this,'product')"><span class="icon">☕</span>Mug</div><div class="btn-select" data-val="greeting card" onclick="pick(this,'product')"><span class="icon">💌</span>Card</div><div class="btn-select" data-val="water bottle" onclick="pick(this,'product')"><span class="icon">🍶</span>Travel Cups</div><div class="btn-select" data-val="post-it note" onclick="pick(this,'product')"><span class="icon">📝</span>Post-it</div><div class="btn-select" data-val="phone case" onclick="pick(this,'product')"><span class="icon">📱</span>Phone case</div><div class="btn-select" data-val="tote bag" onclick="pick(this,'product')"><span class="icon">👜</span>Tote bag</div><div class="btn-select" data-val="suitcase" onclick="pick(this,'product')"><span class="icon">🧳</span>Suitcase</div><div class="btn-select" data-val="puzzle" onclick="pick(this,'product')"><span class="icon">🧩</span>Puzzle</div><div class="btn-select" data-val="photo poster" onclick="pick(this,'product')"><span class="icon">🖼️</span>Photo/Poster</div><div class="btn-select" data-val="coaster" onclick="pick(this,'product')"><span class="icon">☕</span>Coasters</div><div class="btn-select" data-val="mouse pad" onclick="pick(this,'product')"><span class="icon">🖱️</span>Mouse pad</div><div class="btn-select" data-val="artwork only" onclick="pick(this,'product')"><span class="icon">🖼️</span>Artwork Only<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">No product. Just creates an image for you to download.</div><div class="note" style="margin-top:2px;color:#7ab8ff;font-size:10px">1 token</div></div></div>
+<div class="card" id="productCard"><div class="card-title">🎁 Product</div><div class="guidance-prompt soft visible" id="productGuidancePrompt" role="status" style="margin-top:0;margin-bottom:.9rem">Please select your desired product below when ready.</div><div class="grid3"><div class="btn-select" data-val="mug" onclick="pick(this,'product')"><span class="icon">☕</span>Mug</div><div class="btn-select" data-val="greeting card" onclick="pick(this,'product')"><span class="icon">💌</span>Card</div><div class="btn-select" data-val="water bottle" onclick="pick(this,'product')"><span class="icon">🍶</span>Travel Cups</div><div class="btn-select" data-val="post-it note" onclick="pick(this,'product')"><span class="icon">📝</span>Post-it</div><div class="btn-select" data-val="phone case" onclick="pick(this,'product')"><span class="icon">📱</span>Phone case</div><div class="btn-select" data-val="tote bag" onclick="pick(this,'product')"><span class="icon">👜</span>Tote bag</div><div class="btn-select" data-val="suitcase" onclick="pick(this,'product')"><span class="icon">🧳</span>Suitcase</div><div class="btn-select" data-val="puzzle" onclick="pick(this,'product')"><span class="icon">🧩</span>Puzzle</div><div class="btn-select" data-val="photo poster" onclick="pick(this,'product')"><span class="icon">🖼️</span>Photo/Poster</div><div class="btn-select" data-val="coaster" onclick="pick(this,'product')"><span class="icon">☕</span>Coasters</div><div class="btn-select" data-val="mouse pad" onclick="pick(this,'product')"><span class="icon">🖱️</span>Mouse pad</div><div class="btn-select" data-val="wrapping paper" onclick="pick(this,'product')"><span class="icon">🎁</span>It's a Wrap<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Your own wrapping paper.</div></div><div class="btn-select" data-val="artwork only" onclick="pick(this,'product')"><span class="icon">🖼️</span>Artwork Only<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">No product. Just creates an image for you to download.</div><div class="note" style="margin-top:2px;color:#7ab8ff;font-size:10px">1 token</div></div></div>
 <button type="button" class="download-btn" id="productCardBackBtn" style="margin-top:1rem" onclick="productCardBack()">← Back</button></div>
 
 <div id="mugSizeLockOverlay" class="step-lock-overlay" style="display:none">
@@ -3841,13 +3853,14 @@ function pickTrackDescribe(){
 // Greeting cards and post-it pads joined 2026-08-28 when they graduated
 // from "Art only" to real orderable products -- same shape as mouse pad:
 // no gimmicks, no frame, one variant, so the description IS the design.
-const PRODUCTS_NEEDING_IDEA=['suitcase','phone case','tote bag','puzzle','coaster','mouse pad','photo poster','greeting card','post-it note'];
+const PRODUCTS_NEEDING_IDEA=['suitcase','phone case','tote bag','puzzle','coaster','mouse pad','photo poster','greeting card','post-it note','wrapping paper'];
 const PRODUCT_IDEA_LABEL={
   'artwork only':'artwork',
   'suitcase':'suitcase',
   'phone case':'phone case',
   'tote bag':'tote bag',
   'puzzle':'puzzle',
+  'wrapping paper':'wrapping paper',
   'coaster':'coasters',
   'mouse pad':'mouse pad',
   'photo poster':'poster',
@@ -3883,7 +3896,7 @@ const PRODUCTS_WITH_GIMMICKS=['mug','water bottle'];
 // there is nothing to wait for the customer to decide before showing it.
 // Water bottle is deliberately absent -- it has its own preview panel and
 // would fetch twice.
-const PRODUCTS_AUTO_MOCKUP=['suitcase','phone case','tote bag','puzzle','photo poster','coaster','mouse pad','greeting card','post-it note'];
+const PRODUCTS_AUTO_MOCKUP=['suitcase','phone case','tote bag','puzzle','photo poster','coaster','mouse pad','greeting card','post-it note','wrapping paper'];
 
 // ONE CLICK, NOT TWO (Alyx, Sep 2026, landing on the product card with a
 // GENERATE button after saying he was happy with his description: "I don't
@@ -4239,7 +4252,7 @@ function toggleWorkingImage(){
 // Two copies of a number is exactly how the marker rotted in the first place,
 // so they are not trusted to agree: .githooks/pre-commit moves both together
 // and REFUSES the commit if it ever finds them apart.
-const APP_VERSION='V329';
+const APP_VERSION='V330';
 try{ console.log('%cNeedles\u2019 Studio '+APP_VERSION,'color:#29a3ff;font-weight:700'); }catch(e){}
 
 function getDeviceId(){
@@ -7512,6 +7525,8 @@ const PRODUCT_TILE_PRICES = {
   // single price undersells the product. The unit rides the tile.
   'coaster':       { from: 29.95, ladder: false, unit: 'set of 4' },
   'mouse pad':     { from: 9.95,  ladder: false },
+  // It's a Wrap (22 Sep 2026): sheet 14.95, 6 ft roll 29.95, 12 ft roll 44.95.
+  'wrapping paper': { from: 14.95, ladder: true },
   // Plugged in 2026-08-28 -- see lib/products-catalog.js for the printer
   // story (chosen on US shipping, not unit cost).
   'greeting card': { from: 15.95, ladder: false, unit: 'pack of 8' },
@@ -11961,6 +11976,22 @@ function refreshPhoneCaseModelVisibility(){
 // buildMockupRequestBody() does that mapping.
 let selectedPuzzleSize=null;
 
+// IT'S A WRAP (22 Sep 2026): sheet or roll, picked before generating.
+let selectedWrapSize=null;
+function pickWrapSize(label){
+  selectedWrapSize=label;
+  document.querySelectorAll('#wrapSizeGrid .btn-select').forEach(b=>{
+    b.classList.toggle('selected',b.dataset.wrapSize===label);
+  });
+  document.getElementById('wrapSizeSelectedNote').textContent='✓ Confirmed: '+label+'.';
+  handOffToIdeaAfterProductChoice();
+}
+function refreshWrapSizeVisibility(){
+  const card=document.getElementById('wrapSizeCard');
+  if(!card)return;
+  card.style.display=(product==='wrapping paper')?'block':'none';
+}
+
 // Round vs square is a genuine product fork, not a cosmetic one: they are
 // different Printify blueprints (994 round, 2764 square), different sizes and
 // different materials. Same presented price, so the customer is choosing on
@@ -12219,7 +12250,7 @@ function pick(el,type){
     if(productGuide)productGuide.classList.remove('visible');
     const finalGuide=document.getElementById('finalGenerateGuidance');
     if(finalGuide)finalGuide.classList.toggle('visible',
-      (product==='phone case'&&!!selectedPhoneCaseModel)||(product==='puzzle'&&!!selectedPuzzleSize)||(product==='suitcase'&&!!selectedSuitcaseSize));
+      (product==='phone case'&&!!selectedPhoneCaseModel)||(product==='puzzle'&&!!selectedPuzzleSize)||(product==='wrapping paper'&&!!selectedWrapSize)||(product==='suitcase'&&!!selectedSuitcaseSize));
     refreshApproveRowForMode();
     refreshMugSizeCardVisibility();
     refreshMugStyleCardVisibility();
@@ -12229,6 +12260,7 @@ function pick(el,type){
     refreshPhotoPosterVisibility();
     refreshPhoneCaseModelVisibility();
     refreshPuzzleSizeVisibility();
+    refreshWrapSizeVisibility();
     refreshSuitcaseSizeVisibility();
     refreshTravelMugVariantVisibility();
     refreshTravelMugColorVisibility();
@@ -12282,6 +12314,9 @@ function pick(el,type){
     } else if(product==='puzzle'){
       setOptionSpotlight('puzzle-size-focus');
       smoothScrollToTarget('puzzleSizeCard','center');
+    } else if(product==='wrapping paper'){
+      setOptionSpotlight('wrap-size-focus');
+      smoothScrollToTarget('wrapSizeCard','center');
     } else if(product==='suitcase'){
       setOptionSpotlight('suitcase-size-focus');
       smoothScrollToTarget('suitcaseSizeCard','center');
@@ -13129,6 +13164,7 @@ const BYO_SHAPE_LINES={
   'post-it note':'a square composition with the subject centered',
   'coaster':'a square composition that still reads well when trimmed to a circle',
   'mouse pad':'a landscape composition (wider than it is tall)',
+  'wrapping paper':'a repeating all-over pattern that tiles edge to edge, the subject appearing several times at different sizes and poses with decorative filler between, no single centred subject and no border',
   'tote bag':'a bold square composition that reads clearly from a distance',
   'suitcase':'a bold vertical composition that reads clearly from a distance',
   'puzzle':'a detailed composition with a clear central subject and good contrast throughout'
@@ -18024,6 +18060,7 @@ function getProductRules(p){
   if(p==='tote bag')return 'tote bag artwork, bold high-impact design readable from a distance';
   if(p==='suitcase')return 'travel suitcase artwork, bold full-coverage design that reads well from a distance, adventurous or eye-catching composition';
   if(p==='puzzle')return 'photo puzzle artwork, clear central subject with good contrast between pieces, works well when cut into interlocking pieces';
+  if(p==='wrapping paper')return 'custom gift wrapping paper: a seamless repeating all-over pattern that tiles edge to edge, the subject appearing several times in different poses and sizes with small decorative motifs between them, no single centred subject, no border, no margins, festive and dense';
   // ARTWORK ONLY has no product to fit, so it is told so plainly: fill the
   // frame, no print-area margins to respect, nothing shaped for a mug or a
   // case. (Alyx has not settled the final wording for this tile -- this is a
@@ -19360,6 +19397,11 @@ async function generate(){
   if(product==='puzzle' && !selectedPuzzleSize){
     setStatus('Please pick your puzzle piece count above first — each one is a different physical puzzle with its own price.',true);
     document.getElementById('puzzleSizeCard').scrollIntoView({behavior:'smooth',block:'center'});
+    return;
+  }
+  if(product==='wrapping paper' && !selectedWrapSize){
+    setStatus('Please pick sheet or roll above first — each is a different size with its own price.',true);
+    document.getElementById('wrapSizeCard').scrollIntoView({behavior:'smooth',block:'center'});
     return;
   }
   if(product==='suitcase' && !selectedSuitcaseSize){
@@ -21211,6 +21253,15 @@ function buildMockupRequestBody(){
       : { productKey: 'post-it-notes', sizeLabel: '3" x 3"', image: url };
   }
 
+  // It's a Wrap: single-image, the size picked on its card is the catalog
+  // size key. The server tiles the picture; the studio sends it once.
+  if (product === 'wrapping paper') {
+    const design = placements.left || placements.front || placements.right;
+    const url = design ? (findDesignById(design)?.url ?? null) : null;
+    if (!url || !selectedWrapSize) return null;
+    return { productKey: 'wrapping-paper', sizeLabel: selectedWrapSize, image: url };
+  }
+
   // Photo Puzzle: a single-image catalog product whose variant is chosen
   // purely by piece count. UI value 'puzzle' -> catalog key 'photo-puzzle'.
   // start-mockup's generic path (getProduct + resolveVariant) handles the
@@ -22147,6 +22198,7 @@ async function goToOrder(){
     // on screen to say so. Same pattern as the travel cup and the phone
     // model above, which already made the trip.
     preselectedPuzzleSize: (product==='puzzle') ? selectedPuzzleSize : null,
+    preselectedWrapSize: (product==='wrapping paper') ? selectedWrapSize : null,
     preselectedSuitcaseSize: (product==='suitcase') ? selectedSuitcaseSize : null,
     preselectedToteSize: (product==='tote bag') ? selectedToteSize : null,
     preselectedToteColor: (product==='tote bag') ? selectedToteColorGen : null,
@@ -22711,6 +22763,7 @@ function resetEverythingFreshStart(){
   if(toteNote)toteNote.textContent='';
 
   selectedPuzzleSize=null;
+  selectedWrapSize=null;
   document.querySelectorAll('#puzzleSizeGrid .btn-select').forEach(b=>b.classList.remove('selected'));
   const puzzleNote=document.getElementById('puzzleSizeSelectedNote');
   if(puzzleNote)puzzleNote.textContent='';

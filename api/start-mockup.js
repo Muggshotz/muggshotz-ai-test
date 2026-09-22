@@ -14,6 +14,7 @@ import {
   wrapBorderHex,
   buildFrontBackImages,
   buildSingleImage,
+  buildTiledPattern,
   resolveVariant,
   resolvePhotoPosterSelection,
   resolveVariantIdByTitleMatch,
@@ -101,11 +102,15 @@ async function handleStart(req, res) {
 
   } else if (product.layoutType === "single-image") {
     if (!image) throw new Error("An image is required to generate a mockup.");
-    const dims = product.printDimensions?.front;
+    const dims = product.sizes?.[sizeLabel]?.printDimensions?.front || product.printDimensions?.front;
     const { width, height, position } = dims
       ? { ...dims, position: "front" }
       : await getPlaceholderDimensions(effectiveBlueprintId, effectivePrintProviderId, variantId);
-    const buffer = await buildSingleImage(image, width, height);
+    // Wrapping paper is tiled for the mockup too, at a quarter of print size:
+    // the picture on the preview is what prints, and the upload stays small.
+    const buffer = product.tilePattern
+      ? await buildTiledPattern(image, width, height, 3, 1450)
+      : await buildSingleImage(image, width, height);
     printifyImages[position] = await uploadImageToPrintify(buffer, `muggshotz-mockup-preview-${Date.now()}.png`);
 
   } else {
