@@ -1,5 +1,5 @@
 <!-- ============================================================
-     VERSION: V337
+     VERSION: V338
      ============================================================
      THE ONE LINE THAT SAYS WHICH BUILD YOU ARE LOOKING AT.
 
@@ -1390,7 +1390,7 @@ const HERO_SETTLE_MS = 1000;
 <div class="card-title">🎄 Which Shape?</div>
 <div class="note" style="margin-top:0;margin-bottom:.75rem">A glossy ceramic ornament with a ribbon. Pick the shape before generating — your picture is fitted to it.</div>
 <div class="grid2" id="ornamentShapeGrid">
-<div class="btn-select" data-ornament-shape="Star" onclick="pickOrnamentShape('Star')">Star<div class="note" style="margin-top:4px">$9.95</div></div><div class="btn-select" data-ornament-shape="Circle" onclick="pickOrnamentShape('Circle')">Circle<div class="note" style="margin-top:4px">$9.95</div></div><div class="btn-select" data-ornament-shape="Heart" onclick="pickOrnamentShape('Heart')">Heart<div class="note" style="margin-top:4px">$9.95</div></div><div class="btn-select" data-ornament-shape="Snowflake" onclick="pickOrnamentShape('Snowflake')">Snowflake<div class="note" style="margin-top:4px">$9.95</div></div>
+<div class="btn-select" data-ornament-shape="Star" onclick="pickOrnamentShape('Star')">Star<div class="note" style="margin-top:4px">$19.95</div></div><div class="btn-select" data-ornament-shape="Circle" onclick="pickOrnamentShape('Circle')">Circle<div class="note" style="margin-top:4px">$19.95</div></div><div class="btn-select" data-ornament-shape="Heart" onclick="pickOrnamentShape('Heart')">Heart<div class="note" style="margin-top:4px">$19.95</div></div><div class="btn-select" data-ornament-shape="Snowflake" onclick="pickOrnamentShape('Snowflake')">Snowflake<div class="note" style="margin-top:4px">$19.95</div></div>
 </div>
 <div class="note" id="ornamentShapeSelectedNote" style="margin-top:.6rem"></div>
 </div>
@@ -4314,7 +4314,7 @@ function toggleWorkingImage(){
 // Two copies of a number is exactly how the marker rotted in the first place,
 // so they are not trusted to agree: .githooks/pre-commit moves both together
 // and REFUSES the commit if it ever finds them apart.
-const APP_VERSION='V337';
+const APP_VERSION='V338';
 try{ console.log('%cNeedles\u2019 Studio '+APP_VERSION,'color:#29a3ff;font-weight:700'); }catch(e){}
 
 function getDeviceId(){
@@ -7621,7 +7621,7 @@ const PRODUCT_TILE_PRICES = {
   // It's a Wrap (22 Sep 2026): sheet 8.95, 6 ft roll 15.95, 12 ft roll 24.95.
   'wrapping paper': { from: 8.95, ladder: true },
   // Ceramic ornament (22 Sep 2026): one price for all four shapes.
-  'ornament':      { from: 9.95,  ladder: false },
+  'ornament':      { from: 19.95, ladder: false },
   // Plugged in 2026-08-28 -- see lib/products-catalog.js for the printer
   // story (chosen on US shipping, not unit cost).
   'greeting card': { from: 15.95, ladder: false, unit: 'pack of 8' },
