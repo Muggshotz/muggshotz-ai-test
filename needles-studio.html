@@ -1,5 +1,5 @@
 <!-- ============================================================
-     VERSION: V328
+     VERSION: V329
      ============================================================
      THE ONE LINE THAT SAYS WHICH BUILD YOU ARE LOOKING AT.
 
@@ -3416,15 +3416,37 @@ function describeOnlyMode(){ return byoDeclaredIntent==='describe'; }
 // what is left is real horizon end to end. Only the panoramic cups need it:
 // the 20oz, the Gator and both 40s are narrower than the picture and crop.
 function describeBandRatio(){
-  if(product!=='water bottle' || mugPrintMode!=='wraparound' || !wrapIsPanoramic())return null;
-  const r=TRAVEL_WRAP_RATIO[selectedTravelProductKey];
+  if(mugPrintMode!=='wraparound' || !wrapIsPanoramic())return null;
+  // THE MUGS TOO (Alyx, V329, "The word"): a described wraparound on a mug
+  // drew a 1.5 picture and mirrored the flanks, and on Color Burst's 2.74
+  // band that mirror was nearly half the cup -- two moons. Same trick as the
+  // cups: ask for the band's shape, letterboxed, and trim.
+  const r=(product==='mug') ? mugWrapRatio()
+        : (product==='water bottle') ? TRAVEL_WRAP_RATIO[selectedTravelProductKey] : null;
   return (typeof r==='number' && r>1.6) ? Math.round(r*100)/100 : null;
 }
 function describeShapingRule(){
   const r=describeBandRatio();
   if(r==null)return getProductRules(product);
+  if(product==='mug'){
+    // A mug's band does not close: the handle sits in the gap between its ends.
+    return 'a wraparound band printed round a coffee mug, one continuous panoramic scene '+r+' times wider than it is tall, the scenery and sky running the full width, its two ends sitting either side of the handle; bold simple details, no tall or centred composition';
+  }
   const closes=travelWrapCloses(selectedTravelProductKey);
   return 'a wraparound band printed all the way round a travel cup, one continuous panoramic scene '+r+' times wider than it is tall, the scenery and sky running the full width'+(closes?', with the two ends meant to meet at the back':'')+'; bold simple details, no tall or centred composition';
+}
+// The strip came back letterboxed on purpose (see describeBandRatio): take the
+// white rows off, with a floor low enough for a 3.5:1 strip, so the widener
+// receives real picture only. Returns the url untouched if nothing to trim.
+async function trimDescribedStrip(flatUrl){
+  if(describeBandRatio()==null)return flatUrl;
+  setStatus('Cutting the strip to the band...');
+  try{
+    const raw=await loadImageFromUrl(flatUrl);
+    const cut=trimBlankBands(raw,0.2);
+    if(cut!==raw)return cut.toDataURL('image/jpeg',0.95);
+  }catch(err){ console.error('Could not trim the strip, widening it as drawn:',err); }
+  return flatUrl;
 }
 function describeTextOnlyPayload(){
   const r=describeBandRatio();
@@ -4217,7 +4239,7 @@ function toggleWorkingImage(){
 // Two copies of a number is exactly how the marker rotted in the first place,
 // so they are not trusted to agree: .githooks/pre-commit moves both together
 // and REFUSES the commit if it ever finds them apart.
-const APP_VERSION='V328';
+const APP_VERSION='V329';
 try{ console.log('%cNeedles\u2019 Studio '+APP_VERSION,'color:#29a3ff;font-weight:700'); }catch(e){}
 
 function getDeviceId(){
@@ -10317,12 +10339,19 @@ const MUG_PRINT_AREA={
   // bp 1126 / prov 59: one front placeholder, 20oz only, a 2.25:1 band.
   'all-nighter-mug': {'20oz':{w:2700,h:1200}}
 };
-// THE BAND'S RATIO COMES FROM THE PRINT AREA (22 Sep 2026). MUG_WRAP_RATIO
-// (2.14) was the one number for every mug while every mug was 2475 x 1155.
-// Color Burst is 4725 x 1725, so the wrap paths ask the print area instead.
+// A MUG'S BAND RATIO, PER STYLE (22 Sep 2026). MUG_WRAP_RATIO (2.14) stays
+// the number for the four original mugs at BOTH sizes -- the 15oz's print
+// area is 1.94 but its strip has always been cut at 2.14 and the server's
+// finishWrapStrip fits it from there, so deriving from the print area would
+// have quietly changed the 15oz. Only a style whose print is a different
+// shape gets its own number here.
+const MUG_WRAP_RATIOS_BY_KEY={
+  'color-burst-mug': 2.74,   // 4725 x 1725
+  'all-nighter-mug': 2.25    // 2700 x 1200
+};
 function mugWrapRatio(){
-  const a=getMugPrintArea();
-  return (a && a.w && a.h) ? Math.round(a.w/a.h*100)/100 : MUG_WRAP_RATIO;
+  const key=GEN_STYLE_TO_PRODUCT_KEY[selectedGenStyle];
+  return MUG_WRAP_RATIOS_BY_KEY[key]||MUG_WRAP_RATIO;
 }
 function getMugPrintArea(){
   const key=GEN_STYLE_TO_PRODUCT_KEY[selectedGenStyle]||'classic-white-mug';
@@ -19703,8 +19732,9 @@ Use rich environmental storytelling while keeping the face as the primary focal 
       const flatUrl=await callGenerateAPI({workingImage:null,prompt:describePromptText(),refImageA:null,refImageB:null});
       if(!flatUrl)throw new Error('No image returned.');
       if(product==='mug'){
+        const bandUrl=await trimDescribedStrip(flatUrl);
         setStatus('Wrapping it round the mug...');
-        const wide=await extendWrapToProductRatio(flatUrl,{ratio:mugWrapRatio(),closes:true});
+        const wide=await extendWrapToProductRatio(bandUrl,{ratio:mugWrapRatio(),closes:true});
         const panels=await sliceFaceItResultIntoPanels(wide);
         if(!panels)throw new Error('Could not cut the wrap into panels.');
         panoramaData={leftUrl:panels.left,centerUrl:panels.center,rightUrl:panels.right,panoramaUrl:wide};
@@ -19717,19 +19747,7 @@ Use rich environmental storytelling while keeping the face as the primary focal 
         // down widens it with extendWrapToProductRatio's own defaults: this
         // cup's band ratio, whether its ends meet, and the Tundra's mirrored
         // flanks. Nothing downstream changed.
-        let bandUrl=flatUrl;
-        if(describeBandRatio()!=null){
-          // The strip came back letterboxed on purpose (see describeBandRatio):
-          // take the white rows off here, with a floor low enough for a 3.5:1
-          // strip, so the widener below receives real picture only.
-          setStatus('Cutting the strip to the band...');
-          try{
-            const raw=await loadImageFromUrl(flatUrl);
-            const cut=trimBlankBands(raw,0.2);
-            if(cut!==raw)bandUrl=cut.toDataURL('image/jpeg',0.95);
-          }catch(err){ console.error('Could not trim the strip, widening it as drawn:',err); }
-        }
-        panoramaData={panoramaUrl:bandUrl};
+        panoramaData={panoramaUrl:await trimDescribedStrip(flatUrl)};
       }
     } else if(usePanorama){
       document.getElementById('approveRow').style.display='none';
