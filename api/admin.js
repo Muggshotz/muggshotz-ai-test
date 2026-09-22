@@ -260,7 +260,7 @@ async function printifyCall(path, opts = {}) {
 }
 
 async function handleCostProbe(req, res) {
-  const { password, blueprintId, printProviderId } = req.body || {};
+  const { password, blueprintId, printProviderId, variantIds: onlyVariantIds } = req.body || {};
   if (password !== ADMIN_PASSWORD) return res.status(403).json({ error: 'Unauthorized.' });
   if (!PRINTIFY_API_TOKEN) return res.status(500).json({ error: 'Printify token is not configured on the server.' });
   if (!blueprintId || !printProviderId) {
@@ -272,7 +272,12 @@ async function handleCostProbe(req, res) {
     const catalog = await printifyCall(
       `catalog/blueprints/${blueprintId}/print_providers/${printProviderId}/variants.json`
     );
-    const variants = Array.isArray(catalog?.variants) ? catalog.variants : [];
+    // A blueprint with more than 100 variants (every T-shirt: colours x
+    // sizes) cannot be probed whole -- Printify caps a product at 100 enabled
+    // variants. variantIds lets the probe price a chosen subset (22 Sep 2026).
+    const allVariants = Array.isArray(catalog?.variants) ? catalog.variants : [];
+    const want = Array.isArray(onlyVariantIds) && onlyVariantIds.length ? new Set(onlyVariantIds.map(Number)) : null;
+    const variants = want ? allVariants.filter(v => want.has(v.id)) : allVariants.slice(0, 100);
     if (!variants.length) return res.status(404).json({ error: 'No variants for that blueprint/provider.' });
 
     // Shipping needs no product — straight off the catalog.
