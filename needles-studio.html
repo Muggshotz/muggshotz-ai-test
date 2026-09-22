@@ -1,5 +1,5 @@
 <!-- ============================================================
-     VERSION: V321
+     VERSION: V322
      ============================================================
      THE ONE LINE THAT SAYS WHICH BUILD YOU ARE LOOKING AT.
 
@@ -4183,7 +4183,7 @@ function toggleWorkingImage(){
 // Two copies of a number is exactly how the marker rotted in the first place,
 // so they are not trusted to agree: .githooks/pre-commit moves both together
 // and REFUSES the commit if it ever finds them apart.
-const APP_VERSION='V321';
+const APP_VERSION='V322';
 try{ console.log('%cNeedles\u2019 Studio '+APP_VERSION,'color:#29a3ff;font-weight:700'); }catch(e){}
 
 function getDeviceId(){
@@ -8196,8 +8196,14 @@ function showDesignMethodCard(){
   // card (Cover Me, Face It, Home Sweet Home) IS an AI generation, which
   // is precisely what they declared against at the intent gate. Same
   // silent handling as a product the gimmicks were never meant for.
-  if(chosenTrack==='describe' || byoDeclaredIntent==='byo' || !PRODUCTS_WITH_GIMMICKS.includes(product)
-     || !FACEIT_MODULE_OK){
+  // A DESCRIBED DESIGN HAS NO FACE TO PUT IN A PROP (Alyx, Sep 2026, shown
+  // the Face It picker before he had typed a word: "I don't even have an image
+  // yet, why would I want Face Its? ... they've already told us that they want
+  // to generate their own image, this is a clear indicator that they're not
+  // looking to use our props at this time"). Every prop on this card merges a
+  // PHOTO into a plate; the describe path has none. Same silent skip as BYO.
+  if(chosenTrack==='describe' || byoDeclaredIntent==='byo' || describeOnlyMode()
+     || !PRODUCTS_WITH_GIMMICKS.includes(product) || !FACEIT_MODULE_OK){
     goToDescribeAndGenerate();
     return;
   }
