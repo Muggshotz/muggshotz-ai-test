@@ -1,5 +1,5 @@
 <!-- ============================================================
-     VERSION: V318
+     VERSION: V319
      ============================================================
      THE ONE LINE THAT SAYS WHICH BUILD YOU ARE LOOKING AT.
 
@@ -1441,7 +1441,7 @@ const HERO_SETTLE_MS = 1000;
   <textarea id="promptKitText" readonly style="width:100%;min-height:110px;font-size:12px" onclick="this.select()"></textarea>
   <button type="button" class="download-btn" style="width:100%;margin-top:.5rem" onclick="copyPromptKit(this)">📋 Copy Prompt</button>
 </div><div class="note" id="ideaArtistNote" style="display:none">Tell the artist what you have in mind.</div><div class="note" id="ideaWindowSillNote" style="display:none">(Optional) Add a costume, outfit, hair, or companion — or just upload your photo and we'll take it from there.</div><div id="mugIdeaActionRow" style="display:none;gap:8px;margin-top:.75rem"><button class="download-btn" style="flex:1;margin-top:0" onclick="handleReturnToPhotos()">📸 Return to select additional photos</button><button class="generate-btn" style="flex:1" onclick="handleMugGuidedGenerate()">🎨 Generate</button></div>
-<div id="ideaGuidancePrompt" class="guidance-prompt" role="status" style="margin-top:8px;margin-bottom:0;cursor:pointer" onclick="confirmIdeaSatisfied()">Click here when you are satisfied with your descriptive requests for the image.</div>
+<div id="ideaGuidancePrompt" class="guidance-prompt" role="status" style="margin-top:8px;margin-bottom:0;cursor:pointer" onclick="ideaPromptClicked()">Click here when you are satisfied with your descriptive requests for the image.</div>
 </div>
 </div>
 <div class="card" id="productCard"><div class="card-title">🎁 Product</div><div class="guidance-prompt soft visible" id="productGuidancePrompt" role="status" style="margin-top:0;margin-bottom:.9rem">Please select your desired product below when ready.</div><div class="grid3"><div class="btn-select" data-val="mug" onclick="pick(this,'product')"><span class="icon">☕</span>Mug</div><div class="btn-select" data-val="greeting card" onclick="pick(this,'product')"><span class="icon">💌</span>Card</div><div class="btn-select" data-val="water bottle" onclick="pick(this,'product')"><span class="icon">🍶</span>Travel Cups</div><div class="btn-select" data-val="post-it note" onclick="pick(this,'product')"><span class="icon">📝</span>Post-it</div><div class="btn-select" data-val="phone case" onclick="pick(this,'product')"><span class="icon">📱</span>Phone case</div><div class="btn-select" data-val="tote bag" onclick="pick(this,'product')"><span class="icon">👜</span>Tote bag</div><div class="btn-select" data-val="suitcase" onclick="pick(this,'product')"><span class="icon">🧳</span>Suitcase</div><div class="btn-select" data-val="puzzle" onclick="pick(this,'product')"><span class="icon">🧩</span>Puzzle</div><div class="btn-select" data-val="photo poster" onclick="pick(this,'product')"><span class="icon">🖼️</span>Photo/Poster</div><div class="btn-select" data-val="coaster" onclick="pick(this,'product')"><span class="icon">☕</span>Coasters</div><div class="btn-select" data-val="mouse pad" onclick="pick(this,'product')"><span class="icon">🖱️</span>Mouse pad</div><div class="btn-select" data-val="artwork only" onclick="pick(this,'product')"><span class="icon">🖼️</span>Artwork Only<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">No product. Just creates an image for you to download.</div><div class="note" style="margin-top:2px;color:#7ab8ff;font-size:10px">1 token</div></div></div>
@@ -3427,6 +3427,7 @@ function closeDescribeFork(){
 // "Put it on something" -- the product decides the shape of the picture, so it
 // is chosen first and pick() then routes onward exactly as it always has.
 function describeForkPickProduct(){
+  refreshIdeaPromptLabel();
   const overlay=document.getElementById('describeForkOverlay');
   if(overlay)overlay.style.display='none';
   document.body.classList.remove('step-locked');
@@ -3454,6 +3455,7 @@ function describeForkPickProduct(){
 // "Just the picture" -- there is no product, so the product IS 'artwork only'
 // and the grid is skipped entirely. Straight to the words.
 function describeForkPickArtworkOnly(){
+  refreshIdeaPromptLabel();
   const overlay=document.getElementById('describeForkOverlay');
   if(overlay)overlay.style.display='none';
   document.body.classList.remove('step-locked');
@@ -3814,6 +3816,48 @@ const PRODUCTS_WITH_GIMMICKS=['mug','water bottle'];
 // would fetch twice.
 const PRODUCTS_AUTO_MOCKUP=['suitcase','phone case','tote bag','puzzle','photo poster','coaster','mouse pad','greeting card','post-it note'];
 
+// ONE CLICK, NOT TWO (Alyx, Sep 2026, landing on the product card with a
+// GENERATE button after saying he was happy with his description: "I don't
+// know why I have to be sent to a separate panel to tell me to generate the
+// image. That's a redundancy. The button that I clicked to get to this second
+// panel is the one that should have generated the image").
+//
+// Right on the described path, and only there. confirmIdeaSatisfied() hands
+// the customer to Generate because the photo rail may still have things worth
+// a look before a token is spent. A described design has none: the fork chose
+// the product, there is no size, style, colour or photo, and the description
+// IS the last decision. So the button does the thing it took them to.
+//
+// And it says so, which was his condition -- "let them know that this is a
+// paid step". A button that only promised to accept text must never quietly
+// spend a credit; naming the cost on the generator is the same rule that took
+// every price off the upload boards.
+function ideaPromptClicked(){
+  if(describeOnlyMode()){
+    const box=document.getElementById('ideaDesc');
+    if(box && !box.value.trim()){
+      setStatus('Tell Needles what to draw first.',true);
+      try{ box.focus(); }catch(e){}
+      return;
+    }
+    document.body.classList.remove('initial-upload-focus');
+    document.body.classList.remove('idea-focus');
+    document.body.classList.remove('ideafirst-focus');
+    try{ pauseIdeaGuideCycle(); }catch(e){}
+    generate();
+    return;
+  }
+  confirmIdeaSatisfied();
+}
+
+function refreshIdeaPromptLabel(){
+  const el=document.getElementById('ideaGuidancePrompt');
+  if(!el)return;
+  el.textContent=describeOnlyMode()
+    ? "🎨 Draw it — this is the paid step, 1 token"
+    : 'Click here when you are satisfied with your descriptive requests for the image.';
+}
+
 function confirmIdeaSatisfied(){
   pauseIdeaGuideCycle();
   document.body.classList.remove('initial-upload-focus');
@@ -4126,7 +4170,7 @@ function toggleWorkingImage(){
 // Two copies of a number is exactly how the marker rotted in the first place,
 // so they are not trusted to agree: .githooks/pre-commit moves both together
 // and REFUSES the commit if it ever finds them apart.
-const APP_VERSION='V318';
+const APP_VERSION='V319';
 try{ console.log('%cNeedles\u2019 Studio '+APP_VERSION,'color:#29a3ff;font-weight:700'); }catch(e){}
 
 function getDeviceId(){
