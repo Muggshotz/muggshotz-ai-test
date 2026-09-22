@@ -12,7 +12,7 @@ We're just gonna have to have a page two." Twelve seats: the nine below, the
 gift certificate (see GIFT-CERTIFICATES.md) as the tenth, and one pick each
 from Claude and Bud for eleven and twelve.
 
-1. Wrapping paper
+1. Wrapping paper — category name "It's a Wrap" (Alyx). Bud's sample sheet, 22 Sep: the couple in six poses with festive filler, drawn as one repeating pattern; the server tiles that sheet across the print.
 2. Custom cut standee
 3. Playing cards
 4. Car air freshener
