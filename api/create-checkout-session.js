@@ -2,6 +2,7 @@ import Stripe from "stripe";
 import { getProduct } from "../lib/products-catalog.js";
 import { calculateShippingCharge } from "../lib/printify-shipping.js";
 import { readMaintenance } from "../lib/maintenance.js";
+import { TOKEN_PACKS } from "../lib/token-packs.js";
 import { GIFT_AMOUNTS_CENTS, STRIPE_MIN_CHARGE_CENTS, findGiftCertificate, normalizeGiftCode, giftLedgerReady } from "../lib/gift-certificates.js";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
@@ -9,11 +10,8 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-const TOKEN_PACKS = {
-  "1token":  { tokens: 1,  amountCents: 50,  label: "1 Token — 50¢" },
-  "3tokens": { tokens: 3,  amountCents: 100, label: "3 Tokens — $1.00" },
-  "20tokens":{ tokens: 20, amountCents: 500, label: "20 Tokens — $5.00" }
-};
+// The packs live in lib/token-packs.js so the webhook credits from the same
+// table checkout sells from.
 
 const GIFT_MESSAGE_PRICE = 1.00;
 // Wraparound = 3 real generation runs at 50c each. Charged at cost, not
@@ -406,8 +404,10 @@ async function handleTokenPurchase(req, res) {
       quantity: 1
     }],
     metadata: { device_id: deviceId, pack_id: packId, fees_cents: String(packFeeCents) },
-    success_url: `${origin}/index.html?checkout=success`,
-    cancel_url: `${origin}/index.html?checkout=cancelled`
+    // Back to the studio, where the tokens are spent. These used to send the
+    // buyer to index.html, the old generator.
+    success_url: `${origin}/needles-studio.html?checkout=success`,
+    cancel_url: `${origin}/needles-studio.html?checkout=cancelled`
   });
 
   return res.status(200).json({ url: session.url });

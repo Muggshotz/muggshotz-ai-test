@@ -1,5 +1,6 @@
 import Stripe from "stripe";
 import { mintGiftCertificate, spendGiftCertificate, giftEmailHtml } from "../lib/gift-certificates.js";
+import { TOKEN_PACKS } from "../lib/token-packs.js";
 import { TIER_SEQUENCE, TIER_RULES, TIER_UPGRADE_LABEL, buildTierCodes } from "../lib/flyer-tiers.js";
 import { placeProductOrder } from "./create-printify-order.js";
 import { getProduct } from "../lib/products-catalog.js";
@@ -433,9 +434,9 @@ async function recordEmailDiscount(email, stripeSessionId) {
 // too — 5 tokens instead of 4. This keeps the total tokens a customer
 // can reach the same (6) no matter which order they go through
 // free-email-verification vs. paying the $5 deposit.
-async function creditTokensForPayment(customer, stripeEmail) {
+async function creditTokensForPayment(customer, stripeEmail, packTokens = null) {
   const alreadyVerified = customer.email_verified === true;
-  const tokensToAdd = alreadyVerified ? 4 : 5;
+  const tokensToAdd = packTokens != null ? packTokens : (alreadyVerified ? 4 : 5);
 
   const tokenUrl = `${SUPABASE_URL}/rest/v1/customers?id=eq.${customer.id}`;
   const tokenResp = await fetch(tokenUrl, {
@@ -719,5 +720,8 @@ async function handleTokenPayment(session) {
     customer = await createCustomerForDevice(deviceId);
   }
 
-  await creditTokensForPayment(customer, stripeEmail);
+  // A token pack credits exactly the tokens it sold. Anything else paid
+  // through this branch (the old $5 reservation) keeps the old 5 / 4.
+  const pack = TOKEN_PACKS[session.metadata?.pack_id];
+  await creditTokensForPayment(customer, stripeEmail, pack ? pack.tokens : null);
 }

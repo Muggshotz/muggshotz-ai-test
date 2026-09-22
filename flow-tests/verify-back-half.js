@@ -38,7 +38,7 @@ const IMG = 'https://cdn.muggshotz.test/design.jpg';
 const JPEG = fs.readFileSync(path.join(__dirname, 'fake-generated.jpg'));
 
 // ---- outbound HTTP, recorded ----
-const wire = { uploads: 0, products: [], orders: [], unstubbed: [], variantsAsked: [] };
+const wire = { uploads: 0, products: [], orders: [], unstubbed: [], variantsAsked: [], supaPatches: [] };
 let catalog = null;
 const json = (obj, status = 200) => new Response(JSON.stringify(obj), { status, headers: { 'content-type': 'application/json' } });
 
@@ -88,6 +88,7 @@ global.fetch = async (url, opts = {}) => {
   if (u.startsWith('https://supabase.test/')) {
     if (/\/customers/.test(u) && m === 'GET') return json([]);
     if (/\/customers/.test(u) && m === 'POST') return json([{ id: 'cust_1', token_balance: 0, email: null, email_verified: false }]);
+    if (/\/customers/.test(u) && m === 'PATCH') wire.supaPatches.push(body);
     return json([{}]);
   }
   if (u.startsWith('https://api.resend.com/')) return json({ id: 'email_1' });
@@ -182,6 +183,31 @@ function bodiesFor(key, p) {
     }
     console.log = origLog;
     console.log(`[${label}] ${verdict}`);
+  }
+
+  // Token packs (22 Sep 2026): each pack must credit exactly the tokens it
+  // sold, and send the buyer back to the studio. The webhook used to ignore
+  // the pack and credit 5 (or 4) for every purchase.
+  {
+    const packs = { '1token': 1, '3tokens': 3, '20tokens': 20 };
+    const bad = [];
+    for (const [packId, want] of Object.entries(packs)) {
+      const before = globalThis.__stripe.sessions.length;
+      wire.supaPatches.length = 0;
+      console.log = quiet;
+      const r1 = res(); await session(jsonReq({ type: 'token_purchase', deviceId: 'dev_test', packId }), r1);
+      const s = globalThis.__stripe.sessions[before];
+      if (r1.code !== 200 || !s) { console.log = origLog; bad.push(`${packId}: checkout answered ${r1.code}`); continue; }
+      if (!/needles-studio\.html\?checkout=success/.test(s.success_url || '')) bad.push(`${packId}: success_url is ${s.success_url}`);
+      const r2 = res(); await webhook(rawReq({ type: 'checkout.session.completed', livemode: true, data: { object: { id: s.id, metadata: s.metadata, customer_details: { email: 'buyer@x.test' } } } }), r2);
+      console.log = origLog;
+      const credit = wire.supaPatches.find((b) => b && typeof b.token_balance === 'number');
+      if (!credit) bad.push(`${packId}: no token balance was written`);
+      else if (credit.token_balance !== want) bad.push(`${packId}: credited ${credit.token_balance}, expected ${want}`);
+    }
+    const tv = bad.length ? `FAIL: ${bad.join('; ')}` : 'PASS: 1, 3 and 20-token packs credit 1, 3 and 20, and return the buyer to the studio';
+    if (bad.length) fails++;
+    console.log(`[tokenPacksCreditWhatTheySold] ${tv}`);
   }
 
   // The kill-switch: a TEST-mode event must place nothing.

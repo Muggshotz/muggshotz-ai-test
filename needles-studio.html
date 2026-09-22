@@ -1,5 +1,5 @@
 <!-- ============================================================
-     VERSION: V334
+     VERSION: V335
      ============================================================
      THE ONE LINE THAT SAYS WHICH BUILD YOU ARE LOOKING AT.
 
@@ -894,12 +894,13 @@ body.panels-active #verifyCard{display:none!important}
     <div class="card-title">💳 Credits & Extras</div>
     <div id="creditsPanelMessage" class="note" style="margin-top:0;margin-bottom:1.1rem;color:#29a3ff;font-size:13px;line-height:1.4"></div>
 
-    <a href="checkout.html" style="text-decoration:none;display:block">
-      <button class="generate-btn">✅ $5 Preview Reservation</button>
-    </a>
-    <div class="note" style="margin-top:.5rem;margin-bottom:1.1rem">That $5 isn't an extra charge — it comes straight off your product's price at checkout, and unlocks more tokens right away so you can keep creating.</div>
+    <!-- The $5 Preview Reservation lived here until 22 Sep 2026. It opened
+         checkout.html, an old page with no working checkout, and promised
+         the $5 would come off the product at checkout, which no code did.
+         Dropped (Alyx: "yeah do it"); the 20-token pack covers the need. -->
+    
 
-    <div class="note" style="margin-bottom:.6rem;color:#29a3ff;font-size:13px">Just want to play? Buy tokens directly — no purchase required.</div>
+    <div class="note" style="margin-bottom:.6rem;color:#29a3ff;font-size:13px">Buy tokens directly — no purchase required.</div>
 
     <button class="generate-btn" style="margin-bottom:.4rem" onclick="buyTokenPack('1token')">🪙 1 Token — 50¢</button>
     <div class="note" style="margin-top:0;margin-bottom:.75rem">One more shot — perfect if you know exactly what tweak you need.</div>
@@ -2302,7 +2303,7 @@ Tell Needles <span style="color:#7ab8ff">what you have in mind</span>
 
   <div class="card" id="positionHolderCard" style="display:none">
 <div class="card-title">🖼️ Design Your Product</div>
-<div class="note-prominent" style="margin-top:0;margin-bottom:.9rem">Happy with just this one picture? We'll gladly take you to checkout. Want to try a few more designs first? If you're out of free tokens, a $5 Preview Reservation unlocks more tokens to keep creating — that $5 isn't an extra charge, it comes straight off your product's price at checkout. Whatever you end up with, your exact total (including any charge for extra printed designs, or an image on both sides) is always shown before you pay.</div>
+<div class="note-prominent" style="margin-top:0;margin-bottom:.9rem">Happy with just this one picture? We'll gladly take you to checkout. Want to try a few more designs first? If you're out of free tokens, more are 50 cents each, or 20 for $5. Whatever you end up with, your exact total (including any charge for extra printed designs, or an image on both sides) is always shown before you pay.</div>
 <div id="positionHolderRow" style="display:flex;align-items:flex-start;gap:6px;justify-content:center;flex-wrap:nowrap"></div>
 <div id="wraparoundStandbyPrompt" class="note mug-select-flash" style="display:none">⏳ Please Stand By While Panoramic Panels Are Being Completed</div>
 <button type="button" class="generate-btn" id="mugPanelsContinueBtn" style="display:none;margin-top:1rem" onclick="continueFromMugPanels()">✅ Continue</button>
@@ -4299,7 +4300,7 @@ function toggleWorkingImage(){
 // Two copies of a number is exactly how the marker rotted in the first place,
 // so they are not trusted to agree: .githooks/pre-commit moves both together
 // and REFUSES the commit if it ever finds them apart.
-const APP_VERSION='V334';
+const APP_VERSION='V335';
 try{ console.log('%cNeedles\u2019 Studio '+APP_VERSION,'color:#29a3ff;font-weight:700'); }catch(e){}
 
 function getDeviceId(){
@@ -4340,6 +4341,21 @@ const deviceId=getDeviceId();
 let hasPurchased=false;
 let isAdminDevice=false;
 let currentTokenBalance=null;
+
+// BACK FROM BUYING TOKENS (22 Sep 2026). Stripe sends the buyer here with
+// ?checkout=success. The webhook that credits the tokens can land a few
+// seconds after the page, so the meter is re-read a few times, and the
+// query is taken off the address so a reload does not repeat the message.
+(function(){
+  let q; try{ q=new URLSearchParams(location.search).get('checkout'); }catch(e){ return; }
+  if(q!=='success' && q!=='cancelled')return;
+  try{ history.replaceState(null,'',location.pathname); }catch(e){}
+  window.addEventListener('DOMContentLoaded',()=>{
+    if(q==='cancelled'){ if(typeof showGuidanceAlert==='function')showGuidanceAlert('Checkout cancelled. Nothing was charged.'); return; }
+    if(typeof showGuidanceAlert==='function')showGuidanceAlert('Payment received. Your tokens are on their way to your meter.');
+    [2000,5000,10000,20000].forEach(ms=>setTimeout(()=>{ try{ refreshTokenMeter(); }catch(e){} },ms));
+  });
+})();
 
 async function refreshTokenMeter(){
   const meterEl=document.getElementById('tokenMeterNumber');
@@ -19929,7 +19945,7 @@ Use rich environmental storytelling while keeping the face as the primary focal 
         refreshTokenMeter();
         stopNeedlesStage();
         document.getElementById('wraparoundStandbyPrompt').style.display='none';
-        openCreditsPanel("You're out of image credits. Grab the $5 Preview Reservation below to unlock more and keep creating.");
+        openCreditsPanel("You're out of image credits. Pick a token pack below to keep creating.");
         return;
       } else {
         // FALL BACK, DO NOT DEAD-END. This used to throw, which was
@@ -20063,7 +20079,7 @@ Use rich environmental storytelling while keeping the face as the primary focal 
           clearStatus();
           refreshTokenMeter();
           stopNeedlesStage();
-          openCreditsPanel("You're out of image credits. Grab the $5 Preview Reservation below to unlock more and keep creating.");
+          openCreditsPanel("You're out of image credits. Pick a token pack below to keep creating.");
           return;
         }
         throw new Error(data.error||data.detail||'Generation failed.');
