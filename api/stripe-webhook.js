@@ -514,6 +514,9 @@ export default async function handler(req, res) {
 
       if (session.metadata?.order_type === "gift_certificate") {
         await handleGiftCertificatePayment(session);
+      } else if (session.metadata?.order_type === "reservation") {
+        await handleTokenPayment(session);
+        await mintReservationCredit(session);
       } else if (session.metadata?.order_type === "mug_order") {
         // The certificate is spent first and on its own: a spend failure is
         // logged, never allowed to stop a paid order from being placed.
@@ -566,6 +569,25 @@ async function handleGiftCertificatePayment(session) {
   const common = { code: cert.code, amountCents: Number(m.amount_cents), recipientName: m.recipient_name, message: m.message, fromName: m.from_name, siteUrl };
   if (m.recipient_email) await sendResendEmail(m.recipient_email, `You've got a ${amt} Muggshotz gift certificate`, giftEmailHtml({ ...common, forBuyer: false }));
   if (m.buyer_email) await sendResendEmail(m.buyer_email, `Your ${amt} Muggshotz gift certificate`, giftEmailHtml({ ...common, forBuyer: true }));
+}
+
+// The reservation's $5 toward the product: a $5 credit on the gift ledger,
+// minted once per payment (idempotent on the session). A failure is logged and
+// never undoes the tokens already credited.
+const RESERVATION_CREDIT_CENTS = 500;
+async function mintReservationCredit(session) {
+  try {
+    await mintGiftCertificate({
+      sessionId: session.id,
+      amountCents: RESERVATION_CREDIT_CENTS,
+      buyerEmail: session.customer_details?.email || session.customer_email || "",
+      recipientEmail: session.customer_details?.email || session.customer_email || "",
+      recipientName: "Preview Reservation",
+      message: `device:${session.metadata?.device_id || ""}`
+    });
+  } catch (err) {
+    console.error("CRITICAL: reservation credit could not be minted; tokens were still credited", { session: session.id, error: err.message });
+  }
 }
 
 async function handleMugOrderPayment(session) {

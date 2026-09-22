@@ -1436,6 +1436,15 @@ async function applyGiftCert(){
   updateSummary();
 }
 
+// THE RESERVATION'S $5 (22 Sep 2026): the studio saves the credit code on
+// this device when a reservation is paid; it is applied here by itself, and
+// shows in the certificate box like any other code.
+window.addEventListener('DOMContentLoaded', () => {
+  let code = null; try { code = localStorage.getItem('muggshotz_reservation_code'); } catch (e) {}
+  const box = document.getElementById('giftCertInput');
+  if (code && box && !box.value) { box.value = code; applyGiftCert(); }
+});
+
 function renderWrapSizeGrid(){
   const grid = document.getElementById('wrapSizeGrid');
   grid.innerHTML = '';

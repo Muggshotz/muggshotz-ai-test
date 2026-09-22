@@ -131,15 +131,23 @@ const MUG_TYPE_TO_PRODUCT_KEY = {
   "All-Nighter": "all-nighter-mug"
 };
 
+// THE $5 PREVIEW RESERVATION (restored and wired, Alyx, 22 Sep 2026: "The $5
+// preview button was doing a lot of work ... a portion of that to be diverted
+// to pay for more spins"). It buys tokens now AND $5 of credit toward the
+// product: the webhook credits the tokens and mints a $5 credit code on the
+// gift-certificate ledger, the studio saves that code on the device when the
+// buyer returns, and the order page applies it at checkout by itself.
 async function handleReservation(req, res) {
   const { email, deviceId } = req.body || {};
+  if (!deviceId) return res.status(400).json({ error: "Missing device ID." });
+  const origin = req.headers.origin || process.env.PUBLIC_SITE_URL || "https://muggshotz-ai-test.vercel.app";
   const session = await stripe.checkout.sessions.create({
     mode: "payment",
     line_items: [{ price: process.env.STRIPE_PRICE_ID, quantity: 1 }],
     customer_email: email || undefined,
-    metadata: { device_id: deviceId || "" },
-    success_url: `${process.env.PUBLIC_SITE_URL || "https://muggshotz-ai-test.vercel.app"}?checkout=success`,
-    cancel_url:  `${process.env.PUBLIC_SITE_URL || "https://muggshotz-ai-test.vercel.app"}?checkout=cancelled`
+    metadata: { order_type: "reservation", device_id: deviceId },
+    success_url: `${origin}/needles-studio.html?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url:  `${origin}/needles-studio.html?checkout=cancelled`
   });
   return res.status(200).json({ url: session.url });
 }

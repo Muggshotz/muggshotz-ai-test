@@ -1,5 +1,5 @@
 <!-- ============================================================
-     VERSION: V335
+     VERSION: V336
      ============================================================
      THE ONE LINE THAT SAYS WHICH BUILD YOU ARE LOOKING AT.
 
@@ -894,10 +894,13 @@ body.panels-active #verifyCard{display:none!important}
     <div class="card-title">💳 Credits & Extras</div>
     <div id="creditsPanelMessage" class="note" style="margin-top:0;margin-bottom:1.1rem;color:#29a3ff;font-size:13px;line-height:1.4"></div>
 
-    <!-- The $5 Preview Reservation lived here until 22 Sep 2026. It opened
-         checkout.html, an old page with no working checkout, and promised
-         the $5 would come off the product at checkout, which no code did.
-         Dropped (Alyx: "yeah do it"); the 20-token pack covers the need. -->
+    <!-- THE $5 PREVIEW RESERVATION (22 Sep 2026). It used to open
+         checkout.html, an old page with no working checkout, and nothing took
+         the $5 off at checkout. Now it opens the real reservation checkout;
+         the webhook credits tokens and mints $5 of credit, which the order
+         page applies by itself. Alyx: it funds the free spins. -->
+    <button class="generate-btn" onclick="buyReservation()">✅ $5 Preview Reservation</button>
+    <div class="note" style="margin-top:.5rem;margin-bottom:1.1rem">That $5 isn't an extra charge — it comes straight off your product's price at checkout, and unlocks more tokens right away so you can keep creating.</div>
     
 
     <div class="note" style="margin-bottom:.6rem;color:#29a3ff;font-size:13px">Buy tokens directly — no purchase required.</div>
@@ -2303,7 +2306,7 @@ Tell Needles <span style="color:#7ab8ff">what you have in mind</span>
 
   <div class="card" id="positionHolderCard" style="display:none">
 <div class="card-title">🖼️ Design Your Product</div>
-<div class="note-prominent" style="margin-top:0;margin-bottom:.9rem">Happy with just this one picture? We'll gladly take you to checkout. Want to try a few more designs first? If you're out of free tokens, more are 50 cents each, or 20 for $5. Whatever you end up with, your exact total (including any charge for extra printed designs, or an image on both sides) is always shown before you pay.</div>
+<div class="note-prominent" style="margin-top:0;margin-bottom:.9rem">Happy with just this one picture? We'll gladly take you to checkout. Want to try a few more designs first? If you're out of free tokens, a $5 Preview Reservation unlocks more tokens to keep creating — that $5 isn't an extra charge, it comes straight off your product's price at checkout. Whatever you end up with, your exact total (including any charge for extra printed designs, or an image on both sides) is always shown before you pay.</div>
 <div id="positionHolderRow" style="display:flex;align-items:flex-start;gap:6px;justify-content:center;flex-wrap:nowrap"></div>
 <div id="wraparoundStandbyPrompt" class="note mug-select-flash" style="display:none">⏳ Please Stand By While Panoramic Panels Are Being Completed</div>
 <button type="button" class="generate-btn" id="mugPanelsContinueBtn" style="display:none;margin-top:1rem" onclick="continueFromMugPanels()">✅ Continue</button>
@@ -4300,7 +4303,7 @@ function toggleWorkingImage(){
 // Two copies of a number is exactly how the marker rotted in the first place,
 // so they are not trusted to agree: .githooks/pre-commit moves both together
 // and REFUSES the commit if it ever finds them apart.
-const APP_VERSION='V335';
+const APP_VERSION='V336';
 try{ console.log('%cNeedles\u2019 Studio '+APP_VERSION,'color:#29a3ff;font-weight:700'); }catch(e){}
 
 function getDeviceId(){
@@ -4346,14 +4349,30 @@ let currentTokenBalance=null;
 // ?checkout=success. The webhook that credits the tokens can land a few
 // seconds after the page, so the meter is re-read a few times, and the
 // query is taken off the address so a reload does not repeat the message.
+// A reservation also comes back with its session id: the $5 credit code the
+// webhook minted is fetched and saved on this device, where order.html picks
+// it up and applies it at checkout by itself.
 (function(){
-  let q; try{ q=new URLSearchParams(location.search).get('checkout'); }catch(e){ return; }
+  let q, sid; try{ const p=new URLSearchParams(location.search); q=p.get('checkout'); sid=p.get('session_id'); }catch(e){ return; }
   if(q!=='success' && q!=='cancelled')return;
   try{ history.replaceState(null,'',location.pathname); }catch(e){}
   window.addEventListener('DOMContentLoaded',()=>{
     if(q==='cancelled'){ if(typeof showGuidanceAlert==='function')showGuidanceAlert('Checkout cancelled. Nothing was charged.'); return; }
-    if(typeof showGuidanceAlert==='function')showGuidanceAlert('Payment received. Your tokens are on their way to your meter.');
+    if(typeof showGuidanceAlert==='function')showGuidanceAlert(sid
+      ? 'Reservation received! Your tokens are on their way, and your $5 will come off your product at checkout automatically.'
+      : 'Payment received. Your tokens are on their way to your meter.');
     [2000,5000,10000,20000].forEach(ms=>setTimeout(()=>{ try{ refreshTokenMeter(); }catch(e){} },ms));
+    if(sid){
+      let tries=0;
+      (async function poll(){
+        try{
+          const r=await fetch('/api/get-balance?giftSession='+encodeURIComponent(sid));
+          const d=await r.json();
+          if(d.ready&&d.code){ try{ localStorage.setItem('muggshotz_reservation_code',d.code); }catch(e){} return; }
+        }catch(e){}
+        if(++tries<15)setTimeout(poll,3000);
+      })();
+    }
   });
 })();
 
@@ -13205,6 +13224,21 @@ function closeCreditsPanel(){
   document.getElementById('creditsModalOverlay').style.display='none';
 }
 
+async function buyReservation(){
+  try{
+    const resp=await fetch('/api/create-checkout-session',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({type:'reservation',deviceId})
+    });
+    const data=await resp.json();
+    if(!resp.ok)throw new Error(data.error||'Could not start checkout.');
+    window.location.href=data.url;
+  }catch(err){
+    alert('Could not open checkout: '+err.message);
+  }
+}
+
 async function buyTokenPack(packId){
   try{
     const resp=await fetch('/api/create-checkout-session',{
@@ -19945,7 +19979,7 @@ Use rich environmental storytelling while keeping the face as the primary focal 
         refreshTokenMeter();
         stopNeedlesStage();
         document.getElementById('wraparoundStandbyPrompt').style.display='none';
-        openCreditsPanel("You're out of image credits. Pick a token pack below to keep creating.");
+        openCreditsPanel("You're out of image credits. Grab the $5 Preview Reservation below to unlock more and keep creating.");
         return;
       } else {
         // FALL BACK, DO NOT DEAD-END. This used to throw, which was
@@ -20079,7 +20113,7 @@ Use rich environmental storytelling while keeping the face as the primary focal 
           clearStatus();
           refreshTokenMeter();
           stopNeedlesStage();
-          openCreditsPanel("You're out of image credits. Pick a token pack below to keep creating.");
+          openCreditsPanel("You're out of image credits. Grab the $5 Preview Reservation below to unlock more and keep creating.");
           return;
         }
         throw new Error(data.error||data.detail||'Generation failed.');

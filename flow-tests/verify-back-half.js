@@ -38,7 +38,7 @@ const IMG = 'https://cdn.muggshotz.test/design.jpg';
 const JPEG = fs.readFileSync(path.join(__dirname, 'fake-generated.jpg'));
 
 // ---- outbound HTTP, recorded ----
-const wire = { uploads: 0, products: [], orders: [], unstubbed: [], variantsAsked: [], supaPatches: [] };
+const wire = { uploads: 0, products: [], orders: [], unstubbed: [], variantsAsked: [], supaPatches: [], giftRows: [] };
 let catalog = null;
 const json = (obj, status = 200) => new Response(JSON.stringify(obj), { status, headers: { 'content-type': 'application/json' } });
 
@@ -89,6 +89,8 @@ global.fetch = async (url, opts = {}) => {
     if (/\/customers/.test(u) && m === 'GET') return json([]);
     if (/\/customers/.test(u) && m === 'POST') return json([{ id: 'cust_1', token_balance: 0, email: null, email_verified: false }]);
     if (/\/customers/.test(u) && m === 'PATCH') wire.supaPatches.push(body);
+    if (/\/gift_certificates\?/.test(u) && m === 'GET') return json(wire.giftRows.filter((r) => u.includes(encodeURIComponent(r.stripe_session_id)) || u.includes(r.code)));
+    if (/\/gift_certificates$/.test(u) && m === 'POST') { wire.giftRows.push(body); return json([body], 201); }
     return json([{}]);
   }
   if (u.startsWith('https://api.resend.com/')) return json({ id: 'email_1' });
@@ -208,6 +210,34 @@ function bodiesFor(key, p) {
     const tv = bad.length ? `FAIL: ${bad.join('; ')}` : 'PASS: 1, 3 and 20-token packs credit 1, 3 and 20, and return the buyer to the studio';
     if (bad.length) fails++;
     console.log(`[tokenPacksCreditWhatTheySold] ${tv}`);
+  }
+
+  // The $5 Preview Reservation (22 Sep 2026): the real checkout returns the
+  // buyer to the studio with the session id, and the real webhook credits
+  // tokens AND mints a $5 credit on the gift ledger, once, even on a retry.
+  {
+    const bad = [];
+    const before = globalThis.__stripe.sessions.length;
+    wire.supaPatches.length = 0; wire.giftRows.length = 0;
+    console.log = quiet;
+    const r1 = res(); await session(jsonReq({ type: 'reservation', deviceId: 'dev_res' }), r1);
+    const s = globalThis.__stripe.sessions[before];
+    if (r1.code !== 200 || !s) bad.push(`checkout answered ${r1.code}`);
+    else {
+      if (s.metadata?.order_type !== 'reservation') bad.push(`order_type=${s.metadata?.order_type}`);
+      if (!/needles-studio\.html\?checkout=success&session_id=\{CHECKOUT_SESSION_ID\}/.test(s.success_url || '')) bad.push(`success_url=${s.success_url}`);
+      const ev = { type: 'checkout.session.completed', livemode: true, data: { object: { id: s.id, metadata: s.metadata, customer_details: { email: 'res@x.test' } } } };
+      await webhook(rawReq(ev), res());
+      await webhook(rawReq(ev), res());
+      const credit = wire.supaPatches.find((b) => b && typeof b.token_balance === 'number');
+      if (!credit || !(credit.token_balance > 0)) bad.push('no tokens were credited');
+      if (wire.giftRows.length !== 1) bad.push(`${wire.giftRows.length} credit rows minted, expected exactly 1 across a retried webhook`);
+      else if (wire.giftRows[0].amount_cents !== 500 || wire.giftRows[0].balance_cents !== 500) bad.push(`credit is ${wire.giftRows[0].amount_cents} cents`);
+    }
+    console.log = origLog;
+    const rv = bad.length ? `FAIL: ${bad.join('; ')}` : 'PASS: a reservation credits tokens, mints one $5 credit (even when the webhook is retried), and returns to the studio with its session';
+    if (bad.length) fails++;
+    console.log(`[reservationFundsSpinsAndCreditsFive] ${rv}`);
   }
 
   // The kill-switch: a TEST-mode event must place nothing.
