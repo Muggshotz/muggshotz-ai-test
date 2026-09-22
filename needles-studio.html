@@ -1,5 +1,5 @@
 <!-- ============================================================
-     VERSION: V324
+     VERSION: V325
      ============================================================
      THE ONE LINE THAT SAYS WHICH BUILD YOU ARE LOOKING AT.
 
@@ -4183,7 +4183,7 @@ function toggleWorkingImage(){
 // Two copies of a number is exactly how the marker rotted in the first place,
 // so they are not trusted to agree: .githooks/pre-commit moves both together
 // and REFUSES the commit if it ever finds them apart.
-const APP_VERSION='V324';
+const APP_VERSION='V325';
 try{ console.log('%cNeedles\u2019 Studio '+APP_VERSION,'color:#29a3ff;font-weight:700'); }catch(e){}
 
 function getDeviceId(){
@@ -19586,17 +19586,29 @@ Use rich environmental storytelling while keeping the face as the primary focal 
     // fits Face It bands to this same mug -- and cut it into thirds. The
     // result lands in panoramaData in exactly the shape the mug consumer
     // below already expects, so nothing downstream changed.
-    if(usePanorama && describeOnlyMode() && product==='mug'){
+    if(usePanorama && describeOnlyMode()){
       document.getElementById('approveRow').style.display='none';
       document.getElementById('downloadDesignBtn').style.display='none';
       setStatus('Drawing your picture...');
       const flatUrl=await callGenerateAPI({workingImage:null,prompt:describePromptText(),refImageA:null,refImageB:null});
       if(!flatUrl)throw new Error('No image returned.');
-      setStatus('Wrapping it round the mug...');
-      const wide=await extendWrapToProductRatio(flatUrl,{ratio:MUG_WRAP_RATIO,closes:true});
-      const panels=await sliceFaceItResultIntoPanels(wide);
-      if(!panels)throw new Error('Could not cut the wrap into panels.');
-      panoramaData={leftUrl:panels.left,centerUrl:panels.center,rightUrl:panels.right,panoramaUrl:wide};
+      if(product==='mug'){
+        setStatus('Wrapping it round the mug...');
+        const wide=await extendWrapToProductRatio(flatUrl,{ratio:MUG_WRAP_RATIO,closes:true});
+        const panels=await sliceFaceItResultIntoPanels(wide);
+        if(!panels)throw new Error('Could not cut the wrap into panels.');
+        panoramaData={leftUrl:panels.left,centerUrl:panels.center,rightUrl:panels.right,panoramaUrl:wide};
+      } else {
+        // THE SAME TRICK ON A TRAVEL CUP (Alyx, V325: "use the same trick that
+        // you did on coffee mugs"). The two panoramic cups, the 14oz with the
+        // handle and the 30oz Tundra, used to fall through to the photo
+        // panorama below and die on its missing image. The flat picture goes
+        // into panoramaData as the panorama, and the travel consumer further
+        // down widens it with extendWrapToProductRatio's own defaults: this
+        // cup's band ratio, whether its ends meet, and the Tundra's mirrored
+        // flanks. Nothing downstream changed.
+        panoramaData={panoramaUrl:flatUrl};
+      }
     } else if(usePanorama){
       document.getElementById('approveRow').style.display='none';
       document.getElementById('downloadDesignBtn').style.display='none';
