@@ -1,5 +1,5 @@
 <!-- ============================================================
-     VERSION: V314
+     VERSION: V317
      ============================================================
      THE ONE LINE THAT SAYS WHICH BUILD YOU ARE LOOKING AT.
 
@@ -1070,7 +1070,22 @@ const HERO_SETTLE_MS = 1000;
 <div class="needles-board-stack">
 <div class="needles-board board-free"><div class="needles-clip"></div><div class="upload-zone needles-polaroid" id="uploadZone" onclick="startUploadWithIntent('byo')"><svg viewBox="0 0 48 48" width="44" height="44" aria-hidden="true" focusable="false" style="overflow:visible;margin-bottom:8px"><g transform="rotate(-6 24 24)"><rect x="7" y="5" width="34" height="38" rx="2.5" fill="#fff" stroke="#2b2b2b" stroke-width="2"/><rect x="11" y="9" width="26" height="22" fill="#cfd8e3" stroke="#2b2b2b" stroke-width="1.6"/><circle cx="18" cy="16" r="3" fill="#8aa6c8"/><path d="M11 31 L20 21 L26 27 L31 23 L37 31 Z" fill="#8aa6c8" stroke="#2b2b2b" stroke-width="1.4" stroke-linejoin="round"/></g></svg><div class="upload-text">Tap here to upload a photo</div><div class="upload-sub">Your own picture, used exactly as it is</div></div></div>
 <div class="boards-or boards-or-stacked" aria-hidden="true">OR</div>
-<div class="needles-board board-describe"><div class="needles-clip"></div><div class="upload-zone needles-polaroid" id="describeOnlyZone" onclick="startDescribeOnly()"><svg viewBox="0 0 54 50" width="48" height="44" aria-hidden="true" focusable="false" style="overflow:visible;margin-bottom:8px"><g fill="none" stroke="#2b2b2b" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="24" width="17" height="14" rx="3.5" fill="#fff"/><path d="M6 31 h-3"/><path d="M23 27 h6"/><circle cx="30.5" cy="27" r="1.6" fill="#2b2b2b" stroke="none"/><path d="M23 31.5 h7"/><circle cx="31.5" cy="31.5" r="1.6" fill="#2b2b2b" stroke="none"/><path d="M23 36 h5"/><circle cx="29.5" cy="36" r="1.6" fill="#2b2b2b" stroke="none"/><path d="M14 24 v-4"/><path d="M14.5 21 l14 -13"/><path d="M27 6 l5 4 -3.5 4.5 -5 -4 Z" fill="#8aa6c8"/><path d="M8 45 q12 5 22 0 q8 -3 15 1" stroke-width="2.8"/></g></svg><div class="upload-text">Tap here if you have no picture</div><div class="upload-sub">Needles draws it from your words — nothing to upload</div></div></div>
+<div class="needles-board board-describe"><div class="needles-clip"></div><div class="upload-zone needles-polaroid" id="describeOnlyZone" onclick="startDescribeOnly()"><!-- ONE HAND, THREE BOARDS (Alyx, Sep 2026): "I like that 'cause it's got
+     continuity -- the 1st is a photo, the 2nd is an easel with a hand about
+     to draw, an AI robotic hand, and then the 3rd is that same hand shaking
+     hands with a person."
+     So the three read left to right as one story: your photo, the robot
+     draws it for you, you and the robot work on it together. The hand here
+     and the hand in the handshake are meant as the same hand, which is what
+     makes them a set rather than three unrelated pictures.
+     Two earlier attempts are recorded because both failed for reasons worth
+     keeping: a bare robot hand meant nothing on its own ("I don't know what
+     that icon is supposed to mean, neither will anyone"), and the Needles
+     badge dragged its ring and its NEEDLES EASEL wordmark onto a cream
+     polaroid ("you can't have the half circle cropped out, it's a hot
+     mess"). Drawn rather than an emoji, for the reason the Fade to Cup icon
+     already records: an emoji is a bet on the device's font. -->
+<svg viewBox="0 0 58 56" width="50" height="50" aria-hidden="true" focusable="false" style="overflow:visible;margin-bottom:8px"><g fill="none" stroke="#2b2b2b" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"> <path d="M13 31 L8 51"/><path d="M31 31 L36 51"/><path d="M22 32 L22 48"/> <path d="M11 42 H33"/> <rect x="7" y="6" width="30" height="25" rx="1.5" fill="#ffffff"/> <path d="M4 31 H40"/> <path d="M12 25 q6 -10 13 -3" stroke="#8aa6c8" stroke-width="2.6"/> <path d="M25.5 18 L43 6.5"/> <path d="M22.5 19.6 l4.2 -2.8 2.1 3.2 -4.2 2.8 Z" fill="#8aa6c8" stroke-width="1.7"/> <g transform="rotate(-33 37 11)"> <rect x="31.5" y="6" width="13" height="7.5" rx="3" fill="#ffffff"/> <path d="M34 13.5 v3.2"/><circle cx="34" cy="17.8" r="1.35" fill="#2b2b2b" stroke="none"/> <path d="M38 13.5 v3.2"/><circle cx="38" cy="17.8" r="1.35" fill="#2b2b2b" stroke="none"/> <path d="M42 13.5 v3.2"/><circle cx="42" cy="17.8" r="1.35" fill="#2b2b2b" stroke="none"/> <path d="M44.5 9.7 h5.5"/> <path d="M50 6.6 v6.2"/> </g> </g></svg><div class="upload-text">Tap here if you have no picture</div><div class="upload-sub">Needles draws it from your words — nothing to upload</div></div></div>
 </div>
 <div class="boards-or" aria-hidden="true">OR</div>
 <div class="needles-board board-ai" id="aiCollabBoard"><div class="needles-clip"></div><div class="upload-zone needles-polaroid" id="aiCollabUploadBtn" onclick="startUploadWithIntent('ai')"><img src="ai-collab-handshake.webp" alt="" class="ai-collab-icon"/><div class="upload-text">Tap here to collaborate with our AI</div><div class="upload-sub">Upload a photo, then tell Needles what to make of it</div></div>
@@ -3411,6 +3426,20 @@ function describeForkPickProduct(){
   const overlay=document.getElementById('describeForkOverlay');
   if(overlay)overlay.style.display='none';
   document.body.classList.remove('step-locked');
+  // LIFT THE FIRST-VISIT SPOTLIGHT (Alyx, Sep 2026: the describe path "just
+  // takes you to the tap here to collaborate with our AI panel, which is kind
+  // of against the point, because the only way to engage that panel is the
+  // first thing you have to do is upload an image").
+  //
+  // body.initial-upload-focus sets opacity:0 and pointer-events:none on every
+  // card except the upload one, and setMainSlotImage() is what clears it --
+  // which is to say, LANDING A PHOTO is what clears it. A described design
+  // never lands one, so the spotlight stayed up: the product grid was there,
+  // invisible and unclickable, the guided scroll bounced straight back, and
+  // the customer was pinned to the upload card looking at the one board that
+  // demands the photo they said they did not have. The third door has to open
+  // this the same way the other two do.
+  document.body.classList.remove('initial-upload-focus');
   document.body.classList.remove('idea-focus');
   document.body.classList.add('product-focus');
   const guide=document.getElementById('productGuidancePrompt');
@@ -3424,6 +3453,20 @@ function describeForkPickArtworkOnly(){
   const overlay=document.getElementById('describeForkOverlay');
   if(overlay)overlay.style.display='none';
   document.body.classList.remove('step-locked');
+  // LIFT THE FIRST-VISIT SPOTLIGHT (Alyx, Sep 2026: the describe path "just
+  // takes you to the tap here to collaborate with our AI panel, which is kind
+  // of against the point, because the only way to engage that panel is the
+  // first thing you have to do is upload an image").
+  //
+  // body.initial-upload-focus sets opacity:0 and pointer-events:none on every
+  // card except the upload one, and setMainSlotImage() is what clears it --
+  // which is to say, LANDING A PHOTO is what clears it. A described design
+  // never lands one, so the spotlight stayed up: the product grid was there,
+  // invisible and unclickable, the guided scroll bounced straight back, and
+  // the customer was pinned to the upload card looking at the one board that
+  // demands the photo they said they did not have. The third door has to open
+  // this the same way the other two do.
+  document.body.classList.remove('initial-upload-focus');
   product='artwork only';
   productExplicitlyChosen=true;
   const tile=document.querySelector('#productCard .btn-select[data-val="artwork only"]');
@@ -4079,7 +4122,7 @@ function toggleWorkingImage(){
 // Two copies of a number is exactly how the marker rotted in the first place,
 // so they are not trusted to agree: .githooks/pre-commit moves both together
 // and REFUSES the commit if it ever finds them apart.
-const APP_VERSION='V314';
+const APP_VERSION='V317';
 try{ console.log('%cNeedles\u2019 Studio '+APP_VERSION,'color:#29a3ff;font-weight:700'); }catch(e){}
 
 function getDeviceId(){
