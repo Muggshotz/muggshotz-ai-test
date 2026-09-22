@@ -13,8 +13,8 @@ gift certificate (see GIFT-CERTIFICATES.md) as the tenth, and one pick each
 from Claude and Bud for eleven and twelve.
 
 1. Wrapping paper — category name "It's a Wrap" (Alyx). Bud's sample sheet, 22 Sep: the couple in six poses with festive filler, drawn as one repeating pattern; the server tiles that sheet across the print.
-2. Custom cut standee
-3. Playing cards
+2. Custom cut standee — "From Where I Stand" (Alyx). Bud's tile and blank, 22 Sep.
+3. Playing cards — "Just Playin'" (Alyx). Bud's tile and blank card back, 22 Sep.
 4. Car air freshener
 5. Ceramic ornament
 6. Doormat
