@@ -1,3 +1,4 @@
+import { findGiftCertificate, findGiftCertificateBySession } from "../lib/gift-certificates.js";
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 // Simple read-only lookup: given a device ID, return its current token
@@ -185,7 +186,29 @@ async function handleRecentLookup(req, res) {
   }
 }
 
+
+// GIFT CERTIFICATE LOOKUPS (22 Sep 2026), here because every function slot is
+// taken. ?giftCode= answers the order page's Apply button with the balance;
+// ?giftSession= answers the buyer's thank-you page with the code, keyed on
+// the Stripe session id only the buyer's browser was sent back with.
+async function handleGiftLookup(req, res) {
+  try {
+    if (req.query.giftCode) {
+      const c = await findGiftCertificate(req.query.giftCode);
+      if (!c || c.voided_at || c.balance_cents <= 0) return res.status(200).json({ valid: false });
+      return res.status(200).json({ valid: true, code: c.code, balanceCents: c.balance_cents });
+    }
+    const c = await findGiftCertificateBySession(req.query.giftSession);
+    if (!c) return res.status(200).json({ ready: false });
+    return res.status(200).json({ ready: true, code: c.code, amountCents: c.amount_cents, recipientName: c.recipient_name, recipientEmail: c.recipient_email });
+  } catch (err) {
+    console.error("Gift lookup failed:", err.message);
+    return res.status(503).json({ error: "Could not check the gift certificate just now." });
+  }
+}
+
 export default async function handler(req, res) {
+  if (req.method === "GET" && (req.query.giftCode || req.query.giftSession)) return handleGiftLookup(req, res);
   if (req.method !== "GET") {
     return res.status(405).json({ error: "Method not allowed" });
   }

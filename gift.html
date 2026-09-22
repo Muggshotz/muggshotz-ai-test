@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Muggshotz Gift Certificate</title>
+<!-- GIFT CERTIFICATES (Alyx, 22 Sep 2026): store credit on a ledger. This
+     page sells one (checkout type "gift_certificate") and, on return from
+     Stripe, shows the buyer the code the webhook minted. See
+     GIFT-CERTIFICATES.md. -->
+<style>
+body{margin:0;background:#0b0b0b;color:#eaeaea;font-family:system-ui,sans-serif}
+.wrap{max-width:620px;margin:0 auto;padding:16px}
+h1{font-family:Georgia,serif;font-style:italic;color:#7ab8ff;font-size:24px;margin:.4rem 0 1rem}
+.card{background:#141a24;border:1px solid #243349;border-radius:14px;padding:16px;margin-bottom:14px}
+.bill{position:relative}
+.bill img{width:100%;display:block;border-radius:10px}
+.bill .amt{position:absolute;left:var(--ax,17%);top:var(--ay,40%);transform:translate(-50%,-50%);text-align:center;font:700 clamp(20px,7vw,44px) Georgia,serif;color:#1b2a4a}
+.bill .inner{position:relative}
+.amts{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.amts button{padding:.8rem 0;border-radius:10px;border:1px solid #2d4a73;background:#0f1622;color:#7ab8ff;font-size:17px;font-weight:700;cursor:pointer}
+.amts button.sel{background:#1d5fbf;color:#fff;border-color:#4d93ff}
+label{display:block;font-size:12px;color:#7ab8ff;margin:.7rem 0 .25rem}
+input,textarea{width:100%;box-sizing:border-box;background:#0d0d0d;border:1px solid #444;border-radius:8px;padding:10px 12px;color:#fff;font-size:15px}
+textarea{min-height:70px;resize:vertical}
+.go{width:100%;margin-top:1rem;padding:1rem;border:0;border-radius:12px;background:linear-gradient(#3a8bff,#1b5fc4);color:#fff;font-size:18px;font-weight:700;cursor:pointer}
+.go:disabled{opacity:.5}
+.note{font-size:12px;color:#9fb7d6;margin-top:.5rem;line-height:1.4}
+.code{font:700 26px/1.2 ui-monospace,monospace;letter-spacing:3px;text-align:center;background:#f6f0dc;color:#111;border:2px solid #c9a227;border-radius:10px;padding:14px;margin:.6rem 0}
+#status{color:#ff8a8a;font-size:13px;margin-top:.6rem;min-height:1em}
+a{color:#7ab8ff}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>🎁 Muggshotz Gift Certificate</h1>
+
+<div id="buyView">
+<div class="card bill"><div class="inner"><img src="art/gift-certificate-bill-preview.png" alt="Muggshotz gift certificate"><div class="amt" id="billAmt">$50</div></div></div>
+<div class="card">
+<div style="font-size:13px;color:#7ab8ff;margin-bottom:.5rem">Pick an amount</div>
+<div class="amts" id="amts">
+<button data-c="2500">$25</button><button data-c="5000" class="sel">$50</button><button data-c="7500">$75</button><button data-c="10000">$100</button>
+</div>
+<label>Who is it for?</label><input id="rName" placeholder="Their name">
+<label>Their email — we'll send the certificate there</label><input id="rEmail" type="email" placeholder="them@example.com">
+<label>A message for them <span style="opacity:.7">(optional)</span></label><textarea id="msg" maxlength="300" placeholder="Happy birthday! Make yourself something ridiculous."></textarea>
+<label>Your name</label><input id="fName" placeholder="So they know who it's from">
+<label>Your email — for your receipt</label><input id="bEmail" type="email" placeholder="you@example.com">
+<button class="go" id="goBtn">Buy the $50 certificate</button>
+<div id="status"></div>
+<div class="note" id="feeNote"></div>
+<div class="note">Store credit for anything at Muggshotz. Whatever isn't spent stays on the code for next time, and it never expires.</div>
+</div>
+</div>
+
+<div id="doneView" style="display:none">
+<div class="card">
+<div style="font-size:18px;font-weight:700;color:#7ab8ff">Thank you!</div>
+<div id="doneText" class="note" style="font-size:14px">Your certificate is being minted…</div>
+<div class="code" id="doneCode" style="display:none"></div>
+<div class="note">We've emailed it to the recipient and a copy to you. Keep this code somewhere safe — it's the certificate.</div>
+<p><a href="needles-studio.html">Back to the studio</a></p>
+</div>
+</div>
+</div>
+<script>
+let cents=5000;
+const fee=c=>Math.ceil(0.029*c+30+5)/100;
+function refresh(){
+  document.querySelectorAll('#amts button').forEach(b=>b.classList.toggle('sel',+b.dataset.c===cents));
+  document.getElementById('billAmt').textContent='$'+cents/100;
+  document.getElementById('goBtn').textContent='Buy the $'+cents/100+' certificate';
+  document.getElementById('feeNote').textContent='You pay $'+(cents/100).toFixed(2)+' plus $'+fee(cents).toFixed(2)+' card processing and handling (our processor’s 2.9% + 30¢, plus a 5¢ handling fee). The recipient gets the full $'+cents/100+'.';
+}
+document.querySelectorAll('#amts button').forEach(b=>b.onclick=()=>{cents=+b.dataset.c;refresh();});
+refresh();
+document.getElementById('goBtn').onclick=async()=>{
+  const v=id=>document.getElementById(id).value.trim();
+  const st=document.getElementById('status'); st.textContent='';
+  const btn=document.getElementById('goBtn'); btn.disabled=true;
+  try{
+    const r=await fetch('/api/create-checkout-session',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+      type:'gift_certificate',amountCents:cents,recipientName:v('rName'),recipientEmail:v('rEmail'),message:v('msg'),fromName:v('fName'),buyerEmail:v('bEmail')})});
+    const d=await r.json();
+    if(!r.ok)throw new Error(d.error||'Could not start checkout.');
+    location.href=d.url;
+  }catch(e){st.textContent=e.message;btn.disabled=false;}
+};
+const qs=new URLSearchParams(location.search);
+if(qs.get('session_id')){
+  document.getElementById('buyView').style.display='none';
+  document.getElementById('doneView').style.display='block';
+  let tries=0;
+  (async function poll(){
+    try{
+      const r=await fetch('/api/get-balance?giftSession='+encodeURIComponent(qs.get('session_id')));
+      const d=await r.json();
+      if(d.ready){
+        document.getElementById('doneText').textContent='Your $'+(d.amountCents/100)+' certificate'+(d.recipientName?' for '+d.recipientName:'')+' is ready. The code:';
+        const el=document.getElementById('doneCode'); el.textContent=d.code; el.style.display='block'; return;
+      }
+    }catch(e){}
+    if(++tries<20)setTimeout(poll,3000);
+    else document.getElementById('doneText').textContent='Payment received. Your code is on its way by email.';
+  })();
+}
+</script>
+</body>
+</html>

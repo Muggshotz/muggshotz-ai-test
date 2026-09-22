@@ -6,8 +6,23 @@ bill and the coin are pictures of it. Nothing is printed or issued; a code in
 an email is the only thing the recipient carries, and the ledger is the only
 thing that counts.
 
-Status: **not built.** Art is in `art/` (Bud, 22 Sep 2026). Everything below
-is what it takes, on the plumbing the site has today.
+Status: **built, V334 (22 Sep 2026).** Waiting on two things outside the code:
+the tables (`supabase/gift-certificates.sql`, paste into Supabase SQL Editor —
+until then the purchase refuses with "not on sale just yet") and email
+delivery (the site sends from Resend's test address, which only delivers to
+the Resend account's own email until a domain is verified).
+
+What V334 does: `gift.html` sells $25/$50/$75/$100 plus the usual fee line;
+the webhook mints the code idempotently and emails recipient and buyer; the
+thank-you page shows the buyer the code; the order page's "Have a gift
+certificate?" box applies the balance to product and shipping, the fee is
+worked on what is left, and 50 cents stays on the card (Stripe's minimum);
+the webhook spends the balance on payment, optimistically, once per order.
+Shared code in `lib/gift-certificates.js`; lookups ride `api/get-balance.js`.
+Friction setting: open (the code alone redeems). Not yet: admin page, the
+no-card path for a fully covered order, leftover-to-tokens, attempt limits.
+
+The plan as first written follows.
 
 ## What already exists that this stands on
 

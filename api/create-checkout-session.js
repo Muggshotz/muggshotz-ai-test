@@ -2,6 +2,7 @@ import Stripe from "stripe";
 import { getProduct } from "../lib/products-catalog.js";
 import { calculateShippingCharge } from "../lib/printify-shipping.js";
 import { readMaintenance } from "../lib/maintenance.js";
+import { GIFT_AMOUNTS_CENTS, STRIPE_MIN_CHARGE_CENTS, findGiftCertificate, normalizeGiftCode, giftLedgerReady } from "../lib/gift-certificates.js";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
@@ -227,6 +228,24 @@ async function handleProductOrder(req, res) {
   }
   const shippingCents = Math.round(shippingCharge * 100);
 
+  // GIFT CERTIFICATE (22 Sep 2026). The code's balance comes off product and
+  // shipping before the card fee is worked out, so the fee is only charged on
+  // what the card actually pays. Stripe will not take under 50 cents, so a
+  // certificate that would cover the whole order leaves 50 cents on the card
+  // and keeps the rest of its balance. Nothing is spent here: the webhook
+  // spends it when the payment completes, so an abandoned checkout costs the
+  // certificate nothing.
+  let giftCode = null, giftCents = 0;
+  if (req.body.giftCode) {
+    giftCode = normalizeGiftCode(req.body.giftCode);
+    let cert = null;
+    try { cert = giftCode ? await findGiftCertificate(giftCode) : null; }
+    catch (err) { console.error("Gift certificate lookup failed:", err.message); return res.status(503).json({ error: "We couldn't check that gift certificate just now. Please try again in a moment." }); }
+    if (!cert || cert.voided_at || cert.balance_cents <= 0)
+      return res.status(400).json({ error: "That gift certificate code isn't valid or has no balance left." });
+    giftCents = Math.max(0, Math.min(cert.balance_cents, productCents + shippingCents - STRIPE_MIN_CHARGE_CENTS));
+  }
+
   const origin = req.headers.origin || "https://muggshotz-ai-test.vercel.app";
   const discountSuffix = emailDiscountEligible ? " (10% first-order discount applied)" : "";
   const productName = `Muggshotz ${product.displayName} (${sizeLabel})${colorName ? " - " + colorName : ""}${discountSuffix}`;
@@ -240,12 +259,20 @@ async function handleProductOrder(req, res) {
       quantity: 1
     });
   }
-  const feeCents = feeLineCents(productCents + shippingCents);
+  const feeCents = feeLineCents(productCents + shippingCents - giftCents);
   if (feeCents > 0) {
     line_items.push({
       price_data: { currency: "usd", product_data: { name: "Card Processing & Handling", description: "Payment processing at our processor's standard rate (2.9% + 30¢) plus a 5¢ handling fee" }, unit_amount: feeCents },
       quantity: 1
     });
+  }
+  let discounts;
+  if (giftCents > 0) {
+    const coupon = await stripe.coupons.create({
+      amount_off: giftCents, currency: "usd", duration: "once", max_redemptions: 1,
+      name: `Gift certificate ${giftCode}`
+    });
+    discounts = [{ coupon: coupon.id }];
   }
 
   let imageUrlA = "", imageUrlB = "", imageUrlC = "";
@@ -301,8 +328,11 @@ async function handleProductOrder(req, res) {
     payment_method_types: ["card"],
     automatic_tax: { enabled: true },
     line_items,
+    ...(discounts ? { discounts } : {}),
     metadata: {
       order_type: "mug_order",
+      gift_code: giftCode && giftCents > 0 ? giftCode : "",
+      gift_cents: String(giftCents),
       device_id: deviceId,
       product_key: productKey,
       size_label: sizeLabel,
@@ -474,6 +504,42 @@ async function handleTierUpgrade(req, res) {
   }
 }
 
+// BUYING A GIFT CERTIFICATE (22 Sep 2026). One of four amounts, the same card
+// fee line every order carries ("if I pay, you pay"), and the recipient's
+// details in metadata. The webhook mints the code when payment completes.
+async function handleGiftCertificatePurchase(req, res) {
+  const { amountCents, buyerEmail, recipientEmail, recipientName, message, fromName } = req.body;
+  const amt = Number(amountCents);
+  if (!GIFT_AMOUNTS_CENTS.includes(amt)) return res.status(400).json({ error: "Please pick one of the certificate amounts." });
+  const emailOk = e => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(e || "").trim());
+  if (!emailOk(buyerEmail)) return res.status(400).json({ error: "Please enter your email address." });
+  if (!emailOk(recipientEmail)) return res.status(400).json({ error: "Please enter the recipient's email address." });
+  if (!(await giftLedgerReady())) return res.status(503).json({ error: "Gift certificates aren't on sale just yet. Please check back soon." });
+  const origin = req.headers.origin || "https://muggshotz-ai-test.vercel.app";
+  const feeCents = feeLineCents(amt);
+  const session = await stripe.checkout.sessions.create({
+    mode: "payment",
+    payment_method_types: ["card"],
+    customer_email: String(buyerEmail).trim(),
+    line_items: [
+      { price_data: { currency: "usd", product_data: { name: `Muggshotz Gift Certificate — $${amt / 100}`, description: "Store credit, emailed to the recipient. Never expires." }, unit_amount: amt }, quantity: 1 },
+      { price_data: { currency: "usd", product_data: { name: "Card Processing & Handling", description: "Payment processing at our processor's standard rate (2.9% + 30¢) plus a 5¢ handling fee" }, unit_amount: feeCents }, quantity: 1 }
+    ],
+    metadata: {
+      order_type: "gift_certificate",
+      amount_cents: String(amt),
+      buyer_email: String(buyerEmail).trim().slice(0, 200),
+      recipient_email: String(recipientEmail).trim().slice(0, 200),
+      recipient_name: String(recipientName || "").trim().slice(0, 100),
+      from_name: String(fromName || "").trim().slice(0, 100),
+      message: String(message || "").trim().slice(0, 450)
+    },
+    success_url: `${origin}/gift.html?session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: `${origin}/gift.html?checkout=cancelled`
+  });
+  return res.status(200).json({ url: session.url });
+}
+
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
@@ -513,6 +579,9 @@ export default async function handler(req, res) {
     }
     if (type === "tier_upgrade") {
       return await handleTierUpgrade(req, res);
+    }
+    if (type === "gift_certificate") {
+      return await handleGiftCertificatePurchase(req, res);
     }
     return res.status(400).json({ error: `Unknown checkout type "${type}".` });
   } catch (error) {

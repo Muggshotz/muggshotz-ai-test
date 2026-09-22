@@ -1,4 +1,5 @@
 import Stripe from "stripe";
+import { mintGiftCertificate, spendGiftCertificate, giftEmailHtml } from "../lib/gift-certificates.js";
 import { TIER_SEQUENCE, TIER_RULES, TIER_UPGRADE_LABEL, buildTierCodes } from "../lib/flyer-tiers.js";
 import { placeProductOrder } from "./create-printify-order.js";
 import { getProduct } from "../lib/products-catalog.js";
@@ -510,7 +511,19 @@ export default async function handler(req, res) {
         return res.status(200).json({ received: true, ignored: "test_mode" });
       }
 
-      if (session.metadata?.order_type === "mug_order") {
+      if (session.metadata?.order_type === "gift_certificate") {
+        await handleGiftCertificatePayment(session);
+      } else if (session.metadata?.order_type === "mug_order") {
+        // The certificate is spent first and on its own: a spend failure is
+        // logged, never allowed to stop a paid order from being placed.
+        if (session.metadata?.gift_code && Number(session.metadata?.gift_cents) > 0) {
+          try {
+            const r = await spendGiftCertificate(session.metadata.gift_code, Number(session.metadata.gift_cents), session.id);
+            if (r.short) console.error("CRITICAL: gift certificate was short at spend time", { code: session.metadata.gift_code, session: session.id, short: r.short });
+          } catch (err) {
+            console.error("CRITICAL: gift certificate spend failed; the order is still placed", { code: session.metadata.gift_code, session: session.id, error: err.message });
+          }
+        }
         await handleMugOrderPayment(session);
       } else if (session.metadata?.order_type === "tier_upgrade") {
         await handleTierUpgradePayment(session);
@@ -534,6 +547,25 @@ const MUG_TYPE_TO_PRODUCT_KEY = {
   "Color Burst": "color-burst-mug",
   "All-Nighter": "all-nighter-mug"
 };
+
+// GIFT CERTIFICATE PAID (22 Sep 2026): mint the code, email it to the
+// recipient and a receipt with the code to the buyer. Minting is idempotent
+// on the session, so a retried webhook cannot mint twice.
+async function handleGiftCertificatePayment(session) {
+  const m = session.metadata || {};
+  const cert = await mintGiftCertificate({
+    sessionId: session.id,
+    amountCents: Number(m.amount_cents),
+    buyerEmail: m.buyer_email, recipientEmail: m.recipient_email,
+    recipientName: m.recipient_name, message: m.message
+  });
+  if (cert.alreadyMinted) return;
+  const siteUrl = process.env.SITE_BASE_URL || "https://muggshotz-ai-test.vercel.app";
+  const amt = `$${(Number(m.amount_cents) / 100).toFixed(0)}`;
+  const common = { code: cert.code, amountCents: Number(m.amount_cents), recipientName: m.recipient_name, message: m.message, fromName: m.from_name, siteUrl };
+  if (m.recipient_email) await sendResendEmail(m.recipient_email, `You've got a ${amt} Muggshotz gift certificate`, giftEmailHtml({ ...common, forBuyer: false }));
+  if (m.buyer_email) await sendResendEmail(m.buyer_email, `Your ${amt} Muggshotz gift certificate`, giftEmailHtml({ ...common, forBuyer: true }));
+}
 
 async function handleMugOrderPayment(session) {
   const m = session.metadata || {};
