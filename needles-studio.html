@@ -1,5 +1,5 @@
 <!-- ============================================================
-     VERSION: V331
+     VERSION: V332
      ============================================================
      THE ONE LINE THAT SAYS WHICH BUILD YOU ARE LOOKING AT.
 
@@ -1452,7 +1452,15 @@ const HERO_SETTLE_MS = 1000;
 </div>
 </div>
 
-<div class="card" id="ideaCard"><div class="card-title">💬 Tell Us Your Idea</div><div class="quote-text-reminder">⚠️ PLEASE REMEMBER TO SHOW ALL TEXT AND/OR CAPTIONS YOU WISH TO HAVE INCLUDED WITH YOUR IMAGE INSIDE QUOTES " "!</div><div class="idea-photo-row"><img id="ideaPhotoPreview" alt="Your uploaded photo" style="display:none"/><textarea id="ideaDesc" placeholder="Example: Put me on a tiny red tricycle wearing a firefighter helmet, shouting &quot;Out of my way!&quot; as I race through a parade with smoke and sirens behind me, under a banner that reads &quot;World's Fastest Firefighter.&quot;"></textarea></div><div class="quick-btns" id="quickBtns"></div><button type="button" class="download-btn" id="ideaBackBtn" style="margin-bottom:.9rem" onclick="ideaStepBack()">← Back</button><div class="note" id="ideaDefaultNote">Paint us a clear picture — the more detail you give us, the better our chances of getting your exact idea right.<br><span style="display:block;margin-top:.5rem">📸 <b>Just want your photo, exactly as it is?</b> Leave this box empty and hit Generate — no AI artwork, no changes, and it costs no image credits.</span></div>
+<div class="card" id="ideaCard"><div class="card-title">💬 Tell Us Your Idea</div><div class="quote-text-reminder">⚠️ PLEASE REMEMBER TO SHOW ALL TEXT AND/OR CAPTIONS YOU WISH TO HAVE INCLUDED WITH YOUR IMAGE INSIDE QUOTES " "!</div><div id="wrapOccasionForm" style="display:none;margin-bottom:.9rem">
+<div class="note" style="margin-top:0;margin-bottom:.6rem;color:#7ab8ff">Tell us about the occasion and we'll design the whole sheet around it.</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem">
+<label style="font-size:12px;color:#7ab8ff">Occasion<select id="wrapOccasion" style="width:100%;margin-top:3px"><option value="">Choose…</option><option>Birthday</option><option>Christmas</option><option>Anniversary</option><option>Valentine's Day</option><option>Graduation</option><option>Baby Shower</option><option>Other</option></select></label>
+<label style="font-size:12px;color:#7ab8ff">Style<select id="wrapStyle" style="width:100%;margin-top:3px"><option value="drawn">Drawn, like a caricature</option><option value="collage">Photo collage, like stickers</option></select></label>
+<label style="font-size:12px;color:#7ab8ff">Name<input id="wrapName" type="text" placeholder="e.g. Maya" style="width:100%;margin-top:3px"></label>
+<label style="font-size:12px;color:#7ab8ff">Age or year <span style="opacity:.7">(optional)</span><input id="wrapAge" type="text" placeholder="e.g. 7, or 25 years" style="width:100%;margin-top:3px"></label>
+</div>
+</div><div class="idea-photo-row"><img id="ideaPhotoPreview" alt="Your uploaded photo" style="display:none"/><textarea id="ideaDesc" placeholder="Example: Put me on a tiny red tricycle wearing a firefighter helmet, shouting &quot;Out of my way!&quot; as I race through a parade with smoke and sirens behind me, under a banner that reads &quot;World's Fastest Firefighter.&quot;"></textarea></div><div class="quick-btns" id="quickBtns"></div><button type="button" class="download-btn" id="ideaBackBtn" style="margin-bottom:.9rem" onclick="ideaStepBack()">← Back</button><div class="note" id="ideaDefaultNote">Paint us a clear picture — the more detail you give us, the better our chances of getting your exact idea right.<br><span style="display:block;margin-top:.5rem">📸 <b>Just want your photo, exactly as it is?</b> Leave this box empty and hit Generate — no AI artwork, no changes, and it costs no image credits.</span></div>
 <!-- THE PROMPT KIT (Alyx, 2026-08-28): the other half of the free lane.
      The customer generates in THEIR OWN AI (their subscription, their
      free tier -- someone else's compute bill), and this hands them a
@@ -3465,8 +3473,47 @@ function describeTextOnlyPayload(){
   return Object.assign({ action:'textOnly', shapingRule:describeShapingRule() }, r!=null ? { bandRatio:r } : {});
 }
 function describePromptText(){
+  return effectiveIdeaText();
+}
+
+// IT'S A WRAP'S OCCASION FORM (Alyx, 22 Sep 2026): "the description box will
+// be replaced with a short form ... but the second will be there in case
+// there is any specific things that it wants to add." On wrapping paper the
+// form writes the recipe -- the person drawn many times, dressed and propped
+// for the occasion, themed filler between, a few short phrases of lettering
+// -- and the idea box underneath is "anything else". Everywhere else, and on
+// wrapping paper with no occasion picked, the idea box is read as before.
+const WRAP_OCCASIONS={
+  "Birthday":{wear:'party hats and a birthday crown, blowing out candles, holding a slice of cake, laughing under balloons',decor:'balloons, birthday cakes, wrapped presents, confetti and streamers',words:'"Happy Birthday"'},
+  "Christmas":{wear:'Santa hats, reindeer antlers and ugly Christmas sweaters, holding mugs of cocoa, carrying presents',decor:'Christmas trees, ornaments, candy canes, holly, snowflakes and wrapped presents',words:'"Merry Christmas"'},
+  "Anniversary":{wear:'dressed up for a night out, dancing, toasting with champagne, holding hands',decor:'hearts, roses, champagne glasses, rings and sparkles',words:'"Happy Anniversary"'},
+  "Valentine's Day":{wear:'holding roses, wearing heart-shaped glasses, blowing kisses',decor:'hearts, roses, boxes of chocolates, cupids and love letters',words:'"Be Mine" and "Happy Valentine\'s Day"'},
+  "Graduation":{wear:'caps and gowns, holding a diploma, throwing a cap in the air',decor:'mortarboards, diplomas, stars and confetti',words:'"Congrats Grad"'},
+  "Baby Shower":{wear:'holding baby rattles and bottles, beaming with joy',decor:'rattles, bottles, tiny onesies, storks, baby blocks and balloons',words:'"Welcome Baby"'},
+  "Other":{wear:'in fun outfits and poses that suit the occasion described below',decor:'decorations that suit the occasion described below',words:'short celebratory phrases that suit the occasion'}
+};
+function wrapFormPrompt(){
+  if(product!=='wrapping paper')return '';
+  const occ=(document.getElementById('wrapOccasion')||{}).value||'';
+  if(!occ)return '';
+  const o=WRAP_OCCASIONS[occ]||WRAP_OCCASIONS.Other;
+  const name=((document.getElementById('wrapName')||{}).value||'').trim();
+  const age=((document.getElementById('wrapAge')||{}).value||'').trim();
+  const collage=((document.getElementById('wrapStyle')||{}).value||'drawn')==='collage';
+  const who=name?`the person in the photo, ${name}`:'the person in the photo';
+  const ageLine=age?(occ==='Birthday'?` ${name||'They'} is turning ${age}; work "${age}" into the lettering.`:` Work "${age}" into the lettering.`):'';
+  const nameLine=name?` Include the name "${name}" in some of the phrases.`:'';
+  const look=collage
+    ? 'Make it a sticker-bomb photo collage: many cut-out photos of the person with white sticker outlines, their face kept exactly true to the photos, some with fun props added.'
+    : 'Draw them as a warm, polished caricature illustration, clearly the same person every time.';
+  return `${occ} wrapping paper starring ${who}. Show them eight to twelve times at different sizes and poses: ${o.wear}. Fill the space between with ${o.decor}. Scatter five or six short, cheerful phrases in bold hand-lettering, including ${o.words}.${nameLine}${ageLine} ${look} A seamless repeating all-over pattern that tiles edge to edge, bright and dense, no border.`;
+}
+function effectiveIdeaText(){
   const box=document.getElementById('ideaDesc');
-  return box ? box.value.trim() : '';
+  const extra=box?box.value.trim():'';
+  const form=wrapFormPrompt();
+  if(!form)return extra;
+  return extra?`${form} Also: ${extra}`:form;
 }
 
 // The bottom board's tap. It opens no picker -- there is no picture -- and it
@@ -4252,7 +4299,7 @@ function toggleWorkingImage(){
 // Two copies of a number is exactly how the marker rotted in the first place,
 // so they are not trusted to agree: .githooks/pre-commit moves both together
 // and REFUSES the commit if it ever finds them apart.
-const APP_VERSION='V331';
+const APP_VERSION='V332';
 try{ console.log('%cNeedles\u2019 Studio '+APP_VERSION,'color:#29a3ff;font-weight:700'); }catch(e){}
 
 function getDeviceId(){
@@ -11986,10 +12033,17 @@ function pickWrapSize(label){
   document.getElementById('wrapSizeSelectedNote').textContent='✓ Confirmed: '+label+'.';
   handOffToIdeaAfterProductChoice();
 }
+const IDEA_PLACEHOLDER_DEFAULT='Example: Put me on a tiny red tricycle wearing a firefighter helmet, shouting "Out of my way!" as I race through a parade with smoke and sirens behind me, under a banner that reads "World\'s Fastest Firefighter."';
+const IDEA_PLACEHOLDER_WRAP='Anything else? Example: He loves dinosaurs and soccer, use lots of blue and green, put our dog in a party hat too, and add "Ca\'Ron is 7!"';
 function refreshWrapSizeVisibility(){
   const card=document.getElementById('wrapSizeCard');
   if(!card)return;
-  card.style.display=(product==='wrapping paper')?'block':'none';
+  const wrap=(product==='wrapping paper');
+  card.style.display=wrap?'block':'none';
+  const form=document.getElementById('wrapOccasionForm');
+  if(form)form.style.display=wrap?'block':'none';
+  const box=document.getElementById('ideaDesc');
+  if(box)box.placeholder=wrap?IDEA_PLACEHOLDER_WRAP:IDEA_PLACEHOLDER_DEFAULT;
 }
 
 // Round vs square is a genuine product fork, not a cosmetic one: they are
@@ -19346,7 +19400,7 @@ async function generate(){
   // below refuses it with a message that NAMES the free way out ("switch
   // to Classic") -- a broke customer deserves that answer, not a buy-
   // credits popup that contradicts the free lane's promise.
-  const emptyIdeaBoxNow=!document.getElementById('ideaDesc').value.trim();
+  const emptyIdeaBoxNow=!effectiveIdeaText();
   const wrapModeNow=(product==='mug'||product==='water bottle')&&mugPrintMode==='wraparound';
   const couldBeExactTransfer=byoDeclaredIntent==='byo'
     || (emptyIdeaBoxNow && (wrapModeNow || (!windowSillChoice && !refImageAData && !refImageBData)));
@@ -19361,7 +19415,7 @@ async function generate(){
     document.getElementById('uploadZone').scrollIntoView({behavior:'smooth',block:'center'});
     return;
   }
-  if(describeOnlyMode() && !document.getElementById('ideaDesc').value.trim()){
+  if(describeOnlyMode() && !effectiveIdeaText()){
     setStatus('Tell Needles what to draw first.',true);
     smoothScrollToTarget('ideaCard','center');
     return;
@@ -19441,7 +19495,7 @@ async function generate(){
   // meaning of an empty box was "oops", so the one-time question protects
   // anyone who left it blank by accident, and Cancel lands them on the
   // idea box exactly like the old block did.
-  const ideaTextForTransfer=document.getElementById('ideaDesc').value.trim();
+  const ideaTextForTransfer=effectiveIdeaText();
   const wrapActiveForTransfer=(product==='mug'||product==='water bottle') && mugPrintMode==='wraparound';
   let exactTransfer=false;
   // Declared-BYO is a transfer BY DECLARATION, not by an empty box:
@@ -19554,7 +19608,7 @@ document.getElementById('cancelBtn').style.display='block';
   const needlesStageAnchor=document.querySelector('#needlesStageWrap .needles-stage');
   if(needlesStageAnchor)scrollToStableTop(needlesStageAnchor,14,20);
   try{
-    const idea=document.getElementById('ideaDesc').value.trim();
+    const idea=effectiveIdeaText();
 
     const customerIdea=idea
       ? `Customer idea: ${idea}.`
@@ -22764,6 +22818,7 @@ function resetEverythingFreshStart(){
 
   selectedPuzzleSize=null;
   selectedWrapSize=null;
+  ['wrapOccasion','wrapName','wrapAge'].forEach(id=>{const el=document.getElementById(id); if(el)el.value='';});
   document.querySelectorAll('#puzzleSizeGrid .btn-select').forEach(b=>b.classList.remove('selected'));
   const puzzleNote=document.getElementById('puzzleSizeSelectedNote');
   if(puzzleNote)puzzleNote.textContent='';
