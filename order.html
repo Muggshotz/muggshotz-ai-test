@@ -103,7 +103,7 @@ label{font-size:11px;color:#888;letter-spacing:.5px;text-transform:uppercase;dis
 body.studio-driven #bridgeGridCard,body.studio-driven #previewCard,
 body.studio-driven #mugStyleCard,body.studio-driven #sizeCard,body.studio-driven #livePreviewCard,body.studio-driven #colorCard,body.studio-driven #fullWrapCard,
 body.studio-driven #travelMugStyleCard,body.studio-driven #travelColorCard,body.studio-driven #suitcaseSizeCard,body.studio-driven #phoneCaseCard,
-body.studio-driven #toteBagSizeCard,body.studio-driven #toteBagColorCard,body.studio-driven #puzzleSizeCard,body.studio-driven #wrapSizeCard,body.studio-driven #ornamentShapeCard,body.studio-driven #photoPosterCard,
+body.studio-driven #toteBagSizeCard,body.studio-driven #toteBagColorCard,body.studio-driven #puzzleSizeCard,body.studio-driven #wrapSizeCard,body.studio-driven #ornamentShapeCard,body.studio-driven #airFreshenerOptionCard,body.studio-driven #photoPosterCard,
 body.studio-driven #mockupCtaLeft,body.studio-driven #mockupCtaRight,body.studio-driven #mockupWaitBanner{display:none!important}
 #orderHeadlineCard{display:none}
 body.studio-driven #orderHeadlineCard{display:block}
@@ -304,6 +304,13 @@ body.studio-driven #orderHeadlineCard{display:block}
 <img id="toteMockupImg" style="display:none;width:100%;border-radius:12px;border:1px solid var(--accent);margin-top:.75rem"/>
 </div>
 
+<div class="card" id="airFreshenerOptionCard" style="display:none">
+<div class="card-title">🌲 Which Scent?</div>
+<div class="grid2" id="airFreshenerOptionGrid"></div>
+<div class="note" id="airFreshenerMockupBtn" style="text-align:center;margin-top:1rem;color:var(--accent-soft);font-weight:600">🔍 Click Image To Enlarge</div>
+<div class="note" id="airFreshenerMockupNote" style="margin-top:.5rem;text-align:center;display:none"></div>
+<img id="airFreshenerMockupImg" style="display:none;width:100%;border-radius:12px;border:1px solid var(--accent);margin-top:.75rem"/>
+</div>
 <div class="card" id="ornamentShapeCard" style="display:none">
 <div class="card-title">🎄 Which Shape?</div>
 <div class="grid2" id="ornamentShapeGrid"></div>
@@ -705,6 +712,10 @@ function currentProductKey(){
   if (isWrap())         return 'wrapping-paper';
   if (isOrnament())     return 'ceramic-ornament';
   if (isStandee())      return 'custom-standee';
+  if (isBeerStein()) return 'beer-stein';
+  if (isDoormat()) return 'doormat';
+  if (isAirFreshener()) return 'car-air-freshener';
+  if (isPlayingCards()) return 'playing-cards';
   if (isMousePad())     return 'mouse-pad';
   if (isGreetingCard()) return 'greeting-card';
   if (isPostIt())       return 'post-it-notes';
@@ -1136,6 +1147,10 @@ function isPuzzle(){ return selectedProductFamily === 'puzzle'; }
 function isWrap(){ return selectedProductFamily === 'wrapping paper'; }
 function isOrnament(){ return selectedProductFamily === 'ornament'; }
 function isStandee(){ return selectedProductFamily === 'standee'; }
+function isBeerStein(){ return selectedProductFamily === 'beer stein'; }
+function isDoormat(){ return selectedProductFamily === 'doormat'; }
+function isAirFreshener(){ return selectedProductFamily === 'air freshener'; }
+function isPlayingCards(){ return selectedProductFamily === 'playing cards'; }
 function isPhotoPoster(){ return selectedProductFamily === 'photo poster'; }
 function isCoaster(){ return selectedProductFamily === 'coaster'; }
 function isMousePad(){ return selectedProductFamily === 'mouse pad'; }
@@ -1149,6 +1164,9 @@ function isPostIt(){ return selectedProductFamily === 'post-it note'; }
 const COASTER_PRICE = 29.95;
 const MOUSE_PAD_PRICE = 9.95;
 const STANDEE_PRICE = 16.95; // From Where I Stand, one size (22 Sep 2026)
+const BEERSTEIN_PRICE = 24.95; // Beer Stein (22 Sep 2026)
+const DOORMAT_PRICE = 16.95; // Doormat (22 Sep 2026)
+const PLAYINGCARDS_PRICE = 17.95; // Just Playin' (22 Sep 2026)
 // Reflex-buy pricing (Alyx, 2026-08-28): ~$2 over wholesale on purpose,
 // "not a profit generator" — do not round these upward.
 const GREETING_CARD_PRICE = 15.95; // 8-pack, CatPrint (wholesale $13.96)
@@ -1180,6 +1198,13 @@ const PUZZLE_SIZES = {
   "1000 pcs": { price: 43.95 }
 };
 let selectedPuzzleSize = "96 pcs";
+
+// CAR AIR FRESHENER (22 Sep 2026). Keys match lib/products-catalog.js.
+const AIRFRESHENER_OPTIONS = { "New Car": { price: 9.95 }, "Pine": { price: 9.95 }, "Black Ice": { price: 9.95 }, "Onyx Frost": { price: 9.95 } };
+let selectedAirFreshener = "New Car";
+if (pendingOrder?.preselectedAirFreshener && AIRFRESHENER_OPTIONS[pendingOrder.preselectedAirFreshener]) {
+  selectedAirFreshener = pendingOrder.preselectedAirFreshener;
+}
 
 // CERAMIC ORNAMENT (22 Sep 2026). Keys match lib/products-catalog.js.
 const ORNAMENT_SHAPES = { "Star": { price: 9.95 }, "Circle": { price: 9.95 }, "Heart": { price: 9.95 }, "Snowflake": { price: 9.95 } };
@@ -1268,6 +1293,10 @@ const BRIDGE_GRID_PRODUCTS = [
   { key: 'wrapping paper', icon: '🎁', label: "It's a Wrap", priceFrom: '$8.95' },
   { key: 'ornament', icon: '🎄', label: 'Ceramic Ornament', priceFrom: '$9.95' },
   { key: 'standee', icon: '🧍', label: 'From Where I Stand', priceFrom: '$16.95' },
+  { key: 'beer stein', icon: '🍺', label: 'Beer Stein', priceFrom: '$24.95' },
+  { key: 'doormat', icon: '🚪', label: 'Doormat', priceFrom: '$16.95' },
+  { key: 'air freshener', icon: '🌲', label: 'Car Air Freshener', priceFrom: '$9.95' },
+  { key: 'playing cards', icon: '🃏', label: "Just Playin'", priceFrom: '$17.95' },
   { key: 'coaster', icon: '☕', label: 'Coasters', priceFrom: '$29.95' },
   { key: 'mouse pad', icon: '🖱️', label: 'Mouse Pad', priceFrom: '$9.95' },
   { key: 'greeting card', icon: '💌', label: 'Greeting Cards', priceFrom: '$15.95' },
@@ -1465,6 +1494,26 @@ window.addEventListener('DOMContentLoaded', () => {
   const box = document.getElementById('giftCertInput');
   if (code && box && !box.value) { box.value = code; applyGiftCert(); }
 });
+
+function renderAirFreshenerGrid(){
+  const grid = document.getElementById('airFreshenerOptionGrid');
+  grid.innerHTML = '';
+  Object.keys(AIRFRESHENER_OPTIONS).forEach(name => {
+    const btn = document.createElement('div');
+    btn.className = 'btn-select' + (name === selectedAirFreshener ? ' selected' : '');
+    btn.innerHTML = name + '<span class="price">$' + AIRFRESHENER_OPTIONS[name].price.toFixed(2) + '</span>';
+    btn.onclick = () => pickAirFreshener(name);
+    grid.appendChild(btn);
+  });
+}
+function pickAirFreshener(name){
+  selectedAirFreshener = name;
+  renderAirFreshenerGrid();
+  const img=document.getElementById('airFreshenerMockupImg'); if(img) img.style.display='none';
+  hideMockupSideCta();
+  updateSummary();
+  scheduleAutoMockupFetch();
+}
 
 function renderOrnamentShapeGrid(){
   const grid = document.getElementById('ornamentShapeGrid');
@@ -1884,6 +1933,9 @@ function runAutoMockupForMode(){
   } else if (isPuzzle()) {
     if (!selectedPuzzleSize) return;
     fetchSingleImageMockup('photo-puzzle', selectedPuzzleSize, null, 'puzzleMockupBtn', 'puzzleMockupNote', 'puzzleMockupImg');
+  } else if (isAirFreshener()) {
+    if (!selectedAirFreshener) return;
+    fetchSingleImageMockup('car-air-freshener', selectedAirFreshener, null, 'airFreshenerMockupBtn', 'airFreshenerMockupNote', 'airFreshenerMockupImg');
   } else if (isOrnament()) {
     if (!selectedOrnamentShape) return;
     fetchSingleImageMockup('ceramic-ornament', selectedOrnamentShape, null, 'ornamentMockupBtn', 'ornamentMockupNote', 'ornamentMockupImg');
@@ -2092,6 +2144,9 @@ function updateSummary(){
   } else if (isPuzzle()) {
     basePrice = PUZZLE_SIZES[selectedPuzzleSize].price;
     styleSizeLabel = 'Photo Puzzle, ' + selectedPuzzleSize;
+  } else if (isAirFreshener()) {
+    basePrice = AIRFRESHENER_OPTIONS[selectedAirFreshener].price;
+    styleSizeLabel = 'Car Air Freshener' + ', ' + selectedAirFreshener;
   } else if (isOrnament()) {
     basePrice = ORNAMENT_SHAPES[selectedOrnamentShape].price;
     styleSizeLabel = 'Ceramic Ornament, ' + selectedOrnamentShape;
@@ -2103,6 +2158,15 @@ function updateSummary(){
     styleSizeLabel = (pendingOrder?.coasterShape === 'round')
       ? 'Round Coasters, Set of 4 (3.7")'
       : 'Coasters, Set of 4 (4" x 4")';
+  } else if (isPlayingCards()) {
+    basePrice = PLAYINGCARDS_PRICE;
+    styleSizeLabel = "Just Playin'";
+  } else if (isDoormat()) {
+    basePrice = DOORMAT_PRICE;
+    styleSizeLabel = 'Doormat';
+  } else if (isBeerStein()) {
+    basePrice = BEERSTEIN_PRICE;
+    styleSizeLabel = 'Beer Stein';
   } else if (isStandee()) {
     basePrice = STANDEE_PRICE;
     styleSizeLabel = 'From Where I Stand, acrylic standee';
@@ -2382,6 +2446,24 @@ async function submitOrder(){
       referralCode
     };
 
+  } else if (isAirFreshener()) {
+    const image = pendingOrder?.placements?.left || pendingOrder?.placements?.front || pendingOrder?.placements?.right || null;
+    if (!image) {
+      setStatus('No design found — please go back and place a design first.', true);
+      return;
+    }
+    body = {
+      type: 'mug_order',
+      deviceId,
+      productKey: 'car-air-freshener',
+      sizeLabel: selectedAirFreshener,
+      image,
+      customerName: fullName,
+      giftMessage: giftMessageEnabled ? document.getElementById('giftMessageText').value.trim() : null,
+      shippingAddress,
+      referralCode
+    };
+
   } else if (isOrnament()) {
     const image = pendingOrder?.placements?.left || pendingOrder?.placements?.front || pendingOrder?.placements?.right || null;
     if (!image) {
@@ -2441,7 +2523,7 @@ async function submitOrder(){
       referralCode
     };
 
-  } else if (isCoaster() || isMousePad() || isGreetingCard() || isPostIt() || isStandee()) {
+  } else if (isCoaster() || isMousePad() || isGreetingCard() || isPostIt() || isStandee() || isBeerStein() || isDoormat() || isPlayingCards()) {
     // ADDED 2026-08-27. Both products could be configured, priced and shown a
     // summary here, and then had NO branch of their own -- so they fell
     // through to the final else, which is the MUG branch, and a coaster order
@@ -2472,11 +2554,17 @@ async function submitOrder(){
       deviceId,
       productKey: isMousePad() ? 'mouse-pad'
         : isStandee() ? 'custom-standee'
+        : isBeerStein() ? 'beer-stein'
+        : isDoormat() ? 'doormat'
+        : isPlayingCards() ? 'playing-cards'
         : isGreetingCard() ? 'greeting-card'
         : isPostIt() ? 'post-it-notes'
         : (roundCoaster ? 'coaster-set-round' : 'coaster-set'),
       sizeLabel: isMousePad() ? '9" x 8"'
         : isStandee() ? 'One size'
+        : isBeerStein() ? '22oz'
+        : isDoormat() ? '18 x 30'
+        : isPlayingCards() ? 'Standard Deck'
         : isGreetingCard() ? '8-Pack'
         : isPostIt() ? '3" x 3"'
         : (roundCoaster ? 'Round 3.7"' : '4" x 4"'),
@@ -2623,7 +2711,7 @@ function setupPageForMode(){
 const ALL_PRODUCT_SPECIFIC_CARDS = [
   'mugStyleCard','sizeCard','livePreviewCard','colorCard','fullWrapCard',
   'travelMugStyleCard','travelColorCard','suitcaseSizeCard','phoneCaseCard',
-  'toteBagSizeCard','toteBagColorCard','puzzleSizeCard','wrapSizeCard','ornamentShapeCard','photoPosterCard'
+  'toteBagSizeCard','toteBagColorCard','puzzleSizeCard','wrapSizeCard','ornamentShapeCard','airFreshenerOptionCard','photoPosterCard'
 ];
 function hideAllProductCards(){
   ALL_PRODUCT_SPECIFIC_CARDS.forEach(id => {
@@ -2700,6 +2788,10 @@ if (isTravelMug()) {
     document.getElementById('previewNote').textContent =
       'Whichever design you placed first (Left, Center, or Right) will be printed on your puzzle.';
     renderPuzzleSizeGrid();
+  } else if (isAirFreshener()) {
+    hideAllProductCards();
+    document.getElementById('airFreshenerOptionCard').style.display = 'block';
+    renderAirFreshenerGrid();
   } else if (isOrnament()) {
     hideAllProductCards();
     document.getElementById('ornamentShapeCard').style.display = 'block';

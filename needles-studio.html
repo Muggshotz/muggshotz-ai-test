@@ -1,5 +1,5 @@
 <!-- ============================================================
-     VERSION: V340
+     VERSION: V341
      ============================================================
      THE ONE LINE THAT SAYS WHICH BUILD YOU ARE LOOKING AT.
 
@@ -636,6 +636,7 @@ body.product-focus .card:not(#productCard):not(#uploadPhotoCard){opacity:.35;fil
 body.suitcase-size-focus .card:not(#suitcaseSizeCard){opacity:.35;filter:brightness(.6) saturate(.75);transition:opacity .5s,filter .5s}
 body.puzzle-size-focus .card:not(#puzzleSizeCard){opacity:.35;filter:brightness(.6) saturate(.75);transition:opacity .5s,filter .5s}
 body.ornament-shape-focus .card:not(#ornamentShapeCard){opacity:.35;filter:brightness(.6) saturate(.75);transition:opacity .5s,filter .5s}
+body.airFreshener-option-focus .card:not(#airFreshenerOptionCard){opacity:.35;filter:brightness(.6) saturate(.75);transition:opacity .5s,filter .5s}
 body.wrap-size-focus .card:not(#wrapSizeCard){opacity:.35;filter:brightness(.6) saturate(.75);transition:opacity .5s,filter .5s}
 body.tote-size-focus .card:not(#toteSizeCard){opacity:.35;filter:brightness(.6) saturate(.75);transition:opacity .5s,filter .5s}
 body.tote-color-focus .card:not(#toteBagColorCard){opacity:.35;filter:brightness(.6) saturate(.75);transition:opacity .5s,filter .5s}
@@ -1395,6 +1396,15 @@ const HERO_SETTLE_MS = 1000;
 <div class="note" id="ornamentShapeSelectedNote" style="margin-top:.6rem"></div>
 </div>
 
+<div class="card" id="airFreshenerOptionCard" style="display:none">
+<div class="card-title">🌲 Which Scent?</div>
+<div class="note" style="margin-top:0;margin-bottom:.75rem">A rectangular card air freshener with your picture on it. Pick the scent before generating.</div>
+<div class="grid2" id="airFreshenerOptionGrid">
+<div class="btn-select" data-opt="New Car" onclick="pickAirFreshener('New Car')">New Car<div class="note" style="margin-top:4px">$9.95</div></div><div class="btn-select" data-opt="Pine" onclick="pickAirFreshener('Pine')">Pine<div class="note" style="margin-top:4px">$9.95</div></div><div class="btn-select" data-opt="Black Ice" onclick="pickAirFreshener('Black Ice')">Black Ice<div class="note" style="margin-top:4px">$9.95</div></div><div class="btn-select" data-opt="Onyx Frost" onclick="pickAirFreshener('Onyx Frost')">Onyx Frost<div class="note" style="margin-top:4px">$9.95</div></div>
+</div>
+<div class="note" id="airFreshenerOptionNote" style="margin-top:.6rem"></div>
+</div>
+
 <div class="card" id="wrapSizeCard" style="display:none">
 <div class="card-title">🎁 Sheet or Roll?</div>
 <div class="note" style="margin-top:0;margin-bottom:.75rem">Your picture becomes a repeating pattern across the whole sheet. Pick the size before generating — each is a different roll with its own price.</div>
@@ -1493,7 +1503,7 @@ const HERO_SETTLE_MS = 1000;
 <div id="ideaGuidancePrompt" class="guidance-prompt" role="status" style="margin-top:8px;margin-bottom:0;cursor:pointer" onclick="ideaPromptClicked()">Click here when you are satisfied with your descriptive requests for the image.</div>
 </div>
 </div>
-<div class="card" id="productCard"><div class="card-title">🎁 Product</div><div class="guidance-prompt soft visible" id="productGuidancePrompt" role="status" style="margin-top:0;margin-bottom:.9rem">Please select your desired product below when ready.</div><div class="grid3"><div class="btn-select" data-val="mug" onclick="pick(this,'product')"><span class="icon">☕</span>Mug</div><div class="btn-select" data-val="greeting card" onclick="pick(this,'product')"><span class="icon">💌</span>Card</div><div class="btn-select" data-val="water bottle" onclick="pick(this,'product')"><span class="icon">🍶</span>Travel Cups</div><div class="btn-select" data-val="post-it note" onclick="pick(this,'product')"><span class="icon">📝</span>Post-it</div><div class="btn-select" data-val="phone case" onclick="pick(this,'product')"><span class="icon">📱</span>Phone case</div><div class="btn-select" data-val="tote bag" onclick="pick(this,'product')"><span class="icon">👜</span>Tote bag</div><div class="btn-select" data-val="suitcase" onclick="pick(this,'product')"><span class="icon">🧳</span>Suitcase</div><div class="btn-select" data-val="puzzle" onclick="pick(this,'product')"><span class="icon">🧩</span>Puzzle</div><div class="btn-select" data-val="photo poster" onclick="pick(this,'product')"><span class="icon">🖼️</span>Photo/Poster</div><div class="btn-select" data-val="coaster" onclick="pick(this,'product')"><span class="icon">☕</span>Coasters</div><div class="btn-select" data-val="mouse pad" onclick="pick(this,'product')"><span class="icon">🖱️</span>Mouse pad</div><div class="btn-select" data-val="wrapping paper" onclick="pick(this,'product')"><span class="icon">🎁</span>It's a Wrap<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Your own wrapping paper.</div></div><div class="btn-select" data-val="standee" onclick="pick(this,'product')"><span class="icon">🧍</span>From Where I Stand<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Acrylic standee, cut to shape.</div></div><div class="btn-select" data-val="ornament" onclick="pick(this,'product')"><span class="icon">🎄</span>Ornament<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Ceramic, for the tree.</div></div><div class="btn-select" onclick="location.href='gift.html'"><span class="icon">💵</span>Gift Certificate<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Store credit, emailed to them.</div></div><div class="btn-select" data-val="artwork only" onclick="pick(this,'product')"><span class="icon">🖼️</span>Artwork Only<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">No product. Just creates an image for you to download.</div><div class="note" style="margin-top:2px;color:#7ab8ff;font-size:10px">1 token</div></div></div>
+<div class="card" id="productCard"><div class="card-title">🎁 Product</div><div class="guidance-prompt soft visible" id="productGuidancePrompt" role="status" style="margin-top:0;margin-bottom:.9rem">Please select your desired product below when ready.</div><div class="grid3"><div class="btn-select" data-val="mug" onclick="pick(this,'product')"><span class="icon">☕</span>Mug</div><div class="btn-select" data-val="greeting card" onclick="pick(this,'product')"><span class="icon">💌</span>Card</div><div class="btn-select" data-val="water bottle" onclick="pick(this,'product')"><span class="icon">🍶</span>Travel Cups</div><div class="btn-select" data-val="post-it note" onclick="pick(this,'product')"><span class="icon">📝</span>Post-it</div><div class="btn-select" data-val="phone case" onclick="pick(this,'product')"><span class="icon">📱</span>Phone case</div><div class="btn-select" data-val="tote bag" onclick="pick(this,'product')"><span class="icon">👜</span>Tote bag</div><div class="btn-select" data-val="suitcase" onclick="pick(this,'product')"><span class="icon">🧳</span>Suitcase</div><div class="btn-select" data-val="puzzle" onclick="pick(this,'product')"><span class="icon">🧩</span>Puzzle</div><div class="btn-select" data-val="photo poster" onclick="pick(this,'product')"><span class="icon">🖼️</span>Photo/Poster</div><div class="btn-select" data-val="coaster" onclick="pick(this,'product')"><span class="icon">☕</span>Coasters</div><div class="btn-select" data-val="mouse pad" onclick="pick(this,'product')"><span class="icon">🖱️</span>Mouse pad</div><div class="btn-select" data-val="wrapping paper" onclick="pick(this,'product')"><span class="icon">🎁</span>It's a Wrap<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Your own wrapping paper.</div></div><div class="btn-select" data-val="standee" onclick="pick(this,'product')"><span class="icon">🧍</span>From Where I Stand<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Acrylic standee, cut to shape.</div></div><div class="btn-select" data-val="ornament" onclick="pick(this,'product')"><span class="icon">🎄</span>Ornament<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Ceramic, for the tree.</div></div><div class="btn-select" data-val="playing cards" onclick="pick(this,'product')"><span class="icon">🃏</span>Just Playin'<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">A poker deck with your art on the back.</div></div><div class="btn-select" data-val="air freshener" onclick="pick(this,'product')"><span class="icon">🌲</span>Car Air Freshener<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Hangs from the mirror. Four scents.</div></div><div class="btn-select" data-val="doormat" onclick="pick(this,'product')"><span class="icon">🚪</span>Doormat<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">18 x 30 in, for the front door.</div></div><div class="btn-select" data-val="beer stein" onclick="pick(this,'product')"><span class="icon">🍺</span>Beer Stein<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">22oz ceramic with gold trim.</div></div><div class="btn-select" onclick="location.href='gift.html'"><span class="icon">💵</span>Gift Certificate<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Store credit, emailed to them.</div></div><div class="btn-select" data-val="artwork only" onclick="pick(this,'product')"><span class="icon">🖼️</span>Artwork Only<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">No product. Just creates an image for you to download.</div><div class="note" style="margin-top:2px;color:#7ab8ff;font-size:10px">1 token</div></div></div>
 <button type="button" class="download-btn" id="productCardBackBtn" style="margin-top:1rem" onclick="productCardBack()">← Back</button></div>
 
 <div id="mugSizeLockOverlay" class="step-lock-overlay" style="display:none">
@@ -3914,7 +3924,7 @@ function pickTrackDescribe(){
 // Greeting cards and post-it pads joined 2026-08-28 when they graduated
 // from "Art only" to real orderable products -- same shape as mouse pad:
 // no gimmicks, no frame, one variant, so the description IS the design.
-const PRODUCTS_NEEDING_IDEA=['suitcase','phone case','tote bag','puzzle','coaster','mouse pad','photo poster','greeting card','post-it note','wrapping paper','ornament','standee'];
+const PRODUCTS_NEEDING_IDEA=['suitcase','phone case','tote bag','puzzle','coaster','mouse pad','photo poster','greeting card','post-it note','wrapping paper','ornament','standee','playing cards','air freshener','doormat','beer stein'];
 const PRODUCT_IDEA_LABEL={
   'artwork only':'artwork',
   'suitcase':'suitcase',
@@ -3924,6 +3934,10 @@ const PRODUCT_IDEA_LABEL={
   'wrapping paper':'wrapping paper',
   'ornament':'ornament',
   'standee':'standee',
+  'beer stein':'beer stein',
+  'doormat':'doormat',
+  'air freshener':'air freshener',
+  'playing cards':'deck of cards',
   'coaster':'coasters',
   'mouse pad':'mouse pad',
   'photo poster':'poster',
@@ -3959,7 +3973,7 @@ const PRODUCTS_WITH_GIMMICKS=['mug','water bottle'];
 // there is nothing to wait for the customer to decide before showing it.
 // Water bottle is deliberately absent -- it has its own preview panel and
 // would fetch twice.
-const PRODUCTS_AUTO_MOCKUP=['suitcase','phone case','tote bag','puzzle','photo poster','coaster','mouse pad','greeting card','post-it note','wrapping paper','ornament','standee'];
+const PRODUCTS_AUTO_MOCKUP=['suitcase','phone case','tote bag','puzzle','photo poster','coaster','mouse pad','greeting card','post-it note','wrapping paper','ornament','standee','playing cards','air freshener','doormat','beer stein'];
 
 // ONE CLICK, NOT TWO (Alyx, Sep 2026, landing on the product card with a
 // GENERATE button after saying he was happy with his description: "I don't
@@ -4315,7 +4329,7 @@ function toggleWorkingImage(){
 // Two copies of a number is exactly how the marker rotted in the first place,
 // so they are not trusted to agree: .githooks/pre-commit moves both together
 // and REFUSES the commit if it ever finds them apart.
-const APP_VERSION='V340';
+const APP_VERSION='V341';
 try{ console.log('%cNeedles\u2019 Studio '+APP_VERSION,'color:#29a3ff;font-weight:700'); }catch(e){}
 
 function getDeviceId(){
@@ -7625,6 +7639,10 @@ const PRODUCT_TILE_PRICES = {
   'ornament':      { from: 9.95,  ladder: false },
   // From Where I Stand (22 Sep 2026): one size.
   'standee':       { from: 16.95, ladder: false },
+  'beer stein': { from: 24.95, ladder: false },
+  'doormat': { from: 16.95, ladder: false },
+  'air freshener': { from: 9.95, ladder: false },
+  'playing cards': { from: 17.95, ladder: false },
   // Plugged in 2026-08-28 -- see lib/products-catalog.js for the printer
   // story (chosen on US shipping, not unit cost).
   'greeting card': { from: 15.95, ladder: false, unit: 'pack of 8' },
@@ -12074,6 +12092,19 @@ function refreshPhoneCaseModelVisibility(){
 // buildMockupRequestBody() does that mapping.
 let selectedPuzzleSize=null;
 
+// CAR AIR FRESHENER (22 Sep 2026): option picked before generating.
+let selectedAirFreshener=null;
+function pickAirFreshener(name){
+  selectedAirFreshener=name;
+  document.querySelectorAll('#airFreshenerOptionGrid .btn-select').forEach(b=>b.classList.toggle('selected',b.dataset.opt===name));
+  document.getElementById('airFreshenerOptionNote').textContent='✓ Confirmed: '+name+'.';
+  handOffToIdeaAfterProductChoice();
+}
+function refreshAirFreshenerVisibility(){
+  const card=document.getElementById('airFreshenerOptionCard');
+  if(card)card.style.display=(product==='air freshener')?'block':'none';
+}
+
 // CERAMIC ORNAMENT (22 Sep 2026): shape picked before generating.
 let selectedOrnamentShape=null;
 function pickOrnamentShape(shape){
@@ -12370,7 +12401,7 @@ function pick(el,type){
     if(productGuide)productGuide.classList.remove('visible');
     const finalGuide=document.getElementById('finalGenerateGuidance');
     if(finalGuide)finalGuide.classList.toggle('visible',
-      (product==='phone case'&&!!selectedPhoneCaseModel)||(product==='puzzle'&&!!selectedPuzzleSize)||(product==='wrapping paper'&&!!selectedWrapSize)||(product==='ornament'&&!!selectedOrnamentShape)||(product==='suitcase'&&!!selectedSuitcaseSize));
+      (product==='phone case'&&!!selectedPhoneCaseModel)||(product==='puzzle'&&!!selectedPuzzleSize)||(product==='wrapping paper'&&!!selectedWrapSize)||(product==='ornament'&&!!selectedOrnamentShape)||(product==='air freshener'&&!!selectedAirFreshener)||(product==='suitcase'&&!!selectedSuitcaseSize));
     refreshApproveRowForMode();
     refreshMugSizeCardVisibility();
     refreshMugStyleCardVisibility();
@@ -12382,6 +12413,7 @@ function pick(el,type){
     refreshPuzzleSizeVisibility();
     refreshWrapSizeVisibility();
     refreshOrnamentShapeVisibility();
+    refreshAirFreshenerVisibility();
     refreshSuitcaseSizeVisibility();
     refreshTravelMugVariantVisibility();
     refreshTravelMugColorVisibility();
@@ -12419,7 +12451,7 @@ function pick(el,type){
       if(shapeNote)shapeNote.textContent='';
       setOptionSpotlight('coaster-shape-focus');
       smoothScrollToTarget('coasterShapeCard','center');
-    } else if(product==='mouse pad'||product==='greeting card'||product==='post-it note'||product==='standee'){
+    } else if(product==='mouse pad'||product==='greeting card'||product==='post-it note'||product==='standee'||product==='beer stein'||product==='doormat'||product==='playing cards'){
       // Exactly ONE variant each, so picking the product finishes the
       // product -- there is no size, colour or model left to settle. The
       // rail rule ("finish the thing, then decide what goes on it") is
@@ -12438,6 +12470,9 @@ function pick(el,type){
     } else if(product==='wrapping paper'){
       setOptionSpotlight('wrap-size-focus');
       smoothScrollToTarget('wrapSizeCard','center');
+    } else if(product==='air freshener'){
+      setOptionSpotlight('airFreshener-option-focus');
+      smoothScrollToTarget('airFreshenerOptionCard','center');
     } else if(product==='ornament'){
       setOptionSpotlight('ornament-shape-focus');
       smoothScrollToTarget('ornamentShapeCard','center');
@@ -13303,6 +13338,10 @@ const BYO_SHAPE_LINES={
   'post-it note':'a square composition with the subject centered',
   'coaster':'a square composition that still reads well when trimmed to a circle',
   'mouse pad':'a landscape composition (wider than it is tall)',
+  'playing cards':'a tall portrait composition for the back of a playing card, 2.5 by 3.5 inches, bold and symmetrical enough to read at a glance, with a clean even margin all round and no text near the edges',
+  'air freshener':'a tall portrait composition for a 2.75 by 4 inch car air freshener, the subject large and centred, bold and readable at a glance',
+  'doormat':'a wide landscape composition for an 18 by 30 inch doormat, bold shapes and large lettering that read from standing height, no fine detail, the subject centred',
+  'beer stein':'a wide panoramic band about two and a half times wider than it is tall, wrapping around a beer stein, the main subject centred with scenery continuing out to both ends',
   'standee':'a full-length figure, head to feet, standing, filling the frame from top to bottom, on a completely flat solid pure magenta background (hex #FF00FF) with no floor, scenery, shadow or text anywhere, crisp clean edges against the magenta; the magenta is removed and the acrylic is cut along the outline of the figure',
   'ornament':'a compact, nearly square composition with the subject centred and filling the middle, clear of the outer edges so it survives being trimmed to a star, circle, heart or snowflake',
   'wrapping paper':'a repeating all-over pattern that tiles edge to edge, the subject appearing several times at different sizes and poses with decorative filler between, no single centred subject and no border',
@@ -18201,6 +18240,10 @@ function getProductRules(p){
   if(p==='tote bag')return 'tote bag artwork, bold high-impact design readable from a distance';
   if(p==='suitcase')return 'travel suitcase artwork, bold full-coverage design that reads well from a distance, adventurous or eye-catching composition';
   if(p==='puzzle')return 'photo puzzle artwork, clear central subject with good contrast between pieces, works well when cut into interlocking pieces';
+  if(p==='playing cards')return 'playing card back artwork: a tall portrait composition, 2.5 by 3.5 inches, bold and readable at a glance, a clean even margin all round';
+  if(p==='air freshener')return 'car air freshener artwork: a tall portrait composition, 2.75 by 4 inches, the subject large and centred, bold and readable at a glance';
+  if(p==='doormat')return 'doormat artwork: a wide landscape composition, 18 by 30 inches, bold shapes and large lettering readable from standing height, no fine detail';
+  if(p==='beer stein')return 'beer stein artwork: a wide panoramic band about two and a half times wider than it is tall, the main subject centred with scenery continuing to both ends';
   if(p==='standee')return 'acrylic standee artwork: a full-length figure, head to feet, standing, filling the frame from top to bottom, on a completely flat solid pure magenta background (hex #FF00FF) with no floor, scenery, shadow or text anywhere, crisp clean edges against the magenta; the magenta is removed and the acrylic is cut along the outline of the figure';
   if(p==='ornament')return 'Christmas tree ornament artwork: a compact, nearly square composition with the subject centred and filling the middle, bold and readable at three inches, the outer edges kept simple because the ornament is cut to a star, circle, heart or snowflake shape';
   if(p==='wrapping paper')return 'custom gift wrapping paper: a seamless repeating all-over pattern that tiles edge to edge, the subject appearing several times in different poses and sizes with small decorative motifs between them, no single centred subject, no border, no margins, festive and dense';
@@ -19556,6 +19599,11 @@ async function generate(){
   if(product==='puzzle' && !selectedPuzzleSize){
     setStatus('Please pick your puzzle piece count above first — each one is a different physical puzzle with its own price.',true);
     document.getElementById('puzzleSizeCard').scrollIntoView({behavior:'smooth',block:'center'});
+    return;
+  }
+  if(product==='air freshener' && !selectedAirFreshener){
+    setStatus('Please pick an option above first.',true);
+    document.getElementById('airFreshenerOptionCard').scrollIntoView({behavior:'smooth',block:'center'});
     return;
   }
   if(product==='ornament' && !selectedOrnamentShape){
@@ -21427,6 +21475,38 @@ function buildMockupRequestBody(){
       : { productKey: 'post-it-notes', sizeLabel: '3" x 3"', image: url };
   }
 
+  // Just Playin' (22 Sep 2026): single-image.
+  if (product === 'playing cards') {
+    const design = placements.left || placements.front || placements.right;
+    const url = design ? (findDesignById(design)?.url ?? null) : null;
+    if (!url) return null;
+    return { productKey: 'playing-cards', sizeLabel: 'Standard Deck', image: url };
+  }
+
+  // Car Air Freshener (22 Sep 2026): single-image.
+  if (product === 'air freshener') {
+    const design = placements.left || placements.front || placements.right;
+    const url = design ? (findDesignById(design)?.url ?? null) : null;
+    if (!url || !selectedAirFreshener) return null;
+    return { productKey: 'car-air-freshener', sizeLabel: selectedAirFreshener, image: url };
+  }
+
+  // Doormat (22 Sep 2026): single-image.
+  if (product === 'doormat') {
+    const design = placements.left || placements.front || placements.right;
+    const url = design ? (findDesignById(design)?.url ?? null) : null;
+    if (!url) return null;
+    return { productKey: 'doormat', sizeLabel: '18 x 30', image: url };
+  }
+
+  // Beer Stein (22 Sep 2026): single-image.
+  if (product === 'beer stein') {
+    const design = placements.left || placements.front || placements.right;
+    const url = design ? (findDesignById(design)?.url ?? null) : null;
+    if (!url) return null;
+    return { productKey: 'beer-stein', sizeLabel: '22oz', image: url };
+  }
+
   // From Where I Stand: single-image, one size. The design is already the
   // transparent cutout (keyStandeeCutout in generate()).
   if (product === 'standee') {
@@ -22391,6 +22471,7 @@ async function goToOrder(){
     preselectedPuzzleSize: (product==='puzzle') ? selectedPuzzleSize : null,
     preselectedWrapSize: (product==='wrapping paper') ? selectedWrapSize : null,
     preselectedOrnamentShape: (product==='ornament') ? selectedOrnamentShape : null,
+    preselectedAirFreshener: (product==='air freshener') ? selectedAirFreshener : null,
     preselectedSuitcaseSize: (product==='suitcase') ? selectedSuitcaseSize : null,
     preselectedToteSize: (product==='tote bag') ? selectedToteSize : null,
     preselectedToteColor: (product==='tote bag') ? selectedToteColorGen : null,
@@ -22957,6 +23038,7 @@ function resetEverythingFreshStart(){
   selectedPuzzleSize=null;
   selectedWrapSize=null;
   selectedOrnamentShape=null;
+  selectedAirFreshener=null;
   ['wrapOccasion','wrapName','wrapAge'].forEach(id=>{const el=document.getElementById(id); if(el)el.value='';});
   document.querySelectorAll('#puzzleSizeGrid .btn-select').forEach(b=>b.classList.remove('selected'));
   const puzzleNote=document.getElementById('puzzleSizeSelectedNote');
