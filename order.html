@@ -103,7 +103,7 @@ label{font-size:11px;color:#888;letter-spacing:.5px;text-transform:uppercase;dis
 body.studio-driven #bridgeGridCard,body.studio-driven #previewCard,
 body.studio-driven #mugStyleCard,body.studio-driven #sizeCard,body.studio-driven #livePreviewCard,body.studio-driven #colorCard,body.studio-driven #fullWrapCard,
 body.studio-driven #travelMugStyleCard,body.studio-driven #travelColorCard,body.studio-driven #suitcaseSizeCard,body.studio-driven #phoneCaseCard,
-body.studio-driven #toteBagSizeCard,body.studio-driven #toteBagColorCard,body.studio-driven #puzzleSizeCard,body.studio-driven #wrapSizeCard,body.studio-driven #ornamentShapeCard,body.studio-driven #stickerSheetOptionCard,body.studio-driven #nightBuddyOptionCard,body.studio-driven #airFreshenerOptionCard,body.studio-driven #photoPosterCard,
+body.studio-driven #toteBagSizeCard,body.studio-driven #toteBagColorCard,body.studio-driven #puzzleSizeCard,body.studio-driven #wrapSizeCard,body.studio-driven #ornamentShapeCard,body.studio-driven #tshirtOptionCard,body.studio-driven #stickerSheetOptionCard,body.studio-driven #nightBuddyOptionCard,body.studio-driven #airFreshenerOptionCard,body.studio-driven #photoPosterCard,
 body.studio-driven #mockupCtaLeft,body.studio-driven #mockupCtaRight,body.studio-driven #mockupWaitBanner{display:none!important}
 #orderHeadlineCard{display:none}
 body.studio-driven #orderHeadlineCard{display:block}
@@ -324,6 +324,13 @@ body.studio-driven #orderHeadlineCard{display:block}
 <div class="note" id="stickerSheetMockupBtn" style="text-align:center;margin-top:1rem;color:var(--accent-soft);font-weight:600">🔍 Click Image To Enlarge</div>
 <div class="note" id="stickerSheetMockupNote" style="margin-top:.5rem;text-align:center;display:none"></div>
 <img id="stickerSheetMockupImg" style="display:none;width:100%;border-radius:12px;border:1px solid var(--accent);margin-top:.75rem"/>
+</div>
+<div class="card" id="tshirtOptionCard" style="display:none">
+<div class="card-title">👕 Size and Colour</div>
+<div class="grid2" id="tshirtOptionGrid"></div>
+<div class="note" id="tshirtMockupBtn" style="text-align:center;margin-top:1rem;color:var(--accent-soft);font-weight:600">🔍 Click Image To Enlarge</div>
+<div class="note" id="tshirtMockupNote" style="margin-top:.5rem;text-align:center;display:none"></div>
+<img id="tshirtMockupImg" style="display:none;width:100%;border-radius:12px;border:1px solid var(--accent);margin-top:.75rem"/>
 </div>
 <div class="card" id="ornamentShapeCard" style="display:none">
 <div class="card-title">🎄 Which Shape?</div>
@@ -726,6 +733,7 @@ function currentProductKey(){
   if (isWrap())         return 'wrapping-paper';
   if (isOrnament())     return 'ceramic-ornament';
   if (isStandee())      return 'custom-standee';
+  if (isTshirt()) return 'unisex-tshirt';
   if (isStickerSheet()) return 'sticker-sheet';
   if (isNightBuddy()) return 'night-buddy';
   if (isBeerStein()) return 'beer-stein';
@@ -1163,6 +1171,7 @@ function isPuzzle(){ return selectedProductFamily === 'puzzle'; }
 function isWrap(){ return selectedProductFamily === 'wrapping paper'; }
 function isOrnament(){ return selectedProductFamily === 'ornament'; }
 function isStandee(){ return selectedProductFamily === 'standee'; }
+function isTshirt(){ return selectedProductFamily === 'tshirt'; }
 function isStickerSheet(){ return selectedProductFamily === 'sticker sheet'; }
 function isNightBuddy(){ return selectedProductFamily === 'night light'; }
 function isBeerStein(){ return selectedProductFamily === 'beer stein'; }
@@ -1237,6 +1246,15 @@ let selectedStickerSheet = "Small 6 x 4 in";
 if (pendingOrder?.preselectedStickerSheet && STICKERSHEET_OPTIONS[pendingOrder.preselectedStickerSheet]) {
   selectedStickerSheet = pendingOrder.preselectedStickerSheet;
 }
+
+// T-SHIRT (22 Sep 2026). Keys match lib/products-catalog.js.
+const TSHIRT_OPTIONS = { "S": { price: 7.95 }, "M": { price: 7.95 }, "L": { price: 7.95 }, "XL": { price: 7.95 }, "2XL": { price: 9.95 }, "3XL": { price: 11.95 }, "4XL": { price: 11.95 }, "5XL": { price: 11.95 } };
+let selectedTshirt = "L";
+if (pendingOrder?.preselectedTshirt && TSHIRT_OPTIONS[pendingOrder.preselectedTshirt]) {
+  selectedTshirt = pendingOrder.preselectedTshirt;
+}
+const TSHIRT_COLORS = ["White", "Black", "Sport Grey", "Navy", "Red", "Royal", "Forest Green", "Maroon", "Light Pink", "Light Blue", "Charcoal", "Sand"];
+let selectedTshirtColor = (pendingOrder?.preselectedTshirtColor && TSHIRT_COLORS.includes(pendingOrder.preselectedTshirtColor)) ? pendingOrder.preselectedTshirtColor : "Black";
 
 // CERAMIC ORNAMENT (22 Sep 2026). Keys match lib/products-catalog.js.
 const ORNAMENT_SHAPES = { "Star": { price: 9.95 }, "Circle": { price: 9.95 }, "Heart": { price: 9.95 }, "Snowflake": { price: 9.95 } };
@@ -1325,6 +1343,7 @@ const BRIDGE_GRID_PRODUCTS = [
   { key: 'wrapping paper', icon: '🎁', label: "It's a Wrap", priceFrom: '$8.95' },
   { key: 'ornament', icon: '🎄', label: 'Ceramic Ornament', priceFrom: '$9.95' },
   { key: 'standee', icon: '🧍', label: 'From Where I Stand', priceFrom: '$16.95' },
+  { key: 'tshirt', icon: '👕', label: 'T-Shirt', priceFrom: '$7.95' },
   { key: 'sticker sheet', icon: '⭐', label: 'Sticker Sheet', priceFrom: '$9.95' },
   { key: 'night light', icon: '💡', label: 'Night-Buddy', priceFrom: '$12.95' },
   { key: 'beer stein', icon: '🍺', label: 'Beer Stein', priceFrom: '$24.95' },
@@ -1584,6 +1603,26 @@ function pickStickerSheet(name){
   selectedStickerSheet = name;
   renderStickerSheetGrid();
   const img=document.getElementById('stickerSheetMockupImg'); if(img) img.style.display='none';
+  hideMockupSideCta();
+  updateSummary();
+  scheduleAutoMockupFetch();
+}
+
+function renderTshirtGrid(){
+  const grid = document.getElementById('tshirtOptionGrid');
+  grid.innerHTML = '';
+  Object.keys(TSHIRT_OPTIONS).forEach(name => {
+    const btn = document.createElement('div');
+    btn.className = 'btn-select' + (name === selectedTshirt ? ' selected' : '');
+    btn.innerHTML = name + '<span class="price">$' + TSHIRT_OPTIONS[name].price.toFixed(2) + '</span>';
+    btn.onclick = () => pickTshirt(name);
+    grid.appendChild(btn);
+  });
+}
+function pickTshirt(name){
+  selectedTshirt = name;
+  renderTshirtGrid();
+  const img=document.getElementById('tshirtMockupImg'); if(img) img.style.display='none';
   hideMockupSideCta();
   updateSummary();
   scheduleAutoMockupFetch();
@@ -2016,6 +2055,9 @@ function runAutoMockupForMode(){
   } else if (isStickerSheet()) {
     if (!selectedStickerSheet) return;
     fetchSingleImageMockup('sticker-sheet', selectedStickerSheet, null, 'stickerSheetMockupBtn', 'stickerSheetMockupNote', 'stickerSheetMockupImg');
+  } else if (isTshirt()) {
+    if (!selectedTshirt) return;
+    fetchSingleImageMockup('unisex-tshirt', selectedTshirt, selectedTshirtColor, 'tshirtMockupBtn', 'tshirtMockupNote', 'tshirtMockupImg');
   } else if (isOrnament()) {
     if (!selectedOrnamentShape) return;
     fetchSingleImageMockup('ceramic-ornament', selectedOrnamentShape, null, 'ornamentMockupBtn', 'ornamentMockupNote', 'ornamentMockupImg');
@@ -2233,6 +2275,9 @@ function updateSummary(){
   } else if (isStickerSheet()) {
     basePrice = STICKERSHEET_OPTIONS[selectedStickerSheet].price;
     styleSizeLabel = 'Sticker Sheet' + ', ' + selectedStickerSheet;
+  } else if (isTshirt()) {
+    basePrice = TSHIRT_OPTIONS[selectedTshirt].price;
+    styleSizeLabel = 'T-Shirt, ' + selectedTshirt + ', ' + selectedTshirtColor;
   } else if (isOrnament()) {
     basePrice = ORNAMENT_SHAPES[selectedOrnamentShape].price;
     styleSizeLabel = 'Ceramic Ornament, ' + selectedOrnamentShape;
@@ -2586,6 +2631,25 @@ async function submitOrder(){
       referralCode
     };
 
+  } else if (isTshirt()) {
+    const image = pendingOrder?.placements?.left || pendingOrder?.placements?.front || pendingOrder?.placements?.right || null;
+    if (!image) {
+      setStatus('No design found — please go back and place a design first.', true);
+      return;
+    }
+    body = {
+      type: 'mug_order',
+      deviceId,
+      productKey: 'unisex-tshirt',
+      sizeLabel: selectedTshirt,
+      colorName: selectedTshirtColor,
+      image,
+      customerName: fullName,
+      giftMessage: giftMessageEnabled ? document.getElementById('giftMessageText').value.trim() : null,
+      shippingAddress,
+      referralCode
+    };
+
   } else if (isOrnament()) {
     const image = pendingOrder?.placements?.left || pendingOrder?.placements?.front || pendingOrder?.placements?.right || null;
     if (!image) {
@@ -2833,7 +2897,7 @@ function setupPageForMode(){
 const ALL_PRODUCT_SPECIFIC_CARDS = [
   'mugStyleCard','sizeCard','livePreviewCard','colorCard','fullWrapCard',
   'travelMugStyleCard','travelColorCard','suitcaseSizeCard','phoneCaseCard',
-  'toteBagSizeCard','toteBagColorCard','puzzleSizeCard','wrapSizeCard','ornamentShapeCard','stickerSheetOptionCard','nightBuddyOptionCard','airFreshenerOptionCard','photoPosterCard'
+  'toteBagSizeCard','toteBagColorCard','puzzleSizeCard','wrapSizeCard','ornamentShapeCard','tshirtOptionCard','stickerSheetOptionCard','nightBuddyOptionCard','airFreshenerOptionCard','photoPosterCard'
 ];
 function hideAllProductCards(){
   ALL_PRODUCT_SPECIFIC_CARDS.forEach(id => {
@@ -2922,6 +2986,10 @@ if (isTravelMug()) {
     hideAllProductCards();
     document.getElementById('stickerSheetOptionCard').style.display = 'block';
     renderStickerSheetGrid();
+  } else if (isTshirt()) {
+    hideAllProductCards();
+    document.getElementById('tshirtOptionCard').style.display = 'block';
+    renderTshirtGrid();
   } else if (isOrnament()) {
     hideAllProductCards();
     document.getElementById('ornamentShapeCard').style.display = 'block';
