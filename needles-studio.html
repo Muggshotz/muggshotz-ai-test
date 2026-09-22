@@ -1,5 +1,5 @@
 <!-- ============================================================
-     VERSION: V332
+     VERSION: V333
      ============================================================
      THE ONE LINE THAT SAYS WHICH BUILD YOU ARE LOOKING AT.
 
@@ -1142,7 +1142,7 @@ const HERO_SETTLE_MS = 1000;
      added later. -->
 <div id="saveArtBar" style="display:none;margin-top:.7rem">
 <div style="display:flex;gap:8px">
-<button type="button" class="download-btn" style="flex:1;margin-top:0;padding:.7rem .5rem;font-size:14px" onclick="saveArtwork()">⬇️ Save Image</button>
+<button type="button" class="generate-btn" style="flex:1;margin-top:0;padding:.7rem .5rem;font-size:14px" onclick="saveArtwork()">⬇️ Save Image</button>
 <button type="button" class="download-btn" style="flex:1;margin-top:0;padding:.7rem .5rem;font-size:14px" onclick="copyArtwork()">📋 Copy Image</button>
 </div>
 <div class="note" id="saveArtNote" style="text-align:center;margin-top:.4rem;color:#29a3ff">This picture is yours. Save it or copy it anywhere.</div>
@@ -4299,7 +4299,7 @@ function toggleWorkingImage(){
 // Two copies of a number is exactly how the marker rotted in the first place,
 // so they are not trusted to agree: .githooks/pre-commit moves both together
 // and REFUSES the commit if it ever finds them apart.
-const APP_VERSION='V332';
+const APP_VERSION='V333';
 try{ console.log('%cNeedles\u2019 Studio '+APP_VERSION,'color:#29a3ff;font-weight:700'); }catch(e){}
 
 function getDeviceId(){
