@@ -25,6 +25,23 @@ from Claude and Bud for eleven and twelve.
 11. Claude's pick: beer stein (1088; frosted glass beer mug 1131 as its twin) — the mug's cousin, wrap/frame/fade carry over
 12. Bud's pick, named by Alyx: the Night-Buddy — Custom Shape Night Light (UV), Printify 4742, Printdoors: a custom-cut acrylic panel on a wood base, lit from below. Face It's cut-out becomes the lamp. Real, in the catalog, UV like the Tundra.
 
+## It's a Wrap — cost probe, 22 Sep 2026
+
+Prodigi (845 rolls, 848 sheets) ships at 19.29 in the US: out. The other two
+share one shipping table: US 8.49 first / 1.39 each extra, CA 14.99 / 4.99,
+rest of world 16.29 / 6.59, handling 10 days.
+
+| | 1367 via Printify Choice (99) | 1100 via Stickers & Posters (215) |
+| --- | --- | --- |
+| Small sheet | 30x36 8.06 matte / 8.14 glossy | 30x20 5.50 matte / 5.91 satin |
+| Roll | 30x72 10.28 / 10.42 | 30x72 12.89 matte / 15.02 satin |
+| Long roll | 30x180 19.77 / 17.81 | 30x144 25.78 / 30.05 |
+| Print area | 9075 x 10800 (all sizes) | 5874 x 4205 (20"), x 14614 (72"), x 28913 (144") |
+
+Taylor also makes 1367 (8.76 / 13.82 / 23.64, US-only 13.49 postage).
+Claude's lean: 1100 for the 5.50 entry sheet; 1367 if rolls sell more than
+sheets. Awaiting Alyx's blueprint and two retail prices.
+
 ## The consolidated nine
 
 Bud's real ones plus Claude's left standing, overlaps counted once. Bud also
