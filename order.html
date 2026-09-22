@@ -544,6 +544,27 @@ const MUG_STYLES = {
         { name: "Light Blue", hex: "#5FA8DE" }
       ]}
     }
+  },
+  // COLOR BURST (22 Sep 2026): whole-body colour, 11oz only (bp 10725).
+  "Color Burst": {
+    sizes: {
+      "11oz": { price: 21.95, colors: [
+        { name: "Black", hex: "#000000" },
+        { name: "Red", hex: "#cc141b" },
+        { name: "Burgundy", hex: "#67161b" },
+        { name: "Almond", hex: "#e3cfb4" },
+        { name: "Orange", hex: "#f97000" },
+        { name: "Bright Yellow", hex: "#d4b245" },
+        { name: "Light Yellow", hex: "#f9e38a" },
+        { name: "Green", hex: "#006400" },
+        { name: "Forest Green", hex: "#07463b" },
+        { name: "Cobalt", hex: "#313da6" },
+        { name: "Ocean Blue", hex: "#264f86" },
+        { name: "Navy Blue", hex: "#35405a" },
+        { name: "Wedgewood Blue", hex: "#3a486a" },
+        { name: "Purple", hex: "#862470" }
+      ] }
+    }
   }
 };
 
@@ -1512,6 +1533,10 @@ function renderMugPreview(){
       handleStroke = pickedColor;
     } else if (selectedStyle === 'Accented') {
       bodyFill = pickedColor;
+    } else if (selectedStyle === 'Color Burst') {
+      bodyFill = pickedColor;
+      rimFill = pickedColor;
+      handleStroke = pickedColor;
     }
   }
 
@@ -1538,7 +1563,8 @@ const MUG_STYLE_TO_PRODUCT_KEY = {
   "Classic White": "classic-white-mug",
   "Color Pop": "color-pop-mug",
   "Trimmed": "trimmed-mug",
-  "Accented": "accented-mug"
+  "Accented": "accented-mug",
+  "Color Burst": "color-burst-mug"
 };
 
 async function fetchSingleImageMockup(productKey, sizeLabel, colorName, btnId, noteId, imgId){
@@ -1760,6 +1786,7 @@ function pickStyle(el){
   selectedStyle = el.dataset.style;
   styleTouched = true;
   selectedColor = null;
+  refreshSizeTilesForStyle();
   const hasColors = !!MUG_STYLES[selectedStyle].sizes[selectedSize].colors;
   document.getElementById('colorCard').style.display = hasColors ? 'block' : 'none';
   if (hasColors) renderColorGrid();
@@ -1769,6 +1796,22 @@ function pickStyle(el){
   scheduleAutoMockupFetch();
 }
 
+// Sizes a style is not made in (Color Burst has no 15oz) are hidden, and a
+// hidden size that was selected falls back to the first one the style has.
+function refreshSizeTilesForStyle(){
+  const sizes = MUG_STYLES[selectedStyle].sizes;
+  let fell = false;
+  document.querySelectorAll('[data-size]').forEach(b=>{
+    const has = !!sizes[b.dataset.size];
+    b.style.display = has ? '' : 'none';
+    if (!has && b.classList.contains('selected')) { b.classList.remove('selected'); fell = true; }
+  });
+  if (fell || !sizes[selectedSize]) {
+    selectedSize = Object.keys(sizes)[0];
+    const first = document.querySelector('[data-size="'+selectedSize+'"]');
+    if (first) first.classList.add('selected');
+  }
+}
 function pickSize(el){
   document.querySelectorAll('[data-size]').forEach(b=>b.classList.remove('selected'));
   el.classList.add('selected');

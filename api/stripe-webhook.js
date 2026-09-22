@@ -530,7 +530,8 @@ const MUG_TYPE_TO_PRODUCT_KEY = {
   "Classic White": "classic-white-mug",
   "Color Pop": "color-pop-mug",
   "Trimmed": "trimmed-mug",
-  "Accented": "accented-mug"
+  "Accented": "accented-mug",
+  "Color Burst": "color-burst-mug"
 };
 
 async function handleMugOrderPayment(session) {

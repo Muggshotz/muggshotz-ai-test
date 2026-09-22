@@ -1,5 +1,5 @@
 <!-- ============================================================
-     VERSION: V326
+     VERSION: V327
      ============================================================
      THE ONE LINE THAT SAYS WHICH BUILD YOU ARE LOOKING AT.
 
@@ -918,6 +918,7 @@ body.panels-active #verifyCard{display:none!important}
         <tr style="border-top:1px solid #333"><td style="padding:6px 0;color:#29a3ff">Trimmed</td><td style="padding:6px 0;text-align:right;color:#29a3ff">$17.95</td><td style="padding:6px 0;text-align:right;color:#29a3ff">$19.95</td></tr>
         <tr style="border-top:1px solid #333"><td style="padding:6px 0;color:#29a3ff">Accented</td><td style="padding:6px 0;text-align:right;color:#29a3ff">$17.95</td><td style="padding:6px 0;text-align:right;color:#29a3ff">$19.95</td></tr>
         <tr style="border-top:1px solid #333"><td style="padding:6px 0;color:#29a3ff">Color Pop</td><td style="padding:6px 0;text-align:right;color:#29a3ff">$19.95</td><td style="padding:6px 0;text-align:right;color:#29a3ff">$21.95</td></tr>
+        <tr style="border-top:1px solid #333"><td style="padding:6px 0;color:#29a3ff">Color Burst</td><td style="padding:6px 0;text-align:right;color:#29a3ff">$21.95</td><td style="padding:6px 0;text-align:right;color:#29a3ff">—</td></tr>
       </table>
       <div class="note" style="margin-top:.6rem">Prices shown are for the mug itself — shipping and handling is calculated and added at checkout.</div>
     </div>
@@ -4210,7 +4211,7 @@ function toggleWorkingImage(){
 // Two copies of a number is exactly how the marker rotted in the first place,
 // so they are not trusted to agree: .githooks/pre-commit moves both together
 // and REFUSES the commit if it ever finds them apart.
-const APP_VERSION='V326';
+const APP_VERSION='V327';
 try{ console.log('%cNeedles\u2019 Studio '+APP_VERSION,'color:#29a3ff;font-weight:700'); }catch(e){}
 
 function getDeviceId(){
@@ -7515,7 +7516,11 @@ const PRE_GEN_MUG_STYLE_PRICES = {
   "Classic White": { "11oz": 14.95, "15oz": 16.95 },
   "Trimmed": { "11oz": 17.95, "15oz": 19.95 },
   "Accented": { "11oz": 17.95, "15oz": 19.95 },
-  "Color Pop": { "11oz": 19.95, "15oz": 21.95 }
+  "Color Pop": { "11oz": 19.95, "15oz": 21.95 },
+  // COLOR BURST (Alyx, 22 Sep 2026): the whole mug is the colour. ONE size --
+  // Printify's blueprint 10725 has no 15oz -- so there is no 15oz price, and
+  // renderPreGenMugStyleGrid() leaves the tile out when 15oz is the size.
+  "Color Burst": { "11oz": 21.95 }
 };
 
 // The base every upgrade is measured against. A name, not a number, so the
@@ -7582,6 +7587,26 @@ const MUG_MOCKUP_PHOTOS = {
       "Red": "mug-accented-11oz-red.webp",
       "Light Blue": "mug-accented-15oz-light-blue.webp",
       "Black": "mug-accented-15oz-black.webp"
+    }
+  },
+  // Color Burst: the classic 11oz photo with its whole body recoloured to
+  // each of Printify's fourteen swatches (22 Sep 2026).
+  "Color Burst": {
+    "11oz": {
+      "Black": "mug-colorburst-black.webp",
+      "Red": "mug-colorburst-red.webp",
+      "Burgundy": "mug-colorburst-burgundy.webp",
+      "Almond": "mug-colorburst-almond.webp",
+      "Orange": "mug-colorburst-orange.webp",
+      "Bright Yellow": "mug-colorburst-bright-yellow.webp",
+      "Light Yellow": "mug-colorburst-light-yellow.webp",
+      "Green": "mug-colorburst-green.webp",
+      "Forest Green": "mug-colorburst-forest-green.webp",
+      "Cobalt": "mug-colorburst-cobalt.webp",
+      "Ocean Blue": "mug-colorburst-ocean-blue.webp",
+      "Navy Blue": "mug-colorburst-navy-blue.webp",
+      "Wedgewood Blue": "mug-colorburst-wedgewood-blue.webp",
+      "Purple": "mug-colorburst-purple.webp"
     }
   },
   "Color Pop": {
@@ -7734,6 +7759,10 @@ function mugStyleLockBack(){
 function pickPreGenMugSize(size){
   selectedGenSize=size;
   mugSizeChosenPreGen=true;
+  if(typeof (PRE_GEN_MUG_STYLE_PRICES[selectedGenStyle]||{})[size]!=='number'){
+    // Color Burst is 11oz only: switching to 15oz with it chosen cannot stand.
+    selectedGenStyle='Classic White'; selectedGenColor=null; mugStyleChosenPreGen=false;
+  }
   document.getElementById('preGenSize11Btn').classList.toggle('selected',size==='11oz');
   document.getElementById('preGenSize15Btn').classList.toggle('selected',size==='15oz');
   mugColorFinishedPreGen=false;
@@ -7788,7 +7817,8 @@ const PRE_GEN_MUG_STYLE_THUMBNAILS = {
   "Classic White": "style-classic-white.jpg",
   "Trimmed": "style-trimmed.jpg",
   "Accented": "style-accented.jpg",
-  "Color Pop": "style-color-pop.jpg"
+  "Color Pop": "style-color-pop.jpg",
+  "Color Burst": "style-color-burst.jpg"
 };
 // CORRECTED (Sep 2026, Alyx): "even though I clicked the 15 ounce mug, all
 // three of these thumbnails seem to be 11 ounce mugs." The generic tiles
@@ -7831,6 +7861,8 @@ function renderPreGenMugStyleGrid(){
   grid.innerHTML='';
   Object.keys(PRE_GEN_MUG_STYLE_PRICES).forEach(styleName=>{
     const price=PRE_GEN_MUG_STYLE_PRICES[styleName][selectedGenSize];
+    // A style not made at this size (Color Burst at 15oz) has no tile here.
+    if(typeof price!=='number')return;
     const btn=document.createElement('div');
     btn.className='btn-select'+(styleName===selectedGenStyle && mugStyleChosenPreGen?' selected':'');
     btn.style.padding='8px';
@@ -7844,7 +7876,7 @@ function renderPreGenMugStyleGrid(){
     // Cambridge Blue on the coloured styles, as the photos always were, so
     // the four tiles compare like for like.
     requestMugStill({sizeLabel:selectedGenSize, styleName,
-      colorHex: styleName==='Classic White'?'#ffffff':'#A3C1AD'},
+      colorHex: styleName==='Classic White'?'#ffffff':(styleName==='Color Burst'?'#cc141b':'#A3C1AD')},
       url=>{ if(url && thumb.isConnected) thumb.src=url; });
     thumb.style.cssText='width:100%;border-radius:8px;background:#fff;margin-bottom:6px;box-shadow:0 2px 10px rgba(0,0,0,.45)';
     btn.appendChild(thumb);
@@ -9297,7 +9329,7 @@ async function generateFaceIt(){
       try{
         const fitted=await extendWrapToProductRatio(resultImageUrl,
           bandPrintsInThirds
-            ? {ratio:MUG_WRAP_RATIO,closes:true,flanks:'edge'}
+            ? {ratio:mugWrapRatio(),closes:true,flanks:'edge'}
             : {flanks:'edge'});
         if(fitted)resultImageUrl=fitted;
       }catch(err){
@@ -10262,8 +10294,17 @@ const MUG_PRINT_AREA={
   'classic-white-mug':{'11oz':{w:2475,h:1155},'15oz':{w:2475,h:1275}},
   'color-pop-mug':   {'11oz':{w:2538,h:1211},'15oz':{w:2475,h:1275}},
   'trimmed-mug':     {'11oz':{w:2538,h:1088},'15oz':{w:2475,h:1275}},
-  'accented-mug':    {'11oz':{w:2538,h:1088},'15oz':{w:2475,h:1275}}
+  'accented-mug':    {'11oz':{w:2538,h:1088},'15oz':{w:2475,h:1275}},
+  // bp 10725 / prov 228: one front placeholder, 11oz only, a 2.74:1 band.
+  'color-burst-mug': {'11oz':{w:4725,h:1725}}
 };
+// THE BAND'S RATIO COMES FROM THE PRINT AREA (22 Sep 2026). MUG_WRAP_RATIO
+// (2.14) was the one number for every mug while every mug was 2475 x 1155.
+// Color Burst is 4725 x 1725, so the wrap paths ask the print area instead.
+function mugWrapRatio(){
+  const a=getMugPrintArea();
+  return (a && a.w && a.h) ? Math.round(a.w/a.h*100)/100 : MUG_WRAP_RATIO;
+}
 function getMugPrintArea(){
   const key=GEN_STYLE_TO_PRODUCT_KEY[selectedGenStyle]||'classic-white-mug';
   const bySize=MUG_PRINT_AREA[key]||MUG_PRINT_AREA['classic-white-mug'];
@@ -16756,6 +16797,18 @@ const MUG3D = (function(){
 
   // Real mugs, in inches. wrapIn is how much of the circumference Printify
   // actually prints; the remainder is the bare strip at the handle.
+  // A style's own band (22 Sep 2026). Color Burst prints a 4725 x 1725 area,
+  // 2.74:1, on the same 11oz body; the wrap length is kept and the band is
+  // shorter, so the strip's shape and the band's agree and paint() crops
+  // nothing (see V323/V324 for why they must).
+  const STYLE_BANDS = {
+    'Color Burst': { wrapIn: 8.25, bandH: 3.01 }
+  };
+  function sizeForMug(opts){
+    const base=SIZES[opts.sizeLabel]||SIZES['11oz'];
+    const band=STYLE_BANDS[opts.styleName];
+    return band ? Object.assign({},base,band) : base;
+  }
   const SIZES = {
     // wrapIn 7.17, not Printify's 8.25 (V324): the strip is cut at
     // MUG_WRAP_RATIO (2.14) for both mugs, and the band must be that shape
@@ -16956,7 +17009,9 @@ const MUG3D = (function(){
   // serves the spinning mockup and every still the picker draws.
   function assembleMug(THREE,S,opts,mats){
     const g=new THREE.Group();
-    const outer=new THREE.Mesh(new THREE.LatheGeometry(outerProfile(THREE,S),160),mats.white);
+    // COLOR BURST (22 Sep 2026): the first style whose colour is the body.
+    const wholeBody=((opts.styleName||'')==='Color Burst');
+    const outer=new THREE.Mesh(new THREE.LatheGeometry(outerProfile(THREE,S),160),wholeBody?mats.accent:mats.white);
     outer.castShadow=true; outer.receiveShadow=true; g.add(outer);
     // PER STYLE (Alyx, Sep 2026, definitive): "Trimmed -- think rimmed with a
     // T for tail: the entire rim is coloured and the tail is the handle.
@@ -16975,12 +17030,12 @@ const MUG3D = (function(){
     const prof=innerProfile(THREE,S);
     const rimGeo=new THREE.LatheGeometry(prof.slice(0,13),160);      // the half-round rim
     const insideGeo=new THREE.LatheGeometry(prof.slice(12),160);     // inner wall and floor
-    const rimMat   = (style==='Trimmed'||style==='Color Pop') ? mats.accent : mats.white;
-    const insideMat= (style==='Accented'||style==='Color Pop') ? mats.accent : mats.white;
+    const rimMat   = (style==='Trimmed'||style==='Color Pop'||wholeBody) ? mats.accent : mats.white;
+    const insideMat= (style==='Accented'||style==='Color Pop'||wholeBody) ? mats.accent : mats.white;
     const rim=new THREE.Mesh(rimGeo,rimMat); rim.receiveShadow=true; g.add(rim);
     const inside=new THREE.Mesh(insideGeo,insideMat); inside.receiveShadow=true; g.add(inside);
-    const handleColoured=(style==='Trimmed'||style==='Color Pop');
-    const hand=new THREE.Mesh(handleGeo(THREE,S), handleColoured?[mats.white,mats.accent]:[mats.white,mats.white]);
+    const handleColoured=(style==='Trimmed'||style==='Color Pop'||wholeBody);
+    const hand=new THREE.Mesh(handleGeo(THREE,S), wholeBody?[mats.accent,mats.accent]:(handleColoured?[mats.white,mats.accent]:[mats.white,mats.white]));
     hand.castShadow=true; hand.receiveShadow=true; g.add(hand);
     return g;
   }
@@ -17223,7 +17278,7 @@ const MUG3D = (function(){
 
   function build(THREE,opts){
     const T=hasTumbler(opts.tumblerKey)?TUMBLERS[opts.tumblerKey]:null;
-    const S=T?tumblerSize(T):(SIZES[opts.sizeLabel]||SIZES['11oz']);
+    const S=T?tumblerSize(T):sizeForMug(opts);
     // A tumbler's band goes all the way round; a mug's stops at the handle.
     const wrap=T?1:S.wrapIn/(2*Math.PI*S.R);
 
@@ -17345,7 +17400,7 @@ const MUG3D = (function(){
       }
       snapRenderer.setSize(px,px,false);
       const T=hasTumbler(opts.tumblerKey)?TUMBLERS[opts.tumblerKey]:null;
-      const S=T?tumblerSize(T):(SIZES[opts.sizeLabel]||SIZES['11oz']);
+      const S=T?tumblerSize(T):sizeForMug(opts);
       const sc=new THREE.Scene();
       sc.background=new THREE.Color(opts.background||'#ffffff');
       dressScene(THREE,snapRenderer,sc,S);
@@ -19626,7 +19681,7 @@ Use rich environmental storytelling while keeping the face as the primary focal 
       if(!flatUrl)throw new Error('No image returned.');
       if(product==='mug'){
         setStatus('Wrapping it round the mug...');
-        const wide=await extendWrapToProductRatio(flatUrl,{ratio:MUG_WRAP_RATIO,closes:true});
+        const wide=await extendWrapToProductRatio(flatUrl,{ratio:mugWrapRatio(),closes:true});
         const panels=await sliceFaceItResultIntoPanels(wide);
         if(!panels)throw new Error('Could not cut the wrap into panels.');
         panoramaData={leftUrl:panels.left,centerUrl:panels.center,rightUrl:panels.right,panoramaUrl:wide};
@@ -20682,13 +20737,20 @@ const GEN_MUG_STYLES = {
     { name: "Maroon", hex: "#7A1F2B" }, { name: "Green", hex: "#1F7A45" },
     { name: "Yellow", hex: "#F0D43A" }, { name: "Pink", hex: "#E0457B" },
     { name: "Light Blue", hex: "#5FA8DE" }
+  ]}},
+  // COLOR BURST (22 Sep 2026): the day the comment above waited for. The
+  // colour IS the exterior, so surfaceColored is on: the edge fade samples
+  // it, and the 3D mug paints its whole body with it. 11oz only.
+  "Color Burst": { surfaceColored: true, colors: { "11oz": [
+    { name: "Black", hex: "#000000" }, { name: "Red", hex: "#cc141b" }, { name: "Burgundy", hex: "#67161b" }, { name: "Almond", hex: "#e3cfb4" }, { name: "Orange", hex: "#f97000" }, { name: "Bright Yellow", hex: "#d4b245" }, { name: "Light Yellow", hex: "#f9e38a" }, { name: "Green", hex: "#006400" }, { name: "Forest Green", hex: "#07463b" }, { name: "Cobalt", hex: "#313da6" }, { name: "Ocean Blue", hex: "#264f86" }, { name: "Navy Blue", hex: "#35405a" }, { name: "Wedgewood Blue", hex: "#3a486a" }, { name: "Purple", hex: "#862470" }
   ]}}
 };
 const GEN_STYLE_TO_PRODUCT_KEY = {
   "Classic White": "classic-white-mug",
   "Color Pop": "color-pop-mug",
   "Trimmed": "trimmed-mug",
-  "Accented": "accented-mug"
+  "Accented": "accented-mug",
+  "Color Burst": "color-burst-mug"
 };
 
 let selectedGenStyle='Classic White';
@@ -20793,6 +20855,7 @@ function renderGenMugStyleGrid(){
   const grid=document.getElementById('genMugStyleGrid');
   if(!grid || grid.childElementCount)return;
   Object.keys(GEN_MUG_STYLES).forEach(styleName=>{
+    if(typeof (PRE_GEN_MUG_STYLE_PRICES[styleName]||{})[selectedGenSize]!=='number')return;
     const btn=document.createElement('div');
     btn.className='btn-select'+(styleName===selectedGenStyle?' selected':'');
     btn.dataset.style=styleName;
@@ -20820,6 +20883,10 @@ function pickGenMugStyle(styleName){
 function pickGenMugSize(size){
   const wasTouched=mugOptionsTouched;
   selectedGenSize=size;
+  if(typeof (PRE_GEN_MUG_STYLE_PRICES[selectedGenStyle]||{})[size]!=='number'){
+    selectedGenStyle='Classic White';
+    renderGenMugStyleGrid();
+  }
   document.getElementById('genSize11Btn').classList.toggle('selected', size==='11oz');
   document.getElementById('genSize15Btn').classList.toggle('selected', size==='15oz');
   selectedGenColor=null;

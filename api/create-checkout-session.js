@@ -127,7 +127,8 @@ const MUG_TYPE_TO_PRODUCT_KEY = {
   "Classic White": "classic-white-mug",
   "Color Pop": "color-pop-mug",
   "Trimmed": "trimmed-mug",
-  "Accented": "accented-mug"
+  "Accented": "accented-mug",
+  "Color Burst": "color-burst-mug"
 };
 
 async function handleReservation(req, res) {
@@ -204,6 +205,14 @@ async function handleProductOrder(req, res) {
   // calculateShippingCharge THROWS rather than returning $0 when it can
   // resolve no real cost (see lib/printify-shipping.js). Caught here so the
   // customer gets a plain retry message instead of a raw internal error.
+  // A product Printify only ships to some countries (Color Burst: US and
+  // Canada) says so, instead of failing as a generic shipping error below.
+  const shipCountry = (shippingAddress.country || "US").toUpperCase();
+  if (Array.isArray(product.shipsTo) && !product.shipsTo.includes(shipCountry)) {
+    return res.status(400).json({
+      error: `Sorry — the ${product.displayName} can only be shipped to ${product.shipsTo.join(" and ")} at the moment.`
+    });
+  }
   let shippingCharge = 0;
   if (product.shippingSeparate) {
     try {
