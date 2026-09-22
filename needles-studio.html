@@ -1,5 +1,5 @@
 <!-- ============================================================
-     VERSION: V320
+     VERSION: V321
      ============================================================
      THE ONE LINE THAT SAYS WHICH BUILD YOU ARE LOOKING AT.
 
@@ -4183,7 +4183,7 @@ function toggleWorkingImage(){
 // Two copies of a number is exactly how the marker rotted in the first place,
 // so they are not trusted to agree: .githooks/pre-commit moves both together
 // and REFUSES the commit if it ever finds them apart.
-const APP_VERSION='V320';
+const APP_VERSION='V321';
 try{ console.log('%cNeedles\u2019 Studio '+APP_VERSION,'color:#29a3ff;font-weight:700'); }catch(e){}
 
 function getDeviceId(){
@@ -19559,7 +19559,28 @@ Use rich environmental storytelling while keeping the face as the primary focal 
     // had a continuous surface to wrap in the first place.
     const usePanorama = isWraparoundActive && !is40ozWraparoundSplit && wrapIsPanoramic();
     let panoramaData = null;
-    if(usePanorama){
+    // A DESCRIBED WRAP NEVER CALLS THE PANORAMA (Alyx, Sep 2026). The panorama
+    // widens a PHOTO; a described design has none, so that request 400'd and
+    // dropped the customer onto the old seam-slider screen every time. His
+    // fix, in his words: "first just have the AI generate a non-panoramic
+    // image, and then... take that very same image and expand it into a
+    // wraparound image." So: draw the flat picture (one token), then widen it
+    // with extendWrapToProductRatio -- the free canvas mirror that already
+    // fits Face It bands to this same mug -- and cut it into thirds. The
+    // result lands in panoramaData in exactly the shape the mug consumer
+    // below already expects, so nothing downstream changed.
+    if(usePanorama && describeOnlyMode() && product==='mug'){
+      document.getElementById('approveRow').style.display='none';
+      document.getElementById('downloadDesignBtn').style.display='none';
+      setStatus('Drawing your picture...');
+      const flatUrl=await callGenerateAPI({workingImage:null,prompt:describePromptText(),refImageA:null,refImageB:null});
+      if(!flatUrl)throw new Error('No image returned.');
+      setStatus('Wrapping it round the mug...');
+      const wide=await extendWrapToProductRatio(flatUrl,{ratio:MUG_WRAP_RATIO,closes:true});
+      const panels=await sliceFaceItResultIntoPanels(wide);
+      if(!panels)throw new Error('Could not cut the wrap into panels.');
+      panoramaData={leftUrl:panels.left,centerUrl:panels.center,rightUrl:panels.right,panoramaUrl:wide};
+    } else if(usePanorama){
       document.getElementById('approveRow').style.display='none';
       document.getElementById('downloadDesignBtn').style.display='none';
       document.getElementById('wraparoundStandbyPrompt').style.display='block';
