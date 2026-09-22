@@ -16,6 +16,7 @@ import {
   buildSingleImage,
   buildTiledPattern,
   buildCutoutImage,
+  buildCalendarPrintFiles,
   resolveVariant,
   resolvePhotoPosterSelection,
   resolveVariantIdByTitleMatch,
@@ -100,6 +101,12 @@ async function handleStart(req, res) {
     const { frontBuf, backBuf } = await buildFrontBackImages(frontImage, backImage, frontDims, backDims);
     if (frontBuf) printifyImages["mug_front"] = await uploadImageToPrintify(frontBuf, `muggshotz-mockup-front-${Date.now()}.png`);
     if (backBuf) printifyImages["mug_back"] = await uploadImageToPrintify(backBuf, `muggshotz-mockup-back-${Date.now()}.png`);
+
+  } else if (product.layoutType === "single-image" && product.calendarPages) {
+    // The preview shows the cover and January; the order builds all thirteen.
+    if (!image) throw new Error("An image is required to generate a mockup.");
+    const pages = await buildCalendarPrintFiles(image, ["front_cover", "january"]);
+    for (const [pos, buf] of Object.entries(pages)) printifyImages[pos] = await uploadImageToPrintify(buf, `muggshotz-mockup-calendar-${pos}-${Date.now()}.png`);
 
   } else if (product.layoutType === "single-image") {
     if (!image) throw new Error("An image is required to generate a mockup.");

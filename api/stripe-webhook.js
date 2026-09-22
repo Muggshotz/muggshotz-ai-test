@@ -23,7 +23,11 @@ const EMAIL_FROM = "Muggshotz <onboarding@resend.dev>";
 export const config = {
   api: {
     bodyParser: false
-  }
+  },
+  // Placing an order builds print files: the 12 ft wrapping roll takes ~6 s,
+  // a desk calendar draws and uploads thirteen pages. Vercel's default limit
+  // can be as short as 10 s (22 Sep 2026).
+  maxDuration: 60
 };
 
 // Reads the raw request body as a single Buffer, which Stripe's

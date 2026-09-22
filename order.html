@@ -733,6 +733,7 @@ function currentProductKey(){
   if (isWrap())         return 'wrapping-paper';
   if (isOrnament())     return 'ceramic-ornament';
   if (isStandee())      return 'custom-standee';
+  if (isDeskCalendar()) return 'desk-calendar';
   if (isTshirt()) return 'unisex-tshirt';
   if (isStickerSheet()) return 'sticker-sheet';
   if (isNightBuddy()) return 'night-buddy';
@@ -1171,6 +1172,7 @@ function isPuzzle(){ return selectedProductFamily === 'puzzle'; }
 function isWrap(){ return selectedProductFamily === 'wrapping paper'; }
 function isOrnament(){ return selectedProductFamily === 'ornament'; }
 function isStandee(){ return selectedProductFamily === 'standee'; }
+function isDeskCalendar(){ return selectedProductFamily === 'calendar'; }
 function isTshirt(){ return selectedProductFamily === 'tshirt'; }
 function isStickerSheet(){ return selectedProductFamily === 'sticker sheet'; }
 function isNightBuddy(){ return selectedProductFamily === 'night light'; }
@@ -1191,6 +1193,7 @@ function isPostIt(){ return selectedProductFamily === 'post-it note'; }
 const COASTER_PRICE = 29.95;
 const MOUSE_PAD_PRICE = 9.95;
 const STANDEE_PRICE = 16.95; // From Where I Stand, one size (22 Sep 2026)
+const DESKCALENDAR_PRICE = 10.95; // Desk Calendar (22 Sep 2026)
 const BEERSTEIN_PRICE = 24.95; // Beer Stein (22 Sep 2026)
 const DOORMAT_PRICE = 16.95; // Doormat (22 Sep 2026)
 const PLAYINGCARDS_PRICE = 17.95; // Just Playin' (22 Sep 2026)
@@ -1343,6 +1346,7 @@ const BRIDGE_GRID_PRODUCTS = [
   { key: 'wrapping paper', icon: '🎁', label: "It's a Wrap", priceFrom: '$8.95' },
   { key: 'ornament', icon: '🎄', label: 'Ceramic Ornament', priceFrom: '$9.95' },
   { key: 'standee', icon: '🧍', label: 'From Where I Stand', priceFrom: '$16.95' },
+  { key: 'calendar', icon: '📅', label: 'Desk Calendar', priceFrom: '$10.95' },
   { key: 'tshirt', icon: '👕', label: 'T-Shirt', priceFrom: '$7.95' },
   { key: 'sticker sheet', icon: '⭐', label: 'Sticker Sheet', priceFrom: '$9.95' },
   { key: 'night light', icon: '💡', label: 'Night-Buddy', priceFrom: '$12.95' },
@@ -2298,6 +2302,9 @@ function updateSummary(){
   } else if (isBeerStein()) {
     basePrice = BEERSTEIN_PRICE;
     styleSizeLabel = 'Beer Stein';
+  } else if (isDeskCalendar()) {
+    basePrice = DESKCALENDAR_PRICE;
+    styleSizeLabel = 'Desk Calendar';
   } else if (isStandee()) {
     basePrice = STANDEE_PRICE;
     styleSizeLabel = 'From Where I Stand, acrylic standee';
@@ -2709,7 +2716,7 @@ async function submitOrder(){
       referralCode
     };
 
-  } else if (isCoaster() || isMousePad() || isGreetingCard() || isPostIt() || isStandee() || isBeerStein() || isDoormat() || isPlayingCards()) {
+  } else if (isCoaster() || isMousePad() || isGreetingCard() || isPostIt() || isStandee() || isDeskCalendar() || isBeerStein() || isDoormat() || isPlayingCards()) {
     // ADDED 2026-08-27. Both products could be configured, priced and shown a
     // summary here, and then had NO branch of their own -- so they fell
     // through to the final else, which is the MUG branch, and a coaster order
@@ -2740,6 +2747,7 @@ async function submitOrder(){
       deviceId,
       productKey: isMousePad() ? 'mouse-pad'
         : isStandee() ? 'custom-standee'
+        : isDeskCalendar() ? 'desk-calendar'
         : isBeerStein() ? 'beer-stein'
         : isDoormat() ? 'doormat'
         : isPlayingCards() ? 'playing-cards'
@@ -2748,6 +2756,7 @@ async function submitOrder(){
         : (roundCoaster ? 'coaster-set-round' : 'coaster-set'),
       sizeLabel: isMousePad() ? '9" x 8"'
         : isStandee() ? 'One size'
+        : isDeskCalendar() ? '10 x 5'
         : isBeerStein() ? '22oz'
         : isDoormat() ? '18 x 30'
         : isPlayingCards() ? 'Standard Deck'

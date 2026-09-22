@@ -950,6 +950,13 @@ export async function uploadLargeImageToPrintify(buffer, fileName) {
   return data.id;
 }
 
+// DESK CALENDAR (22 Sep 2026): thirteen pages from one picture, dates drawn
+// here (lib/calendar-pages.js). only: which positions to build.
+export async function buildCalendarPrintFiles(imageSource, only = null) {
+  const { buildCalendarPages } = await import("../lib/calendar-pages.js");
+  return buildCalendarPages(await resolveImageBuffer(imageSource), 3075, 1575, undefined, only);
+}
+
 // CUT TO SHAPE (22 Sep 2026, the standee): Printify cuts along the artwork's
 // outline, so the figure is fitted into the print area on a TRANSPARENT field
 // and sent as PNG. buildSingleImage below flattens onto white and would have
@@ -1245,6 +1252,13 @@ export async function placeProductOrder({
     const { frontBuf, backBuf } = await buildFrontBackImages(frontImage, backImage, frontDims, backDims);
     if (frontBuf) printifyImages["mug_front"] = await uploadImageToPrintify(frontBuf, `muggshotz-front-${Date.now()}.png`);
     if (backBuf) printifyImages["mug_back"] = await uploadImageToPrintify(backBuf, `muggshotz-back-${Date.now()}.png`);
+
+  } else if (product.layoutType === "single-image" && product.calendarPages) {
+    if (!image) throw new Error("An image is required.");
+    const pages = await buildCalendarPrintFiles(image);
+    const ids = await Promise.all(Object.entries(pages).map(([pos, buf]) =>
+      uploadImageToPrintify(buf, `muggshotz-calendar-${pos}-${Date.now()}.png`).then(id => [pos, id])));
+    for (const [pos, id] of ids) printifyImages[pos] = id;
 
   } else if (product.layoutType === "single-image") {
     if (!image) throw new Error("An image is required.");
