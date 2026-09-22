@@ -1,5 +1,5 @@
 <!-- ============================================================
-     VERSION: V345
+     VERSION: V346
      ============================================================
      THE ONE LINE THAT SAYS WHICH BUILD YOU ARE LOOKING AT.
 
@@ -4365,7 +4365,7 @@ function toggleWorkingImage(){
 // Two copies of a number is exactly how the marker rotted in the first place,
 // so they are not trusted to agree: .githooks/pre-commit moves both together
 // and REFUSES the commit if it ever finds them apart.
-const APP_VERSION='V345';
+const APP_VERSION='V346';
 try{ console.log('%cNeedles\u2019 Studio '+APP_VERSION,'color:#29a3ff;font-weight:700'); }catch(e){}
 
 function getDeviceId(){
@@ -17544,7 +17544,10 @@ const MUG3D = (function(){
     // puts the print 90% of the way round, the gap at the handle.
     'beer-stein': {
       totalH:6.58, maxR:1.97, bandR:1.65,
-      band:{ h:3.70, y:2.95, wrapIn:9.325 },
+      // fit:'contain' -- the stein prints through buildSingleImage in
+      // api/create-printify-order.js, which fits the whole picture inside the
+      // print area on white rather than cropping it. The band shows the same.
+      band:{ h:3.70, y:2.95, wrapIn:9.325, fit:'contain' },
       // The bead rows on the two raised bands, as beads rather than a smooth
       // roll: [height, radius the beads sit at, bead size, beads round].
       beads:[[0.72,1.665,0.062,84],[0.88,1.665,0.062,84],[5.00,1.660,0.060,86],[5.14,1.660,0.060,86],
@@ -17784,6 +17787,7 @@ const MUG3D = (function(){
       // the body's own taper.
       tumblerBands(T).forEach(band=>{
         const st=makeTex(band.wrapIn/band.h);
+        st.fit=band.fit||'cover';
         const mesh=new THREE.Mesh(bandGeo(THREE,T,band),
           new THREE.MeshPhysicalMaterial(Object.assign({map:st.tex, side:THREE.FrontSide, transparent:true,
             // The other half of the fix, and the one that does not depend on
@@ -17963,7 +17967,17 @@ const MUG3D = (function(){
     const W=st.canvas.width, Hc=st.canvas.height;
     const g=st.canvas.getContext('2d');
     g.clearRect(0,0,W,Hc);
-    if(img){
+    if(img && st.fit==='contain'){
+      // The whole picture, fitted inside the band on white, as it prints.
+      // The canvas is stretched back to the band's shape by the UVs, so the
+      // fit is worked in band units and then scaled to the canvas.
+      const want=st.aspect||(W/Hc), have=img.width/img.height;
+      const fw=have>want?1:have/want, fh=have>want?want/have:1;
+      const dw=Math.round(W*fw), dh=Math.round(Hc*fh);
+      g.fillStyle='#ffffff'; g.fillRect(0,0,W,Hc);
+      g.imageSmoothingEnabled=true; g.imageSmoothingQuality='high';
+      g.drawImage(img,Math.round((W-dw)/2),Math.round((Hc-dh)/2),dw,dh);
+    } else if(img){
       // The crop follows the BAND's proportions, not the canvas's.
       const want=st.aspect||(W/Hc), have=img.width/img.height;
       let sw,sh,sx,sy;
