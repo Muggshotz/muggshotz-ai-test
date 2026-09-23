@@ -24,10 +24,14 @@ const CARDS = {
 async function pickProduct(page, val) {
   await page.click('#postUploadForkRow button:has-text("Select Your Product")');
   await T(page, 700);
-  await page.locator(`#productCard .btn-select[data-val="${val}"]`).click({ force: true });
+  await tap(page, `#productCard .btn-select[data-val="${val}"]`);
   await T(page, 1200);
   await dismissAlerts(page);
 }
+// A click by the element, not by where it sits on screen: the studio scrolls
+// itself smoothly as panels open, and a click aimed at a moving tile can land
+// outside the viewport -- a test that misses, not a page that is broken.
+const tap = (page, sel) => page.evaluate((sel) => { const el = document.querySelector(sel); if (!el) throw new Error('no ' + sel); el.click(); }, sel);
 
 const scenarios = {};
 for (const [val, cardId] of Object.entries(CARDS)) {
@@ -55,23 +59,23 @@ for (const [val, cardId] of Object.entries(CARDS)) {
     if (!pics.back) return `FAIL: the ${val} card has no Back button`;
 
     // Back leaves the card and frees the grid: a different product can be picked.
-    await page.click(`#${cardId} button[onclick="optionCardBack()"]`);
+    await tap(page, `#${cardId} button[onclick="optionCardBack()"]`);
     await T(page, 900);
     const after = await page.evaluate(() => [...document.body.classList].filter((c) => c.endsWith('-focus')));
     if (after.length) return `FAIL: Back left a spotlight on: ${after.join(', ')}`;
-    await page.locator('#productCard .btn-select[data-val="mouse pad"]').click({ force: true });
+    await tap(page, '#productCard .btn-select[data-val="mouse pad"]');
     await T(page, 1200);
     await dismissAlerts(page);
     const moved = await page.evaluate(() => product);
     if (moved !== 'mouse pad') return `FAIL: after Back, picking the mouse pad left product=${moved}`;
 
     // Back from the description box returns to the option card.
-    await page.locator(`#productCard .btn-select[data-val="${val}"]`).click({ force: true });
+    await tap(page, `#productCard .btn-select[data-val="${val}"]`);
     await T(page, 1200);
     await dismissAlerts(page);
-    await page.locator(`#${cardId} .btn-select`).first().click({ force: true });
+    await tap(page, `#${cardId} .btn-select`);
     // The shirt goes on once it has a colour as well as a size.
-    if (val === 'tshirt') await page.locator('#tshirtColorGrid .color-btn').first().click({ force: true });
+    if (val === 'tshirt') await tap(page, '#tshirtColorGrid .color-btn');
     await T(page, 1200);
     await dismissAlerts(page);
     const atIdea = await page.evaluate(() => document.body.classList.contains('ideafirst-focus'));
