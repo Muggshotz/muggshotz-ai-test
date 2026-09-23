@@ -977,6 +977,19 @@ This magenta fill is a placeholder that will be programmatically removed after g
       : "";
 
 
+    // A STRIP ON THE PHOTO LANE (Alyx, 22 Sep 2026: the 10 x 3 car magnet).
+    // The same letterbox the described lane uses (see the textOnly branch):
+    // a print wider than the widest canvas is painted as a strip across the
+    // middle, pure white above and below, and the studio trims the white off.
+    // Sent only when the studio sends bandRatio; every other request is as it was.
+    const photoStrip = Number(bandRatio) > 1.6 ? Number(bandRatio) : 0;
+    const stripInstruction = photoStrip
+      ? `
+CANVAS SHAPE REQUIREMENT (technical printing instruction, not visible to the customer):
+This prints on a strip exactly ${photoStrip} times wider than it is tall. Compose the whole picture as ONE strip of that exact proportion, centred vertically and running the full width of the canvas from the left edge to the right edge. The canvas above and below the strip must be pure flat white (#FFFFFF), with a clean straight edge where the strip begins and ends -- that white is trimmed off by software. Keep every face, head and word inside the strip. The strip itself is full-bleed, edge to edge with no frame; the white above and below it is not a border or a frame, it is empty canvas outside the print.
+`
+      : "";
+
     const finalPrompt = isPanelContinuation
       ? `${panelContinuationPrompt}
 ${buildStyleBlock(styleDirective, styleIsDefault)}`
@@ -987,6 +1000,7 @@ ${prompt}
 ${backgroundInstruction}
 ${currentDesignInstruction}
 ${chromaKeyInstruction}
+${stripInstruction}
 ${buildStyleBlock(styleDirective, styleIsDefault)}`;
 
     // image comes in as a data URL like "data:image/png;base64,AAAA..."
