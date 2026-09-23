@@ -1,5 +1,5 @@
 <!-- ============================================================
-     VERSION: V359
+     VERSION: V360
      ============================================================
      THE ONE LINE THAT SAYS WHICH BUILD YOU ARE LOOKING AT.
 
@@ -1516,6 +1516,10 @@ const HERO_SETTLE_MS = 1000;
 <div class="note" style="text-align:center;margin:0 0 .75rem">An ordinary-looking black mug, until the hot coffee goes in. Some messages are worth the wait. <b>11oz Smart Mug · <span data-smart-price>$19.95</span></b></div>
 <div class="note" style="margin-top:0;margin-bottom:.4rem;font-weight:700">Pick your surprise</div>
 <div class="grid2" id="surpriseTemplateGrid"></div>
+<div id="surpriseVariantWrap" style="display:none">
+<div class="note" style="margin-top:.9rem;margin-bottom:.4rem;font-weight:700">And on the other side?</div>
+<div class="grid2" id="surpriseVariantGrid"></div>
+</div>
 <div class="note" style="margin-top:.9rem;margin-bottom:.4rem;font-weight:700">Who is it for? The surprise faces them as they hold it.</div>
 <div class="grid2" id="surpriseHandGrid" data-words="which hand: the mug and its surprise carry the pictures">
 <div class="btn-select selected" data-hand="right" onclick="pickSurpriseHand('right')" style="padding:.5rem;font-size:12px">Right-handed</div><div class="btn-select" data-hand="left" onclick="pickSurpriseHand('left')" style="padding:.5rem;font-size:12px">Left-handed</div>
@@ -4534,7 +4538,7 @@ function toggleWorkingImage(){
 // Two copies of a number is exactly how the marker rotted in the first place,
 // so they are not trusted to agree: .githooks/pre-commit moves both together
 // and REFUSES the commit if it ever finds them apart.
-const APP_VERSION='V359';
+const APP_VERSION='V360';
 try{ console.log('%cNeedles\u2019 Studio '+APP_VERSION,'color:#29a3ff;font-weight:700'); }catch(e){}
 
 function getDeviceId(){
@@ -12434,22 +12438,41 @@ const SURPRISE_TEMPLATES={
   'congratulations':{label:'Congratulations',file:'congratulations'},
   'apology':{label:'The Apology',file:'apology'},
   'appeal':{label:'The Appeal',file:'appeal'},
-  'reveal-boy':{label:'Gender Reveal: Boy',file:'reveal-boy'}
+  // "Ready?" is one opener for every reveal; the customer picks what is on
+  // the other side. Girl and twins follow when Bud has painted them.
+  'ready':{label:'Ready?',tile:'ready',variants:{
+    'boy':{label:"It's a boy",file:'reveal-boy'},
+    'expecting':{label:'Any preference?',file:'ready-expecting'}
+  }}
 };
 let selectedSurprise=null;
+let selectedSurpriseVariant=null;
 let selectedSurpriseHand='right';
 function smartMugPriceText(){ return typeof SMART_MUG_PRICE==='number' ? '$'+SMART_MUG_PRICE.toFixed(2) : ''; }
 function surprisePrintUrl(){
   const t=SURPRISE_TEMPLATES[selectedSurprise]; if(!t)return null;
-  return location.origin+'/art/surprise/'+t.file+'-print'+(selectedSurpriseHand==='left'?'-left':'')+'.png';
+  const file=t.variants?(t.variants[selectedSurpriseVariant]||{}).file:t.file; if(!file)return null;
+  return location.origin+'/art/surprise/'+file+'-print'+(selectedSurpriseHand==='left'?'-left':'')+'.png';
 }
 function renderSurpriseTemplates(){
   const grid=document.getElementById('surpriseTemplateGrid'); if(!grid)return;
   grid.innerHTML=Object.entries(SURPRISE_TEMPLATES).map(([k,t])=>
     '<div class="btn-select'+(k===selectedSurprise?' selected':'')+'" data-surprise="'+k+'" style="padding:.5rem" onclick="pickSurprise(\''+k+'\')">'
-    +'<img src="art/options/surprise-'+t.file+'.jpg" alt="" style="width:100%;border-radius:6px;background:#000;margin-bottom:6px"/>'
+    +'<img src="art/options/surprise-'+(t.tile||t.file)+'.jpg" alt="" style="width:100%;border-radius:6px;background:#000;margin-bottom:6px"/>'
     +t.label+'<div class="note" style="margin-top:4px">'+smartMugPriceText()+'</div></div>').join('');
+  renderSurpriseVariants();
   document.querySelectorAll('[data-smart-price]').forEach(el=>el.textContent=smartMugPriceText());
+}
+// A template with variants ("Ready?") asks what is on its other side.
+function renderSurpriseVariants(){
+  const wrap=document.getElementById('surpriseVariantWrap'), grid=document.getElementById('surpriseVariantGrid');
+  if(!wrap||!grid)return;
+  const t=SURPRISE_TEMPLATES[selectedSurprise], v=t&&t.variants;
+  wrap.style.display=v?'block':'none';
+  grid.innerHTML=v?Object.entries(v).map(([k,x])=>
+    '<div class="btn-select'+(k===selectedSurpriseVariant?' selected':'')+'" data-variant="'+k+'" style="padding:.5rem" onclick="pickSurpriseVariant(\''+k+'\')">'
+    +'<img src="art/options/surprise-'+x.file+'.jpg" alt="" style="width:100%;border-radius:6px;background:#000;margin-bottom:6px"/>'
+    +x.label+'<div class="note" style="margin-top:4px">'+smartMugPriceText()+'</div></div>').join(''):'';
 }
 function refreshSurpriseVisibility(){
   const card=document.getElementById('surpriseCard');
@@ -12470,8 +12493,17 @@ function pickSmartMug(){
   smoothScrollToTarget('surpriseCard','center');
 }
 function pickSurprise(key){
+  if(key!==selectedSurprise)selectedSurpriseVariant=null;
   selectedSurprise=key;
   document.querySelectorAll('#surpriseTemplateGrid .btn-select').forEach(b=>b.classList.toggle('selected',b.dataset.surprise===key));
+  renderSurpriseVariants();
+  refreshSurprisePreview();
+  // Nothing to preview until the other side is chosen: land on that choice.
+  if(SURPRISE_TEMPLATES[key]?.variants&&!selectedSurpriseVariant)smoothScrollToTarget('surpriseVariantWrap','center');
+}
+function pickSurpriseVariant(key){
+  selectedSurpriseVariant=key;
+  document.querySelectorAll('#surpriseVariantGrid .btn-select').forEach(b=>b.classList.toggle('selected',b.dataset.variant===key));
   refreshSurprisePreview();
 }
 function pickSurpriseHand(hand){
@@ -12511,6 +12543,7 @@ function goToSurpriseOrder(){
     deviceId:deviceId,
     productIcon:'smart mug',
     preselectedSurprise:selectedSurprise,
+    preselectedSurpriseVariant:selectedSurpriseVariant,
     preselectedSurpriseHand:selectedSurpriseHand
   };
   localStorage.setItem('muggshotz_pending_order',JSON.stringify(orderData));
@@ -23755,7 +23788,7 @@ function resetEverythingFreshStart(){
   document.getElementById('preGenSize15Btn').classList.remove('selected');
   document.getElementById('preGenSize20Btn').classList.remove('selected');
   document.getElementById('preGenSizeSmartBtn')?.classList.remove('selected');
-  selectedSurprise=null; selectedSurpriseHand='right';
+  selectedSurprise=null; selectedSurpriseVariant=null; selectedSurpriseHand='right';
   { const sc=document.getElementById('surpriseCard'); if(sc)sc.style.display='none'; }
   document.getElementById('preGenMugStyleGrid').innerHTML='';
   document.getElementById('preGenMugColorGrid').innerHTML='';

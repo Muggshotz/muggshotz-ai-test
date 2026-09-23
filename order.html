@@ -1438,10 +1438,15 @@ let selectedTshirtColor = (pendingOrder?.preselectedTshirtColor && TSHIRT_COLORS
 // hand were chosen in the studio and the print arrives ready-made.
 const SMART_MUG_PRICE = 19.95;
 const SURPRISE_COLDHOT = { 'proposal': 'art/surprise/proposal-coldhot.jpg' };
-const SURPRISE_LABELS = { 'proposal': 'Will You Marry Me?', 'valentine': 'Will You Be My Valentine?', 'congratulations': 'Congratulations', 'apology': 'The Apology', 'appeal': 'The Appeal', 'reveal-boy': 'Gender Reveal: Boy' };
+const SURPRISE_LABELS = { 'proposal': 'Will You Marry Me?', 'valentine': 'Will You Be My Valentine?', 'congratulations': 'Congratulations', 'apology': 'The Apology', 'appeal': 'The Appeal', 'ready': 'Ready?' };
+const SURPRISE_VARIANT_LABELS = { 'ready': { 'boy': "It's a boy", 'expecting': 'Any preference?' } };
 const selectedSurprise = pendingOrder?.preselectedSurprise || null;
 const selectedSurpriseHand = pendingOrder?.preselectedSurpriseHand === 'left' ? 'left' : 'right';
-function surpriseLabel(){ return SURPRISE_LABELS[selectedSurprise] || 'Surprise'; }
+const selectedSurpriseVariant = pendingOrder?.preselectedSurpriseVariant || null;
+function surpriseLabel(){
+  const v = (SURPRISE_VARIANT_LABELS[selectedSurprise] || {})[selectedSurpriseVariant];
+  return (SURPRISE_LABELS[selectedSurprise] || 'Surprise') + (v ? ' / ' + v : '');
+}
 const CARMAGNET_OPTIONS = { "5 x 5 in": { price: 5.95 }, "7.5 x 4.5 in": { price: 6.95 }, "10 x 3 in": { price: 8.95 } };
 let selectedCarMagnet = "5 x 5 in";
 if (pendingOrder?.preselectedCarMagnet && CARMAGNET_OPTIONS[pendingOrder.preselectedCarMagnet]) {

@@ -99,8 +99,9 @@ scenarios.leftHandedAndThePrints = async (page) => {
   if (!/\/art\/surprise\/valentine-print-left\.png$/.test(src)) return `FAIL: left-handed previews ${src}`;
   const sizes = await page.evaluate(async () => {
     const out = {};
-    for (const k of Object.keys(SURPRISE_TEMPLATES)) for (const h of ['', '-left']) {
-      const u = '/art/surprise/' + SURPRISE_TEMPLATES[k].file + '-print' + h + '.png';
+    const files = Object.values(SURPRISE_TEMPLATES).flatMap((t) => t.variants ? Object.values(t.variants).map((v) => v.file) : [t.file]);
+    for (const f of files) for (const h of ['', '-left']) {
+      const u = '/art/surprise/' + f + '-print' + h + '.png';
       const im = await loadImageFromUrl(u); out[u] = im.naturalWidth + 'x' + im.naturalHeight;
     }
     return out;
@@ -116,6 +117,51 @@ scenarios.leftHandedAndThePrints = async (page) => {
   await T(page, 600);
   if (await vis(page, 'surpriseColdHot')) return 'FAIL: a COLD -> HOT picture shows for a template that has none';
   return `PASS: left-handed swaps to the -left print; all ${Object.keys(sizes).length} prints are 2475 x 1155; the Proposal shows its COLD -> HOT picture`;
+};
+
+// "Ready?" is one opener; the customer picks its other side, and nothing is
+// previewed or ordered until they have.
+scenarios.readyAndItsOtherSide = async (page) => {
+  await toMugSize(page);
+  await tap(page, '#preGenSizeSmartBtn');
+  await T(page, 1500);
+  await tap(page, '#surpriseTemplateGrid .btn-select[data-surprise="ready"]');
+  await T(page, 1200);
+  if (!(await vis(page, 'surpriseVariantWrap'))) return 'FAIL: picking Ready? offers no choice of the other side';
+  if (await vis(page, 'surprisePreviewWrap')) return 'FAIL: Ready? previews before its other side is chosen';
+  const tiles = await page.evaluate(() => [...document.querySelectorAll('#surpriseVariantGrid .btn-select')].map((b) => ({ k: b.dataset.variant, img: !!b.querySelector('img')?.naturalWidth, price: /\$\d/.test(b.innerText) })));
+  if (tiles.map((t) => t.k).join() !== 'boy,expecting') return `FAIL: the other side offers ${tiles.map((t) => t.k).join()}`;
+  if (tiles.some((t) => !t.img || !t.price)) return `FAIL: a variant tile is missing its picture or price: ${JSON.stringify(tiles)}`;
+  const land = await page.evaluate(() => { const r = document.getElementById('surpriseVariantGrid').getBoundingClientRect(); return { top: Math.round(r.top), bottom: Math.round(r.bottom), H: innerHeight }; });
+  if (land.top < 0 || land.bottom > land.H + 2) return `FAIL: picking Ready? does not land on the choice of other side (${JSON.stringify(land)})`;
+  const want = { boy: 'reveal-boy', expecting: 'ready-expecting' };
+  for (const [k, f] of Object.entries(want)) {
+    await tap(page, `#surpriseVariantGrid .btn-select[data-variant="${k}"]`);
+    await T(page, 1200);
+    const src = await page.evaluate(() => document.getElementById('surprisePreview').src);
+    if (!src.endsWith(`/art/surprise/${f}-print.png`)) return `FAIL: Ready? / ${k} previews ${src}`;
+    const c = await page.evaluate(() => { const r = document.getElementById('surpriseContinueBtn').getBoundingClientRect(); return { top: Math.round(r.top), bottom: Math.round(r.bottom), H: innerHeight }; });
+    if (c.top < 0 || c.bottom > c.H + 2) return `FAIL: after picking ${k}, Continue is off screen (${JSON.stringify(c)})`;
+  }
+  // Another template drops the choice; coming back to Ready? asks again.
+  await tap(page, '#surpriseTemplateGrid .btn-select[data-surprise="apology"]');
+  await T(page, 900);
+  if (await vis(page, 'surpriseVariantWrap')) return 'FAIL: the other-side choice stays up for The Apology';
+  await tap(page, '#surpriseTemplateGrid .btn-select[data-surprise="ready"]');
+  await T(page, 900);
+  if (await vis(page, 'surprisePreviewWrap')) return 'FAIL: returning to Ready? previews a side nobody picked';
+  await tap(page, '#surpriseVariantGrid .btn-select[data-variant="expecting"]');
+  await tap(page, '#surpriseHandGrid .btn-select[data-hand="left"]');
+  await T(page, 900);
+  await Promise.all([page.waitForURL(/order\.html/, { timeout: 10000 }), tap(page, '#surpriseContinueBtn')]);
+  await T(page, 3000);
+  const st = await page.evaluate(() => ({
+    pending: JSON.parse(localStorage.getItem('muggshotz_pending_order') || 'null'),
+    note: document.getElementById('smartMugChoiceNote').textContent,
+  }));
+  if (!st.pending.placements.left.endsWith('/art/surprise/ready-expecting-print-left.png')) return `FAIL: the hand-off print is ${st.pending.placements.left}`;
+  if (!/Ready\? \/ Any preference\?/.test(st.note) || !/left-handed/.test(st.note)) return `FAIL: the order card says "${st.note}"`;
+  return 'PASS: Ready? asks for its other side (boy / Any preference?, pictured and priced), previews each, and orders "Ready? / Any preference?" left-handed';
 };
 
 scenarios.theOrderPage = async (page, log) => {
