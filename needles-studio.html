@@ -1,5 +1,5 @@
 <!-- ============================================================
-     VERSION: V354
+     VERSION: V355
      ============================================================
      THE ONE LINE THAT SAYS WHICH BUILD YOU ARE LOOKING AT.
 
@@ -658,6 +658,7 @@ body.airFreshener-option-focus .card:not(#airFreshenerOptionCard){opacity:.35;fi
 body.nightBuddy-option-focus .card:not(#nightBuddyOptionCard){opacity:.35;filter:brightness(.6) saturate(.75);transition:opacity .5s,filter .5s}
 body.stickerSheet-option-focus .card:not(#stickerSheetOptionCard){opacity:.35;filter:brightness(.6) saturate(.75);transition:opacity .5s,filter .5s}
 body.tshirt-option-focus .card:not(#tshirtOptionCard){opacity:.35;filter:brightness(.6) saturate(.75);transition:opacity .5s,filter .5s}
+body.surprise-focus .card:not(#surpriseCard){opacity:.35;filter:brightness(.6) saturate(.75);transition:opacity .5s,filter .5s}
 body.carMagnet-option-focus .card:not(#carMagnetOptionCard){opacity:.35;filter:brightness(.6) saturate(.75);transition:opacity .5s,filter .5s}
 body.businessCards-option-focus .card:not(#businessCardOptionCard){opacity:.35;filter:brightness(.6) saturate(.75);transition:opacity .5s,filter .5s}
 body.wrap-size-focus .card:not(#wrapSizeCard){opacity:.35;filter:brightness(.6) saturate(.75);transition:opacity .5s,filter .5s}
@@ -1509,6 +1510,24 @@ const HERO_SETTLE_MS = 1000;
 <button type="button" class="download-btn" style="margin-top:1rem" onclick="optionCardBack()">← Back</button>
 </div>
 
+<div class="card" id="surpriseCard" style="display:none">
+<div class="card-title">🎁 SURPRISE!!!</div>
+<img src="art/options/smart-mug.jpg" alt="The black smart mug" style="display:block;width:min(100%,150px);margin:0 auto .4rem;border-radius:8px;background:#fff"/>
+<div class="note" style="text-align:center;margin:0 0 .75rem">An ordinary-looking black mug, until the hot coffee goes in. Some messages are worth the wait. <b>11oz Smart Mug · <span data-smart-price>$19.95</span></b></div>
+<div class="note" style="margin-top:0;margin-bottom:.4rem;font-weight:700">Pick your surprise</div>
+<div class="grid2" id="surpriseTemplateGrid"></div>
+<div class="note" style="margin-top:.9rem;margin-bottom:.4rem;font-weight:700">Who is it for? The surprise faces them as they hold it.</div>
+<div class="grid2" id="surpriseHandGrid" data-words="which hand: the mug and its surprise carry the pictures">
+<div class="btn-select selected" data-hand="right" onclick="pickSurpriseHand('right')" style="padding:.5rem;font-size:12px">Right-handed</div><div class="btn-select" data-hand="left" onclick="pickSurpriseHand('left')" style="padding:.5rem;font-size:12px">Left-handed</div>
+</div>
+<div id="surprisePreviewWrap" style="display:none;margin-top:.9rem">
+<div class="note" style="margin-bottom:.4rem">The whole print, laid flat. It wraps once round the mug.</div>
+<img id="surprisePreview" alt="" style="width:100%;border-radius:8px;background:#000"/>
+<button type="button" class="generate-btn" id="surpriseContinueBtn" style="margin-top:.8rem" onclick="goToSurpriseOrder()">🎁 See it on the mug and order</button>
+</div>
+<button type="button" class="download-btn" style="margin-top:1rem" onclick="surpriseBack()">← Back</button>
+</div>
+
 <div class="card" id="wrapSizeCard" style="display:none">
 <div class="card-title">🎁 Sheet or Roll?</div>
 <div class="note" style="margin-top:0;margin-bottom:.75rem">Your picture becomes a repeating pattern across the whole sheet. Pick the size before generating — each is a different roll with its own price.</div>
@@ -1628,6 +1647,10 @@ const HERO_SETTLE_MS = 1000;
 <div class="btn-select" id="preGenSize20Btn" style="padding:.5rem" onclick="pickPreGenMugSize('20oz')">
 <img src="size-20oz.jpg" style="width:100%;border-radius:6px;background:#fff;margin-bottom:6px"/>
 20oz<div class="note" style="margin-top:4px">$24.95</div>
+</div>
+<div class="btn-select" id="preGenSizeSmartBtn" style="padding:.5rem" onclick="pickSmartMug()">
+<img src="art/options/smart-mug.jpg" alt="" style="width:100%;border-radius:6px;background:#fff;margin-bottom:6px"/>
+11oz Smart Mug<div class="note" style="margin-top:4px" data-smart-price>$19.95</div>
 </div>
 </div>
 <button type="button" class="download-btn" style="margin-top:1rem" onclick="mugSizeLockBack()">← Back</button>
@@ -4510,7 +4533,7 @@ function toggleWorkingImage(){
 // Two copies of a number is exactly how the marker rotted in the first place,
 // so they are not trusted to agree: .githooks/pre-commit moves both together
 // and REFUSES the commit if it ever finds them apart.
-const APP_VERSION='V354';
+const APP_VERSION='V355';
 try{ console.log('%cNeedles\u2019 Studio '+APP_VERSION,'color:#29a3ff;font-weight:700'); }catch(e){}
 
 function getDeviceId(){
@@ -12394,6 +12417,97 @@ function refreshCarMagnetVisibility(){
   if(card)card.style.display=(product==='car magnet')?'block':'none';
 }
 
+// SURPRISE!!! -- THE SMART MUG (Alyx, 23 Sep 2026: "The Smart mug may well
+// be the single biggest addition to this whole process that we've ever come
+// up with."). A fourth tile on Coffee Mug Size: Printify's Color Morphing Mug
+// (bp 1156 / pp 28, 11oz, black), which shows nothing until hot coffee goes
+// in. Its designs are finished templates, printed as they are -- nothing is
+// painted, so nothing is spent. Each print is 2475 x 1155, the mug's exact
+// print area, faded into black at every edge. Left-handed swaps the two sides
+// (the print rolled by half its width) so the surprise faces the person
+// holding it.
+const SMART_MUG_PRICE=19.95; // Alyx's price, before shipping: wholesale 9.06 + $10, customer total under $30
+const SURPRISE_TEMPLATES={
+  'valentine':{label:'Will You Be My Valentine?',file:'valentine'},
+  'congratulations':{label:'Congratulations',file:'congratulations'}
+};
+let selectedSurprise=null;
+let selectedSurpriseHand='right';
+function smartMugPriceText(){ return typeof SMART_MUG_PRICE==='number' ? '$'+SMART_MUG_PRICE.toFixed(2) : ''; }
+function surprisePrintUrl(){
+  const t=SURPRISE_TEMPLATES[selectedSurprise]; if(!t)return null;
+  return location.origin+'/art/surprise/'+t.file+'-print'+(selectedSurpriseHand==='left'?'-left':'')+'.png';
+}
+function renderSurpriseTemplates(){
+  const grid=document.getElementById('surpriseTemplateGrid'); if(!grid)return;
+  grid.innerHTML=Object.entries(SURPRISE_TEMPLATES).map(([k,t])=>
+    '<div class="btn-select'+(k===selectedSurprise?' selected':'')+'" data-surprise="'+k+'" style="padding:.5rem" onclick="pickSurprise(\''+k+'\')">'
+    +'<img src="art/options/surprise-'+t.file+'.jpg" alt="" style="width:100%;border-radius:6px;background:#000;margin-bottom:6px"/>'
+    +t.label+'<div class="note" style="margin-top:4px">'+smartMugPriceText()+'</div></div>').join('');
+  document.querySelectorAll('[data-smart-price]').forEach(el=>el.textContent=smartMugPriceText());
+}
+function refreshSurpriseVisibility(){
+  const card=document.getElementById('surpriseCard');
+  if(card)card.style.display=(product==='smart mug')?'block':'none';
+  if(product==='smart mug')renderSurpriseTemplates();
+}
+// The size tile: leave the coffee-mug rail for the smart mug's own.
+function pickSmartMug(){
+  product='smart mug';
+  mugSizeChosenPreGen=false;
+  ['preGenSize11Btn','preGenSize15Btn','preGenSize20Btn'].forEach(id=>document.getElementById(id)?.classList.remove('selected'));
+  document.getElementById('preGenSizeSmartBtn')?.classList.add('selected');
+  refreshMugSizeCardVisibility();
+  refreshMugStyleCardVisibility();
+  refreshMugPrintModeVisibility();
+  refreshSurpriseVisibility();
+  setOptionSpotlight('surprise-focus');
+  smoothScrollToTarget('surpriseCard','center');
+}
+function pickSurprise(key){
+  selectedSurprise=key;
+  document.querySelectorAll('#surpriseTemplateGrid .btn-select').forEach(b=>b.classList.toggle('selected',b.dataset.surprise===key));
+  refreshSurprisePreview();
+}
+function pickSurpriseHand(hand){
+  selectedSurpriseHand=hand;
+  document.querySelectorAll('#surpriseHandGrid .btn-select').forEach(b=>b.classList.toggle('selected',b.dataset.hand===hand));
+  refreshSurprisePreview();
+}
+function refreshSurprisePreview(){
+  const url=surprisePrintUrl(), wrap=document.getElementById('surprisePreviewWrap');
+  if(!wrap)return;
+  wrap.style.display=url?'block':'none';
+  if(url)document.getElementById('surprisePreview').src=url;
+  // The next thing to do is look and press Continue: land on the preview and
+  // its button, not back at the top of the panel with both below the screen.
+  if(url)smoothScrollToTarget('surprisePreviewWrap','end');
+}
+// Back is the panel before: Coffee Mug Size.
+function surpriseBack(){
+  clearAllFocusModes();
+  product='mug';
+  mugSizeChosenPreGen=false;
+  document.getElementById('preGenSizeSmartBtn')?.classList.remove('selected');
+  refreshSurpriseVisibility();
+  refreshMugSizeCardVisibility();
+  refreshMugStyleCardVisibility();
+}
+// The design is the template itself: straight to the order page, which shows
+// Printify's mockup of it on the mug and takes the order.
+function goToSurpriseOrder(){
+  const url=surprisePrintUrl(); if(!url)return;
+  const orderData={
+    placements:{left:url,front:null,right:null},
+    deviceId:deviceId,
+    productIcon:'smart mug',
+    preselectedSurprise:selectedSurprise,
+    preselectedSurpriseHand:selectedSurpriseHand
+  };
+  localStorage.setItem('muggshotz_pending_order',JSON.stringify(orderData));
+  window.location.href='order.html';
+}
+
 // BUSINESS CARDS (Alyx, 23 Sep 2026): one tile, three products -- Taylor's
 // cards (100 or 200, four papers), Print Pigeons' boxed cards, and the metal
 // holder. The choice names the catalog product and size; ratio is the print
@@ -12753,6 +12867,7 @@ function pick(el,type){
     refreshOrnamentShapeVisibility();
     refreshBusinessCardVisibility();
     refreshCarMagnetVisibility();
+    refreshSurpriseVisibility();
     refreshTshirtVisibility();
     refreshStickerSheetVisibility();
     refreshNightBuddyVisibility();
@@ -20056,6 +20171,7 @@ async function callGenerateAPI({ workingImage, prompt, refImageA, refImageB, tem
 }
 
 async function generate(){
+  if(product==='smart mug'){ smoothScrollToTarget('surpriseCard','center'); return; }
   // An exact transfer never calls the AI, so it costs no image credits --
   // an out-of-credits customer must NOT be blocked from it. A declared-BYO
   // customer is a transfer by definition. And an empty box on WRAPAROUND
@@ -23629,6 +23745,9 @@ function resetEverythingFreshStart(){
   document.getElementById('preGenSize11Btn').classList.remove('selected');
   document.getElementById('preGenSize15Btn').classList.remove('selected');
   document.getElementById('preGenSize20Btn').classList.remove('selected');
+  document.getElementById('preGenSizeSmartBtn')?.classList.remove('selected');
+  selectedSurprise=null; selectedSurpriseHand='right';
+  { const sc=document.getElementById('surpriseCard'); if(sc)sc.style.display='none'; }
   document.getElementById('preGenMugStyleGrid').innerHTML='';
   document.getElementById('preGenMugColorGrid').innerHTML='';
   document.getElementById('preGenMugColorWrap').style.display='none';

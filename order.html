@@ -338,6 +338,13 @@ body.studio-driven #orderHeadlineCard{display:block}
 <div class="note" id="tshirtMockupNote" style="margin-top:.5rem;text-align:center;display:none"></div>
 <img id="tshirtMockupImg" style="display:none;width:100%;border-radius:12px;border:1px solid var(--accent);margin-top:.75rem"/>
 </div>
+<div class="card" id="smartMugCard" style="display:none">
+<div class="card-title">🎁 SURPRISE!!! Smart Mug</div>
+<div class="note" id="smartMugChoiceNote" style="margin-top:0"></div>
+<div class="note" id="smartMugMockupBtn" style="text-align:center;margin-top:1rem;color:var(--accent-soft);font-weight:600">🔍 Click Image To Enlarge</div>
+<div class="note" id="smartMugMockupNote" style="margin-top:.5rem;text-align:center;display:none"></div>
+<img id="smartMugMockupImg" style="display:none;width:100%;border-radius:12px;border:1px solid var(--accent);margin-top:.75rem"/>
+</div>
 <div class="card" id="carMagnetOptionCard" style="display:none">
 <div class="card-title">🚗 Car Magnet Size</div>
 <div class="grid2" id="carMagnetOptionGrid"></div>
@@ -887,6 +894,7 @@ function currentProductKey(){
   if (isStandee())      return 'custom-standee';
   if (isLuggageTag()) return 'luggage-tag';
   if (isCarMagnet()) return 'car-magnet';
+  if (isSmartMug()) return 'smart-mug';
   if (isBusinessCards()) return BUSINESS_CARD_OPTIONS[selectedBusinessCard].key;
   if (isDeskCalendar()) return 'desk-calendar';
   if (isTshirt()) return 'unisex-tshirt';
@@ -1204,7 +1212,9 @@ function scrollToCheckout(){
 async function runMockupJob(body, btn, noteEl, imgEl){
   // The studio already showed and approved the mockup; this page does not
   // ask Printify for another one (a product created per visit, for nothing).
-  if (studioDriven) return null;
+  // The smart mug is the exception: its template goes from the SURPRISE!!!
+  // panel straight here, so this is where the customer first sees it on the mug.
+  if (studioDriven && !isSmartMug()) return null;
   if (btn) { btn.disabled = true; }
   noteEl.style.display = 'none';
   hideMockupSideCta();
@@ -1332,6 +1342,7 @@ function isOrnament(){ return selectedProductFamily === 'ornament'; }
 function isStandee(){ return selectedProductFamily === 'standee'; }
 function isLuggageTag(){ return selectedProductFamily === 'luggage tag'; }
 function isCarMagnet(){ return selectedProductFamily === 'car magnet'; }
+function isSmartMug(){ return selectedProductFamily === 'smart mug'; }
 function isBusinessCards(){ return selectedProductFamily === 'business cards'; }
 function isDeskCalendar(){ return selectedProductFamily === 'calendar'; }
 function isTshirt(){ return selectedProductFamily === 'tshirt'; }
@@ -1422,6 +1433,13 @@ const TSHIRT_COLORS = ["White", "Black", "Sport Grey", "Navy", "Red", "Royal", "
 let selectedTshirtColor = (pendingOrder?.preselectedTshirtColor && TSHIRT_COLORS.includes(pendingOrder.preselectedTshirtColor)) ? pendingOrder.preselectedTshirtColor : "Black";
 
 // CAR MAGNET (22 Sep 2026). Keys match lib/products-catalog.js.
+// SURPRISE!!! -- the smart mug (23 Sep 2026). One size; the template and the
+// hand were chosen in the studio and the print arrives ready-made.
+const SMART_MUG_PRICE = 19.95;
+const SURPRISE_LABELS = { 'valentine': 'Will You Be My Valentine?', 'congratulations': 'Congratulations' };
+const selectedSurprise = pendingOrder?.preselectedSurprise || null;
+const selectedSurpriseHand = pendingOrder?.preselectedSurpriseHand === 'left' ? 'left' : 'right';
+function surpriseLabel(){ return SURPRISE_LABELS[selectedSurprise] || 'Surprise'; }
 const CARMAGNET_OPTIONS = { "5 x 5 in": { price: 5.95 }, "7.5 x 4.5 in": { price: 6.95 }, "10 x 3 in": { price: 8.95 } };
 let selectedCarMagnet = "5 x 5 in";
 if (pendingOrder?.preselectedCarMagnet && CARMAGNET_OPTIONS[pendingOrder.preselectedCarMagnet]) {
@@ -2305,6 +2323,8 @@ function runAutoMockupForMode(){
   } else if (isTshirt()) {
     if (!selectedTshirt) return;
     fetchSingleImageMockup('unisex-tshirt', selectedTshirt, selectedTshirtColor, 'tshirtMockupBtn', 'tshirtMockupNote', 'tshirtMockupImg');
+  } else if (isSmartMug()) {
+    fetchSingleImageMockup('smart-mug', '11oz', null, 'smartMugMockupBtn', 'smartMugMockupNote', 'smartMugMockupImg');
   } else if (isCarMagnet()) {
     if (!selectedCarMagnet) return;
     fetchSingleImageMockup('car-magnet', selectedCarMagnet, null, 'carMagnetMockupBtn', 'carMagnetMockupNote', 'carMagnetMockupImg');
@@ -2531,6 +2551,9 @@ function updateSummary(){
   } else if (isTshirt()) {
     basePrice = TSHIRT_OPTIONS[selectedTshirt].price;
     styleSizeLabel = 'T-Shirt, ' + selectedTshirt + ', ' + selectedTshirtColor;
+  } else if (isSmartMug()) {
+    basePrice = SMART_MUG_PRICE;
+    styleSizeLabel = 'SURPRISE!!! Smart Mug, ' + surpriseLabel();
   } else if (isCarMagnet()) {
     basePrice = CARMAGNET_OPTIONS[selectedCarMagnet].price;
     styleSizeLabel = 'Car Magnet' + ', ' + selectedCarMagnet;
@@ -2923,6 +2946,24 @@ function buildOrderItemBody(fullName, shippingAddress){
       referralCode
     };
 
+  } else if (isSmartMug()) {
+    const image = pendingOrder?.placements?.left || null;
+    if (!image) {
+      setStatus('No surprise chosen — please go back and pick one first.', true);
+      return null;
+    }
+    body = {
+      type: 'mug_order',
+      deviceId,
+      productKey: 'smart-mug',
+      sizeLabel: '11oz',
+      image,
+      customerName: fullName,
+      giftMessage: giftMessageEnabled ? document.getElementById('giftMessageText').value.trim() : null,
+      shippingAddress,
+      referralCode
+    };
+
   } else if (isCarMagnet()) {
     const image = pendingOrder?.placements?.left || pendingOrder?.placements?.front || pendingOrder?.placements?.right || null;
     if (!image) {
@@ -3268,7 +3309,7 @@ function setupPageForMode(){
 const ALL_PRODUCT_SPECIFIC_CARDS = [
   'mugStyleCard','sizeCard','livePreviewCard','colorCard','fullWrapCard',
   'travelMugStyleCard','travelColorCard','suitcaseSizeCard','phoneCaseCard',
-  'toteBagSizeCard','toteBagColorCard','puzzleSizeCard','wrapSizeCard','ornamentShapeCard','businessCardOptionCard','carMagnetOptionCard','tshirtOptionCard','stickerSheetOptionCard','nightBuddyOptionCard','airFreshenerOptionCard','photoPosterCard'
+  'toteBagSizeCard','toteBagColorCard','puzzleSizeCard','wrapSizeCard','ornamentShapeCard','businessCardOptionCard','carMagnetOptionCard','smartMugCard','tshirtOptionCard','stickerSheetOptionCard','nightBuddyOptionCard','airFreshenerOptionCard','photoPosterCard'
 ];
 function hideAllProductCards(){
   ALL_PRODUCT_SPECIFIC_CARDS.forEach(id => {
@@ -3361,6 +3402,14 @@ if (isTravelMug()) {
     hideAllProductCards();
     document.getElementById('tshirtOptionCard').style.display = 'block';
     renderTshirtGrid();
+  } else if (isSmartMug()) {
+    hideAllProductCards();
+    document.getElementById('smartMugCard').style.display = 'block';
+    document.getElementById('smartMugChoiceNote').textContent =
+      surpriseLabel() + ' · for a ' + selectedSurpriseHand + '-handed recipient · $' + SMART_MUG_PRICE.toFixed(2);
+    document.getElementById('previewNote').textContent =
+      'Your surprise, laid flat. It wraps once round the black mug and appears when hot coffee goes in.';
+    scheduleAutoMockupFetch();
   } else if (isCarMagnet()) {
     hideAllProductCards();
     document.getElementById('carMagnetOptionCard').style.display = 'block';
@@ -3420,7 +3469,7 @@ if (isTravelMug()) {
 function applyStudioDrivenLayout(){
   if (!studioDriven) return;
   const fam = BRIDGE_GRID_PRODUCTS.find(p => p.key === selectedProductFamily);
-  const name = fam ? fam.label : (selectedProductFamily || 'Your product');
+  const name = isSmartMug() ? 'SURPRISE!!! Smart Mug' : fam ? fam.label : (selectedProductFamily || 'Your product');
   document.getElementById('orderHeadlineName').textContent = name;
   document.getElementById('orderHeadlineDetail').textContent = document.getElementById('summaryStyleSize')?.textContent || '';
   const pl = pendingOrder.placements || {};
