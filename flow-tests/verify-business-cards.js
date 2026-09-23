@@ -84,6 +84,59 @@ for (const [opt, c] of Object.entries(CASES)) {
   };
 }
 
+// YOUR CARD (Alyx, 23 Sep 2026: "How is there no text box?"): after
+// painting, a card gets a panel with the details boxes, where the words go,
+// and Size/pan for the picture. The painter is told to paint no lettering.
+// Yes saves the card exactly as the panel shows it, and that is what the
+// mockup is made from.
+OPTS.yourCard = { echoUploads: true };
+scenarios.yourCard = async (page, log) => {
+  await page.click('#postUploadForkRow button:has-text("Select Your Product")');
+  await T(page, 700);
+  await page.locator('#productCard .btn-select[data-val="business cards"]').click({ force: true });
+  await T(page, 900);
+  await page.click('#businessCardOptionGrid .btn-select[data-opt="100 cards"]');
+  await T(page, 1200); await dismissAlerts(page);
+  await paint(page, log);
+  const gen = log.apiCalls.find((x) => x.path === '/api/generate');
+  if (!/no words, letters or numbers/.test(gen.prompt || '')) return 'FAIL: the painter was not told to leave the lettering off the card';
+  await T(page, 1200);
+  const st = await page.evaluate(() => {
+    const w = document.getElementById('cardLayoutWrap'), r = w.getBoundingClientRect();
+    return { shown: getComputedStyle(w).display !== 'none', top: Math.round(r.top), H: innerHeight,
+      caption: document.getElementById('captionCard').classList.contains('visible') };
+  });
+  if (!st.shown) return 'FAIL: no Your Card panel after painting a business card';
+  if (st.caption) return 'FAIL: the one-line caption tool shows beside Your Card';
+  if (st.top < 0 || st.top > st.H * 0.3) return `FAIL: the page did not land on Your Card (its top at ${st.top} of ${st.H})`;
+  const before = await page.evaluate(() => findDesignById(currentDesignId).url);
+  await page.fill('#cardName', 'Alyx Needles');
+  await page.fill('#cardTitle', 'Designer');
+  await page.fill('#cardPhone', '(555) 010-0100');
+  await page.fill('#cardEmail', 'hello@example.com');
+  await page.evaluate(() => { const z = document.getElementById('cardZoom'); z.value = '160'; z.dispatchEvent(new Event('input')); });
+  // The words land on the right by default: that side of the preview must
+  // now carry white text over a shade.
+  const shaded = await page.evaluate(() => {
+    const c = document.getElementById('cardLayoutCanvas'), g = c.getContext('2d');
+    const d = g.getImageData(Math.round(c.width * 0.55), 0, Math.round(c.width * 0.4), c.height).data;
+    let white = 0; for (let i = 0; i < d.length; i += 4) if (d[i] > 235 && d[i + 1] > 235 && d[i + 2] > 235) white++;
+    return { white, ratio: c.width / c.height };
+  });
+  if (shaded.white < 200) return `FAIL: the preview shows no words on the right (${shaded.white} white pixels)`;
+  log.apiCalls.length = 0;
+  await page.locator('#approveRow button:has-text("Yes")').first().click();
+  await passFadePage(page);
+  await T(page, 8000);
+  const start = log.apiCalls.find((x) => x.path === '/api/start-mockup' && x.action === 'start');
+  if (!start) return 'FAIL: Yes fetched no mockup';
+  const img = start.body.image;
+  if (!img || img === before) return 'FAIL: the mockup was made from the painting, not the card with its details';
+  const out = await page.evaluate(async (u) => { const im = await loadImageFromUrl(u); return im.naturalWidth / im.naturalHeight; }, img);
+  if (Math.abs(out - 1125 / 675) > 0.01) return `FAIL: the saved card is ${out.toFixed(3)}:1, not the card's 1.667:1`;
+  return `PASS: Your Card opens and lands after painting (no caption tool, painter told no lettering); typed details show on the right; Yes sends the card itself, ${out.toFixed(3)}:1, to the mockup`;
+};
+
 OPTS.luggageTag = { echoUploads: true };
 scenarios.luggageTag = async (page, log) => {
   await page.click('#postUploadForkRow button:has-text("Select Your Product")');

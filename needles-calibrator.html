@@ -687,13 +687,16 @@ saveConnBtn.addEventListener('click', () => {
 // ===== Sync targets registry (unchanged from single-clip version) =====
 const DEFAULT_TARGETS = [
   { key: 'needles-studio', label: "Needles' Studio", path: 'needles-studio.html', enabled: true },
-  { key: 'excelsior', label: 'Excelsior', path: 'index.html', enabled: true }
+  { key: 'excelsior', label: 'Excelsior', path: 'excelsior.html', enabled: true }
 ];
 
 let TARGETS = [];
 try{
   const savedTargets = JSON.parse(localStorage.getItem('needlesCalibratorTargets') || 'null');
   TARGETS = Array.isArray(savedTargets) && savedTargets.length ? savedTargets : DEFAULT_TARGETS.slice();
+  // The old generator moved from index.html to excelsior.html (23 Sep 2026);
+  // index.html now only forwards to the studio. A saved list keeps up.
+  TARGETS.forEach(t => { if(t && t.path === 'index.html') t.path = 'excelsior.html'; });
 }catch(e){
   TARGETS = DEFAULT_TARGETS.slice();
 }

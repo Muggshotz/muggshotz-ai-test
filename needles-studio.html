@@ -1,5 +1,5 @@
 <!-- ============================================================
-     VERSION: V363
+     VERSION: V364
      ============================================================
      THE ONE LINE THAT SAYS WHICH BUILD YOU ARE LOOKING AT.
 
@@ -1231,6 +1231,34 @@ const HERO_SETTLE_MS = 1000;
 </div>
 <input type="file" id="fileInput" accept="image/*" style="display:none"/><img id="previewImg" class="preview-img" style="display:none"/>
 <div id="approveRow" style="display:none">
+<!-- YOUR CARD (Alyx, 23 Sep 2026: "How is there no text box?"). Business
+     cards only: the details typed here are set on the card by the studio,
+     never painted, and the painting is sized and moved inside the card's
+     exact shape. Yes below saves the card as shown. -->
+<div id="cardLayoutWrap" style="display:none;margin-top:.9rem">
+<div class="card-title">💼 Your Card</div>
+<div class="note" style="margin-top:0;margin-bottom:.6rem">Type what goes on the card. It is printed exactly as you type it. Leave any box empty to leave it off.</div>
+<canvas id="cardLayoutCanvas" style="display:block;width:100%;max-width:340px;margin:0 auto .7rem;border-radius:8px;background:#222"></canvas>
+<div class="grid2" style="gap:8px">
+<input type="text" class="caption-input" id="cardName" placeholder="Name" oninput="drawCardLayout()"/>
+<input type="text" class="caption-input" id="cardTitle" placeholder="Title" oninput="drawCardLayout()"/>
+<input type="text" class="caption-input" id="cardCompany" placeholder="Company" oninput="drawCardLayout()"/>
+<input type="tel" class="caption-input" id="cardPhone" placeholder="Phone" oninput="drawCardLayout()"/>
+<input type="email" class="caption-input" id="cardEmail" placeholder="Email" oninput="drawCardLayout()"/>
+<input type="text" class="caption-input" id="cardWebsite" placeholder="Website" oninput="drawCardLayout()"/>
+</div>
+<div class="note" style="margin-top:.8rem;margin-bottom:.35rem;font-weight:700">Where the words go</div>
+<div class="grid3" id="cardSideGrid" data-words="text placement: the card above is the picture">
+<div class="btn-select selected" data-card-side="right" onclick="pickCardSide('right')" style="padding:.45rem;font-size:12px">Right</div><div class="btn-select" data-card-side="left" onclick="pickCardSide('left')" style="padding:.45rem;font-size:12px">Left</div><div class="btn-select" data-card-side="bottom" onclick="pickCardSide('bottom')" style="padding:.45rem;font-size:12px">Bottom</div>
+</div>
+<div class="grid2" id="cardToneGrid" data-words="text colour: the card above is the picture" style="margin-top:6px">
+<div class="btn-select selected" data-card-tone="light" onclick="pickCardTone('light')" style="padding:.45rem;font-size:12px">Light words</div><div class="btn-select" data-card-tone="dark" onclick="pickCardTone('dark')" style="padding:.45rem;font-size:12px">Dark words</div>
+</div>
+<div class="note" style="margin-top:.8rem;margin-bottom:.2rem;font-weight:700">Fit the picture to the card</div>
+<div class="cap-row"><label>Size</label><input type="range" id="cardZoom" min="100" max="250" value="100" oninput="drawCardLayout()"/></div>
+<div class="cap-row"><label>Left / Right</label><input type="range" id="cardPanX" min="-100" max="100" value="0" oninput="drawCardLayout()"/></div>
+<div class="cap-row"><label>Up / Down</label><input type="range" id="cardPanY" min="-100" max="100" value="0" oninput="drawCardLayout()"/></div>
+</div>
 <div class="note" style="margin-top:.9rem;text-align:center;font-size:13px;color:#29a3ff">Are you satisfied with this design?</div>
 <!-- Yes and No, side by side, the way every prop flow already does it. The
      "No" used to live outside approveRow entirely, and since the landing
@@ -4540,7 +4568,7 @@ function toggleWorkingImage(){
 // Two copies of a number is exactly how the marker rotted in the first place,
 // so they are not trusted to agree: .githooks/pre-commit moves both together
 // and REFUSES the commit if it ever finds them apart.
-const APP_VERSION='V363';
+const APP_VERSION='V364';
 try{ console.log('%cNeedles\u2019 Studio '+APP_VERSION,'color:#29a3ff;font-weight:700'); }catch(e){}
 
 function getDeviceId(){
@@ -12599,7 +12627,115 @@ function businessCardRule(){
   const o=BUSINESS_CARD_OPTIONS[selectedBusinessCard];
   const what=!o?'a business card':o.key==='business-card-holder'?'the lid of a metal business card holder':'a business card';
   const shape=!o?'about 1.7':o.key==='business-card-holder'?'about 1.8':o.key==='business-cards-boxed'?'about 1.5':'about 1.7';
-  return 'artwork for '+what+': a landscape design '+shape+' times wider than it is tall, bold and simple, any name, title or contact details the customer gives written clean and readable, clear of the edges';
+  // No lettering: the name and details are set on the card afterwards, from
+  // the Your Card boxes, so they are always spelled exactly as typed.
+  return 'artwork for '+what+': a landscape design '+shape+' times wider than it is tall, bold and simple, with no words, letters or numbers anywhere in it -- the name and details are set on the card afterwards -- and the right-hand third kept calm and uncluttered so they read clearly';
+}
+// YOUR CARD (Alyx, 23 Sep 2026: "a mechanism through which I can resize my
+// card according to the size of the template, and ... enter data and
+// information. How is there no text box?"). The painting, whole and uncut,
+// is drawn to fill the card's exact shape; Size zooms into it and the two
+// sliders move it, never leaving an empty edge. The details are set in a
+// block on one side over a soft shade so they read on any picture, and are
+// fitted to the space: the name large, the rest smaller.
+let cardLayoutSourceUrl=null;
+const cardLayout={side:'right',tone:'light',img:null};
+function cardRatio(){ const o=BUSINESS_CARD_OPTIONS[selectedBusinessCard]; return o?o.ratio:1125/675; }
+function cardField(id){ const el=document.getElementById(id); return el?el.value.trim():''; }
+function cardLines(){
+  const name=cardField('cardName'), title=cardField('cardTitle'), company=cardField('cardCompany');
+  const contact=[cardField('cardPhone'),cardField('cardEmail'),cardField('cardWebsite')].filter(Boolean);
+  const out=[];
+  if(name)out.push({t:name,rel:1,bold:true});
+  if(cardLayout.side==='bottom'){
+    const mid=[title,company].filter(Boolean).join('  ·  ');
+    if(mid)out.push({t:mid,rel:.5});
+    if(contact.length)out.push({t:contact.join('  ·  '),rel:.42});
+  } else {
+    if(title)out.push({t:title,rel:.5});
+    if(company)out.push({t:company,rel:.5});
+    contact.forEach((c,i)=>out.push({t:c,rel:.44,gap:i===0}));
+  }
+  return out;
+}
+function cardFont(line,px){ return line.bold ? '700 '+px+'px "Playfair Display", Georgia, serif' : '500 '+px+'px system-ui, "Segoe UI", Arial, sans-serif'; }
+function renderCardOnto(canvas,W){
+  const img=cardLayout.img; if(!img)return;
+  const r=cardRatio(), H=Math.round(W/r);
+  canvas.width=W; canvas.height=H;
+  const g=canvas.getContext('2d');
+  g.fillStyle='#000'; g.fillRect(0,0,W,H);
+  // The picture: cover the card, then Size zooms in; the pan sliders move it
+  // within the slack, so an edge is never left empty.
+  const iw=img.naturalWidth, ih=img.naturalHeight;
+  const zoom=(parseFloat(document.getElementById('cardZoom').value)||100)/100;
+  const sc=Math.max(W/iw,H/ih)*zoom, dw=iw*sc, dh=ih*sc;
+  const px=(parseFloat(document.getElementById('cardPanX').value)||0)/100, py=(parseFloat(document.getElementById('cardPanY').value)||0)/100;
+  const x=(W-dw)/2-px*(dw-W)/2, y=(H-dh)/2-py*(dh-H)/2;
+  g.imageSmoothingEnabled=true; g.imageSmoothingQuality='high';
+  g.drawImage(img,x,y,dw,dh);
+  const lines=cardLines(); if(!lines.length)return;
+  // The words' zone and its shade.
+  const side=cardLayout.side, light=cardLayout.tone==='light';
+  const pad=Math.round(H*0.08);
+  let zx,zy,zw,zh,grad;
+  if(side==='bottom'){ zx=pad; zw=W-2*pad; zh=Math.round(H*0.36); zy=H-pad-zh; grad=g.createLinearGradient(0,H*0.5,0,H); }
+  else { zw=Math.round(W*0.44); zh=H-2*pad; zy=pad; zx=side==='right'?W-pad-zw:pad; grad=side==='right'?g.createLinearGradient(W*0.45,0,W,0):g.createLinearGradient(W*0.55,0,0,0); }
+  const shade=light?'0,0,0':'255,255,255';
+  grad.addColorStop(0,'rgba('+shade+',0)'); grad.addColorStop(0.45,'rgba('+shade+','+(light?0.5:0.62)+')'); grad.addColorStop(1,'rgba('+shade+','+(light?0.62:0.75)+')');
+  g.fillStyle=grad;
+  if(side==='bottom')g.fillRect(0,H*0.5,W,H*0.5); else if(side==='right')g.fillRect(W*0.45,0,W*0.55,H); else g.fillRect(0,0,W*0.55,H);
+  // One size for the block: as large as fits the zone's height and every
+  // line's width, the name no taller than a sixth of the card.
+  const LH=1.28, gapPx=0.35;
+  const sumH=lines.reduce((a,l)=>a+l.rel*LH+(l.gap?gapPx*.44:0),0);
+  let base=Math.min(zh/sumH, H/6);
+  lines.forEach(l=>{ g.font=cardFont(l,100); const w=g.measureText(l.t).width/100*l.rel; if(w>0)base=Math.min(base,zw/w); });
+  base=Math.floor(base);
+  const total=lines.reduce((a,l)=>a+l.rel*base*LH+(l.gap?gapPx*.44*base:0),0);
+  let cy=zy+(zh-total)/2;
+  g.textBaseline='middle';
+  g.textAlign=side==='bottom'?'center':side==='right'?'right':'left';
+  const tx=side==='bottom'?W/2:side==='right'?zx+zw:zx;
+  g.fillStyle=light?'#fff':'#141414';
+  g.shadowColor=light?'rgba(0,0,0,0.55)':'rgba(255,255,255,0.35)'; g.shadowBlur=base*0.08;
+  lines.forEach(l=>{
+    if(l.gap)cy+=gapPx*.44*base;
+    const px2=Math.max(1,Math.round(base*l.rel));
+    g.font=cardFont(l,px2);
+    g.fillText(l.t,tx,cy+px2*LH/2);
+    cy+=px2*LH;
+  });
+  g.shadowBlur=0;
+}
+function drawCardLayout(){ const c=document.getElementById('cardLayoutCanvas'); if(c&&cardLayout.img)renderCardOnto(c,Math.min(1200,cardLayout.img.naturalWidth)); }
+function pickCardSide(side){ cardLayout.side=side; document.querySelectorAll('#cardSideGrid .btn-select').forEach(b=>b.classList.toggle('selected',b.dataset.cardSide===side)); drawCardLayout(); }
+function pickCardTone(tone){ cardLayout.tone=tone; document.querySelectorAll('#cardToneGrid .btn-select').forEach(b=>b.classList.toggle('selected',b.dataset.cardTone===tone)); drawCardLayout(); }
+async function openCardLayout(url){
+  const wrap=document.getElementById('cardLayoutWrap'); if(!wrap||!url)return;
+  try{ cardLayout.img=await loadImageFromUrl(url); }catch(e){ console.error('Your Card could not load the picture:',e); cardLayout.img=null; wrap.style.display='none'; return; }
+  // A new picture starts centred and unzoomed; the typed details stay, so a
+  // second design keeps the customer's name.
+  ['cardZoom','cardPanX','cardPanY'].forEach(id=>{ const el=document.getElementById(id); if(el)el.value=(id==='cardZoom'?100:0); });
+  wrap.style.display='block';
+  try{ await document.fonts.load('700 40px "Playfair Display"'); }catch(e){}
+  drawCardLayout();
+}
+// Yes: the card as shown becomes the design. Untouched (no words, not moved)
+// it is the picture already cut to the card, and is left as it is.
+async function bakeCardLayout(){
+  const wrap=document.getElementById('cardLayoutWrap');
+  if(!cardLayout.img || !wrap || wrap.style.display==='none')return;
+  const moved=document.getElementById('cardZoom').value!=='100'||document.getElementById('cardPanX').value!=='0'||document.getElementById('cardPanY').value!=='0';
+  if(!cardLines().length && !moved)return;
+  try{ await document.fonts.load('700 40px "Playfair Display"'); }catch(e){}
+  const c=document.createElement('canvas');
+  renderCardOnto(c,Math.max(1536,cardLayout.img.naturalWidth));
+  const uploaded=await uploadCompositedImage(c.toDataURL('image/jpeg',0.95),{strict:true});
+  const design=currentDesignId?findDesignById(currentDesignId):null;
+  if(design)design.url=uploaded;
+  finalImageUrl=uploaded;
+  wrap.style.display='none';
 }
 // The print shape of the flat products that are cut to it after painting
 // (besides the car magnet, which has its own). Null for everything else.
@@ -13881,7 +14017,7 @@ const BYO_SHAPE_LINES={
   'calendar':'a square composition with the subject centred and filling the frame, bold and clear at five inches, since it sits beside the dates on every page of a desk calendar',
   'car magnet':'a bold, simple picture that reads from across a parking lot, the subject large and clear, on a car magnet',
   'luggage tag':'a tall portrait picture about two thirds as wide as it is tall, the subject large and centred, bold and clear, for an acrylic luggage tag',
-  'business cards':'a landscape design shaped like a business card, bold and simple, any lettering clean and readable',
+  'business cards':'a landscape design shaped like a business card, bold and simple, no words or lettering in it, the right-hand third calm for the card\'s details',
   'standee':'a full-length figure, head to feet, standing, filling the frame from top to bottom, on a completely flat solid pure magenta background (hex #FF00FF) with no floor, scenery, shadow or text anywhere, crisp clean edges against the magenta; the magenta is removed and the acrylic is cut along the outline of the figure',
   'ornament':'a compact, nearly square composition with the subject centred and filling the middle, clear of the outer edges so it survives being trimmed to a star, circle, heart or snowflake',
   'wrapping paper':'a repeating all-over pattern that tiles edge to edge, the subject appearing several times at different sizes and poses with decorative filler between, no single centred subject and no border',
@@ -14231,6 +14367,12 @@ async function approveDesign(allThree){
       smoothScrollToTarget('artworkOnlyDoneCard','start');
     }
     return;
+  }
+  // Your Card: the card as shown in the panel becomes the design, uploaded,
+  // before anything below reads it. A failed upload stays here for a retry.
+  if(product==='business cards'){
+    try{ await bakeCardLayout(); }
+    catch(e){ console.error('Could not save the card:',e); showGuidanceAlert(describeUploadFailure(e)); return; }
   }
   // What the page looked like before Yes, so the Edge Fade page can offer a
   // way back to the design decision (v110).
@@ -21080,6 +21222,7 @@ async function makeTestSingleZonePanorama(side){
     // Cut to the print's exact shape, as the magnet is: business cards, the
     // holder, the luggage tag and the doormat (see shapedPrintRatio). An exact transfer is
     // left as sent.
+    if(product==='business cards')cardLayoutSourceUrl=resultUrl;
     if(!exactTransfer && resultUrl && shapedPrintRatio()){
       try{
         if(product==='doormat') resultUrl=await trimLetterboxedStrip(resultUrl);
@@ -21163,7 +21306,9 @@ async function makeTestSingleZonePanorama(side){
     // card stayed locked forever. Patience banners are done either way.
     removeGenerationReminders();
 
-    document.getElementById('captionCard').className='card caption-card visible';
+    // A business card has its own words, in Your Card; the one-line caption
+    // tool would be a second, different text box for the same thing.
+    document.getElementById('captionCard').className=(product==='business cards')?'card caption-card':'card caption-card visible';
     document.getElementById('captionText').value='';
     document.getElementById('verifyCard').style.display='block';
 
@@ -21207,6 +21352,15 @@ async function makeTestSingleZonePanorama(side){
       document.getElementById('toggleImageBtn').style.display='none';
       refreshApproveRowForMode();
       showSingleImageAccessorizeStep();
+      // A business card lands on Your Card: the next thing to do is type.
+      if(product==='business cards' && !exactTransfer){
+        // By its top, clear of the floating English / Chips bar on a phone.
+        openCardLayout(cardLayoutSourceUrl||resultUrl).then(()=>setTimeout(()=>{
+          const w=document.getElementById('cardLayoutWrap'); if(!w)return;
+          window.scrollTo({top:w.getBoundingClientRect().top+window.scrollY-(innerWidth<700?60:16),behavior:'smooth'});
+        },350));
+        return;
+      }
       // Same fix as Face It/Cover Me/Home Sweet Home -- see that comment.
       scrollToStandardRevealWhenReady();
     };
