@@ -1,5 +1,5 @@
 <!-- ============================================================
-     VERSION: V352
+     VERSION: V353
      ============================================================
      THE ONE LINE THAT SAYS WHICH BUILD YOU ARE LOOKING AT.
 
@@ -370,6 +370,10 @@ body.frame-tools-open #accessorizeCancelBtn{padding:.45rem;font-size:12px;margin
   .mockup-lightbox-counter{top:12px}
 }
 
+/* The option photos are all square (360 x 360). Their space is held before
+   they load, so a panel does not grow under the customer as they arrive and
+   the page never shifts beneath a tap. */
+img[src^="art/options/"]{aspect-ratio:1/1;height:auto;object-fit:cover}
 .guidance-prompt{display:none;margin:14px 0;padding:12px 14px;border:1px solid #003c8c;border-radius:10px;background:#211006;color:#cfe6ff;text-align:center;font-size:13px;font-weight:700;line-height:1.4;box-shadow:0 0 0 rgba(0,60,140,0)}
 .quote-text-reminder{margin:0 0 14px;padding:10px 14px;border:1px solid rgba(226,75,74,0.55);border-radius:10px;background:rgba(226,75,74,0.12);color:#ff6b6b;text-align:center;font-size:12.5px;font-weight:800;letter-spacing:.3px;line-height:1.45}
 @keyframes quoteReminderBlink{0%,100%{opacity:1}50%{opacity:.45}}
@@ -1397,6 +1401,8 @@ const HERO_SETTLE_MS = 1000;
 <div class="card" id="phoneCaseModelCard" style="display:none">
 <div class="card-title">📱 Which Phone Model?</div>
 <div class="note" style="margin-top:0;margin-bottom:.75rem">We need this before generating, so your art gets composed to fit your exact phone case shape — no cropping surprises later.</div>
+<img src="art/options/phone-case.jpg" alt="" style="display:block;width:min(100%,170px);margin:0 auto .4rem;border-radius:8px;background:#fff"/>
+<div class="note" style="text-align:center;margin:0 0 .75rem">Tough phone case · $19.95</div>
 <div class="note" style="margin-top:0;margin-bottom:.5rem;color:#7ab8ff;font-weight:600">Type in your phone model, then press Enter.</div>
 <input type="text" id="phoneModelSearchInputGen" placeholder="e.g. iPhone 15 Pro, Galaxy S24"
   style="width:100%;padding:.6rem;border-radius:8px;border:.5px solid #333;background:#0d0d0d;color:#fff;box-sizing:border-box"/>
@@ -1410,18 +1416,20 @@ const HERO_SETTLE_MS = 1000;
   </div>
 </div>
 <div class="note" id="phoneModelSelectedNoteGen" style="margin-top:.6rem"></div>
+<button type="button" class="download-btn" style="margin-top:1rem" onclick="optionCardBack()">← Back</button>
 </div>
 
 <div class="card" id="puzzleSizeCard" style="display:none">
 <div class="card-title">🧩 How Many Pieces?</div>
 <div class="note" style="margin-top:0;margin-bottom:.75rem">We need this before generating — each piece count is a different physical puzzle with its own print size and price, and your art gets composed to fit it exactly.</div>
 <div class="grid2" id="puzzleSizeGrid">
-<div class="btn-select" data-puzzle-size="96 pcs" onclick="pickPuzzleSize('96 pcs')">96 pieces<div class="note" style="margin-top:4px">$39.95</div></div>
-<div class="btn-select" data-puzzle-size="252 pcs" onclick="pickPuzzleSize('252 pcs')">252 pieces<div class="note" style="margin-top:4px">$38.95</div></div>
-<div class="btn-select" data-puzzle-size="500 pcs" onclick="pickPuzzleSize('500 pcs')">500 pieces<div class="note" style="margin-top:4px">$43.95</div></div>
-<div class="btn-select" data-puzzle-size="1000 pcs" onclick="pickPuzzleSize('1000 pcs')">1000 pieces<div class="note" style="margin-top:4px">$43.95</div></div>
+<div class="btn-select" data-puzzle-size="96 pcs" style="padding:.5rem" onclick="pickPuzzleSize('96 pcs')"><img src="art/options/puzzle.jpg" alt="" style="width:100%;border-radius:6px;background:#fff;margin-bottom:6px"/>96 pieces<div class="note" style="margin-top:4px">$39.95</div></div>
+<div class="btn-select" data-puzzle-size="252 pcs" style="padding:.5rem" onclick="pickPuzzleSize('252 pcs')"><img src="art/options/puzzle.jpg" alt="" style="width:100%;border-radius:6px;background:#fff;margin-bottom:6px"/>252 pieces<div class="note" style="margin-top:4px">$38.95</div></div>
+<div class="btn-select" data-puzzle-size="500 pcs" style="padding:.5rem" onclick="pickPuzzleSize('500 pcs')"><img src="art/options/puzzle.jpg" alt="" style="width:100%;border-radius:6px;background:#fff;margin-bottom:6px"/>500 pieces<div class="note" style="margin-top:4px">$43.95</div></div>
+<div class="btn-select" data-puzzle-size="1000 pcs" style="padding:.5rem" onclick="pickPuzzleSize('1000 pcs')"><img src="art/options/puzzle.jpg" alt="" style="width:100%;border-radius:6px;background:#fff;margin-bottom:6px"/>1000 pieces<div class="note" style="margin-top:4px">$43.95</div></div>
 </div>
 <div class="note" id="puzzleSizeSelectedNote" style="margin-top:.6rem"></div>
+<button type="button" class="download-btn" style="margin-top:1rem" onclick="optionCardBack()">← Back</button>
 </div>
 
 <div class="card" id="ornamentShapeCard" style="display:none">
@@ -1468,7 +1476,7 @@ const HERO_SETTLE_MS = 1000;
 <div class="card-title">👕 Size and Colour</div>
 <img src="art/options/tshirt.jpg" alt="Gildan heavy cotton T-shirt" style="display:block;width:min(100%,220px);margin:0 auto .8rem;border-radius:8px;background:#fff"/>
 <div class="note" style="margin-top:0;margin-bottom:.75rem">A Gildan 5000 heavy cotton unisex tee. Only your design prints, not a box around it. Pick a size and a shirt colour.</div>
-<div class="grid2" id="tshirtOptionGrid">
+<div class="grid2" id="tshirtOptionGrid" data-words="sizes: the card carries the picture">
 <div class="btn-select" data-opt="S" onclick="pickTshirt('S')">S<div class="note" style="margin-top:4px">$7.95</div></div><div class="btn-select" data-opt="M" onclick="pickTshirt('M')">M<div class="note" style="margin-top:4px">$7.95</div></div><div class="btn-select" data-opt="L" onclick="pickTshirt('L')">L<div class="note" style="margin-top:4px">$7.95</div></div><div class="btn-select" data-opt="XL" onclick="pickTshirt('XL')">XL<div class="note" style="margin-top:4px">$7.95</div></div><div class="btn-select" data-opt="2XL" onclick="pickTshirt('2XL')">2XL<div class="note" style="margin-top:4px">$9.95</div></div><div class="btn-select" data-opt="3XL" onclick="pickTshirt('3XL')">3XL<div class="note" style="margin-top:4px">$11.95</div></div><div class="btn-select" data-opt="4XL" onclick="pickTshirt('4XL')">4XL<div class="note" style="margin-top:4px">$11.95</div></div><div class="btn-select" data-opt="5XL" onclick="pickTshirt('5XL')">5XL<div class="note" style="margin-top:4px">$11.95</div></div>
 </div>
 <div class="note" style="margin:.8rem 0 .4rem">Shirt colour</div>
@@ -1491,7 +1499,7 @@ const HERO_SETTLE_MS = 1000;
 <div class="card-title">💼 Business Cards</div>
 <div class="note" style="margin-top:0;margin-bottom:.75rem">Pick what you want printed. Your design is drawn to fit its exact shape.</div>
 <div class="note" style="margin-top:0;margin-bottom:.4rem;font-weight:700">Paper (for 50, 100 and 200 cards)</div>
-<div class="grid2" id="businessCardPaperGrid" style="margin-bottom:.9rem">
+<div class="grid2" id="businessCardPaperGrid" data-words="papers: the choices below carry the pictures" style="margin-bottom:.9rem">
 <div class="btn-select" data-paper="Coated (both sides)" onclick="pickCardPaper('Coated (both sides)')" style="padding:.5rem;font-size:12px">Coated (both sides)</div><div class="btn-select" data-paper="Coated (one side)" onclick="pickCardPaper('Coated (one side)')" style="padding:.5rem;font-size:12px">Coated (one side)</div><div class="btn-select" data-paper="White Matte" onclick="pickCardPaper('White Matte')" style="padding:.5rem;font-size:12px">White Matte</div><div class="btn-select" data-paper="Uncoated" onclick="pickCardPaper('Uncoated')" style="padding:.5rem;font-size:12px">Uncoated</div>
 </div>
 <div class="grid2" id="businessCardOptionGrid">
@@ -1517,19 +1525,20 @@ const HERO_SETTLE_MS = 1000;
 <div class="card-title">🧳 Which Suitcase Size?</div>
 <div class="note" style="margin-top:0;margin-bottom:.75rem">We need this before generating — each size is a different physical case with its own price, and your art gets composed to fit it exactly.</div>
 <div class="grid3" id="suitcaseSizeGrid">
-<div class="btn-select" data-suitcase-size="Small" onclick="pickSuitcaseSize('Small')">Small<div class="note" style="margin-top:4px">$169.95</div></div>
-<div class="btn-select" data-suitcase-size="Medium" onclick="pickSuitcaseSize('Medium')">Medium<div class="note" style="margin-top:4px">$194.95</div></div>
-<div class="btn-select" data-suitcase-size="Large" onclick="pickSuitcaseSize('Large')">Large<div class="note" style="margin-top:4px">$214.95</div></div>
+<div class="btn-select" data-suitcase-size="Small" style="padding:.5rem" onclick="pickSuitcaseSize('Small')"><img src="art/options/suitcase-small.jpg" alt="" style="width:100%;border-radius:6px;background:#fff;margin-bottom:6px"/>Small<div class="note" style="margin-top:4px">$169.95</div></div>
+<div class="btn-select" data-suitcase-size="Medium" style="padding:.5rem" onclick="pickSuitcaseSize('Medium')"><img src="art/options/suitcase-medium.jpg" alt="" style="width:100%;border-radius:6px;background:#fff;margin-bottom:6px"/>Medium<div class="note" style="margin-top:4px">$194.95</div></div>
+<div class="btn-select" data-suitcase-size="Large" style="padding:.5rem" onclick="pickSuitcaseSize('Large')"><img src="art/options/suitcase-large.jpg" alt="" style="width:100%;border-radius:6px;background:#fff;margin-bottom:6px"/>Large<div class="note" style="margin-top:4px">$214.95</div></div>
 </div>
 <div class="note" id="suitcaseSizeSelectedNote" style="margin-top:.6rem"></div>
+<button type="button" class="download-btn" style="margin-top:1rem" onclick="optionCardBack()">← Back</button>
 </div>
 
 <div class="card" id="coasterShapeCard" style="display:none">
 <div class="card-title">⭕ Coaster Shape</div>
 <div class="note" style="margin-top:0;margin-bottom:.75rem">Both are sets of four with a cork backing. Same price — pick whichever you like the look of.</div>
 <div class="grid2" id="coasterShapeGrid">
-<div class="btn-select" data-coaster-shape="square" onclick="pickCoasterShape('square')"><span class="icon">⬜</span>Square<div class="note" style="margin-top:4px">4" × 4" hardboard · $29.95</div></div>
-<div class="btn-select" data-coaster-shape="round" onclick="pickCoasterShape('round')"><span class="icon">⭕</span>Round<div class="note" style="margin-top:4px">3.7" corkwood · $29.95</div></div>
+<div class="btn-select" data-coaster-shape="square" style="padding:.5rem" onclick="pickCoasterShape('square')"><img src="art/options/coaster-square.jpg" alt="" style="width:100%;border-radius:6px;background:#fff;margin-bottom:6px"/>Square<div class="note" style="margin-top:4px">4" × 4" hardboard · $29.95</div></div>
+<div class="btn-select" data-coaster-shape="round" style="padding:.5rem" onclick="pickCoasterShape('round')"><img src="art/options/coaster-round.jpg" alt="" style="width:100%;border-radius:6px;background:#fff;margin-bottom:6px"/>Round<div class="note" style="margin-top:4px">3.7" corkwood · $29.95</div></div>
 </div>
 <div class="note" id="coasterShapeSelectedNote" style="margin-top:.6rem"></div>
 <button type="button" class="download-btn" id="coasterShapeBackBtn" style="margin-top:1rem" onclick="coasterShapeBack()">← Back</button>
@@ -1610,15 +1619,15 @@ const HERO_SETTLE_MS = 1000;
 <div class="grid2">
 <div class="btn-select" id="preGenSize11Btn" style="padding:.5rem" onclick="pickPreGenMugSize('11oz')">
 <img src="size-11oz.jpg" style="width:100%;border-radius:6px;background:#fff;margin-bottom:6px"/>
-11oz
+11oz<div class="note" style="margin-top:4px">from $14.95</div>
 </div>
 <div class="btn-select" id="preGenSize15Btn" style="padding:.5rem" onclick="pickPreGenMugSize('15oz')">
 <img src="size-15oz.jpg" style="width:100%;border-radius:6px;background:#fff;margin-bottom:6px"/>
-15oz
+15oz<div class="note" style="margin-top:4px">from $16.95</div>
 </div>
 <div class="btn-select" id="preGenSize20Btn" style="padding:.5rem" onclick="pickPreGenMugSize('20oz')">
 <img src="size-20oz.jpg" style="width:100%;border-radius:6px;background:#fff;margin-bottom:6px"/>
-20oz
+20oz<div class="note" style="margin-top:4px">$24.95</div>
 </div>
 </div>
 <button type="button" class="download-btn" style="margin-top:1rem" onclick="mugSizeLockBack()">← Back</button>
@@ -1899,29 +1908,34 @@ Tell Needles <span style="color:#7ab8ff">what you have in mind</span>
 <div id="posterOrientationFinishWrap" style="margin-top:1rem">
 <div class="note" style="margin-bottom:6px">Orientation</div>
 <div class="grid2" style="margin-bottom:1rem">
-<div class="btn-select selected" id="posterOrientVerticalBtn" onclick="pickPosterOrientation('Vertical')">Vertical</div>
-<div class="btn-select" id="posterOrientHorizontalBtn" onclick="pickPosterOrientation('Horizontal')">Horizontal</div>
+<div class="btn-select selected" id="posterOrientVerticalBtn" style="padding:.5rem" onclick="pickPosterOrientation('Vertical')"><img src="art/options/poster-vertical.jpg" alt="" style="width:100%;border-radius:6px;background:#fff;margin-bottom:6px"/>Vertical</div>
+<div class="btn-select" id="posterOrientHorizontalBtn" style="padding:.5rem" onclick="pickPosterOrientation('Horizontal')"><img src="art/options/poster-horizontal.jpg" alt="" style="width:100%;border-radius:6px;background:#fff;margin-bottom:6px"/>Horizontal</div>
 </div>
 </div>
 
 <div class="note" id="posterPriceNote" style="margin-top:1rem;font-size:14px;color:#003c8c;font-weight:700"></div>
+<button type="button" class="download-btn" style="margin-top:1rem" onclick="optionCardBack()">← Back</button>
 </div>
 
 <div class="card" id="toteSizeCard" style="display:none">
 <div class="card-title">👜 Which Tote Size?</div>
 <div class="note" style="margin-top:0;margin-bottom:.75rem">We need this before generating — each size is a different bag with its own price, and your art gets composed to fit it exactly.</div>
 <div class="grid3" id="toteSizeGrid">
-<div class="btn-select" data-tote-size="13&quot; x 13&quot;" onclick="pickToteSize(this)">13" x 13"<div class="note" style="margin-top:4px">$23.95</div></div>
-<div class="btn-select" data-tote-size="16&quot; x 16&quot;" onclick="pickToteSize(this)">16" x 16"<div class="note" style="margin-top:4px">$24.95</div></div>
-<div class="btn-select" data-tote-size="18&quot; x 18&quot;" onclick="pickToteSize(this)">18" x 18"<div class="note" style="margin-top:4px">$25.95</div></div>
+<div class="btn-select" data-tote-size="13&quot; x 13&quot;" style="padding:.5rem" onclick="pickToteSize(this)"><img src="art/options/tote.jpg" alt="" style="width:100%;border-radius:6px;background:#fff;margin-bottom:6px"/>13" x 13"<div class="note" style="margin-top:4px">$23.95</div></div>
+<div class="btn-select" data-tote-size="16&quot; x 16&quot;" style="padding:.5rem" onclick="pickToteSize(this)"><img src="art/options/tote.jpg" alt="" style="width:100%;border-radius:6px;background:#fff;margin-bottom:6px"/>16" x 16"<div class="note" style="margin-top:4px">$24.95</div></div>
+<div class="btn-select" data-tote-size="18&quot; x 18&quot;" style="padding:.5rem" onclick="pickToteSize(this)"><img src="art/options/tote.jpg" alt="" style="width:100%;border-radius:6px;background:#fff;margin-bottom:6px"/>18" x 18"<div class="note" style="margin-top:4px">$25.95</div></div>
 </div>
 <div class="note" id="toteSizeSelectedNote" style="margin-top:.6rem"></div>
+<button type="button" class="download-btn" style="margin-top:1rem" onclick="optionCardBack()">← Back</button>
 </div>
 
 <div class="card" id="toteBagColorCard" style="display:none">
 <div class="card-title">👜 Tote Bag Color</div>
+<img src="art/options/tote.jpg" alt="Canvas tote bag" style="display:block;width:min(100%,150px);margin:0 auto .6rem;border-radius:8px;background:#fff"/>
 <div class="note" style="margin-top:0;margin-bottom:.75rem">Pick your tote color — the automatic edge fade matches it exactly, and each color is a different bag we have to order by name.</div>
 <div class="color-grid" id="toteBagColorGridGen"></div>
+<div class="note" id="toteColorPriceNote" style="margin-top:.6rem"></div>
+<button type="button" class="download-btn" style="margin-top:1rem" onclick="toteColorBack()">← Back</button>
 </div>
 
 
@@ -3430,10 +3444,51 @@ function smoothScrollToTarget(targetId,block='start',after){
     attempts++;
     const top=Math.round(target.getBoundingClientRect().top);
     if(top===lastTop||attempts>=20){
-      target.scrollIntoView({behavior:'smooth',block});
+      // A centred landing on a panel taller than the screen centred its
+      // MIDDLE: the title and first choices went off the top. Such a panel
+      // lands by its top, so the question and its first choices are in view.
+      const tall=block==='center' && target.offsetHeight>window.innerHeight*0.9;
+      // Where the target should sit on screen, and so where the page goes.
+      const want=()=>{
+        const H=window.innerHeight, h=target.getBoundingClientRect().height;
+        return tall?12:block==='center'?(H-h)/2:block==='end'?H-h:0;
+      };
+      const maxY=()=>document.documentElement.scrollHeight-window.innerHeight;
+      const destOf=()=>Math.max(0,Math.min(maxY(),window.scrollY+target.getBoundingClientRect().top-want()));
+      let dest=destOf();
+      if(tall)window.scrollTo({top:dest,behavior:'smooth'});
+      else target.scrollIntoView({behavior:'smooth',block});
+      // Panels inside a pop-up overlay scroll within it, not the page; the
+      // correction below reads the page, so it is for page panels only.
+      const inPage=!target.closest('.step-lock-overlay,[style*="position:fixed"]');
+      // ONE CORRECTION ON ARRIVAL (Alyx, 23 Sep 2026: "It should scroll me
+      // right to where I would automatically naturally want to end up").
+      // The page can move under a scroll already in flight: leaving the
+      // description box folds its "satisfied" prompt away, and everything
+      // below it rises 60px, so the poster card landed with its title cut
+      // off. Once the scroll has arrived, look again; if the target has
+      // drifted, land once more -- but only if the page is still where this
+      // scroll left it. A customer who has already wheeled, swiped or tapped
+      // elsewhere keeps the page they chose.
+      let touched=false;
+      const touch=()=>{touched=true;};
+      const opts={passive:true};
+      ['wheel','touchstart','mousedown','keydown'].forEach(e=>window.addEventListener(e,touch,opts));
       setTimeout(()=>{
-        guidedScrollInProgress=false;
-        if(typeof after==='function')after();
+        ['wheel','touchstart','mousedown','keydown'].forEach(e=>window.removeEventListener(e,touch,opts));
+        const stillOurs=inPage && !touched && Math.abs(window.scrollY-dest)<4;
+        // Only when the move has actually cut the panel off: a panel still
+        // wholly on screen (or a tall one with its title near the top) is
+        // left where it is, so the page never moves twice for nothing.
+        const r=target.getBoundingClientRect(), H=window.innerHeight;
+        const cutOff=tall?(r.top<0||r.top>H*0.25):(r.top<0||r.bottom>H);
+        const again=destOf();
+        const drift=stillOurs && cutOff && Math.abs(again-window.scrollY)>8;
+        if(drift){ dest=again; window.scrollTo({top:dest,behavior:'smooth'}); }
+        setTimeout(()=>{
+          guidedScrollInProgress=false;
+          if(typeof after==='function')after();
+        },drift?500:0);
       },750);
       return;
     }
@@ -4455,7 +4510,7 @@ function toggleWorkingImage(){
 // Two copies of a number is exactly how the marker rotted in the first place,
 // so they are not trusted to agree: .githooks/pre-commit moves both together
 // and REFUSES the commit if it ever finds them apart.
-const APP_VERSION='V352';
+const APP_VERSION='V353';
 try{ console.log('%cNeedles\u2019 Studio '+APP_VERSION,'color:#29a3ff;font-weight:700'); }catch(e){}
 
 function getDeviceId(){
@@ -12530,6 +12585,9 @@ function pickToteSize(el){
     b.classList.toggle('selected',b.dataset.toteSize===label);
   });
   document.getElementById('toteSizeSelectedNote').textContent='✓ Confirmed: '+label+'.';
+  const priceNote=document.getElementById('toteColorPriceNote');
+  const price=el.querySelector('.note');
+  if(priceNote)priceNote.textContent='Your '+label+' tote: '+(price?price.textContent:'')+', the same in every colour.';
   setOptionSpotlight('tote-color-focus');
   smoothScrollToTarget('toteBagColorCard','center');
 }
@@ -12599,7 +12657,8 @@ function renderPosterSizeGrid(){
   Object.entries(tree.sizes).forEach(([sizeKey, data]) => {
     const btn = document.createElement('div');
     btn.className = 'btn-select' + (sizeKey === posterSize ? ' selected' : '');
-    btn.innerHTML = sizeKey.replace('x', '" x ') + '"<span class="price">$' + data.price.toFixed(2) + '</span>';
+    btn.style.padding = '.5rem';
+    btn.innerHTML = '<img src="art/options/poster-vertical.jpg" alt="" style="width:100%;border-radius:6px;background:#fff;margin-bottom:6px"/>' + sizeKey.replace('x', '" x ') + '"<span class="price">$' + data.price.toFixed(2) + '</span>';
     btn.onclick = () => {
       posterSize = sizeKey; renderPosterSizeGrid(); updatePosterPriceNote();
       // Size is the decisive poster choice (orientation defaults to Vertical
@@ -16453,7 +16512,24 @@ function travelVariantBack(){
 function optionCardBack(){ coasterShapeBack(); }
 function coasterShapeBack(){
   clearAllFocusModes();
-  smoothScrollToTarget('productCard','start');
+  landOnProductGrid();
+}
+// THE PANEL BEFORE, AND NOTHING ELSE (Alyx, 23 Sep 2026: "back buttons ...
+// that literally go back to the previous panel and nothing else"). The
+// product grid is that panel for every first option card; land on the tile
+// that was picked, centred, so the grid opens where the customer left it.
+function landOnProductGrid(){
+  const tile=document.querySelector('#productCard .btn-select.selected');
+  const pc=document.getElementById('productCard');
+  if(pc)pc.style.display='block';
+  if(!tile){ smoothScrollToTarget('productCard','start'); return; }
+  snapExpandThrough('productCard');
+  scrollToStableTop(tile,Math.max(0,(window.innerHeight-tile.offsetHeight)/2),20);
+}
+// The tote's second card: back is its first, the size.
+function toteColorBack(){
+  setOptionSpotlight('tote-size-focus');
+  smoothScrollToTarget('toteSizeCard','center');
 }
 
 // The description box is reached from the product grid on every flat
@@ -16474,7 +16550,12 @@ function ideaStepBack(){
     'sticker sheet':['stickerSheetOptionCard','stickerSheet-option-focus'],
     'tshirt':['tshirtOptionCard','tshirt-option-focus'],
     'car magnet':['carMagnetOptionCard','carMagnet-option-focus'],
-    'business cards':['businessCardOptionCard','businessCards-option-focus']
+    'business cards':['businessCardOptionCard','businessCards-option-focus'],
+    'tote bag':['toteBagColorCard','tote-color-focus'],
+    'phone case':['phoneCaseModelCard','phone-model-focus'],
+    'suitcase':['suitcaseSizeCard','suitcase-size-focus'],
+    'puzzle':['puzzleSizeCard','puzzle-size-focus'],
+    'photo poster':['photoPosterOptionsCard','poster-options-focus']
   };
   const opt=OPTION_CARD_OF[product];
   if(opt){
@@ -16485,7 +16566,7 @@ function ideaStepBack(){
       return;
     }
   }
-  smoothScrollToTarget('productCard','start');
+  landOnProductGrid();
 }
 
 // Back from the Edge Fade page is the design decision it came from: put the

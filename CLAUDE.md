@@ -68,6 +68,30 @@ comment is evidence of what a person once believed, and nothing else.
 that runs, not the line that describes. When quoting a comment, say "the comment
 claims" — and then go and check whether it is still true.
 
+## The panel checklist
+
+Alyx, 23 Sep 2026: *"You should have a checklist of everything that the panels
+need so that you don't keep missing things ... Every panel should have these
+things automatically."* Panel after panel was found missing a Back, a picture or
+a price, because each new one was copied from the last and nobody went back
+over the old ones. Every panel a customer stops on, new or old, has:
+
+1. **A name.** A title saying what is being chosen.
+2. **A Back button** that goes to the panel before it and nothing else. Forward
+   and back are the same list of panels, reversed. Back never jumps past a panel.
+3. **Pictures.** A real product photo on the panel (Printify's blank-product
+   photos, in `art/options/`), and one on every choice. Words-only choices
+   (sizes, papers) are marked `data-words` and sit in a panel that has a picture.
+4. **Prices.** The panel shows a price; if one choice in a grid shows a price,
+   every choice does.
+5. **The landing.** Arriving, forward or by Back, scrolls to the lit panel with
+   its title and its choices on screen. Never a dimmed neighbour, never the
+   button off the bottom. A panel taller than the screen lands by its top.
+
+`flow-tests/verify-panel-checklist.js` walks every product tile's rail, forward
+to Generate and back to the grid, on a laptop and a phone, and fails on any of
+the five. A new product is not done until it passes.
+
 ## Scope
 
 **A discussion is not an order.** Do the thing asked, at the size asked.
