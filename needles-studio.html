@@ -1,5 +1,5 @@
 <!-- ============================================================
-     VERSION: V360
+     VERSION: V361
      ============================================================
      THE ONE LINE THAT SAYS WHICH BUILD YOU ARE LOOKING AT.
 
@@ -1518,7 +1518,7 @@ const HERO_SETTLE_MS = 1000;
 <div class="grid2" id="surpriseTemplateGrid"></div>
 <div id="surpriseVariantWrap" style="display:none">
 <div class="note" style="margin-top:.9rem;margin-bottom:.4rem;font-weight:700">And on the other side?</div>
-<div class="grid2" id="surpriseVariantGrid"></div>
+<div class="grid3" id="surpriseVariantGrid"></div>
 </div>
 <div class="note" style="margin-top:.9rem;margin-bottom:.4rem;font-weight:700">Who is it for? The surprise faces them as they hold it.</div>
 <div class="grid2" id="surpriseHandGrid" data-words="which hand: the mug and its surprise carry the pictures">
@@ -3644,6 +3644,7 @@ function describeBandRatio(){
   // mugPrintMode is a mug's setting and may be left over from one.
   if(product==='beer stein')return Math.round(STEIN_WRAP_RATIO*100)/100;
   if(carMagnetIsStrip())return Math.round(carMagnetRatio()*100)/100;
+  if(product==='doormat')return Math.round(DOORMAT_RATIO*100)/100;
   if(mugPrintMode!=='wraparound' || !wrapIsPanoramic())return null;
   // THE MUGS TOO (Alyx, V329, "The word"): a described wraparound on a mug
   // drew a 1.5 picture and mirrored the flanks, and on Color Burst's 2.74
@@ -3657,6 +3658,7 @@ function describeShapingRule(){
   const r=describeBandRatio();
   if(r==null)return getProductRules(product);
   if(product==='car magnet')return carMagnetRule();
+  if(product==='doormat')return getProductRules('doormat')+', the picture '+r+' times wider than it is tall';
   if(product==='beer stein'){
     return 'a wraparound band printed round a beer stein, one continuous panoramic scene '+r+' times wider than it is tall, the scenery and sky running the full width, its two ends sitting either side of the handle; bold simple details, no tall or centred composition';
   }
@@ -4538,7 +4540,7 @@ function toggleWorkingImage(){
 // Two copies of a number is exactly how the marker rotted in the first place,
 // so they are not trusted to agree: .githooks/pre-commit moves both together
 // and REFUSES the commit if it ever finds them apart.
-const APP_VERSION='V360';
+const APP_VERSION='V361';
 try{ console.log('%cNeedles\u2019 Studio '+APP_VERSION,'color:#29a3ff;font-weight:700'); }catch(e){}
 
 function getDeviceId(){
@@ -12438,10 +12440,16 @@ const SURPRISE_TEMPLATES={
   'congratulations':{label:'Congratulations',file:'congratulations'},
   'apology':{label:'The Apology',file:'apology'},
   'appeal':{label:'The Appeal',file:'appeal'},
+  'breakup':{label:'We Need to Talk',file:'breakup'},
   // "Ready?" is one opener for every reveal; the customer picks what is on
-  // the other side. Girl and twins follow when Bud has painted them.
+  // the other side. The girl and the twins are the boy's cap and the two caps
+  // of Any preference? recoloured, the words taken off the twins.
   'ready':{label:'Ready?',tile:'ready',variants:{
     'boy':{label:"It's a boy",file:'reveal-boy'},
+    'girl':{label:"It's a girl",file:'reveal-girl'},
+    'twins':{label:'Twins, a boy and a girl',file:'reveal-twins'},
+    'twin-boys':{label:'Twin boys',file:'reveal-twin-boys'},
+    'twin-girls':{label:'Twin girls',file:'reveal-twin-girls'},
     'expecting':{label:'Any preference?',file:'ready-expecting'}
   }}
 };
@@ -12592,8 +12600,12 @@ function businessCardRule(){
 function shapedPrintRatio(){
   if(product==='business cards'){ const o=BUSINESS_CARD_OPTIONS[selectedBusinessCard]; return o?o.ratio:null; }
   if(product==='luggage tag')return 750/1237;
+  if(product==='doormat')return DOORMAT_RATIO;
   return null;
 }
+// The doormat's print area, 4650 x 2850. Wider than the widest canvas, so it
+// is painted letterboxed at this shape (bandRatio) and its white rows trimmed.
+const DOORMAT_RATIO=4650/2850;
 
 // CERAMIC ORNAMENT (22 Sep 2026): shape picked before generating.
 let selectedOrnamentShape=null;
@@ -18926,6 +18938,8 @@ function getImageSizeParam(){
   // Cards and the holder are landscape; the luggage tag is portrait.
   if (product==='business cards') return '1536x1024';
   if (product==='luggage tag') return '1024x1536';
+  // The doormat prints 1.63:1: painted square, it printed with white sides.
+  if (product==='doormat') return '1536x1024';
   if (product==='photo poster'){
     return posterOrientation==='Horizontal' ? '1536x1024' : '1024x1536';
   }
@@ -20937,7 +20951,8 @@ Use rich environmental storytelling while keeping the face as the primary focal 
           ? {image:null,prompt:describePromptText(),theme:null,deviceId,refImageA:null,refImageB:null,currentDesign:null,
              size:getImageSizeParam(),...describeTextOnlyPayload()}
           : {image:workingImage,prompt,theme:null,deviceId,refImageA:refASnapshot,refImageB:refBSnapshot,currentDesign:null,size:getImageSizeParam(),...currentStylePayload(),
-             ...(carMagnetIsStrip()?{bandRatio:carMagnetRatio()}:{})}),
+             ...(carMagnetIsStrip()?{bandRatio:carMagnetRatio()}:{}),
+             ...(product==='doormat'?{bandRatio:Math.round(DOORMAT_RATIO*100)/100}:{})}),
         signal:currentGenerationController.signal
       });
 
@@ -21057,10 +21072,12 @@ async function makeTestSingleZonePanorama(side){
       }catch(err){ console.error('Could not cut the magnet picture to its size, using it as drawn:',err); }
     }
     // Cut to the print's exact shape, as the magnet is: business cards, the
-    // holder and the luggage tag (see shapedPrintRatio). An exact transfer is
+    // holder, the luggage tag and the doormat (see shapedPrintRatio). An exact transfer is
     // left as sent.
     if(!exactTransfer && resultUrl && shapedPrintRatio()){
-      try{ resultUrl=await fitToPrintShape(resultUrl,shapedPrintRatio()); }
+      try{
+        if(product==='doormat') resultUrl=await trimLetterboxedStrip(resultUrl);
+        resultUrl=await fitToPrintShape(resultUrl,shapedPrintRatio()); }
       catch(err){ console.error('Could not cut the picture to its print shape, using it as drawn:',err); }
     }
     const rawResultUrl=resultUrl;

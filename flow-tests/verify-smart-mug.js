@@ -130,11 +130,11 @@ scenarios.readyAndItsOtherSide = async (page) => {
   if (!(await vis(page, 'surpriseVariantWrap'))) return 'FAIL: picking Ready? offers no choice of the other side';
   if (await vis(page, 'surprisePreviewWrap')) return 'FAIL: Ready? previews before its other side is chosen';
   const tiles = await page.evaluate(() => [...document.querySelectorAll('#surpriseVariantGrid .btn-select')].map((b) => ({ k: b.dataset.variant, img: !!b.querySelector('img')?.naturalWidth, price: /\$\d/.test(b.innerText) })));
-  if (tiles.map((t) => t.k).join() !== 'boy,expecting') return `FAIL: the other side offers ${tiles.map((t) => t.k).join()}`;
+  if (tiles.map((t) => t.k).join() !== 'boy,girl,twins,twin-boys,twin-girls,expecting') return `FAIL: the other side offers ${tiles.map((t) => t.k).join()}`;
   if (tiles.some((t) => !t.img || !t.price)) return `FAIL: a variant tile is missing its picture or price: ${JSON.stringify(tiles)}`;
   const land = await page.evaluate(() => { const r = document.getElementById('surpriseVariantGrid').getBoundingClientRect(); return { top: Math.round(r.top), bottom: Math.round(r.bottom), H: innerHeight }; });
   if (land.top < 0 || land.bottom > land.H + 2) return `FAIL: picking Ready? does not land on the choice of other side (${JSON.stringify(land)})`;
-  const want = { boy: 'reveal-boy', expecting: 'ready-expecting' };
+  const want = { boy: 'reveal-boy', girl: 'reveal-girl', twins: 'reveal-twins', 'twin-boys': 'reveal-twin-boys', 'twin-girls': 'reveal-twin-girls', expecting: 'ready-expecting' };
   for (const [k, f] of Object.entries(want)) {
     await tap(page, `#surpriseVariantGrid .btn-select[data-variant="${k}"]`);
     await T(page, 1200);
@@ -161,7 +161,7 @@ scenarios.readyAndItsOtherSide = async (page) => {
   }));
   if (!st.pending.placements.left.endsWith('/art/surprise/ready-expecting-print-left.png')) return `FAIL: the hand-off print is ${st.pending.placements.left}`;
   if (!/Ready\? \/ Any preference\?/.test(st.note) || !/left-handed/.test(st.note)) return `FAIL: the order card says "${st.note}"`;
-  return 'PASS: Ready? asks for its other side (boy / Any preference?, pictured and priced), previews each, and orders "Ready? / Any preference?" left-handed';
+  return 'PASS: Ready? asks for its other side (boy, girl, three twins, Any preference?; pictured and priced), previews each, and orders "Ready? / Any preference?" left-handed';
 };
 
 scenarios.theOrderPage = async (page, log) => {
