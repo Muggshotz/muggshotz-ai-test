@@ -200,8 +200,13 @@ scenarios.tundraOpensThe3DTumbler = async (page) => {
 
 // ---- THE STEIN TURNS (22 Sep 2026, Alyx: "Why does a Stein not have the 3D
 // model?"). Approving a stein design opens the 3D stein, white, wearing the
-// design, with no cup palette under it -- and Printify still fires behind. ----
-OPTS.steinOpensThe3DStein = { chromiumArgs: GL };
+// design, with no cup palette under it -- and Printify still fires behind.
+// AND IT WRAPS ("Begin", the same day): a photo stein goes to the
+// continuous-scene painter, and the design it wears is the print's own
+// 2175 x 863 shape, so nothing prints with white bars. ----
+// echoUploads: the default upload stub answers every upload with one fixed
+// square picture, which would hide exactly the shape this checks.
+OPTS.steinOpensThe3DStein = { chromiumArgs: GL, echoUploads: true };
 scenarios.steinOpensThe3DStein = async (page, log) => {
   // A travel cup picked first, so a palette left over from it would show.
   await page.evaluate(() => { selectedTravelProductKey = 'travel-mug-30oz-tundra'; });
@@ -222,6 +227,10 @@ scenarios.steinOpensThe3DStein = async (page, log) => {
   if (o.tumblerKey !== 'beer-stein') return `FAIL: opened as ${JSON.stringify(o)}, not the stein body`;
   if (!o.panoramaUrl) return 'FAIL: the stein was not handed its design';
   if (o.colorHex !== '#ffffff') return `FAIL: the stein opened in ${o.colorHex}, not white`;
+  const painted = log.apiCalls.filter((c) => c.path === '/api/generate').map((c) => c.action);
+  if (!painted.includes('wraparoundPanorama')) return `FAIL: the stein was not painted as a wrap (generate actions: ${JSON.stringify(painted)})`;
+  const shape = await page.evaluate((u) => new Promise((res) => { const im = new Image(); im.onload = () => res(im.naturalWidth / im.naturalHeight); im.onerror = () => res(null); im.src = u; }), o.panoramaUrl);
+  if (!shape || Math.abs(shape - 2175 / 863) > 0.02) return `FAIL: the stein's design is ${shape && shape.toFixed(3)}:1, not the print's 2.52:1 -- it would print with white bars`;
   const s = await stageState(page);
   if (!s.wrap || !s.canvas || s.photo) return 'FAIL: the 3D stein is not what is on screen';
   if (s.waitOverlay) return 'FAIL: the "please be patient" overlay is up over the 3D stein';
@@ -238,7 +247,26 @@ scenarios.steinOpensThe3DStein = async (page, log) => {
   if (!log.apiCalls.some((c) => c.path === '/api/start-mockup')) return 'FAIL: the Printify mockup request no longer fires for the stein';
   const after = await stageState(page);
   if (!after.wrap || after.photo) return 'FAIL: Printify answering replaced the 3D stein with the flat photo';
-  return `PASS: Yes opens a white 3D stein wearing the design (${(art*100).toFixed(0)}% of the stage), no palette, hint names the stein; Printify still fired and did not replace it`;
+  return `PASS: a photo stein is painted as a wrap and cut to the print's ${shape.toFixed(2)}:1; Yes opens a white 3D stein wearing it (${(art*100).toFixed(0)}% of the stage), no palette, hint names the stein; Printify still fired and did not replace it`;
+};
+
+// A DESCRIBED stein asks for the strip at the band's shape, on the widest
+// canvas, and any picture that comes back is cut to the print's shape.
+scenarios.describedSteinAsksForTheBand = async (page) => {
+  const r = await page.evaluate(async () => {
+    product = 'beer stein';
+    const pay = describeTextOnlyPayload();
+    const c = document.createElement('canvas'); c.width = 1024; c.height = 1024;
+    const g = c.getContext('2d'); g.fillStyle = '#3366cc'; g.fillRect(0, 0, 1024, 1024);
+    const cut = await fitSteinBand(c.toDataURL('image/png'));
+    const im = await loadImageFromUrl(cut);
+    return { ratio: pay.bandRatio, rule: pay.shapingRule, size: getImageSizeParam(), cut: im.naturalWidth / im.naturalHeight };
+  });
+  if (r.ratio !== 2.52) return `FAIL: a described stein asks for a ${r.ratio}:1 strip, not 2.52`;
+  if (!/beer stein/.test(r.rule || '')) return `FAIL: the shaping rule does not name the stein: "${r.rule}"`;
+  if (r.size !== '1536x1024') return `FAIL: a stein paints on ${r.size}, not the widest canvas`;
+  if (Math.abs(r.cut - 2175 / 863) > 0.01) return `FAIL: a square cut for the stein came out ${r.cut.toFixed(3)}:1`;
+  return `PASS: a described stein asks for a 2.52:1 strip on 1536x1024 with the stein named, and the cut lands on ${r.cut.toFixed(3)}:1`;
 };
 
 // ---- THE HANDLED CUPS (v107). The 40oz insulated is a front-and-back cup:

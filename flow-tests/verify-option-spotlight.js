@@ -84,7 +84,11 @@ const scenarios = {
     return judge('suitcase -> idea', await state(page, 'ideaCard'), 'ideafirst-focus');
   },
 
-  // Confirming the description releases the spotlight toward Generate.
+  // Confirming the description releases the spotlight toward Generate --
+  // and, since 22 Sep 2026, hands it TO Generate (Alyx: "the generate image
+  // bar should be the only thing showing ... everything else should
+  // certainly be subdued"). The idea card's spotlight must be gone; the one
+  // left is Generate's, and nothing else.
   async ideaReleaseClears(page) {
     await pick(page, 'suitcase');
     await page.click('#suitcaseSizeGrid .btn-select[data-suitcase-size="Small"]');
@@ -95,8 +99,8 @@ const scenarios = {
     await page.evaluate(() => confirmIdeaSatisfied());
     await page.waitForTimeout(1500);
     const focus = await page.evaluate(() => [...document.body.classList].filter(c => c.endsWith('-focus')));
-    if (focus.length) return `FAIL: spotlight not released after confirming the description: ${JSON.stringify(focus)}`;
-    return 'PASS: confirming the description releases the spotlight for Generate';
+    if (focus.length !== 1 || focus[0] !== 'generate-focus') return `FAIL: after confirming the description the spotlight is ${JSON.stringify(focus)}, not Generate's alone`;
+    return 'PASS: confirming the description hands the spotlight to Generate, and only to Generate';
   },
 
   // Reset must sweep the new spotlights too -- it used to remove by name.

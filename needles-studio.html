@@ -1,5 +1,5 @@
 <!-- ============================================================
-     VERSION: V347
+     VERSION: V348
      ============================================================
      THE ONE LINE THAT SAYS WHICH BUILD YOU ARE LOOKING AT.
 
@@ -606,6 +606,12 @@ body.travel-color-focus .card:not(#travelMugVariantCard){opacity:.35;filter:brig
    (Sep 2026), so by the time this spotlight lights there is nothing left to
    answer at all -- every card dims and the bare Generate button is the step. */
 body.generate-focus .card{opacity:.35;filter:brightness(.6) saturate(.75);transition:opacity .5s,filter .5s}
+/* AND THE LOOSE ONES (Alyx, 22 Sep 2026: "the generate image bar should be
+   the only thing showing ... everything else should certainly be
+   subdued"). The rule above dims cards; these sit between cards and stayed
+   fully lit around the button. The token note under Generate stays lit --
+   it is the price of the click. Dimmed, not locked: Back still works. */
+body.generate-focus :is(#finalGenerateGuidance,#generateBackBtn,#changeMugStyleBtn,#cancelBtn,#resetEverythingBtn,#resetEverythingBtnTop,#keepTweakingReminder){opacity:.35;filter:brightness(.6) saturate(.75);transition:opacity .5s,filter .5s}
 /* A DIM IS A GUIDE, NOT A CAGE -- and that goes for going BACK.
    Alyx: "whenever we switch the back button we shouldn't switch the back
    button and have things freeze up on us... going back allows you to
@@ -3500,6 +3506,9 @@ function describeOnlyMode(){ return byoDeclaredIntent==='describe'; }
 // what is left is real horizon end to end. Only the panoramic cups need it:
 // the 20oz, the Gator and both 40s are narrower than the picture and crop.
 function describeBandRatio(){
+  // The stein is always a wrap (Alyx, 22 Sep 2026: "Begin"). Checked first:
+  // mugPrintMode is a mug's setting and may be left over from one.
+  if(product==='beer stein')return Math.round(STEIN_WRAP_RATIO*100)/100;
   if(mugPrintMode!=='wraparound' || !wrapIsPanoramic())return null;
   // THE MUGS TOO (Alyx, V329, "The word"): a described wraparound on a mug
   // drew a 1.5 picture and mirrored the flanks, and on Color Burst's 2.74
@@ -3512,6 +3521,9 @@ function describeBandRatio(){
 function describeShapingRule(){
   const r=describeBandRatio();
   if(r==null)return getProductRules(product);
+  if(product==='beer stein'){
+    return 'a wraparound band printed round a beer stein, one continuous panoramic scene '+r+' times wider than it is tall, the scenery and sky running the full width, its two ends sitting either side of the handle; bold simple details, no tall or centred composition';
+  }
   if(product==='mug'){
     // A mug's band does not close: the handle sits in the gap between its ends.
     return 'a wraparound band printed round a coffee mug, one continuous panoramic scene '+r+' times wider than it is tall, the scenery and sky running the full width, its two ends sitting either side of the handle; bold simple details, no tall or centred composition';
@@ -4104,7 +4116,11 @@ function confirmIdeaSatisfied(){
   // dim-clearing above changes layout as this runs and cancels a plain
   // scrollIntoView.
   if(PRODUCTS_NEEDING_IDEA.includes(product)){
-    document.body.classList.remove('ideafirst-focus');
+    // Generate lit, everything else dimmed (Alyx, 22 Sep 2026: "the generate
+    // image bar should be the only thing showing ... everything else should
+    // certainly be subdued"). This only took the description's spotlight
+    // off, so every card came back to full brightness around the button.
+    setOptionSpotlight('generate-focus');
     const guide=document.getElementById('finalGenerateGuidance');
     if(guide)guide.classList.add('visible');
     const genBtn=document.getElementById('generateBtn');
@@ -4373,7 +4389,7 @@ function toggleWorkingImage(){
 // Two copies of a number is exactly how the marker rotted in the first place,
 // so they are not trusted to agree: .githooks/pre-commit moves both together
 // and REFUSES the commit if it ever finds them apart.
-const APP_VERSION='V347';
+const APP_VERSION='V348';
 try{ console.log('%cNeedles\u2019 Studio '+APP_VERSION,'color:#29a3ff;font-weight:700'); }catch(e){}
 
 function getDeviceId(){
@@ -6526,6 +6542,26 @@ function trimBlankBands(img,minKeep){
 // surface is a parameter rather than an assumption. Called with no opts it
 // behaves exactly as it always did, including returning the url untouched for
 // any product that has no band of its own.
+// THE STEIN'S BAND (Alyx, 22 Sep 2026: "Begin", on the stein wraparound).
+// The print file is 2175 x 863. buildSingleImage in
+// api/create-printify-order.js FITS whatever it is given inside that on
+// white, so anything not this shape prints with white bars. The picture
+// arrives at 2.52 give or take (a trimmed strip) or 21:9 (the photo
+// painter's 2.33): both are centre-cropped to the exact shape. Nothing is
+// mirrored and nothing is faded -- a 21:9 loses about 4% top and bottom.
+const STEIN_WRAP_RATIO=2175/863;
+async function fitSteinBand(url){
+  const img=await loadImageFromUrl(url);
+  const w=img.naturalWidth||img.width, h=img.naturalHeight||img.height;
+  let sw=w, sh=h;
+  if(w/h>STEIN_WRAP_RATIO) sw=Math.round(h*STEIN_WRAP_RATIO); else sh=Math.round(w/STEIN_WRAP_RATIO);
+  if(Math.abs(sw-w)<=1 && Math.abs(sh-h)<=1) return url;
+  const c=document.createElement('canvas'); c.width=sw; c.height=sh;
+  const g=c.getContext('2d');
+  g.imageSmoothingEnabled=true; g.imageSmoothingQuality='high';
+  g.drawImage(img,Math.round((w-sw)/2),Math.round((h-sh)/2),sw,sh,0,0,sw,sh);
+  return c.toDataURL('image/jpeg',0.92);
+}
 async function extendWrapToProductRatio(url,opts){
   const ratio=(opts && typeof opts.ratio==='number')
     ? opts.ratio
@@ -18467,6 +18503,8 @@ function getImageSizeParam(){
   if ((product==='mug'||product==='water bottle') && mugPrintMode==='wraparound'){
     return '1536x1024';
   }
+  // The stein's band is 2.52:1; the widest canvas is the start of it.
+  if (product==='beer stein') return '1536x1024';
   if (product==='photo poster'){
     return posterOrientation==='Horizontal' ? '1536x1024' : '1024x1536';
   }
@@ -20194,7 +20232,11 @@ Use rich environmental storytelling while keeping the face as the primary focal 
     // print-style card -- it splits a single image into front and back
     // halves through its own path below, and its handle means it never
     // had a continuous surface to wrap in the first place.
-    const usePanorama = isWraparoundActive && !is40ozWraparoundSplit && wrapIsPanoramic();
+    // The stein takes the same two lanes as a panoramic cup: a described
+    // design is painted as a strip and trimmed, a photo goes to the
+    // continuous-scene painter. fitSteinBand() then cuts either to the print.
+    const steinWrap = product==='beer stein';
+    const usePanorama = (isWraparoundActive && !is40ozWraparoundSplit && wrapIsPanoramic()) || steinWrap;
     let panoramaData = null;
     // A DESCRIBED WRAP NEVER CALLS THE PANORAMA (Alyx, Sep 2026). The panorama
     // widens a PHOTO; a described design has none, so that request 400'd and
@@ -20392,7 +20434,8 @@ Use rich environmental storytelling while keeping the face as the primary focal 
     // finale of its own. The only thing it skips is the OpenAI call it
     // has already replaced.
     const travelPanoramaReady = !!(panoramaData && product==='water bottle' && panoramaData.panoramaUrl);
-    if(panoramaData && product==='water bottle' && !panoramaData.panoramaUrl){
+    const steinPanoramaReady = !!(panoramaData && steinWrap && panoramaData.panoramaUrl);
+    if(panoramaData && (product==='water bottle'||steinWrap) && !panoramaData.panoramaUrl){
       throw new Error('No panorama image returned.');
     }
 
@@ -20423,6 +20466,9 @@ Use rich environmental storytelling while keeping the face as the primary focal 
     } else if(travelPanoramaReady){
       document.getElementById('wraparoundStandbyPrompt').style.display='none';
       resultUrl=await extendWrapToProductRatio(panoramaData.panoramaUrl);
+    } else if(steinPanoramaReady){
+      document.getElementById('wraparoundStandbyPrompt').style.display='none';
+      resultUrl=await fitSteinBand(panoramaData.panoramaUrl);
     } else {
       currentGenerationController=new AbortController();
       const resp=await fetch('/api/generate',{
