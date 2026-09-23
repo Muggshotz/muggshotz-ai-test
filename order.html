@@ -341,6 +341,7 @@ body.studio-driven #orderHeadlineCard{display:block}
 <div class="card" id="smartMugCard" style="display:none">
 <div class="card-title">🎁 SURPRISE!!! Smart Mug</div>
 <div class="note" id="smartMugChoiceNote" style="margin-top:0"></div>
+<img id="smartMugColdHot" alt="Cold, then hot: the surprise appears" style="display:none;width:100%;border-radius:10px;margin-top:.75rem"/>
 <div class="note" id="smartMugMockupBtn" style="text-align:center;margin-top:1rem;color:var(--accent-soft);font-weight:600">🔍 Click Image To Enlarge</div>
 <div class="note" id="smartMugMockupNote" style="margin-top:.5rem;text-align:center;display:none"></div>
 <img id="smartMugMockupImg" style="display:none;width:100%;border-radius:12px;border:1px solid var(--accent);margin-top:.75rem"/>
@@ -1436,7 +1437,8 @@ let selectedTshirtColor = (pendingOrder?.preselectedTshirtColor && TSHIRT_COLORS
 // SURPRISE!!! -- the smart mug (23 Sep 2026). One size; the template and the
 // hand were chosen in the studio and the print arrives ready-made.
 const SMART_MUG_PRICE = 19.95;
-const SURPRISE_LABELS = { 'valentine': 'Will You Be My Valentine?', 'congratulations': 'Congratulations', 'apology': 'The Apology' };
+const SURPRISE_COLDHOT = { 'proposal': 'art/surprise/proposal-coldhot.jpg' };
+const SURPRISE_LABELS = { 'proposal': 'Will You Marry Me?', 'valentine': 'Will You Be My Valentine?', 'congratulations': 'Congratulations', 'apology': 'The Apology' };
 const selectedSurprise = pendingOrder?.preselectedSurprise || null;
 const selectedSurpriseHand = pendingOrder?.preselectedSurpriseHand === 'left' ? 'left' : 'right';
 function surpriseLabel(){ return SURPRISE_LABELS[selectedSurprise] || 'Surprise'; }
@@ -3407,6 +3409,10 @@ if (isTravelMug()) {
     document.getElementById('smartMugCard').style.display = 'block';
     document.getElementById('smartMugChoiceNote').textContent =
       surpriseLabel() + ' · for a ' + selectedSurpriseHand + '-handed recipient · $' + SMART_MUG_PRICE.toFixed(2);
+    if (SURPRISE_COLDHOT[selectedSurprise]) {
+      const ch = document.getElementById('smartMugColdHot');
+      ch.src = SURPRISE_COLDHOT[selectedSurprise]; ch.style.display = 'block';
+    }
     document.getElementById('previewNote').textContent =
       'Your surprise, laid flat. It wraps once round the black mug and appears when hot coffee goes in.';
     scheduleAutoMockupFetch();

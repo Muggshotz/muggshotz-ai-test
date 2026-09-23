@@ -1,5 +1,5 @@
 <!-- ============================================================
-     VERSION: V356
+     VERSION: V357
      ============================================================
      THE ONE LINE THAT SAYS WHICH BUILD YOU ARE LOOKING AT.
 
@@ -1521,6 +1521,7 @@ const HERO_SETTLE_MS = 1000;
 <div class="btn-select selected" data-hand="right" onclick="pickSurpriseHand('right')" style="padding:.5rem;font-size:12px">Right-handed</div><div class="btn-select" data-hand="left" onclick="pickSurpriseHand('left')" style="padding:.5rem;font-size:12px">Left-handed</div>
 </div>
 <div id="surprisePreviewWrap" style="display:none;margin-top:.9rem">
+<img id="surpriseColdHot" alt="Cold, then hot: the surprise appears" style="display:none;width:100%;border-radius:8px;margin-bottom:.6rem"/>
 <div class="note" style="margin-bottom:.4rem">The whole print, laid flat. It wraps once round the mug.</div>
 <img id="surprisePreview" alt="" style="width:100%;border-radius:8px;background:#000"/>
 <button type="button" class="generate-btn" id="surpriseContinueBtn" style="margin-top:.8rem" onclick="goToSurpriseOrder()">🎁 See it on the mug and order</button>
@@ -4533,7 +4534,7 @@ function toggleWorkingImage(){
 // Two copies of a number is exactly how the marker rotted in the first place,
 // so they are not trusted to agree: .githooks/pre-commit moves both together
 // and REFUSES the commit if it ever finds them apart.
-const APP_VERSION='V356';
+const APP_VERSION='V357';
 try{ console.log('%cNeedles\u2019 Studio '+APP_VERSION,'color:#29a3ff;font-weight:700'); }catch(e){}
 
 function getDeviceId(){
@@ -12428,6 +12429,7 @@ function refreshCarMagnetVisibility(){
 // holding it.
 const SMART_MUG_PRICE=19.95; // Alyx's price, before shipping: wholesale 9.06 + $10, customer total under $30
 const SURPRISE_TEMPLATES={
+  'proposal':{label:'Will You Marry Me?',file:'proposal',coldhot:'art/surprise/proposal-coldhot.jpg'},
   'valentine':{label:'Will You Be My Valentine?',file:'valentine'},
   'congratulations':{label:'Congratulations',file:'congratulations'},
   'apology':{label:'The Apology',file:'apology'}
@@ -12480,6 +12482,10 @@ function refreshSurprisePreview(){
   if(!wrap)return;
   wrap.style.display=url?'block':'none';
   if(url)document.getElementById('surprisePreview').src=url;
+  // The template's own COLD -> HOT picture, where Bud has made one: it shows
+  // what the mug does, which the flat print cannot.
+  const ch=document.getElementById('surpriseColdHot'), t=SURPRISE_TEMPLATES[selectedSurprise];
+  if(ch){ ch.style.display=(t&&t.coldhot)?'block':'none'; if(t&&t.coldhot)ch.src=t.coldhot; }
   // The next thing to do is look and press Continue: land on the preview and
   // its button, not back at the top of the panel with both below the screen.
   if(url)smoothScrollToTarget('surprisePreviewWrap','end');

@@ -107,7 +107,15 @@ scenarios.leftHandedAndThePrints = async (page) => {
   });
   const bad = Object.entries(sizes).filter(([, v]) => v !== '2475x1155');
   if (bad.length) return `FAIL: prints not at the mug's 2475 x 1155: ${JSON.stringify(bad)}`;
-  return `PASS: left-handed swaps to the -left print; all ${Object.keys(sizes).length} prints are 2475 x 1155`;
+  // A template with its own COLD -> HOT picture shows it; one without does not.
+  await tap(page, '#surpriseTemplateGrid .btn-select[data-surprise="proposal"]');
+  await T(page, 1200);
+  const ch = await page.evaluate(async () => { const im = document.getElementById('surpriseColdHot'); if (getComputedStyle(im).display === 'none') return null; await (im.complete ? null : new Promise((r) => { im.onload = im.onerror = r; })); return im.naturalWidth; });
+  if (!ch) return 'FAIL: the Proposal does not show its COLD -> HOT picture';
+  await tap(page, '#surpriseTemplateGrid .btn-select[data-surprise="valentine"]');
+  await T(page, 600);
+  if (await vis(page, 'surpriseColdHot')) return 'FAIL: a COLD -> HOT picture shows for a template that has none';
+  return `PASS: left-handed swaps to the -left print; all ${Object.keys(sizes).length} prints are 2475 x 1155; the Proposal shows its COLD -> HOT picture`;
 };
 
 scenarios.theOrderPage = async (page, log) => {
