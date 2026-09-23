@@ -15,7 +15,7 @@
 // good deployment (that is what happened Sep 2026: the shipping fix was
 // on main but the site kept showing $6.95). Do not add files to api/.
 import { getProduct } from "../lib/products-catalog.js";
-import { calculateShippingCharge } from "../lib/printify-shipping.js";
+import { calculateShippingCharge, calculateBasketShipping } from "../lib/printify-shipping.js";
 
 const SHOP_ID = "27439202";
 const DEFAULT_PRODUCT_ID = "6a38968893a2ad63ed041050";
@@ -49,10 +49,40 @@ export default async function handler(req, res) {
       const countryCode = ((req.query.country || "US").trim().toUpperCase()) || "US";
 
       try {
-        const shipping = await calculateShippingCharge(product, price, countryCode);
+        // The size and colour pick the variant, for a product whose shipping
+        // differs by variant (shippingByVariant: business cards by quantity).
+        const sz = product.sizes?.[req.query.sizeLabel];
+        const cl = sz?.colors && req.query.colorName ? sz.colors.find((x) => x.name === req.query.colorName) : null;
+        const shipping = await calculateShippingCharge(product, price, countryCode, cl?.variantId || sz?.variantId || null);
         return res.status(200).json({ shipping, shippingSeparate: true, source: "live" });
       } catch (err) {
         console.error("shipping quote failed:", err.message);
+        return res.status(200).json({ shipping: null, source: "error" });
+      }
+    }
+    // The basket's shipping, from the same function create-checkout-session
+    // bills a basket with (calculateBasketShipping): one first-item rate per
+    // maker, the cheaper additional rate after it. items is JSON:
+    // [{ productKey, sizeLabel, colorName, basePrice }]. Same failure rule as
+    // the single quote above: HTTP 200, shipping:null, the page estimates.
+    if (action === "basketShipping") {
+      let items = [];
+      try { items = JSON.parse(req.query.items || "[]"); } catch (e) { items = []; }
+      if (!Array.isArray(items) || !items.length) return res.status(400).json({ error: "items is required." });
+      const countryCode = ((req.query.country || "US").trim().toUpperCase()) || "US";
+      const entries = [];
+      for (const it of items.slice(0, 12)) {
+        const product = getProduct(String(it.productKey || ""));
+        if (!product) return res.status(404).json({ error: `Unknown product: ${it.productKey}` });
+        const s = product.sizes?.[it.sizeLabel];
+        const c = s?.colors && it.colorName ? s.colors.find((x) => x.name === it.colorName) : null;
+        entries.push({ product, basePrice: Number(it.basePrice) || 0, variantId: c?.variantId || s?.variantId || null });
+      }
+      try {
+        const ship = await calculateBasketShipping(entries, countryCode);
+        return res.status(200).json({ shipping: ship.total, perItem: ship.perItem, source: "live" });
+      } catch (err) {
+        console.error("basket shipping quote failed:", err.message);
         return res.status(200).json({ shipping: null, source: "error" });
       }
     }

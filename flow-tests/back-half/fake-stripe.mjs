@@ -13,5 +13,7 @@ export default class Stripe {
       return session;
     } } };
     this.webhooks = { constructEvent: (rawBody) => JSON.parse(rawBody.toString()) };
+    // Gift certificates come off as a one-time coupon (the basket test uses one).
+    this.coupons = { create: async (args) => ({ id: `coupon_${globalThis.__stripe.sessions.length + 1}`, ...args }) };
   }
 }

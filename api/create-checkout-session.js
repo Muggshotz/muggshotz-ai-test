@@ -1,6 +1,7 @@
 import Stripe from "stripe";
+import { randomUUID } from "node:crypto";
 import { getProduct } from "../lib/products-catalog.js";
-import { calculateShippingCharge } from "../lib/printify-shipping.js";
+import { calculateShippingCharge, calculateBasketShipping } from "../lib/printify-shipping.js";
 import { readMaintenance } from "../lib/maintenance.js";
 import { TOKEN_PACKS } from "../lib/token-packs.js";
 import { GIFT_AMOUNTS_CENTS, STRIPE_MIN_CHARGE_CENTS, findGiftCertificate, normalizeGiftCode, giftLedgerReady } from "../lib/gift-certificates.js";
@@ -159,55 +160,88 @@ async function handleReservation(req, res) {
   return res.status(200).json({ url: session.url });
 }
 
-async function handleProductOrder(req, res) {
-  const {
-    deviceId, sizeLabel, customerName, giftMessage, shippingAddress, printMode, isWraparoundSet, referralCode
-  } = req.body;
+// ONE ITEM, CHECKED AND PRICED (23 Sep 2026). What handleProductOrder always
+// did for its one product, lifted out so a basket checks every item the same
+// way: the product exists, the size (and colour, and poster pair) is real, the
+// artwork its layout needs is present. Throws an Error carrying .status on
+// anything a customer must fix. Prices come from the catalog, never the page.
+function orderError(message, status = 400) { const e = new Error(message); e.status = status; return e; }
+function catalogVariantId(product, sizeLabel, colorName) {
+  const s = product.sizes?.[sizeLabel];
+  if (!s) return null;
+  if (s.colors && colorName) { const c = s.colors.find((x) => x.name === colorName); if (c?.variantId) return c.variantId; }
+  return s.variantId || null;
+}
+function resolveOrderItem(b) {
+  const sizeLabel = b.sizeLabel;
+  const productKey = b.productKey || MUG_TYPE_TO_PRODUCT_KEY[b.mugType];
+  const colorName = b.colorName || b.color || null;
+  const placements = b.placements || null;
+  const placementAdjust = b.placementAdjust || null;
+  const frontImage = b.frontImage || null;
+  const backImage = b.backImage || null;
+  const singleImage = b.image || null;
 
-  const productKey = req.body.productKey || MUG_TYPE_TO_PRODUCT_KEY[req.body.mugType];
-  const colorName = req.body.colorName || req.body.color || null;
-  const placements = req.body.placements || null;
-  const placementAdjust = req.body.placementAdjust || null;
-  const frontImage = req.body.frontImage || null;
-  const backImage = req.body.backImage || null;
-  const singleImage = req.body.image || null;
-
-  if (!deviceId) return res.status(400).json({ error: "Missing device ID." });
   const product = productKey ? getProduct(productKey) : null;
-  if (!product) return res.status(400).json({ error: `"${req.body.mugType || productKey}" isn't available yet.` });
+  if (!product) throw orderError(`"${b.mugType || productKey}" isn't available yet.`);
 
-  let basePrice;
-  try {
-    basePrice = resolvePrice(product, sizeLabel, colorName, {
-      orientation: req.body.posterOrientation, finish: req.body.posterFinish
-    });
-  } catch (err) {
-    return res.status(400).json({ error: err.message });
-  }
+  const basePrice = (() => {
+    try {
+      return resolvePrice(product, sizeLabel, colorName, { orientation: b.posterOrientation, finish: b.posterFinish });
+    } catch (err) { throw orderError(err.message); }
+  })();
 
   const requiresColor = !!(product.sizes?.[sizeLabel]?.colors || product.colors);
-  if (requiresColor && !colorName) return res.status(400).json({ error: "Please pick a color." });
+  if (requiresColor && !colorName) throw orderError("Please pick a color.");
 
   if (product.layoutType === "three-slot-wrap") {
     if (!placements || !(placements.left || placements.front || placements.right))
-      return res.status(400).json({ error: "At least one design is required." });
+      throw orderError("At least one design is required.");
   } else if (product.layoutType === "front-back") {
     if (!frontImage && !backImage)
-      return res.status(400).json({ error: "At least a front or back image is required." });
+      throw orderError("At least a front or back image is required.");
   } else {
     if (!singleImage)
-      return res.status(400).json({ error: "An image is required." });
+      throw orderError("An image is required.");
   }
+
+  const upsellCharge = product.layoutType === "three-slot-wrap"
+    ? (b.isWraparoundSet ? WRAPAROUND_SET_SURCHARGE : calculateUpsellCharge(placements))
+    : 0;
+
+  return {
+    product, productKey, sizeLabel, colorName, basePrice, upsellCharge,
+    variantId: catalogVariantId(product, sizeLabel, colorName),
+    placements, placementAdjust, frontImage, backImage, singleImage,
+    printMode: b.printMode === "fullBleed" ? "fullBleed" : "standard",
+    isWraparoundSet: !!b.isWraparoundSet,
+    panoramaImage: b.panoramaImage || null,
+    insideImage: b.insideImage || null,
+    posterOrientation: b.posterOrientation || null,
+    posterFinish: b.posterFinish || null
+  };
+}
+function shipsToOrThrow(product, shipCountry) {
+  if (Array.isArray(product.shipsTo) && !product.shipsTo.includes(shipCountry))
+    throw orderError(`Sorry — the ${product.displayName} can only be shipped to ${product.shipsTo.join(" and ")} at the moment.`);
+}
+
+async function handleProductOrder(req, res) {
+  const {
+    deviceId, customerName, giftMessage, shippingAddress, isWraparoundSet, referralCode
+  } = req.body;
+
+  if (!deviceId) return res.status(400).json({ error: "Missing device ID." });
+  let item;
+  try { item = resolveOrderItem(req.body); }
+  catch (err) { return res.status(err.status || 400).json({ error: err.message }); }
+  const { product, productKey, sizeLabel, colorName, basePrice, upsellCharge, placements, placementAdjust, frontImage, backImage, singleImage } = item;
 
   if (!shippingAddress?.email || !shippingAddress?.address1 || !shippingAddress?.city ||
       !shippingAddress?.region || !shippingAddress?.zip)
     return res.status(400).json({ error: "Missing required shipping information." });
 
-  const resolvedPrintMode = printMode === "fullBleed" ? "fullBleed" : "standard";
-
-  const upsellCharge = product.layoutType === "three-slot-wrap"
-    ? (isWraparoundSet ? WRAPAROUND_SET_SURCHARGE : calculateUpsellCharge(placements))
-    : 0;
+  const resolvedPrintMode = item.printMode;
   const giftCharge = giftMessage?.trim() ? GIFT_MESSAGE_PRICE : 0;
 
   // one-time 10% email discount, checked fresh at checkout creation time.
@@ -223,15 +257,12 @@ async function handleProductOrder(req, res) {
   // A product Printify only ships to some countries (Color Burst: US and
   // Canada) says so, instead of failing as a generic shipping error below.
   const shipCountry = (shippingAddress.country || "US").toUpperCase();
-  if (Array.isArray(product.shipsTo) && !product.shipsTo.includes(shipCountry)) {
-    return res.status(400).json({
-      error: `Sorry — the ${product.displayName} can only be shipped to ${product.shipsTo.join(" and ")} at the moment.`
-    });
-  }
+  try { shipsToOrThrow(product, shipCountry); }
+  catch (err) { return res.status(400).json({ error: err.message }); }
   let shippingCharge = 0;
   if (product.shippingSeparate) {
     try {
-      shippingCharge = await calculateShippingCharge(product, basePrice, shippingAddress.country || "US");
+      shippingCharge = await calculateShippingCharge(product, basePrice, shippingAddress.country || "US", item.variantId);
     } catch (err) {
       console.error("Shipping resolution failed, refusing to create session:", err.message);
       return res.status(503).json({
@@ -386,6 +417,154 @@ async function handleProductOrder(req, res) {
     cancel_url: `${origin}/order.html?checkout=cancelled`
   });
 
+  return res.status(200).json({ url: session.url });
+}
+
+// THE BASKET (Alyx, 23 Sep 2026: "Begin build a basket"). Several products,
+// one payment, one Printify order. Every item is checked and priced exactly as
+// a single order is (resolveOrderItem); shipping is Printify's per maker
+// (calculateBasketShipping); the gift message, the first-order discount, the
+// gift certificate and the card fee apply to the whole order once.
+//
+// The items do not travel in Stripe's metadata -- 500 characters a value,
+// already split four ways for one mug's placements. They are written to
+// storage as baskets/<id>.json (artwork URLs and options only; the name,
+// address and message stay in metadata, as on a single order) and the
+// webhook reads them back by basket_id.
+const MAX_BASKET_ITEMS = 6;
+async function storeBasket(basketId, items) {
+  const resp = await fetch(`${SUPABASE_URL}/storage/v1/object/generations/baskets/${basketId}.json`, {
+    method: "POST",
+    headers: { apikey: SUPABASE_SERVICE_ROLE_KEY, Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ version: 1, items })
+  });
+  if (!resp.ok) throw new Error("Basket storage failed: " + await resp.text());
+}
+async function handleBasketOrder(req, res) {
+  const { deviceId, items, customerName, giftMessage, shippingAddress, referralCode } = req.body;
+  if (!deviceId) return res.status(400).json({ error: "Missing device ID." });
+  if (!Array.isArray(items) || !items.length) return res.status(400).json({ error: "Your basket is empty." });
+  if (items.length > MAX_BASKET_ITEMS) return res.status(400).json({ error: `A basket holds up to ${MAX_BASKET_ITEMS} items. Please check out and start a new basket for the rest.` });
+  if (!shippingAddress?.email || !shippingAddress?.address1 || !shippingAddress?.city ||
+      !shippingAddress?.region || !shippingAddress?.zip)
+    return res.status(400).json({ error: "Missing required shipping information." });
+  const shipCountry = (shippingAddress.country || "US").toUpperCase();
+
+  let resolved;
+  try {
+    resolved = items.map((b, i) => {
+      try { const r = resolveOrderItem(b); shipsToOrThrow(r.product, shipCountry); return r; }
+      catch (err) { err.message = `Basket item ${i + 1}: ${err.message}`; throw err; }
+    });
+  } catch (err) { return res.status(err.status || 400).json({ error: err.message }); }
+
+  const cleanReferralCode = (referralCode || "").trim().toUpperCase() || null;
+  const emailDiscountEligible = await checkEmailDiscountEligibility(shippingAddress.email);
+  const giftCharge = giftMessage?.trim() ? GIFT_MESSAGE_PRICE : 0;
+
+  const itemCents = resolved.map((r) => {
+    const discount = emailDiscountEligible ? Math.round(r.basePrice * FLYER_DISCOUNT_RATE * 100) / 100 : 0;
+    return Math.round((r.basePrice - discount + r.upsellCharge) * 100);
+  });
+  const giftChargeCents = Math.round(giftCharge * 100);
+  const productCents = itemCents.reduce((a, b) => a + b, 0) + giftChargeCents;
+
+  let shippingCents = 0;
+  try {
+    const ship = await calculateBasketShipping(resolved.map((r) => ({ product: r.product, basePrice: r.basePrice, variantId: r.variantId })), shipCountry);
+    shippingCents = Math.round(ship.total * 100);
+  } catch (err) {
+    console.error("Basket shipping resolution failed, refusing to create session:", err.message);
+    return res.status(503).json({ error: "We couldn't confirm the shipping cost for this order just now. Please try again in a moment." });
+  }
+
+  let giftCode = null, giftCents = 0;
+  if (req.body.giftCode) {
+    giftCode = normalizeGiftCode(req.body.giftCode);
+    let cert = null;
+    try { cert = giftCode ? await findGiftCertificate(giftCode) : null; }
+    catch (err) { console.error("Gift certificate lookup failed:", err.message); return res.status(503).json({ error: "We couldn't check that gift certificate just now. Please try again in a moment." }); }
+    if (!cert || cert.voided_at || cert.balance_cents <= 0)
+      return res.status(400).json({ error: "That gift certificate code isn't valid or has no balance left." });
+    giftCents = Math.max(0, Math.min(cert.balance_cents, productCents + shippingCents - STRIPE_MIN_CHARGE_CENTS));
+  }
+
+  const discountSuffix = emailDiscountEligible ? " (10% first-order discount applied)" : "";
+  const line_items = resolved.map((r, i) => ({
+    price_data: { currency: "usd", product_data: {
+      name: `Muggshotz ${r.product.displayName} (${r.sizeLabel})${r.colorName ? " - " + r.colorName : ""}${discountSuffix}`,
+      description: `Custom ${r.product.displayName}` }, unit_amount: itemCents[i] },
+    quantity: 1
+  }));
+  if (giftChargeCents > 0) line_items.push({ price_data: { currency: "usd", product_data: { name: "Gift message" }, unit_amount: giftChargeCents }, quantity: 1 });
+  if (shippingCents > 0) line_items.push({ price_data: { currency: "usd", product_data: { name: "Shipping & Handling" }, unit_amount: shippingCents }, quantity: 1 });
+  const feeCents = feeLineCents(productCents + shippingCents - giftCents);
+  if (feeCents > 0) line_items.push({
+    price_data: { currency: "usd", product_data: { name: "Card Processing & Handling", description: "Payment processing at our processor's standard rate (2.9% + 30¢) plus a 5¢ handling fee" }, unit_amount: feeCents },
+    quantity: 1
+  });
+  let discounts;
+  if (giftCents > 0) {
+    const coupon = await stripe.coupons.create({
+      amount_off: giftCents, currency: "usd", duration: "once", max_redemptions: 1,
+      name: `Gift certificate ${giftCode}`
+    });
+    discounts = [{ coupon: coupon.id }];
+  }
+
+  const basketId = randomUUID();
+  const stored = resolved.map((r) => ({
+    productKey: r.productKey, sizeLabel: r.sizeLabel, colorName: r.colorName, printMode: r.printMode,
+    placements: r.product.layoutType === "three-slot-wrap" ? r.placements : undefined,
+    placementAdjust: r.product.layoutType === "three-slot-wrap" ? (r.placementAdjust || {}) : undefined,
+    panoramaImage: r.panoramaImage || undefined,
+    frontImage: r.frontImage || undefined, backImage: r.backImage || undefined,
+    image: r.singleImage || undefined, insideImage: r.insideImage || undefined,
+    posterFramed: r.productKey === "photo-poster" ? false : undefined,
+    posterOrientation: r.posterOrientation || undefined, posterFinish: r.posterFinish || undefined
+  }));
+  try { await storeBasket(basketId, stored); }
+  catch (err) {
+    console.error("Basket could not be stored, refusing to create session:", err.message);
+    return res.status(503).json({ error: "We couldn't save your basket just now. Please try again in a moment." });
+  }
+  const netProfit = resolved.reduce((a, r) => a + (typeof r.product.estimatedProfit === "number" ? r.product.estimatedProfit : 0), 0);
+
+  const origin = req.headers.origin || "https://muggshotz-ai-test.vercel.app";
+  const session = await stripe.checkout.sessions.create({
+    mode: "payment",
+    payment_method_types: ["card"],
+    automatic_tax: { enabled: true },
+    line_items,
+    ...(discounts ? { discounts } : {}),
+    metadata: {
+      order_type: "basket_order",
+      basket_id: basketId,
+      item_count: String(resolved.length),
+      product_keys: resolved.map((r) => r.productKey).join(",").slice(0, 490),
+      gift_code: giftCode && giftCents > 0 ? giftCode : "",
+      gift_cents: String(giftCents),
+      device_id: deviceId,
+      gift_message: (giftMessage || "").trim().slice(0, 450),
+      customer_name: customerName || "",
+      first_name: shippingAddress.first_name || "",
+      last_name: shippingAddress.last_name || "",
+      email: shippingAddress.email || "",
+      phone: shippingAddress.phone || "",
+      country: shippingAddress.country || "US",
+      region: shippingAddress.region || "",
+      address1: shippingAddress.address1 || "",
+      address2: shippingAddress.address2 || "",
+      city: shippingAddress.city || "",
+      zip: shippingAddress.zip || "",
+      referral_code: cleanReferralCode || "",
+      email_discount_eligible: emailDiscountEligible ? "true" : "false",
+      net_profit: String(Math.round(netProfit * 100) / 100),
+      fees_cents: String(feeCents)
+    },
+    success_url: `${origin}/order.html?checkout=success&basket=1`,
+    cancel_url: `${origin}/order.html?checkout=cancelled`
+  });
   return res.status(200).json({ url: session.url });
 }
 
@@ -591,6 +770,9 @@ export default async function handler(req, res) {
     }
     if (type === "mug_order") {
       return await handleProductOrder(req, res);
+    }
+    if (type === "basket_order") {
+      return await handleBasketOrder(req, res);
     }
     if (type === "tier_upgrade") {
       return await handleTierUpgrade(req, res);

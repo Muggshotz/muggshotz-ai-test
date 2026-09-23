@@ -2,7 +2,7 @@ import Stripe from "stripe";
 import { mintGiftCertificate, spendGiftCertificate, giftEmailHtml } from "../lib/gift-certificates.js";
 import { TOKEN_PACKS } from "../lib/token-packs.js";
 import { TIER_SEQUENCE, TIER_RULES, TIER_UPGRADE_LABEL, buildTierCodes } from "../lib/flyer-tiers.js";
-import { placeProductOrder } from "./create-printify-order.js";
+import { placeProductOrder, placeBasketOrder } from "./create-printify-order.js";
 import { getProduct } from "../lib/products-catalog.js";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
@@ -277,11 +277,14 @@ async function maybeSendBalance100Email(betaId) {
 
 // Credits commission via the real fn_credit_commission Postgres
 // function, then checks for tier maturity and the $100 milestone.
-async function creditFlyerCommission(referralCode, productKey, stripeSessionId) {
+async function creditFlyerCommission(referralCode, productKey, stripeSessionId, netProfitOverride = null) {
   if (!referralCode) return;
   try {
     const product = getProduct(productKey);
-    const netProfit = typeof product?.estimatedProfit === "number" ? product.estimatedProfit : 0;
+    // A basket is one order with several products: its profit is the sum,
+    // credited once against the one session (netProfitOverride).
+    const netProfit = typeof netProfitOverride === "number" ? netProfitOverride
+      : (typeof product?.estimatedProfit === "number" ? product.estimatedProfit : 0);
 
     if (netProfit <= 0) {
       console.log(`Flyer code ${referralCode} used on session ${stripeSessionId} — $0 net profit set for "${productKey}", nothing to credit yet.`);
@@ -521,7 +524,7 @@ export default async function handler(req, res) {
       } else if (session.metadata?.order_type === "reservation") {
         await handleTokenPayment(session);
         await mintReservationCredit(session);
-      } else if (session.metadata?.order_type === "mug_order") {
+      } else if (session.metadata?.order_type === "mug_order" || session.metadata?.order_type === "basket_order") {
         // The certificate is spent first and on its own: a spend failure is
         // logged, never allowed to stop a paid order from being placed.
         if (session.metadata?.gift_code && Number(session.metadata?.gift_cents) > 0) {
@@ -532,7 +535,8 @@ export default async function handler(req, res) {
             console.error("CRITICAL: gift certificate spend failed; the order is still placed", { code: session.metadata.gift_code, session: session.id, error: err.message });
           }
         }
-        await handleMugOrderPayment(session);
+        if (session.metadata?.order_type === "basket_order") await handleBasketOrderPayment(session);
+        else await handleMugOrderPayment(session);
       } else if (session.metadata?.order_type === "tier_upgrade") {
         await handleTierUpgradePayment(session);
       } else {
@@ -680,7 +684,55 @@ async function handleMugOrderPayment(session) {
   try {
     const result = await placeProductOrder(orderInput);
     console.log("Order placed successfully for session", session.id, "-> Printify order", result.printifyOrderId);
+    await afterProductOrder(session, productKey, null);
+  } catch (error) {
+    console.error("CRITICAL: Order payment succeeded but Printify order failed.", {
+      stripeSessionId: session.id,
+      deviceId: m.device_id,
+      customerEmail: m.email,
+      error: error.message
+    });
+  }
+}
 
+function shippingAddressFrom(m) {
+  return {
+    first_name: m.first_name, last_name: m.last_name, email: m.email, phone: m.phone,
+    country: m.country, region: m.region, address1: m.address1, address2: m.address2,
+    city: m.city, zip: m.zip
+  };
+}
+
+// THE BASKET PAID (23 Sep 2026). The items were written to storage by
+// create-checkout-session (baskets/<basket_id>.json); every one is built as a
+// single order builds it, and one Printify order carries them all.
+async function handleBasketOrderPayment(session) {
+  const m = session.metadata || {};
+  try {
+    const resp = await fetch(`${SUPABASE_URL}/storage/v1/object/generations/baskets/${m.basket_id}.json`, {
+      headers: { apikey: SUPABASE_SERVICE_ROLE_KEY, Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}` }
+    });
+    if (!resp.ok) throw new Error(`basket ${m.basket_id} could not be read: ${resp.status}`);
+    const basket = await resp.json();
+    const result = await placeBasketOrder(basket.items || [], {
+      shippingAddress: shippingAddressFrom(m), customerName: m.customer_name, orderId: session.id
+    });
+    console.log("Basket order placed for session", session.id, "-> Printify order", result.printifyOrderId, `(${result.productIds.length} items)`);
+    const firstKey = (m.product_keys || "").split(",")[0] || null;
+    await afterProductOrder(session, firstKey, Number(m.net_profit) || 0);
+  } catch (error) {
+    console.error("CRITICAL: Basket payment succeeded but the Printify order failed.", {
+      stripeSessionId: session.id, basketId: m.basket_id, deviceId: m.device_id, customerEmail: m.email, error: error.message
+    });
+  }
+}
+
+// What a paid product order does after Printify has it: the device is marked
+// as a buyer, the email joins the list, a flyer code earns its commission, the
+// one-time discount is used up. Shared by a single order and a basket.
+async function afterProductOrder(session, productKey, netProfitOverride) {
+  const m = session.metadata || {};
+  {
     if (m.device_id) {
       let customer = await findCustomerByDeviceId(m.device_id);
       if (!customer) customer = await createCustomerForDevice(m.device_id);
@@ -716,18 +768,11 @@ async function handleMugOrderPayment(session) {
     }
 
     if (m.referral_code) {
-      await creditFlyerCommission(m.referral_code, productKey, session.id);
+      await creditFlyerCommission(m.referral_code, productKey, session.id, netProfitOverride);
     }
     if (m.email_discount_eligible === "true" && m.email) {
       await recordEmailDiscount(m.email, session.id);
     }
-  } catch (error) {
-    console.error("CRITICAL: Order payment succeeded but Printify order failed.", {
-      stripeSessionId: session.id,
-      deviceId: m.device_id,
-      customerEmail: m.email,
-      error: error.message
-    });
   }
 }
 

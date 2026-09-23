@@ -1114,6 +1114,12 @@ export async function createPrintifyProduct(images, { blueprintId, printProvider
 }
 
 async function submitPrintifyOrder(productId, variantId, shippingAddress, externalOrderId) {
+  return submitPrintifyOrderLines([{ product_id: productId, variant_id: variantId, quantity: 1 }], shippingAddress, externalOrderId);
+}
+
+// One order, several items (the basket, 23 Sep 2026). Printify takes line
+// items from different makers in one order and splits the shipments itself.
+async function submitPrintifyOrderLines(lineItems, shippingAddress, externalOrderId) {
   const response = await fetch(`https://api.printify.com/v1/shops/${SHOP_ID}/orders.json`, {
     method: "POST",
     headers: {
@@ -1122,7 +1128,7 @@ async function submitPrintifyOrder(productId, variantId, shippingAddress, extern
     },
     body: JSON.stringify({
       external_id: externalOrderId,
-      line_items: [{ product_id: productId, variant_id: variantId, quantity: 1 }],
+      line_items: lineItems,
       shipping_method: 1,
       send_shipping_notification: true,
       address_to: shippingAddress
@@ -1172,7 +1178,11 @@ export async function placeProductOrder({
   panoramaImage = null,
   posterFramed,
   posterOrientation,
-  posterFinish
+  posterFinish,
+  // The basket builds every item's Printify product first and then places
+  // ONE order for all of them (placeBasketOrder below), so it asks for the
+  // product and stops short of ordering it.
+  skipOrder = false
 }) {
   const product = getProduct(productKey);
   if (!product) throw new Error(`Unknown product: "${productKey}"`);
@@ -1343,6 +1353,10 @@ export async function placeProductOrder({
     imageY
   );
 
+  if (skipOrder) {
+    return { success: true, productId, variantId, basePrice: price };
+  }
+
   const orderResult = await submitPrintifyOrder(
     productId, variantId, shippingAddress, orderId || `muggshotz-${Date.now()}`
   );
@@ -1355,6 +1369,27 @@ export async function placeProductOrder({
     upsellCharge: pricing.upsellCharge,
     upsellReason: pricing.reason
   };
+}
+
+// THE BASKET (Alyx, 23 Sep 2026: "Begin build a basket"). Every item is built
+// exactly as a single order builds it -- same print file, same upload, same
+// product -- and then one Printify order carries them all to one address.
+// Built a few at a time rather than all at once: some print files are large
+// (wrapping paper runs to 144 inches) and sharp holds each one in memory.
+export async function placeBasketOrder(items, { shippingAddress, customerName, orderId }) {
+  if (!Array.isArray(items) || !items.length) throw new Error("The basket is empty.");
+  if (!shippingAddress) throw new Error("shippingAddress is required.");
+  const built = new Array(items.length);
+  const AT_ONCE = 3;
+  for (let i = 0; i < items.length; i += AT_ONCE) {
+    const slice = items.slice(i, i + AT_ONCE);
+    const done = await Promise.all(slice.map((item) =>
+      placeProductOrder({ ...item, shippingAddress, customerName, orderId, skipOrder: true })));
+    done.forEach((r, j) => { built[i + j] = r; });
+  }
+  const lineItems = built.map((b) => ({ product_id: b.productId, variant_id: b.variantId, quantity: 1 }));
+  const orderResult = await submitPrintifyOrderLines(lineItems, shippingAddress, orderId || `muggshotz-${Date.now()}`);
+  return { success: true, printifyOrderId: orderResult.id, productIds: built.map((b) => b.productId) };
 }
 
 export default async function handler(req, res) {

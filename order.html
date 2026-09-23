@@ -109,6 +109,12 @@ body.studio-driven #mockupCtaLeft,body.studio-driven #mockupCtaRight,body.studio
 body.studio-driven #orderHeadlineCard{display:block}
 .headline-row{display:flex;align-items:center;gap:14px}
 .headline-thumb{flex:0 0 72px;width:72px;height:72px;border-radius:10px;object-fit:cover;background:#fff;border:1px solid var(--card-line);box-shadow:0 0 0 1px rgba(122,184,255,0.25),0 4px 12px rgba(0,0,0,0.4)}
+.download-btn{width:min(100%,320px);margin-left:auto;margin-right:auto;display:block;background:#0d0d0d;border:1px solid #003c8c;border-radius:10px;padding:.75rem;color:#7ab8ff;font-size:14px;font-weight:600;cursor:pointer}
+.basket-row{display:flex;align-items:center;gap:10px;padding:.5rem 0;border-bottom:1px solid var(--card-line)}
+.basket-thumb{flex:0 0 44px;width:44px;height:44px;border-radius:8px;object-fit:cover;background:#fff}
+.basket-label{flex:1;font-size:13px}
+.basket-price{font-weight:700;font-size:13px}
+.basket-remove{background:none;border:1px solid #5a2a2a;color:#ff8a7a;border-radius:6px;padding:.2rem .5rem;cursor:pointer}
 .headline-name{font-size:17px;font-weight:700;color:#fff;line-height:1.2}
 .headline-detail{font-size:13px;color:var(--steel);margin-top:4px;line-height:1.35}
 .headline-change{display:inline-block;margin-top:6px;font-size:12px;color:var(--accent);text-decoration:none}
@@ -507,9 +513,17 @@ body.studio-driven #orderHeadlineCard{display:block}
 </div>
 </div>
 
+<div class="card" id="basketCard" style="display:none">
+<div class="card-title">🧺 Your Basket</div>
+<div id="basketList"></div>
+<div class="note" id="basketCurrentNote" style="display:none;margin-top:.6rem">…plus the design above, which goes in with them when you pay.</div>
+<div class="note" style="margin-top:.6rem">Everything here is paid for together and ships to the address above. Items made by different workshops arrive in separate packages.</div>
+</div>
+
 <div class="card" id="summaryCard">
 <div class="card-title">Order Summary</div>
 <div class="summary-row"><span id="summaryStyleSize">Classic White, 11oz</span><span id="summaryBase">$14.95</span></div>
+<div class="summary-row" id="summaryBasketRow" style="display:none"><span id="summaryBasketLabel">Basket</span><span id="summaryBasket"></span></div>
 <div class="summary-row" id="summaryUpsellRow" style="display:none"><span id="summaryUpsellLabel">Extra design charge</span><span id="summaryUpsell"></span></div>
 <div class="summary-row" id="summaryGiftRow" style="display:none"><span>Gift message</span><span id="summaryGift"></span></div>
 <div class="summary-row" id="summaryShippingRow"><span>Shipping & Handling</span><span id="summaryShipping">$6.95</span></div>
@@ -521,6 +535,7 @@ body.studio-driven #orderHeadlineCard{display:block}
 </div>
 
 <button class="generate-btn" id="submitBtn" onclick="submitOrder()">Continue to Payment</button>
+<button type="button" class="download-btn" id="addToBasketBtn" style="margin-top:.6rem" onclick="addToBasketAndDesignAnother()">🧺 Add to Basket &amp; Design Another</button>
 <div class="status" id="status"></div>
 <a href="needles-studio.html" class="back-link">← Back to the studio</a>
 
@@ -728,6 +743,127 @@ let liveShipping = null;      // real resolved dollars, or null if not yet known
 let liveShippingKey = '';     // productKey|basePrice|country this value is for
 let shippingLookupInFlight = '';
 
+// THE BASKET (Alyx, 23 Sep 2026: "Begin build a basket"). Finished items wait
+// here on the device, each as the exact order body this page would have sent
+// for it alone, minus the name and address, which the whole basket shares.
+// Checkout prices every item again from the catalog; the price kept here is
+// for the list and the summary only.
+const BASKET_KEY = 'muggshotz_basket';
+const MAX_BASKET_ITEMS = 6;
+let lastSummary = null;
+function readBasket(){
+  try { const b = JSON.parse(localStorage.getItem(BASKET_KEY) || '[]'); return Array.isArray(b) ? b : []; }
+  catch (e) { return []; }
+}
+function writeBasket(b){ try { localStorage.setItem(BASKET_KEY, JSON.stringify(b)); } catch (e) {} }
+function hasCurrentDesign(){
+  const p = pendingOrder?.placements;
+  return !!(p && (p.left || p.front || p.right));
+}
+function itemOnlyBody(body){
+  const { type, deviceId, customerName, giftMessage, shippingAddress, referralCode, giftCode, ...item } = body;
+  return item;
+}
+function firstImageOf(item){
+  return item.image || item.frontImage || item.panoramaImage ||
+    (item.placements && (item.placements.front || item.placements.left || item.placements.right)) || '';
+}
+// The page's own item, built without saying anything on screen -- the summary
+// asks for it on every render, and a half-chosen product is not an error there.
+function currentItemQuietly(){
+  let b = null; const say = setStatus; setStatus = function(){};
+  try { b = buildOrderItemBody('', null); } catch (e) { b = null; } finally { setStatus = say; }
+  return b ? itemOnlyBody(b) : null;
+}
+function addToBasketAndDesignAnother(){
+  if (!validateMugSelectionsAndFlash()) return;
+  const basket = readBasket();
+  if (basket.length >= MAX_BASKET_ITEMS) {
+    setStatus('Your basket holds up to ' + MAX_BASKET_ITEMS + ' items — check these out first, then start a new one.', true);
+    return;
+  }
+  const body = buildOrderItemBody('', null);
+  if (!body) return;
+  const item = itemOnlyBody(body);
+  const s = lastSummary || {};
+  basket.push({
+    item,
+    productKey: item.productKey || currentProductKey(),
+    sizeLabel: item.sizeLabel || null,
+    colorName: item.colorName || item.color || null,
+    label: s.styleSizeLabel || 'Your design',
+    basePrice: Number(s.basePrice) || 0,
+    price: (Number(s.basePrice) || 0) + (Number(s.upsellCharge) || 0),
+    thumb: firstImageOf(item)
+  });
+  writeBasket(basket);
+  try { localStorage.removeItem('muggshotz_pending_order'); } catch (e) {}
+  location.href = 'needles-studio.html';
+}
+function removeFromBasket(i){
+  const basket = readBasket();
+  basket.splice(i, 1);
+  writeBasket(basket);
+  renderBasket();
+  applyBasketOnlyMode();
+  updateSummary();
+}
+function renderBasket(){
+  const card = document.getElementById('basketCard');
+  const list = document.getElementById('basketList');
+  if (!card || !list) return;
+  const basket = readBasket();
+  card.style.display = basket.length ? 'block' : 'none';
+  list.innerHTML = '';
+  basket.forEach((b, i) => {
+    const row = document.createElement('div');
+    row.className = 'basket-row';
+    row.innerHTML = '<img class="basket-thumb" alt=""/><div class="basket-label"></div><div class="basket-price"></div>' +
+      '<button type="button" class="basket-remove" title="Remove from basket">✕</button>';
+    row.querySelector('img').src = b.thumb || '';
+    row.querySelector('.basket-label').textContent = b.label;
+    row.querySelector('.basket-price').textContent = '$' + (Number(b.price) || 0).toFixed(2);
+    row.querySelector('button').onclick = () => removeFromBasket(i);
+    list.appendChild(row);
+  });
+  const note = document.getElementById('basketCurrentNote');
+  if (note) note.style.display = (basket.length && hasCurrentDesign()) ? 'block' : 'none';
+  const add = document.getElementById('addToBasketBtn');
+  if (add) add.style.display = hasCurrentDesign() ? 'block' : 'none';
+}
+// Nothing new on this page, only a basket: the product pickers have nothing to
+// pick for, so the page is just the basket, the address and the summary.
+function applyBasketOnlyMode(){
+  const only = !hasCurrentDesign() && readBasket().length > 0;
+  if (!only) return;
+  // Every card but these is about choosing a product, and there is none.
+  const KEEP = ['basketCard','shippingCard','flyerCodeCard','giftCertCard','giftMessageCard','summaryCard'];
+  document.querySelectorAll('.main > .card').forEach(el => {
+    el.style.display = KEEP.includes(el.id) ? 'block' : 'none';
+  });
+  const btn = document.getElementById('submitBtn'); if (btn) btn.style.display = 'block';
+}
+let liveBasketShipping = null, liveBasketShippingKey = '', basketShippingInFlight = '';
+async function refreshBasketShipping(entries){
+  const key = JSON.stringify(entries) + '|' + currentCountry();
+  if (key === liveBasketShippingKey || key === basketShippingInFlight) return;
+  basketShippingInFlight = key;
+  try {
+    const qs = new URLSearchParams({ action: 'basketShipping', items: JSON.stringify(entries), country: currentCountry() });
+    const resp = await fetch('/api/printify-catalog?' + qs.toString());
+    const data = await resp.json();
+    if (typeof data.shipping === 'number') {
+      liveBasketShipping = data.shipping;
+      liveBasketShippingKey = key;
+      updateSummary();
+    }
+  } catch (err) {
+    console.error('Basket shipping lookup failed, showing estimate:', err);
+  } finally {
+    if (basketShippingInFlight === key) basketShippingInFlight = '';
+  }
+}
+
 // Mirrors the productKey each branch of submitOrder() sends to the server.
 // If these two ever disagree we are back to displaying one product's shipping
 // and charging another's, so they must be changed together.
@@ -774,11 +910,14 @@ async function refreshShipping(basePrice){
   shippingLookupInFlight = key;
 
   try {
+    const cur = currentItemQuietly();
     const qs = new URLSearchParams({
       action: 'shipping',
       productKey,
       basePrice: String(basePrice),
-      country: currentCountry()
+      country: currentCountry(),
+      sizeLabel: (cur && cur.sizeLabel) || '',
+      colorName: (cur && (cur.colorName || cur.color)) || ''
     });
     const resp = await fetch('/api/printify-catalog?' + qs.toString());
     const data = await resp.json();
@@ -2372,13 +2511,33 @@ function updateSummary(){
     styleSizeLabel = selectedStyle + ', ' + selectedSize;
   }
 
+  // THE BASKET joins the total (23 Sep 2026). The page's own item is kept for
+  // Add to Basket; with only a basket on the page it counts for nothing.
+  lastSummary = { basePrice, upsellCharge, styleSizeLabel };
+  const basketNow = readBasket();
+  const currentPresent = !basketNow.length || hasCurrentDesign();
+  if (!currentPresent) { basePrice = 0; upsellCharge = 0; }
+  const basketSubtotal = basketNow.reduce((a, b) => a + (Number(b.price) || 0), 0);
+
   const giftCharge = giftMessageEnabled ? GIFT_MESSAGE_PRICE : 0;
   // Live figure if we have one for THIS product/country, otherwise the
   // placeholder -- and if it is the placeholder we say so rather than
   // presenting a guess as the real total.
   const shippingKeyNow = currentProductKey() + '|' + basePrice + '|' + currentCountry();
-  const shippingIsLive = (liveShipping !== null && liveShippingKey === shippingKeyNow);
-  const shipping = shippingIsLive ? liveShipping : SHIPPING_FALLBACK_ESTIMATE;
+  let shippingIsLive = (liveShipping !== null && liveShippingKey === shippingKeyNow);
+  let shipping = shippingIsLive ? liveShipping : SHIPPING_FALLBACK_ESTIMATE;
+  let basketEntries = null;
+  if (basketNow.length) {
+    // One quote for everything, from the function checkout bills a basket with.
+    basketEntries = basketNow.map(b => ({ productKey: b.productKey, sizeLabel: b.sizeLabel, colorName: b.colorName, basePrice: b.basePrice }));
+    if (currentPresent) {
+      const cur = currentItemQuietly();
+      basketEntries.push({ productKey: currentProductKey(), sizeLabel: cur ? cur.sizeLabel : null, colorName: cur ? (cur.colorName || cur.color || null) : null, basePrice });
+    }
+    const bKey = JSON.stringify(basketEntries) + '|' + currentCountry();
+    shippingIsLive = (liveBasketShipping !== null && liveBasketShippingKey === bKey);
+    shipping = shippingIsLive ? liveBasketShipping : SHIPPING_FALLBACK_ESTIMATE * basketEntries.length;
+  }
   // FEES (Alyx, 2026-08-28, revised same day: explained, not mysterious):
   // exactly what the note under the summary says -- the processor's
   // 2.9% + 30c passed through at cost, plus a 5c handling fee. Same
@@ -2389,7 +2548,7 @@ function updateSummary(){
   // before Continue to Payment, not first on the Stripe page. Display
   // matches the server to the extent shipping does (this row uses the
   // flat shipping estimate exactly like the row above it).
-  const subtotalCents = Math.round((basePrice + upsellCharge + giftCharge + shipping) * 100);
+  const subtotalCents = Math.round((basePrice + upsellCharge + basketSubtotal + giftCharge + shipping) * 100);
   const fees = subtotalCents > 0 ? Math.ceil(0.029 * subtotalCents + 30 + 5) / 100 : 0;
   // Gift certificate: the same arithmetic as the server -- the balance comes
   // off product and shipping, the card fee is worked on what is left, and at
@@ -2400,7 +2559,7 @@ function updateSummary(){
     const left = subtotalCents - Math.round(giftCertOff * 100);
     feesAfter = left > 0 ? Math.ceil(0.029 * left + 30 + 5) / 100 : 0;
   }
-  const total = basePrice + upsellCharge + giftCharge + shipping + feesAfter - giftCertOff;
+  const total = basePrice + upsellCharge + basketSubtotal + giftCharge + shipping + feesAfter - giftCertOff;
   const gcRow = document.getElementById('summaryGiftCertRow');
   if (gcRow) {
     gcRow.style.display = giftCertOff > 0 ? 'flex' : 'none';
@@ -2409,6 +2568,14 @@ function updateSummary(){
 
   document.getElementById('summaryStyleSize').textContent = styleSizeLabel;
   document.getElementById('summaryBase').textContent = '$' + basePrice.toFixed(2);
+  const baseRow = document.getElementById('summaryStyleSize').parentElement;
+  if (baseRow) baseRow.style.display = currentPresent ? 'flex' : 'none';
+  const basketRow = document.getElementById('summaryBasketRow');
+  if (basketRow) {
+    basketRow.style.display = basketNow.length ? 'flex' : 'none';
+    document.getElementById('summaryBasketLabel').textContent = 'Basket (' + basketNow.length + (basketNow.length === 1 ? ' item)' : ' items)');
+    document.getElementById('summaryBasket').textContent = '$' + basketSubtotal.toFixed(2);
+  }
 
   const upsellRow = document.getElementById('summaryUpsellRow');
   if (upsellCharge > 0) {
@@ -2434,7 +2601,8 @@ function updateSummary(){
 
   // Kick off (or refresh) the real lookup. Deduped inside refreshShipping,
   // which calls updateSummary() again once a real number arrives.
-  refreshShipping(basePrice);
+  if (basketEntries) refreshBasketShipping(basketEntries);
+  else refreshShipping(basePrice);
 
   // RESTORED: reminds the customer the 10% discount is checked
   // server-side (per email, one-time) — this note is informational
@@ -2487,39 +2655,17 @@ async function checkMaintenance(){
 }
 checkMaintenance();
 
-async function submitOrder(){
-  if (!validateMugSelectionsAndFlash()) return;
-
-  const fullName = document.getElementById('fullName').value.trim();
-  const email = document.getElementById('email').value.trim();
-  const phone = document.getElementById('phone').value.trim();
-  const address1 = document.getElementById('address1').value.trim();
-  const address2 = document.getElementById('address2').value.trim();
-  const city = document.getElementById('city').value.trim();
-  const state = document.getElementById('state').value.trim();
-  const zip = document.getElementById('zip').value.trim();
-  const country = document.getElementById('country').value.trim() || 'US';
-
-  if (!fullName || !email || !address1 || !city || !state || !zip) {
-    setStatus('Please fill in your name, email, and full shipping address.', true);
-    return;
-  }
-
-  const nameParts = fullName.split(' ');
-  const firstName = nameParts[0] || 'Customer';
-  const lastName = nameParts.slice(1).join(' ') || '-';
-
-  const shippingAddress = {
-    first_name: firstName, last_name: lastName, email, phone, country,
-    region: state, address1, address2, city, zip
-  };
-
+// ONE ITEM'S ORDER BODY (23 Sep 2026, the basket). What submitOrder always
+// built for the product on this page, lifted out whole so the basket can build
+// the same body without an address yet. Returns null, having said why, when
+// something is missing.
+function buildOrderItemBody(fullName, shippingAddress){
   let body;
 
   if (isTravelMug()) {
     const product = selectedTravelProductKey ? TRAVEL_MUG_CATALOG[selectedTravelProductKey] : null;
-    if (!product) { setStatus('Please pick which travel mug you want.', true); return; }
-    if (product.colors && !selectedTravelColor) { setStatus('Please pick a color.', true); return; }
+    if (!product) { setStatus('Please pick which travel mug you want.', true); return null; }
+    if (product.colors && !selectedTravelColor) { setStatus('Please pick a color.', true); return null; }
 
     const left = pendingOrder?.placements?.left || null;
     const front = pendingOrder?.placements?.front || null;
@@ -2546,7 +2692,7 @@ async function submitOrder(){
 
     if (!(product.layoutType === 'front-back' ? (body.frontImage || body.backImage) : body.image)) {
       setStatus('No design found — please go back and place a design first.', true);
-      return;
+      return null;
     }
 
   } else if (isSuitcase()) {
@@ -2557,7 +2703,7 @@ async function submitOrder(){
 
     if (!image) {
       setStatus('No design found — please go back and place a design first.', true);
-      return;
+      return null;
     }
 
     body = {
@@ -2575,7 +2721,7 @@ async function submitOrder(){
   } else if (isPhoneCase()) {
     if (!selectedPhoneModel) {
       setStatus('Please search and select your phone model above.', true);
-      return;
+      return null;
     }
     const left = pendingOrder?.placements?.left || null;
     const front = pendingOrder?.placements?.front || null;
@@ -2584,7 +2730,7 @@ async function submitOrder(){
 
     if (!image) {
       setStatus('No design found — please go back and place a design first.', true);
-      return;
+      return null;
     }
 
     body = {
@@ -2602,7 +2748,7 @@ async function submitOrder(){
   } else if (isToteBag()) {
     if (!selectedToteColor) {
       setStatus('Please pick a color.', true);
-      return;
+      return null;
     }
     const left = pendingOrder?.placements?.left || null;
     const front = pendingOrder?.placements?.front || null;
@@ -2611,7 +2757,7 @@ async function submitOrder(){
 
     if (!image) {
       setStatus('No design found — please go back and place a design first.', true);
-      return;
+      return null;
     }
 
     body = {
@@ -2631,7 +2777,7 @@ async function submitOrder(){
     const image = pendingOrder?.placements?.left || pendingOrder?.placements?.front || pendingOrder?.placements?.right || null;
     if (!image) {
       setStatus('No design found — please go back and place a design first.', true);
-      return;
+      return null;
     }
     body = {
       type: 'mug_order',
@@ -2649,7 +2795,7 @@ async function submitOrder(){
     const image = pendingOrder?.placements?.left || pendingOrder?.placements?.front || pendingOrder?.placements?.right || null;
     if (!image) {
       setStatus('No design found — please go back and place a design first.', true);
-      return;
+      return null;
     }
     body = {
       type: 'mug_order',
@@ -2667,7 +2813,7 @@ async function submitOrder(){
     const image = pendingOrder?.placements?.left || pendingOrder?.placements?.front || pendingOrder?.placements?.right || null;
     if (!image) {
       setStatus('No design found — please go back and place a design first.', true);
-      return;
+      return null;
     }
     body = {
       type: 'mug_order',
@@ -2685,7 +2831,7 @@ async function submitOrder(){
     const image = pendingOrder?.placements?.left || pendingOrder?.placements?.front || pendingOrder?.placements?.right || null;
     if (!image) {
       setStatus('No design found — please go back and place a design first.', true);
-      return;
+      return null;
     }
     body = {
       type: 'mug_order',
@@ -2704,7 +2850,7 @@ async function submitOrder(){
     const image = pendingOrder?.placements?.left || pendingOrder?.placements?.front || pendingOrder?.placements?.right || null;
     if (!image) {
       setStatus('No design found — please go back and place a design first.', true);
-      return;
+      return null;
     }
     body = {
       type: 'mug_order',
@@ -2722,7 +2868,7 @@ async function submitOrder(){
     const image = pendingOrder?.placements?.left || pendingOrder?.placements?.front || pendingOrder?.placements?.right || null;
     if (!image) {
       setStatus('No design found — please go back and place a design first.', true);
-      return;
+      return null;
     }
     body = {
       type: 'mug_order',
@@ -2740,7 +2886,7 @@ async function submitOrder(){
     const image = pendingOrder?.placements?.left || pendingOrder?.placements?.front || pendingOrder?.placements?.right || null;
     if (!image) {
       setStatus('No design found — please go back and place a design first.', true);
-      return;
+      return null;
     }
     body = {
       type: 'mug_order',
@@ -2762,7 +2908,7 @@ async function submitOrder(){
 
     if (!image) {
       setStatus('No design found — please go back and place a design first.', true);
-      return;
+      return null;
     }
 
     body = {
@@ -2795,7 +2941,7 @@ async function submitOrder(){
 
     if (!image) {
       setStatus('No design found — please go back and generate one first.', true);
-      return;
+      return null;
     }
 
     // Round and square coasters are different Printify blueprints, so the
@@ -2844,7 +2990,7 @@ async function submitOrder(){
 
     if (!image) {
       setStatus('No design found — please go back and generate one first.', true);
-      return;
+      return null;
     }
 
     body = {
@@ -2881,11 +3027,11 @@ async function submitOrder(){
     const mugPlacements = pendingOrder?.placements || null;
     if (!mugPlacements || !(mugPlacements.left || mugPlacements.front || mugPlacements.right)) {
       setStatus('No design found — please go back to the studio and make one first.', true);
-      return;
+      return null;
     }
     if (MUG_STYLES[selectedStyle].sizes[selectedSize].colors && !selectedColor) {
       setStatus('Please pick a mug color.', true);
-      return;
+      return null;
     }
     body = {
       type: 'mug_order',
@@ -2909,12 +3055,68 @@ async function submitOrder(){
     };
   }
 
+
+  return body;
+}
+
+async function submitOrder(){
+  // With only a basket on the page there is no product here to validate.
+  if ((!readBasket().length || hasCurrentDesign()) && !validateMugSelectionsAndFlash()) return;
+
+  const fullName = document.getElementById('fullName').value.trim();
+  const email = document.getElementById('email').value.trim();
+  const phone = document.getElementById('phone').value.trim();
+  const address1 = document.getElementById('address1').value.trim();
+  const address2 = document.getElementById('address2').value.trim();
+  const city = document.getElementById('city').value.trim();
+  const state = document.getElementById('state').value.trim();
+  const zip = document.getElementById('zip').value.trim();
+  const country = document.getElementById('country').value.trim() || 'US';
+
+  if (!fullName || !email || !address1 || !city || !state || !zip) {
+    setStatus('Please fill in your name, email, and full shipping address.', true);
+    return;
+  }
+
+  const nameParts = fullName.split(' ');
+  const firstName = nameParts[0] || 'Customer';
+  const lastName = nameParts.slice(1).join(' ') || '-';
+
+  const shippingAddress = {
+    first_name: firstName, last_name: lastName, email, phone, country,
+    region: state, address1, address2, city, zip
+  };
+
+  const basket = readBasket();
+  let body;
+  if (basket.length) {
+    // THE BASKET: everything in it, plus the design on this page if there is one.
+    const items = basket.map(b => b.item);
+    if (hasCurrentDesign()) {
+      const current = buildOrderItemBody(fullName, shippingAddress);
+      if (!current) return;
+      items.push(itemOnlyBody(current));
+    }
+    body = {
+      type: 'basket_order',
+      deviceId,
+      items,
+      customerName: fullName,
+      giftMessage: giftMessageEnabled ? document.getElementById('giftMessageText').value.trim() : null,
+      shippingAddress,
+      referralCode
+    };
+  } else {
+    body = buildOrderItemBody(fullName, shippingAddress);
+    if (!body) return;
+  }
+
   const btn = document.getElementById('submitBtn');
   btn.disabled = true;
   setStatus('Setting up your secure checkout...');
 
   try {
-    if (appliedGiftCert && body && body.type === 'mug_order') body.giftCode = appliedGiftCert.code;
+    if (appliedGiftCert && body && (body.type === 'mug_order' || body.type === 'basket_order')) body.giftCode = appliedGiftCert.code;
     const resp = await fetch('/api/create-checkout-session', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -3160,12 +3362,20 @@ if (studioDriven) {
 // twice. Cancelled: say so, charge nothing, and leave EVERYTHING exactly
 // as it was so they can simply press the button again.
 // Runs last, after all the render logic above, so it wins the screen.
+// Guarded: whatever goes wrong here must never stop the return-from-payment
+// screen below from running -- a thrown error here once did exactly that.
+(function bootBasket(){
+  try { renderBasket(); applyBasketOnlyMode(); updateSummary(); }
+  catch (err) { console.error('The basket could not be drawn:', err); }
+})();
 (function handleCheckoutReturn(){
   const params = new URLSearchParams(location.search);
   const state = params.get('checkout');
   if (!state) return;
   if (state === 'success') {
     try { localStorage.removeItem('muggshotz_pending_order'); } catch (e) {}
+    // The basket was paid for with it.
+    try { localStorage.removeItem('muggshotz_basket'); } catch (e) {}
     // HIDE the form, don't destroy it: late timers and fetch callbacks from
     // the page's normal boot still reference elements inside .main by id,
     // and replacing innerHTML made those callbacks die on null. Display:none

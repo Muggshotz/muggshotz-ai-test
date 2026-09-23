@@ -267,7 +267,12 @@ checks.push(missing.length
 // and would have received a mug. Passing the pricing check is not evidence
 // of anything about checkout.
 {
-  const payloadStart = order.indexOf('async function submitOrder') >= 0
+  // Since the basket (23 Sep 2026) the chain lives in buildOrderItemBody,
+  // which submitOrder and Add to Basket both call; before that it was inline
+  // in submitOrder. Either way the chain starts at the first of them.
+  const payloadStart = order.indexOf('function buildOrderItemBody') >= 0
+    ? order.indexOf('function buildOrderItemBody')
+    : order.indexOf('async function submitOrder') >= 0
     ? order.indexOf('async function submitOrder')
     : order.indexOf('type: \'mug_order\'');
   const payloadChain = order.slice(payloadStart);
