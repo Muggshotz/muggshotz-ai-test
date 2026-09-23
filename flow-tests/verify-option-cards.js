@@ -19,7 +19,11 @@ const CARDS = {
   'sticker sheet': 'stickerSheetOptionCard',
   'tshirt': 'tshirtOptionCard',
   'car magnet': 'carMagnetOptionCard',
+  'business cards': 'businessCardOptionCard',
 };
+// The business-card paper choices are words, not products, so they carry no
+// picture; the check is on the things being bought.
+const CHOICE = '.btn-select:not([data-paper])';
 
 async function pickProduct(page, val) {
   await page.click('#postUploadForkRow button:has-text("Select Your Product")');
@@ -37,12 +41,12 @@ const scenarios = {};
 for (const [val, cardId] of Object.entries(CARDS)) {
   scenarios['card_' + val.replace(/[^a-z]/g, '_')] = async (page) => {
     await pickProduct(page, val);
-    const pics = await page.evaluate(async (cardId) => {
+    const pics = await page.evaluate(async ([cardId, CHOICE]) => {
       const card = document.getElementById(cardId);
       if (!card || getComputedStyle(card).display === 'none') return { shown: false };
       const imgs = [...card.querySelectorAll('img')];
       await Promise.all(imgs.map((im) => im.complete ? null : new Promise((r) => { im.onload = im.onerror = r; })));
-      const tiles = [...card.querySelectorAll('.btn-select')];
+      const tiles = [...card.querySelectorAll(CHOICE)];
       return {
         shown: true,
         tiles: tiles.length,
@@ -51,7 +55,7 @@ for (const [val, cardId] of Object.entries(CARDS)) {
         pics: imgs.length,
         back: !!card.querySelector('button[onclick="optionCardBack()"]'),
       };
-    }, cardId);
+    }, [cardId, CHOICE]);
     if (!pics.shown) return `FAIL: picking ${val} did not open ${cardId}`;
     if (val === 'tshirt') { if (pics.pics < 1) return 'FAIL: the T-shirt card has no picture'; }
     else if (pics.tilesWithPics !== pics.tiles) return `FAIL: ${pics.tiles - pics.tilesWithPics} of ${pics.tiles} ${val} choices have no picture`;
@@ -73,7 +77,7 @@ for (const [val, cardId] of Object.entries(CARDS)) {
     await tap(page, `#productCard .btn-select[data-val="${val}"]`);
     await T(page, 1200);
     await dismissAlerts(page);
-    await tap(page, `#${cardId} .btn-select`);
+    await tap(page, `#${cardId} ${CHOICE}`);
     // The shirt goes on once it has a colour as well as a size.
     if (val === 'tshirt') await tap(page, '#tshirtColorGrid .color-btn');
     await T(page, 1200);

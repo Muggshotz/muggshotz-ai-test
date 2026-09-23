@@ -103,7 +103,7 @@ label{font-size:11px;color:#888;letter-spacing:.5px;text-transform:uppercase;dis
 body.studio-driven #bridgeGridCard,body.studio-driven #previewCard,
 body.studio-driven #mugStyleCard,body.studio-driven #sizeCard,body.studio-driven #livePreviewCard,body.studio-driven #colorCard,body.studio-driven #fullWrapCard,
 body.studio-driven #travelMugStyleCard,body.studio-driven #travelColorCard,body.studio-driven #suitcaseSizeCard,body.studio-driven #phoneCaseCard,
-body.studio-driven #toteBagSizeCard,body.studio-driven #toteBagColorCard,body.studio-driven #puzzleSizeCard,body.studio-driven #wrapSizeCard,body.studio-driven #ornamentShapeCard,body.studio-driven #carMagnetOptionCard,body.studio-driven #tshirtOptionCard,body.studio-driven #stickerSheetOptionCard,body.studio-driven #nightBuddyOptionCard,body.studio-driven #airFreshenerOptionCard,body.studio-driven #photoPosterCard,
+body.studio-driven #toteBagSizeCard,body.studio-driven #toteBagColorCard,body.studio-driven #puzzleSizeCard,body.studio-driven #wrapSizeCard,body.studio-driven #ornamentShapeCard,body.studio-driven #businessCardOptionCard,body.studio-driven #carMagnetOptionCard,body.studio-driven #tshirtOptionCard,body.studio-driven #stickerSheetOptionCard,body.studio-driven #nightBuddyOptionCard,body.studio-driven #airFreshenerOptionCard,body.studio-driven #photoPosterCard,
 body.studio-driven #mockupCtaLeft,body.studio-driven #mockupCtaRight,body.studio-driven #mockupWaitBanner{display:none!important}
 #orderHeadlineCard{display:none}
 body.studio-driven #orderHeadlineCard{display:block}
@@ -344,6 +344,15 @@ body.studio-driven #orderHeadlineCard{display:block}
 <div class="note" id="carMagnetMockupBtn" style="text-align:center;margin-top:1rem;color:var(--accent-soft);font-weight:600">🔍 Click Image To Enlarge</div>
 <div class="note" id="carMagnetMockupNote" style="margin-top:.5rem;text-align:center;display:none"></div>
 <img id="carMagnetMockupImg" style="display:none;width:100%;border-radius:12px;border:1px solid var(--accent);margin-top:.75rem"/>
+</div>
+<div class="card" id="businessCardOptionCard" style="display:none">
+<div class="card-title">💼 Business Cards</div>
+<div class="grid2" id="businessCardOptionGrid"></div>
+<div class="note" style="margin-top:.8rem;margin-bottom:.4rem;font-weight:700" id="businessCardPaperTitle">Paper</div>
+<div class="grid2" id="businessCardPaperGrid"></div>
+<div class="note" id="businessCardMockupBtn" style="text-align:center;margin-top:1rem;color:var(--accent-soft);font-weight:600">🔍 Click Image To Enlarge</div>
+<div class="note" id="businessCardMockupNote" style="margin-top:.5rem;text-align:center;display:none"></div>
+<img id="businessCardMockupImg" style="display:none;width:100%;border-radius:12px;border:1px solid var(--accent);margin-top:.75rem"/>
 </div>
 <div class="card" id="ornamentShapeCard" style="display:none">
 <div class="card-title">🎄 Which Shape?</div>
@@ -876,7 +885,9 @@ function currentProductKey(){
   if (isWrap())         return 'wrapping-paper';
   if (isOrnament())     return 'ceramic-ornament';
   if (isStandee())      return 'custom-standee';
+  if (isLuggageTag()) return 'luggage-tag';
   if (isCarMagnet()) return 'car-magnet';
+  if (isBusinessCards()) return BUSINESS_CARD_OPTIONS[selectedBusinessCard].key;
   if (isDeskCalendar()) return 'desk-calendar';
   if (isTshirt()) return 'unisex-tshirt';
   if (isStickerSheet()) return 'sticker-sheet';
@@ -1319,7 +1330,9 @@ function isPuzzle(){ return selectedProductFamily === 'puzzle'; }
 function isWrap(){ return selectedProductFamily === 'wrapping paper'; }
 function isOrnament(){ return selectedProductFamily === 'ornament'; }
 function isStandee(){ return selectedProductFamily === 'standee'; }
+function isLuggageTag(){ return selectedProductFamily === 'luggage tag'; }
 function isCarMagnet(){ return selectedProductFamily === 'car magnet'; }
+function isBusinessCards(){ return selectedProductFamily === 'business cards'; }
 function isDeskCalendar(){ return selectedProductFamily === 'calendar'; }
 function isTshirt(){ return selectedProductFamily === 'tshirt'; }
 function isStickerSheet(){ return selectedProductFamily === 'sticker sheet'; }
@@ -1341,6 +1354,7 @@ function isPostIt(){ return selectedProductFamily === 'post-it note'; }
 const COASTER_PRICE = 29.95;
 const MOUSE_PAD_PRICE = 9.95;
 const STANDEE_PRICE = 16.95; // From Where I Stand, one size (22 Sep 2026)
+const LUGGAGETAG_PRICE = 16.95; // Luggage Tag (22 Sep 2026)
 const DESKCALENDAR_PRICE = 10.95; // Desk Calendar (22 Sep 2026)
 const BEERSTEIN_PRICE = 24.95; // Beer Stein (22 Sep 2026)
 const DOORMAT_PRICE = 16.95; // Doormat (22 Sep 2026)
@@ -1412,6 +1426,26 @@ const CARMAGNET_OPTIONS = { "5 x 5 in": { price: 5.95 }, "7.5 x 4.5 in": { price
 let selectedCarMagnet = "5 x 5 in";
 if (pendingOrder?.preselectedCarMagnet && CARMAGNET_OPTIONS[pendingOrder.preselectedCarMagnet]) {
   selectedCarMagnet = pendingOrder.preselectedCarMagnet;
+}
+
+// BUSINESS CARDS (23 Sep 2026). The same choices as the studio's card, each
+// naming its catalog product and size; Taylor's cards take a paper.
+const BUSINESS_CARD_OPTIONS = {
+  '50 cards':{key:'business-cards',size:'50 cards',price:24.95,paper:true,ratio:1125/675},
+  '100 cards':{key:'business-cards',size:'100 cards',price:34.95,paper:true,ratio:1125/675},
+  '200 cards':{key:'business-cards',size:'200 cards',price:61.95,paper:true,ratio:1125/675},
+  'Boxed, 100':{key:'business-cards-boxed',size:'100 cards',price:24.95,paper:false,ratio:1075/720},
+  'Boxed, 100 laminated':{key:'business-cards-boxed',size:'100 cards, laminated',price:33.95,paper:false,ratio:1075/720},
+  'Card holder':{key:'business-card-holder',size:'One size',price:16.95,paper:false,ratio:1022/566}
+};
+const BUSINESS_CARD_PAPERS = ['Coated (both sides)', 'Coated (one side)', 'White Matte', 'Uncoated'];
+let selectedBusinessCard = "100 cards";
+if (pendingOrder?.preselectedBusinessCard && BUSINESS_CARD_OPTIONS[pendingOrder.preselectedBusinessCard]) {
+  selectedBusinessCard = pendingOrder.preselectedBusinessCard;
+}
+let selectedCardPaper = "Coated (both sides)";
+if (pendingOrder?.preselectedCardPaper && BUSINESS_CARD_PAPERS.includes(pendingOrder.preselectedCardPaper)) {
+  selectedCardPaper = pendingOrder.preselectedCardPaper;
 }
 
 // CERAMIC ORNAMENT (22 Sep 2026). Keys match lib/products-catalog.js.
@@ -1501,6 +1535,8 @@ const BRIDGE_GRID_PRODUCTS = [
   { key: 'wrapping paper', icon: '🎁', label: "It's a Wrap", priceFrom: '$8.95' },
   { key: 'ornament', icon: '🎄', label: 'Ceramic Ornament', priceFrom: '$9.95' },
   { key: 'standee', icon: '🧍', label: 'From Where I Stand', priceFrom: '$16.95' },
+  { key: 'business cards', icon: '💼', label: 'Business Cards', priceFrom: '$16.95' },
+  { key: 'luggage tag', icon: '🏷️', label: 'Luggage Tag', priceFrom: '$16.95' },
   { key: 'car magnet', icon: '🚗', label: 'Car Magnet', priceFrom: '$5.95' },
   { key: 'calendar', icon: '📅', label: 'Desk Calendar', priceFrom: '$10.95' },
   { key: 'tshirt', icon: '👕', label: 'T-Shirt', priceFrom: '$7.95' },
@@ -1808,6 +1844,37 @@ function pickCarMagnet(name){
   scheduleAutoMockupFetch();
 }
 
+function renderBusinessCardGrid(){
+  const grid = document.getElementById('businessCardOptionGrid');
+  grid.innerHTML = '';
+  Object.keys(BUSINESS_CARD_OPTIONS).forEach(name => {
+    const btn = document.createElement('div');
+    btn.className = 'btn-select' + (name === selectedBusinessCard ? ' selected' : '');
+    btn.innerHTML = name + '<span class="price">$' + BUSINESS_CARD_OPTIONS[name].price.toFixed(2) + '</span>';
+    btn.onclick = () => pickBusinessCard(name);
+    grid.appendChild(btn);
+  });
+  const withPaper = BUSINESS_CARD_OPTIONS[selectedBusinessCard].paper;
+  const pg = document.getElementById('businessCardPaperGrid');
+  document.getElementById('businessCardPaperTitle').style.display = withPaper ? 'block' : 'none';
+  pg.style.display = withPaper ? 'grid' : 'none';
+  pg.innerHTML = '';
+  BUSINESS_CARD_PAPERS.forEach(p => {
+    const b = document.createElement('div');
+    b.className = 'btn-select' + (p === selectedCardPaper ? ' selected' : '');
+    b.textContent = p;
+    b.onclick = () => { selectedCardPaper = p; renderBusinessCardGrid(); updateSummary(); scheduleAutoMockupFetch(); };
+    pg.appendChild(b);
+  });
+}
+function pickBusinessCard(name){
+  selectedBusinessCard = name;
+  renderBusinessCardGrid();
+  const img=document.getElementById('businessCardMockupImg'); if(img) img.style.display='none';
+  hideMockupSideCta();
+  updateSummary();
+  scheduleAutoMockupFetch();
+}
 function renderOrnamentShapeGrid(){
   const grid = document.getElementById('ornamentShapeGrid');
   grid.innerHTML = '';
@@ -2241,6 +2308,9 @@ function runAutoMockupForMode(){
   } else if (isCarMagnet()) {
     if (!selectedCarMagnet) return;
     fetchSingleImageMockup('car-magnet', selectedCarMagnet, null, 'carMagnetMockupBtn', 'carMagnetMockupNote', 'carMagnetMockupImg');
+  } else if (isBusinessCards()) {
+    const bc = BUSINESS_CARD_OPTIONS[selectedBusinessCard];
+    fetchSingleImageMockup(bc.key, bc.size, bc.paper ? selectedCardPaper : null, 'businessCardMockupBtn', 'businessCardMockupNote', 'businessCardMockupImg');
   } else if (isOrnament()) {
     if (!selectedOrnamentShape) return;
     fetchSingleImageMockup('ceramic-ornament', selectedOrnamentShape, null, 'ornamentMockupBtn', 'ornamentMockupNote', 'ornamentMockupImg');
@@ -2464,6 +2534,10 @@ function updateSummary(){
   } else if (isCarMagnet()) {
     basePrice = CARMAGNET_OPTIONS[selectedCarMagnet].price;
     styleSizeLabel = 'Car Magnet' + ', ' + selectedCarMagnet;
+  } else if (isBusinessCards()) {
+    const bc = BUSINESS_CARD_OPTIONS[selectedBusinessCard];
+    basePrice = bc.price;
+    styleSizeLabel = (bc.key === 'business-card-holder' ? 'Business Card Holder' : 'Business Cards, ' + selectedBusinessCard) + (bc.paper ? ', ' + selectedCardPaper : '');
   } else if (isOrnament()) {
     basePrice = ORNAMENT_SHAPES[selectedOrnamentShape].price;
     styleSizeLabel = 'Ceramic Ornament, ' + selectedOrnamentShape;
@@ -2487,6 +2561,9 @@ function updateSummary(){
   } else if (isDeskCalendar()) {
     basePrice = DESKCALENDAR_PRICE;
     styleSizeLabel = 'Desk Calendar';
+  } else if (isLuggageTag()) {
+    basePrice = LUGGAGETAG_PRICE;
+    styleSizeLabel = 'Luggage Tag';
   } else if (isStandee()) {
     basePrice = STANDEE_PRICE;
     styleSizeLabel = 'From Where I Stand, acrylic standee';
@@ -2864,6 +2941,26 @@ function buildOrderItemBody(fullName, shippingAddress){
       referralCode
     };
 
+  } else if (isBusinessCards()) {
+    const image = pendingOrder?.placements?.left || pendingOrder?.placements?.front || pendingOrder?.placements?.right || null;
+    if (!image) {
+      setStatus('No design found — please go back and place a design first.', true);
+      return null;
+    }
+    const bc = BUSINESS_CARD_OPTIONS[selectedBusinessCard];
+    body = {
+      type: 'mug_order',
+      deviceId,
+      productKey: bc.key,
+      sizeLabel: bc.size,
+      colorName: bc.paper ? selectedCardPaper : null,
+      image,
+      customerName: fullName,
+      giftMessage: giftMessageEnabled ? document.getElementById('giftMessageText').value.trim() : null,
+      shippingAddress,
+      referralCode
+    };
+
   } else if (isOrnament()) {
     const image = pendingOrder?.placements?.left || pendingOrder?.placements?.front || pendingOrder?.placements?.right || null;
     if (!image) {
@@ -2923,7 +3020,7 @@ function buildOrderItemBody(fullName, shippingAddress){
       referralCode
     };
 
-  } else if (isCoaster() || isMousePad() || isGreetingCard() || isPostIt() || isStandee() || isDeskCalendar() || isBeerStein() || isDoormat() || isPlayingCards()) {
+  } else if (isCoaster() || isMousePad() || isGreetingCard() || isPostIt() || isStandee() || isLuggageTag() || isDeskCalendar() || isBeerStein() || isDoormat() || isPlayingCards()) {
     // ADDED 2026-08-27. Both products could be configured, priced and shown a
     // summary here, and then had NO branch of their own -- so they fell
     // through to the final else, which is the MUG branch, and a coaster order
@@ -2954,6 +3051,7 @@ function buildOrderItemBody(fullName, shippingAddress){
       deviceId,
       productKey: isMousePad() ? 'mouse-pad'
         : isStandee() ? 'custom-standee'
+        : isLuggageTag() ? 'luggage-tag'
         : isDeskCalendar() ? 'desk-calendar'
         : isBeerStein() ? 'beer-stein'
         : isDoormat() ? 'doormat'
@@ -2963,6 +3061,7 @@ function buildOrderItemBody(fullName, shippingAddress){
         : (roundCoaster ? 'coaster-set-round' : 'coaster-set'),
       sizeLabel: isMousePad() ? '9" x 8"'
         : isStandee() ? 'One size'
+        : isLuggageTag() ? '2.4 x 4 in'
         : isDeskCalendar() ? '10 x 5'
         : isBeerStein() ? '22oz'
         : isDoormat() ? '18 x 30'
@@ -3169,7 +3268,7 @@ function setupPageForMode(){
 const ALL_PRODUCT_SPECIFIC_CARDS = [
   'mugStyleCard','sizeCard','livePreviewCard','colorCard','fullWrapCard',
   'travelMugStyleCard','travelColorCard','suitcaseSizeCard','phoneCaseCard',
-  'toteBagSizeCard','toteBagColorCard','puzzleSizeCard','wrapSizeCard','ornamentShapeCard','carMagnetOptionCard','tshirtOptionCard','stickerSheetOptionCard','nightBuddyOptionCard','airFreshenerOptionCard','photoPosterCard'
+  'toteBagSizeCard','toteBagColorCard','puzzleSizeCard','wrapSizeCard','ornamentShapeCard','businessCardOptionCard','carMagnetOptionCard','tshirtOptionCard','stickerSheetOptionCard','nightBuddyOptionCard','airFreshenerOptionCard','photoPosterCard'
 ];
 function hideAllProductCards(){
   ALL_PRODUCT_SPECIFIC_CARDS.forEach(id => {
@@ -3266,6 +3365,12 @@ if (isTravelMug()) {
     hideAllProductCards();
     document.getElementById('carMagnetOptionCard').style.display = 'block';
     renderCarMagnetGrid();
+  } else if (isBusinessCards()) {
+    hideAllProductCards();
+    document.getElementById('businessCardOptionCard').style.display = 'block';
+    document.getElementById('previewNote').textContent =
+      'Your design is fitted to the card or holder you pick.';
+    renderBusinessCardGrid();
   } else if (isOrnament()) {
     hideAllProductCards();
     document.getElementById('ornamentShapeCard').style.display = 'block';
