@@ -92,6 +92,25 @@ over the old ones. Every panel a customer stops on, new or old, has:
 to Generate and back to the grid, on a laptop and a phone, and fails on any of
 the five. A new product is not done until it passes.
 
+## Paint it in one pass, into its own shape
+
+Alyx, 23 Sep 2026: *"We shouldn't force the AI to try to stitch pictures
+together to fill a space. When it is perfectly capable of drawing the picture
+to that specific space in one pass."*
+
+- **Never stitch.** No design is built from separate paintings joined
+  together. The classic wraparound did that (a centre, then a left and a right
+  "continuation") and its joins drifted every time; it is retired.
+- **Take the widest frame the painter gives, and draw into it once.** Gemini
+  paints 21:9 in one pass (`action:'wraparoundPanorama'` in `api/generate.js`);
+  gpt-image paints 1536 x 1024 at most. A band wider than the frame is painted
+  letterboxed inside it at its true proportions (`bandRatio`) and trimmed.
+- **New products start from a reference already in the print's shape.** A
+  template (SURPRISE!!!'s mugs, for one) is designed at the proportions it
+  prints at, inside the painter's frame, and the painter changes only what the
+  customer asked for. The shape is never left for the painter to guess and
+  never fixed afterwards by stretching, mirroring or cropping.
+
 ## Scope
 
 **A discussion is not an order.** Do the thing asked, at the size asked.

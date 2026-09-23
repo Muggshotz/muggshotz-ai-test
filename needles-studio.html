@@ -1,5 +1,5 @@
 <!-- ============================================================
-     VERSION: V353
+     VERSION: V354
      ============================================================
      THE ONE LINE THAT SAYS WHICH BUILD YOU ARE LOOKING AT.
 
@@ -4510,7 +4510,7 @@ function toggleWorkingImage(){
 // Two copies of a number is exactly how the marker rotted in the first place,
 // so they are not trusted to agree: .githooks/pre-commit moves both together
 // and REFUSES the commit if it ever finds them apart.
-const APP_VERSION='V353';
+const APP_VERSION='V354';
 try{ console.log('%cNeedles\u2019 Studio '+APP_VERSION,'color:#29a3ff;font-weight:700'); }catch(e){}
 
 function getDeviceId(){
@@ -19973,7 +19973,7 @@ async function recoverRecentGeneration(startedAt){
 // through the real 315 seconds would never be run.
 let GEN_SLOW_NOTICE_MS=90000;   // 3x a normal generation: say something
 let GEN_HARD_TIMEOUT_MS=315000; // past the server's own 300s ceiling: give up
-async function callGenerateAPI({ workingImage, prompt, refImageA, refImageB, panelRole, templateMerge, idealise, signal }){
+async function callGenerateAPI({ workingImage, prompt, refImageA, refImageB, templateMerge, idealise, bandRatio, signal }){
   const ac=new AbortController();
   const startedAt=Date.now();
   let timedOut=false;
@@ -20001,7 +20001,9 @@ async function callGenerateAPI({ workingImage, prompt, refImageA, refImageB, pan
         refImageB:refImageB||null,
         currentDesign:null,
         size:getImageSizeParam(),
-        panelRole:panelRole||undefined,
+        // A strip painted in one pass, letterboxed in the wide canvas and
+        // trimmed after (the photo lane's CANVAS SHAPE REQUIREMENT).
+        ...(bandRatio?{bandRatio}:{}),
         templateMerge:templateMerge||false,
         // Set by exactly one kind of template -- see the delusion-pact note in
         // api/generate.js. Absent everywhere else, which is the point.
@@ -20643,9 +20645,28 @@ Use rich environmental storytelling while keeping the face as the primary focal 
         // so it takes over silently instead. Out of credits (403) is
         // NOT an outage and is handled above; it must never fall
         // through to a second, chargeable path.
-        console.error('Panorama generation failed, falling back to the per-panel path:',parsedPanorama&&(parsedPanorama.error||parsedPanorama.detail));
-        document.getElementById('wraparoundStandbyPrompt').style.display='none';
-        setStatus('Panorama service is busy — building your wraparound panel by panel instead...');
+        console.error('Panorama generation failed, painting the band in one pass instead:',parsedPanorama&&(parsedPanorama.error||parsedPanorama.detail));
+        // ONE PASS, NEVER A STITCH (Alyx, 23 Sep 2026: "We shouldn't force the
+        // AI to try to stitch pictures together to fill a space. When it is
+        // perfectly capable of drawing the picture to that specific space in
+        // one pass."). This fell back to the classic method -- a centre panel,
+        // then a left and a right "continuation" joined on -- and the joins
+        // drifted every time. Now the other painter draws the mug's whole band
+        // in one go, letterboxed in its widest canvas, and it is trimmed and
+        // cut into the three panels exactly as the panorama would have been.
+        if(product==='mug'){
+          setStatus('The panorama painter is busy, so our other painter is drawing your wraparound in one piece...');
+          const stripUrl=await callGenerateAPI({workingImage,prompt,refImageA:refASnapshot,refImageB:refBSnapshot,bandRatio:mugWrapRatio(),signal:currentGenerationController.signal});
+          if(!stripUrl)throw new Error('No image returned.');
+          const band=await trimLetterboxedStrip(stripUrl);
+          const wide=await extendWrapToProductRatio(band,{ratio:mugWrapRatio(),closes:true});
+          const panels=await sliceFaceItResultIntoPanels(wide);
+          if(!panels)throw new Error('Could not cut the wrap into panels.');
+          panoramaData={leftUrl:panels.left,centerUrl:panels.center,rightUrl:panels.right,panoramaUrl:wide};
+        } else {
+          document.getElementById('wraparoundStandbyPrompt').style.display='none';
+          setStatus('The panorama painter is busy, so our other painter is drawing your design instead...');
+        }
       }
     }
 
@@ -20946,99 +20967,9 @@ async function makeTestSingleZonePanorama(side){
 
     currentDesignId=addToRecentDesigns(resultUrl);
 
-    if (product==='mug' && mugPrintMode==='wraparound'){
-      placements.front = currentDesignId;
-      document.getElementById('approveRow').style.display='none';
-      document.getElementById('downloadDesignBtn').style.display='none';
-      setStatus('Center panel done. Generating the left panel — continuing the same scene...');
-      document.getElementById('wraparoundStandbyPrompt').style.display='block';
-
-      const centerRaw = await urlToDataURL(rawResultUrl);
-      // TEST (Aug 2026, Alyx's idea): if a frame was pre-selected before
-      // generating, feed the AI a framed reference for the left/right
-      // "continue this scene" calls instead of the plain unframed
-      // center panel. The theory: since these calls already lean on the
-      // model visually continuing whatever it sees in the reference
-      // image, it may naturally extend the frame's border into the new
-      // panels too, the same way it already continues room/scene detail
-      // -- something composited-after-the-fact framing can never
-      // achieve, since it has no way to know what's "supposed" to
-      // continue past each panel's edge. Genuinely untested until now;
-      // this is intentionally the ONLY thing this test changes -- the
-      // seam-fix/vertical-align/frame-reapply pipeline downstream still
-      // runs exactly as before regardless of what the AI returns here.
-      const centerForFrameTest = selectedFrame ? await compositeFrameOntoImageUrl(rawResultUrl) : centerRaw;
-      const centerForApi = await resizeDataUrl(centerForFrameTest, 1280);
-      const panoramaFadeSuffixLeft = !skipEdgeFade ? ' ' + PANORAMA_FADE_INSTRUCTION_LEFT : '';
-      const panoramaFadeSuffixRight = !skipEdgeFade ? ' ' + PANORAMA_FADE_INSTRUCTION_RIGHT : '';
-
-      let leftUrl = await callGenerateAPI({
-        workingImage: centerForApi,
-        prompt: 'Continue this scene to the left.' + panoramaFadeSuffixLeft,
-        panelRole: 'left',
-        signal: currentGenerationController.signal
-      });
-      // Sharp, unfaded copy kept specifically for pendingWraparoundRaw --
-      // see the matching comment on rawRightUrl below for why.
-      const rawLeftUrl = leftUrl;
-      if(!skipEdgeFade) leftUrl = await applyEdgeFadeToImageUrl(leftUrl, {top:true,bottom:true,left:true,right:false},getSelectedProductColorHex(),edgeFadeAmountPct);
-      placements.left = addToRecentDesigns(leftUrl);
-
-      setStatus('Left panel done. Generating the right panel...');
-      let rightUrl = await callGenerateAPI({
-        workingImage: centerForApi,
-        prompt: 'Continue this scene to the right.' + panoramaFadeSuffixRight,
-        panelRole: 'right',
-        signal: currentGenerationController.signal
-      });
-      // FIXED (Aug 2026, Alyx's find): pendingWraparoundRaw used to be
-      // built from these same already-edge-faded leftUrl/rightUrl (and
-      // the faded resultUrl for center) -- but the Fix the Seams screen's
-      // horizontal trim and vertical nudge sliders pan/crop a window
-      // across each panel, and the guaranteed edge fade above is baked
-      // in at each panel's own TRUE edge. Pan away from that exact spot
-      // even slightly and the crop window shows sharp, unfaded interior
-      // instead -- no fade at the new visible edge at all. Root cause of
-      // "the border moves when I move the sliders, and goes missing in
-      // spots." Fix: feed the seam-fix/vertical-alignment/frame pipeline
-      // genuinely sharp, unfaded copies of all three panels instead, kept
-      // separately here (rawLeftUrl, rawResultUrl for center, rawRightUrl)
-      // -- the guaranteed fade above still applies to placements.left/
-      // front/right themselves (the individually saved designs), just no
-      // longer to what Fix the Seams and the frame system actually work
-      // with. The existing Hard/Fade choice screen already fades the
-      // FINAL aligned panorama's true outer edges correctly once you're
-      // done aligning -- it just needed sharp input to fade correctly,
-      // not a rewrite.
-      const rawRightUrl = rightUrl;
-      if(!skipEdgeFade) rightUrl = await applyEdgeFadeToImageUrl(rightUrl, {top:true,bottom:true,left:false,right:true},getSelectedProductColorHex(),edgeFadeAmountPct);
-      placements.right = addToRecentDesigns(rightUrl);
-
-      lastWraparoundMethod='classic';
-      showWrapMethodBanner('classic');
-      // No panorama exists on this path: left and right were generated
-      // independently by "continue this scene", so there is no single strip to
-      // print from and the server must reassemble the panels as before.
-      wraparoundPanoramaUrl=null;wraparoundPanoramaBaseUrl=null;unframedWrapDesignUrls=null;
-      pendingWraparoundRaw = { left: rawLeftUrl, center: rawResultUrl, right: rawRightUrl };
-
-      document.getElementById('wraparoundStandbyPrompt').style.display='none';
-      renderRecentDesigns();
-      renderPositionHolder();
-      updatePlacementSummary();
-      saveMugState();
-
-      currentDesignId=null;
-      resetMainSlot();
-      clearReferenceSlots();
-      clearWorkshopStorage();
-      refreshTokenMeter();
-      stopNeedlesStage();
-      setStatus('✅ All three wraparound panels are ready!');
-      stopGenTimerSuccess();
-      enterRevealStage();
-      return;
-    }
+    // The classic stitched wraparound lived here (centre, then a left and a
+    // right continuation joined on). Retired 23 Sep 2026: every wrap is
+    // painted in one pass above, so a mug never reaches this line wrapping.
 
     // The guided-rail dim stays ON through the reveal: generation-active
     // already spotlights exactly the right card (the finished art and the

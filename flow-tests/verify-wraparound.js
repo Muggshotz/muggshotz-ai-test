@@ -227,31 +227,38 @@ scenarios.mugWraparoundUsesPanorama = async (page, log) => {
   return 'PASS: mug Wraparound = 1 panorama call carrying the idea alone, 3 aligned panels, no Fix the Seams, and no banner when it works';
 };
 
-// ---- 4. Panorama outage falls back to per-panel rather than dead-ending. ----
+// ---- 4. Panorama outage paints the band in ONE pass, never a stitch. ----
+// Alyx, 23 Sep 2026: "We shouldn't force the AI to try to stitch pictures
+// together to fill a space." The outage used to fall back to the classic
+// method -- a centre, then a left and a right continuation joined on -- whose
+// joins drifted every time. Now the other painter draws the whole band once,
+// letterboxed at the mug's own proportions, and it is cut into the panels
+// exactly as the panorama would have been.
 scenarios.mugWraparoundFallsBackOnOutage = async (page, log) => {
   await mugToPrintStyle(page);
   await page.evaluate(() => pickMugPrintMode('wraparound'));
   await T(page, 1200);
   await dismissAlerts(page);
   await describeAndGenerate(page, 'a wide desert canyon at sunrise');
-  await waitSeamFix(page);
+  await waitWrapDone(page);
+  await T(page, 1200);
   const pano = panoramaCalls(log);
-  const plain = plainGenCalls(log);
-  // A 502 is transient, so it is RETRIED before the fallback runs. Three of
-  // four probe calls came back 503 in real testing; falling back on the first
-  // one would hand most customers the drifting-seam path on a merely busy day.
+  const plain = log.apiCalls.filter(c => c.path === '/api/generate' && !c.action);
+  // A 502 is transient, so it is RETRIED before the fallback runs.
   if (pano !== 3) return `FAIL: a transient 502 should be retried to 3 attempts, saw ${pano}`;
-  if (plain < 3) return `FAIL: panorama failed but only ${plain} per-panel call(s) followed — the fallback did not run`;
+  if (plain.length !== 1) return `FAIL: the fallback made ${plain.length} paintings -- it must be exactly one, never a stitch`;
+  if (plain.some(c => c.body && c.body.panelRole)) return 'FAIL: a request still asks for a left/right continuation';
+  const ratio = await page.evaluate(() => mugWrapRatio());
+  if (Math.abs(Number(plain[0].body.bandRatio) - ratio) > 0.01) return `FAIL: the one painting asked for bandRatio ${plain[0].body.bandRatio}, not the mug's ${ratio}`;
   const s = await page.evaluate(() => ({
-    method: lastWraparoundMethod,
+    method: lastWraparoundMethod, strip: !!wraparoundPanoramaUrl,
     left: !!placements.left, front: !!placements.front, right: !!placements.right,
+    seamShown: getComputedStyle(document.getElementById('seamFixOverlay')).display !== 'none',
   }));
-  if (s.method !== 'classic') return `FAIL: lastWraparoundMethod=${s.method} after a panorama outage`;
   if (!s.left || !s.front || !s.right) return `FAIL: fallback left panels missing (l=${s.left} c=${s.front} r=${s.right})`;
-  const fb = await page.evaluate(() => { const b = document.getElementById('wrapMethodBanner'); return { shown: getComputedStyle(b).display !== 'none', text: document.getElementById('wrapMethodBannerText').textContent }; });
-  if (!fb.shown) return 'FAIL: a silent fallback stayed silent — no banner';
-  if (!/FALLBACK/.test(fb.text)) return 'FAIL: banner does not announce the fallback: ' + fb.text;
-  return 'PASS: panorama outage falls back, still finishes, and says so on screen instead of silently';
+  if (!s.strip) return 'FAIL: the one-pass band is not kept as the strip to print from';
+  if (s.seamShown) return 'FAIL: Fix the Seams opened -- one painting has no seams to fix';
+  return `PASS: a panorama outage paints the whole band once (bandRatio ${ratio}), cut into three panels, with the strip kept and no seams`;
 };
 
 // ---- 5. Out of credits does NOT fall back to a second chargeable path. ----
@@ -414,7 +421,7 @@ scenarios.fortyOzNeverOffersWraparound = async (page) => {
 const OPTS = {
   mugWraparoundFallsBackOnOutage: { panoramaFails: true },
   mugWraparoundOutOfCreditsDoesNotRetry: { panoramaOutOfCredits: true },
-  classicFallbackHasNoPanorama: { panoramaFails: true },
+  oneShotFallbackPrintsItsStrip: { panoramaFails: true },
 };
 
 // ---- 12. The mug prints from ONE strip, not three glued back together. ----
@@ -470,30 +477,23 @@ scenarios.mugWraparoundPrintsFromOneStrip = async (page, log, mockupBodies) => {
   return 'PASS: mug wraparound carries the uncut strip to both the mockup and the order, thirds still alongside';
 };
 
-// ---- 13. The classic fallback must NOT claim to have a panorama. ----
-// Its left and right panels came from two independent "continue this scene"
-// calls, so there is no single strip they are thirds of. Handing one over
-// would print something that was never generated as a whole. This is the
-// failure mode that matters most: it would be silent, and it would reach a
-// physical mug.
-scenarios.classicFallbackHasNoPanorama = async (page, log) => {
+// ---- 13. The one-pass fallback prints from its own strip. ----
+// The classic fallback had no single strip (its panels were separate
+// paintings), so the server had to reassemble them. The one-pass fallback IS
+// one picture: the order must carry it as the strip to print, like the
+// panorama's.
+scenarios.oneShotFallbackPrintsItsStrip = async (page, log) => {
   await mugToPrintStyle(page);
   await page.evaluate(() => pickMugPrintMode('wraparound'));
   await T(page, 1200);
   await dismissAlerts(page);
   await describeAndGenerate(page, 'a wide desert canyon at sunrise');
-  await waitSeamFix(page);
-  const s = await page.evaluate(() => ({
-    method: lastWraparoundMethod,
-    hasPanorama: !!wraparoundPanoramaUrl,
-    body: buildMockupRequestBody(),
-  }));
-  if (s.method !== 'classic') return `FAIL: expected the classic fallback, got ${s.method}`;
-  if (s.hasPanorama)
-    return 'FAIL: the classic fallback is carrying a panorama — its panels are independent generations, not thirds of one image';
-  if (s.body?.panoramaImage)
-    return 'FAIL: panoramaImage sent on the classic path — the server must reassemble the three real panels instead';
-  return 'PASS: classic fallback carries no panorama, so the server reassembles its three real panels';
+  await waitWrapDone(page);
+  await T(page, 1200);
+  const s = await page.evaluate(() => ({ method: lastWraparoundMethod, body: buildMockupRequestBody() }));
+  if (s.method === 'classic') return 'FAIL: the classic stitched method still ran';
+  if (!s.body?.panoramaImage) return 'FAIL: the one-pass fallback did not send its strip -- the server would reassemble panels that were never separate';
+  return 'PASS: after an outage the order prints from the one-pass strip, like the panorama';
 };
 
 
