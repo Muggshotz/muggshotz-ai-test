@@ -18,7 +18,9 @@ async function magnetTo(page, size, log) {
   await page.click('#postUploadForkRow button:has-text("Select Your Product")');
   await T(page, 700);
   await page.locator('#productCard .btn-select[data-val="car magnet"]').click({ force: true });
-  await T(page, 1000);
+  // Waited for, not assumed after a fixed second: under load the card can take
+  // longer to open, and a fixed delay then reads a slow page as a broken one.
+  await page.waitForFunction(() => { const c = document.getElementById('carMagnetOptionCard'); return c && getComputedStyle(c).display !== 'none'; }, null, { timeout: 5000 }).catch(() => {});
   const card = await page.evaluate(() => {
     const c = document.getElementById('carMagnetOptionCard');
     return { shown: !!c && getComputedStyle(c).display !== 'none', tiles: c ? c.querySelectorAll('.btn-select').length : 0 };

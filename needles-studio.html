@@ -1,5 +1,5 @@
 <!-- ============================================================
-     VERSION: V350
+     VERSION: V351
      ============================================================
      THE ONE LINE THAT SAYS WHICH BUILD YOU ARE LOOKING AT.
 
@@ -1427,40 +1427,45 @@ const HERO_SETTLE_MS = 1000;
 <div class="card-title">🎄 Which Shape?</div>
 <div class="note" style="margin-top:0;margin-bottom:.75rem">A glossy ceramic ornament with a ribbon. Pick the shape before generating — your picture is fitted to it.</div>
 <div class="grid2" id="ornamentShapeGrid">
-<div class="btn-select" data-ornament-shape="Star" onclick="pickOrnamentShape('Star')">Star<div class="note" style="margin-top:4px">$9.95</div></div><div class="btn-select" data-ornament-shape="Circle" onclick="pickOrnamentShape('Circle')">Circle<div class="note" style="margin-top:4px">$9.95</div></div><div class="btn-select" data-ornament-shape="Heart" onclick="pickOrnamentShape('Heart')">Heart<div class="note" style="margin-top:4px">$9.95</div></div><div class="btn-select" data-ornament-shape="Snowflake" onclick="pickOrnamentShape('Snowflake')">Snowflake<div class="note" style="margin-top:4px">$9.95</div></div>
+<div class="btn-select" data-ornament-shape="Star" style="padding:.5rem" onclick="pickOrnamentShape('Star')"><img src="art/options/ornament-star.jpg" alt="" style="width:100%;border-radius:6px;background:#fff;margin-bottom:6px"/>Star<div class="note" style="margin-top:4px">$9.95</div></div><div class="btn-select" data-ornament-shape="Circle" style="padding:.5rem" onclick="pickOrnamentShape('Circle')"><img src="art/options/ornament-circle.jpg" alt="" style="width:100%;border-radius:6px;background:#fff;margin-bottom:6px"/>Circle<div class="note" style="margin-top:4px">$9.95</div></div><div class="btn-select" data-ornament-shape="Heart" style="padding:.5rem" onclick="pickOrnamentShape('Heart')"><img src="art/options/ornament-heart.jpg" alt="" style="width:100%;border-radius:6px;background:#fff;margin-bottom:6px"/>Heart<div class="note" style="margin-top:4px">$9.95</div></div><div class="btn-select" data-ornament-shape="Snowflake" style="padding:.5rem" onclick="pickOrnamentShape('Snowflake')"><img src="art/options/ornament-snowflake.jpg" alt="" style="width:100%;border-radius:6px;background:#fff;margin-bottom:6px"/>Snowflake<div class="note" style="margin-top:4px">$9.95</div></div>
 </div>
 <div class="note" id="ornamentShapeSelectedNote" style="margin-top:.6rem"></div>
+<button type="button" class="download-btn" style="margin-top:1rem" onclick="optionCardBack()">← Back</button>
 </div>
 
 <div class="card" id="airFreshenerOptionCard" style="display:none">
 <div class="card-title">🌲 Which Scent?</div>
 <div class="note" style="margin-top:0;margin-bottom:.75rem">A rectangular card air freshener with your picture on it. Pick the scent before generating.</div>
 <div class="grid2" id="airFreshenerOptionGrid">
-<div class="btn-select" data-opt="New Car" onclick="pickAirFreshener('New Car')">New Car<div class="note" style="margin-top:4px">$9.95</div></div><div class="btn-select" data-opt="Pine" onclick="pickAirFreshener('Pine')">Pine<div class="note" style="margin-top:4px">$9.95</div></div><div class="btn-select" data-opt="Black Ice" onclick="pickAirFreshener('Black Ice')">Black Ice<div class="note" style="margin-top:4px">$9.95</div></div><div class="btn-select" data-opt="Onyx Frost" onclick="pickAirFreshener('Onyx Frost')">Onyx Frost<div class="note" style="margin-top:4px">$9.95</div></div>
+<div class="btn-select" data-opt="New Car" style="padding:.5rem" onclick="pickAirFreshener('New Car')"><img src="art/options/airfreshener.jpg" alt="" style="width:100%;border-radius:6px;background:#fff;margin-bottom:6px"/>New Car<div class="note" style="margin-top:4px">$9.95</div></div><div class="btn-select" data-opt="Pine" style="padding:.5rem" onclick="pickAirFreshener('Pine')"><img src="art/options/airfreshener.jpg" alt="" style="width:100%;border-radius:6px;background:#fff;margin-bottom:6px"/>Pine<div class="note" style="margin-top:4px">$9.95</div></div><div class="btn-select" data-opt="Black Ice" style="padding:.5rem" onclick="pickAirFreshener('Black Ice')"><img src="art/options/airfreshener.jpg" alt="" style="width:100%;border-radius:6px;background:#fff;margin-bottom:6px"/>Black Ice<div class="note" style="margin-top:4px">$9.95</div></div><div class="btn-select" data-opt="Onyx Frost" style="padding:.5rem" onclick="pickAirFreshener('Onyx Frost')"><img src="art/options/airfreshener.jpg" alt="" style="width:100%;border-radius:6px;background:#fff;margin-bottom:6px"/>Onyx Frost<div class="note" style="margin-top:4px">$9.95</div></div>
 </div>
 <div class="note" id="airFreshenerOptionNote" style="margin-top:.6rem"></div>
+<button type="button" class="download-btn" style="margin-top:1rem" onclick="optionCardBack()">← Back</button>
 </div>
 
 <div class="card" id="nightBuddyOptionCard" style="display:none">
 <div class="card-title">💡 Full Colour or Warm Glow?</div>
 <div class="note" style="margin-top:0;margin-bottom:.75rem">A clear acrylic panel cut to the shape of your picture, standing in a lit wooden base.</div>
 <div class="grid2" id="nightBuddyOptionGrid">
-<div class="btn-select" data-opt="Full Colour" onclick="pickNightBuddy('Full Colour')">Full Colour<div class="note" style="margin-top:4px">$15.95</div></div><div class="btn-select" data-opt="Warm Glow" onclick="pickNightBuddy('Warm Glow')">Warm Glow<div class="note" style="margin-top:4px">$12.95</div></div>
+<div class="btn-select" data-opt="Full Colour" style="padding:.5rem" onclick="pickNightBuddy('Full Colour')"><img src="art/options/nightbuddy-colour.jpg" alt="" style="width:100%;border-radius:6px;background:#fff;margin-bottom:6px"/>Full Colour<div class="note" style="margin-top:4px">$15.95</div></div><div class="btn-select" data-opt="Warm Glow" style="padding:.5rem" onclick="pickNightBuddy('Warm Glow')"><img src="art/options/nightbuddy-warm.jpg" alt="" style="width:100%;border-radius:6px;background:#fff;margin-bottom:6px"/>Warm Glow<div class="note" style="margin-top:4px">$12.95</div></div>
 </div>
 <div class="note" id="nightBuddyOptionNote" style="margin-top:.6rem"></div>
+<button type="button" class="download-btn" style="margin-top:1rem" onclick="optionCardBack()">← Back</button>
 </div>
 
 <div class="card" id="stickerSheetOptionCard" style="display:none">
 <div class="card-title">⭐ Small or Large Sheet?</div>
 <div class="note" style="margin-top:0;margin-bottom:.75rem">Four die-cut vinyl stickers of your picture on one sheet, each cut to its outline.</div>
 <div class="grid2" id="stickerSheetOptionGrid">
-<div class="btn-select" data-opt="Small 6 x 4 in" onclick="pickStickerSheet('Small 6 x 4 in')">Small 6 x 4 in<div class="note" style="margin-top:4px">$9.95</div></div><div class="btn-select" data-opt="Large 11 x 8.5 in" onclick="pickStickerSheet('Large 11 x 8.5 in')">Large 11 x 8.5 in<div class="note" style="margin-top:4px">$13.95</div></div>
+<div class="btn-select" data-opt="Small 6 x 4 in" style="padding:.5rem" onclick="pickStickerSheet('Small 6 x 4 in')"><img src="art/options/stickers-small.jpg" alt="" style="width:100%;border-radius:6px;background:#fff;margin-bottom:6px"/>Small 6 x 4 in<div class="note" style="margin-top:4px">$9.95</div></div><div class="btn-select" data-opt="Large 11 x 8.5 in" style="padding:.5rem" onclick="pickStickerSheet('Large 11 x 8.5 in')"><img src="art/options/stickers-large.jpg" alt="" style="width:100%;border-radius:6px;background:#fff;margin-bottom:6px"/>Large 11 x 8.5 in<div class="note" style="margin-top:4px">$13.95</div></div>
 </div>
 <div class="note" id="stickerSheetOptionNote" style="margin-top:.6rem"></div>
+<button type="button" class="download-btn" style="margin-top:1rem" onclick="optionCardBack()">← Back</button>
 </div>
 
 <div class="card" id="tshirtOptionCard" style="display:none">
 <div class="card-title">👕 Size and Colour</div>
+<img src="art/options/tshirt.jpg" alt="Gildan heavy cotton T-shirt" style="display:block;width:min(100%,220px);margin:0 auto .8rem;border-radius:8px;background:#fff"/>
 <div class="note" style="margin-top:0;margin-bottom:.75rem">A Gildan 5000 heavy cotton unisex tee. Only your design prints, not a box around it. Pick a size and a shirt colour.</div>
 <div class="grid2" id="tshirtOptionGrid">
 <div class="btn-select" data-opt="S" onclick="pickTshirt('S')">S<div class="note" style="margin-top:4px">$7.95</div></div><div class="btn-select" data-opt="M" onclick="pickTshirt('M')">M<div class="note" style="margin-top:4px">$7.95</div></div><div class="btn-select" data-opt="L" onclick="pickTshirt('L')">L<div class="note" style="margin-top:4px">$7.95</div></div><div class="btn-select" data-opt="XL" onclick="pickTshirt('XL')">XL<div class="note" style="margin-top:4px">$7.95</div></div><div class="btn-select" data-opt="2XL" onclick="pickTshirt('2XL')">2XL<div class="note" style="margin-top:4px">$9.95</div></div><div class="btn-select" data-opt="3XL" onclick="pickTshirt('3XL')">3XL<div class="note" style="margin-top:4px">$11.95</div></div><div class="btn-select" data-opt="4XL" onclick="pickTshirt('4XL')">4XL<div class="note" style="margin-top:4px">$11.95</div></div><div class="btn-select" data-opt="5XL" onclick="pickTshirt('5XL')">5XL<div class="note" style="margin-top:4px">$11.95</div></div>
@@ -1468,26 +1473,29 @@ const HERO_SETTLE_MS = 1000;
 <div class="note" style="margin:.8rem 0 .4rem">Shirt colour</div>
 <div id="tshirtColorGrid" style="display:flex;flex-wrap:wrap;gap:8px"><button type="button" class="color-btn" data-tcolor="White" title="White" style="background:#ffffff" onclick="pickTshirtColor('White')"></button><button type="button" class="color-btn" data-tcolor="Black" title="Black" style="background:#111111" onclick="pickTshirtColor('Black')"></button><button type="button" class="color-btn" data-tcolor="Sport Grey" title="Sport Grey" style="background:#9ea3a8" onclick="pickTshirtColor('Sport Grey')"></button><button type="button" class="color-btn" data-tcolor="Navy" title="Navy" style="background:#1f2a44" onclick="pickTshirtColor('Navy')"></button><button type="button" class="color-btn" data-tcolor="Red" title="Red" style="background:#c8102e" onclick="pickTshirtColor('Red')"></button><button type="button" class="color-btn" data-tcolor="Royal" title="Royal" style="background:#1d4f91" onclick="pickTshirtColor('Royal')"></button><button type="button" class="color-btn" data-tcolor="Forest Green" title="Forest Green" style="background:#22452f" onclick="pickTshirtColor('Forest Green')"></button><button type="button" class="color-btn" data-tcolor="Maroon" title="Maroon" style="background:#5c1f2b" onclick="pickTshirtColor('Maroon')"></button><button type="button" class="color-btn" data-tcolor="Light Pink" title="Light Pink" style="background:#f4c6d2" onclick="pickTshirtColor('Light Pink')"></button><button type="button" class="color-btn" data-tcolor="Light Blue" title="Light Blue" style="background:#a9c8e8" onclick="pickTshirtColor('Light Blue')"></button><button type="button" class="color-btn" data-tcolor="Charcoal" title="Charcoal" style="background:#4a4b4f" onclick="pickTshirtColor('Charcoal')"></button><button type="button" class="color-btn" data-tcolor="Sand" title="Sand" style="background:#d8c7a5" onclick="pickTshirtColor('Sand')"></button></div>
 <div class="note" id="tshirtOptionNote" style="margin-top:.6rem"></div>
+<button type="button" class="download-btn" style="margin-top:1rem" onclick="optionCardBack()">← Back</button>
 </div>
 
 <div class="card" id="carMagnetOptionCard" style="display:none">
 <div class="card-title">🚗 Car Magnet Size</div>
 <div class="note" style="margin-top:0;margin-bottom:.75rem">Each size is a different magnet, and your picture is drawn to fit its exact shape.</div>
 <div class="grid3" id="carMagnetOptionGrid">
-<div class="btn-select" data-opt="5 x 5 in" onclick="pickCarMagnet('5 x 5 in')">5 x 5 in<div class="note" style="margin-top:4px">$5.95</div></div><div class="btn-select" data-opt="7.5 x 4.5 in" onclick="pickCarMagnet('7.5 x 4.5 in')">7.5 x 4.5 in<div class="note" style="margin-top:4px">$6.95</div></div><div class="btn-select" data-opt="10 x 3 in" onclick="pickCarMagnet('10 x 3 in')">10 x 3 in<div class="note" style="margin-top:4px">$8.95</div></div>
+<div class="btn-select" data-opt="5 x 5 in" style="padding:.5rem" onclick="pickCarMagnet('5 x 5 in')"><img src="art/options/magnet-5x5.jpg" alt="" style="width:100%;border-radius:6px;background:#fff;margin-bottom:6px"/>5 x 5 in<div class="note" style="margin-top:4px">$5.95</div></div><div class="btn-select" data-opt="7.5 x 4.5 in" style="padding:.5rem" onclick="pickCarMagnet('7.5 x 4.5 in')"><img src="art/options/magnet-7x4.jpg" alt="" style="width:100%;border-radius:6px;background:#fff;margin-bottom:6px"/>7.5 x 4.5 in<div class="note" style="margin-top:4px">$6.95</div></div><div class="btn-select" data-opt="10 x 3 in" style="padding:.5rem" onclick="pickCarMagnet('10 x 3 in')"><img src="art/options/magnet-10x3.jpg" alt="" style="width:100%;border-radius:6px;background:#fff;margin-bottom:6px"/>10 x 3 in<div class="note" style="margin-top:4px">$8.95</div></div>
 </div>
 <div class="note" id="carMagnetOptionNote" style="margin-top:.6rem"></div>
+<button type="button" class="download-btn" style="margin-top:1rem" onclick="optionCardBack()">← Back</button>
 </div>
 
 <div class="card" id="wrapSizeCard" style="display:none">
 <div class="card-title">🎁 Sheet or Roll?</div>
 <div class="note" style="margin-top:0;margin-bottom:.75rem">Your picture becomes a repeating pattern across the whole sheet. Pick the size before generating — each is a different roll with its own price.</div>
 <div class="grid3" id="wrapSizeGrid">
-<div class="btn-select" data-wrap-size="Sheet 29&quot; x 20&quot;" onclick="pickWrapSize('Sheet 29&quot; x 20&quot;')">Sheet<div class="note" style="margin-top:4px">29" x 20"</div><div class="note" style="margin-top:4px">$8.95</div></div>
-<div class="btn-select" data-wrap-size="Roll 29&quot; x 72&quot;" onclick="pickWrapSize('Roll 29&quot; x 72&quot;')">Roll<div class="note" style="margin-top:4px">29" x 6 ft</div><div class="note" style="margin-top:4px">$15.95</div></div>
-<div class="btn-select" data-wrap-size="Roll 29&quot; x 144&quot;" onclick="pickWrapSize('Roll 29&quot; x 144&quot;')">Long roll<div class="note" style="margin-top:4px">29" x 12 ft</div><div class="note" style="margin-top:4px">$24.95</div></div>
+<div class="btn-select" data-wrap-size="Sheet 29&quot; x 20&quot;" style="padding:.5rem" onclick="pickWrapSize('Sheet 29&quot; x 20&quot;')"><img src="art/options/wrap-sheet.jpg" alt="" style="width:100%;border-radius:6px;background:#fff;margin-bottom:6px"/>Sheet<div class="note" style="margin-top:4px">29" x 20"</div><div class="note" style="margin-top:4px">$8.95</div></div>
+<div class="btn-select" data-wrap-size="Roll 29&quot; x 72&quot;" style="padding:.5rem" onclick="pickWrapSize('Roll 29&quot; x 72&quot;')"><img src="art/options/wrap-roll.jpg" alt="" style="width:100%;border-radius:6px;background:#fff;margin-bottom:6px"/>Roll<div class="note" style="margin-top:4px">29" x 6 ft</div><div class="note" style="margin-top:4px">$15.95</div></div>
+<div class="btn-select" data-wrap-size="Roll 29&quot; x 144&quot;" style="padding:.5rem" onclick="pickWrapSize('Roll 29&quot; x 144&quot;')"><img src="art/options/wrap-roll.jpg" alt="" style="width:100%;border-radius:6px;background:#fff;margin-bottom:6px"/>Long roll<div class="note" style="margin-top:4px">29" x 12 ft</div><div class="note" style="margin-top:4px">$24.95</div></div>
 </div>
 <div class="note" id="wrapSizeSelectedNote" style="margin-top:.6rem"></div>
+<button type="button" class="download-btn" style="margin-top:1rem" onclick="optionCardBack()">← Back</button>
 </div>
 
 <div class="card" id="suitcaseSizeCard" style="display:none">
@@ -4430,7 +4438,7 @@ function toggleWorkingImage(){
 // Two copies of a number is exactly how the marker rotted in the first place,
 // so they are not trusted to agree: .githooks/pre-commit moves both together
 // and REFUSES the commit if it ever finds them apart.
-const APP_VERSION='V350';
+const APP_VERSION='V351';
 try{ console.log('%cNeedles\u2019 Studio '+APP_VERSION,'color:#29a3ff;font-weight:700'); }catch(e){}
 
 function getDeviceId(){
@@ -16369,6 +16377,10 @@ function travelVariantBack(){
 // flat products and found three panels without one).
 // The shape is the whole product decision for a coaster, so back from it is
 // the product grid.
+// THE OPTION CARDS' BACK (Alyx, 23 Sep 2026: "When I click on it, and decide
+// to try to go back out and click something else I'm stuck. Because there is
+// no back button"). The coaster card's Back, shared by every option card.
+function optionCardBack(){ coasterShapeBack(); }
 function coasterShapeBack(){
   clearAllFocusModes();
   smoothScrollToTarget('productCard','start');
@@ -16382,11 +16394,23 @@ function ideaStepBack(){
     showDesignMethodCard();
     return;
   }
-  if(product==='coaster'){
-    const shape=document.getElementById('coasterShapeCard');
-    if(shape && shape.style.display!=='none'){
-      setOptionSpotlight('coaster-shape-focus');
-      smoothScrollToTarget('coasterShapeCard','center');
+  // The card this product's option was picked on, and its spotlight.
+  const OPTION_CARD_OF={
+    'coaster':['coasterShapeCard','coaster-shape-focus'],
+    'ornament':['ornamentShapeCard','ornament-shape-focus'],
+    'wrapping paper':['wrapSizeCard','wrap-size-focus'],
+    'air freshener':['airFreshenerOptionCard','airFreshener-option-focus'],
+    'night light':['nightBuddyOptionCard','nightBuddy-option-focus'],
+    'sticker sheet':['stickerSheetOptionCard','stickerSheet-option-focus'],
+    'tshirt':['tshirtOptionCard','tshirt-option-focus'],
+    'car magnet':['carMagnetOptionCard','carMagnet-option-focus']
+  };
+  const opt=OPTION_CARD_OF[product];
+  if(opt){
+    const card=document.getElementById(opt[0]);
+    if(card && card.style.display!=='none'){
+      setOptionSpotlight(opt[1]);
+      smoothScrollToTarget(opt[0],'center');
       return;
     }
   }
