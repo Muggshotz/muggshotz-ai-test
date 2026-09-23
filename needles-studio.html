@@ -1,5 +1,5 @@
 <!-- ============================================================
-     VERSION: V355
+     VERSION: V356
      ============================================================
      THE ONE LINE THAT SAYS WHICH BUILD YOU ARE LOOKING AT.
 
@@ -4533,7 +4533,7 @@ function toggleWorkingImage(){
 // Two copies of a number is exactly how the marker rotted in the first place,
 // so they are not trusted to agree: .githooks/pre-commit moves both together
 // and REFUSES the commit if it ever finds them apart.
-const APP_VERSION='V355';
+const APP_VERSION='V356';
 try{ console.log('%cNeedles\u2019 Studio '+APP_VERSION,'color:#29a3ff;font-weight:700'); }catch(e){}
 
 function getDeviceId(){
@@ -12429,7 +12429,8 @@ function refreshCarMagnetVisibility(){
 const SMART_MUG_PRICE=19.95; // Alyx's price, before shipping: wholesale 9.06 + $10, customer total under $30
 const SURPRISE_TEMPLATES={
   'valentine':{label:'Will You Be My Valentine?',file:'valentine'},
-  'congratulations':{label:'Congratulations',file:'congratulations'}
+  'congratulations':{label:'Congratulations',file:'congratulations'},
+  'apology':{label:'The Apology',file:'apology'}
 };
 let selectedSurprise=null;
 let selectedSurpriseHand='right';

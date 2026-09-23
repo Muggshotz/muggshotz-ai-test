@@ -1436,7 +1436,7 @@ let selectedTshirtColor = (pendingOrder?.preselectedTshirtColor && TSHIRT_COLORS
 // SURPRISE!!! -- the smart mug (23 Sep 2026). One size; the template and the
 // hand were chosen in the studio and the print arrives ready-made.
 const SMART_MUG_PRICE = 19.95;
-const SURPRISE_LABELS = { 'valentine': 'Will You Be My Valentine?', 'congratulations': 'Congratulations' };
+const SURPRISE_LABELS = { 'valentine': 'Will You Be My Valentine?', 'congratulations': 'Congratulations', 'apology': 'The Apology' };
 const selectedSurprise = pendingOrder?.preselectedSurprise || null;
 const selectedSurpriseHand = pendingOrder?.preselectedSurpriseHand === 'left' ? 'left' : 'right';
 function surpriseLabel(){ return SURPRISE_LABELS[selectedSurprise] || 'Surprise'; }
