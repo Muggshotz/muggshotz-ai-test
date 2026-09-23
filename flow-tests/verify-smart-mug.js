@@ -164,6 +164,32 @@ scenarios.readyAndItsOtherSide = async (page) => {
   return 'PASS: Ready? asks for its other side (boy, girl, three twins, Any preference?; pictured and priced), previews each, and orders "Ready? / Any preference?" left-handed';
 };
 
+// Alyx's own mug is hidden: not in the panel, unless the link names it,
+// and then it orders like any other.
+scenarios.hiddenTemplate = async (page) => {
+  await toMugSize(page);
+  await tap(page, '#preGenSizeSmartBtn');
+  await T(page, 1500);
+  if (await page.evaluate(() => !!document.querySelector('#surpriseTemplateGrid .btn-select[data-surprise="i-know"]'))) return 'FAIL: the hidden mug shows in the panel without its link';
+  await page.goto(page.url().split('?')[0] + '?surprise=i-know', { waitUntil: 'domcontentloaded' });
+  await T(page, 800);
+  await uploadPhoto(page); await dismissAlerts(page);
+  await toMugSize(page);
+  await tap(page, '#preGenSizeSmartBtn');
+  await T(page, 1500);
+  const tile = await page.evaluate(() => { const t = document.querySelector('#surpriseTemplateGrid .btn-select[data-surprise="i-know"]'); return t && { img: !!t.querySelector('img')?.naturalWidth, price: /\$\d/.test(t.innerText) }; });
+  if (!tile) return 'FAIL: the link ?surprise=i-know does not show the hidden mug';
+  if (!tile.img || !tile.price) return `FAIL: the hidden mug's tile is missing its picture or price ${JSON.stringify(tile)}`;
+  await tap(page, '#surpriseTemplateGrid .btn-select[data-surprise="i-know"]');
+  await T(page, 1200);
+  await Promise.all([page.waitForURL(/order\.html/, { timeout: 10000 }), tap(page, '#surpriseContinueBtn')]);
+  await T(page, 3000);
+  const st = await page.evaluate(() => ({ left: JSON.parse(localStorage.getItem('muggshotz_pending_order') || 'null')?.placements?.left, note: document.getElementById('smartMugChoiceNote').textContent }));
+  if (!st.left || !st.left.endsWith('/art/surprise/i-know-print.png')) return `FAIL: the hand-off print is ${st.left}`;
+  if (!/I Don't Know, But I Know/.test(st.note)) return `FAIL: the order card says "${st.note}"`;
+  return 'PASS: the hidden mug is not in the panel; its link shows it, pictured and priced, and it orders as "I Don\'t Know, But I Know"';
+};
+
 scenarios.theOrderPage = async (page, log) => {
   const bodies = [];
   page.on('request', (r) => { if (r.url().includes('/api/create-checkout-session')) { try { bodies.push(r.postDataJSON()); } catch (e) {} } });

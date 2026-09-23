@@ -1,5 +1,5 @@
 <!-- ============================================================
-     VERSION: V362
+     VERSION: V363
      ============================================================
      THE ONE LINE THAT SAYS WHICH BUILD YOU ARE LOOKING AT.
 
@@ -4540,7 +4540,7 @@ function toggleWorkingImage(){
 // Two copies of a number is exactly how the marker rotted in the first place,
 // so they are not trusted to agree: .githooks/pre-commit moves both together
 // and REFUSES the commit if it ever finds them apart.
-const APP_VERSION='V362';
+const APP_VERSION='V363';
 try{ console.log('%cNeedles\u2019 Studio '+APP_VERSION,'color:#29a3ff;font-weight:700'); }catch(e){}
 
 function getDeviceId(){
@@ -12442,6 +12442,9 @@ const SURPRISE_TEMPLATES={
   'appeal':{label:'The Appeal',file:'appeal'},
   'breakup':{label:'We Need to Talk',file:'breakup'},
   'grandpa':{label:"You're Going to Be a Grandpa!",file:'grandpa'},
+  // HIDDEN (Alyx, 23 Sep 2026): Alyx's own mug, a real person's likeness, so
+  // never offered to customers. Shown only on a link carrying ?surprise=i-know.
+  'i-know':{label:"I Don't Know, But I Know",file:'i-know',hidden:true},
   // "Ready?" is one opener for every reveal; the customer picks what is on
   // the other side. The girl and the twins are the boy's cap and the two caps
   // of Any preference? recoloured, the words taken off the twins.
@@ -12456,6 +12459,8 @@ const SURPRISE_TEMPLATES={
 };
 let selectedSurprise=null;
 let selectedSurpriseVariant=null;
+// A hidden template shows only when the page's link names it.
+const SURPRISE_UNLOCKED=(()=>{ try{ return new URLSearchParams(location.search).get('surprise'); }catch(e){ return null; } })();
 let selectedSurpriseHand='right';
 function smartMugPriceText(){ return typeof SMART_MUG_PRICE==='number' ? '$'+SMART_MUG_PRICE.toFixed(2) : ''; }
 function surprisePrintUrl(){
@@ -12465,7 +12470,7 @@ function surprisePrintUrl(){
 }
 function renderSurpriseTemplates(){
   const grid=document.getElementById('surpriseTemplateGrid'); if(!grid)return;
-  grid.innerHTML=Object.entries(SURPRISE_TEMPLATES).map(([k,t])=>
+  grid.innerHTML=Object.entries(SURPRISE_TEMPLATES).filter(([k,t])=>!t.hidden||k===SURPRISE_UNLOCKED).map(([k,t])=>
     '<div class="btn-select'+(k===selectedSurprise?' selected':'')+'" data-surprise="'+k+'" style="padding:.5rem" onclick="pickSurprise(\''+k+'\')">'
     +'<img src="art/options/surprise-'+(t.tile||t.file)+'.jpg" alt="" style="width:100%;border-radius:6px;background:#000;margin-bottom:6px"/>'
     +t.label+'<div class="note" style="margin-top:4px">'+smartMugPriceText()+'</div></div>').join('');
