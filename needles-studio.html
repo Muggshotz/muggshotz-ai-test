@@ -1,5 +1,5 @@
 <!-- ============================================================
-     VERSION: V366
+     VERSION: V367
      ============================================================
      THE ONE LINE THAT SAYS WHICH BUILD YOU ARE LOOKING AT.
 
@@ -1237,7 +1237,7 @@ const HERO_SETTLE_MS = 1000;
      exact shape. Yes below saves the card as shown. -->
 <div id="cardLayoutWrap" style="display:none;margin-top:.9rem">
 <div class="card-title">💼 Your Card</div>
-<div class="note" style="margin-top:0;margin-bottom:.6rem">Type what goes on the card. It is printed exactly as you type it. Leave any box empty to leave it off.</div>
+<div class="note" style="margin-top:0;margin-bottom:.6rem">Type what goes on the card. It is printed exactly as you type it. Leave any box empty to leave it off. The solid line is where the card is cut; your words stay inside the dashed line.</div>
 <canvas id="cardLayoutCanvas" style="display:block;width:100%;max-width:340px;margin:0 auto .7rem;border-radius:8px;background:#222"></canvas>
 <div class="grid2" style="gap:8px">
 <input type="text" class="caption-input" id="cardName" placeholder="Name" oninput="drawCardLayout()"/>
@@ -4568,7 +4568,7 @@ function toggleWorkingImage(){
 // Two copies of a number is exactly how the marker rotted in the first place,
 // so they are not trusted to agree: .githooks/pre-commit moves both together
 // and REFUSES the commit if it ever finds them apart.
-const APP_VERSION='V366';
+const APP_VERSION='V367';
 try{ console.log('%cNeedles\u2019 Studio '+APP_VERSION,'color:#29a3ff;font-weight:700'); }catch(e){}
 
 function getDeviceId(){
@@ -12603,6 +12603,17 @@ function goToSurpriseOrder(){
 // cards (100 or 200, four papers), Print Pigeons' boxed cards, and the metal
 // holder. The choice names the catalog product and size; ratio is the print
 // area's shape, which the picture is cut to (fitToPrintShape).
+// PRINTIFY'S GUIDES (measured 23 Sep 2026 from Printify's own design screens,
+// Alyx's screenshots): the print area is the full bleed; the CUT line and the
+// dashed SAFE line sit this far in, as a fraction of the print's width (x) and
+// height (y). Taylor's cards are 3.75 x 2.25 in with a 1/8 in bleed and a
+// 1/4 in safe zone. The details on Your Card are kept inside SAFE; the picture
+// runs to the full bleed.
+const CARD_GUIDES={
+  'business-cards':{cutX:1/30,cutY:1/18,safeX:1/15,safeY:1/9},
+  'business-cards-boxed':{cutX:35/1075,cutY:34/720,safeX:64/1075,safeY:62/720},
+  'business-card-holder':{cutX:12/505,cutY:14/280,safeX:32/505,safeY:34/280}
+};
 const BUSINESS_CARD_OPTIONS={
   '50 cards':{key:'business-cards',size:'50 cards',price:24.95,paper:true,ratio:1125/675},
   '100 cards':{key:'business-cards',size:'100 cards',price:34.95,paper:true,ratio:1125/675},
@@ -12611,6 +12622,7 @@ const BUSINESS_CARD_OPTIONS={
   'Boxed, 100 laminated':{key:'business-cards-boxed',size:'100 cards, laminated',price:33.95,paper:false,ratio:1075/720},
   'Card holder':{key:'business-card-holder',size:'One size',price:16.95,paper:false,ratio:1022/566}
 };
+function cardGuides(){ const o=BUSINESS_CARD_OPTIONS[selectedBusinessCard]; return CARD_GUIDES[o?o.key:'business-cards']; }
 let selectedBusinessCard=null;
 let selectedCardPaper='Coated (both sides)';
 function pickBusinessCard(name){
@@ -12684,10 +12696,11 @@ function renderCardOnto(canvas,W){
   const lines=cardLines(); if(!lines.length)return;
   // The words' zone and its shade.
   const side=cardLayout.side, light=cardLayout.tone==='light';
-  const pad=Math.round(H*0.08);
+  // The words' zone sits inside Printify's safe line.
+  const gd=cardGuides(), px_=Math.ceil(W*gd.safeX), py_=Math.ceil(H*gd.safeY);
   let zx,zy,zw,zh,grad;
-  if(side==='bottom'){ zx=pad; zw=W-2*pad; zh=Math.round(H*0.36); zy=H-pad-zh; grad=g.createLinearGradient(0,H*0.5,0,H); }
-  else { zw=Math.round(W*0.44); zh=H-2*pad; zy=pad; zx=side==='right'?W-pad-zw:pad; grad=side==='right'?g.createLinearGradient(W*0.45,0,W,0):g.createLinearGradient(W*0.55,0,0,0); }
+  if(side==='bottom'){ zx=px_; zw=W-2*px_; zh=Math.round(H*0.36); zy=H-py_-zh; grad=g.createLinearGradient(0,H*0.5,0,H); }
+  else { zw=Math.round(W*0.44); zh=H-2*py_; zy=py_; zx=side==='right'?W-px_-zw:px_; grad=side==='right'?g.createLinearGradient(W*0.45,0,W,0):g.createLinearGradient(W*0.55,0,0,0); }
   const shade=light?'0,0,0':'255,255,255';
   grad.addColorStop(0,'rgba('+shade+',0)'); grad.addColorStop(0.45,'rgba('+shade+','+(light?0.5:0.62)+')'); grad.addColorStop(1,'rgba('+shade+','+(light?0.62:0.75)+')');
   g.fillStyle=grad;
@@ -12715,7 +12728,19 @@ function renderCardOnto(canvas,W){
   });
   g.shadowBlur=0;
 }
-function drawCardLayout(){ const c=document.getElementById('cardLayoutCanvas'); if(c&&cardLayout.img)renderCardOnto(c,Math.min(1200,cardLayout.img.naturalWidth)); }
+// The preview also carries Printify's two guides, as its design screen does:
+// the cut line solid, the safe line dashed. They are drawn on the preview only;
+// bakeCardLayout renders the card without them.
+function drawCardGuides(c){
+  const g=c.getContext('2d'), W=c.width, H=c.height, gd=cardGuides(), lw=Math.max(1,Math.round(W/400));
+  const box=(fx,fy)=>[W*fx,H*fy,W*(1-2*fx),H*(1-2*fy)];
+  g.save(); g.lineWidth=lw;
+  g.strokeStyle='rgba(255,255,255,0.9)'; g.setLineDash([]); g.strokeRect(...box(gd.cutX,gd.cutY));
+  g.strokeStyle='rgba(0,0,0,0.55)'; g.strokeRect(...box(gd.cutX,gd.cutY).map((v,i)=>i<2?v+lw:v-2*lw));
+  g.setLineDash([lw*5,lw*4]); g.strokeStyle='rgba(255,255,255,0.85)'; g.strokeRect(...box(gd.safeX,gd.safeY));
+  g.restore();
+}
+function drawCardLayout(){ const c=document.getElementById('cardLayoutCanvas'); if(c&&cardLayout.img){ renderCardOnto(c,Math.min(1200,cardLayout.img.naturalWidth)); drawCardGuides(c); } }
 function pickCardSide(side){ cardLayout.side=side; document.querySelectorAll('#cardSideGrid .btn-select').forEach(b=>b.classList.toggle('selected',b.dataset.cardSide===side)); drawCardLayout(); }
 function pickCardTone(tone){ cardLayout.tone=tone; document.querySelectorAll('#cardToneGrid .btn-select').forEach(b=>b.classList.toggle('selected',b.dataset.cardTone===tone)); drawCardLayout(); }
 async function openCardLayout(url){

@@ -124,6 +124,30 @@ scenarios.yourCard = async (page, log) => {
     return { white, ratio: c.width / c.height };
   });
   if (shaded.white < 200) return `FAIL: the preview shows no words on the right (${shaded.white} white pixels)`;
+  // PRINTIFY'S SAFE ZONE: on every card product the words, rendered on the
+  // card itself (no guides), sit inside the dashed safe line measured from
+  // Printify's design screen, and the saved card carries no guide lines.
+  const safe = await page.evaluate(() => {
+    const out = [];
+    const keep = selectedBusinessCard;
+    for (const opt of ['100 cards', 'Boxed, 100', 'Card holder']) {
+      selectedBusinessCard = opt;
+      for (const side of ['right', 'left', 'bottom']) {
+        cardLayout.side = side;
+        const c = document.createElement('canvas'); renderCardOnto(c, 1200);
+        const W = c.width, H = c.height, d = c.getContext('2d').getImageData(0, 0, W, H).data;
+        let x0 = W, y0 = H, x1 = -1, y1 = -1;
+        for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { const i = (y * W + x) * 4; if (d[i] > 245 && d[i + 1] > 245 && d[i + 2] > 245) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; } }
+        const g = cardGuides();
+        if (x1 < 0) out.push(`${opt}/${side}: no words`);
+        else if (x0 < W * g.safeX - 1 || x1 > W * (1 - g.safeX) + 1 || y0 < H * g.safeY - 1 || y1 > H * (1 - g.safeY) + 1)
+          out.push(`${opt}/${side}: words at x ${x0}-${x1}, y ${y0}-${y1} of ${W}x${H}, safe is ${Math.round(W * g.safeX)}-${Math.round(W * (1 - g.safeX))}, ${Math.round(H * g.safeY)}-${Math.round(H * (1 - g.safeY))}`);
+      }
+    }
+    selectedBusinessCard = keep; cardLayout.side = 'right';
+    return out;
+  });
+  if (safe.length) return `FAIL: words outside Printify's safe zone: ${safe.join('; ')}`;
   log.apiCalls.length = 0;
   await page.locator('#approveRow button:has-text("Yes")').first().click();
   await passFadePage(page);
@@ -134,7 +158,7 @@ scenarios.yourCard = async (page, log) => {
   if (!img || img === before) return 'FAIL: the mockup was made from the painting, not the card with its details';
   const out = await page.evaluate(async (u) => { const im = await loadImageFromUrl(u); return im.naturalWidth / im.naturalHeight; }, img);
   if (Math.abs(out - 1125 / 675) > 0.01) return `FAIL: the saved card is ${out.toFixed(3)}:1, not the card's 1.667:1`;
-  return `PASS: Your Card opens and lands after painting (no caption tool, painter told no lettering); typed details show on the right; Yes sends the card itself, ${out.toFixed(3)}:1, to the mockup`;
+  return `PASS: Your Card opens and lands after painting (no caption tool, painter told no lettering); typed details show on the right, inside Printify's safe line on all three card products; Yes sends the card itself, ${out.toFixed(3)}:1, to the mockup`;
 };
 
 OPTS.luggageTag = { echoUploads: true };
