@@ -197,7 +197,7 @@ function bodiesFor(key, p) {
   // sold, and send the buyer back to the studio. The webhook used to ignore
   // the pack and credit 5 (or 4) for every purchase.
   {
-    const packs = { '1token': 1, '3tokens': 3, '20tokens': 20 };
+    const packs = { '3tokens': 3, '20tokens': 20 };  // the 50c pack went 24 Sep 2026
     const bad = [];
     for (const [packId, want] of Object.entries(packs)) {
       const before = globalThis.__stripe.sessions.length;

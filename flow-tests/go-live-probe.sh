@@ -17,7 +17,7 @@ SITE="https://muggshotz-ai-test.vercel.app"
 echo "== Stripe mode =="
 MODE=$(curl -s --max-time 45 -X POST "$SITE/api/create-checkout-session" \
   -H "Content-Type: application/json" \
-  -d '{"type":"token_purchase","deviceId":"go-live-probe","packId":"1token"}' \
+  -d '{"type":"token_purchase","deviceId":"go-live-probe","packId":"3tokens"}' \
   | grep -oE "cs_(test|live)_" | head -1)
 case "$MODE" in
   cs_live_) echo "STRIPE MODE: LIVE — real cards will be charged, webhook will place real Printify orders" ;;

@@ -302,16 +302,8 @@ let squarePay;
   ok(!bad.length, 'the webhook refuses a bad signature, settles a paid link once, leaves a page-settled order alone, and still routes Stripe', `webhook: ${bad.join('; ')}`);
 }
 
-// 9b. Square's $1.00 floor: the 50c pack is refused on the Square track with a reason, and sold on Stripe.
-{
-  state.rail = 'square';
-  const r = await post({ type: 'token_purchase', deviceId: 'dev3', packId: '1token' });
-  state.rail = 'stripe';
-  const r2 = await post({ type: 'token_purchase', deviceId: 'dev3', packId: '1token' });
-  ok(r.code === 400 && /\$1\.00/.test(r.body?.error || '') && r2.code === 200 && /stripe\.test/.test(r2.body?.url || ''),
-    'the 50c pack is refused on Square with the $1.00 reason, and still sells on Stripe',
-    `50c pack: square ${r.code} ${JSON.stringify(r.body)}; stripe ${r2.code} ${JSON.stringify(r2.body)}`);
-}
+// (Square's $1.00 floor in createSquareCheckout is a backstop: with the 50c
+// pack gone, 24 Sep 2026, nothing the shop sells comes to less than a dollar.)
 
 // 10. The sandbox minter: a digital card, activated with the amount, usable.
 {
