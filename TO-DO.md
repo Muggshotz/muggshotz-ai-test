@@ -15,7 +15,7 @@ Started 24 Sep 2026, when the old lists ran out.
 products (Night-Buddy off the grid for now; the frosted glass mug not added),
 then a last row of four: Artwork Only, Gift Certificate, Premades & Sets,
 Pitch In. The grid is three across today (needles-studio.html, #productCard
-.grid3); four across needs deciding for phones.
+.grid3); four across on phones too (Alyx, 24 Sep).
 
 
 - **Premades & Sets**. Finished designs, nothing painted:
@@ -36,8 +36,9 @@ Pitch In. The grid is three across today (needles-studio.html, #productCard
   the shop; every sale pays you your %). **The reward (Alyx, 24 Sep): 5% plus
   10 free chips** when an idea is adopted, so the pitcher tests the idea
   themselves and reports back if anything doesn't work (Alyx: likely to buy
-  their own item just to see). Still to say: 5% of the sale price, or of the
-  profit.
+  their own item just to see). 5% of the PROFIT, not the sale price (Alyx:
+  "5% of the gross could get messy") -- the catalog's estimatedProfit, the
+  same base the flyer betas' commissions use.
   (Bug reports: see "Report a bug" below.)
   Gets people invested in the app; enough involvement may later support
   selling advertising. The flyer betas' commissions ledger and payouts may
@@ -64,8 +65,6 @@ Pitch In. The grid is three across today (needles-studio.html, #productCard
 ## Waiting on Alyx or Bud
 
 - The bug-report email address (Alyx is making a dedicated one).
-- Pitch In's 5%: of the sale price, or of the profit?
-- Phones: the 28-tile grid four across there too, or three?
 
 - Method C on wraparound-compare.html (paints without charging): delete or
   keep?
