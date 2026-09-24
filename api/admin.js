@@ -16,7 +16,7 @@
 import { buildTierCodes, TIER_SEQUENCE } from '../lib/flyer-tiers.js';
 import { readMaintenance, writeMaintenance } from '../lib/maintenance.js';
 import { readPaymentRail, writePaymentRail } from "../lib/payment-rail.js";
-import { squareConfigured, squareEnv, squareTokenPresent, listLocations } from "../lib/square.js";
+import { squareConfigured, squareEnv, squareTokenPresent, listLocations, createGiftCard, activateGiftCard } from "../lib/square.js";
 
 const SUPABASE_URL              = process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -810,6 +810,26 @@ async function handlePaymentRailSet(req, res) {
   }
 }
 
+// A SANDBOX GIFT CARD TO TEST WITH (24 Sep 2026). Square's sandbox has no
+// screen for making one, so this mints a digital card and puts money on it.
+// Sandbox only, and the password: it can never make a real card.
+async function handleSquareTestGiftCard(req, res) {
+  const { password, amountCents } = req.body || {};
+  if (password !== ADMIN_PASSWORD) return res.status(403).json({ error: 'Unauthorized.' });
+  if (squareEnv() !== 'sandbox') return res.status(400).json({ error: 'Test gift cards are minted in the sandbox only.' });
+  if (!squareConfigured()) return res.status(400).json({ error: 'Square is not configured yet.' });
+  const cents = Math.max(100, Math.min(50000, Math.round(Number(amountCents) || 2500)));
+  try {
+    const card = await createGiftCard({ type: 'DIGITAL' });
+    const act = await activateGiftCard({ giftCardId: card.id, amountCents: cents, referenceId: 'sandbox-test', buyerPaymentInstrumentIds: ['sandbox-test'] });
+    console.log(`Sandbox gift card minted: ${card.gan} with $${(cents / 100).toFixed(2)}.`);
+    return res.status(200).json({ gan: card.gan || act.gan, balanceCents: act.balanceCents || cents, env: squareEnv() });
+  } catch (err) {
+    console.error('Sandbox gift card failed:', err.message);
+    return res.status(500).json({ error: err.message });
+  }
+}
+
 async function handleMaintenanceSet(req, res) {
   const { password, on, message, eta } = req.body || {};
   if (password !== ADMIN_PASSWORD) return res.status(403).json({ error: 'Unauthorized.' });
@@ -860,6 +880,7 @@ export default async function handler(req, res) {
   if (action === 'campaign-create') return handleCampaignCreate(req, res);
   if (action === 'maintenance-set') return handleMaintenanceSet(req, res);
   if (action === 'payment-rail-set') return handlePaymentRailSet(req, res);
+  if (action === 'square-test-gift-card') return handleSquareTestGiftCard(req, res);
 
   return res.status(400).json({ error: `Unknown action "${action}".` });
 }

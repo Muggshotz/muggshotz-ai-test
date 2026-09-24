@@ -100,6 +100,11 @@ select{width:100%;background:#0d0d0d;border:1px solid #444;border-radius:8px;pad
   <div id="railStatus" class="result" style="display:block;margin-bottom:1rem">Checking…</div>
   <button class="btn-full" id="railStripeBtn" onclick="setPaymentRail('stripe')" style="background:#635bff">Switch to Stripe</button>
   <button class="btn-full" id="railSquareBtn" onclick="setPaymentRail('square')" style="background:#006aff">Switch to Square</button>
+  <div id="sqTestWrap" style="display:none;margin-top:1rem">
+    <div class="note" style="margin-bottom:.5rem">Sandbox only: a $25 test gift card to type into the order page's gift box. No real money.</div>
+    <button class="btn-full" id="sqTestBtn" onclick="mintSandboxGiftCard()" style="background:#3a3a3a">🎁 Mint a $25 sandbox gift card</button>
+    <div id="sqTestResult" class="result" style="display:none;margin-top:.75rem"></div>
+  </div>
 </div>
 
 <div class="card">
@@ -443,6 +448,23 @@ function renderPaymentRail(d){
   if (d.locationsError) el.textContent += ' Could not list locations: ' + d.locationsError;
   document.getElementById('railStripeBtn').disabled = d.rail !== 'square';
   document.getElementById('railSquareBtn').disabled = d.rail === 'square' || !d.squareConfigured;
+  document.getElementById('sqTestWrap').style.display = (d.squareConfigured && d.squareEnv === 'sandbox') ? 'block' : 'none';
+}
+async function mintSandboxGiftCard(){
+  const el = document.getElementById('sqTestResult');
+  el.style.display = 'block'; el.className = 'result'; el.textContent = 'Minting…';
+  try{
+    const resp = await fetch('/api/admin', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'square-test-gift-card', password: enteredPassword, amountCents: 2500 }) });
+    const d = await resp.json();
+    if (resp.status === 403) { relockWithError('Wrong password.'); return; }
+    if (!resp.ok) throw new Error(d.error || 'Could not mint.');
+    el.className = 'result success';
+    el.textContent = 'Sandbox gift card: ' + d.gan + ' with $' + (d.balanceCents / 100).toFixed(2) + ' on it. Type that number into the gift box on order.html.';
+  }catch(err){
+    el.className = 'result error';
+    el.textContent = 'Could not mint: ' + err.message;
+  }
 }
 async function setPaymentRail(rail){
   if (!confirm('Move every checkout onto ' + rail.toUpperCase() + '? It takes effect on the next sale.')) return;

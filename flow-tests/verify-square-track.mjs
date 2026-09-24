@@ -102,6 +102,8 @@ globalThis.fetch = async (url, opts = {}) => {
       state.square.payments.set(pid, p); return json({ payment: p });
     }
     if (/^\/v2\/payments\/[^/]+\/cancel$/.test(path)) return json({ payment: {} });
+    if (path === '/v2/gift-cards' && method === 'POST') { const g = { id: nid('gftc:'), gan: '77827300009' + String(idn).padStart(5, '0'), state: 'PENDING', balance: 0, type: body.gift_card.type }; state.giftCards[g.gan] = g; return json({ gift_card: { id: g.id, gan: g.gan, state: g.state, type: g.type, balance_money: { amount: 0, currency: 'USD' } } }); }
+    if (path === '/v2/gift-cards/activities' && method === 'POST') { const a = body.gift_card_activity; const g = Object.values(state.giftCards).find((c) => c.id === a.gift_card_id); if (!g) return json({ errors: [{ code: 'NOT_FOUND' }] }, 404); g.balance += Number(a.activate_activity_details.amount_money.amount); g.state = 'ACTIVE'; return json({ gift_card_activity: { id: nid('act'), gift_card_gan: g.gan, gift_card_balance_money: { amount: g.balance, currency: 'USD' } } }); }
     if (path === '/v2/gift-cards/from-gan') { const c = state.giftCards[body.gan]; return c ? json({ gift_card: { id: c.id, gan: c.gan, state: c.state, balance_money: { amount: c.balance, currency: 'USD' }, type: c.type } }) : json({ errors: [{ code: 'NOT_FOUND' }] }, 404); }
     return json({ errors: [{ code: 'UNSTUBBED', detail: path }] }, 500);
   }
@@ -298,6 +300,17 @@ let squarePay;
   const rs = await hook(payload, { 'stripe-signature': header });
   if (rs.code !== 200 || rs.body?.ignored !== 'test_mode') bad.push(`Stripe's event answered ${rs.code} ${JSON.stringify(rs.body)}`);
   ok(!bad.length, 'the webhook refuses a bad signature, settles a paid link once, leaves a page-settled order alone, and still routes Stripe', `webhook: ${bad.join('; ')}`);
+}
+
+// 10. The sandbox minter: a digital card, activated with the amount, usable.
+{
+  const { createGiftCard, activateGiftCard, giftCardFromGan, giftCardUsable } = await import('../lib/square.js');
+  const card = await createGiftCard({ type: 'DIGITAL' });
+  const act = await activateGiftCard({ giftCardId: card.id, amountCents: 2500, referenceId: 'sandbox-test', buyerPaymentInstrumentIds: ['sandbox-test'] });
+  const back = await giftCardFromGan(card.gan);
+  ok(card.state === 'PENDING' && act.balanceCents === 2500 && giftCardUsable(back) && back.balanceCents === 2500,
+    'a minted card is registered, activated with $25, and looks up as usable',
+    `minted card: ${JSON.stringify({ card, act, back })}`);
 }
 
 for (const c of checks) console.log(`[square-track] ${c}`);
