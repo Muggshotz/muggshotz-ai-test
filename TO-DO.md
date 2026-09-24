@@ -43,6 +43,9 @@ Pitch In. The grid is three across today (needles-studio.html, #productCard
   **Paid in perpetuity** (Alyx, 24 Sep): the contributor, as inventor of the
   item or category, holds a 5% net stake in it for good. If their category
   grows into more items, the 5% extends to every item in it.
+  **Every refusal gets an explanation** (Alyx, 24 Sep) of why the idea was not
+  taken up, as detailed as the pitch warrants: a partial bulwark against
+  complaints and accusations about unused suggestions.
   (Bug reports: see "Report a bug" below.)
   Gets people invested in the app; enough involvement may later support
   selling advertising. The flyer betas' commissions ledger and payouts may
