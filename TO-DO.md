@@ -33,8 +33,11 @@ Pitch In. The grid is three across today (needles-studio.html, #productCard
 - **Pitch In**. A separate category: people pitch ideas, and earn a
   percentage on every one that is adopted and sold. Tapping it opens a short,
   clear explanation (draft 24 Sep: tell us the idea; if we make it, it goes in
-  the shop; every sale pays you your %). The % and whether it is of the sale
-  or the profit: Alyx's call.
+  the shop; every sale pays you your %). **The reward (Alyx, 24 Sep): 5% plus
+  10 free chips** when an idea is adopted, so the pitcher tests the idea
+  themselves and reports back if anything doesn't work (Alyx: likely to buy
+  their own item just to see). Still to say: 5% of the sale price, or of the
+  profit.
   Gets people invested in the app; enough involvement may later support
   selling advertising. The flyer betas' commissions ledger and payouts may
   carry it — read that before designing anything new.
