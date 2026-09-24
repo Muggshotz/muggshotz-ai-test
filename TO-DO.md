@@ -48,6 +48,10 @@ Pitch In. The grid is three across today (needles-studio.html, #productCard
   about $0.03 a bug ("even 1000 bugs is $30"). Needs a Report-a-bug button on
   every panel that sends the report (what they saw, where, their device) to
   Alyx; the chip can be granted from the admin page's existing chip grant.
+  Only the FIRST report of a bug earns the chip (it gets fixed, and is no
+  longer a bug). Delivery: Alyx wants it to reach him directly, a text
+  preferred. The site can already send email (Resend, as the verification and
+  flyer emails do); no text-message service is connected.
 - **Optical Illusions** — an art style dressed as a tile in Art Style,
   templates for nearly every product (up to ~10 each, ~250 in all) plus a
   "suggest a template" box. Waits on the templates. Claude and Bud to agree
