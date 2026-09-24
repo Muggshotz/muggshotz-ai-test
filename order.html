@@ -1365,12 +1365,12 @@ function isPostIt(){ return selectedProductFamily === 'post-it note'; }
 // the other shows the customer one number while the server charges another.
 const COASTER_PRICE = 29.95;
 const MOUSE_PAD_PRICE = 9.95;
-const STANDEE_PRICE = 16.95; // From Where I Stand, one size (22 Sep 2026)
+const STANDEE_PRICE = 14.95; // From Where I Stand, one size (22 Sep 2026)
 const LUGGAGETAG_PRICE = 16.95; // Luggage Tag (22 Sep 2026)
-const DESKCALENDAR_PRICE = 10.95; // Desk Calendar (22 Sep 2026)
+const DESKCALENDAR_PRICE = 9.95; // Desk Calendar (22 Sep 2026)
 const BEERSTEIN_PRICE = 24.95; // Beer Stein (22 Sep 2026)
-const DOORMAT_PRICE = 16.95; // Doormat (22 Sep 2026)
-const PLAYINGCARDS_PRICE = 17.95; // Just Playin' (22 Sep 2026)
+const DOORMAT_PRICE = 19.95; // Doormat (22 Sep 2026)
+const PLAYINGCARDS_PRICE = 16.95; // Just Playin' (22 Sep 2026)
 // Reflex-buy pricing (Alyx, 2026-08-28): ~$2 over wholesale on purpose,
 // "not a profit generator" — do not round these upward.
 const GREETING_CARD_PRICE = 15.95; // 8-pack, CatPrint (wholesale $13.96)
@@ -1411,7 +1411,7 @@ if (pendingOrder?.preselectedAirFreshener && AIRFRESHENER_OPTIONS[pendingOrder.p
 }
 
 // NIGHT-BUDDY (22 Sep 2026). Keys match lib/products-catalog.js.
-const NIGHTBUDDY_OPTIONS = { "Full Colour": { price: 15.95 }, "Warm Glow": { price: 12.95 } };
+const NIGHTBUDDY_OPTIONS = { "Full Colour": { price: 14.95 }, "Warm Glow": { price: 12.95 } };
 let selectedNightBuddy = "Full Colour";
 if (pendingOrder?.preselectedNightBuddy && NIGHTBUDDY_OPTIONS[pendingOrder.preselectedNightBuddy]) {
   selectedNightBuddy = pendingOrder.preselectedNightBuddy;
@@ -1425,7 +1425,7 @@ if (pendingOrder?.preselectedStickerSheet && STICKERSHEET_OPTIONS[pendingOrder.p
 }
 
 // T-SHIRT (22 Sep 2026). Keys match lib/products-catalog.js.
-const TSHIRT_OPTIONS = { "S": { price: 7.95 }, "M": { price: 7.95 }, "L": { price: 7.95 }, "XL": { price: 7.95 }, "2XL": { price: 9.95 }, "3XL": { price: 11.95 }, "4XL": { price: 11.95 }, "5XL": { price: 11.95 } };
+const TSHIRT_OPTIONS = { "S": { price: 8.95 }, "M": { price: 8.95 }, "L": { price: 8.95 }, "XL": { price: 8.95 }, "2XL": { price: 9.95 }, "3XL": { price: 12.95 }, "4XL": { price: 12.95 }, "5XL": { price: 12.95 } };
 let selectedTshirt = "L";
 if (pendingOrder?.preselectedTshirt && TSHIRT_OPTIONS[pendingOrder.preselectedTshirt]) {
   selectedTshirt = pendingOrder.preselectedTshirt;
@@ -1564,18 +1564,18 @@ const BRIDGE_GRID_PRODUCTS = [
   { key: 'puzzle', icon: '🧩', label: 'Photo Puzzle', priceFrom: '$38.95' },
   { key: 'wrapping paper', icon: '🎁', label: "It's a Wrap", priceFrom: '$8.95' },
   { key: 'ornament', icon: '🎄', label: 'Ceramic Ornament', priceFrom: '$9.95' },
-  { key: 'standee', icon: '🧍', label: 'From Where I Stand', priceFrom: '$16.95' },
+  { key: 'standee', icon: '🧍', label: 'From Where I Stand', priceFrom: '$14.95' },
   { key: 'business cards', icon: '💼', label: 'Business Cards', priceFrom: '$16.95' },
   { key: 'luggage tag', icon: '🏷️', label: 'Luggage Tag', priceFrom: '$16.95' },
   { key: 'car magnet', icon: '🚗', label: 'Car Magnet', priceFrom: '$5.95' },
-  { key: 'calendar', icon: '📅', label: 'Desk Calendar', priceFrom: '$10.95' },
-  { key: 'tshirt', icon: '👕', label: 'T-Shirt', priceFrom: '$7.95' },
+  { key: 'calendar', icon: '📅', label: 'Desk Calendar', priceFrom: '$9.95' },
+  { key: 'tshirt', icon: '👕', label: 'T-Shirt', priceFrom: '$8.95' },
   { key: 'sticker sheet', icon: '⭐', label: 'Sticker Sheet', priceFrom: '$9.95' },
   { key: 'night light', icon: '💡', label: 'Night-Buddy', priceFrom: '$12.95' },
   { key: 'beer stein', icon: '🍺', label: 'Beer Stein', priceFrom: '$24.95' },
-  { key: 'doormat', icon: '🚪', label: 'Doormat', priceFrom: '$16.95' },
+  { key: 'doormat', icon: '🚪', label: 'Doormat', priceFrom: '$19.95' },
   { key: 'air freshener', icon: '🌲', label: 'Car Air Freshener', priceFrom: '$9.95' },
-  { key: 'playing cards', icon: '🃏', label: "Just Playin'", priceFrom: '$17.95' },
+  { key: 'playing cards', icon: '🃏', label: "Just Playin'", priceFrom: '$16.95' },
   { key: 'coaster', icon: '☕', label: 'Coasters', priceFrom: '$29.95' },
   { key: 'mouse pad', icon: '🖱️', label: 'Mouse Pad', priceFrom: '$9.95' },
   { key: 'greeting card', icon: '💌', label: 'Greeting Cards', priceFrom: '$15.95' },

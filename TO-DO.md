@@ -19,6 +19,7 @@ Started 24 Sep 2026, when the old lists ran out.
   - Lifeseyes
   - Christmas sets, Thanksgiving sets
   - Anniversary pairs, Valentine's Day pairs — "A Toast to Us"
+  - **Gone Fishing** — made from the fishing magic mug image (Alyx, 24 Sep)
   - The SURPRISE!!! heat-reveal mugs, shown here as well as under Coffee
     Mugs → Smart Mug. The SURPRISE!!! panel (tiles with picture, price,
     choices) is the model for the whole line.
@@ -35,10 +36,7 @@ Started 24 Sep 2026, when the old lists ran out.
 
 ## Waiting on Alyx or Bud
 
-- The frosted glass beer mug's retail price. Wholesale (probe 24 Sep 2026):
-  $23.83, 16oz frosted, Imagine Your Photos; US shipping $12.49, $3.99 each
-  extra; 10 days handling. (The stein: $20.80 wholesale, $10.29 shipping,
-  sold at $24.95.)
+- Night-Buddy, Warm Glow: its price. (Full Colour is $14.95, Alyx's price.)
 - Method C on wraparound-compare.html (paints without charging): delete or
   keep?
 
@@ -46,6 +44,11 @@ Started 24 Sep 2026, when the old lists ran out.
 
 - A Printify-style placement editor.
 - Researching more products.
-- Night-Buddy.
+- Night-Buddy * — US shipping ($19.29 first, $15.99 each extra) is more than
+  the item ($14.95). Alyx: "The shipping should not be more than the item";
+  may drop it.
+- Frosted glass beer mug — not on the site; kept for later, if the liquid
+  motif idea comes to something. Wholesale $23.83; US shipping $12.49 /
+  $3.99 each extra (probe 24 Sep 2026).
 - The coffee mug and travel cup rails in the panel checker
   (`flow-tests/verify-panel-checklist.js` skips them today).
