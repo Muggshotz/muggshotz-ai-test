@@ -45,7 +45,8 @@ Pitch In. The grid is three across today (needles-studio.html, #productCard
   grows into more items, the 5% extends to every item in it.
   **Every refusal gets an explanation** (Alyx, 24 Sep) of why the idea was not
   taken up, as detailed as the pitch warrants: a partial bulwark against
-  complaints and accusations about unused suggestions.
+  complaints and accusations about unused suggestions. Customer-facing terms:
+  draft in PITCH-IN-TERMS.md.
   (Bug reports: see "Report a bug" below.)
   Gets people invested in the app; enough involvement may later support
   selling advertising. The flyer betas' commissions ledger and payouts may
