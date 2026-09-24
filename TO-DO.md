@@ -40,9 +40,11 @@ Pitch In. The grid is three across today (needles-studio.html, #productCard
   "5% of the gross could get messy") -- the catalog's estimatedProfit, the
   same base and the same 5% the flyer betas earn at the Muggshotz tier
   (lib/flyer-tiers.js: rate 0.05).
-  **Paid in perpetuity** (Alyx, 24 Sep): the contributor, as inventor of the
-  item or category, holds a 5% net stake in it for good. If their category
-  grows into more items, the 5% extends to every item in it.
+  **Paid for one year** (Alyx, 24 Sep; first said in perpetuity, then capped):
+  the contributor, as inventor of the item or category, earns 5% net on it for
+  one year from the day it goes on sale; if their category grows into more
+  items in that year, the 5% covers every item in it. After the year the
+  business owns it outright.
   **Every refusal gets an explanation** (Alyx, 24 Sep) of why the idea was not
   taken up, as detailed as the pitch warrants: a partial bulwark against
   complaints and accusations about unused suggestions. Customer-facing terms:

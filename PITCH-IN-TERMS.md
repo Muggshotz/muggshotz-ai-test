@@ -21,9 +21,10 @@ Worth having someone who writes contracts look it over before it goes live.
    to make it). You also get **10 free chips**, so you can try your idea out
    yourself.
 
-4. **For as long as we sell it.** Your 5% is paid for as long as the item is
-   sold. If your idea grows into a whole category, your 5% covers every item
-   in that category, including ones added later.
+4. **For one year.** Your 5% is paid on every sale for one year from the day
+   your item goes on sale. If your idea grows into a whole category during
+   that year, your 5% covers every item in it, including ones added later.
+   After the year, the item and its category belong to us outright.
 
 5. **Found a bug? Tell us.** Anyone, on any screen, can report a bug. The
    first person to report a real bug gets a free chip back.
