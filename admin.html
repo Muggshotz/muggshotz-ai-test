@@ -439,6 +439,8 @@ function renderPaymentRail(d){
   const sq = d.squareConfigured ? ('Square is set up (' + (d.squareEnv || 'sandbox') + ' keys).') : 'Square is not set up on the server yet.';
   el.className = 'result success';
   el.textContent = (d.rail === 'square' ? '🟦 SQUARE is taking the money. ' : '🟪 STRIPE is taking the money. ') + sq;
+  if (d.locations) el.textContent += ' Locations on the Square account: ' + d.locations.map(l => l.id + ' (' + (l.name || 'unnamed') + ')').join(', ') + ' — put the id in SQUARE_LOCATION_ID.';
+  if (d.locationsError) el.textContent += ' Could not list locations: ' + d.locationsError;
   document.getElementById('railStripeBtn').disabled = d.rail !== 'square';
   document.getElementById('railSquareBtn').disabled = d.rail === 'square' || !d.squareConfigured;
 }

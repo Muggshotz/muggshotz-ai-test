@@ -16,7 +16,7 @@
 import { buildTierCodes, TIER_SEQUENCE } from '../lib/flyer-tiers.js';
 import { readMaintenance, writeMaintenance } from '../lib/maintenance.js';
 import { readPaymentRail, writePaymentRail } from "../lib/payment-rail.js";
-import { squareConfigured, squareEnv } from "../lib/square.js";
+import { squareConfigured, squareEnv, squareTokenPresent, listLocations } from "../lib/square.js";
 
 const SUPABASE_URL              = process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -787,7 +787,14 @@ async function handleMaintenanceRead(req, res) {
 // order page shows which company takes the card), set with the password.
 async function handlePaymentRailRead(req, res) {
   res.setHeader('Cache-Control', 'no-store, max-age=0');
-  return res.status(200).json({ rail: await readPaymentRail(), squareConfigured: squareConfigured(), squareEnv: squareEnv() });
+  const out = { rail: await readPaymentRail(), squareConfigured: squareConfigured(), squareEnv: squareEnv() };
+  // Setting up: the token is in but not the location -- list them, so the
+  // id can be read off admin.html instead of hunted for in Square's console.
+  if (squareTokenPresent() && !squareConfigured()) {
+    try { out.locations = await listLocations(); }
+    catch (err) { out.locationsError = err.message; }
+  }
+  return res.status(200).json(out);
 }
 async function handlePaymentRailSet(req, res) {
   const { password, rail } = req.body || {};
