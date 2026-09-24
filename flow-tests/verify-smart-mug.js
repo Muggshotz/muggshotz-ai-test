@@ -108,15 +108,44 @@ scenarios.leftHandedAndThePrints = async (page) => {
   });
   const bad = Object.entries(sizes).filter(([, v]) => v !== '2475x1155');
   if (bad.length) return `FAIL: prints not at the mug's 2475 x 1155: ${JSON.stringify(bad)}`;
-  // A template with its own COLD -> HOT picture shows it; one without does not.
-  await tap(page, '#surpriseTemplateGrid .btn-select[data-surprise="proposal"]');
-  await T(page, 1200);
-  const ch = await page.evaluate(async () => { const im = document.getElementById('surpriseColdHot'); if (getComputedStyle(im).display === 'none') return null; await (im.complete ? null : new Promise((r) => { im.onload = im.onerror = r; })); return im.naturalWidth; });
-  if (!ch) return 'FAIL: the Proposal does not show its COLD -> HOT picture';
-  await tap(page, '#surpriseTemplateGrid .btn-select[data-surprise="valentine"]');
-  await T(page, 600);
-  if (await vis(page, 'surpriseColdHot')) return 'FAIL: a COLD -> HOT picture shows for a template that has none';
-  return `PASS: left-handed swaps to the -left print; all ${Object.keys(sizes).length} prints are 2475 x 1155; the Proposal shows its COLD -> HOT picture`;
+  // RIGHT-HANDED FACES THE OPENER TO THE HOLDER (Alyx, 24 Sep 2026): held by
+  // the handle in the right hand, the side facing the drinker is the print's
+  // right half, so that is where the opener goes and the punchline is on the
+  // left. The template's tile shows its punchline: in every right-handed
+  // print it must look like the LEFT half, not the right.
+  const sides = await page.evaluate(async () => {
+    const tiny = (im, sx, sy, sw, sh) => { const c = document.createElement('canvas'); c.width = c.height = 32; const g = c.getContext('2d'); g.drawImage(im, sx, sy, sw, sh, 0, 0, 32, 32); return g.getImageData(0, 0, 32, 32).data; };
+    const diff = (a, b) => { let d = 0; for (let i = 0; i < a.length; i += 4) d += Math.abs(a[i] - b[i]) + Math.abs(a[i + 1] - b[i + 1]) + Math.abs(a[i + 2] - b[i + 2]); return d; };
+    const wrong = [];
+    const files = Object.values(SURPRISE_TEMPLATES).flatMap((t) => t.variants ? Object.values(t.variants).map((v) => v.file) : [t.file]);
+    for (const f of files) {
+      const p = await loadImageFromUrl('/art/surprise/' + f + '-print.png'), t = await loadImageFromUrl('/art/options/surprise-' + f + '.jpg');
+      const w = p.naturalWidth / 2, h = p.naturalHeight, tt = tiny(t, 0, 0, t.naturalWidth, t.naturalHeight);
+      const L = diff(tiny(p, (w - h) / 2, 0, h, h), tt), R = diff(tiny(p, w + (w - h) / 2, 0, h, h), tt);
+      if (!(L < R)) wrong.push(f);
+    }
+    return wrong;
+  });
+  if (sides.length) return `FAIL: these right-handed prints have the punchline on the right, facing the holder: ${sides.join(', ')}`;
+  // Every template, and every choice of Ready?'s other side, shows its own
+  // COLD -> HOT picture, and it loads.
+  const coldhot = await page.evaluate(async () => {
+    const bad = [], seen = [];
+    const loaded = async () => { const im = document.getElementById('surpriseColdHot'); if (getComputedStyle(im).display === 'none') return null; await (im.complete ? null : new Promise((r) => { im.onload = im.onerror = r; })); return im.naturalWidth ? im.getAttribute('src') : null; };
+    for (const [k, t] of Object.entries(SURPRISE_TEMPLATES)) {
+      if (t.hidden) continue;
+      pickSurprise(k);
+      for (const v of (t.variants ? Object.keys(t.variants) : [null])) {
+        if (v) pickSurpriseVariant(v);
+        const want = 'art/surprise/' + (v ? t.variants[v].file : t.file) + '-coldhot.jpg';
+        const got = await loaded(); seen.push(want);
+        if (got !== want) bad.push(`${k}${v ? '/' + v : ''} shows ${got}`);
+      }
+    }
+    return { bad, n: seen.length };
+  });
+  if (coldhot.bad.length) return `FAIL: COLD -> HOT pictures wrong or missing: ${coldhot.bad.join('; ')}`;
+  return `PASS: left-handed swaps to the -left print; all ${Object.keys(sizes).length} prints are 2475 x 1155; every right-handed print faces its opener to the holder; all ${coldhot.n} COLD -> HOT pictures show and load`;
 };
 
 // "Ready?" is one opener; the customer picks its other side, and nothing is
@@ -212,6 +241,8 @@ scenarios.theOrderPage = async (page, log) => {
   if (!/\/art\/surprise\/congratulations-print\.png$/.test(st.pending.placements.left)) return `FAIL: the hand-off print is ${st.pending.placements.left}`;
   if (st.card === 'none') return 'FAIL: the order page shows no SURPRISE!!! card';
   if (!/Congratulations/.test(st.note) || !/right-handed/.test(st.note)) return `FAIL: the card says "${st.note}"`;
+  const oc = await page.evaluate(async () => { const im = document.getElementById('smartMugColdHot'); if (getComputedStyle(im).display === 'none') return null; await (im.complete ? null : new Promise((r) => { im.onload = im.onerror = r; })); return im.naturalWidth ? im.getAttribute('src') : 'broken'; });
+  if (!oc || !oc.endsWith('art/surprise/congratulations-coldhot.jpg')) return `FAIL: the order page's COLD -> HOT picture is ${oc}`;
   const head = await page.evaluate(() => document.getElementById('orderHeadlineName').textContent);
   if (head !== 'SURPRISE!!! Smart Mug') return `FAIL: the order is headed "${head}"`;
   if (st.base !== '$' + price.toFixed(2)) return `FAIL: the order page prices it at ${st.base}, not $${price.toFixed(2)}`;

@@ -1437,7 +1437,12 @@ let selectedTshirtColor = (pendingOrder?.preselectedTshirtColor && TSHIRT_COLORS
 // SURPRISE!!! -- the smart mug (23 Sep 2026). One size; the template and the
 // hand were chosen in the studio and the print arrives ready-made.
 const SMART_MUG_PRICE = 19.95;
-const SURPRISE_COLDHOT = { 'proposal': 'art/surprise/proposal-coldhot.jpg' };
+// The COLD -> HOT picture sits beside every print: <file>-coldhot.jpg, found
+// from the print the studio handed over (right- or left-handed alike).
+function surpriseColdHotUrl(){
+  const u = pendingOrder?.placements?.left || '';
+  return /\/art\/surprise\/[\w-]+-print(-left)?\.png$/.test(u) ? u.replace(/-print(-left)?\.png$/, '-coldhot.jpg') : null;
+}
 const SURPRISE_LABELS = { 'proposal': 'Will You Marry Me?', 'valentine': 'Will You Be My Valentine?', 'congratulations': 'Congratulations', 'apology': 'The Apology', 'appeal': 'The Appeal', 'breakup': 'We Need to Talk', 'grandpa': "You're Going to Be a Grandpa!", 'i-know': "I Don't Know, But I Know", 'ready': 'Ready?' };
 const SURPRISE_VARIANT_LABELS = { 'ready': { 'boy': "It's a boy", 'girl': "It's a girl", 'twins': 'Twins, a boy and a girl', 'twin-boys': 'Twin boys', 'twin-girls': 'Twin girls', 'expecting': 'Any preference?' } };
 const selectedSurprise = pendingOrder?.preselectedSurprise || null;
@@ -3414,9 +3419,9 @@ if (isTravelMug()) {
     document.getElementById('smartMugCard').style.display = 'block';
     document.getElementById('smartMugChoiceNote').textContent =
       surpriseLabel() + ' · for a ' + selectedSurpriseHand + '-handed recipient · $' + SMART_MUG_PRICE.toFixed(2);
-    if (SURPRISE_COLDHOT[selectedSurprise]) {
+    if (surpriseColdHotUrl()) {
       const ch = document.getElementById('smartMugColdHot');
-      ch.src = SURPRISE_COLDHOT[selectedSurprise]; ch.style.display = 'block';
+      ch.src = surpriseColdHotUrl(); ch.style.display = 'block';
     }
     document.getElementById('previewNote').textContent =
       'Your surprise, laid flat. It wraps once round the black mug and appears when hot coffee goes in.';

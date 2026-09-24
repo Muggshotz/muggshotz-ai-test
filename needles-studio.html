@@ -1,5 +1,5 @@
 <!-- ============================================================
-     VERSION: V364
+     VERSION: V365
      ============================================================
      THE ONE LINE THAT SAYS WHICH BUILD YOU ARE LOOKING AT.
 
@@ -4568,7 +4568,7 @@ function toggleWorkingImage(){
 // Two copies of a number is exactly how the marker rotted in the first place,
 // so they are not trusted to agree: .githooks/pre-commit moves both together
 // and REFUSES the commit if it ever finds them apart.
-const APP_VERSION='V364';
+const APP_VERSION='V365';
 try{ console.log('%cNeedles\u2019 Studio '+APP_VERSION,'color:#29a3ff;font-weight:700'); }catch(e){}
 
 function getDeviceId(){
@@ -12463,7 +12463,7 @@ function refreshCarMagnetVisibility(){
 // holding it.
 const SMART_MUG_PRICE=19.95; // Alyx's price, before shipping: wholesale 9.06 + $10, customer total under $30
 const SURPRISE_TEMPLATES={
-  'proposal':{label:'Will You Marry Me?',file:'proposal',coldhot:'art/surprise/proposal-coldhot.jpg'},
+  'proposal':{label:'Will You Marry Me?',file:'proposal'},
   'valentine':{label:'Will You Be My Valentine?',file:'valentine'},
   'congratulations':{label:'Congratulations',file:'congratulations'},
   'apology':{label:'The Apology',file:'apology'},
@@ -12491,9 +12491,13 @@ let selectedSurpriseVariant=null;
 const SURPRISE_UNLOCKED=(()=>{ try{ return new URLSearchParams(location.search).get('surprise'); }catch(e){ return null; } })();
 let selectedSurpriseHand='right';
 function smartMugPriceText(){ return typeof SMART_MUG_PRICE==='number' ? '$'+SMART_MUG_PRICE.toFixed(2) : ''; }
-function surprisePrintUrl(){
+// The print file chosen: the template's own, or its chosen variant's.
+function surpriseFile(){
   const t=SURPRISE_TEMPLATES[selectedSurprise]; if(!t)return null;
-  const file=t.variants?(t.variants[selectedSurpriseVariant]||{}).file:t.file; if(!file)return null;
+  return (t.variants?(t.variants[selectedSurpriseVariant]||{}).file:t.file)||null;
+}
+function surprisePrintUrl(){
+  const file=surpriseFile(); if(!file)return null;
   return location.origin+'/art/surprise/'+file+'-print'+(selectedSurpriseHand==='left'?'-left':'')+'.png';
 }
 function renderSurpriseTemplates(){
@@ -12558,10 +12562,13 @@ function refreshSurprisePreview(){
   if(!wrap)return;
   wrap.style.display=url?'block':'none';
   if(url)document.getElementById('surprisePreview').src=url;
-  // The template's own COLD -> HOT picture, where Bud has made one: it shows
-  // what the mug does, which the flat print cannot.
-  const ch=document.getElementById('surpriseColdHot'), t=SURPRISE_TEMPLATES[selectedSurprise];
-  if(ch){ ch.style.display=(t&&t.coldhot)?'block':'none'; if(t&&t.coldhot)ch.src=t.coldhot; }
+  // The COLD -> HOT picture: the mug cold, then hot with the opener facing
+  // the holder (handle on the right), then turned round to the punchline. It
+  // shows what the mug does, which the flat print cannot. Every print has one
+  // beside it, <file>-coldhot.jpg, built from the print itself
+  // (tools/surprise/coldhot.py).
+  const ch=document.getElementById('surpriseColdHot'), file=surpriseFile();
+  if(ch){ ch.style.display=(url&&file)?'block':'none'; if(url&&file)ch.src='art/surprise/'+file+'-coldhot.jpg'; }
   // The next thing to do is look and press Continue: land on the preview and
   // its button, not back at the top of the panel with both below the screen.
   if(url)smoothScrollToTarget('surprisePreviewWrap','end');
