@@ -144,7 +144,7 @@ const ok = (cond, pass, fail) => checks.push(cond ? `PASS: ${pass}` : `FAIL: ${f
 // 1. Stripe by default: a token pack becomes a Stripe session at Stripe's rate.
 {
   state.rail = 'stripe';
-  const r = await post({ type: 'token_purchase', deviceId: 'dev1', packId: Object.keys((await import('../lib/token-packs.js')).TOKEN_PACKS)[0] });
+  const r = await post({ type: 'token_purchase', deviceId: 'dev1', packId: '3tokens' });
   const s = state.stripe.sessions[state.stripe.sessions.length - 1];
   const fee = s && feeOf(s.spec.line_items);
   const pack = s && s.spec.line_items[0].price_data.unit_amount;
@@ -159,7 +159,7 @@ const ok = (cond, pass, fail) => checks.push(cond ? `PASS: ${pass}` : `FAIL: ${f
   ok((await readPaymentRail()) === 'square', 'the switch reads square', 'the switch did not read square');
   const kinds = [
     ['reservation', { type: 'reservation', deviceId: 'dev1', email: 'alyx@example.com' }],
-    ['token_purchase', { type: 'token_purchase', deviceId: 'dev1', packId: Object.keys((await import('../lib/token-packs.js')).TOKEN_PACKS)[0] }],
+    ['token_purchase', { type: 'token_purchase', deviceId: 'dev1', packId: '3tokens' }],
     ['mug_order', mousePad()],
     ['basket_order', { type: 'basket_order', deviceId: 'dev1', items: [mousePad(), mousePad()], shippingAddress: ADDRESS }],
     ['tier_upgrade', { type: 'tier_upgrade', betaId: 'beta1' }],
@@ -278,7 +278,7 @@ let squarePay;
   const sign = (body) => createHmac('sha256', 'sig-key').update(process.env.SQUARE_WEBHOOK_URL + body).digest('base64');
   // a fresh payment-link sale, paid on Square's page
   state.rail = 'square';
-  await post({ type: 'token_purchase', deviceId: 'dev2', packId: Object.keys((await import('../lib/token-packs.js')).TOKEN_PACKS)[0] });
+  await post({ type: 'token_purchase', deviceId: 'dev2', packId: '3tokens' });
   const l = lastSquareLink();
   const evt = JSON.stringify({ type: 'payment.updated', data: { object: { payment: { id: 'payX', status: 'COMPLETED', order_id: l.link.order_id } } } });
   const badSig = await hook(evt, { 'x-square-hmacsha256-signature': 'nope' });
