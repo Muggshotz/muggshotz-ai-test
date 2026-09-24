@@ -11,7 +11,14 @@ Started 24 Sep 2026, when the old lists ran out.
 
 ## New categories — planned, not built
 
-- **The pre-made line** (name to come). Finished designs, nothing painted:
+**The grid (Alyx, 24 Sep 2026): 28 tiles, seven even rows of four.** 24
+products (Night-Buddy off the grid for now; the frosted glass mug not added),
+then a last row of four: Artwork Only, Gift Certificate, Premades & Sets,
+Pitch In. The grid is three across today (needles-studio.html, #productCard
+.grid3); four across needs deciding for phones.
+
+
+- **Premades & Sets**. Finished designs, nothing painted:
   pick, choose options, order. Holds:
   - Ewww Stew (the code already reserves an all-over print for it:
     `api/create-printify-order.js:727`; `lib/products-catalog.js:19` once
@@ -23,9 +30,11 @@ Started 24 Sep 2026, when the old lists ran out.
   - The SURPRISE!!! heat-reveal mugs, shown here as well as under Coffee
     Mugs → Smart Mug. The SURPRISE!!! panel (tiles with picture, price,
     choices) is the model for the whole line.
-- **Sense** — a category. What goes in it: to be described by Alyx.
-- **Your ideas, your cut** (working name). A separate category: people submit
-  ideas, and earn a percentage on every one that is adopted and developed.
+- **Pitch In**. A separate category: people pitch ideas, and earn a
+  percentage on every one that is adopted and sold. Tapping it opens a short,
+  clear explanation (draft 24 Sep: tell us the idea; if we make it, it goes in
+  the shop; every sale pays you your %). The % and whether it is of the sale
+  or the profit: Alyx's call.
   Gets people invested in the app; enough involvement may later support
   selling advertising. The flyer betas' commissions ledger and payouts may
   carry it — read that before designing anything new.
@@ -43,7 +52,7 @@ Started 24 Sep 2026, when the old lists ran out.
 
 - A Printify-style placement editor.
 - Researching more products.
-- Night-Buddy * — US shipping ($19.29 first, $15.99 each extra) is more than
+- Night-Buddy (off the grid for now) * — US shipping ($19.29 first, $15.99 each extra) is more than
   the item ($14.95). Alyx: "The shipping should not be more than the item";
   may drop it.
 - Frosted glass beer mug — not on the site; kept for later, if the liquid
