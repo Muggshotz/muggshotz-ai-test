@@ -642,7 +642,7 @@ async function handleGiftCertificatePayment(session) {
   if (cert.alreadyMinted) return;
   const siteUrl = process.env.SITE_BASE_URL || "https://muggshotz-ai-test.vercel.app";
   const amt = `$${(Number(m.amount_cents) / 100).toFixed(0)}`;
-  const common = { code: cert.code, amountCents: Number(m.amount_cents), recipientName: m.recipient_name, message: m.message, fromName: m.from_name, siteUrl };
+  const common = { code: cert.code, amountCents: Number(m.amount_cents), recipientName: m.recipient_name, message: m.message, fromName: m.from_name, siteUrl, face: m.face || "" };
   if (m.recipient_email) await sendResendEmail(m.recipient_email, `You've got a ${amt} Muggshotz gift certificate`, giftEmailHtml({ ...common, forBuyer: false }));
   if (m.buyer_email) await sendResendEmail(m.buyer_email, `Your ${amt} Muggshotz gift certificate`, giftEmailHtml({ ...common, forBuyer: true }));
 }

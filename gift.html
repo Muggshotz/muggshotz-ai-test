@@ -15,8 +15,20 @@ h1{font-family:Georgia,serif;font-style:italic;color:#7ab8ff;font-size:24px;marg
 .card{background:#141a24;border:1px solid #243349;border-radius:14px;padding:16px;margin-bottom:14px}
 .bill{position:relative}
 .bill img{width:100%;display:block;border-radius:10px}
-.bill .amt{position:absolute;left:var(--ax,17%);top:var(--ay,40%);transform:translate(-50%,-50%);text-align:center;font:700 clamp(20px,7vw,44px) Georgia,serif;color:#1b2a4a}
+/* THE FACES (24 Sep 2026): Bud's cards carry no amount; the number is laid on
+   here, bottom right where the master card's "$50" sat, in the card's own
+   brushy orange. */
 .bill .inner{position:relative}
+.bill .amt{position:absolute;right:var(--ar,6%);bottom:var(--ab,13%);font:italic 900 clamp(26px,var(--as,11vw),var(--am,72px))/1 Impact,"Arial Black",sans-serif;color:#ff7a1a;-webkit-text-stroke:2px #111;text-shadow:0 0 8px #000,0 0 14px #000,3px 3px 0 #111;transform:rotate(-4deg);letter-spacing:1px}
+/* Where each face left room for the number. */
+.bill[data-face="needles"]{--ar:14%;--ab:22%}
+.bill[data-face="chipper"]{--ar:9%;--ab:24%}
+.bill[data-face="sly"]{--ar:3%;--ab:17%;--as:8.5vw;--am:56px}
+.faces{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}
+.faces button{padding:0;border-radius:10px;border:2px solid #2d4a73;background:#0f1622;cursor:pointer;overflow:hidden;color:#7ab8ff;font-size:12px;font-weight:700}
+.faces button img{width:100%;display:block}
+.faces button span{display:block;padding:.35rem 0}
+.faces button.sel{border-color:#ff7a1a;color:#fff}
 .amts{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
 .amts button{padding:.8rem 0;border-radius:10px;border:1px solid #2d4a73;background:#0f1622;color:#7ab8ff;font-size:17px;font-weight:700;cursor:pointer}
 .amts button.sel{background:#1d5fbf;color:#fff;border-color:#4d93ff}
@@ -36,7 +48,14 @@ a{color:#7ab8ff}
 <h1>🎁 Muggshotz Gift Certificate</h1>
 
 <div id="buyView">
-<div class="card bill"><div class="inner"><img src="art/gift-certificate-bill-preview.png" alt="Muggshotz gift certificate"><div class="amt" id="billAmt">$50</div></div></div>
+<div class="card bill" id="bill" data-face="needles"><div class="inner"><img id="billImg" src="art/gift-card/web/needles.jpg" alt="Muggshotz gift card"><div class="amt" id="billAmt">$50</div></div>
+<div style="font-size:13px;color:#7ab8ff;margin-top:.7rem">Pick a face</div>
+<div class="faces" id="faces">
+<button data-d="needles" class="sel"><img src="art/gift-card/web/needles.jpg" alt=""><span>Needles</span></button>
+<button data-d="chipper"><img src="art/gift-card/web/chipper.jpg" alt=""><span>Chipper</span></button>
+<button data-d="sly"><img src="art/gift-card/web/sly.jpg" alt=""><span>Sly</span></button>
+</div>
+</div>
 <div class="card">
 <div style="font-size:13px;color:#7ab8ff;margin-bottom:.5rem">Pick an amount</div>
 <div class="amts" id="amts">
@@ -65,15 +84,19 @@ a{color:#7ab8ff}
 </div>
 </div>
 <script>
-let cents=5000;
+let cents=5000, design='needles';
 const fee=c=>Math.ceil(0.029*c+30+5)/100;
 function refresh(){
   document.querySelectorAll('#amts button').forEach(b=>b.classList.toggle('sel',+b.dataset.c===cents));
+  document.querySelectorAll('#faces button').forEach(b=>b.classList.toggle('sel',b.dataset.d===design));
+  document.getElementById('billImg').src='art/gift-card/web/'+design+'.jpg';
+  document.getElementById('bill').dataset.face=design;
   document.getElementById('billAmt').textContent='$'+cents/100;
   document.getElementById('goBtn').textContent='Buy the $'+cents/100+' certificate';
   document.getElementById('feeNote').textContent='You pay $'+(cents/100).toFixed(2)+' plus $'+fee(cents).toFixed(2)+' card processing and handling (our processor’s 2.9% + 30¢, plus a 5¢ handling fee). The recipient gets the full $'+cents/100+'.';
 }
 document.querySelectorAll('#amts button').forEach(b=>b.onclick=()=>{cents=+b.dataset.c;refresh();});
+document.querySelectorAll('#faces button').forEach(b=>b.onclick=()=>{design=b.dataset.d;refresh();});
 refresh();
 document.getElementById('goBtn').onclick=async()=>{
   const v=id=>document.getElementById(id).value.trim();
@@ -81,7 +104,7 @@ document.getElementById('goBtn').onclick=async()=>{
   const btn=document.getElementById('goBtn'); btn.disabled=true;
   try{
     const r=await fetch('/api/create-checkout-session',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
-      type:'gift_certificate',amountCents:cents,recipientName:v('rName'),recipientEmail:v('rEmail'),message:v('msg'),fromName:v('fName'),buyerEmail:v('bEmail')})});
+      type:'gift_certificate',amountCents:cents,design,recipientName:v('rName'),recipientEmail:v('rEmail'),message:v('msg'),fromName:v('fName'),buyerEmail:v('bEmail')})});
     const d=await r.json();
     if(!r.ok)throw new Error(d.error||'Could not start checkout.');
     location.href=d.url;

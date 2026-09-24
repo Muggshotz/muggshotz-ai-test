@@ -4,7 +4,7 @@ import { getProduct } from "../lib/products-catalog.js";
 import { calculateShippingCharge, calculateBasketShipping } from "../lib/printify-shipping.js";
 import { readMaintenance } from "../lib/maintenance.js";
 import { TOKEN_PACKS } from "../lib/token-packs.js";
-import { GIFT_AMOUNTS_CENTS, findGiftCertificate, normalizeGiftCode, giftLedgerReady } from "../lib/gift-certificates.js";
+import { GIFT_AMOUNTS_CENTS, GIFT_FACES, findGiftCertificate, normalizeGiftCode, giftLedgerReady } from "../lib/gift-certificates.js";
 import { chooseRail, feeLineCentsFor, feeLineDescriptionFor, minChargeCentsFor, newCheckoutId, storeCheckoutRecord, readCheckoutRecord, updateCheckoutRecord } from "../lib/payment-rail.js";
 import { squareEnv, squarePublicConfig, squareSdkUrl, buildSquareOrder, orderTotalCents, createPaymentLink, createOrder, createPayment, payOrder, cancelPayment, giftCardFromGan, giftCardUsable } from "../lib/square.js";
 import { settleSquareCheckout } from "./stripe-webhook.js";
@@ -840,8 +840,10 @@ async function handleTierUpgrade(req, res) {
 // fee line every order carries ("if I pay, you pay"), and the recipient's
 // details in metadata. The webhook mints the code when payment completes.
 async function handleGiftCertificatePurchase(req, res) {
-  const { amountCents, buyerEmail, recipientEmail, recipientName, message, fromName } = req.body;
+  const { amountCents, buyerEmail, recipientEmail, recipientName, message, fromName, design } = req.body;
   const amt = Number(amountCents);
+  // The face on the card (24 Sep 2026); an unknown one falls back to the bill picture.
+  const face = GIFT_FACES.includes(design) ? design : "";
   if (!GIFT_AMOUNTS_CENTS.includes(amt)) return res.status(400).json({ error: "Please pick one of the certificate amounts." });
   const emailOk = e => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(e || "").trim());
   if (!emailOk(buyerEmail)) return res.status(400).json({ error: "Please enter your email address." });
@@ -861,6 +863,7 @@ async function handleGiftCertificatePurchase(req, res) {
     metadata: {
       order_type: "gift_certificate",
       amount_cents: String(amt),
+      face,
       buyer_email: String(buyerEmail).trim().slice(0, 200),
       recipient_email: String(recipientEmail).trim().slice(0, 200),
       recipient_name: String(recipientName || "").trim().slice(0, 100),

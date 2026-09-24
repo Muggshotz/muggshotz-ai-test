@@ -376,7 +376,7 @@ checks.push(missing.length
     'calendar': ['desk-calendar'],
     'tshirt': ['unisex-tshirt'],
     'sticker sheet': ['sticker-sheet'],
-    'night light': ['night-buddy'],
+    // 'night light' is off the grid (24 Sep 2026); its tile price stays in the studio for its return
     'beer stein': ['beer-stein'],
     'doormat': ['doormat'],
     'air freshener': ['car-air-freshener'],

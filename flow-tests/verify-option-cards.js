@@ -15,7 +15,7 @@ const CARDS = {
   'ornament': 'ornamentShapeCard',
   'wrapping paper': 'wrapSizeCard',
   'air freshener': 'airFreshenerOptionCard',
-  'night light': 'nightBuddyOptionCard',
+  // 'night light' -- off the grid 24 Sep 2026; its card stays for its return
   'sticker sheet': 'stickerSheetOptionCard',
   'tshirt': 'tshirtOptionCard',
   'car magnet': 'carMagnetOptionCard',

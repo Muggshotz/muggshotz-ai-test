@@ -629,86 +629,10 @@ FINAL REMINDER ON LIKENESS: Do not add facial hair, tattoos, piercings, scars, j
       return res.status(200).json({ leftUrl, centerUrl, rightUrl, panoramaUrl });
     }
 
-    // EXPERIMENTAL (Sep 2026, comparison-tool test only): masked outpainting
-    // for the sequential method. The existing panelRole ("continue this
-    // scene") calls hand the model a whole reference image and ask for a
-    // brand-new image inspired by it -- the model re-imagines the entire
-    // frame, including the boundary, which is the likely root cause of the
-    // scale/style/perspective drift seen at the seams. True outpainting is
-    // different: the input image itself has a transparent region, and only
-    // that transparent region gets filled in -- the existing (opaque)
-    // pixels are meant to survive untouched, so the boundary is never
-    // re-guessed. UNPROVEN: this codebase has never sent a
-    // transparent-region edit to this model before, so whether it actually
-    // honors the alpha channel as an implicit mask (rather than ignoring
-    // it, erroring, or repainting everything) is exactly what this test
-    // exists to find out. Also resolution-limited on purpose: the model
-    // only accepts a fixed menu of canvas sizes, and none of them are
-    // "double the width of another one," so this first pass tests at
-    // 768px-wide half-canvases rather than full panel resolution -- proving
-    // the alignment concept, not shipping final quality.
-    if (action === "wraparoundOutpaintTest") {
-      if (!image || !prompt) {
-        return res.status(400).json({ error: "Missing image or prompt." });
-      }
-      if (!deviceId) {
-        return res.status(400).json({ error: "Missing device ID." });
-      }
-
-      const outpaintMatch = image.match(/^data:(image\/\w+);base64,(.+)$/);
-      if (!outpaintMatch) {
-        return res.status(400).json({ error: "Image must be a base64 data URL." });
-      }
-      if (outpaintMatch[1] !== "image/png") {
-        return res.status(400).json({ error: "Outpaint composite must be a PNG with real alpha transparency." });
-      }
-
-      const outpaintBuffer = Buffer.from(outpaintMatch[2], "base64");
-
-      const outpaintFormData = new FormData();
-      outpaintFormData.append("model", "gpt-image-2.5-sunburst");
-      outpaintFormData.append(
-        "prompt",
-        `OUTPAINTING TASK -- READ CAREFULLY:\nThis image is 1536x1024. Roughly half of it is real, existing content from an already-approved design. The other half is empty/transparent.\nDo NOT alter, redraw, recolor, rescale, or shift any of the existing (opaque) pixels in any way -- they must survive completely untouched.\nFill ONLY the empty/transparent area by continuing the exact same scene outward, believably, as if the camera had simply panned further in that direction: same environment, same lighting direction, same color grading, same art style.\nSCALE LOCK: any large environmental feature that touches the boundary between the existing content and the empty area -- a mountain range, tree line, building, fence, or similar -- must continue at the EXACT SAME apparent size and distance it has right at that boundary. Do not shrink it, recede it further away, or enlarge it as you move away from the boundary.\nThe join between the existing content and the new content must be seamless -- no visible seam, no gap, no shift in perspective, scale, or style at the boundary.\n\n${prompt}`
-      );
-      outpaintFormData.append("size", "1536x1024");
-      outpaintFormData.append(
-        "image[]",
-        new Blob([outpaintBuffer], { type: "image/png" }),
-        "outpaint-composite.png"
-      );
-
-      const outpaintResp = await fetch("https://api.openai.com/v1/images/edits", {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`
-        },
-        body: outpaintFormData
-      });
-
-      const outpaintData = await outpaintResp.json();
-      if (!outpaintResp.ok) {
-        const rawError = outpaintData?.error;
-        const readableError =
-          typeof rawError === "string"
-            ? rawError
-            : rawError?.message || JSON.stringify(rawError) || "Unknown error from image service.";
-        return res.status(outpaintResp.status).json({ error: readableError });
-      }
-
-      const outpaintB64 = outpaintData?.data?.[0]?.b64_json;
-      if (!outpaintB64) {
-        return res.status(502).json({ error: "No image returned from OpenAI.", raw: outpaintData });
-      }
-
-      const outpaintResultBuffer = Buffer.from(outpaintB64, "base64");
-      const outpaintResultUrl = await uploadGenerationToStorage(outpaintResultBuffer, deviceId + "-outpaint-test");
-
-      // No token charge -- this is a free experimental test action, same
-      // policy as the existing panelRole continuations it's being compared
-      // against.
-      return res.status(200).json({ imageUrl: outpaintResultUrl });
-    }
+    // The masked-outpaint test action (wraparoundOutpaintTest) that lived here
+    // painted without charging a token, for the retired wraparound comparison
+    // page. Removed 24 Sep 2026 (Alyx): stitching is retired, and a free
+    // painting action with no password is a hole. The page went with it.
 
     // ---------------------------------------------------------------------
     // NO PHOTO AT ALL (Alyx, Sep 2026): "what if they just want the AI to make

@@ -127,18 +127,21 @@ Pitch In. The grid is three across today (needles-studio.html, #productCard
   the card box appears for the rest; (4) Switch back to Stripe. Until this
   has run, the Square track is proven only against stand-ins.
 
+- **Muggsy on gift.html.** The page offers Needles, Chipper and Sly (their
+  cards carry no amount; the number is laid on). Muggsy joins the moment
+  Bud's card arrives without the "$50" on it (BRIEF-GIFT-CARDS.md).
+
 ## Waiting on Alyx or Bud
 
 - The bug-report email address (Alyx is making a dedicated one).
 
-- Method C on wraparound-compare.html (paints without charging): delete or
-  keep?
 
 ## Deferred
 
 - A Printify-style placement editor.
 - Researching more products.
-- Night-Buddy (off the grid for now) * — US shipping ($19.29 first, $15.99 each extra) is more than
+- Night-Buddy (off the grid since 24 Sep 2026; the option card, prompt and
+  checkout stay for its return) * — US shipping ($19.29 first, $15.99 each extra) is more than
   the item ($14.95). Alyx: "The shipping should not be more than the item";
   may drop it.
 - Frosted glass beer mug — not on the site; kept for later, if the liquid
