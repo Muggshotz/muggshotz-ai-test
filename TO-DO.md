@@ -9,6 +9,15 @@ Started 24 Sep 2026, when the old lists ran out.
       onboarding, commissions ledger in admin.html; see GO-LIVE.md). Read it
       first, then say what is there and what is missing.
 
+- **Flyers for single products** (Alyx, 24 Sep): beautifully imagined flyers
+  that show one product's flow and the model simply; the smart mug first
+  (its COLD -> HOT pictures already tell the story).
+- **Protecting the smart-mug idea** (Alyx: "appropriately patented"). The
+  colour-changing mug itself is a stock Printify product; what is Alyx's is
+  the use of it (opener facing the drinker, punchline behind, the SURPRISE!!!
+  name). Ask a patent/trademark attorney what can be protected; a trademark
+  on the name is the usual first step.
+
 ## The spark — SURPRISE!!! mugs for podcast hosts
 
 Hidden templates (like Candace's, ?surprise=i-know), gifted by Alyx to hosts
