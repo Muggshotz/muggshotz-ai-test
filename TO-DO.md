@@ -38,6 +38,10 @@ Pitch In. The grid is three across today (needles-studio.html, #productCard
   themselves and reports back if anything doesn't work (Alyx: likely to buy
   their own item just to see). Still to say: 5% of the sale price, or of the
   profit.
+  **Bug reports (Alyx, 24 Sep):** tell them to report any bug they find; each
+  legitimate bug earns one chip back — nobody should pay for the spin that
+  led them to a bug. Needs a way to report one; the payback can use the
+  admin page's existing chip grant.
   Gets people invested in the app; enough involvement may later support
   selling advertising. The flyer betas' commissions ledger and payouts may
   carry it — read that before designing anything new.
