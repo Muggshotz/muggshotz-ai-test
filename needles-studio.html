@@ -1,5 +1,5 @@
 <!-- ============================================================
-     VERSION: V367
+     VERSION: V368
      ============================================================
      THE ONE LINE THAT SAYS WHICH BUILD YOU ARE LOOKING AT.
 
@@ -982,6 +982,20 @@ body.panels-active #verifyCard{display:none!important}
     <div class="big-alert-icon">⚠️</div>
     <div class="big-alert-msg" id="bigAlertMsg"></div>
     <button class="big-alert-close" onclick="closeBigAlert()">Got It</button>
+  </div>
+</div>
+<!-- BUSINESS-CARD SPINS (Alyx, 24 Sep 2026). Opens for a visitor who arrived
+     by scanning the card (?card=CODE) while that code is on and their email
+     is not yet verified. The spins are paid when the email is verified: see
+     lib/card-bonus.js for the rules and the off switch. -->
+<div id="cardBonusOverlay" class="big-alert-overlay" onclick="if(event.target===this)closeCardBonus()">
+  <div class="guidance-alert-box">
+    <div class="guidance-alert-icon">🎁</div>
+    <div class="guidance-alert-msg" id="cardBonusMsg">Thanks for scanning our card!</div>
+    <input type="email" class="caption-input" id="cardBonusEmail" placeholder="you@example.com" autocomplete="email" style="margin-bottom:.7rem"/>
+    <button class="guidance-alert-close" id="cardBonusSendBtn" onclick="sendCardBonus()">📧 Send My Free Spins</button>
+    <div class="note" id="cardBonusStatus" style="margin-top:.7rem;min-height:1.2em"></div>
+    <div class="note" style="margin-top:.4rem;color:#7ab8ff;cursor:pointer" onclick="closeCardBonus()">Maybe later</div>
   </div>
 </div>
 <div id="guidanceAlertOverlay" class="big-alert-overlay" onclick="if(event.target===this)closeGuidanceAlert()">
@@ -4568,7 +4582,7 @@ function toggleWorkingImage(){
 // Two copies of a number is exactly how the marker rotted in the first place,
 // so they are not trusted to agree: .githooks/pre-commit moves both together
 // and REFUSES the commit if it ever finds them apart.
-const APP_VERSION='V367';
+const APP_VERSION='V368';
 try{ console.log('%cNeedles\u2019 Studio '+APP_VERSION,'color:#29a3ff;font-weight:700'); }catch(e){}
 
 function getDeviceId(){
@@ -4652,6 +4666,7 @@ async function refreshTokenMeter(){
     if(isNaN(currentTokenBalance))currentTokenBalance=null;
     hasPurchased=!!data.hasPurchased;
     isAdminDevice=!!data.isAdmin;
+    checkCardBonus(!!data.emailVerified);
     refreshMugPrintModeVisibility();
   }catch(err){
     meterEl.textContent='—';
@@ -4660,7 +4675,47 @@ async function refreshTokenMeter(){
 }
 refreshTokenMeter();
 
+// BUSINESS-CARD SPINS. The card's QR code opens the site with ?card=CODE; the
+// front page passes it on, and it is kept on this device so it survives a
+// refresh or coming back later. Once the email is verified it is dropped.
+let cardBonusOffer=null;   // {code,spins} while the offer applies to this visitor
+(function(){ try{ const c=(new URLSearchParams(location.search).get('card')||'').trim().toUpperCase(); if(/^[A-Z0-9]{2,20}$/.test(c))localStorage.setItem('muggshotz_card_code',c); }catch(e){} })();
+async function checkCardBonus(emailVerified){
+  let code=null; try{ code=localStorage.getItem('muggshotz_card_code'); }catch(e){}
+  if(!code)return;
+  if(emailVerified){ try{ localStorage.removeItem('muggshotz_card_code'); }catch(e){} cardBonusOffer=null; return; }
+  if(cardBonusOffer)return;
+  try{
+    const r=await fetch('/api/get-balance?card='+encodeURIComponent(code)); const d=await r.json();
+    if(!d||!d.on)return;
+    cardBonusOffer={code,spins:d.spins};
+    let seen=false; try{ seen=sessionStorage.getItem('muggshotz_card_offer_seen')==='1'; sessionStorage.setItem('muggshotz_card_offer_seen','1'); }catch(e){}
+    if(!seen)openCardBonus();
+  }catch(e){}
+}
+function openCardBonus(){
+  if(!cardBonusOffer)return false;
+  document.getElementById('cardBonusMsg').textContent='Thanks for scanning our card!\nHere are '+cardBonusOffer.spins+' free spins. Enter your email and we\'ll send a link to unlock them.';
+  document.getElementById('cardBonusOverlay').classList.add('visible');
+  return true;
+}
+function closeCardBonus(){ document.getElementById('cardBonusOverlay').classList.remove('visible'); }
+async function sendCardBonus(){
+  const email=document.getElementById('cardBonusEmail').value.trim();
+  const st=document.getElementById('cardBonusStatus'), btn=document.getElementById('cardBonusSendBtn');
+  if(!email){ st.textContent='Please enter your email.'; st.style.color='#e24b4a'; return; }
+  btn.disabled=true; st.textContent='Sending...'; st.style.color='#888';
+  try{
+    const resp=await fetch('/api/send-verification',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,deviceId,cardCode:cardBonusOffer&&cardBonusOffer.code})});
+    const data=await resp.json();
+    if(!resp.ok)throw new Error(data.error||'Something went wrong.');
+    st.textContent='Check your email and tap the link. Your spins will be waiting here.'; st.style.color='#7ab8ff';
+  }catch(err){ st.textContent=err.message; st.style.color='#e24b4a'; btn.disabled=false; }
+}
+
 function showTokenInfoPopup(anchorEl){
+  // A card visitor with no spins yet is offered the card's spins instead.
+  if(cardBonusOffer && openCardBonus())return;
   const popup=document.getElementById('tokenInfoPopup');
   if(!popup||!anchorEl)return;
   const rect=anchorEl.getBoundingClientRect();

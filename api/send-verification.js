@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import crypto from 'crypto';
+import { cardOffer, cardToken, likeExact } from '../lib/card-bonus.js';
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 
@@ -8,7 +9,13 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { email, deviceId } = req.body;
+  const { email, deviceId, cardCode } = req.body;
+  // A business-card claim (lib/card-bonus.js); null when there is none or the
+  // code has been switched off.
+  const offer = cardCode ? cardOffer(cardCode) : null;
+  if (cardCode && !offer) {
+    return res.status(400).json({ error: 'That card offer has ended.' });
+  }
 
   if (!email || !deviceId) {
     return res.status(400).json({ error: 'Email and device ID are required.' });
@@ -19,11 +26,19 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { data: customer, error: findError } = await supabase
+    let { data: customer, error: findError } = await supabase
       .from('customers')
       .select('id, email_verified')
       .eq('device_id', deviceId)
-      .single();
+      .maybeSingle();
+
+    // A card visitor arrives brand new: no row yet, and at 0 spins the studio
+    // will not let them generate to make one. Create it here at 0 -- the spins
+    // come only from the verified email, never from the device.
+    if (!customer && !findError && offer) {
+      const created = await supabase.from('customers').insert({ device_id: deviceId, token_balance: 0 }).select('id, email_verified').single();
+      customer = created.data; findError = created.error;
+    }
 
     if (findError || !customer) {
       return res.status(404).json({ error: 'Could not find your account. Try generating an image first.', detail: findError ? findError.message : 'no customer' });
@@ -33,7 +48,25 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'This device has already verified an email.' });
     }
 
-    const token = crypto.randomBytes(32).toString('hex');
+    // Once per email address: an address already verified anywhere has had
+    // its free spins, so a card cannot pay it again from another device.
+    if (offer) {
+      const { data: used, error: usedError } = await supabase
+        .from('customers')
+        .select('id')
+        .ilike('email', likeExact(email))
+        .eq('email_verified', true)
+        .limit(1);
+      if (usedError) {
+        return res.status(500).json({ error: 'Could not check your email just now. Please try again.' });
+      }
+      if (used && used.length) {
+        return res.status(400).json({ error: 'That email has already claimed its free spins.' });
+      }
+    }
+
+    const random = crypto.randomBytes(32).toString('hex');
+    const token = offer ? cardToken(offer.code, random) : random;
 
     const { error: updateError } = await supabase
       .from('customers')
@@ -55,8 +88,10 @@ export default async function handler(req, res) {
       body: JSON.stringify({
         from: 'Muggshotz <onboarding@resend.dev>',
         to: email,
-        subject: 'Verify your email for a free bonus token!',
-        html: `<p>Click below to verify your email and unlock a free bonus token:</p><p><a href="${verifyUrl}">Verify My Email</a></p>`
+        subject: offer ? `Verify your email for your ${offer.spins} free spins!` : 'Verify your email for a free bonus token!',
+        html: offer
+          ? `<p>Thanks for scanning our card! Click below to verify your email and unlock your ${offer.spins} free spins:</p><p><a href="${verifyUrl}">Verify My Email</a></p>`
+          : `<p>Click below to verify your email and unlock a free bonus token:</p><p><a href="${verifyUrl}">Verify My Email</a></p>`
       })
     });
 

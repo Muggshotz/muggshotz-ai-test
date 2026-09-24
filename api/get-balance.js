@@ -1,4 +1,5 @@
 import { findGiftCertificate, findGiftCertificateBySession } from "../lib/gift-certificates.js";
+import { cardOffer } from "../lib/card-bonus.js";
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 // Simple read-only lookup: given a device ID, return its current token
@@ -217,6 +218,13 @@ export default async function handler(req, res) {
     return handleReferralLookup(req, res);
   }
 
+  // ?card= : is this business-card code's offer on, and for how many spins.
+  if (req.query.card) {
+    res.setHeader("Cache-Control", "no-store, max-age=0");
+    const offer = cardOffer(req.query.card);
+    return res.status(200).json(offer ? { on: true, spins: offer.spins } : { on: false });
+  }
+
   if (req.query.recent) {
     return handleRecentLookup(req, res);
   }
@@ -226,7 +234,7 @@ export default async function handler(req, res) {
     if (!deviceId) {
       return res.status(400).json({ error: "Missing device ID." });
     }
-    const url = `${SUPABASE_URL}/rest/v1/customers?device_id=eq.${encodeURIComponent(deviceId)}&select=token_balance,role,has_purchased`;
+    const url = `${SUPABASE_URL}/rest/v1/customers?device_id=eq.${encodeURIComponent(deviceId)}&select=token_balance,role,has_purchased,email_verified`;
     const resp = await fetch(url, {
       headers: {
         "apikey": SUPABASE_SERVICE_ROLE_KEY,
@@ -240,14 +248,15 @@ export default async function handler(req, res) {
       // No customer row yet means this device hasn't generated anything --
       // report 0 rather than creating a row here (the first real generate()
       // call handles creation, per the comment at the top of this file).
-      return res.status(200).json({ tokenBalance: 0, isAdmin: false, hasPurchased: false });
+      return res.status(200).json({ tokenBalance: 0, isAdmin: false, hasPurchased: false, emailVerified: false });
     }
 
     const customer = rows[0];
     return res.status(200).json({
       tokenBalance: customer.token_balance,
       isAdmin: customer.role === "admin",
-      hasPurchased: !!customer.has_purchased
+      hasPurchased: !!customer.has_purchased,
+      emailVerified: !!customer.email_verified
     });
   } catch (error) {
     return res.status(500).json({ error: error.message });
