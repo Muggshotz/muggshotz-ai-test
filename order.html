@@ -1331,6 +1331,15 @@ if (pendingOrder?.preselectedMugColor) {
 }
 
 let selectedProductFamily = pendingOrder?.productIcon || 'mug';
+// ARTWORK ONLY is a picture, not a product: the studio ends there and never
+// sends one here (approveDesign, and goToOrder refuses it too). If one ever
+// arrives -- an old tab, a stale saved order -- it must not fall through to
+// the mug's price below. It goes back to the studio instead.
+if (selectedProductFamily === 'artwork only') {
+  try { localStorage.removeItem('muggshotz_pending_order'); } catch (e) {}
+  location.replace('needles-studio.html');
+  throw new Error('Artwork Only has no product to order; back to the studio.');
+}
 
 function isTravelMug(){ return selectedProductFamily === 'water bottle'; }
 function isMug(){ return selectedProductFamily === 'mug'; }
@@ -1411,7 +1420,7 @@ if (pendingOrder?.preselectedAirFreshener && AIRFRESHENER_OPTIONS[pendingOrder.p
 }
 
 // NIGHT-BUDDY (22 Sep 2026). Keys match lib/products-catalog.js.
-const NIGHTBUDDY_OPTIONS = { "Full Colour": { price: 14.95 }, "Warm Glow": { price: 12.95 } };
+const NIGHTBUDDY_OPTIONS = { "Full Colour": { price: 14.95 }, "Warm Glow": { price: 14.95 } };
 let selectedNightBuddy = "Full Colour";
 if (pendingOrder?.preselectedNightBuddy && NIGHTBUDDY_OPTIONS[pendingOrder.preselectedNightBuddy]) {
   selectedNightBuddy = pendingOrder.preselectedNightBuddy;
@@ -1571,7 +1580,7 @@ const BRIDGE_GRID_PRODUCTS = [
   { key: 'calendar', icon: '📅', label: 'Desk Calendar', priceFrom: '$9.95' },
   { key: 'tshirt', icon: '👕', label: 'T-Shirt', priceFrom: '$8.95' },
   { key: 'sticker sheet', icon: '⭐', label: 'Sticker Sheet', priceFrom: '$9.95' },
-  { key: 'night light', icon: '💡', label: 'Night-Buddy', priceFrom: '$12.95' },
+  { key: 'night light', icon: '💡', label: 'Night-Buddy', priceFrom: '$14.95' },
   { key: 'beer stein', icon: '🍺', label: 'Beer Stein', priceFrom: '$24.95' },
   { key: 'doormat', icon: '🚪', label: 'Doormat', priceFrom: '$19.95' },
   { key: 'air freshener', icon: '🌲', label: 'Car Air Freshener', priceFrom: '$9.95' },

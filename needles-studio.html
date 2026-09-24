@@ -1,5 +1,5 @@
 <!-- ============================================================
-     VERSION: V370
+     VERSION: V371
      ============================================================
      THE ONE LINE THAT SAYS WHICH BUILD YOU ARE LOOKING AT.
 
@@ -1499,7 +1499,7 @@ const HERO_SETTLE_MS = 1000;
 <div class="card-title">💡 Full Colour or Warm Glow?</div>
 <div class="note" style="margin-top:0;margin-bottom:.75rem">A clear acrylic panel cut to the shape of your picture, standing in a lit wooden base.</div>
 <div class="grid2" id="nightBuddyOptionGrid">
-<div class="btn-select" data-opt="Full Colour" style="padding:.5rem" onclick="pickNightBuddy('Full Colour')"><img src="art/options/nightbuddy-colour.jpg" alt="" style="width:100%;border-radius:6px;background:#fff;margin-bottom:6px"/>Full Colour<div class="note" style="margin-top:4px">$14.95</div></div><div class="btn-select" data-opt="Warm Glow" style="padding:.5rem" onclick="pickNightBuddy('Warm Glow')"><img src="art/options/nightbuddy-warm.jpg" alt="" style="width:100%;border-radius:6px;background:#fff;margin-bottom:6px"/>Warm Glow<div class="note" style="margin-top:4px">$12.95</div></div>
+<div class="btn-select" data-opt="Full Colour" style="padding:.5rem" onclick="pickNightBuddy('Full Colour')"><img src="art/options/nightbuddy-colour.jpg" alt="" style="width:100%;border-radius:6px;background:#fff;margin-bottom:6px"/>Full Colour<div class="note" style="margin-top:4px">$14.95</div></div><div class="btn-select" data-opt="Warm Glow" style="padding:.5rem" onclick="pickNightBuddy('Warm Glow')"><img src="art/options/nightbuddy-warm.jpg" alt="" style="width:100%;border-radius:6px;background:#fff;margin-bottom:6px"/>Warm Glow<div class="note" style="margin-top:4px">$14.95</div></div>
 </div>
 <div class="note" id="nightBuddyOptionNote" style="margin-top:.6rem"></div>
 <button type="button" class="download-btn" style="margin-top:1rem" onclick="optionCardBack()">← Back</button>
@@ -4582,7 +4582,7 @@ function toggleWorkingImage(){
 // Two copies of a number is exactly how the marker rotted in the first place,
 // so they are not trusted to agree: .githooks/pre-commit moves both together
 // and REFUSES the commit if it ever finds them apart.
-const APP_VERSION='V370';
+const APP_VERSION='V371';
 try{ console.log('%cNeedles\u2019 Studio '+APP_VERSION,'color:#29a3ff;font-weight:700'); }catch(e){}
 
 function getDeviceId(){
@@ -7963,7 +7963,7 @@ const PRODUCT_TILE_PRICES = {
   'calendar': { from: 9.95, ladder: false },
   'tshirt': { from: 8.95, ladder: true },
   'sticker sheet': { from: 9.95, ladder: true },
-  'night light': { from: 12.95, ladder: true },
+  'night light': { from: 14.95, ladder: false },
   'beer stein': { from: 24.95, ladder: false },
   'doormat': { from: 19.95, ladder: false },
   'air freshener': { from: 9.95, ladder: false },
@@ -23396,6 +23396,8 @@ async function hostRawDesignsBeforeCheckout(){
   return jobs.length;
 }
 async function goToOrder(){
+  // Artwork Only has no product to order (see approveDesign); never send it on.
+  if(product==='artwork only')return;
   const btn=document.querySelector('button[onclick="goToOrder()"]');
   const label=btn?btn.textContent:'';
   if(btn){ btn.disabled=true; btn.textContent='Saving your picture…'; }

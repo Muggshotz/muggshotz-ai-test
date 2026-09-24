@@ -36,7 +36,6 @@ Started 24 Sep 2026, when the old lists ran out.
 
 ## Waiting on Alyx or Bud
 
-- Night-Buddy, Warm Glow: its price. (Full Colour is $14.95, Alyx's price.)
 - Method C on wraparound-compare.html (paints without charging): delete or
   keep?
 
