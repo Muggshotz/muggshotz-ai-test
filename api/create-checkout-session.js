@@ -128,7 +128,17 @@ async function createCheckout(rail, spec, extras = {}) {
   return createSquareCheckout(spec, { ...extras, discounts });
 }
 
+// SQUARE'S FLOOR: a card payment under $1.00 is refused by Square, so a
+// checkout that small is refused here first, with the reason (the 50c token
+// pack plus its fee is 87c). A Square gift card can pay any amount.
+const SQUARE_MIN_CARD_CENTS = 100;
 async function createSquareCheckout(spec, extras) {
+  {
+    const owed = orderTotalCents(spec.line_items.map((li) => ({ cents: Math.round(li.price_data.unit_amount * (li.quantity || 1)) })), extras.discounts || []);
+    if (owed > 0 && owed < SQUARE_MIN_CARD_CENTS && !extras.squareGift) {
+      throw orderError(`A card payment has to be at least $1.00 through our card processor just now; this comes to $${(owed / 100).toFixed(2)}. Please pick a larger pack.`);
+    }
+  }
   const checkoutId = newCheckoutId();
   const orderType = spec.metadata?.order_type || "token_purchase";
   const lineItems = spec.line_items.map((li) => ({
@@ -907,6 +917,7 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: `Unknown checkout type "${type}".` });
   } catch (error) {
     console.error("Checkout session creation failed:", error.message);
-    return res.status(500).json({ error: error.message });
+    // A refusal with a reason for the customer (orderError) is a 400, not a 500.
+    return res.status(error.status || 500).json({ error: error.message });
   }
 }
