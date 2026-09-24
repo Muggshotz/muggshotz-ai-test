@@ -45,9 +45,11 @@ Pitch In. The grid is three across today (needles-studio.html, #productCard
   **One year per item, from its born-on date** (Alyx, 24 Sep; first said in
   perpetuity, then capped): the inventor earns 5% net on each item for one
   year from the day that item goes on sale, after which the business owns it
-  outright -- the ITEM, not the category. Every new item added to their
-  category gets its own born-on date and expiry date (one year later), and
-  its own year. (Each item stores both dates.)
+  outright -- the ITEM, not the category. The inventor holds a 5% net stake
+  in the CATEGORY: every new item added to it, including designs the business
+  adds itself, gets its own born-on date and expiry date (one year later) and
+  pays the inventor 5% for its year. (Each item stores both dates and its
+  category's inventor.)
   **Every refusal gets an explanation** (Alyx, 24 Sep) of why the idea was not
   taken up, as detailed as the pitch warrants: a partial bulwark against
   complaints and accusations about unused suggestions. Customer-facing terms:

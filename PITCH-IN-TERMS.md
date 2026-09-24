@@ -24,9 +24,10 @@ Worth having someone who writes contracts look it over before it goes live.
 4. **One year per item, from its born-on date.** Every item has a born-on
    date (the day it goes on sale) and an expiry date one year later. Your 5%
    is paid on every sale of it until its expiry date; after that, that item
-   belongs to us outright. Your category does not expire: if your idea grows
-   into a whole category, every new item added to it gets its own born-on
-   date, its own expiry date, and its own year of 5% for you.
+   belongs to us outright. Your category does not expire: you hold a 5% net
+   stake in the whole category. Every new item added to it -- including
+   designs we add ourselves -- gets its own born-on date, its own expiry
+   date, and its own year of 5% for you.
 
 5. **Found a bug? Tell us.** Anyone, on any screen, can report a bug. The
    first person to report a real bug gets a free chip back.
