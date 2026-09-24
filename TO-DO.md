@@ -38,13 +38,16 @@ Pitch In. The grid is three across today (needles-studio.html, #productCard
   themselves and reports back if anything doesn't work (Alyx: likely to buy
   their own item just to see). Still to say: 5% of the sale price, or of the
   profit.
-  **Bug reports (Alyx, 24 Sep):** tell them to report any bug they find; each
-  legitimate bug earns one chip back — nobody should pay for the spin that
-  led them to a bug. Needs a way to report one; the payback can use the
-  admin page's existing chip grant.
+  (Bug reports: see "Report a bug" below.)
   Gets people invested in the app; enough involvement may later support
   selling advertising. The flyer betas' commissions ledger and payouts may
   carry it — read that before designing anything new.
+- **Report a bug — on every flow, for every customer** (Alyx, 24 Sep). Each
+  legitimate bug reported earns a free chip; nobody pays for the spin that
+  led them to a bug. Alyx: a built-in workforce testing the generator, at
+  about $0.03 a bug ("even 1000 bugs is $30"). Needs a Report-a-bug button on
+  every panel that sends the report (what they saw, where, their device) to
+  Alyx; the chip can be granted from the admin page's existing chip grant.
 - **Optical Illusions** — an art style dressed as a tile in Art Style,
   templates for nearly every product (up to ~10 each, ~250 in all) plus a
   "suggest a template" box. Waits on the templates. Claude and Bud to agree
