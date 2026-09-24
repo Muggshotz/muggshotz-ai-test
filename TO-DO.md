@@ -115,6 +115,18 @@ Pitch In. The grid is three across today (needles-studio.html, #productCard
   "suggest a template" box. Waits on the templates. Claude and Bud to agree
   the prompts; each template drawn at its product's own print shape.
 
+- **The Square walk-through (Alyx, 24 Sep 2026: "a test that must be run
+  from order to purchase just using the Square pipeline alone").** Sandbox
+  keys are in and the switch works; nothing has yet gone through Square's
+  real sandbox end to end. When it is run: (1) Foxhole -> Switch to Square;
+  (2) studio -> 3 Tokens $1.00 -> Square's page -> test card
+  4111 1111 1111 1111 -> back on the studio, and the Vercel log shows
+  "Ignored a SANDBOX Square payment" (the webhook's signature and our
+  redirect both proven); (3) Foxhole -> Mint a $25 sandbox gift card ->
+  order page -> the number in the gift box -> pay: the card pays first and
+  the card box appears for the rest; (4) Switch back to Stripe. Until this
+  has run, the Square track is proven only against stand-ins.
+
 ## Waiting on Alyx or Bud
 
 - The bug-report email address (Alyx is making a dedicated one).
