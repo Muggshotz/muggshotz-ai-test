@@ -40,6 +40,9 @@ Pitch In. The grid is three across today (needles-studio.html, #productCard
   "5% of the gross could get messy") -- the catalog's estimatedProfit, the
   same base and the same 5% the flyer betas earn at the Muggshotz tier
   (lib/flyer-tiers.js: rate 0.05).
+  **Paid in perpetuity** (Alyx, 24 Sep): the contributor, as inventor of the
+  item or category, holds a 5% net stake in it for good. If their category
+  grows into more items, the 5% extends to every item in it.
   (Bug reports: see "Report a bug" below.)
   Gets people invested in the app; enough involvement may later support
   selling advertising. The flyer betas' commissions ledger and payouts may
