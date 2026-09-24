@@ -51,13 +51,21 @@ Pitch In. The grid is three across today (needles-studio.html, #productCard
   Only the FIRST report of a bug earns the chip (it gets fixed, and is no
   longer a bug). Delivery: Alyx wants it to reach him directly, a text
   preferred. The site can already send email (Resend, as the verification and
-  flyer emails do); no text-message service is connected.
+  flyer emails do); no text-message service is connected. Plan (24 Sep):
+  reports go by email to a new address Alyx makes just for them. When he
+  sends it, send one test report there first: the site mails from
+  onboarding@resend.dev, which may only deliver to the Resend account's own
+  address.
 - **Optical Illusions** — an art style dressed as a tile in Art Style,
   templates for nearly every product (up to ~10 each, ~250 in all) plus a
   "suggest a template" box. Waits on the templates. Claude and Bud to agree
   the prompts; each template drawn at its product's own print shape.
 
 ## Waiting on Alyx or Bud
+
+- The bug-report email address (Alyx is making a dedicated one).
+- Pitch In's 5%: of the sale price, or of the profit?
+- Phones: the 28-tile grid four across there too, or three?
 
 - Method C on wraparound-compare.html (paints without charging): delete or
   keep?
