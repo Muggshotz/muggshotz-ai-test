@@ -27,7 +27,8 @@ Worth having someone who writes contracts look it over before it goes live.
    belongs to us outright. Your category does not expire: you hold a 5% net
    stake in the whole category. Every new item added to it -- including
    designs we add ourselves -- gets its own born-on date, its own expiry
-   date, and its own year of 5% for you.
+   date, and its own year of 5% for you. The category has no born-on date of
+   its own, and a new item never restarts the year for items already in it.
 
 5. **Found a bug? Tell us.** Anyone, on any screen, can report a bug. The
    first person to report a real bug gets a free chip back.
