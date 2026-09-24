@@ -30,7 +30,9 @@ Pitch In. The grid is three across today (needles-studio.html, #productCard
   - The SURPRISE!!! heat-reveal mugs, shown here as well as under Coffee
     Mugs → Smart Mug. The SURPRISE!!! panel (tiles with picture, price,
     choices) is the model for the whole line.
-- **Pitch In**. A separate category: people pitch ideas, and earn a
+- **Pitch In**. Alyx (24 Sep): "I intend for this to become The People's
+  App" -- the customers invent the products, test them, find the bugs, and
+  share in what sells. A separate category: people pitch ideas, and earn a
   percentage on every one that is adopted and sold. Tapping it opens a short,
   clear explanation (draft 24 Sep: tell us the idea; if we make it, it goes in
   the shop; every sale pays you your %). **The reward (Alyx, 24 Sep): 5% plus
