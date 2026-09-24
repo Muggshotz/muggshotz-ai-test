@@ -9,6 +9,18 @@ Started 24 Sep 2026, when the old lists ran out.
       onboarding, commissions ledger in admin.html; see GO-LIVE.md). Read it
       first, then say what is there and what is missing.
 
+## The spark — SURPRISE!!! mugs for podcast hosts
+
+Hidden templates (like Candace's, ?surprise=i-know), gifted by Alyx to hosts
+who keep a coffee mug on camera. Gift only: no selling their likeness or
+using their face or reaction in our ads without their permission. Each needs
+art (opener left, punchline right, black between) and a link name.
+
+- Candace Owens — "I don't KNOW know..." / "But I know..." (live: i-know)
+- Joe Rogan — "This juice?" / "...was definitely worth the squeeze." (his
+  saying: the juice is not worth the squeeze)
+- Dave Smith, Baron Coleman, Tucker Carlson, Oprah — ideas to come
+
 ## New categories — planned, not built
 
 **The grid (Alyx, 24 Sep 2026): 28 tiles, seven even rows of four.** 24
