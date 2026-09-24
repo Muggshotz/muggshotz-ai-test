@@ -50,9 +50,27 @@ const scenarios = {
     return judge('puzzle', await state(page, 'puzzleSizeCard'), 'puzzle-size-focus');
   },
 
+  // Which case comes first (24 Sep 2026: the card holder joined the Tough
+  // case), then the model, then -- on the card holder -- the finish.
+  async phoneStyleSpotlit(page) {
+    await pick(page, 'phone case');
+    return judge('phone case', await state(page, 'phoneCaseStyleCard'), 'phone-style-focus');
+  },
+
   async phoneModelSpotlit(page) {
     await pick(page, 'phone case');
-    return judge('phone case', await state(page, 'phoneCaseModelCard'), 'phone-model-focus');
+    await page.evaluate(() => pickPhoneCaseStyle('tough'));
+    await page.waitForTimeout(1400);
+    return judge('phone case model', await state(page, 'phoneCaseModelCard'), 'phone-model-focus');
+  },
+
+  async phoneFinishSpotlit(page) {
+    await pick(page, 'phone case');
+    await page.evaluate(() => pickPhoneCaseStyle('card-holder'));
+    await page.waitForTimeout(1200);
+    await page.evaluate(() => { pendingPhoneCaseModel = 'iPhone 15 Pro'; confirmPhoneModelGen(true); });
+    await page.waitForTimeout(1400);
+    return judge('card holder finish', await state(page, 'phoneCaseFinishCard'), 'phone-finish-focus');
   },
 
   async posterOptionsSpotlit(page) {

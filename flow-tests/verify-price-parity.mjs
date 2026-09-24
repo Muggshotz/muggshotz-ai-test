@@ -88,6 +88,36 @@ for (const [label, constName, catalogKey] of [
   }
 }
 
+// --- the card-holder phone case (24 Sep 2026) ------------------------------
+// Two prices behind one product: every model $21.95, and the gift box, a
+// "colour" of the same model, $24.95. order.html and the studio each keep a
+// copy of both; the server bills from the colour's own price.
+{
+  const { PRODUCTS_CATALOG } = await import('file://' + path.join(ROOT, 'lib', 'products-catalog.js'));
+  const ch = PRODUCTS_CATALOG['phone-case-card-holder'];
+  const studioSrc = fs.readFileSync(path.join(ROOT, 'needles-studio.html'), 'utf8');
+  const bad = [];
+  if (!ch) bad.push('"phone-case-card-holder" is not in the catalog');
+  else {
+    const plain = new Set(), gift = new Set();
+    for (const sz of Object.values(ch.sizes)) {
+      for (const c of sz.colors) (/gift/.test(c.name) ? gift : plain).add(typeof c.price === 'number' ? c.price : sz.price);
+    }
+    if (plain.size !== 1 || gift.size !== 1) bad.push(`catalog: plain prices ${[...plain]}, gift prices ${[...gift]} — expected one of each`);
+    const catPlain = [...plain][0], catGift = [...gift][0];
+    for (const [file, src] of [['order.html', order], ['needles-studio.html', studioSrc]]) {
+      const isStudio = file !== 'order.html';
+      const m = isStudio
+        ? /'card-holder':\{[^}]*price:([\d.]+),giftPrice:([\d.]+)/.exec(src)
+        : [null, /const CARD_HOLDER_PRICE = ([\d.]+)/.exec(src)?.[1], /const CARD_HOLDER_GIFT_PRICE = ([\d.]+)/.exec(src)?.[1]];
+      if (!m || !m[1] || !m[2]) { bad.push(`${file}: card-holder prices not found`); continue; }
+      if (parseFloat(m[1]) !== catPlain) bad.push(`${file}: plain $${m[1]}, catalog $${catPlain}`);
+      if (parseFloat(m[2]) !== catGift) bad.push(`${file}: gift boxed $${m[2]}, catalog $${catGift}`);
+    }
+  }
+  checks.push(bad.length ? `FAIL: card-holder phone case: ${bad.join('; ')}` : `PASS: card-holder phone case: $${[...new Set(Object.values(ch.sizes).map(s => s.price))][0]} plain and the gift box price agree on every page`);
+}
+
 // --- per-size tables --------------------------------------------------------
 for (const [label, tableName, catalogKey] of [
   ['puzzle',   'PUZZLE_SIZES',   'photo-puzzle'],
@@ -333,7 +363,7 @@ checks.push(missing.length
     'mug':          ['classic-white-mug', 'color-pop-mug', 'trimmed-mug', 'accented-mug', 'color-burst-mug', 'all-nighter-mug'],
     'water bottle': ['travel-mug-20oz', 'travel-mug-14oz-handle', 'travel-mug-40oz-insulated',
                      'travel-mug-32oz-gator', 'travel-mug-30oz-tundra', 'travel-mug-40oz-vacuum'],
-    'phone case':   ['phone-case-tough'],
+    'phone case':   ['phone-case-tough', 'phone-case-card-holder'],
     'tote bag':     ['tote-bag'],
     'suitcase':     ['suitcase'],
     'puzzle':       ['photo-puzzle'],

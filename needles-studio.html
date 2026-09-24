@@ -1,5 +1,5 @@
 <!-- ============================================================
-     VERSION: V371
+     VERSION: V372
      ============================================================
      THE ONE LINE THAT SAYS WHICH BUILD YOU ARE LOOKING AT.
 
@@ -665,6 +665,8 @@ body.wrap-size-focus .card:not(#wrapSizeCard){opacity:.35;filter:brightness(.6) 
 body.tote-size-focus .card:not(#toteSizeCard){opacity:.35;filter:brightness(.6) saturate(.75);transition:opacity .5s,filter .5s}
 body.tote-color-focus .card:not(#toteBagColorCard){opacity:.35;filter:brightness(.6) saturate(.75);transition:opacity .5s,filter .5s}
 body.phone-model-focus .card:not(#phoneCaseModelCard){opacity:.35;filter:brightness(.6) saturate(.75);transition:opacity .5s,filter .5s}
+body.phone-style-focus .card:not(#phoneCaseStyleCard){opacity:.35;filter:brightness(.6) saturate(.75);transition:opacity .5s,filter .5s}
+body.phone-finish-focus .card:not(#phoneCaseFinishCard){opacity:.35;filter:brightness(.6) saturate(.75);transition:opacity .5s,filter .5s}
 body.poster-options-focus .card:not(#photoPosterOptionsCard){opacity:.35;filter:brightness(.6) saturate(.75);transition:opacity .5s,filter .5s}
 body.style-focus .card:not(#styleSectionCard){opacity:.35;filter:brightness(.6) saturate(.75);transition:opacity .5s,filter .5s}
 body.coaster-shape-focus .card:not(#coasterShapeCard){opacity:.35;filter:brightness(.6) saturate(.75);transition:opacity .5s,filter .5s}
@@ -1441,11 +1443,22 @@ const HERO_SETTLE_MS = 1000;
 <button class="download-btn" style="margin-top:.6rem" onclick="changeDesignSelection()">🔄 If you wish to change your selection</button>
 </div>
 
+<div class="card" id="phoneCaseStyleCard" style="display:none">
+<div class="card-title">📱 Which Phone Case?</div>
+<div class="note" style="margin-top:0;margin-bottom:.75rem">Two cases, two prices. The card holder has a slot in the back for a credit card or your ID.</div>
+<div class="grid2" id="phoneCaseStyleGrid">
+<div class="btn-select" data-phone-style="tough" style="padding:.5rem" onclick="pickPhoneCaseStyle('tough')"><img src="art/options/phone-case.jpg" alt="" style="width:100%;border-radius:6px;background:#fff;margin-bottom:6px"/>Tough Case<div class="note" style="margin-top:4px">$19.95</div></div>
+<div class="btn-select" data-phone-style="card-holder" style="padding:.5rem" onclick="pickPhoneCaseStyle('card-holder')"><img src="art/options/phone-case-card-holder.jpg" alt="" style="width:100%;border-radius:6px;background:#fff;margin-bottom:6px"/>With Card Holder<div class="note" style="margin-top:4px">$21.95</div></div>
+</div>
+<div class="note" id="phoneCaseStyleSelectedNote" style="margin-top:.6rem"></div>
+<button type="button" class="download-btn" style="margin-top:1rem" onclick="optionCardBack()">← Back</button>
+</div>
+
 <div class="card" id="phoneCaseModelCard" style="display:none">
 <div class="card-title">📱 Which Phone Model?</div>
 <div class="note" style="margin-top:0;margin-bottom:.75rem">We need this before generating, so your art gets composed to fit your exact phone case shape — no cropping surprises later.</div>
-<img src="art/options/phone-case.jpg" alt="" style="display:block;width:min(100%,170px);margin:0 auto .4rem;border-radius:8px;background:#fff"/>
-<div class="note" style="text-align:center;margin:0 0 .75rem">Tough phone case · $19.95</div>
+<img id="phoneCaseModelPic" src="art/options/phone-case.jpg" alt="" style="display:block;width:min(100%,170px);margin:0 auto .4rem;border-radius:8px;background:#fff"/>
+<div class="note" id="phoneCaseModelPriceNote" style="text-align:center;margin:0 0 .75rem">Tough phone case · $19.95</div>
 <div class="note" style="margin-top:0;margin-bottom:.5rem;color:#7ab8ff;font-weight:600">Type in your phone model, then press Enter.</div>
 <input type="text" id="phoneModelSearchInputGen" placeholder="e.g. iPhone 15 Pro, Galaxy S24"
   style="width:100%;padding:.6rem;border-radius:8px;border:.5px solid #333;background:#0d0d0d;color:#fff;box-sizing:border-box"/>
@@ -1459,7 +1472,15 @@ const HERO_SETTLE_MS = 1000;
   </div>
 </div>
 <div class="note" id="phoneModelSelectedNoteGen" style="margin-top:.6rem"></div>
-<button type="button" class="download-btn" style="margin-top:1rem" onclick="optionCardBack()">← Back</button>
+<button type="button" class="download-btn" style="margin-top:1rem" onclick="phoneModelBack()">← Back</button>
+</div>
+
+<div class="card" id="phoneCaseFinishCard" style="display:none">
+<div class="card-title">✨ Finish &amp; Gift Box</div>
+<div class="note" style="margin-top:0;margin-bottom:.75rem">Glossy or matte, and whether it arrives in a gift box. Each one is a different case we order by name.</div>
+<div class="grid2" id="phoneCaseFinishGrid"></div>
+<div class="note" id="phoneCaseFinishSelectedNote" style="margin-top:.6rem"></div>
+<button type="button" class="download-btn" style="margin-top:1rem" onclick="phoneFinishBack()">← Back</button>
 </div>
 
 <div class="card" id="puzzleSizeCard" style="display:none">
@@ -4582,7 +4603,7 @@ function toggleWorkingImage(){
 // Two copies of a number is exactly how the marker rotted in the first place,
 // so they are not trusted to agree: .githooks/pre-commit moves both together
 // and REFUSES the commit if it ever finds them apart.
-const APP_VERSION='V371';
+const APP_VERSION='V372';
 try{ console.log('%cNeedles\u2019 Studio '+APP_VERSION,'color:#29a3ff;font-weight:700'); }catch(e){}
 
 function getDeviceId(){
@@ -7883,6 +7904,106 @@ const PHONE_CASE_MODELS = [
   "Samsung Galaxy S21","Samsung Galaxy S22","Samsung Galaxy S23",
   "Samsung Galaxy S24","Samsung Galaxy S25","Samsung Galaxy S26"
 ];
+// THE TWO CASES (Alyx, 24 Sep 2026). The Tough case above, and the Phone Case
+// With Card Holder (WOYC, blueprint 1022): a slot in the back for a card. Each
+// carries its own model list, its own price, and the card holder adds a
+// finish (glossy/matte) and an optional gift box, each a different Printify
+// variant. Model names and prices track lib/products-catalog.js by hand.
+const PHONE_CASE_STYLES={
+  'tough':{label:'Tough Case',key:'phone-case-tough',price:19.95,pic:'art/options/phone-case.jpg'},
+  'card-holder':{label:'Phone Case With Card Holder',key:'phone-case-card-holder',price:21.95,giftPrice:24.95,pic:'art/options/phone-case-card-holder.jpg'}
+};
+const CARD_HOLDER_MODELS = [
+  "iPhone 13","iPhone 13 Mini","iPhone 13 Pro","iPhone 13 Pro Max",
+  "iPhone 14","iPhone 14 Plus","iPhone 14 Pro","iPhone 14 Pro Max",
+  "iPhone 15","iPhone 15 Plus","iPhone 15 Pro","iPhone 15 Pro Max",
+  "iPhone 16","iPhone 16 Plus","iPhone 16 Pro","iPhone 16 Pro Max",
+  "iPhone 17","iPhone 17 Air","iPhone 17 Pro","iPhone 17 Pro Max",
+  "iPhone 18 Pro","iPhone 18 Pro Max",
+  "Samsung Galaxy S21","Samsung Galaxy S21 Plus","Samsung Galaxy S21 Ultra",
+  "Samsung Galaxy S22","Samsung Galaxy S22 Plus","Samsung Galaxy S22 Ultra"
+];
+// Printify has no gift box for these two yet.
+const CARD_HOLDER_NO_GIFT_BOX = ["iPhone 18 Pro","iPhone 18 Pro Max"];
+const CARD_HOLDER_FINISHES = [
+  {name:'Glossy',pic:'art/options/phone-case-card-holder.jpg',gift:false},
+  {name:'Matte',pic:'art/options/phone-case-card-holder-matte.jpg',gift:false},
+  {name:'Glossy, gift boxed',pic:'art/options/phone-case-gift-box.jpg',gift:true},
+  {name:'Matte, gift boxed',pic:'art/options/phone-case-gift-box.jpg',gift:true}
+];
+let selectedPhoneCaseStyle=null;
+let selectedPhoneCaseFinish=null;
+function phoneCaseModelsFor(){ return selectedPhoneCaseStyle==='card-holder'?CARD_HOLDER_MODELS:PHONE_CASE_MODELS; }
+function phoneCaseNeedsFinish(){ return selectedPhoneCaseStyle==='card-holder'; }
+// Every mandatory pick made: style, model, and the finish where there is one.
+function phoneCaseComplete(){
+  return !!selectedPhoneCaseStyle&&!!selectedPhoneCaseModel&&(!phoneCaseNeedsFinish()||!!selectedPhoneCaseFinish);
+}
+function phoneCasePrice(){
+  const st=PHONE_CASE_STYLES[selectedPhoneCaseStyle];
+  if(!st)return null;
+  return (st.giftPrice&&/gift/.test(selectedPhoneCaseFinish||''))?st.giftPrice:st.price;
+}
+function pickPhoneCaseStyle(style){
+  const st=PHONE_CASE_STYLES[style];
+  if(!st)return;
+  const changed=selectedPhoneCaseStyle!==style;
+  selectedPhoneCaseStyle=style;
+  document.querySelectorAll('#phoneCaseStyleGrid .btn-select').forEach(b=>b.classList.toggle('selected',b.dataset.phoneStyle===style));
+  document.getElementById('phoneCaseStyleSelectedNote').textContent='✓ Confirmed: '+st.label+'.';
+  // A model picked for the other case may not exist on this one.
+  if(changed){
+    selectedPhoneCaseModel=null;pendingPhoneCaseModel=null;selectedPhoneCaseFinish=null;
+    const input=document.getElementById('phoneModelSearchInputGen');
+    if(input)input.value='';
+    document.getElementById('phoneModelResultsGen').innerHTML='';
+    document.getElementById('phoneModelSelectedNoteGen').textContent='';
+    hidePhoneConfirmationGen();
+  }
+  const pic=document.getElementById('phoneCaseModelPic');
+  if(pic)pic.src=st.pic;
+  const note=document.getElementById('phoneCaseModelPriceNote');
+  if(note)note.textContent=st.label+' · $'+st.price.toFixed(2)+(st.giftPrice?' ($'+st.giftPrice.toFixed(2)+' gift boxed)':'');
+  refreshPhoneCaseModelVisibility();
+  setOptionSpotlight('phone-model-focus');
+  smoothScrollToTarget('phoneCaseModelCard','center',()=>{
+    const input=document.getElementById('phoneModelSearchInputGen');
+    if(input)input.focus();
+  });
+}
+function renderPhoneFinishGrid(){
+  const grid=document.getElementById('phoneCaseFinishGrid');
+  if(!grid)return;
+  const st=PHONE_CASE_STYLES['card-holder'];
+  const noGift=CARD_HOLDER_NO_GIFT_BOX.includes(selectedPhoneCaseModel);
+  grid.innerHTML='';
+  CARD_HOLDER_FINISHES.filter(f=>!(f.gift&&noGift)).forEach(f=>{
+    const b=document.createElement('div');
+    b.className='btn-select'+(f.name===selectedPhoneCaseFinish?' selected':'');
+    b.dataset.phoneFinish=f.name;
+    b.style.padding='.5rem';
+    b.innerHTML='<img src="'+f.pic+'" alt="" style="width:100%;border-radius:6px;background:#fff;margin-bottom:6px"/>'+f.name+'<div class="note" style="margin-top:4px">$'+(f.gift?st.giftPrice:st.price).toFixed(2)+'</div>';
+    b.onclick=()=>pickPhoneCaseFinish(f.name);
+    grid.appendChild(b);
+  });
+}
+function pickPhoneCaseFinish(name){
+  selectedPhoneCaseFinish=name;
+  document.querySelectorAll('#phoneCaseFinishGrid .btn-select').forEach(b=>b.classList.toggle('selected',b.dataset.phoneFinish===name));
+  document.getElementById('phoneCaseFinishSelectedNote').textContent='✓ Confirmed: '+name+', $'+phoneCasePrice().toFixed(2)+'.';
+  const finalGuide=document.getElementById('finalGenerateGuidance');
+  if(finalGuide)finalGuide.classList.add('visible');
+  handOffToIdeaAfterProductChoice();
+}
+// Back, one panel at a time: finish -> model -> case -> the grid.
+function phoneModelBack(){
+  setOptionSpotlight('phone-style-focus');
+  smoothScrollToTarget('phoneCaseStyleCard','center');
+}
+function phoneFinishBack(){
+  setOptionSpotlight('phone-model-focus');
+  smoothScrollToTarget('phoneCaseModelCard','center');
+}
 let selectedPhoneCaseModel=null;
 let selectedTravelProductKey=null;
 let selectedTravelColor=null;
@@ -7940,7 +8061,7 @@ let mugColorFinishedPreGen=false;
 const PRODUCT_TILE_PRICES = {
   'mug':           { from: 14.95, ladder: true  },
   'water bottle':  { from: 24.95, ladder: true  },
-  'phone case':    { from: 19.95, ladder: false },
+  'phone case':    { from: 19.95, ladder: true  },
   'tote bag':      { from: 23.95, ladder: true  },
   'suitcase':      { from: 169.95, ladder: true },
   'puzzle':        { from: 38.95, ladder: true  },
@@ -12275,7 +12396,7 @@ function setupPhoneModelSearchGen(){
     const resultsEl=document.getElementById('phoneModelResultsGen');
     resultsEl.innerHTML='';
     if(q.length<2)return;
-    const matches=PHONE_CASE_MODELS.filter(m=>m.toLowerCase().includes(q));
+    const matches=phoneCaseModelsFor().filter(m=>m.toLowerCase().includes(q));
     if(matches.length===0){
       resultsEl.innerHTML='<div class="note" style="color:#e24b4a">We don\'t currently carry a case for that model.</div>';
       return;
@@ -12300,8 +12421,8 @@ function setupPhoneModelSearchGen(){
     // Prefer an exact (case-insensitive) match; otherwise fall back to the
     // first model whose name contains what was typed. Either way, Enter
     // resolves straight to a single model — no list to click through.
-    const exact=PHONE_CASE_MODELS.find(m=>m.toLowerCase()===q);
-    const match=exact||PHONE_CASE_MODELS.find(m=>m.toLowerCase().includes(q));
+    const exact=phoneCaseModelsFor().find(m=>m.toLowerCase()===q);
+    const match=exact||phoneCaseModelsFor().find(m=>m.toLowerCase().includes(q));
     if(!match){
       resultsEl.innerHTML='<div class="note" style="color:#e24b4a">We don\'t currently carry a case for that model.</div>';
       return;
@@ -12344,6 +12465,17 @@ function confirmPhoneModelGen(isCorrect){
   selectedPhoneCaseModel=pendingPhoneCaseModel;
   hidePhoneConfirmationGen();
   document.getElementById('phoneModelSelectedNoteGen').textContent='✓ Confirmed: '+selectedPhoneCaseModel+'.';
+  // The card holder still has its finish and gift box to settle; the Tough
+  // case is finished here.
+  if(phoneCaseNeedsFinish()){
+    selectedPhoneCaseFinish=null;
+    document.getElementById('phoneCaseFinishSelectedNote').textContent='';
+    renderPhoneFinishGrid();
+    refreshPhoneCaseModelVisibility();
+    setOptionSpotlight('phone-finish-focus');
+    smoothScrollToTarget('phoneCaseFinishCard','center');
+    return;
+  }
   handOffToIdeaAfterProductChoice();
 }
 
@@ -12403,8 +12535,15 @@ function handOffToIdeaAfterProductChoice(){
 function refreshPhoneCaseModelVisibility(){
   const card=document.getElementById('phoneCaseModelCard');
   if(!card)return;
-  card.style.display=(product==='phone case')?'block':'none';
-  if(product==='phone case')setupPhoneModelSearchGen();
+  const on=(product==='phone case');
+  // Case first; the model card opens once a case is picked, and the finish
+  // card once a card-holder model is.
+  const styleCard=document.getElementById('phoneCaseStyleCard');
+  if(styleCard)styleCard.style.display=on?'block':'none';
+  card.style.display=(on&&!!selectedPhoneCaseStyle)?'block':'none';
+  const finishCard=document.getElementById('phoneCaseFinishCard');
+  if(finishCard)finishCard.style.display=(on&&phoneCaseNeedsFinish()&&!!selectedPhoneCaseModel)?'block':'none';
+  if(on)setupPhoneModelSearchGen();
 }
 
 
@@ -13136,7 +13275,7 @@ function pick(el,type){
     if(productGuide)productGuide.classList.remove('visible');
     const finalGuide=document.getElementById('finalGenerateGuidance');
     if(finalGuide)finalGuide.classList.toggle('visible',
-      (product==='phone case'&&!!selectedPhoneCaseModel)||(product==='puzzle'&&!!selectedPuzzleSize)||(product==='wrapping paper'&&!!selectedWrapSize)||(product==='ornament'&&!!selectedOrnamentShape)||(product==='business cards'&&!!selectedBusinessCard)||(product==='car magnet'&&!!selectedCarMagnet)||(product==='tshirt'&&!!selectedTshirt&&!!selectedTshirtColor)||(product==='sticker sheet'&&!!selectedStickerSheet)||(product==='night light'&&!!selectedNightBuddy)||(product==='air freshener'&&!!selectedAirFreshener)||(product==='suitcase'&&!!selectedSuitcaseSize));
+      (product==='phone case'&&phoneCaseComplete())||(product==='puzzle'&&!!selectedPuzzleSize)||(product==='wrapping paper'&&!!selectedWrapSize)||(product==='ornament'&&!!selectedOrnamentShape)||(product==='business cards'&&!!selectedBusinessCard)||(product==='car magnet'&&!!selectedCarMagnet)||(product==='tshirt'&&!!selectedTshirt&&!!selectedTshirtColor)||(product==='sticker sheet'&&!!selectedStickerSheet)||(product==='night light'&&!!selectedNightBuddy)||(product==='air freshener'&&!!selectedAirFreshener)||(product==='suitcase'&&!!selectedSuitcaseSize));
     refreshApproveRowForMode();
     refreshMugSizeCardVisibility();
     refreshMugStyleCardVisibility();
@@ -13174,11 +13313,9 @@ function pick(el,type){
     suspendGuidedScrollsForGeneration();
 
     if(product==='phone case'){
-      setOptionSpotlight('phone-model-focus');
-      smoothScrollToTarget('phoneCaseModelCard','center',()=>{
-        const input=document.getElementById('phoneModelSearchInputGen');
-        if(input)input.focus();
-      });
+      // Which case first (Tough or Card Holder), then the model.
+      setOptionSpotlight('phone-style-focus');
+      smoothScrollToTarget('phoneCaseStyleCard','center');
     } else if(product==='coaster'){
       // Coasters gained a real decision when the round set was added, so they
       // no longer go straight to the description: shape first, per the rail
@@ -16956,7 +17093,7 @@ function ideaStepBack(){
     'car magnet':['carMagnetOptionCard','carMagnet-option-focus'],
     'business cards':['businessCardOptionCard','businessCards-option-focus'],
     'tote bag':['toteBagColorCard','tote-color-focus'],
-    'phone case':['phoneCaseModelCard','phone-model-focus'],
+    'phone case':phoneCaseNeedsFinish()?['phoneCaseFinishCard','phone-finish-focus']:['phoneCaseModelCard','phone-model-focus'],
     'suitcase':['suitcaseSizeCard','suitcase-size-focus'],
     'puzzle':['puzzleSizeCard','puzzle-size-focus'],
     'photo poster':['photoPosterOptionsCard','poster-options-focus']
@@ -20506,9 +20643,14 @@ async function generate(){
     setStatus('Please pick your Photo/Poster size and options above first.',true);
     return;
   }
-  if(product==='phone case' && !selectedPhoneCaseModel){
-    setStatus('Please select your phone model above first — we need it before generating so your art fits your exact case.',true);
-    document.getElementById('phoneCaseModelCard').scrollIntoView({behavior:'smooth',block:'center'});
+  if(product==='phone case' && !phoneCaseComplete()){
+    const missing=!selectedPhoneCaseStyle?'phoneCaseStyleCard':!selectedPhoneCaseModel?'phoneCaseModelCard':'phoneCaseFinishCard';
+    setStatus(!selectedPhoneCaseStyle
+      ? 'Please pick which phone case you want above first.'
+      : !selectedPhoneCaseModel
+        ? 'Please select your phone model above first — we need it before generating so your art fits your exact case.'
+        : 'Please pick your finish and gift box above first — each one is a different case.',true);
+    document.getElementById(missing).scrollIntoView({behavior:'smooth',block:'center'});
     return;
   }
   if(product==='tote bag' && (!selectedToteSize || !selectedToteColorGen)){
@@ -22528,8 +22670,11 @@ function buildMockupRequestBody(){
     const design = placements.left || placements.front || placements.right;
     const url = design ? (findDesignById(design)?.url ?? null) : null;
     if (product === 'phone case') {
-      if (!selectedPhoneCaseModel) return null;
-      return { productKey: 'phone-case-tough', sizeLabel: selectedPhoneCaseModel, image: url };
+      if (!phoneCaseComplete()) return null;
+      const body = { productKey: PHONE_CASE_STYLES[selectedPhoneCaseStyle].key, sizeLabel: selectedPhoneCaseModel, image: url };
+      // The card holder's finish and gift box are its "colour" in the catalog.
+      if (phoneCaseNeedsFinish()) body.colorName = selectedPhoneCaseFinish;
+      return body;
     }
     if (!selectedSuitcaseSize) return null;
     return { productKey: 'suitcase', sizeLabel: selectedSuitcaseSize, image: url };
@@ -23467,7 +23612,9 @@ async function goToOrder(){
     preselectedMugStyle: (product==='mug') ? selectedGenStyle : null,
     preselectedMugSize: (product==='mug') ? selectedGenSize : null,
     preselectedMugColor: (product==='mug') ? selectedGenColor : null,
-    preselectedPhoneModel: (product==='phone case') ? selectedPhoneCaseModel : null
+    preselectedPhoneModel: (product==='phone case') ? selectedPhoneCaseModel : null,
+    preselectedPhoneStyle: (product==='phone case') ? selectedPhoneCaseStyle : null,
+    preselectedPhoneFinish: (product==='phone case') ? selectedPhoneCaseFinish : null
   };
   localStorage.setItem('muggshotz_pending_order', JSON.stringify(orderData));
   window.location.href = 'order.html';
@@ -23999,6 +24146,11 @@ function resetEverythingFreshStart(){
 
   selectedPhoneCaseModel=null;
   pendingPhoneCaseModel=null;
+  selectedPhoneCaseStyle=null;
+  selectedPhoneCaseFinish=null;
+  document.querySelectorAll('#phoneCaseStyleGrid .btn-select').forEach(b=>b.classList.remove('selected'));
+  const phoneStyleNote=document.getElementById('phoneCaseStyleSelectedNote');
+  if(phoneStyleNote)phoneStyleNote.textContent='';
   const phoneInput=document.getElementById('phoneModelSearchInputGen');
   if(phoneInput)phoneInput.value='';
   const phoneResults=document.getElementById('phoneModelResultsGen');

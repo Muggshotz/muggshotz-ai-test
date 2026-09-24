@@ -1,4 +1,5 @@
 import { findGiftCertificate, findGiftCertificateBySession } from "../lib/gift-certificates.js";
+import { squareConfigured, giftCardFromGan, giftCardUsable } from "../lib/square.js";
 import { cardOffer } from "../lib/card-bonus.js";
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -194,6 +195,14 @@ async function handleRecentLookup(req, res) {
 // the Stripe session id only the buyer's browser was sent back with.
 async function handleGiftLookup(req, res) {
   try {
+    // A SQUARE GIFT CARD (24 Sep 2026): the plastic ones. Answered with what
+    // is on it, so the order page can show it and route the sale to Square.
+    if (req.query.squareGan) {
+      if (!squareConfigured()) return res.status(200).json({ valid: false, reason: "square_off" });
+      const card = await giftCardFromGan(req.query.squareGan);
+      if (!giftCardUsable(card)) return res.status(200).json({ valid: false });
+      return res.status(200).json({ valid: true, square: true, last4: card.last4, balanceCents: card.balanceCents });
+    }
     if (req.query.giftCode) {
       const c = await findGiftCertificate(req.query.giftCode);
       if (!c || c.voided_at || c.balance_cents <= 0) return res.status(200).json({ valid: false });
@@ -209,7 +218,7 @@ async function handleGiftLookup(req, res) {
 }
 
 export default async function handler(req, res) {
-  if (req.method === "GET" && (req.query.giftCode || req.query.giftSession)) return handleGiftLookup(req, res);
+  if (req.method === "GET" && (req.query.giftCode || req.query.giftSession || req.query.squareGan)) return handleGiftLookup(req, res);
   if (req.method !== "GET") {
     return res.status(405).json({ error: "Method not allowed" });
   }

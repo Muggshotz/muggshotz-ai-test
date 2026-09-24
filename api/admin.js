@@ -15,6 +15,8 @@
 // first, before the action-field routing kicks in for POST requests.
 import { buildTierCodes, TIER_SEQUENCE } from '../lib/flyer-tiers.js';
 import { readMaintenance, writeMaintenance } from '../lib/maintenance.js';
+import { readPaymentRail, writePaymentRail } from "../lib/payment-rail.js";
+import { squareConfigured, squareEnv } from "../lib/square.js";
 
 const SUPABASE_URL              = process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -781,6 +783,26 @@ async function handleMaintenanceRead(req, res) {
   return res.status(200).json(state);
 }
 
+// THE PAYMENT TRACK (24 Sep 2026): stripe or square, read by anyone (the
+// order page shows which company takes the card), set with the password.
+async function handlePaymentRailRead(req, res) {
+  res.setHeader('Cache-Control', 'no-store, max-age=0');
+  return res.status(200).json({ rail: await readPaymentRail(), squareConfigured: squareConfigured(), squareEnv: squareEnv() });
+}
+async function handlePaymentRailSet(req, res) {
+  const { password, rail } = req.body || {};
+  if (password !== ADMIN_PASSWORD) return res.status(403).json({ error: 'Unauthorized.' });
+  if (rail === 'square' && !squareConfigured()) return res.status(400).json({ error: 'Square is not configured on the server yet (SQUARE_ACCESS_TOKEN and SQUARE_LOCATION_ID).' });
+  try {
+    const set = await writePaymentRail(rail);
+    console.log(`Payment rail set to ${set}.`);
+    return res.status(200).json({ rail: set, squareConfigured: squareConfigured(), squareEnv: squareEnv() });
+  } catch (err) {
+    console.error('Payment rail set failed:', err.message);
+    return res.status(500).json({ error: err.message });
+  }
+}
+
 async function handleMaintenanceSet(req, res) {
   const { password, on, message, eta } = req.body || {};
   if (password !== ADMIN_PASSWORD) return res.status(403).json({ error: 'Unauthorized.' });
@@ -805,6 +827,9 @@ export default async function handler(req, res) {
 
   // Public, unauthenticated read of the kill switch. The order page and the
   // studio call this on load to decide whether to show the closed banner.
+  if (req.method === 'GET' && req.query?.action === 'payment-rail') {
+    return handlePaymentRailRead(req, res);
+  }
   if (req.method === 'GET' && req.query?.action === 'maintenance') {
     return handleMaintenanceRead(req, res);
   }
@@ -827,6 +852,7 @@ export default async function handler(req, res) {
   if (action === 'payout') return handlePayout(req, res);
   if (action === 'campaign-create') return handleCampaignCreate(req, res);
   if (action === 'maintenance-set') return handleMaintenanceSet(req, res);
+  if (action === 'payment-rail-set') return handlePaymentRailSet(req, res);
 
   return res.status(400).json({ error: `Unknown action "${action}".` });
 }

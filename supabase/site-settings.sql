@@ -19,3 +19,8 @@ create table if not exists site_settings (
 insert into site_settings (id, maintenance_mode, maintenance_message, maintenance_eta)
 values (1, false, '', '')
 on conflict (id) do nothing;
+
+-- THE PAYMENT TRACK (24 Sep 2026): which payment company carries a sale,
+-- 'stripe' (the default) or 'square'. Flipped from admin.html. An order paid
+-- with a Square gift card goes to Square whatever this says. Safe to re-run.
+alter table site_settings add column if not exists payment_rail text not null default 'stripe';

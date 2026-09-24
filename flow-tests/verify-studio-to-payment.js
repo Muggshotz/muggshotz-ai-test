@@ -124,10 +124,30 @@ const PRODUCTS = [
     // reaches payment, not which one it is.
     sizeLabel: (page) => page.evaluate(() => typeof selectedPhoneCaseModel !== 'undefined' ? selectedPhoneCaseModel : null),
     settle: async (page) => {
+      await page.click('#phoneCaseStyleGrid .btn-select[data-phone-style="tough"]');
+      await T(page, 900);
       await page.fill('#phoneModelSearchInputGen', 'iPhone 15 Pro Max');
       await page.press('#phoneModelSearchInputGen', 'Enter');
       await T(page, 900);
       await page.click('#phoneModelConfirmGen button:has-text("Yes")');
+      await T(page, 900);
+      await dismissAlerts(page);
+    } },
+  // The card holder (24 Sep 2026): its finish and gift box travel as the
+  // colour, and the gift-boxed one is the dearer case -- a colour that fell
+  // off on the hop would bill $21.95 for a $24.95 order.
+  { tile: 'phone case', slug: 'phone_case_card_holder', key: 'phone-case-card-holder',
+    sizeLabel: (page) => page.evaluate(() => typeof selectedPhoneCaseModel !== 'undefined' ? selectedPhoneCaseModel : null),
+    colour: () => 'Matte, gift boxed',
+    settle: async (page) => {
+      await page.click('#phoneCaseStyleGrid .btn-select[data-phone-style="card-holder"]');
+      await T(page, 900);
+      await page.fill('#phoneModelSearchInputGen', 'iPhone 15 Pro Max');
+      await page.press('#phoneModelSearchInputGen', 'Enter');
+      await T(page, 900);
+      await page.click('#phoneModelConfirmGen button:has-text("Yes")');
+      await T(page, 900);
+      await page.click('#phoneCaseFinishGrid .btn-select[data-phone-finish="Matte, gift boxed"]');
       await T(page, 900);
       await dismissAlerts(page);
     } },
@@ -432,6 +452,7 @@ scenarios.wraparoundMugCarriesTheStripAcrossTheHop = async (page, log, bodies) =
 // interchangeable with any other cup's, so the cup and its colour have to
 // ride the hop. The wiring suite pins this from a seeded record; this pins
 // it from the studio actually writing one.
+OPTS.travelCupKeepsItsIdentityAcrossTheHop = { chromiumArgs: GL };
 scenarios.travelCupKeepsItsIdentityAcrossTheHop = async (page, log, bodies) => {
   await pickProduct(page, 'water bottle');
   // The 40oz insulated cup: front/back split art, so it is the one whose
@@ -483,24 +504,26 @@ scenarios.travelCupKeepsItsIdentityAcrossTheHop = async (page, log, bodies) => {
   if (chosen.key !== 'travel-mug-40oz-insulated')
     return `FAIL: asked for the insulated 40oz, the studio settled on ${chosen.key}`;
 
-  await page.evaluate(() => {
-    const box = document.getElementById('ideaDesc');
-    if (box) box.closest('.snap-section')?.classList.remove('snap-collapsed');
-  });
-  await page.fill('#ideaDesc', 'a lighthouse in a storm');
-  await T(page, 600);
-  await dismissAlerts(page);
-  await page.evaluate(() => document.getElementById('generateBtn')?.scrollIntoView({ block: 'center' }));
-  await page.click('#generateBtn');
-  await waitApprove(page);
-  await reachCheckoutButton(page);
+  // The same walk the other five cups take (24 Sep 2026). This used to press
+  // Generate and then wait for the mockup's Return button straight after the
+  // fade page -- the flat products' route -- and timed out every run: a cup
+  // reaches its mockup through the panel screens, and the 3D fitter needs
+  // WebGL (the GL flags, set in OPTS below). Walk forward screen by screen,
+  // as the TRAVEL scenarios do, and name the screen if it stalls.
+  await describeAndGenerate(page, 'a lighthouse in a storm');
+  await waitLanded(page);
+  await T(page, 1200);
+  const walk = await walkForwardToMockup(page);
+  if (!walk.ok) return `FAIL: the insulated 40oz never reached its mockup — stuck at "${walk.route[walk.route.length - 1]}" via ${walk.route.join(' → ')}`;
+  await T(page, 1200);
+  await checkoutFromMockup(page);
   await payFrom(page);
 
   const b = bodies[bodies.length - 1];
   if (!b) {
     const st = await page.evaluate(() => ({
       url: location.pathname, status: document.getElementById('status')?.textContent || '' }));
-    return `FAIL: travel cup: no payment body. at=${st.url} status="${st.status.trim()}"`;
+    return `FAIL: travel cup: no payment body. at=${st.url} status="${st.status.trim()}" (route ${walk.route.join(' → ')})`;
   }
   if (b.productKey !== chosen.key)
     return `FAIL: the cup changed across the hop — studio had ${chosen.key}, payment says ${b.productKey}`;

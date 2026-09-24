@@ -190,12 +190,16 @@ scenarios.submitSendsTheWholeOrder = async (page) => {
 // no "as per regulation" language anywhere. ----
 scenarios.feesRideEveryCharge = async (page) => {
   const session = fs.readFileSync(path.join(ROOT, 'api', 'create-checkout-session.js'), 'utf8');
+  // The rate and the 5c live in lib/payment-rail.js since the Square track
+  // (24 Sep 2026): one fee formula, the rate per track.
+  const rail = fs.readFileSync(path.join(ROOT, 'lib', 'payment-rail.js'), 'utf8');
   const order = fs.readFileSync(path.join(ROOT, 'order.html'), 'utf8');
   const bad = [];
   if (!/function feeLineCents/.test(session)) bad.push('no feeLineCents helper in the session builder');
-  if (/1 - STRIPE_FEE_RATE/.test(session)) bad.push('the gross-up is back -- the charged rate would contradict the stated rate');
-  if (!/HANDLING_FEE_CENTS = 5/.test(session)) bad.push('the 5c handling fee is missing');
-  if ((session.match(/name: "Card Processing & Handling"/g) || []).length < 2) bad.push('the explained fee line is not on both product orders and token packs');
+  if (/1 - STRIPE_FEE_RATE/.test(session + rail)) bad.push('the gross-up is back -- the charged rate would contradict the stated rate');
+  if (!/HANDLING_FEE_CENTS = 5/.test(session + rail)) bad.push('the 5c handling fee is missing');
+  // Every checkout kind puts the explained fee line on: six builders call feeLine().
+  if ((session.match(/feeLine\(/g) || []).length < 6) bad.push('the explained fee line is not on every checkout (product orders, baskets, token packs, reservations, certificates)');
   if (!/fees_cents/.test(session)) bad.push('fee never recorded in session metadata');
   if (!/summaryFees/.test(order)) bad.push('order summary has no fee row');
   if (!/feesExplainerNote/.test(order)) bad.push('the fee has no explanation under the summary');

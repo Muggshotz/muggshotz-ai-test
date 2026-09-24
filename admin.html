@@ -91,6 +91,18 @@ select{width:100%;background:#0d0d0d;border:1px solid #444;border-radius:8px;pad
 </div>
 
 <div class="card">
+  <div class="card-title">🚂 Payment track</div>
+  <div class="note" style="margin-top:0;margin-bottom:.75rem">
+    Which payment company takes the money. Stripe is the everyday track (the cheaper rate for the
+    customer); Square is the other, fully wired, for when Stripe has trouble. An order paid with a
+    Square gift card goes through Square whatever this says.
+  </div>
+  <div id="railStatus" class="result" style="display:block;margin-bottom:1rem">Checking…</div>
+  <button class="btn-full" id="railStripeBtn" onclick="setPaymentRail('stripe')" style="background:#635bff">Switch to Stripe</button>
+  <button class="btn-full" id="railSquareBtn" onclick="setPaymentRail('square')" style="background:#006aff">Switch to Square</button>
+</div>
+
+<div class="card">
   <h1>MuggsHotz Admin</h1>
   <div class="sub">Token grant &amp; deduct tool</div>
 
@@ -407,6 +419,46 @@ async function postMaintenance(on, includeText, busyMsg){
 }
 
 loadMaintenance();
+
+// ---------------------------------------------------------------------------
+// PAYMENT TRACK (24 Sep 2026): stripe or square. Read without the password,
+// set with it, like the kill switch.
+// ---------------------------------------------------------------------------
+async function loadPaymentRail(){
+  const el = document.getElementById('railStatus');
+  try{
+    const resp = await fetch('/api/admin?action=payment-rail', { cache: 'no-store' });
+    renderPaymentRail(await resp.json());
+  }catch(err){
+    el.className = 'result error';
+    el.textContent = 'Could not read the payment track: ' + err.message;
+  }
+}
+function renderPaymentRail(d){
+  const el = document.getElementById('railStatus');
+  const sq = d.squareConfigured ? ('Square is set up (' + (d.squareEnv || 'sandbox') + ' keys).') : 'Square is not set up on the server yet.';
+  el.className = 'result success';
+  el.textContent = (d.rail === 'square' ? '🟦 SQUARE is taking the money. ' : '🟪 STRIPE is taking the money. ') + sq;
+  document.getElementById('railStripeBtn').disabled = d.rail !== 'square';
+  document.getElementById('railSquareBtn').disabled = d.rail === 'square' || !d.squareConfigured;
+}
+async function setPaymentRail(rail){
+  if (!confirm('Move every checkout onto ' + rail.toUpperCase() + '? It takes effect on the next sale.')) return;
+  const el = document.getElementById('railStatus');
+  el.className = 'result'; el.textContent = 'Switching…';
+  try{
+    const resp = await fetch('/api/admin', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'payment-rail-set', password: enteredPassword, rail }) });
+    const d = await resp.json();
+    if (resp.status === 403) { relockWithError('Wrong password.'); return; }
+    if (!resp.ok) throw new Error(d.error || 'Could not switch.');
+    renderPaymentRail(d);
+  }catch(err){
+    el.className = 'result error';
+    el.textContent = 'Could not switch: ' + err.message;
+  }
+}
+loadPaymentRail();
 
 async function lookupBalance(){
   const deviceId = document.getElementById('deviceId').value.trim();

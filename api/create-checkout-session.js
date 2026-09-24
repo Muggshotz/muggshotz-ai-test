@@ -4,7 +4,10 @@ import { getProduct } from "../lib/products-catalog.js";
 import { calculateShippingCharge, calculateBasketShipping } from "../lib/printify-shipping.js";
 import { readMaintenance } from "../lib/maintenance.js";
 import { TOKEN_PACKS } from "../lib/token-packs.js";
-import { GIFT_AMOUNTS_CENTS, STRIPE_MIN_CHARGE_CENTS, findGiftCertificate, normalizeGiftCode, giftLedgerReady } from "../lib/gift-certificates.js";
+import { GIFT_AMOUNTS_CENTS, findGiftCertificate, normalizeGiftCode, giftLedgerReady } from "../lib/gift-certificates.js";
+import { chooseRail, feeLineCentsFor, feeLineDescriptionFor, minChargeCentsFor, newCheckoutId, storeCheckoutRecord, readCheckoutRecord, updateCheckoutRecord } from "../lib/payment-rail.js";
+import { squareEnv, squarePublicConfig, squareSdkUrl, buildSquareOrder, orderTotalCents, createPaymentLink, createOrder, createPayment, payOrder, cancelPayment, giftCardFromGan, giftCardUsable } from "../lib/square.js";
+import { settleSquareCheckout } from "./stripe-webhook.js";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
@@ -91,12 +94,131 @@ function calculateUpsellCharge(placements) {
 // surcharges are restricted in some states; a uniform fee line is not.
 // Tax's share of Stripe's cut is not recouped (tax is computed by Stripe
 // after this session is built); the 5c absorbs most of that residue too.
-const STRIPE_FEE_RATE = 0.029;
-const STRIPE_FEE_FIXED_CENTS = 30;
-const HANDLING_FEE_CENTS = 5;
-function feeLineCents(subtotalCents) {
-  if (!subtotalCents || subtotalCents <= 0) return 0;
-  return Math.ceil(STRIPE_FEE_RATE * subtotalCents + STRIPE_FEE_FIXED_CENTS + HANDLING_FEE_CENTS);
+// TWO TRACKS (24 Sep 2026): the rate is the track's -- Stripe 2.9% + 30c,
+// Square 3.3% + 30c -- and the line says which (lib/payment-rail.js).
+function feeLineCents(subtotalCents, rail) { return feeLineCentsFor(subtotalCents, rail); }
+function feeLine(cents, rail) {
+  return { price_data: { currency: "usd", product_data: { name: "Card Processing & Handling", description: feeLineDescriptionFor(rail) }, unit_amount: cents }, quantity: 1 };
+}
+
+// THE HAND-OFF TO THE PAYMENT COMPANY. Every checkout builds one spec -- the
+// shape of a Stripe Checkout Session, which the six builders below always
+// built -- and this sends it down the chosen track:
+//   stripe: a Checkout Session, as ever (a certificate is a one-off coupon);
+//   square: Square's hosted page, the twin of the above; or, when the order
+//           pays with a Square gift card, an order of our own charged on
+//           order.html: the gift card's balance now, by its id, and the rest
+//           on a bank card tokenised by Square's form (type square_complete).
+// The answer is what the page does next: { url } to go there, or
+// { squarePay } to draw the card form for what is left.
+async function createCheckout(rail, spec, extras = {}) {
+  const discounts = (extras.discounts || []).filter((d) => d.cents > 0);
+  if (rail !== "square") {
+    let stripeDiscounts;
+    if (discounts.length) {
+      const coupon = await stripe.coupons.create({
+        amount_off: discounts.reduce((a, d) => a + d.cents, 0), currency: "usd", duration: "once", max_redemptions: 1,
+        name: discounts.map((d) => d.name).join(" + ").slice(0, 40)
+      });
+      stripeDiscounts = [{ coupon: coupon.id }];
+    }
+    const session = await stripe.checkout.sessions.create({ ...spec, ...(stripeDiscounts ? { discounts: stripeDiscounts } : {}) });
+    return { url: session.url, rail: "stripe" };
+  }
+  return createSquareCheckout(spec, { ...extras, discounts });
+}
+
+async function createSquareCheckout(spec, extras) {
+  const checkoutId = newCheckoutId();
+  const orderType = spec.metadata?.order_type || "token_purchase";
+  const lineItems = spec.line_items.map((li) => ({
+    name: li.price_data.product_data.name,
+    description: li.price_data.product_data.description || "",
+    cents: Math.round(li.price_data.unit_amount * (li.quantity || 1))
+  }));
+  const successUrl = String(spec.success_url).replace("{CHECKOUT_SESSION_ID}", checkoutId);
+  const customerEmail = spec.customer_email || spec.metadata?.email || spec.metadata?.buyer_email || extras.buyerEmail || null;
+  const record = {
+    rail: "square", env: squareEnv(), orderType, metadata: spec.metadata || {}, customerEmail, successUrl,
+    lineItems, discounts: extras.discounts || [], createdAt: new Date().toISOString()
+  };
+  await storeCheckoutRecord(checkoutId, record);
+  const order = buildSquareOrder({ checkoutId, orderType, lineItems, discounts: extras.discounts || [] });
+
+  if (!extras.squareGift) {
+    const link = await createPaymentLink({ order, redirectUrl: successUrl, buyerEmail: customerEmail, description: lineItems[0]?.name });
+    await updateCheckoutRecord(checkoutId, { squareOrderId: link.orderId, paymentLinkId: link.linkId });
+    return { url: link.url, rail: "square" };
+  }
+
+  // The gift card pays first, by its id, for as much as it holds.
+  const total = orderTotalCents(lineItems, extras.discounts || []);
+  const { orderId } = await createOrder(order);
+  let giftPayment = null;
+  if (extras.squareGift.cents > 0 && total > 0) {
+    giftPayment = await createPayment({
+      sourceId: extras.squareGift.card.id, orderId, amountCents: total, partial: true,
+      buyerEmail: customerEmail, note: `Muggshotz ${orderType}`, referenceId: checkoutId
+    });
+  }
+  const giftPaidCents = giftPayment ? Math.min(total, giftPayment.approvedCents || giftPayment.amountCents || 0) : 0;
+  const remainderCents = Math.max(0, total - giftPaidCents);
+  await updateCheckoutRecord(checkoutId, {
+    squareOrderId: orderId, giftPaymentId: giftPayment?.paymentId || null, giftCardLast4: extras.squareGift.card.last4,
+    giftPaidCents, remainderCents, totalCents: total
+  });
+  if (remainderCents === 0) {
+    // The card covered it all: close the order and fulfil it now.
+    await updateCheckoutRecord(checkoutId, { settledAt: new Date().toISOString(), settledBy: "page" });
+    try { await payOrder(orderId, giftPayment ? [giftPayment.paymentId] : []); }
+    catch (err) { await updateCheckoutRecord(checkoutId, { settledAt: null, settledBy: null }); throw err; }
+    await settleSquareCheckout(checkoutId, { alreadyMarked: true });
+    return { url: successUrl, rail: "square", paid: true };
+  }
+  return {
+    rail: "square",
+    squarePay: { checkoutId, orderId, totalCents: total, giftPaidCents, remainderCents, giftCardLast4: extras.squareGift.card.last4, successUrl, sdkUrl: squareSdkUrl(), ...squarePublicConfig() }
+  };
+}
+
+// THE REST ON A BANK CARD (the on-page Square path). order.html tokenised
+// the card with Square's form and sends the token; the payment joins the
+// gift card's on the order, PayOrder closes it, and the order is fulfilled.
+async function handleSquareComplete(req, res) {
+  const { checkoutId, sourceId } = req.body || {};
+  if (!checkoutId || !sourceId) return res.status(400).json({ error: "Missing checkout or card token." });
+  const record = await readCheckoutRecord(checkoutId);
+  if (!record || record.rail !== "square" || !record.squareOrderId) return res.status(404).json({ error: "That checkout wasn't found. Please start again." });
+  if (record.settledAt) return res.status(200).json({ url: record.successUrl, paid: true });
+  const remainder = Number(record.remainderCents || 0);
+  if (remainder <= 0) return res.status(400).json({ error: "Nothing is left to pay on this order." });
+  const cardPayment = await createPayment({
+    sourceId, orderId: record.squareOrderId, amountCents: remainder,
+    buyerEmail: record.customerEmail, note: `Muggshotz ${record.orderType}`, referenceId: checkoutId
+  });
+  const paymentIds = [record.giftPaymentId, cardPayment.paymentId].filter(Boolean);
+  await updateCheckoutRecord(checkoutId, { cardPaymentId: cardPayment.paymentId, settledAt: new Date().toISOString(), settledBy: "page" });
+  try { await payOrder(record.squareOrderId, paymentIds); }
+  catch (err) {
+    await updateCheckoutRecord(checkoutId, { settledAt: null, settledBy: null, cardPaymentId: null });
+    await cancelPayment(cardPayment.paymentId);
+    throw err;
+  }
+  await settleSquareCheckout(checkoutId, { alreadyMarked: true });
+  return res.status(200).json({ url: record.successUrl, paid: true });
+}
+
+// A SQUARE GIFT CARD ON THE ORDER (Alyx: "when dealing with gift cards
+// specifically, we would naturally switch automatically to the Square
+// track"). Looked up by its number; what it holds comes off before the card
+// fee is worked out, since Square charges no processing on a gift card.
+async function squareGiftFor(body, owedCents) {
+  if (!body.squareGan) return null;
+  let card = null;
+  try { card = await giftCardFromGan(body.squareGan); }
+  catch (err) { console.error("Square gift card lookup failed:", err.message); throw orderError("We couldn't check that gift card just now. Please try again in a moment.", 503); }
+  if (!giftCardUsable(card)) throw orderError("That gift card isn't active or has no balance left.");
+  return { card, cents: Math.max(0, Math.min(card.balanceCents, owedCents)) };
 }
 
 function resolvePrice(product, sizeLabel, colorName, posterChoice) {
@@ -120,6 +242,11 @@ function resolvePrice(product, sizeLabel, colorName, posterChoice) {
   }
   const sizeEntry = product.sizes?.[sizeLabel];
   if (!sizeEntry) throw new Error(`Unknown size "${sizeLabel}" for this product.`);
+  // A colour with its own price outranks the size price. The card-holder
+  // phone case is billed this way: its gift box is a "colour" of the same
+  // model at $3 more (lib/products-catalog.js, phone-case-card-holder).
+  const colorEntry = colorName && sizeEntry.colors ? sizeEntry.colors.find((c) => c.name === colorName) : null;
+  if (typeof colorEntry?.price === "number") return colorEntry.price;
   return sizeEntry.price;
 }
 
@@ -143,21 +270,22 @@ async function handleReservation(req, res) {
   const { email, deviceId } = req.body || {};
   if (!deviceId) return res.status(400).json({ error: "Missing device ID." });
   const origin = req.headers.origin || process.env.PUBLIC_SITE_URL || "https://muggshotz-ai-test.vercel.app";
-  const session = await stripe.checkout.sessions.create({
+  const rail = await chooseRail(req.body);
+  const spec = {
     mode: "payment",
     // Priced inline, like every other product. It used to name a saved Stripe
     // price (STRIPE_PRICE_ID) that does not exist in the live account --
     // "No such price", checked 22 Sep 2026 -- so every reservation failed.
     line_items: [
       { price_data: { currency: "usd", product_data: { name: "$5 Preview Reservation", description: "Tokens now, and $5 off your product at checkout." }, unit_amount: RESERVATION_CENTS }, quantity: 1 },
-      { price_data: { currency: "usd", product_data: { name: "Card Processing & Handling", description: "Payment processing at our processor's standard rate (2.9% + 30¢) plus a 5¢ handling fee" }, unit_amount: feeLineCents(RESERVATION_CENTS) }, quantity: 1 }
+      feeLine(feeLineCents(RESERVATION_CENTS, rail), rail)
     ],
     customer_email: email || undefined,
     metadata: { order_type: "reservation", device_id: deviceId },
     success_url: `${origin}/needles-studio.html?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
     cancel_url:  `${origin}/needles-studio.html?checkout=cancelled`
-  });
-  return res.status(200).json({ url: session.url });
+  };
+  return res.status(200).json(await createCheckout(rail, spec));
 }
 
 // ONE ITEM, CHECKED AND PRICED (23 Sep 2026). What handleProductOrder always
@@ -243,6 +371,9 @@ async function handleProductOrder(req, res) {
 
   const resolvedPrintMode = item.printMode;
   const giftCharge = giftMessage?.trim() ? GIFT_MESSAGE_PRICE : 0;
+  let rail;
+  try { rail = await chooseRail(req.body); }
+  catch (err) { return res.status(err.status || 400).json({ error: err.message }); }
 
   // one-time 10% email discount, checked fresh at checkout creation time.
   const cleanReferralCode = (referralCode || "").trim().toUpperCase() || null;
@@ -287,8 +418,15 @@ async function handleProductOrder(req, res) {
     catch (err) { console.error("Gift certificate lookup failed:", err.message); return res.status(503).json({ error: "We couldn't check that gift certificate just now. Please try again in a moment." }); }
     if (!cert || cert.voided_at || cert.balance_cents <= 0)
       return res.status(400).json({ error: "That gift certificate code isn't valid or has no balance left." });
-    giftCents = Math.max(0, Math.min(cert.balance_cents, productCents + shippingCents - STRIPE_MIN_CHARGE_CENTS));
+    giftCents = Math.max(0, Math.min(cert.balance_cents, productCents + shippingCents - minChargeCentsFor(rail)));
   }
+  // A Square gift card, when one was given: it pays before the card fee is
+  // worked out, and there is no minimum left for a bank card -- it can pay
+  // the whole order and no bank card is asked for.
+  let squareGift = null;
+  try { squareGift = await squareGiftFor(req.body, productCents + shippingCents - giftCents); }
+  catch (err) { return res.status(err.status || 400).json({ error: err.message }); }
+  const squareGiftCents = squareGift ? squareGift.cents : 0;
 
   const origin = req.headers.origin || "https://muggshotz-ai-test.vercel.app";
   const discountSuffix = emailDiscountEligible ? " (10% first-order discount applied)" : "";
@@ -303,21 +441,9 @@ async function handleProductOrder(req, res) {
       quantity: 1
     });
   }
-  const feeCents = feeLineCents(productCents + shippingCents - giftCents);
-  if (feeCents > 0) {
-    line_items.push({
-      price_data: { currency: "usd", product_data: { name: "Card Processing & Handling", description: "Payment processing at our processor's standard rate (2.9% + 30¢) plus a 5¢ handling fee" }, unit_amount: feeCents },
-      quantity: 1
-    });
-  }
-  let discounts;
-  if (giftCents > 0) {
-    const coupon = await stripe.coupons.create({
-      amount_off: giftCents, currency: "usd", duration: "once", max_redemptions: 1,
-      name: `Gift certificate ${giftCode}`
-    });
-    discounts = [{ coupon: coupon.id }];
-  }
+  const feeCents = feeLineCents(productCents + shippingCents - giftCents - squareGiftCents, rail);
+  if (feeCents > 0) line_items.push(feeLine(feeCents, rail));
+  const discounts = giftCents > 0 ? [{ name: `Gift certificate ${giftCode}`, cents: giftCents }] : [];
 
   let imageUrlA = "", imageUrlB = "", imageUrlC = "";
   if (product.layoutType === "three-slot-wrap") {
@@ -367,12 +493,11 @@ async function handleProductOrder(req, res) {
     console.error("placementAdjust too long for Stripe metadata; the order will print without adjustments:", placementAdjustText.length);
   }
 
-  const session = await stripe.checkout.sessions.create({
+  const spec = {
     mode: "payment",
     payment_method_types: ["card"],
     automatic_tax: { enabled: true },
     line_items,
-    ...(discounts ? { discounts } : {}),
     metadata: {
       order_type: "mug_order",
       gift_code: giftCode && giftCents > 0 ? giftCode : "",
@@ -411,13 +536,15 @@ async function handleProductOrder(req, res) {
       referral_code: cleanReferralCode || "",
       email_discount_eligible: emailDiscountEligible ? "true" : "false",
       base_price: String(basePrice),
-      fees_cents: String(feeCents)
+      fees_cents: String(feeCents),
+      square_gift_last4: squareGift ? squareGift.card.last4 : "",
+      square_gift_cents: String(squareGiftCents)
     },
     success_url: `${origin}/order.html?checkout=success`,
     cancel_url: `${origin}/order.html?checkout=cancelled`
-  });
+  };
 
-  return res.status(200).json({ url: session.url });
+  return res.status(200).json(await createCheckout(rail, spec, { discounts, squareGift }));
 }
 
 // THE BASKET (Alyx, 23 Sep 2026: "Begin build a basket"). Several products,
@@ -449,6 +576,9 @@ async function handleBasketOrder(req, res) {
       !shippingAddress?.region || !shippingAddress?.zip)
     return res.status(400).json({ error: "Missing required shipping information." });
   const shipCountry = (shippingAddress.country || "US").toUpperCase();
+  let rail;
+  try { rail = await chooseRail(req.body); }
+  catch (err) { return res.status(err.status || 400).json({ error: err.message }); }
 
   let resolved;
   try {
@@ -486,8 +616,12 @@ async function handleBasketOrder(req, res) {
     catch (err) { console.error("Gift certificate lookup failed:", err.message); return res.status(503).json({ error: "We couldn't check that gift certificate just now. Please try again in a moment." }); }
     if (!cert || cert.voided_at || cert.balance_cents <= 0)
       return res.status(400).json({ error: "That gift certificate code isn't valid or has no balance left." });
-    giftCents = Math.max(0, Math.min(cert.balance_cents, productCents + shippingCents - STRIPE_MIN_CHARGE_CENTS));
+    giftCents = Math.max(0, Math.min(cert.balance_cents, productCents + shippingCents - minChargeCentsFor(rail)));
   }
+  let squareGift = null;
+  try { squareGift = await squareGiftFor(req.body, productCents + shippingCents - giftCents); }
+  catch (err) { return res.status(err.status || 400).json({ error: err.message }); }
+  const squareGiftCents = squareGift ? squareGift.cents : 0;
 
   const discountSuffix = emailDiscountEligible ? " (10% first-order discount applied)" : "";
   const line_items = resolved.map((r, i) => ({
@@ -498,19 +632,9 @@ async function handleBasketOrder(req, res) {
   }));
   if (giftChargeCents > 0) line_items.push({ price_data: { currency: "usd", product_data: { name: "Gift message" }, unit_amount: giftChargeCents }, quantity: 1 });
   if (shippingCents > 0) line_items.push({ price_data: { currency: "usd", product_data: { name: "Shipping & Handling" }, unit_amount: shippingCents }, quantity: 1 });
-  const feeCents = feeLineCents(productCents + shippingCents - giftCents);
-  if (feeCents > 0) line_items.push({
-    price_data: { currency: "usd", product_data: { name: "Card Processing & Handling", description: "Payment processing at our processor's standard rate (2.9% + 30¢) plus a 5¢ handling fee" }, unit_amount: feeCents },
-    quantity: 1
-  });
-  let discounts;
-  if (giftCents > 0) {
-    const coupon = await stripe.coupons.create({
-      amount_off: giftCents, currency: "usd", duration: "once", max_redemptions: 1,
-      name: `Gift certificate ${giftCode}`
-    });
-    discounts = [{ coupon: coupon.id }];
-  }
+  const feeCents = feeLineCents(productCents + shippingCents - giftCents - squareGiftCents, rail);
+  if (feeCents > 0) line_items.push(feeLine(feeCents, rail));
+  const discounts = giftCents > 0 ? [{ name: `Gift certificate ${giftCode}`, cents: giftCents }] : [];
 
   const basketId = randomUUID();
   const stored = resolved.map((r) => ({
@@ -531,12 +655,11 @@ async function handleBasketOrder(req, res) {
   const netProfit = resolved.reduce((a, r) => a + (typeof r.product.estimatedProfit === "number" ? r.product.estimatedProfit : 0), 0);
 
   const origin = req.headers.origin || "https://muggshotz-ai-test.vercel.app";
-  const session = await stripe.checkout.sessions.create({
+  const spec = {
     mode: "payment",
     payment_method_types: ["card"],
     automatic_tax: { enabled: true },
     line_items,
-    ...(discounts ? { discounts } : {}),
     metadata: {
       order_type: "basket_order",
       basket_id: basketId,
@@ -560,12 +683,14 @@ async function handleBasketOrder(req, res) {
       referral_code: cleanReferralCode || "",
       email_discount_eligible: emailDiscountEligible ? "true" : "false",
       net_profit: String(Math.round(netProfit * 100) / 100),
-      fees_cents: String(feeCents)
+      fees_cents: String(feeCents),
+      square_gift_last4: squareGift ? squareGift.card.last4 : "",
+      square_gift_cents: String(squareGiftCents)
     },
     success_url: `${origin}/order.html?checkout=success&basket=1`,
     cancel_url: `${origin}/order.html?checkout=cancelled`
-  });
-  return res.status(200).json({ url: session.url });
+  };
+  return res.status(200).json(await createCheckout(rail, spec, { discounts, squareGift }));
 }
 
 async function handleTokenPurchase(req, res) {
@@ -578,8 +703,9 @@ async function handleTokenPurchase(req, res) {
 
   // Fees on token packs too -- proportionally these hurt the most
   // uncovered (30c fixed on a $5 pack is where Stripe's bite peaks).
-  const packFeeCents = feeLineCents(pack.amountCents);
-  const session = await stripe.checkout.sessions.create({
+  const rail = await chooseRail(req.body);
+  const packFeeCents = feeLineCents(pack.amountCents, rail);
+  const spec = {
     mode: "payment",
     line_items: [{
       price_data: {
@@ -589,22 +715,15 @@ async function handleTokenPurchase(req, res) {
       },
       quantity: 1
     },
-    {
-      price_data: {
-        currency: "usd",
-        product_data: { name: "Card Processing & Handling", description: "Payment processing at our processor's standard rate (2.9% + 30¢) plus a 5¢ handling fee" },
-        unit_amount: packFeeCents
-      },
-      quantity: 1
-    }],
-    metadata: { device_id: deviceId, pack_id: packId, fees_cents: String(packFeeCents) },
+    feeLine(packFeeCents, rail)],
+    metadata: { order_type: "token_purchase", device_id: deviceId, pack_id: packId, fees_cents: String(packFeeCents) },
     // Back to the studio, where the tokens are spent. These used to send the
     // buyer to index.html, the old generator.
     success_url: `${origin}/needles-studio.html?checkout=success`,
     cancel_url: `${origin}/needles-studio.html?checkout=cancelled`
-  });
+  };
 
-  return res.status(200).json({ url: session.url });
+  return res.status(200).json(await createCheckout(rail, spec));
 }
 
 // NEW (July 2026, flyer tier system): a Beta buying into the next tier
@@ -669,8 +788,9 @@ async function handleTierUpgrade(req, res) {
     if (!buyIn) return res.status(500).json({ error: `No buy-in price configured for ${nextTier}.` });
 
     const origin = req.headers.origin || "https://muggshotz-ai-test.vercel.app";
+    const rail = await chooseRail(req.body);
 
-    const session = await stripe.checkout.sessions.create({
+    const spec = {
       mode: "payment",
       line_items: [{
         price_data: {
@@ -689,9 +809,9 @@ async function handleTierUpgrade(req, res) {
       },
       success_url: `${origin}/flyer-balance.html?upgrade=success`,
       cancel_url: `${origin}/flyer-balance.html?upgrade=cancelled`
-    });
+    };
 
-    return res.status(200).json({ url: session.url });
+    return res.status(200).json(await createCheckout(rail, spec));
   } catch (err) {
     console.error("Tier upgrade checkout failed:", err.message);
     return res.status(500).json({ error: err.message });
@@ -710,14 +830,15 @@ async function handleGiftCertificatePurchase(req, res) {
   if (!emailOk(recipientEmail)) return res.status(400).json({ error: "Please enter the recipient's email address." });
   if (!(await giftLedgerReady())) return res.status(503).json({ error: "Gift certificates aren't on sale just yet. Please check back soon." });
   const origin = req.headers.origin || "https://muggshotz-ai-test.vercel.app";
-  const feeCents = feeLineCents(amt);
-  const session = await stripe.checkout.sessions.create({
+  const rail = await chooseRail(req.body);
+  const feeCents = feeLineCents(amt, rail);
+  const spec = {
     mode: "payment",
     payment_method_types: ["card"],
     customer_email: String(buyerEmail).trim(),
     line_items: [
       { price_data: { currency: "usd", product_data: { name: `Muggshotz Gift Certificate — $${amt / 100}`, description: "Store credit, emailed to the recipient. Never expires." }, unit_amount: amt }, quantity: 1 },
-      { price_data: { currency: "usd", product_data: { name: "Card Processing & Handling", description: "Payment processing at our processor's standard rate (2.9% + 30¢) plus a 5¢ handling fee" }, unit_amount: feeCents }, quantity: 1 }
+      feeLine(feeCents, rail)
     ],
     metadata: {
       order_type: "gift_certificate",
@@ -730,8 +851,8 @@ async function handleGiftCertificatePurchase(req, res) {
     },
     success_url: `${origin}/gift.html?session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${origin}/gift.html?checkout=cancelled`
-  });
-  return res.status(200).json({ url: session.url });
+  };
+  return res.status(200).json(await createCheckout(rail, spec));
 }
 
 export default async function handler(req, res) {
@@ -779,6 +900,9 @@ export default async function handler(req, res) {
     }
     if (type === "gift_certificate") {
       return await handleGiftCertificatePurchase(req, res);
+    }
+    if (type === "square_complete") {
+      return await handleSquareComplete(req, res);
     }
     return res.status(400).json({ error: `Unknown checkout type "${type}".` });
   } catch (error) {

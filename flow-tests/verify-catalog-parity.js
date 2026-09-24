@@ -118,6 +118,28 @@ const firstSize = (p) => Object.values(p.sizes || {})[0] || {};
     return bad.length ? `FAIL: ${bad.join('; ')}` : 'PASS: the six flat prices match the catalog';
   };
 
+  // ---- The card-holder phone case (24 Sep 2026): both pages carry the
+  // model list and the finish names by hand; the server resolves the
+  // variant by the colour NAME, so a name either page invents is a refusal
+  // in the webhook, after payment. ----
+  scenarios.cardHolderPhoneCase = () => {
+    const ch = cat['phone-case-card-holder'];
+    if (!ch) return 'FAIL: phone-case-card-holder is not in the catalog';
+    const catModels = Object.keys(ch.sizes).sort();
+    const catFinishes = [...new Set(Object.values(ch.sizes).flatMap((s) => s.colors.map((c) => c.name)))].sort();
+    const bad = [];
+    for (const [file, from] of [['order.html', src], ['needles-studio.html', studio]]) {
+      const models = extract('CARD_HOLDER_MODELS', from).slice().sort();
+      if (JSON.stringify(models) !== JSON.stringify(catModels)) bad.push(`${file} models differ from the catalog: ${models.filter((m) => !catModels.includes(m)).concat(catModels.filter((m) => !models.includes(m))).join(', ')}`);
+      const finishes = extract('CARD_HOLDER_FINISHES', from).map((f) => f.name).sort();
+      if (JSON.stringify(finishes) !== JSON.stringify(catFinishes)) bad.push(`${file} finishes ${finishes} vs catalog ${catFinishes}`);
+      const noGift = extract('CARD_HOLDER_NO_GIFT_BOX', from).slice().sort();
+      const catNoGift = Object.entries(ch.sizes).filter(([, s]) => !s.colors.some((c) => /gift/.test(c.name))).map(([k]) => k).sort();
+      if (JSON.stringify(noGift) !== JSON.stringify(catNoGift)) bad.push(`${file} says no gift box for ${noGift}, the catalog says ${catNoGift}`);
+    }
+    return bad.length ? `FAIL: ${bad.join('; ')}` : `PASS: card holder: ${catModels.length} models and ${catFinishes.length} finishes agree on both pages`;
+  };
+
   // ---- The studio's own copies. ----
   const S = {
     GEN: extract('GEN_MUG_STYLES', studio),

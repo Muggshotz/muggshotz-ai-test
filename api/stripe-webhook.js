@@ -4,6 +4,8 @@ import { TOKEN_PACKS } from "../lib/token-packs.js";
 import { TIER_SEQUENCE, TIER_RULES, TIER_UPGRADE_LABEL, buildTierCodes } from "../lib/flyer-tiers.js";
 import { placeProductOrder, placeBasketOrder } from "./create-printify-order.js";
 import { getProduct } from "../lib/products-catalog.js";
+import { verifyWebhookSignature, squareWebhookUrl, retrieveOrder } from "../lib/square.js";
+import { readCheckoutRecord, updateCheckoutRecord, sessionFromRecord } from "../lib/payment-rail.js";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
@@ -488,14 +490,102 @@ async function creditTokensForPayment(customer, stripeEmail, packTokens = null) 
   return tokenRows[0];
 }
 
+// A PAID CHECKOUT, SETTLED (24 Sep 2026: shared by both tracks). `session` is
+// a Stripe Checkout Session, or the same shape built from a Square checkout
+// record (lib/payment-rail.js sessionFromRecord): id, metadata, the buyer's
+// email. Everything below reads only those.
+export async function settleCheckoutSession(session) {
+  if (session.metadata?.order_type === "gift_certificate") {
+    await handleGiftCertificatePayment(session);
+  } else if (session.metadata?.order_type === "reservation") {
+    await handleTokenPayment(session);
+    await mintReservationCredit(session);
+  } else if (session.metadata?.order_type === "mug_order" || session.metadata?.order_type === "basket_order") {
+    // The certificate is spent first and on its own: a spend failure is
+    // logged, never allowed to stop a paid order from being placed.
+    if (session.metadata?.gift_code && Number(session.metadata?.gift_cents) > 0) {
+      try {
+        const r = await spendGiftCertificate(session.metadata.gift_code, Number(session.metadata.gift_cents), session.id);
+        if (r.short) console.error("CRITICAL: gift certificate was short at spend time", { code: session.metadata.gift_code, session: session.id, short: r.short });
+      } catch (err) {
+        console.error("CRITICAL: gift certificate spend failed; the order is still placed", { code: session.metadata.gift_code, session: session.id, error: err.message });
+      }
+    }
+    if (session.metadata?.order_type === "basket_order") await handleBasketOrderPayment(session);
+    else await handleMugOrderPayment(session);
+  } else if (session.metadata?.order_type === "tier_upgrade") {
+    await handleTierUpgradePayment(session);
+  } else {
+    await handleTokenPayment(session);
+  }
+}
+
+// A SQUARE CHECKOUT, SETTLED ONCE. The record is marked before anything is
+// fulfilled, so the page path (which pays and settles in one request) and
+// the webhook (which hears about the same payment moments later) cannot
+// both place the order. Sandbox payments are recorded and ignored, exactly
+// as Stripe's test-mode events are: nothing is printed, credited or emailed
+// until the keys are production keys.
+export async function settleSquareCheckout(checkoutId, { alreadyMarked = false } = {}) {
+  const record = await readCheckoutRecord(checkoutId);
+  if (!record) { console.error("Square checkout record missing at settle:", checkoutId); return { settled: false, reason: "no_record" }; }
+  if (record.settledAt && !alreadyMarked) return { settled: false, reason: "already_settled" };
+  if (record.fulfilledAt) return { settled: false, reason: "already_fulfilled" };
+  if (!record.settledAt) await updateCheckoutRecord(checkoutId, { settledAt: new Date().toISOString(), settledBy: "webhook" });
+  if (record.env !== "production") {
+    console.warn("Ignored a SANDBOX Square payment — no order placed, no tokens or commission credited.", { checkoutId, orderType: record.orderType });
+    await updateCheckoutRecord(checkoutId, { fulfilledAt: new Date().toISOString(), ignored: "sandbox" });
+    return { settled: false, reason: "sandbox" };
+  }
+  await settleCheckoutSession(sessionFromRecord(checkoutId, record));
+  await updateCheckoutRecord(checkoutId, { fulfilledAt: new Date().toISOString() });
+  return { settled: true };
+}
+
+// SQUARE'S NOTIFICATION (24 Sep 2026). Reaches this file through the
+// vercel.json rewrite of /api/square-webhook (api/ has no free slot), and
+// is told apart from Stripe's by its signature header. A completed payment
+// names its order; the order's reference_id is our checkout record.
+async function handleSquareWebhook(req, res, rawBody) {
+  const signature = req.headers["x-square-hmacsha256-signature"];
+  if (!verifyWebhookSignature({ rawBody, signature, notificationUrl: squareWebhookUrl() })) {
+    console.error("Square webhook signature verification failed.");
+    return res.status(400).json({ error: "Square webhook signature verification failed." });
+  }
+  let event;
+  try { event = JSON.parse(rawBody.toString("utf8")); }
+  catch (err) { return res.status(400).json({ error: "Square webhook body is not JSON." }); }
+  try {
+    const payment = event?.data?.object?.payment;
+    if (/^payment\./.test(event?.type || "") && payment?.status === "COMPLETED" && payment.order_id) {
+      const order = await retrieveOrder(payment.order_id);
+      const checkoutId = order?.reference_id || order?.metadata?.checkout_id || null;
+      if (!checkoutId) {
+        console.warn("Square payment completed on an order with no checkout id (not ours?):", payment.order_id);
+        return res.status(200).json({ received: true, ignored: "no_checkout_id" });
+      }
+      const r = await settleSquareCheckout(checkoutId);
+      return res.status(200).json({ received: true, ...r });
+    }
+    return res.status(200).json({ received: true, ignored: event?.type || "unknown" });
+  } catch (error) {
+    console.error("Error handling Square webhook event:", error.message);
+    return res.status(500).json({ error: error.message });
+  }
+}
+
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
+  const rawBody = await readRawBody(req);
+  if (req.headers["x-square-hmacsha256-signature"] && !req.headers["stripe-signature"]) {
+    return handleSquareWebhook(req, res, rawBody);
+  }
+
   let event;
   try {
-    const rawBody = await readRawBody(req);
     const signature = req.headers["stripe-signature"];
     event = stripe.webhooks.constructEvent(
       rawBody,
@@ -519,29 +609,7 @@ export default async function handler(req, res) {
         return res.status(200).json({ received: true, ignored: "test_mode" });
       }
 
-      if (session.metadata?.order_type === "gift_certificate") {
-        await handleGiftCertificatePayment(session);
-      } else if (session.metadata?.order_type === "reservation") {
-        await handleTokenPayment(session);
-        await mintReservationCredit(session);
-      } else if (session.metadata?.order_type === "mug_order" || session.metadata?.order_type === "basket_order") {
-        // The certificate is spent first and on its own: a spend failure is
-        // logged, never allowed to stop a paid order from being placed.
-        if (session.metadata?.gift_code && Number(session.metadata?.gift_cents) > 0) {
-          try {
-            const r = await spendGiftCertificate(session.metadata.gift_code, Number(session.metadata.gift_cents), session.id);
-            if (r.short) console.error("CRITICAL: gift certificate was short at spend time", { code: session.metadata.gift_code, session: session.id, short: r.short });
-          } catch (err) {
-            console.error("CRITICAL: gift certificate spend failed; the order is still placed", { code: session.metadata.gift_code, session: session.id, error: err.message });
-          }
-        }
-        if (session.metadata?.order_type === "basket_order") await handleBasketOrderPayment(session);
-        else await handleMugOrderPayment(session);
-      } else if (session.metadata?.order_type === "tier_upgrade") {
-        await handleTierUpgradePayment(session);
-      } else {
-        await handleTokenPayment(session);
-      }
+      await settleCheckoutSession(session);
     }
 
     return res.status(200).json({ received: true });

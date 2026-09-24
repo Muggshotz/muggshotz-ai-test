@@ -385,12 +385,22 @@ body.studio-driven #orderHeadlineCard{display:block}
 </div>
 
 <div class="card" id="phoneCaseCard" style="display:none">
-<div class="card-title">Phone Model</div>
-<div class="note" style="margin-top:0;margin-bottom:.75rem">We carry cases for iPhone 11-17 and Galaxy S21-S26. Search your model below to check.</div>
+<div class="card-title">Phone Case</div>
+<div class="note" style="margin-top:0;margin-bottom:.75rem">Which case, then your phone model. The card holder has a slot in the back for a credit card or your ID.</div>
+<div class="grid2" id="phoneCaseStyleGrid">
+<div class="btn-select" data-phone-style="tough" style="padding:.5rem" onclick="pickPhoneCaseStyle('tough')"><img src="art/options/phone-case.jpg" alt="" style="width:100%;border-radius:6px;background:#fff;margin-bottom:6px"/>Tough Case<div class="note" style="margin-top:4px">$19.95</div></div>
+<div class="btn-select" data-phone-style="card-holder" style="padding:.5rem" onclick="pickPhoneCaseStyle('card-holder')"><img src="art/options/phone-case-card-holder.jpg" alt="" style="width:100%;border-radius:6px;background:#fff;margin-bottom:6px"/>With Card Holder<div class="note" style="margin-top:4px">$21.95</div></div>
+</div>
+<div class="note" id="phoneModelListNote" style="margin-top:.75rem;margin-bottom:.5rem"></div>
 <input type="text" id="phoneModelSearchInput" placeholder="e.g. iPhone 15 Pro, Galaxy S24"
   style="width:100%;padding:.6rem;border-radius:8px;border:.5px solid #333;background:#0d0d0d;color:#fff;box-sizing:border-box"/>
 <div id="phoneModelResults" style="margin-top:.6rem"></div>
 <div class="note" id="phoneModelSelectedNote" style="margin-top:.6rem"></div>
+<div id="phoneCaseFinishWrap" style="display:none;margin-top:.75rem">
+<div class="note" style="margin-bottom:.5rem">Finish and gift box — each one is a different case we order by name.</div>
+<div class="grid2" id="phoneCaseFinishGrid"></div>
+<div class="note" id="phoneCaseFinishSelectedNote" style="margin-top:.6rem"></div>
+</div>
 <div class="note" id="phoneMockupBtn" style="text-align:center;margin-top:1rem;color:var(--accent-soft);font-weight:600">🔍 Click Image To Enlarge</div>
 <div class="note" id="phoneMockupNote" style="margin-top:.5rem;text-align:center;display:none"></div>
 <img id="phoneMockupImg" style="display:none;width:100%;border-radius:12px;border:1px solid var(--accent);margin-top:.75rem"/>
@@ -513,8 +523,9 @@ body.studio-driven #orderHeadlineCard{display:block}
 </div>
 
 <div class="card" id="giftCertCard">
-<div class="card-title">💵 Have a gift certificate?</div>
-<div style="display:flex;gap:8px"><input id="giftCertInput" placeholder="MUG-XXXX-XXXX" style="flex:1;background:#0d0d0d;border:1px solid #444;border-radius:8px;padding:10px 12px;color:#fff;font-size:15px;text-transform:uppercase"><button type="button" class="btn-select" style="flex:0 0 auto;padding:.6rem 1rem" onclick="applyGiftCert()">Apply</button></div>
+<div class="card-title">💵 Have a gift certificate or gift card?</div>
+<div class="note" style="margin-top:0;margin-bottom:.5rem">A Muggshotz certificate code (MUG-XXXX-XXXX), or the number on a Muggshotz gift card.</div>
+<div style="display:flex;gap:8px"><input id="giftCertInput" placeholder="MUG-XXXX-XXXX or card number" style="flex:1;background:#0d0d0d;border:1px solid #444;border-radius:8px;padding:10px 12px;color:#fff;font-size:15px;text-transform:uppercase"><button type="button" class="btn-select" style="flex:0 0 auto;padding:.6rem 1rem" onclick="applyGiftCert()">Apply</button></div>
 <div class="note" id="giftCertNote" style="margin-top:.5rem"></div>
 </div>
 <div class="card" id="giftMessageCard">
@@ -547,7 +558,7 @@ body.studio-driven #orderHeadlineCard{display:block}
 <div class="summary-row" id="summaryFeesRow"><span>Card Processing &amp; Handling</span><span id="summaryFees"></span></div>
 <div class="summary-row" id="summaryGiftCertRow" style="display:none;color:#5fbf5f"><span>Gift certificate</span><span id="summaryGiftCert"></span></div>
 <div class="summary-row total"><span>Total</span><span id="summaryTotal">$21.90</span></div>
-<div class="note" id="feesExplainerNote" style="margin-top:.4rem;margin-bottom:0;font-size:10.5px;opacity:.75">Our payment processor charges 2.9% + 30&cent; per transaction, which we pass through at cost, plus a 5&cent; handling fee.</div>
+<div class="note" id="feesExplainerNote" style="margin-top:.4rem;margin-bottom:0;font-size:10.5px;opacity:.75">Our payment processor charges <span id="feesRateText">2.9%</span> + 30&cent; per transaction, which we pass through at cost, plus a 5&cent; handling fee.</div>
 <div class="note" id="summaryDiscountNote" style="display:none;color:#5fbf5f;margin-top:.5rem">Your first-order 10% discount will be applied automatically at checkout if your email qualifies.</div>
 </div>
 
@@ -887,7 +898,7 @@ async function refreshBasketShipping(entries){
 function currentProductKey(){
   if (isTravelMug())    return selectedTravelProductKey;
   if (isSuitcase())     return 'suitcase';
-  if (isPhoneCase())    return 'phone-case-tough';
+  if (isPhoneCase())    return (PHONE_CASE_STYLES[selectedPhoneStyle] || PHONE_CASE_STYLES.tough).key;
   if (isToteBag())      return 'tote-bag';
   if (isPuzzle())       return 'photo-puzzle';
   if (isWrap())         return 'wrapping-paper';
@@ -1535,9 +1546,114 @@ const PHONE_CASE_MODELS = [
 // Kept in step with lib/products-catalog.js by hand -- this page carries its
 // own copy of every price. See COASTER_PRICE below for why that matters.
 const PHONE_CASE_PRICE = 19.95;
+// THE CARD-HOLDER CASE (Alyx, 24 Sep 2026). Same shape as the studio's
+// PHONE_CASE_STYLES: the Tough case above, and the Phone Case With Card
+// Holder with its own model list, its finish (glossy/matte) and an optional
+// gift box -- each a Printify variant of its own, and the "colour" the
+// server keys the price and variant by. Prices track lib/products-catalog.js.
+const CARD_HOLDER_PRICE = 21.95;
+const CARD_HOLDER_GIFT_PRICE = 24.95;
+const PHONE_CASE_STYLES = {
+  'tough':       { label: 'Tough Case', key: 'phone-case-tough', price: PHONE_CASE_PRICE },
+  'card-holder': { label: 'Phone Case With Card Holder', key: 'phone-case-card-holder', price: CARD_HOLDER_PRICE, giftPrice: CARD_HOLDER_GIFT_PRICE }
+};
+const CARD_HOLDER_MODELS = [
+  "iPhone 13","iPhone 13 Mini","iPhone 13 Pro","iPhone 13 Pro Max",
+  "iPhone 14","iPhone 14 Plus","iPhone 14 Pro","iPhone 14 Pro Max",
+  "iPhone 15","iPhone 15 Plus","iPhone 15 Pro","iPhone 15 Pro Max",
+  "iPhone 16","iPhone 16 Plus","iPhone 16 Pro","iPhone 16 Pro Max",
+  "iPhone 17","iPhone 17 Air","iPhone 17 Pro","iPhone 17 Pro Max",
+  "iPhone 18 Pro","iPhone 18 Pro Max",
+  "Samsung Galaxy S21","Samsung Galaxy S21 Plus","Samsung Galaxy S21 Ultra",
+  "Samsung Galaxy S22","Samsung Galaxy S22 Plus","Samsung Galaxy S22 Ultra"
+];
+const CARD_HOLDER_NO_GIFT_BOX = ["iPhone 18 Pro", "iPhone 18 Pro Max"];
+const CARD_HOLDER_FINISHES = [
+  { name: 'Glossy', pic: 'art/options/phone-case-card-holder.jpg', gift: false },
+  { name: 'Matte', pic: 'art/options/phone-case-card-holder-matte.jpg', gift: false },
+  { name: 'Glossy, gift boxed', pic: 'art/options/phone-case-gift-box.jpg', gift: true },
+  { name: 'Matte, gift boxed', pic: 'art/options/phone-case-gift-box.jpg', gift: true }
+];
 let selectedPhoneModel = null;
+let selectedPhoneStyle = null;
+let selectedPhoneFinish = null;
+if (pendingOrder?.preselectedPhoneStyle && PHONE_CASE_STYLES[pendingOrder.preselectedPhoneStyle]) {
+  selectedPhoneStyle = pendingOrder.preselectedPhoneStyle;
+} else if (pendingOrder?.preselectedPhoneModel) {
+  selectedPhoneStyle = 'tough';  // an order saved before the card holder existed
+}
 if (pendingOrder?.preselectedPhoneModel) {
   selectedPhoneModel = pendingOrder.preselectedPhoneModel;
+}
+if (pendingOrder?.preselectedPhoneFinish) {
+  selectedPhoneFinish = pendingOrder.preselectedPhoneFinish;
+}
+function phoneModelsFor(){ return selectedPhoneStyle === 'card-holder' ? CARD_HOLDER_MODELS : PHONE_CASE_MODELS; }
+function phoneCaseNeedsFinish(){ return selectedPhoneStyle === 'card-holder'; }
+function phoneCaseComplete(){
+  return !!selectedPhoneStyle && !!selectedPhoneModel && (!phoneCaseNeedsFinish() || !!selectedPhoneFinish);
+}
+function phoneCasePrice(){
+  const st = PHONE_CASE_STYLES[selectedPhoneStyle];
+  if (!st) return 0;
+  return (st.giftPrice && /gift/.test(selectedPhoneFinish || '')) ? st.giftPrice : st.price;
+}
+function phoneCaseLabel(){
+  const st = PHONE_CASE_STYLES[selectedPhoneStyle];
+  return (st ? st.label : 'Phone Case') + ', ' + selectedPhoneModel + (selectedPhoneFinish ? ', ' + selectedPhoneFinish : '');
+}
+function pickPhoneCaseStyle(style){
+  if (!PHONE_CASE_STYLES[style]) return;
+  if (selectedPhoneStyle !== style) {
+    // A model picked for the other case may not exist on this one.
+    selectedPhoneModel = null;
+    selectedPhoneFinish = null;
+    document.getElementById('phoneModelSearchInput').value = '';
+    document.getElementById('phoneModelResults').innerHTML = '';
+    document.getElementById('phoneModelSelectedNote').textContent = '';
+    const img = document.getElementById('phoneMockupImg'); if (img) img.style.display = 'none';
+  }
+  selectedPhoneStyle = style;
+  renderPhoneCaseChoices();
+  hideMockupSideCta();
+  updateSummary();
+}
+function pickPhoneFinish(name){
+  selectedPhoneFinish = name;
+  renderPhoneCaseChoices();
+  document.getElementById('phoneCaseFinishSelectedNote').textContent = '✓ ' + name + ' — $' + phoneCasePrice().toFixed(2) + ' + shipping.';
+  const img = document.getElementById('phoneMockupImg'); if (img) img.style.display = 'none';
+  hideMockupSideCta();
+  updateSummary();
+  maybeAutoFetchPhoneMockup(true);
+}
+// The style tiles, the model note, and the card holder's finish grid.
+function renderPhoneCaseChoices(){
+  document.querySelectorAll('#phoneCaseStyleGrid .btn-select').forEach(b => b.classList.toggle('selected', b.dataset.phoneStyle === selectedPhoneStyle));
+  const listNote = document.getElementById('phoneModelListNote');
+  if (listNote) listNote.textContent = !selectedPhoneStyle
+    ? 'Pick a case above, then search your model.'
+    : selectedPhoneStyle === 'card-holder'
+      ? 'The card holder fits iPhone 13-18 Pro Max and Galaxy S21-S22. Search your model below to check.'
+      : 'The Tough case fits iPhone 11-17 and Galaxy S21-S26. Search your model below to check.';
+  const wrap = document.getElementById('phoneCaseFinishWrap');
+  const grid = document.getElementById('phoneCaseFinishGrid');
+  if (!wrap || !grid) return;
+  const show = phoneCaseNeedsFinish() && !!selectedPhoneModel;
+  wrap.style.display = show ? 'block' : 'none';
+  if (!show) return;
+  const st = PHONE_CASE_STYLES['card-holder'];
+  const noGift = CARD_HOLDER_NO_GIFT_BOX.includes(selectedPhoneModel);
+  grid.innerHTML = '';
+  CARD_HOLDER_FINISHES.filter(f => !(f.gift && noGift)).forEach(f => {
+    const b = document.createElement('div');
+    b.className = 'btn-select' + (f.name === selectedPhoneFinish ? ' selected' : '');
+    b.dataset.phoneFinish = f.name;
+    b.style.padding = '.5rem';
+    b.innerHTML = '<img src="' + f.pic + '" alt="" style="width:100%;border-radius:6px;background:#fff;margin-bottom:6px"/>' + f.name + '<div class="note" style="margin-top:4px">$' + (f.gift ? st.giftPrice : st.price).toFixed(2) + '</div>';
+    b.onclick = () => pickPhoneFinish(f.name);
+    grid.appendChild(b);
+  });
 }
 let phoneMockupAutoFetchInFlight = false;
 
@@ -1617,9 +1733,13 @@ function setupPhoneModelSearch(){
     const resultsEl = document.getElementById('phoneModelResults');
     resultsEl.innerHTML = '';
     if (q.length < 2) return;
-    const matches = PHONE_CASE_MODELS.filter(m => m.toLowerCase().includes(q));
+    if (!selectedPhoneStyle) {
+      resultsEl.innerHTML = '<div class="note" style="color:#e24b4a">Pick which case you want above first.</div>';
+      return;
+    }
+    const matches = phoneModelsFor().filter(m => m.toLowerCase().includes(q));
     if (matches.length === 0) {
-      resultsEl.innerHTML = '<div class="note" style="color:#e24b4a">We don\'t currently carry a case for that model.</div>';
+      resultsEl.innerHTML = '<div class="note" style="color:#e24b4a">We don\'t currently carry that case for that model.</div>';
       return;
     }
     matches.slice(0, 8).forEach(model => {
@@ -1637,7 +1757,15 @@ function pickPhoneModel(model){
   selectedPhoneModel = model;
   document.getElementById('phoneModelSearchInput').value = model;
   document.getElementById('phoneModelResults').innerHTML = '';
-  document.getElementById('phoneModelSelectedNote').textContent = '✓ Case selected for ' + model + ' — $' + PHONE_CASE_PRICE.toFixed(2) + ' + shipping.';
+  // The card holder's finish comes next; its price is settled there.
+  if (phoneCaseNeedsFinish()) {
+    selectedPhoneFinish = null;
+    document.getElementById('phoneCaseFinishSelectedNote').textContent = '';
+    document.getElementById('phoneModelSelectedNote').textContent = '✓ ' + model + '. Now pick the finish and gift box below.';
+  } else {
+    document.getElementById('phoneModelSelectedNote').textContent = '✓ Case selected for ' + model + ' — $' + phoneCasePrice().toFixed(2) + ' + shipping.';
+  }
+  renderPhoneCaseChoices();
   const img=document.getElementById('phoneMockupImg'); if(img) img.style.display='none';
   hideMockupSideCta();
   updateSummary();
@@ -1645,11 +1773,11 @@ function pickPhoneModel(model){
 }
 
 function maybeAutoFetchPhoneMockup(force){
-  if (!selectedPhoneModel || phoneMockupAutoFetchInFlight) return;
+  if (!phoneCaseComplete() || phoneMockupAutoFetchInFlight) return;
   const imgEl = document.getElementById('phoneMockupImg');
   if (!force && imgEl && imgEl.style.display === 'block') return;
   phoneMockupAutoFetchInFlight = true;
-  fetchSingleImageMockup('phone-case-tough', selectedPhoneModel, null, 'phoneMockupBtn', 'phoneMockupNote', 'phoneMockupImg')
+  fetchSingleImageMockup(currentProductKey(), selectedPhoneModel, phoneCaseNeedsFinish() ? selectedPhoneFinish : null, 'phoneMockupBtn', 'phoneMockupNote', 'phoneMockupImg')
     .finally(() => { phoneMockupAutoFetchInFlight = false; });
 }
 
@@ -1764,15 +1892,42 @@ async function applyGiftCert(){
   const raw = document.getElementById('giftCertInput').value.trim();
   if (!raw) { appliedGiftCert = null; note.textContent = ''; updateSummary(); return; }
   note.textContent = 'Checking…';
+  // A SQUARE GIFT CARD (24 Sep 2026): the plastic one. All digits, 13 or
+  // more, is a card number; the certificate codes are letters and digits.
+  const isCardNumber = /^[\d\s-]+$/.test(raw) && raw.replace(/\D/g, '').length >= 13;
   try {
-    const r = await fetch('/api/get-balance?giftCode=' + encodeURIComponent(raw));
+    const r = await fetch('/api/get-balance?' + (isCardNumber ? 'squareGan=' : 'giftCode=') + encodeURIComponent(raw));
     const d = await r.json();
-    if (!r.ok || !d.valid) { appliedGiftCert = null; note.textContent = 'That code isn\'t valid or has no balance left.'; updateSummary(); return; }
-    appliedGiftCert = { code: d.code, balanceCents: d.balanceCents };
-    note.textContent = '✓ ' + d.code + ' has $' + (d.balanceCents/100).toFixed(2) + ' on it. It comes off your total below; anything left stays on the code.';
+    if (!r.ok || !d.valid) {
+      appliedGiftCert = null;
+      note.textContent = d && d.reason === 'square_off' ? 'Gift cards can\'t be taken just now. Please pay another way.' : 'That ' + (isCardNumber ? 'card' : 'code') + ' isn\'t valid or has no balance left.';
+      updateSummary(); return;
+    }
+    if (d.square) {
+      appliedGiftCert = { square: true, gan: raw.replace(/\D/g, ''), last4: d.last4, balanceCents: d.balanceCents };
+      note.textContent = '✓ Gift card ending ' + d.last4 + ' has $' + (d.balanceCents/100).toFixed(2) + ' on it. It pays first; anything it doesn\'t cover goes on a card, and anything left stays on the gift card.';
+    } else {
+      appliedGiftCert = { code: d.code, balanceCents: d.balanceCents };
+      note.textContent = '✓ ' + d.code + ' has $' + (d.balanceCents/100).toFixed(2) + ' on it. It comes off your total below; anything left stays on the code.';
+    }
   } catch (e) { appliedGiftCert = null; note.textContent = 'Could not check the code just now. Try again in a moment.'; }
   updateSummary();
 }
+
+// WHICH TRACK TAKES THE CARD (24 Sep 2026): Stripe unless the admin switch
+// says Square, and Square whenever a Square gift card is applied. The fee
+// row shows that track's rate, the same figure the server bills.
+let paymentRail = 'stripe';
+(async () => {
+  try {
+    const r = await fetch('/api/admin?action=payment-rail', { cache: 'no-store' });
+    const d = await r.json();
+    if (d && (d.rail === 'square' || d.rail === 'stripe')) { paymentRail = d.rail; updateSummary(); }
+  } catch (e) {}
+})();
+function railForThisOrder(){ return (appliedGiftCert && appliedGiftCert.square) ? 'square' : paymentRail; }
+function feeRateFor(rail){ return rail === 'square' ? 0.033 : 0.029; }
+function minChargeFor(rail){ return rail === 'square' ? 100 : 50; }
 
 // THE RESERVATION'S $5 (22 Sep 2026): the studio saves the credit code on
 // this device when a reservation is paid; it is applied here by itself, and
@@ -2552,8 +2707,11 @@ function updateSummary(){
     basePrice = SUITCASE_SIZES[selectedSuitcaseSize].price;
     styleSizeLabel = 'Suitcase, ' + selectedSuitcaseSize + ' (Black)';
   } else if (isPhoneCase()) {
-    basePrice = selectedPhoneModel ? PHONE_CASE_PRICE : 0;
-    styleSizeLabel = selectedPhoneModel ? ('Phone Case, ' + selectedPhoneModel) : 'Search and pick your phone model above';
+    basePrice = phoneCaseComplete() ? phoneCasePrice() : 0;
+    styleSizeLabel = phoneCaseComplete() ? phoneCaseLabel()
+      : !selectedPhoneStyle ? 'Pick your phone case above'
+      : !selectedPhoneModel ? 'Search and pick your phone model above'
+      : 'Pick your finish and gift box above';
   } else if (isToteBag()) {
     basePrice = TOTE_BAG_SIZES[selectedToteSize].price;
     styleSizeLabel = 'Tote Bag, ' + selectedToteSize + (selectedToteColor ? ' - ' + selectedToteColor : '');
@@ -2670,22 +2828,29 @@ function updateSummary(){
   // matches the server to the extent shipping does (this row uses the
   // flat shipping estimate exactly like the row above it).
   const subtotalCents = Math.round((basePrice + upsellCharge + basketSubtotal + giftCharge + shipping) * 100);
-  const fees = subtotalCents > 0 ? Math.ceil(0.029 * subtotalCents + 30 + 5) / 100 : 0;
+  const rail = railForThisOrder();
+  const rate = feeRateFor(rail);
+  const fees = subtotalCents > 0 ? Math.ceil(rate * subtotalCents + 30 + 5) / 100 : 0;
   // Gift certificate: the same arithmetic as the server -- the balance comes
-  // off product and shipping, the card fee is worked on what is left, and at
-  // least 50 cents stays on the card (Stripe's minimum).
+  // off product and shipping, the card fee is worked on what is left, and the
+  // track's minimum stays on the card (50c Stripe, $1 Square). A Square gift
+  // card has no minimum: it can pay the whole order and no card is asked for.
   let giftCertOff = 0, feesAfter = fees;
   if (appliedGiftCert) {
-    giftCertOff = Math.max(0, Math.min(appliedGiftCert.balanceCents, subtotalCents - 50)) / 100;
+    const floor = appliedGiftCert.square ? 0 : minChargeFor(rail);
+    giftCertOff = Math.max(0, Math.min(appliedGiftCert.balanceCents, subtotalCents - floor)) / 100;
     const left = subtotalCents - Math.round(giftCertOff * 100);
-    feesAfter = left > 0 ? Math.ceil(0.029 * left + 30 + 5) / 100 : 0;
+    feesAfter = left > 0 ? Math.ceil(rate * left + 30 + 5) / 100 : 0;
   }
   const total = basePrice + upsellCharge + basketSubtotal + giftCharge + shipping + feesAfter - giftCertOff;
   const gcRow = document.getElementById('summaryGiftCertRow');
   if (gcRow) {
     gcRow.style.display = giftCertOff > 0 ? 'flex' : 'none';
+    gcRow.firstElementChild.textContent = appliedGiftCert && appliedGiftCert.square ? 'Gift card ending ' + appliedGiftCert.last4 : 'Gift certificate';
     document.getElementById('summaryGiftCert').textContent = '−$' + giftCertOff.toFixed(2);
   }
+  const rateText = document.getElementById('feesRateText');
+  if (rateText) rateText.textContent = (rate * 100).toFixed(1) + '%';
 
   document.getElementById('summaryStyleSize').textContent = styleSizeLabel;
   document.getElementById('summaryBase').textContent = '$' + basePrice.toFixed(2);
@@ -2840,8 +3005,10 @@ function buildOrderItemBody(fullName, shippingAddress){
     };
 
   } else if (isPhoneCase()) {
-    if (!selectedPhoneModel) {
-      setStatus('Please search and select your phone model above.', true);
+    if (!phoneCaseComplete()) {
+      setStatus(!selectedPhoneStyle ? 'Please pick which phone case you want above.'
+        : !selectedPhoneModel ? 'Please search and select your phone model above.'
+        : 'Please pick your finish and gift box above.', true);
       return null;
     }
     const left = pendingOrder?.placements?.left || null;
@@ -2857,8 +3024,10 @@ function buildOrderItemBody(fullName, shippingAddress){
     body = {
       type: 'mug_order',
       deviceId,
-      productKey: 'phone-case-tough',
+      productKey: currentProductKey(),
       sizeLabel: selectedPhoneModel,
+      // The card holder's finish and gift box are its "colour" server-side.
+      colorName: phoneCaseNeedsFinish() ? selectedPhoneFinish : null,
       image,
       customerName: fullName,
       giftMessage: giftMessageEnabled ? document.getElementById('giftMessageText').value.trim() : null,
@@ -3277,7 +3446,10 @@ async function submitOrder(){
   setStatus('Setting up your secure checkout...');
 
   try {
-    if (appliedGiftCert && body && (body.type === 'mug_order' || body.type === 'basket_order')) body.giftCode = appliedGiftCert.code;
+    if (appliedGiftCert && body && (body.type === 'mug_order' || body.type === 'basket_order')) {
+      if (appliedGiftCert.square) body.squareGan = appliedGiftCert.gan;
+      else body.giftCode = appliedGiftCert.code;
+    }
     const resp = await fetch('/api/create-checkout-session', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -3293,6 +3465,13 @@ async function submitOrder(){
       return;
     }
     if (!resp.ok) throw new Error(data.error || 'Could not start checkout.');
+    if (data.squarePay) {
+      // The gift card paid what it held; the rest goes on a card, here.
+      setStatus('', false);
+      await openSquarePay(data.squarePay);
+      btn.disabled = false;
+      return;
+    }
     if (data.url) {
       window.location.href = data.url;
     } else {
@@ -3301,6 +3480,74 @@ async function submitOrder(){
   } catch (err) {
     setStatus(err.message, true);
     btn.disabled = false;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// THE REST ON A CARD (24 Sep 2026). Square's hosted page cannot take a Square
+// gift card, so an order paying with one is charged on this page: the server
+// has already taken the card's balance and answers with what is left. Square's
+// Web Payments SDK draws its own card box here (the card number never touches
+// our server; the SDK hands back a token) and create-checkout-session
+// finishes the order with it (type square_complete).
+// ---------------------------------------------------------------------------
+let squareSdkPromise = null;
+function loadSquareSdk(url){
+  if (window.Square) return Promise.resolve();
+  if (!squareSdkPromise) squareSdkPromise = new Promise((resolve, reject) => {
+    const sc = document.createElement('script');
+    sc.src = url; sc.onload = resolve; sc.onerror = () => reject(new Error('Could not load the card form. Please try again.'));
+    document.head.appendChild(sc);
+  });
+  return squareSdkPromise;
+}
+async function openSquarePay(sp){
+  let ov = document.getElementById('squarePayOverlay');
+  if (!ov) {
+    ov = document.createElement('div');
+    ov.id = 'squarePayOverlay';
+    ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.82);z-index:9000;display:flex;align-items:center;justify-content:center;padding:16px';
+    ov.innerHTML = '<div class="card" style="max-width:420px;width:100%;margin:0">'
+      + '<div class="card-title">💳 The rest on a card</div>'
+      + '<div class="note" id="squarePayNote" style="margin-top:0;margin-bottom:.75rem"></div>'
+      + '<div id="squareCardBox" style="min-height:52px;margin-bottom:.75rem"></div>'
+      + '<button type="button" class="btn-full" id="squarePayBtn">Pay</button>'
+      + '<button type="button" class="download-btn" id="squarePayCancel" style="margin-top:.6rem">Not now</button>'
+      + '<div class="note" id="squarePayStatus" style="margin-top:.6rem"></div></div>';
+    document.body.appendChild(ov);
+  }
+  ov.style.display = 'flex';
+  const note = document.getElementById('squarePayNote'), st = document.getElementById('squarePayStatus');
+  const payBtn = document.getElementById('squarePayBtn');
+  note.textContent = 'Your gift card ending ' + sp.giftCardLast4 + ' paid $' + (sp.giftPaidCents/100).toFixed(2) + ' of $' + (sp.totalCents/100).toFixed(2) + '. Pay the remaining $' + (sp.remainderCents/100).toFixed(2) + ' by card.';
+  payBtn.textContent = 'Pay $' + (sp.remainderCents/100).toFixed(2);
+  st.textContent = '';
+  document.getElementById('squarePayCancel').onclick = () => { ov.style.display = 'none'; setStatus('Your gift card\'s payment is held on the order; press Pay again to finish, or it releases on its own.', false); };
+  try {
+    await loadSquareSdk(sp.sdkUrl);
+    if (!window.Square) throw new Error('The card form did not load.');
+    const payments = window.Square.payments(sp.applicationId, sp.locationId);
+    const box = document.getElementById('squareCardBox');
+    box.innerHTML = '';
+    const card = await payments.card();
+    await card.attach('#squareCardBox');
+    payBtn.disabled = false;
+    payBtn.onclick = async () => {
+      payBtn.disabled = true; st.textContent = 'Paying…';
+      try {
+        const r = await card.tokenize();
+        if (r.status !== 'OK') throw new Error((r.errors && r.errors[0] && r.errors[0].message) || 'The card was not accepted.');
+        const resp = await fetch('/api/create-checkout-session', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ type: 'square_complete', checkoutId: sp.checkoutId, sourceId: r.token }) });
+        const d = await resp.json();
+        if (!resp.ok) throw new Error(d.error || 'The payment did not go through.');
+        st.textContent = 'Paid. One moment…';
+        window.location.href = d.url || sp.successUrl;
+      } catch (err) { st.textContent = err.message; payBtn.disabled = false; }
+    };
+  } catch (err) {
+    st.textContent = err.message;
+    payBtn.disabled = true;
   }
 }
 
@@ -3377,10 +3624,13 @@ if (isTravelMug()) {
     document.getElementById('previewNote').textContent =
       'Whichever design you placed first (Left, Center, or Right) will be printed on your phone case.';
     setupPhoneModelSearch();
+    renderPhoneCaseChoices();
     if (selectedPhoneModel) {
       document.getElementById('phoneModelSearchInput').value = selectedPhoneModel;
-      document.getElementById('phoneModelSelectedNote').textContent =
-        '✓ Case selected for ' + selectedPhoneModel + ' — $' + PHONE_CASE_PRICE.toFixed(2) + ' + shipping.';
+      document.getElementById('phoneModelSelectedNote').textContent = phoneCaseComplete()
+        ? '✓ Case selected for ' + selectedPhoneModel + ' — $' + phoneCasePrice().toFixed(2) + ' + shipping.'
+        : '✓ ' + selectedPhoneModel + '. Now pick the finish and gift box below.';
+      if (selectedPhoneFinish) document.getElementById('phoneCaseFinishSelectedNote').textContent = '✓ ' + selectedPhoneFinish + ' — $' + phoneCasePrice().toFixed(2) + ' + shipping.';
       maybeAutoFetchPhoneMockup(false);
     }
   } else if (isToteBag()) {

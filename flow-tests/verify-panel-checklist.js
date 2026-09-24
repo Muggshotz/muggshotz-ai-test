@@ -89,6 +89,7 @@ async function settle(page) { await T(page, 1900); await dismissAlerts(page); }
 async function choose(page, cardId) {
   await page.evaluate((cardId) => {
     if (cardId === 'phoneCaseModelCard') { pendingPhoneCaseModel = 'iPhone 15 Pro'; confirmPhoneModelGen(true); return; }
+    if (cardId === 'phoneCaseStyleCard') { pickPhoneCaseStyle(window.__walkPhoneStyle || 'tough'); return; }
     const card = document.getElementById(cardId);
     const t = [...card.querySelectorAll('.btn-select')].find((b) => !b.closest('[data-words]') || cardId === 'tshirtOptionCard');
     if (cardId === 'tshirtOptionCard') { t.click(); card.querySelector('#tshirtColorGrid .color-btn').click(); return; }
@@ -96,8 +97,13 @@ async function choose(page, cardId) {
   }, cardId);
 }
 
-async function walk(page, val) {
+// The phone case tile has two rails behind it (24 Sep 2026): the Tough case
+// and the card holder, which adds a finish panel. Both are walked.
+const RAILS = { 'phone case': ['tough', 'card-holder'] };
+
+async function walk(page, val, variant) {
   const fails = [];
+  if (variant) await page.evaluate((v) => { window.__walkPhoneStyle = v; }, variant);
   await page.click('#postUploadForkRow button:has-text("Select Your Product")');
   await T(page, 700);
   await page.evaluate((v) => document.querySelector(`#productCard .btn-select[data-val="${v}"]`).click(), val);
@@ -149,13 +155,13 @@ async function walk(page, val) {
     .filter((v) => !SKIP.has(v) && (!only || v === only));
   await b0.close();
   for (const [screen, viewport] of Object.entries(SCREENS)) {
-    for (const val of vals) {
+    for (const val of vals) for (const variant of (RAILS[val] || [null])) {
       const { browser, page, log } = await launch({ viewport });
       let res;
-      try { await openStudio(page); await uploadPhoto(page); await dismissAlerts(page); res = await walk(page, val); }
+      try { await openStudio(page); await uploadPhoto(page); await dismissAlerts(page); res = await walk(page, val, variant); }
       catch (e) { res = [`ERROR: ${String(e).split('\n')[0]}`]; }
       const pass = res.length === 1 && res[0].startsWith('PASS');
-      console.log(`[${screen}] ${val}: ${pass ? res[0] : 'FAIL'}`);
+      console.log(`[${screen}] ${val}${variant ? ' (' + variant + ')' : ''}: ${pass ? res[0] : 'FAIL'}`);
       if (!pass) { res.forEach((f) => console.log('    - ' + f)); fails++; }
       if (log.pageErrors.length) { console.log(`    PAGE ERRORS: ${JSON.stringify(log.pageErrors)}`); fails++; }
       await browser.close();

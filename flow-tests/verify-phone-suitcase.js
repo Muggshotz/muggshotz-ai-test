@@ -75,6 +75,8 @@ const scenarios = {
     await page.waitForTimeout(700);
     await page.locator('#productCard .btn-select[data-val="phone case"]').click({ force: true });
     await page.waitForTimeout(900);
+    await page.click('#phoneCaseStyleGrid .btn-select[data-phone-style="tough"]');
+    await page.waitForTimeout(900);
     await page.fill('#phoneModelSearchInputGen', 'iPhone 15 Pro Max');
     await page.press('#phoneModelSearchInputGen', 'Enter');
     await page.waitForTimeout(800);
@@ -112,6 +114,67 @@ const scenarios = {
       return ov && getComputedStyle(ov).display !== 'none';
     });
     return `PASS: full path, mockup body {phone-case-tough, iPhone 15 Pro Max, image}, lightbox=${lightbox}`;
+  },
+
+  // THE CARD HOLDER (24 Sep 2026): case -> model -> finish, and the mockup
+  // asks for the card-holder product with the finish as its colour. The
+  // gift-boxed Matte is chosen on purpose: it is the dearer variant, so a
+  // colour that fell off here would preview and bill the wrong case.
+  async cardHolderFull(page, log, mockupBodies) {
+    await page.click('#postUploadForkRow button:has-text("Select Your Product")');
+    await page.waitForTimeout(700);
+    await page.locator('#productCard .btn-select[data-val="phone case"]').click({ force: true });
+    await page.waitForTimeout(900);
+    await page.click('#phoneCaseStyleGrid .btn-select[data-phone-style="card-holder"]');
+    await page.waitForTimeout(900);
+    // The Tough case's models are not all the card holder's: the S26 must
+    // not be offered here, and the 18 Pro must be.
+    const offered = await page.evaluate(() => phoneCaseModelsFor());
+    if (offered.includes('Samsung Galaxy S26') || !offered.includes('iPhone 18 Pro'))
+      return `FAIL: card holder offers the Tough case's models (${offered.length} models)`;
+    await page.fill('#phoneModelSearchInputGen', 'iPhone 15 Pro Max');
+    await page.press('#phoneModelSearchInputGen', 'Enter');
+    await page.waitForTimeout(800);
+    await page.click('#phoneModelConfirmGen button:has-text("Yes")');
+    await page.waitForTimeout(900);
+    const finishShown = await page.evaluate(() => document.getElementById('phoneCaseFinishCard')?.style.display !== 'none'
+      && document.querySelectorAll('#phoneCaseFinishGrid .btn-select').length);
+    if (finishShown !== 4) return `FAIL: the finish card should offer 4 choices after the model, got ${finishShown}`;
+    await page.click('#phoneCaseFinishGrid .btn-select[data-phone-finish="Matte, gift boxed"]');
+    await page.waitForTimeout(800);
+    await page.fill('#ideaDesc', 'riding a dragon over a volcano');
+    await page.waitForTimeout(600);
+    await dismissAlerts(page);
+    await page.waitForTimeout(300);
+    await page.evaluate(() => document.getElementById('generateBtn')?.scrollIntoView({ block: 'center' }));
+    await page.click('#generateBtn');
+    await waitApprove(page);
+    await page.locator('#approveRow button:has-text("Yes")').first().click();
+    await page.waitForTimeout(1500);
+    await passFadePage(page);
+    await page.waitForTimeout(8000);
+    const start = mockupBodies.find(b => b.action === 'start');
+    if (!start) return 'FAIL: no start-mockup call fired';
+    if (start.productKey !== 'phone-case-card-holder' || start.sizeLabel !== 'iPhone 15 Pro Max' || start.colorName !== 'Matte, gift boxed' || !start.image)
+      return `FAIL: bad mockup body: ${JSON.stringify({ k: start.productKey, s: start.sizeLabel, c: start.colorName, img: !!start.image })}`;
+    const pending = await page.evaluate(() => { try { return JSON.parse(localStorage.getItem('muggshotz_pending_order') || 'null'); } catch (e) { return null; } });
+    return `PASS: card holder, mockup body {phone-case-card-holder, iPhone 15 Pro Max, Matte, gift boxed, image}${pending ? ', pending order saved' : ''}`;
+  },
+
+  // The 18 Pro has no gift box at Printify, so the two gift tiles must not
+  // be offered for it.
+  async cardHolderNoGiftBoxOn18Pro(page) {
+    await page.click('#postUploadForkRow button:has-text("Select Your Product")');
+    await page.waitForTimeout(700);
+    await page.locator('#productCard .btn-select[data-val="phone case"]').click({ force: true });
+    await page.waitForTimeout(900);
+    await page.evaluate(() => pickPhoneCaseStyle('card-holder'));
+    await page.waitForTimeout(900);
+    await page.evaluate(() => { pendingPhoneCaseModel = 'iPhone 18 Pro'; confirmPhoneModelGen(true); });
+    await page.waitForTimeout(900);
+    const tiles = await page.evaluate(() => [...document.querySelectorAll('#phoneCaseFinishGrid .btn-select')].map(b => b.dataset.phoneFinish));
+    if (tiles.length !== 2 || tiles.some(t => /gift/.test(t))) return `FAIL: iPhone 18 Pro offered ${JSON.stringify(tiles)}`;
+    return `PASS: iPhone 18 Pro offers ${tiles.join(' / ')} only`;
   },
 
   // Reset must clear the suitcase size

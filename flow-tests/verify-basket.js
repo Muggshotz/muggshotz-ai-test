@@ -9,6 +9,8 @@
 //     summary and pay, and items can be removed;
 //   * a paid basket is emptied; a single order with no basket is unchanged.
 const { launch, dismissAlerts } = require('./harness');
+const path = require('path');
+const ROOT = path.join(__dirname, '..');
 
 const T = (page, ms) => page.waitForTimeout(ms);
 const BASE = 'http://127.0.0.1:8788';
@@ -97,7 +99,12 @@ scenarios.basketAndNewDesignPayTogether = async (page) => {
   }));
   if (sum.basketRow !== '$5.95') return `FAIL: the summary's basket row reads ${sum.basketRow}`;
   if (sum.ship !== '$12.34') return `FAIL: shipping reads ${sum.ship}, the quote for two items is $12.34`;
-  const sub = 16.95 + 5.95 + 12.34;
+  // The doormat's price is the catalog's, not a number typed here: it was
+  // $16.95 when this was written and $19.95 by the afternoon of 24 Sep 2026.
+  const { PRODUCTS_CATALOG } = await import(path.join(ROOT, 'lib', 'products-catalog.js'));
+  const doormat = Object.values(PRODUCTS_CATALOG['doormat'].sizes)[0].price;
+  if (sum.base !== '$' + doormat.toFixed(2)) return `FAIL: the doormat reads ${sum.base}, the catalog bills $${doormat.toFixed(2)}`;
+  const sub = doormat + 5.95 + 12.34;
   const want = '$' + (sub + Math.ceil(0.029 * Math.round(sub * 100) + 35) / 100).toFixed(2);
   if (sum.total !== want) return `FAIL: total ${sum.total}, expected ${want} (doormat + basket + shipping + fee)`;
   if (!sum.current) return 'FAIL: the page does not say the design above goes in with the basket';

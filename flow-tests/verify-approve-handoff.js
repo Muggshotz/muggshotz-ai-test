@@ -191,6 +191,8 @@ scenarios.ideaOfferedPuzzle = async (page) => {
 
 scenarios.ideaOfferedPhoneCase = async (page) => {
   await afterMandatoryPick(page, 'phone case', async (p) => {
+    await p.click('#phoneCaseStyleGrid .btn-select[data-phone-style="tough"]');
+    await p.waitForTimeout(900);
     await p.fill('#phoneModelSearchInputGen', 'iPhone 15 Pro Max');
     await p.waitForTimeout(1200);
     const hit = p.locator('#phoneModelResultsGen >> text=iPhone 15 Pro Max').first();

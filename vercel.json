@@ -1,0 +1,5 @@
+{
+  "rewrites": [
+    { "source": "/api/square-webhook", "destination": "/api/stripe-webhook" }
+  ]
+}

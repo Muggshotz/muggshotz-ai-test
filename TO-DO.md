@@ -18,6 +18,23 @@ Started 24 Sep 2026, when the old lists ran out.
   name). Ask a patent/trademark attorney what can be protected; a trademark
   on the name is the usual first step.
 
+- **The SURPRISE!!! panel** (Alyx, 24 Sep, "will probably take some focused
+  attention"): (1) the three-mug COLD → HOT advertisement at the TOP of the
+  panel, before the templates -- today a plain black mug sits there and the
+  COLD → HOT picture only shows after a template is tapped, so nobody sees
+  what the mug does; (2) drop the line "Who is it for? The surprise faces
+  them as they hold it." (the hand tiles stay); (3) a "make up your own"
+  tile with a short kit (what an opener and a punchline are, examples) and
+  the space to type theirs -- painting a two-part print from their words is
+  new. Alyx also says the example pictures shown on tapping are "the wrong
+  stuff"; which ones is not known yet -- ask for a screenshot.
+- **The Square track, part two**: selling the physical Square gift card on
+  the site (card + stamp + envelope on the price), an admin mail queue, and
+  activation when the packer types the card's number. Part one (both tracks
+  wired, gift cards charged on the page, the admin switch) is built:
+  SQUARE-SETUP.md. Sales tax is not charged on the Square track -- decide
+  before ordinary sales move onto it.
+
 ## The spark — SURPRISE!!! mugs for podcast hosts
 
 Hidden templates (like Candace's, ?surprise=i-know), gifted by Alyx to hosts
