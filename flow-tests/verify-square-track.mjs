@@ -144,7 +144,7 @@ const ok = (cond, pass, fail) => checks.push(cond ? `PASS: ${pass}` : `FAIL: ${f
 // 1. Stripe by default: a token pack becomes a Stripe session at Stripe's rate.
 {
   state.rail = 'stripe';
-  const r = await post({ type: 'token_purchase', deviceId: 'dev1', packId: '3tokens' });
+  const r = await post({ type: 'token_purchase', deviceId: 'dev1', packId: '20tokens' });
   const s = state.stripe.sessions[state.stripe.sessions.length - 1];
   const fee = s && feeOf(s.spec.line_items);
   const pack = s && s.spec.line_items[0].price_data.unit_amount;
@@ -159,7 +159,7 @@ const ok = (cond, pass, fail) => checks.push(cond ? `PASS: ${pass}` : `FAIL: ${f
   ok((await readPaymentRail()) === 'square', 'the switch reads square', 'the switch did not read square');
   const kinds = [
     ['reservation', { type: 'reservation', deviceId: 'dev1', email: 'alyx@example.com' }],
-    ['token_purchase', { type: 'token_purchase', deviceId: 'dev1', packId: '3tokens' }],
+    ['token_purchase', { type: 'token_purchase', deviceId: 'dev1', packId: '20tokens' }],
     ['mug_order', mousePad()],
     ['basket_order', { type: 'basket_order', deviceId: 'dev1', items: [mousePad(), mousePad()], shippingAddress: ADDRESS }],
     ['tier_upgrade', { type: 'tier_upgrade', betaId: 'beta1' }],
@@ -278,7 +278,7 @@ let squarePay;
   const sign = (body) => createHmac('sha256', 'sig-key').update(process.env.SQUARE_WEBHOOK_URL + body).digest('base64');
   // a fresh payment-link sale, paid on Square's page
   state.rail = 'square';
-  await post({ type: 'token_purchase', deviceId: 'dev2', packId: '3tokens' });
+  await post({ type: 'token_purchase', deviceId: 'dev2', packId: '20tokens' });
   const l = lastSquareLink();
   const evt = JSON.stringify({ type: 'payment.updated', data: { object: { payment: { id: 'payX', status: 'COMPLETED', order_id: l.link.order_id } } } });
   const badSig = await hook(evt, { 'x-square-hmacsha256-signature': 'nope' });
@@ -300,6 +300,29 @@ let squarePay;
   const rs = await hook(payload, { 'stripe-signature': header });
   if (rs.code !== 200 || rs.body?.ignored !== 'test_mode') bad.push(`Stripe's event answered ${rs.code} ${JSON.stringify(rs.body)}`);
   ok(!bad.length, 'the webhook refuses a bad signature, settles a paid link once, leaves a page-settled order alone, and still routes Stripe', `webhook: ${bad.join('; ')}`);
+}
+
+// 9b. The dollar pack: 3 for $1.33 -- the 5c handling fee waived, and the
+//     fee line says so; the $5 pack keeps it.
+{
+  state.rail = 'stripe';
+  await post({ type: 'token_purchase', deviceId: 'dev4', packId: '3tokens' });
+  const s1 = state.stripe.sessions[state.stripe.sessions.length - 1];
+  await post({ type: 'token_purchase', deviceId: 'dev4', packId: '20tokens' });
+  const s2 = state.stripe.sessions[state.stripe.sessions.length - 1];
+  const f1 = feeOf(s1.spec.line_items), f2 = feeOf(s2.spec.line_items);
+  const total1 = s1.spec.line_items.reduce((a, li) => a + li.price_data.unit_amount, 0);
+  // and the same $1.33 on Square, the penny on Square's rate eaten
+  state.rail = 'square';
+  const before = state.square.links.length;
+  await post({ type: 'token_purchase', deviceId: 'dev4', packId: '3tokens' });
+  state.rail = 'stripe';
+  const sqOrder = state.square.links.length > before ? lastSquareLink().body.order : null;
+  const sqTotal = sqOrder ? sqOrder.line_items.reduce((a, li) => a + Number(li.base_price_money.amount), 0) : null;
+  ok(total1 === 133 && f1.price_data.unit_amount === 33 && !/handling/i.test(f1.price_data.product_data.description) && !/Handling/.test(f1.price_data.product_data.name)
+     && f2.price_data.unit_amount === 50 && /5¢ handling/.test(f2.price_data.product_data.description) && sqTotal === 133,
+    'the dollar pack comes to $1.33 on Stripe and on Square, no handling fee on its line; the $5 pack keeps the 5c',
+    `packs: ${JSON.stringify({ total1, sqTotal, f1: f1.price_data, f2: f2.price_data })}`);
 }
 
 // (Square's $1.00 floor in createSquareCheckout is a backstop: with the 50c

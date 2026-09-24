@@ -96,9 +96,13 @@ function calculateUpsellCharge(placements) {
 // after this session is built); the 5c absorbs most of that residue too.
 // TWO TRACKS (24 Sep 2026): the rate is the track's -- Stripe 2.9% + 30c,
 // Square 3.3% + 30c -- and the line says which (lib/payment-rail.js).
-function feeLineCents(subtotalCents, rail) { return feeLineCentsFor(subtotalCents, rail); }
-function feeLine(cents, rail) {
-  return { price_data: { currency: "usd", product_data: { name: "Card Processing & Handling", description: feeLineDescriptionFor(rail) }, unit_amount: cents }, quantity: 1 };
+function feeLineCents(subtotalCents, rail, opts) { return feeLineCentsFor(subtotalCents, rail, opts); }
+function feeLine(cents, rail, opts = {}) {
+  const handling = opts.handling !== false;
+  const description = typeof opts.fixedCents === "number"
+    ? `The card processor's fee on this pack (${opts.fixedCents}¢), the same on any card`
+    : feeLineDescriptionFor(rail, opts);
+  return { price_data: { currency: "usd", product_data: { name: handling ? "Card Processing & Handling" : "Card Processing", description }, unit_amount: cents }, quantity: 1 };
 }
 
 // THE HAND-OFF TO THE PAYMENT COMPANY. Every checkout builds one spec -- the
@@ -714,7 +718,11 @@ async function handleTokenPurchase(req, res) {
   // Fees on token packs too -- proportionally these hurt the most
   // uncovered (30c fixed on a $5 pack is where Stripe's bite peaks).
   const rail = await chooseRail(req.body);
-  const packFeeCents = feeLineCents(pack.amountCents, rail);
+  // The dollar pack waives the 5c handling fee: 3 for $1.33 (Alyx, 24 Sep 2026).
+  const feeOpts = { handling: !pack.noHandlingFee };
+  // A pack with a fixed fee is that fee on either track ($1.33 all in).
+  const packFeeCents = typeof pack.feeCents === "number" ? pack.feeCents : feeLineCents(pack.amountCents, rail, feeOpts);
+  if (typeof pack.feeCents === "number") feeOpts.fixedCents = pack.feeCents;
   const spec = {
     mode: "payment",
     line_items: [{
@@ -725,7 +733,7 @@ async function handleTokenPurchase(req, res) {
       },
       quantity: 1
     },
-    feeLine(packFeeCents, rail)],
+    feeLine(packFeeCents, rail, feeOpts)],
     metadata: { order_type: "token_purchase", device_id: deviceId, pack_id: packId, fees_cents: String(packFeeCents) },
     // Back to the studio, where the tokens are spent. These used to send the
     // buyer to index.html, the old generator.
