@@ -38,7 +38,8 @@ Pitch In. The grid is three across today (needles-studio.html, #productCard
   themselves and reports back if anything doesn't work (Alyx: likely to buy
   their own item just to see). 5% of the PROFIT, not the sale price (Alyx:
   "5% of the gross could get messy") -- the catalog's estimatedProfit, the
-  same base the flyer betas' commissions use.
+  same base and the same 5% the flyer betas earn at the Muggshotz tier
+  (lib/flyer-tiers.js: rate 0.05).
   (Bug reports: see "Report a bug" below.)
   Gets people invested in the app; enough involvement may later support
   selling advertising. The flyer betas' commissions ledger and payouts may
