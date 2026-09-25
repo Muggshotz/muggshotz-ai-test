@@ -163,7 +163,10 @@ Pitch In. The grid is three across today (needles-studio.html, #productCard
   the prompts; each template drawn at its product's own print shape.
 
 - **The Square walk-through (Alyx, 24 Sep 2026: "a test that must be run
-  from order to purchase just using the Square pipeline alone").** Sandbox
+  from order to purchase just using the Square pipeline alone").** NOT
+  UNTIL ALYX SAYS: it runs when he is ready to buy an actual product, and he
+  has said so more than once. Do not offer it or propose it as a next step
+  (25 Sep 2026). Sandbox
   keys are in and the switch works; nothing has yet gone through Square's
   real sandbox end to end. When it is run: (1) Foxhole -> Switch to Square;
   (2) studio -> 3 Tokens $1.00 -> Square's page -> test card
