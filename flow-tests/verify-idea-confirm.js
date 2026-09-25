@@ -57,6 +57,30 @@ const scenarios = {
     return `PASS: confirming the description lands on Generate (top=${st.generateTop}), no product-focus left behind`;
   },
 
+  // "No -- Let's Try Another" lands on the idea box and STAYS there (Alyx,
+  // 25 Sep 2026: "it doesn't do anything but cycle you right back to the
+  // exact same panel"). The result pin used to drag the page back to the
+  // picture the moment the scroll arrived.
+  async noLetsTryAnotherLandsOnTheIdeaBox(page) {
+    await toDescription(page, 'phone case', prepPhone);
+    await page.evaluate(() => generate());
+    await page.waitForFunction(() => document.getElementById('approveRow')?.style.display !== 'none', null, { timeout: 60000 });
+    await page.waitForTimeout(1500);
+    await page.locator('#keepTweakingBtn').click({ force: true });
+    const where = () => page.evaluate(() => {
+      const b = document.getElementById('ideaDesc').getBoundingClientRect();
+      return { on: b.top >= 0 && b.bottom <= innerHeight, top: Math.round(b.top), y: Math.round(scrollY), focused: document.activeElement && document.activeElement.id, lit: [...document.body.classList].filter((c) => c.endsWith('-focus')) };
+    });
+    await page.waitForTimeout(1200);
+    const first = await where();
+    await page.waitForTimeout(2500);
+    const later = await where();
+    if (!first.on) return `FAIL: No did not bring the idea box on screen (top ${first.top}, ${JSON.stringify(first.lit)})`;
+    if (!later.on) return `FAIL: the idea box came on screen and was dragged away again (top ${first.top} -> ${later.top}, scroll ${first.y} -> ${later.y})`;
+    if (later.focused !== 'ideaDesc') return `FAIL: the box is not focused for typing (${later.focused})`;
+    return `PASS: No lands on the idea box and stays (top ${later.top}), box focused, ${JSON.stringify(later.lit)} lit`;
+  },
+
   // The generation stage must never be veiled by a stale spotlight.
   async stageNotVeiled(page) {
     await toDescription(page, 'phone case', prepPhone);

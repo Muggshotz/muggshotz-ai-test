@@ -1,5 +1,5 @@
 <!-- ============================================================
-     VERSION: V380
+     VERSION: V381
      ============================================================
      THE ONE LINE THAT SAYS WHICH BUILD YOU ARE LOOKING AT.
 
@@ -1679,7 +1679,11 @@ const HERO_SETTLE_MS = 1000;
 <label style="font-size:12px;color:#7ab8ff">Name<input id="wrapName" type="text" placeholder="e.g. Maya" style="width:100%;margin-top:3px"></label>
 <label style="font-size:12px;color:#7ab8ff">Age or year <span style="opacity:.7">(optional)</span><input id="wrapAge" type="text" placeholder="e.g. 7, or 25 years" style="width:100%;margin-top:3px"></label>
 </div>
-</div><div class="idea-photo-row"><img id="ideaPhotoPreview" alt="Your uploaded photo" style="display:none"/><textarea id="ideaDesc" placeholder="Example: Put me on a tiny red tricycle wearing a firefighter helmet, shouting &quot;Out of my way!&quot; as I race through a parade with smoke and sirens behind me, under a banner that reads &quot;World's Fastest Firefighter.&quot;"></textarea></div><div class="quick-btns" id="quickBtns"></div><button type="button" class="download-btn" id="ideaBackBtn" style="margin-bottom:.9rem" onclick="ideaStepBack()">← Back</button><div class="note" id="ideaDefaultNote">Paint us a clear picture — the more detail you give us, the better our chances of getting your exact idea right.<br><span style="display:block;margin-top:.5rem">📸 <b>Just want your photo, exactly as it is?</b> Leave this box empty and hit Generate — no AI artwork, no changes, and it costs no image credits.</span></div>
+</div><div class="idea-photo-row"><img id="ideaPhotoPreview" alt="Your uploaded photo" style="display:none"/><textarea id="ideaDesc" placeholder="Example: Put me on a tiny red tricycle wearing a firefighter helmet, shouting &quot;Out of my way!&quot; as I race through a parade with smoke and sirens behind me, under a banner that reads &quot;World's Fastest Firefighter.&quot;"></textarea></div><div id="trompeRow" style="margin:.7rem 0 .3rem;text-align:center">
+<button type="button" class="download-btn" id="trompeBtn" style="margin-top:0;width:min(100%,420px);margin-left:auto;margin-right:auto;display:block;border-color:#e0a44b;color:#ffd27a;letter-spacing:.5px" onclick="generateTrompeLoeil()">🎭 TROMPE-L'ŒIL — surprise me</button>
+<div class="note" style="margin:.35rem auto 0;max-width:460px;font-size:11px;line-height:1.4">French for "fool the eye". Nothing to type: the studio invents an illusion made for this product, one that makes the eye believe the thing itself has changed. 1 token.</div>
+</div>
+<div class="quick-btns" id="quickBtns"></div><button type="button" class="download-btn" id="ideaBackBtn" style="margin-bottom:.9rem" onclick="ideaStepBack()">← Back</button><div class="note" id="ideaDefaultNote">Paint us a clear picture — the more detail you give us, the better our chances of getting your exact idea right.<br><span style="display:block;margin-top:.5rem">📸 <b>Just want your photo, exactly as it is?</b> Leave this box empty and hit Generate — no AI artwork, no changes, and it costs no image credits.</span></div>
 <!-- THE PROMPT KIT (Alyx, 2026-08-28): the other half of the free lane.
      The customer generates in THEIR OWN AI (their subscription, their
      free tier -- someone else's compute bill), and this hands them a
@@ -3684,7 +3688,58 @@ let pendingUploadIntent=null;
 // uploaded at all. It is checked in exactly two places -- the photo gate in
 // generate(), and the request it builds -- so a value this file has never
 // seen before cannot leak into a lane that assumes a photograph.
-function describeOnlyMode(){ return byoDeclaredIntent==='describe'; }
+function describeOnlyMode(){ return byoDeclaredIntent==='describe' || trompeMode; }
+
+// TROMPE-L'OEIL (Alyx and Bud, 25 Sep 2026: "a standalone button ... through
+// pushing this button we will educate the American public what this phrase
+// actually means"). One button beside the description box on every product
+// panel. Pressing it sends Bud's instructions -- prompts/trompe-loeil.md,
+// word for word, with the product's name filled in -- straight to the
+// generator, on the describe-only lane (no photo, one token), and the
+// customer sees only the result. The text lives in that one file and nowhere
+// else ("we are gonna be constantly refining that language"): a refinement
+// is an edit to the file. The mode lasts exactly one press of Generate.
+let trompeMode=false;
+let trompePromptText=null;
+let trompePromptFile=null;
+async function loadTrompePrompt(){
+  if(trompePromptFile)return trompePromptFile;
+  const resp=await fetch('prompts/trompe-loeil.md?v='+encodeURIComponent(typeof APP_VERSION!=='undefined'?APP_VERSION:''),{cache:'no-store'});
+  if(!resp.ok)throw new Error('The TROMPE-L\'OEIL instructions could not be loaded ('+resp.status+').');
+  const md=await resp.text();
+  // The file opens with a note for us; the instructions follow the rule.
+  const cut=md.indexOf('\n---\n');
+  const body=(cut>=0?md.slice(cut+5):md).trim();
+  if(!body)throw new Error('The TROMPE-L\'OEIL instructions are empty.');
+  trompePromptFile=body;
+  return body;
+}
+// The product, as Bud's text names it: "SELECTED PRODUCT: SUITCASE".
+function trompeProductName(){
+  if(product==='water bottle'){
+    const c=(typeof TRAVEL_MUG_CATALOG!=='undefined')?TRAVEL_MUG_CATALOG[selectedTravelProductKey]:null;
+    return (c&&c.displayName)?c.displayName:'travel cup';
+  }
+  const names={ 'mug':'ceramic coffee mug', 'photo poster':'poster', 'tshirt':'T-shirt', 'post-it note':'sticky note pad',
+    'standee':'acrylic standee', 'coaster':'drink coaster', 'puzzle':'jigsaw puzzle', 'ornament':'ceramic Christmas ornament',
+    'air freshener':'car air freshener', 'sticker sheet':'sticker sheet', 'calendar':'desk calendar', 'night light':'night light',
+    'business cards':'business card', 'wrapping paper':'wrapping paper', 'greeting card':'greeting card', 'beer stein':'beer stein' };
+  return names[product]||product||'product';
+}
+async function generateTrompeLoeil(){
+  if(!product||product==='artwork only'){
+    setStatus('Please select a product above first.',true);
+    document.getElementById('productCard')?.scrollIntoView({behavior:'smooth',block:'center'});
+    return;
+  }
+  let text;
+  try{ text=await loadTrompePrompt(); }
+  catch(err){ console.error(err); showGuidanceAlert('TROMPE-L\'ŒIL isn\'t available just now. Describe your idea in the box instead.'); return; }
+  trompePromptText=text.replace(/\{PRODUCT\}/g,trompeProductName().toUpperCase());
+  trompeMode=true;
+  try{ await generate(); }
+  finally{ trompeMode=false; trompePromptText=null; }
+}
 
 // WHAT A DESCRIBED DESIGN ACTUALLY SENDS. The studio's normal prompt builder
 // composes around a photograph -- it opens "Transform the uploaded person",
@@ -3798,6 +3853,7 @@ function wrapFormPrompt(){
   return `${occ} wrapping paper starring ${who}. Show them eight to twelve times at different sizes and poses: ${o.wear}. Fill the space between with ${o.decor}. Scatter five or six short, cheerful phrases in bold hand-lettering, including ${o.words}.${nameLine}${ageLine} ${look} A seamless repeating all-over pattern that tiles edge to edge, bright and dense, no border.`;
 }
 function effectiveIdeaText(){
+  if(trompeMode&&trompePromptText)return trompePromptText;
   const box=document.getElementById('ideaDesc');
   const extra=box?box.value.trim():'';
   const form=wrapFormPrompt();
@@ -4605,7 +4661,7 @@ function toggleWorkingImage(){
 // Two copies of a number is exactly how the marker rotted in the first place,
 // so they are not trusted to agree: .githooks/pre-commit moves both together
 // and REFUSES the commit if it ever finds them apart.
-const APP_VERSION='V380';
+const APP_VERSION='V381';
 try{ console.log('%cNeedles\u2019 Studio '+APP_VERSION,'color:#29a3ff;font-weight:700'); }catch(e){}
 
 function getDeviceId(){
@@ -17366,6 +17422,14 @@ function keepTweaking(){
   // release, or the box this scrolls to is dimmed and click-locked under
   // generation-active. Generate re-arms the dim when they spin again.
   clearAllFocusModes();
+  // AND THE IDEA CARD IS LIT (Alyx, 25 Sep 2026: "it doesn't do anything but
+  // cycle you right back to the exact same panel"). With every spotlight
+  // cleared and the approve row still showing, the result pin (see
+  // scrollPinTargets) owned the page: the scroll below reached the idea box
+  // and the pin dragged it straight back to the picture. Instrumented on a
+  // suitcase: 1360 -> 3634 -> 1360. A lit spotlight outranks the finished
+  // picture, so light the one card the customer is being sent to.
+  setOptionSpotlight('idea-focus');
   const box=document.getElementById('ideaDesc');
   box.placeholder='What would you like to add or change? Describe it here, then hit Generate again.';
   // smoothScrollToTarget, not raw scrollIntoView: on product-first flows

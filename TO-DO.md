@@ -21,13 +21,14 @@ Started 24 Sep 2026, when the old lists ran out.
       The 40oz travel mug has no product photo in the repo, so its flyer has
       no picture yet.
 
-- **TROMPE-L'ŒIL button** (Alyx and Bud, 25 Sep; waits for "begin"). A button
-  beside the description box on every product panel. Pressing it sends Bud's
-  instructions (prompts/trompe-loeil.md, verbatim, with the product's name
-  filled in) straight to the generator; the customer never sees them, only
-  the result. No photo: rides the describe-only lane, one token. First result
-  on a mouse pad: a stone well shaft seen from above, so the pad is a hole in
-  the desk and the mouse sits over it. Alyx: "through pushing this button we
+- [x] **TROMPE-L'ŒIL button** (Alyx and Bud, 25 Sep; built V381). Under the
+  description box on every product panel. Pressing it sends Bud's
+  instructions (prompts/trompe-loeil.md, verbatim, {PRODUCT} filled in)
+  straight to the generator on the describe-only lane, one token, no photo;
+  the customer sees only the result. The text lives in that one file: a
+  refinement is an edit there. Results so far: mouse pad as a well shaft,
+  suitcase as a hole in a stone wall and as an aeroplane window, the nine
+  Unwelcome Mats, the Wet Paint mat. Alyx: "through pushing this button we
   will educate the American public what this phrase actually means."
 
 - **"Hmm... seems like I'm forgetting something"** (Alyx, 25 Sep): a category
