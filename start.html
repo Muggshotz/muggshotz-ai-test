@@ -9,10 +9,16 @@
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png"/>
 <link rel="manifest" href="needles-manifest.json">
 <!-- v1 landing page: where a scanned flyer lands. It does three jobs --
-     says who sent them, sells the mug, and gets them into the studio with
-     the flyer code remembered so checkout credits the right beta. The
+     says who sent them, sells the product, and gets them into the studio
+     with the flyer code remembered so checkout credits the right beta. The
      designed page (Alyx + Bud + Claude) replaces this one at the same
-     address; printed QR codes never need to change. -->
+     address; printed QR codes never need to change.
+
+     WHICH PRODUCT (24 Sep 2026): the page opens on the coffee mug, then asks
+     the code (get-balance?referralCode=) who sent it and what they sell; a
+     beta with a featured product gets that product's picture, headline,
+     pitch, steps and catalog price here (lib/flyer-products.js), so the
+     smart mug's flyer lands on the smart mug. -->
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{background:#111;color:#fff;font-family:system-ui,sans-serif;padding:0 16px 40px}
@@ -25,12 +31,14 @@ body{background:#111;color:#fff;font-family:system-ui,sans-serif;padding:0 16px 
 .hero h1{font-size:30px;line-height:1.15;margin-bottom:10px}
 .hero p{color:#bbb;font-size:15px;line-height:1.45}
 .mug{width:100%;max-width:340px;border-radius:14px;margin:18px auto 6px;display:block;border:1px solid #333}
+.mug.wide{max-width:none;background:#fff}
 .cta{display:block;width:100%;background:#ff6a00;color:#fff;text-align:center;text-decoration:none;font-weight:800;font-size:18px;padding:18px;border-radius:12px;letter-spacing:.5px;margin:16px 0 8px}
 .cta small{display:block;font-weight:500;font-size:12px;opacity:.9;margin-top:4px}
 .price{text-align:center;color:#888;font-size:13px}
 .card{background:#1a1a1a;border:1px solid #333;border-radius:12px;padding:18px;margin-top:18px}
 .card h2{font-size:13px;letter-spacing:1px;text-transform:uppercase;color:#ff6a00;margin-bottom:10px}
 .steps{list-style:none;display:grid;gap:10px}
+.steps[hidden]{display:none} /* display:grid beat the hidden attribute: both install lists showed at once */
 .steps li{display:flex;gap:12px;align-items:flex-start;font-size:14px;color:#ddd;line-height:1.4}
 .steps b{flex:none;width:28px;height:28px;border-radius:50%;background:#ff6a00;color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px}
 .tabs{display:flex;gap:6px;margin-bottom:12px}
@@ -49,17 +57,17 @@ body{background:#111;color:#fff;font-family:system-ui,sans-serif;padding:0 16px 
   </div>
 
   <div class="hero">
-    <h1>Your face. Your mug.<br>Made from one photo.</h1>
-    <p>Snap a picture, pick a style, and our studio turns it into a caricature that wraps right around a real ceramic coffee mug. Designed on your phone in about two minutes, shipped to your door.</p>
+    <h1 id="heroTitle">Your face. Your mug.<br>Made from one photo.</h1>
+    <p id="heroPitch">Snap a picture, pick a style, and our studio turns it into a caricature that wraps right around a real ceramic coffee mug. Designed on your phone in about two minutes, shipped to your door.</p>
     <img class="mug" id="heroImg" alt="A custom caricature coffee mug" src="favicon-512.png"/>
   </div>
 
-  <a class="cta" id="cta" href="needles-studio.html">🎨 Make my mug<small>Free to design — you only pay if you order</small></a>
-  <div class="price">Ceramic mugs from $14.95 · 11 oz and 15 oz · dishwasher safe</div>
+  <a class="cta" id="cta" href="needles-studio.html"><span id="ctaText">🎨 Make my mug</span><small>Free to design — you only pay if you order</small></a>
+  <div class="price" id="priceLine">Ceramic mugs from $14.95 · 11 oz and 15 oz · dishwasher safe</div>
 
   <div class="card">
     <h2>How it works</h2>
-    <ul class="steps">
+    <ul class="steps" id="howSteps">
       <li><b>1</b><span>Take or upload a photo of the face you want on the mug — you, a friend, the dog.</span></li>
       <li><b>2</b><span>Pick a style. Watch the studio draw the caricature and wrap it on the mug in 3D.</span></li>
       <li><b>3</b><span>Order. Your flyer code is already applied — the person who gave you this flyer gets credit for the sale.</span></li>
@@ -84,7 +92,7 @@ body{background:#111;color:#fff;font-family:system-ui,sans-serif;padding:0 16px 
     </ul>
   </div>
 
-  <div class="also">Mugs are the star this season. Travel mugs, coasters, phone cases and more are in the <a id="alsoLink" href="needles-studio.html">studio</a> too.</div>
+  <div class="also" id="also">Mugs are the star this season. Travel mugs, coasters, phone cases and more are in the <a id="alsoLink" href="needles-studio.html">studio</a> too.</div>
   <div class="code" id="codeLine"></div>
 </div>
 <script>
@@ -102,15 +110,32 @@ body{background:#111;color:#fff;font-family:system-ui,sans-serif;padding:0 16px 
     fetch('/api/get-balance?referralCode=' + encodeURIComponent(ref))
       .then(r => r.json())
       .then(d => {
-        if (!d || !d.found || !d.fullName) return;
-        const first = String(d.fullName).split(' ')[0];
-        const el = document.getElementById('from');
-        el.textContent = '👋 ' + first + ' sent you';
-        el.hidden = false;
+        if (!d || !d.found) return;
+        if (d.fullName) {
+          const first = String(d.fullName).split(' ')[0];
+          const el = document.getElementById('from');
+          el.textContent = '👋 ' + first + ' sent you';
+          el.hidden = false;
+        }
+        if (d.product) showProduct(d.product);
       })
       .catch(() => {});
   }
 })();
+// The beta's product takes the page over: its words, its picture, its
+// catalog price. The studio link keeps the code; the product is chosen there.
+function showProduct(p){
+  const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  document.title = 'MuggsHotz — ' + p.label;
+  document.getElementById('heroTitle').innerHTML = esc(p.headline).replace(/\n/g, '<br>');
+  document.getElementById('heroPitch').textContent = p.pitch;
+  const img = document.getElementById('heroImg');
+  if (p.picture) { img.src = p.picture; img.alt = p.label; img.classList.toggle('wide', !!p.wide); }
+  document.getElementById('ctaText').textContent = p.cta || '🎨 Start designing';
+  document.getElementById('priceLine').textContent = p.label + ' ' + p.priceText + (p.priceNote ? ' · ' + p.priceNote : '');
+  document.getElementById('howSteps').innerHTML = p.steps.map((s, i) => '<li><b>' + (i + 1) + '</b><span>' + esc(s) + '</span></li>').join('');
+  document.getElementById('also').innerHTML = 'Mugs, travel cups, coasters, phone cases and more are in the <a id="alsoLink" href="' + esc(document.getElementById('alsoLink').getAttribute('href')) + '">studio</a> too.';
+}
 function showInstall(which, tab){
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('on'));
   tab.classList.add('on');

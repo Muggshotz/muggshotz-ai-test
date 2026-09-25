@@ -1,6 +1,7 @@
 import { findGiftCertificate, findGiftCertificateBySession } from "../lib/gift-certificates.js";
 import { squareConfigured, giftCardFromGan, giftCardUsable } from "../lib/square.js";
 import { cardOffer } from "../lib/card-bonus.js";
+import { flyerProduct } from "../lib/flyer-products.js";
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 // Simple read-only lookup: given a device ID, return its current token
@@ -50,7 +51,10 @@ async function handleReferralLookup(req, res) {
     }
     const flyerCode = codeRows[0];
 
-    const betaUrl = `${SUPABASE_URL}/rest/v1/flyer_betas?id=eq.${flyerCode.beta_id}&select=id,base_code,full_name,current_tier`;
+    // select=* rather than a column list: featured_product and campaign_id
+    // arrive with supabase/flyer-ledger.sql, and a project that has not run
+    // it must still answer the balance page.
+    const betaUrl = `${SUPABASE_URL}/rest/v1/flyer_betas?id=eq.${flyerCode.beta_id}&select=*`;
     const betaResp = await fetch(betaUrl, {
       headers: { apikey: SUPABASE_SERVICE_ROLE_KEY, Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}` }
     });
@@ -100,6 +104,23 @@ async function handleReferralLookup(req, res) {
     const nextTier = TIER_SEQUENCE[currentIndex + 1] || null;
     const canUpgrade = tierFullyMatured && !!nextTier;
 
+    // The product this beta's flyers lead with, so start.html can pitch it
+    // (lib/flyer-products.js). The beta's own choice first; a campaign's
+    // product when the beta has none; nothing when neither is set, and the
+    // landing page keeps its coffee-mug pitch.
+    let featuredProduct = beta.featured_product || null;
+    if (!featuredProduct && beta.campaign_id) {
+      try {
+        const cResp = await fetch(`${SUPABASE_URL}/rest/v1/campaigns?id=eq.${encodeURIComponent(String(beta.campaign_id))}&select=product_key`, {
+          headers: { apikey: SUPABASE_SERVICE_ROLE_KEY, Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}` }
+        });
+        if (cResp.ok) featuredProduct = (await cResp.json())[0]?.product_key || null;
+      } catch (err) {
+        console.error("Campaign lookup failed (landing page keeps the mug pitch):", err.message);
+      }
+    }
+    const product = flyerProduct(featuredProduct);
+
     return res.status(200).json({
       code: cleanCode,
       found: true,
@@ -107,6 +128,8 @@ async function handleReferralLookup(req, res) {
       baseCode: beta.base_code,
       fullName: beta.full_name,
       currentTier: beta.current_tier,
+      featuredProduct: product ? product.key : null,
+      product,
       totalBalance,
       tierFullyMatured,
       canUpgrade,

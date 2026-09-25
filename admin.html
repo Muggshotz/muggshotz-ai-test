@@ -158,12 +158,9 @@ select{width:100%;background:#0d0d0d;border:1px solid #444;border-radius:8px;pad
   <label>Campaign (optional — sets the product and counts a pack)</label>
   <select id="betaCampaign"><option value="">No campaign — an individual beta</option></select>
 
-  <label>What do they want to sell? (their flyers lead with it)</label>
+  <label>What do they want to sell? (their flyers and landing page lead with it)</label>
   <select id="betaFeaturedProduct">
-    <option value="classic-white-mug" selected>Coffee mug (phase 1 default — earns the most per sale)</option>
-    <option value="travel-mug-40oz-insulated">Travel mug</option>
-    <option value="coaster-set">Coasters</option>
-    <option value="phone-case-tough">Phone case</option>
+    <option value="classic-white-mug" selected>Coffee mug</option>
   </select>
 
   <button class="btn-full" id="onboardBtn" onclick="onboardBeta()">✅ Create Beta &amp; Generate 20 PotShotz Codes</button>
@@ -199,9 +196,6 @@ select{width:100%;background:#0d0d0d;border:1px solid #444;border-radius:8px;pad
   <label>Product the flyers feature</label>
   <select id="campaignProduct">
     <option value="classic-white-mug" selected>Coffee mug</option>
-    <option value="travel-mug-40oz-insulated">Travel mug</option>
-    <option value="coaster-set">Coasters</option>
-    <option value="phone-case-tough">Phone case</option>
   </select>
   <label>Packs available</label>
   <input type="number" id="campaignPacks" value="20" min="0" step="1"/>
@@ -701,7 +695,7 @@ async function onboardBeta(){
     if (resp.status === 403) { relockWithError('Wrong password.'); return; }
     if(!resp.ok) throw new Error(data.error || 'Onboarding failed.');
 
-    lastBetaForPrinting = { name: data.beta.fullName, baseCode: data.beta.baseCode, codes: data.codes };
+    lastBetaForPrinting = { name: data.beta.fullName, baseCode: data.beta.baseCode, codes: data.codes, product: data.beta.featuredProduct || featuredProduct || null };
     showResultIn('onboardResult', `✅ ${data.beta.fullName} onboarded as ${data.beta.baseCode} — ${data.codes.length} ${data.beta.currentTier} codes created.` + (data.warning ? ' ⚠️ ' + data.warning : ''), 'success');
     document.getElementById('onboardCodesTitle').textContent = `${data.beta.fullName}'s pack — ${data.codes[0]} to ${data.codes[data.codes.length-1]}`;
     renderCodeList(document.getElementById('onboardCodesList'), data.codes);
@@ -732,7 +726,7 @@ async function lookupBeta(){
     const b = data.betas[0];
     // Reprint the CURRENT tier's pack -- that is the one out in the world.
     const current = b.codes.filter(c => c.tier === b.currentTier);
-    lastBetaForPrinting = { name: b.fullName, baseCode: b.baseCode, codes: current.map(c => c.code) };
+    lastBetaForPrinting = { name: b.fullName, baseCode: b.baseCode, codes: current.map(c => c.code), product: b.featuredProduct || null };
     showResultIn('reprintResult', `${b.fullName} — ${b.currentTier} tier, ${b.codes.length} codes, $${b.totalEarned.toFixed(2)} earned so far.`, 'success');
     renderCodeList(document.getElementById('reprintCodesList'), b.codes);
     document.getElementById('reprintCodes').style.display = 'block';
@@ -744,12 +738,38 @@ async function lookupBeta(){
 function openFlyerSheet(){
   if(!lastBetaForPrinting) return;
   const q = new URLSearchParams({ name: lastBetaForPrinting.name, base: lastBetaForPrinting.baseCode, codes: lastBetaForPrinting.codes.join(',') });
+  // The product the beta sells: flyer-sheet.html prints its picture, pitch
+  // and price (lib/flyer-products.js). Without one, the generic mug flyer.
+  if (lastBetaForPrinting.product) q.set('product', lastBetaForPrinting.product);
   window.open('flyer-sheet.html?' + q.toString(), '_blank');
+}
+
+// The products a flyer can feature, from the catalog by way of the admin
+// endpoint (public, no password), into both product dropdowns and the
+// ledger's labels. The lists used to be typed here and drifted from the
+// catalog (a phone case no longer sold, no smart mug).
+async function loadFlyerProducts(){
+  try{
+    const resp = await fetch('/api/admin?action=flyer-products');
+    const data = await resp.json();
+    const products = data.products || [];
+    if(!products.length) return;
+    for (const p of products) PRODUCT_LABELS[p.key] = p.label;
+    for (const id of ['betaFeaturedProduct', 'campaignProduct']) {
+      const sel = document.getElementById(id);
+      const keep = sel.value;
+      sel.innerHTML = products.map(p => `<option value="${p.key}">${p.label} — ${p.priceText}</option>`).join('');
+      sel.value = products.some(p => p.key === keep) ? keep : products[0].key;
+    }
+  }catch(err){
+    console.error('Flyer product list unavailable; the dropdowns keep their defaults.', err.message);
+  }
 }
 
 // ===== Commissions ledger + campaigns (Sep 2026) =====
 let ledgerCache = null;
 const PRODUCT_LABELS = { 'classic-white-mug': 'Coffee mug', 'color-burst-mug': 'Color Burst mug', 'all-nighter-mug': 'All-Nighter mug', 'travel-mug-40oz-insulated': 'Travel mug', 'coaster-set': 'Coasters', 'phone-case-tough': 'Phone case' };
+loadFlyerProducts();
 const money = (n) => '$' + Number(n || 0).toFixed(2);
 
 async function adminPost(body){

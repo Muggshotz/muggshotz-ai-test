@@ -159,14 +159,68 @@ await check('payoutReducesWhatIsOwed', async () => {
   if (zero.code !== 400) throw new Error(`zero payout answered ${zero.code}`);
   return '$30 refused against $24.50 owed; $10 Venmo recorded -> owed $14.50, totals follow, $0 refused';
 });
-await check('theBetaBalancePageSubtractsPayouts', async () => {
+const balanceCall = async (query) => {
   const { default: getBalance } = await import(pathToFileURL(path.join(ROOT, 'api', 'get-balance.js')).href);
-  const r = { code: 0, body: null, status(c) { this.code = c; return this; }, json(b) { this.body = b; return this; } };
-  await getBalance({ method: 'GET', query: { referralCode: 'CHIPPER-07' } }, r);
+  const r = { code: 0, body: null, status(c) { this.code = c; return this; }, json(b) { this.body = b; return this; }, setHeader() {} };
+  await getBalance({ method: 'GET', query }, r);
+  return r;
+};
+await check('theBetaBalancePageSubtractsPayouts', async () => {
+  const r = await balanceCall({ referralCode: 'CHIPPER-07' });
   if (r.code !== 200) throw new Error(`answered ${r.code}: ${JSON.stringify(r.body)}`);
   if (r.body.totalBalance !== 14.5) throw new Error(`totalBalance=${r.body.totalBalance}, expected 24.50 earned - 10 paid`);
   if (r.body.fullName !== 'Jane Smith') throw new Error('name missing (the landing page reads it)');
   return `flyer-balance shows ${r.body.totalBalance} after the $10 payout, name "${r.body.fullName}" for the landing page`;
+});
+
+// ===== The product a flyer leads with (lib/flyer-products.js) =====
+await check('theFlyerProductListIsPublicAndPricedFromTheCatalog', async () => {
+  const { PRODUCTS_CATALOG } = await import(pathToFileURL(path.join(ROOT, 'lib', 'products-catalog.js')).href);
+  const fs = await import('node:fs');
+  const r = { code: 0, body: null, status(c) { this.code = c; return this; }, json(b) { this.body = b; return this; } };
+  await admin({ method: 'GET', query: { action: 'flyer-products' } }, r);
+  if (r.code !== 200) throw new Error(`answered ${r.code}: ${JSON.stringify(r.body)}`);
+  const list = r.body.products;
+  if (!Array.isArray(list) || list.length < 30) throw new Error(`${list && list.length} products listed`);
+  if (list[0].key !== 'smart-mug') throw new Error(`"${list[0].key}" leads the list, not the smart mug`);
+  const smart = list[0];
+  if (smart.price !== PRODUCTS_CATALOG['smart-mug'].sizes['11oz'].price || smart.priceText !== '$19.95') throw new Error(`smart mug priced ${smart.priceText}`);
+  if (!smart.wide || !/coldhot/.test(smart.picture)) throw new Error(`smart mug picture ${smart.picture}`);
+  for (const p of list) {
+    if (!PRODUCTS_CATALOG[p.key]) throw new Error(`${p.key} is not in the catalog`);
+    if (p.picture && !fs.existsSync(path.join(ROOT, p.picture))) throw new Error(`${p.key}'s picture ${p.picture} is not in the repo`);
+    if (!/^(from )?\$\d+\.\d\d$/.test(p.priceText) || p.steps.length !== 3 || !p.headline || !p.pitch) throw new Error(`${p.key}: ${JSON.stringify(p)}`);
+  }
+  const holder = list.find((p) => p.key === 'phone-case-card-holder');
+  if (holder.priceText !== 'from $21.95') throw new Error(`card holder "${holder.priceText}" (plain 21.95, gift boxed 24.95)`);
+  const ornament = list.find((p) => p.key === 'ceramic-ornament');
+  if (ornament.priceText !== '$9.95') throw new Error(`ornament "${ornament.priceText}" (one price for four shapes)`);
+  return `${list.length} products, no password, smart mug first at $19.95 with the COLD -> HOT strip, every picture on disk, "from" only where sizes differ`;
+});
+await check('onboardingAnswersTheProductItSaved', async () => {
+  if (onboarded.beta.featuredProduct !== 'classic-white-mug') throw new Error(`onboard answered featuredProduct=${onboarded.beta.featuredProduct}`);
+  return 'the Foxhole gets the product back to put on the flyer link';
+});
+await check('aScannedCodeAnswersWithItsBetasProduct', async () => {
+  const r = await balanceCall({ referralCode: 'CHIPPER-07' });
+  if (r.code !== 200) throw new Error(`answered ${r.code}: ${JSON.stringify(r.body)}`);
+  if (r.body.featuredProduct !== 'classic-white-mug' || r.body.product?.key !== 'classic-white-mug') throw new Error(`product ${JSON.stringify(r.body.product)}`);
+  if (r.body.product.priceText !== 'from $14.95' || !r.body.product.picture) throw new Error(`product card ${JSON.stringify(r.body.product)}`);
+  const drum = await balanceCall({ referralCode: 'DRUM-01' });
+  if (drum.body.product?.key !== 'coaster-set') throw new Error(`the campaign beta's code answered ${JSON.stringify(drum.body.product)}`);
+  return 'CHIPPER-07 -> the coffee mug card (from $14.95, picture); DRUM-01 -> the campaign\'s coasters';
+});
+await check('aCampaignBetaWithoutItsOwnProductPitchesTheCampaigns', async () => {
+  const [beta] = [].concat(await (await fetch('https://supabase.test/rest/v1/flyer_betas', { method: 'POST', body: JSON.stringify({ full_name: 'Tuba Player', base_code: 'TUBA', current_tier: 'PotShotz', campaign_id: campaignId }) })).json());
+  db.flyer_codes.push({ id: nextId++, beta_id: beta.id, code: 'TUBA-01', tier: 'PotShotz', flyer_number: 1, commission_total: 0, cap_amount: 20, commission_rate: 0.03, matured: false });
+  const r = await balanceCall({ referralCode: 'TUBA-01' });
+  if (r.code !== 200) throw new Error(`answered ${r.code}: ${JSON.stringify(r.body)}`);
+  if (r.body.product?.key !== 'coaster-set') throw new Error(`answered ${JSON.stringify(r.body.product)}`);
+  const [lone] = [].concat(await (await fetch('https://supabase.test/rest/v1/flyer_betas', { method: 'POST', body: JSON.stringify({ full_name: 'No Product', base_code: 'NONE', current_tier: 'PotShotz' }) })).json());
+  db.flyer_codes.push({ id: nextId++, beta_id: lone.id, code: 'NONE-01', tier: 'PotShotz', flyer_number: 1, commission_total: 0, cap_amount: 20, commission_rate: 0.03, matured: false });
+  const n = await balanceCall({ referralCode: 'NONE-01' });
+  if (n.code !== 200 || n.body.product !== null || n.body.featuredProduct !== null) throw new Error(`a beta with no product answered ${JSON.stringify(n.body)}`);
+  return 'no featured_product + a campaign -> the campaign\'s product; neither -> null, and the page keeps the mug';
 });
 
 console.error = origErr; console.log = origLog;

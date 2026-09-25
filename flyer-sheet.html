@@ -7,7 +7,20 @@
 <!-- Opened from admin.html after onboarding (or reprinting) a beta. Every
      code in the pack becomes one printable flyer with its own QR. The QR
      carries the code in the link, so a customer who scans it is credited
-     to this beta without typing anything. -->
+     to this beta without typing anything.
+
+     Two kinds of flyer (Alyx, 24 Sep 2026: "flyers that show one product's
+     flow and the model simply"):
+       * a PRODUCT flyer, when the link names the product the beta sells
+         (?product=<catalog key>): its picture, headline, pitch, three steps
+         and catalog price, from lib/flyer-products.js by way of
+         /api/admin?action=flyer-products. Two to a page, stacked, so the
+         smart mug's COLD -> HOT strip prints the full width of the sheet.
+       * the GENERIC mug flyer, four to a page, when no product is named or
+         the product list cannot be read.
+     The QR is the same either way: start.html?ref=CODE, and start.html asks
+     the code which product to pitch, so a beta's product can change without
+     reprinting. -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
@@ -25,6 +38,35 @@ body{font-family:system-ui,sans-serif;background:#eee;color:#111;padding:16px}
 .code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;font-weight:700;letter-spacing:1px}
 .hint{font-size:10px;color:#666}
 .from{font-size:10.5px;color:#333;border-top:1px dashed #bbb;padding-top:6px;width:100%}
+
+/* The product flyer: one column, two to a page. Top to bottom: logo and
+   price, headline, picture (the smart mug's strip full width; a product photo
+   beside the pitch), pitch, then the footer: QR beside the three steps, the
+   code and the hint. Nothing flexes: a 4.95in box with fixed parts. */
+.sheet.product{grid-template-columns:1fr;gap:0.2in}
+.sheet.product .flyer{text-align:left;align-items:stretch;gap:.08in;min-height:0;height:4.95in;padding:.26in .32in;overflow:hidden}
+.pf-top{display:flex;justify-content:space-between;align-items:baseline;gap:.2in}
+.pf-top .logo{font-size:22px}
+.pf-price{font-size:20px;font-weight:800;color:#ff6a00;white-space:nowrap}
+.pf-price small{display:block;font-size:9.5px;font-weight:600;color:#666;text-align:right;letter-spacing:0}
+.pf-headline{font-size:24px;font-weight:800;line-height:1.1;letter-spacing:-.2px}
+.pf-body{display:grid;grid-template-columns:1fr;gap:.08in .2in;align-items:start}
+.pf-body.side{grid-template-columns:1.8in 1fr;align-items:center}
+.pf-picture{display:block;width:100%;border-radius:8px;background:#fff}
+.pf-body.side .pf-picture{height:1.8in;object-fit:contain;border:1px solid #ddd}
+.pf-body.wide .pf-picture{max-height:1.68in;object-fit:contain}
+.pf-pitch{font-size:11.5px;color:#333;line-height:1.35}
+.pf-foot{display:grid;grid-template-columns:1.2in 1fr;gap:.18in;align-items:start;border-top:1px dashed #bbb;padding-top:.1in;margin-top:auto}
+.pf-foot .qr{padding:4px}
+.pf-foot .qr img,.pf-foot .qr canvas{width:1.1in;height:1.1in}
+.pf-scan{display:flex;flex-direction:column;gap:4px;min-width:0}
+.pf-steps{list-style:none;display:flex;flex-direction:column;gap:3px}
+.pf-steps li{display:flex;gap:6px;align-items:flex-start;font-size:10.5px;line-height:1.3;color:#222}
+.pf-steps b{flex:none;width:16px;height:16px;border-radius:50%;background:#ff6a00;color:#fff;display:flex;align-items:center;justify-content:center;font-size:9.5px}
+.pf-scan .code{font-size:14px;margin-top:2px}
+.pf-scan .hint{font-size:10px;color:#444}
+.pf-scan .from{border:none;padding:0;font-size:9.5px;color:#666}
+
 @media print{
   body{background:#fff;padding:0}
   .toolbar{display:none}
@@ -41,29 +83,83 @@ body{font-family:system-ui,sans-serif;background:#eee;color:#111;padding:16px}
 </div>
 <div class="sheet" id="sheet"></div>
 <script>
-(function(){
+(async function(){
   const q = new URLSearchParams(location.search);
   const name = q.get('name') || '';
   const base = q.get('base') || '';
+  const productKey = (q.get('product') || '').trim();
   const codes = (q.get('codes') || '').split(',').map(s => s.trim()).filter(Boolean);
   const first = name.split(' ')[0] || 'a friend';
-  document.getElementById('summary').textContent = codes.length
-    ? `${codes.length} flyers for ${name} (${base}). Two per row, Letter paper. Cut along the borders.`
-    : 'No codes in the link — open this page from the admin panel.';
+  const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const summary = document.getElementById('summary');
   const sheet = document.getElementById('sheet');
+  if (!codes.length) { summary.textContent = 'No codes in the link — open this page from the admin panel.'; return; }
+
+  // The product the beta sells, from the list the admin endpoint serves.
+  // Unreadable or unknown: the generic mug flyer, and the toolbar says why.
+  let product = null, why = '';
+  if (productKey) {
+    try {
+      const r = await fetch('/api/admin?action=flyer-products');
+      const d = await r.json();
+      product = (d.products || []).find(p => p.key === productKey) || null;
+      if (!product) why = ` (no product called "${productKey}", so these are the generic mug flyers)`;
+    } catch (e) {
+      why = ' (the product list could not be read, so these are the generic mug flyers)';
+    }
+  }
+
+  const perPage = product ? 'Two per page' : 'Two per row';
+  summary.textContent = `${codes.length} flyers for ${name} (${base})` + (product ? ` — ${product.label}` : '') + `. ${perPage}, Letter paper. Cut along the borders.` + why;
+  if (product) sheet.classList.add('product');
+
   codes.forEach((code, i) => {
     const url = `${location.origin}/start.html?ref=${encodeURIComponent(code)}`;
     const f = document.createElement('div'); f.className = 'flyer';
-    f.innerHTML = `
-      <div class="logo">Muggs<span>Hotz</span></div>
-      <div class="pitch">Your face. Your mug.<br>Made from one photo.</div>
-      <div class="sub">Scan, snap a photo, and watch it turn into a custom caricature coffee mug — designed on your phone, shipped to your door.</div>
-      <div class="qr" id="qr${i}"></div>
-      <div class="code">${code}</div>
-      <div class="hint">Scan the code, or type it in at checkout.</div>
-      <div class="from">Brought to you by ${first} · flyer ${i + 1} of ${codes.length}</div>`;
+    const fromLine = `Brought to you by ${esc(first)} · flyer ${i + 1} of ${codes.length}`;
+    if (product) {
+      const shape = product.picture ? (product.wide ? 'wide' : 'side') : '';
+      const picture = product.picture ? `<img class="pf-picture" src="${esc(product.picture)}" alt="${esc(product.label)}"/>` : '';
+      f.innerHTML = `
+        <div class="pf-top">
+          <div class="logo">Muggs<span>Hotz</span></div>
+          <div class="pf-price">${esc(product.priceText)}<small>${esc(product.label)}${product.priceNote ? ' · ' + esc(product.priceNote) : ''}</small></div>
+        </div>
+        <div class="pf-headline">${esc(product.headline).replace(/\n/g, '<br>')}</div>
+        <div class="pf-body ${shape}">
+          ${picture}
+          <div class="pf-pitch">${esc(product.pitch)}</div>
+        </div>
+        <div class="pf-foot">
+          <div class="qr" id="qr${i}"></div>
+          <div class="pf-scan">
+            <ul class="pf-steps">${product.steps.map((s, n) => `<li><b>${n + 1}</b><span>${esc(s)}</span></li>`).join('')}</ul>
+            <div class="code">${esc(code)}</div>
+            <div class="hint">Scan the code with your phone's camera, or type it in at checkout. Free to design — you only pay if you order.</div>
+            <div class="from">${fromLine}</div>
+          </div>
+        </div>`;
+    } else {
+      f.innerHTML = `
+        <div class="logo">Muggs<span>Hotz</span></div>
+        <div class="pitch">Your face. Your mug.<br>Made from one photo.</div>
+        <div class="sub">Scan, snap a photo, and watch it turn into a custom caricature coffee mug — designed on your phone, shipped to your door.</div>
+        <div class="qr" id="qr${i}"></div>
+        <div class="code">${esc(code)}</div>
+        <div class="hint">Scan the code, or type it in at checkout.</div>
+        <div class="from">${fromLine}</div>`;
+    }
     sheet.appendChild(f);
-    new QRCode(document.getElementById('qr' + i), { text: url, width: 154, height: 154, correctLevel: QRCode.CorrectLevel.M });
+    const size = product ? 120 : 154;
+    const box = document.getElementById('qr' + i);
+    if (typeof QRCode === 'function') {
+      new QRCode(box, { text: url, width: size, height: size, correctLevel: QRCode.CorrectLevel.M });
+    } else {
+      // The QR library did not load (offline): print the link itself rather
+      // than a blank box, and say so in the toolbar once.
+      box.textContent = url; box.style.cssText = 'font-size:9px;word-break:break-all;width:' + size + 'px';
+      if (!/QR library/.test(summary.textContent)) summary.textContent += ' The QR library did not load, so the links are printed as text; reload when online.';
+    }
   });
 })();
 </script>

@@ -4,14 +4,27 @@ Started 24 Sep 2026, when the old lists ran out.
 
 ## This week
 
-- [ ] **Flyers wired in** so printing can start and betas can be collected.
-      The flyer/beta system already exists (flyer codes, campaigns, beta
-      onboarding, commissions ledger in admin.html; see GO-LIVE.md). Read it
-      first, then say what is there and what is missing.
+- [x] **Flyers wired in** (25 Sep): a beta's featured product now reaches
+      the flyer and the landing page. lib/flyer-products.js holds each
+      product's headline, pitch, three steps and picture, priced from the
+      catalog; flyer-sheet.html prints product flyers (two to a page, the
+      smart mug's COLD -> HOT strip full width) when the Foxhole's link names
+      the product; start.html asks the code (get-balance) what its beta sells
+      and pitches that; the Foxhole's product dropdowns come from the catalog
+      (action=flyer-products). supabase/flyer-core.sql defines the tables and
+      the two functions the code always called but the repo never held.
+      **Open:** whether the live project has `fn_credit_commission` and
+      `fn_beta_available_balance` (Supabase -> Database -> Functions); if not,
+      run flyer-core.sql (GO-LIVE step 1). No flyer sale credits without them.
+      Stories are written for 19 products; the rest print the generic words
+      with no picture -- add a story in lib/flyer-products.js to give one.
+      The 40oz travel mug has no product photo in the repo, so its flyer has
+      no picture yet.
 
 - **Flyers for single products** (Alyx, 24 Sep): beautifully imagined flyers
   that show one product's flow and the model simply; the smart mug first
-  (its COLD -> HOT pictures already tell the story).
+  (its COLD -> HOT pictures already tell the story). Done for the smart mug
+  (above); the words for the other products are first drafts.
 - **Protecting the smart-mug idea** (Alyx: "appropriately patented"). The
   colour-changing mug itself is a stock Printify product; what is Alyx's is
   the use of it (opener facing the drinker, punchline behind, the SURPRISE!!!

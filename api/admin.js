@@ -14,6 +14,7 @@
 // job like the others are POST-only, so it's routed by HTTP method
 // first, before the action-field routing kicks in for POST requests.
 import { buildTierCodes, TIER_SEQUENCE } from '../lib/flyer-tiers.js';
+import { flyerProducts } from '../lib/flyer-products.js';
 import { readMaintenance, writeMaintenance } from '../lib/maintenance.js';
 import { readPaymentRail, writePaymentRail } from "../lib/payment-rail.js";
 import { squareConfigured, squareEnv, squareTokenPresent, listLocations, createGiftCard, activateGiftCard } from "../lib/square.js";
@@ -601,7 +602,8 @@ async function handleOnboard(req, res) {
     const codes = await sb('POST', 'flyer_codes', buildTierCodes(beta.id, baseCode, tier));
     console.log(`Onboarded beta ${beta.id} (${baseCode}, ${fullName}) with ${codes.length} ${tier} codes.`);
     return res.status(200).json({
-      beta: { id: beta.id, fullName: beta.full_name, baseCode: beta.base_code, currentTier: beta.current_tier },
+      beta: { id: beta.id, fullName: beta.full_name, baseCode: beta.base_code, currentTier: beta.current_tier,
+              featuredProduct: beta.featured_product || null },
       codes: codes.map(c => c.code),
       warning
     });
@@ -859,6 +861,12 @@ export default async function handler(req, res) {
   }
   if (req.method === 'GET' && req.query?.action === 'maintenance') {
     return handleMaintenanceRead(req, res);
+  }
+  // Public: the products a flyer can feature, with the words and picture each
+  // prints and its catalog price. The Foxhole's dropdowns and flyer-sheet.html
+  // read this; it says nothing a product tile does not.
+  if (req.method === 'GET' && req.query?.action === 'flyer-products') {
+    return res.status(200).json({ products: flyerProducts() });
   }
 
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });

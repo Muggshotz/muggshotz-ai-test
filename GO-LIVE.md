@@ -12,10 +12,16 @@ Expected: `STRIPE MODE: TEST`, webhook `400`. That is the safe state.
 ## 1. Supabase — the ledger tables (2 min)
 
 1. Open the project → **SQL Editor** → **New query**.
-2. Paste the whole of [`supabase/flyer-ledger.sql`](supabase/flyer-ledger.sql).
-3. **Run**. It only adds two tables and three optional columns; nothing
+2. First, **Database → Functions**: if `fn_credit_commission` and
+   `fn_beta_available_balance` are NOT listed, paste and run the whole of
+   [`supabase/flyer-core.sql`](supabase/flyer-core.sql) (the flyer tables and
+   both functions; it creates only what is missing, so it is harmless on a
+   project that already has them). Without those two functions a flyer sale
+   credits nothing and the balance page errors.
+3. Paste the whole of [`supabase/flyer-ledger.sql`](supabase/flyer-ledger.sql).
+4. **Run**. It only adds two tables and three optional columns; nothing
    existing changes. Re-running it is harmless (`if not exists` throughout).
-4. Check: on [admin.html](https://muggshotz-ai-test.vercel.app/admin.html) the
+5. Check: on [admin.html](https://muggshotz-ai-test.vercel.app/admin.html) the
    Commissions card no longer says "tables not created yet".
 
 ## 2. Stripe — the live webhook (4 min)
