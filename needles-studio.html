@@ -1,5 +1,5 @@
 <!-- ============================================================
-     VERSION: V377
+     VERSION: V378
      ============================================================
      THE ONE LINE THAT SAYS WHICH BUILD YOU ARE LOOKING AT.
 
@@ -999,7 +999,7 @@ body.panels-active #verifyCard{display:none!important}
     <input type="email" class="caption-input" id="cardBonusEmail" placeholder="you@example.com" autocomplete="email" style="margin-bottom:.7rem"/>
     <button class="guidance-alert-close" id="cardBonusSendBtn" onclick="sendCardBonus()">📧 Send My Free Spins</button>
     <div class="note" id="cardBonusStatus" style="margin-top:.7rem;min-height:1.2em"></div>
-    <div class="note" style="margin-top:.4rem;color:#7ab8ff;cursor:pointer" onclick="closeCardBonus()">Maybe later</div>
+    <div class="note" style="margin-top:.4rem;color:#7ab8ff;cursor:pointer" onclick="declineCardBonus()">Maybe later</div>
   </div>
 </div>
 <div id="guidanceAlertOverlay" class="big-alert-overlay" onclick="if(event.target===this)closeGuidanceAlert()">
@@ -4605,7 +4605,7 @@ function toggleWorkingImage(){
 // Two copies of a number is exactly how the marker rotted in the first place,
 // so they are not trusted to agree: .githooks/pre-commit moves both together
 // and REFUSES the commit if it ever finds them apart.
-const APP_VERSION='V377';
+const APP_VERSION='V378';
 try{ console.log('%cNeedles\u2019 Studio '+APP_VERSION,'color:#29a3ff;font-weight:700'); }catch(e){}
 
 function getDeviceId(){
@@ -4712,9 +4712,18 @@ async function checkCardBonus(emailVerified){
     const r=await fetch('/api/get-balance?card='+encodeURIComponent(code)); const d=await r.json();
     if(!d||!d.on)return;
     cardBonusOffer={code,spins:d.spins};
-    let seen=false; try{ seen=sessionStorage.getItem('muggshotz_card_offer_seen')==='1'; sessionStorage.setItem('muggshotz_card_offer_seen','1'); }catch(e){}
-    if(!seen)openCardBonus();
+    // Once per session, and never again by itself after "Maybe later" (Alyx,
+    // 25 Sep 2026: it came up on every open of the installed app, and nagged
+    // him into sending twice, which killed the first link). The chips pill
+    // still offers the spins whenever they tap it.
+    let seen=false, declined=false;
+    try{ seen=sessionStorage.getItem('muggshotz_card_offer_seen')==='1'; sessionStorage.setItem('muggshotz_card_offer_seen','1'); declined=localStorage.getItem('muggshotz_card_offer_declined')==='1'; }catch(e){}
+    if(!seen&&!declined)openCardBonus();
   }catch(e){}
+}
+function declineCardBonus(){
+  try{ localStorage.setItem('muggshotz_card_offer_declined','1'); }catch(e){}
+  closeCardBonus();
 }
 function openCardBonus(){
   if(!cardBonusOffer)return false;

@@ -96,6 +96,26 @@ scenarios.creditsPopupShowsBeforeThePhoto = async (viewport) => {
   } finally { await browser.close(); }
 };
 
+
+// MAYBE LATER IS REMEMBERED (Alyx, 25 Sep 2026). Declining closes the offer
+// and it does not open by itself on the next visit; the chips pill still
+// offers it on a tap.
+scenarios.maybeLaterIsRemembered = async (viewport) => {
+  const { browser, page } = await open({ viewport, on: true });
+  try {
+    if (!(await shown(page))) return 'FAIL: the offer did not open on arrival';
+    await page.evaluate(() => declineCardBonus());
+    await T(page, 300);
+    if (await shown(page)) return 'FAIL: Maybe later did not close the offer';
+    await page.goto(BASE + '/needles-studio.html', { waitUntil: 'domcontentloaded' });
+    await T(page, 2500);
+    if (await shown(page)) return 'FAIL: the offer came back by itself after Maybe later';
+    const offeredOnTap = await page.evaluate(() => { showTokenInfoPopup(document.getElementById('hudPill')); return document.getElementById('cardBonusOverlay').classList.contains('visible'); });
+    if (!offeredOnTap) return 'FAIL: after Maybe later the chips pill no longer offers the spins';
+    return 'PASS: Maybe later closes the offer for good; the chips pill still offers it on a tap';
+  } finally { await browser.close(); }
+};
+
 (async () => {
   let fails = 0;
   for (const [screen, viewport] of Object.entries({ laptop: { width: 1880, height: 770 }, phone: { width: 390, height: 844 } })) {
