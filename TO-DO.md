@@ -44,7 +44,10 @@ Started 24 Sep 2026, when the old lists ran out.
   a pit, "anything we can think of." Bud's first result: WELCOME cut from a
   wooden dock over clear water, the missing boards where the letters are
   (its W and last E run off the mat's edges; watch the letters at the edges
-  on a doormat). Goes in with Premades & Sets.
+  on a doormat). Bud then made nine (25 Sep): dock over water, dog through
+  the boards, rope bridge, cracked ice, crocodile, open manhole, lava pit,
+  shark at a pier, spike pit. The dock and the manhole have their lettering
+  cut at the edges; the rest are print-ready. Goes in with Premades & Sets.
 
 - **Every product that can spin, spins** (Alyx, 25 Sep: "The carousel is my
   jam"). The suitcase joined the mugs, cups and stein on the 3D mockup (V380).
