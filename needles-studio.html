@@ -1,5 +1,5 @@
 <!-- ============================================================
-     VERSION: V376
+     VERSION: V377
      ============================================================
      THE ONE LINE THAT SAYS WHICH BUILD YOU ARE LOOKING AT.
 
@@ -641,6 +641,11 @@ body.goodmorninggen-focus .card:not(#goodMorningCard){opacity:.28;filter:brightn
 body.goodmorningreveal-focus .card:not(#uploadPhotoCard){opacity:.28;filter:brightness(.55) saturate(.7);transition:opacity .5s,filter .5s}
 body.final-generate-focus .card:not(#uploadPhotoCard){opacity:.35;filter:brightness(.6) saturate(.75);transition:opacity .5s,filter .5s}
 body.initial-upload-focus .card:not(#uploadPhotoCard){opacity:0;pointer-events:none;transition:opacity .5s}
+/* A popup's box is a .card too. Before the photo, the rule above hid the
+   Credits & Extras box (and any other overlay's) to opacity 0: the page
+   dimmed and nothing appeared (Alyx, 25 Sep 2026). Popups are never part of
+   the rail, so they show whatever the page is focused on. */
+body.initial-upload-focus :is(#creditsModalOverlay,#bigAlertOverlay,#cardBonusOverlay,#guidanceAlertOverlay,.step-lock-overlay) .card{opacity:1!important;filter:none!important;pointer-events:auto!important}
 /* THE WHOLE PAGE WAITS FOR THE PHOTO (Alyx, batch item 2): before a photo
    is chosen (or AI collaboration picked), the ONLY live panel is the
    upload/choice card. The card rule above already hides every .card, but
@@ -4600,7 +4605,7 @@ function toggleWorkingImage(){
 // Two copies of a number is exactly how the marker rotted in the first place,
 // so they are not trusted to agree: .githooks/pre-commit moves both together
 // and REFUSES the commit if it ever finds them apart.
-const APP_VERSION='V376';
+const APP_VERSION='V377';
 try{ console.log('%cNeedles\u2019 Studio '+APP_VERSION,'color:#29a3ff;font-weight:700'); }catch(e){}
 
 function getDeviceId(){

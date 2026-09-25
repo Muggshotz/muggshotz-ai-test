@@ -27,6 +27,7 @@ async function open(opts) {
 const shown = (page) => page.evaluate(() => document.getElementById('cardBonusOverlay').classList.contains('visible'));
 
 const scenarios = {
+
   async arrivesFromTheCard(viewport) {
     const { browser, page, log, sent } = await open({ viewport, on: true });
     try {
@@ -74,6 +75,25 @@ const scenarios = {
       return 'PASS: a switched-off code shows nothing';
     } finally { await browser.close(); }
   },
+};
+
+// THE CREDITS POPUP SHOWS BEFORE THE PHOTO (Alyx, 25 Sep 2026: "all I get is
+// a completely subdued page"). Before a photo is chosen the page hides every
+// card but the upload card, and the popup's box is a card: the page dimmed
+// and nothing appeared. A popup is never part of the rail; it must show.
+scenarios.creditsPopupShowsBeforeThePhoto = async (viewport) => {
+  const { browser, page } = await open({ viewport, on: false, path: '/needles-studio.html' });
+  try {
+    await page.evaluate(() => openCreditsPanel());
+    await T(page, 600);
+    const st = await page.evaluate(() => {
+      const c = document.querySelector('#creditsModalOverlay .card'); const cs = getComputedStyle(c); const r = c.getBoundingClientRect();
+      return { focus: [...document.body.classList].filter((x) => /focus/.test(x)), opacity: Number(cs.opacity), clickable: cs.pointerEvents !== 'none', onScreen: r.width > 200 && r.height > 200 && r.top >= 0 };
+    });
+    if (!st.focus.includes('initial-upload-focus')) return `FAIL: the page is not in its pre-photo focus (${st.focus.join(' ')}) -- not the reported case`;
+    if (st.opacity < 0.99 || !st.clickable || !st.onScreen) return `FAIL: the Credits box is hidden before the photo: ${JSON.stringify(st)}`;
+    return 'PASS: the Credits & Extras popup shows, fully lit and clickable, before a photo is chosen';
+  } finally { await browser.close(); }
 };
 
 (async () => {
