@@ -38,6 +38,14 @@ Started 24 Sep 2026, when the old lists ran out.
   what you probably should be doing instead of wasting all this time on the
   computer." Goes in with Premades & Sets.
 
+- **The Unwelcome Mat** (Alyx, 25 Sep): a category of doormat premades from
+  the trompe-l'oeil prompt: eyes peering up from beneath the boards, the
+  snarling dog, a trapdoor with the bolt drawn, a manhole with the cover off,
+  a pit, "anything we can think of." Bud's first result: WELCOME cut from a
+  wooden dock over clear water, the missing boards where the letters are
+  (its W and last E run off the mat's edges; watch the letters at the edges
+  on a doormat). Goes in with Premades & Sets.
+
 - **Every product that can spin, spins** (Alyx, 25 Sep: "The carousel is my
   jam"). The suitcase joined the mugs, cups and stein on the 3D mockup (V380).
   Still on Printify's photos: coasters, phone cases, tote, puzzle, poster,
