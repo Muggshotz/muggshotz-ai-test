@@ -157,9 +157,22 @@ scenarios.mugWraparoundHidesProps = async (page) => {
     tiles: document.getElementById('designMethodTiles')?.style.display,
     notice: document.getElementById('designMethodWraparoundNotice')?.style.display,
     intro: document.getElementById('designMethodPropsIntro')?.style.display,
+    coverMe: document.getElementById('designMethodCoverMeBtn')?.style.display,
+    home: document.getElementById('designMethodHomeBtn')?.style.display,
+    faceItVisible: (() => { const t = document.getElementById('designMethodFaceItBtn'); return !!t && getComputedStyle(t).display !== 'none'; })(),
+    propsNote: document.getElementById('designMethodWrapPropsNote')?.style.display,
   }));
   if (s.mode !== 'wraparound') return `FAIL: mugPrintMode=${s.mode} after picking Wraparound`;
-  if (s.tiles !== 'none') return `FAIL: prop tiles still showing (display=${s.tiles}) — a prop is a fixed picture and cannot wrap`;
+  // Since 9f6e87a a wraparound that Face It can serve keeps the tiles up,
+  // narrowed: the two fixed pictures (Cover Me, Home Sweet Home) come down
+  // and a note says why. Only a wrap Face It cannot serve hides every prop
+  // and shows the describe-your-idea notice instead.
+  if (s.tiles !== 'none') {
+    if (s.coverMe !== 'none' || s.home !== 'none') return `FAIL: the fixed props still showing on a wraparound (Cover Me=${s.coverMe}, Home=${s.home}) — a fixed picture cannot wrap`;
+    if (s.propsNote !== 'block') return `FAIL: two props came down with no note saying why (display=${s.propsNote})`;
+    if (!s.faceItVisible) return 'FAIL: tiles are up on the wraparound but Face It, the one that can wrap, is not among them';
+    return 'PASS: Wraparound keeps Face It up and takes the two fixed props down, with a note saying why';
+  }
   if (s.notice !== 'block') return `FAIL: wraparound description notice not shown (display=${s.notice})`;
   if (s.intro !== 'none') return `FAIL: "try our fun props" intro still showing alongside a wraparound`;
   // The notice says "describe your idea for us in the box above." It was
@@ -464,11 +477,14 @@ scenarios.mugWraparoundPrintsFromOneStrip = async (page, log, mockupBodies) => {
   // And it must survive the hop to order.html, which is a different document
   // reading a localStorage handoff -- an easy place for a new field to be
   // dropped silently.
-  const handed = await page.evaluate(() => {
-    goToOrder();
-    try { return JSON.parse(localStorage.getItem('muggshotz_pending_order') || 'null'); }
-    catch (e) { return null; }
-  });
+  // goToOrder is async: it hosts the raw designs first, writes the order,
+  // then leaves for order.html. Poll for the write, across that navigation.
+  await page.evaluate(() => { goToOrder(); });
+  let handed = null;
+  for (let i = 0; i < 30 && !handed; i++) {
+    await T(page, 500);
+    handed = await page.evaluate(() => { try { return JSON.parse(localStorage.getItem('muggshotz_pending_order') || 'null'); } catch (e) { return null; } }).catch(() => null);
+  }
   if (!handed) return 'FAIL: no pending order was written';
   if (!handed.panoramaImage)
     return 'FAIL: panoramaImage dropped in the handoff to order.html — the order would print from the reassembly';
@@ -1367,6 +1383,18 @@ scenarios.blankBandsAreTrimmedFromTheWrap = async (page) => {
 // THE PALETTE COMES NEXT (Alyx, v102): a cup with colours lands on its
 // colour card, a colour lands on Print Style, and Print Style with an
 // empty idea box lands on the idea box, not Generate.
+// Since a8f3c2a (an On My Mind plate for every cup band) the open question
+// after a cup's Print Style, or its colour on a two-face cup, is the Design
+// Method card: Face It, or describe. Landing there, with Face It on screen,
+// is the correct landing; the idea box is the landing only when that card
+// is not offered.
+const landedOnNextQuestion = (page) => page.evaluate(() => {
+  const on = (el) => { if (!el || getComputedStyle(el).display === 'none') return false; const r = el.getBoundingClientRect(); return r.height > 0 && r.bottom > 0 && r.top < window.innerHeight; };
+  const dm = document.getElementById('designMethodCard');
+  if (dm && getComputedStyle(dm).display !== 'none') return on(dm) && on(document.getElementById('designMethodFaceItBtn')) ? 'design method' : null;
+  return on(document.getElementById('ideaDesc')) ? 'idea box' : null;
+});
+
 scenarios.theCupsPaletteComesNext = async (page) => {
   await pickProduct(page, 'water bottle');
   await page.evaluate(() => pickPreGenTravelVariant('travel-mug-30oz-tundra'));
@@ -1384,9 +1412,9 @@ scenarios.theCupsPaletteComesNext = async (page) => {
   await page.evaluate(() => pickMugPrintMode('wraparound'));
   await T(page, 1500);
   await dismissAlerts(page);
-  const idea = await page.evaluate(() => { const t = document.getElementById('ideaDesc'); const r = t.getBoundingClientRect(); return r.height > 0 && r.bottom > 0 && r.top < window.innerHeight; });
-  if (!idea) return 'FAIL: Print Style with an empty idea box did not land on the idea box';
-  return 'PASS: Tundra -> colour card -> Print Style -> idea box, each the next open question';
+  const next = await landedOnNextQuestion(page);
+  if (!next) return 'FAIL: Print Style with an empty idea box did not land on the next open question (Design Method, or the idea box)';
+  return `PASS: Tundra -> colour card -> Print Style -> ${next}, each the next open question`;
 };
 
 // A BAND THAT STOPS SHORT FADES TO THE CUP (Alyx, v105). The Gator's band
@@ -1406,15 +1434,25 @@ scenarios.gatorWrapFadesToTheBottle = async (page) => {
       const d = ctx.getImageData(Math.round(x), Math.round(y), 1, 1).data; return [d[0], d[1], d[2]];
     };
     const W = ext.naturalWidth, H = ext.naturalHeight, y = H * 0.35;
-    return { closes: travelWrapCloses(selectedTravelProductKey), ratio: W / H,
-      left: px(ext, 1, y), right: px(ext, W - 2, y), centre: px(ext, W / 2, H / 2), origCentre: px(orig, orig.naturalWidth / 2, orig.naturalHeight / 2) };
+    // The picture sits in the middle; each flank is its own edge mirrored
+    // (extendWrapToProductRatio's default), so the pixel k in from an end is
+    // the picture's pixel k in from that edge.
+    const ow = orig.naturalWidth * (H / orig.naturalHeight), flank = (W - ow) / 2, k = 6;
+    return { closes: travelWrapCloses(selectedTravelProductKey), ratio: W / H, flank,
+      left: px(ext, flank - k, y), leftMirror: px(ext, flank + k, y),
+      right: px(ext, W - flank + k, y), rightMirror: px(ext, W - flank - k, y),
+      centre: px(ext, W / 2, H / 2), origCentre: px(orig, orig.naturalWidth / 2, orig.naturalHeight / 2) };
   });
   const near = (a, b, tol) => a.every((v, i) => Math.abs(v - b[i]) <= tol);
   if (r.closes) return 'FAIL: the Gator is marked as a band that meets itself';
   if (Math.abs(r.ratio - 1.75) > 0.02) return `FAIL: the Gator wrap is ${r.ratio.toFixed(3)}:1, not 1.75:1`;
-  if (!near(r.left, [255, 255, 255], 8) || !near(r.right, [255, 255, 255], 8)) return `FAIL: the ends did not fade to the bottle's white: rgb(${r.left}) / rgb(${r.right})`;
   if (!near(r.centre, r.origCentre, 8)) return `FAIL: the centre of the picture changed: rgb(${r.origCentre}) -> rgb(${r.centre})`;
-  return 'PASS: the Gator wrap is 1.75:1 with both ends faded to the bottle and the centre untouched';
+  // A picture wider than the band is cut to it from the middle (no flanks);
+  // a narrower one gets its own edges mirrored as flanks. Fade is opt-in
+  // everywhere (edgeFadeChoice): never an automatic fade to the bottle.
+  if (r.flank < 8) return `PASS: the Gator wrap is 1.75:1, cut from the middle of a wider picture (${(-r.flank).toFixed(0)}px off each end), centre untouched`;
+  if (!near(r.left, r.leftMirror, 12) || !near(r.right, r.rightMirror, 12)) return `FAIL: the flanks are not the picture's edges mirrored: rgb(${r.left}) vs rgb(${r.leftMirror}) / rgb(${r.right}) vs rgb(${r.rightMirror})`;
+  return 'PASS: the Gator wrap is 1.75:1 with mirrored flanks (no automatic fade) and the centre untouched';
 };
 
 // THE 40oz LANDS ON THE IDEA BOX (Alyx, v108). It has no Print Style step,
@@ -1427,9 +1465,9 @@ scenarios.theFortyOunceLandsOnTheIdeaBox = async (page) => {
   await page.evaluate(() => { const b = document.querySelector('#travelMugColorGridGen .color-btn[data-color="Black"]'); b.click(); });
   await T(page, 1500);
   await dismissAlerts(page);
-  const idea = await page.evaluate(() => { const t = document.getElementById('ideaDesc'); const r = t.getBoundingClientRect(); return r.height > 0 && r.bottom > 0 && r.top < window.innerHeight; });
-  if (!idea) return 'FAIL: the 40oz colour pick did not land on the idea box';
-  return 'PASS: the 40oz insulated lands on the idea box after its colour pick';
+  const next = await landedOnNextQuestion(page);
+  if (!next) return 'FAIL: the 40oz colour pick did not land on the next open question (Design Method, or the idea box)';
+  return `PASS: the 40oz insulated lands on the ${next} after its colour pick`;
 };
 
 // FRAMES ON CUPS (Alyx, v108: "why can't we put frames on this mug?").

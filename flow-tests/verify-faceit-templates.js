@@ -81,9 +81,11 @@ scenarios.legacyRosterIntact = async (page) => {
   const missing = LEGACY_20.filter(f => r.files.indexOf(f) === -1);
   if (missing.length) return `FAIL: templates dropped by the refactor: ${missing.join(', ')}`;
   if (kept.length !== 20) return `FAIL: expected the original 20, got ${kept.length}`;
-  const textSorted = r.text.slice().sort();
-  if (JSON.stringify(textSorted) !== JSON.stringify(LEGACY_TEXT.slice().sort()))
-    return `FAIL: text-template set drifted to ${JSON.stringify(r.text)}`;
+  // The text set gained a plate per cup band (a8f3c2a: On My Mind for the
+  // Tundra, Gator, narrow cups, left and right); the two originals must stay.
+  const lostText = LEGACY_TEXT.filter(f => r.text.indexOf(f) === -1);
+  if (lostText.length)
+    return `FAIL: text templates dropped: ${lostText.join(', ')} (set is ${JSON.stringify(r.text)})`;
   return 'PASS: all 20 original templates and both text templates survive the refactor';
 };
 
@@ -414,7 +416,10 @@ studio.faceItPlumbingStaysInsideFaceIt = async (page) => {
       const fn = window[n];
       if (typeof fn !== 'function') { leaks.push(`${n} missing`); continue; }
       const src = fn.toString();
-      for (const tok of ['faceItKind', 'faceItPendingPanels', 'placardTexts', 'faceItHeightIn', 'buildFaceItComposite', 'sliceFaceItResultIntoPanels'])
+      // sliceFaceItResultIntoPanels is no longer Face It's alone: since V325
+      // (08ef0b7) a described mug wraparound is painted flat, widened, and cut
+      // into panels by the same function, so generate() may name it.
+      for (const tok of ['faceItKind', 'faceItPendingPanels', 'placardTexts', 'faceItHeightIn', 'buildFaceItComposite'])
         if (src.indexOf(tok) !== -1) leaks.push(`${n} references ${tok}`);
     }
     const own = window.generateFaceIt.toString();
@@ -538,8 +543,9 @@ studio.legacyRosterReachesTheStudio = async (page) => {
   const survivors = r.catalog.filter(f => LEGACY_20.indexOf(f) !== -1);
   if (JSON.stringify(survivors) !== JSON.stringify(LEGACY_20))
     return `FAIL: the original 20 drifted in content or order:\n  got  ${JSON.stringify(survivors)}`;
-  if (JSON.stringify(r.text.slice().sort()) !== JSON.stringify(LEGACY_TEXT.slice().sort()))
-    return `FAIL: text set drifted to ${JSON.stringify(r.text)}`;
+  const lostText = LEGACY_TEXT.filter(f => r.text.indexOf(f) === -1);
+  if (lostText.length)
+    return `FAIL: text templates dropped: ${lostText.join(', ')} (set is ${JSON.stringify(r.text)})`;
   return 'PASS: the studio sees the original 20 in their original order';
 };
 

@@ -140,6 +140,17 @@ async function launch(opts = {}) {
     if (p === '/api/send-verification') {
       return route.fulfill({ json: { ok: true, sent: true } });
     }
+    // The order page's three public reads on load. Left unstubbed they came
+    // back 500 (three console errors a suite counts as failures): the kill
+    // switch (off), the payment track (Stripe, as the shop defaults), and the
+    // live shipping quote (none, so the page keeps its fallback estimate,
+    // exactly as a 500 left it).
+    if (p === '/api/admin') {
+      const action = url.searchParams.get('action');
+      if (action === 'maintenance') return route.fulfill({ json: { on: false } });
+      if (action === 'payment-rail') return route.fulfill({ json: { rail: 'stripe', squareConfigured: false } });
+    }
+    if (p === '/api/printify-catalog') return route.fulfill({ json: {} });
     if (p === '/api/phone-case-catalog' || p === '/api/phone-compatibility-check') {
       return route.fulfill({ json: {
         matches: [{ model: 'iPhone 15 Pro', blueprintId: 1, printProviderId: 1, variantId: 111 }],
@@ -286,6 +297,22 @@ async function passFadePage(page, { timeout = 20000 } = {}) {
   return true;
 }
 
+// A CUP'S FIT STEP (320b52f, #91: "give cups the fit step"). On a travel cup
+// with a 3D body, Yes opens FIT YOUR PICTURE (coverMePanelCard) before the
+// cup; Done takes it on to the mockup. Tolerant like passFadePage: a product
+// without the step returns false and the suite carries on.
+async function passCupFitStep(page, { timeout = 8000 } = {}) {
+  const opened = await page.waitForFunction(() => {
+    const c = document.getElementById('coverMePanelCard');
+    return !!(c && getComputedStyle(c).display !== 'none');
+  }, null, { timeout }).then(() => true).catch(() => false);
+  if (!opened) return false;
+  await page.waitForFunction(() => { const b = document.getElementById('coverMePanelDoneBtn'); return !!b && !b.disabled; }, null, { timeout: 10000 });
+  await page.click('#coverMePanelDoneBtn');
+  await page.waitForTimeout(1200);
+  return true;
+}
+
 // THE GREETING CARD'S INSIDE PAGE (Sep 2026) stands between the fade page and
 // the mockup, exactly as passFadePage's screen does. Blank is the default and
 // the ordinary card, so passing straight through is what most customers do --
@@ -310,4 +337,4 @@ async function passCardInside(page, choose, { timeout = 10000 } = {}) {
   return true;
 }
 
-module.exports = { launch, openStudio, uploadPhoto, uploadPhotoAndChooseBYO, waitForIntentGate, interactable, bodyFocusClasses, dismissAlerts, passFadePage, passCardInside, BASE };
+module.exports = { launch, openStudio, uploadPhoto, uploadPhotoAndChooseBYO, waitForIntentGate, interactable, bodyFocusClasses, dismissAlerts, passFadePage, passCupFitStep, passCardInside, BASE };

@@ -211,7 +211,9 @@ scenarios.frontDoorAdvertisesTheFreeLane = async (page) => {
   if (!st.exists) return 'FAIL: no BYO banner on the page';
   if (!st.visible) return 'FAIL: the banner exists but is not visible';
   if (!st.insideUpload) return 'FAIL: the banner is outside uploadPhotoCard — the initial spotlight will dim it';
-  if (!/FREE/i.test(st.text) || !/exactly as it is/i.test(st.text)) return `FAIL: banner copy doesn't sell the free as-is lane`;
+  // The banner says free with the 🆓 sign since V314 (nothing about money on
+  // the upload boards, f5eb430); either spelling sells the lane.
+  if (!/FREE|🆓/i.test(st.text) || !/exactly as it is/i.test(st.text)) return `FAIL: banner copy doesn't sell the free as-is lane`;
   if (/token/i.test(st.text)) return 'FAIL: the banner mentions tokens — Alyx: "we don\'t have to say that"';
   return 'PASS: the front door advertises bring-your-own-art, free, without mentioning tokens';
 };
@@ -571,9 +573,11 @@ scenarios.byoUploadButtonSkipsTheGate = async (page) => {
 BYO_SETUP.add('byoUploadButtonSkipsTheGate');
 
 scenarios.aiCollabButtonSkipsTheGate = async (page) => {
+  // V314 (f5eb430, Alyx: "why would it cost me money to upload my photo?"):
+  // the boards say nothing about money; the token line moved under them.
   const btnText = await page.evaluate(() => document.getElementById('aiCollabUploadBtn')?.textContent || '');
-  if (!/Collaborate/i.test(btnText) || !/1 token/i.test(btnText))
-    return `FAIL: the AI button doesn't say Collaborate + (1 token): "${btnText}"`;
+  if (!/Collaborate/i.test(btnText) || /token/i.test(btnText))
+    return `FAIL: the AI button should say Collaborate and nothing about tokens: "${btnText}"`;
   page.on('filechooser', (fc) => fc.setFiles(require('path').join(__dirname, 'test-photo.jpg')).catch(() => {}));
   await page.click('#aiCollabUploadBtn');
   await T(page, 2500);
@@ -586,7 +590,7 @@ scenarios.aiCollabButtonSkipsTheGate = async (page) => {
   if (st.gateShown) return 'FAIL: the AI collab upload still shows the gate';
   if (st.intent !== 'ai') return `FAIL: AI collab upload declared intent=${st.intent}, expected ai`;
   if (!st.forkShown || !st.styleShown) return 'FAIL: the AI track did not land on the prior rail (Art Style + track fork)';
-  return 'PASS: Collaborate With Our AI (1 token) is the AI track — no gate, straight onto the prior rail';
+  return 'PASS: Collaborate With Our AI is the AI track, no money on the board — no gate, straight onto the prior rail';
 };
 BYO_SETUP.add('aiCollabButtonSkipsTheGate');
 

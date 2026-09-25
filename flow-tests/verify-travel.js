@@ -179,6 +179,23 @@ for (const key of GEN_LANDING) {
     await page.evaluate(() => pickMugPrintMode('wraparound'));
     await page.waitForTimeout(2500);
 
+    // Since a8f3c2a (an On My Mind plate for every cup band) a wraparound on
+    // a cup is followed by the Design Method card: Face It, or describe. That
+    // card is the landing then, with its first choice on screen; a cup with
+    // no card lands on Generate as before.
+    const dm = await page.evaluate(() => {
+      const c = document.getElementById('designMethodCard');
+      if (!c || getComputedStyle(c).display === 'none') return null;
+      const r = c.getBoundingClientRect();
+      const tile = document.getElementById('designMethodFaceItBtn');
+      const t = tile && getComputedStyle(tile).display !== 'none' ? tile.getBoundingClientRect() : null;
+      return { top: Math.round(r.top), bottom: Math.round(r.bottom), H: innerHeight, tileOn: !!t && t.top >= 0 && t.bottom <= innerHeight + 2 };
+    });
+    if (dm) {
+      if (dm.top < -2 || dm.top > dm.H * 0.5) return `FAIL: ${key} — after picking Print Style the Design Method card sits at top ${dm.top} (screen ${dm.H}); its title is not where the customer lands`;
+      if (!dm.tileOn) return `FAIL: ${key} — the Design Method card landed but its Face It choice is off screen`;
+      return `PASS: ${key} lands on the Design Method card (${dm.top}px from the top) with Face It on screen`;
+    }
     const st = await page.evaluate(() => {
       const btn = document.getElementById('generateBtn');
       if (!btn) return { missing: true };

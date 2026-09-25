@@ -1,5 +1,5 @@
 <!-- ============================================================
-     VERSION: V378
+     VERSION: V379
      ============================================================
      THE ONE LINE THAT SAYS WHICH BUILD YOU ARE LOOKING AT.
 
@@ -2223,7 +2223,7 @@ Tell Needles <span style="color:#7ab8ff">what you have in mind</span>
      in front of this one is gone, and two sentences take its place. -->
 <div class="note" id="trimmingsIntroNote" style="margin-top:0;margin-bottom:.6rem;text-align:left;line-height:1.5">Your picture goes <b>all the way around</b> this cup, so its two ends come back and meet on the back. Tap a trimming and the cup wears it straight away &mdash; tap <b>No Thanks</b> to see the join bare. It's free to look either way.</div>
 <!-- What the same screen says on a cup with NO join -- see renderTrimmingsChoices(). -->
-<div class="note" id="trimmingsNoSeamNote" style="display:none;margin-top:0;margin-bottom:.6rem;text-align:left;line-height:1.5">Your picture goes <b>right the way round</b> this cup and its two ends <b>overlap</b>, so there is no join to cover and nothing here to trim. What there is to decide is <b>where the handle lands</b> &mdash; turn the picture below until it sits where you want it.</div>
+<div class="note" id="trimmingsNoSeamNote" style="display:none;margin-top:0;margin-bottom:.2rem;text-align:left;line-height:1.4">Your picture goes <b>right the way round</b> this cup and its two ends <b>overlap</b>, so there is no join to cover and nothing here to trim. What there is to decide is <b>where the handle lands</b> &mdash; turn the picture below until it sits where you want it.</div>
 <!-- SIDE BY SIDE (Alyx, Sep 2026): "there's gotta be some way to recompose
      this so that you can look at all of the available trimmings, and the image
      it would go on to, simultaneously as you're applying different options.
@@ -4605,7 +4605,7 @@ function toggleWorkingImage(){
 // Two copies of a number is exactly how the marker rotted in the first place,
 // so they are not trusted to agree: .githooks/pre-commit moves both together
 // and REFUSES the commit if it ever finds them apart.
-const APP_VERSION='V378';
+const APP_VERSION='V379';
 try{ console.log('%cNeedles\u2019 Studio '+APP_VERSION,'color:#29a3ff;font-weight:700'); }catch(e){}
 
 function getDeviceId(){
@@ -12769,6 +12769,11 @@ function refreshSurprisePreview(){
   if(!wrap)return;
   wrap.style.display=url?'block':'none';
   if(url)document.getElementById('surprisePreview').src=url;
+  // Picking lands on the preview with its Continue button on screen (the
+  // checklist's landing rule; on a 770px laptop the button sat 3px under
+  // the fold once the COLD -> HOT picture joined the preview). The scroll
+  // helper waits for the pictures to settle before it moves.
+  if(url)smoothScrollToTarget('surprisePreviewWrap','end');
   // The COLD -> HOT picture: the mug cold, then hot with the opener facing
   // the holder (handle on the right), then turned round to the punchline. It
   // shows what the mug does, which the flat print cannot. Every print has one

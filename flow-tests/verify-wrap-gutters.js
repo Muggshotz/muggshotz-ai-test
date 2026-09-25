@@ -24,10 +24,14 @@
 //     whole wrap and MOVE the join, which is what the gutter exists to settle.
 //   * ONLY ON A CUP WHOSE ENDS MEET. Strips on a wrap that never closes are
 //     just two stripes down the artwork.
-const { launch, openStudio, uploadPhoto, dismissAlerts } = require('./harness');
+const { launch, openStudio, uploadPhoto, dismissAlerts, passCupFitStep } = require('./harness');
 
 const T = (page, ms) => page.waitForTimeout(ms);
 const VACUUM = 'travel-mug-40oz-vacuum';
+// The cup whose seam a trimming covers (WRAP_GUTTER_CUPS). The vacuum 40oz's
+// picture closes on itself, so its Trimmings screen carries only the turn
+// slider (c13bf77): the gutter grid, No Thanks and Fade live on this one.
+const SEAM_CUP = 'travel-mug-20oz';
 // The panel now spins the real 3D cup, so every scenario that opens it needs a
 // software GL in this headless sandbox -- the same one verify-mug-3d uses.
 const GL = ['--use-gl=swiftshader', '--enable-unsafe-swiftshader'];
@@ -157,18 +161,23 @@ scenarios.paintsInsideTheCanvas = async (page) => {
   return 'PASS: 3710x2817 in and out, centre of the picture unmoved';
 };
 
-// ---- 4. ONLY WHERE THE ENDS MEET. ----
+// ---- 4. ONLY WHERE THERE IS A SEAM TO COVER. ----
+// A trimming stands on a join (Alyx, Sep 2026: "trimmings are only for items
+// which meet at a seam"). The 20oz has one (WRAP_GUTTER_CUPS, e461d27 /
+// 42dfc1c); the vacuum 40oz's picture closes on itself with no join, so it
+// gets the turn slider and no gutters (c13bf77); a handled cup never has one.
 scenarios.onlyOnCupsWhoseEndsMeet = async (page) => {
   await pickCup(page, VACUUM);
-  if (!(await page.evaluate(() => wrapWantsGutters()))) return 'FAIL: the vacuum 40oz did not get gutters';
+  if (await page.evaluate(() => wrapWantsGutters())) return 'FAIL: the vacuum 40oz got gutters, and its picture has no join to cover';
   const others = await page.evaluate(() => {
     const was = selectedTravelProductKey, out = {};
     for (const k of Object.keys(TRAVEL_MUG_CATALOG)) { selectedTravelProductKey = k; out[k] = wrapWantsGutters(); }
     selectedTravelProductKey = was;
     return out;
   });
-  const wrong = Object.entries(others).filter(([k, v]) => v && k !== VACUUM).map(([k]) => k);
-  if (wrong.length) return `FAIL: gutters on ${wrong.join(', ')} — none is confirmed to close`;
+  if (!others[SEAM_CUP]) return `FAIL: the ${SEAM_CUP} did not get gutters, and its seam is the one a trimming covers`;
+  const wrong = Object.entries(others).filter(([k, v]) => v && k !== SEAM_CUP).map(([k]) => k);
+  if (wrong.length) return `FAIL: gutters on ${wrong.join(', ')} — no seam there to cover`;
   const leaked = await page.evaluate(() => {
     const was = product, out = {};
     for (const p of ['mug', 'coaster', 'tote bag', 'poster']) { product = p; out[p] = wrapWantsGutters(); }
@@ -177,7 +186,7 @@ scenarios.onlyOnCupsWhoseEndsMeet = async (page) => {
   });
   const bad = Object.entries(leaked).filter(([, v]) => v).map(([k]) => k);
   if (bad.length) return `FAIL: gutters leaked onto ${bad.join(', ')}`;
-  return 'PASS: the vacuum 40oz alone — every other cup and every non-cup is untouched';
+  return 'PASS: the 20oz alone — the vacuum 40oz, every other cup and every non-cup are untouched';
 };
 
 // ---- 5. THE WIDTH DIAL REACHES THE PAINT. ----
@@ -316,7 +325,7 @@ scenarios.aBrokenDesignFallsBackToThePlainGutter = async (page) => {
 // that opens and does not close, which strands a paying customer short of
 // their mockup with no way forward.
 scenarios.theCustomerReachesThePanelAndGetsPastIt = async (page) => {
-  await pickCup(page, VACUUM);
+  await pickCup(page, SEAM_CUP);
   await page.evaluate(() => {
     const b = Array.from(document.querySelectorAll('#travelMugColorGridGen .color-btn'))
       .find((x) => x.dataset.color && !/white/i.test(x.dataset.color));
@@ -349,6 +358,7 @@ scenarios.theCustomerReachesThePanelAndGetsPastIt = async (page) => {
   await page.locator('#approveRow button:has-text("Yes")').first().click();
   await T(page, 2500);
   await dismissAlerts(page);
+  await passCupFitStep(page); // the cup's Fit Your Picture step (320b52f, #91) comes first
 
   // NOT via Continue to Order. That was the route this test used to take, and
   // taking it is exactly why the real bug shipped: after generating, a travel
@@ -573,7 +583,7 @@ scenarios.aSecondChoiceIsNotPaintedOverTheFirst = async (page) => {
 // over the first. Every single step looked right, which is why this needs a
 // test rather than an eye: the fault is only visible after the round trip.
 scenarios.changingYourMindReplacesTheTrimming = async (page) => {
-  await pickCup(page, VACUUM);
+  await pickCup(page, SEAM_CUP);
   await T(page, 300);
   await dismissAlerts(page);
 
@@ -641,7 +651,7 @@ scenarios.changingYourMindReplacesTheTrimming = async (page) => {
 //   * with room, two columns and nothing scrolls at all;
 //   * without room, the picture sticks to the top and the tiles pass under it.
 scenarios.theWholeChoiceIsOnScreenAtOnce = async (page) => {
-  await pickCup(page, VACUUM);
+  await pickCup(page, SEAM_CUP);
   await T(page, 300);
   await dismissAlerts(page);
 
@@ -721,8 +731,10 @@ scenarios.theWholeChoiceIsOnScreenAtOnce = async (page) => {
   if (!wide.fadeIconDrawn) {
     return 'FAIL: the fade button has no drawn icon — if it is back to an emoji it is a bet on the device having that character, and the one it had before rendered as an empty box on the machine it was designed on';
   }
-  if (!wide.fadePulsing) {
-    return 'FAIL: the fade button is not pulsing while nothing has been chosen — it is the option the customer does not know to look for, which is the whole reason it was given a pulse';
+  // Nothing blinks (09b0b08; Alyx, twice: "why is fade to cup still
+  // highlighted and flashing?"). Fade is brighter than its neighbour, never lit.
+  if (wide.fadePulsing) {
+    return 'FAIL: the fade button is pulsing on arrival — Alyx had the blink taken off (09b0b08)';
   }
   if (wide.sharesRowWithContinue) {
     return 'FAIL: Fade to Cup is back on Continue\'s row — the layout calls them peers and the styling then shouts down the one that is a choice, which is how the fade became invisible on a screen it was already on';

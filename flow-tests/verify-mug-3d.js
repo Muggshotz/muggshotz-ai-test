@@ -9,7 +9,7 @@
 //   * the Add-a-Frame round trip comes back to the 3D mug, not the photo;
 //   * every exit tears the renderer down;
 //   * and with no WebGL at all, the old photo path runs untouched.
-const { launch, openStudio, uploadPhoto, dismissAlerts, passFadePage } = require('./harness');
+const { launch, openStudio, uploadPhoto, dismissAlerts, passFadePage, passCupFitStep } = require('./harness');
 const fs = require('fs');
 
 const T = (page, ms) => page.waitForTimeout(ms);
@@ -164,8 +164,10 @@ scenarios.tundraOpensThe3DTumbler = async (page) => {
   await waitLanded(page);
   await T(page, 1200);
   await spyOnMug3D(page);
-  // v101: the real Yes button, and nothing else. Yes opens the cup.
+  // v101: the real Yes button, and nothing else. Yes opens the cup -- by way
+  // of the cup's Fit Your Picture step since 320b52f (#91).
   await page.locator('#approveRow button:has-text("Yes")').first().click();
+  await passCupFitStep(page);
   await page.waitForFunction(() => document.querySelector('#mug3dStage canvas'), null, { timeout: 15000 });
   await T(page, 1500);
   const opens = await page.evaluate(() => window.__mug3dOpens);
@@ -288,6 +290,7 @@ scenarios.fortyOunceInsulatedOpensWithTwoFaces = async (page) => {
   const hint = await page.evaluate(() => document.getElementById('approveRowHint').textContent);
   if (!/both sides/i.test(hint)) return `FAIL: the result screen does not say the picture goes on both sides: "${hint}"`;
   await page.locator('#approveRow button:has-text("Yes")').first().click();
+  await passCupFitStep(page); // the cup's fit step (320b52f, #91) sits before the cup
   await page.waitForFunction(() => document.querySelector('#mug3dStage canvas'), null, { timeout: 15000 });
   await T(page, 1500);
   const opens = await page.evaluate(() => window.__mug3dOpens);
@@ -412,11 +415,13 @@ OPTS.thePickerDrawsItsOwnMugs = { chromiumArgs: GL };
 scenarios.thePickerDrawsItsOwnMugs = async (page) => {
   await pickProduct(page, 'mug');
   await page.evaluate(() => pickPreGenMugSize('11oz'));
-  // the four tiles turn into stills
-  await page.waitForFunction(() => {
+  // every style tile on the 11oz picker turns into a still (five since V328,
+  // 4367c9e: the All-Nighter is a sixth style, on the 20oz only)
+  const want11 = await page.evaluate(() => Object.values(GEN_MUG_STYLES).filter(d => d.colors && ('11oz' in d.colors)).length);
+  await page.waitForFunction((n) => {
     const imgs = [...document.querySelectorAll('#preGenMugStyleGrid img')];
-    return imgs.length === 4 && imgs.every(i => i.src.startsWith('data:image/png'));
-  }, null, { timeout: 20000 });
+    return imgs.length === n && imgs.every(i => i.src.startsWith('data:image/png'));
+  }, want11, { timeout: 20000 });
   const tiles = await page.evaluate(() => [...document.querySelectorAll('#preGenMugStyleGrid img')].map(i => i.alt));
   // Trimmed, Cambridge Blue: a colour that never had a photo
   await page.evaluate(() => pickPreGenMugStyle('Trimmed'));
@@ -463,7 +468,7 @@ scenarios.thePickerDrawsItsOwnMugs = async (page) => {
   const want = ['Accented 11oz', 'Color Pop 11oz', 'Color Pop 15oz', 'Trimmed 11oz', 'Trimmed 15oz'];
   if (JSON.stringify(combos) !== JSON.stringify(want)) return `FAIL: Cambridge Blue is offered on ${JSON.stringify(combos)}, catalogue says ${JSON.stringify(want)}`;
   await page.locator('#mugStyleCard').screenshot({ path: 'shot-mug3d-picker.png' }).catch(() => {});
-  return `PASS: four style tiles (${tiles.join(', ')}) and the confirmation mug are 3D stills; Cambridge Blue renders sage (${sage.sageish}/${sage.coloured}) on exactly ${want.length} combinations`;
+  return `PASS: ${tiles.length} style tiles (${tiles.join(', ')}) and the confirmation mug are 3D stills; Cambridge Blue renders sage (${sage.sageish}/${sage.coloured}) on exactly ${want.length} combinations`;
 };
 
 // ---- 8. No WebGL: the picker keeps its photos. ----
@@ -473,9 +478,10 @@ scenarios.noWebGLPickerKeepsPhotos = async (page) => {
   await page.evaluate(() => pickPreGenMugSize('11oz'));
   await T(page, 2500);
   const srcs = await page.evaluate(() => [...document.querySelectorAll('#preGenMugStyleGrid img')].map(i => i.src));
-  if (srcs.length !== 4) return `FAIL: ${srcs.length} tiles`;
+  const want11 = await page.evaluate(() => Object.values(GEN_MUG_STYLES).filter(d => d.colors && ('11oz' in d.colors)).length);
+  if (srcs.length !== want11) return `FAIL: ${srcs.length} tiles, the catalogue has ${want11} styles on the 11oz`;
   if (srcs.some(u => u.startsWith('data:'))) return 'FAIL: a tile became a still with no WebGL';
-  return 'PASS: without WebGL the four tiles keep their photos';
+  return `PASS: without WebGL the ${srcs.length} tiles keep their photos`;
 };
 
 // ---- 6. No WebGL: the flat photo path runs, exactly as before. ----
@@ -533,6 +539,7 @@ scenarios.theBandDoesNotFightTheBodyForPixels = async (page) => {
   await waitLanded(page);
   await T(page, 1200);
   await page.locator('#approveRow button:has-text("Yes")').first().click();
+  await passCupFitStep(page); // the cup's fit step (320b52f, #91) sits before the cup
   await page.waitForFunction(() => document.querySelector('#mug3dStage canvas'), null, { timeout: 20000 });
   await T(page, 1500);
   const d = await page.evaluate(() => MUG3D.depthSettings());
@@ -573,6 +580,7 @@ scenarios.theTiltButtonSaysWhatItWillDo = async (page) => {
   await waitLanded(page);
   await T(page, 1200);
   await page.locator('#approveRow button:has-text("Yes")').first().click();
+  await passCupFitStep(page); // the cup's fit step (320b52f, #91) sits before the cup
   await page.waitForFunction(() => document.querySelector('#mug3dStage canvas'), null, { timeout: 20000 });
   await T(page, 1200);
 
@@ -642,6 +650,7 @@ scenarios.theFinalRevealFillsTheScreen = async (page) => {
   await waitLanded(page);
   await T(page, 1200);
   await page.locator('#approveRow button:has-text("Yes")').first().click();
+  await passCupFitStep(page); // the cup's fit step (320b52f, #91) sits before the cup
   await page.waitForFunction(() => document.querySelector('#mug3dStage canvas'), null, { timeout: 20000 });
   await T(page, 1500);
 
@@ -650,10 +659,19 @@ scenarios.theFinalRevealFillsTheScreen = async (page) => {
     const onScreen = (el) => { if (!el) return true; const r = el.getBoundingClientRect(); return r.height < 2 || (r.top >= -2 && r.bottom <= innerHeight + 2); };
     const actions = document.getElementById('mockupLightboxActions');
     const btns = actions ? Array.from(actions.querySelectorAll('button')).filter((b) => b.getBoundingClientRect().height > 2) : [];
+    // What the rows around the cup leave it, the way fitMug3DStage counts
+    // them: every other child of the wrap, the action buttons, the gaps, and
+    // the 68px of breathing room. On a phone the cup-colour row and the two
+    // control rows leave under half the height; the cup must take all of it.
+    const wrap = document.getElementById('mug3dWrap');
+    const kids = Array.from(wrap.children).filter((el) => el !== document.getElementById('mug3dStage') && el.offsetParent !== null);
+    const gap = parseFloat(getComputedStyle(wrap).rowGap || getComputedStyle(wrap).gap) || 10;
+    const taken = kids.reduce((a, el) => a + el.getBoundingClientRect().height, 0) + (actions ? actions.getBoundingClientRect().height : 0) + gap * kids.length + 24 + 44;
     return {
       vh: innerHeight, vw: innerWidth,
       h: Math.round(st.height), w: Math.round(st.width),
       share: +(st.height / innerHeight).toFixed(2),
+      left: Math.round(innerHeight - taken),
       buttons: btns.map((b) => ({ txt: (b.textContent || '').trim().slice(0, 18), ok: onScreen(b) })),
       allButtonsOn: btns.every(onScreen),
       count: btns.length
@@ -671,13 +689,17 @@ scenarios.theFinalRevealFillsTheScreen = async (page) => {
       return `FAIL: at ${vp.width}x${vp.height} the cup grew until these went off screen: ${off}. A customer who cannot reach Satisfied? cannot buy anything, which is a worse outcome than a small picture`;
     }
     // The old caps left roughly half the height unused on a desktop.
-    if (m.share < 0.5) {
+    const floor = vp.height >= 900 ? 0.5 : 0.4;
+    if (m.share < floor) {
       return `FAIL: at ${vp.width}x${vp.height} the cup is ${m.h}px in a ${m.vh}px window — ${Math.round(m.share * 100)}% of the height, with the rest empty. This is the screen that sells the cup`;
+    }
+    if (m.h < Math.min(m.left, m.vw) - 4) {
+      return `FAIL: at ${vp.width}x${vp.height} the rows leave the cup ${m.left}px and it takes only ${m.h}px — the rest is empty`;
     }
     if (m.w > vp.width) return `FAIL: at ${vp.width}px wide the stage is ${m.w}px — wider than the window`;
   }
 
-  return 'PASS: the final reveal fills the height it is given at both a 900px desktop and a 780px phone, without pushing a single button off the bottom';
+  return 'PASS: the final reveal takes every pixel the rows leave it, at a 900px desktop (half the height or more) and a 780px phone, without pushing a single button off the bottom';
 };
 OPTS.theFinalRevealFillsTheScreen = { chromiumArgs: GL };
 
@@ -714,6 +736,7 @@ scenarios.backAndForwardStayInSequence = async (page) => {
   await waitLanded(page);
   await T(page, 1200);
   await page.locator('#approveRow button:has-text("Yes")').first().click();
+  await passCupFitStep(page); // the cup's fit step (320b52f, #91) sits before the cup
   await page.waitForFunction(() => document.querySelector('#mug3dStage canvas'), null, { timeout: 20000 });
   await T(page, 1500);
 

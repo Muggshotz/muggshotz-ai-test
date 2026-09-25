@@ -57,8 +57,10 @@ function captureGenerateBodies(page) {
   return bodies;
 }
 
+// The style tiles only: the likeness dial (ca6413a, "style and degree become
+// two independent dials") is its own preselected row inside the same card.
 const styleTiles = (page) => page.evaluate(() =>
-  Array.from(document.querySelectorAll('#styleSectionCard .btn-select')).map(b => ({
+  Array.from(document.querySelectorAll('#styleSectionCard .btn-select')).filter(b => !b.closest('#likenessSectionCard')).map(b => ({
     label: b.textContent.trim(),
     val: b.dataset.val,
     selected: b.classList.contains('selected'),

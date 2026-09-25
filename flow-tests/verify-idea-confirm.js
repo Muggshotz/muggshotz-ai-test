@@ -22,6 +22,10 @@ async function toDescription(page, val, prep) {
 }
 
 const prepPhone = async (p) => {
+  // The phone case rail opens on its style card (tough / card holder, 25 Sep
+  // 2026); the model search is behind it.
+  await p.click('#phoneCaseStyleGrid .btn-select[data-phone-style="tough"]');
+  await p.waitForTimeout(900);
   await p.fill('#phoneModelSearchInputGen', 'iPhone 15 Pro Max');
   await p.waitForTimeout(1200);
   const hit = p.locator('#phoneModelResultsGen >> text=iPhone 15 Pro Max').first();
