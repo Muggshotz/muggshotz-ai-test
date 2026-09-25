@@ -20,9 +20,10 @@
 -- changes nothing there.
 
 -- 1. Betas: one row per person handing out flyers. base_code is the printed
---    prefix (CHIPPER in CHIPPER-07).
+--    prefix (CHIPPER in CHIPPER-07). id is a uuid, as on the live project
+--    (its fn_beta_available_balance takes p_beta_id uuid; seen 25 Sep 2026).
 create table if not exists flyer_betas (
-  id                          bigserial primary key,
+  id                          uuid primary key default gen_random_uuid(),
   full_name                   text not null,
   base_code                   text not null unique,
   contact_email               text,
@@ -36,7 +37,7 @@ create table if not exists flyer_betas (
 create table if not exists flyer_codes (
   id                bigserial unique,
   code              text primary key,
-  beta_id           bigint not null references flyer_betas(id),
+  beta_id           uuid not null references flyer_betas(id),
   tier              text not null,
   flyer_number      integer not null,
   commission_rate   numeric(5,4) not null,
@@ -51,7 +52,7 @@ create index if not exists flyer_codes_beta_idx on flyer_codes (beta_id);
 create table if not exists flyer_commission_events (
   id          bigserial primary key,
   code        text not null references flyer_codes(code),
-  beta_id     bigint not null,
+  beta_id     uuid not null,
   order_id    text not null unique,
   net_profit  numeric(10,2) not null,
   credited    numeric(10,2) not null,
@@ -63,7 +64,7 @@ create table if not exists flyer_commission_events (
 --    $100 email, so the uniqueness is on coalesce(tier, '').
 create table if not exists flyer_notifications_sent (
   id                 bigserial primary key,
-  beta_id            bigint not null,
+  beta_id            uuid not null,
   notification_type  text not null,
   tier               text,
   sent_at            timestamptz not null default now()
@@ -119,7 +120,7 @@ do $do$
 begin
   if not exists (select 1 from pg_proc where proname = 'fn_beta_available_balance') then
     execute $fn$
-      create function fn_beta_available_balance(p_beta_id bigint)
+      create function fn_beta_available_balance(p_beta_id uuid)
       returns numeric
       language sql stable as $body$
         select coalesce(sum(commission_total), 0)::numeric from flyer_codes where beta_id = p_beta_id;
