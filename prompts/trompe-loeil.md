@@ -1,12 +1,15 @@
 # TROMPE-L'ŒIL — PRODUCT-FIRST CREATIVE ENGINE
 
-Bud's instructions, verbatim (Alyx, 25 Sep 2026). To become a button beside
-the description box on every product panel: pressing it sends this text,
-with SELECTED PRODUCT filled in, straight to the generator. The customer
-never sees it; they see the result. First result, on a mouse pad: a stone
-well shaft, looking straight down, so the pad reads as a hole in the desk.
+Bud's instructions, verbatim, second version (Alyx, 25 Sep 2026: "only as a
+placeholder. We are gonna be constantly refining that language"). To become
+a button beside the description box on every product panel: pressing it
+sends this text, with {PRODUCT} filled in, straight to the generator. The
+customer never sees it; they see the result. Results so far: a mouse pad as
+a stone well shaft seen from above; a suitcase as a broken stone wall with a
+tropical beach through the hole.
 
-Not built yet. Waits for "begin".
+Not built yet. Waits for "begin". Refinements go in this file and nowhere
+else.
 
 ---
 
@@ -32,15 +35,55 @@ Do not substitute a merely attractive illustration, clever graphic, decorative p
 The deception itself is the mission.
 
 
-FRESH-CONCEPT RULE
+FRESH-CONCEPT RULE — CONCEPTUAL AMNESIA
 
-Every generation must be a completely new invention.
+Every generation must be a genuinely new invention.
 
 Forget all previous designs.
 
-Do not repair, improve, simplify, continue, reinterpret, or vary a previous concept.
+Do not repair, improve, simplify, continue, reinterpret, reskin, modernize, age, decorate, or create a variation of a previous concept.
 
-Discard previous subjects, settings, scenery, characters, objects, compositions, jokes, metaphors, and illusion mechanisms.
+A change of color, material, texture, decoration, historical period, artistic style, accessories, scenery, or theme does NOT constitute a new concept.
+
+A different version of the same physical identity does NOT constitute a new concept.
+
+Making the selected product appear older, newer, luxurious, damaged, futuristic, antique, rustic, metallic, wooden, leather, mechanical, transparent, decorated, or otherwise restyled is not enough if the viewer still fundamentally perceives it as the same kind of object.
+
+Seek CONCEPTUAL DISTANCE.
+
+Ask:
+
+"What could this product convincingly appear to be that belongs to an entirely different physical identity?"
+
+"What unexpected object, structure, space, material reality, environment, mechanism, or phenomenon could its physical characteristics allow it to impersonate?"
+
+"What interpretation would make someone momentarily forget what product they are actually looking at?"
+
+Strongly prefer transformations that CROSS A CATEGORY BOUNDARY.
+
+The viewer should ideally think:
+
+"Wait — is that really a {PRODUCT}?"
+
+rather than merely:
+
+"That's an interesting version of a {PRODUCT}."
+
+However, do not reject a same-category transformation automatically.
+
+If a same-category idea produces an exceptionally convincing, surprising, product-dependent trompe-l'œil effect, it may survive.
+
+But ordinary restyling, decoration, material substitution, or historical reinterpretation is not sufficient.
+
+Before accepting a concept, ask:
+
+"Did I invent a new deception — or did I merely dress the product differently?"
+
+If you merely dressed it differently, reject it and start over.
+
+Previous generations teach only general creative principles.
+
+They do not provide subjects, settings, objects, materials, visual identities, compositions, metaphors, illusion mechanisms, or starting points.
 
 A rejected concept is DEAD.
 
@@ -77,6 +120,37 @@ Ask:
 Do not assume you understand its creative possibilities merely because you recognize the object.
 
 Mentally simulate a real person using the product from beginning to end.
+
+
+PRODUCT-SPECIFIC DECEPTION
+
+Do not merely place a convincing illusion ON the selected product.
+
+Make the selected product itself participate in the lie.
+
+Identify the physical characteristics that distinguish THIS product from an ordinary flat printing surface: its shape, proportions, thickness, edges, openings, controls, hardware, cutouts, raised or recessed features, orientation, movement, handling, environment, and normal use.
+
+Treat those characteristics as creative opportunities, not obstacles to work around.
+
+Ask:
+
+"What physical fact about THIS product could make the deception possible?"
+
+"What feature of THIS product could become something else in the illusion?"
+
+"What could the viewer mistake this product itself for?"
+
+"What can THIS product make believable that a generic flat surface could not?"
+
+Whenever possible, exploit at least one distinctive physical characteristic or normal behavior of the selected product as an essential part of the deception.
+
+Do not force a product feature into the concept merely to satisfy this instruction.
+
+If exploiting a particular feature weakens the illusion, abandon that concept and search for another.
+
+The goal is not to decorate the product's features.
+
+The goal is to make the product itself tell the lie.
 
 
 TROMPE-L'ŒIL INTERROGATION
@@ -258,11 +332,22 @@ Reject anything generic.
 
 Reject anything resembling a previous generation.
 
+Reject ordinary restyling of the selected product.
+
 Reject anything that fails during actual physical use.
 
 Reject anything requiring explanation.
 
 Reject anything where the real product is merely carrying a picture.
+
+Prefer the concept with the greatest combination of:
+
+• visual deception
+• conceptual distance
+• product dependence
+• physical plausibility
+• surprise
+• discovery
 
 Choose the strongest surviving trompe-l'œil concept.
 
@@ -277,5 +362,11 @@ Do not step on the punchline.
 FIRST FOOL THE EYE.
 
 THEN LET REALITY COMPLETE THE LIE.
+
+MAKE THE PRODUCT ITSELF TELL THE LIE.
+
+DON'T JUST DRESS THE PRODUCT DIFFERENTLY.
+
+CHANGE WHAT THE VIEWER BELIEVES THE PRODUCT IS.
 
 TROMPE-L'ŒIL.

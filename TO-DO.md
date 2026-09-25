@@ -30,6 +30,19 @@ Started 24 Sep 2026, when the old lists ran out.
   the desk and the mouse sits over it. Alyx: "through pushing this button we
   will educate the American public what this phrase actually means."
 
+- **"Hmm... seems like I'm forgetting something"** (Alyx, 25 Sep): a category
+  of mouse pad premades, each a thing you should be doing instead of sitting
+  at the computer: a washing machine mid-cycle (Bud's trompe-l'oeil result,
+  the mouse going round on the drum), a skillet on the stove about to burn,
+  a hot plate, an open textbook or homework, laundry, "anything that signals
+  what you probably should be doing instead of wasting all this time on the
+  computer." Goes in with Premades & Sets.
+
+- **Every product that can spin, spins** (Alyx, 25 Sep: "The carousel is my
+  jam"). The suitcase joined the mugs, cups and stein on the 3D mockup (V380).
+  Still on Printify's photos: coasters, phone cases, tote, puzzle, poster,
+  doormat, ornament, stein excepted, and the rest. Each needs a drawn body.
+
 - **Flyers for single products** (Alyx, 24 Sep): beautifully imagined flyers
   that show one product's flow and the model simply; the smart mug first
   (its COLD -> HOT pictures already tell the story). Done for the smart mug

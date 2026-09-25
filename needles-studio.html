@@ -1,5 +1,5 @@
 <!-- ============================================================
-     VERSION: V379
+     VERSION: V380
      ============================================================
      THE ONE LINE THAT SAYS WHICH BUILD YOU ARE LOOKING AT.
 
@@ -4605,7 +4605,7 @@ function toggleWorkingImage(){
 // Two copies of a number is exactly how the marker rotted in the first place,
 // so they are not trusted to agree: .githooks/pre-commit moves both together
 // and REFUSES the commit if it ever finds them apart.
-const APP_VERSION='V379';
+const APP_VERSION='V380';
 try{ console.log('%cNeedles\u2019 Studio '+APP_VERSION,'color:#29a3ff;font-weight:700'); }catch(e){}
 
 function getDeviceId(){
@@ -16682,7 +16682,7 @@ async function runReallyBeginFinalMockupFetch(){
   // what actually validates that Printify accepted this artwork, and a
   // failure there predicts a failed order, so it must still be heard.
   let usingMug3D=false;
-  if((product==='mug'||tumbler3dKey()||stein3dKey()) && !mug3dFailed){
+  if((product==='mug'||tumbler3dKey()||stein3dKey()||box3dKey()) && !mug3dFailed){
     try{ await openMug3DMockup(); usingMug3D=true; }
     catch(err){ usingMug3D=false; }
   }
@@ -16931,7 +16931,7 @@ function reopenMockupLightboxFromFrameOffer(){
   // was taken off. Reopening the flat photo here would have handed the
   // customer a downgrade for accepting the frame offer, and, if Printify
   // had not yet answered, bounced them out to What's Next entirely.
-  if((product==='mug'||tumbler3dKey()||stein3dKey()) && !mug3dFailed){
+  if((product==='mug'||tumbler3dKey()||stein3dKey()||box3dKey()) && !mug3dFailed){
     openMug3DMockup().catch(()=>{ reopenFlatMockupFromFrameOffer(); });
     return;
   }
@@ -17750,6 +17750,11 @@ function tumbler3dKey(){
 // TUMBLERS). Kept apart from tumbler3dKey on purpose: that one also switches
 // on the cup palette, Trimmings and the fade slider, none of which the stein
 // has. This opens the 3D mockup and nothing else.
+// The suitcase, drawn by the same engine as a box body (BOXES). Like the
+// stein: the 3D mockup and nothing else -- no palette, no Trimmings, no slider.
+function box3dKey(){
+  return (product==='suitcase' && typeof MUG3D!=='undefined' && MUG3D.hasBox('suitcase'))?'suitcase':null;
+}
 function stein3dKey(){
   return (product==='beer stein' && typeof MUG3D!=='undefined' && MUG3D.hasTumbler('beer-stein'))?'beer-stein':null;
 }
@@ -17901,6 +17906,7 @@ async function openMug3DMockup(){
   // different body (see TUMBLERS in MUG3D).
   // The stein rides the same path with its own body, in white.
   const steinKey=stein3dKey();
+  const boxKey=box3dKey();
   const tumblerKey=tumbler3dKey()||steinKey;
   const urlOf=pos=>placements[pos]?((findDesignById(placements[pos])||{}).url||null):null;
   // THE MUG SHOWS THE REAL PRINT (Alyx, Sep 2026). urlOf hands over a design's
@@ -17926,16 +17932,16 @@ async function openMug3DMockup(){
   const cupProduct=tumblerKey?TRAVEL_MUG_CATALOG[tumblerKey]:null;
   const cupIsFrontBack=!!(cupProduct&&cupProduct.layoutType==='front-back');
   // The stage is square for a cup, and the hint names a cup (v103).
-  wrap.classList.toggle('mug3d-square',!!tumblerKey);
+  wrap.classList.toggle('mug3d-square',!!(tumblerKey||boxKey));
   // The palette under the cup. Built before fitMug3DStage() below, which
   // measures what is in this wrap to decide the stage's height, so the row
   // has to exist by then or the stage claims its space and the buttons go
   // off the bottom -- the failure verify-mug-3d.js measures.
   renderCupColourRows();
   // A stein is white only: no palette under it, whatever cup was last picked.
-  if(steinKey)CUP_COLOUR_ROWS.forEach(([rowId])=>{ const row=document.getElementById(rowId); if(row)row.style.display='none'; });
+  if(steinKey||boxKey)CUP_COLOUR_ROWS.forEach(([rowId])=>{ const row=document.getElementById(rowId); if(row)row.style.display='none'; });
   const hint=wrap.querySelector('.mug3d-hint');
-  if(hint)hint.textContent=steinKey?'Drag the stein to turn it · click it to stop or start the spin':tumblerKey?'Drag the cup to turn it · click it to stop or start the spin':'Drag the mug to turn it · click it to stop or start the spin';
+  if(hint)hint.textContent=boxKey?'Drag the suitcase to turn it · click it to stop or start the spin':steinKey?'Drag the stein to turn it · click it to stop or start the spin':tumblerKey?'Drag the cup to turn it · click it to stop or start the spin':'Drag the mug to turn it · click it to stop or start the spin';
   // Alyx: "you can also take away the 'drag the cup to turn it' wording,
   // because you will have that on the previous panel -- by now if they don't
   // get the trick they're too dumb to read anyway. And you can use all that
@@ -17944,16 +17950,23 @@ async function openMug3DMockup(){
   // place it meets a cup it can turn, and there the instruction stays.
   if(hint)hint.style.display=cameThroughTrimmings()?'none':'';
   const angleInput=document.getElementById('mug3dAngle');
-  if(angleInput)angleInput.setAttribute('aria-label',tumblerKey?'Turn the cup':'Turn the mug');
+  if(angleInput)angleInput.setAttribute('aria-label',boxKey?'Turn the suitcase':tumblerKey?'Turn the cup':'Turn the mug');
   fitMug3DStage();
   // Only the ceramic mug's panels. A travel cup's band is not a panel print
   // box (renderPanelPrintDataUrl is already excluded for it elsewhere), and
   // under Wraparound the panorama carries its fade baked in and panelUrls is
   // ignored anyway -- both keep the plain file.
-  const mugPanelUrls=(!tumblerKey && mugPrintMode!=='wraparound')
+  const mugPanelUrls=(!tumblerKey && !boxKey && mugPrintMode!=='wraparound')
     ? await Promise.all([printUrlOf('left'),printUrlOf('front'),printUrlOf('right')])
     : [urlOf('left'),urlOf('front'),urlOf('right')];
-  const openOpts=tumblerKey?{
+  // The suitcase wears its front design as it will print (fade and caption
+  // baked), the plain design if that cannot be drawn.
+  const openOpts=boxKey?{
+    boxKey,
+    colorHex:'#ffffff',
+    panoramaUrl: (await printUrlOf('front'))||urlOf('front')||urlOf('left')||urlOf('right')||null,
+    panelUrls:[]
+  }:tumblerKey?{
     tumblerKey,
     colorHex: cupColor?cupColor.hex:'#ffffff',
     finish: cupColor&&cupColor.finish?cupColor.finish:'coat',
@@ -18551,6 +18564,110 @@ const MUG3D = (function(){
     return { R:T.maxR, H:T.totalH, wrapIn:b0.wrapIn, bandH:b0.h, band:b0, tumbler:true };
   }
 
+  // THE SUITCASE (Alyx, 25 Sep 2026: "Where is my carousel? ... I want every
+  // item that can go on a carousel eventually be on a carousel"). Not a body
+  // of revolution, so not a lathe: a rounded hard shell traced off Printify's
+  // straight-on photo of blueprint 624 -- a white spinner with black corner
+  // guards at the front's top corners, a dark seam round the middle, two
+  // latches on one side, four spinner wheels, a black telescoping handle and
+  // a carry handle on top. Drawn at about 0.4 scale so the cups' key light and
+  // shadow box, which are sized for a cup, light it the same way.
+  // The print is the front face, full bleed inside the rim, as Printify
+  // renders it: the design paints portrait (1024 x 1536) and paint() crops it
+  // to the face's own proportion (2:3, near enough).
+  const BOXES = {
+    'suitcase': {
+      w:6.2, h:9.0, d:3.9, r:0.75,     // the shell: width, height, depth, corner radius
+      bevel:0.42,                       // how far the shell's edges round off
+      face:{ w:5.26, h:8.06, r:0.5 },   // the printed front: the flat of the face, inside the rounding
+      wheel:{ r:0.40, t:0.30, inset:0.55 },
+      grip:{ w:3.0, h:0.42, d:0.5, rods:1.15, rodR:0.11, up:3.0 },
+      latches:[0.30,0.66],              // the two side latches, as fractions of the height
+      snapAngle:-30
+    }
+  };
+  function hasBox(key){ return !!(key && BOXES[key]); }
+  function boxSize(B){
+    const lift=B.wheel.r*2;
+    // H frames the shell with the handle up; tumbler:true takes the square
+    // stage and the closer camera the cups use.
+    return { R:B.w/2, H:lift+B.h+2.6, wrapIn:B.face.w, bandH:B.face.h, tumbler:true, box:true, lift };
+  }
+  function roundedRect(THREE,w,h,r){
+    const sh=new THREE.Shape(); const x=-w/2, y=-h/2;
+    sh.moveTo(x+r,y); sh.lineTo(x+w-r,y); sh.quadraticCurveTo(x+w,y,x+w,y+r);
+    sh.lineTo(x+w,y+h-r); sh.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
+    sh.lineTo(x+r,y+h); sh.quadraticCurveTo(x,y+h,x,y+h-r);
+    sh.lineTo(x,y+r); sh.quadraticCurveTo(x,y,x+r,y);
+    return sh;
+  }
+  // A ShapeGeometry's UVs are the shape's own coordinates; the print wants 0..1.
+  function normalizeUv(geo){
+    geo.computeBoundingBox();
+    const bb=geo.boundingBox, uv=geo.attributes.uv, pos=geo.attributes.position;
+    for(let i=0;i<uv.count;i++)
+      uv.setXY(i,(pos.getX(i)-bb.min.x)/(bb.max.x-bb.min.x),(pos.getY(i)-bb.min.y)/(bb.max.y-bb.min.y));
+    uv.needsUpdate=true;
+    return geo;
+  }
+  function assembleBox(THREE,B,mats,opts){
+    const g=new THREE.Group();
+    const black=new THREE.MeshPhysicalMaterial({color:0x101214, roughness:0.55, metalness:0.05, clearcoat:0.15, envMapIntensity:0.4, side:THREE.DoubleSide});
+    const seam=new THREE.MeshPhysicalMaterial({color:0x2a2d31, roughness:0.7, metalness:0.0, envMapIntensity:0.3, side:THREE.DoubleSide});
+    const lift=B.wheel.r*2, cy=lift+B.h/2, top=lift+B.h;
+    const rounded=(w,h,r,depth,bevel)=>new THREE.ExtrudeGeometry(roundedRect(THREE,w,h,r),
+      bevel?{depth, bevelEnabled:true, bevelThickness:bevel, bevelSize:bevel, bevelSegments:8, curveSegments:24}
+           :{depth, bevelEnabled:false, curveSegments:24});
+    // The shell: a rounded rectangle extruded to the depth, its edges rounded
+    // off by the bevel (which adds the bevel back on every side).
+    const depth=B.d-2*B.bevel;
+    const shell=new THREE.Mesh(rounded(B.w-2*B.bevel,B.h-2*B.bevel,Math.max(0.05,B.r-B.bevel),depth,B.bevel),mats.white);
+    shell.position.set(0,cy,-depth/2);
+    shell.castShadow=true; shell.receiveShadow=true;
+    g.add(shell);
+    // The seam where the two halves meet.
+    const ring=new THREE.Mesh(rounded(B.w+0.05,B.h+0.05,B.r+0.02,0.14,0),seam);
+    ring.position.set(0,cy,-0.07);
+    g.add(ring);
+    // Four spinner wheels on their forks.
+    const wheelGeo=new THREE.CylinderGeometry(B.wheel.r,B.wheel.r,B.wheel.t,28);
+    [[-1,-1],[1,-1],[-1,1],[1,1]].forEach(([sx,sz])=>{
+      const x=sx*(B.w/2-B.wheel.inset), z=sz*(B.d/2-0.35);
+      const wh=new THREE.Mesh(wheelGeo,black);
+      wh.rotation.z=Math.PI/2; wh.position.set(x,B.wheel.r,z); wh.castShadow=true; g.add(wh);
+      const fork=new THREE.Mesh(new THREE.BoxGeometry(0.5,0.45,0.6),black);
+      fork.position.set(x,lift-0.12,z); g.add(fork);
+    });
+    // The telescoping handle at the back, and its grip.
+    const G=B.grip, rz=-B.d/2+0.55;
+    [-1,1].forEach(sx=>{
+      const rod=new THREE.Mesh(new THREE.CylinderGeometry(G.rodR,G.rodR,G.up,16),black);
+      rod.position.set(sx*G.rods,top+G.up/2,rz); rod.castShadow=true; g.add(rod);
+    });
+    const grip=new THREE.Mesh(rounded(G.w-0.24,G.h-0.24,0.09,G.d-0.24,0.12),black);
+    grip.position.set(0,top+G.up,rz-(G.d-0.24)/2); grip.castShadow=true; g.add(grip);
+    // The carry handle on top, on two posts.
+    const carry=new THREE.Mesh(rounded(1.6,0.26,0.1,0.34,0.06),black);
+    carry.position.set(0,top+0.44,-0.17); carry.castShadow=true; g.add(carry);
+    [-0.62,0.62].forEach(x=>{
+      const post=new THREE.Mesh(new THREE.CylinderGeometry(0.08,0.08,0.4,12),black);
+      post.position.set(x,top+0.2,0); g.add(post);
+    });
+    // Black guards on the front's top corners, set into the rounding.
+    [-1,1].forEach(sx=>{
+      const guard=new THREE.Mesh(rounded(1.0,1.0,0.3,0.5,0),black);
+      guard.position.set(sx*(B.w/2-0.6),top-0.6,B.d/2-0.42);
+      g.add(guard);
+    });
+    // Two latches on the left side.
+    B.latches.forEach(f=>{
+      const latch=new THREE.Mesh(new THREE.BoxGeometry(0.26,0.85,0.55),black);
+      latch.position.set(-B.w/2+0.02,lift+B.h*f,0.1); g.add(latch);
+    });
+    g.userData.tumblerMats=null;
+    return g;
+  }
+
   // The studio: environment light, a key light with shadows, a contact
   // shadow under the mug and a floor to catch the key's shadow. The
   // environment map is built once per renderer and reused.
@@ -18589,8 +18706,9 @@ const MUG3D = (function(){
   }
 
   function build(THREE,opts){
-    const T=hasTumbler(opts.tumblerKey)?TUMBLERS[opts.tumblerKey]:null;
-    const S=T?tumblerSize(T):sizeForMug(opts);
+    const B=hasBox(opts.boxKey)?BOXES[opts.boxKey]:null;
+    const T=(!B&&hasTumbler(opts.tumblerKey))?TUMBLERS[opts.tumblerKey]:null;
+    const S=B?boxSize(B):T?tumblerSize(T):sizeForMug(opts);
     // A tumbler's band goes all the way round; a mug's stops at the handle.
     const wrap=T?1:S.wrapIn/(2*Math.PI*S.R);
 
@@ -18610,7 +18728,7 @@ const MUG3D = (function(){
 
     const mats=makeMaterials(THREE,opts);
     baseMats=mats;
-    mugGroup=T?assembleTumbler(THREE,T,mats,opts):assembleMug(THREE,S,opts,mats); scene.add(mugGroup);
+    mugGroup=B?assembleBox(THREE,B,mats,opts):T?assembleTumbler(THREE,T,mats,opts):assembleMug(THREE,S,opts,mats); scene.add(mugGroup);
 
     // POWER OF TWO, ALWAYS (Alyx, v104: "little tiny white strings"). A
     // tumbler's texture used to be cut to the band's own proportions,
@@ -18641,7 +18759,20 @@ const MUG3D = (function(){
       return {canvas,tex,aspect};
     };
     bandStates=[];
-    if(T){
+    if(B){
+      // The printed face: a flat rounded rectangle a hair in front of the
+      // shell's front, wearing the design cropped to its own proportion.
+      const st=makeTex(B.face.w/B.face.h);
+      st.fit='cover';
+      const mesh=new THREE.Mesh(normalizeUv(new THREE.ShapeGeometry(roundedRect(THREE,B.face.w,B.face.h,B.face.r),24)),
+        new THREE.MeshPhysicalMaterial(Object.assign({map:st.tex, side:THREE.FrontSide, transparent:true,
+          polygonOffset:true, polygonOffsetFactor:-4, polygonOffsetUnits:-4},mats.glaze)));
+      mesh.position.set(0,S.lift+B.h/2,B.d/2+0.012);
+      mesh.receiveShadow=true;
+      mugGroup.add(mesh);
+      bandStates.push(st);
+      designCanvas=st.canvas; designTex=st.tex; printMesh=null;
+    } else if(T){
       // Every band a tumbler has (one, or front and back), each following
       // the body's own taper.
       tumblerBands(T).forEach(band=>{
@@ -18696,10 +18827,12 @@ const MUG3D = (function(){
   const snapCache=new Map();
   function snapshot(opts){
     const px=opts.px||560;
-    const Tq=hasTumbler(opts.tumblerKey)?TUMBLERS[opts.tumblerKey]:null;
-    const angle=(opts.angle==null)?((Tq&&Tq.snapAngle!=null)?Tq.snapAngle:-90):opts.angle;      // handle to the right
+    const Bq=hasBox(opts.boxKey)?BOXES[opts.boxKey]:null;
+    const Tq=(!Bq&&hasTumbler(opts.tumblerKey))?TUMBLERS[opts.tumblerKey]:null;
+    const Q=Bq||Tq;
+    const angle=(opts.angle==null)?((Q&&Q.snapAngle!=null)?Q.snapAngle:-90):opts.angle;      // handle to the right
     const el=(opts.el==null)?0.18:opts.el;               // a little above
-    const key=[opts.tumblerKey||'',opts.finish||'',opts.sizeLabel,opts.styleName,opts.colorHex,angle,el,px,opts.background||'#ffffff'].join('|');
+    const key=[opts.boxKey||'',opts.tumblerKey||'',opts.finish||'',opts.sizeLabel,opts.styleName,opts.colorHex,angle,el,px,opts.background||'#ffffff'].join('|');
     if(snapCache.has(key))return snapCache.get(key);
     const pr=loadThree().then(THREE=>{
       if(!snapRenderer){
@@ -18712,13 +18845,14 @@ const MUG3D = (function(){
         snapRenderer.shadowMap.type=THREE.PCFSoftShadowMap;
       }
       snapRenderer.setSize(px,px,false);
-      const T=hasTumbler(opts.tumblerKey)?TUMBLERS[opts.tumblerKey]:null;
-      const S=T?tumblerSize(T):sizeForMug(opts);
+      const B=hasBox(opts.boxKey)?BOXES[opts.boxKey]:null;
+      const T=(!B&&hasTumbler(opts.tumblerKey))?TUMBLERS[opts.tumblerKey]:null;
+      const S=B?boxSize(B):T?tumblerSize(T):sizeForMug(opts);
       const sc=new THREE.Scene();
       sc.background=new THREE.Color(opts.background||'#ffffff');
       dressScene(THREE,snapRenderer,sc,S);
       const mats=makeMaterials(THREE,opts);
-      const g=T?assembleTumbler(THREE,T,mats,opts):assembleMug(THREE,S,opts,mats);
+      const g=B?assembleBox(THREE,B,mats,opts):T?assembleTumbler(THREE,T,mats,opts):assembleMug(THREE,S,opts,mats);
       g.rotation.y=angle*Math.PI/180;
       sc.add(g);
       const cam=new THREE.PerspectiveCamera(9,1,0.1,400);
@@ -18728,7 +18862,7 @@ const MUG3D = (function(){
       // fills its tile and the 20oz is honestly the small one.
       // The tumblers share one distance, 80" back, so the 12" Stanley fits
       // its tile and the 20oz is honestly the small one.
-      const d=T?80:43, lookY=S.H*0.5, lookX=T?0:S.R*0.42;
+      const d=B?100:T?80:43, lookY=S.H*0.5, lookX=(T||B)?0:S.R*0.42;
       cam.position.set(lookX, lookY+Math.sin(el)*d, Math.cos(el)*d);
       cam.lookAt(lookX,lookY,0);
       snapRenderer.render(sc,cam);
@@ -18968,6 +19102,7 @@ const MUG3D = (function(){
   return {
     isCeramicMug(){ return typeof product!=='undefined' && product==='mug'; },
     hasTumbler,
+    hasBox,
     // Fetch three.js ahead of the first still so the picker never waits on
     // the download itself.
     warm(){ return loadThree().catch(()=>null); },
@@ -19042,6 +19177,7 @@ const MUG3D = (function(){
 
     // opts: { sizeLabel, styleName, colorHex, panelUrls[], panoramaUrl }
     //   or, for a travel cup: { tumblerKey, colorHex, panoramaUrl }
+    //   or, for a suitcase: { boxKey, panoramaUrl } (the front's design)
     open(hostEl, opts){
       host=hostEl;
       return loadThree().then(THREE=>{

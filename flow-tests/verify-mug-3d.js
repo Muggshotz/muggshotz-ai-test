@@ -471,6 +471,56 @@ scenarios.thePickerDrawsItsOwnMugs = async (page) => {
   return `PASS: ${tiles.length} style tiles (${tiles.join(', ')}) and the confirmation mug are 3D stills; Cambridge Blue renders sage (${sage.sageish}/${sage.coloured}) on exactly ${want.length} combinations`;
 };
 
+// ---- THE SUITCASE ON THE CAROUSEL (Alyx, 25 Sep 2026: "Where is my
+// carousel?"). Yes on a suitcase opens the drawn 3D suitcase wearing the
+// front design, not Printify's four photos; no cup palette under it; the
+// Printify request still fires behind it and does not replace it. ----
+OPTS.suitcaseOpensThe3DSuitcase = { chromiumArgs: GL, echoUploads: true };
+scenarios.suitcaseOpensThe3DSuitcase = async (page, log) => {
+  await page.evaluate(() => { selectedTravelProductKey = 'travel-mug-30oz-tundra'; });
+  await pickProduct(page, 'suitcase');
+  await T(page, 1000);
+  await dismissAlerts(page);
+  await page.click('#suitcaseSizeGrid .btn-select[data-suitcase-size="Medium"]');
+  await T(page, 1000);
+  await dismissAlerts(page);
+  await describeAndGenerate(page, 'a lighthouse in a storm');
+  await page.waitForFunction(() => document.getElementById('approveRow')?.style.display !== 'none', null, { timeout: 90000 });
+  await T(page, 800);
+  await spyOnMug3D(page);
+  await page.locator('#approveRow button:has-text("Yes")').first().click();
+  await passFadePage(page);
+  await page.waitForFunction(() => document.querySelector('#mug3dStage canvas'), null, { timeout: 20000 });
+  await T(page, 1500);
+  const opens = await page.evaluate(() => window.__mug3dOpens);
+  if (!opens.length) return 'FAIL: MUG3D.open was never called for the suitcase';
+  const o = opens[0];
+  if (o.boxKey !== 'suitcase') return `FAIL: opened as ${JSON.stringify(o)}, not the suitcase body`;
+  if (!o.panoramaUrl) return 'FAIL: the suitcase was not handed its front design';
+  const s = await stageState(page);
+  if (!s.wrap || !s.canvas || s.photo) return 'FAIL: the 3D suitcase is not what is on screen';
+  if (s.waitOverlay) return 'FAIL: the "please be patient" overlay is up over the 3D suitcase';
+  if (!s.actions) return 'FAIL: the action row is missing from the 3D suitcase';
+  const ui = await page.evaluate(() => ({
+    hint: document.querySelector('#mug3dWrap .mug3d-hint').textContent,
+    square: document.getElementById('mug3dWrap').classList.contains('mug3d-square'),
+    palette: CUP_COLOUR_ROWS.some(([id]) => { const r = document.getElementById(id); return r && getComputedStyle(r).display !== 'none'; }),
+    counter: getComputedStyle(document.getElementById('mockupLightboxCounter')).display,
+    arrows: getComputedStyle(document.getElementById('mockupLightboxNext')).display,
+  }));
+  if (!/suitcase/.test(ui.hint)) return `FAIL: the hint says "${ui.hint}"`;
+  if (!ui.square) return 'FAIL: the suitcase is not on the square stage';
+  if (ui.palette) return 'FAIL: a cup colour palette is showing under a suitcase';
+  if (ui.counter !== 'none' || ui.arrows !== 'none') return 'FAIL: the photo counter or arrows are showing over the 3D suitcase';
+  const art = await artworkFraction(page, 'suitcase');
+  if (art < 0.02) return `FAIL: only ${(art*100).toFixed(1)}% of the stage is coloured — no design on the suitcase`;
+  await T(page, 6000);
+  if (!log.apiCalls.some((c) => c.path === '/api/start-mockup')) return 'FAIL: the Printify mockup request no longer fires for the suitcase';
+  const after = await stageState(page);
+  if (!after.wrap || after.photo) return 'FAIL: Printify answering replaced the 3D suitcase with the flat photos';
+  return `PASS: Yes opens the 3D suitcase wearing its design (${(art*100).toFixed(0)}% of the stage), square stage, no palette, no photo arrows; Printify still fired and did not replace it`;
+};
+
 // ---- 8. No WebGL: the picker keeps its photos. ----
 OPTS.noWebGLPickerKeepsPhotos = { noWebGL: true };
 scenarios.noWebGLPickerKeepsPhotos = async (page) => {
