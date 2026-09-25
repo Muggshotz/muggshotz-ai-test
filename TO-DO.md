@@ -51,8 +51,8 @@ Started 24 Sep 2026, when the old lists ran out.
   shaft (broken boards, rope ladder, lanterns): eleven in all. Bud redid the
   dock with deep water (25 Sep); that version is the one. The dock's worn-away
   WELCOME (it reads ELCOM) is ON PURPOSE -- Alyx: "do not correct that ... you
-  can still infer that it used to say welcome". The manhole's lettering does
-  run off its edge. None is print-ready: every one is a mockup on a doorstep;
+  can still infer that it used to say welcome". Propose no changes to Bud's
+  designs without running them past Alyx first. None is print-ready: every one is a mockup on a doorstep;
   Bud has the proposal asking for flat 4650 x 2850 art. Goes in with
   Premades & Sets.
 
