@@ -9,8 +9,8 @@ Worth having someone who writes contracts look it over before it goes live.
 **Pitch In: your idea, your cut.**
 
 1. **Pitch an idea.** Tell us what you'd like to see on a mug, a shirt, a card,
-   or anything else we make. A sentence or two is enough; a sketch or photo
-   helps.
+   or anything else we make. Explain the premise of the idea, and the punch
+   line if there is one. A sketch or photo helps.
 
 2. **We'll try to read every pitch.** We can't reply to every one. If we
    make yours, we'll let you know.

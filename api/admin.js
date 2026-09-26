@@ -18,6 +18,8 @@ import { flyerProducts } from '../lib/flyer-products.js';
 import { readMaintenance, writeMaintenance } from '../lib/maintenance.js';
 import { readPaymentRail, writePaymentRail } from "../lib/payment-rail.js";
 import { squareConfigured, squareEnv, squareTokenPresent, listLocations, createGiftCard, activateGiftCard } from "../lib/square.js";
+import { sendAlert, alertTopics } from "../lib/alerts.js";
+import crypto from 'crypto';
 
 const SUPABASE_URL              = process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -847,6 +849,167 @@ async function handleMaintenanceSet(req, res) {
   }
 }
 
+// PITCH IN AND REPORT A BUG (Alyx, 26 Sep 2026). Public: anyone can send an
+// idea or a bug report from the studio, no password. Each one is
+//   * saved to its own PRIVATE storage bucket ("pitches", made on first use),
+//     never to "generations", so the storage clean-up can never touch it;
+//   * emailed to PITCH_EMAIL, an idea with "My Idea" at the start of its
+//     subject (Alyx: his Gmail filter flags that subject), a bug report with
+//     "Bug Report"; reply-to is the sender, so he can answer from his inbox;
+//   * announced on his phone (lib/alerts.js): a cuckoo for an idea, a sprung
+//     spring for a bug.
+// Saving is what counts: if the email or the alert fails, the sender is still
+// told it arrived, because it did.
+const PITCH_EMAIL = 'myideaformuggshotz@gmail.com';
+const PITCH_BUCKET = 'pitches';
+const PITCH_FROM = 'Muggshotz <onboarding@resend.dev>';
+const MAX_PITCH_IMAGE_CHARS = 3_500_000; // about 2.5 MB of picture
+let pitchBucketReady = false;
+
+function sbHeaders(extra = {}) {
+  return { apikey: SUPABASE_SERVICE_ROLE_KEY, Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`, ...extra };
+}
+async function ensurePitchBucket() {
+  if (pitchBucketReady) return;
+  const resp = await fetch(`${SUPABASE_URL}/storage/v1/bucket`, {
+    method: 'POST', headers: sbHeaders({ 'Content-Type': 'application/json' }),
+    body: JSON.stringify({ id: PITCH_BUCKET, name: PITCH_BUCKET, public: false })
+  });
+  // "Already exists" comes back as 400 or 409; either way it is there.
+  if (resp.ok || resp.status === 400 || resp.status === 409) { pitchBucketReady = true; return; }
+  throw new Error('Could not make the pitches bucket: ' + resp.status + ' ' + await resp.text());
+}
+async function putPitchObject(path, body, contentType) {
+  const resp = await fetch(`${SUPABASE_URL}/storage/v1/object/${PITCH_BUCKET}/${path}`, {
+    method: 'POST', headers: sbHeaders({ 'Content-Type': contentType }), body
+  });
+  if (!resp.ok) throw new Error('Pitch storage failed: ' + resp.status + ' ' + await resp.text());
+}
+const escHtml = (t) => String(t || '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const clip = (t, n) => String(t == null ? '' : t).trim().slice(0, n);
+
+// Checks a submission and returns the record to save, or { error }.
+export function readPitch(body) {
+  const b = body || {};
+  const kind = b.kind === 'bug' ? 'bug' : b.kind === 'idea' ? 'idea' : null;
+  if (!kind) return { error: 'Unknown kind.' };
+  if (b.website) return { spam: true }; // the hidden field only a bot fills in
+  const text = clip(b.text, 3000);
+  if (text.length < 5) return { error: kind === 'idea' ? 'Please tell us your idea.' : 'Please tell us what went wrong.' };
+  const name = clip(b.name, 80), email = clip(b.email, 120).toLowerCase();
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return { error: 'That email address does not look right.' };
+  if (kind === 'idea') {
+    if (!email) return { error: 'Please give your email, so we can reach you if we make it.' };
+    if (b.agree !== true) return { error: 'Please agree to the Pitch In terms.' };
+  }
+  let image = null;
+  if (b.image) {
+    const m = /^data:image\/(jpeg|png);base64,([A-Za-z0-9+/=]+)$/.exec(String(b.image));
+    if (!m) return { error: 'That picture could not be read.' };
+    if (m[2].length > MAX_PITCH_IMAGE_CHARS) return { error: 'That picture is too big.' };
+    image = { type: m[1], base64: m[2] };
+  }
+  const c = b.context || {};
+  const context = kind === 'bug' ? {
+    page: clip(c.page, 300), focus: clip(c.focus, 200), version: clip(c.version, 20),
+    product: clip(c.product, 60), viewport: clip(c.viewport, 20), userAgent: clip(c.userAgent, 300)
+  } : null;
+  return { kind, text, name, email, deviceId: clip(b.deviceId, 80), image, context };
+}
+
+function pitchEmailHtml(p, id) {
+  const rows = [['From', `${escHtml(p.name) || '(no name)'} ${p.email ? '&lt;' + escHtml(p.email) + '&gt;' : ''}`],
+    ['Device', escHtml(p.deviceId) || '-'], ['Reference', id]];
+  if (p.context) for (const [k, v] of Object.entries(p.context)) if (v) rows.push([k, escHtml(v)]);
+  return `<div style="font-family:Arial,sans-serif;font-size:15px;line-height:1.5">`
+    + `<p style="white-space:pre-wrap">${escHtml(p.text)}</p>`
+    + `<table style="font-size:13px;color:#555">${rows.map(([k, v]) => `<tr><td style="padding-right:12px">${k}</td><td>${v}</td></tr>`).join('')}</table>`
+    + (p.image ? '<p style="font-size:13px;color:#555">Picture attached.</p>' : '') + '</div>';
+}
+
+async function handlePitch(req, res) {
+  const p = readPitch(req.body);
+  if (p.spam) return res.status(200).json({ ok: true });
+  if (p.error) return res.status(400).json({ error: p.error });
+  const id = `${new Date().toISOString().replace(/[:.]/g, '-')}-${crypto.randomUUID().slice(0, 8)}`;
+  const base = `${p.kind}/${id}`;
+  try {
+    await ensurePitchBucket();
+    if (p.image) await putPitchObject(`${base}.${p.image.type === 'png' ? 'png' : 'jpg'}`, Buffer.from(p.image.base64, 'base64'), `image/${p.image.type}`);
+    const record = { id, kind: p.kind, text: p.text, name: p.name, email: p.email, deviceId: p.deviceId,
+      context: p.context, image: p.image ? `${base}.${p.image.type === 'png' ? 'png' : 'jpg'}` : null, receivedAt: new Date().toISOString() };
+    await putPitchObject(`${base}.json`, JSON.stringify(record), 'application/json');
+  } catch (err) {
+    console.error('Pitch could not be saved:', err.message);
+    return res.status(500).json({ error: 'Sorry, that did not go through. Please try again in a minute.' });
+  }
+  const firstLine = p.text.replace(/\s+/g, ' ').slice(0, 60);
+  const subject = p.kind === 'idea' ? `My Idea: ${firstLine}` : `Bug Report: ${firstLine}`;
+  try {
+    const resp = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        from: PITCH_FROM, to: PITCH_EMAIL, subject, html: pitchEmailHtml(p, id),
+        ...(p.email ? { reply_to: p.email } : {}),
+        ...(p.image ? { attachments: [{ filename: `${p.kind}-${id}.${p.image.type === 'png' ? 'png' : 'jpg'}`, content: p.image.base64 }] } : {})
+      })
+    });
+    if (!resp.ok) console.error('Pitch email failed:', resp.status, await resp.text());
+  } catch (err) { console.error('Pitch email failed:', err.message); }
+  await sendAlert(p.kind, p.kind === 'idea' ? `New idea from ${p.name || 'someone'}` : 'New bug report', firstLine);
+  return res.status(200).json({ ok: true, id });
+}
+
+// The admin page's list: newest first, each with a picture link good for an hour.
+async function handlePitchList(req, res) {
+  const { password, kind } = req.body || {};
+  if (password !== ADMIN_PASSWORD) return res.status(403).json({ error: 'Unauthorized.' });
+  const k = kind === 'bug' ? 'bug' : 'idea';
+  try {
+    await ensurePitchBucket();
+    const list = await fetch(`${SUPABASE_URL}/storage/v1/object/list/${PITCH_BUCKET}`, {
+      method: 'POST', headers: sbHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({ prefix: `${k}/`, limit: 1000, sortBy: { column: 'name', order: 'desc' } })
+    });
+    const rows = await list.json();
+    if (!list.ok) throw new Error(JSON.stringify(rows));
+    const names = rows.map((r) => r.name).filter((n) => n.endsWith('.json')).slice(0, 50);
+    const items = [];
+    for (const n of names) {
+      const r = await fetch(`${SUPABASE_URL}/storage/v1/object/${PITCH_BUCKET}/${k}/${n}`, { headers: sbHeaders() });
+      if (!r.ok) continue;
+      const rec = await r.json();
+      if (rec.image) {
+        const sg = await fetch(`${SUPABASE_URL}/storage/v1/object/sign/${PITCH_BUCKET}/${rec.image}`, {
+          method: 'POST', headers: sbHeaders({ 'Content-Type': 'application/json' }), body: JSON.stringify({ expiresIn: 3600 })
+        });
+        const sj = sg.ok ? await sg.json() : null;
+        rec.imageUrl = sj && (sj.signedURL || sj.signedUrl) ? `${SUPABASE_URL}/storage/v1${sj.signedURL || sj.signedUrl}` : null;
+      }
+      items.push(rec);
+    }
+    return res.status(200).json({ kind: k, total: rows.filter((r) => r.name.endsWith('.json')).length, items });
+  } catch (err) {
+    console.error('Pitch list failed:', err.message);
+    return res.status(500).json({ error: err.message });
+  }
+}
+
+// The three phone channels, for subscribing in the ntfy app; and a test ping
+// of each, so each sound can be set and heard.
+async function handleAlertTopics(req, res) {
+  const { password, test } = req.body || {};
+  if (password !== ADMIN_PASSWORD) return res.status(403).json({ error: 'Unauthorized.' });
+  const sent = {};
+  if (test) {
+    sent.idea = await sendAlert('idea', 'Test: a new idea', 'This is what an idea sounds like.');
+    sent.bug = await sendAlert('bug', 'Test: a bug report', 'This is what a bug report sounds like.');
+    sent.sale = await sendAlert('sale', 'Test: a sale', 'This is what a sale sounds like.');
+  }
+  return res.status(200).json({ topics: alertTopics(), sent });
+}
+
 export default async function handler(req, res) {
   // Printify catalog reads are GET requests (read-only, no password
   // needed) — check this first, before the POST/action routing below.
@@ -889,6 +1052,9 @@ export default async function handler(req, res) {
   if (action === 'maintenance-set') return handleMaintenanceSet(req, res);
   if (action === 'payment-rail-set') return handlePaymentRailSet(req, res);
   if (action === 'square-test-gift-card') return handleSquareTestGiftCard(req, res);
+  if (action === 'pitch') return handlePitch(req, res);
+  if (action === 'pitches') return handlePitchList(req, res);
+  if (action === 'alert-topics') return handleAlertTopics(req, res);
 
   return res.status(400).json({ error: `Unknown action "${action}".` });
 }

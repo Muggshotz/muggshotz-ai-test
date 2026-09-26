@@ -38,7 +38,7 @@ const IMG = 'https://cdn.muggshotz.test/design.jpg';
 const JPEG = fs.readFileSync(path.join(__dirname, 'fake-generated.jpg'));
 
 // ---- outbound HTTP, recorded ----
-const wire = { uploads: 0, products: [], orders: [], unstubbed: [], variantsAsked: [], supaPatches: [], giftRows: [], baskets: {} };
+const wire = { uploads: 0, products: [], orders: [], unstubbed: [], variantsAsked: [], supaPatches: [], giftRows: [], baskets: {}, rings: [] };
 let catalog = null;
 const json = (obj, status = 200) => new Response(JSON.stringify(obj), { status, headers: { 'content-type': 'application/json' } });
 
@@ -100,6 +100,8 @@ global.fetch = async (url, opts = {}) => {
     return json([{}]);
   }
   if (u.startsWith('https://api.resend.com/')) return json({ id: 'email_1' });
+  // Alyx's phone (lib/alerts.js): the sale's ka-ching.
+  if (u.startsWith('https://ntfy.sh/')) { wire.rings.push({ topic: u.slice(16), title: opts.headers?.Title || '', body: String(opts.body || '') }); return json({ id: 'ring_1' }); }
   wire.unstubbed.push(`${m} ${u}`); return json({ error: 'unstubbed' }, 500);
 };
 
@@ -148,7 +150,7 @@ function bodiesFor(key, p) {
   for (const [key, p] of Object.entries(catalog)) for (const c of bodiesFor(key, p)) cases.push(c);
 
   for (const [label, body] of cases) {
-    wire.uploads = 0; wire.products.length = 0; wire.orders.length = 0; wire.unstubbed.length = 0; errors.length = 0;
+    wire.uploads = 0; wire.products.length = 0; wire.orders.length = 0; wire.unstubbed.length = 0; errors.length = 0; wire.rings.length = 0;
     const before = globalThis.__stripe.sessions.length;
     console.log = quiet;
     let verdict;
@@ -175,6 +177,8 @@ function bodiesFor(key, p) {
       const critical = errors.filter((e) => /CRITICAL|Error handling|failed|Failed/.test(e));
       if (critical.length) throw new Error(`the webhook logged: ${critical[0].slice(0, 220)}`);
       if (wire.unstubbed.length) throw new Error(`unstubbed call: ${wire.unstubbed[0]}`);
+      // The sale rings Alyx's phone once, on the sales channel, saying what sold.
+      if (wire.rings.length !== 1 || !/^muggshotz-sales-/.test(wire.rings[0].topic) || !/^Sale: /.test(wire.rings[0].title)) throw new Error(`the sale rang ${JSON.stringify(wire.rings)}`);
       // 3. what reached Printify
       if (wire.orders.length !== 1) throw new Error(`${wire.orders.length} Printify orders were submitted, expected 1`);
       const order = wire.orders[0];

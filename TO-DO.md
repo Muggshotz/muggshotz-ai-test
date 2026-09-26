@@ -189,6 +189,15 @@ Pitch In. The grid is three across today (needles-studio.html, #productCard
   There's no way I can respond to that"). Customer-facing terms:
   draft in PITCH-IN-TERMS.md.
   (Bug reports: see "Report a bug" below.)
+  **BUILT 26 Sep:** a Pitch In button on the opening card (no photo needed)
+  and the grid's last tile; a Report a bug button in the corner of the
+  studio and the order page (pitch-in.js). Each is saved to a private
+  "pitches" bucket, emailed ("My Idea: ..." / "Bug Report: ..."), rings
+  Alyx's phone through ntfy (cuckoo / boing; every sale rings ka-ching from
+  api/stripe-webhook.js), and is listed on the admin page with the phone
+  channels. Still to do: paying the 5% and the 10 chips when an idea is
+  adopted; granting the bug bounty's two tokens (by hand, from the admin
+  page's token grant, for now).
   **Pitches and bug reports go to myideaformuggshotz@gmail.com** (Alyx,
   26 Sep), with a phone alert: that account alone notifying in the Gmail
   app, and/or a push from the site (ntfy) when one arrives.

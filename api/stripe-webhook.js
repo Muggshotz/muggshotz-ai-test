@@ -6,6 +6,7 @@ import { placeProductOrder, placeBasketOrder } from "./create-printify-order.js"
 import { getProduct } from "../lib/products-catalog.js";
 import { verifyWebhookSignature, squareWebhookUrl, retrieveOrder } from "../lib/square.js";
 import { readCheckoutRecord, updateCheckoutRecord, sessionFromRecord } from "../lib/payment-rail.js";
+import { sendAlert, saleAlertText } from "../lib/alerts.js";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
@@ -518,6 +519,12 @@ export async function settleCheckoutSession(session) {
   } else {
     await handleTokenPayment(session);
   }
+  // THE CASH REGISTER (Alyx, 26 Sep 2026): a ka-ching on his phone for every
+  // sale that has just gone through. Only settled, live payments reach here
+  // (test-mode events and Square sandbox payments stop earlier), and the
+  // alert can never fail the settlement (lib/alerts.js swallows its errors).
+  const alert = saleAlertText(session, getProduct(session.metadata?.product_key || "")?.displayName);
+  await sendAlert("sale", alert.title, alert.message);
 }
 
 // A SQUARE CHECKOUT, SETTLED ONCE. The record is marked before anything is

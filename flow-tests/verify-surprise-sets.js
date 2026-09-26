@@ -112,7 +112,9 @@ scenarios.thePanelAndTheOrder = async (page, log) => {
   await page.evaluate(() => surpriseBack());
   await T(page, 900);
   // The tile: last on the grid, with its price.
-  const tile = await page.evaluate(() => { const t = document.getElementById('premadesTile'); return t && { text: t.innerText, last: t === t.parentElement.lastElementChild }; });
+  // Next to last: Pitch In ends the grid (Alyx's last row: Artwork Only, Gift
+  // Certificate, Premades & Sets, Pitch In).
+  const tile = await page.evaluate(() => { const t = document.getElementById('premadesTile'); return t && { text: t.innerText, last: t.nextElementSibling === document.getElementById('pitchInTile') && t.nextElementSibling === t.parentElement.lastElementChild }; });
   if (!tile || !tile.last || !/Premades & Sets/.test(tile.text) || !/\$19\.95/.test(tile.text)) return `FAIL: the Premades & Sets tile reads ${JSON.stringify(tile)}`;
   await tap(page, '#premadesTile');
   await T(page, 1900);
