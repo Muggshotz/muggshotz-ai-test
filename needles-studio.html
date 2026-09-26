@@ -1,5 +1,5 @@
 <!-- ============================================================
-     VERSION: V383
+     VERSION: V384
      ============================================================
      THE ONE LINE THAT SAYS WHICH BUILD YOU ARE LOOKING AT.
 
@@ -662,6 +662,7 @@ body.ornament-shape-focus .card:not(#ornamentShapeCard){opacity:.35;filter:brigh
 body.airFreshener-option-focus .card:not(#airFreshenerOptionCard){opacity:.35;filter:brightness(.6) saturate(.75);transition:opacity .5s,filter .5s}
 body.nightBuddy-option-focus .card:not(#nightBuddyOptionCard){opacity:.35;filter:brightness(.6) saturate(.75);transition:opacity .5s,filter .5s}
 body.stickerSheet-option-focus .card:not(#stickerSheetOptionCard){opacity:.35;filter:brightness(.6) saturate(.75);transition:opacity .5s,filter .5s}
+body.apparel-style-focus .card:not(#apparelStyleCard){opacity:.35;filter:brightness(.6) saturate(.75);transition:opacity .5s,filter .5s}
 body.tshirt-option-focus .card:not(#tshirtOptionCard){opacity:.35;filter:brightness(.6) saturate(.75);transition:opacity .5s,filter .5s}
 body.surprise-focus .card:not(#surpriseCard){opacity:.35;filter:brightness(.6) saturate(.75);transition:opacity .5s,filter .5s}
 body.premades-focus .card:not(#premadesCard){opacity:.35;filter:brightness(.6) saturate(.75);transition:opacity .5s,filter .5s}
@@ -1539,17 +1540,22 @@ const HERO_SETTLE_MS = 1000;
 <button type="button" class="download-btn" style="margin-top:1rem" onclick="optionCardBack()">← Back</button>
 </div>
 
-<div class="card" id="tshirtOptionCard" style="display:none">
-<div class="card-title">👕 Size and Colour</div>
-<img src="art/options/tshirt.jpg" alt="Gildan heavy cotton T-shirt" style="display:block;width:min(100%,220px);margin:0 auto .8rem;border-radius:8px;background:#fff"/>
-<div class="note" style="margin-top:0;margin-bottom:.75rem">A Gildan 5000 heavy cotton unisex tee. Only your design prints, not a box around it. Pick a size and a shirt colour.</div>
-<div class="grid2" id="tshirtOptionGrid" data-words="sizes: the card carries the picture">
-<div class="btn-select" data-opt="S" onclick="pickTshirt('S')">S<div class="note" style="margin-top:4px">$8.95</div></div><div class="btn-select" data-opt="M" onclick="pickTshirt('M')">M<div class="note" style="margin-top:4px">$8.95</div></div><div class="btn-select" data-opt="L" onclick="pickTshirt('L')">L<div class="note" style="margin-top:4px">$8.95</div></div><div class="btn-select" data-opt="XL" onclick="pickTshirt('XL')">XL<div class="note" style="margin-top:4px">$8.95</div></div><div class="btn-select" data-opt="2XL" onclick="pickTshirt('2XL')">2XL<div class="note" style="margin-top:4px">$9.95</div></div><div class="btn-select" data-opt="3XL" onclick="pickTshirt('3XL')">3XL<div class="note" style="margin-top:4px">$12.95</div></div><div class="btn-select" data-opt="4XL" onclick="pickTshirt('4XL')">4XL<div class="note" style="margin-top:4px">$12.95</div></div><div class="btn-select" data-opt="5XL" onclick="pickTshirt('5XL')">5XL<div class="note" style="margin-top:4px">$12.95</div></div>
-</div>
-<div class="note" style="margin:.8rem 0 .4rem">Shirt colour</div>
-<div id="tshirtColorGrid" style="display:flex;flex-wrap:wrap;gap:8px"><button type="button" class="color-btn" data-tcolor="White" title="White" style="background:#ffffff" onclick="pickTshirtColor('White')"></button><button type="button" class="color-btn" data-tcolor="Black" title="Black" style="background:#111111" onclick="pickTshirtColor('Black')"></button><button type="button" class="color-btn" data-tcolor="Sport Grey" title="Sport Grey" style="background:#9ea3a8" onclick="pickTshirtColor('Sport Grey')"></button><button type="button" class="color-btn" data-tcolor="Navy" title="Navy" style="background:#1f2a44" onclick="pickTshirtColor('Navy')"></button><button type="button" class="color-btn" data-tcolor="Red" title="Red" style="background:#c8102e" onclick="pickTshirtColor('Red')"></button><button type="button" class="color-btn" data-tcolor="Royal" title="Royal" style="background:#1d4f91" onclick="pickTshirtColor('Royal')"></button><button type="button" class="color-btn" data-tcolor="Forest Green" title="Forest Green" style="background:#22452f" onclick="pickTshirtColor('Forest Green')"></button><button type="button" class="color-btn" data-tcolor="Maroon" title="Maroon" style="background:#5c1f2b" onclick="pickTshirtColor('Maroon')"></button><button type="button" class="color-btn" data-tcolor="Light Pink" title="Light Pink" style="background:#f4c6d2" onclick="pickTshirtColor('Light Pink')"></button><button type="button" class="color-btn" data-tcolor="Light Blue" title="Light Blue" style="background:#a9c8e8" onclick="pickTshirtColor('Light Blue')"></button><button type="button" class="color-btn" data-tcolor="Charcoal" title="Charcoal" style="background:#4a4b4f" onclick="pickTshirtColor('Charcoal')"></button><button type="button" class="color-btn" data-tcolor="Sand" title="Sand" style="background:#d8c7a5" onclick="pickTshirtColor('Sand')"></button></div>
-<div class="note" id="tshirtOptionNote" style="margin-top:.6rem"></div>
+<div class="card" id="apparelStyleCard" style="display:none">
+<div class="card-title">👕 Apparel</div>
+<div class="note" style="margin-top:0;margin-bottom:.75rem">Pick a garment. Only your design prints, not a box around it.</div>
+<div class="grid2" id="apparelStyleGrid"></div>
 <button type="button" class="download-btn" style="margin-top:1rem" onclick="optionCardBack()">← Back</button>
+</div>
+
+<div class="card" id="tshirtOptionCard" style="display:none">
+<div class="card-title" id="apparelSizeTitle">👕 Size and Colour</div>
+<img id="apparelSizePic" src="art/options/tshirt.jpg" alt="" style="display:block;width:min(100%,220px);margin:0 auto .8rem;border-radius:8px;background:#fff"/>
+<div class="note" id="apparelSizeNote" style="margin-top:0;margin-bottom:.75rem"></div>
+<div class="grid2" id="tshirtOptionGrid" data-words="sizes: the card carries the picture"></div>
+<div class="note" style="margin:.8rem 0 .4rem">Colour</div>
+<div id="tshirtColorGrid" style="display:flex;flex-wrap:wrap;gap:8px"></div>
+<div class="note" id="tshirtOptionNote" style="margin-top:.6rem"></div>
+<button type="button" class="download-btn" style="margin-top:1rem" onclick="apparelSizeBack()">← Back</button>
 </div>
 
 <div class="card" id="carMagnetOptionCard" style="display:none">
@@ -1702,7 +1708,7 @@ const HERO_SETTLE_MS = 1000;
 <div id="ideaGuidancePrompt" class="guidance-prompt" role="status" style="margin-top:8px;margin-bottom:0;cursor:pointer" onclick="ideaPromptClicked()">Click here when you are satisfied with your descriptive requests for the image.</div>
 </div>
 </div>
-<div class="card" id="productCard"><div class="card-title">🎁 Product</div><div class="guidance-prompt soft visible" id="productGuidancePrompt" role="status" style="margin-top:0;margin-bottom:.9rem">Please select your desired product below when ready.</div><div class="grid3"><div class="btn-select" data-val="mug" onclick="pick(this,'product')"><span class="icon">☕</span>Mug</div><div class="btn-select" data-val="greeting card" onclick="pick(this,'product')"><span class="icon">💌</span>Card</div><div class="btn-select" data-val="water bottle" onclick="pick(this,'product')"><span class="icon">🍶</span>Travel Cups</div><div class="btn-select" data-val="post-it note" onclick="pick(this,'product')"><span class="icon">📝</span>Post-it</div><div class="btn-select" data-val="phone case" onclick="pick(this,'product')"><span class="icon">📱</span>Phone case</div><div class="btn-select" data-val="tote bag" onclick="pick(this,'product')"><span class="icon">👜</span>Tote bag</div><div class="btn-select" data-val="suitcase" onclick="pick(this,'product')"><span class="icon">🧳</span>Suitcase</div><div class="btn-select" data-val="puzzle" onclick="pick(this,'product')"><span class="icon">🧩</span>Puzzle</div><div class="btn-select" data-val="photo poster" onclick="pick(this,'product')"><span class="icon">🖼️</span>Photo/Poster</div><div class="btn-select" data-val="coaster" onclick="pick(this,'product')"><span class="icon">☕</span>Coasters</div><div class="btn-select" data-val="mouse pad" onclick="pick(this,'product')"><span class="icon">🖱️</span>Mouse pad</div><div class="btn-select" data-val="wrapping paper" onclick="pick(this,'product')"><span class="icon">🎁</span>It's a Wrap<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Your own wrapping paper.</div></div><div class="btn-select" data-val="standee" onclick="pick(this,'product')"><span class="icon">🧍</span>From Where I Stand<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Acrylic standee, cut to shape.</div></div><div class="btn-select" data-val="ornament" onclick="pick(this,'product')"><span class="icon">🎄</span>Ornament<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Ceramic, for the tree.</div></div><div class="btn-select" data-val="playing cards" onclick="pick(this,'product')"><span class="icon">🃏</span>Just Playin'<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">A poker deck with your art on the back.</div></div><div class="btn-select" data-val="air freshener" onclick="pick(this,'product')"><span class="icon">🌲</span>Car Air Freshener<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Hangs from the mirror. Four scents.</div></div><div class="btn-select" data-val="doormat" onclick="pick(this,'product')"><span class="icon">🚪</span>Doormat<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">18 x 30 in, for the front door.</div></div><div class="btn-select" data-val="beer stein" onclick="pick(this,'product')"><span class="icon">🍺</span>Beer Stein<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">22oz ceramic with gold trim.</div></div><div class="btn-select" data-val="sticker sheet" onclick="pick(this,'product')"><span class="icon">⭐</span>Sticker Sheet<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Four die-cut vinyl stickers.</div></div><div class="btn-select" data-val="tshirt" onclick="pick(this,'product')"><span class="icon">👕</span>T-Shirt<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Gildan heavy cotton, 12 colours.</div></div><div class="btn-select" data-val="calendar" onclick="pick(this,'product')"><span class="icon">📅</span>Desk Calendar<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Next year, 13 pages, dates included.</div></div><div class="btn-select" data-val="car magnet" onclick="pick(this,'product')"><span class="icon">🚗</span>Car Magnet<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Weatherproof vinyl, magnetic back.</div></div><div class="btn-select" data-val="luggage tag" onclick="pick(this,'product')"><span class="icon">🏷️</span>Luggage Tag<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Acrylic, leather strap, card slot.</div></div><div class="btn-select" data-val="business cards" onclick="pick(this,'product')"><span class="icon">💼</span>Business Cards<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Cards, boxed cards, a metal holder.</div></div><div class="btn-select" onclick="location.href='gift.html'"><span class="icon">💵</span>Gift Certificate<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Store credit, emailed to them.</div></div><div class="btn-select" data-val="artwork only" onclick="pick(this,'product')"><span class="icon">🖼️</span>Artwork Only<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">No product. Just creates an image for you to download.</div><div class="note" style="margin-top:2px;color:#7ab8ff;font-size:10px">1 token</div></div><div class="btn-select" id="premadesTile" onclick="openPremades()"><span class="icon">🎁</span>Premades &amp; Sets<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Finished designs, ready to order.</div><div class="note" id="premadesTilePrice" style="margin-top:6px;color:#7ab8ff;font-weight:700;font-size:11px"></div></div></div>
+<div class="card" id="productCard"><div class="card-title">🎁 Product</div><div class="guidance-prompt soft visible" id="productGuidancePrompt" role="status" style="margin-top:0;margin-bottom:.9rem">Please select your desired product below when ready.</div><div class="grid3"><div class="btn-select" data-val="mug" onclick="pick(this,'product')"><span class="icon">☕</span>Mug</div><div class="btn-select" data-val="greeting card" onclick="pick(this,'product')"><span class="icon">💌</span>Card</div><div class="btn-select" data-val="water bottle" onclick="pick(this,'product')"><span class="icon">🍶</span>Travel Cups</div><div class="btn-select" data-val="post-it note" onclick="pick(this,'product')"><span class="icon">📝</span>Post-it</div><div class="btn-select" data-val="phone case" onclick="pick(this,'product')"><span class="icon">📱</span>Phone case</div><div class="btn-select" data-val="tote bag" onclick="pick(this,'product')"><span class="icon">👜</span>Tote bag</div><div class="btn-select" data-val="suitcase" onclick="pick(this,'product')"><span class="icon">🧳</span>Suitcase</div><div class="btn-select" data-val="puzzle" onclick="pick(this,'product')"><span class="icon">🧩</span>Puzzle</div><div class="btn-select" data-val="photo poster" onclick="pick(this,'product')"><span class="icon">🖼️</span>Photo/Poster</div><div class="btn-select" data-val="coaster" onclick="pick(this,'product')"><span class="icon">☕</span>Coasters</div><div class="btn-select" data-val="mouse pad" onclick="pick(this,'product')"><span class="icon">🖱️</span>Mouse pad</div><div class="btn-select" data-val="wrapping paper" onclick="pick(this,'product')"><span class="icon">🎁</span>It's a Wrap<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Your own wrapping paper.</div></div><div class="btn-select" data-val="standee" onclick="pick(this,'product')"><span class="icon">🧍</span>From Where I Stand<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Acrylic standee, cut to shape.</div></div><div class="btn-select" data-val="ornament" onclick="pick(this,'product')"><span class="icon">🎄</span>Ornament<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Ceramic, for the tree.</div></div><div class="btn-select" data-val="playing cards" onclick="pick(this,'product')"><span class="icon">🃏</span>Just Playin'<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">A poker deck with your art on the back.</div></div><div class="btn-select" data-val="air freshener" onclick="pick(this,'product')"><span class="icon">🌲</span>Car Air Freshener<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Hangs from the mirror. Four scents.</div></div><div class="btn-select" data-val="doormat" onclick="pick(this,'product')"><span class="icon">🚪</span>Doormat<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">18 x 30 in, for the front door.</div></div><div class="btn-select" data-val="beer stein" onclick="pick(this,'product')"><span class="icon">🍺</span>Beer Stein<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">22oz ceramic with gold trim.</div></div><div class="btn-select" data-val="sticker sheet" onclick="pick(this,'product')"><span class="icon">⭐</span>Sticker Sheet<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Four die-cut vinyl stickers.</div></div><div class="btn-select" data-val="tshirt" onclick="pick(this,'product')"><span class="icon">👕</span>Apparel<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Tees, hoodies, sweatshirts. 11 styles.</div></div><div class="btn-select" data-val="calendar" onclick="pick(this,'product')"><span class="icon">📅</span>Desk Calendar<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Next year, 13 pages, dates included.</div></div><div class="btn-select" data-val="car magnet" onclick="pick(this,'product')"><span class="icon">🚗</span>Car Magnet<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Weatherproof vinyl, magnetic back.</div></div><div class="btn-select" data-val="luggage tag" onclick="pick(this,'product')"><span class="icon">🏷️</span>Luggage Tag<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Acrylic, leather strap, card slot.</div></div><div class="btn-select" data-val="business cards" onclick="pick(this,'product')"><span class="icon">💼</span>Business Cards<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Cards, boxed cards, a metal holder.</div></div><div class="btn-select" onclick="location.href='gift.html'"><span class="icon">💵</span>Gift Certificate<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Store credit, emailed to them.</div></div><div class="btn-select" data-val="artwork only" onclick="pick(this,'product')"><span class="icon">🖼️</span>Artwork Only<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">No product. Just creates an image for you to download.</div><div class="note" style="margin-top:2px;color:#7ab8ff;font-size:10px">1 token</div></div><div class="btn-select" id="premadesTile" onclick="openPremades()"><span class="icon">🎁</span>Premades &amp; Sets<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Finished designs, ready to order.</div><div class="note" id="premadesTilePrice" style="margin-top:6px;color:#7ab8ff;font-weight:700;font-size:11px"></div></div></div>
 <button type="button" class="download-btn" id="productCardBackBtn" style="margin-top:1rem" onclick="productCardBack()">← Back</button></div>
 
 <div class="card" id="premadesCard" style="display:none">
@@ -4676,7 +4682,7 @@ function toggleWorkingImage(){
 // Two copies of a number is exactly how the marker rotted in the first place,
 // so they are not trusted to agree: .githooks/pre-commit moves both together
 // and REFUSES the commit if it ever finds them apart.
-const APP_VERSION='V383';
+const APP_VERSION='V384';
 try{ console.log('%cNeedles\u2019 Studio '+APP_VERSION,'color:#29a3ff;font-weight:700'); }catch(e){}
 
 function getDeviceId(){
@@ -8164,7 +8170,7 @@ const PRODUCT_TILE_PRICES = {
   'luggage tag': { from: 16.95, ladder: false },
   'car magnet': { from: 5.95, ladder: true },
   'calendar': { from: 9.95, ladder: false },
-  'tshirt': { from: 8.95, ladder: true },
+  'tshirt': { from: 6.95, ladder: true },
   'sticker sheet': { from: 9.95, ladder: true },
   // Night-Buddy is off the grid (Alyx, 24 Sep 2026: US shipping is more than
   // the item). Its option card, prompt and checkout stay, so it can come back.
@@ -12680,11 +12686,61 @@ function refreshStickerSheetVisibility(){
 }
 
 // T-SHIRT (22 Sep 2026): option picked before generating.
+// APPAREL (Alyx, 26 Sep 2026). The tile that was the T-shirt opens two
+// panels: the garment, then its size and colour. The product stays 'tshirt'
+// (cut to shape, the chest-print prompt, the mockup) and the garment picks
+// the catalog entry. Prices are the catalog's (wholesale + $3 to the nearest
+// $0.95); this table is printed from it by tools/apparel-table.mjs and
+// flow-tests/verify-apparel.js holds the two together.
+const APPAREL={"unisex-tshirt":{"label":"T-Shirt","brand":"Gildan 5000","pic":"art/options/tshirt.jpg","blurb":"Classic heavy cotton tee.","sizes":{"S":6.95,"M":6.95,"L":6.95,"XL":6.95,"2XL":8.95,"3XL":10.95,"4XL":10.95,"5XL":10.95},"colors":[{"name":"White","hex":"#ffffff"},{"name":"Black","hex":"#111111"},{"name":"Sport Grey","hex":"#9ea3a8"},{"name":"Navy","hex":"#1f2a44"},{"name":"Red","hex":"#c8102e"},{"name":"Royal","hex":"#1d4f91"},{"name":"Forest Green","hex":"#22452f"},{"name":"Maroon","hex":"#5c1f2b"},{"name":"Light Pink","hex":"#f4c6d2"},{"name":"Light Blue","hex":"#a9c8e8"},{"name":"Charcoal","hex":"#4a4b4f"},{"name":"Sand","hex":"#d8c7a5"}]},"apparel-premium-tee":{"label":"Premium Tee","brand":"Bella+Canvas 3001","pic":"art/options/apparel-premium-tee.jpg","blurb":"Softer, lighter cotton tee.","sizes":{"XS":8.95,"S":8.95,"M":8.95,"L":8.95,"XL":8.95,"2XL":11.95,"3XL":13.95,"4XL":15.95,"5XL":17.95},"colors":[{"name":"Athletic Heather","hex":"#a9adb0"},{"name":"Black","hex":"#111111"},{"name":"Dark Grey Heather","hex":"#555659"},{"name":"Forest","hex":"#24422f"},{"name":"Light Blue","hex":"#a9c8e8"},{"name":"Maroon","hex":"#5c1f2b"},{"name":"Navy","hex":"#1f2a44"},{"name":"Pink","hex":"#f2b8c6"},{"name":"Red","hex":"#c8102e"},{"name":"True Royal","hex":"#1f4ea3"},{"name":"White","hex":"#ffffff"}]},"apparel-garment-dyed-tee":{"label":"Garment-Dyed Tee","brand":"Comfort Colors 1717","pic":"art/options/apparel-garment-dyed-tee.jpg","blurb":"Heavyweight, washed-in colour.","sizes":{"S":15.95,"M":15.95,"L":15.95,"XL":15.95,"2XL":16.95,"3XL":18.95,"4XL":20.95},"colors":[{"name":"Black","hex":"#111111"},{"name":"Navy","hex":"#1f2a44"},{"name":"Red","hex":"#c8102e"},{"name":"White","hex":"#ffffff"},{"name":"Blossom","hex":"#f3c7cf"},{"name":"Blue Spruce","hex":"#3c5a55"},{"name":"Chambray","hex":"#a6bdd6"},{"name":"Grey","hex":"#8f9194"},{"name":"Ivory","hex":"#f1ead8"},{"name":"Pepper","hex":"#55524f"},{"name":"Royal Caribe","hex":"#2a5da8"},{"name":"Wine","hex":"#5e2331"}]},"apparel-womens-tee":{"label":"Women's Tee","brand":"Bella+Canvas 6004","pic":"art/options/apparel-womens-tee.jpg","blurb":"Slim fit.","sizes":{"S":14.95,"M":14.95,"L":14.95,"XL":14.95,"2XL":16.95},"colors":[{"name":"Athletic Heather","hex":"#a9adb0"},{"name":"Baby Blue","hex":"#a7c7e7"},{"name":"Black","hex":"#111111"},{"name":"Dark Grey Heather","hex":"#555659"},{"name":"Maroon","hex":"#5c1f2b"},{"name":"Navy","hex":"#1f2a44"},{"name":"Pink","hex":"#f2b8c6"},{"name":"Red","hex":"#c8102e"},{"name":"Soft Cream","hex":"#efe3c8"},{"name":"True Royal","hex":"#1f4ea3"},{"name":"White","hex":"#ffffff"},{"name":"Military Green","hex":"#5b5e3d"}]},"apparel-long-sleeve":{"label":"Long Sleeve Tee","brand":"Gildan 5400","pic":"art/options/apparel-long-sleeve.jpg","blurb":"Heavy cotton, long sleeves.","sizes":{"S":16.95,"M":16.95,"L":16.95,"XL":16.95,"2XL":19.95,"3XL":20.95},"colors":[{"name":"Carolina Blue","hex":"#7ba7d8"},{"name":"Irish Green","hex":"#2e8b57"},{"name":"Navy","hex":"#1f2a44"},{"name":"Purple","hex":"#4b2e83"},{"name":"Red","hex":"#c8102e"},{"name":"Royal","hex":"#1d4f91"},{"name":"White","hex":"#ffffff"},{"name":"Sport Grey","hex":"#9ea3a8"},{"name":"Black","hex":"#111111"},{"name":"Forest Green","hex":"#22452f"},{"name":"Graphite Heather","hex":"#6b6c70"}]},"apparel-tank":{"label":"Tank Top","brand":"Gildan 5200","pic":"art/options/apparel-tank.jpg","blurb":"Heavy cotton tank.","sizes":{"S":15.95,"M":15.95,"L":15.95,"XL":15.95,"2XL":18.95},"colors":[{"name":"Navy","hex":"#1f2a44"},{"name":"Red","hex":"#c8102e"},{"name":"Royal","hex":"#1d4f91"},{"name":"Sport Grey","hex":"#9ea3a8"},{"name":"White","hex":"#ffffff"},{"name":"Black","hex":"#111111"},{"name":"Maroon","hex":"#5c1f2b"},{"name":"Purple","hex":"#4b2e83"},{"name":"Safety Pink","hex":"#ff6fa8"},{"name":"Forest Green","hex":"#22452f"},{"name":"Graphite Heather","hex":"#6b6c70"}]},"apparel-kids-tee":{"label":"Kids Tee","brand":"Gildan 5000B","pic":"art/options/apparel-kids-tee.jpg","blurb":"Kids sizes XS–XL.","sizes":{"XS":9.95,"S":9.95,"M":9.95,"L":9.95,"XL":9.95},"colors":[{"name":"Navy","hex":"#1f2a44"},{"name":"Purple","hex":"#4b2e83"},{"name":"Red","hex":"#c8102e"},{"name":"Royal","hex":"#1d4f91"},{"name":"Black","hex":"#111111"},{"name":"Forest Green","hex":"#22452f"},{"name":"Maroon","hex":"#5c1f2b"},{"name":"Sport Grey","hex":"#9ea3a8"},{"name":"White","hex":"#ffffff"},{"name":"Light Blue","hex":"#a9c8e8"},{"name":"Light Pink","hex":"#f4c6d2"},{"name":"Charcoal","hex":"#4a4b4f"}],"colorPrices":{"XS|Charcoal":11.95}},"apparel-crewneck":{"label":"Crewneck Sweatshirt","brand":"Gildan 18000","pic":"art/options/apparel-crewneck.jpg","blurb":"Heavy blend fleece.","sizes":{"S":20.95,"M":20.95,"L":20.95,"XL":20.95,"2XL":22.95,"3XL":24.95,"4XL":27.95,"5XL":27.95},"colors":[{"name":"Charcoal","hex":"#4a4b4f"},{"name":"Light Blue","hex":"#a9c8e8"},{"name":"Light Pink","hex":"#f4c6d2"},{"name":"Maroon","hex":"#5c1f2b"},{"name":"Navy","hex":"#1f2a44"},{"name":"Red","hex":"#c8102e"},{"name":"Sand","hex":"#d8c7a5"},{"name":"Sport Grey","hex":"#9ea3a8"},{"name":"White","hex":"#ffffff"},{"name":"Black","hex":"#111111"},{"name":"Forest Green","hex":"#22452f"},{"name":"Royal","hex":"#1d4f91"}]},"apparel-hoodie":{"label":"Hoodie","brand":"Gildan 18500","pic":"art/options/apparel-hoodie.jpg","blurb":"Heavy blend pullover hoodie.","sizes":{"S":23.95,"M":23.95,"L":23.95,"XL":23.95,"2XL":26.95,"3XL":27.95,"4XL":27.95,"5XL":27.95},"colors":[{"name":"Maroon","hex":"#5c1f2b"},{"name":"Navy","hex":"#1f2a44"},{"name":"Sport Grey","hex":"#9ea3a8"},{"name":"White","hex":"#ffffff"},{"name":"Black","hex":"#111111"},{"name":"Red","hex":"#c8102e"},{"name":"Royal","hex":"#1d4f91"},{"name":"Forest Green","hex":"#22452f"},{"name":"Light Pink","hex":"#f4c6d2"},{"name":"Sand","hex":"#d8c7a5"},{"name":"Charcoal","hex":"#4a4b4f"},{"name":"Light Blue","hex":"#a9c8e8"}]},"apparel-youth-hoodie":{"label":"Youth Hoodie","brand":"Gildan 18500B","pic":"art/options/apparel-youth-hoodie.jpg","blurb":"Youth sizes S–XL.","sizes":{"S":26.95,"M":26.95,"L":26.95,"XL":26.95},"colors":[{"name":"Carolina Blue","hex":"#7ba7d8"},{"name":"Dark Heather","hex":"#4b4d52"},{"name":"Light Pink","hex":"#f4c6d2"},{"name":"Maroon","hex":"#5c1f2b"},{"name":"Navy","hex":"#1f2a44"},{"name":"Purple","hex":"#4b2e83"},{"name":"Red","hex":"#c8102e"},{"name":"Royal","hex":"#1d4f91"},{"name":"Sport Grey","hex":"#9ea3a8"},{"name":"White","hex":"#ffffff"},{"name":"Black","hex":"#111111"},{"name":"Forest Green","hex":"#22452f"}]},"apparel-zip-hoodie":{"label":"Zip Hoodie","brand":"Gildan 18600","pic":"art/options/apparel-zip-hoodie.jpg","blurb":"Full-zip hoodie.","sizes":{"S":31.95,"M":31.95,"L":31.95,"XL":31.95,"2XL":33.95,"3XL":35.95},"colors":[{"name":"Navy","hex":"#1f2a44"},{"name":"Sport Grey","hex":"#9ea3a8"},{"name":"Black","hex":"#111111"},{"name":"Dark Heather","hex":"#4b4d52"}]}};
+let selectedApparel=null;
 let selectedTshirt=null;
 let selectedTshirtColor=null;
-function tshirtConfirm(){
-  document.getElementById('tshirtOptionNote').textContent=(selectedTshirt&&selectedTshirtColor)?('✓ Confirmed: '+selectedTshirt+', '+selectedTshirtColor+'.'):(selectedTshirt?'Now pick a shirt colour.':'Now pick a size.');
-  if(selectedTshirt&&selectedTshirtColor)handOffToIdeaAfterProductChoice();
+function apparelPrice(key,size,color){
+  const g=APPAREL[key]; if(!g)return null;
+  const own=g.colorPrices&&color?g.colorPrices[size+'|'+color]:undefined;
+  return typeof own==='number'?own:g.sizes[size];
+}
+function apparelFrom(key){ return Math.min(...Object.values(APPAREL[key].sizes)); }
+function renderApparelStyles(){
+  const grid=document.getElementById('apparelStyleGrid'); if(!grid)return;
+  grid.innerHTML=Object.entries(APPAREL).map(([k,g])=>
+    '<div class="btn-select'+(k===selectedApparel?' selected':'')+'" data-apparel="'+k+'" style="padding:.5rem" onclick="pickApparel(\''+k+'\')">'
+    +'<img src="'+g.pic+'" alt="" width="360" height="360" style="width:100%;height:auto;aspect-ratio:1/1;border-radius:6px;background:#fff;margin-bottom:6px"/>'
+    +g.label+'<div class="note" style="margin-top:2px">'+g.blurb+'</div>'
+    +'<div class="note" style="margin-top:4px">'+(new Set(Object.values(g.sizes)).size>1?'from ':'')+'$'+apparelFrom(k).toFixed(2)+'</div></div>').join('');
+}
+function renderApparelSizes(){
+  const g=APPAREL[selectedApparel]; if(!g)return;
+  document.getElementById('apparelSizeTitle').textContent='👕 '+g.label+': Size and Colour';
+  const pic=document.getElementById('apparelSizePic'); pic.src=g.pic; pic.alt=g.label;
+  document.getElementById('apparelSizeNote').textContent=g.brand+'. '+g.blurb+' Only your design prints, not a box around it. Pick a size and a colour.';
+  document.getElementById('tshirtOptionGrid').innerHTML=Object.keys(g.sizes).map(s=>
+    '<div class="btn-select'+(s===selectedTshirt?' selected':'')+'" data-opt="'+s+'" onclick="pickTshirt(\''+s+'\')">'+s
+    +'<div class="note" style="margin-top:4px">$'+apparelPrice(selectedApparel,s,selectedTshirtColor).toFixed(2)+'</div></div>').join('');
+  document.getElementById('tshirtColorGrid').innerHTML=g.colors.map(c=>
+    '<button type="button" class="color-btn'+(c.name===selectedTshirtColor?' selected':'')+'" data-tcolor="'+c.name+'" title="'+c.name+'" style="background:'+c.hex+'" onclick="pickTshirtColor(\''+c.name.replace(/'/g,"\\'")+'\')"></button>').join('');
+}
+function pickApparel(key){
+  if(!APPAREL[key])return;
+  if(key!==selectedApparel){ selectedApparel=key; selectedTshirt=null; selectedTshirtColor=null; }
+  document.querySelectorAll('#apparelStyleGrid .btn-select').forEach(b=>b.classList.toggle('selected',b.dataset.apparel===key));
+  renderApparelSizes();
+  tshirtConfirm(true);
+  const card=document.getElementById('tshirtOptionCard'); if(card)card.style.display='block';
+  setOptionSpotlight('tshirt-option-focus');
+  smoothScrollToTarget('tshirtOptionCard','center');
+}
+// Back from the size is the garment, the panel before.
+function apparelSizeBack(){
+  setOptionSpotlight('apparel-style-focus');
+  smoothScrollToTarget('apparelStyleCard','center');
+}
+function tshirtConfirm(quiet){
+  const g=APPAREL[selectedApparel];
+  const price=(selectedTshirt&&selectedTshirtColor)?apparelPrice(selectedApparel,selectedTshirt,selectedTshirtColor):null;
+  document.getElementById('tshirtOptionNote').textContent=(selectedTshirt&&selectedTshirtColor)?('✓ Confirmed: '+g.label+', '+selectedTshirt+', '+selectedTshirtColor+', $'+price.toFixed(2)+'.'):(selectedTshirt?'Now pick a colour.':'Now pick a size.');
+  if(!quiet&&selectedTshirt&&selectedTshirtColor)handOffToIdeaAfterProductChoice();
 }
 function pickTshirt(name){
   selectedTshirt=name;
@@ -12693,12 +12749,16 @@ function pickTshirt(name){
 }
 function pickTshirtColor(name){
   selectedTshirtColor=name;
+  // A colour with its own price changes the sizes' prices on show.
+  if(APPAREL[selectedApparel]?.colorPrices)renderApparelSizes();
   document.querySelectorAll('#tshirtColorGrid .color-btn').forEach(b=>b.classList.toggle('selected',b.dataset.tcolor===name));
   tshirtConfirm();
 }
 function refreshTshirtVisibility(){
-  const card=document.getElementById('tshirtOptionCard');
-  if(card)card.style.display=(product==='tshirt')?'block':'none';
+  const style=document.getElementById('apparelStyleCard'), card=document.getElementById('tshirtOptionCard');
+  if(style)style.style.display=(product==='tshirt')?'block':'none';
+  if(product==='tshirt')renderApparelStyles();
+  if(card)card.style.display=(product==='tshirt'&&selectedApparel)?'block':'none';
 }
 
 // THE MAGNET'S SHAPE (Alyx, 22 Sep 2026). Each size is its own print area,
@@ -13450,7 +13510,7 @@ function pick(el,type){
     if(productGuide)productGuide.classList.remove('visible');
     const finalGuide=document.getElementById('finalGenerateGuidance');
     if(finalGuide)finalGuide.classList.toggle('visible',
-      (product==='phone case'&&phoneCaseComplete())||(product==='puzzle'&&!!selectedPuzzleSize)||(product==='wrapping paper'&&!!selectedWrapSize)||(product==='ornament'&&!!selectedOrnamentShape)||(product==='business cards'&&!!selectedBusinessCard)||(product==='car magnet'&&!!selectedCarMagnet)||(product==='tshirt'&&!!selectedTshirt&&!!selectedTshirtColor)||(product==='sticker sheet'&&!!selectedStickerSheet)||(product==='night light'&&!!selectedNightBuddy)||(product==='air freshener'&&!!selectedAirFreshener)||(product==='suitcase'&&!!selectedSuitcaseSize));
+      (product==='phone case'&&phoneCaseComplete())||(product==='puzzle'&&!!selectedPuzzleSize)||(product==='wrapping paper'&&!!selectedWrapSize)||(product==='ornament'&&!!selectedOrnamentShape)||(product==='business cards'&&!!selectedBusinessCard)||(product==='car magnet'&&!!selectedCarMagnet)||(product==='tshirt'&&!!selectedApparel&&!!selectedTshirt&&!!selectedTshirtColor)||(product==='sticker sheet'&&!!selectedStickerSheet)||(product==='night light'&&!!selectedNightBuddy)||(product==='air freshener'&&!!selectedAirFreshener)||(product==='suitcase'&&!!selectedSuitcaseSize));
     refreshApproveRowForMode();
     refreshMugSizeCardVisibility();
     refreshMugStyleCardVisibility();
@@ -13534,8 +13594,8 @@ function pick(el,type){
       setOptionSpotlight('stickerSheet-option-focus');
       smoothScrollToTarget('stickerSheetOptionCard','center');
     } else if(product==='tshirt'){
-      setOptionSpotlight('tshirt-option-focus');
-      smoothScrollToTarget('tshirtOptionCard','center');
+      setOptionSpotlight('apparel-style-focus');
+      smoothScrollToTarget('apparelStyleCard','center');
     } else if(product==='car magnet'){
       setOptionSpotlight('carMagnet-option-focus');
       smoothScrollToTarget('carMagnetOptionCard','center');
@@ -21000,7 +21060,7 @@ async function generate(){
     document.getElementById('stickerSheetOptionCard').scrollIntoView({behavior:'smooth',block:'center'});
     return;
   }
-  if(product==='tshirt' && (!selectedTshirt || !selectedTshirtColor)){
+  if(product==='tshirt' && (!selectedApparel || !selectedTshirt || !selectedTshirtColor)){
     setStatus('Please pick an option above first.',true);
     document.getElementById('tshirtOptionCard').scrollIntoView({behavior:'smooth',block:'center'});
     return;
@@ -22905,9 +22965,9 @@ function buildMockupRequestBody(){
   if (product === 'tshirt') {
     const design = placements.left || placements.front || placements.right;
     const url = design ? (findDesignById(design)?.url ?? null) : null;
-    if (!url || !selectedTshirt) return null;
+    if (!url || !selectedApparel || !selectedTshirt) return null;
     if (!selectedTshirtColor) return null;
-    return { productKey: 'unisex-tshirt', sizeLabel: selectedTshirt, colorName: selectedTshirtColor, image: url };
+    return { productKey: selectedApparel, sizeLabel: selectedTshirt, colorName: selectedTshirtColor, image: url };
   }
 
   // Desk Calendar (22 Sep 2026): single-image.
@@ -23916,6 +23976,7 @@ async function goToOrder(){
     preselectedBusinessCard: (product==='business cards') ? selectedBusinessCard : null,
     preselectedCardPaper: (product==='business cards') ? selectedCardPaper : null,
     preselectedCarMagnet: (product==='car magnet') ? selectedCarMagnet : null,
+    preselectedApparel: (product==='tshirt') ? selectedApparel : null,
     preselectedTshirt: (product==='tshirt') ? selectedTshirt : null,
     preselectedTshirtColor: (product==='tshirt') ? selectedTshirtColor : null,
     preselectedStickerSheet: (product==='sticker sheet') ? selectedStickerSheet : null,
@@ -24496,6 +24557,7 @@ function resetEverythingFreshStart(){
   selectedOrnamentShape=null;
   selectedBusinessCard=null;
   selectedCarMagnet=null;
+  selectedApparel=null;
   selectedTshirt=null;
   selectedTshirtColor=null;
   selectedStickerSheet=null;

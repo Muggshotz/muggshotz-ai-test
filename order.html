@@ -332,7 +332,7 @@ body.studio-driven #orderHeadlineCard{display:block}
 <img id="stickerSheetMockupImg" style="display:none;width:100%;border-radius:12px;border:1px solid var(--accent);margin-top:.75rem"/>
 </div>
 <div class="card" id="tshirtOptionCard" style="display:none">
-<div class="card-title">👕 Size and Colour</div>
+<div class="card-title" id="tshirtOptionTitle">👕 Size and Colour</div>
 <div class="grid2" id="tshirtOptionGrid"></div>
 <div class="note" id="tshirtMockupBtn" style="text-align:center;margin-top:1rem;color:var(--accent-soft);font-weight:600">🔍 Click Image To Enlarge</div>
 <div class="note" id="tshirtMockupNote" style="margin-top:.5rem;text-align:center;display:none"></div>
@@ -910,7 +910,7 @@ function currentProductKey(){
   if (isSmartMug()) return isSmartMugSet() ? 'smart-mug-set' : 'smart-mug';
   if (isBusinessCards()) return BUSINESS_CARD_OPTIONS[selectedBusinessCard].key;
   if (isDeskCalendar()) return 'desk-calendar';
-  if (isTshirt()) return 'unisex-tshirt';
+  if (isTshirt()) return selectedApparel;
   if (isStickerSheet()) return 'sticker-sheet';
   if (isNightBuddy()) return 'night-buddy';
   if (isBeerStein()) return 'beer-stein';
@@ -1445,14 +1445,19 @@ if (pendingOrder?.preselectedStickerSheet && STICKERSHEET_OPTIONS[pendingOrder.p
   selectedStickerSheet = pendingOrder.preselectedStickerSheet;
 }
 
-// T-SHIRT (22 Sep 2026). Keys match lib/products-catalog.js.
-const TSHIRT_OPTIONS = { "S": { price: 8.95 }, "M": { price: 8.95 }, "L": { price: 8.95 }, "XL": { price: 8.95 }, "2XL": { price: 9.95 }, "3XL": { price: 12.95 }, "4XL": { price: 12.95 }, "5XL": { price: 12.95 } };
-let selectedTshirt = "L";
-if (pendingOrder?.preselectedTshirt && TSHIRT_OPTIONS[pendingOrder.preselectedTshirt]) {
-  selectedTshirt = pendingOrder.preselectedTshirt;
+// APPAREL (26 Sep 2026): the T-shirt tile became eleven garments. The
+// garment, size and colour come from the studio; prices are the catalog's
+// (tools/apparel-table.mjs prints this copy; flow-tests/verify-apparel.js
+// holds it to lib/products-catalog.js).
+const APPAREL={"unisex-tshirt":{"label":"T-Shirt","brand":"Gildan 5000","pic":"art/options/tshirt.jpg","blurb":"Classic heavy cotton tee.","sizes":{"S":6.95,"M":6.95,"L":6.95,"XL":6.95,"2XL":8.95,"3XL":10.95,"4XL":10.95,"5XL":10.95},"colors":[{"name":"White","hex":"#ffffff"},{"name":"Black","hex":"#111111"},{"name":"Sport Grey","hex":"#9ea3a8"},{"name":"Navy","hex":"#1f2a44"},{"name":"Red","hex":"#c8102e"},{"name":"Royal","hex":"#1d4f91"},{"name":"Forest Green","hex":"#22452f"},{"name":"Maroon","hex":"#5c1f2b"},{"name":"Light Pink","hex":"#f4c6d2"},{"name":"Light Blue","hex":"#a9c8e8"},{"name":"Charcoal","hex":"#4a4b4f"},{"name":"Sand","hex":"#d8c7a5"}]},"apparel-premium-tee":{"label":"Premium Tee","brand":"Bella+Canvas 3001","pic":"art/options/apparel-premium-tee.jpg","blurb":"Softer, lighter cotton tee.","sizes":{"XS":8.95,"S":8.95,"M":8.95,"L":8.95,"XL":8.95,"2XL":11.95,"3XL":13.95,"4XL":15.95,"5XL":17.95},"colors":[{"name":"Athletic Heather","hex":"#a9adb0"},{"name":"Black","hex":"#111111"},{"name":"Dark Grey Heather","hex":"#555659"},{"name":"Forest","hex":"#24422f"},{"name":"Light Blue","hex":"#a9c8e8"},{"name":"Maroon","hex":"#5c1f2b"},{"name":"Navy","hex":"#1f2a44"},{"name":"Pink","hex":"#f2b8c6"},{"name":"Red","hex":"#c8102e"},{"name":"True Royal","hex":"#1f4ea3"},{"name":"White","hex":"#ffffff"}]},"apparel-garment-dyed-tee":{"label":"Garment-Dyed Tee","brand":"Comfort Colors 1717","pic":"art/options/apparel-garment-dyed-tee.jpg","blurb":"Heavyweight, washed-in colour.","sizes":{"S":15.95,"M":15.95,"L":15.95,"XL":15.95,"2XL":16.95,"3XL":18.95,"4XL":20.95},"colors":[{"name":"Black","hex":"#111111"},{"name":"Navy","hex":"#1f2a44"},{"name":"Red","hex":"#c8102e"},{"name":"White","hex":"#ffffff"},{"name":"Blossom","hex":"#f3c7cf"},{"name":"Blue Spruce","hex":"#3c5a55"},{"name":"Chambray","hex":"#a6bdd6"},{"name":"Grey","hex":"#8f9194"},{"name":"Ivory","hex":"#f1ead8"},{"name":"Pepper","hex":"#55524f"},{"name":"Royal Caribe","hex":"#2a5da8"},{"name":"Wine","hex":"#5e2331"}]},"apparel-womens-tee":{"label":"Women's Tee","brand":"Bella+Canvas 6004","pic":"art/options/apparel-womens-tee.jpg","blurb":"Slim fit.","sizes":{"S":14.95,"M":14.95,"L":14.95,"XL":14.95,"2XL":16.95},"colors":[{"name":"Athletic Heather","hex":"#a9adb0"},{"name":"Baby Blue","hex":"#a7c7e7"},{"name":"Black","hex":"#111111"},{"name":"Dark Grey Heather","hex":"#555659"},{"name":"Maroon","hex":"#5c1f2b"},{"name":"Navy","hex":"#1f2a44"},{"name":"Pink","hex":"#f2b8c6"},{"name":"Red","hex":"#c8102e"},{"name":"Soft Cream","hex":"#efe3c8"},{"name":"True Royal","hex":"#1f4ea3"},{"name":"White","hex":"#ffffff"},{"name":"Military Green","hex":"#5b5e3d"}]},"apparel-long-sleeve":{"label":"Long Sleeve Tee","brand":"Gildan 5400","pic":"art/options/apparel-long-sleeve.jpg","blurb":"Heavy cotton, long sleeves.","sizes":{"S":16.95,"M":16.95,"L":16.95,"XL":16.95,"2XL":19.95,"3XL":20.95},"colors":[{"name":"Carolina Blue","hex":"#7ba7d8"},{"name":"Irish Green","hex":"#2e8b57"},{"name":"Navy","hex":"#1f2a44"},{"name":"Purple","hex":"#4b2e83"},{"name":"Red","hex":"#c8102e"},{"name":"Royal","hex":"#1d4f91"},{"name":"White","hex":"#ffffff"},{"name":"Sport Grey","hex":"#9ea3a8"},{"name":"Black","hex":"#111111"},{"name":"Forest Green","hex":"#22452f"},{"name":"Graphite Heather","hex":"#6b6c70"}]},"apparel-tank":{"label":"Tank Top","brand":"Gildan 5200","pic":"art/options/apparel-tank.jpg","blurb":"Heavy cotton tank.","sizes":{"S":15.95,"M":15.95,"L":15.95,"XL":15.95,"2XL":18.95},"colors":[{"name":"Navy","hex":"#1f2a44"},{"name":"Red","hex":"#c8102e"},{"name":"Royal","hex":"#1d4f91"},{"name":"Sport Grey","hex":"#9ea3a8"},{"name":"White","hex":"#ffffff"},{"name":"Black","hex":"#111111"},{"name":"Maroon","hex":"#5c1f2b"},{"name":"Purple","hex":"#4b2e83"},{"name":"Safety Pink","hex":"#ff6fa8"},{"name":"Forest Green","hex":"#22452f"},{"name":"Graphite Heather","hex":"#6b6c70"}]},"apparel-kids-tee":{"label":"Kids Tee","brand":"Gildan 5000B","pic":"art/options/apparel-kids-tee.jpg","blurb":"Kids sizes XS–XL.","sizes":{"XS":9.95,"S":9.95,"M":9.95,"L":9.95,"XL":9.95},"colors":[{"name":"Navy","hex":"#1f2a44"},{"name":"Purple","hex":"#4b2e83"},{"name":"Red","hex":"#c8102e"},{"name":"Royal","hex":"#1d4f91"},{"name":"Black","hex":"#111111"},{"name":"Forest Green","hex":"#22452f"},{"name":"Maroon","hex":"#5c1f2b"},{"name":"Sport Grey","hex":"#9ea3a8"},{"name":"White","hex":"#ffffff"},{"name":"Light Blue","hex":"#a9c8e8"},{"name":"Light Pink","hex":"#f4c6d2"},{"name":"Charcoal","hex":"#4a4b4f"}],"colorPrices":{"XS|Charcoal":11.95}},"apparel-crewneck":{"label":"Crewneck Sweatshirt","brand":"Gildan 18000","pic":"art/options/apparel-crewneck.jpg","blurb":"Heavy blend fleece.","sizes":{"S":20.95,"M":20.95,"L":20.95,"XL":20.95,"2XL":22.95,"3XL":24.95,"4XL":27.95,"5XL":27.95},"colors":[{"name":"Charcoal","hex":"#4a4b4f"},{"name":"Light Blue","hex":"#a9c8e8"},{"name":"Light Pink","hex":"#f4c6d2"},{"name":"Maroon","hex":"#5c1f2b"},{"name":"Navy","hex":"#1f2a44"},{"name":"Red","hex":"#c8102e"},{"name":"Sand","hex":"#d8c7a5"},{"name":"Sport Grey","hex":"#9ea3a8"},{"name":"White","hex":"#ffffff"},{"name":"Black","hex":"#111111"},{"name":"Forest Green","hex":"#22452f"},{"name":"Royal","hex":"#1d4f91"}]},"apparel-hoodie":{"label":"Hoodie","brand":"Gildan 18500","pic":"art/options/apparel-hoodie.jpg","blurb":"Heavy blend pullover hoodie.","sizes":{"S":23.95,"M":23.95,"L":23.95,"XL":23.95,"2XL":26.95,"3XL":27.95,"4XL":27.95,"5XL":27.95},"colors":[{"name":"Maroon","hex":"#5c1f2b"},{"name":"Navy","hex":"#1f2a44"},{"name":"Sport Grey","hex":"#9ea3a8"},{"name":"White","hex":"#ffffff"},{"name":"Black","hex":"#111111"},{"name":"Red","hex":"#c8102e"},{"name":"Royal","hex":"#1d4f91"},{"name":"Forest Green","hex":"#22452f"},{"name":"Light Pink","hex":"#f4c6d2"},{"name":"Sand","hex":"#d8c7a5"},{"name":"Charcoal","hex":"#4a4b4f"},{"name":"Light Blue","hex":"#a9c8e8"}]},"apparel-youth-hoodie":{"label":"Youth Hoodie","brand":"Gildan 18500B","pic":"art/options/apparel-youth-hoodie.jpg","blurb":"Youth sizes S–XL.","sizes":{"S":26.95,"M":26.95,"L":26.95,"XL":26.95},"colors":[{"name":"Carolina Blue","hex":"#7ba7d8"},{"name":"Dark Heather","hex":"#4b4d52"},{"name":"Light Pink","hex":"#f4c6d2"},{"name":"Maroon","hex":"#5c1f2b"},{"name":"Navy","hex":"#1f2a44"},{"name":"Purple","hex":"#4b2e83"},{"name":"Red","hex":"#c8102e"},{"name":"Royal","hex":"#1d4f91"},{"name":"Sport Grey","hex":"#9ea3a8"},{"name":"White","hex":"#ffffff"},{"name":"Black","hex":"#111111"},{"name":"Forest Green","hex":"#22452f"}]},"apparel-zip-hoodie":{"label":"Zip Hoodie","brand":"Gildan 18600","pic":"art/options/apparel-zip-hoodie.jpg","blurb":"Full-zip hoodie.","sizes":{"S":31.95,"M":31.95,"L":31.95,"XL":31.95,"2XL":33.95,"3XL":35.95},"colors":[{"name":"Navy","hex":"#1f2a44"},{"name":"Sport Grey","hex":"#9ea3a8"},{"name":"Black","hex":"#111111"},{"name":"Dark Heather","hex":"#4b4d52"}]}};
+const selectedApparel = APPAREL[pendingOrder?.preselectedApparel] ? pendingOrder.preselectedApparel : 'unisex-tshirt';
+const APPAREL_G = APPAREL[selectedApparel];
+let selectedTshirt = APPAREL_G.sizes[pendingOrder?.preselectedTshirt] ? pendingOrder.preselectedTshirt : Object.keys(APPAREL_G.sizes)[0];
+let selectedTshirtColor = APPAREL_G.colors.some((c) => c.name === pendingOrder?.preselectedTshirtColor) ? pendingOrder.preselectedTshirtColor : APPAREL_G.colors[0].name;
+function apparelPrice(size, color){
+  const own = APPAREL_G.colorPrices && color ? APPAREL_G.colorPrices[size + '|' + color] : undefined;
+  return typeof own === 'number' ? own : APPAREL_G.sizes[size];
 }
-const TSHIRT_COLORS = ["White", "Black", "Sport Grey", "Navy", "Red", "Royal", "Forest Green", "Maroon", "Light Pink", "Light Blue", "Charcoal", "Sand"];
-let selectedTshirtColor = (pendingOrder?.preselectedTshirtColor && TSHIRT_COLORS.includes(pendingOrder.preselectedTshirtColor)) ? pendingOrder.preselectedTshirtColor : "Black";
 
 // CAR MAGNET (22 Sep 2026). Keys match lib/products-catalog.js.
 // SURPRISE!!! -- the smart mug (23 Sep 2026). One size; the template and the
@@ -1704,7 +1709,7 @@ const BRIDGE_GRID_PRODUCTS = [
   { key: 'luggage tag', icon: '🏷️', label: 'Luggage Tag', priceFrom: '$16.95' },
   { key: 'car magnet', icon: '🚗', label: 'Car Magnet', priceFrom: '$5.95' },
   { key: 'calendar', icon: '📅', label: 'Desk Calendar', priceFrom: '$9.95' },
-  { key: 'tshirt', icon: '👕', label: 'T-Shirt', priceFrom: '$8.95' },
+  { key: 'tshirt', icon: '👕', label: 'Apparel', priceFrom: '$6.95' },
   { key: 'sticker sheet', icon: '⭐', label: 'Sticker Sheet', priceFrom: '$9.95' },
   // Night-Buddy is off the grid (Alyx, 24 Sep 2026); its pricing branch stays.
   { key: 'beer stein', icon: '🍺', label: 'Beer Stein', priceFrom: '$24.95' },
@@ -2011,10 +2016,10 @@ function pickStickerSheet(name){
 function renderTshirtGrid(){
   const grid = document.getElementById('tshirtOptionGrid');
   grid.innerHTML = '';
-  Object.keys(TSHIRT_OPTIONS).forEach(name => {
+  Object.keys(APPAREL_G.sizes).forEach(name => {
     const btn = document.createElement('div');
     btn.className = 'btn-select' + (name === selectedTshirt ? ' selected' : '');
-    btn.innerHTML = name + '<span class="price">$' + TSHIRT_OPTIONS[name].price.toFixed(2) + '</span>';
+    btn.innerHTML = name + '<span class="price">$' + apparelPrice(name, selectedTshirtColor).toFixed(2) + '</span>';
     btn.onclick = () => pickTshirt(name);
     grid.appendChild(btn);
   });
@@ -2508,7 +2513,7 @@ function runAutoMockupForMode(){
     fetchSingleImageMockup('sticker-sheet', selectedStickerSheet, null, 'stickerSheetMockupBtn', 'stickerSheetMockupNote', 'stickerSheetMockupImg');
   } else if (isTshirt()) {
     if (!selectedTshirt) return;
-    fetchSingleImageMockup('unisex-tshirt', selectedTshirt, selectedTshirtColor, 'tshirtMockupBtn', 'tshirtMockupNote', 'tshirtMockupImg');
+    fetchSingleImageMockup(selectedApparel, selectedTshirt, selectedTshirtColor, 'tshirtMockupBtn', 'tshirtMockupNote', 'tshirtMockupImg');
   } else if (isSmartMug()) {
     if (isSmartMugSet()) return; // four mugs: their COLD -> HOT pictures stand in for the mockup
     fetchSingleImageMockup('smart-mug', '11oz', null, 'smartMugMockupBtn', 'smartMugMockupNote', 'smartMugMockupImg');
@@ -2739,8 +2744,8 @@ function updateSummary(){
     basePrice = STICKERSHEET_OPTIONS[selectedStickerSheet].price;
     styleSizeLabel = 'Sticker Sheet' + ', ' + selectedStickerSheet;
   } else if (isTshirt()) {
-    basePrice = TSHIRT_OPTIONS[selectedTshirt].price;
-    styleSizeLabel = 'T-Shirt, ' + selectedTshirt + ', ' + selectedTshirtColor;
+    basePrice = apparelPrice(selectedTshirt, selectedTshirtColor);
+    styleSizeLabel = APPAREL_G.label + ', ' + selectedTshirt + ', ' + selectedTshirtColor;
   } else if (isSmartMugSet()) {
     basePrice = SMART_MUG_SET_PRICE;
     styleSizeLabel = surpriseSetName() + ', 4 smart mugs' + (selectedSurpriseHand === 'left' ? ', left-handed' : '');
@@ -3140,7 +3145,7 @@ function buildOrderItemBody(fullName, shippingAddress){
     body = {
       type: 'mug_order',
       deviceId,
-      productKey: 'unisex-tshirt',
+      productKey: selectedApparel,
       sizeLabel: selectedTshirt,
       colorName: selectedTshirtColor,
       image,
@@ -3792,7 +3797,7 @@ if (isTravelMug()) {
 function applyStudioDrivenLayout(){
   if (!studioDriven) return;
   const fam = BRIDGE_GRID_PRODUCTS.find(p => p.key === selectedProductFamily);
-  const name = isSmartMugSet() ? surpriseSetName() : isSmartMug() ? 'SURPRISE!!! Smart Mug' : fam ? fam.label : (selectedProductFamily || 'Your product');
+  const name = isSmartMugSet() ? surpriseSetName() : isSmartMug() ? 'SURPRISE!!! Smart Mug' : isTshirt() ? APPAREL_G.label : fam ? fam.label : (selectedProductFamily || 'Your product');
   document.getElementById('orderHeadlineName').textContent = name;
   document.getElementById('orderHeadlineDetail').textContent = document.getElementById('summaryStyleSize')?.textContent || '';
   const pl = pendingOrder.placements || {};

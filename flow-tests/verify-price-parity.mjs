@@ -374,7 +374,8 @@ checks.push(missing.length
     'luggage tag': ['luggage-tag'],
     'car magnet': ['car-magnet'],
     'calendar': ['desk-calendar'],
-    'tshirt': ['unisex-tshirt'],
+    'tshirt': ['unisex-tshirt', 'apparel-premium-tee', 'apparel-garment-dyed-tee', 'apparel-womens-tee', 'apparel-long-sleeve', 'apparel-tank',
+               'apparel-kids-tee', 'apparel-crewneck', 'apparel-hoodie', 'apparel-youth-hoodie', 'apparel-zip-hoodie'],
     'sticker sheet': ['sticker-sheet'],
     // 'night light' is off the grid (24 Sep 2026); its tile price stays in the studio for its return
     'beer stein': ['beer-stein'],

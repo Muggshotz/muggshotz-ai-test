@@ -17,7 +17,8 @@ const CARDS = {
   'air freshener': 'airFreshenerOptionCard',
   // 'night light' -- off the grid 24 Sep 2026; its card stays for its return
   'sticker sheet': 'stickerSheetOptionCard',
-  'tshirt': 'tshirtOptionCard',
+  // Apparel (26 Sep 2026): the garment first; its size and colour are the next panel.
+  'tshirt': 'apparelStyleCard',
   'car magnet': 'carMagnetOptionCard',
   'business cards': 'businessCardOptionCard',
 };
@@ -57,8 +58,7 @@ for (const [val, cardId] of Object.entries(CARDS)) {
       };
     }, [cardId, CHOICE]);
     if (!pics.shown) return `FAIL: picking ${val} did not open ${cardId}`;
-    if (val === 'tshirt') { if (pics.pics < 1) return 'FAIL: the T-shirt card has no picture'; }
-    else if (pics.tilesWithPics !== pics.tiles) return `FAIL: ${pics.tiles - pics.tilesWithPics} of ${pics.tiles} ${val} choices have no picture`;
+    if (pics.tilesWithPics !== pics.tiles) return `FAIL: ${pics.tiles - pics.tilesWithPics} of ${pics.tiles} ${val} choices have no picture`;
     if (pics.broken.length) return `FAIL: pictures that do not load: ${pics.broken.join(', ')}`;
     if (!pics.back) return `FAIL: the ${val} card has no Back button`;
 
@@ -78,8 +78,8 @@ for (const [val, cardId] of Object.entries(CARDS)) {
     await T(page, 1200);
     await dismissAlerts(page);
     await tap(page, `#${cardId} ${CHOICE}`);
-    // The shirt goes on once it has a colour as well as a size.
-    if (val === 'tshirt') await tap(page, '#tshirtColorGrid .color-btn');
+    // A garment opens its size and colour; it goes on once it has both.
+    if (val === 'tshirt') { await T(page, 900); await tap(page, '#tshirtOptionGrid .btn-select'); await tap(page, '#tshirtColorGrid .color-btn'); }
     await T(page, 1200);
     await dismissAlerts(page);
     const atIdea = await page.evaluate(() => document.body.classList.contains('ideafirst-focus'));
@@ -87,12 +87,13 @@ for (const [val, cardId] of Object.entries(CARDS)) {
     await page.evaluate(() => ideaStepBack());
     await T(page, 900);
     const backOn = await page.evaluate((cardId) => {
+      if (cardId === 'apparelStyleCard') cardId = 'tshirtOptionCard'; // the panel before the description
       const card = document.getElementById(cardId);
       const r = card.getBoundingClientRect();
       return { lit: [...document.body.classList].filter((c) => c.endsWith('-focus')), inView: r.top < innerHeight && r.bottom > 0 };
     }, cardId);
     if (!backOn.lit.length || !backOn.inView) return `FAIL: Back from the description did not return to the ${val} card (${JSON.stringify(backOn)})`;
-    return `PASS: ${val} — ${val === 'tshirt' ? 'a card picture' : pics.tiles + ' choices, each with a picture'}, all loading; Back frees the grid; Back from the description returns to the card`;
+    return `PASS: ${val} — ${pics.tiles} choices, each with a picture, all loading; Back frees the grid; Back from the description returns to the card`;
   };
 }
 

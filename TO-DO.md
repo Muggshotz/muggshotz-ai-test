@@ -108,8 +108,19 @@ then a last row of four: Artwork Only, Gift Certificate, Premades & Sets,
 Pitch In. The grid is three across today (needles-studio.html, #productCard
 .grid3); four across on phones too (Alyx, 24 Sep).
 
+- **Apparel** -- BUILT 26 Sep, waiting on Alyx's "push it": the T-shirt tile
+  is now Apparel, 11 garments (tees, tank, long sleeve, crewneck, hoodies,
+  kids and youth), priced wholesale + $3 to the nearest $0.95 (Alyx, 26 Sep:
+  the rule for everything unless stated). Table printed by
+  `tools/apparel-table.mjs`; held by `flow-tests/verify-apparel.js`. Next:
+  more batches from Printify's catalog, subcategories when it grows, and a
+  search bar on the product panel (Alyx: "very very soon").
+- **Description box lands 42px short on a laptop**, now and then, on a
+  different product each run (verify-panel-checklist: "#ideaCard is not
+  fully on screen, top 135, bottom 812, screen 770"). Seen on the live
+  version too, 26 Sep. Not yet fixed.
 
-- **Premades & Sets** -- BUILT 26 Sep (V384): the last tile on the grid, a
+- **Premades & Sets** -- BUILT 26 Sep (V383): the last tile on the grid, a
   panel of the SURPRISE!!! holiday sets (Thanksgiving so far), and a link
   `/?set=thanksgiving` that opens it on a set with no photo needed. Still to
   design (Alyx, 26 Sep): what someone arriving from a flyer's QR sees -- a
