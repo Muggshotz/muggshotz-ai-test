@@ -120,12 +120,39 @@ Pitch In. The grid is three across today (needles-studio.html, #productCard
   fully on screen, top 135, bottom 812, screen 770"). Seen on the live
   version too, 26 Sep. Not yet fixed.
 
-- **Premades & Sets** -- BUILT 26 Sep (V383): the last tile on the grid, a
-  panel of the SURPRISE!!! holiday sets (Thanksgiving so far), and a link
-  `/?set=thanksgiving` that opens it on a set with no photo needed. Still to
-  design (Alyx, 26 Sep): what someone arriving from a flyer's QR sees -- a
-  welcome, what the mug is, how the heat reveal works -- before the flyer's
-  QR is final. Finished designs, nothing painted:
+- **Premades & Sets** -- BUILT 26 Sep: a button on the opening card (no photo
+  needed, V385) and the grid's last tile. Quiet then loud, one loud picture at
+  a time (Alyx: "like trying to drink from a fire hose"): a plain list of
+  occasions -> the occasion's flyer alone -> "How the magic mug works" in
+  seven steps -> the order page. Everyday holds Bud's Unwelcome mats, one at a
+  time, ordered as the doormat at $19.95. `/?set=thanksgiving` (the flyer's
+  QR) opens How it works. Still to do:
+  - The How it works pictures are Golden Brown (Claude's joke, Bud's
+    painting, 26 Sep: `art/surprise/golden-brown*`), the demo mug, so no
+    set's punchline is spent. The fade-in is four still frames made by
+    darkening the print; could become an animation.
+  - How long the picture takes to appear: unknown; add it once the test
+    mug arrives.
+  - Mats still to come from Bud: the manhole, the spike pit, the deep dock
+    (ELCOM) and Wet Paint. The crocodile was widened 16% to fit; Alyx to
+    say if it shows. The mat names are Claude's; Alyx to rename freely.
+  - Christmas, Halloween and Valentine's Day show as "soon" until their sets
+    and flyers exist.
+  - NEXT (Alyx, 26 Sep, not yet built): holiday mugs sold singly and "build
+    your own four". The curated set stays the default; a customer can pick
+    any four holiday mugs for the set's $59.95, or buy one at **$19.95**,
+    the same as a single SURPRISE!!! smart mug (Alyx, 26 Sep; he first said
+    $17.95, then settled on matching the singles).
+    Extra mugs added to an order that has a set: **$17.95** each, $2 off
+    the single (Alyx, 26 Sep). The server prices all of it and gives the
+    discount only when a set is in the same order.
+    The choices (set $59.95 / single $19.95 / extra with a set $17.95) are
+    explained at the end of How the magic mug works, one quiet step after
+    the hand (Alyx, 26 Sep), built in the same change as the selling. The picker shows one mug at a time, not a wall of them.
+    Checkout takes the four chosen designs and checks each against the
+    server's list. Golden Brown is the 5th, ad-only and on How it works; Thankful
+    (Claude's) went to Bud next.
+  Finished designs, nothing painted:
   pick, choose options, order. Holds:
   - Ewww Stew (the code already reserves an all-over print for it:
     `api/create-printify-order.js:727`; `lib/products-catalog.js:19` once

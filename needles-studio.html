@@ -1,5 +1,5 @@
 <!-- ============================================================
-     VERSION: V385
+     VERSION: V386
      ============================================================
      THE ONE LINE THAT SAYS WHICH BUILD YOU ARE LOOKING AT.
 
@@ -666,6 +666,32 @@ body.apparel-style-focus .card:not(#apparelStyleCard){opacity:.35;filter:brightn
 body.tshirt-option-focus .card:not(#tshirtOptionCard){opacity:.35;filter:brightness(.6) saturate(.75);transition:opacity .5s,filter .5s}
 body.surprise-focus .card:not(#surpriseCard){opacity:.35;filter:brightness(.6) saturate(.75);transition:opacity .5s,filter .5s}
 body.premades-focus .card:not(#premadesCard){opacity:.35;filter:brightness(.6) saturate(.75);transition:opacity .5s,filter .5s}
+#premadesCard .pm-crumb{font-size:11px;color:#5b7aa6;margin:-.2rem 0 .8rem}
+#premadesCard .pm-ask{color:#29a3ff;font-size:13px;margin:.2rem 0 1.4rem}
+#premadesCard .pm-row{display:flex;align-items:center;gap:16px;padding:18px 6px;border-top:1px solid #1c2738;cursor:pointer}
+#premadesCard .pm-row:last-child{border-bottom:1px solid #1c2738}
+#premadesCard .pm-row .pm-ic{font-size:22px;width:30px;text-align:center}
+#premadesCard .pm-row .pm-tx{flex:1;display:flex;flex-direction:column}
+#premadesCard .pm-row .pm-nm{font-size:16px;color:#cfe3ff}
+#premadesCard .pm-row .pm-sub{font-size:12px;color:#5b7aa6;margin-top:2px}
+#premadesCard .pm-row .pm-ar{color:#29a3ff;font-size:20px}
+#premadesCard .pm-row.pm-soon{cursor:default}
+#premadesCard .pm-row.pm-soon .pm-nm{color:#5b7aa6}
+#premadesCard .pm-row.pm-soon .pm-ar{font-size:11px;color:#3d5577}
+#premadesCard .pm-name{text-align:center;color:#cfe3ff;font-size:16px}
+#premadesCard .pm-line{text-align:center;color:#29a3ff;font-size:13px;margin:4px 0 1.1rem}
+#premadesCard .pm-big{display:block;width:100%;height:auto;border-radius:10px}
+#premadesCard .pm-step{text-align:center;padding:2rem 0 1.8rem;border-top:1px solid #1c2738}
+#premadesCard .pm-sn{width:30px;height:30px;border-radius:50%;border:1px solid #29a3ff;color:#29a3ff;margin:0 auto 14px;display:flex;align-items:center;justify-content:center;font-size:14px}
+#premadesCard .pm-sh{color:#cfe3ff;font-size:18px;margin-bottom:6px}
+#premadesCard .pm-sl{color:#7ab8ff;font-size:13px;line-height:1.5;max-width:360px;margin:0 auto}
+#premadesCard .pm-simg{display:block;width:min(100%,300px);height:auto;margin:1.3rem auto 0;border-radius:10px}
+#premadesCard .pm-simg.pm-wide{width:100%}
+#premadesCard .pm-mat{position:relative;margin:.4rem 0 1rem}
+#premadesCard .pm-arr{position:absolute;top:50%;transform:translateY(-50%);width:36px;height:36px;border-radius:50%;background:#131b27;border:1px solid #24344a;color:#cfe3ff;display:flex;align-items:center;justify-content:center;font-size:22px;cursor:pointer;padding:0}
+#premadesCard .pm-dots{text-align:center;margin:.2rem 0 1.1rem}
+#premadesCard .pm-dots span{display:inline-block;width:10px;height:10px;border-radius:50%;border:1px solid #3d5577;margin:0 4px;cursor:pointer}
+#premadesCard .pm-dots span.on{background:#3d5577}
 body.carMagnet-option-focus .card:not(#carMagnetOptionCard){opacity:.35;filter:brightness(.6) saturate(.75);transition:opacity .5s,filter .5s}
 body.businessCards-option-focus .card:not(#businessCardOptionCard){opacity:.35;filter:brightness(.6) saturate(.75);transition:opacity .5s,filter .5s}
 body.wrap-size-focus .card:not(#wrapSizeCard){opacity:.35;filter:brightness(.6) saturate(.75);transition:opacity .5s,filter .5s}
@@ -1719,19 +1745,17 @@ const HERO_SETTLE_MS = 1000;
 <div class="card" id="productCard"><div class="card-title">🎁 Product</div><div class="guidance-prompt soft visible" id="productGuidancePrompt" role="status" style="margin-top:0;margin-bottom:.9rem">Please select your desired product below when ready.</div><div class="grid3"><div class="btn-select" data-val="mug" onclick="pick(this,'product')"><span class="icon">☕</span>Mug</div><div class="btn-select" data-val="greeting card" onclick="pick(this,'product')"><span class="icon">💌</span>Card</div><div class="btn-select" data-val="water bottle" onclick="pick(this,'product')"><span class="icon">🍶</span>Travel Cups</div><div class="btn-select" data-val="post-it note" onclick="pick(this,'product')"><span class="icon">📝</span>Post-it</div><div class="btn-select" data-val="phone case" onclick="pick(this,'product')"><span class="icon">📱</span>Phone case</div><div class="btn-select" data-val="tote bag" onclick="pick(this,'product')"><span class="icon">👜</span>Tote bag</div><div class="btn-select" data-val="suitcase" onclick="pick(this,'product')"><span class="icon">🧳</span>Suitcase</div><div class="btn-select" data-val="puzzle" onclick="pick(this,'product')"><span class="icon">🧩</span>Puzzle</div><div class="btn-select" data-val="photo poster" onclick="pick(this,'product')"><span class="icon">🖼️</span>Photo/Poster</div><div class="btn-select" data-val="coaster" onclick="pick(this,'product')"><span class="icon">☕</span>Coasters</div><div class="btn-select" data-val="mouse pad" onclick="pick(this,'product')"><span class="icon">🖱️</span>Mouse pad</div><div class="btn-select" data-val="wrapping paper" onclick="pick(this,'product')"><span class="icon">🎁</span>It's a Wrap<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Your own wrapping paper.</div></div><div class="btn-select" data-val="standee" onclick="pick(this,'product')"><span class="icon">🧍</span>From Where I Stand<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Acrylic standee, cut to shape.</div></div><div class="btn-select" data-val="ornament" onclick="pick(this,'product')"><span class="icon">🎄</span>Ornament<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Ceramic, for the tree.</div></div><div class="btn-select" data-val="playing cards" onclick="pick(this,'product')"><span class="icon">🃏</span>Just Playin'<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">A poker deck with your art on the back.</div></div><div class="btn-select" data-val="air freshener" onclick="pick(this,'product')"><span class="icon">🌲</span>Car Air Freshener<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Hangs from the mirror. Four scents.</div></div><div class="btn-select" data-val="doormat" onclick="pick(this,'product')"><span class="icon">🚪</span>Doormat<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">18 x 30 in, for the front door.</div></div><div class="btn-select" data-val="beer stein" onclick="pick(this,'product')"><span class="icon">🍺</span>Beer Stein<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">22oz ceramic with gold trim.</div></div><div class="btn-select" data-val="sticker sheet" onclick="pick(this,'product')"><span class="icon">⭐</span>Sticker Sheet<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Four die-cut vinyl stickers.</div></div><div class="btn-select" data-val="tshirt" onclick="pick(this,'product')"><span class="icon">👕</span>Apparel<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Tees, hoodies, sweatshirts. 11 styles.</div></div><div class="btn-select" data-val="calendar" onclick="pick(this,'product')"><span class="icon">📅</span>Desk Calendar<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Next year, 13 pages, dates included.</div></div><div class="btn-select" data-val="car magnet" onclick="pick(this,'product')"><span class="icon">🚗</span>Car Magnet<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Weatherproof vinyl, magnetic back.</div></div><div class="btn-select" data-val="luggage tag" onclick="pick(this,'product')"><span class="icon">🏷️</span>Luggage Tag<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Acrylic, leather strap, card slot.</div></div><div class="btn-select" data-val="business cards" onclick="pick(this,'product')"><span class="icon">💼</span>Business Cards<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Cards, boxed cards, a metal holder.</div></div><div class="btn-select" onclick="location.href='gift.html'"><span class="icon">💵</span>Gift Certificate<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Store credit, emailed to them.</div></div><div class="btn-select" data-val="artwork only" onclick="pick(this,'product')"><span class="icon">🖼️</span>Artwork Only<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">No product. Just creates an image for you to download.</div><div class="note" style="margin-top:2px;color:#7ab8ff;font-size:10px">1 token</div></div><div class="btn-select" id="premadesTile" onclick="openPremades()"><span class="icon">🎁</span>Premades &amp; Sets<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Finished designs, ready to order.</div><div class="note" id="premadesTilePrice" style="margin-top:6px;color:#7ab8ff;font-weight:700;font-size:11px"></div></div></div>
 <button type="button" class="download-btn" id="productCardBackBtn" style="margin-top:1rem" onclick="productCardBack()">← Back</button></div>
 
+<!-- PREMADES & SETS, QUIET THEN LOUD (Alyx, 26 Sep 2026: "we need to give
+     them a visual break before we go into the wildly vivid displays ... It's
+     like trying to drink from a fire hose"). One card, four views, one loud
+     picture at a time: the occasions as a plain list; an occasion's flyer on
+     its own; "How the magic mug works", step by step with space between; and
+     the Unwelcome mats one at a time. renderPremades() draws the view;
+     premadesBack() steps back one view, never past one. -->
 <div class="card" id="premadesCard" style="display:none">
-<div class="card-title">🎁 Premades &amp; Sets</div>
-<div class="note" style="text-align:center;margin:0 0 .75rem">Finished designs, ready to order. Nothing to paint, nothing to spend.</div>
-<div class="grid2" id="premadesGrid"></div>
-<div id="premadesSetWrap" style="display:none">
-<div class="note" style="margin-top:.9rem;margin-bottom:.4rem;font-weight:700">Who is it for? The surprise faces them as they hold it.</div>
-<div class="grid2" id="premadesHandGrid" data-words="which hand: the set and its four mugs carry the pictures">
-<div class="btn-select selected" data-hand="right" onclick="pickPremadesHand('right')" style="padding:.5rem;font-size:12px">Right-handed</div><div class="btn-select" data-hand="left" onclick="pickPremadesHand('left')" style="padding:.5rem;font-size:12px">Left-handed</div>
-</div>
-<div id="premadesSetPreview" style="margin-top:.9rem"></div>
-<button type="button" class="generate-btn" id="premadesContinueBtn" style="margin-top:.8rem" onclick="goToPremadeSetOrder()">🎁 Order the set</button>
-</div>
-<button type="button" class="download-btn" style="margin-top:1rem" onclick="premadesBack()">← Back</button>
+<div class="card-title" id="premadesTitle">🎁 Premades &amp; Sets</div>
+<div id="premadesView"></div>
+<button type="button" class="download-btn" id="premadesBackBtn" style="margin-top:1.2rem" onclick="premadesBack()">← Back</button>
 </div>
 
 <div id="mugSizeLockOverlay" class="step-lock-overlay" style="display:none">
@@ -4690,7 +4714,7 @@ function toggleWorkingImage(){
 // Two copies of a number is exactly how the marker rotted in the first place,
 // so they are not trusted to agree: .githooks/pre-commit moves both together
 // and REFUSES the commit if it ever finds them apart.
-const APP_VERSION='V385';
+const APP_VERSION='V386';
 try{ console.log('%cNeedles\u2019 Studio '+APP_VERSION,'color:#29a3ff;font-weight:700'); }catch(e){}
 
 function getDeviceId(){
@@ -12971,51 +12995,135 @@ function goToSurpriseOrder(){
 }
 
 // PREMADES & SETS (Alyx, 26 Sep 2026: "this set is going to go into a whole
-// separate category where we keep all sets"). The last tile on the product
-// grid opens a panel of finished designs: nothing painted, nothing spent, so
-// it needs no photo and asks nothing of the rest of the rail. Today it holds
-// the SURPRISE!!! holiday sets (SURPRISE_SETS above); picking one shows its
-// four mugs cold then hot, asks which hand, and goes to the order page.
-// A link can open it: ?sets opens the panel, ?set=<key> opens it on that set.
-let premadesSet=null, premadesHand='right';
-function premadesFromPrice(){ return '$'+SMART_MUG_SET_PRICE.toFixed(2)+' / set of 4'; }
+// separate category where we keep all sets"). Finished designs: nothing
+// painted, nothing spent, no photo needed. Opened from the opening card's
+// button or the grid's last tile. Four views, quiet then loud, one loud
+// picture at a time (Alyx: "the images are stunning I'd hate for them to lose
+// their impact by their being just too much of it at once"):
+//   occasions -- a plain list, lots of space, no pictures on purpose: the
+//                visual break before the vivid ones (the one panel that breaks
+//                the checklist's "a photo on the panel", by his design);
+//   occasion  -- the occasion's flyer, alone, and one button;
+//   how       -- "How the magic mug works", seven steps, then the hand and
+//                Order the set (the flyer's QR lands here, ?set=<key>);
+//   mats      -- the Unwelcome mats, one at a time.
+// Links: ?sets opens the list; ?set=<key> opens that set's How it works.
+const PREMADE_OCCASIONS=[
+  {key:'thanksgiving',icon:'🦃',label:'Thanksgiving',set:'thanksgiving',flyer:'art/flyers/thanksgiving.webp',sub:'Mug sets'},
+  {key:'christmas',icon:'🎄',label:'Christmas',soon:true},
+  {key:'halloween',icon:'🎃',label:'Halloween',soon:true},
+  {key:'valentines',icon:'💘',label:"Valentine's Day",soon:true},
+  {key:'everyday',icon:'🚪',label:'Everyday',mats:true,sub:'Unwelcome mats'}
+];
+// Bud's Unwelcome mats (art/unwelcome). show/ is the picture on the page,
+// print/ the file printed, both at the doormat's 4650 x 2850 shape. Ordered as
+// the doormat product at the doormat's own price.
+const PREMADE_MAT_PRICE=19.95;
+const PREMADE_MATS=[
+  {key:'rope-bridge',label:'Rope Bridge'},{key:'shaft',label:'The Shaft'},{key:'dog',label:'The Dog'},
+  {key:'lava-pit',label:'Lava Pit'},{key:'crocodile',label:'Crocodile'},{key:'shark-pier',label:'Shark Pier'},
+  {key:'sharks-under-pier',label:'Under the Pier'},{key:'ice-hole',label:'Thin Ice'},{key:'dock-shallow',label:'The Dock'}
+];
+let premadesSet=null, premadesHand='right', premadesView='occasions', premadesOccasion=null, premadesMat=0;
+function premadesFromPrice(){ return '$'+Math.min(SMART_MUG_SET_PRICE,PREMADE_MAT_PRICE).toFixed(2); }
+function premadeOccasion(){ return PREMADE_OCCASIONS.find(o=>o.key===premadesOccasion)||null; }
+function premadesCrumb(parts){ return '<div class="pm-crumb">'+['Premades &amp; Sets'].concat(parts).join(' › ')+'</div>'; }
 function renderPremades(){
-  const grid=document.getElementById('premadesGrid'); if(!grid)return;
-  grid.innerHTML=Object.entries(SURPRISE_SETS).map(([k,t])=>
-    '<div class="btn-select'+(k===premadesSet?' selected':'')+'" data-premade-set="'+k+'" style="padding:.5rem" onclick="pickPremadeSet(\''+k+'\')">'
-    +'<img src="art/options/surprise-set-'+k+'.jpg" alt="" style="width:100%;border-radius:6px;background:#000;margin-bottom:6px"/>'
-    +t.label+' Set<div class="note" style="margin-top:2px">4 SURPRISE!!! smart mugs</div><div class="note" style="margin-top:4px">$'+SMART_MUG_SET_PRICE.toFixed(2)+'</div></div>').join('');
+  const view=document.getElementById('premadesView'), title=document.getElementById('premadesTitle'); if(!view)return;
+  const occ=premadeOccasion(), set=occ&&occ.set?SURPRISE_SETS[occ.set]:null, $=n=>'$'+n.toFixed(2);
+  if(premadesView==='occasion'&&set){
+    title.textContent=occ.icon+' '+occ.label;
+    view.innerHTML=premadesCrumb([occ.label])
+      +'<img class="pm-big" src="'+occ.flyer+'" width="1104" height="1424" alt="'+set.label+' SURPRISE!!! magic mugs"/>'
+      +'<div class="pm-name" style="margin-top:1.3rem">'+set.label+' Set</div>'
+      +'<div class="pm-line">Four SURPRISE!!! smart mugs · '+$(SMART_MUG_SET_PRICE)+'</div>'
+      +'<button type="button" class="generate-btn" id="premadesSetBtn" onclick="premadesGo(\'how\')">🎁 Order the set</button>';
+  } else if(premadesView==='how'&&set){
+    const step=(n,head,line,img,wide)=>'<div class="pm-step"><div class="pm-sn">'+n+'</div><div class="pm-sh">'+head+'</div><div class="pm-sl">'+line+'</div>'
+      +(img?'<img class="pm-simg'+(wide?' pm-wide':'')+'" src="art/premades/how/'+img+'.jpg" width="'+(wide?924:455)+'" height="'+(wide?674:330)+'" alt=""/>':'')+'</div>';
+    title.textContent='✨ How the magic mug works';
+    view.innerHTML=premadesCrumb([occ.label,'How it works'])
+      +step(1,"Cold, it's a plain black mug.","Nothing to see. Nobody knows what's coming.",'black')
+      +step(2,'Pour in something hot.',"Coffee, tea, cocoa. It doesn't switch on all at once: as the mug warms, the picture slowly rises up through the black.",'emerge',true)
+      +step(3,'The joke appears.',"Once it's hot, the first half of the joke is there in full, facing them.",'hot')
+      +step(4,'They turn it round.','Nobody can leave a joke half told. Curious, they turn the mug, and the punchline is waiting on the other side.','other')
+      +step(5,'Let it cool, and it hides again.','As the mug cools it goes back to plain black, ready to surprise them all over again.','black')
+      +step(6,'Choose their hand.','Tell us whether they hold a mug in the right hand or the left, and we print it so the setup faces them first.','')
+      +'<div class="grid2" id="premadesHandGrid" data-words="which hand: the steps above carry the pictures" style="max-width:360px;margin:0 auto 1rem">'
+      +['right','left'].map(h=>'<div class="btn-select'+(h===premadesHand?' selected':'')+'" data-hand="'+h+'" onclick="pickPremadesHand(\''+h+'\')" style="padding:.7rem;font-size:13px">'+(h==='right'?'Right-handed':'Left-handed')+'</div>').join('')+'</div>'
+      +step(7,'Four mugs, four jokes.','One set, four different '+set.label+' surprises. '+$(SMART_MUG_SET_PRICE)+'.','')
+      +'<button type="button" class="generate-btn" id="premadesContinueBtn" onclick="goToPremadeSetOrder()">🎁 Order the set</button>';
+  } else if(premadesView==='mats'){
+    const m=PREMADE_MATS[premadesMat];
+    title.textContent='🚪 Unwelcome Mats';
+    view.innerHTML=premadesCrumb(['Everyday','Unwelcome Mats'])
+      +'<div class="pm-mat"><img class="pm-big" id="premadesMatPic" src="art/unwelcome/show/'+m.key+'.jpg" width="900" height="552" alt="'+m.label+'"/>'
+      +'<button type="button" class="pm-arr" style="left:-12px" aria-label="Previous mat" onclick="premadesMatStep(-1)">‹</button>'
+      +'<button type="button" class="pm-arr" style="right:-12px" aria-label="Next mat" onclick="premadesMatStep(1)">›</button></div>'
+      +'<div class="pm-name" id="premadesMatName">'+m.label+'</div>'
+      +'<div class="pm-line" style="margin-bottom:.5rem">18 x 30 in doormat · '+$(PREMADE_MAT_PRICE)+'</div>'
+      +'<div class="pm-dots">'+PREMADE_MATS.map((x,i)=>'<span class="'+(i===premadesMat?'on':'')+'" onclick="premadesMatStep('+(i-premadesMat)+')"></span>').join('')+'</div>'
+      +'<button type="button" class="generate-btn" id="premadesMatOrderBtn" onclick="goToPremadeMatOrder()">🚪 Order this mat</button>';
+    const next=new Image(); next.src='art/unwelcome/show/'+PREMADE_MATS[(premadesMat+1)%PREMADE_MATS.length].key+'.jpg';
+  } else {
+    premadesView='occasions';
+    title.textContent='🎁 Premades & Sets';
+    const priced=o=>o.set?(o.sub+' · '+$(SMART_MUG_SET_PRICE)):o.mats?(o.sub+' · '+$(PREMADE_MAT_PRICE)):'';
+    view.innerHTML='<div class="pm-ask">What\'s the occasion?</div><div id="premadesOccasions" data-words="occasions: a quiet list on purpose, the pictures come after">'
+      +PREMADE_OCCASIONS.map(o=>'<div class="pm-row'+(o.soon?' pm-soon':'')+'" data-occasion="'+o.key+'"'+(o.soon?'':' onclick="pickPremadeOccasion(\''+o.key+'\')"')+'>'
+        +'<span class="pm-ic">'+o.icon+'</span><span class="pm-tx"><span class="pm-nm">'+o.label+'</span>'+(o.soon?'':'<span class="pm-sub">'+priced(o)+'</span>')+'</span>'
+        +'<span class="pm-ar">'+(o.soon?'soon':'›')+'</span></div>').join('')+'</div>';
+  }
+}
+// Every view lands the same way: the card, by its top when it is taller than
+// the screen (smoothScrollToTarget's 'center' does that).
+function premadesGo(view){
+  premadesView=view;
+  renderPremades();
+  smoothScrollToTarget('premadesCard','center');
+}
+function pickPremadeOccasion(key){
+  const o=PREMADE_OCCASIONS.find(x=>x.key===key); if(!o||o.soon)return;
+  premadesOccasion=key;
+  if(o.set)premadesSet=o.set;
+  if(o.mats)premadesMat=0;
+  premadesGo(o.mats?'mats':'occasion');
+}
+// Kept by name: the ?set=<key> link and the tests call it. A set opens on its
+// How it works, the page the flyer's QR is for.
+function pickPremadeSet(key){
+  if(!SURPRISE_SETS[key])return;
+  const o=PREMADE_OCCASIONS.find(x=>x.set===key); if(!o)return;
+  premadesOccasion=o.key; premadesSet=key;
+  premadesGo('how');
+}
+function premadesMatStep(d){
+  const n=PREMADE_MATS.length; premadesMat=((premadesMat+d)%n+n)%n;
+  renderPremades();
 }
 // Where the panel was opened from, and the spotlight that was on then, so
-// Back returns to exactly that: the opening card (the front-door button, or
-// the ?sets link before any photo) or the product grid.
+// Back from the list returns to exactly that: the opening card (the
+// front-door button, or a link before any photo) or the product grid.
 let premadesFrom='grid', premadesPrevFocus=[];
 function openPremades(from){
   const card=document.getElementById('premadesCard'); if(!card)return;
   premadesFrom=from==='front'?'front':'grid';
   premadesPrevFocus=Array.from(document.body.classList).filter(c=>c.endsWith('-focus')&&c!=='premades-focus');
+  premadesView='occasions';
   renderPremades();
   card.style.display='block';
   setOptionSpotlight('premades-focus');
-  smoothScrollToTarget('premadesCard','start');
-}
-function pickPremadeSet(key){
-  if(!SURPRISE_SETS[key])return;
-  premadesSet=key;
-  document.querySelectorAll('#premadesGrid .btn-select').forEach(b=>b.classList.toggle('selected',b.dataset.premadeSet===key));
-  const set=SURPRISE_SETS[key];
-  document.getElementById('premadesSetPreview').innerHTML=set.designs.map(d=>'<div class="note" style="margin:.2rem 0 .3rem;font-weight:700">'+d.label+'</div>'
-    +'<img src="art/surprise/'+d.file+'-coldhot.jpg" alt="'+d.label+': cold, then hot" style="display:block;width:100%;border-radius:8px;margin-bottom:.6rem"/>').join('');
-  document.getElementById('premadesSetWrap').style.display='block';
-  // Land on the four mugs and the button that orders them.
-  smoothScrollToTarget('premadesSetWrap','end');
+  smoothScrollToTarget('premadesCard','center');
 }
 function pickPremadesHand(hand){
   premadesHand=hand==='left'?'left':'right';
   document.querySelectorAll('#premadesHandGrid .btn-select').forEach(b=>b.classList.toggle('selected',b.dataset.hand===premadesHand));
 }
-// Back is the panel before: the product grid.
+// Back is the view before, never past one: How it works -> the flyer -> the
+// list; the mats -> the list; the list -> where the panel was opened from.
 function premadesBack(){
+  if(premadesView==='how'){ premadesGo('occasion'); return; }
+  if(premadesView==='occasion'||premadesView==='mats'){ premadesGo('occasions'); return; }
   clearAllFocusModes();
   document.getElementById('premadesCard').style.display='none';
   if(premadesFrom==='front'){
@@ -13036,6 +13144,17 @@ function goToPremadeSetOrder(){
     surpriseSet:premadesSet,
     surpriseSetPrints:urls,
     preselectedSurpriseHand:premadesHand
+  }));
+  window.location.href='order.html';
+}
+// A mat: the doormat, with the mat's print file as its picture.
+function goToPremadeMatOrder(){
+  const m=PREMADE_MATS[premadesMat]; if(!m)return;
+  localStorage.setItem('muggshotz_pending_order',JSON.stringify({
+    placements:{left:location.origin+'/art/unwelcome/print/'+m.key+'.jpg',front:null,right:null},
+    deviceId:deviceId,
+    productIcon:'doormat',
+    premadeMat:m.key
   }));
   window.location.href='order.html';
 }

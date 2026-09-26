@@ -1,6 +1,8 @@
 # The Unwelcome Mats (Bud, 26 Sep 2026)
 
-Flat artwork, as Bud sent it. Not yet on the site (Premades & Sets).
+Flat artwork, as Bud sent it. On the site under Premades & Sets > Everyday:
+`print/` is each mat at the doormat's 4650 x 2850 (what is printed), `show/`
+the same at 900 x 552 (what the page shows).
 
 | File | Size | Shape |
 |---|---|---|

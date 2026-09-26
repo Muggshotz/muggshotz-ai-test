@@ -43,6 +43,19 @@ function pageConst(src, name) {
 
 const scenarios = {};
 
+// The Premades card as it stands: which view, its title, Back, pictures
+// (and how many loaded), steps, and whether it landed with its title on screen.
+const pmState = (page) => page.evaluate(async () => {
+  const card = document.getElementById('premadesCard'), r = card.getBoundingClientRect();
+  const imgs = [...card.querySelectorAll('img')].filter((im) => im.offsetParent);
+  await Promise.all(imgs.map((im) => im.complete ? null : new Promise((res) => { im.onload = im.onerror = res; })));
+  return { shown: getComputedStyle(card).display !== 'none', view: premadesView, focus: [...document.body.classList].filter((c) => c.endsWith('-focus')).join(),
+    title: card.querySelector('.card-title').innerText, back: [...card.querySelectorAll('button')].some((b) => b.offsetParent && /back/i.test(b.innerText)),
+    text: card.innerText, imgs: imgs.length, loaded: imgs.filter((im) => im.naturalWidth > 0).length, steps: card.querySelectorAll('.pm-step').length,
+    top: Math.round(r.top), landed: r.top > -2 && r.top < innerHeight * 0.3 };
+});
+
+
 scenarios.theThreeListsAndTheFiles = async (page) => {
   const { SURPRISE_SETS } = await import(pathToFileURL(path.join(ROOT, 'lib', 'surprise-sets.js')).href);
   const { PRODUCTS_CATALOG } = await import(pathToFileURL(path.join(ROOT, 'lib', 'products-catalog.js')).href);
@@ -100,46 +113,40 @@ scenarios.thePanelAndTheOrder = async (page, log) => {
   await T(page, 900);
   // The tile: last on the grid, with its price.
   const tile = await page.evaluate(() => { const t = document.getElementById('premadesTile'); return t && { text: t.innerText, last: t === t.parentElement.lastElementChild }; });
-  if (!tile || !tile.last || !/Premades & Sets/.test(tile.text) || !/\$59\.95/.test(tile.text)) return `FAIL: the Premades & Sets tile reads ${JSON.stringify(tile)}`;
+  if (!tile || !tile.last || !/Premades & Sets/.test(tile.text) || !/\$19\.95/.test(tile.text)) return `FAIL: the Premades & Sets tile reads ${JSON.stringify(tile)}`;
   await tap(page, '#premadesTile');
   await T(page, 1900);
-  // The checklist: name, Back, pictures, prices, the landing, the spotlight.
-  const st0 = await page.evaluate(async () => {
-    const card = document.getElementById('premadesCard'), r = card.getBoundingClientRect();
-    const tiles = [...card.querySelectorAll('.btn-select')].filter((t) => !t.closest('[data-words]') && t.offsetParent);
-    const imgs = [...card.querySelectorAll('img')].filter((im) => im.offsetParent);
-    await Promise.all(imgs.map((im) => im.complete ? null : new Promise((r) => { im.onload = im.onerror = r; })));
-    return { shown: getComputedStyle(card).display !== 'none', focus: [...document.body.classList].filter((c) => c.endsWith('-focus')).join(),
-      title: card.querySelector('.card-title')?.innerText, back: [...card.querySelectorAll('button')].some((b) => b.offsetParent && /back/i.test(b.innerText)),
-      tiles: tiles.length, pics: tiles.filter((t) => t.querySelector('img')?.naturalWidth > 0).length, prices: tiles.filter((t) => /\$\d/.test(t.innerText)).length,
-      top: Math.round(r.top), H: innerHeight, firstBottom: Math.round((tiles[0] || card).getBoundingClientRect().bottom) };
-  });
-  if (!st0.shown || st0.focus !== 'premades-focus') return `FAIL: the tile did not open a lit Premades & Sets panel (${JSON.stringify(st0)})`;
-  if (!/Premades/i.test(st0.title || '') || !st0.back) return 'FAIL: the panel lacks its name or Back';
-  if (!st0.tiles || st0.pics !== st0.tiles || st0.prices !== st0.tiles) return `FAIL: ${st0.tiles} sets, ${st0.pics} with pictures, ${st0.prices} with prices`;
-  if (st0.top < -2 || st0.top > st0.H * 0.25 || st0.firstBottom > st0.H + 2) return `FAIL: the panel did not land with its title and first set on screen (${JSON.stringify(st0)})`;
-  await tap(page, '#premadesGrid .btn-select[data-premade-set="thanksgiving"]');
-  await tap(page, '#premadesHandGrid .btn-select[data-hand="left"]');
-  await T(page, 1900);
-  const pv = await page.evaluate(async () => {
-    const imgs = [...document.querySelectorAll('#premadesSetPreview img')];
-    await Promise.all(imgs.map((im) => im.complete ? null : new Promise((r) => { im.onload = im.onerror = r; })));
-    const b = document.getElementById('premadesContinueBtn').getBoundingClientRect();
-    return { n: imgs.length, ok: imgs.filter((im) => im.naturalWidth > 0).length, btnOnScreen: b.top >= 0 && b.bottom <= innerHeight + 2 };
-  });
-  if (pv.n !== 4 || pv.ok !== 4) return `FAIL: the set shows ${pv.ok} of ${pv.n} COLD -> HOT pictures`;
-  if (!pv.btnOnScreen) return 'FAIL: after picking, the order button is off screen';
-  // Back goes to the product grid, and nothing stays lit.
+  // The list: quiet on purpose (no pictures), but named, priced, with Back,
+  // lit, and landed with its title and first occasion on screen.
+  const st0 = await pmState(page);
+  if (!st0.shown || st0.focus !== 'premades-focus' || st0.view !== 'occasions') return `FAIL: the tile did not open the lit occasions list (${JSON.stringify(st0)})`;
+  if (!/Premades/i.test(st0.title) || !st0.back || !/\$59\.95/.test(st0.text) || !/\$19\.95/.test(st0.text)) return `FAIL: the list lacks its name, Back or prices (${JSON.stringify(st0)})`;
+  if (st0.imgs) return `FAIL: the quiet list shows ${st0.imgs} picture(s)`;
+  if (!st0.landed) return `FAIL: the list did not land at its title (${JSON.stringify(st0)})`;
+  // Thanksgiving: its flyer alone, the set, one button.
+  await tap(page, '#premadesView .pm-row[data-occasion="thanksgiving"]'); await T(page, 1900);
+  const st1 = await pmState(page);
+  if (st1.view !== 'occasion' || st1.imgs !== 1 || st1.loaded !== 1 || !/\$59\.95/.test(st1.text) || !st1.landed) return `FAIL: Thanksgiving did not open on its flyer alone (${JSON.stringify(st1)})`;
+  // How it works: seven steps, the hand, Order the set.
+  await tap(page, '#premadesSetBtn'); await T(page, 1900);
+  const st2 = await pmState(page);
+  if (st2.view !== 'how' || st2.steps !== 7 || st2.imgs !== 5 || st2.loaded !== 5 || !st2.landed || !/How the magic mug works/i.test(st2.title)) return `FAIL: How it works shows ${JSON.stringify(st2)}`;
+  // Back, one view at a time: How it works -> the flyer -> the list -> the grid.
+  for (const want of ['occasion', 'occasions']) {
+    await page.evaluate(() => premadesBack()); await T(page, 1500);
+    const b = await pmState(page); if (b.view !== want || !b.landed) return `FAIL: Back went to ${b.view}, not ${want} (${JSON.stringify(b)})`;
+  }
   await page.evaluate(() => premadesBack());
   await T(page, 1900);
   const bk = await page.evaluate(() => { const r = document.getElementById('productCard').getBoundingClientRect();
     return { card: getComputedStyle(document.getElementById('premadesCard')).display, focus: [...document.body.classList].filter((c) => c.endsWith('-focus')), top: Math.round(r.top) }; });
   if (bk.card !== 'none' || bk.focus.length || bk.top < -2 || bk.top > 200) return `FAIL: Back did not return to the product grid (${JSON.stringify(bk)})`;
-  // And forward again, to the order page.
+  // And forward again, to the order page, left-handed.
   await tap(page, '#premadesTile'); await T(page, 1500);
-  await tap(page, '#premadesGrid .btn-select[data-premade-set="thanksgiving"]');
+  await tap(page, '#premadesView .pm-row[data-occasion="thanksgiving"]'); await T(page, 900);
+  await tap(page, '#premadesSetBtn'); await T(page, 900);
   await tap(page, '#premadesHandGrid .btn-select[data-hand="left"]');
-  await T(page, 900);
+  await T(page, 500);
   log.apiCalls.length = 0;
   await Promise.all([page.waitForURL(/order\.html/, { timeout: 10000 }), tap(page, '#premadesContinueBtn')]);
   await T(page, 3500);
@@ -173,25 +180,22 @@ scenarios.thePanelAndTheOrder = async (page, log) => {
   const b = bodies[bodies.length - 1];
   if (!b || b.productKey !== 'smart-mug-set' || b.sizeLabel !== 'Set of 4' || b.setKey !== 'thanksgiving' || b.hand !== 'left' || b.image)
     return `FAIL: checkout got ${JSON.stringify(b && { k: b.productKey, s: b.sizeLabel, set: b.setKey, hand: b.hand, image: b.image })}`;
-  return 'PASS: the Premades & Sets tile ends the grid at from $59.95 and opens a lit panel that passes the checklist; the set, left-handed, shows its four mugs cold then hot with the order button on screen; Back returns to the grid; and the order page shows the four, prices the set, asks for no mockup, and checks out smart-mug-set / Set of 4 / thanksgiving / left with no artwork of its own';
+  return 'PASS: the Premades & Sets tile ends the grid at from $19.95 and opens the quiet occasions list (named, priced, no pictures, lit, landed); Thanksgiving shows its flyer alone, then How the magic mug works in seven steps; Back steps one view at a time to the grid; and the order page shows the four, prices the set, asks for no mockup, and checks out smart-mug-set / Set of 4 / thanksgiving / left with no artwork of its own';
 };
 
-// The flyer's link: ?set=thanksgiving opens the panel on the set, no photo needed.
+// The flyer's link: ?set=thanksgiving opens the set's How it works, the page
+// the QR is for, no photo needed; Back goes to the flyer, then the list.
 scenarios.theLink = async (page) => {
   await page.goto('http://127.0.0.1:8788/needles-studio.html?set=thanksgiving');
   await T(page, 4500); await dismissAlerts(page);
-  const st = await page.evaluate(() => ({ card: getComputedStyle(document.getElementById('premadesCard')).display, set: premadesSet,
-    focus: [...document.body.classList].filter((c) => c.endsWith('-focus')).join(),
-    btn: (() => { const r = document.getElementById('premadesContinueBtn').getBoundingClientRect(); return r.top >= 0 && r.bottom <= innerHeight + 2; })() }));
-  if (st.card === 'none' || st.set !== 'thanksgiving' || st.focus !== 'premades-focus') return `FAIL: ?set=thanksgiving opened ${JSON.stringify(st)}`;
-  if (!st.btn) return 'FAIL: the link lands with the order button off screen';
-  return 'PASS: ?set=thanksgiving opens Premades & Sets on the Thanksgiving Set, lit, with its order button on screen, no photo needed';
+  const st = await pmState(page);
+  if (!st.shown || st.view !== 'how' || st.focus !== 'premades-focus' || !st.landed || st.steps !== 7) return `FAIL: ?set=thanksgiving opened ${JSON.stringify(st)}`;
+  await page.evaluate(() => premadesBack()); await T(page, 1500);
+  const b = await pmState(page);
+  if (b.view !== 'occasion') return `FAIL: Back from the link's page went to ${b.view}`;
+  return 'PASS: ?set=thanksgiving opens the Thanksgiving Set\'s How the magic mug works, lit, landed at its title, no photo needed; Back goes to the flyer';
 };
 
-// The front door (Alyx, 26 Sep 2026: sets "by their very nature require no
-// photograph", so finding them must not need one). A fresh visit, no upload:
-// the button is on the opening card, lit, priced; it opens the panel; a set
-// shows its order button; Back returns to the opening card as it was.
 scenarios.theFrontDoor = async (page) => {
   await openStudio(page); await dismissAlerts(page);
   const b0 = await page.evaluate(() => {
@@ -202,24 +206,54 @@ scenarios.theFrontDoor = async (page) => {
       photo: !!(typeof uploadedOriginalFile !== 'undefined' && uploadedOriginalFile) };
   });
   if (!b0 || !b0.inCard || !b0.shown || !b0.lit) return `FAIL: no lit Premades & Sets button on the opening card (${JSON.stringify(b0)})`;
-  if (!/Premades & Sets/.test(b0.text) || !/No photo needed/.test(b0.text) || !/\$59\.95/.test(b0.text)) return `FAIL: the button reads "${b0.text}"`;
+  if (!/Premades & Sets/.test(b0.text) || !/No photo needed/.test(b0.text) || !/\$19\.95/.test(b0.text)) return `FAIL: the button reads "${b0.text}"`;
   if (b0.focus !== 'initial-upload-focus' || b0.photo) return `FAIL: not a fresh visit (${JSON.stringify(b0)})`;
   await tap(page, '#premadesFrontBtn'); await T(page, 1800);
-  const st = await page.evaluate(() => { const r = document.getElementById('premadesCard').getBoundingClientRect();
-    return { card: getComputedStyle(document.getElementById('premadesCard')).display, focus: [...document.body.classList].filter((c) => c.endsWith('-focus')).join(),
-      top: Math.round(r.top), H: innerHeight, sets: document.querySelectorAll('#premadesGrid .btn-select').length }; });
-  if (st.card === 'none' || st.focus !== 'premades-focus' || !st.sets) return `FAIL: the button did not open a lit panel of sets (${JSON.stringify(st)})`;
-  if (st.top < -2 || st.top > st.H * 0.5) return `FAIL: the panel did not land at its title (top ${st.top})`;
-  await tap(page, '#premadesGrid .btn-select[data-premade-set="thanksgiving"]'); await T(page, 2200);
-  const btn = await page.evaluate(() => { const r = document.getElementById('premadesContinueBtn').getBoundingClientRect(); return r.top >= 0 && r.bottom <= innerHeight + 2; });
-  if (!btn) return 'FAIL: the set lands with its order button off screen';
+  const st = await pmState(page);
+  if (!st.shown || st.focus !== 'premades-focus' || st.view !== 'occasions' || !st.landed) return `FAIL: the button did not open the lit occasions list (${JSON.stringify(st)})`;
   await page.evaluate(() => [...document.getElementById('premadesCard').querySelectorAll('button')].find((b) => /back/i.test(b.innerText) && b.offsetParent).click());
   await T(page, 1800);
   const back = await page.evaluate(() => { const r = document.getElementById('premadesFrontBtn').getBoundingClientRect();
     return { card: getComputedStyle(document.getElementById('premadesCard')).display, focus: [...document.body.classList].filter((c) => c.endsWith('-focus')).join(),
       onScreen: r.top >= 0 && r.bottom <= innerHeight }; });
   if (back.card !== 'none' || back.focus !== 'initial-upload-focus' || !back.onScreen) return `FAIL: Back left ${JSON.stringify(back)}`;
-  return 'PASS: a fresh visit, no photo: the opening card carries a lit Premades & Sets button (from $59.95, no photo needed); it opens the panel lit at its title, the Thanksgiving Set shows its order button, and Back returns to the opening card as it was';
+  return 'PASS: a fresh visit, no photo: the opening card carries a lit Premades & Sets button (from $19.95, no photo needed); it opens the occasions list lit at its title, and Back returns to the opening card as it was';
+};
+
+// Everyday: the Unwelcome mats one at a time, next and back round the nine,
+// and a mat orders as the doormat at its price with the mat's print file.
+scenarios.theMats = async (page) => {
+  const bodies = [];
+  page.on('request', (r) => { if (r.url().includes('/api/create-checkout-session')) { try { bodies.push(r.postDataJSON()); } catch (e) {} } });
+  await page.route('**/api/printify-catalog**', (route) => route.fulfill({ json: { shipping: 13.69, shippingSeparate: true, source: 'live' } }));
+  await openStudio(page); await dismissAlerts(page);
+  await tap(page, '#premadesFrontBtn'); await T(page, 1500);
+  await tap(page, '#premadesView .pm-row[data-occasion="everyday"]'); await T(page, 1900);
+  const a = await pmState(page);
+  if (a.view !== 'mats' || a.imgs !== 1 || a.loaded !== 1 || !/\$19\.95/.test(a.text) || !a.landed) return `FAIL: Everyday opened ${JSON.stringify(a)}`;
+  const names = [];
+  for (let i = 0; i < 10; i++) { names.push(await page.evaluate(() => document.getElementById('premadesMatName').textContent)); await page.evaluate(() => premadesMatStep(1)); }
+  if (new Set(names).size !== 9 || names[9] !== names[0]) return `FAIL: next went round ${names.join(', ')}`;
+  await page.evaluate(() => premadesMatStep(-2)); // back past the first, round to the last
+  const files = await page.evaluate(async () => {
+    const load = (u) => new Promise((r) => { const im = new Image(); im.onload = () => r(`${im.naturalWidth}x${im.naturalHeight}`); im.onerror = () => r(null); im.src = u; });
+    const out = []; for (const m of PREMADE_MATS) out.push([m.key, await load(`art/unwelcome/print/${m.key}.jpg`), await load(`art/unwelcome/show/${m.key}.jpg`)]); return out; });
+  const badFiles = files.filter(([, p, sh]) => p !== '4650x2850' || sh !== '900x552');
+  if (badFiles.length) return `FAIL: mat files ${JSON.stringify(badFiles)}`;
+  await Promise.all([page.waitForURL(/order\.html/, { timeout: 10000 }), tap(page, '#premadesMatOrderBtn')]);
+  await T(page, 3500);
+  const o = await page.evaluate(() => ({ base: document.getElementById('summaryBase').textContent, head: document.getElementById('orderHeadlineName').textContent }));
+  if (o.base !== '$19.95') return `FAIL: the order page prices the mat at ${o.base} (${o.head})`;
+  await page.evaluate(() => {
+    const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v; };
+    set('fullName', 'Test Customer'); set('email', 'test@example.com'); set('phone', '5555550100');
+    set('address1', '123 Test St'); set('city', 'Westland'); set('state', 'MI'); set('zip', '48185'); set('country', 'US');
+    submitOrder();
+  });
+  await T(page, 2000);
+  const b = bodies[bodies.length - 1];
+  if (!b || b.productKey !== 'doormat' || !/\/art\/unwelcome\/print\/dock-shallow\.jpg$/.test(b.image || '')) return `FAIL: checkout got ${JSON.stringify(b && { k: b.productKey, s: b.sizeLabel, image: b.image })}`;
+  return `PASS: Everyday opens one mat at a time at $19.95, next goes round all nine and back; every mat has its 4650 x 2850 print and 900 x 552 picture; The Dock orders as the doormat at $19.95 with its own print file (${o.head})`;
 };
 
 (async () => {
