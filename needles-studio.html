@@ -1,5 +1,5 @@
 <!-- ============================================================
-     VERSION: V382
+     VERSION: V383
      ============================================================
      THE ONE LINE THAT SAYS WHICH BUILD YOU ARE LOOKING AT.
 
@@ -664,6 +664,7 @@ body.nightBuddy-option-focus .card:not(#nightBuddyOptionCard){opacity:.35;filter
 body.stickerSheet-option-focus .card:not(#stickerSheetOptionCard){opacity:.35;filter:brightness(.6) saturate(.75);transition:opacity .5s,filter .5s}
 body.tshirt-option-focus .card:not(#tshirtOptionCard){opacity:.35;filter:brightness(.6) saturate(.75);transition:opacity .5s,filter .5s}
 body.surprise-focus .card:not(#surpriseCard){opacity:.35;filter:brightness(.6) saturate(.75);transition:opacity .5s,filter .5s}
+body.premades-focus .card:not(#premadesCard){opacity:.35;filter:brightness(.6) saturate(.75);transition:opacity .5s,filter .5s}
 body.carMagnet-option-focus .card:not(#carMagnetOptionCard){opacity:.35;filter:brightness(.6) saturate(.75);transition:opacity .5s,filter .5s}
 body.businessCards-option-focus .card:not(#businessCardOptionCard){opacity:.35;filter:brightness(.6) saturate(.75);transition:opacity .5s,filter .5s}
 body.wrap-size-focus .card:not(#wrapSizeCard){opacity:.35;filter:brightness(.6) saturate(.75);transition:opacity .5s,filter .5s}
@@ -1591,14 +1592,12 @@ const HERO_SETTLE_MS = 1000;
 </div>
 <div id="surprisePreviewWrap" style="display:none;margin-top:.9rem">
 <img id="surpriseColdHot" alt="Cold, then hot: the surprise appears" style="display:none;width:100%;border-radius:8px;margin-bottom:.6rem"/>
-<div id="surpriseSetPreview" style="display:none"></div>
-<div class="note" id="surpriseFlatNote" style="margin-bottom:.4rem">The whole print, laid flat. It wraps once round the mug.</div>
+<div class="note" style="margin-bottom:.4rem">The whole print, laid flat. It wraps once round the mug.</div>
 <img id="surprisePreview" alt="" style="width:100%;border-radius:8px;background:#000"/>
 <button type="button" class="generate-btn" id="surpriseContinueBtn" style="margin-top:.8rem" onclick="goToSurpriseOrder()">🎁 See it on the mug and order</button>
 </div>
 <button type="button" class="download-btn" style="margin-top:1rem" onclick="surpriseBack()">← Back</button>
 </div>
-
 <div class="card" id="wrapSizeCard" style="display:none">
 <div class="card-title">🎁 Sheet or Roll?</div>
 <div class="note" style="margin-top:0;margin-bottom:.75rem">Your picture becomes a repeating pattern across the whole sheet. Pick the size before generating — each is a different roll with its own price.</div>
@@ -1703,8 +1702,23 @@ const HERO_SETTLE_MS = 1000;
 <div id="ideaGuidancePrompt" class="guidance-prompt" role="status" style="margin-top:8px;margin-bottom:0;cursor:pointer" onclick="ideaPromptClicked()">Click here when you are satisfied with your descriptive requests for the image.</div>
 </div>
 </div>
-<div class="card" id="productCard"><div class="card-title">🎁 Product</div><div class="guidance-prompt soft visible" id="productGuidancePrompt" role="status" style="margin-top:0;margin-bottom:.9rem">Please select your desired product below when ready.</div><div class="grid3"><div class="btn-select" data-val="mug" onclick="pick(this,'product')"><span class="icon">☕</span>Mug</div><div class="btn-select" data-val="greeting card" onclick="pick(this,'product')"><span class="icon">💌</span>Card</div><div class="btn-select" data-val="water bottle" onclick="pick(this,'product')"><span class="icon">🍶</span>Travel Cups</div><div class="btn-select" data-val="post-it note" onclick="pick(this,'product')"><span class="icon">📝</span>Post-it</div><div class="btn-select" data-val="phone case" onclick="pick(this,'product')"><span class="icon">📱</span>Phone case</div><div class="btn-select" data-val="tote bag" onclick="pick(this,'product')"><span class="icon">👜</span>Tote bag</div><div class="btn-select" data-val="suitcase" onclick="pick(this,'product')"><span class="icon">🧳</span>Suitcase</div><div class="btn-select" data-val="puzzle" onclick="pick(this,'product')"><span class="icon">🧩</span>Puzzle</div><div class="btn-select" data-val="photo poster" onclick="pick(this,'product')"><span class="icon">🖼️</span>Photo/Poster</div><div class="btn-select" data-val="coaster" onclick="pick(this,'product')"><span class="icon">☕</span>Coasters</div><div class="btn-select" data-val="mouse pad" onclick="pick(this,'product')"><span class="icon">🖱️</span>Mouse pad</div><div class="btn-select" data-val="wrapping paper" onclick="pick(this,'product')"><span class="icon">🎁</span>It's a Wrap<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Your own wrapping paper.</div></div><div class="btn-select" data-val="standee" onclick="pick(this,'product')"><span class="icon">🧍</span>From Where I Stand<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Acrylic standee, cut to shape.</div></div><div class="btn-select" data-val="ornament" onclick="pick(this,'product')"><span class="icon">🎄</span>Ornament<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Ceramic, for the tree.</div></div><div class="btn-select" data-val="playing cards" onclick="pick(this,'product')"><span class="icon">🃏</span>Just Playin'<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">A poker deck with your art on the back.</div></div><div class="btn-select" data-val="air freshener" onclick="pick(this,'product')"><span class="icon">🌲</span>Car Air Freshener<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Hangs from the mirror. Four scents.</div></div><div class="btn-select" data-val="doormat" onclick="pick(this,'product')"><span class="icon">🚪</span>Doormat<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">18 x 30 in, for the front door.</div></div><div class="btn-select" data-val="beer stein" onclick="pick(this,'product')"><span class="icon">🍺</span>Beer Stein<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">22oz ceramic with gold trim.</div></div><div class="btn-select" data-val="sticker sheet" onclick="pick(this,'product')"><span class="icon">⭐</span>Sticker Sheet<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Four die-cut vinyl stickers.</div></div><div class="btn-select" data-val="tshirt" onclick="pick(this,'product')"><span class="icon">👕</span>T-Shirt<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Gildan heavy cotton, 12 colours.</div></div><div class="btn-select" data-val="calendar" onclick="pick(this,'product')"><span class="icon">📅</span>Desk Calendar<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Next year, 13 pages, dates included.</div></div><div class="btn-select" data-val="car magnet" onclick="pick(this,'product')"><span class="icon">🚗</span>Car Magnet<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Weatherproof vinyl, magnetic back.</div></div><div class="btn-select" data-val="luggage tag" onclick="pick(this,'product')"><span class="icon">🏷️</span>Luggage Tag<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Acrylic, leather strap, card slot.</div></div><div class="btn-select" data-val="business cards" onclick="pick(this,'product')"><span class="icon">💼</span>Business Cards<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Cards, boxed cards, a metal holder.</div></div><div class="btn-select" onclick="location.href='gift.html'"><span class="icon">💵</span>Gift Certificate<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Store credit, emailed to them.</div></div><div class="btn-select" data-val="artwork only" onclick="pick(this,'product')"><span class="icon">🖼️</span>Artwork Only<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">No product. Just creates an image for you to download.</div><div class="note" style="margin-top:2px;color:#7ab8ff;font-size:10px">1 token</div></div></div>
+<div class="card" id="productCard"><div class="card-title">🎁 Product</div><div class="guidance-prompt soft visible" id="productGuidancePrompt" role="status" style="margin-top:0;margin-bottom:.9rem">Please select your desired product below when ready.</div><div class="grid3"><div class="btn-select" data-val="mug" onclick="pick(this,'product')"><span class="icon">☕</span>Mug</div><div class="btn-select" data-val="greeting card" onclick="pick(this,'product')"><span class="icon">💌</span>Card</div><div class="btn-select" data-val="water bottle" onclick="pick(this,'product')"><span class="icon">🍶</span>Travel Cups</div><div class="btn-select" data-val="post-it note" onclick="pick(this,'product')"><span class="icon">📝</span>Post-it</div><div class="btn-select" data-val="phone case" onclick="pick(this,'product')"><span class="icon">📱</span>Phone case</div><div class="btn-select" data-val="tote bag" onclick="pick(this,'product')"><span class="icon">👜</span>Tote bag</div><div class="btn-select" data-val="suitcase" onclick="pick(this,'product')"><span class="icon">🧳</span>Suitcase</div><div class="btn-select" data-val="puzzle" onclick="pick(this,'product')"><span class="icon">🧩</span>Puzzle</div><div class="btn-select" data-val="photo poster" onclick="pick(this,'product')"><span class="icon">🖼️</span>Photo/Poster</div><div class="btn-select" data-val="coaster" onclick="pick(this,'product')"><span class="icon">☕</span>Coasters</div><div class="btn-select" data-val="mouse pad" onclick="pick(this,'product')"><span class="icon">🖱️</span>Mouse pad</div><div class="btn-select" data-val="wrapping paper" onclick="pick(this,'product')"><span class="icon">🎁</span>It's a Wrap<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Your own wrapping paper.</div></div><div class="btn-select" data-val="standee" onclick="pick(this,'product')"><span class="icon">🧍</span>From Where I Stand<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Acrylic standee, cut to shape.</div></div><div class="btn-select" data-val="ornament" onclick="pick(this,'product')"><span class="icon">🎄</span>Ornament<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Ceramic, for the tree.</div></div><div class="btn-select" data-val="playing cards" onclick="pick(this,'product')"><span class="icon">🃏</span>Just Playin'<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">A poker deck with your art on the back.</div></div><div class="btn-select" data-val="air freshener" onclick="pick(this,'product')"><span class="icon">🌲</span>Car Air Freshener<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Hangs from the mirror. Four scents.</div></div><div class="btn-select" data-val="doormat" onclick="pick(this,'product')"><span class="icon">🚪</span>Doormat<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">18 x 30 in, for the front door.</div></div><div class="btn-select" data-val="beer stein" onclick="pick(this,'product')"><span class="icon">🍺</span>Beer Stein<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">22oz ceramic with gold trim.</div></div><div class="btn-select" data-val="sticker sheet" onclick="pick(this,'product')"><span class="icon">⭐</span>Sticker Sheet<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Four die-cut vinyl stickers.</div></div><div class="btn-select" data-val="tshirt" onclick="pick(this,'product')"><span class="icon">👕</span>T-Shirt<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Gildan heavy cotton, 12 colours.</div></div><div class="btn-select" data-val="calendar" onclick="pick(this,'product')"><span class="icon">📅</span>Desk Calendar<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Next year, 13 pages, dates included.</div></div><div class="btn-select" data-val="car magnet" onclick="pick(this,'product')"><span class="icon">🚗</span>Car Magnet<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Weatherproof vinyl, magnetic back.</div></div><div class="btn-select" data-val="luggage tag" onclick="pick(this,'product')"><span class="icon">🏷️</span>Luggage Tag<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Acrylic, leather strap, card slot.</div></div><div class="btn-select" data-val="business cards" onclick="pick(this,'product')"><span class="icon">💼</span>Business Cards<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Cards, boxed cards, a metal holder.</div></div><div class="btn-select" onclick="location.href='gift.html'"><span class="icon">💵</span>Gift Certificate<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Store credit, emailed to them.</div></div><div class="btn-select" data-val="artwork only" onclick="pick(this,'product')"><span class="icon">🖼️</span>Artwork Only<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">No product. Just creates an image for you to download.</div><div class="note" style="margin-top:2px;color:#7ab8ff;font-size:10px">1 token</div></div><div class="btn-select" id="premadesTile" onclick="openPremades()"><span class="icon">🎁</span>Premades &amp; Sets<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Finished designs, ready to order.</div><div class="note" id="premadesTilePrice" style="margin-top:6px;color:#7ab8ff;font-weight:700;font-size:11px"></div></div></div>
 <button type="button" class="download-btn" id="productCardBackBtn" style="margin-top:1rem" onclick="productCardBack()">← Back</button></div>
+
+<div class="card" id="premadesCard" style="display:none">
+<div class="card-title">🎁 Premades &amp; Sets</div>
+<div class="note" style="text-align:center;margin:0 0 .75rem">Finished designs, ready to order. Nothing to paint, nothing to spend.</div>
+<div class="grid2" id="premadesGrid"></div>
+<div id="premadesSetWrap" style="display:none">
+<div class="note" style="margin-top:.9rem;margin-bottom:.4rem;font-weight:700">Who is it for? The surprise faces them as they hold it.</div>
+<div class="grid2" id="premadesHandGrid" data-words="which hand: the set and its four mugs carry the pictures">
+<div class="btn-select selected" data-hand="right" onclick="pickPremadesHand('right')" style="padding:.5rem;font-size:12px">Right-handed</div><div class="btn-select" data-hand="left" onclick="pickPremadesHand('left')" style="padding:.5rem;font-size:12px">Left-handed</div>
+</div>
+<div id="premadesSetPreview" style="margin-top:.9rem"></div>
+<button type="button" class="generate-btn" id="premadesContinueBtn" style="margin-top:.8rem" onclick="goToPremadeSetOrder()">🎁 Order the set</button>
+</div>
+<button type="button" class="download-btn" style="margin-top:1rem" onclick="premadesBack()">← Back</button>
+</div>
 
 <div id="mugSizeLockOverlay" class="step-lock-overlay" style="display:none">
 <div class="card" id="mugSizeCard" style="max-width:420px;width:100%;margin:auto;position:relative">
@@ -4662,7 +4676,7 @@ function toggleWorkingImage(){
 // Two copies of a number is exactly how the marker rotted in the first place,
 // so they are not trusted to agree: .githooks/pre-commit moves both together
 // and REFUSES the commit if it ever finds them apart.
-const APP_VERSION='V382';
+const APP_VERSION='V383';
 try{ console.log('%cNeedles\u2019 Studio '+APP_VERSION,'color:#29a3ff;font-weight:700'); }catch(e){}
 
 function getDeviceId(){
@@ -12753,7 +12767,7 @@ const SURPRISE_TEMPLATES={
 // Each one is a different scene but they're all a part of the same set").
 // Four designs of one holiday, four mugs, one price. The server's own list
 // (lib/surprise-sets.js) names the four print files and is what is printed;
-// this copy is the panel's, and flow-tests/verify-surprise-sets.js holds the
+// this copy is the Premades & Sets panel's, and flow-tests/verify-surprise-sets.js holds the
 // two together. Every design is painted whole at the mug's shape with its
 // punchline on the left half, so each file is used as it is.
 const SMART_MUG_SET_PRICE=59.95; // Alyx's price for the set of four (26 Sep 2026)
@@ -12765,7 +12779,6 @@ const SURPRISE_SETS={
     {label:'All These Chickens',file:'thanksgiving-chickens'}
   ]}
 };
-let selectedSurpriseSet=null;
 let selectedSurprise=null;
 let selectedSurpriseVariant=null;
 // A hidden template shows only when the page's link names it.
@@ -12781,17 +12794,13 @@ function surprisePrintUrl(){
   const file=surpriseFile(); if(!file)return null;
   return location.origin+'/art/surprise/'+file+'-print'+(selectedSurpriseHand==='left'?'-left':'')+'.png';
 }
-function surpriseSetPrintUrls(){
-  const set=SURPRISE_SETS[selectedSurpriseSet]; if(!set)return null;
-  return set.designs.map(d=>location.origin+'/art/surprise/'+d.file+'-print'+(selectedSurpriseHand==='left'?'-left':'')+'.png');
+function setPrintUrls(key,hand){
+  const set=SURPRISE_SETS[key]; if(!set)return null;
+  return set.designs.map(d=>location.origin+'/art/surprise/'+d.file+'-print'+(hand==='left'?'-left':'')+'.png');
 }
 function renderSurpriseTemplates(){
   const grid=document.getElementById('surpriseTemplateGrid'); if(!grid)return;
-  grid.innerHTML=Object.entries(SURPRISE_SETS).map(([k,t])=>
-    '<div class="btn-select'+(k===selectedSurpriseSet?' selected':'')+'" data-surprise-set="'+k+'" style="padding:.5rem" onclick="pickSurpriseSet(\''+k+'\')">'
-    +'<img src="art/options/surprise-set-'+k+'.jpg" alt="" style="width:100%;border-radius:6px;background:#000;margin-bottom:6px"/>'
-    +t.label+' Set · 4 mugs<div class="note" style="margin-top:4px">$'+SMART_MUG_SET_PRICE.toFixed(2)+'</div></div>').join('')
-  +Object.entries(SURPRISE_TEMPLATES).filter(([k,t])=>!t.hidden||k===SURPRISE_UNLOCKED).map(([k,t])=>
+  grid.innerHTML=Object.entries(SURPRISE_TEMPLATES).filter(([k,t])=>!t.hidden||k===SURPRISE_UNLOCKED).map(([k,t])=>
     '<div class="btn-select'+(k===selectedSurprise?' selected':'')+'" data-surprise="'+k+'" style="padding:.5rem" onclick="pickSurprise(\''+k+'\')">'
     +'<img src="art/options/surprise-'+(t.tile||t.file)+'.jpg" alt="" style="width:100%;border-radius:6px;background:#000;margin-bottom:6px"/>'
     +t.label+'<div class="note" style="margin-top:4px">'+smartMugPriceText()+'</div></div>').join('');
@@ -12830,21 +12839,11 @@ function pickSmartMug(){
 function pickSurprise(key){
   if(key!==selectedSurprise)selectedSurpriseVariant=null;
   selectedSurprise=key;
-  selectedSurpriseSet=null;
   document.querySelectorAll('#surpriseTemplateGrid .btn-select').forEach(b=>b.classList.toggle('selected',b.dataset.surprise===key));
   renderSurpriseVariants();
   refreshSurprisePreview();
   // Nothing to preview until the other side is chosen: land on that choice.
   if(SURPRISE_TEMPLATES[key]?.variants&&!selectedSurpriseVariant)smoothScrollToTarget('surpriseVariantWrap','center');
-}
-// A set is one choice in the same grid: picking it clears the single
-// template, and picking a template clears the set.
-function pickSurpriseSet(key){
-  selectedSurpriseSet=key;
-  selectedSurprise=null; selectedSurpriseVariant=null;
-  document.querySelectorAll('#surpriseTemplateGrid .btn-select').forEach(b=>b.classList.toggle('selected',b.dataset.surpriseSet===key));
-  renderSurpriseVariants();
-  refreshSurprisePreview();
 }
 function pickSurpriseVariant(key){
   selectedSurpriseVariant=key;
@@ -12857,21 +12856,10 @@ function pickSurpriseHand(hand){
   refreshSurprisePreview();
 }
 function refreshSurprisePreview(){
-  const setUrls=surpriseSetPrintUrls();
-  const url=surprisePrintUrl()||(setUrls&&setUrls[0]), wrap=document.getElementById('surprisePreviewWrap');
+  const url=surprisePrintUrl(), wrap=document.getElementById('surprisePreviewWrap');
   if(!wrap)return;
   wrap.style.display=url?'block':'none';
-  // A set shows its four mugs, each cold then hot then turned, in place of
-  // the one flat print.
-  const setBox=document.getElementById('surpriseSetPreview'), set=SURPRISE_SETS[selectedSurpriseSet];
-  if(setBox){
-    setBox.style.display=set?'block':'none';
-    setBox.innerHTML=set?set.designs.map(d=>'<div class="note" style="margin:.2rem 0 .3rem;font-weight:700">'+d.label+'</div>'
-      +'<img src="art/surprise/'+d.file+'-coldhot.jpg" alt="'+d.label+': cold, then hot" style="display:block;width:100%;border-radius:8px;margin-bottom:.6rem"/>').join(''):'';
-  }
-  document.getElementById('surpriseFlatNote').style.display=set?'none':'block';
-  document.getElementById('surprisePreview').style.display=set?'none':'block';
-  if(url&&!set)document.getElementById('surprisePreview').src=url;
+  if(url)document.getElementById('surprisePreview').src=url;
   // Picking lands on the preview with its Continue button on screen (the
   // checklist's landing rule; on a 770px laptop the button sat 3px under
   // the fold once the COLD -> HOT picture joined the preview). The scroll
@@ -12883,7 +12871,7 @@ function refreshSurprisePreview(){
   // beside it, <file>-coldhot.jpg, built from the print itself
   // (tools/surprise/coldhot.py).
   const ch=document.getElementById('surpriseColdHot'), file=surpriseFile();
-  if(ch){ ch.style.display=(url&&file&&!set)?'block':'none'; if(url&&file&&!set)ch.src='art/surprise/'+file+'-coldhot.jpg'; }
+  if(ch){ ch.style.display=(url&&file)?'block':'none'; if(url&&file)ch.src='art/surprise/'+file+'-coldhot.jpg'; }
   // The next thing to do is look and press Continue: land on the preview and
   // its button, not back at the top of the panel with both below the screen.
   if(url)smoothScrollToTarget('surprisePreviewWrap','end');
@@ -12901,21 +12889,6 @@ function surpriseBack(){
 // The design is the template itself: straight to the order page, which shows
 // Printify's mockup of it on the mug and takes the order.
 function goToSurpriseOrder(){
-  const setUrls=surpriseSetPrintUrls();
-  if(setUrls){
-    // The set: which set and which hand. The four prints travel for the
-    // page's pictures only; checkout prints the server's own four.
-    localStorage.setItem('muggshotz_pending_order',JSON.stringify({
-      placements:{left:setUrls[0],front:null,right:null},
-      deviceId:deviceId,
-      productIcon:'smart mug',
-      surpriseSet:selectedSurpriseSet,
-      surpriseSetPrints:setUrls,
-      preselectedSurpriseHand:selectedSurpriseHand
-    }));
-    window.location.href='order.html';
-    return;
-  }
   const url=surprisePrintUrl(); if(!url)return;
   const orderData={
     placements:{left:url,front:null,right:null},
@@ -12928,6 +12901,72 @@ function goToSurpriseOrder(){
   localStorage.setItem('muggshotz_pending_order',JSON.stringify(orderData));
   window.location.href='order.html';
 }
+
+// PREMADES & SETS (Alyx, 26 Sep 2026: "this set is going to go into a whole
+// separate category where we keep all sets"). The last tile on the product
+// grid opens a panel of finished designs: nothing painted, nothing spent, so
+// it needs no photo and asks nothing of the rest of the rail. Today it holds
+// the SURPRISE!!! holiday sets (SURPRISE_SETS above); picking one shows its
+// four mugs cold then hot, asks which hand, and goes to the order page.
+// A link can open it: ?sets opens the panel, ?set=<key> opens it on that set.
+let premadesSet=null, premadesHand='right';
+function premadesFromPrice(){ return '$'+SMART_MUG_SET_PRICE.toFixed(2)+' / set of 4'; }
+function renderPremades(){
+  const grid=document.getElementById('premadesGrid'); if(!grid)return;
+  grid.innerHTML=Object.entries(SURPRISE_SETS).map(([k,t])=>
+    '<div class="btn-select'+(k===premadesSet?' selected':'')+'" data-premade-set="'+k+'" style="padding:.5rem" onclick="pickPremadeSet(\''+k+'\')">'
+    +'<img src="art/options/surprise-set-'+k+'.jpg" alt="" style="width:100%;border-radius:6px;background:#000;margin-bottom:6px"/>'
+    +t.label+' Set<div class="note" style="margin-top:2px">4 SURPRISE!!! smart mugs</div><div class="note" style="margin-top:4px">$'+SMART_MUG_SET_PRICE.toFixed(2)+'</div></div>').join('');
+}
+function openPremades(){
+  const card=document.getElementById('premadesCard'); if(!card)return;
+  renderPremades();
+  card.style.display='block';
+  setOptionSpotlight('premades-focus');
+  smoothScrollToTarget('premadesCard','start');
+}
+function pickPremadeSet(key){
+  if(!SURPRISE_SETS[key])return;
+  premadesSet=key;
+  document.querySelectorAll('#premadesGrid .btn-select').forEach(b=>b.classList.toggle('selected',b.dataset.premadeSet===key));
+  const set=SURPRISE_SETS[key];
+  document.getElementById('premadesSetPreview').innerHTML=set.designs.map(d=>'<div class="note" style="margin:.2rem 0 .3rem;font-weight:700">'+d.label+'</div>'
+    +'<img src="art/surprise/'+d.file+'-coldhot.jpg" alt="'+d.label+': cold, then hot" style="display:block;width:100%;border-radius:8px;margin-bottom:.6rem"/>').join('');
+  document.getElementById('premadesSetWrap').style.display='block';
+  // Land on the four mugs and the button that orders them.
+  smoothScrollToTarget('premadesSetWrap','end');
+}
+function pickPremadesHand(hand){
+  premadesHand=hand==='left'?'left':'right';
+  document.querySelectorAll('#premadesHandGrid .btn-select').forEach(b=>b.classList.toggle('selected',b.dataset.hand===premadesHand));
+}
+// Back is the panel before: the product grid.
+function premadesBack(){
+  clearAllFocusModes();
+  document.getElementById('premadesCard').style.display='none';
+  smoothScrollToTarget('productCard','start');
+}
+// The set: which set and which hand. The four prints travel for the order
+// page's pictures only; checkout prints the server's own four.
+function goToPremadeSetOrder(){
+  const urls=setPrintUrls(premadesSet,premadesHand); if(!urls)return;
+  localStorage.setItem('muggshotz_pending_order',JSON.stringify({
+    placements:{left:urls[0],front:null,right:null},
+    deviceId:deviceId,
+    productIcon:'smart mug',
+    surpriseSet:premadesSet,
+    surpriseSetPrints:urls,
+    preselectedSurpriseHand:premadesHand
+  }));
+  window.location.href='order.html';
+}
+{ const el=document.getElementById('premadesTilePrice'); if(el)el.textContent='from '+premadesFromPrice(); }
+window.addEventListener('load',()=>{
+  let q=null; try{ q=new URLSearchParams(location.search); }catch(e){ return; }
+  const key=q.get('set');
+  if(!q.has('sets')&&!key)return;
+  setTimeout(()=>{ openPremades(); if(key&&SURPRISE_SETS[key])setTimeout(()=>pickPremadeSet(key),700); },600);
+});
 
 // BUSINESS CARDS (Alyx, 23 Sep 2026): one tile, three products -- Taylor's
 // cards (100 or 200, four papers), Print Pigeons' boxed cards, and the metal
@@ -13426,6 +13465,7 @@ function pick(el,type){
     refreshBusinessCardVisibility();
     refreshCarMagnetVisibility();
     refreshSurpriseVisibility();
+    { const pc=document.getElementById('premadesCard'); if(pc)pc.style.display='none'; }
     refreshTshirtVisibility();
     refreshStickerSheetVisibility();
     refreshNightBuddyVisibility();
@@ -24486,7 +24526,7 @@ function resetEverythingFreshStart(){
   document.getElementById('preGenSize15Btn').classList.remove('selected');
   document.getElementById('preGenSize20Btn').classList.remove('selected');
   document.getElementById('preGenSizeSmartBtn')?.classList.remove('selected');
-  selectedSurprise=null; selectedSurpriseVariant=null; selectedSurpriseSet=null; selectedSurpriseHand='right';
+  selectedSurprise=null; selectedSurpriseVariant=null; selectedSurpriseHand='right';
   { const sc=document.getElementById('surpriseCard'); if(sc)sc.style.display='none'; }
   document.getElementById('preGenMugStyleGrid').innerHTML='';
   document.getElementById('preGenMugColorGrid').innerHTML='';

@@ -93,38 +93,55 @@ scenarios.thePanelAndTheOrder = async (page, log) => {
   page.on('request', (r) => { if (r.url().includes('/api/create-checkout-session')) { try { bodies.push(r.postDataJSON()); } catch (e) {} } });
   await page.route('**/api/printify-catalog**', (route) => route.fulfill({ json: { shipping: 16.14, shippingSeparate: true, source: 'live' } }));
   await openStudio(page); await uploadPhoto(page); await dismissAlerts(page);
+  // The sets live in their own category now, not in the SURPRISE!!! panel.
   await toSurprise(page);
-  const tile = await page.evaluate(() => {
-    const t = document.querySelector('#surpriseTemplateGrid .btn-select[data-surprise-set="thanksgiving"]');
-    const im = t && t.querySelector('img');
-    return t && { text: t.innerText, pic: !!im && im.naturalWidth > 0, first: t === t.parentElement.firstElementChild };
-  });
-  if (!tile) return 'FAIL: no Thanksgiving set in the SURPRISE!!! panel';
-  if (!tile.pic || !/\$59\.95/.test(tile.text) || !/Thanksgiving Set/.test(tile.text)) return `FAIL: the set tile reads ${JSON.stringify(tile)}`;
-  await tap(page, '#surpriseTemplateGrid .btn-select[data-surprise-set="thanksgiving"]');
-  await tap(page, '#surpriseHandGrid .btn-select[data-hand="left"]');
-  await T(page, 1500);
-  const pv = await page.evaluate(async () => {
-    const imgs = [...document.querySelectorAll('#surpriseSetPreview img')];
+  if (await page.evaluate(() => !!document.querySelector('#surpriseTemplateGrid [data-surprise-set], #surpriseTemplateGrid [data-premade-set]'))) return 'FAIL: a set is still in the SURPRISE!!! panel';
+  await page.evaluate(() => surpriseBack());
+  await T(page, 900);
+  // The tile: last on the grid, with its price.
+  const tile = await page.evaluate(() => { const t = document.getElementById('premadesTile'); return t && { text: t.innerText, last: t === t.parentElement.lastElementChild }; });
+  if (!tile || !tile.last || !/Premades & Sets/.test(tile.text) || !/\$59\.95/.test(tile.text)) return `FAIL: the Premades & Sets tile reads ${JSON.stringify(tile)}`;
+  await tap(page, '#premadesTile');
+  await T(page, 1900);
+  // The checklist: name, Back, pictures, prices, the landing, the spotlight.
+  const st0 = await page.evaluate(async () => {
+    const card = document.getElementById('premadesCard'), r = card.getBoundingClientRect();
+    const tiles = [...card.querySelectorAll('.btn-select')].filter((t) => !t.closest('[data-words]') && t.offsetParent);
+    const imgs = [...card.querySelectorAll('img')].filter((im) => im.offsetParent);
     await Promise.all(imgs.map((im) => im.complete ? null : new Promise((r) => { im.onload = im.onerror = r; })));
-    const b = document.getElementById('surpriseContinueBtn').getBoundingClientRect();
-    return { n: imgs.length, ok: imgs.filter((im) => im.naturalWidth > 0).length, flat: getComputedStyle(document.getElementById('surprisePreview')).display,
-      single: getComputedStyle(document.getElementById('surpriseColdHot')).display, selected: document.querySelectorAll('#surpriseTemplateGrid .btn-select.selected').length,
-      btnOnScreen: b.top >= 0 && b.bottom <= innerHeight + 2 };
+    return { shown: getComputedStyle(card).display !== 'none', focus: [...document.body.classList].filter((c) => c.endsWith('-focus')).join(),
+      title: card.querySelector('.card-title')?.innerText, back: [...card.querySelectorAll('button')].some((b) => b.offsetParent && /back/i.test(b.innerText)),
+      tiles: tiles.length, pics: tiles.filter((t) => t.querySelector('img')?.naturalWidth > 0).length, prices: tiles.filter((t) => /\$\d/.test(t.innerText)).length,
+      top: Math.round(r.top), H: innerHeight, firstBottom: Math.round((tiles[0] || card).getBoundingClientRect().bottom) };
+  });
+  if (!st0.shown || st0.focus !== 'premades-focus') return `FAIL: the tile did not open a lit Premades & Sets panel (${JSON.stringify(st0)})`;
+  if (!/Premades/i.test(st0.title || '') || !st0.back) return 'FAIL: the panel lacks its name or Back';
+  if (!st0.tiles || st0.pics !== st0.tiles || st0.prices !== st0.tiles) return `FAIL: ${st0.tiles} sets, ${st0.pics} with pictures, ${st0.prices} with prices`;
+  if (st0.top < -2 || st0.top > st0.H * 0.25 || st0.firstBottom > st0.H + 2) return `FAIL: the panel did not land with its title and first set on screen (${JSON.stringify(st0)})`;
+  await tap(page, '#premadesGrid .btn-select[data-premade-set="thanksgiving"]');
+  await tap(page, '#premadesHandGrid .btn-select[data-hand="left"]');
+  await T(page, 1900);
+  const pv = await page.evaluate(async () => {
+    const imgs = [...document.querySelectorAll('#premadesSetPreview img')];
+    await Promise.all(imgs.map((im) => im.complete ? null : new Promise((r) => { im.onload = im.onerror = r; })));
+    const b = document.getElementById('premadesContinueBtn').getBoundingClientRect();
+    return { n: imgs.length, ok: imgs.filter((im) => im.naturalWidth > 0).length, btnOnScreen: b.top >= 0 && b.bottom <= innerHeight + 2 };
   });
   if (pv.n !== 4 || pv.ok !== 4) return `FAIL: the set shows ${pv.ok} of ${pv.n} COLD -> HOT pictures`;
-  if (pv.flat !== 'none' || pv.single !== 'none') return 'FAIL: the single print or its picture still shows beside the set';
-  if (pv.selected !== 1) return `FAIL: ${pv.selected} tiles are lit`;
-  if (!pv.btnOnScreen) return 'FAIL: after picking, the Continue button is off screen';
-  // A single template clears the set, and back again.
-  await tap(page, '#surpriseTemplateGrid .btn-select[data-surprise="proposal"]');
-  await T(page, 600);
-  const back = await page.evaluate(() => ({ set: selectedSurpriseSet, setBox: getComputedStyle(document.getElementById('surpriseSetPreview')).display, flat: getComputedStyle(document.getElementById('surprisePreview')).display }));
-  if (back.set !== null || back.setBox !== 'none' || back.flat === 'none') return `FAIL: picking a single mug left the set up (${JSON.stringify(back)})`;
-  await tap(page, '#surpriseTemplateGrid .btn-select[data-surprise-set="thanksgiving"]');
+  if (!pv.btnOnScreen) return 'FAIL: after picking, the order button is off screen';
+  // Back goes to the product grid, and nothing stays lit.
+  await page.evaluate(() => premadesBack());
+  await T(page, 1900);
+  const bk = await page.evaluate(() => { const r = document.getElementById('productCard').getBoundingClientRect();
+    return { card: getComputedStyle(document.getElementById('premadesCard')).display, focus: [...document.body.classList].filter((c) => c.endsWith('-focus')), top: Math.round(r.top) }; });
+  if (bk.card !== 'none' || bk.focus.length || bk.top < -2 || bk.top > 200) return `FAIL: Back did not return to the product grid (${JSON.stringify(bk)})`;
+  // And forward again, to the order page.
+  await tap(page, '#premadesTile'); await T(page, 1500);
+  await tap(page, '#premadesGrid .btn-select[data-premade-set="thanksgiving"]');
+  await tap(page, '#premadesHandGrid .btn-select[data-hand="left"]');
   await T(page, 900);
   log.apiCalls.length = 0;
-  await Promise.all([page.waitForURL(/order\.html/, { timeout: 10000 }), tap(page, '#surpriseContinueBtn')]);
+  await Promise.all([page.waitForURL(/order\.html/, { timeout: 10000 }), tap(page, '#premadesContinueBtn')]);
   await T(page, 3500);
   const st = await page.evaluate(async () => {
     const imgs = [...document.querySelectorAll('#smartMugSetPictures img')];
@@ -156,7 +173,19 @@ scenarios.thePanelAndTheOrder = async (page, log) => {
   const b = bodies[bodies.length - 1];
   if (!b || b.productKey !== 'smart-mug-set' || b.sizeLabel !== 'Set of 4' || b.setKey !== 'thanksgiving' || b.hand !== 'left' || b.image)
     return `FAIL: checkout got ${JSON.stringify(b && { k: b.productKey, s: b.sizeLabel, set: b.setKey, hand: b.hand, image: b.image })}`;
-  return 'PASS: the Thanksgiving set leads the SURPRISE!!! panel with its picture and $59.95; picked left-handed it shows its four mugs cold then hot, a single mug clears it, and the order page shows the four, prices the set, asks for no mockup, and checks out smart-mug-set / Set of 4 / thanksgiving / left with no artwork of its own';
+  return 'PASS: the Premades & Sets tile ends the grid at from $59.95 and opens a lit panel that passes the checklist; the set, left-handed, shows its four mugs cold then hot with the order button on screen; Back returns to the grid; and the order page shows the four, prices the set, asks for no mockup, and checks out smart-mug-set / Set of 4 / thanksgiving / left with no artwork of its own';
+};
+
+// The flyer's link: ?set=thanksgiving opens the panel on the set, no photo needed.
+scenarios.theLink = async (page) => {
+  await page.goto('http://127.0.0.1:8788/needles-studio.html?set=thanksgiving');
+  await T(page, 4500); await dismissAlerts(page);
+  const st = await page.evaluate(() => ({ card: getComputedStyle(document.getElementById('premadesCard')).display, set: premadesSet,
+    focus: [...document.body.classList].filter((c) => c.endsWith('-focus')).join(),
+    btn: (() => { const r = document.getElementById('premadesContinueBtn').getBoundingClientRect(); return r.top >= 0 && r.bottom <= innerHeight + 2; })() }));
+  if (st.card === 'none' || st.set !== 'thanksgiving' || st.focus !== 'premades-focus') return `FAIL: ?set=thanksgiving opened ${JSON.stringify(st)}`;
+  if (!st.btn) return 'FAIL: the link lands with the order button off screen';
+  return 'PASS: ?set=thanksgiving opens Premades & Sets on the Thanksgiving Set, lit, with its order button on screen, no photo needed';
 };
 
 (async () => {

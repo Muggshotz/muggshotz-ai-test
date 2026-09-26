@@ -109,7 +109,12 @@ Pitch In. The grid is three across today (needles-studio.html, #productCard
 .grid3); four across on phones too (Alyx, 24 Sep).
 
 
-- **Premades & Sets**. Finished designs, nothing painted:
+- **Premades & Sets** -- BUILT 26 Sep (V384): the last tile on the grid, a
+  panel of the SURPRISE!!! holiday sets (Thanksgiving so far), and a link
+  `/?set=thanksgiving` that opens it on a set with no photo needed. Still to
+  design (Alyx, 26 Sep): what someone arriving from a flyer's QR sees -- a
+  welcome, what the mug is, how the heat reveal works -- before the flyer's
+  QR is final. Finished designs, nothing painted:
   pick, choose options, order. Holds:
   - Ewww Stew (the code already reserves an all-over print for it:
     `api/create-printify-order.js:727`; `lib/products-catalog.js:19` once
@@ -149,7 +154,16 @@ Pitch In. The grid is three across today (needles-studio.html, #productCard
   Gets people invested in the app; enough involvement may later support
   selling advertising. The flyer betas' commissions ledger and payouts may
   carry it — read that before designing anything new.
-- **Report a bug — on every flow, for every customer** (Alyx, 24 Sep). Each
+- **Report a bug — on every flow, for every customer** (Alyx, 24 Sep; the
+  reward revised 26 Sep). **The policy, 26 Sep:** every prospective customer
+  is told of it -- find a bug, tell us through the site, and the FIRST person
+  to report a given bug gets **two free tokens** for spins. First come, first
+  served by who reported it first; the tokens are handed out when the bug is
+  fixed ("which we will be doing constantly"). The reasoning (Alyx, 26 Sep):
+  a workforce hunting bugs; 1,000 bugs x 2 tokens = 2,000 spins at 3-6c a
+  spin, about $60-120 to debug the generator, against months alone. Still to devise: how every
+  prospective customer is told (studio, flyers, start page, emails) and the
+  reporting method itself. Earlier (24 Sep): each
   legitimate bug reported earns a free chip; nobody pays for the spin that
   led them to a bug. Alyx: a built-in workforce testing the generator, at
   about $0.03 a bug ("even 1000 bugs is $30"). Needs a Report-a-bug button on
