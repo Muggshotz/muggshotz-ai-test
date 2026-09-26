@@ -184,11 +184,14 @@ Pitch In. The grid is three across today (needles-studio.html, #productCard
   adds itself, gets its own born-on date and expiry date (one year later) and
   pays the inventor 5% for its year. (Each item stores both dates and its
   category's inventor.)
-  **Every refusal gets an explanation** (Alyx, 24 Sep) of why the idea was not
-  taken up, as detailed as the pitch warrants: a partial bulwark against
-  complaints and accusations about unused suggestions. Customer-facing terms:
+  **No reply to pitches that are not taken up** (Alyx, 26 Sep, reversing 24
+  Sep's "every refusal gets an explanation": "I may get 500,000 offers.
+  There's no way I can respond to that"). Customer-facing terms:
   draft in PITCH-IN-TERMS.md.
   (Bug reports: see "Report a bug" below.)
+  **Pitches and bug reports go to myideaformuggshotz@gmail.com** (Alyx,
+  26 Sep), with a phone alert: that account alone notifying in the Gmail
+  app, and/or a push from the site (ntfy) when one arrives.
   Gets people invested in the app; enough involvement may later support
   selling advertising. The flyer betas' commissions ledger and payouts may
   carry it — read that before designing anything new.

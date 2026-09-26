@@ -12,8 +12,8 @@ Worth having someone who writes contracts look it over before it goes live.
    or anything else we make. A sentence or two is enough; a sketch or photo
    helps.
 
-2. **We read every pitch.** If we don't take your idea up, we'll tell you why,
-   in as much detail as your pitch deserves.
+2. **We'll try to read every pitch.** We can't reply to every one. If we
+   make yours, we'll let you know.
 
 3. **If we make it, you earn.** Your idea becomes a product in the shop, and
    you are credited as its inventor. On every sale you get **5% of our net
