@@ -115,6 +115,8 @@ const MUG_TYPE = { 'classic-white-mug': 'Classic White', 'color-pop-mug': 'Color
 
 // One payment body per product, built the way order.html builds them.
 function bodiesFor(key, p) {
+  // A holiday set is four mugs, one order through the basket: its own scenario below.
+  if (p.layoutType === 'surprise-set') return [];
   const firstSize = Object.keys(p.sizes || {})[0];
   if (p.layoutType === 'three-slot-wrap') {
     const colour = p.sizes[firstSize].colors ? p.sizes[firstSize].colors[0].name : null;
@@ -311,6 +313,71 @@ function bodiesFor(key, p) {
     const bv = bad.length ? `FAIL: ${bad.join('; ')}` : `PASS: 4 items from 3 makers, one payment (shipping ${wantShip} cents: one first item per maker, the rest at the additional rate), one Printify order with 4 line items`;
     if (bad.length) fails++;
     console.log(`[basketOneOrderManyMakers] ${bv}`);
+  }
+
+  // THE SURPRISE!!! HOLIDAY SET (26 Sep 2026). Bought on its own, the set is
+  // ONE line at the catalog's set price, shipping for four mugs (one first
+  // item, three at the additional rate), and the four print files the server
+  // names -- never artwork from the page. The webhook places one Printify
+  // order with four smart mugs. A set that doesn't exist, or no hand, is
+  // refused; a set in a basket beside another product is still four mugs.
+  {
+    const bad = [];
+    const { SURPRISE_SETS } = await import(pathToFileURL(path.join(ROOT, 'lib', 'surprise-sets.js')).href);
+    const setP = catalog['smart-mug-set'];
+    const want = (hand) => SURPRISE_SETS.thanksgiving.designs.map((d) => `https://muggshotz.test/art/surprise/${d.file}${hand === 'left' ? '-print-left' : '-print'}.png`);
+    const cushion = (c) => Math.ceil(c * 1.03);
+    for (const hand of ['right', 'left']) {
+      wire.uploads = 0; wire.products.length = 0; wire.orders.length = 0; wire.unstubbed.length = 0; errors.length = 0;
+      const before = globalThis.__stripe.sessions.length;
+      console.log = quiet;
+      const r1 = res(); await session(jsonReq(base({ productKey: 'smart-mug-set', sizeLabel: 'Set of 4', setKey: 'thanksgiving', hand, image: 'https://evil.test/other.png' })), r1);
+      const s = globalThis.__stripe.sessions[before];
+      if (r1.code !== 200 || !s) { console.log = origLog; bad.push(`${hand}: checkout answered ${r1.code} ${JSON.stringify(r1.body)}`); continue; }
+      const meta = s.metadata || {}, lines = s.line_items || [];
+      if (meta.order_type !== 'basket_order') bad.push(`${hand}: order_type=${meta.order_type}`);
+      const productLines = lines.filter((li) => /^Muggshotz /.test(li.price_data.product_data.name));
+      if (productLines.length !== 1) bad.push(`${hand}: ${productLines.length} product lines, expected the one set`);
+      else {
+        if (productLines[0].price_data.unit_amount !== Math.round(setP.sizes['Set of 4'].price * 100)) bad.push(`${hand}: the set is charged ${productLines[0].price_data.unit_amount} cents`);
+        if (!/Thanksgiving Set \(4 smart mugs\)/.test(productLines[0].price_data.product_data.name)) bad.push(`${hand}: the line reads "${productLines[0].price_data.product_data.name}"`);
+      }
+      const ship = lines.find((li) => /^Shipping/.test(li.price_data.product_data.name));
+      const wantShip = cushion(599) + 3 * cushion(199);
+      if (!ship || ship.price_data.unit_amount !== wantShip) bad.push(`${hand}: shipping ${ship ? ship.price_data.unit_amount : 'none'} cents, expected ${wantShip} (four mugs: one first item, three additional)`);
+      const stored = (wire.baskets[meta.basket_id + '.json'] || {}).items || [];
+      const images = stored.map((it) => it.image);
+      if (JSON.stringify(images) !== JSON.stringify(want(hand))) bad.push(`${hand}: stored prints ${JSON.stringify(images)}`);
+      if (stored.some((it) => it.productKey !== 'smart-mug' || it.sizeLabel !== '11oz')) bad.push(`${hand}: stored items are not four smart mugs`);
+      const r2 = res(); await webhook(rawReq({ type: 'checkout.session.completed', livemode: true, data: { object: { id: s.id, metadata: meta, customer_details: { email: ADDRESS.email } } } }), r2);
+      const critical = errors.filter((e) => /CRITICAL|Error handling|failed|Failed/.test(e));
+      if (critical.length) bad.push(`${hand}: the webhook logged: ${critical[0].slice(0, 200)}`);
+      if (wire.unstubbed.length) bad.push(`${hand}: unstubbed: ${wire.unstubbed[0]}`);
+      if (wire.products.length !== 4) bad.push(`${hand}: ${wire.products.length} Printify products, expected 4`);
+      if (wire.orders.length !== 1 || (wire.orders[0].line_items || []).length !== 4) bad.push(`${hand}: ${wire.orders.length} orders / ${(wire.orders[0]?.line_items || []).length} lines, expected one order of 4`);
+      else if (wire.orders[0].line_items.some((l) => l.variant_id !== 88141)) bad.push(`${hand}: a line is not the smart mug's variant`);
+      console.log = origLog;
+    }
+    console.log = quiet;
+    const r3 = res(); await session(jsonReq(base({ productKey: 'smart-mug-set', sizeLabel: 'Set of 4', setKey: 'easter', hand: 'right' })), r3);
+    if (r3.code !== 400) bad.push(`an unknown set answered ${r3.code}`);
+    const r4 = res(); await session(jsonReq(base({ productKey: 'smart-mug-set', sizeLabel: 'Set of 4', setKey: 'thanksgiving' })), r4);
+    if (r4.code !== 400) bad.push(`a set with no hand answered ${r4.code}`);
+    const before = globalThis.__stripe.sessions.length;
+    const r5 = res(); await session(jsonReq({ type: 'basket_order', deviceId: 'd', customerName: 'A', shippingAddress: ADDRESS,
+      items: [{ productKey: 'smart-mug-set', sizeLabel: 'Set of 4', setKey: 'thanksgiving', hand: 'right' }, { productKey: 'smart-mug', sizeLabel: '11oz', image: IMG }] }), r5);
+    const s5 = globalThis.__stripe.sessions[before];
+    console.log = origLog;
+    if (r5.code !== 200 || !s5) bad.push(`a set plus a mug answered ${r5.code}`);
+    else {
+      const ship = s5.line_items.find((li) => /^Shipping/.test(li.price_data.product_data.name));
+      const wantShip = cushion(599) + 4 * cushion(199);
+      if (!ship || ship.price_data.unit_amount !== wantShip) bad.push(`a set plus a mug ships at ${ship ? ship.price_data.unit_amount : 'none'} cents, expected ${wantShip} (five mugs from one maker)`);
+      if (((wire.baskets[s5.metadata.basket_id + '.json'] || {}).items || []).length !== 5) bad.push('a set plus a mug is not stored as five mugs');
+    }
+    const sv = bad.length ? `FAIL: ${bad.join('; ')}` : 'PASS: the Thanksgiving set, both hands, is one line at the set price, ships as four mugs, prints the server\'s own four files, and reaches Printify as one order of four; an unknown set or no hand is refused; beside a single mug it ships as five';
+    if (bad.length) fails++;
+    console.log(`[holidaySetFourMugsOneOrder] ${sv}`);
   }
 
   // A basket item is checked like a single order, and the gift certificate

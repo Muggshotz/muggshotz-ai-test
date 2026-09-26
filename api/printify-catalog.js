@@ -53,7 +53,11 @@ export default async function handler(req, res) {
         // differs by variant (shippingByVariant: business cards by quantity).
         const sz = product.sizes?.[req.query.sizeLabel];
         const cl = sz?.colors && req.query.colorName ? sz.colors.find((x) => x.name === req.query.colorName) : null;
-        const shipping = await calculateShippingCharge(product, price, countryCode, cl?.variantId || sz?.variantId || null);
+        // A set (setOf) is several mugs in one parcel: quoted as the basket
+        // quotes it, which is how checkout bills it.
+        const shipping = product.setOf > 1
+          ? (await calculateBasketShipping([{ product, basePrice: price, variantId: sz?.variantId || null }], countryCode)).total
+          : await calculateShippingCharge(product, price, countryCode, cl?.variantId || sz?.variantId || null);
         return res.status(200).json({ shipping, shippingSeparate: true, source: "live" });
       } catch (err) {
         console.error("shipping quote failed:", err.message);

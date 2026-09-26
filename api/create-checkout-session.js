@@ -8,6 +8,7 @@ import { GIFT_AMOUNTS_CENTS, GIFT_FACES, findGiftCertificate, normalizeGiftCode,
 import { chooseRail, feeLineCentsFor, feeLineDescriptionFor, minChargeCentsFor, newCheckoutId, storeCheckoutRecord, readCheckoutRecord, updateCheckoutRecord } from "../lib/payment-rail.js";
 import { squareEnv, squarePublicConfig, squareSdkUrl, buildSquareOrder, orderTotalCents, createPaymentLink, createOrder, createPayment, payOrder, cancelPayment, giftCardFromGan, giftCardUsable } from "../lib/square.js";
 import { settleSquareCheckout } from "./stripe-webhook.js";
+import { surpriseSet, setPrintUrls } from "../lib/surprise-sets.js";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
@@ -339,6 +340,10 @@ function resolveOrderItem(b) {
   if (product.layoutType === "three-slot-wrap") {
     if (!placements || !(placements.left || placements.front || placements.right))
       throw orderError("At least one design is required.");
+  } else if (product.layoutType === "surprise-set") {
+    // The page names the set and the hand; the artwork is the server's own.
+    if (!surpriseSet(b.setKey)) throw orderError("That set isn't available.");
+    if (b.hand !== "right" && b.hand !== "left") throw orderError("Please pick right- or left-handed.");
   } else if (product.layoutType === "front-back") {
     if (!frontImage && !backImage)
       throw orderError("At least a front or back image is required.");
@@ -360,7 +365,11 @@ function resolveOrderItem(b) {
     panoramaImage: b.panoramaImage || null,
     insideImage: b.insideImage || null,
     posterOrientation: b.posterOrientation || null,
-    posterFinish: b.posterFinish || null
+    posterFinish: b.posterFinish || null,
+    ...(product.layoutType === "surprise-set" ? (() => {
+      const set = surpriseSet(b.setKey);
+      return { setKey: b.setKey, hand: b.hand, set, setImages: setPrintUrls(set, b.hand) };
+    })() : {})
   };
 }
 function shipsToOrThrow(product, shipCountry) {
@@ -639,7 +648,9 @@ async function handleBasketOrder(req, res) {
 
   const discountSuffix = emailDiscountEligible ? " (10% first-order discount applied)" : "";
   const line_items = resolved.map((r, i) => ({
-    price_data: { currency: "usd", product_data: {
+    price_data: { currency: "usd", product_data: r.set ? {
+      name: `Muggshotz SURPRISE!!! ${r.set.label} Set (4 smart mugs)${discountSuffix}`,
+      description: r.set.designs.map((d) => d.label).join(", ") + (r.hand === "left" ? ", left-handed" : "") } : {
       name: `Muggshotz ${r.product.displayName} (${r.sizeLabel})${r.colorName ? " - " + r.colorName : ""}${discountSuffix}`,
       description: `Custom ${r.product.displayName}` }, unit_amount: itemCents[i] },
     quantity: 1
@@ -651,7 +662,11 @@ async function handleBasketOrder(req, res) {
   const discounts = giftCents > 0 ? [{ name: `Gift certificate ${giftCode}`, cents: giftCents }] : [];
 
   const basketId = randomUUID();
-  const stored = resolved.map((r) => ({
+  // A set is stored as its four mugs, each an ordinary smart mug with its own
+  // print file, so the webhook places it exactly as it places any basket.
+  const stored = resolved.flatMap((r) => r.set ? r.setImages.map((image) => ({
+    productKey: "smart-mug", sizeLabel: "11oz", colorName: null, printMode: "standard", image
+  })) : [{
     productKey: r.productKey, sizeLabel: r.sizeLabel, colorName: r.colorName, printMode: r.printMode,
     placements: r.product.layoutType === "three-slot-wrap" ? r.placements : undefined,
     placementAdjust: r.product.layoutType === "three-slot-wrap" ? (r.placementAdjust || {}) : undefined,
@@ -660,7 +675,7 @@ async function handleBasketOrder(req, res) {
     image: r.singleImage || undefined, insideImage: r.insideImage || undefined,
     posterFramed: r.productKey === "photo-poster" ? false : undefined,
     posterOrientation: r.posterOrientation || undefined, posterFinish: r.posterFinish || undefined
-  }));
+  }]);
   try { await storeBasket(basketId, stored); }
   catch (err) {
     console.error("Basket could not be stored, refusing to create session:", err.message);
@@ -677,8 +692,9 @@ async function handleBasketOrder(req, res) {
     metadata: {
       order_type: "basket_order",
       basket_id: basketId,
-      item_count: String(resolved.length),
+      item_count: String(stored.length),
       product_keys: resolved.map((r) => r.productKey).join(",").slice(0, 490),
+      sets: resolved.filter((r) => r.set).map((r) => `${r.setKey}:${r.hand}`).join(","),
       gift_code: giftCode && giftCents > 0 ? giftCode : "",
       gift_cents: String(giftCents),
       device_id: deviceId,
@@ -911,6 +927,13 @@ export default async function handler(req, res) {
       return await handleTokenPurchase(req, res);
     }
     if (type === "mug_order") {
+      // A holiday set is four mugs in one order, which is what a basket is:
+      // a set bought on its own goes through the basket's checkout.
+      if (getProduct(req.body.productKey)?.layoutType === "surprise-set") {
+        const { productKey, sizeLabel, setKey, hand } = req.body;
+        req.body = { ...req.body, type: "basket_order", items: [{ productKey, sizeLabel, setKey, hand }] };
+        return await handleBasketOrder(req, res);
+      }
       return await handleProductOrder(req, res);
     }
     if (type === "basket_order") {

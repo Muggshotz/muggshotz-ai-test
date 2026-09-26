@@ -1,5 +1,5 @@
 <!-- ============================================================
-     VERSION: V381
+     VERSION: V382
      ============================================================
      THE ONE LINE THAT SAYS WHICH BUILD YOU ARE LOOKING AT.
 
@@ -1591,7 +1591,8 @@ const HERO_SETTLE_MS = 1000;
 </div>
 <div id="surprisePreviewWrap" style="display:none;margin-top:.9rem">
 <img id="surpriseColdHot" alt="Cold, then hot: the surprise appears" style="display:none;width:100%;border-radius:8px;margin-bottom:.6rem"/>
-<div class="note" style="margin-bottom:.4rem">The whole print, laid flat. It wraps once round the mug.</div>
+<div id="surpriseSetPreview" style="display:none"></div>
+<div class="note" id="surpriseFlatNote" style="margin-bottom:.4rem">The whole print, laid flat. It wraps once round the mug.</div>
 <img id="surprisePreview" alt="" style="width:100%;border-radius:8px;background:#000"/>
 <button type="button" class="generate-btn" id="surpriseContinueBtn" style="margin-top:.8rem" onclick="goToSurpriseOrder()">🎁 See it on the mug and order</button>
 </div>
@@ -4661,7 +4662,7 @@ function toggleWorkingImage(){
 // Two copies of a number is exactly how the marker rotted in the first place,
 // so they are not trusted to agree: .githooks/pre-commit moves both together
 // and REFUSES the commit if it ever finds them apart.
-const APP_VERSION='V381';
+const APP_VERSION='V382';
 try{ console.log('%cNeedles\u2019 Studio '+APP_VERSION,'color:#29a3ff;font-weight:700'); }catch(e){}
 
 function getDeviceId(){
@@ -12748,6 +12749,23 @@ const SURPRISE_TEMPLATES={
     'expecting':{label:'Any preference?',file:'ready-expecting'}
   }}
 };
+// THE HOLIDAY SETS (Alyx, 26 Sep 2026: "a set of four different themes.
+// Each one is a different scene but they're all a part of the same set").
+// Four designs of one holiday, four mugs, one price. The server's own list
+// (lib/surprise-sets.js) names the four print files and is what is printed;
+// this copy is the panel's, and flow-tests/verify-surprise-sets.js holds the
+// two together. Every design is painted whole at the mug's shape with its
+// punchline on the left half, so each file is used as it is.
+const SMART_MUG_SET_PRICE=59.95; // Alyx's price for the set of four (26 Sep 2026)
+const SURPRISE_SETS={
+  'thanksgiving':{label:'Thanksgiving',designs:[
+    {label:"Power's Out",file:'thanksgiving-power-out'},
+    {label:'Witness Protection',file:'thanksgiving-witness'},
+    {label:'The Pardon',file:'thanksgiving-pardon'},
+    {label:'All These Chickens',file:'thanksgiving-chickens'}
+  ]}
+};
+let selectedSurpriseSet=null;
 let selectedSurprise=null;
 let selectedSurpriseVariant=null;
 // A hidden template shows only when the page's link names it.
@@ -12763,9 +12781,17 @@ function surprisePrintUrl(){
   const file=surpriseFile(); if(!file)return null;
   return location.origin+'/art/surprise/'+file+'-print'+(selectedSurpriseHand==='left'?'-left':'')+'.png';
 }
+function surpriseSetPrintUrls(){
+  const set=SURPRISE_SETS[selectedSurpriseSet]; if(!set)return null;
+  return set.designs.map(d=>location.origin+'/art/surprise/'+d.file+'-print'+(selectedSurpriseHand==='left'?'-left':'')+'.png');
+}
 function renderSurpriseTemplates(){
   const grid=document.getElementById('surpriseTemplateGrid'); if(!grid)return;
-  grid.innerHTML=Object.entries(SURPRISE_TEMPLATES).filter(([k,t])=>!t.hidden||k===SURPRISE_UNLOCKED).map(([k,t])=>
+  grid.innerHTML=Object.entries(SURPRISE_SETS).map(([k,t])=>
+    '<div class="btn-select'+(k===selectedSurpriseSet?' selected':'')+'" data-surprise-set="'+k+'" style="padding:.5rem" onclick="pickSurpriseSet(\''+k+'\')">'
+    +'<img src="art/options/surprise-set-'+k+'.jpg" alt="" style="width:100%;border-radius:6px;background:#000;margin-bottom:6px"/>'
+    +t.label+' Set · 4 mugs<div class="note" style="margin-top:4px">$'+SMART_MUG_SET_PRICE.toFixed(2)+'</div></div>').join('')
+  +Object.entries(SURPRISE_TEMPLATES).filter(([k,t])=>!t.hidden||k===SURPRISE_UNLOCKED).map(([k,t])=>
     '<div class="btn-select'+(k===selectedSurprise?' selected':'')+'" data-surprise="'+k+'" style="padding:.5rem" onclick="pickSurprise(\''+k+'\')">'
     +'<img src="art/options/surprise-'+(t.tile||t.file)+'.jpg" alt="" style="width:100%;border-radius:6px;background:#000;margin-bottom:6px"/>'
     +t.label+'<div class="note" style="margin-top:4px">'+smartMugPriceText()+'</div></div>').join('');
@@ -12804,11 +12830,21 @@ function pickSmartMug(){
 function pickSurprise(key){
   if(key!==selectedSurprise)selectedSurpriseVariant=null;
   selectedSurprise=key;
+  selectedSurpriseSet=null;
   document.querySelectorAll('#surpriseTemplateGrid .btn-select').forEach(b=>b.classList.toggle('selected',b.dataset.surprise===key));
   renderSurpriseVariants();
   refreshSurprisePreview();
   // Nothing to preview until the other side is chosen: land on that choice.
   if(SURPRISE_TEMPLATES[key]?.variants&&!selectedSurpriseVariant)smoothScrollToTarget('surpriseVariantWrap','center');
+}
+// A set is one choice in the same grid: picking it clears the single
+// template, and picking a template clears the set.
+function pickSurpriseSet(key){
+  selectedSurpriseSet=key;
+  selectedSurprise=null; selectedSurpriseVariant=null;
+  document.querySelectorAll('#surpriseTemplateGrid .btn-select').forEach(b=>b.classList.toggle('selected',b.dataset.surpriseSet===key));
+  renderSurpriseVariants();
+  refreshSurprisePreview();
 }
 function pickSurpriseVariant(key){
   selectedSurpriseVariant=key;
@@ -12821,10 +12857,21 @@ function pickSurpriseHand(hand){
   refreshSurprisePreview();
 }
 function refreshSurprisePreview(){
-  const url=surprisePrintUrl(), wrap=document.getElementById('surprisePreviewWrap');
+  const setUrls=surpriseSetPrintUrls();
+  const url=surprisePrintUrl()||(setUrls&&setUrls[0]), wrap=document.getElementById('surprisePreviewWrap');
   if(!wrap)return;
   wrap.style.display=url?'block':'none';
-  if(url)document.getElementById('surprisePreview').src=url;
+  // A set shows its four mugs, each cold then hot then turned, in place of
+  // the one flat print.
+  const setBox=document.getElementById('surpriseSetPreview'), set=SURPRISE_SETS[selectedSurpriseSet];
+  if(setBox){
+    setBox.style.display=set?'block':'none';
+    setBox.innerHTML=set?set.designs.map(d=>'<div class="note" style="margin:.2rem 0 .3rem;font-weight:700">'+d.label+'</div>'
+      +'<img src="art/surprise/'+d.file+'-coldhot.jpg" alt="'+d.label+': cold, then hot" style="display:block;width:100%;border-radius:8px;margin-bottom:.6rem"/>').join(''):'';
+  }
+  document.getElementById('surpriseFlatNote').style.display=set?'none':'block';
+  document.getElementById('surprisePreview').style.display=set?'none':'block';
+  if(url&&!set)document.getElementById('surprisePreview').src=url;
   // Picking lands on the preview with its Continue button on screen (the
   // checklist's landing rule; on a 770px laptop the button sat 3px under
   // the fold once the COLD -> HOT picture joined the preview). The scroll
@@ -12836,7 +12883,7 @@ function refreshSurprisePreview(){
   // beside it, <file>-coldhot.jpg, built from the print itself
   // (tools/surprise/coldhot.py).
   const ch=document.getElementById('surpriseColdHot'), file=surpriseFile();
-  if(ch){ ch.style.display=(url&&file)?'block':'none'; if(url&&file)ch.src='art/surprise/'+file+'-coldhot.jpg'; }
+  if(ch){ ch.style.display=(url&&file&&!set)?'block':'none'; if(url&&file&&!set)ch.src='art/surprise/'+file+'-coldhot.jpg'; }
   // The next thing to do is look and press Continue: land on the preview and
   // its button, not back at the top of the panel with both below the screen.
   if(url)smoothScrollToTarget('surprisePreviewWrap','end');
@@ -12854,6 +12901,21 @@ function surpriseBack(){
 // The design is the template itself: straight to the order page, which shows
 // Printify's mockup of it on the mug and takes the order.
 function goToSurpriseOrder(){
+  const setUrls=surpriseSetPrintUrls();
+  if(setUrls){
+    // The set: which set and which hand. The four prints travel for the
+    // page's pictures only; checkout prints the server's own four.
+    localStorage.setItem('muggshotz_pending_order',JSON.stringify({
+      placements:{left:setUrls[0],front:null,right:null},
+      deviceId:deviceId,
+      productIcon:'smart mug',
+      surpriseSet:selectedSurpriseSet,
+      surpriseSetPrints:setUrls,
+      preselectedSurpriseHand:selectedSurpriseHand
+    }));
+    window.location.href='order.html';
+    return;
+  }
   const url=surprisePrintUrl(); if(!url)return;
   const orderData={
     placements:{left:url,front:null,right:null},
@@ -24424,7 +24486,7 @@ function resetEverythingFreshStart(){
   document.getElementById('preGenSize15Btn').classList.remove('selected');
   document.getElementById('preGenSize20Btn').classList.remove('selected');
   document.getElementById('preGenSizeSmartBtn')?.classList.remove('selected');
-  selectedSurprise=null; selectedSurpriseVariant=null; selectedSurpriseHand='right';
+  selectedSurprise=null; selectedSurpriseVariant=null; selectedSurpriseSet=null; selectedSurpriseHand='right';
   { const sc=document.getElementById('surpriseCard'); if(sc)sc.style.display='none'; }
   document.getElementById('preGenMugStyleGrid').innerHTML='';
   document.getElementById('preGenMugColorGrid').innerHTML='';
