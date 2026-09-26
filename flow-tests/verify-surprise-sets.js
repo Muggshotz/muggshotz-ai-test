@@ -188,6 +188,40 @@ scenarios.theLink = async (page) => {
   return 'PASS: ?set=thanksgiving opens Premades & Sets on the Thanksgiving Set, lit, with its order button on screen, no photo needed';
 };
 
+// The front door (Alyx, 26 Sep 2026: sets "by their very nature require no
+// photograph", so finding them must not need one). A fresh visit, no upload:
+// the button is on the opening card, lit, priced; it opens the panel; a set
+// shows its order button; Back returns to the opening card as it was.
+scenarios.theFrontDoor = async (page) => {
+  await openStudio(page); await dismissAlerts(page);
+  const b0 = await page.evaluate(() => {
+    const b = document.getElementById('premadesFrontBtn'); if (!b) return null;
+    const card = document.getElementById('uploadPhotoCard');
+    return { inCard: card.contains(b), shown: !!b.offsetParent, text: b.innerText.replace(/\n/g, ' '),
+      lit: getComputedStyle(card).opacity === '1', focus: [...document.body.classList].filter((c) => c.endsWith('-focus')).join(),
+      photo: !!(typeof uploadedOriginalFile !== 'undefined' && uploadedOriginalFile) };
+  });
+  if (!b0 || !b0.inCard || !b0.shown || !b0.lit) return `FAIL: no lit Premades & Sets button on the opening card (${JSON.stringify(b0)})`;
+  if (!/Premades & Sets/.test(b0.text) || !/No photo needed/.test(b0.text) || !/\$59\.95/.test(b0.text)) return `FAIL: the button reads "${b0.text}"`;
+  if (b0.focus !== 'initial-upload-focus' || b0.photo) return `FAIL: not a fresh visit (${JSON.stringify(b0)})`;
+  await tap(page, '#premadesFrontBtn'); await T(page, 1800);
+  const st = await page.evaluate(() => { const r = document.getElementById('premadesCard').getBoundingClientRect();
+    return { card: getComputedStyle(document.getElementById('premadesCard')).display, focus: [...document.body.classList].filter((c) => c.endsWith('-focus')).join(),
+      top: Math.round(r.top), H: innerHeight, sets: document.querySelectorAll('#premadesGrid .btn-select').length }; });
+  if (st.card === 'none' || st.focus !== 'premades-focus' || !st.sets) return `FAIL: the button did not open a lit panel of sets (${JSON.stringify(st)})`;
+  if (st.top < -2 || st.top > st.H * 0.5) return `FAIL: the panel did not land at its title (top ${st.top})`;
+  await tap(page, '#premadesGrid .btn-select[data-premade-set="thanksgiving"]'); await T(page, 2200);
+  const btn = await page.evaluate(() => { const r = document.getElementById('premadesContinueBtn').getBoundingClientRect(); return r.top >= 0 && r.bottom <= innerHeight + 2; });
+  if (!btn) return 'FAIL: the set lands with its order button off screen';
+  await page.evaluate(() => [...document.getElementById('premadesCard').querySelectorAll('button')].find((b) => /back/i.test(b.innerText) && b.offsetParent).click());
+  await T(page, 1800);
+  const back = await page.evaluate(() => { const r = document.getElementById('premadesFrontBtn').getBoundingClientRect();
+    return { card: getComputedStyle(document.getElementById('premadesCard')).display, focus: [...document.body.classList].filter((c) => c.endsWith('-focus')).join(),
+      onScreen: r.top >= 0 && r.bottom <= innerHeight }; });
+  if (back.card !== 'none' || back.focus !== 'initial-upload-focus' || !back.onScreen) return `FAIL: Back left ${JSON.stringify(back)}`;
+  return 'PASS: a fresh visit, no photo: the opening card carries a lit Premades & Sets button (from $59.95, no photo needed); it opens the panel lit at its title, the Thanksgiving Set shows its order button, and Back returns to the opening card as it was';
+};
+
 (async () => {
   let fails = 0;
   for (const [screen, viewport] of Object.entries({ laptop: { width: 1880, height: 770 }, phone: { width: 390, height: 844 } })) {

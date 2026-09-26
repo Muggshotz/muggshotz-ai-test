@@ -1,5 +1,5 @@
 <!-- ============================================================
-     VERSION: V384
+     VERSION: V385
      ============================================================
      THE ONE LINE THAT SAYS WHICH BUILD YOU ARE LOOKING AT.
 
@@ -1358,6 +1358,14 @@ const HERO_SETTLE_MS = 1000;
      DOES -- and the charge is named once, here, attached to the thing
      actually being paid for. -->
 <div class="note" id="describeCostNote" style="text-align:center;margin-top:.9rem;font-size:12.5px;line-height:1.6;border-top:1px solid #24344a;padding-top:.8rem"><b>Uploading is always free.</b> A token is only spent when <b>Needles draws something for you</b> — one token per picture, whether you describe it from scratch or hand Needles a photo to work from. You only pay for a product if you decide to order one.</div>
+<!-- PREMADES AT THE FRONT DOOR (Alyx, 26 Sep 2026): "Why on earth would you
+     make it a requirement that I upload a photograph in order that I may even
+     know of the existence of sets ... which by their very nature require no
+     photograph?" The product grid only appears after an upload, so the
+     Premades & Sets tile there was invisible to anyone without a photo. This
+     button sits in uploadPhotoCard, lit from the first second of a visit,
+     and opens the same panel; its Back returns here. -->
+<div class="btn-select" id="premadesFrontBtn" style="margin-top:.9rem;padding:.8rem .6rem;text-align:center" onclick="openPremades('front')"><span class="icon">🎁</span>Premades &amp; Sets<div class="note" style="margin-top:4px;color:#29a3ff;font-size:11px;line-height:1.3">Finished designs, ready to order. No photo needed.</div><div class="note" id="premadesFrontPrice" style="margin-top:6px;color:#7ab8ff;font-weight:700;font-size:11px"></div></div>
 </div>
 
 <div class="card" id="styleSectionCard"><div class="card-title">🎨 Art Style</div>
@@ -4682,7 +4690,7 @@ function toggleWorkingImage(){
 // Two copies of a number is exactly how the marker rotted in the first place,
 // so they are not trusted to agree: .githooks/pre-commit moves both together
 // and REFUSES the commit if it ever finds them apart.
-const APP_VERSION='V384';
+const APP_VERSION='V385';
 try{ console.log('%cNeedles\u2019 Studio '+APP_VERSION,'color:#29a3ff;font-weight:700'); }catch(e){}
 
 function getDeviceId(){
@@ -12978,8 +12986,14 @@ function renderPremades(){
     +'<img src="art/options/surprise-set-'+k+'.jpg" alt="" style="width:100%;border-radius:6px;background:#000;margin-bottom:6px"/>'
     +t.label+' Set<div class="note" style="margin-top:2px">4 SURPRISE!!! smart mugs</div><div class="note" style="margin-top:4px">$'+SMART_MUG_SET_PRICE.toFixed(2)+'</div></div>').join('');
 }
-function openPremades(){
+// Where the panel was opened from, and the spotlight that was on then, so
+// Back returns to exactly that: the opening card (the front-door button, or
+// the ?sets link before any photo) or the product grid.
+let premadesFrom='grid', premadesPrevFocus=[];
+function openPremades(from){
   const card=document.getElementById('premadesCard'); if(!card)return;
+  premadesFrom=from==='front'?'front':'grid';
+  premadesPrevFocus=Array.from(document.body.classList).filter(c=>c.endsWith('-focus')&&c!=='premades-focus');
   renderPremades();
   card.style.display='block';
   setOptionSpotlight('premades-focus');
@@ -13004,6 +13018,11 @@ function pickPremadesHand(hand){
 function premadesBack(){
   clearAllFocusModes();
   document.getElementById('premadesCard').style.display='none';
+  if(premadesFrom==='front'){
+    premadesPrevFocus.forEach(c=>document.body.classList.add(c));
+    smoothScrollToTarget('premadesFrontBtn','center');
+    return;
+  }
   smoothScrollToTarget('productCard','start');
 }
 // The set: which set and which hand. The four prints travel for the order
@@ -13020,12 +13039,12 @@ function goToPremadeSetOrder(){
   }));
   window.location.href='order.html';
 }
-{ const el=document.getElementById('premadesTilePrice'); if(el)el.textContent='from '+premadesFromPrice(); }
+['premadesTilePrice','premadesFrontPrice'].forEach(id=>{ const el=document.getElementById(id); if(el)el.textContent='from '+premadesFromPrice(); });
 window.addEventListener('load',()=>{
   let q=null; try{ q=new URLSearchParams(location.search); }catch(e){ return; }
   const key=q.get('set');
   if(!q.has('sets')&&!key)return;
-  setTimeout(()=>{ openPremades(); if(key&&SURPRISE_SETS[key])setTimeout(()=>pickPremadeSet(key),700); },600);
+  setTimeout(()=>{ openPremades(document.body.classList.contains('initial-upload-focus')?'front':'grid'); if(key&&SURPRISE_SETS[key])setTimeout(()=>pickPremadeSet(key),700); },600);
 });
 
 // BUSINESS CARDS (Alyx, 23 Sep 2026): one tile, three products -- Taylor's
