@@ -675,7 +675,7 @@
  "{0} isn't available to order yet — we're still building this one out. Pick a real option above instead.": "{0}はまだご注文いただけません — 現在準備中です。代わりに上の利用可能なオプションを選んでください。",
  "{0} pcs": "{0}ピース",
  "— FREE": "— 無料",
- "— if you want to combine or pull elements from other pictures (e.g. \"use the face from Reference A on the body in Reference B\"). If not, no biggie.": "— 別の画像の要素を組み合わせたり取り入れたりしたい場合に（例：「参考写真 A の顔を参考写真 B の体に使って」）。不要なら、それでも全然 OK です。",
+ "— if you want to combine or pull elements from other pictures (e.g. \"use the face from Reference A on the body in Reference B\"). Or just leave blank.": "— 別の画像の要素を組み合わせたり取り入れたりしたい場合に（例：「参考写真 A の顔を参考写真 B の体に使って」）。不要なら空欄のままで大丈夫です。",
  "← Back": "← 戻る",
  "← Back to the studio": "← スタジオに戻る",
  "← Back — Change Photo": "← 戻る — 写真を変更",

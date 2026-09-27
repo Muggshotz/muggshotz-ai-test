@@ -675,7 +675,7 @@
  "{0} isn't available to order yet — we're still building this one out. Pick a real option above instead.": "{0} 暂时还不能订购 — 我们还在准备中。请在上方选一个可用的选项。",
  "{0} pcs": "{0} 片",
  "— FREE": "— 免费",
- "— if you want to combine or pull elements from other pictures (e.g. \"use the face from Reference A on the body in Reference B\"). If not, no biggie.": "— 如果你想合并或从其他图片中提取元素（例如\"把参考图 A 的脸放到参考图 B 的身体上\"）。不需要也没关系。",
+ "— if you want to combine or pull elements from other pictures (e.g. \"use the face from Reference A on the body in Reference B\"). Or just leave blank.": "— 如果你想合并或从其他图片中提取元素（例如\"把参考图 A 的脸放到参考图 B 的身体上\"）。或直接留空。",
  "← Back": "← 返回",
  "← Back to the studio": "← 返回工作室",
  "← Back — Change Photo": "← 返回 — 更换照片",

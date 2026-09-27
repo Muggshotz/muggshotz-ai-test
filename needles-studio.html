@@ -1,5 +1,5 @@
 <!-- ============================================================
-     VERSION: V387
+     VERSION: V388
      ============================================================
      THE ONE LINE THAT SAYS WHICH BUILD YOU ARE LOOKING AT.
 
@@ -1206,7 +1206,7 @@ const HERO_SETTLE_MS = 1000;
      acceptedTransferSkipsTheAI, which exists to prove it). This is the only
      notice that route ever sees. -->
 <div class="note ai-board-note" style="opacity:.85">By uploading you confirm you have the right to use this picture. We print through third-party partners and reserve the right to decline any artwork that breaches their content policies.</div>
-<div class="note ai-board-note"><u>Optional!</u> Pin extra reference photos on the sides — <b>Reference A</b> and <b>Reference B</b> — if you want to combine or pull elements from other pictures (e.g. "use the face from Reference A on the body in Reference B"). If not, no biggie.</div>
+<div class="note ai-board-note"><u>Optional!</u> Pin extra reference photos on the sides — <b>Reference A</b> and <b>Reference B</b> — if you want to combine or pull elements from other pictures (e.g. "use the face from Reference A on the body in Reference B"). Or just leave blank.</div>
 </div>
 </div>
 <div id="workshopRecallRow" style="display:none;gap:8px;margin-top:.6rem">
@@ -3432,6 +3432,8 @@ let previousImageData=null;
 let currentDesignId=null;
 
 let guidedScrollInProgress=false;
+// Landings by smoothScrollToTarget still under way (see the note there).
+let guidedLandingsPending=0;
 let guidedScrollSettleTimer=0;
 let guidedScrollClearTimer=null;
 
@@ -3579,6 +3581,16 @@ function smoothScrollToTarget(targetId,block='start',after){
   if(!target)return;
   snapExpandThrough(targetId);
   guidedScrollInProgress=true;
+  // THE PIN WAITS FOR THE WHOLE LANDING (27 Sep 2026). The scroll pin stands
+  // down while guidedScrollInProgress is set, but its own settle timer
+  // cleared the flag after 160ms without a scroll event -- and on a busy
+  // machine this landing can spend longer than that polling for the page to
+  // stop moving. The pin then woke mid-landing, measured a half-settled page
+  // and threw it to the bottom: Apparel's garment panel landed with its title
+  // 1317px off the top (caught under parallel load: 2 runs in 15, both by
+  // scrollPinOnScroll). While any landing is pending, the settle timer leaves
+  // the flag alone; the landing clears it itself when it is done.
+  guidedLandingsPending++;
   // STABILITY-POLLED AT THE ROOT (Alyx, 2026-08-28: "if it happened once
   // under those conditions it will likely happen when those conditions
   // happen again. So get rid of them all in one sweep."). This used to
@@ -3638,7 +3650,8 @@ function smoothScrollToTarget(targetId,block='start',after){
         const drift=stillOurs && cutOff && Math.abs(again-window.scrollY)>8;
         if(drift){ dest=again; window.scrollTo({top:dest,behavior:'smooth'}); }
         setTimeout(()=>{
-          guidedScrollInProgress=false;
+          guidedLandingsPending=Math.max(0,guidedLandingsPending-1);
+          if(!guidedLandingsPending)guidedScrollInProgress=false;
           if(typeof after==='function')after();
         },drift?500:0);
       },750);
@@ -4716,7 +4729,7 @@ function toggleWorkingImage(){
 // Two copies of a number is exactly how the marker rotted in the first place,
 // so they are not trusted to agree: .githooks/pre-commit moves both together
 // and REFUSES the commit if it ever finds them apart.
-const APP_VERSION='V387';
+const APP_VERSION='V388';
 try{ console.log('%cNeedles\u2019 Studio '+APP_VERSION,'color:#29a3ff;font-weight:700'); }catch(e){}
 
 function getDeviceId(){
@@ -17687,7 +17700,7 @@ function scrollPinOnScroll(){
   // beat it has landed, and from that moment the pin is back on duty.
   if(guidedScrollInProgress){
     clearTimeout(guidedScrollSettleTimer);
-    guidedScrollSettleTimer=setTimeout(()=>{guidedScrollInProgress=false;scrollPinOnScroll();},160);
+    guidedScrollSettleTimer=setTimeout(()=>{ if(guidedLandingsPending)return; guidedScrollInProgress=false;scrollPinOnScroll();},160);
     return;
   }
   if(scrollPinRaf)return;
