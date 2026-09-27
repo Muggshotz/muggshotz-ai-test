@@ -1,8 +1,9 @@
 // PLACEMATS (Alyx, 27 Sep 2026: "create the category"). Two Printify products
-// behind one tile: Cotton (18 x 14 in, prints 2925 x 2325) and Quilted
+// behind one tile: Cotton (18 x 14 in, prints 2925 x 2325) and Neoprene
+// (Printify's 12 x 18 desk mat, prints 5610 x 3839, which replaced Quilted)
 // (12 x 18 in, prints 2925 x 2025). What this pins:
 //   * the tile shows its price; it opens a lit card with both kinds, each with
-//     a picture and its price ($16.95 / $15.95, Alyx's rule);
+//     a picture and its price ($16.95 / $13.95, Alyx's prices);
 //   * each kind paints wide and comes back cut to its own print shape, and
 //     approving fetches the right Printify mockup;
 //   * the order page prices the kind carried from the studio and checks out
@@ -10,11 +11,11 @@
 const { launch, openStudio, uploadPhoto, dismissAlerts, passFadePage } = require('./harness');
 
 const T = (page, ms) => page.waitForTimeout(ms);
-// Cotton is bought singly here, Quilted as a set of two (the same design twice,
+// Cotton is bought singly here, Neoprene as a set of two (the same design twice,
 // priced as one item), so both routes through the card are driven.
 const KINDS = {
   Cotton: { key: 'placemat-cotton', size: '18 x 14 in', price: '$16.95', ratio: 2925 / 2325, pack: 1, label: /Cotton Placemat, 18 x 14/ },
-  Quilted: { key: 'placemat-quilted', size: '12 x 18 in, set of 2', price: '$28.95', ratio: 2925 / 2025, pack: 2, label: /Quilted Placemats, set of 2/ }
+  Neoprene: { key: 'placemat-neoprene', size: '12 x 18 in, set of 2', price: '$24.95', ratio: 5610 / 3839, pack: 2, label: /Neoprene Placemats, set of 2/ }
 };
 
 async function run(page, log, kind) {
@@ -30,7 +31,7 @@ async function run(page, log, kind) {
   await page.click('#postUploadForkRow button:has-text("Select Your Product")');
   await T(page, 700);
   const tile = await page.evaluate(() => document.querySelector('#productCard .btn-select[data-val="placemat"]')?.innerText || '');
-  if (!/Placemats/.test(tile) || !/\$15\.95/.test(tile)) return `FAIL: the tile reads "${tile.replace(/\n/g, ' / ')}"`;
+  if (!/Placemats/.test(tile) || !/\$13\.95/.test(tile)) return `FAIL: the tile reads "${tile.replace(/\n/g, ' / ')}"`;
   await page.evaluate(() => document.querySelector('#productCard .btn-select[data-val="placemat"]').click());
   await T(page, 1800); await dismissAlerts(page);
   const card = await page.evaluate(async () => {
@@ -42,14 +43,14 @@ async function run(page, log, kind) {
       tiles: tiles.map((t) => t.innerText.replace(/\n/g, ' ')), pics: imgs.filter((im) => im.naturalWidth > 0).length, top: Math.round(c.getBoundingClientRect().top), H: innerHeight };
   });
   if (!card.shown || card.focus !== 'placemat-option-focus') return `FAIL: the tile did not open the lit placemat card (${JSON.stringify(card)})`;
-  if (card.tiles.length !== 2 || card.pics !== 2 || !/Cotton.*\$16\.95/.test(card.tiles[0]) || !/Quilted.*\$15\.95/.test(card.tiles[1])) return `FAIL: the card offers ${JSON.stringify(card.tiles)} with ${card.pics} pictures`;
+  if (card.tiles.length !== 2 || card.pics !== 2 || !/Cotton.*\$16\.95/.test(card.tiles[0]) || !/Neoprene.*\$13\.95/.test(card.tiles[1])) return `FAIL: the card offers ${JSON.stringify(card.tiles)} with ${card.pics} pictures`;
   if (card.top < -2 || card.top > card.H * 0.5) return `FAIL: the card did not land at its title (top ${card.top})`;
   await page.evaluate((k) => document.querySelector(`#placematOptionGrid .btn-select[data-opt="${k}"]`).click(), kind);
   await T(page, 1200); await dismissAlerts(page);
   // One, or a set of two: asked before the description.
   if (await page.evaluate(() => document.body.classList.contains('ideafirst-focus'))) return 'FAIL: the idea box opened before one-or-two was chosen';
   const packs = await page.evaluate(() => [...document.querySelectorAll('#placematPackGrid .btn-select')].map((b) => b.innerText.replace(/\n/g, ' ')));
-  const setPrice = kind === 'Cotton' ? '29.95' : '28.95', onePrice = kind === 'Cotton' ? '16.95' : '15.95';
+  const setPrice = kind === 'Cotton' ? '29.95' : '24.95', onePrice = kind === 'Cotton' ? '16.95' : '13.95';
   if (packs.length !== 2 || !packs[0].includes('Just one $' + onePrice) || !packs[1].includes('A set of two $' + setPrice)) return `FAIL: the one-or-two choice reads ${JSON.stringify(packs)}`;
   await page.evaluate((n) => document.querySelector(`#placematPackGrid .btn-select[data-pack="${n}"]`).click(), want.pack);
   await T(page, 1200); await dismissAlerts(page);

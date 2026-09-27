@@ -9,7 +9,7 @@ import sys, os
 from PIL import Image
 CATEGORIES = {
     'welcome-mats': ('art/unwelcome', (4650, 2850), (900, 552)),   # the doormat
-    'placemats':    ('art/placemats', (2925, 2025), (900, 623)),   # the quilted placemat
+    'placemats':    ('art/placemats', (5610, 3839), (900, 616)),   # the neoprene placemat
 }
 cat, key, src = sys.argv[1:4]
 folder, (pw, ph), (sw, sh) = CATEGORIES[cat]

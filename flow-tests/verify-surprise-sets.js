@@ -344,8 +344,8 @@ scenarios.theMats = async (page) => {
 
 // A placemat slot, filled here with a stand-in design (the category is empty
 // until Bud's first placemat): Everyday then lists its categories; the
-// placemat offers one or a set of two, and a set orders as the quilted
-// placemat's set of two at $28.95.
+// placemat offers one or a set of two, and a set orders as the neoprene
+// placemat's set of two at $24.95.
 scenarios.thePlacematSlot = async (page) => {
   const bodies = [];
   page.on('request', (r) => { if (r.url().includes('/api/create-checkout-session')) { try { bodies.push(r.postDataJSON()); } catch (e) {} } });
@@ -360,9 +360,9 @@ scenarios.thePlacematSlot = async (page) => {
   if (cats.view !== 'categories' || cats.imgs || !/Placemats/.test(cats.text) || !/Welcome Mats/.test(cats.text)) return `FAIL: Everyday with two categories opened ${JSON.stringify(cats)}`;
   await page.evaluate(() => document.querySelector('#premadesView .pm-row[data-category="placemats"]').click()); await T(page, 1500);
   const g = await page.evaluate(() => ({ view: premadesView, packs: [...document.querySelectorAll('#premadesPackGrid .btn-select')].map((b) => b.innerText.replace(/\n/g, ' ')) }));
-  if (g.view !== 'gallery' || g.packs.length !== 2 || !/Just one \$15\.95/.test(g.packs[0]) || !/A set of two \$28\.95/.test(g.packs[1])) return `FAIL: the placemat gallery offers ${JSON.stringify(g)}`;
+  if (g.view !== 'gallery' || g.packs.length !== 2 || !/Just one \$13\.95/.test(g.packs[0]) || !/A set of two \$24\.95/.test(g.packs[1])) return `FAIL: the placemat gallery offers ${JSON.stringify(g)}`;
   await page.evaluate(() => pickPremadesPack(2)); await T(page, 300);
-  if (!/\$28\.95/.test(await page.evaluate(() => document.getElementById('premadesMatOrderBtn').innerText))) return 'FAIL: the order button does not show the set price';
+  if (!/\$24\.95/.test(await page.evaluate(() => document.getElementById('premadesMatOrderBtn').innerText))) return 'FAIL: the order button does not show the set price';
   // Back: the gallery -> the categories -> the occasions.
   await page.evaluate(() => premadesBack()); await T(page, 900);
   if (await page.evaluate(() => premadesView) !== 'categories') return 'FAIL: Back from the placemats did not go to the categories';
@@ -370,7 +370,7 @@ scenarios.thePlacematSlot = async (page) => {
   await Promise.all([page.waitForURL(/order\.html/, { timeout: 10000 }), page.evaluate(() => document.getElementById('premadesMatOrderBtn').click())]);
   await T(page, 3000);
   const o = await page.evaluate(() => ({ base: document.getElementById('summaryBase').textContent, label: document.getElementById('summaryStyleSize')?.textContent || '' }));
-  if (o.base !== '$28.95' || !/set of 2/.test(o.label)) return `FAIL: the order page shows ${JSON.stringify(o)}`;
+  if (o.base !== '$24.95' || !/Neoprene Placemats, set of 2/.test(o.label)) return `FAIL: the order page shows ${JSON.stringify(o)}`;
   await page.evaluate(() => {
     const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v; };
     set('fullName', 'Test Customer'); set('email', 'test@example.com'); set('phone', '5555550100');
@@ -379,8 +379,8 @@ scenarios.thePlacematSlot = async (page) => {
   });
   await T(page, 2000);
   const b = bodies[bodies.length - 1];
-  if (!b || b.productKey !== 'placemat-quilted' || b.sizeLabel !== '12 x 18 in, set of 2' || !/\/art\/unwelcome\/print\/pearly-gates\.jpg$/.test(b.image || '')) return `FAIL: checkout got ${JSON.stringify(b && { k: b.productKey, s: b.sizeLabel, image: b.image })}`;
-  return 'PASS: an empty placemat category stays hidden; filled, Everyday lists its two categories quietly; the placemat offers one ($15.95) or a set of two ($28.95); Back steps to the categories; a set checks out as placemat-quilted / 12 x 18 in, set of 2, with the design\'s print file';
+  if (!b || b.productKey !== 'placemat-neoprene' || b.sizeLabel !== '12 x 18 in, set of 2' || !/\/art\/unwelcome\/print\/pearly-gates\.jpg$/.test(b.image || '')) return `FAIL: checkout got ${JSON.stringify(b && { k: b.productKey, s: b.sizeLabel, image: b.image })}`;
+  return 'PASS: an empty placemat category stays hidden; filled, Everyday lists its two categories quietly; the placemat offers one ($13.95) or a set of two ($24.95); Back steps to the categories; a set checks out as placemat-neoprene / 12 x 18 in, set of 2, with the design\'s print file';
 };
 
 (async () => {
