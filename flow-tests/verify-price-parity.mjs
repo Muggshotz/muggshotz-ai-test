@@ -322,6 +322,7 @@ checks.push(missing.length
     'night light': 'isNightBuddy()',
     'beer stein': 'isBeerStein()',
     'doormat': 'isDoormat()',
+    'placemat': 'isPlacemat()',
     'air freshener': 'isAirFreshener()',
     'playing cards': 'isPlayingCards()',
     'tote bag': 'isToteBag()',
@@ -380,6 +381,7 @@ checks.push(missing.length
     // 'night light' is off the grid (24 Sep 2026); its tile price stays in the studio for its return
     'beer stein': ['beer-stein'],
     'doormat': ['doormat'],
+    'placemat': ['placemat-cotton', 'placemat-quilted'],
     'air freshener': ['car-air-freshener'],
     'playing cards': ['playing-cards'],
     'coaster':      ['coaster-set', 'coaster-set-round'],

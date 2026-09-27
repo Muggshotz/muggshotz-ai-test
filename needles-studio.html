@@ -1,5 +1,5 @@
 <!-- ============================================================
-     VERSION: V388
+     VERSION: V389
      ============================================================
      THE ONE LINE THAT SAYS WHICH BUILD YOU ARE LOOKING AT.
 
@@ -693,6 +693,7 @@ body.premades-focus .card:not(#premadesCard){opacity:.35;filter:brightness(.6) s
 #premadesCard .pm-dots span{display:inline-block;width:10px;height:10px;border-radius:50%;border:1px solid #3d5577;margin:0 4px;cursor:pointer}
 #premadesCard .pm-dots span.on{background:#3d5577}
 body.carMagnet-option-focus .card:not(#carMagnetOptionCard){opacity:.35;filter:brightness(.6) saturate(.75);transition:opacity .5s,filter .5s}
+body.placemat-option-focus .card:not(#placematOptionCard){opacity:.35;filter:brightness(.6) saturate(.75);transition:opacity .5s,filter .5s}
 body.businessCards-option-focus .card:not(#businessCardOptionCard){opacity:.35;filter:brightness(.6) saturate(.75);transition:opacity .5s,filter .5s}
 body.wrap-size-focus .card:not(#wrapSizeCard){opacity:.35;filter:brightness(.6) saturate(.75);transition:opacity .5s,filter .5s}
 body.tote-size-focus .card:not(#toteSizeCard){opacity:.35;filter:brightness(.6) saturate(.75);transition:opacity .5s,filter .5s}
@@ -1604,6 +1605,16 @@ const HERO_SETTLE_MS = 1000;
 <button type="button" class="download-btn" style="margin-top:1rem" onclick="optionCardBack()">← Back</button>
 </div>
 
+<div class="card" id="placematOptionCard" style="display:none">
+<div class="card-title">🍽️ Placemat</div>
+<div class="note" style="margin-top:0;margin-bottom:.75rem">Two kinds, each a different shape. Your picture is drawn to fit the one you pick, edge to edge.</div>
+<div class="grid2" id="placematOptionGrid">
+<div class="btn-select" data-opt="Cotton" style="padding:.5rem" onclick="pickPlacemat('Cotton')"><img src="art/options/placemat-cotton.jpg" alt="" width="360" height="360" style="width:100%;height:auto;border-radius:6px;background:#fff;margin-bottom:6px"/>Cotton<div class="note" style="margin-top:2px">18 x 14 in, double layer</div><div class="note" style="margin-top:4px">$16.95</div></div><div class="btn-select" data-opt="Quilted" style="padding:.5rem" onclick="pickPlacemat('Quilted')"><img src="art/options/placemat-quilted.jpg" alt="" width="360" height="360" style="width:100%;height:auto;border-radius:6px;background:#fff;margin-bottom:6px"/>Quilted<div class="note" style="margin-top:2px">18 x 12 in, grey back</div><div class="note" style="margin-top:4px">$15.95</div></div>
+</div>
+<div class="note" id="placematOptionNote" style="margin-top:.6rem"></div>
+<button type="button" class="download-btn" style="margin-top:1rem" onclick="optionCardBack()">← Back</button>
+</div>
+
 <div class="card" id="businessCardOptionCard" style="display:none">
 <div class="card-title">💼 Business Cards</div>
 <div class="note" style="margin-top:0;margin-bottom:.75rem">Pick what you want printed. Your design is drawn to fit its exact shape.</div>
@@ -1744,7 +1755,7 @@ const HERO_SETTLE_MS = 1000;
 <div id="ideaGuidancePrompt" class="guidance-prompt" role="status" style="margin-top:8px;margin-bottom:0;cursor:pointer" onclick="ideaPromptClicked()">Click here when you are satisfied with your descriptive requests for the image.</div>
 </div>
 </div>
-<div class="card" id="productCard"><div class="card-title">🎁 Product</div><div class="guidance-prompt soft visible" id="productGuidancePrompt" role="status" style="margin-top:0;margin-bottom:.9rem">Please select your desired product below when ready.</div><div class="grid3"><div class="btn-select" data-val="mug" onclick="pick(this,'product')"><span class="icon">☕</span>Mug</div><div class="btn-select" data-val="greeting card" onclick="pick(this,'product')"><span class="icon">💌</span>Card</div><div class="btn-select" data-val="water bottle" onclick="pick(this,'product')"><span class="icon">🍶</span>Travel Cups</div><div class="btn-select" data-val="post-it note" onclick="pick(this,'product')"><span class="icon">📝</span>Post-it</div><div class="btn-select" data-val="phone case" onclick="pick(this,'product')"><span class="icon">📱</span>Phone case</div><div class="btn-select" data-val="tote bag" onclick="pick(this,'product')"><span class="icon">👜</span>Tote bag</div><div class="btn-select" data-val="suitcase" onclick="pick(this,'product')"><span class="icon">🧳</span>Suitcase</div><div class="btn-select" data-val="puzzle" onclick="pick(this,'product')"><span class="icon">🧩</span>Puzzle</div><div class="btn-select" data-val="photo poster" onclick="pick(this,'product')"><span class="icon">🖼️</span>Photo/Poster</div><div class="btn-select" data-val="coaster" onclick="pick(this,'product')"><span class="icon">☕</span>Coasters</div><div class="btn-select" data-val="mouse pad" onclick="pick(this,'product')"><span class="icon">🖱️</span>Mouse pad</div><div class="btn-select" data-val="wrapping paper" onclick="pick(this,'product')"><span class="icon">🎁</span>It's a Wrap<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Your own wrapping paper.</div></div><div class="btn-select" data-val="standee" onclick="pick(this,'product')"><span class="icon">🧍</span>From Where I Stand<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Acrylic standee, cut to shape.</div></div><div class="btn-select" data-val="ornament" onclick="pick(this,'product')"><span class="icon">🎄</span>Ornament<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Ceramic, for the tree.</div></div><div class="btn-select" data-val="playing cards" onclick="pick(this,'product')"><span class="icon">🃏</span>Just Playin'<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">A poker deck with your art on the back.</div></div><div class="btn-select" data-val="air freshener" onclick="pick(this,'product')"><span class="icon">🌲</span>Car Air Freshener<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Hangs from the mirror. Four scents.</div></div><div class="btn-select" data-val="doormat" onclick="pick(this,'product')"><span class="icon">🚪</span>Doormat<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">18 x 30 in, for the front door.</div></div><div class="btn-select" data-val="beer stein" onclick="pick(this,'product')"><span class="icon">🍺</span>Beer Stein<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">22oz ceramic with gold trim.</div></div><div class="btn-select" data-val="sticker sheet" onclick="pick(this,'product')"><span class="icon">⭐</span>Sticker Sheet<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Four die-cut vinyl stickers.</div></div><div class="btn-select" data-val="tshirt" onclick="pick(this,'product')"><span class="icon">👕</span>Apparel<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Tees, hoodies, sweatshirts. 11 styles.</div></div><div class="btn-select" data-val="calendar" onclick="pick(this,'product')"><span class="icon">📅</span>Desk Calendar<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Next year, 13 pages, dates included.</div></div><div class="btn-select" data-val="car magnet" onclick="pick(this,'product')"><span class="icon">🚗</span>Car Magnet<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Weatherproof vinyl, magnetic back.</div></div><div class="btn-select" data-val="luggage tag" onclick="pick(this,'product')"><span class="icon">🏷️</span>Luggage Tag<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Acrylic, leather strap, card slot.</div></div><div class="btn-select" data-val="business cards" onclick="pick(this,'product')"><span class="icon">💼</span>Business Cards<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Cards, boxed cards, a metal holder.</div></div><div class="btn-select" onclick="location.href='gift.html'"><span class="icon">💵</span>Gift Certificate<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Store credit, emailed to them.</div></div><div class="btn-select" data-val="artwork only" onclick="pick(this,'product')"><span class="icon">🖼️</span>Artwork Only<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">No product. Just creates an image for you to download.</div><div class="note" style="margin-top:2px;color:#7ab8ff;font-size:10px">1 token</div></div><div class="btn-select" id="premadesTile" onclick="openPremades()"><span class="icon">🎁</span>Premades &amp; Sets<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Finished designs, ready to order.</div><div class="note" id="premadesTilePrice" style="margin-top:6px;color:#7ab8ff;font-weight:700;font-size:11px"></div></div><div class="btn-select" id="pitchInTile" onclick="openPitch('idea')"><span class="icon">💡</span>Pitch In<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Your idea, your cut.</div><div class="note" style="margin-top:6px;color:#7ab8ff;font-weight:700;font-size:11px">earn 5%</div></div></div>
+<div class="card" id="productCard"><div class="card-title">🎁 Product</div><div class="guidance-prompt soft visible" id="productGuidancePrompt" role="status" style="margin-top:0;margin-bottom:.9rem">Please select your desired product below when ready.</div><div class="grid3"><div class="btn-select" data-val="mug" onclick="pick(this,'product')"><span class="icon">☕</span>Mug</div><div class="btn-select" data-val="greeting card" onclick="pick(this,'product')"><span class="icon">💌</span>Card</div><div class="btn-select" data-val="water bottle" onclick="pick(this,'product')"><span class="icon">🍶</span>Travel Cups</div><div class="btn-select" data-val="post-it note" onclick="pick(this,'product')"><span class="icon">📝</span>Post-it</div><div class="btn-select" data-val="phone case" onclick="pick(this,'product')"><span class="icon">📱</span>Phone case</div><div class="btn-select" data-val="tote bag" onclick="pick(this,'product')"><span class="icon">👜</span>Tote bag</div><div class="btn-select" data-val="suitcase" onclick="pick(this,'product')"><span class="icon">🧳</span>Suitcase</div><div class="btn-select" data-val="puzzle" onclick="pick(this,'product')"><span class="icon">🧩</span>Puzzle</div><div class="btn-select" data-val="photo poster" onclick="pick(this,'product')"><span class="icon">🖼️</span>Photo/Poster</div><div class="btn-select" data-val="coaster" onclick="pick(this,'product')"><span class="icon">☕</span>Coasters</div><div class="btn-select" data-val="mouse pad" onclick="pick(this,'product')"><span class="icon">🖱️</span>Mouse pad</div><div class="btn-select" data-val="wrapping paper" onclick="pick(this,'product')"><span class="icon">🎁</span>It's a Wrap<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Your own wrapping paper.</div></div><div class="btn-select" data-val="standee" onclick="pick(this,'product')"><span class="icon">🧍</span>From Where I Stand<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Acrylic standee, cut to shape.</div></div><div class="btn-select" data-val="ornament" onclick="pick(this,'product')"><span class="icon">🎄</span>Ornament<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Ceramic, for the tree.</div></div><div class="btn-select" data-val="playing cards" onclick="pick(this,'product')"><span class="icon">🃏</span>Just Playin'<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">A poker deck with your art on the back.</div></div><div class="btn-select" data-val="air freshener" onclick="pick(this,'product')"><span class="icon">🌲</span>Car Air Freshener<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Hangs from the mirror. Four scents.</div></div><div class="btn-select" data-val="doormat" onclick="pick(this,'product')"><span class="icon">🚪</span>Doormat<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">18 x 30 in, for the front door.</div></div><div class="btn-select" data-val="placemat" onclick="pick(this,'product')"><span class="icon">🍽️</span>Placemats<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">For the dinner table. Cotton or quilted.</div></div><div class="btn-select" data-val="beer stein" onclick="pick(this,'product')"><span class="icon">🍺</span>Beer Stein<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">22oz ceramic with gold trim.</div></div><div class="btn-select" data-val="sticker sheet" onclick="pick(this,'product')"><span class="icon">⭐</span>Sticker Sheet<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Four die-cut vinyl stickers.</div></div><div class="btn-select" data-val="tshirt" onclick="pick(this,'product')"><span class="icon">👕</span>Apparel<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Tees, hoodies, sweatshirts. 11 styles.</div></div><div class="btn-select" data-val="calendar" onclick="pick(this,'product')"><span class="icon">📅</span>Desk Calendar<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Next year, 13 pages, dates included.</div></div><div class="btn-select" data-val="car magnet" onclick="pick(this,'product')"><span class="icon">🚗</span>Car Magnet<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Weatherproof vinyl, magnetic back.</div></div><div class="btn-select" data-val="luggage tag" onclick="pick(this,'product')"><span class="icon">🏷️</span>Luggage Tag<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Acrylic, leather strap, card slot.</div></div><div class="btn-select" data-val="business cards" onclick="pick(this,'product')"><span class="icon">💼</span>Business Cards<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Cards, boxed cards, a metal holder.</div></div><div class="btn-select" onclick="location.href='gift.html'"><span class="icon">💵</span>Gift Certificate<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Store credit, emailed to them.</div></div><div class="btn-select" data-val="artwork only" onclick="pick(this,'product')"><span class="icon">🖼️</span>Artwork Only<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">No product. Just creates an image for you to download.</div><div class="note" style="margin-top:2px;color:#7ab8ff;font-size:10px">1 token</div></div><div class="btn-select" id="premadesTile" onclick="openPremades()"><span class="icon">🎁</span>Premades &amp; Sets<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Finished designs, ready to order.</div><div class="note" id="premadesTilePrice" style="margin-top:6px;color:#7ab8ff;font-weight:700;font-size:11px"></div></div><div class="btn-select" id="pitchInTile" onclick="openPitch('idea')"><span class="icon">💡</span>Pitch In<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Your idea, your cut.</div><div class="note" style="margin-top:6px;color:#7ab8ff;font-weight:700;font-size:11px">earn 5%</div></div></div>
 <button type="button" class="download-btn" id="productCardBackBtn" style="margin-top:1rem" onclick="productCardBack()">← Back</button></div>
 
 <!-- PREMADES & SETS, QUIET THEN LOUD (Alyx, 26 Sep 2026: "we need to give
@@ -4313,7 +4324,7 @@ function pickTrackDescribe(){
 // Greeting cards and post-it pads joined 2026-08-28 when they graduated
 // from "Art only" to real orderable products -- same shape as mouse pad:
 // no gimmicks, no frame, one variant, so the description IS the design.
-const PRODUCTS_NEEDING_IDEA=['suitcase','phone case','tote bag','puzzle','coaster','mouse pad','photo poster','greeting card','post-it note','wrapping paper','ornament','standee','playing cards','air freshener','doormat','beer stein','night light','sticker sheet','tshirt','calendar','car magnet','luggage tag','business cards'];
+const PRODUCTS_NEEDING_IDEA=['suitcase','phone case','tote bag','puzzle','coaster','mouse pad','photo poster','greeting card','post-it note','wrapping paper','ornament','standee','playing cards','air freshener','doormat','placemat','beer stein','night light','sticker sheet','tshirt','calendar','car magnet','luggage tag','business cards'];
 const PRODUCT_IDEA_LABEL={
   'artwork only':'artwork',
   'suitcase':'suitcase',
@@ -4326,6 +4337,7 @@ const PRODUCT_IDEA_LABEL={
   'business cards':'business cards',
   'luggage tag':'luggage tag',
   'car magnet':'car magnet',
+  'placemat':'placemat',
   'calendar':'desk calendar',
   'tshirt':'T-shirt',
   'sticker sheet':'sticker sheet',
@@ -4369,7 +4381,7 @@ const PRODUCTS_WITH_GIMMICKS=['mug','water bottle'];
 // there is nothing to wait for the customer to decide before showing it.
 // Water bottle is deliberately absent -- it has its own preview panel and
 // would fetch twice.
-const PRODUCTS_AUTO_MOCKUP=['suitcase','phone case','tote bag','puzzle','photo poster','coaster','mouse pad','greeting card','post-it note','wrapping paper','ornament','standee','playing cards','air freshener','doormat','beer stein','night light','sticker sheet','tshirt','calendar','car magnet','luggage tag','business cards'];
+const PRODUCTS_AUTO_MOCKUP=['suitcase','phone case','tote bag','puzzle','photo poster','coaster','mouse pad','greeting card','post-it note','wrapping paper','ornament','standee','playing cards','air freshener','doormat','placemat','beer stein','night light','sticker sheet','tshirt','calendar','car magnet','luggage tag','business cards'];
 
 // ONE CLICK, NOT TWO (Alyx, Sep 2026, landing on the product card with a
 // GENERATE button after saying he was happy with his description: "I don't
@@ -4729,7 +4741,7 @@ function toggleWorkingImage(){
 // Two copies of a number is exactly how the marker rotted in the first place,
 // so they are not trusted to agree: .githooks/pre-commit moves both together
 // and REFUSES the commit if it ever finds them apart.
-const APP_VERSION='V388';
+const APP_VERSION='V389';
 try{ console.log('%cNeedles\u2019 Studio '+APP_VERSION,'color:#29a3ff;font-weight:700'); }catch(e){}
 
 function getDeviceId(){
@@ -8216,6 +8228,7 @@ const PRODUCT_TILE_PRICES = {
   'business cards': { from: 16.95, ladder: true },
   'luggage tag': { from: 16.95, ladder: false },
   'car magnet': { from: 5.95, ladder: true },
+  'placemat': { from: 15.95, ladder: true },
   'calendar': { from: 9.95, ladder: false },
   'tshirt': { from: 6.95, ladder: true },
   'sticker sheet': { from: 9.95, ladder: true },
@@ -12837,6 +12850,32 @@ function refreshCarMagnetVisibility(){
   if(card)card.style.display=(product==='car magnet')?'block':'none';
 }
 
+// PLACEMATS (Alyx, 27 Sep 2026: "create the category"). Two Printify products,
+// one tile: the kind picks the catalog entry and the print's shape, and the
+// picture is drawn landscape and cut to that shape (shapedPrintRatio), edge to
+// edge. Prices are Alyx's rule: wholesale + $3 to the nearest $0.95. The
+// leather one (9 x 7.5 in) was left off: "practically a coaster".
+const PLACEMAT_OPTIONS={
+  'Cotton':{key:'placemat-cotton',size:'18 x 14 in',price:16.95,ratio:2925/2325},
+  'Quilted':{key:'placemat-quilted',size:'12 x 18 in',price:15.95,ratio:2925/2025}
+};
+let selectedPlacemat=null;
+function pickPlacemat(name){
+  if(!PLACEMAT_OPTIONS[name])return;
+  selectedPlacemat=name;
+  document.querySelectorAll('#placematOptionGrid .btn-select').forEach(b=>b.classList.toggle('selected',b.dataset.opt===name));
+  document.getElementById('placematOptionNote').textContent='✓ Confirmed: '+name+' placemat, $'+PLACEMAT_OPTIONS[name].price.toFixed(2)+'.';
+  handOffToIdeaAfterProductChoice();
+}
+function placematRule(){
+  const o=PLACEMAT_OPTIONS[selectedPlacemat];
+  return 'placemat artwork: a landscape picture '+(o?Math.round(o.ratio*100)/100+' times':'a little')+' wider than it is tall, running edge to edge, the main subject near the middle and the edges kept calm where the plate and cutlery sit';
+}
+function refreshPlacematVisibility(){
+  const card=document.getElementById('placematOptionCard');
+  if(card)card.style.display=(product==='placemat')?'block':'none';
+}
+
 // SURPRISE!!! -- THE SMART MUG (Alyx, 23 Sep 2026: "The Smart mug may well
 // be the single biggest addition to this whole process that we've ever come
 // up with."). A fourth tile on Coffee Mug Size: Printify's Color Morphing Mug
@@ -13028,7 +13067,7 @@ const PREMADE_OCCASIONS=[
   {key:'christmas',icon:'🎄',label:'Christmas',soon:true},
   {key:'halloween',icon:'🎃',label:'Halloween',soon:true},
   {key:'valentines',icon:'💘',label:"Valentine's Day",soon:true},
-  {key:'everyday',icon:'🚪',label:'Everyday',mats:true,sub:'Unwelcome mats'}
+  {key:'everyday',icon:'🚪',label:'Everyday',mats:true,sub:'(Un/)Welcome mats'}
 ];
 // Bud's Unwelcome mats (art/unwelcome). show/ is the picture on the page,
 // print/ the file printed, both at the doormat's 4650 x 2850 shape. Ordered as
@@ -13037,7 +13076,8 @@ const PREMADE_MAT_PRICE=19.95;
 const PREMADE_MATS=[
   {key:'rope-bridge',label:'Rope Bridge'},{key:'shaft',label:'The Shaft'},{key:'dog',label:'The Dog'},
   {key:'lava-pit',label:'Lava Pit'},{key:'crocodile',label:'Crocodile'},{key:'shark-pier',label:'Shark Pier'},
-  {key:'sharks-under-pier',label:'Under the Pier'},{key:'ice-hole',label:'Thin Ice'},{key:'dock-shallow',label:'The Dock'}
+  {key:'sharks-under-pier',label:'Under the Pier'},{key:'ice-hole',label:'Thin Ice'},{key:'dock-shallow',label:'The Dock'},
+  {key:'abandon-hope',label:'Abandon Hope'},{key:'pearly-gates',label:'Pearly Gates'}
 ];
 let premadesSet=null, premadesHand='right', premadesView='occasions', premadesOccasion=null, premadesMat=0;
 function premadesFromPrice(){ return '$'+Math.min(SMART_MUG_SET_PRICE,PREMADE_MAT_PRICE).toFixed(2); }
@@ -13070,8 +13110,8 @@ function renderPremades(){
       +'<button type="button" class="generate-btn" id="premadesContinueBtn" onclick="goToPremadeSetOrder()">🎁 Order the set</button>';
   } else if(premadesView==='mats'){
     const m=PREMADE_MATS[premadesMat];
-    title.textContent='🚪 Unwelcome Mats';
-    view.innerHTML=premadesCrumb(['Everyday','Unwelcome Mats'])
+    title.textContent='🚪 (Un/)Welcome Mats';
+    view.innerHTML=premadesCrumb(['Everyday','(Un/)Welcome Mats'])
       +'<div class="pm-mat"><img class="pm-big" id="premadesMatPic" src="art/unwelcome/show/'+m.key+'.jpg" width="900" height="552" alt="'+m.label+'"/>'
       +'<button type="button" class="pm-arr" style="left:-12px" aria-label="Previous mat" onclick="premadesMatStep(-1)">‹</button>'
       +'<button type="button" class="pm-arr" style="right:-12px" aria-label="Next mat" onclick="premadesMatStep(1)">›</button></div>'
@@ -13357,6 +13397,7 @@ function shapedPrintRatio(){
   if(product==='business cards'){ const o=BUSINESS_CARD_OPTIONS[selectedBusinessCard]; return o?o.ratio:null; }
   if(product==='luggage tag')return 750/1237;
   if(product==='doormat')return DOORMAT_RATIO;
+  if(product==='placemat'){ const o=PLACEMAT_OPTIONS[selectedPlacemat]; return o?o.ratio:null; }
   return null;
 }
 // The doormat's print area, 4650 x 2850. Wider than the widest canvas, so it
@@ -13663,7 +13704,7 @@ function pick(el,type){
     if(productGuide)productGuide.classList.remove('visible');
     const finalGuide=document.getElementById('finalGenerateGuidance');
     if(finalGuide)finalGuide.classList.toggle('visible',
-      (product==='phone case'&&phoneCaseComplete())||(product==='puzzle'&&!!selectedPuzzleSize)||(product==='wrapping paper'&&!!selectedWrapSize)||(product==='ornament'&&!!selectedOrnamentShape)||(product==='business cards'&&!!selectedBusinessCard)||(product==='car magnet'&&!!selectedCarMagnet)||(product==='tshirt'&&!!selectedApparel&&!!selectedTshirt&&!!selectedTshirtColor)||(product==='sticker sheet'&&!!selectedStickerSheet)||(product==='night light'&&!!selectedNightBuddy)||(product==='air freshener'&&!!selectedAirFreshener)||(product==='suitcase'&&!!selectedSuitcaseSize));
+      (product==='phone case'&&phoneCaseComplete())||(product==='puzzle'&&!!selectedPuzzleSize)||(product==='wrapping paper'&&!!selectedWrapSize)||(product==='ornament'&&!!selectedOrnamentShape)||(product==='business cards'&&!!selectedBusinessCard)||(product==='placemat'&&!!selectedPlacemat)||(product==='car magnet'&&!!selectedCarMagnet)||(product==='tshirt'&&!!selectedApparel&&!!selectedTshirt&&!!selectedTshirtColor)||(product==='sticker sheet'&&!!selectedStickerSheet)||(product==='night light'&&!!selectedNightBuddy)||(product==='air freshener'&&!!selectedAirFreshener)||(product==='suitcase'&&!!selectedSuitcaseSize));
     refreshApproveRowForMode();
     refreshMugSizeCardVisibility();
     refreshMugStyleCardVisibility();
@@ -13677,6 +13718,7 @@ function pick(el,type){
     refreshOrnamentShapeVisibility();
     refreshBusinessCardVisibility();
     refreshCarMagnetVisibility();
+    refreshPlacematVisibility();
     refreshSurpriseVisibility();
     { const pc=document.getElementById('premadesCard'); if(pc)pc.style.display='none'; }
     refreshTshirtVisibility();
@@ -13752,6 +13794,9 @@ function pick(el,type){
     } else if(product==='car magnet'){
       setOptionSpotlight('carMagnet-option-focus');
       smoothScrollToTarget('carMagnetOptionCard','center');
+    } else if(product==='placemat'){
+      setOptionSpotlight('placemat-option-focus');
+      smoothScrollToTarget('placematOptionCard','center');
     } else if(product==='business cards'){
       setOptionSpotlight('businessCards-option-focus');
       smoothScrollToTarget('businessCardOptionCard','center');
@@ -14629,6 +14674,7 @@ const BYO_SHAPE_LINES={
   'tshirt':'a bold chest print, taller than wide, the subject and any lettering as one strong shape, on a completely flat solid pure magenta background (hex #FF00FF) with no floor, scenery, shadow or frame anywhere, crisp clean edges against the magenta; the magenta is removed so only the design prints on the shirt',
   'calendar':'a square composition with the subject centred and filling the frame, bold and clear at five inches, since it sits beside the dates on every page of a desk calendar',
   'car magnet':'a bold, simple picture that reads from across a parking lot, the subject large and clear, on a car magnet',
+  'placemat':'a landscape picture for a dinner-table placemat, running edge to edge, the main subject near the middle and the edges kept calm where the plate and cutlery sit',
   'luggage tag':'a tall portrait picture about two thirds as wide as it is tall, the subject large and centred, bold and clear, for an acrylic luggage tag',
   'business cards':'a landscape design shaped like a business card, bold and simple, no words or lettering in it, the right-hand third calm for the card\'s details',
   'standee':'a full-length figure, head to feet, standing, filling the frame from top to bottom, on a completely flat solid pure magenta background (hex #FF00FF) with no floor, scenery, shadow or text anywhere, crisp clean edges against the magenta; the magenta is removed and the acrylic is cut along the outline of the figure',
@@ -17480,6 +17526,7 @@ function ideaStepBack(){
     'sticker sheet':['stickerSheetOptionCard','stickerSheet-option-focus'],
     'tshirt':['tshirtOptionCard','tshirt-option-focus'],
     'car magnet':['carMagnetOptionCard','carMagnet-option-focus'],
+    'placemat':['placematOptionCard','placemat-option-focus'],
     'business cards':['businessCardOptionCard','businessCards-option-focus'],
     'tote bag':['toteBagColorCard','tote-color-focus'],
     'phone case':phoneCaseNeedsFinish()?['phoneCaseFinishCard','phone-finish-focus']:['phoneCaseModelCard','phone-model-focus'],
@@ -19819,6 +19866,7 @@ function getProductRules(p){
   if(p==='tshirt')return 'T-shirt chest print artwork: a bold design taller than wide, the subject and any lettering as one strong shape, on a completely flat solid pure magenta background (hex #FF00FF) with no floor, scenery, shadow or frame anywhere, crisp clean edges against the magenta; the magenta is removed so only the design prints on the shirt';
   if(p==='calendar')return 'desk calendar artwork: a square composition, the subject centred and filling the frame, bold and clear at five inches';
   if(p==='car magnet')return carMagnetRule();
+  if(p==='placemat')return placematRule();
   if(p==='luggage tag')return 'luggage tag artwork: a tall portrait picture about two thirds as wide as it is tall, the subject large and centred, bold and clear at four inches';
   if(p==='business cards')return businessCardRule();
   if(p==='standee')return 'acrylic standee artwork: a full-length figure, head to feet, standing, filling the frame from top to bottom, on a completely flat solid pure magenta background (hex #FF00FF) with no floor, scenery, shadow or text anywhere, crisp clean edges against the magenta; the magenta is removed and the acrylic is cut along the outline of the figure';
@@ -19845,6 +19893,8 @@ function getImageSizeParam(){
   if (product==='luggage tag') return '1024x1536';
   // The doormat prints 1.63:1: painted square, it printed with white sides.
   if (product==='doormat') return '1536x1024';
+  // Both placemats are landscape: drawn wide and cut to shape.
+  if (product==='placemat') return '1536x1024';
   if (product==='photo poster'){
     return posterOrientation==='Horizontal' ? '1536x1024' : '1024x1536';
   }
@@ -21221,6 +21271,11 @@ async function generate(){
   if(product==='car magnet' && !selectedCarMagnet){
     setStatus('Please pick an option above first.',true);
     document.getElementById('carMagnetOptionCard').scrollIntoView({behavior:'smooth',block:'center'});
+    return;
+  }
+  if(product==='placemat' && !selectedPlacemat){
+    setStatus('Please pick a placemat above first.',true);
+    document.getElementById('placematOptionCard').scrollIntoView({behavior:'smooth',block:'center'});
     return;
   }
   if(product==='business cards' && !selectedBusinessCard){
@@ -23158,6 +23213,14 @@ function buildMockupRequestBody(){
 
   // Business cards (23 Sep 2026): the choice names the product and size;
   // Taylor's cards carry the paper as the size's colour.
+  if (product === 'placemat') {
+    const design = placements.left || placements.front || placements.right;
+    const url = design ? (findDesignById(design)?.url ?? null) : null;
+    const o = PLACEMAT_OPTIONS[selectedPlacemat];
+    if (!url || !o) return null;
+    return { productKey: o.key, sizeLabel: o.size, image: url };
+  }
+
   if (product === 'business cards') {
     const design = placements.left || placements.front || placements.right;
     const url = design ? (findDesignById(design)?.url ?? null) : null;
@@ -24129,6 +24192,7 @@ async function goToOrder(){
     preselectedBusinessCard: (product==='business cards') ? selectedBusinessCard : null,
     preselectedCardPaper: (product==='business cards') ? selectedCardPaper : null,
     preselectedCarMagnet: (product==='car magnet') ? selectedCarMagnet : null,
+    preselectedPlacemat: (product==='placemat') ? selectedPlacemat : null,
     preselectedApparel: (product==='tshirt') ? selectedApparel : null,
     preselectedTshirt: (product==='tshirt') ? selectedTshirt : null,
     preselectedTshirtColor: (product==='tshirt') ? selectedTshirtColor : null,
@@ -24710,6 +24774,7 @@ function resetEverythingFreshStart(){
   selectedOrnamentShape=null;
   selectedBusinessCard=null;
   selectedCarMagnet=null;
+  selectedPlacemat=null;
   selectedApparel=null;
   selectedTshirt=null;
   selectedTshirtColor=null;

@@ -108,6 +108,15 @@ then a last row of four: Artwork Only, Gift Certificate, Premades & Sets,
 Pitch In. The grid is three across today (needles-studio.html, #productCard
 .grid3); four across on phones too (Alyx, 24 Sep).
 
+- **Two ways to browse, for every category going forward** (Alyx, 27 Sep): the
+  one-at-a-time viewer with arrows (as the (Un/)Welcome mats have now) AND a
+  full page with them all on show at once, the customer choosing which view.
+  To be the model for all new categories; whether to retrofit the older ones
+  (coffee mugs, travel cups ...) is Alyx's call, later. Not yet built.
+- **Placemats** -- BUILT 27 Sep: one tile, Cotton 18 x 14 ($16.95) or Quilted
+  12 x 18 ($15.95), Alyx's rule; leather left off. Next (Alyx): seasonal and
+  occasion welcome mats and place-setting mats -- birthdays, holidays, special
+  events.
 - **Apparel** -- BUILT 26 Sep, waiting on Alyx's "push it": the T-shirt tile
   is now Apparel, 11 garments (tees, tank, long sleeve, crewneck, hoodies,
   kids and youth), priced wholesale + $3 to the nearest $0.95 (Alyx, 26 Sep:

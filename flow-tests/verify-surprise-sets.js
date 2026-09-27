@@ -233,9 +233,9 @@ scenarios.theMats = async (page) => {
   await tap(page, '#premadesView .pm-row[data-occasion="everyday"]'); await T(page, 1900);
   const a = await pmState(page);
   if (a.view !== 'mats' || a.imgs !== 1 || a.loaded !== 1 || !/\$19\.95/.test(a.text) || !a.landed) return `FAIL: Everyday opened ${JSON.stringify(a)}`;
-  const names = [];
-  for (let i = 0; i < 10; i++) { names.push(await page.evaluate(() => document.getElementById('premadesMatName').textContent)); await page.evaluate(() => premadesMatStep(1)); }
-  if (new Set(names).size !== 9 || names[9] !== names[0]) return `FAIL: next went round ${names.join(', ')}`;
+  const names = [], n = await page.evaluate(() => PREMADE_MATS.length), lastKey = await page.evaluate(() => PREMADE_MATS[PREMADE_MATS.length - 1].key);
+  for (let i = 0; i <= n; i++) { names.push(await page.evaluate(() => document.getElementById('premadesMatName').textContent)); await page.evaluate(() => premadesMatStep(1)); }
+  if (new Set(names).size !== n || names[n] !== names[0]) return `FAIL: next went round ${names.join(', ')}`;
   await page.evaluate(() => premadesMatStep(-2)); // back past the first, round to the last
   const files = await page.evaluate(async () => {
     const load = (u) => new Promise((r) => { const im = new Image(); im.onload = () => r(`${im.naturalWidth}x${im.naturalHeight}`); im.onerror = () => r(null); im.src = u; });
@@ -254,8 +254,8 @@ scenarios.theMats = async (page) => {
   });
   await T(page, 2000);
   const b = bodies[bodies.length - 1];
-  if (!b || b.productKey !== 'doormat' || !/\/art\/unwelcome\/print\/dock-shallow\.jpg$/.test(b.image || '')) return `FAIL: checkout got ${JSON.stringify(b && { k: b.productKey, s: b.sizeLabel, image: b.image })}`;
-  return `PASS: Everyday opens one mat at a time at $19.95, next goes round all nine and back; every mat has its 4650 x 2850 print and 900 x 552 picture; The Dock orders as the doormat at $19.95 with its own print file (${o.head})`;
+  if (!b || b.productKey !== 'doormat' || !(b.image || '').endsWith(`/art/unwelcome/print/${lastKey}.jpg`)) return `FAIL: checkout got ${JSON.stringify(b && { k: b.productKey, s: b.sizeLabel, image: b.image })}`;
+  return `PASS: Everyday opens one mat at a time at $19.95, next goes round all ${n} and back; every mat has its 4650 x 2850 print and 900 x 552 picture; the last mat orders as the doormat at $19.95 with its own print file (${o.head})`;
 };
 
 (async () => {
