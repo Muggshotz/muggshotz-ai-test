@@ -337,4 +337,14 @@ async function passCardInside(page, choose, { timeout = 10000 } = {}) {
   return true;
 }
 
-module.exports = { launch, openStudio, uploadPhoto, uploadPhotoAndChooseBYO, waitForIntentGate, interactable, bodyFocusClasses, dismissAlerts, passFadePage, passCupFitStep, passCardInside, BASE };
+// CHECKOUT OPENS THE ORDER PAGE OVER THE STUDIO (27 Sep 2026), in a frame,
+// so Back can close it. A test that checks the order page itself presses
+// Checkout (press), sees the order page open over the studio, then follows it
+// to order.html as a page of its own -- the same page, the same saved order.
+async function followToOrder(page, press) {
+  await press();
+  await page.waitForSelector('#orderPageFrame', { timeout: 15000 });
+  await page.goto(`${BASE}/order.html`);
+}
+
+module.exports = { followToOrder, launch, openStudio, uploadPhoto, uploadPhotoAndChooseBYO, waitForIntentGate, interactable, bodyFocusClasses, dismissAlerts, passFadePage, passCupFitStep, passCardInside, BASE };

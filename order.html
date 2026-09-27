@@ -248,7 +248,7 @@ body.studio-driven #orderHeadlineCard{display:block}
   <div>
     <div class="headline-name" id="orderHeadlineName"></div>
     <div class="headline-detail" id="orderHeadlineDetail"></div>
-    <a class="headline-change" href="needles-studio.html">← Change it in the studio</a>
+    <a class="headline-change" href="needles-studio.html" onclick="return !backToStudio(event)">← Change it in the studio</a>
   </div>
 </div>
 </div>
@@ -567,7 +567,7 @@ body.studio-driven #orderHeadlineCard{display:block}
 <button class="generate-btn" id="submitBtn" onclick="submitOrder()">Continue to Payment</button>
 <button type="button" class="download-btn" id="addToBasketBtn" style="margin-top:.6rem" onclick="addToBasketAndDesignAnother()">🧺 Add to Basket &amp; Design Another</button>
 <div class="status" id="status"></div>
-<a href="needles-studio.html" class="back-link">← Back to the studio</a>
+<a href="needles-studio.html" class="back-link" onclick="return !backToStudio(event)">← Back to the studio</a>
 
 </div>
 
@@ -778,6 +778,22 @@ let shippingLookupInFlight = '';
 // for it alone, minus the name and address, which the whole basket shares.
 // Checkout prices every item again from the catalog; the price kept here is
 // for the list and the summary only.
+// OPENED OVER THE STUDIO (27 Sep 2026). The studio opens this page on top of
+// itself, in a frame, so Back returns to the screen Checkout was pressed on
+// with everything as it was. backToStudio() closes it there (true), or says
+// this page stands alone (false) and the link goes to the studio as a page.
+// goTop() leaves for another page -- payment, the basket -- from the whole
+// window, never inside the frame (the payment page will not run in one).
+const OPENED_OVER_STUDIO = (() => { try { return window.parent !== window && typeof window.parent.closeOrderOverlay === 'function'; } catch (e) { return false; } })();
+function backToStudio(e){
+  if (!OPENED_OVER_STUDIO) return false;
+  if (e && e.preventDefault) e.preventDefault();
+  try { window.parent.closeOrderOverlay(); } catch (err) { return false; }
+  return true;
+}
+function goTop(url){
+  try { (OPENED_OVER_STUDIO ? window.top : window).location.href = url; } catch (e) { window.location.href = url; }
+}
 const BASKET_KEY = 'muggshotz_basket';
 const MAX_BASKET_ITEMS = 6;
 let lastSummary = null;
@@ -828,7 +844,7 @@ function addToBasketAndDesignAnother(){
   });
   writeBasket(basket);
   try { localStorage.removeItem('muggshotz_pending_order'); } catch (e) {}
-  location.href = 'needles-studio.html';
+  goTop('needles-studio.html');
 }
 function removeFromBasket(i){
   const basket = readBasket();
@@ -1196,6 +1212,7 @@ function returnToOptionsFromMockup(e){
   hideMockupSideCta();
   try { localStorage.setItem('muggshotz_return_to_idea', '1'); } catch (err) {}
   // The studio is where changes are made now, not index.html.
+  if (backToStudio()) return;
   window.location.href = 'needles-studio.html';
 }
 
@@ -1352,7 +1369,7 @@ let selectedProductFamily = pendingOrder?.productIcon || 'mug';
 // the mug's price below. It goes back to the studio instead.
 if (selectedProductFamily === 'artwork only') {
   try { localStorage.removeItem('muggshotz_pending_order'); } catch (e) {}
-  location.replace('needles-studio.html');
+  if (!backToStudio()) location.replace('needles-studio.html');
   throw new Error('Artwork Only has no product to order; back to the studio.');
 }
 
@@ -3541,7 +3558,7 @@ async function submitOrder(){
       return;
     }
     if (data.url) {
-      window.location.href = data.url;
+      goTop(data.url);
     } else {
       throw new Error('No checkout URL returned.');
     }
@@ -3610,7 +3627,7 @@ async function openSquarePay(sp){
         const d = await resp.json();
         if (!resp.ok) throw new Error(d.error || 'The payment did not go through.');
         st.textContent = 'Paid. One moment…';
-        window.location.href = d.url || sp.successUrl;
+        goTop(d.url || sp.successUrl);
       } catch (err) { st.textContent = err.message; payBtn.disabled = false; }
     };
   } catch (err) {

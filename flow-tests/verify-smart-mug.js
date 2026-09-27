@@ -10,7 +10,7 @@
 //   * the order page prices it, asks Printify for the smart-mug mockup, and
 //     checks out smart-mug / 11oz with the chosen print;
 //   * Generate paints nothing for a template.
-const { launch, openStudio, uploadPhoto, dismissAlerts } = require('./harness');
+const { followToOrder, launch, openStudio, uploadPhoto, dismissAlerts } = require('./harness');
 
 const T = (page, ms) => page.waitForTimeout(ms);
 const BASE = 'http://127.0.0.1:8788';
@@ -182,7 +182,7 @@ scenarios.readyAndItsOtherSide = async (page) => {
   await tap(page, '#surpriseVariantGrid .btn-select[data-variant="expecting"]');
   await tap(page, '#surpriseHandGrid .btn-select[data-hand="left"]');
   await T(page, 900);
-  await Promise.all([page.waitForURL(/order\.html/, { timeout: 10000 }), tap(page, '#surpriseContinueBtn')]);
+  await followToOrder(page, () => tap(page, '#surpriseContinueBtn'));
   await T(page, 3000);
   const st = await page.evaluate(() => ({
     pending: JSON.parse(localStorage.getItem('muggshotz_pending_order') || 'null'),
@@ -211,7 +211,7 @@ scenarios.hiddenTemplate = async (page) => {
   if (!tile.img || !tile.price) return `FAIL: the hidden mug's tile is missing its picture or price ${JSON.stringify(tile)}`;
   await tap(page, '#surpriseTemplateGrid .btn-select[data-surprise="i-know"]');
   await T(page, 1200);
-  await Promise.all([page.waitForURL(/order\.html/, { timeout: 10000 }), tap(page, '#surpriseContinueBtn')]);
+  await followToOrder(page, () => tap(page, '#surpriseContinueBtn'));
   await T(page, 3000);
   const st = await page.evaluate(() => ({ left: JSON.parse(localStorage.getItem('muggshotz_pending_order') || 'null')?.placements?.left, note: document.getElementById('smartMugChoiceNote').textContent }));
   if (!st.left || !st.left.endsWith('/art/surprise/i-know-print.png')) return `FAIL: the hand-off print is ${st.left}`;
@@ -229,7 +229,7 @@ scenarios.theOrderPage = async (page, log) => {
   await tap(page, '#surpriseTemplateGrid .btn-select[data-surprise="congratulations"]');
   await T(page, 900);
   const price = await page.evaluate(() => SMART_MUG_PRICE);
-  await Promise.all([page.waitForURL(/order\.html/, { timeout: 10000 }), tap(page, '#surpriseContinueBtn')]);
+  await followToOrder(page, () => tap(page, '#surpriseContinueBtn'));
   await T(page, 3500);
   const st = await page.evaluate(() => ({
     pending: JSON.parse(localStorage.getItem('muggshotz_pending_order') || 'null'),

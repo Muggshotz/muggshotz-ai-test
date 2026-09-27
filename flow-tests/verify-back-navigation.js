@@ -472,6 +472,40 @@ scenarios.travelMugPaletteBackIsADoor = async (page) => {
 // So this scenario presses the REAL button, by click, from the real generated
 // state -- no calling the handler by name, which is how the earlier tests
 // managed to be green about the wrong thing.
+
+// ONE SCREEN AT A TIME (Alyx, 27 Sep 2026: "successively click back it
+// successively takes you back never forward"). Back from the picture now steps
+// back through every screen the way in showed; the colour panel is reached by
+// pressing the Back on each screen in turn, as a customer would.
+async function backUntilCupPanel(page, maxPresses = 8) {
+  for (let i = 0; i < maxPresses; i++) {
+    const there = await page.evaluate(() => {
+      const card = document.getElementById('travelMugVariantCard');
+      const r = card.getBoundingClientRect();
+      return document.body.classList.contains('travel-color-focus') && r.bottom > 0 && r.top < innerHeight;
+    });
+    if (there) return i;
+    const pressed = await page.evaluate(() => {
+      const shown = (b) => b.offsetParent !== null && getComputedStyle(b).display !== 'none' && getComputedStyle(b).opacity !== '0';
+      const focus = [...document.body.classList].filter((c) => c.endsWith('-focus'));
+      let b = null;
+      if (focus.includes('generate-focus') || focus.includes('final-generate-focus')) b = document.getElementById('generateBackBtn');
+      else if (focus.length) {
+        let id = null;
+        for (const sh of document.styleSheets) { let rules; try { rules = sh.cssRules; } catch (e) { continue; }
+          for (const r of rules) { const m = /^body\.([\w-]+) \.card:not\(#(\w+)\)/.exec(r.selectorText || ''); if (m && focus.includes(m[1])) id = m[2]; } }
+        const card = id && document.getElementById(id);
+        b = card && [...card.querySelectorAll('button')].find((x) => shown(x) && /(Back|Return)\b/.test(x.innerText));
+      } else b = document.getElementById('approveBackBtn');
+      if (!b || !shown(b)) return null;
+      b.scrollIntoView({ block: 'center' }); b.click(); return b.id || b.getAttribute('onclick');
+    });
+    if (!pressed) return -1;
+    await page.waitForTimeout(1500);
+    await dismissAlerts(page);
+  }
+  return -1;
+}
 scenarios.travelResultBackReachesTheColourPanel = async (page) => {
   await toProduct(page);
   if (!await pickProduct(page, 'water bottle')) return 'FAIL: could not choose a travel cup';
@@ -509,11 +543,12 @@ scenarios.travelResultBackReachesTheColourPanel = async (page) => {
   await T(page, 800);
   await dismissAlerts(page);
 
-  // THE PRESS. Real click on the real button, exactly as he did it.
+  // THE PRESS. Real click on the real button, exactly as he did it, then the
+  // Back on each screen after it, until the colour panel.
   const back = await operable(page, '#approveBackBtn');
   if (!back.visible) return 'FAIL: the result screen has no operable Back button';
-  await page.click('#approveBackBtn');
-  await T(page, 1200);
+  const presses = await backUntilCupPanel(page);
+  if (presses < 0) return 'FAIL: pressing Back again and again never reached the colour panel';
 
   const after = await page.evaluate(() => {
     const card = document.getElementById('travelMugVariantCard');
@@ -603,8 +638,8 @@ scenarios.backWorksAfterRecallWithNoCupRemembered = async (page) => {
 
   const back = await operable(page, '#approveBackBtn');
   if (!back.visible) return 'FAIL: the recalled result screen has no operable Back button';
-  await page.click('#approveBackBtn');
-  await T(page, 1400);
+  const presses = await backUntilCupPanel(page);
+  if (presses < 0) return 'FAIL: pressing Back again and again after recall never reached the cup panel';
 
   const after = await page.evaluate(() => {
     const card = document.getElementById('travelMugVariantCard');

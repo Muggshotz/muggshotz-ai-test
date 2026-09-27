@@ -1,5 +1,5 @@
 <!-- ============================================================
-     VERSION: V399
+     VERSION: V400
      ============================================================
      THE ONE LINE THAT SAYS WHICH BUILD YOU ARE LOOKING AT.
 
@@ -690,6 +690,15 @@ body.premades-focus :is(#generateBtn,#generateTokenNote,#finalGenerateGuidance,#
 #premadesCard .pm-dots{text-align:center;margin:.2rem 0 1.1rem}
 #premadesCard .pm-dots span{display:inline-block;width:10px;height:10px;border-radius:50%;border:1px solid #3d5577;margin:0 4px;cursor:pointer}
 #premadesCard .pm-dots span.on{background:#3d5577}
+#orderPageOverlay{position:fixed;inset:0;z-index:2147483000;background:#0b0f16}
+#orderPageOverlay iframe{display:block;width:100%;height:100%;border:0;background:#0b0f16}
+html.order-page-open,html.order-page-open body{overflow:hidden}
+#artworkOnlyStrip{display:flex;align-items:center;gap:12px;padding:.55rem .9rem;margin:0 0 .8rem;text-align:left}
+#artworkOnlyStrip .icon{margin:0;font-size:20px}
+#artworkOnlyStrip .ao-tx{flex:1;display:flex;flex-direction:column;line-height:1.3}
+#artworkOnlyStrip .ao-tx b{font-weight:600}
+#artworkOnlyStrip .ao-sub{font-size:11px;color:#29a3ff}
+#artworkOnlyStrip .ao-price{font-size:11px;color:#7ab8ff;font-weight:700;white-space:nowrap}
 #premadesCard .pm-prod{display:flex;align-items:center;gap:14px;padding:14px 4px;border-top:1px solid #1c2738;cursor:pointer}
 #premadesCard .pm-prod:last-child{border-bottom:1px solid #1c2738}
 #premadesCard .pm-prod img{width:96px;height:64px;object-fit:cover;border-radius:8px;flex:none;background:#000}
@@ -975,7 +984,7 @@ body.panels-active #verifyCard{display:none!important}
 </div>
 <!-- THE BASKET (23 Sep 2026): items added on the order page wait on this
      device; this is the way back to them from anywhere in the studio. -->
-<a id="basketPill" href="order.html" style="display:none;position:fixed;top:60px;right:16px;z-index:997;background:#0d0d0d;border:1px solid #003c8c;border-radius:20px;padding:.45rem .9rem;color:#7ab8ff;font-size:12px;font-weight:700;text-decoration:none;box-shadow:0 2px 10px rgba(0,0,0,0.6)">🧺 Basket (<b id="basketPillCount">0</b>) · Check out</a>
+<a id="basketPill" href="order.html" onclick="openOrderPage();return false;" style="display:none;position:fixed;top:60px;right:16px;z-index:997;background:#0d0d0d;border:1px solid #003c8c;border-radius:20px;padding:.45rem .9rem;color:#7ab8ff;font-size:12px;font-weight:700;text-decoration:none;box-shadow:0 2px 10px rgba(0,0,0,0.6)">🧺 Basket (<b id="basketPillCount">0</b>) · Check out</a>
 <script>
 (function basketPill(){
   function show(){
@@ -1781,7 +1790,7 @@ const HERO_SETTLE_MS = 1000;
 <div id="ideaGuidancePrompt" class="guidance-prompt" role="status" style="margin-top:8px;margin-bottom:0;cursor:pointer" onclick="ideaPromptClicked()">Click here when you are satisfied with your descriptive requests for the image.</div>
 </div>
 </div>
-<div class="card" id="productCard"><div class="card-title">🎁 Product</div><div class="guidance-prompt soft visible" id="productGuidancePrompt" role="status" style="margin-top:0;margin-bottom:.9rem">Please select your desired product below when ready.</div><div class="grid3"><div class="btn-select" data-val="mug" onclick="pick(this,'product')"><span class="icon">☕</span>Mug</div><div class="btn-select" data-val="greeting card" onclick="pick(this,'product')"><span class="icon">💌</span>Card</div><div class="btn-select" data-val="water bottle" onclick="pick(this,'product')"><span class="icon">🍶</span>Travel Cups</div><div class="btn-select" data-val="post-it note" onclick="pick(this,'product')"><span class="icon">📝</span>Post-it</div><div class="btn-select" data-val="phone case" onclick="pick(this,'product')"><span class="icon">📱</span>Phone case</div><div class="btn-select" data-val="tote bag" onclick="pick(this,'product')"><span class="icon">👜</span>Tote bag</div><div class="btn-select" data-val="suitcase" onclick="pick(this,'product')"><span class="icon">🧳</span>Suitcase</div><div class="btn-select" data-val="puzzle" onclick="pick(this,'product')"><span class="icon">🧩</span>Puzzle</div><div class="btn-select" data-val="photo poster" onclick="pick(this,'product')"><span class="icon">🖼️</span>Photo/Poster</div><div class="btn-select" data-val="coaster" onclick="pick(this,'product')"><span class="icon">☕</span>Coasters</div><div class="btn-select" data-val="mouse pad" onclick="pick(this,'product')"><span class="icon">🖱️</span>Mouse pad</div><div class="btn-select" data-val="wrapping paper" onclick="pick(this,'product')"><span class="icon">🎁</span>It's a Wrap<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Your own wrapping paper.</div></div><div class="btn-select" data-val="standee" onclick="pick(this,'product')"><span class="icon">🧍</span>From Where I Stand<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Acrylic standee, cut to shape.</div></div><div class="btn-select" data-val="ornament" onclick="pick(this,'product')"><span class="icon">🎄</span>Ornament<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Ceramic, for the tree.</div></div><div class="btn-select" data-val="playing cards" onclick="pick(this,'product')"><span class="icon">🃏</span>Just Playin'<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">A poker deck with your art on the back.</div></div><div class="btn-select" data-val="air freshener" onclick="pick(this,'product')"><span class="icon">🌲</span>Car Air Freshener<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Hangs from the mirror. Four scents.</div></div><div class="btn-select" data-val="doormat" onclick="pick(this,'product')"><span class="icon">🚪</span>Doormat<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">18 x 30 in, for the front door.</div></div><div class="btn-select" data-val="placemat" onclick="pick(this,'product')"><span class="icon">🍽️</span>Placemats<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">For the dinner table, grown-up or kids' size.</div></div><div class="btn-select" data-val="beer stein" onclick="pick(this,'product')"><span class="icon">🍺</span>Beer Stein<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">22oz ceramic with gold trim.</div></div><div class="btn-select" data-val="sticker sheet" onclick="pick(this,'product')"><span class="icon">⭐</span>Sticker Sheet<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Four die-cut vinyl stickers.</div></div><div class="btn-select" data-val="tshirt" onclick="pick(this,'product')"><span class="icon">👕</span>Apparel<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Tees, hoodies, sweatshirts. 11 styles.</div></div><div class="btn-select" data-val="calendar" onclick="pick(this,'product')"><span class="icon">📅</span>Desk Calendar<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Next year, 13 pages, dates included.</div></div><div class="btn-select" data-val="car magnet" onclick="pick(this,'product')"><span class="icon">🚗</span>Car Magnet<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Weatherproof vinyl, magnetic back.</div></div><div class="btn-select" data-val="luggage tag" onclick="pick(this,'product')"><span class="icon">🏷️</span>Luggage Tag<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Acrylic, leather strap, card slot.</div></div><div class="btn-select" data-val="business cards" onclick="pick(this,'product')"><span class="icon">💼</span>Business Cards<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Cards, boxed cards, a metal holder.</div></div><div class="btn-select" onclick="location.href='gift.html'"><span class="icon">💵</span>Gift Certificate<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Store credit, emailed to them.</div></div><div class="btn-select" data-val="artwork only" onclick="pick(this,'product')"><span class="icon">🖼️</span>Artwork Only<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">No product. Just creates an image for you to download.</div><div class="note" style="margin-top:2px;color:#7ab8ff;font-size:10px">1 token</div></div><div class="btn-select" id="premadesTile" onclick="openPremades()"><span class="icon">🎁</span>Pre-mades &amp; Sets<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Finished designs, ready to order.</div><div class="note" id="premadesTilePrice" style="margin-top:6px;color:#7ab8ff;font-weight:700;font-size:11px"></div></div><div class="btn-select" id="pitchInTile" onclick="openPitch('idea')"><span class="icon">💡</span>Pitch In<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Your idea, your cut.</div><div class="note" style="margin-top:6px;color:#7ab8ff;font-weight:700;font-size:11px">earn 5%</div></div></div>
+<div class="card" id="productCard"><div class="card-title">🎁 Product</div><div class="guidance-prompt soft visible" id="productGuidancePrompt" role="status" style="margin-top:0;margin-bottom:.9rem">Please select your desired product below when ready.</div><!-- ARTWORK ONLY, FIRST (Alyx, 27 Sep 2026: "a very long narrow panel that sits right above all of the product options ... at the very beginning, not at the very end"). No product: a picture to download. One strip across the top of the grid; it takes the customer straight to the description, as the describe path's "just the picture" does. --><div class="btn-select" id="artworkOnlyStrip" data-val="artwork only" onclick="pickArtworkOnly(this)"><span class="icon">🖼️</span><span class="ao-tx"><b>Artwork Only</b><span class="ao-sub">No product. Just a picture for you to download.</span></span><span class="ao-price">1 token</span></div><div class="grid3"><div class="btn-select" data-val="mug" onclick="pick(this,'product')"><span class="icon">☕</span>Mug</div><div class="btn-select" data-val="greeting card" onclick="pick(this,'product')"><span class="icon">💌</span>Card</div><div class="btn-select" data-val="water bottle" onclick="pick(this,'product')"><span class="icon">🍶</span>Travel Cups</div><div class="btn-select" data-val="post-it note" onclick="pick(this,'product')"><span class="icon">📝</span>Post-it</div><div class="btn-select" data-val="phone case" onclick="pick(this,'product')"><span class="icon">📱</span>Phone case</div><div class="btn-select" data-val="tote bag" onclick="pick(this,'product')"><span class="icon">👜</span>Tote bag</div><div class="btn-select" data-val="suitcase" onclick="pick(this,'product')"><span class="icon">🧳</span>Suitcase</div><div class="btn-select" data-val="puzzle" onclick="pick(this,'product')"><span class="icon">🧩</span>Puzzle</div><div class="btn-select" data-val="photo poster" onclick="pick(this,'product')"><span class="icon">🖼️</span>Photo/Poster</div><div class="btn-select" data-val="coaster" onclick="pick(this,'product')"><span class="icon">☕</span>Coasters</div><div class="btn-select" data-val="mouse pad" onclick="pick(this,'product')"><span class="icon">🖱️</span>Mouse pad</div><div class="btn-select" data-val="wrapping paper" onclick="pick(this,'product')"><span class="icon">🎁</span>It's a Wrap<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Your own wrapping paper.</div></div><div class="btn-select" data-val="standee" onclick="pick(this,'product')"><span class="icon">🧍</span>From Where I Stand<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Acrylic standee, cut to shape.</div></div><div class="btn-select" data-val="ornament" onclick="pick(this,'product')"><span class="icon">🎄</span>Ornament<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Ceramic, for the tree.</div></div><div class="btn-select" data-val="playing cards" onclick="pick(this,'product')"><span class="icon">🃏</span>Just Playin'<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">A poker deck with your art on the back.</div></div><div class="btn-select" data-val="air freshener" onclick="pick(this,'product')"><span class="icon">🌲</span>Car Air Freshener<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Hangs from the mirror. Four scents.</div></div><div class="btn-select" data-val="doormat" onclick="pick(this,'product')"><span class="icon">🚪</span>Doormat<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">18 x 30 in, for the front door.</div></div><div class="btn-select" data-val="placemat" onclick="pick(this,'product')"><span class="icon">🍽️</span>Placemats<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">For the dinner table, grown-up or kids' size.</div></div><div class="btn-select" data-val="beer stein" onclick="pick(this,'product')"><span class="icon">🍺</span>Beer Stein<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">22oz ceramic with gold trim.</div></div><div class="btn-select" data-val="sticker sheet" onclick="pick(this,'product')"><span class="icon">⭐</span>Sticker Sheet<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Four die-cut vinyl stickers.</div></div><div class="btn-select" data-val="tshirt" onclick="pick(this,'product')"><span class="icon">👕</span>Apparel<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Tees, hoodies, sweatshirts. 11 styles.</div></div><div class="btn-select" data-val="calendar" onclick="pick(this,'product')"><span class="icon">📅</span>Desk Calendar<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Next year, 13 pages, dates included.</div></div><div class="btn-select" data-val="car magnet" onclick="pick(this,'product')"><span class="icon">🚗</span>Car Magnet<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Weatherproof vinyl, magnetic back.</div></div><div class="btn-select" data-val="luggage tag" onclick="pick(this,'product')"><span class="icon">🏷️</span>Luggage Tag<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Acrylic, leather strap, card slot.</div></div><div class="btn-select" data-val="business cards" onclick="pick(this,'product')"><span class="icon">💼</span>Business Cards<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Cards, boxed cards, a metal holder.</div></div><div class="btn-select" onclick="location.href='gift.html'"><span class="icon">💵</span>Gift Certificate<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Store credit, emailed to them.</div></div><div class="btn-select" id="premadesTile" onclick="openPremades()"><span class="icon">🎁</span>Pre-mades &amp; Sets<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Finished designs, ready to order.</div><div class="note" id="premadesTilePrice" style="margin-top:6px;color:#7ab8ff;font-weight:700;font-size:11px"></div></div><div class="btn-select" id="pitchInTile" onclick="openPitch('idea')"><span class="icon">💡</span>Pitch In<div class="note" style="margin-top:4px;color:#29a3ff;font-size:10px;line-height:1.3">Your idea, your cut.</div><div class="note" style="margin-top:6px;color:#7ab8ff;font-weight:700;font-size:11px">earn 5%</div></div></div>
 <button type="button" class="download-btn" id="productCardBackBtn" style="margin-top:1rem" onclick="productCardBack()">← Back</button></div>
 
 <!-- PREMADES & SETS, QUIET THEN LOUD (Alyx, 26 Sep 2026: "we need to give
@@ -3350,6 +3359,7 @@ function enterDesignRevealedState(){
   // picture paints. Painting is over; disarm it for good rather than let it
   // keep yanking the page back every four seconds.
   generationBottomSnapArmed=false;
+  resultIsCurrent=true;
   refreshScrollPin();
 }
 // design-revealed deliberately does NOT end in -focus, so setOptionSpotlight's
@@ -4032,6 +4042,13 @@ function describeForkPickProduct(){
 
 // "Just the picture" -- there is no product, so the product IS 'artwork only'
 // and the grid is skipped entirely. Straight to the words.
+// The Artwork Only strip above the product grid: chosen like any product,
+// then straight to the description box, lit.
+function pickArtworkOnly(el){
+  pick(el,'product');
+  if(product!=='artwork only')return;
+  handOffToIdeaAfterProductChoice();
+}
 function describeForkPickArtworkOnly(){
   refreshIdeaPromptLabel();
   const overlay=document.getElementById('describeForkOverlay');
@@ -4248,7 +4265,9 @@ function styleStepBack(){
   const row=document.getElementById('postUploadForkRow');
   if(row)row.style.display='none';
   setOptionSpotlight(null);
-  smoothScrollToTarget('uploadPhotoCard','start');
+  // Back from Art Style is the question before it (see openingPageBack).
+  if(uploadedImageData){ openIntentGate(); return; }
+  openingPageBack();
 }
 
 function confirmStyleAndContinue(){
@@ -4767,7 +4786,7 @@ function toggleWorkingImage(){
 // Two copies of a number is exactly how the marker rotted in the first place,
 // so they are not trusted to agree: .githooks/pre-commit moves both together
 // and REFUSES the commit if it ever finds them apart.
-const APP_VERSION='V399';
+const APP_VERSION='V400';
 try{ console.log('%cNeedles\u2019 Studio '+APP_VERSION,'color:#29a3ff;font-weight:700'); }catch(e){}
 
 function getDeviceId(){
@@ -6645,6 +6664,12 @@ let mugPrintModeTouched=false;
 // hardcoded productCard destination.
 let selectedDesignMethod=null;
 let ideaReturnTarget=null;
+// Where the description box was reached from, for its Back (Alyx, 27 Sep
+// 2026: Back never jumps past a panel). ideaReturnTarget is spent the moment
+// the customer presses Satisfied, so a Back after the picture was made fell
+// through to the product grid, past the design method, print style and mug
+// style. This one is kept until the product changes.
+let ideaCameFromMethod=false;
 let frameGuidancePopupShown=false;
 let ideaBoxIntroShown=false;
 // NEW (Aug 2026, Alyx's request): Mug is pre-selected by default, but
@@ -9210,6 +9235,7 @@ function clearFunPropsDecline(){
 // rather than any prop screen.
 function continueWithDescriptionOnly(){
   ideaReturnTarget='descriptionOnly';
+  ideaCameFromMethod=true;
   document.getElementById('designMethodCard').style.display='none';
   document.body.classList.remove('design-method-focus');
   document.body.classList.add('idea-focus');
@@ -9238,6 +9264,14 @@ function designMethodBack(){
     const printCard=document.getElementById('mugPrintModeCard');
     const printVisible=printCard && printCard.style.display!=='none';
     smoothScrollToTarget(printVisible?'mugPrintModeCard':'travelMugVariantCard','center');
+    return;
+  }
+  // A mug's panel before this one is Print Style (Alyx, 27 Sep 2026: Back
+  // never jumps past a panel); this reopened the mug's style, skipping it.
+  const printCard=document.getElementById('mugPrintModeCard');
+  if(product==='mug' && printCard && printCard.style.display!=='none'){
+    setOptionSpotlight('print-mode-focus');
+    smoothScrollToTarget('mugPrintModeCard','center');
     return;
   }
   mugColorFinishedPreGen=false;
@@ -11017,8 +11051,11 @@ function showCoverMePanelCard(){
   document.getElementById('coverMePanelCard').style.display='block';
   const chooser=document.getElementById('coverMePanelChooser');
   if(chooser)chooser.style.display=cupUsesFitStep()?'none':'';
+  // Every panel has a Back (Alyx, 27 Sep 2026): it was shown only for a
+  // customer's own art, so an AI-made mug's Fit Your Picture had none, and the
+  // nearest Back on the page belonged to a panel six screens earlier.
   const panelBack=document.getElementById('coverMePanelBackBtn');
-  if(panelBack)panelBack.style.display=(product==='mug'&&byoDeclaredIntent==='byo')?'block':'none';
+  if(panelBack)panelBack.style.display='block';
   // A design already exists by this point -- Generate sitting further down
   // the page just duplicates what Done already does, and re-clicking it
   // would silently re-run the whole generation pipeline from scratch.
@@ -13105,7 +13142,7 @@ function goToSurpriseOrder(){
     preselectedSurpriseHand:selectedSurpriseHand
   };
   localStorage.setItem('muggshotz_pending_order',JSON.stringify(orderData));
-  window.location.href='order.html';
+  openOrderPage();
 }
 
 // PREMADES & SETS (Alyx, 26 Sep 2026: "this set is going to go into a whole
@@ -13170,8 +13207,14 @@ const PREMADE_CATEGORIES={
   'placemats':{label:'Placemats',icon:'🍽️',dir:'art/placemats',show:[900,616],line:'Neoprene placemat, 18 x 12 in',
     pic:'dino-pals',sub:'For the dinner table · one or a set of two',
     order:{family:'placemat',kind:'Neoprene'},packs:[{n:1,label:'Just one',price:13.95},{n:2,label:'A set of two',price:24.95}],
+    // A design painted at another placemat's shape orders as that one
+    // (kind), at its own shape, price and picture size: Bud's 24 x 14 designs
+    // are the Large placemat (Alyx, 27 Sep 2026), never cut to the neoprene's.
+    kinds:{'Large':{show:[900,533],line:'Large placemat, 24 x 14 in'}},
     items:[
-      {key:'dino-valley',label:'Dino Valley'},{key:'dino-pals',label:'Dino Pals'},{key:'feed-me',label:'Feed Me!'}
+      {key:'dino-valley',label:'Dino Valley'},{key:'dino-pals',label:'Dino Pals'},{key:'feed-me',label:'Feed Me!'},
+      {key:'turntable',label:'Turntable',kind:'Large'},{key:'koi-pond',label:'Koi Pond',kind:'Large'},
+      {key:'knights-table',label:"Knight's Table",kind:'Large'},{key:'lift-off',label:'Lift Off',kind:'Large'}
     ]}
 };
 // The mats' list by its old name (the tests and the ?set links read it).
@@ -13187,7 +13230,15 @@ function premadeCat(){ return PREMADE_CATEGORIES[premadesCategory]||null; }
 function liveCategories(){ return Object.keys(PREMADE_CATEGORIES).filter(k=>PREMADE_CATEGORIES[k].items.length); }
 // The holidays with mugs on sale.
 function liveHolidays(){ return PREMADE_OCCASIONS.filter(o=>o.set&&SURPRISE_SETS[o.set]); }
-function catFrom(c){ return Math.min(...c.packs.map(p=>p.price)); }
+// A design's own picture size, line and prices: its kind's, else its category's.
+function itemSpec(c,x){
+  const k=x&&x.kind&&c.kinds&&c.kinds[x.kind];
+  if(!k)return {show:c.show,line:c.line,packs:c.packs,kind:c.order.kind};
+  const o=(typeof PLACEMAT_OPTIONS!=='undefined'&&PLACEMAT_OPTIONS[x.kind])||null;
+  const packs=o?[{n:1,label:'Just one',price:o.price},{n:2,label:'A set of two',price:o.setPrice}]:c.packs;
+  return {show:k.show||c.show,line:k.line||c.line,packs,kind:x.kind};
+}
+function catFrom(c){ return Math.min(...c.items.flatMap(x=>itemSpec(c,x).packs.map(p=>p.price)),...c.packs.map(p=>p.price)); }
 function premadesFromPrice(){ return '$'+Math.min(SMART_MUG_PRICE,...Object.values(PREMADE_CATEGORIES).filter(c=>c.items.length).map(catFrom)).toFixed(2); }
 function premadeOccasion(){ return PREMADE_OCCASIONS.find(o=>o.key===premadesOccasion)||null; }
 // The holidays across the top of the mugs: the live ones, and those to come.
@@ -13241,24 +13292,24 @@ function renderPremades(){
       +step(7,'Mix and match.','Pick any four mugs for a set, '+$(SMART_MUG_SET_PRICE)+'. The same one four times if you like. Add more to a set at '+$(SMART_MUG_EXTRA_PRICE)+' each, or buy one on its own for '+$(SMART_MUG_PRICE)+'.','')
       +'<button type="button" class="generate-btn" id="premadesShelfBtn" onclick="premadesGo(\'shelf\')">'+PREMADE_MUGS.icon+' See all the mugs and build your set</button>';
   } else if(premadesView==='gallery'&&premadeCat()){
-    const c=premadeCat(), m=c.items[premadesIndex]||c.items[0], [sw,sh]=c.show, pack=c.packs.find(p=>p.n===premadesPack)||c.packs[0];
+    const c=premadeCat(), m=c.items[premadesIndex]||c.items[0], spec=itemSpec(c,m), [sw,sh]=spec.show, pack=spec.packs.find(p=>p.n===premadesPack)||spec.packs[0];
     title.textContent=c.icon+' '+c.label;
     const layout='<div class="pm-layout" data-words="how to browse: the designs carry the pictures">'
       +[['one','One at a time'],['all','All at once']].map(([k,l])=>'<button type="button" class="pm-lay'+(premadesLayout===k?' on':'')+'" data-layout="'+k+'" onclick="premadesSetLayout(\''+k+'\')">'+l+'</button>').join('')+'</div>';
-    const packs=c.packs.length>1?'<div class="grid2" id="premadesPackGrid" data-words="how many: the design above is the picture" style="margin:.2rem 0 1rem">'
-      +c.packs.map(p=>'<div class="btn-select'+(p.n===pack.n?' selected':'')+'" data-pack="'+p.n+'" onclick="pickPremadesPack('+p.n+')" style="padding:.6rem">'+p.label+'<div class="note" style="margin-top:4px">'+$(p.price)+'</div></div>').join('')+'</div>':'';
+    const packs=spec.packs.length>1?'<div class="grid2" id="premadesPackGrid" data-words="how many: the design above is the picture" style="margin:.2rem 0 1rem">'
+      +spec.packs.map(p=>'<div class="btn-select'+(p.n===pack.n?' selected':'')+'" data-pack="'+p.n+'" onclick="pickPremadesPack('+p.n+')" style="padding:.6rem">'+p.label+'<div class="note" style="margin-top:4px">'+$(p.price)+'</div></div>').join('')+'</div>':'';
     if(premadesLayout==='all'){
       view.innerHTML=premadesCrumb([c.label])+layout
-        +'<div class="grid2" id="premadesAll">'+c.items.map((x,i)=>'<div class="btn-select" data-item="'+x.key+'" style="padding:.4rem" onclick="premadesShowOne('+i+')">'
-          +'<img src="'+c.dir+'/show/'+x.key+'.jpg" width="'+sw+'" height="'+sh+'" alt="" loading="lazy" style="width:100%;height:auto;border-radius:6px;margin-bottom:4px"/>'+x.label
-          +'<div class="note" style="margin-top:2px">'+$(catFrom(c))+'</div></div>').join('')+'</div>';
+        +'<div class="grid2" id="premadesAll">'+c.items.map((x,i)=>{ const xs=itemSpec(c,x); return '<div class="btn-select" data-item="'+x.key+'" style="padding:.4rem" onclick="premadesShowOne('+i+')">'
+          +'<img src="'+c.dir+'/show/'+x.key+'.jpg" width="'+xs.show[0]+'" height="'+xs.show[1]+'" alt="" loading="lazy" style="width:100%;height:auto;border-radius:6px;margin-bottom:4px"/>'+x.label
+          +'<div class="note" style="margin-top:2px">'+$(Math.min(...xs.packs.map(p=>p.price)))+'</div></div>'; }).join('')+'</div>';
     } else {
       view.innerHTML=premadesCrumb([c.label])+layout
         +'<div class="pm-mat"><img class="pm-big" id="premadesMatPic" src="'+c.dir+'/show/'+m.key+'.jpg" width="'+sw+'" height="'+sh+'" alt="'+m.label+'"/>'
         +'<button type="button" class="pm-arr" style="left:-12px" aria-label="Previous" onclick="premadesStep(-1)">‹</button>'
         +'<button type="button" class="pm-arr" style="right:-12px" aria-label="Next" onclick="premadesStep(1)">›</button></div>'
         +'<div class="pm-name" id="premadesMatName">'+m.label+'</div>'
-        +'<div class="pm-line" style="margin-bottom:.5rem">'+c.line+' · '+$(pack.price)+'</div>'
+        +'<div class="pm-line" style="margin-bottom:.5rem">'+spec.line+' · '+$(pack.price)+'</div>'
         +'<div class="pm-dots">'+c.items.map((x,i)=>'<span class="'+(i===premadesIndex?'on':'')+'" onclick="premadesStep('+(i-premadesIndex)+')"></span>').join('')+'</div>'
         +packs
         +'<button type="button" class="generate-btn" id="premadesMatOrderBtn" onclick="goToPremadeOrder()">'+c.icon+' Order this '+(pack.n>1?'set':'one')+' · '+$(pack.price)+'</button>';
@@ -13432,7 +13483,7 @@ function goToPremadeSetOrder(mugs){
     surpriseSetPrints:urls,
     preselectedSurpriseHand:premadesHand
   }));
-  window.location.href='order.html';
+  openOrderPage();
 }
 // A premade design, ordered as its category's product with the design's print
 // file as the picture: the doormat, or a placemat of the category's kind, one
@@ -13445,9 +13496,9 @@ function goToPremadeOrder(){
     productIcon:c.order.family,
     premadeItem:premadesCategory+'/'+m.key
   };
-  if(c.order.family==='placemat'){ pending.preselectedPlacemat=c.order.kind; pending.preselectedPlacematPack=premadesPack===2?2:1; }
+  if(c.order.family==='placemat'){ pending.preselectedPlacemat=itemSpec(c,m).kind; pending.preselectedPlacematPack=premadesPack===2?2:1; }
   localStorage.setItem('muggshotz_pending_order',JSON.stringify(pending));
-  window.location.href='order.html';
+  openOrderPage();
 }
 const goToPremadeMatOrder=goToPremadeOrder;
 ['premadesTilePrice','premadesFrontPrice'].forEach(id=>{ const el=document.getElementById(id); if(el)el.textContent='from '+premadesFromPrice(); });
@@ -13910,6 +13961,7 @@ function refreshPhotoPosterVisibility(){
 }
 
 function pick(el,type){
+  if(type==='product')ideaCameFromMethod=false;
   // TIER B OF THE OFF-RAIL LADDER (Alyx's design, 2026-08-28): a deviation
   // that is rational but COSTLY gets exactly one question, phrased as the
   // cost. Switching products before generating is tier a -- free, silent,
@@ -13927,7 +13979,10 @@ function pick(el,type){
       if(!ok)return;
     }
   }
-  el.closest('.grid3,.grid2').querySelectorAll('.btn-select').forEach(b=>b.classList.remove('selected'));
+  // A product is chosen across the whole panel: the grid and the Artwork
+  // Only strip above it are one choice.
+  const scope=(type==='product'&&el.closest('#productCard'))||el.closest('.grid3,.grid2')||el.parentElement;
+  scope.querySelectorAll('.btn-select').forEach(b=>b.classList.remove('selected'));
   el.classList.add('selected');
   if(type==='product'){
     product=el.dataset.val;
@@ -17634,6 +17689,7 @@ function productRailIsComplete(){
 // -- colour AND cup type -- are on the screen he lands on. Every other product
 // keeps the idea box it has always had.
 function resultScreenBack(){
+  resultIsCurrent=false;
   clearAllFocusModes();
   // NO CUP REQUIRED (Alyx, Sep 2026, second pass). This first read
   // "&& selectedTravelProductKey", which made the fix fail in the exact state he
@@ -17649,11 +17705,29 @@ function resultScreenBack(){
   // destination is the cup/colour card either way: with a cup it shows that
   // cup and its palette, without one it shows all six, which is still the
   // right place to stand and is strictly better than the top of the rail.
-  if(product==='water bottle'){
-    goBackToTravelColor();
+  // BACK MUST MOVE (Alyx, 27 Sep 2026: "successively click back it
+  // successively takes you back never forward"). This only scrolled to the
+  // idea box, with nothing lit -- and with the finished picture still up and
+  // no spotlight, the scroll pin holds the page on the picture, so it dragged
+  // the page straight back: ten presses, not one pixel moved. Lighting the
+  // idea box (as Back under Generate does) makes it the panel the customer is
+  // on, the pin follows it, and its own Back carries on down the rail.
+  // Where the way in stopped on Generate (the description, Satisfied, then
+  // Generate), Back stops there too; its own Back is the description.
+  //
+  // ONE SCREEN AT A TIME, THE TRAVEL CUP TOO (Alyx, 27 Sep 2026: "every single
+  // product on every single flow path"). A travel cup's Back from the picture
+  // went straight to the cup-and-colour card, past Generate, the description,
+  // the design method and Print Style; it now steps back like every product,
+  // and the colour card is reached by pressing Back again.
+  if(generatedFromGenerateStep){
+    setOptionSpotlight('generate-focus');
+    const guide=document.getElementById('finalGenerateGuidance');
+    if(guide)guide.classList.add('visible');
+    smoothScrollToTarget('generateBtn','center');
     return;
   }
-  smoothScrollToTarget('ideaCard','center');
+  handOffToIdeaAfterProductChoice();
 }
 function trackForkBack(){
   // Back from the fork is Art Style: its Continue, its Back and its
@@ -17662,6 +17736,8 @@ function trackForkBack(){
 }
 function printModeBack(){
   if(product==='water bottle'){ smoothScrollToTarget('travelMugVariantCard','center'); return; }
+  // A mug's panel before Print Style is its style and colour.
+  if(product==='mug'){ clearAllFocusModes(); goBackToMugStyle(); return; }
   smoothScrollToTarget('productCard','start');
 }
 // A DEAD END (Alyx, Sep 2026: "the back button doesn't do anything... I click on
@@ -17749,11 +17825,23 @@ function toteColorBack(){
 // product, and from its own fork elsewhere; back goes wherever it came from.
 function ideaStepBack(){
   clearAllFocusModes();
-  if(ideaReturnTarget==='descriptionOnly' && typeof showDesignMethodCard==='function'){
+  if((ideaReturnTarget==='descriptionOnly'||ideaCameFromMethod) && typeof showDesignMethodCard==='function'){
     showDesignMethodCard();
     return;
   }
   // The card this product's option was picked on, and its spotlight.
+  // A travel cup's panels before the description: Print Style, else the
+  // cup-and-colour card (which shows all six when no cup is remembered).
+  if(product==='water bottle'){
+    const printCard=document.getElementById('mugPrintModeCard');
+    if(printCard && printCard.style.display!=='none' && selectedTravelProductKey){
+      setOptionSpotlight('print-mode-focus');
+      smoothScrollToTarget('mugPrintModeCard','center');
+      return;
+    }
+    goBackToTravelColor();
+    return;
+  }
   const OPTION_CARD_OF={
     'coaster':['coasterShapeCard','coaster-shape-focus'],
     'ornament':['ornamentShapeCard','ornament-shape-focus'],
@@ -17801,6 +17889,7 @@ function restoreApproveDecision(){
   currentDesignId=snap.designId;
   const approveRow=document.getElementById('approveRow');
   if(approveRow)approveRow.style.display='';
+  resultIsCurrent=true;
   const dl=document.getElementById('downloadDesignBtn');
   if(dl)dl.style.display='';
   try{ renderRecentDesigns(); renderPositionHolder(); updatePlacementSummary(); saveMugState(); }catch(e){}
@@ -17865,6 +17954,15 @@ window.addEventListener('resize',()=>{ const o=document.getElementById('frameFad
 // screen that dims the rest of the page is automatically the only screen.
 const SCROLL_PIN_SLACK=28;
 let scrollPinRaf=0, scrollPinListening=false;
+// THE CUSTOMER IS ON THE RESULT (Alyx, 27 Sep 2026: "successively click back
+// it successively takes you back never forward"). The finished picture stays
+// on the page after a Back leaves it -- it is kept, not thrown away -- and
+// while it was up with nothing lit the pin held the page on it, so every Back
+// that went to an unlit place (the product grid, the idea box) was dragged
+// straight back to the picture: Back did nothing, or seemed to go forward.
+// The picture holds the page only while the customer is on it: set when it is
+// revealed or brought back, cleared when a Back leaves it.
+let resultIsCurrent=false;
 let focusCardMap=null;
 function focusCardFor(cls){
   if(!focusCardMap){
@@ -17932,8 +18030,10 @@ function scrollPinTargets(){
     const litId=lit?focusCardFor(lit):null;
     const litCard=litId?document.getElementById(litId):null;
     if(vis(litCard))return [litCard,litCard];
-    const pic=document.getElementById('previewImg');
-    return [vis(pic)?pic:row,row];
+    if(resultIsCurrent){
+      const pic=document.getElementById('previewImg');
+      return [vis(pic)?pic:row,row];
+    }
   }
   if(cls.includes('generation-active')){
     const stage=document.getElementById('needlesStageWrap');
@@ -21418,7 +21518,11 @@ async function callGenerateAPI({ workingImage, prompt, refImageA, refImageB, tem
   }
 }
 
+// Whether this picture was made from the Generate step (the page lit on
+// Generate, its Back beneath it), so Back from the picture stops there too.
+let generatedFromGenerateStep=false;
 async function generate(){
+  generatedFromGenerateStep=/\b(final-)?generate-focus\b/.test(document.body.className);
   if(product==='smart mug'){ smoothScrollToTarget('surpriseCard','center'); return; }
   // An exact transfer never calls the AI, so it costs no image credits --
   // an out-of-credits customer must NOT be blocked from it. A declared-BYO
@@ -24373,6 +24477,35 @@ async function hostRawDesignsBeforeCheckout(){
   if(jobs.length)await Promise.all(jobs);
   return jobs.length;
 }
+// THE ORDER PAGE OPENS ON TOP OF THE STUDIO (Alyx, 27 Sep 2026: "if it takes
+// you to check out then you should be able to back out of there. Maybe you
+// forgot something and wanna add it."). Checkout used to leave the studio for
+// order.html, and the order page's Back loaded the studio fresh: the opening
+// page, the product and the design gone. Nothing is paid until Continue to
+// Payment, so the order page is still a screen you can back out of. It opens
+// here, over the studio, in a frame; its Back (and the phone's own Back)
+// closes it, and the customer is on the screen they pressed Checkout on, with
+// every Back from there still working. Payment leaves for the payment page
+// from inside it, as before.
+function openOrderPage(){
+  let ov=document.getElementById('orderPageOverlay');
+  if(ov)ov.remove();
+  ov=document.createElement('div');
+  ov.id='orderPageOverlay';
+  ov.innerHTML='<iframe id="orderPageFrame" title="Your order" src="order.html?embedded=1"></iframe>';
+  document.body.appendChild(ov);
+  document.documentElement.classList.add('order-page-open');
+  try{ history.pushState({orderPage:1},'',location.href); }catch(e){}
+}
+function closeOrderPage(fromHistory){
+  const ov=document.getElementById('orderPageOverlay');
+  if(!ov)return;
+  ov.remove();
+  document.documentElement.classList.remove('order-page-open');
+  if(!fromHistory && history.state && history.state.orderPage){ try{ history.back(); }catch(e){} }
+}
+window.closeOrderOverlay=()=>closeOrderPage(false);
+window.addEventListener('popstate',()=>{ if(document.getElementById('orderPageOverlay'))closeOrderPage(true); });
 async function goToOrder(){
   // Artwork Only has no product to order (see approveDesign); never send it on.
   if(product==='artwork only')return;
@@ -24453,7 +24586,7 @@ async function goToOrder(){
     preselectedPhoneFinish: (product==='phone case') ? selectedPhoneCaseFinish : null
   };
   localStorage.setItem('muggshotz_pending_order', JSON.stringify(orderData));
-  window.location.href = 'order.html';
+  openOrderPage();
 } let currentGenerationController=null;
 function cancelGeneration(){
   if(currentGenerationController){
@@ -24782,6 +24915,7 @@ function recallLastGeneratedImage(){
     if(product){
       clearAllFocusModes();
       document.getElementById('approveRow').style.display='block';
+      resultIsCurrent=true;
       smoothScrollToTarget('approveRow','center');
     } else {
       recalledDesignAwaitingApproval=true;
@@ -25152,21 +25286,30 @@ async function ensureByoUploaded(){
 // their work intact. Upload -> intent gate -> product -> size -> style &
 // colour -> Fit Your Picture -> frame offer -> edge question -> mockup ->
 // What's Next. Size and style already had theirs; these fill the gaps.
+// THE TOP OF THE RAIL, BACKWARDS (Alyx, 27 Sep 2026: "you should be able to
+// go all the way back to the very beginning screen by simply successively
+// clicking the back button"). Forward is: the opening page, a photo lands,
+// How Will You Get Your Art?, then Art Style (for the AI; the BYO customer
+// goes straight to the products), then the product grid. Back is that list
+// reversed, one screen at a time. The grid's Back used to skip Art Style for
+// the question, Art Style's only scrolled, and the question's opened the file
+// picker -- a Back that went nowhere.
+function openingPageBack(){
+  clearAllFocusModes();
+  document.body.classList.add('initial-upload-focus');
+  smoothScrollToTarget('uploadPhotoCard','start');
+}
 function intentGateBack(){
   const overlay=document.getElementById('intentGateOverlay');
   if(overlay)overlay.style.display='none';
   document.body.classList.remove('step-locked');
-  const fi=document.getElementById('fileInput');
-  if(fi)fi.click();
+  openingPageBack();
 }
 function productCardBack(){
-  const overlay=document.getElementById('intentGateOverlay');
-  if(!overlay||!uploadedImageData){
-    document.getElementById('uploadPhotoCard')?.scrollIntoView({behavior:'smooth',block:'start'});
-    return;
-  }
-  overlay.style.display='flex';
-  document.body.classList.add('step-locked');
+  if(!uploadedImageData){ openingPageBack(); return; }
+  if(byoDeclaredIntent!=='byo'){ clearAllFocusModes(); showPostUploadFork(); return; }
+  clearAllFocusModes();
+  openIntentGate();
 }
 // Set when the BYO picture has been placed on the panels; lets a trip back
 // to the mug style & colour screen return to the SAME panels on Satisfied
@@ -25175,6 +25318,13 @@ let byoPanelsLive=false;
 function coverMePanelBack(){
   coverMePanelAutoScrollToken++;
   document.getElementById('coverMePanelCard').style.display='none';
+  // Reached by Yes under a finished picture: Back is that picture again.
+  if(approveUndoSnapshot){
+    const gen=document.getElementById('generateBtn');
+    if(gen)gen.style.display='';
+    restoreApproveDecision();
+    return;
+  }
   if(product==='mug'){
     goBackToMugStyle();
     return;

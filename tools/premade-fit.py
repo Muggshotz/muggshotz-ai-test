@@ -10,6 +10,7 @@ from PIL import Image
 CATEGORIES = {
     'welcome-mats': ('art/unwelcome', (4650, 2850), (900, 552)),   # the doormat
     'placemats':    ('art/placemats', (5610, 3839), (900, 616)),   # the neoprene placemat
+    'placemats-large': ('art/placemats', (7350, 4350), (900, 533)),  # the Large (24 x 14) placemat
 }
 cat, key, src = sys.argv[1:4]
 folder, (pw, ph), (sw, sh) = CATEGORIES[cat]

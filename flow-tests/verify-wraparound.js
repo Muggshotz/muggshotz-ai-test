@@ -1068,8 +1068,10 @@ scenarios.theFramesAreWarmedWhenTheStudioOpens = async (page) => {
 
 // ART STYLE HAS A BACK (Alyx, v94): "There is no back button anywhere on
 // this page... My only recourse is to completely exit the entire program."
-// Every panel gets a Back. Here Back is back to the photo: the spotlight
-// lifts, the step puts itself away, and the upload boards are back in view.
+// Every panel gets a Back, and Back is the screen before (Alyx, 27 Sep 2026:
+// "successively click back it successively takes you back"): Art Style's Back
+// is How Will You Get Your Art?, and that question's Back is the opening
+// page, lit as it was, with the upload boards in view.
 scenarios.artStyleHasABackButton = async (page) => {
   const r = await page.evaluate(async () => {
     const back = document.getElementById('styleBackBtn');
@@ -1081,6 +1083,12 @@ scenarios.artStyleHasABackButton = async (page) => {
     out.spotlitAfter = document.body.classList.contains('style-focus');
     out.continueHidden = !vis(document.getElementById('styleContinueBtn'));
     out.forkHidden = !vis(document.getElementById('postUploadForkRow'));
+    const gate = document.getElementById('intentGateOverlay');
+    out.question = !!gate && getComputedStyle(gate).display !== 'none';
+    if (out.question) [...gate.querySelectorAll('button')].find((b) => /Back/.test(b.innerText)).click();
+    await new Promise((r2) => setTimeout(r2, 1500));
+    out.questionClosed = !!gate && getComputedStyle(gate).display === 'none';
+    out.opening = document.body.classList.contains('initial-upload-focus');
     const up = document.getElementById('uploadPhotoCard').getBoundingClientRect();
     out.uploadInView = up.bottom > 0 && up.top < window.innerHeight;
     out.boardStillTappable = !!document.getElementById('uploadZone') && !!document.getElementById('aiCollabUploadBtn');
@@ -1091,9 +1099,11 @@ scenarios.artStyleHasABackButton = async (page) => {
   if (!r.spotlitBefore) return 'FAIL: Art Style was not spotlit before Back (test setup)';
   if (r.spotlitAfter) return 'FAIL: Back left the Art Style spotlight on';
   if (!r.continueHidden || !r.forkHidden) return 'FAIL: Back left the step on screen: ' + JSON.stringify(r);
+  if (!r.question) return 'FAIL: Back from Art Style did not go to How Will You Get Your Art?: ' + JSON.stringify(r);
+  if (!r.questionClosed || !r.opening) return 'FAIL: Back from the question did not go to the opening page: ' + JSON.stringify(r);
   if (!r.uploadInView) return 'FAIL: Back did not bring the upload boards into view: ' + JSON.stringify(r);
   if (!r.boardStillTappable) return 'FAIL: the upload boards are gone';
-  return `PASS: "${r.label}" under Art Style lifts the spotlight, puts the step away and lands on the upload boards`;
+  return `PASS: "${r.label}" under Art Style lifts the spotlight, puts the step away and opens How Will You Get Your Art?, whose Back is the opening page with the upload boards`;
 };
 
 // THE TUNDRA'S FULL WRAP (Alyx, Sep 2026: "B plus D"). The 30oz band is

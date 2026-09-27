@@ -210,7 +210,7 @@ scenarios.roundCoasterReachesTheOrder = async (page, log, mockupBodies) => {
   // exists once goToOrder() actually runs, and "undefined" told us nothing
   // about whether the shape is carried.
   await page.evaluate(() => goToOrder());
-  await page.waitForURL(/order\.html/, { timeout: 15000 }).catch(() => {});
+  await page.waitForSelector('#orderPageFrame', { timeout: 15000 }).catch(() => {});
   const carried = await page.evaluate(() => {
     try { return JSON.parse(localStorage.getItem('muggshotz_pending_order') || '{}').coasterShape; }
     catch (e) { return 'unreadable'; }

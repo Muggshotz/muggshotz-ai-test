@@ -92,6 +92,15 @@ over the old ones. Every panel a customer stops on, new or old, has:
 to Generate and back to the grid, on a laptop and a phone, and fails on any of
 the five. A new product is not done until it passes.
 
+**Back goes all the way back.** Alyx, 27 Sep 2026: *"For every single product on
+every single flow path, You should be able to go all the way back to the very
+beginning screen by simply successively clicking the back button. All the way
+up to check out."* Checkout opens the order page over the studio; its Back
+returns to the Checkout screen. Only Continue to Payment is past the point of no
+return. `flow-tests/verify-back-all-the-way.js` walks every product from the
+opening page to Checkout and back, and fails on a Back that stalls, goes
+forward, skips a screen or loops.
+
 ## Paint it in one pass, into its own shape
 
 Alyx, 23 Sep 2026: *"We shouldn't force the AI to try to stitch pictures
