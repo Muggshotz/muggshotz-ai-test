@@ -166,20 +166,17 @@ Pitch In. The grid is three across today (needles-studio.html, #productCard
     say if it shows. The mat names are Claude's; Alyx to rename freely.
   - Christmas, Halloween and Valentine's Day show as "soon" until their sets
     and flyers exist.
-  - NEXT (Alyx, 26 Sep, not yet built): holiday mugs sold singly and "build
-    your own four". The curated set stays the default; a customer can pick
-    any four holiday mugs for the set's $59.95, or buy one at **$19.95**,
-    the same as a single SURPRISE!!! smart mug (Alyx, 26 Sep; he first said
-    $17.95, then settled on matching the singles).
-    Extra mugs added to an order that has a set: **$17.95** each, $2 off
-    the single (Alyx, 26 Sep). The server prices all of it and gives the
-    discount only when a set is in the same order.
-    The choices (set $59.95 / single $19.95 / extra with a set $17.95) are
-    explained at the end of How the magic mug works, one quiet step after
-    the hand (Alyx, 26 Sep), built in the same change as the selling. The picker shows one mug at a time, not a wall of them.
-    Checkout takes the four chosen designs and checks each against the
-    server's list. Golden Brown is the 5th, ad-only and on How it works; Thankful
-    (Claude's) went to Bud next.
+  - BUILT (27 Sep): the holiday shelf. Thanksgiving opens on its nine mugs,
+    one at a time or all at once; any four (repeats welcome) are the set at
+    $59.95, each more $17.95, under four $19.95 each (lib/surprise-sets.js
+    holidayPrice, the server's rule). How it works is a button on the shelf
+    and ends on the prices; the flyer's QR (?set=thanksgiving) opens How it
+    works, which goes on to the shelf. A new mug: tools/surprise/holiday-mug.py
+    on the artist's file, then one line in lib/surprise-sets.js and one in
+    needles-studio.html's SURPRISE_SETS.
+    The printed flyer (art/flyers/thanksgiving.webp) still advertises the
+    fixed four at $59.95 and is no longer shown on the site; Alyx: the flyer
+    should say sets are built from any mugs.
   Finished designs, nothing painted:
   pick, choose options, order. Holds:
   - Ewww Stew (the code already reserves an all-over print for it:

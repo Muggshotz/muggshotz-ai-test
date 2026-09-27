@@ -1,16 +1,19 @@
-// THE SURPRISE!!! HOLIDAY SETS (Alyx, 26 Sep 2026: "a set of four different
-// themes. Each one is a different scene but they're all a part of the same
-// set"; $59.95). What this pins:
-//   * the studio's copy of the sets, and the order page's, match the server's
-//     (lib/surprise-sets.js), and both prices match the catalog's set price;
-//   * every design has both prints at the mug's 2475 x 1155, its COLD -> HOT
-//     picture and its tile, and every set has its tile; each right-handed
-//     print's LEFT half is its tile (the punchline, as for the singles);
-//   * the set sits in the SURPRISE!!! panel with its picture and price;
-//     picking it shows its four mugs cold then hot, and hands the set and the
-//     hand to the order page, which shows the four, prices the set, asks
-//     Printify for no mockup, and checks out smart-mug-set / Set of 4 with
-//     the set and the hand -- and no artwork of its own.
+// THE SURPRISE!!! HOLIDAY MUGS (Alyx, 26-27 Sep 2026: mix and match, "you
+// decide the participants"; any four $59.95, more with a set $17.95 each, one
+// alone $19.95). What this pins:
+//   * the studio's copy of the holiday's mugs, and the order page's, match the
+//     server's (lib/surprise-sets.js), and the prices match the catalog's;
+//   * every mug has both prints at the mug's 2475 x 1155, its COLD -> HOT
+//     picture, its shelf picture and its tile; each right-handed print's LEFT
+//     half is its tile (the punchline, as for the singles);
+//   * Pre-mades opens the holiday on its shelf: every mug, one at a time or
+//     all at once, each added to "your mugs" (repeats and all) or bought
+//     alone; How it works is a button away and ends on the prices; Back is
+//     always the view before;
+//   * the order page shows the mugs chosen, prices them by the rule, asks
+//     Printify for no mockup, and checks out the holiday, the hand and the
+//     mugs by key -- and no artwork of its own;
+//   * the flyer's link opens How it works, which goes on to the shelf.
 const fs = require('fs');
 const path = require('path');
 const { pathToFileURL } = require('url');
@@ -67,15 +70,20 @@ scenarios.theThreeListsAndTheFiles = async (page) => {
   const bad = [];
   if (pageConst(studio, 'SMART_MUG_SET_PRICE') !== price) bad.push(`the studio's set price is not the catalog's $${price}`);
   if (pageConst(order, 'SMART_MUG_SET_PRICE') !== price) bad.push(`the order page's set price is not the catalog's $${price}`);
+  const extra = PRODUCTS_CATALOG['smart-mug-set'].extraPrice, single = PRODUCTS_CATALOG['smart-mug'].sizes['11oz'].price;
+  for (const [name, src] of [['studio', studio], ['order page', order]]) {
+    if (pageConst(src, 'SMART_MUG_EXTRA_PRICE') !== extra) bad.push(`the ${name}'s extra-mug price is not the catalog's $${extra}`);
+    if (pageConst(src, 'SMART_MUG_PRICE') !== single) bad.push(`the ${name}'s single price is not the catalog's $${single}`);
+  }
   const live = Object.entries(SURPRISE_SETS).filter(([, s]) => s.live);
   const studioSets = pageConst(studio, 'SURPRISE_SETS'), orderLabels = pageConst(order, 'SURPRISE_SET_LABELS');
   if (JSON.stringify(Object.keys(studioSets).sort()) !== JSON.stringify(live.map(([k]) => k).sort())) bad.push(`the studio offers ${Object.keys(studioSets)}, the server sells ${live.map(([k]) => k)}`);
   for (const [k, s] of live) {
     if (orderLabels[k] !== s.label) bad.push(`${k}: the order page calls it ${orderLabels[k]}`);
     const mine = (studioSets[k] || {}).designs || [];
-    if (JSON.stringify(mine.map((d) => [d.label, d.file])) !== JSON.stringify(s.designs.map((d) => [d.label, d.file]))) bad.push(`${k}: the studio's designs differ from the server's`);
-    if (s.designs.length !== 4) bad.push(`${k} has ${s.designs.length} designs, not 4`);
-    if (!fs.existsSync(path.join(ROOT, 'art', 'options', `surprise-set-${k}.jpg`))) bad.push(`${k} has no set tile`);
+    if (JSON.stringify(mine.map((d) => [d.key, d.label, d.file])) !== JSON.stringify(s.designs.map((d) => [d.key, d.label, d.file]))) bad.push(`${k}: the studio's mugs differ from the server's`);
+    if (s.designs.length < 4) bad.push(`${k} has ${s.designs.length} mugs, fewer than a set`);
+    if (new Set(s.designs.map((d) => d.key)).size !== s.designs.length) bad.push(`${k}: two mugs share a key`);
   }
   // The files, measured in the page (the browser reads the PNGs).
   await page.goto('http://127.0.0.1:8788/needles-studio.html');
@@ -87,8 +95,8 @@ scenarios.theThreeListsAndTheFiles = async (page) => {
     const out = [];
     for (const f of files) {
       const p = await load(`/art/surprise/${f}-print.png`), l = await load(`/art/surprise/${f}-print-left.png`);
-      const c = await load(`/art/surprise/${f}-coldhot.jpg`), t = await load(`/art/options/surprise-${f}.jpg`);
-      const row = { f, print: p && `${p.naturalWidth}x${p.naturalHeight}`, left: l && `${l.naturalWidth}x${l.naturalHeight}`, coldhot: !!c, tile: !!t };
+      const c = await load(`/art/surprise/${f}-coldhot.jpg`), t = await load(`/art/options/surprise-${f}.jpg`), sh = await load(`/art/surprise/show/${f}.jpg`);
+      const row = { f, print: p && `${p.naturalWidth}x${p.naturalHeight}`, left: l && `${l.naturalWidth}x${l.naturalHeight}`, coldhot: !!c, tile: !!t, show: sh && `${sh.naturalWidth}x${sh.naturalHeight}` };
       if (p && t) { const w = p.naturalWidth / 2, h = p.naturalHeight, tt = tiny(t, 0, 0, t.naturalWidth, t.naturalHeight);
         row.punchlineLeft = diff(tiny(p, (w - h) / 2, 0, h, h), tt) < diff(tiny(p, w + (w - h) / 2, 0, h, h), tt); }
       out.push(row);
@@ -97,10 +105,10 @@ scenarios.theThreeListsAndTheFiles = async (page) => {
   }, files);
   for (const r of measured) {
     if (r.print !== '2475x1155' || r.left !== '2475x1155') bad.push(`${r.f}: prints ${r.print} / ${r.left}`);
-    if (!r.coldhot || !r.tile) bad.push(`${r.f}: COLD -> HOT ${r.coldhot}, tile ${r.tile}`);
+    if (!r.coldhot || !r.tile || r.show !== '1050x412') bad.push(`${r.f}: COLD -> HOT ${r.coldhot}, tile ${r.tile}, shelf picture ${r.show}`);
     if (!r.punchlineLeft) bad.push(`${r.f}: the right-handed print's punchline is not on its left half`);
   }
-  return bad.length ? `FAIL: ${bad.join('; ')}` : `PASS: ${live.length} set(s) of four, the same on the server, the studio and the order page at $${price}; ${files.length} designs each with both prints at 2475 x 1155, COLD -> HOT and tile, punchline on the left`;
+  return bad.length ? `FAIL: ${bad.join('; ')}` : `PASS: ${live.length} holiday(s), the same mugs on the server, the studio and the order page, priced as the catalog ($${single} one, $${price} four, $${extra} each more); ${files.length} mugs each with both prints at 2475 x 1155, COLD -> HOT, shelf picture and tile, punchline on the left`;
 };
 
 scenarios.thePanelAndTheOrder = async (page, log) => {
@@ -128,20 +136,20 @@ scenarios.thePanelAndTheOrder = async (page, log) => {
   if (st0.imgs) return `FAIL: the quiet list shows ${st0.imgs} picture(s)`;
   if (st0.generate.length) return `FAIL: with a photo uploaded, Pre-mades still shows ${st0.generate.join(', ')}`;
   if (!st0.landed) return `FAIL: the list did not land at its title (${JSON.stringify(st0)})`;
-  // Thanksgiving: its flyer alone, the set, one button.
+  // Thanksgiving opens on its shelf: one mug at a time, priced, with How it
+  // works a button away.
   await tap(page, '#premadesView .pm-row[data-occasion="thanksgiving"]'); await T(page, 1900);
   const st1 = await pmState(page);
-  if (st1.view !== 'occasion' || st1.imgs !== 1 || st1.loaded !== 1 || !/\$59\.95/.test(st1.text) || !st1.landed) return `FAIL: Thanksgiving did not open on its flyer alone (${JSON.stringify(st1)})`;
-  // The flyer's one button explains before it sells: nobody presses "Order"
-  // to find out how the mug works (Alyx, 27 Sep 2026).
-  const flyerBtn = await page.evaluate(() => document.getElementById('premadesSetBtn')?.innerText || '');
-  if (!/See how the magic mug works/.test(flyerBtn) || /Order/i.test(flyerBtn)) return `FAIL: the flyer's button reads "${flyerBtn}"`;
-  // How it works: seven steps, the hand, Order the set.
-  await tap(page, '#premadesSetBtn'); await T(page, 1900);
+  if (st1.view !== 'shelf' || st1.imgs !== 1 || st1.loaded !== 1 || !/\$19\.95/.test(st1.text) || !/\$59\.95/.test(st1.text) || !st1.landed || !/Thanksgiving/i.test(st1.title))
+    return `FAIL: Thanksgiving did not open on its shelf (${JSON.stringify(st1)})`;
+  if (!/Add to my mugs/.test(st1.text) || !/Just this one/.test(st1.text)) return `FAIL: the shelf's mug cannot be added or bought alone (${st1.text.slice(0, 300)})`;
+  // How it works: seven steps, ending on the prices, then on to the shelf.
+  await tap(page, '#premadesHowBtn'); await T(page, 1900);
   const st2 = await pmState(page);
   if (st2.view !== 'how' || st2.steps !== 7 || st2.imgs !== 5 || st2.loaded !== 5 || !st2.landed || !/How the magic mug works/i.test(st2.title)) return `FAIL: How it works shows ${JSON.stringify(st2)}`;
-  // Back, one view at a time: How it works -> the flyer -> the list -> the grid.
-  for (const want of ['occasion', 'occasions']) {
+  if (!/\$59\.95/.test(st2.text) || !/\$17\.95/.test(st2.text) || !/\$19\.95/.test(st2.text) || !/See all the mugs and build your set/.test(st2.text)) return 'FAIL: How it works does not end on the prices and the way to the shelf';
+  // Back, one view at a time: How it works -> the shelf -> the list -> the grid.
+  for (const want of ['shelf', 'occasions']) {
     await page.evaluate(() => premadesBack()); await T(page, 1500);
     const b = await pmState(page); if (b.view !== want || !b.landed) return `FAIL: Back went to ${b.view}, not ${want} (${JSON.stringify(b)})`;
   }
@@ -150,10 +158,37 @@ scenarios.thePanelAndTheOrder = async (page, log) => {
   const bk = await page.evaluate(() => { const r = document.getElementById('productCard').getBoundingClientRect();
     return { card: getComputedStyle(document.getElementById('premadesCard')).display, focus: [...document.body.classList].filter((c) => c.endsWith('-focus')), top: Math.round(r.top) }; });
   if (bk.card !== 'none' || bk.focus.length || bk.top < -2 || bk.top > 200) return `FAIL: Back did not return to the product grid (${JSON.stringify(bk)})`;
-  // And forward again, to the order page, left-handed.
+  // Forward again: every mug at once, six chosen with repeats, left-handed.
   await tap(page, '#premadesTile'); await T(page, 1500);
   await tap(page, '#premadesView .pm-row[data-occasion="thanksgiving"]'); await T(page, 900);
-  await tap(page, '#premadesSetBtn'); await T(page, 900);
+  await page.evaluate(() => document.querySelector('#premadesView .pm-lay[data-layout="all"]').click()); await T(page, 1200);
+  const all = await page.evaluate(async () => {
+    const imgs = [...document.querySelectorAll('#premadesMugsAll img')];
+    imgs.forEach((im) => { im.loading = 'eager'; });
+    await Promise.all(imgs.map((im) => im.complete ? null : new Promise((r) => { im.onload = im.onerror = r; })));
+    return { rows: document.querySelectorAll('#premadesMugsAll .pm-mugrow').length, loaded: imgs.filter((im) => im.naturalWidth > 0).length, n: SURPRISE_SETS.thanksgiving.designs.length,
+      priced: [...document.querySelectorAll('#premadesMugsAll .pm-mugrow')].every((r) => /\$19\.95/.test(r.innerText) && r.querySelector('.pm-add')) };
+  });
+  if (all.rows !== all.n || all.loaded !== all.n || !all.priced) return `FAIL: all at once shows ${JSON.stringify(all)}`;
+  const MUGS = ['golden-brown', 'golden-brown', 'dark-meat', 'thankful', 'uncle-gerald', 'golden-brown'];
+  const trays = [];
+  for (const k of MUGS) {
+    await page.evaluate((k) => document.querySelector(`#premadesMugsAll .pm-add[data-add="${k}"]`).click(), k); await T(page, 150);
+    trays.push(await page.evaluate(() => ({ line: document.getElementById('premadesTrayLine')?.textContent || '', btn: document.getElementById('premadesContinueBtn')?.textContent || '', mugs: document.querySelectorAll('#premadesTray .pm-traymug').length })));
+  }
+  const wantTray = [['$19.95', 'Order this mug'], ['$39.90', 'Order 2 mugs'], ['$59.85', 'Order 3 mugs'], ['$59.95', 'Order your set'], ['$77.90', 'Order 5 mugs'], ['$95.85', 'Order 6 mugs']];
+  for (let i = 0; i < wantTray.length; i++) {
+    const [price, btn] = wantTray[i], t = trays[i];
+    if (t.mugs !== i + 1 || !t.line.includes(price) || !t.btn.includes(btn) || !t.btn.includes(price)) return `FAIL: with ${i + 1} mug(s) the tray reads ${JSON.stringify(t)}`;
+  }
+  const badge = await page.evaluate(() => document.querySelector('#premadesMugsAll .pm-add[data-add="golden-brown"]').textContent);
+  if (!/×3/.test(badge)) return `FAIL: Golden Brown, chosen three times, says "${badge}"`;
+  // Taking one out and putting it back.
+  await page.evaluate(() => document.querySelectorAll('#premadesTray .pm-traymug button')[2].click()); await T(page, 150);
+  const out = await page.evaluate(() => ({ n: premadesMugs.length, keys: premadesMugs.join() }));
+  if (out.n !== 5 || out.keys !== 'golden-brown,golden-brown,thankful,uncle-gerald,golden-brown') return `FAIL: taking out the third mug left ${out.keys}`;
+  await page.evaluate(() => holidayAdd('dark-meat')); await T(page, 150);
+  const CHOSEN = ['golden-brown', 'golden-brown', 'thankful', 'uncle-gerald', 'golden-brown', 'dark-meat'];
   await tap(page, '#premadesHandGrid .btn-select[data-hand="left"]');
   await T(page, 500);
   log.apiCalls.length = 0;
@@ -172,13 +207,13 @@ scenarios.thePanelAndTheOrder = async (page, log) => {
       head: document.getElementById('orderHeadlineName').textContent,
     };
   });
-  if (!st.pending || st.pending.surpriseSet !== 'thanksgiving' || st.pending.preselectedSurpriseHand !== 'left') return `FAIL: the hand-off carried ${JSON.stringify(st.pending)}`;
-  if (st.card === 'none' || !/Thanksgiving Set/.test(st.title)) return `FAIL: the order page's card is "${st.title}" (${st.card})`;
-  if (!/left-handed/.test(st.note) || !/\$59\.95/.test(st.note)) return `FAIL: the card says "${st.note}"`;
-  if (st.pics !== 4) return `FAIL: the order page shows ${st.pics} of the four mugs`;
-  if (st.base !== '$59.95') return `FAIL: the order page prices the set at ${st.base}`;
-  if (st.head !== 'SURPRISE!!! Thanksgiving Set') return `FAIL: the order is headed "${st.head}"`;
-  if (log.apiCalls.some((c) => c.path === '/api/start-mockup')) return 'FAIL: the order page asked Printify for a mockup of a set';
+  if (!st.pending || st.pending.surpriseSet !== 'thanksgiving' || st.pending.preselectedSurpriseHand !== 'left' || JSON.stringify(st.pending.surpriseMugs) !== JSON.stringify(CHOSEN)) return `FAIL: the hand-off carried ${JSON.stringify(st.pending)}`;
+  if (st.card === 'none' || !/Thanksgiving Set \+ 2 more/.test(st.title)) return `FAIL: the order page's card is "${st.title}" (${st.card})`;
+  if (!/left-handed/.test(st.note) || !/\$95\.85/.test(st.note) || !/6 smart mugs/.test(st.note)) return `FAIL: the card says "${st.note}"`;
+  if (st.pics !== 6) return `FAIL: the order page shows ${st.pics} of the six mugs`;
+  if (st.base !== '$95.85') return `FAIL: the order page prices the six at ${st.base}`;
+  if (st.head !== 'SURPRISE!!! Thanksgiving Set + 2 more') return `FAIL: the order is headed "${st.head}"`;
+  if (log.apiCalls.some((c) => c.path === '/api/start-mockup')) return 'FAIL: the order page asked Printify for a mockup of the mugs';
   await page.evaluate(() => {
     const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v; };
     set('fullName', 'Test Customer'); set('email', 'test@example.com'); set('phone', '5555550100');
@@ -187,22 +222,55 @@ scenarios.thePanelAndTheOrder = async (page, log) => {
   });
   await T(page, 2000);
   const b = bodies[bodies.length - 1];
-  if (!b || b.productKey !== 'smart-mug-set' || b.sizeLabel !== 'Set of 4' || b.setKey !== 'thanksgiving' || b.hand !== 'left' || b.image)
-    return `FAIL: checkout got ${JSON.stringify(b && { k: b.productKey, s: b.sizeLabel, set: b.setKey, hand: b.hand, image: b.image })}`;
-  return 'PASS: the Pre-mades & Sets tile ends the grid at from $19.95 and opens the quiet occasions list (named, priced, no pictures, lit, landed); Thanksgiving shows its flyer alone, then How the magic mug works in seven steps; Back steps one view at a time to the grid; and the order page shows the four, prices the set, asks for no mockup, and checks out smart-mug-set / Set of 4 / thanksgiving / left with no artwork of its own';
+  if (!b || b.productKey !== 'smart-mug-set' || b.setKey !== 'thanksgiving' || b.hand !== 'left' || b.image || JSON.stringify(b.mugs) !== JSON.stringify(CHOSEN))
+    return `FAIL: checkout got ${JSON.stringify(b && { k: b.productKey, s: b.sizeLabel, set: b.setKey, hand: b.hand, mugs: b.mugs, image: b.image })}`;
+  return 'PASS: the Pre-mades & Sets tile ends the grid at from $19.95 and opens the quiet occasions list (named, priced, no pictures, lit, landed); Thanksgiving opens on its shelf, one mug at a time with its price, How it works a button away (seven steps ending on the three prices); Back steps one view at a time to the grid; all at once shows every mug pictured and priced; the tray prices 1 to 6 mugs as $19.95, $39.90, $59.85, the set $59.95, $77.90, $95.85, counts repeats and takes one out; the order page shows the six, left-handed, at $95.85, asks for no mockup, and checks out thanksgiving / left / the six by key with no artwork of its own';
 };
 
-// The flyer's link: ?set=thanksgiving opens the set's How it works, the page
-// the QR is for, no photo needed; Back goes to the flyer, then the list.
+// The flyer's link: ?set=thanksgiving opens How it works, the page the QR is
+// for, no photo needed; its button goes on to the shelf; Back goes the way
+// it came.
 scenarios.theLink = async (page) => {
   await page.goto('http://127.0.0.1:8788/needles-studio.html?set=thanksgiving');
   await T(page, 4500); await dismissAlerts(page);
   const st = await pmState(page);
   if (!st.shown || st.view !== 'how' || st.focus !== 'premades-focus' || !st.landed || st.steps !== 7) return `FAIL: ?set=thanksgiving opened ${JSON.stringify(st)}`;
-  await page.evaluate(() => premadesBack()); await T(page, 1500);
-  const b = await pmState(page);
-  if (b.view !== 'occasion') return `FAIL: Back from the link's page went to ${b.view}`;
-  return 'PASS: ?set=thanksgiving opens the Thanksgiving Set\'s How the magic mug works, lit, landed at its title, no photo needed; Back goes to the flyer';
+  await tap(page, '#premadesShelfBtn'); await T(page, 1500);
+  const sh = await pmState(page);
+  if (sh.view !== 'shelf' || !sh.landed) return `FAIL: How it works went on to ${JSON.stringify(sh)}`;
+  for (const want of ['how', 'occasions']) {
+    await page.evaluate(() => premadesBack()); await T(page, 1500);
+    const b = await pmState(page); if (b.view !== want) return `FAIL: Back went to ${b.view}, not ${want}`;
+  }
+  return 'PASS: ?set=thanksgiving opens How the magic mug works, lit, landed at its title, no photo needed; its button goes on to the shelf; Back goes to How it works, then the occasions list';
+};
+
+// One mug on its own: Just this one, on the shelf, orders that one at $19.95.
+scenarios.theJustOne = async (page) => {
+  const bodies = [];
+  page.on('request', (r) => { if (r.url().includes('/api/create-checkout-session')) { try { bodies.push(r.postDataJSON()); } catch (e) {} } });
+  await page.route('**/api/printify-catalog**', (route) => route.fulfill({ json: { shipping: 7.99, shippingSeparate: true, source: 'live' } }));
+  await openStudio(page); await dismissAlerts(page);
+  await tap(page, '#premadesFrontBtn'); await T(page, 1500);
+  await tap(page, '#premadesView .pm-row[data-occasion="thanksgiving"]'); await T(page, 1500);
+  await page.evaluate(() => premadesSetLayout('one'));
+  await page.evaluate(() => holidayStep(SURPRISE_SETS.thanksgiving.designs.findIndex((d) => d.key === 'uncle-gerald'))); await T(page, 700);
+  const name = await page.evaluate(() => document.getElementById('premadesMugName').textContent);
+  if (name !== 'Uncle Gerald') return `FAIL: stepping to Uncle Gerald shows ${name}`;
+  await Promise.all([page.waitForURL(/order\.html/, { timeout: 10000 }), tap(page, '#premadesJustOneBtn')]);
+  await T(page, 3500);
+  const o = await page.evaluate(() => ({ base: document.getElementById('summaryBase').textContent, head: document.getElementById('orderHeadlineName').textContent, pics: document.querySelectorAll('#smartMugSetPictures img').length }));
+  if (o.base !== '$19.95' || o.head !== 'SURPRISE!!! Thanksgiving smart mug' || o.pics !== 1) return `FAIL: the order page shows ${JSON.stringify(o)}`;
+  await page.evaluate(() => {
+    const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v; };
+    set('fullName', 'Test Customer'); set('email', 'test@example.com'); set('phone', '5555550100');
+    set('address1', '123 Test St'); set('city', 'Westland'); set('state', 'MI'); set('zip', '48185'); set('country', 'US');
+    submitOrder();
+  });
+  await T(page, 2000);
+  const b = bodies[bodies.length - 1];
+  if (!b || JSON.stringify(b.mugs) !== '["uncle-gerald"]' || b.setKey !== 'thanksgiving' || b.image) return `FAIL: checkout got ${JSON.stringify(b && { mugs: b.mugs, set: b.setKey, image: b.image })}`;
+  return 'PASS: Just this one on the shelf orders that one mug: the order page shows it at $19.95 and checks out thanksgiving / uncle-gerald';
 };
 
 scenarios.theFrontDoor = async (page) => {

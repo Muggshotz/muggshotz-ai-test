@@ -1,5 +1,5 @@
 <!-- ============================================================
-     VERSION: V393
+     VERSION: V394
      ============================================================
      THE ONE LINE THAT SAYS WHICH BUILD YOU ARE LOOKING AT.
 
@@ -700,6 +700,17 @@ body.premades-focus :is(#generateBtn,#generateTokenNote,#finalGenerateGuidance,#
 #premadesCard .pm-dots{text-align:center;margin:.2rem 0 1.1rem}
 #premadesCard .pm-dots span{display:inline-block;width:10px;height:10px;border-radius:50%;border:1px solid #3d5577;margin:0 4px;cursor:pointer}
 #premadesCard .pm-dots span.on{background:#3d5577}
+#premadesCard .pm-how{display:block;margin:0 auto 1rem;background:transparent;border:none;color:#29a3ff;font-size:13px;text-decoration:underline;cursor:pointer}
+#premadesCard .pm-mugrow{margin:0 0 1.4rem}
+#premadesCard .pm-mugbar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:6px}
+#premadesCard .pm-mugname{color:#cfe3ff;font-size:14px}
+#premadesCard .pm-mugprice{color:#29a3ff;font-size:12px;margin-left:4px}
+#premadesCard .pm-add{background:rgba(41,163,255,.08);border:1px solid #29a3ff;border-radius:16px;color:#cfe3ff;font-size:12px;padding:6px 12px;cursor:pointer;white-space:nowrap}
+#premadesCard .pm-tray{border-top:1px solid #1c2738;margin-top:1.4rem;padding-top:1.4rem}
+#premadesCard .pm-traymugs{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin:.9rem 0 .2rem}
+#premadesCard .pm-traymug{position:relative;width:74px;text-align:center;font-size:10px;color:#7ab8ff}
+#premadesCard .pm-traymug img{display:block;width:74px;height:74px;border-radius:8px;margin-bottom:3px}
+#premadesCard .pm-traymug button{position:absolute;top:-6px;right:-6px;width:22px;height:22px;border-radius:50%;border:1px solid #24344a;background:#131b27;color:#cfe3ff;font-size:11px;cursor:pointer;padding:0}
 body.carMagnet-option-focus .card:not(#carMagnetOptionCard){opacity:.35;filter:brightness(.6) saturate(.75);transition:opacity .5s,filter .5s}
 body.placemat-option-focus .card:not(#placematOptionCard){opacity:.35;filter:brightness(.6) saturate(.75);transition:opacity .5s,filter .5s}
 body.businessCards-option-focus .card:not(#businessCardOptionCard){opacity:.35;filter:brightness(.6) saturate(.75);transition:opacity .5s,filter .5s}
@@ -4753,7 +4764,7 @@ function toggleWorkingImage(){
 // Two copies of a number is exactly how the marker rotted in the first place,
 // so they are not trusted to agree: .githooks/pre-commit moves both together
 // and REFUSES the commit if it ever finds them apart.
-const APP_VERSION='V393';
+const APP_VERSION='V394';
 try{ console.log('%cNeedles\u2019 Studio '+APP_VERSION,'color:#29a3ff;font-weight:700'); }catch(e){}
 
 function getDeviceId(){
@@ -12942,22 +12953,30 @@ const SURPRISE_TEMPLATES={
     'expecting':{label:'Any preference?',file:'ready-expecting'}
   }}
 };
-// THE HOLIDAY SETS (Alyx, 26 Sep 2026: "a set of four different themes.
-// Each one is a different scene but they're all a part of the same set").
-// Four designs of one holiday, four mugs, one price. The server's own list
-// (lib/surprise-sets.js) names the four print files and is what is printed;
-// this copy is the Premades & Sets panel's, and flow-tests/verify-surprise-sets.js holds the
-// two together. Every design is painted whole at the mug's shape with its
-// punchline on the left half, so each file is used as it is.
-const SMART_MUG_SET_PRICE=59.95; // Alyx's price for the set of four (26 Sep 2026)
+// THE HOLIDAY MUGS (Alyx, 26-27 Sep 2026). A holiday is a shelf of single
+// smart-mug designs, mixed and matched: "you decide the participants". Any
+// four, repeats and all, are a set; more with a set are $17.95 each; fewer
+// than four are $19.95 each (holidayPrice, the server's rule mirrored). The
+// server's own list (lib/surprise-sets.js) names the print files and is what
+// is printed; this copy is the Pre-mades panel's, and
+// flow-tests/verify-surprise-sets.js holds the two together. A new mug is
+// tools/surprise/holiday-mug.py on the artist's file and one line in each.
+const SMART_MUG_SET_PRICE=59.95; // Alyx's price for any four (26 Sep 2026)
+const SMART_MUG_EXTRA_PRICE=17.95; // each more with a set, $2 off the single (26 Sep 2026)
 const SURPRISE_SETS={
   'thanksgiving':{label:'Thanksgiving',designs:[
-    {label:"Power's Out",file:'thanksgiving-power-out'},
-    {label:'Witness Protection',file:'thanksgiving-witness'},
-    {label:'The Pardon',file:'thanksgiving-pardon'},
-    {label:'All These Chickens',file:'thanksgiving-chickens'}
+    {key:'power-out',label:"Power's Out",file:'thanksgiving-power-out'},
+    {key:'witness',label:'Witness Protection',file:'thanksgiving-witness'},
+    {key:'pardon',label:'The Pardon',file:'thanksgiving-pardon'},
+    {key:'chickens',label:'All These Chickens',file:'thanksgiving-chickens'},
+    {key:'golden-brown',label:'Golden Brown',file:'golden-brown'},
+    {key:'thankful',label:'Thankful',file:'thankful'},
+    {key:'uncle-gerald',label:'Uncle Gerald',file:'uncle-gerald'},
+    {key:'the-diet',label:'The Diet',file:'the-diet'},
+    {key:'dark-meat',label:'Dark Meat',file:'dark-meat'}
   ]}
 };
+function holidayPrice(n){ return n>=4 ? Math.round((SMART_MUG_SET_PRICE+(n-4)*SMART_MUG_EXTRA_PRICE)*100)/100 : Math.round(n*SMART_MUG_PRICE*100)/100; }
 let selectedSurprise=null;
 let selectedSurpriseVariant=null;
 // A hidden template shows only when the page's link names it.
@@ -12973,9 +12992,10 @@ function surprisePrintUrl(){
   const file=surpriseFile(); if(!file)return null;
   return location.origin+'/art/surprise/'+file+'-print'+(selectedSurpriseHand==='left'?'-left':'')+'.png';
 }
-function setPrintUrls(key,hand){
+// The print files of the mugs chosen (keys), for the order page's pictures.
+function setPrintUrls(key,hand,mugs){
   const set=SURPRISE_SETS[key]; if(!set)return null;
-  return set.designs.map(d=>location.origin+'/art/surprise/'+d.file+'-print'+(hand==='left'?'-left':'')+'.png');
+  return mugs.map(k=>set.designs.find(d=>d.key===k)).filter(Boolean).map(d=>location.origin+'/art/surprise/'+d.file+'-print'+(hand==='left'?'-left':'')+'.png');
 }
 function renderSurpriseTemplates(){
   const grid=document.getElementById('surpriseTemplateGrid'); if(!grid)return;
@@ -13090,14 +13110,18 @@ function goToSurpriseOrder(){
 //   occasions -- a plain list, lots of space, no pictures on purpose: the
 //                visual break before the vivid ones (the one panel that breaks
 //                the checklist's "a photo on the panel", by his design);
-//   occasion  -- the occasion's flyer, alone, and one button;
-//   how       -- "How the magic mug works", seven steps, then the hand and
-//                Order the set (the flyer's QR lands here, ?set=<key>);
+//   shelf     -- a holiday's mugs, one at a time or all at once; each can be
+//                added to "your mugs" (mix and match, repeats and all) or
+//                bought alone; the tray under them prices what is chosen,
+//                asks the hand and orders (Alyx, 27 Sep 2026);
+//   how       -- "How the magic mug works", seven steps ending on the prices,
+//                then on to the shelf (the flyer's QR lands here, ?set=<key>);
 //   categories -- an occasion's kinds of design, a quiet list (when it has more than one);
 //   gallery   -- a category's designs, one at a time or all at once.
 // Links: ?sets opens the list; ?set=<key> opens that set's How it works.
+// Back is the view before, whatever the way in: the views walked are a stack.
 const PREMADE_OCCASIONS=[
-  {key:'thanksgiving',icon:'🦃',label:'Thanksgiving',set:'thanksgiving',flyer:'art/flyers/thanksgiving.webp',sub:'Mug sets'},
+  {key:'thanksgiving',icon:'🦃',label:'Thanksgiving',set:'thanksgiving'},
   {key:'christmas',icon:'🎄',label:'Christmas',soon:true},
   {key:'halloween',icon:'🎃',label:'Halloween',soon:true},
   {key:'valentines',icon:'💘',label:"Valentine's Day",soon:true},
@@ -13133,26 +13157,49 @@ const PREMADE_CATEGORIES={
 };
 // The mats' list by its old name (the tests and the ?set links read it).
 const PREMADE_MATS=PREMADE_CATEGORIES['welcome-mats'].items;
-let premadesSet=null, premadesHand='right', premadesView='occasions', premadesOccasion=null;
+let premadesSet=null, premadesHand='right', premadesView='occasions', premadesOccasion=null, premadesStack=['occasions'];
+// The holiday shelf: the mugs chosen so far (keys, in order, repeats kept)
+// and the one on show.
+let premadesMugs=[], premadesMugIndex=0;
 let premadesCategory=null, premadesIndex=0, premadesPack=1;
 let premadesLayout=(()=>{ try{ return localStorage.getItem('mz_premades_layout')==='all'?'all':'one'; }catch(e){ return 'one'; } })();
 function premadeCat(){ return PREMADE_CATEGORIES[premadesCategory]||null; }
 // An occasion's categories that have designs in them.
 function liveCategories(o){ return (o&&o.categories||[]).filter(k=>PREMADE_CATEGORIES[k]&&PREMADE_CATEGORIES[k].items.length); }
 function catFrom(c){ return Math.min(...c.packs.map(p=>p.price)); }
-function premadesFromPrice(){ return '$'+Math.min(SMART_MUG_SET_PRICE,...Object.values(PREMADE_CATEGORIES).filter(c=>c.items.length).map(catFrom)).toFixed(2); }
+function premadesFromPrice(){ return '$'+Math.min(SMART_MUG_PRICE,...Object.values(PREMADE_CATEGORIES).filter(c=>c.items.length).map(catFrom)).toFixed(2); }
 function premadeOccasion(){ return PREMADE_OCCASIONS.find(o=>o.key===premadesOccasion)||null; }
 function premadesCrumb(parts){ return '<div class="pm-crumb">'+['Pre-mades &amp; Sets'].concat(parts).join(' › ')+'</div>'; }
 function renderPremades(){
   const view=document.getElementById('premadesView'), title=document.getElementById('premadesTitle'); if(!view)return;
   const occ=premadeOccasion(), set=occ&&occ.set?SURPRISE_SETS[occ.set]:null, $=n=>'$'+n.toFixed(2);
-  if(premadesView==='occasion'&&set){
+  if(premadesView==='shelf'&&set){
+    const d=set.designs, m=d[premadesMugIndex]||d[0];
     title.textContent=occ.icon+' '+occ.label;
-    view.innerHTML=premadesCrumb([occ.label])
-      +'<img class="pm-big" src="'+occ.flyer+'" width="1104" height="1424" alt="'+set.label+' SURPRISE!!! magic mugs"/>'
-      +'<div class="pm-name" style="margin-top:1.3rem">'+set.label+' Set</div>'
-      +'<div class="pm-line">Four SURPRISE!!! smart mugs · '+$(SMART_MUG_SET_PRICE)+'</div>'
-      +'<button type="button" class="generate-btn" id="premadesSetBtn" onclick="premadesGo(\'how\')">✨ See how the magic mug works</button>';
+    const layout='<div class="pm-layout" data-words="how to browse: the mugs carry the pictures">'
+      +[['one','One at a time'],['all','All at once']].map(([k,l])=>'<button type="button" class="pm-lay'+(premadesLayout===k?' on':'')+'" data-layout="'+k+'" onclick="premadesSetLayout(\''+k+'\')">'+l+'</button>').join('')+'</div>';
+    const head=premadesCrumb([occ.label])
+      +'<div class="pm-ask" style="margin-bottom:.4rem">Mix and match your mugs. Any four are a set, '+$(SMART_MUG_SET_PRICE)+'.</div>'
+      +'<button type="button" class="pm-how" id="premadesHowBtn" onclick="premadesGo(\'how\')">✨ How the magic mug works</button>'+layout;
+    let body;
+    if(premadesLayout==='all'){
+      body='<div id="premadesMugsAll">'+d.map((x,i)=>'<div class="pm-mugrow" data-mug="'+x.key+'">'
+        +'<img src="art/surprise/show/'+x.file+'.jpg" width="1050" height="412" alt="'+x.label+'" loading="lazy" class="pm-big" style="cursor:pointer" onclick="holidayShowOne('+i+')"/>'
+        +'<div class="pm-mugbar"><span class="pm-mugname">'+x.label+' <span class="pm-mugprice">'+$(SMART_MUG_PRICE)+'</span></span>'
+        +'<button type="button" class="pm-add" data-add="'+x.key+'" onclick="holidayAdd(\''+x.key+'\')">'+holidayAddText(x.key)+'</button></div></div>').join('')+'</div>';
+    } else {
+      body='<div class="pm-mat"><img class="pm-big" id="premadesMugPic" src="art/surprise/show/'+m.file+'.jpg" width="1050" height="412" alt="'+m.label+'"/>'
+        +'<button type="button" class="pm-arr" style="left:-12px" aria-label="Previous" onclick="holidayStep(-1)">‹</button>'
+        +'<button type="button" class="pm-arr" style="right:-12px" aria-label="Next" onclick="holidayStep(1)">›</button></div>'
+        +'<div class="pm-name" id="premadesMugName">'+m.label+'</div>'
+        +'<div class="pm-line" style="margin-bottom:.5rem">SURPRISE!!! smart mug · '+$(SMART_MUG_PRICE)+' on its own</div>'
+        +'<div class="pm-dots">'+d.map((x,i)=>'<span class="'+(i===premadesMugIndex?'on':'')+'" onclick="holidayStep('+(i-premadesMugIndex)+')"></span>').join('')+'</div>'
+        +'<button type="button" class="generate-btn" id="premadesAddBtn" data-add="'+m.key+'" onclick="holidayAdd(\''+m.key+'\')">'+holidayAddText(m.key)+'</button>'
+        +'<button type="button" class="download-btn" id="premadesJustOneBtn" style="margin-top:.6rem" onclick="holidayJustOne(\''+m.key+'\')">Just this one · '+$(SMART_MUG_PRICE)+'</button>';
+      const next=new Image(); next.src='art/surprise/show/'+d[(premadesMugIndex+1)%d.length].file+'.jpg';
+    }
+    view.innerHTML=head+body+'<div id="premadesTray"></div>';
+    renderHolidayTray();
   } else if(premadesView==='how'&&set){
     const step=(n,head,line,img,wide)=>'<div class="pm-step"><div class="pm-sn">'+n+'</div><div class="pm-sh">'+head+'</div><div class="pm-sl">'+line+'</div>'
       +(img?'<img class="pm-simg'+(wide?' pm-wide':'')+'" src="art/premades/how/'+img+'.jpg" width="'+(wide?924:455)+'" height="'+(wide?674:330)+'" alt=""/>':'')+'</div>';
@@ -13163,11 +13210,9 @@ function renderPremades(){
       +step(3,'The joke appears.',"Once it's hot, the first half of the joke is there in full, facing them.",'hot')
       +step(4,'They turn it round.','Nobody can leave a joke half told. Curious, they turn the mug, and the punchline is waiting on the other side.','other')
       +step(5,'Let it cool, and it hides again.','As the mug cools it goes back to plain black, ready to surprise the next unsuspecting victim.','black')
-      +step(6,'Choose their hand.','Tell us whether they hold a mug in the right hand or the left, and we print it so the setup faces them first.','')
-      +'<div class="grid2" id="premadesHandGrid" data-words="which hand: the steps above carry the pictures" style="max-width:360px;margin:0 auto 1rem">'
-      +['right','left'].map(h=>'<div class="btn-select'+(h===premadesHand?' selected':'')+'" data-hand="'+h+'" onclick="pickPremadesHand(\''+h+'\')" style="padding:.7rem;font-size:13px">'+(h==='right'?'Right-handed':'Left-handed')+'</div>').join('')+'</div>'
-      +step(7,'Four mugs, four jokes.','One set, four different '+set.label+' surprises. '+$(SMART_MUG_SET_PRICE)+'.','')
-      +'<button type="button" class="generate-btn" id="premadesContinueBtn" onclick="goToPremadeSetOrder()">🎁 Order the set</button>';
+      +step(6,'Left hand or right.','When you order, tell us which hand they hold a mug in, and we print it so the joke starts on the side facing them.','')
+      +step(7,'Mix and match.','Pick any four mugs for a set, '+$(SMART_MUG_SET_PRICE)+'. The same one four times if you like. Add more to a set at '+$(SMART_MUG_EXTRA_PRICE)+' each, or buy one on its own for '+$(SMART_MUG_PRICE)+'.','')
+      +'<button type="button" class="generate-btn" id="premadesShelfBtn" onclick="premadesGo(\'shelf\')">'+occ.icon+' See all the mugs and build your set</button>';
   } else if(premadesView==='categories'&&occ){
     title.textContent=occ.icon+' '+occ.label;
     view.innerHTML=premadesCrumb([occ.label])+'<div class="pm-ask">What are you looking for?</div><div id="premadesCategories" data-words="categories: a quiet list on purpose, the pictures come after">'
@@ -13200,7 +13245,7 @@ function renderPremades(){
   } else {
     premadesView='occasions';
     title.textContent='🎁 Pre-mades & Sets';
-    const priced=o=>{ if(o.set)return o.sub+' · '+$(SMART_MUG_SET_PRICE); const cs=liveCategories(o).map(k=>PREMADE_CATEGORIES[k]); return cs.length?cs.map(c=>c.label).join(', ')+' · from '+$(Math.min(...cs.map(catFrom))):''; };
+    const priced=o=>{ if(o.set)return SURPRISE_SETS[o.set].designs.length+' magic mugs · any four '+$(SMART_MUG_SET_PRICE); const cs=liveCategories(o).map(k=>PREMADE_CATEGORIES[k]); return cs.length?cs.map(c=>c.label).join(', ')+' · from '+$(Math.min(...cs.map(catFrom))):''; };
     const isSoon=o=>o.soon||(!o.set&&!liveCategories(o).length);
     view.innerHTML='<div class="pm-ask">What\'s the occasion?</div><div id="premadesOccasions" data-words="occasions: a quiet list on purpose, the pictures come after">'
       +PREMADE_OCCASIONS.map(o=>'<div class="pm-row'+(isSoon(o)?' pm-soon':'')+'" data-occasion="'+o.key+'"'+(isSoon(o)?'':' onclick="pickPremadeOccasion(\''+o.key+'\')"')+'>'
@@ -13209,8 +13254,12 @@ function renderPremades(){
   }
 }
 // Every view lands the same way: the card, by its top when it is taller than
-// the screen (smoothScrollToTarget's 'center' does that).
+// the screen (smoothScrollToTarget's 'center' does that). The views walked
+// are a stack, so Back is always the one before: going forward to the view
+// just behind (How it works and back to the shelf) steps back instead.
 function premadesGo(view){
+  const st=premadesStack;
+  if(st[st.length-1]!==view){ if(st[st.length-2]===view)st.pop(); else st.push(view); }
   premadesView=view;
   renderPremades();
   smoothScrollToTarget('premadesCard','center');
@@ -13218,7 +13267,7 @@ function premadesGo(view){
 function pickPremadeOccasion(key){
   const o=PREMADE_OCCASIONS.find(x=>x.key===key); if(!o||o.soon)return;
   premadesOccasion=key;
-  if(o.set){ premadesSet=o.set; premadesGo('occasion'); return; }
+  if(o.set){ premadesSet=o.set; premadesMugIndex=0; premadesGo('shelf'); return; }
   const live=liveCategories(o); if(!live.length)return;
   if(live.length===1){ pickPremadeCategory(live[0]); return; }
   premadesGo('categories');
@@ -13234,16 +13283,65 @@ function premadesSetLayout(k){
   renderPremades();
 }
 // A design tapped on the all-at-once page opens on its own, arrows and all.
-function premadesShowOne(i){ premadesIndex=i; premadesLayout='one'; premadesGo('gallery'); }
+function premadesShowOne(i){ premadesIndex=i; premadesLayout='one'; renderPremades(); smoothScrollToTarget('premadesCard','center'); }
 function pickPremadesPack(n){ premadesPack=n; renderPremades(); }
-// Kept by name: the ?set=<key> link and the tests call it. A set opens on its
-// How it works, the page the flyer's QR is for.
+// Kept by name: the ?set=<key> link and the tests call it. A holiday opens on
+// its How it works, the page the flyer's QR is for, and goes on to its shelf.
 function pickPremadeSet(key){
   if(!SURPRISE_SETS[key])return;
   const o=PREMADE_OCCASIONS.find(x=>x.set===key); if(!o)return;
-  premadesOccasion=o.key; premadesSet=key;
+  premadesOccasion=o.key; premadesSet=key; premadesMugIndex=0;
   premadesGo('how');
 }
+// THE HOLIDAY SHELF. The mugs chosen are a list of keys, repeats kept; the
+// tray under the shelf shows them, prices them, asks the hand and orders.
+function holidayDesigns(){ const s=SURPRISE_SETS[premadesSet]; return s?s.designs:[]; }
+function holidayAddText(key){
+  const n=premadesMugs.filter(k=>k===key).length;
+  return n?'✓ In your mugs'+(n>1?' ×'+n:'')+' · add another':'➕ Add to my mugs';
+}
+function holidayStep(d){
+  const n=holidayDesigns().length; if(!n)return;
+  premadesMugIndex=((premadesMugIndex+d)%n+n)%n;
+  renderPremades();
+}
+function holidayShowOne(i){ premadesMugIndex=i; premadesLayout='one'; try{ localStorage.setItem('mz_premades_layout','one'); }catch(e){} renderPremades(); smoothScrollToTarget('premadesCard','center'); }
+function holidayAdd(key){
+  if(!holidayDesigns().some(d=>d.key===key)||premadesMugs.length>=24)return;
+  premadesMugs.push(key);
+  document.querySelectorAll('#premadesView [data-add="'+key+'"]').forEach(b=>b.textContent=holidayAddText(key));
+  renderHolidayTray();
+}
+function holidayRemove(i){
+  const key=premadesMugs[i]; premadesMugs.splice(i,1);
+  document.querySelectorAll('#premadesView [data-add="'+key+'"]').forEach(b=>b.textContent=holidayAddText(key));
+  renderHolidayTray();
+}
+// What the tray says about the price: how far from a set, the set, or the
+// set and its extras.
+function holidayTrayLine(n){
+  const $=v=>'$'+v.toFixed(2);
+  if(n<4) return n+' of 4 for a set · '+$(holidayPrice(n))+' as '+(n>1?'singles':'a single')+'. Add '+(4-n)+' more and all four are '+$(SMART_MUG_SET_PRICE)+'.';
+  if(n===4) return 'Your set of four · '+$(SMART_MUG_SET_PRICE)+'. Add more at '+$(SMART_MUG_EXTRA_PRICE)+' each.';
+  return 'Your set of four and '+(n-4)+' more · '+$(holidayPrice(n))+'. Each more is '+$(SMART_MUG_EXTRA_PRICE)+'.';
+}
+function renderHolidayTray(){
+  const tray=document.getElementById('premadesTray'); if(!tray)return;
+  const n=premadesMugs.length, d=holidayDesigns(), $=v=>'$'+v.toFixed(2);
+  const just=document.getElementById('premadesJustOneBtn'); if(just)just.style.display=n?'none':'block';
+  if(!n){ tray.innerHTML=''; return; }
+  tray.innerHTML='<div class="pm-tray"><div class="pm-sh" style="text-align:center">Your mugs</div>'
+    +'<div class="pm-sl" id="premadesTrayLine" style="text-align:center;max-width:none">'+holidayTrayLine(n)+'</div>'
+    +'<div class="pm-traymugs" data-words="the mugs chosen: their pictures are the tiles">'+premadesMugs.map((k,i)=>{ const x=d.find(y=>y.key===k)||{}; return '<div class="pm-traymug" data-tray="'+k+'">'
+      +'<img src="art/options/surprise-'+x.file+'.jpg" width="360" height="360" alt="'+(x.label||'')+'"/><span>'+(x.label||'')+'</span>'
+      +'<button type="button" aria-label="Take out" onclick="holidayRemove('+i+')">✕</button></div>'; }).join('')+'</div>'
+    +'<div class="pm-sl" style="margin:.9rem auto .5rem">Which hand do they hold a mug in?</div>'
+    +'<div class="grid2" id="premadesHandGrid" data-words="which hand: the mugs above carry the pictures" style="max-width:360px;margin:0 auto 1rem">'
+    +['right','left'].map(h=>'<div class="btn-select'+(h===premadesHand?' selected':'')+'" data-hand="'+h+'" onclick="pickPremadesHand(\''+h+'\')" style="padding:.7rem;font-size:13px">'+(h==='right'?'Right-handed':'Left-handed')+'</div>').join('')+'</div>'
+    +'<button type="button" class="generate-btn" id="premadesContinueBtn" onclick="goToPremadeSetOrder()">🎁 '+(n===1?'Order this mug':n===4?'Order your set':'Order '+n+' mugs')+' · '+$(holidayPrice(n))+'</button></div>';
+}
+// One mug on its own, whatever is in the tray: an order of that one.
+function holidayJustOne(key){ goToPremadeSetOrder([key]); }
 function premadesStep(d){
   const c=premadeCat(); if(!c)return;
   const n=c.items.length; premadesIndex=((premadesIndex+d)%n+n)%n;
@@ -13258,7 +13356,7 @@ function openPremades(from){
   const card=document.getElementById('premadesCard'); if(!card)return;
   premadesFrom=from==='front'?'front':'grid';
   premadesPrevFocus=Array.from(document.body.classList).filter(c=>c.endsWith('-focus')&&c!=='premades-focus');
-  premadesView='occasions';
+  premadesView='occasions'; premadesStack=['occasions'];
   renderPremades();
   card.style.display='block';
   setOptionSpotlight('premades-focus');
@@ -13268,12 +13366,16 @@ function pickPremadesHand(hand){
   premadesHand=hand==='left'?'left':'right';
   document.querySelectorAll('#premadesHandGrid .btn-select').forEach(b=>b.classList.toggle('selected',b.dataset.hand===premadesHand));
 }
-// Back is the view before, never past one: How it works -> the flyer -> the
-// list; the mats -> the list; the list -> where the panel was opened from.
+// Back is the view before, never past one, by the stack of views walked; the
+// list, at the bottom of it, goes back to where the panel was opened from.
 function premadesBack(){
-  if(premadesView==='how'){ premadesGo('occasion'); return; }
-  if(premadesView==='gallery'&&liveCategories(premadeOccasion()).length>1){ premadesGo('categories'); return; }
-  if(premadesView==='occasion'||premadesView==='gallery'||premadesView==='categories'){ premadesGo('occasions'); return; }
+  if(premadesStack.length>1){
+    premadesStack.pop();
+    premadesView=premadesStack[premadesStack.length-1];
+    renderPremades();
+    smoothScrollToTarget('premadesCard','center');
+    return;
+  }
   clearAllFocusModes();
   document.getElementById('premadesCard').style.display='none';
   if(premadesFrom==='front'){
@@ -13283,15 +13385,18 @@ function premadesBack(){
   }
   smoothScrollToTarget('productCard','start');
 }
-// The set: which set and which hand. The four prints travel for the order
-// page's pictures only; checkout prints the server's own four.
-function goToPremadeSetOrder(){
-  const urls=setPrintUrls(premadesSet,premadesHand); if(!urls)return;
+// The holiday's mugs: which holiday, which hand, which mugs (keys). Their
+// prints travel for the order page's pictures only; checkout prints the
+// server's own files for those keys, at the server's price.
+function goToPremadeSetOrder(mugs){
+  const chosen=(mugs||premadesMugs).slice(0,24); if(!chosen.length)return;
+  const urls=setPrintUrls(premadesSet,premadesHand,chosen); if(!urls||!urls.length)return;
   localStorage.setItem('muggshotz_pending_order',JSON.stringify({
     placements:{left:urls[0],front:null,right:null},
     deviceId:deviceId,
     productIcon:'smart mug',
     surpriseSet:premadesSet,
+    surpriseMugs:chosen,
     surpriseSetPrints:urls,
     preselectedSurpriseHand:premadesHand
   }));

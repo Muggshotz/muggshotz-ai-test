@@ -8,7 +8,7 @@ import { GIFT_AMOUNTS_CENTS, GIFT_FACES, findGiftCertificate, normalizeGiftCode,
 import { chooseRail, feeLineCentsFor, feeLineDescriptionFor, minChargeCentsFor, newCheckoutId, storeCheckoutRecord, readCheckoutRecord, updateCheckoutRecord } from "../lib/payment-rail.js";
 import { squareEnv, squarePublicConfig, squareSdkUrl, buildSquareOrder, orderTotalCents, createPaymentLink, createOrder, createPayment, payOrder, cancelPayment, giftCardFromGan, giftCardUsable } from "../lib/square.js";
 import { settleSquareCheckout } from "./stripe-webhook.js";
-import { surpriseSet, setPrintUrls } from "../lib/surprise-sets.js";
+import { surpriseSet, setPrintUrls, holidayMugs, holidayPrice } from "../lib/surprise-sets.js";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
@@ -320,6 +320,13 @@ function packUnits(product, sizeLabel) {
   const n = product?.sizes?.[sizeLabel]?.packOf;
   return Number.isInteger(n) && n > 1 ? n : 1;
 }
+// The checkout line for a holiday's mugs: "Thanksgiving Set (4 smart mugs)",
+// "Thanksgiving Set + 2 more (6 smart mugs)", "Thanksgiving smart mugs (2)".
+function holidayLineName(r) {
+  const n = r.mugs.length, extra = n - 4;
+  if (n < 4) return `${r.set.label} smart mug${n > 1 ? `s (${n})` : ""}`;
+  return `${r.set.label} Set${extra > 0 ? ` + ${extra} more` : ""} (${n} smart mugs)`;
+}
 function resolveOrderItem(b) {
   const sizeLabel = b.sizeLabel;
   const productKey = b.productKey || MUG_TYPE_TO_PRODUCT_KEY[b.mugType];
@@ -333,9 +340,19 @@ function resolveOrderItem(b) {
   const product = productKey ? getProduct(productKey) : null;
   if (!product) throw orderError(`"${b.mugType || productKey}" isn't available yet.`);
 
+  // A holiday's mugs: which ones, each on the server's list, and their price
+  // by Alyx's rule (lib/surprise-sets.js holidayPrice), never the page's.
+  let mugs = null;
+  if (product.layoutType === "surprise-set") {
+    const set = surpriseSet(b.setKey);
+    if (!set) throw orderError("That set isn't available.");
+    try { mugs = holidayMugs(set, b.mugs); } catch (err) { throw orderError(err.message); }
+  }
   const basePrice = (() => {
     try {
-      return resolvePrice(product, sizeLabel, colorName, { orientation: b.posterOrientation, finish: b.posterFinish });
+      const listed = resolvePrice(product, sizeLabel, colorName, { orientation: b.posterOrientation, finish: b.posterFinish });
+      if (!mugs) return listed;
+      return holidayPrice(mugs.length, { setPrice: listed, extraPrice: product.extraPrice, singlePrice: getProduct("smart-mug").sizes["11oz"].price });
     } catch (err) { throw orderError(err.message); }
   })();
 
@@ -347,7 +364,6 @@ function resolveOrderItem(b) {
       throw orderError("At least one design is required.");
   } else if (product.layoutType === "surprise-set") {
     // The page names the set and the hand; the artwork is the server's own.
-    if (!surpriseSet(b.setKey)) throw orderError("That set isn't available.");
     if (b.hand !== "right" && b.hand !== "left") throw orderError("Please pick right- or left-handed.");
   } else if (product.layoutType === "front-back") {
     if (!frontImage && !backImage)
@@ -371,10 +387,11 @@ function resolveOrderItem(b) {
     insideImage: b.insideImage || null,
     posterOrientation: b.posterOrientation || null,
     posterFinish: b.posterFinish || null,
-    ...(product.layoutType === "surprise-set" ? (() => {
-      const set = surpriseSet(b.setKey);
-      return { setKey: b.setKey, hand: b.hand, set, setImages: setPrintUrls(set, b.hand) };
-    })() : {})
+    ...(mugs ? {
+      setKey: b.setKey, hand: b.hand, set: surpriseSet(b.setKey), mugs,
+      setImages: setPrintUrls(mugs, b.hand), units: mugs.length,
+      profit: Math.round((basePrice - mugs.length * product.unitCost) * 100) / 100
+    } : {})
   };
 }
 function shipsToOrThrow(product, shipCountry) {
@@ -634,7 +651,7 @@ async function handleBasketOrder(req, res) {
 
   let shippingCents = 0;
   try {
-    const ship = await calculateBasketShipping(resolved.map((r) => ({ product: r.product, basePrice: r.basePrice, variantId: r.variantId, units: packUnits(r.product, r.sizeLabel) })), shipCountry);
+    const ship = await calculateBasketShipping(resolved.map((r) => ({ product: r.product, basePrice: r.basePrice, variantId: r.variantId, units: r.units || packUnits(r.product, r.sizeLabel) })), shipCountry);
     shippingCents = Math.round(ship.total * 100);
   } catch (err) {
     console.error("Basket shipping resolution failed, refusing to create session:", err.message);
@@ -659,8 +676,8 @@ async function handleBasketOrder(req, res) {
   const discountSuffix = emailDiscountEligible ? " (10% first-order discount applied)" : "";
   const line_items = resolved.map((r, i) => ({
     price_data: { currency: "usd", product_data: r.set ? {
-      name: `Muggshotz SURPRISE!!! ${r.set.label} Set (4 smart mugs)${discountSuffix}`,
-      description: r.set.designs.map((d) => d.label).join(", ") + (r.hand === "left" ? ", left-handed" : "") } : {
+      name: `Muggshotz SURPRISE!!! ${holidayLineName(r)}${discountSuffix}`,
+      description: r.mugs.map((d) => d.label).join(", ") + (r.hand === "left" ? ", left-handed" : "") } : {
       name: `Muggshotz ${r.product.displayName} (${r.sizeLabel})${r.colorName ? " - " + r.colorName : ""}${discountSuffix}`,
       description: `Custom ${r.product.displayName}` }, unit_amount: itemCents[i] },
     quantity: 1
@@ -691,7 +708,7 @@ async function handleBasketOrder(req, res) {
     console.error("Basket could not be stored, refusing to create session:", err.message);
     return res.status(503).json({ error: "We couldn't save your basket just now. Please try again in a moment." });
   }
-  const netProfit = resolved.reduce((a, r) => a + (typeof r.product.estimatedProfit === "number" ? r.product.estimatedProfit : 0), 0);
+  const netProfit = resolved.reduce((a, r) => a + (typeof r.profit === "number" ? r.profit : typeof r.product.estimatedProfit === "number" ? r.product.estimatedProfit : 0), 0);
 
   const origin = req.headers.origin || "https://muggshotz-ai-test.vercel.app";
   const spec = {
@@ -704,7 +721,7 @@ async function handleBasketOrder(req, res) {
       basket_id: basketId,
       item_count: String(stored.length),
       product_keys: resolved.map((r) => r.productKey).join(",").slice(0, 490),
-      sets: resolved.filter((r) => r.set).map((r) => `${r.setKey}:${r.hand}`).join(","),
+      sets: resolved.filter((r) => r.set).map((r) => `${r.setKey}:${r.hand}:${r.mugs.length}`).join(","),
       gift_code: giftCode && giftCents > 0 ? giftCode : "",
       gift_cents: String(giftCents),
       device_id: deviceId,
@@ -940,8 +957,8 @@ export default async function handler(req, res) {
       // A holiday set is four mugs in one order, which is what a basket is:
       // a set bought on its own goes through the basket's checkout.
       if (getProduct(req.body.productKey)?.layoutType === "surprise-set") {
-        const { productKey, sizeLabel, setKey, hand } = req.body;
-        req.body = { ...req.body, type: "basket_order", items: [{ productKey, sizeLabel, setKey, hand }] };
+        const { productKey, sizeLabel, setKey, hand, mugs } = req.body;
+        req.body = { ...req.body, type: "basket_order", items: [{ productKey, sizeLabel, setKey, hand, mugs }] };
         return await handleBasketOrder(req, res);
       }
       return await handleProductOrder(req, res);

@@ -335,7 +335,7 @@ function bodiesFor(key, p) {
     const bad = [];
     const { SURPRISE_SETS } = await import(pathToFileURL(path.join(ROOT, 'lib', 'surprise-sets.js')).href);
     const setP = catalog['smart-mug-set'];
-    const want = (hand) => SURPRISE_SETS.thanksgiving.designs.map((d) => `https://muggshotz.test/art/surprise/${d.file}${hand === 'left' ? '-print-left' : '-print'}.png`);
+    const want = (hand) => SURPRISE_SETS.thanksgiving.designs.slice(0, 4).map((d) => `https://muggshotz.test/art/surprise/${d.file}${hand === 'left' ? '-print-left' : '-print'}.png`);
     const cushion = (c) => Math.ceil(c * 1.03);
     for (const hand of ['right', 'left']) {
       wire.uploads = 0; wire.products.length = 0; wire.orders.length = 0; wire.unstubbed.length = 0; errors.length = 0;
@@ -388,6 +388,53 @@ function bodiesFor(key, p) {
     const sv = bad.length ? `FAIL: ${bad.join('; ')}` : 'PASS: the Thanksgiving set, both hands, is one line at the set price, ships as four mugs, prints the server\'s own four files, and reaches Printify as one order of four; an unknown set or no hand is refused; beside a single mug it ships as five';
     if (bad.length) fails++;
     console.log(`[holidaySetFourMugsOneOrder] ${sv}`);
+  }
+
+  // MIX AND MATCH (Alyx, 27 Sep 2026: "you decide the participants"). The page
+  // names the mugs, repeats and all; the server checks each against its list
+  // and prices them by Alyx's rule: under four at $19.95 each, four the set,
+  // each more $17.95. Shipping counts every mug; every mug is printed.
+  {
+    const bad = [];
+    const { SURPRISE_SETS } = await import(pathToFileURL(path.join(ROOT, 'lib', 'surprise-sets.js')).href);
+    const file = (k) => SURPRISE_SETS.thanksgiving.designs.find((d) => d.key === k).file;
+    const cushion = (c) => Math.ceil(c * 1.03);
+    const cases = [
+      { mugs: ['golden-brown', 'golden-brown', 'dark-meat', 'thankful', 'uncle-gerald', 'golden-brown'], hand: 'left', cents: 9585, name: /Thanksgiving Set \+ 2 more \(6 smart mugs\)/ },
+      { mugs: ['the-diet', 'the-diet', 'the-diet', 'the-diet'], hand: 'right', cents: 5995, name: /Thanksgiving Set \(4 smart mugs\)/ },
+      { mugs: ['the-diet', 'dark-meat'], hand: 'right', cents: 3990, name: /Thanksgiving smart mugs \(2\)/ },
+      { mugs: ['uncle-gerald'], hand: 'right', cents: 1995, name: /Thanksgiving smart mug(?! )/ }
+    ];
+    for (const c of cases) {
+      wire.products.length = 0; wire.orders.length = 0; wire.unstubbed.length = 0; errors.length = 0;
+      const before = globalThis.__stripe.sessions.length;
+      console.log = quiet;
+      const r = res(); await session(jsonReq(base({ productKey: 'smart-mug-set', sizeLabel: 'Set of 4', setKey: 'thanksgiving', hand: c.hand, mugs: c.mugs, image: 'https://evil.test/other.png' })), r);
+      const s = globalThis.__stripe.sessions[before];
+      const tag = `${c.mugs.length} mugs`;
+      if (r.code !== 200 || !s) { console.log = origLog; bad.push(`${tag}: checkout answered ${r.code} ${JSON.stringify(r.body)}`); continue; }
+      const lines = s.line_items || [], product = lines.filter((li) => /^Muggshotz /.test(li.price_data.product_data.name));
+      if (product.length !== 1 || product[0].price_data.unit_amount !== c.cents) bad.push(`${tag}: charged ${product.map((l) => l.price_data.unit_amount)} cents, expected ${c.cents}`);
+      else if (!c.name.test(product[0].price_data.product_data.name)) bad.push(`${tag}: the line reads "${product[0].price_data.product_data.name}"`);
+      const ship = lines.find((li) => /^Shipping/.test(li.price_data.product_data.name));
+      const wantShip = cushion(599) + (c.mugs.length - 1) * cushion(199);
+      if (!ship || ship.price_data.unit_amount !== wantShip) bad.push(`${tag}: shipping ${ship ? ship.price_data.unit_amount : 'none'} cents, expected ${wantShip}`);
+      const stored = ((wire.baskets[s.metadata.basket_id + '.json'] || {}).items || []).map((it) => it.image);
+      const wantImgs = c.mugs.map((k) => `https://muggshotz.test/art/surprise/${file(k)}${c.hand === 'left' ? '-print-left' : '-print'}.png`);
+      if (JSON.stringify(stored) !== JSON.stringify(wantImgs)) bad.push(`${tag}: stored prints ${JSON.stringify(stored)}`);
+      const r2 = res(); await webhook(rawReq({ type: 'checkout.session.completed', livemode: true, data: { object: { id: s.id, metadata: s.metadata, customer_details: { email: ADDRESS.email } } } }), r2);
+      if (wire.orders.length !== 1 || (wire.orders[0].line_items || []).length !== c.mugs.length) bad.push(`${tag}: ${wire.orders.length} orders / ${(wire.orders[0]?.line_items || []).length} lines, expected one order of ${c.mugs.length}`);
+      console.log = origLog;
+    }
+    console.log = quiet;
+    for (const [mugs, why] of [[['power-out', 'easter-bunny'], 'a mug not on the list'], [[], 'no mugs'], [Array(25).fill('pardon'), '25 mugs'], ['pardon', 'mugs that are not a list']]) {
+      const r = res(); await session(jsonReq(base({ productKey: 'smart-mug-set', sizeLabel: 'Set of 4', setKey: 'thanksgiving', hand: 'right', mugs })), r);
+      if (r.code !== 400) bad.push(`${why} answered ${r.code}`);
+    }
+    console.log = origLog;
+    const mv = bad.length ? `FAIL: ${bad.join('; ')}` : 'PASS: mix and match: six with repeats (left-handed) are the set + 2 more at $95.85, four of one mug the set at $59.95, two $39.90, one $19.95; each ships and prints every mug chosen, from the server\'s files, as one Printify order; a mug not on the list, none, 25, or not a list is refused';
+    if (bad.length) fails++;
+    console.log(`[holidayMixAndMatch] ${mv}`);
   }
 
   // A basket item is checked like a single order, and the gift certificate

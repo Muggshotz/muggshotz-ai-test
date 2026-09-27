@@ -55,8 +55,11 @@ export default async function handler(req, res) {
         const cl = sz?.colors && req.query.colorName ? sz.colors.find((x) => x.name === req.query.colorName) : null;
         // A set (setOf) is several mugs in one parcel: quoted as the basket
         // quotes it, which is how checkout bills it.
-        const units = Number.isInteger(sz?.packOf) && sz.packOf > 1 ? sz.packOf : 1;
-        const shipping = (product.setOf > 1 || units > 1)
+        // A holiday's mugs (setOf) are quoted at the count chosen, when given.
+        const count = Number(req.query.units);
+        const units = product.setOf > 1 && Number.isInteger(count) && count >= 1 && count <= 24 ? count
+          : Number.isInteger(sz?.packOf) && sz.packOf > 1 ? sz.packOf : undefined;
+        const shipping = (product.setOf > 1 || units)
           ? (await calculateBasketShipping([{ product, basePrice: price, variantId: sz?.variantId || null, units }], countryCode)).total
           : await calculateShippingCharge(product, price, countryCode, cl?.variantId || sz?.variantId || null);
         return res.status(200).json({ shipping, shippingSeparate: true, source: "live" });
@@ -81,7 +84,10 @@ export default async function handler(req, res) {
         if (!product) return res.status(404).json({ error: `Unknown product: ${it.productKey}` });
         const s = product.sizes?.[it.sizeLabel];
         const c = s?.colors && it.colorName ? s.colors.find((x) => x.name === it.colorName) : null;
-        entries.push({ product, basePrice: Number(it.basePrice) || 0, variantId: c?.variantId || s?.variantId || null, units: Number.isInteger(s?.packOf) && s.packOf > 1 ? s.packOf : 1 });
+        const count = Number(it.units);
+        const units = product.setOf > 1 && Number.isInteger(count) && count >= 1 && count <= 24 ? count
+          : Number.isInteger(s?.packOf) && s.packOf > 1 ? s.packOf : undefined;
+        entries.push({ product, basePrice: Number(it.basePrice) || 0, variantId: c?.variantId || s?.variantId || null, units });
       }
       try {
         const ship = await calculateBasketShipping(entries, countryCode);

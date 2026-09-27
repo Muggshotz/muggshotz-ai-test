@@ -951,7 +951,8 @@ async function refreshShipping(basePrice){
       basePrice: String(basePrice),
       country: currentCountry(),
       sizeLabel: (cur && cur.sizeLabel) || '',
-      colorName: (cur && (cur.colorName || cur.color)) || ''
+      colorName: (cur && (cur.colorName || cur.color)) || '',
+      units: String((cur && Array.isArray(cur.mugs) && cur.mugs.length) || '')
     });
     const resp = await fetch('/api/printify-catalog?' + qs.toString());
     const data = await resp.json();
@@ -1491,15 +1492,26 @@ function surpriseLabel(){
   const v = (SURPRISE_VARIANT_LABELS[selectedSurprise] || {})[selectedSurpriseVariant];
   return (SURPRISE_LABELS[selectedSurprise] || 'Surprise') + (v ? ' / ' + v : '');
 }
-// THE HOLIDAY SETS (26 Sep 2026): four smart-mug designs of one holiday, one
-// price. The studio names the set and the hand; checkout prints the server's
-// own four files (lib/surprise-sets.js). The prints handed over are for the
-// pictures on this page only.
+// THE HOLIDAY MUGS (26-27 Sep 2026): a holiday's designs, mixed and matched
+// in the studio. The studio names the holiday, the hand and the mugs (by key);
+// checkout prints the server's own files for those keys and prices them by
+// the server's rule (lib/surprise-sets.js holidayPrice), which this page only
+// mirrors for the summary. The prints handed over are for the pictures here.
 const SMART_MUG_SET_PRICE = 59.95;
+const SMART_MUG_EXTRA_PRICE = 17.95;
 const SURPRISE_SET_LABELS = { 'thanksgiving': 'Thanksgiving' };
 const selectedSurpriseSet = SURPRISE_SET_LABELS[pendingOrder?.surpriseSet] ? pendingOrder.surpriseSet : null;
+// The mugs chosen; none named (an order saved before they could be chosen)
+// is the holiday's own four.
+const selectedHolidayMugs = Array.isArray(pendingOrder?.surpriseMugs) && pendingOrder.surpriseMugs.length ? pendingOrder.surpriseMugs.slice(0, 24) : null;
+function holidayMugCount(){ return selectedHolidayMugs ? selectedHolidayMugs.length : 4; }
+function holidayPrice(n){ return n >= 4 ? Math.round((SMART_MUG_SET_PRICE + (n - 4) * SMART_MUG_EXTRA_PRICE) * 100) / 100 : Math.round(n * SMART_MUG_PRICE * 100) / 100; }
 function isSmartMugSet(){ return isSmartMug() && !!selectedSurpriseSet; }
-function surpriseSetName(){ return 'SURPRISE!!! ' + SURPRISE_SET_LABELS[selectedSurpriseSet] + ' Set'; }
+function surpriseSetName(){
+  const n = holidayMugCount(), label = SURPRISE_SET_LABELS[selectedSurpriseSet];
+  if (n < 4) return 'SURPRISE!!! ' + label + ' smart mug' + (n > 1 ? 's' : '');
+  return 'SURPRISE!!! ' + label + ' Set' + (n > 4 ? ' + ' + (n - 4) + ' more' : '');
+}
 const CARMAGNET_OPTIONS = { "5 x 5 in": { price: 5.95 }, "7.5 x 4.5 in": { price: 6.95 }, "10 x 3 in": { price: 8.95 } };
 let selectedCarMagnet = "5 x 5 in";
 if (pendingOrder?.preselectedCarMagnet && CARMAGNET_OPTIONS[pendingOrder.preselectedCarMagnet]) {
@@ -2761,8 +2773,8 @@ function updateSummary(){
     basePrice = apparelPrice(selectedTshirt, selectedTshirtColor);
     styleSizeLabel = APPAREL_G.label + ', ' + selectedTshirt + ', ' + selectedTshirtColor;
   } else if (isSmartMugSet()) {
-    basePrice = SMART_MUG_SET_PRICE;
-    styleSizeLabel = surpriseSetName() + ', 4 smart mugs' + (selectedSurpriseHand === 'left' ? ', left-handed' : '');
+    basePrice = holidayPrice(holidayMugCount());
+    styleSizeLabel = surpriseSetName() + ', ' + holidayMugCount() + ' smart mug' + (holidayMugCount() > 1 ? 's' : '') + (selectedSurpriseHand === 'left' ? ', left-handed' : '');
   } else if (isSmartMug()) {
     basePrice = SMART_MUG_PRICE;
     styleSizeLabel = 'SURPRISE!!! Smart Mug, ' + surpriseLabel();
@@ -2844,10 +2856,11 @@ function updateSummary(){
   let basketEntries = null;
   if (basketNow.length) {
     // One quote for everything, from the function checkout bills a basket with.
-    basketEntries = basketNow.map(b => ({ productKey: b.productKey, sizeLabel: b.sizeLabel, colorName: b.colorName, basePrice: b.basePrice }));
+    const unitsOf = (it) => (it && Array.isArray(it.mugs) && it.mugs.length) || undefined;
+    basketEntries = basketNow.map(b => ({ productKey: b.productKey, sizeLabel: b.sizeLabel, colorName: b.colorName, basePrice: b.basePrice, units: unitsOf(b.item) }));
     if (currentPresent) {
       const cur = currentItemQuietly();
-      basketEntries.push({ productKey: currentProductKey(), sizeLabel: cur ? cur.sizeLabel : null, colorName: cur ? (cur.colorName || cur.color || null) : null, basePrice });
+      basketEntries.push({ productKey: currentProductKey(), sizeLabel: cur ? cur.sizeLabel : null, colorName: cur ? (cur.colorName || cur.color || null) : null, basePrice, units: unitsOf(cur) });
     }
     const bKey = JSON.stringify(basketEntries) + '|' + currentCountry();
     shippingIsLive = (liveBasketShipping !== null && liveBasketShippingKey === bKey);
@@ -3180,6 +3193,7 @@ function buildOrderItemBody(fullName, shippingAddress){
       sizeLabel: 'Set of 4',
       setKey: selectedSurpriseSet,
       hand: selectedSurpriseHand,
+      mugs: selectedHolidayMugs || undefined,
       customerName: fullName,
       giftMessage: giftMessageEnabled ? document.getElementById('giftMessageText').value.trim() : null,
       shippingAddress,
@@ -3729,8 +3743,10 @@ if (isTravelMug()) {
     hideAllProductCards();
     document.getElementById('smartMugCard').style.display = 'block';
     document.getElementById('smartMugCardTitle').textContent = '🎁 ' + surpriseSetName();
+    const n = holidayMugCount();
     document.getElementById('smartMugChoiceNote').textContent =
-      'Four smart mugs, four scenes · for a ' + selectedSurpriseHand + '-handed recipient · $' + SMART_MUG_SET_PRICE.toFixed(2) + ' the set';
+      n + ' smart mug' + (n > 1 ? 's' : '') + ' · for a ' + selectedSurpriseHand + '-handed recipient · $' + holidayPrice(n).toFixed(2) +
+      (n >= 4 ? ' (the set of four $' + SMART_MUG_SET_PRICE.toFixed(2) + (n > 4 ? ', ' + (n - 4) + ' more at $' + SMART_MUG_EXTRA_PRICE.toFixed(2) + ' each' : '') + ')' : '');
     const box = document.getElementById('smartMugSetPictures');
     box.innerHTML = '';
     (pendingOrder.surpriseSetPrints || []).forEach((u) => {
@@ -3744,7 +3760,7 @@ if (isTravelMug()) {
     box.style.display = 'block';
     document.getElementById('smartMugMockupBtn').style.display = 'none';
     document.getElementById('previewNote').textContent =
-      'Four surprises, one for each mug. Each appears when hot coffee goes in.';
+      'A surprise on every mug. Each appears when hot coffee goes in.';
   } else if (isSmartMug()) {
     hideAllProductCards();
     document.getElementById('smartMugCard').style.display = 'block';
