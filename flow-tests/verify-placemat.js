@@ -15,7 +15,10 @@ const T = (page, ms) => page.waitForTimeout(ms);
 // priced as one item), so both routes through the card are driven.
 const KINDS = {
   Cotton: { key: 'placemat-cotton', size: '18 x 14 in', price: '$16.95', ratio: 2925 / 2325, pack: 1, label: /Cotton Placemat, 18 x 14/ },
-  Neoprene: { key: 'placemat-neoprene', size: '12 x 18 in, set of 2', price: '$24.95', ratio: 5610 / 3839, pack: 2, label: /Neoprene Placemats, set of 2/ }
+  Neoprene: { key: 'placemat-neoprene', size: '12 x 18 in, set of 2', price: '$24.95', ratio: 5610 / 3839, pack: 2, label: /Neoprene Placemats, set of 2/ },
+  // The Stitched Edge desk mat's two sizes (27 Sep 2026): each its own shape.
+  Large: { key: 'placemat-stitched', size: '24 x 14 in', price: '$11.95', ratio: 7350 / 4350, pack: 1, label: /Large Placemat, 24 x 14/ },
+  Kids: { key: 'placemat-stitched', size: '14.5 x 12.2 in, set of 2', price: '$16.95', ratio: 4709 / 3984, pack: 2, label: /Kids' Placemats, set of 2/ }
 };
 
 async function run(page, log, kind) {
@@ -31,7 +34,7 @@ async function run(page, log, kind) {
   await page.click('#postUploadForkRow button:has-text("Select Your Product")');
   await T(page, 700);
   const tile = await page.evaluate(() => document.querySelector('#productCard .btn-select[data-val="placemat"]')?.innerText || '');
-  if (!/Placemats/.test(tile) || !/\$13\.95/.test(tile)) return `FAIL: the tile reads "${tile.replace(/\n/g, ' / ')}"`;
+  if (!/Placemats/.test(tile) || !/\$9\.95/.test(tile)) return `FAIL: the tile reads "${tile.replace(/\n/g, ' / ')}"`;
   await page.evaluate(() => document.querySelector('#productCard .btn-select[data-val="placemat"]').click());
   await T(page, 1800); await dismissAlerts(page);
   const card = await page.evaluate(async () => {
@@ -43,14 +46,15 @@ async function run(page, log, kind) {
       tiles: tiles.map((t) => t.innerText.replace(/\n/g, ' ')), pics: imgs.filter((im) => im.naturalWidth > 0).length, top: Math.round(c.getBoundingClientRect().top), H: innerHeight };
   });
   if (!card.shown || card.focus !== 'placemat-option-focus') return `FAIL: the tile did not open the lit placemat card (${JSON.stringify(card)})`;
-  if (card.tiles.length !== 2 || card.pics !== 2 || !/Cotton.*\$16\.95/.test(card.tiles[0]) || !/Neoprene.*\$13\.95/.test(card.tiles[1])) return `FAIL: the card offers ${JSON.stringify(card.tiles)} with ${card.pics} pictures`;
+  const wantTiles = [/Cotton.*\$16\.95/, /Neoprene.*\$13\.95/, /Large.*24 x 14.*\$11\.95/, /Kids.*14\.5 x 12\.2.*\$9\.95/];
+  if (card.tiles.length !== 4 || card.pics !== 4 || wantTiles.some((re, i) => !re.test(card.tiles[i]))) return `FAIL: the card offers ${JSON.stringify(card.tiles)} with ${card.pics} pictures`;
   if (card.top < -2 || card.top > card.H * 0.5) return `FAIL: the card did not land at its title (top ${card.top})`;
   await page.evaluate((k) => document.querySelector(`#placematOptionGrid .btn-select[data-opt="${k}"]`).click(), kind);
   await T(page, 1200); await dismissAlerts(page);
   // One, or a set of two: asked before the description.
   if (await page.evaluate(() => document.body.classList.contains('ideafirst-focus'))) return 'FAIL: the idea box opened before one-or-two was chosen';
   const packs = await page.evaluate(() => [...document.querySelectorAll('#placematPackGrid .btn-select')].map((b) => b.innerText.replace(/\n/g, ' ')));
-  const setPrice = kind === 'Cotton' ? '29.95' : '24.95', onePrice = kind === 'Cotton' ? '16.95' : '13.95';
+  const setPrice = { Cotton: '29.95', Neoprene: '24.95', Large: '20.95', Kids: '16.95' }[kind], onePrice = { Cotton: '16.95', Neoprene: '13.95', Large: '11.95', Kids: '9.95' }[kind];
   if (packs.length !== 2 || !packs[0].includes('Just one $' + onePrice) || !packs[1].includes('A set of two $' + setPrice)) return `FAIL: the one-or-two choice reads ${JSON.stringify(packs)}`;
   await page.evaluate((n) => document.querySelector(`#placematPackGrid .btn-select[data-pack="${n}"]`).click(), want.pack);
   await T(page, 1200); await dismissAlerts(page);
@@ -94,7 +98,7 @@ async function run(page, log, kind) {
   await T(page, 2000);
   const b = bodies[bodies.length - 1];
   if (!b || b.productKey !== want.key || b.sizeLabel !== want.size || !b.image) return `FAIL: checkout got ${JSON.stringify(b && { k: b.productKey, s: b.sizeLabel, image: !!b.image })}`;
-  return `PASS: ${kind}${want.pack === 2 ? ' (set of two)' : ''}: the lit card offers both kinds with pictures and prices, then one or a set of two; it paints 1536x1024 and comes back ${d.w}x${d.h} (${shape.toFixed(3)}:1); the mockup and checkout are ${want.key} / ${want.size} at ${want.price}`;
+  return `PASS: ${kind}${want.pack === 2 ? ' (set of two)' : ''}: the lit card offers all four kinds with pictures and prices, then one or a set of two; it paints 1536x1024 and comes back ${d.w}x${d.h} (${shape.toFixed(3)}:1); the mockup and checkout are ${want.key} / ${want.size} at ${want.price}`;
 }
 
 (async () => {
