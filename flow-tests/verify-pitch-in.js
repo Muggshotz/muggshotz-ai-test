@@ -90,6 +90,44 @@ scenarios.theServer = async () => {
   return bad.length ? `FAIL: ${bad.join('; ')}` : 'PASS: refusals, a bot and a good idea handled; saved private, emailed to myideaformuggshotz@gmail.com as "My Idea: ..." with reply-to and the picture, the idea channel rung; a bug as "Bug Report: ..." on its own channel with where it happened; three secret channels, admin-only; a sale says what sold';
 };
 
+// The bug bounty, paid to the reporter's device (27 Sep 2026): once, through
+// the admin grant, stamped on the report; refused without the password, for a
+// report with no device, for an unknown or malformed id, and a second time.
+scenarios.theReward = async () => {
+  Object.assign(process.env, { SUPABASE_URL: 'https://sb.test', SUPABASE_SERVICE_ROLE_KEY: 'service-key', RESEND_API_KEY: 're_test_key', ADMIN_PASSWORD: 'admin-pw' });
+  const reports = {
+    'bug/2026-09-27T10-00-00-000Z-aaaa1111.json': { id: '2026-09-27T10-00-00-000Z-aaaa1111', kind: 'bug', text: 'Back did nothing', deviceId: 'dev_reporter' },
+    'bug/2026-09-27T11-00-00-000Z-bbbb2222.json': { id: '2026-09-27T11-00-00-000Z-bbbb2222', kind: 'bug', text: 'No device', deviceId: '' }
+  };
+  const grants = [], ledger = []; let balance = 5;
+  global.fetch = async (url, opts = {}) => {
+    const u = String(url), m = (opts.method || 'GET').toUpperCase();
+    const ok = (j, status = 200) => ({ ok: status < 300, status, json: async () => j, text: async () => JSON.stringify(j) });
+    const obj = /\/storage\/v1\/object\/pitches\/(bug\/[^?]+)$/.exec(u);
+    if (obj && m === 'GET') return reports[obj[1]] ? ok(reports[obj[1]]) : ok({ error: 'not found' }, 404);
+    if (obj && m === 'POST') { if (opts.headers['x-upsert'] !== 'true') return ok({}, 409); reports[obj[1]] = JSON.parse(opts.body); return ok({ Key: obj[1] }); }
+    if (/\/rest\/v1\/customers\?device_id=/.test(u) && m === 'GET') return ok([{ id: 'cust_9', token_balance: balance }]);
+    if (/\/rest\/v1\/customers\?id=eq\./.test(u) && m === 'PATCH') { balance = JSON.parse(opts.body).token_balance; grants.push(balance); return ok([{ id: 'cust_9', token_balance: balance }]); }
+    if (/\/rest\/v1\/token_transactions/.test(u)) { ledger.push(JSON.parse(opts.body)); return ok({}); }
+    return ok({}, 500);
+  };
+  const admin = await import(pathToFileURL(path.join(ROOT, 'api', 'admin.js')).href + '?reward=' + Date.now());
+  const call = async (body) => { let status = 0, json = null; const res = { status(s) { status = s; return this; }, json(j) { json = j; return this; } }; await admin.default({ method: 'POST', body, query: {} }, res); return { status, json }; };
+  const bad = [], id = '2026-09-27T10-00-00-000Z-aaaa1111';
+  if ((await call({ action: 'pitch-reward', password: 'wrong', id })).status !== 403) bad.push('paid without the password');
+  if ((await call({ action: 'pitch-reward', password: 'admin-pw', id: '../idea/x' })).status !== 400) bad.push('a malformed id was not refused');
+  if ((await call({ action: 'pitch-reward', password: 'admin-pw', id: '2026-09-27T12-00-00-000Z-cccc3333' })).status !== 404) bad.push('an unknown report was not refused');
+  const nodev = await call({ action: 'pitch-reward', password: 'admin-pw', id: '2026-09-27T11-00-00-000Z-bbbb2222' });
+  if (nodev.status !== 400 || !/no device/i.test(nodev.json?.error || '')) bad.push(`a report with no device gave ${nodev.status}`);
+  const paid = await call({ action: 'pitch-reward', password: 'admin-pw', id });
+  if (paid.status !== 200 || paid.json?.rewardTokens !== 2 || balance !== 7) bad.push(`paying gave ${paid.status}, balance ${balance}`);
+  if (ledger.length !== 1 || ledger[0].amount !== 2 || !/Bug report reward 2026-09-27T10-00-00-000Z-aaaa1111/.test(ledger[0].reason)) bad.push(`the ledger has ${JSON.stringify(ledger)}`);
+  if (!reports['bug/' + id + '.json'].rewardedAt || reports['bug/' + id + '.json'].rewardTokens !== 2 || reports['bug/' + id + '.json'].text !== 'Back did nothing') bad.push('the report was not stamped (or lost its text)');
+  const again = await call({ action: 'pitch-reward', password: 'admin-pw', id });
+  if (again.status !== 409 || balance !== 7 || grants.length !== 1) bad.push(`paying twice gave ${again.status}, balance ${balance}`);
+  return bad.length ? `FAIL: ${bad.join('; ')}` : 'PASS: the reward pays 2 tokens to the reporter\'s device through the admin grant (in the ledger as "Bug report reward <id>"), stamps the report, and refuses no password, a bad or unknown id, a report with no device, and a second payment';
+};
+
 scenarios.thePage = async (page, log) => {
   const posts = [];
   await page.route('**/api/admin', async (route) => {
@@ -148,9 +186,9 @@ scenarios.thePage = async (page, log) => {
   let fails = 0;
   for (const [screen, viewport] of Object.entries({ laptop: { width: 1880, height: 770 }, phone: { width: 390, height: 844 } })) {
     for (const [name, fn] of Object.entries(scenarios)) {
-      if (name === 'theServer' && screen === 'phone') continue;
+      if ((name === 'theServer' || name === 'theReward') && screen === 'phone') continue;
       let result;
-      if (name === 'theServer') {
+      if (name === 'theServer' || name === 'theReward') {
         try { result = await fn(); } catch (e) { result = `ERROR: ${String(e).split('\n')[0]}`; }
         console.log(`[${screen}] [${name}] ${result}`);
         if (!/^PASS/.test(result)) fails++;

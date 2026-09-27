@@ -115,14 +115,14 @@ scenarios.thePanelAndTheOrder = async (page, log) => {
   // Next to last: Pitch In ends the grid (Alyx's last row: Artwork Only, Gift
   // Certificate, Premades & Sets, Pitch In).
   const tile = await page.evaluate(() => { const t = document.getElementById('premadesTile'); return t && { text: t.innerText, last: t.nextElementSibling === document.getElementById('pitchInTile') && t.nextElementSibling === t.parentElement.lastElementChild }; });
-  if (!tile || !tile.last || !/Premades & Sets/.test(tile.text) || !/\$19\.95/.test(tile.text)) return `FAIL: the Premades & Sets tile reads ${JSON.stringify(tile)}`;
+  if (!tile || !tile.last || !/Pre-mades & Sets/.test(tile.text) || !/\$19\.95/.test(tile.text)) return `FAIL: the Premades & Sets tile reads ${JSON.stringify(tile)}`;
   await tap(page, '#premadesTile');
   await T(page, 1900);
   // The list: quiet on purpose (no pictures), but named, priced, with Back,
   // lit, and landed with its title and first occasion on screen.
   const st0 = await pmState(page);
   if (!st0.shown || st0.focus !== 'premades-focus' || st0.view !== 'occasions') return `FAIL: the tile did not open the lit occasions list (${JSON.stringify(st0)})`;
-  if (!/Premades/i.test(st0.title) || !st0.back || !/\$59\.95/.test(st0.text) || !/\$19\.95/.test(st0.text)) return `FAIL: the list lacks its name, Back or prices (${JSON.stringify(st0)})`;
+  if (!/Pre-mades/i.test(st0.title) || !st0.back || !/\$59\.95/.test(st0.text) || !/\$19\.95/.test(st0.text)) return `FAIL: the list lacks its name, Back or prices (${JSON.stringify(st0)})`;
   if (st0.imgs) return `FAIL: the quiet list shows ${st0.imgs} picture(s)`;
   if (!st0.landed) return `FAIL: the list did not land at its title (${JSON.stringify(st0)})`;
   // Thanksgiving: its flyer alone, the set, one button.
@@ -182,7 +182,7 @@ scenarios.thePanelAndTheOrder = async (page, log) => {
   const b = bodies[bodies.length - 1];
   if (!b || b.productKey !== 'smart-mug-set' || b.sizeLabel !== 'Set of 4' || b.setKey !== 'thanksgiving' || b.hand !== 'left' || b.image)
     return `FAIL: checkout got ${JSON.stringify(b && { k: b.productKey, s: b.sizeLabel, set: b.setKey, hand: b.hand, image: b.image })}`;
-  return 'PASS: the Premades & Sets tile ends the grid at from $19.95 and opens the quiet occasions list (named, priced, no pictures, lit, landed); Thanksgiving shows its flyer alone, then How the magic mug works in seven steps; Back steps one view at a time to the grid; and the order page shows the four, prices the set, asks for no mockup, and checks out smart-mug-set / Set of 4 / thanksgiving / left with no artwork of its own';
+  return 'PASS: the Pre-mades & Sets tile ends the grid at from $19.95 and opens the quiet occasions list (named, priced, no pictures, lit, landed); Thanksgiving shows its flyer alone, then How the magic mug works in seven steps; Back steps one view at a time to the grid; and the order page shows the four, prices the set, asks for no mockup, and checks out smart-mug-set / Set of 4 / thanksgiving / left with no artwork of its own';
 };
 
 // The flyer's link: ?set=thanksgiving opens the set's How it works, the page
@@ -208,7 +208,7 @@ scenarios.theFrontDoor = async (page) => {
       photo: !!(typeof uploadedOriginalFile !== 'undefined' && uploadedOriginalFile) };
   });
   if (!b0 || !b0.inCard || !b0.shown || !b0.lit) return `FAIL: no lit Premades & Sets button on the opening card (${JSON.stringify(b0)})`;
-  if (!/Premades & Sets/.test(b0.text) || !/No photo needed/.test(b0.text) || !/\$19\.95/.test(b0.text)) return `FAIL: the button reads "${b0.text}"`;
+  if (!/Pre-mades & Sets/.test(b0.text) || !/No photo needed/.test(b0.text) || !/\$19\.95/.test(b0.text)) return `FAIL: the button reads "${b0.text}"`;
   if (b0.focus !== 'initial-upload-focus' || b0.photo) return `FAIL: not a fresh visit (${JSON.stringify(b0)})`;
   await tap(page, '#premadesFrontBtn'); await T(page, 1800);
   const st = await pmState(page);
@@ -219,7 +219,7 @@ scenarios.theFrontDoor = async (page) => {
     return { card: getComputedStyle(document.getElementById('premadesCard')).display, focus: [...document.body.classList].filter((c) => c.endsWith('-focus')).join(),
       onScreen: r.top >= 0 && r.bottom <= innerHeight }; });
   if (back.card !== 'none' || back.focus !== 'initial-upload-focus' || !back.onScreen) return `FAIL: Back left ${JSON.stringify(back)}`;
-  return 'PASS: a fresh visit, no photo: the opening card carries a lit Premades & Sets button (from $19.95, no photo needed); it opens the occasions list lit at its title, and Back returns to the opening card as it was';
+  return 'PASS: a fresh visit, no photo: the opening card carries a lit Pre-mades & Sets button (from $19.95, no photo needed); it opens the occasions list lit at its title, and Back returns to the opening card as it was';
 };
 
 // Everyday: the Unwelcome mats one at a time, next and back round the nine,

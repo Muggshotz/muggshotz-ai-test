@@ -996,6 +996,43 @@ async function handlePitchList(req, res) {
   }
 }
 
+// THE BUG BOUNTY, PAID TO THE DEVICE (Alyx, 27 Sep 2026). The first to report
+// a bug gets two free tokens when it is fixed; name and email are optional, so
+// the reward goes to the device the report came from (pitch-in.js sends it).
+// Alyx decides who was first and presses Pay on that report in the admin
+// page. Paid through the same grant as a hand grant (handleAdjust, so it lands
+// in token_transactions), then the report is stamped rewardedAt: a report is
+// paid once, never twice.
+const BUG_REWARD_TOKENS = 2;
+async function handlePitchReward(req, res) {
+  const { password, id } = req.body || {};
+  if (password !== ADMIN_PASSWORD) return res.status(403).json({ error: 'Unauthorized.' });
+  if (typeof id !== 'string' || !/^[\w-]{10,80}$/.test(id)) return res.status(400).json({ error: 'A report id is required.' });
+  const path = `bug/${id}.json`;
+  try {
+    const r = await fetch(`${SUPABASE_URL}/storage/v1/object/${PITCH_BUCKET}/${path}`, { headers: sbHeaders() });
+    if (r.status === 404 || r.status === 400) return res.status(404).json({ error: 'No such bug report.' });
+    if (!r.ok) throw new Error('Could not read the report: ' + r.status);
+    const rec = await r.json();
+    if (rec.rewardedAt) return res.status(409).json({ error: `Already paid on ${rec.rewardedAt}.`, rewardedAt: rec.rewardedAt });
+    if (!rec.deviceId) return res.status(400).json({ error: 'This report has no device to pay.' });
+    // The grant, exactly as the admin page's own Grant does it.
+    let status = 0, body = null;
+    const capture = { status(s) { status = s; return this; }, json(j) { body = j; return this; } };
+    await handleAdjust({ body: { password, deviceId: rec.deviceId, count: BUG_REWARD_TOKENS, action: 'grant', reason: `Bug report reward ${id}` } }, capture);
+    if (status !== 200) return res.status(status || 500).json({ error: (body && body.error) || 'The grant failed.' });
+    const stamped = { ...rec, rewardedAt: new Date().toISOString(), rewardTokens: BUG_REWARD_TOKENS };
+    const w = await fetch(`${SUPABASE_URL}/storage/v1/object/${PITCH_BUCKET}/${path}`, {
+      method: 'POST', headers: sbHeaders({ 'Content-Type': 'application/json', 'x-upsert': 'true' }), body: JSON.stringify(stamped)
+    });
+    if (!w.ok) console.error('CRITICAL: bug reward paid but the report could not be stamped', { id, status: w.status });
+    return res.status(200).json({ ok: true, rewardedAt: stamped.rewardedAt, rewardTokens: BUG_REWARD_TOKENS, grant: body });
+  } catch (err) {
+    console.error('Bug reward failed:', err.message);
+    return res.status(500).json({ error: err.message });
+  }
+}
+
 // The three phone channels, for subscribing in the ntfy app; and a test ping
 // of each, so each sound can be set and heard.
 async function handleAlertTopics(req, res) {
@@ -1054,6 +1091,7 @@ export default async function handler(req, res) {
   if (action === 'square-test-gift-card') return handleSquareTestGiftCard(req, res);
   if (action === 'pitch') return handlePitch(req, res);
   if (action === 'pitches') return handlePitchList(req, res);
+  if (action === 'pitch-reward') return handlePitchReward(req, res);
   if (action === 'alert-topics') return handleAlertTopics(req, res);
 
   return res.status(400).json({ error: `Unknown action "${action}".` });

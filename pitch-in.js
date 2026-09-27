@@ -64,7 +64,7 @@
       '<h2>' + (idea ? '💡 Pitch In' : '🐞 Report a bug') + '</h2>'
       + '<p class="pi-lead">' + (idea
         ? 'Got an idea for a mug, a shirt, a card, anything? Tell us. If we make it, you earn 5% of our profit on it.'
-        : 'Tell us what went wrong and what you were doing. The first person to report a bug gets <b>two free tokens</b> when we fix it.') + '</p>'
+        : 'Tell us what went wrong and what you were doing. The first person to report a bug gets <b>two free tokens</b> when we fix it, added to your chips on this device automatically.') + '</p>'
       + '<label for="pitchText">' + (idea ? 'Your idea' : 'What went wrong?') + '</label>'
       + '<textarea id="pitchText" maxlength="3000" placeholder="' + (idea ? 'Explain the premise of your idea, and the punch line if there is one.' : 'What you did, what you expected, what happened.') + '"></textarea>'
       + '<label>' + (idea ? 'A sketch or photo (optional)' : 'A screenshot (optional)') + '</label>'
@@ -146,7 +146,7 @@
       document.getElementById('pitchBox').innerHTML = '<h2>' + (idea ? '💡 Pitch In' : '🐞 Report a bug') + '</h2>'
         + '<div class="pi-done" id="pitchDone">' + (idea
           ? 'Thank you! We have your idea.<br/>If we make it, we\'ll let you know.'
-          : 'Thank you! We have your report.<br/>If you\'re the first to report it, you\'ll get two free tokens when it\'s fixed.') + '</div>'
+          : 'Thank you! We have your report.<br/>If you\'re the first to report it, two free tokens will be added to this device when it\'s fixed.') + '</div>'
         + '<button type="button" class="pi-close" id="pitchClose">← Back</button>';
       document.getElementById('pitchClose').addEventListener('click', closePitch);
     } catch (e) {

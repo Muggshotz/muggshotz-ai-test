@@ -484,9 +484,33 @@ async function loadPitches(kind){
       + '<div style="white-space:pre-wrap;color:#eee;margin:.3rem 0">' + escA(p.text) + '</div>'
       + (p.imageUrl ? '<a href="' + escA(p.imageUrl) + '" target="_blank"><img src="' + escA(p.imageUrl) + '" style="max-height:120px;border-radius:6px"/></a>' : '')
       + (p.context ? '<div style="color:#777;font-size:11px">' + escA([p.context.page, p.context.version, p.context.focus, p.context.viewport].filter(Boolean).join(' · ')) + '</div>' : '')
-      + '<div style="color:#555;font-size:10px">Device ' + escA(p.deviceId || '-') + ' · ' + escA(p.id) + '</div></div>').join('');
+      + '<div style="color:#555;font-size:10px">Device ' + escA(p.deviceId || '-') + ' · ' + escA(p.id) + '</div>'
+      + (kind === 'bug' ? bugRewardHtml(p) : '') + '</div>').join('');
   }catch(err){
     el.className = 'result error'; el.textContent = 'Could not load: ' + err.message;
+  }
+}
+// THE BUG BOUNTY (27 Sep 2026): the first reporter of a bug gets two tokens
+// when it is fixed, paid to the device the report came from. You decide who
+// was first and press Pay on that report; a report is paid once.
+function bugRewardHtml(p){
+  if (p.rewardedAt) return '<div style="color:#22a845;font-size:12px;margin-top:.4rem">✓ Paid ' + (p.rewardTokens || 2) + ' tokens · ' + escA(new Date(p.rewardedAt).toLocaleDateString()) + '</div>';
+  if (!p.deviceId) return '<div style="color:#999;font-size:12px;margin-top:.4rem">No device on this report</div>';
+  return '<button class="btn-full" style="margin-top:.5rem;padding:.55rem;font-size:13px;background:#22a845" data-reward="' + escA(p.id) + '" onclick="payBugReward(\'' + escA(p.id) + '\', this)">🎁 Fixed · pay 2 tokens</button>';
+}
+async function payBugReward(id, btn){
+  if (!confirm('Pay 2 tokens to the device that sent this report? Do this once the bug is fixed, for the first person who reported it.')) return;
+  btn.disabled = true; btn.textContent = 'Paying…';
+  try{
+    const resp = await fetch('/api/admin', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'pitch-reward', password: enteredPassword, id }) });
+    const d = await resp.json();
+    if (resp.status === 403) { relockWithError('Wrong password.'); return; }
+    if (!resp.ok) throw new Error(d.error || 'Could not pay.');
+    btn.outerHTML = '<div style="color:#22a845;font-size:12px;margin-top:.4rem">✓ Paid ' + d.rewardTokens + ' tokens · ' + new Date(d.rewardedAt).toLocaleDateString() + '</div>';
+  }catch(err){
+    btn.disabled = false; btn.textContent = '🎁 Fixed · pay 2 tokens';
+    alert('Could not pay: ' + err.message);
   }
 }
 async function loadAlertTopics(test){
