@@ -105,7 +105,7 @@ scenarios.theThreeListsAndTheFiles = async (page) => {
   }, files);
   for (const r of measured) {
     if (r.print !== '2475x1155' || r.left !== '2475x1155') bad.push(`${r.f}: prints ${r.print} / ${r.left}`);
-    if (!r.coldhot || !r.tile || r.show !== '1050x412') bad.push(`${r.f}: COLD -> HOT ${r.coldhot}, tile ${r.tile}, shelf picture ${r.show}`);
+    if (!r.coldhot || !r.tile || r.show !== '1050x490') bad.push(`${r.f}: COLD -> HOT ${r.coldhot}, tile ${r.tile}, shelf picture ${r.show}`);
     if (!r.punchlineLeft) bad.push(`${r.f}: the right-handed print's punchline is not on its left half`);
   }
   return bad.length ? `FAIL: ${bad.join('; ')}` : `PASS: ${live.length} holiday(s), the same mugs on the server, the studio and the order page, priced as the catalog ($${single} one, $${price} four, $${extra} each more); ${files.length} mugs each with both prints at 2475 x 1155, COLD -> HOT, shelf picture and tile, punchline on the left`;

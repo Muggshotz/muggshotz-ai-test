@@ -1,5 +1,5 @@
 <!-- ============================================================
-     VERSION: V396
+     VERSION: V397
      ============================================================
      THE ONE LINE THAT SAYS WHICH BUILD YOU ARE LOOKING AT.
 
@@ -4764,7 +4764,7 @@ function toggleWorkingImage(){
 // Two copies of a number is exactly how the marker rotted in the first place,
 // so they are not trusted to agree: .githooks/pre-commit moves both together
 // and REFUSES the commit if it ever finds them apart.
-const APP_VERSION='V396';
+const APP_VERSION='V397';
 try{ console.log('%cNeedles\u2019 Studio '+APP_VERSION,'color:#29a3ff;font-weight:700'); }catch(e){}
 
 function getDeviceId(){
@@ -13188,11 +13188,11 @@ function renderPremades(){
     let body;
     if(premadesLayout==='all'){
       body='<div id="premadesMugsAll">'+d.map((x,i)=>'<div class="pm-mugrow" data-mug="'+x.key+'">'
-        +'<img src="art/surprise/show/'+x.file+'.jpg" width="1050" height="412" alt="'+x.label+'" loading="lazy" class="pm-big" style="cursor:pointer" onclick="holidayShowOne('+i+')"/>'
+        +'<img src="art/surprise/show/'+x.file+'.jpg" width="1050" height="490" alt="'+x.label+'" loading="lazy" class="pm-big" style="cursor:pointer" onclick="holidayShowOne('+i+')"/>'
         +'<div class="pm-mugbar"><span class="pm-mugname">'+x.label+' <span class="pm-mugprice">'+$(SMART_MUG_PRICE)+'</span></span>'
         +'<button type="button" class="pm-add" data-add="'+x.key+'" onclick="holidayAdd(\''+x.key+'\')">'+holidayAddText(x.key)+'</button></div></div>').join('')+'</div>';
     } else {
-      body='<div class="pm-mat"><img class="pm-big" id="premadesMugPic" src="art/surprise/show/'+m.file+'.jpg" width="1050" height="412" alt="'+m.label+'"/>'
+      body='<div class="pm-mat"><img class="pm-big" id="premadesMugPic" src="art/surprise/show/'+m.file+'.jpg" width="1050" height="490" alt="'+m.label+'"/>'
         +'<button type="button" class="pm-arr" style="left:-12px" aria-label="Previous" onclick="holidayStep(-1)">‹</button>'
         +'<button type="button" class="pm-arr" style="right:-12px" aria-label="Next" onclick="holidayStep(1)">›</button></div>'
         +'<div class="pm-name" id="premadesMugName">'+m.label+'</div>'
