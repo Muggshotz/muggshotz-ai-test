@@ -1,5 +1,5 @@
 <!-- ============================================================
-     VERSION: V401
+     VERSION: V402
      ============================================================
      THE ONE LINE THAT SAYS WHICH BUILD YOU ARE LOOKING AT.
 
@@ -4786,7 +4786,7 @@ function toggleWorkingImage(){
 // Two copies of a number is exactly how the marker rotted in the first place,
 // so they are not trusted to agree: .githooks/pre-commit moves both together
 // and REFUSES the commit if it ever finds them apart.
-const APP_VERSION='V401';
+const APP_VERSION='V402';
 try{ console.log('%cNeedles\u2019 Studio '+APP_VERSION,'color:#29a3ff;font-weight:700'); }catch(e){}
 
 function getDeviceId(){
@@ -13200,7 +13200,8 @@ const PREMADE_CATEGORIES={
       {key:'rope-bridge',label:'Rope Bridge'},{key:'shaft',label:'The Shaft'},{key:'dog',label:'The Dog'},
       {key:'lava-pit',label:'Lava Pit'},{key:'crocodile',label:'Crocodile'},{key:'shark-pier',label:'Shark Pier'},
       {key:'sharks-under-pier',label:'Chum'},{key:'ice-hole',label:'Thin Ice'},{key:'dock-shallow',label:'The Dock'},
-      {key:'abandon-hope',label:'Abandon Hope'},{key:'pearly-gates',label:'Pearly Gates'},{key:'bear-trap',label:'Bear Trap'}
+      {key:'abandon-hope',label:'Abandon Hope'},{key:'pearly-gates',label:'Pearly Gates'},{key:'bear-trap',label:'Bear Trap'},
+      {key:'six-feet-under',label:'Six Feet Under',occasion:'halloween'}
     ]},
   // Placemats: Bud's designs at the neoprene mat's print shape, 5610 x 3839
   // (Alyx and Bud, 27 Sep: singly, or a set of two priced as one item).
@@ -13224,6 +13225,32 @@ let premadesSet=null, premadesHand='right', premadesView='products', premadesOcc
 // and the one on show.
 let premadesMugs=[], premadesMugIndex=0;
 let premadesCategory=null, premadesIndex=0, premadesPack=1;
+// A REGULAR LINE AND A HOLIDAY LINE (Alyx, 27 Sep 2026: "we're going to have
+// their regular line and then we'll have a line especially for holidays").
+// A design with no occasion is Everyday; one with an occasion (a key of
+// PREMADE_OCCASIONS) is in that holiday's line. A product with designs in
+// more than one line shows its lines as tabs over its designs, Everyday first;
+// a holiday tab appears once the product has a design for it.
+let premadesLine='everyday';
+function premadeLines(c){
+  const has=new Set(c.items.map(x=>x.occasion||'everyday'));
+  return ['everyday',...PREMADE_OCCASIONS.map(o=>o.key)].filter(k=>has.has(k));
+}
+// The designs on show: the chosen line's.
+function premadeItems(c){
+  c=c||premadeCat(); if(!c)return [];
+  const lines=premadeLines(c);
+  const line=lines.includes(premadesLine)?premadesLine:lines[0];
+  return c.items.filter(x=>(x.occasion||'everyday')===line);
+}
+function premadeLineTabs(c){
+  const lines=premadeLines(c); if(lines.length<2)return '';
+  const cur=lines.includes(premadesLine)?premadesLine:lines[0];
+  return '<div class="pm-tabs" id="premadesLineTabs" data-words="lines: the designs below carry the pictures">'+lines.map(k=>{
+    const o=PREMADE_OCCASIONS.find(x=>x.key===k), label=k==='everyday'?'Everyday':(o.tab||o.label);
+    return '<span class="pm-tab'+(k===cur?' on':'')+'" data-line="'+k+'" onclick="pickPremadeLine(\''+k+'\')">'+label+'</span>'; }).join('')+'</div>';
+}
+function pickPremadeLine(k){ premadesLine=k; premadesIndex=0; renderPremades(); }
 let premadesLayout=(()=>{ try{ return localStorage.getItem('mz_premades_layout')==='all'?'all':'one'; }catch(e){ return 'one'; } })();
 function premadeCat(){ return PREMADE_CATEGORIES[premadesCategory]||null; }
 // The categories that have designs in them, in the list's order.
@@ -13292,28 +13319,28 @@ function renderPremades(){
       +step(7,'Mix and match.','Pick any four mugs for a set, '+$(SMART_MUG_SET_PRICE)+'. The same one four times if you like. Add more to a set at '+$(SMART_MUG_EXTRA_PRICE)+' each, or buy one on its own for '+$(SMART_MUG_PRICE)+'.','')
       +'<button type="button" class="generate-btn" id="premadesShelfBtn" onclick="premadesGo(\'shelf\')">'+PREMADE_MUGS.icon+' See all the mugs and build your set</button>';
   } else if(premadesView==='gallery'&&premadeCat()){
-    const c=premadeCat(), m=c.items[premadesIndex]||c.items[0], spec=itemSpec(c,m), [sw,sh]=spec.show, pack=spec.packs.find(p=>p.n===premadesPack)||spec.packs[0];
+    const c=premadeCat(), shown=premadeItems(c), m=shown[premadesIndex]||shown[0], spec=itemSpec(c,m), [sw,sh]=spec.show, pack=spec.packs.find(p=>p.n===premadesPack)||spec.packs[0];
     title.textContent=c.icon+' '+c.label;
     const layout='<div class="pm-layout" data-words="how to browse: the designs carry the pictures">'
       +[['one','One at a time'],['all','All at once']].map(([k,l])=>'<button type="button" class="pm-lay'+(premadesLayout===k?' on':'')+'" data-layout="'+k+'" onclick="premadesSetLayout(\''+k+'\')">'+l+'</button>').join('')+'</div>';
     const packs=spec.packs.length>1?'<div class="grid2" id="premadesPackGrid" data-words="how many: the design above is the picture" style="margin:.2rem 0 1rem">'
       +spec.packs.map(p=>'<div class="btn-select'+(p.n===pack.n?' selected':'')+'" data-pack="'+p.n+'" onclick="pickPremadesPack('+p.n+')" style="padding:.6rem">'+p.label+'<div class="note" style="margin-top:4px">'+$(p.price)+'</div></div>').join('')+'</div>':'';
     if(premadesLayout==='all'){
-      view.innerHTML=premadesCrumb([c.label])+layout
-        +'<div class="grid2" id="premadesAll">'+c.items.map((x,i)=>{ const xs=itemSpec(c,x); return '<div class="btn-select" data-item="'+x.key+'" style="padding:.4rem" onclick="premadesShowOne('+i+')">'
+      view.innerHTML=premadesCrumb([c.label])+premadeLineTabs(c)+layout
+        +'<div class="grid2" id="premadesAll">'+shown.map((x,i)=>{ const xs=itemSpec(c,x); return '<div class="btn-select" data-item="'+x.key+'" style="padding:.4rem" onclick="premadesShowOne('+i+')">'
           +'<img src="'+c.dir+'/show/'+x.key+'.jpg" width="'+xs.show[0]+'" height="'+xs.show[1]+'" alt="" loading="lazy" style="width:100%;height:auto;border-radius:6px;margin-bottom:4px"/>'+x.label
           +'<div class="note" style="margin-top:2px">'+$(Math.min(...xs.packs.map(p=>p.price)))+'</div></div>'; }).join('')+'</div>';
     } else {
-      view.innerHTML=premadesCrumb([c.label])+layout
+      view.innerHTML=premadesCrumb([c.label])+premadeLineTabs(c)+layout
         +'<div class="pm-mat"><img class="pm-big" id="premadesMatPic" src="'+c.dir+'/show/'+m.key+'.jpg" width="'+sw+'" height="'+sh+'" alt="'+m.label+'"/>'
         +'<button type="button" class="pm-arr" style="left:-12px" aria-label="Previous" onclick="premadesStep(-1)">‹</button>'
         +'<button type="button" class="pm-arr" style="right:-12px" aria-label="Next" onclick="premadesStep(1)">›</button></div>'
         +'<div class="pm-name" id="premadesMatName">'+m.label+'</div>'
         +'<div class="pm-line" style="margin-bottom:.5rem">'+spec.line+' · '+$(pack.price)+'</div>'
-        +'<div class="pm-dots">'+c.items.map((x,i)=>'<span class="'+(i===premadesIndex?'on':'')+'" onclick="premadesStep('+(i-premadesIndex)+')"></span>').join('')+'</div>'
+        +'<div class="pm-dots">'+shown.map((x,i)=>'<span class="'+(i===premadesIndex?'on':'')+'" onclick="premadesStep('+(i-premadesIndex)+')"></span>').join('')+'</div>'
         +packs
         +'<button type="button" class="generate-btn" id="premadesMatOrderBtn" onclick="goToPremadeOrder()">'+c.icon+' Order this '+(pack.n>1?'set':'one')+' · '+$(pack.price)+'</button>';
-      const next=new Image(); next.src=c.dir+'/show/'+c.items[(premadesIndex+1)%c.items.length].key+'.jpg';
+      const next=new Image(); next.src=c.dir+'/show/'+shown[(premadesIndex+1)%shown.length].key+'.jpg';
     }
   } else {
     premadesView='products';
@@ -13357,7 +13384,7 @@ function pickHoliday(key,quiet){
 const pickPremadeOccasion=(key)=>{ const o=PREMADE_OCCASIONS.find(x=>x.key===key); if(o&&o.set){ pickHoliday(key,true); premadesGo('shelf'); } else pickPremadeProduct(key); }; // the old name, kept for links
 function pickPremadeCategory(key){
   if(!PREMADE_CATEGORIES[key]||!PREMADE_CATEGORIES[key].items.length)return;
-  premadesCategory=key; premadesIndex=0; premadesPack=PREMADE_CATEGORIES[key].packs[0].n;
+  premadesCategory=key; premadesIndex=0; premadesPack=PREMADE_CATEGORIES[key].packs[0].n; premadesLine='everyday';
   premadesGo('gallery');
 }
 function premadesSetLayout(k){
@@ -13427,7 +13454,7 @@ function renderHolidayTray(){
 function holidayJustOne(key){ goToPremadeSetOrder([key]); }
 function premadesStep(d){
   const c=premadeCat(); if(!c)return;
-  const n=c.items.length; premadesIndex=((premadesIndex+d)%n+n)%n;
+  const n=premadeItems(c).length; premadesIndex=((premadesIndex+d)%n+n)%n;
   renderPremades();
 }
 const premadesMatStep=premadesStep; // the old name, kept for the links and tests
@@ -13489,7 +13516,7 @@ function goToPremadeSetOrder(mugs){
 // file as the picture: the doormat, or a placemat of the category's kind, one
 // or a set.
 function goToPremadeOrder(){
-  const c=premadeCat(), m=c&&c.items[premadesIndex]; if(!m)return;
+  const c=premadeCat(), m=c&&premadeItems(c)[premadesIndex]; if(!m)return;
   const pending={
     placements:{left:location.origin+'/'+c.dir+'/print/'+m.key+'.jpg',front:null,right:null},
     deviceId:deviceId,
