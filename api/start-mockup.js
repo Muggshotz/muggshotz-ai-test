@@ -3,7 +3,7 @@ export const config = {
   maxDuration: 60,
 };
 
-import { getProduct } from "../lib/products-catalog.js";
+import { getProduct, PRODUCTS_CATALOG } from "../lib/products-catalog.js";
 import {
   uploadImageToPrintify,
   getPlaceholderDimensions,
@@ -187,6 +187,12 @@ async function handleStart(req, res) {
   });
 }
 
+function cameraAllowList(blueprintId, printProviderId) {
+  const p = Object.values(PRODUCTS_CATALOG).find(x => Array.isArray(x.mockupCameras)
+    && x.blueprintId === blueprintId && x.printProviderId === printProviderId);
+  return p ? p.mockupCameras : null;
+}
+
 async function handleCheck(req, res) {
   const { productId, variantId } = req.body;
   if (!productId) throw new Error("productId is required.");
@@ -217,7 +223,14 @@ async function handleCheck(req, res) {
   // mug even though the customer selected Blue/Green/etc. If Printify has not
   // produced an image explicitly tagged for our requested variant yet, keep
   // polling instead. A timeout/error is safer than showing the wrong product.
-  const relevantImages = variantId ? matchedImages : allImages;
+  // A product can name the only mockup cameras a customer may see
+  // (mockupCameras): the neoprene placemat is Printify's desk mat, whose other
+  // pictures are desk scenes. The check knows the product only by Printify's
+  // blueprint and provider, so it finds the catalog entry by those.
+  const allowed = cameraAllowList(data.blueprint_id, data.print_provider_id);
+  const cameraOf = (src) => { try { return new URL(src).searchParams.get("camera_label"); } catch (e) { return null; } };
+  const relevantImages = (variantId ? matchedImages : allImages)
+    .filter(img => !allowed || allowed.includes(cameraOf(img.src)));
   const mockupUrls = relevantImages.map(img => img.src);
   const mockupUrl = mockupUrls[0] || null;
 
