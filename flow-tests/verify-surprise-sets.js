@@ -52,7 +52,9 @@ const pmState = (page) => page.evaluate(async () => {
   return { shown: getComputedStyle(card).display !== 'none', view: premadesView, focus: [...document.body.classList].filter((c) => c.endsWith('-focus')).join(),
     title: card.querySelector('.card-title').innerText, back: [...card.querySelectorAll('button')].some((b) => b.offsetParent && /back/i.test(b.innerText)),
     text: card.innerText, imgs: imgs.length, loaded: imgs.filter((im) => im.naturalWidth > 0).length, steps: card.querySelectorAll('.pm-step').length,
-    top: Math.round(r.top), landed: r.top > -2 && r.top < innerHeight * 0.3 };
+    top: Math.round(r.top), landed: r.top > -2 && r.top < innerHeight * 0.3,
+    // Nothing is painted here: the studio's Generate (a token) must not show.
+    generate: ['generateBtn', 'generateTokenNote', 'generateBackBtn'].filter((id) => { const el = document.getElementById(id); return el && el.offsetParent && getComputedStyle(el).opacity !== '0'; }) };
 });
 
 
@@ -124,6 +126,7 @@ scenarios.thePanelAndTheOrder = async (page, log) => {
   if (!st0.shown || st0.focus !== 'premades-focus' || st0.view !== 'occasions') return `FAIL: the tile did not open the lit occasions list (${JSON.stringify(st0)})`;
   if (!/Pre-mades/i.test(st0.title) || !st0.back || !/\$59\.95/.test(st0.text) || !/\$19\.95/.test(st0.text)) return `FAIL: the list lacks its name, Back or prices (${JSON.stringify(st0)})`;
   if (st0.imgs) return `FAIL: the quiet list shows ${st0.imgs} picture(s)`;
+  if (st0.generate.length) return `FAIL: with a photo uploaded, Pre-mades still shows ${st0.generate.join(', ')}`;
   if (!st0.landed) return `FAIL: the list did not land at its title (${JSON.stringify(st0)})`;
   // Thanksgiving: its flyer alone, the set, one button.
   await tap(page, '#premadesView .pm-row[data-occasion="thanksgiving"]'); await T(page, 1900);

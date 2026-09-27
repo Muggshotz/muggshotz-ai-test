@@ -1,5 +1,5 @@
 <!-- ============================================================
-     VERSION: V392
+     VERSION: V393
      ============================================================
      THE ONE LINE THAT SAYS WHICH BUILD YOU ARE LOOKING AT.
 
@@ -666,6 +666,11 @@ body.apparel-style-focus .card:not(#apparelStyleCard){opacity:.35;filter:brightn
 body.tshirt-option-focus .card:not(#tshirtOptionCard){opacity:.35;filter:brightness(.6) saturate(.75);transition:opacity .5s,filter .5s}
 body.surprise-focus .card:not(#surpriseCard){opacity:.35;filter:brightness(.6) saturate(.75);transition:opacity .5s,filter .5s}
 body.premades-focus .card:not(#premadesCard){opacity:.35;filter:brightness(.6) saturate(.75);transition:opacity .5s,filter .5s}
+/* Pre-mades are finished designs: nothing is painted, so the studio's own
+   Generate (a token) and its buttons are not there while the panel is open
+   (Alyx, 27 Sep 2026: "WHY IS THERE A GENERATE IMAGE BUTTON HERE CHARGING
+   ONE TOKEN?"). */
+body.premades-focus :is(#generateBtn,#generateTokenNote,#finalGenerateGuidance,#generateBackBtn,#changeMugStyleBtn,#cancelBtn,#resetEverythingBtn){display:none!important}
 #premadesCard .pm-crumb{font-size:11px;color:#5b7aa6;margin:-.2rem 0 .8rem}
 #premadesCard .pm-ask{color:#29a3ff;font-size:13px;margin:.2rem 0 1.4rem}
 #premadesCard .pm-row{display:flex;align-items:center;gap:16px;padding:18px 6px;border-top:1px solid #1c2738;cursor:pointer}
@@ -4748,7 +4753,7 @@ function toggleWorkingImage(){
 // Two copies of a number is exactly how the marker rotted in the first place,
 // so they are not trusted to agree: .githooks/pre-commit moves both together
 // and REFUSES the commit if it ever finds them apart.
-const APP_VERSION='V392';
+const APP_VERSION='V393';
 try{ console.log('%cNeedles\u2019 Studio '+APP_VERSION,'color:#29a3ff;font-weight:700'); }catch(e){}
 
 function getDeviceId(){
