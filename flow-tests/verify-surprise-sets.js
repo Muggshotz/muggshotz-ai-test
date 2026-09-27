@@ -125,14 +125,14 @@ scenarios.thePanelAndTheOrder = async (page, log) => {
   // Next to last: Pitch In ends the grid (Alyx's last row: Artwork Only, Gift
   // Certificate, Premades & Sets, Pitch In).
   const tile = await page.evaluate(() => { const t = document.getElementById('premadesTile'); return t && { text: t.innerText, last: t.nextElementSibling === document.getElementById('pitchInTile') && t.nextElementSibling === t.parentElement.lastElementChild }; });
-  if (!tile || !tile.last || !/Pre-mades & Sets/.test(tile.text) || !/\$19\.95/.test(tile.text)) return `FAIL: the Premades & Sets tile reads ${JSON.stringify(tile)}`;
+  if (!tile || !tile.last || !/Pre-mades & Sets/.test(tile.text) || !/from \$13\.95/.test(tile.text)) return `FAIL: the Premades & Sets tile reads ${JSON.stringify(tile)}`;
   await tap(page, '#premadesTile');
   await T(page, 1900);
   // The list: quiet on purpose (no pictures), but named, priced, with Back,
   // lit, and landed with its title and first occasion on screen.
   const st0 = await pmState(page);
   if (!st0.shown || st0.focus !== 'premades-focus' || st0.view !== 'occasions') return `FAIL: the tile did not open the lit occasions list (${JSON.stringify(st0)})`;
-  if (!/Pre-mades/i.test(st0.title) || !st0.back || !/\$59\.95/.test(st0.text) || !/\$19\.95/.test(st0.text)) return `FAIL: the list lacks its name, Back or prices (${JSON.stringify(st0)})`;
+  if (!/Pre-mades/i.test(st0.title) || !st0.back || !/\$59\.95/.test(st0.text) || !/from \$13\.95/.test(st0.text)) return `FAIL: the list lacks its name, Back or prices (${JSON.stringify(st0)})`;
   if (st0.imgs) return `FAIL: the quiet list shows ${st0.imgs} picture(s)`;
   if (st0.generate.length) return `FAIL: with a photo uploaded, Pre-mades still shows ${st0.generate.join(', ')}`;
   if (!st0.landed) return `FAIL: the list did not land at its title (${JSON.stringify(st0)})`;
@@ -224,7 +224,7 @@ scenarios.thePanelAndTheOrder = async (page, log) => {
   const b = bodies[bodies.length - 1];
   if (!b || b.productKey !== 'smart-mug-set' || b.setKey !== 'thanksgiving' || b.hand !== 'left' || b.image || JSON.stringify(b.mugs) !== JSON.stringify(CHOSEN))
     return `FAIL: checkout got ${JSON.stringify(b && { k: b.productKey, s: b.sizeLabel, set: b.setKey, hand: b.hand, mugs: b.mugs, image: b.image })}`;
-  return 'PASS: the Pre-mades & Sets tile ends the grid at from $19.95 and opens the quiet occasions list (named, priced, no pictures, lit, landed); Thanksgiving opens on its shelf, one mug at a time with its price, How it works a button away (seven steps ending on the three prices); Back steps one view at a time to the grid; all at once shows every mug pictured and priced; the tray prices 1 to 6 mugs as $19.95, $39.90, $59.85, the set $59.95, $77.90, $95.85, counts repeats and takes one out; the order page shows the six, left-handed, at $95.85, asks for no mockup, and checks out thanksgiving / left / the six by key with no artwork of its own';
+  return 'PASS: the Pre-mades & Sets tile ends the grid at from $13.95 (a placemat, the cheapest) and opens the quiet occasions list (named, priced, no pictures, lit, landed); Thanksgiving opens on its shelf, one mug at a time with its price, How it works a button away (seven steps ending on the three prices); Back steps one view at a time to the grid; all at once shows every mug pictured and priced; the tray prices 1 to 6 mugs as $19.95, $39.90, $59.85, the set $59.95, $77.90, $95.85, counts repeats and takes one out; the order page shows the six, left-handed, at $95.85, asks for no mockup, and checks out thanksgiving / left / the six by key with no artwork of its own';
 };
 
 // The flyer's link: ?set=thanksgiving opens How it works, the page the QR is
@@ -283,7 +283,7 @@ scenarios.theFrontDoor = async (page) => {
       photo: !!(typeof uploadedOriginalFile !== 'undefined' && uploadedOriginalFile) };
   });
   if (!b0 || !b0.inCard || !b0.shown || !b0.lit) return `FAIL: no lit Premades & Sets button on the opening card (${JSON.stringify(b0)})`;
-  if (!/Pre-mades & Sets/.test(b0.text) || !/No photo needed/.test(b0.text) || !/\$19\.95/.test(b0.text)) return `FAIL: the button reads "${b0.text}"`;
+  if (!/Pre-mades & Sets/.test(b0.text) || !/No photo needed/.test(b0.text) || !/from \$13\.95/.test(b0.text)) return `FAIL: the button reads "${b0.text}"`;
   if (b0.focus !== 'initial-upload-focus' || b0.photo) return `FAIL: not a fresh visit (${JSON.stringify(b0)})`;
   await tap(page, '#premadesFrontBtn'); await T(page, 1800);
   const st = await pmState(page);
@@ -294,7 +294,7 @@ scenarios.theFrontDoor = async (page) => {
     return { card: getComputedStyle(document.getElementById('premadesCard')).display, focus: [...document.body.classList].filter((c) => c.endsWith('-focus')).join(),
       onScreen: r.top >= 0 && r.bottom <= innerHeight }; });
   if (back.card !== 'none' || back.focus !== 'initial-upload-focus' || !back.onScreen) return `FAIL: Back left ${JSON.stringify(back)}`;
-  return 'PASS: a fresh visit, no photo: the opening card carries a lit Pre-mades & Sets button (from $19.95, no photo needed); it opens the occasions list lit at its title, and Back returns to the opening card as it was';
+  return 'PASS: a fresh visit, no photo: the opening card carries a lit Pre-mades & Sets button (from $13.95, no photo needed); it opens the occasions list lit at its title, and Back returns to the opening card as it was';
 };
 
 // Everyday: the Unwelcome mats one at a time, next and back round the nine,
@@ -305,7 +305,9 @@ scenarios.theMats = async (page) => {
   await page.route('**/api/printify-catalog**', (route) => route.fulfill({ json: { shipping: 13.69, shippingSeparate: true, source: 'live' } }));
   await openStudio(page); await dismissAlerts(page);
   await tap(page, '#premadesFrontBtn'); await T(page, 1500);
-  await tap(page, '#premadesView .pm-row[data-occasion="everyday"]'); await T(page, 1900);
+  await tap(page, '#premadesView .pm-row[data-occasion="everyday"]'); await T(page, 1500);
+  // Everyday has mats and placemats: it asks which, then opens the mats.
+  await tap(page, '#premadesView .pm-row[data-category="welcome-mats"]'); await T(page, 1900);
   const a = await pmState(page);
   if (a.view !== 'gallery' || a.imgs !== 1 || a.loaded !== 1 || !/\$19\.95/.test(a.text) || !a.landed) return `FAIL: Everyday opened ${JSON.stringify(a)}`;
   // All at once: every mat on one page, each pictured and priced; tapping one
@@ -342,18 +344,24 @@ scenarios.theMats = async (page) => {
   return `PASS: Everyday opens one mat at a time at $19.95, all at once shows every mat and a tap opens it, next goes round all ${n} and back; every mat has its 4650 x 2850 print and 900 x 552 picture; the last mat orders as the doormat at $19.95 with its own print file (${o.head})`;
 };
 
-// A placemat slot, filled here with a stand-in design (the category is empty
-// until Bud's first placemat): Everyday then lists its categories; the
-// placemat offers one or a set of two, and a set orders as the neoprene
-// placemat's set of two at $24.95.
+// The placemats: a category with no designs stays hidden; with Bud's,
+// Everyday lists its categories; every placemat has its print at the neoprene
+// mat's 5610 x 3839 and its 900 x 616 picture; one or a set of two, and a set
+// orders as the neoprene placemat's set of two at $24.95 with its own print.
 scenarios.thePlacematSlot = async (page) => {
   const bodies = [];
   page.on('request', (r) => { if (r.url().includes('/api/create-checkout-session')) { try { bodies.push(r.postDataJSON()); } catch (e) {} } });
   await page.route('**/api/printify-catalog**', (route) => route.fulfill({ json: { shipping: 6.78, shippingSeparate: true, source: 'live' } }));
   await openStudio(page); await dismissAlerts(page);
-  const hidden = await page.evaluate(() => liveCategories(PREMADE_OCCASIONS.find((o) => o.key === 'everyday')).join());
+  const hidden = await page.evaluate(() => { const c = PREMADE_CATEGORIES.placemats, keep = c.items; c.items = []; const l = liveCategories(PREMADE_OCCASIONS.find((o) => o.key === 'everyday')).join(); c.items = keep; return l; });
   if (hidden !== 'welcome-mats') return `FAIL: with no placemat designs Everyday lists ${hidden}`;
-  await page.evaluate(() => { const c = PREMADE_CATEGORIES.placemats; c.dir = 'art/unwelcome'; c.show = [900, 552]; c.items.push({ key: 'pearly-gates', label: 'Stand-in' }); });
+  const files = await page.evaluate(async () => {
+    const c = PREMADE_CATEGORIES.placemats, load = (u) => new Promise((r) => { const im = new Image(); im.onload = () => r(`${im.naturalWidth}x${im.naturalHeight}`); im.onerror = () => r(null); im.src = u; });
+    const out = []; for (const x of c.items) out.push([x.key, await load(`${c.dir}/print/${x.key}.jpg`), await load(`${c.dir}/show/${x.key}.jpg`)]); return out;
+  });
+  const badFile = files.find(([, p, sh]) => p !== '5610x3839' || sh !== '900x616');
+  if (!files.length || badFile) return `FAIL: placemat files ${JSON.stringify(badFile || files)}`;
+  const lastKey = files[files.length - 1][0];
   await page.evaluate(() => document.getElementById('premadesFrontBtn').click()); await T(page, 1500);
   await page.evaluate(() => document.querySelector('#premadesView .pm-row[data-occasion="everyday"]').click()); await T(page, 1500);
   const cats = await pmState(page);
@@ -366,7 +374,7 @@ scenarios.thePlacematSlot = async (page) => {
   // Back: the gallery -> the categories -> the occasions.
   await page.evaluate(() => premadesBack()); await T(page, 900);
   if (await page.evaluate(() => premadesView) !== 'categories') return 'FAIL: Back from the placemats did not go to the categories';
-  await page.evaluate(() => { pickPremadeCategory('placemats'); pickPremadesPack(2); }); await T(page, 900);
+  await page.evaluate(() => { pickPremadeCategory('placemats'); premadesSetLayout('one'); premadesStep(-1); pickPremadesPack(2); }); await T(page, 900);
   await Promise.all([page.waitForURL(/order\.html/, { timeout: 10000 }), page.evaluate(() => document.getElementById('premadesMatOrderBtn').click())]);
   await T(page, 3000);
   const o = await page.evaluate(() => ({ base: document.getElementById('summaryBase').textContent, label: document.getElementById('summaryStyleSize')?.textContent || '' }));
@@ -379,8 +387,8 @@ scenarios.thePlacematSlot = async (page) => {
   });
   await T(page, 2000);
   const b = bodies[bodies.length - 1];
-  if (!b || b.productKey !== 'placemat-neoprene' || b.sizeLabel !== '12 x 18 in, set of 2' || !/\/art\/unwelcome\/print\/pearly-gates\.jpg$/.test(b.image || '')) return `FAIL: checkout got ${JSON.stringify(b && { k: b.productKey, s: b.sizeLabel, image: b.image })}`;
-  return 'PASS: an empty placemat category stays hidden; filled, Everyday lists its two categories quietly; the placemat offers one ($13.95) or a set of two ($24.95); Back steps to the categories; a set checks out as placemat-neoprene / 12 x 18 in, set of 2, with the design\'s print file';
+  if (!b || b.productKey !== 'placemat-neoprene' || b.sizeLabel !== '12 x 18 in, set of 2' || !(b.image || '').endsWith(`/art/placemats/print/${lastKey}.jpg`)) return `FAIL: checkout got ${JSON.stringify(b && { k: b.productKey, s: b.sizeLabel, image: b.image })}`;
+  return `PASS: an empty placemat category stays hidden; filled (${files.length}, each with its 5610 x 3839 print and 900 x 616 picture), Everyday lists its two categories quietly; the placemat offers one ($13.95) or a set of two ($24.95); Back steps to the categories; a set checks out as placemat-neoprene / 12 x 18 in, set of 2, with the design\'s print file`;
 };
 
 (async () => {

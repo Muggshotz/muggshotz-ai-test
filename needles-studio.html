@@ -1,5 +1,5 @@
 <!-- ============================================================
-     VERSION: V395
+     VERSION: V396
      ============================================================
      THE ONE LINE THAT SAYS WHICH BUILD YOU ARE LOOKING AT.
 
@@ -4764,7 +4764,7 @@ function toggleWorkingImage(){
 // Two copies of a number is exactly how the marker rotted in the first place,
 // so they are not trusted to agree: .githooks/pre-commit moves both together
 // and REFUSES the commit if it ever finds them apart.
-const APP_VERSION='V395';
+const APP_VERSION='V396';
 try{ console.log('%cNeedles\u2019 Studio '+APP_VERSION,'color:#29a3ff;font-weight:700'); }catch(e){}
 
 function getDeviceId(){
@@ -13155,7 +13155,9 @@ const PREMADE_CATEGORIES={
   // (Alyx and Bud, 27 Sep: singly, or a set of two priced as one item).
   'placemats':{label:'Placemats',icon:'🍽️',dir:'art/placemats',show:[900,616],line:'Neoprene placemat, 18 x 12 in',
     order:{family:'placemat',kind:'Neoprene'},packs:[{n:1,label:'Just one',price:13.95},{n:2,label:'A set of two',price:24.95}],
-    items:[]}
+    items:[
+      {key:'dino-valley',label:'Dino Valley'},{key:'dino-pals',label:'Dino Pals'},{key:'feed-me',label:'Feed Me!'}
+    ]}
 };
 // The mats' list by its old name (the tests and the ?set links read it).
 const PREMADE_MATS=PREMADE_CATEGORIES['welcome-mats'].items;
