@@ -129,6 +129,10 @@ scenarios.thePanelAndTheOrder = async (page, log) => {
   await tap(page, '#premadesView .pm-row[data-occasion="thanksgiving"]'); await T(page, 1900);
   const st1 = await pmState(page);
   if (st1.view !== 'occasion' || st1.imgs !== 1 || st1.loaded !== 1 || !/\$59\.95/.test(st1.text) || !st1.landed) return `FAIL: Thanksgiving did not open on its flyer alone (${JSON.stringify(st1)})`;
+  // The flyer's one button explains before it sells: nobody presses "Order"
+  // to find out how the mug works (Alyx, 27 Sep 2026).
+  const flyerBtn = await page.evaluate(() => document.getElementById('premadesSetBtn')?.innerText || '');
+  if (!/See how the magic mug works/.test(flyerBtn) || /Order/i.test(flyerBtn)) return `FAIL: the flyer's button reads "${flyerBtn}"`;
   // How it works: seven steps, the hand, Order the set.
   await tap(page, '#premadesSetBtn'); await T(page, 1900);
   const st2 = await pmState(page);

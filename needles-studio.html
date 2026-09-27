@@ -1,5 +1,5 @@
 <!-- ============================================================
-     VERSION: V391
+     VERSION: V392
      ============================================================
      THE ONE LINE THAT SAYS WHICH BUILD YOU ARE LOOKING AT.
 
@@ -4748,7 +4748,7 @@ function toggleWorkingImage(){
 // Two copies of a number is exactly how the marker rotted in the first place,
 // so they are not trusted to agree: .githooks/pre-commit moves both together
 // and REFUSES the commit if it ever finds them apart.
-const APP_VERSION='V391';
+const APP_VERSION='V392';
 try{ console.log('%cNeedles\u2019 Studio '+APP_VERSION,'color:#29a3ff;font-weight:700'); }catch(e){}
 
 function getDeviceId(){
@@ -13118,7 +13118,7 @@ const PREMADE_CATEGORIES={
       {key:'rope-bridge',label:'Rope Bridge'},{key:'shaft',label:'The Shaft'},{key:'dog',label:'The Dog'},
       {key:'lava-pit',label:'Lava Pit'},{key:'crocodile',label:'Crocodile'},{key:'shark-pier',label:'Shark Pier'},
       {key:'sharks-under-pier',label:'Under the Pier'},{key:'ice-hole',label:'Thin Ice'},{key:'dock-shallow',label:'The Dock'},
-      {key:'abandon-hope',label:'Abandon Hope'},{key:'pearly-gates',label:'Pearly Gates'}
+      {key:'abandon-hope',label:'Abandon Hope'},{key:'pearly-gates',label:'Pearly Gates'},{key:'bear-trap',label:'Bear Trap'}
     ]},
   // Placemats: Bud's designs at the quilted mat's print shape, 2925 x 2025
   // (Alyx and Bud, 27 Sep: singly, or a set of two priced as one item).
@@ -13147,7 +13147,7 @@ function renderPremades(){
       +'<img class="pm-big" src="'+occ.flyer+'" width="1104" height="1424" alt="'+set.label+' SURPRISE!!! magic mugs"/>'
       +'<div class="pm-name" style="margin-top:1.3rem">'+set.label+' Set</div>'
       +'<div class="pm-line">Four SURPRISE!!! smart mugs · '+$(SMART_MUG_SET_PRICE)+'</div>'
-      +'<button type="button" class="generate-btn" id="premadesSetBtn" onclick="premadesGo(\'how\')">🎁 Order the set</button>';
+      +'<button type="button" class="generate-btn" id="premadesSetBtn" onclick="premadesGo(\'how\')">✨ See how the magic mug works</button>';
   } else if(premadesView==='how'&&set){
     const step=(n,head,line,img,wide)=>'<div class="pm-step"><div class="pm-sn">'+n+'</div><div class="pm-sh">'+head+'</div><div class="pm-sl">'+line+'</div>'
       +(img?'<img class="pm-simg'+(wide?' pm-wide':'')+'" src="art/premades/how/'+img+'.jpg" width="'+(wide?924:455)+'" height="'+(wide?674:330)+'" alt=""/>':'')+'</div>';
@@ -13157,7 +13157,7 @@ function renderPremades(){
       +step(2,'Pour in something hot.',"Coffee, tea, cocoa. It doesn't switch on all at once: as the mug warms, the picture slowly rises up through the black.",'emerge',true)
       +step(3,'The joke appears.',"Once it's hot, the first half of the joke is there in full, facing them.",'hot')
       +step(4,'They turn it round.','Nobody can leave a joke half told. Curious, they turn the mug, and the punchline is waiting on the other side.','other')
-      +step(5,'Let it cool, and it hides again.','As the mug cools it goes back to plain black, ready to surprise them all over again.','black')
+      +step(5,'Let it cool, and it hides again.','As the mug cools it goes back to plain black, ready to surprise the next unsuspecting victim.','black')
       +step(6,'Choose their hand.','Tell us whether they hold a mug in the right hand or the left, and we print it so the setup faces them first.','')
       +'<div class="grid2" id="premadesHandGrid" data-words="which hand: the steps above carry the pictures" style="max-width:360px;margin:0 auto 1rem">'
       +['right','left'].map(h=>'<div class="btn-select'+(h===premadesHand?' selected':'')+'" data-hand="'+h+'" onclick="pickPremadesHand(\''+h+'\')" style="padding:.7rem;font-size:13px">'+(h==='right'?'Right-handed':'Left-handed')+'</div>').join('')+'</div>'
