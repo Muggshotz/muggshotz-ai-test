@@ -108,11 +108,22 @@ then a last row of four: Artwork Only, Gift Certificate, Premades & Sets,
 Pitch In. The grid is three across today (needles-studio.html, #productCard
 .grid3); four across on phones too (Alyx, 24 Sep).
 
-- **Two ways to browse, for every category going forward** (Alyx, 27 Sep): the
-  one-at-a-time viewer with arrows (as the (Un/)Welcome mats have now) AND a
-  full page with them all on show at once, the customer choosing which view.
-  To be the model for all new categories; whether to retrofit the older ones
-  (coffee mugs, travel cups ...) is Alyx's call, later. Not yet built.
+- **Premade slots and the two ways to browse** -- BUILT 27 Sep (Alyx: "we can
+  just design items and you can plug them right into slots"). Premades & Sets
+  reads one table, PREMADE_CATEGORIES in needles-studio.html: each category
+  has its folder, picture sizes, the product it orders as, and its packs
+  (one, a set of two ...). To add a design: `python3 tools/premade-fit.py
+  <category> <key> <artist's file>` (makes print/ and show/ at the right
+  shape), then one line in that category's items. An empty category stays
+  hidden; an occasion with several shows a quiet list of them. Every gallery
+  offers "One at a time" (arrows) or "All at once" (the customer's choice,
+  remembered). Categories today: (Un/)Welcome Mats (11), Placemats (empty,
+  quilted shape 2925 x 2025, one or a set of two). Whether the older
+  products (mugs, travel cups ...) move to this model is Alyx's call, later.
+- **Packs (a set of two)** -- BUILT 27 Sep: a catalog size with packOf: 2 is
+  the same design twice, priced as one item, ordered as quantity 2 and
+  shipped as two in one parcel. Placemats have it: Cotton set $29.95, Quilted
+  set $28.95 (cost + $3, nearest .95).
 - **Placemats** -- BUILT 27 Sep: one tile, Cotton 18 x 14 ($16.95) or Quilted
   12 x 18 ($15.95), Alyx's rule; leather left off. Next (Alyx): seasonal and
   occasion welcome mats and place-setting mats -- birthdays, holidays, special

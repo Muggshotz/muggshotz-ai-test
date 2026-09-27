@@ -315,6 +315,11 @@ function catalogVariantId(product, sizeLabel, colorName) {
   if (s.colors && colorName) { const c = s.colors.find((x) => x.name === colorName); if (c?.variantId) return c.variantId; }
   return s.variantId || null;
 }
+// How many of the product a size is (packOf, e.g. a set of two placemats).
+function packUnits(product, sizeLabel) {
+  const n = product?.sizes?.[sizeLabel]?.packOf;
+  return Number.isInteger(n) && n > 1 ? n : 1;
+}
 function resolveOrderItem(b) {
   const sizeLabel = b.sizeLabel;
   const productKey = b.productKey || MUG_TYPE_TO_PRODUCT_KEY[b.mugType];
@@ -416,7 +421,12 @@ async function handleProductOrder(req, res) {
   let shippingCharge = 0;
   if (product.shippingSeparate) {
     try {
-      shippingCharge = await calculateShippingCharge(product, basePrice, shippingAddress.country || "US", item.variantId);
+      // A pack (a set of two placemats) ships as that many of the product in
+      // one parcel -- the basket's calculation, first rate then additional.
+      const units = packUnits(product, sizeLabel);
+      shippingCharge = units > 1
+        ? (await calculateBasketShipping([{ product, basePrice, variantId: item.variantId, units }], shippingAddress.country || "US")).total
+        : await calculateShippingCharge(product, basePrice, shippingAddress.country || "US", item.variantId);
     } catch (err) {
       console.error("Shipping resolution failed, refusing to create session:", err.message);
       return res.status(503).json({
@@ -624,7 +634,7 @@ async function handleBasketOrder(req, res) {
 
   let shippingCents = 0;
   try {
-    const ship = await calculateBasketShipping(resolved.map((r) => ({ product: r.product, basePrice: r.basePrice, variantId: r.variantId })), shipCountry);
+    const ship = await calculateBasketShipping(resolved.map((r) => ({ product: r.product, basePrice: r.basePrice, variantId: r.variantId, units: packUnits(r.product, r.sizeLabel) })), shipCountry);
     shippingCents = Math.round(ship.total * 100);
   } catch (err) {
     console.error("Basket shipping resolution failed, refusing to create session:", err.message);

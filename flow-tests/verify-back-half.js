@@ -132,6 +132,9 @@ function bodiesFor(key, p) {
   const colour = p.colors ? p.colors[0].name : ((p.sizes || {})[size] || {}).colors ? p.sizes[size].colors[0].name : null;
   const single = base({ productKey: key, sizeLabel: size, colorName: colour, image: IMG });
   if (key === 'greeting-card') return [[key + ' (blank inside)', single], [key + ' (printed inside)', { ...single, insideImage: IMG }]];
+  // A pack size (a set of two placemats) is ordered too: one line, quantity packOf.
+  const pack = Object.keys(p.sizes || {}).find((k) => p.sizes[k].packOf > 1);
+  if (pack) return [[key, single], [key + ' (' + pack + ')', base({ productKey: key, sizeLabel: pack, colorName: null, image: IMG })]];
   return [[key, single]];
 }
 
@@ -183,6 +186,9 @@ function bodiesFor(key, p) {
       if (wire.orders.length !== 1) throw new Error(`${wire.orders.length} Printify orders were submitted, expected 1`);
       const order = wire.orders[0];
       if (order.external_id !== s.id) throw new Error(`external_id=${order.external_id}, expected the Stripe session id ${s.id} (the retry guard)`);
+      // One line, quantity 1 -- or a pack's packOf (a set of two placemats).
+      const wantQty = catalog[meta.product_key]?.sizes?.[meta.size_label]?.packOf || 1;
+      if ((order.line_items || []).length !== 1 || order.line_items[0].quantity !== wantQty) throw new Error(`the Printify order has lines ${JSON.stringify((order.line_items || []).map((l) => l.quantity))}, expected one of ${wantQty}`);
       if (wire.products.length !== 1) throw new Error(`${wire.products.length} Printify products were created, expected 1`);
       const prod = wire.products[0];
       const placeholders = (prod.print_areas?.[0]?.placeholders || []).map((x) => x.position);

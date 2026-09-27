@@ -232,7 +232,16 @@ scenarios.theMats = async (page) => {
   await tap(page, '#premadesFrontBtn'); await T(page, 1500);
   await tap(page, '#premadesView .pm-row[data-occasion="everyday"]'); await T(page, 1900);
   const a = await pmState(page);
-  if (a.view !== 'mats' || a.imgs !== 1 || a.loaded !== 1 || !/\$19\.95/.test(a.text) || !a.landed) return `FAIL: Everyday opened ${JSON.stringify(a)}`;
+  if (a.view !== 'gallery' || a.imgs !== 1 || a.loaded !== 1 || !/\$19\.95/.test(a.text) || !a.landed) return `FAIL: Everyday opened ${JSON.stringify(a)}`;
+  // All at once: every mat on one page, each pictured and priced; tapping one
+  // opens it on its own.
+  await page.evaluate(() => document.querySelector('#premadesView .pm-lay[data-layout="all"]').click()); await T(page, 900);
+  const all = await pmState(page), allTiles = await page.evaluate(() => document.querySelectorAll('#premadesAll .btn-select').length);
+  if (all.view !== 'gallery' || allTiles !== all.imgs || all.loaded !== all.imgs || allTiles < 2) return `FAIL: all at once shows ${allTiles} mats, ${all.loaded} of ${all.imgs} pictures loading`;
+  await page.evaluate(() => document.querySelectorAll('#premadesAll .btn-select')[2].click()); await T(page, 1500);
+  const one = await page.evaluate(() => ({ name: document.getElementById('premadesMatName')?.textContent, want: PREMADE_MATS[2].label, layout: premadesLayout }));
+  if (one.name !== one.want || one.layout !== 'one') return `FAIL: tapping the third mat opened ${JSON.stringify(one)}`;
+  await page.evaluate(() => premadesShowOne(0)); await T(page, 600);
   const names = [], n = await page.evaluate(() => PREMADE_MATS.length), lastKey = await page.evaluate(() => PREMADE_MATS[PREMADE_MATS.length - 1].key);
   for (let i = 0; i <= n; i++) { names.push(await page.evaluate(() => document.getElementById('premadesMatName').textContent)); await page.evaluate(() => premadesMatStep(1)); }
   if (new Set(names).size !== n || names[n] !== names[0]) return `FAIL: next went round ${names.join(', ')}`;
@@ -255,7 +264,48 @@ scenarios.theMats = async (page) => {
   await T(page, 2000);
   const b = bodies[bodies.length - 1];
   if (!b || b.productKey !== 'doormat' || !(b.image || '').endsWith(`/art/unwelcome/print/${lastKey}.jpg`)) return `FAIL: checkout got ${JSON.stringify(b && { k: b.productKey, s: b.sizeLabel, image: b.image })}`;
-  return `PASS: Everyday opens one mat at a time at $19.95, next goes round all ${n} and back; every mat has its 4650 x 2850 print and 900 x 552 picture; the last mat orders as the doormat at $19.95 with its own print file (${o.head})`;
+  return `PASS: Everyday opens one mat at a time at $19.95, all at once shows every mat and a tap opens it, next goes round all ${n} and back; every mat has its 4650 x 2850 print and 900 x 552 picture; the last mat orders as the doormat at $19.95 with its own print file (${o.head})`;
+};
+
+// A placemat slot, filled here with a stand-in design (the category is empty
+// until Bud's first placemat): Everyday then lists its categories; the
+// placemat offers one or a set of two, and a set orders as the quilted
+// placemat's set of two at $28.95.
+scenarios.thePlacematSlot = async (page) => {
+  const bodies = [];
+  page.on('request', (r) => { if (r.url().includes('/api/create-checkout-session')) { try { bodies.push(r.postDataJSON()); } catch (e) {} } });
+  await page.route('**/api/printify-catalog**', (route) => route.fulfill({ json: { shipping: 6.78, shippingSeparate: true, source: 'live' } }));
+  await openStudio(page); await dismissAlerts(page);
+  const hidden = await page.evaluate(() => liveCategories(PREMADE_OCCASIONS.find((o) => o.key === 'everyday')).join());
+  if (hidden !== 'welcome-mats') return `FAIL: with no placemat designs Everyday lists ${hidden}`;
+  await page.evaluate(() => { const c = PREMADE_CATEGORIES.placemats; c.dir = 'art/unwelcome'; c.show = [900, 552]; c.items.push({ key: 'pearly-gates', label: 'Stand-in' }); });
+  await page.evaluate(() => document.getElementById('premadesFrontBtn').click()); await T(page, 1500);
+  await page.evaluate(() => document.querySelector('#premadesView .pm-row[data-occasion="everyday"]').click()); await T(page, 1500);
+  const cats = await pmState(page);
+  if (cats.view !== 'categories' || cats.imgs || !/Placemats/.test(cats.text) || !/Welcome Mats/.test(cats.text)) return `FAIL: Everyday with two categories opened ${JSON.stringify(cats)}`;
+  await page.evaluate(() => document.querySelector('#premadesView .pm-row[data-category="placemats"]').click()); await T(page, 1500);
+  const g = await page.evaluate(() => ({ view: premadesView, packs: [...document.querySelectorAll('#premadesPackGrid .btn-select')].map((b) => b.innerText.replace(/\n/g, ' ')) }));
+  if (g.view !== 'gallery' || g.packs.length !== 2 || !/Just one \$15\.95/.test(g.packs[0]) || !/A set of two \$28\.95/.test(g.packs[1])) return `FAIL: the placemat gallery offers ${JSON.stringify(g)}`;
+  await page.evaluate(() => pickPremadesPack(2)); await T(page, 300);
+  if (!/\$28\.95/.test(await page.evaluate(() => document.getElementById('premadesMatOrderBtn').innerText))) return 'FAIL: the order button does not show the set price';
+  // Back: the gallery -> the categories -> the occasions.
+  await page.evaluate(() => premadesBack()); await T(page, 900);
+  if (await page.evaluate(() => premadesView) !== 'categories') return 'FAIL: Back from the placemats did not go to the categories';
+  await page.evaluate(() => { pickPremadeCategory('placemats'); pickPremadesPack(2); }); await T(page, 900);
+  await Promise.all([page.waitForURL(/order\.html/, { timeout: 10000 }), page.evaluate(() => document.getElementById('premadesMatOrderBtn').click())]);
+  await T(page, 3000);
+  const o = await page.evaluate(() => ({ base: document.getElementById('summaryBase').textContent, label: document.getElementById('summaryStyleSize')?.textContent || '' }));
+  if (o.base !== '$28.95' || !/set of 2/.test(o.label)) return `FAIL: the order page shows ${JSON.stringify(o)}`;
+  await page.evaluate(() => {
+    const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v; };
+    set('fullName', 'Test Customer'); set('email', 'test@example.com'); set('phone', '5555550100');
+    set('address1', '123 Test St'); set('city', 'Westland'); set('state', 'MI'); set('zip', '48185'); set('country', 'US');
+    submitOrder();
+  });
+  await T(page, 2000);
+  const b = bodies[bodies.length - 1];
+  if (!b || b.productKey !== 'placemat-quilted' || b.sizeLabel !== '12 x 18 in, set of 2' || !/\/art\/unwelcome\/print\/pearly-gates\.jpg$/.test(b.image || '')) return `FAIL: checkout got ${JSON.stringify(b && { k: b.productKey, s: b.sizeLabel, image: b.image })}`;
+  return 'PASS: an empty placemat category stays hidden; filled, Everyday lists its two categories quietly; the placemat offers one ($15.95) or a set of two ($28.95); Back steps to the categories; a set checks out as placemat-quilted / 12 x 18 in, set of 2, with the design\'s print file';
 };
 
 (async () => {

@@ -10,9 +10,11 @@
 const { launch, openStudio, uploadPhoto, dismissAlerts, passFadePage } = require('./harness');
 
 const T = (page, ms) => page.waitForTimeout(ms);
+// Cotton is bought singly here, Quilted as a set of two (the same design twice,
+// priced as one item), so both routes through the card are driven.
 const KINDS = {
-  Cotton: { key: 'placemat-cotton', size: '18 x 14 in', price: '$16.95', ratio: 2925 / 2325 },
-  Quilted: { key: 'placemat-quilted', size: '12 x 18 in', price: '$15.95', ratio: 2925 / 2025 }
+  Cotton: { key: 'placemat-cotton', size: '18 x 14 in', price: '$16.95', ratio: 2925 / 2325, pack: 1, label: /Cotton Placemat, 18 x 14/ },
+  Quilted: { key: 'placemat-quilted', size: '12 x 18 in, set of 2', price: '$28.95', ratio: 2925 / 2025, pack: 2, label: /Quilted Placemats, set of 2/ }
 };
 
 async function run(page, log, kind) {
@@ -44,6 +46,13 @@ async function run(page, log, kind) {
   if (card.top < -2 || card.top > card.H * 0.5) return `FAIL: the card did not land at its title (top ${card.top})`;
   await page.evaluate((k) => document.querySelector(`#placematOptionGrid .btn-select[data-opt="${k}"]`).click(), kind);
   await T(page, 1200); await dismissAlerts(page);
+  // One, or a set of two: asked before the description.
+  if (await page.evaluate(() => document.body.classList.contains('ideafirst-focus'))) return 'FAIL: the idea box opened before one-or-two was chosen';
+  const packs = await page.evaluate(() => [...document.querySelectorAll('#placematPackGrid .btn-select')].map((b) => b.innerText.replace(/\n/g, ' ')));
+  const setPrice = kind === 'Cotton' ? '29.95' : '28.95', onePrice = kind === 'Cotton' ? '16.95' : '15.95';
+  if (packs.length !== 2 || !packs[0].includes('Just one $' + onePrice) || !packs[1].includes('A set of two $' + setPrice)) return `FAIL: the one-or-two choice reads ${JSON.stringify(packs)}`;
+  await page.evaluate((n) => document.querySelector(`#placematPackGrid .btn-select[data-pack="${n}"]`).click(), want.pack);
+  await T(page, 1200); await dismissAlerts(page);
   if (!(await page.evaluate(() => document.body.classList.contains('ideafirst-focus')))) return 'FAIL: picking a placemat did not reach the idea box';
   await page.fill('#ideaDesc', 'autumn leaves around a pumpkin pie');
   await dismissAlerts(page);
@@ -70,11 +79,11 @@ async function run(page, log, kind) {
   // The order page, handed the kind the way the studio hands it.
   const bodies = [];
   page.on('request', (r) => { if (r.url().includes('/api/create-checkout-session')) { try { bodies.push(r.postDataJSON()); } catch (e) {} } });
-  const pending = await page.evaluate(() => ({ placements: { left: location.origin + '/__fake/design.png', front: null, right: null }, deviceId: 'dev_test', productIcon: 'placemat', preselectedPlacemat: selectedPlacemat }));
+  const pending = await page.evaluate(() => ({ placements: { left: location.origin + '/__fake/design.png', front: null, right: null }, deviceId: 'dev_test', productIcon: 'placemat', preselectedPlacemat: selectedPlacemat, preselectedPlacematPack: selectedPlacematPack }));
   await page.evaluate((p) => localStorage.setItem('muggshotz_pending_order', JSON.stringify(p)), pending);
   await page.goto('http://127.0.0.1:8788/order.html'); await T(page, 3000);
   const o = await page.evaluate(() => ({ base: document.getElementById('summaryBase').textContent, label: document.getElementById('summaryStyleSize')?.textContent || '' }));
-  if (o.base !== want.price || !new RegExp(kind + ' Placemat').test(o.label)) return `FAIL: the order page shows ${JSON.stringify(o)}`;
+  if (o.base !== want.price || !want.label.test(o.label)) return `FAIL: the order page shows ${JSON.stringify(o)}`;
   await page.evaluate(() => {
     const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v; };
     set('fullName', 'Test Customer'); set('email', 'test@example.com'); set('phone', '5555550100');
@@ -84,7 +93,7 @@ async function run(page, log, kind) {
   await T(page, 2000);
   const b = bodies[bodies.length - 1];
   if (!b || b.productKey !== want.key || b.sizeLabel !== want.size || !b.image) return `FAIL: checkout got ${JSON.stringify(b && { k: b.productKey, s: b.sizeLabel, image: !!b.image })}`;
-  return `PASS: ${kind}: the lit card offers both kinds with pictures and prices; it paints 1536x1024 and comes back ${d.w}x${d.h} (${shape.toFixed(3)}:1); the mockup and checkout are ${want.key} / ${want.size} at ${want.price}`;
+  return `PASS: ${kind}${want.pack === 2 ? ' (set of two)' : ''}: the lit card offers both kinds with pictures and prices, then one or a set of two; it paints 1536x1024 and comes back ${d.w}x${d.h} (${shape.toFixed(3)}:1); the mockup and checkout are ${want.key} / ${want.size} at ${want.price}`;
 }
 
 (async () => {

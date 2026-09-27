@@ -1017,6 +1017,13 @@ export async function buildFrontBackImages(frontSource, backSource, frontDims, b
 // immediately from just its name, with no manual ID lookup required.
 // Every color that already has a real variantId hardcoded is completely
 // unaffected -- this fallback only ever runs when one is missing.
+// How many of the product one size is: 1, or the size's packOf (a set of two
+// placemats is one size, one design, quantity 2).
+export function packQuantity(product, sizeLabel) {
+  const n = product?.sizes?.[sizeLabel]?.packOf;
+  return Number.isInteger(n) && n > 1 ? n : 1;
+}
+
 export async function resolveVariant(product, sizeLabel, colorName) {
   const sizeEntry = product.sizes?.[sizeLabel];
   if (!sizeEntry) throw new Error(`Unknown size "${sizeLabel}" for this product.`);
@@ -1113,9 +1120,6 @@ export async function createPrintifyProduct(images, { blueprintId, printProvider
   return { productId: data.id };
 }
 
-async function submitPrintifyOrder(productId, variantId, shippingAddress, externalOrderId) {
-  return submitPrintifyOrderLines([{ product_id: productId, variant_id: variantId, quantity: 1 }], shippingAddress, externalOrderId);
-}
 
 // One order, several items (the basket, 23 Sep 2026). Printify takes line
 // items from different makers in one order and splits the shipments itself.
@@ -1353,12 +1357,15 @@ export async function placeProductOrder({
     imageY
   );
 
+  // A PACK (packOf on the size, e.g. a set of two placemats): one product,
+  // the same design, ordered packOf times on one line.
+  const quantity = packQuantity(product, sizeLabel);
   if (skipOrder) {
-    return { success: true, productId, variantId, basePrice: price };
+    return { success: true, productId, variantId, basePrice: price, quantity };
   }
 
-  const orderResult = await submitPrintifyOrder(
-    productId, variantId, shippingAddress, orderId || `muggshotz-${Date.now()}`
+  const orderResult = await submitPrintifyOrderLines(
+    [{ product_id: productId, variant_id: variantId, quantity }], shippingAddress, orderId || `muggshotz-${Date.now()}`
   );
 
   return {
@@ -1387,7 +1394,7 @@ export async function placeBasketOrder(items, { shippingAddress, customerName, o
       placeProductOrder({ ...item, shippingAddress, customerName, orderId, skipOrder: true })));
     done.forEach((r, j) => { built[i + j] = r; });
   }
-  const lineItems = built.map((b) => ({ product_id: b.productId, variant_id: b.variantId, quantity: 1 }));
+  const lineItems = built.map((b) => ({ product_id: b.productId, variant_id: b.variantId, quantity: b.quantity || 1 }));
   const orderResult = await submitPrintifyOrderLines(lineItems, shippingAddress, orderId || `muggshotz-${Date.now()}`);
   return { success: true, printifyOrderId: orderResult.id, productIds: built.map((b) => b.productId) };
 }

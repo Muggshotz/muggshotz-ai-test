@@ -93,6 +93,8 @@ async function choose(page, cardId) {
     const card = document.getElementById(cardId);
     const t = [...card.querySelectorAll('.btn-select')].find((b) => !b.closest('[data-words]') || cardId === 'tshirtOptionCard');
     if (cardId === 'tshirtOptionCard') { t.click(); card.querySelector('#tshirtColorGrid .color-btn').click(); return; }
+    // The placemat card asks two things on one panel: the kind, then one or a set of two.
+    if (cardId === 'placematOptionCard') { t.click(); card.querySelector('#placematPackGrid .btn-select').click(); return; }
     (t || card.querySelector('.color-btn')).click();
   }, cardId);
 }

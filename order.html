@@ -1397,10 +1397,13 @@ const DOORMAT_PRICE = 19.95; // Doormat (22 Sep 2026)
 // PLACEMATS (27 Sep 2026). The same two as the studio's card, each naming its
 // catalog product and size; picked in the studio and carried here.
 const PLACEMAT_OPTIONS = {
-  'Cotton':{key:'placemat-cotton',size:'18 x 14 in',price:16.95,label:'Cotton Placemat, 18 x 14 in'},
-  'Quilted':{key:'placemat-quilted',size:'12 x 18 in',price:15.95,label:'Quilted Placemat, 18 x 12 in'}
+  'Cotton':{key:'placemat-cotton',size:'18 x 14 in',price:16.95,label:'Cotton Placemat, 18 x 14 in',setSize:'18 x 14 in, set of 2',setPrice:29.95,setLabel:'Cotton Placemats, set of 2, 18 x 14 in'},
+  'Quilted':{key:'placemat-quilted',size:'12 x 18 in',price:15.95,label:'Quilted Placemat, 18 x 12 in',setSize:'12 x 18 in, set of 2',setPrice:28.95,setLabel:'Quilted Placemats, set of 2, 18 x 12 in'}
 };
 let selectedPlacemat = PLACEMAT_OPTIONS[pendingOrder?.preselectedPlacemat] ? pendingOrder.preselectedPlacemat : 'Cotton';
+// A set of two is one item at one price: the same design printed twice.
+const placematIsSet = pendingOrder?.preselectedPlacematPack === 2;
+function placematChoice(){ const o = PLACEMAT_OPTIONS[selectedPlacemat]; return placematIsSet ? { size: o.setSize, price: o.setPrice, label: o.setLabel } : { size: o.size, price: o.price, label: o.label }; }
 const PLAYINGCARDS_PRICE = 16.95; // Just Playin' (22 Sep 2026)
 // Reflex-buy pricing (Alyx, 2026-08-28): ~$2 over wholesale on purpose,
 // "not a profit generator" — do not round these upward.
@@ -2788,8 +2791,8 @@ function updateSummary(){
     basePrice = DOORMAT_PRICE;
     styleSizeLabel = 'Doormat';
   } else if (isPlacemat()) {
-    basePrice = PLACEMAT_OPTIONS[selectedPlacemat].price;
-    styleSizeLabel = PLACEMAT_OPTIONS[selectedPlacemat].label;
+    basePrice = placematChoice().price;
+    styleSizeLabel = placematChoice().label;
   } else if (isBeerStein()) {
     basePrice = BEERSTEIN_PRICE;
     styleSizeLabel = 'Beer Stein';
@@ -3344,7 +3347,7 @@ function buildOrderItemBody(fullName, shippingAddress){
         : isDeskCalendar() ? '10 x 5'
         : isBeerStein() ? '22oz'
         : isDoormat() ? '18 x 30'
-        : isPlacemat() ? PLACEMAT_OPTIONS[selectedPlacemat].size
+        : isPlacemat() ? placematChoice().size
         : isPlayingCards() ? 'Standard Deck'
         : isGreetingCard() ? '8-Pack'
         : isPostIt() ? '3" x 3"'

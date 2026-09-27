@@ -1,5 +1,5 @@
 <!-- ============================================================
-     VERSION: V389
+     VERSION: V390
      ============================================================
      THE ONE LINE THAT SAYS WHICH BUILD YOU ARE LOOKING AT.
 
@@ -689,6 +689,9 @@ body.premades-focus .card:not(#premadesCard){opacity:.35;filter:brightness(.6) s
 #premadesCard .pm-simg.pm-wide{width:100%}
 #premadesCard .pm-mat{position:relative;margin:.4rem 0 1rem}
 #premadesCard .pm-arr{position:absolute;top:50%;transform:translateY(-50%);width:36px;height:36px;border-radius:50%;background:#131b27;border:1px solid #24344a;color:#cfe3ff;display:flex;align-items:center;justify-content:center;font-size:22px;cursor:pointer;padding:0}
+#premadesCard .pm-layout{display:flex;gap:6px;justify-content:center;margin:0 0 .9rem}
+#premadesCard .pm-lay{background:transparent;border:1px solid #24344a;border-radius:16px;color:#7ab8ff;font-size:12px;padding:5px 12px;cursor:pointer}
+#premadesCard .pm-lay.on{border-color:#29a3ff;color:#cfe3ff;background:rgba(41,163,255,.08)}
 #premadesCard .pm-dots{text-align:center;margin:.2rem 0 1.1rem}
 #premadesCard .pm-dots span{display:inline-block;width:10px;height:10px;border-radius:50%;border:1px solid #3d5577;margin:0 4px;cursor:pointer}
 #premadesCard .pm-dots span.on{background:#3d5577}
@@ -1610,6 +1613,10 @@ const HERO_SETTLE_MS = 1000;
 <div class="note" style="margin-top:0;margin-bottom:.75rem">Two kinds, each a different shape. Your picture is drawn to fit the one you pick, edge to edge.</div>
 <div class="grid2" id="placematOptionGrid">
 <div class="btn-select" data-opt="Cotton" style="padding:.5rem" onclick="pickPlacemat('Cotton')"><img src="art/options/placemat-cotton.jpg" alt="" width="360" height="360" style="width:100%;height:auto;border-radius:6px;background:#fff;margin-bottom:6px"/>Cotton<div class="note" style="margin-top:2px">18 x 14 in, double layer</div><div class="note" style="margin-top:4px">$16.95</div></div><div class="btn-select" data-opt="Quilted" style="padding:.5rem" onclick="pickPlacemat('Quilted')"><img src="art/options/placemat-quilted.jpg" alt="" width="360" height="360" style="width:100%;height:auto;border-radius:6px;background:#fff;margin-bottom:6px"/>Quilted<div class="note" style="margin-top:2px">18 x 12 in, grey back</div><div class="note" style="margin-top:4px">$15.95</div></div>
+</div>
+<div id="placematPackWrap" style="display:none">
+<div class="note" style="margin:.9rem 0 .4rem;font-weight:700">Just one, or a set of two? A set is the same design twice.</div>
+<div class="grid2" id="placematPackGrid" data-words="how many: the placemats above carry the pictures"></div>
 </div>
 <div class="note" id="placematOptionNote" style="margin-top:.6rem"></div>
 <button type="button" class="download-btn" style="margin-top:1rem" onclick="optionCardBack()">← Back</button>
@@ -4741,7 +4748,7 @@ function toggleWorkingImage(){
 // Two copies of a number is exactly how the marker rotted in the first place,
 // so they are not trusted to agree: .githooks/pre-commit moves both together
 // and REFUSES the commit if it ever finds them apart.
-const APP_VERSION='V389';
+const APP_VERSION='V390';
 try{ console.log('%cNeedles\u2019 Studio '+APP_VERSION,'color:#29a3ff;font-weight:700'); }catch(e){}
 
 function getDeviceId(){
@@ -12855,16 +12862,37 @@ function refreshCarMagnetVisibility(){
 // picture is drawn landscape and cut to that shape (shapedPrintRatio), edge to
 // edge. Prices are Alyx's rule: wholesale + $3 to the nearest $0.95. The
 // leather one (9 x 7.5 in) was left off: "practically a coaster".
+// Each sells singly or as a set of two, the set priced as one item (Alyx:
+// "a set of two being considered just one item"); the catalog's size for a set
+// carries packOf: 2, so Printify prints the one design twice.
 const PLACEMAT_OPTIONS={
-  'Cotton':{key:'placemat-cotton',size:'18 x 14 in',price:16.95,ratio:2925/2325},
-  'Quilted':{key:'placemat-quilted',size:'12 x 18 in',price:15.95,ratio:2925/2025}
+  'Cotton':{key:'placemat-cotton',size:'18 x 14 in',price:16.95,setSize:'18 x 14 in, set of 2',setPrice:29.95,ratio:2925/2325},
+  'Quilted':{key:'placemat-quilted',size:'12 x 18 in',price:15.95,setSize:'12 x 18 in, set of 2',setPrice:28.95,ratio:2925/2025}
 };
-let selectedPlacemat=null;
+let selectedPlacemat=null, selectedPlacematPack=null;
+function placematSizeLabel(){ const o=PLACEMAT_OPTIONS[selectedPlacemat]; return o?(selectedPlacematPack===2?o.setSize:o.size):null; }
+function renderPlacematPacks(){
+  const o=PLACEMAT_OPTIONS[selectedPlacemat], grid=document.getElementById('placematPackGrid'); if(!grid)return;
+  document.getElementById('placematPackWrap').style.display=o?'block':'none';
+  if(!o){ grid.innerHTML=''; return; }
+  grid.innerHTML=[[1,'Just one',o.price],[2,'A set of two',o.setPrice]].map(([n,l,p])=>
+    '<div class="btn-select'+(n===selectedPlacematPack?' selected':'')+'" data-pack="'+n+'" style="padding:.6rem" onclick="pickPlacematPack('+n+')">'+l+'<div class="note" style="margin-top:4px">$'+p.toFixed(2)+'</div></div>').join('');
+}
 function pickPlacemat(name){
   if(!PLACEMAT_OPTIONS[name])return;
   selectedPlacemat=name;
   document.querySelectorAll('#placematOptionGrid .btn-select').forEach(b=>b.classList.toggle('selected',b.dataset.opt===name));
-  document.getElementById('placematOptionNote').textContent='✓ Confirmed: '+name+' placemat, $'+PLACEMAT_OPTIONS[name].price.toFixed(2)+'.';
+  renderPlacematPacks();
+  if(selectedPlacematPack){ pickPlacematPack(selectedPlacematPack); return; }
+  document.getElementById('placematOptionNote').textContent='Now pick one or a set of two.';
+  smoothScrollToTarget('placematPackWrap','center');
+}
+function pickPlacematPack(n){
+  if(!PLACEMAT_OPTIONS[selectedPlacemat])return;
+  selectedPlacematPack=n===2?2:1;
+  renderPlacematPacks();
+  const o=PLACEMAT_OPTIONS[selectedPlacemat];
+  document.getElementById('placematOptionNote').textContent='✓ Confirmed: '+(selectedPlacematPack===2?'a set of two '+selectedPlacemat.toLowerCase()+' placemats, $'+o.setPrice.toFixed(2):selectedPlacemat.toLowerCase()+' placemat, $'+o.price.toFixed(2))+'.';
   handOffToIdeaAfterProductChoice();
 }
 function placematRule(){
@@ -13060,27 +13088,54 @@ function goToSurpriseOrder(){
 //   occasion  -- the occasion's flyer, alone, and one button;
 //   how       -- "How the magic mug works", seven steps, then the hand and
 //                Order the set (the flyer's QR lands here, ?set=<key>);
-//   mats      -- the Unwelcome mats, one at a time.
+//   categories -- an occasion's kinds of design, a quiet list (when it has more than one);
+//   gallery   -- a category's designs, one at a time or all at once.
 // Links: ?sets opens the list; ?set=<key> opens that set's How it works.
 const PREMADE_OCCASIONS=[
   {key:'thanksgiving',icon:'🦃',label:'Thanksgiving',set:'thanksgiving',flyer:'art/flyers/thanksgiving.webp',sub:'Mug sets'},
   {key:'christmas',icon:'🎄',label:'Christmas',soon:true},
   {key:'halloween',icon:'🎃',label:'Halloween',soon:true},
   {key:'valentines',icon:'💘',label:"Valentine's Day",soon:true},
-  {key:'everyday',icon:'🚪',label:'Everyday',mats:true,sub:'(Un/)Welcome mats'}
+  {key:'everyday',icon:'🚪',label:'Everyday',categories:['welcome-mats','placemats']}
 ];
-// Bud's Unwelcome mats (art/unwelcome). show/ is the picture on the page,
-// print/ the file printed, both at the doormat's 4650 x 2850 shape. Ordered as
-// the doormat product at the doormat's own price.
-const PREMADE_MAT_PRICE=19.95;
-const PREMADE_MATS=[
-  {key:'rope-bridge',label:'Rope Bridge'},{key:'shaft',label:'The Shaft'},{key:'dog',label:'The Dog'},
-  {key:'lava-pit',label:'Lava Pit'},{key:'crocodile',label:'Crocodile'},{key:'shark-pier',label:'Shark Pier'},
-  {key:'sharks-under-pier',label:'Under the Pier'},{key:'ice-hole',label:'Thin Ice'},{key:'dock-shallow',label:'The Dock'},
-  {key:'abandon-hope',label:'Abandon Hope'},{key:'pearly-gates',label:'Pearly Gates'}
-];
-let premadesSet=null, premadesHand='right', premadesView='occasions', premadesOccasion=null, premadesMat=0;
-function premadesFromPrice(){ return '$'+Math.min(SMART_MUG_SET_PRICE,PREMADE_MAT_PRICE).toFixed(2); }
+// PREMADE SLOTS (Alyx, 27 Sep 2026: "we can just design items and you can
+// plug them right into slots"). Every finished design lives in a category
+// here; a category knows its folder, its picture sizes, the product it orders
+// as and its prices. Adding a design is: its two files in the category's
+// folder (tools/premade-fit.py makes them from the artist's file) and one line
+// in items. A category with no items does not show; an occasion lists only
+// the categories that have some. Each gallery shows one at a time with arrows,
+// or all at once, the customer's choice (Alyx: "the model for all categories
+// going forward").
+//   dir/show/<key>.jpg  the picture on the page (show: [w, h])
+//   dir/print/<key>.jpg the file printed, at the product's print shape
+//   order: the studio product it orders as ('doormat', or 'placemat' with its
+//          kind); packs: the choices of how many, each priced as one item.
+const PREMADE_CATEGORIES={
+  'welcome-mats':{label:'(Un/)Welcome Mats',icon:'🚪',dir:'art/unwelcome',show:[900,552],line:'18 x 30 in doormat',
+    order:{family:'doormat'},packs:[{n:1,label:'The mat',price:19.95}],
+    items:[
+      {key:'rope-bridge',label:'Rope Bridge'},{key:'shaft',label:'The Shaft'},{key:'dog',label:'The Dog'},
+      {key:'lava-pit',label:'Lava Pit'},{key:'crocodile',label:'Crocodile'},{key:'shark-pier',label:'Shark Pier'},
+      {key:'sharks-under-pier',label:'Under the Pier'},{key:'ice-hole',label:'Thin Ice'},{key:'dock-shallow',label:'The Dock'},
+      {key:'abandon-hope',label:'Abandon Hope'},{key:'pearly-gates',label:'Pearly Gates'}
+    ]},
+  // Placemats: Bud's designs at the quilted mat's print shape, 2925 x 2025
+  // (Alyx and Bud, 27 Sep: singly, or a set of two priced as one item).
+  'placemats':{label:'Placemats',icon:'🍽️',dir:'art/placemats',show:[900,623],line:'Quilted placemat, 18 x 12 in',
+    order:{family:'placemat',kind:'Quilted'},packs:[{n:1,label:'Just one',price:15.95},{n:2,label:'A set of two',price:28.95}],
+    items:[]}
+};
+// The mats' list by its old name (the tests and the ?set links read it).
+const PREMADE_MATS=PREMADE_CATEGORIES['welcome-mats'].items;
+let premadesSet=null, premadesHand='right', premadesView='occasions', premadesOccasion=null;
+let premadesCategory=null, premadesIndex=0, premadesPack=1;
+let premadesLayout=(()=>{ try{ return localStorage.getItem('mz_premades_layout')==='all'?'all':'one'; }catch(e){ return 'one'; } })();
+function premadeCat(){ return PREMADE_CATEGORIES[premadesCategory]||null; }
+// An occasion's categories that have designs in them.
+function liveCategories(o){ return (o&&o.categories||[]).filter(k=>PREMADE_CATEGORIES[k]&&PREMADE_CATEGORIES[k].items.length); }
+function catFrom(c){ return Math.min(...c.packs.map(p=>p.price)); }
+function premadesFromPrice(){ return '$'+Math.min(SMART_MUG_SET_PRICE,...Object.values(PREMADE_CATEGORIES).filter(c=>c.items.length).map(catFrom)).toFixed(2); }
 function premadeOccasion(){ return PREMADE_OCCASIONS.find(o=>o.key===premadesOccasion)||null; }
 function premadesCrumb(parts){ return '<div class="pm-crumb">'+['Premades &amp; Sets'].concat(parts).join(' › ')+'</div>'; }
 function renderPremades(){
@@ -13108,26 +13163,44 @@ function renderPremades(){
       +['right','left'].map(h=>'<div class="btn-select'+(h===premadesHand?' selected':'')+'" data-hand="'+h+'" onclick="pickPremadesHand(\''+h+'\')" style="padding:.7rem;font-size:13px">'+(h==='right'?'Right-handed':'Left-handed')+'</div>').join('')+'</div>'
       +step(7,'Four mugs, four jokes.','One set, four different '+set.label+' surprises. '+$(SMART_MUG_SET_PRICE)+'.','')
       +'<button type="button" class="generate-btn" id="premadesContinueBtn" onclick="goToPremadeSetOrder()">🎁 Order the set</button>';
-  } else if(premadesView==='mats'){
-    const m=PREMADE_MATS[premadesMat];
-    title.textContent='🚪 (Un/)Welcome Mats';
-    view.innerHTML=premadesCrumb(['Everyday','(Un/)Welcome Mats'])
-      +'<div class="pm-mat"><img class="pm-big" id="premadesMatPic" src="art/unwelcome/show/'+m.key+'.jpg" width="900" height="552" alt="'+m.label+'"/>'
-      +'<button type="button" class="pm-arr" style="left:-12px" aria-label="Previous mat" onclick="premadesMatStep(-1)">‹</button>'
-      +'<button type="button" class="pm-arr" style="right:-12px" aria-label="Next mat" onclick="premadesMatStep(1)">›</button></div>'
-      +'<div class="pm-name" id="premadesMatName">'+m.label+'</div>'
-      +'<div class="pm-line" style="margin-bottom:.5rem">18 x 30 in doormat · '+$(PREMADE_MAT_PRICE)+'</div>'
-      +'<div class="pm-dots">'+PREMADE_MATS.map((x,i)=>'<span class="'+(i===premadesMat?'on':'')+'" onclick="premadesMatStep('+(i-premadesMat)+')"></span>').join('')+'</div>'
-      +'<button type="button" class="generate-btn" id="premadesMatOrderBtn" onclick="goToPremadeMatOrder()">🚪 Order this mat</button>';
-    const next=new Image(); next.src='art/unwelcome/show/'+PREMADE_MATS[(premadesMat+1)%PREMADE_MATS.length].key+'.jpg';
+  } else if(premadesView==='categories'&&occ){
+    title.textContent=occ.icon+' '+occ.label;
+    view.innerHTML=premadesCrumb([occ.label])+'<div class="pm-ask">What are you looking for?</div><div id="premadesCategories" data-words="categories: a quiet list on purpose, the pictures come after">'
+      +liveCategories(occ).map(k=>{ const c=PREMADE_CATEGORIES[k]; return '<div class="pm-row" data-category="'+k+'" onclick="pickPremadeCategory(\''+k+'\')">'
+        +'<span class="pm-ic">'+c.icon+'</span><span class="pm-tx"><span class="pm-nm">'+c.label+'</span><span class="pm-sub">'+c.items.length+' designs · from '+$(catFrom(c))+'</span></span><span class="pm-ar">›</span></div>'; }).join('')+'</div>';
+  } else if(premadesView==='gallery'&&premadeCat()){
+    const c=premadeCat(), m=c.items[premadesIndex]||c.items[0], [sw,sh]=c.show, pack=c.packs.find(p=>p.n===premadesPack)||c.packs[0];
+    title.textContent=c.icon+' '+c.label;
+    const layout='<div class="pm-layout" data-words="how to browse: the designs carry the pictures">'
+      +[['one','One at a time'],['all','All at once']].map(([k,l])=>'<button type="button" class="pm-lay'+(premadesLayout===k?' on':'')+'" data-layout="'+k+'" onclick="premadesSetLayout(\''+k+'\')">'+l+'</button>').join('')+'</div>';
+    const packs=c.packs.length>1?'<div class="grid2" id="premadesPackGrid" data-words="how many: the design above is the picture" style="margin:.2rem 0 1rem">'
+      +c.packs.map(p=>'<div class="btn-select'+(p.n===pack.n?' selected':'')+'" data-pack="'+p.n+'" onclick="pickPremadesPack('+p.n+')" style="padding:.6rem">'+p.label+'<div class="note" style="margin-top:4px">'+$(p.price)+'</div></div>').join('')+'</div>':'';
+    if(premadesLayout==='all'){
+      view.innerHTML=premadesCrumb([occ?occ.label:'',c.label].filter(Boolean))+layout
+        +'<div class="grid2" id="premadesAll">'+c.items.map((x,i)=>'<div class="btn-select" data-item="'+x.key+'" style="padding:.4rem" onclick="premadesShowOne('+i+')">'
+          +'<img src="'+c.dir+'/show/'+x.key+'.jpg" width="'+sw+'" height="'+sh+'" alt="" loading="lazy" style="width:100%;height:auto;border-radius:6px;margin-bottom:4px"/>'+x.label
+          +'<div class="note" style="margin-top:2px">'+$(catFrom(c))+'</div></div>').join('')+'</div>';
+    } else {
+      view.innerHTML=premadesCrumb([occ?occ.label:'',c.label].filter(Boolean))+layout
+        +'<div class="pm-mat"><img class="pm-big" id="premadesMatPic" src="'+c.dir+'/show/'+m.key+'.jpg" width="'+sw+'" height="'+sh+'" alt="'+m.label+'"/>'
+        +'<button type="button" class="pm-arr" style="left:-12px" aria-label="Previous" onclick="premadesStep(-1)">‹</button>'
+        +'<button type="button" class="pm-arr" style="right:-12px" aria-label="Next" onclick="premadesStep(1)">›</button></div>'
+        +'<div class="pm-name" id="premadesMatName">'+m.label+'</div>'
+        +'<div class="pm-line" style="margin-bottom:.5rem">'+c.line+' · '+$(pack.price)+'</div>'
+        +'<div class="pm-dots">'+c.items.map((x,i)=>'<span class="'+(i===premadesIndex?'on':'')+'" onclick="premadesStep('+(i-premadesIndex)+')"></span>').join('')+'</div>'
+        +packs
+        +'<button type="button" class="generate-btn" id="premadesMatOrderBtn" onclick="goToPremadeOrder()">'+c.icon+' Order this '+(pack.n>1?'set':'one')+' · '+$(pack.price)+'</button>';
+      const next=new Image(); next.src=c.dir+'/show/'+c.items[(premadesIndex+1)%c.items.length].key+'.jpg';
+    }
   } else {
     premadesView='occasions';
     title.textContent='🎁 Premades & Sets';
-    const priced=o=>o.set?(o.sub+' · '+$(SMART_MUG_SET_PRICE)):o.mats?(o.sub+' · '+$(PREMADE_MAT_PRICE)):'';
+    const priced=o=>{ if(o.set)return o.sub+' · '+$(SMART_MUG_SET_PRICE); const cs=liveCategories(o).map(k=>PREMADE_CATEGORIES[k]); return cs.length?cs.map(c=>c.label).join(', ')+' · from '+$(Math.min(...cs.map(catFrom))):''; };
+    const isSoon=o=>o.soon||(!o.set&&!liveCategories(o).length);
     view.innerHTML='<div class="pm-ask">What\'s the occasion?</div><div id="premadesOccasions" data-words="occasions: a quiet list on purpose, the pictures come after">'
-      +PREMADE_OCCASIONS.map(o=>'<div class="pm-row'+(o.soon?' pm-soon':'')+'" data-occasion="'+o.key+'"'+(o.soon?'':' onclick="pickPremadeOccasion(\''+o.key+'\')"')+'>'
-        +'<span class="pm-ic">'+o.icon+'</span><span class="pm-tx"><span class="pm-nm">'+o.label+'</span>'+(o.soon?'':'<span class="pm-sub">'+priced(o)+'</span>')+'</span>'
-        +'<span class="pm-ar">'+(o.soon?'soon':'›')+'</span></div>').join('')+'</div>';
+      +PREMADE_OCCASIONS.map(o=>'<div class="pm-row'+(isSoon(o)?' pm-soon':'')+'" data-occasion="'+o.key+'"'+(isSoon(o)?'':' onclick="pickPremadeOccasion(\''+o.key+'\')"')+'>'
+        +'<span class="pm-ic">'+o.icon+'</span><span class="pm-tx"><span class="pm-nm">'+o.label+'</span>'+(isSoon(o)?'':'<span class="pm-sub">'+priced(o)+'</span>')+'</span>'
+        +'<span class="pm-ar">'+(isSoon(o)?'soon':'›')+'</span></div>').join('')+'</div>';
   }
 }
 // Every view lands the same way: the card, by its top when it is taller than
@@ -13140,10 +13213,24 @@ function premadesGo(view){
 function pickPremadeOccasion(key){
   const o=PREMADE_OCCASIONS.find(x=>x.key===key); if(!o||o.soon)return;
   premadesOccasion=key;
-  if(o.set)premadesSet=o.set;
-  if(o.mats)premadesMat=0;
-  premadesGo(o.mats?'mats':'occasion');
+  if(o.set){ premadesSet=o.set; premadesGo('occasion'); return; }
+  const live=liveCategories(o); if(!live.length)return;
+  if(live.length===1){ pickPremadeCategory(live[0]); return; }
+  premadesGo('categories');
 }
+function pickPremadeCategory(key){
+  if(!PREMADE_CATEGORIES[key]||!PREMADE_CATEGORIES[key].items.length)return;
+  premadesCategory=key; premadesIndex=0; premadesPack=PREMADE_CATEGORIES[key].packs[0].n;
+  premadesGo('gallery');
+}
+function premadesSetLayout(k){
+  premadesLayout=k==='all'?'all':'one';
+  try{ localStorage.setItem('mz_premades_layout',premadesLayout); }catch(e){}
+  renderPremades();
+}
+// A design tapped on the all-at-once page opens on its own, arrows and all.
+function premadesShowOne(i){ premadesIndex=i; premadesLayout='one'; premadesGo('gallery'); }
+function pickPremadesPack(n){ premadesPack=n; renderPremades(); }
 // Kept by name: the ?set=<key> link and the tests call it. A set opens on its
 // How it works, the page the flyer's QR is for.
 function pickPremadeSet(key){
@@ -13152,10 +13239,12 @@ function pickPremadeSet(key){
   premadesOccasion=o.key; premadesSet=key;
   premadesGo('how');
 }
-function premadesMatStep(d){
-  const n=PREMADE_MATS.length; premadesMat=((premadesMat+d)%n+n)%n;
+function premadesStep(d){
+  const c=premadeCat(); if(!c)return;
+  const n=c.items.length; premadesIndex=((premadesIndex+d)%n+n)%n;
   renderPremades();
 }
+const premadesMatStep=premadesStep; // the old name, kept for the links and tests
 // Where the panel was opened from, and the spotlight that was on then, so
 // Back from the list returns to exactly that: the opening card (the
 // front-door button, or a link before any photo) or the product grid.
@@ -13178,7 +13267,8 @@ function pickPremadesHand(hand){
 // list; the mats -> the list; the list -> where the panel was opened from.
 function premadesBack(){
   if(premadesView==='how'){ premadesGo('occasion'); return; }
-  if(premadesView==='occasion'||premadesView==='mats'){ premadesGo('occasions'); return; }
+  if(premadesView==='gallery'&&liveCategories(premadeOccasion()).length>1){ premadesGo('categories'); return; }
+  if(premadesView==='occasion'||premadesView==='gallery'||premadesView==='categories'){ premadesGo('occasions'); return; }
   clearAllFocusModes();
   document.getElementById('premadesCard').style.display='none';
   if(premadesFrom==='front'){
@@ -13202,17 +13292,22 @@ function goToPremadeSetOrder(){
   }));
   window.location.href='order.html';
 }
-// A mat: the doormat, with the mat's print file as its picture.
-function goToPremadeMatOrder(){
-  const m=PREMADE_MATS[premadesMat]; if(!m)return;
-  localStorage.setItem('muggshotz_pending_order',JSON.stringify({
-    placements:{left:location.origin+'/art/unwelcome/print/'+m.key+'.jpg',front:null,right:null},
+// A premade design, ordered as its category's product with the design's print
+// file as the picture: the doormat, or a placemat of the category's kind, one
+// or a set.
+function goToPremadeOrder(){
+  const c=premadeCat(), m=c&&c.items[premadesIndex]; if(!m)return;
+  const pending={
+    placements:{left:location.origin+'/'+c.dir+'/print/'+m.key+'.jpg',front:null,right:null},
     deviceId:deviceId,
-    productIcon:'doormat',
-    premadeMat:m.key
-  }));
+    productIcon:c.order.family,
+    premadeItem:premadesCategory+'/'+m.key
+  };
+  if(c.order.family==='placemat'){ pending.preselectedPlacemat=c.order.kind; pending.preselectedPlacematPack=premadesPack===2?2:1; }
+  localStorage.setItem('muggshotz_pending_order',JSON.stringify(pending));
   window.location.href='order.html';
 }
+const goToPremadeMatOrder=goToPremadeOrder;
 ['premadesTilePrice','premadesFrontPrice'].forEach(id=>{ const el=document.getElementById(id); if(el)el.textContent='from '+premadesFromPrice(); });
 window.addEventListener('load',()=>{
   let q=null; try{ q=new URLSearchParams(location.search); }catch(e){ return; }
@@ -13704,7 +13799,7 @@ function pick(el,type){
     if(productGuide)productGuide.classList.remove('visible');
     const finalGuide=document.getElementById('finalGenerateGuidance');
     if(finalGuide)finalGuide.classList.toggle('visible',
-      (product==='phone case'&&phoneCaseComplete())||(product==='puzzle'&&!!selectedPuzzleSize)||(product==='wrapping paper'&&!!selectedWrapSize)||(product==='ornament'&&!!selectedOrnamentShape)||(product==='business cards'&&!!selectedBusinessCard)||(product==='placemat'&&!!selectedPlacemat)||(product==='car magnet'&&!!selectedCarMagnet)||(product==='tshirt'&&!!selectedApparel&&!!selectedTshirt&&!!selectedTshirtColor)||(product==='sticker sheet'&&!!selectedStickerSheet)||(product==='night light'&&!!selectedNightBuddy)||(product==='air freshener'&&!!selectedAirFreshener)||(product==='suitcase'&&!!selectedSuitcaseSize));
+      (product==='phone case'&&phoneCaseComplete())||(product==='puzzle'&&!!selectedPuzzleSize)||(product==='wrapping paper'&&!!selectedWrapSize)||(product==='ornament'&&!!selectedOrnamentShape)||(product==='business cards'&&!!selectedBusinessCard)||(product==='placemat'&&!!selectedPlacemat&&!!selectedPlacematPack)||(product==='car magnet'&&!!selectedCarMagnet)||(product==='tshirt'&&!!selectedApparel&&!!selectedTshirt&&!!selectedTshirtColor)||(product==='sticker sheet'&&!!selectedStickerSheet)||(product==='night light'&&!!selectedNightBuddy)||(product==='air freshener'&&!!selectedAirFreshener)||(product==='suitcase'&&!!selectedSuitcaseSize));
     refreshApproveRowForMode();
     refreshMugSizeCardVisibility();
     refreshMugStyleCardVisibility();
@@ -21273,7 +21368,7 @@ async function generate(){
     document.getElementById('carMagnetOptionCard').scrollIntoView({behavior:'smooth',block:'center'});
     return;
   }
-  if(product==='placemat' && !selectedPlacemat){
+  if(product==='placemat' && (!selectedPlacemat || !selectedPlacematPack)){
     setStatus('Please pick a placemat above first.',true);
     document.getElementById('placematOptionCard').scrollIntoView({behavior:'smooth',block:'center'});
     return;
@@ -23218,7 +23313,7 @@ function buildMockupRequestBody(){
     const url = design ? (findDesignById(design)?.url ?? null) : null;
     const o = PLACEMAT_OPTIONS[selectedPlacemat];
     if (!url || !o) return null;
-    return { productKey: o.key, sizeLabel: o.size, image: url };
+    return { productKey: o.key, sizeLabel: placematSizeLabel(), image: url };
   }
 
   if (product === 'business cards') {
@@ -24193,6 +24288,7 @@ async function goToOrder(){
     preselectedCardPaper: (product==='business cards') ? selectedCardPaper : null,
     preselectedCarMagnet: (product==='car magnet') ? selectedCarMagnet : null,
     preselectedPlacemat: (product==='placemat') ? selectedPlacemat : null,
+    preselectedPlacematPack: (product==='placemat') ? selectedPlacematPack : null,
     preselectedApparel: (product==='tshirt') ? selectedApparel : null,
     preselectedTshirt: (product==='tshirt') ? selectedTshirt : null,
     preselectedTshirtColor: (product==='tshirt') ? selectedTshirtColor : null,
@@ -24775,6 +24871,7 @@ function resetEverythingFreshStart(){
   selectedBusinessCard=null;
   selectedCarMagnet=null;
   selectedPlacemat=null;
+  selectedPlacematPack=null;
   selectedApparel=null;
   selectedTshirt=null;
   selectedTshirtColor=null;
