@@ -117,6 +117,14 @@ Pitch In. The grid is three across today (needles-studio.html, #productCard
   12 x 18 ($15.95), Alyx's rule; leather left off. Next (Alyx): seasonal and
   occasion welcome mats and place-setting mats -- birthdays, holidays, special
   events.
+  How they sell (Alyx, 27 Sep): four cost him $52.40-$54.20 before shipping, so
+  a set can't be cheap. Singles are the main use -- a kid's own personalised
+  mat, a gag mat for one seat ("the same effect as the coasters"). Holiday
+  sets of four only for Christmas and Thanksgiving (people may pay ~$70 for
+  those); Valentine's at most a pair. PRICING TALK (Alyx, 27 Sep): first
+  his cost for the product and the price it gives, one number each, clearly
+  labelled, no shipping; shipping afterwards, on its own, labelled as the
+  customer's -- never mixed in, so the numbers are not noise.
 - **Apparel** -- BUILT 26 Sep, waiting on Alyx's "push it": the T-shirt tile
   is now Apparel, 11 garments (tees, tank, long sleeve, crewneck, hoodies,
   kids and youth), priced wholesale + $3 to the nearest $0.95 (Alyx, 26 Sep:
