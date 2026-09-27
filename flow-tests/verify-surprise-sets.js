@@ -128,20 +128,24 @@ scenarios.thePanelAndTheOrder = async (page, log) => {
   if (!tile || !tile.last || !/Pre-mades & Sets/.test(tile.text) || !/from \$13\.95/.test(tile.text)) return `FAIL: the Premades & Sets tile reads ${JSON.stringify(tile)}`;
   await tap(page, '#premadesTile');
   await T(page, 1900);
-  // The list: quiet on purpose (no pictures), but named, priced, with Back,
-  // lit, and landed with its title and first occasion on screen.
+  // The list of products (Alyx, 27 Sep 2026: product first): each pictured,
+  // counted and priced, with Back, lit, and landed with its title on screen.
   const st0 = await pmState(page);
-  if (!st0.shown || st0.focus !== 'premades-focus' || st0.view !== 'occasions') return `FAIL: the tile did not open the lit occasions list (${JSON.stringify(st0)})`;
+  if (!st0.shown || st0.focus !== 'premades-focus' || st0.view !== 'products') return `FAIL: the tile did not open the lit products list (${JSON.stringify(st0)})`;
   if (!/Pre-mades/i.test(st0.title) || !st0.back || !/\$59\.95/.test(st0.text) || !/from \$13\.95/.test(st0.text)) return `FAIL: the list lacks its name, Back or prices (${JSON.stringify(st0)})`;
-  if (st0.imgs) return `FAIL: the quiet list shows ${st0.imgs} picture(s)`;
+  const rows = await page.evaluate(() => [...document.querySelectorAll('#premadesProducts .pm-prod')].map((r) => ({ key: r.dataset.product, pic: r.querySelector('img')?.naturalWidth > 0, text: r.innerText.replace(/\n/g, ' ') })));
+  if (JSON.stringify(rows.map((r) => r.key)) !== JSON.stringify(['mugs', 'welcome-mats', 'placemats']) || rows.some((r) => !r.pic || !/\d+ designs · (from )?\$\d+\.\d\d/.test(r.text)))
+    return `FAIL: the products list reads ${JSON.stringify(rows)}`;
   if (st0.generate.length) return `FAIL: with a photo uploaded, Pre-mades still shows ${st0.generate.join(', ')}`;
   if (!st0.landed) return `FAIL: the list did not land at its title (${JSON.stringify(st0)})`;
-  // Thanksgiving opens on its shelf: one mug at a time, priced, with How it
-  // works a button away.
-  await tap(page, '#premadesView .pm-row[data-occasion="thanksgiving"]'); await T(page, 1900);
+  // Magic Mugs opens on its shelf, the holidays as tabs (Thanksgiving lit, the
+  // rest to come): one mug at a time, priced, How it works a button away.
+  await tap(page, '#premadesView .pm-prod[data-product="mugs"]'); await T(page, 1900);
   const st1 = await pmState(page);
-  if (st1.view !== 'shelf' || st1.imgs !== 1 || st1.loaded !== 1 || !/\$19\.95/.test(st1.text) || !/\$59\.95/.test(st1.text) || !st1.landed || !/Thanksgiving/i.test(st1.title))
+  if (st1.view !== 'shelf' || st1.imgs !== 1 || st1.loaded !== 1 || !/\$19\.95/.test(st1.text) || !/\$59\.95/.test(st1.text) || !st1.landed || !/Magic Mugs/i.test(st1.title))
     return `FAIL: Thanksgiving did not open on its shelf (${JSON.stringify(st1)})`;
+  const tabs = await page.evaluate(() => [...document.querySelectorAll('#premadesHolidayTabs .pm-tab')].map((t) => t.className.replace('pm-tab', '').trim() + ':' + t.dataset.holiday));
+  if (tabs[0] !== 'on:thanksgiving' || !tabs.slice(1).every((t) => /^soon:/.test(t))) return `FAIL: the holiday tabs read ${JSON.stringify(tabs)}`;
   if (!/Add to my mugs/.test(st1.text) || !/Just this one/.test(st1.text)) return `FAIL: the shelf's mug cannot be added or bought alone (${st1.text.slice(0, 300)})`;
   // How it works: seven steps, ending on the prices, then on to the shelf.
   await tap(page, '#premadesHowBtn'); await T(page, 1900);
@@ -149,7 +153,7 @@ scenarios.thePanelAndTheOrder = async (page, log) => {
   if (st2.view !== 'how' || st2.steps !== 7 || st2.imgs !== 5 || st2.loaded !== 5 || !st2.landed || !/How the magic mug works/i.test(st2.title)) return `FAIL: How it works shows ${JSON.stringify(st2)}`;
   if (!/\$59\.95/.test(st2.text) || !/\$17\.95/.test(st2.text) || !/\$19\.95/.test(st2.text) || !/See all the mugs and build your set/.test(st2.text)) return 'FAIL: How it works does not end on the prices and the way to the shelf';
   // Back, one view at a time: How it works -> the shelf -> the list -> the grid.
-  for (const want of ['shelf', 'occasions']) {
+  for (const want of ['shelf', 'products']) {
     await page.evaluate(() => premadesBack()); await T(page, 1500);
     const b = await pmState(page); if (b.view !== want || !b.landed) return `FAIL: Back went to ${b.view}, not ${want} (${JSON.stringify(b)})`;
   }
@@ -160,7 +164,7 @@ scenarios.thePanelAndTheOrder = async (page, log) => {
   if (bk.card !== 'none' || bk.focus.length || bk.top < -2 || bk.top > 200) return `FAIL: Back did not return to the product grid (${JSON.stringify(bk)})`;
   // Forward again: every mug at once, six chosen with repeats, left-handed.
   await tap(page, '#premadesTile'); await T(page, 1500);
-  await tap(page, '#premadesView .pm-row[data-occasion="thanksgiving"]'); await T(page, 900);
+  await tap(page, '#premadesView .pm-prod[data-product="mugs"]'); await T(page, 900);
   await page.evaluate(() => document.querySelector('#premadesView .pm-lay[data-layout="all"]').click()); await T(page, 1200);
   const all = await page.evaluate(async () => {
     const imgs = [...document.querySelectorAll('#premadesMugsAll img')];
@@ -224,7 +228,7 @@ scenarios.thePanelAndTheOrder = async (page, log) => {
   const b = bodies[bodies.length - 1];
   if (!b || b.productKey !== 'smart-mug-set' || b.setKey !== 'thanksgiving' || b.hand !== 'left' || b.image || JSON.stringify(b.mugs) !== JSON.stringify(CHOSEN))
     return `FAIL: checkout got ${JSON.stringify(b && { k: b.productKey, s: b.sizeLabel, set: b.setKey, hand: b.hand, mugs: b.mugs, image: b.image })}`;
-  return 'PASS: the Pre-mades & Sets tile ends the grid at from $13.95 (a placemat, the cheapest) and opens the quiet occasions list (named, priced, no pictures, lit, landed); Thanksgiving opens on its shelf, one mug at a time with its price, How it works a button away (seven steps ending on the three prices); Back steps one view at a time to the grid; all at once shows every mug pictured and priced; the tray prices 1 to 6 mugs as $19.95, $39.90, $59.85, the set $59.95, $77.90, $95.85, counts repeats and takes one out; the order page shows the six, left-handed, at $95.85, asks for no mockup, and checks out thanksgiving / left / the six by key with no artwork of its own';
+  return 'PASS: the Pre-mades & Sets tile ends the grid at from $13.95 (a placemat, the cheapest) and opens the products list (Magic Mugs, Welcome Mats, Placemats, each pictured, counted and priced, lit, landed); Magic Mugs opens on its shelf with Thanksgiving lit and the other holidays to come, one mug at a time with its price, How it works a button away (seven steps ending on the three prices); Back steps one view at a time to the grid; all at once shows every mug pictured and priced; the tray prices 1 to 6 mugs as $19.95, $39.90, $59.85, the set $59.95, $77.90, $95.85, counts repeats and takes one out; the order page shows the six, left-handed, at $95.85, asks for no mockup, and checks out thanksgiving / left / the six by key with no artwork of its own';
 };
 
 // The flyer's link: ?set=thanksgiving opens How it works, the page the QR is
@@ -238,11 +242,11 @@ scenarios.theLink = async (page) => {
   await tap(page, '#premadesShelfBtn'); await T(page, 1500);
   const sh = await pmState(page);
   if (sh.view !== 'shelf' || !sh.landed) return `FAIL: How it works went on to ${JSON.stringify(sh)}`;
-  for (const want of ['how', 'occasions']) {
+  for (const want of ['how', 'products']) {
     await page.evaluate(() => premadesBack()); await T(page, 1500);
     const b = await pmState(page); if (b.view !== want) return `FAIL: Back went to ${b.view}, not ${want}`;
   }
-  return 'PASS: ?set=thanksgiving opens How the magic mug works, lit, landed at its title, no photo needed; its button goes on to the shelf; Back goes to How it works, then the occasions list';
+  return 'PASS: ?set=thanksgiving opens How the magic mug works, lit, landed at its title, no photo needed; its button goes on to the shelf; Back goes to How it works, then the products list';
 };
 
 // One mug on its own: Just this one, on the shelf, orders that one at $19.95.
@@ -252,7 +256,7 @@ scenarios.theJustOne = async (page) => {
   await page.route('**/api/printify-catalog**', (route) => route.fulfill({ json: { shipping: 7.99, shippingSeparate: true, source: 'live' } }));
   await openStudio(page); await dismissAlerts(page);
   await tap(page, '#premadesFrontBtn'); await T(page, 1500);
-  await tap(page, '#premadesView .pm-row[data-occasion="thanksgiving"]'); await T(page, 1500);
+  await tap(page, '#premadesView .pm-prod[data-product="mugs"]'); await T(page, 1500);
   await page.evaluate(() => premadesSetLayout('one'));
   await page.evaluate(() => holidayStep(SURPRISE_SETS.thanksgiving.designs.findIndex((d) => d.key === 'uncle-gerald'))); await T(page, 700);
   const name = await page.evaluate(() => document.getElementById('premadesMugName').textContent);
@@ -287,14 +291,14 @@ scenarios.theFrontDoor = async (page) => {
   if (b0.focus !== 'initial-upload-focus' || b0.photo) return `FAIL: not a fresh visit (${JSON.stringify(b0)})`;
   await tap(page, '#premadesFrontBtn'); await T(page, 1800);
   const st = await pmState(page);
-  if (!st.shown || st.focus !== 'premades-focus' || st.view !== 'occasions' || !st.landed) return `FAIL: the button did not open the lit occasions list (${JSON.stringify(st)})`;
+  if (!st.shown || st.focus !== 'premades-focus' || st.view !== 'products' || !st.landed) return `FAIL: the button did not open the lit products list (${JSON.stringify(st)})`;
   await page.evaluate(() => [...document.getElementById('premadesCard').querySelectorAll('button')].find((b) => /back/i.test(b.innerText) && b.offsetParent).click());
   await T(page, 1800);
   const back = await page.evaluate(() => { const r = document.getElementById('premadesFrontBtn').getBoundingClientRect();
     return { card: getComputedStyle(document.getElementById('premadesCard')).display, focus: [...document.body.classList].filter((c) => c.endsWith('-focus')).join(),
       onScreen: r.top >= 0 && r.bottom <= innerHeight }; });
   if (back.card !== 'none' || back.focus !== 'initial-upload-focus' || !back.onScreen) return `FAIL: Back left ${JSON.stringify(back)}`;
-  return 'PASS: a fresh visit, no photo: the opening card carries a lit Pre-mades & Sets button (from $13.95, no photo needed); it opens the occasions list lit at its title, and Back returns to the opening card as it was';
+  return 'PASS: a fresh visit, no photo: the opening card carries a lit Pre-mades & Sets button (from $13.95, no photo needed); it opens the products list lit at its title, and Back returns to the opening card as it was';
 };
 
 // Everyday: the Unwelcome mats one at a time, next and back round the nine,
@@ -305,9 +309,7 @@ scenarios.theMats = async (page) => {
   await page.route('**/api/printify-catalog**', (route) => route.fulfill({ json: { shipping: 13.69, shippingSeparate: true, source: 'live' } }));
   await openStudio(page); await dismissAlerts(page);
   await tap(page, '#premadesFrontBtn'); await T(page, 1500);
-  await tap(page, '#premadesView .pm-row[data-occasion="everyday"]'); await T(page, 1500);
-  // Everyday has mats and placemats: it asks which, then opens the mats.
-  await tap(page, '#premadesView .pm-row[data-category="welcome-mats"]'); await T(page, 1900);
+  await tap(page, '#premadesView .pm-prod[data-product="welcome-mats"]'); await T(page, 1900);
   const a = await pmState(page);
   if (a.view !== 'gallery' || a.imgs !== 1 || a.loaded !== 1 || !/\$19\.95/.test(a.text) || !a.landed) return `FAIL: Everyday opened ${JSON.stringify(a)}`;
   // All at once: every mat on one page, each pictured and priced; tapping one
@@ -353,8 +355,8 @@ scenarios.thePlacematSlot = async (page) => {
   page.on('request', (r) => { if (r.url().includes('/api/create-checkout-session')) { try { bodies.push(r.postDataJSON()); } catch (e) {} } });
   await page.route('**/api/printify-catalog**', (route) => route.fulfill({ json: { shipping: 6.78, shippingSeparate: true, source: 'live' } }));
   await openStudio(page); await dismissAlerts(page);
-  const hidden = await page.evaluate(() => { const c = PREMADE_CATEGORIES.placemats, keep = c.items; c.items = []; const l = liveCategories(PREMADE_OCCASIONS.find((o) => o.key === 'everyday')).join(); c.items = keep; return l; });
-  if (hidden !== 'welcome-mats') return `FAIL: with no placemat designs Everyday lists ${hidden}`;
+  const hidden = await page.evaluate(() => { const c = PREMADE_CATEGORIES.placemats, keep = c.items; c.items = []; const l = liveCategories().join(); c.items = keep; return l; });
+  if (hidden !== 'welcome-mats') return `FAIL: with no placemat designs the list offers ${hidden}`;
   const files = await page.evaluate(async () => {
     const c = PREMADE_CATEGORIES.placemats, load = (u) => new Promise((r) => { const im = new Image(); im.onload = () => r(`${im.naturalWidth}x${im.naturalHeight}`); im.onerror = () => r(null); im.src = u; });
     const out = []; for (const x of c.items) out.push([x.key, await load(`${c.dir}/print/${x.key}.jpg`), await load(`${c.dir}/show/${x.key}.jpg`)]); return out;
@@ -363,17 +365,14 @@ scenarios.thePlacematSlot = async (page) => {
   if (!files.length || badFile) return `FAIL: placemat files ${JSON.stringify(badFile || files)}`;
   const lastKey = files[files.length - 1][0];
   await page.evaluate(() => document.getElementById('premadesFrontBtn').click()); await T(page, 1500);
-  await page.evaluate(() => document.querySelector('#premadesView .pm-row[data-occasion="everyday"]').click()); await T(page, 1500);
-  const cats = await pmState(page);
-  if (cats.view !== 'categories' || cats.imgs || !/Placemats/.test(cats.text) || !/Welcome Mats/.test(cats.text)) return `FAIL: Everyday with two categories opened ${JSON.stringify(cats)}`;
-  await page.evaluate(() => document.querySelector('#premadesView .pm-row[data-category="placemats"]').click()); await T(page, 1500);
+  await page.evaluate(() => document.querySelector('#premadesView .pm-prod[data-product="placemats"]').click()); await T(page, 1500);
   const g = await page.evaluate(() => ({ view: premadesView, packs: [...document.querySelectorAll('#premadesPackGrid .btn-select')].map((b) => b.innerText.replace(/\n/g, ' ')) }));
   if (g.view !== 'gallery' || g.packs.length !== 2 || !/Just one \$13\.95/.test(g.packs[0]) || !/A set of two \$24\.95/.test(g.packs[1])) return `FAIL: the placemat gallery offers ${JSON.stringify(g)}`;
   await page.evaluate(() => pickPremadesPack(2)); await T(page, 300);
   if (!/\$24\.95/.test(await page.evaluate(() => document.getElementById('premadesMatOrderBtn').innerText))) return 'FAIL: the order button does not show the set price';
-  // Back: the gallery -> the categories -> the occasions.
+  // Back: the placemats -> the products list.
   await page.evaluate(() => premadesBack()); await T(page, 900);
-  if (await page.evaluate(() => premadesView) !== 'categories') return 'FAIL: Back from the placemats did not go to the categories';
+  if (await page.evaluate(() => premadesView) !== 'products') return 'FAIL: Back from the placemats did not go to the products list';
   await page.evaluate(() => { pickPremadeCategory('placemats'); premadesSetLayout('one'); premadesStep(-1); pickPremadesPack(2); }); await T(page, 900);
   await Promise.all([page.waitForURL(/order\.html/, { timeout: 10000 }), page.evaluate(() => document.getElementById('premadesMatOrderBtn').click())]);
   await T(page, 3000);
@@ -388,7 +387,7 @@ scenarios.thePlacematSlot = async (page) => {
   await T(page, 2000);
   const b = bodies[bodies.length - 1];
   if (!b || b.productKey !== 'placemat-neoprene' || b.sizeLabel !== '12 x 18 in, set of 2' || !(b.image || '').endsWith(`/art/placemats/print/${lastKey}.jpg`)) return `FAIL: checkout got ${JSON.stringify(b && { k: b.productKey, s: b.sizeLabel, image: b.image })}`;
-  return `PASS: an empty placemat category stays hidden; filled (${files.length}, each with its 5610 x 3839 print and 900 x 616 picture), Everyday lists its two categories quietly; the placemat offers one ($13.95) or a set of two ($24.95); Back steps to the categories; a set checks out as placemat-neoprene / 12 x 18 in, set of 2, with the design\'s print file`;
+  return `PASS: an empty placemat category stays hidden; filled (${files.length}, each with its 5610 x 3839 print and 900 x 616 picture), the list offers it; the placemat offers one ($13.95) or a set of two ($24.95); Back steps to the products list; a set checks out as placemat-neoprene / 12 x 18 in, set of 2, with the design\'s print file`;
 };
 
 (async () => {
