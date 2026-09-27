@@ -355,7 +355,7 @@ scenarios.theMats = async (page) => {
   await T(page, 2000);
   const b = bodies[bodies.length - 1];
   if (!b || b.productKey !== 'doormat' || !(b.image || '').endsWith(`/art/unwelcome/print/${lastKey}.jpg`)) return `FAIL: checkout got ${JSON.stringify(b && { k: b.productKey, s: b.sizeLabel, image: b.image })}`;
-  return `PASS: Everyday opens one mat at a time at $19.95, all at once shows every mat and a tap opens it, next goes round all ${n} Everyday mats and back; every mat has its 4650 x 2850 print and 900 x 552 picture; the Halloween tab holds Six Feet Under, which orders as the doormat at $19.95 with its own print file (${o.head})`;
+  return `PASS: Everyday opens one mat at a time at $19.95, all at once shows every mat and a tap opens it, next goes round all ${n} Everyday mats and back; every mat has its 4650 x 2850 print and 900 x 552 picture; the Halloween tab holds only Halloween mats, Six Feet Under first, which orders as the doormat at $19.95 with its own print file (${o.head})`;
 };
 
 // The placemats: a category with no designs stays hidden; with Bud's,
