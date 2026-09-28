@@ -1,5 +1,5 @@
 <!-- ============================================================
-     VERSION: V416
+     VERSION: V417
      ============================================================
      THE ONE LINE THAT SAYS WHICH BUILD YOU ARE LOOKING AT.
 
@@ -719,6 +719,8 @@ html.order-page-open,html.order-page-open body{overflow:hidden}
 #premadesCard .pm-mug3d>.pm-mug3d-stage{position:absolute;inset:0;touch-action:pan-y;cursor:grab}
 #premadesCard .pm-mug3d>.pm-mug3d-stage canvas{display:block;width:100%;height:100%}
 #premadesCard .pm-mug3d.live>img{visibility:hidden}
+#premadesCard .pm-spin-cue{position:absolute;left:50%;bottom:10px;transform:translateX(-50%);background:rgba(11,16,24,.82);color:#cfe3ff;font-size:13px;font-weight:600;padding:5px 12px;border-radius:14px;pointer-events:none;white-space:nowrap}
+#premadesCard .pm-mug3d.live.spinning .pm-spin-cue,#premadesView.no3d .pm-spin-cue{display:none}
 #premadesCard .pm-mug3d-hint{color:#5b7aa6;font-size:12px;text-align:center;margin:.35rem 0 0}
 #premadesCard .pm-mugbar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:6px}
 #premadesCard .pm-mugname{color:#cfe3ff;font-size:14px}
@@ -4792,7 +4794,7 @@ function toggleWorkingImage(){
 // Two copies of a number is exactly how the marker rotted in the first place,
 // so they are not trusted to agree: .githooks/pre-commit moves both together
 // and REFUSES the commit if it ever finds them apart.
-const APP_VERSION='V416';
+const APP_VERSION='V417';
 try{ console.log('%cNeedles\u2019 Studio '+APP_VERSION,'color:#29a3ff;font-weight:700'); }catch(e){}
 
 function getDeviceId(){
@@ -13285,7 +13287,8 @@ function premadesCrumb(parts){ return '<div class="pm-crumb">'+['Pre-mades &amp;
 // layout that we have for our mockups at the end ... a carousel that spins
 // automatically", "slightly faster for this display", and "a mug doesn't need
 // to start spinning until you're looking at it ... that way it always starts
-// in the proper position"). The mockup's own 3D mug, in black, wearing the
+// in the proper position"). One full turn, then it stops on the setup again
+// until it is tapped ("only spin once and then stop"). The mockup's own 3D mug, in black, wearing the
 // right-handed print: handle on the right, the setup facing (-90, measured),
 // turning on to the punchline. All at once: "still pictures of the first
 // frames. The setup ... the very first one is already the carousel", and a
@@ -13293,20 +13296,23 @@ function premadesCrumb(parts){ return '<div class="pm-crumb">'+['Pre-mades &amp;
 // the same angle (art/surprise/mug/, tools/surprise/mug-stills.cjs), so it is
 // what shows until the cup is drawn, and all there is on a device that
 // cannot draw one.
-const SHELF_MUG_3D={sizeLabel:'11oz',styleName:'Magic',colorHex:'#1c1c1c',startAngle:-90,spinStep:0.6,restartOnView:true};
+const SHELF_MUG_3D={sizeLabel:'11oz',styleName:'Magic',colorHex:'#1c1c1c',startAngle:-90,spinStep:0.6,restartOnView:true,turns:1};
 let shelfMugLive=null;
 function shelfMugHtml(x,id,i){
   return '<div class="pm-mug3d" data-mug3d="'+x.file+'"'+(i==null?'':' onclick="spinShelfMug(this)"')+'>'
     +'<img'+(id?' id="'+id+'"':'')+' src="art/surprise/mug/'+x.file+'.jpg" width="960" height="720" alt="'+x.label+'"'+(i?' loading="lazy"':'')+'/>'
-    +'<div class="pm-mug3d-stage"></div></div>';
+    +'<div class="pm-mug3d-stage"></div><div class="pm-spin-cue">↻ Click to spin</div></div>';
 }
 function spinShelfMug(el){
   if(!el||el===shelfMugLive||typeof MUG3D==='undefined'||(typeof mug3dFailed!=='undefined'&&mug3dFailed))return;
-  if(shelfMugLive)shelfMugLive.classList.remove('live');
+  if(shelfMugLive)shelfMugLive.classList.remove('live','spinning');
   shelfMugLive=el;
+  if(!el._spinCue){ el._spinCue=true; el.addEventListener('mug3dspin',e=>el.classList.toggle('spinning',!!e.detail)); }
   MUG3D.open(el.querySelector('.pm-mug3d-stage'),Object.assign({panoramaUrl:'art/surprise/wrap/'+el.dataset.mug3d+'.jpg',panelUrls:[]},SHELF_MUG_3D))
     .then(()=>{ if(shelfMugLive===el)el.classList.add('live'); })
-    .catch(err=>{ console.error('The shelf mug could not turn; its still stands in:',err); if(shelfMugLive===el)shelfMugLive=null; });
+    .catch(err=>{ console.error('The shelf mug could not turn; its still stands in:',err); if(shelfMugLive===el)shelfMugLive=null;
+      // No cup can be drawn here, so no mug on this page will spin: say nothing about clicking.
+      const v=document.getElementById('premadesView'); if(v)v.classList.add('no3d'); });
 }
 // Any other view, or the card leaving: the cup is let go, so whatever opens it
 // next (the mockup, the fade slider, Trimmings) builds it fresh.
@@ -13337,7 +13343,7 @@ function renderPremades(){
       body='<div class="pm-mat">'+shelfMugHtml(m,'premadesMugPic')
         +'<button type="button" class="pm-arr" style="left:-12px" aria-label="Previous" onclick="holidayStep(-1)">‹</button>'
         +'<button type="button" class="pm-arr" style="right:-12px" aria-label="Next" onclick="holidayStep(1)">›</button></div>'
-        +'<div class="pm-mug3d-hint">Drag it to turn it · tap it to pause</div>'
+        +'<div class="pm-mug3d-hint">Click the mug to spin it · drag it to turn it yourself</div>'
         +'<div class="pm-name" id="premadesMugName">'+m.label+'</div>'
         +'<div class="pm-line" style="margin-bottom:.5rem">SURPRISE!!! smart mug · '+$(SMART_MUG_PRICE)+' on its own</div>'
         +'<div class="pm-dots">'+d.map((x,i)=>'<span class="'+(i===premadesMugIndex?'on':'')+'" onclick="holidayStep('+(i-premadesMugIndex)+')"></span>').join('')+'</div>'
@@ -18931,6 +18937,14 @@ const MUG3D = (function(){
   // it. The mockup's own opens pass none of these and keep 0.32, the first
   // sliver on screen, and no restart.
   let spinStep=0.32, startAngle=null, restartOnView=false, viewRatio=0.01, needsFrame=true;
+  // ONE TURN AND STOP (Alyx, 27 Sep 2026: "only spin once and then stop ...
+  // If you clicked on it again it could start spinning again. But once it
+  // gets to the end nothing spins until something gets clicked on"). turns
+  // is how many full turns a spin makes (0: for ever, the mockup's way);
+  // travelled is how far this one has gone, and a finished spin waits for a
+  // tap, which starts a new one.
+  let turns=0, travelled=0;
+  function spinDone(){ return turns>0 && travelled>=turns*360; }
   // 1 = the framing every product photo here has used. Up to 4 for a close
   // look at the seam, done by narrowing the lens rather than moving in --
   // see placeCamera.
@@ -19899,7 +19913,14 @@ const MUG3D = (function(){
     // after anything changes, so a cup waiting out of view to be looked at is
     // already painted, and at its starting angle, when it arrives.
     if(!visible){ if(needsFrame){ needsFrame=false; renderer.render(scene,camera); } return; }
-    if(spinning && !dragging){ setSpin(spin+spinStep); }
+    if(spinning && !dragging){
+      if(!turns){ setSpin(spin+spinStep); }
+      else {
+        const left=turns*360-travelled;
+        if(spinStep>=left){ setSpin(spin+left); travelled=turns*360; setSpinning(false); }
+        else { setSpin(spin+spinStep); travelled+=spinStep; }
+      }
+    }
     renderer.render(scene,camera);
   }
 
@@ -19933,7 +19954,9 @@ const MUG3D = (function(){
       const io=new IntersectionObserver(es=>{
         const was=visible;
         visible = !document.hidden && es.some(e=>e.isIntersecting&&e.intersectionRatio>=viewRatio);
-        if(visible&&!was&&restartOnView&&startAngle!=null)setSpin(startAngle);
+        // Back in view part-way through a turn: that turn starts again from
+        // the start. A finished one stays finished until it is tapped.
+        if(visible&&!was&&restartOnView&&startAngle!=null&&!spinDone()){ setSpin(startAngle); travelled=0; }
       },{threshold:[0.01,0.6]});
       io.observe(host);
       host._io=io;
@@ -19943,7 +19966,11 @@ const MUG3D = (function(){
   function onVis(){ visible = !document.hidden; }
 
   function setSpinning(on){
+    if(on&&spinDone())travelled=0;   // a tap after the last turn: one more
     spinning=!!on;
+    // Said out loud, for whatever sits round the stage (the shelf's "Click to
+    // spin" shows only while the mug is still).
+    if(host)try{ host.dispatchEvent(new CustomEvent('mug3dspin',{detail:spinning,bubbles:true})); }catch(e){}
     const btn=document.getElementById('mug3dSpinBtn');
     if(btn){
       btn.setAttribute('aria-pressed',String(spinning));
@@ -20039,6 +20066,7 @@ const MUG3D = (function(){
       spinStep=(opts&&opts.spinStep)||0.32;
       startAngle=(opts&&opts.startAngle!=null)?opts.startAngle:null;
       restartOnView=!!(opts&&opts.restartOnView);
+      turns=(opts&&opts.turns)||0; travelled=0;
       viewRatio=restartOnView?0.6:0.01;
       return loadThree().then(THREE=>{
         if(!mounted){

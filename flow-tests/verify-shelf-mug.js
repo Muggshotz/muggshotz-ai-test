@@ -40,10 +40,26 @@ async function run(viewport, tag) {
   const next = await page.evaluate(() => ({ live: !!document.querySelector('#premadesView .pm-mug3d.live'), deg: window.__deg }));
   ok('the next mug is the 3D mug, starting from the setup', next.live && ahead(-90, next.deg) >= 0 && ahead(-90, next.deg) < 60, JSON.stringify(next));
 
+  // One turn, then it stops on the setup until tapped; a tap is one more
+  // turn. Sped up here: this headless browser draws a few frames a second.
+  await page.evaluate(() => { SHELF_MUG_3D.spinStep = 40; holidayStep(1); }); await T(page, 5000);
+  const done = await page.evaluate(() => ({ spinning: MUG3D.spinning(), deg: window.__deg }));
+  await T(page, 800); const still = await angle(page);
+  ok('after one full turn it stops, back on the setup (-90), and stays', !done.spinning && done.deg === -90 && still === -90, JSON.stringify(done) + ' then ' + still);
+  ok('stopped, it says Click to spin', await page.evaluate(() => getComputedStyle(document.querySelector('#premadesView .pm-mug3d .pm-spin-cue')).display !== 'none'));
+  await page.locator('#premadesView .pm-mug3d .pm-mug3d-stage').click(); await T(page, 300);
+  const again = await page.evaluate(() => MUG3D.spinning() && getComputedStyle(document.querySelector('#premadesView .pm-mug3d .pm-spin-cue')).display === 'none');
+  await T(page, 5000);
+  const again2 = await page.evaluate(() => ({ spinning: MUG3D.spinning(), deg: window.__deg }));
+  ok('a tap turns it once more, and it stops on the setup again', again && !again2.spinning && again2.deg === -90, `${again} ${JSON.stringify(again2)}`);
+  await page.evaluate(() => { SHELF_MUG_3D.spinStep = 0.6; });
+
   // All at once: the first turns, the rest are stills until tapped.
   await page.evaluate(() => premadesSetLayout('all')); await T(page, 2000);
   const all0 = await page.evaluate(() => [...document.querySelectorAll('#premadesMugsAll .pm-mug3d')].map((b) => b.classList.contains('live') ? 'live' : (b.querySelector('canvas') ? 'canvas' : 'still')));
   ok('all at once: the first mug turns, every other is a still', all0[0] === 'live' && all0.slice(1).every((s) => s === 'still') && all0.length === 9, all0.join());
+  const cues = await page.evaluate(() => [...document.querySelectorAll('#premadesMugsAll .pm-mug3d')].map((b) => getComputedStyle(b.querySelector('.pm-spin-cue')).display !== 'none'));
+  ok('every still says Click to spin, the turning one does not', !cues[0] && cues.slice(1).every(Boolean), cues.join());
   // Off screen it waits; back on screen it starts at -90 again. (The lit
   // card is pinned on screen, so off screen is further down its own list.)
   await page.evaluate(() => document.querySelectorAll('#premadesMugsAll .pm-mug3d')[0].scrollIntoView({ block: 'center' })); await T(page, 800);
