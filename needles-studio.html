@@ -1,5 +1,5 @@
 <!-- ============================================================
-     VERSION: V420
+     VERSION: V421
      ============================================================
      THE ONE LINE THAT SAYS WHICH BUILD YOU ARE LOOKING AT.
 
@@ -724,10 +724,10 @@ html.order-page-open,html.order-page-open body{overflow:hidden}
 .info-i:hover{background:#e8f2ff}
 @keyframes smartBlink{0%,100%{opacity:1}50%{opacity:.25}}
 .smart-blink{animation:smartBlink 1.2s ease-in-out infinite}
-#surpriseReveal{position:relative;width:100%;aspect-ratio:4/3;background:#f2f4f7;border-radius:10px;overflow:hidden;margin-bottom:.8rem;cursor:pointer}
-#surpriseReveal>.pm-mug3d-stage{position:absolute;inset:0;touch-action:pan-y}
-#surpriseReveal canvas{display:block;width:100%;height:100%}
-#surpriseRevealWords{position:absolute;left:0;right:0;bottom:14px;text-align:center;color:#fff;font-size:17px;font-weight:700;letter-spacing:.3px;text-shadow:0 1px 3px #000,0 0 12px rgba(0,0,0,.8);pointer-events:none;padding:0 12px}
+#surpriseReveal,#smartHowReveal{position:relative;width:100%;aspect-ratio:4/3;background:#f2f4f7;border-radius:10px;overflow:hidden;margin-bottom:.8rem;cursor:pointer}
+#surpriseReveal>.pm-mug3d-stage,#smartHowReveal>.pm-mug3d-stage{position:absolute;inset:0;touch-action:pan-y}
+#surpriseReveal canvas,#smartHowReveal canvas{display:block;width:100%;height:100%}
+#surpriseRevealWords,#smartHowRevealWords{position:absolute;left:0;right:0;bottom:14px;text-align:center;color:#fff;font-size:17px;font-weight:700;letter-spacing:.3px;text-shadow:0 1px 3px #000,0 0 12px rgba(0,0,0,.8);pointer-events:none;padding:0 12px}
 #premadesCard .pm-how3d{width:min(100%,420px);margin:1.3rem auto 0}
 #premadesCard .pm-spin-cue{position:absolute;left:50%;bottom:10px;transform:translateX(-50%);background:rgba(11,16,24,.82);color:#cfe3ff;font-size:13px;font-weight:600;padding:5px 12px;border-radius:14px;pointer-events:none;white-space:nowrap}
 #premadesCard .pm-mug3d.live.spinning .pm-spin-cue,#premadesView.no3d .pm-spin-cue{display:none}
@@ -1856,6 +1856,7 @@ const HERO_SETTLE_MS = 1000;
 <div class="card-title">✨ How the magic mug works</div>
 <img src="art/options/smart-mug.jpg" alt="The 11oz Smart Mug" style="display:block;width:min(100%,150px);margin:0 auto .4rem;border-radius:8px;background:#fff"/>
 <div class="note" style="text-align:center;margin:0 0 .4rem">11oz Smart Mug · <span data-smart-price>$19.95</span></div>
+<div id="smartHowReveal" title="Click to watch it again"><div class="pm-mug3d-stage" id="smartHowRevealStage"></div><div id="smartHowRevealWords"></div></div>
 <div id="smartHowSteps"></div>
 <button type="button" class="generate-btn" id="smartHowOnBtn" onclick="smartMugHowOn()">🎁 Pick your surprise</button>
 <button type="button" class="download-btn" style="margin-top:.6rem" onclick="closeSmartMugHow()">← Back</button>
@@ -4816,7 +4817,7 @@ function toggleWorkingImage(){
 // Two copies of a number is exactly how the marker rotted in the first place,
 // so they are not trusted to agree: .githooks/pre-commit moves both together
 // and REFUSES the commit if it ever finds them apart.
-const APP_VERSION='V420';
+const APP_VERSION='V421';
 try{ console.log('%cNeedles\u2019 Studio '+APP_VERSION,'color:#29a3ff;font-weight:700'); }catch(e){}
 
 function getDeviceId(){
@@ -13149,8 +13150,14 @@ function pickSurpriseHand(hand){
 // wall, black rim, inside and handle), cold at heat 0.
 const SURPRISE_REVEAL_T={words1:1000,spin:2000,full:5000,stop:7000,cool:9000,black:11000,frozen:12000};
 let surpriseRevealRun=0, surpriseRevealFile=null;
-function surpriseRevealWords(text,blink){
-  const w=document.getElementById('surpriseRevealWords'); if(!w)return;
+// Where it plays (Alyx, 28 Sep 2026: "this How it Works panel is the absolute
+// best panel to do the three D carousel"): on the designs, the design picked;
+// on How the magic mug works, HOW_MUG_FILE. One 3D mug at a time, so the two
+// share the run count; only the designs' play is surpriseRevealFile.
+const REVEAL_SPOTS={design:{stage:'surpriseRevealStage',words:'surpriseRevealWords',box:'surpriseReveal'},
+  how:{stage:'smartHowRevealStage',words:'smartHowRevealWords',box:'smartHowReveal'}};
+function surpriseRevealWords(text,blink,spot){
+  const w=document.getElementById(REVEAL_SPOTS[spot||'design'].words); if(!w)return;
   w.textContent=text||''; w.classList.toggle('smart-blink',!!blink);
 }
 function releaseSurpriseReveal(){
@@ -13159,14 +13166,21 @@ function releaseSurpriseReveal(){
   const st=document.getElementById('surpriseRevealStage');
   try{ if(st&&typeof MUG3D!=='undefined'&&MUG3D.mounted()&&MUG3D.host()===st)MUG3D.close(); }catch(e){}
 }
-function playSurpriseReveal(file){
-  const st=document.getElementById('surpriseRevealStage');
+function releaseHowReveal(){
+  surpriseRevealWords('',false,'how');
+  const st=document.getElementById('smartHowRevealStage');
+  try{ if(st&&typeof MUG3D!=='undefined'&&MUG3D.mounted()&&MUG3D.host()===st){ surpriseRevealRun++; MUG3D.close(); } }catch(e){}
+}
+function playSurpriseReveal(file,spot){
+  spot=spot||'design'; const S=REVEAL_SPOTS[spot];
+  const st=document.getElementById(S.stage);
   if(!st||!file||typeof MUG3D==='undefined'||(typeof mug3dFailed!=='undefined'&&mug3dFailed))return;
-  const run=++surpriseRevealRun; surpriseRevealFile=file;
-  surpriseRevealWords('',false);
+  const run=++surpriseRevealRun; if(spot==='design')surpriseRevealFile=file;
+  const words=(text,blink)=>surpriseRevealWords(text,blink,spot);
+  words('',false);
   const T=SURPRISE_REVEAL_T, ease=x=>{ x=Math.max(0,Math.min(1,x)); return x*x*(3-2*x); };
   MUG3D.open(st,Object.assign({},SHELF_MUG_3D,{panoramaUrl:'art/surprise/'+file+'-print.png',panelUrls:[],
-    startAngle:-90,restartOnView:false,turns:0,still:true,heat:0,onClick:()=>playSurpriseReveal(file)}))
+    startAngle:-90,restartOnView:false,turns:0,still:true,heat:0,onClick:()=>playSurpriseReveal(file,spot)}))
   .then(()=>{
     if(run!==surpriseRevealRun)return;
     MUG3D.setSpinning(false); MUG3D.setAngle(-90); MUG3D.setHeat(0);
@@ -13174,11 +13188,11 @@ function playSurpriseReveal(file){
     const tick=()=>{
       if(run!==surpriseRevealRun)return;
       const t=performance.now()-t0;
-      if(t<T.words1)surpriseRevealWords('',false);
-      else if(t<T.full)surpriseRevealWords("as the mug absorbs the liquid's heat",true);
-      else if(t<T.cool)surpriseRevealWords('',false);
-      else if(t<T.black)surpriseRevealWords('then, as it cools down again',true);
-      else surpriseRevealWords('then, as it cools down again',false);
+      if(t<T.words1)words('',false);
+      else if(t<T.full)words("as the mug absorbs the liquid's heat",true);
+      else if(t<T.cool)words('',false);
+      else if(t<T.black)words('then, as it cools down again',true);
+      else words('then, as it cools down again',false);
       MUG3D.setAngle(-90+180*ease((t-T.spin)/(T.stop-T.spin)));
       const heat=t<T.cool?ease((t-T.spin)/(T.full-T.spin)):1-ease((t-T.cool)/(T.black-T.cool));
       MUG3D.setHeat(heat);
@@ -13186,7 +13200,7 @@ function playSurpriseReveal(file){
     };
     requestAnimationFrame(tick);
   })
-  .catch(err=>{ console.error('The heat reveal could not start:',err); const r=document.getElementById('surpriseReveal'); if(r)r.style.display='none'; });
+  .catch(err=>{ console.error('The heat reveal could not start:',err); const r=document.getElementById(S.box); if(r)r.style.display='none'; });
 }
 function refreshSurprisePreview(){
   const url=surprisePrintUrl(), wrap=document.getElementById('surprisePreviewWrap');
@@ -13427,13 +13441,13 @@ function magicMugStep(n,head,line,img,wide){
   return '<div class="pm-step"><div class="pm-sn">'+n+'</div><div class="pm-sh">'+head+'</div><div class="pm-sl">'+line+'</div>'
     +(img?'<img class="pm-simg'+(wide?' pm-wide':'')+'" src="art/premades/how/'+img+'.jpg" width="'+(wide?924:455)+'" height="'+(wide?674:330)+'" alt=""/>':'')+'</div>';
 }
-function magicMugStepsHtml(step4img){
-  const step=magicMugStep;
-  return step(1,"Cold, it's a plain black mug.","Nothing to see. Nobody knows what's coming.",'black')
-    +step(2,'Pour in something hot.',"Coffee, tea, cocoa. It doesn't switch on all at once: as the mug warms, the picture slowly rises up through the black.",'emerge',true)
-    +step(3,'The joke appears.',"Once it's hot, the first half of the joke is there in full, facing them.",'hot')
-    +step(4,'They turn it round.','Nobody can leave a joke half told. Curious, they turn the mug, and the punchline is waiting on the other side.',step4img)
-    +step(5,'Let it cool, and it hides again.','As the mug cools it goes back to plain black, ready to surprise the next unsuspecting victim.','black')
+function magicMugStepsHtml(step4img,noPics){
+  const step=magicMugStep, pic=x=>noPics?'':x;
+  return step(1,"Cold, it's a plain black mug.","Nothing to see. Nobody knows what's coming.",pic('black'))
+    +step(2,'Pour in something hot.',"Coffee, tea, cocoa. It doesn't switch on all at once: as the mug warms, the picture slowly rises up through the black.",pic('emerge'),true)
+    +step(3,'The joke appears.',"Once it's hot, the first half of the joke is there in full, facing them.",pic('hot'))
+    +step(4,'They turn it round.','Nobody can leave a joke half told. Curious, they turn the mug, and the punchline is waiting on the other side.',pic(step4img))
+    +step(5,'Let it cool, and it hides again.','As the mug cools it goes back to plain black, ready to surprise the next unsuspecting victim.',pic('black'))
     +step(6,'Left hand or right.','When you order, tell us which hand they hold a mug in, and we print it so the joke starts on the side facing them.','');
 }
 // The (i) on the Smart Mug button: the explanation, for whoever wants it;
@@ -13441,11 +13455,14 @@ function magicMugStepsHtml(step4img){
 function openSmartMugHow(e){
   if(e){ e.stopPropagation(); e.preventDefault(); }
   const o=document.getElementById('smartHowOverlay'), body=document.getElementById('smartHowSteps'); if(!o||!body)return;
-  body.innerHTML=magicMugStepsHtml('other');
+  body.innerHTML=magicMugStepsHtml('other',true);
   o.style.display='flex';
   o.scrollTop=0;
+  // The 3D mug at the top plays the whole thing, cold to hot to cold: steps
+  // 1 to 5 in motion, so those steps are words only.
+  playSurpriseReveal(HOW_MUG_FILE,'how');
 }
-function closeSmartMugHow(){ const o=document.getElementById('smartHowOverlay'); if(o)o.style.display='none'; }
+function closeSmartMugHow(){ releaseHowReveal(); const o=document.getElementById('smartHowOverlay'); if(o)o.style.display='none'; }
 function smartMugHowOn(){ closeSmartMugHow(); pickSmartMug(); }
 function renderPremades(){
   const view=document.getElementById('premadesView'), title=document.getElementById('premadesTitle'); if(!view)return;

@@ -28,8 +28,24 @@ async function run(viewport, tag) {
     steps: document.querySelectorAll('#smartHowSteps .pm-step').length, product,
     surprise: getComputedStyle(document.getElementById('surpriseCard')).display }));
   ok('the (i) opens How the magic mug works, six steps, and does not pick the mug', how.open && how.steps === 6 && how.product === 'mug' && how.surprise === 'none', JSON.stringify(how));
+  // HOW IT WORKS PLAYS IT TOO (Alyx, 28 Sep 2026: "this How it Works panel is
+  // the absolute best panel to do the three D carousel"): its 3D mug plays the
+  // same 12 seconds, so steps 1-5 are words and only step 6 has no picture anyway.
+  const hw = await page.evaluate(async () => {
+    MUG3D.onSpin((d) => { window.__hdeg = d; });
+    const seen = [], t0 = performance.now();
+    await new Promise((r) => { const iv = setInterval(() => { const w = document.getElementById('smartHowRevealWords');
+      seen.push({ t: performance.now() - t0, deg: window.__hdeg, w: w.textContent });
+      if (seen.some((x) => /cools down/.test(x.w))) { clearInterval(iv); r(); } }, 250);
+      setTimeout(() => { clearInterval(iv); r(); }, 20000); });
+    return { host: MUG3D.mounted() && MUG3D.host() === document.getElementById('smartHowRevealStage'),
+      heat: seen.some((x) => /absorbs the liquid's heat/.test(x.w)), cool: seen.some((x) => /cools down/.test(x.w)),
+      turned: seen.some((x) => x.deg > 80), pics: document.querySelectorAll('#smartHowSteps .pm-simg').length };
+  });
+  ok('How it works plays the heat reveal on its own 3D mug: heat words, the turn, the cooling words', hw.host && hw.heat && hw.cool && hw.turned, JSON.stringify(hw));
+  ok('steps 1-5 there are words only (the mug shows them)', hw.pics === 0, JSON.stringify(hw));
   await page.evaluate(() => closeSmartMugHow()); await T(page, 300);
-  ok('its Back closes it, the sizes still up', await page.evaluate(() => getComputedStyle(document.getElementById('smartHowOverlay')).display === 'none' && product === 'mug'));
+  ok('its Back closes it, the sizes still up, the mug let go', await page.evaluate(() => getComputedStyle(document.getElementById('smartHowOverlay')).display === 'none' && product === 'mug' && !MUG3D.mounted()));
   await page.locator('#smartMugInfoBtn').click(); await T(page, 400);
   await page.locator('#smartHowOnBtn').click(); await T(page, 1500);
   const on = await page.evaluate(() => ({ product, surprise: getComputedStyle(document.getElementById('surpriseCard')).display,
