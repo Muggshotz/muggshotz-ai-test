@@ -11,6 +11,9 @@
 #   is the image with the handle to the far right"). One picture of
 #   the design, as a mat is shown; how the mug works (cold, hot, turned round)
 #   is How it works' job, never the shelf's (Alyx, 27 Sep 2026).
+#   wrap/<name>.jpg: the right-handed print as a JPEG, the texture the
+#   shelf's turning 3D mug wears; then tools/surprise/mug-stills.cjs <name>
+#   draws mug/<name>.jpg, its still (the page must be served on :8788).
 # Then one line, {key, label, file}, in the holiday's designs in
 # lib/surprise-sets.js and the same line in needles-studio.html's
 # SURPRISE_SETS (flow-tests/verify-surprise-sets.js holds the two together).
@@ -24,3 +27,7 @@ subprocess.run([sys.executable, f'{here}/coldhot.py', f'art/surprise/{name}-prin
 os.makedirs('art/surprise/show', exist_ok=True)
 Image.open(f'art/surprise/{name}-print.png').convert('RGB').resize((1050, 490), Image.LANCZOS).save(f'art/surprise/show/{name}.jpg', quality=86, optimize=True)
 print(f'{name}: show/{name}.jpg (1050 x 490)')
+# The texture the shelf's turning mug wears, and a reminder of its still.
+os.makedirs('art/surprise/wrap', exist_ok=True)
+Image.open(f'art/surprise/{name}-print.png').convert('RGB').save(f'art/surprise/wrap/{name}.jpg', quality=88, optimize=True)
+print(f'{name}: wrap/{name}.jpg; now node tools/surprise/mug-stills.cjs {name} for mug/{name}.jpg')
