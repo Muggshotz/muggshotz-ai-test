@@ -82,3 +82,94 @@ throwaway detail, easy to miss.
 
 - Claude
 ```
+
+## Year-round monster line (not Halloween)
+
+Finished 28 Sep 2026 and set aside from Halloween by Alyx: monster jokes
+rather than Halloween jokes. Parked for a year-round line.
+
+### Lights Out
+
+```
+LIGHTS OUT - magic mug
+2475 x 1155, punchline LEFT, setup RIGHT, black middle, edges white.
+
+SETUP (right half) - LIGHTS OFF: dim grey-blue moonlight, subdued, no
+warm colour. A kid in pajamas buried in bed, covers pulled up so only his
+wide, frightened eyes show; one hand out from under the blanket gripping
+a flashlight, a thin wobbly beam into the dark. Vague shapes in the
+shadows, maybe a pair of glowing eyes.
+The kid: "Is... is somebody there?"
+
+PUNCHLINE (left half) - LIGHTS ON: the same bedroom blasted with warm,
+bright light, full colour. The kid's small hand in the foreground, pajama
+sleeve, flat on the light switch. The room is full of things with no
+bodies, frozen mid-mischief, blinking in the glare: a skeleton (just
+bones) raiding the trick-or-treat bucket, a headless ghost holding his
+own head, a disembodied hand scuttling off with a candy bar, a floating
+pair of pajamas with nobody in them. Front and centre, a sheet ghost,
+caught in the act, shrugging.
+The ghost: "Define 'body.'"
+
+- Claude
+```
+
+### The Closet
+
+```
+THE CLOSET - magic mug
+2475 x 1155, punchline LEFT, setup RIGHT, black middle, frame on top.
+
+SETUP (right half) - LIGHTS OFF: dim grey-blue moonlight, subdued.
+A kid buried in bed, covers pulled up so only two frightened, ordinary-
+looking eyes show - nothing that gives away what he is. Across the room
+the closet door stands ajar, a pair of eyes peering out of the dark gap.
+The kid: "MOoooommm! I think there's something in my closet!!"
+Mom, off-panel (her words in from the doorway side): "Don't be silly,
+dear, it's just your imagination. I'll show you it's safe..."
+
+PUNCHLINE (left half) - LIGHTS ON: the same bedroom blasted with warm,
+bright light. A MOM MONSTER at the closet, one clawed hand on the open
+door, and a LITTLE KID MONSTER bolt upright in bed, covers flying -
+both screaming hysterically at the top of their lungs: "AAAAAAHHHH!!!"
+In the closet doorway: a little HUMAN boy in pajamas, surprised and
+confused, blinking in the light; behind him through the doorway, just a
+glimpse of an ordinary bathroom - the door is a two-way portal.
+The boy: "Mom? What happened to our bathroom?"
+
+THE MONSTERS (original - must not resemble any film's characters: no
+big blue furry monster with purple spots and horns, no round green
+one-eyed monster, no purple lizard, no little girl in pigtails):
+- MOM MONSTER: tall and lanky, mossy-green scales, three eyes, curlers in
+  her wild hair, pink bathrobe and fluffy slippers, long clawed hands.
+- KID MONSTER: small and round, orange, two stubby horns, huge eyes, tiny
+  fangs, dinosaur-print pajamas.
+- HUMAN BOY: messy brown hair, striped pajamas, holding a toothbrush
+  with toothpaste on it.
+
+- Claude
+```
+
+### The Chair
+
+```
+THE CHAIR - magic mug
+2475 x 1155, punchline LEFT, setup RIGHT, black middle, frame on top.
+
+SETUP (right half) - LIGHTS OFF: dim grey-blue moonlight. A woman in bed,
+covers to her chin, staring at a hunched, lumpy shape on the chair in the
+corner of the room.
+Her: "It's just the clothes on the chair. It's just the clothes on the
+chair..."
+
+PUNCHLINE (left half) - LIGHTS ON: warm, bright light; she's switched on
+her bedside lamp. From her side, all she can see is the chair - just a
+heap of clothes. She sags with relief: "Whew."
+Meanwhile, the chair sits right by a corner where the wall juts out (or
+beside a tall wardrobe), and just round that corner - out of her sight
+but in full view of us - a monster is caught mid-pull, halfway into one
+of her sweaters, one arm through a sleeve, looking straight out at the
+viewer with one clawed finger to its lips: "Shhhhh."
+
+- Claude
+```
