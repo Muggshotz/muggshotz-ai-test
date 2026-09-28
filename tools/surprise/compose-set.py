@@ -36,7 +36,8 @@ FRAME_OUT = 'art/surprise/set-frame.png'
 # right 2439-2456. The black and the scenes start halfway under it:
 IX0, IX1, IY0, IY1 = 29, 2448, 26, 1087
 MID0, MID1 = round(W * .425), round(W * .575)          # the solid black, centred on the side opposite the handle
-FADE = round(W * .04)                                  # each scene's fade into it
+FADE = round(W * .045)                                 # each scene's fade into it, at its mid-height
+CORNER = round(W * .16)                                # ... and at its top and bottom rows
 PAD = round(W * .012)                                  # the rail's own width: a scene is fitted inside
                                                        # the rail, so no lettering ends up under it
                                                        # ("Stand back, everybo")
@@ -174,16 +175,27 @@ def compose(left_img, right_img, left_caps=None, right_caps=None):
         y = IY0 + (zh - h) // 2
         x = x1 - w if inner == 'right' else x0                # the inner edge on the black
         xs = np.arange(x, x + w)
-        k = ss((MID0 - xs) / FADE) if inner == 'right' else ss((xs - MID1) / FADE)
+        # THE FADE ROUNDS INTO THE CORNERS (Alyx, 28 Sep 2026: "your fade is
+        # just too straight up and down. Compared to how we used to do it").
+        # Bud's own paintings fade the inner edge in a curve, the way a
+        # vignette does: narrow at the scene's middle, sweeping further in at
+        # its top and bottom, so each scene reads as a rounded window onto
+        # the black rather than a straight cut. The fade starts FADE in from
+        # the black at mid-height and CORNER in at the top and bottom rows.
+        ys = (np.arange(h) + 0.5) / h * 2 - 1                  # -1 top .. 1 bottom
+        reach = FADE + (CORNER - FADE) * np.abs(ys) ** 2.2        # per row: how far in it starts
+        edge = MID0 if inner == 'right' else MID1
+        dist = (edge - xs[None, :]) if inner == 'right' else (xs[None, :] - edge)
+        k = ss(dist / reach[:, None])
         # A scene narrower (or shorter) than its place leaves black between it
         # and the rail; its edge there melts into that black instead of
         # stopping hard. Where it reaches the rail, the rail is its edge.
         if (x1 - x0) - w > 4:
-            k = k * (ss((xs - x) / EDGE) if inner == 'right' else ss((x + w - 1 - xs) / EDGE))
+            k = k * (ss((xs - x) / EDGE) if inner == 'right' else ss((x + w - 1 - xs) / EDGE))[None, :]
         kyv = np.ones(h)
         if zh - h > 4:
             yy = np.arange(h); kyv = ss(yy / EDGE) * ss((h - 1 - yy) / EDGE)
-        out[y:y + h, x:x + w] = im * k[None, :, None] * kyv[:, None, None]
+        out[y:y + h, x:x + w] = im * k[:, :, None] * kyv[:, None, None]
     out = words(out, left_caps, 'left'); out = words(out, right_caps, 'right')
     a = frame[..., 3:] / 255
     out = frame[..., :3] * a + out * (1 - a)
