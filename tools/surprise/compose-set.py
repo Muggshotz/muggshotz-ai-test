@@ -36,8 +36,15 @@ FRAME_OUT = 'art/surprise/set-frame.png'
 # right 2439-2456. The black and the scenes start halfway under it:
 IX0, IX1, IY0, IY1 = 29, 2448, 26, 1087
 MID0, MID1 = round(W * .425), round(W * .575)          # the solid black, centred on the side opposite the handle
-FADE = round(W * .045)                                 # each scene's fade into it, at its mid-height
-CORNER = round(W * .16)                                # ... and at its top and bottom rows
+import os
+# The fade into the black middle: FADE in from the black at a scene's
+# mid-height, CORNER at its top and bottom rows (equal = a straight fade).
+# Alyx chose curved, 28 Sep 2026 ("the curved is better than the straight");
+# COMPOSE_FADE=straight or gentle rebuilds the trial styles.
+_STYLE = os.environ.get('COMPOSE_FADE', 'curved')
+FADE, CORNER = {'straight': (round(W * .045), round(W * .045)),
+                'gentle':   (round(W * .06),  round(W * .10)),
+                'curved':   (round(W * .045), round(W * .16))}[_STYLE]
 PAD = round(W * .012)                                  # the rail's own width: a scene is fitted inside
                                                        # the rail, so no lettering ends up under it
                                                        # ("Stand back, everybo")
@@ -53,7 +60,16 @@ if sys.argv[1] == 'frame':
     rgb = np.where(al[..., None] > 0, np.clip(rgb * 255 / np.maximum(al[..., None], 1), 0, 255), 0)
     out = Image.fromarray(np.dstack([rgb, al]).astype(np.uint8), 'RGBA')
     sharp = out.convert('RGB').filter(ImageFilter.UnsharpMask(radius=1.6, percent=70, threshold=2))
-    Image.merge('RGBA', (*sharp.split(), out.split()[3])).save(FRAME_OUT, optimize=True)
+    fr = Image.merge('RGBA', (*sharp.split(), out.split()[3]))
+    # THE MIDDLE ORNAMENTS (Alyx, 28 Sep 2026): a harvest cluster hanging
+    # down from the top rail and a companion rising from the bottom rail,
+    # over the black middle, painted by Bud (art/surprise/set-frame-middle.*,
+    # on hot pink). Laid on once they exist.
+    import glob
+    mids = sorted(glob.glob('art/surprise/set-frame-middle.*'))
+    if mids:
+        print('middle ornaments: not placed yet -', mids[0])
+    fr.save(FRAME_OUT, optimize=True)
     print(f'{FRAME_OUT}: {100 * (al > 127).mean():.1f}% of the print is frame')
     sys.exit()
 
