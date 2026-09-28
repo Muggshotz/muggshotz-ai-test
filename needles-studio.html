@@ -1,5 +1,5 @@
 <!-- ============================================================
-     VERSION: V417
+     VERSION: V418
      ============================================================
      THE ONE LINE THAT SAYS WHICH BUILD YOU ARE LOOKING AT.
 
@@ -719,6 +719,7 @@ html.order-page-open,html.order-page-open body{overflow:hidden}
 #premadesCard .pm-mug3d>.pm-mug3d-stage{position:absolute;inset:0;touch-action:pan-y;cursor:grab}
 #premadesCard .pm-mug3d>.pm-mug3d-stage canvas{display:block;width:100%;height:100%}
 #premadesCard .pm-mug3d.live>img{visibility:hidden}
+#premadesCard .pm-how3d{width:min(100%,420px);margin:1.3rem auto 0}
 #premadesCard .pm-spin-cue{position:absolute;left:50%;bottom:10px;transform:translateX(-50%);background:rgba(11,16,24,.82);color:#cfe3ff;font-size:13px;font-weight:600;padding:5px 12px;border-radius:14px;pointer-events:none;white-space:nowrap}
 #premadesCard .pm-mug3d.live.spinning .pm-spin-cue,#premadesView.no3d .pm-spin-cue{display:none}
 #premadesCard .pm-mug3d-hint{color:#5b7aa6;font-size:12px;text-align:center;margin:.35rem 0 0}
@@ -4794,7 +4795,7 @@ function toggleWorkingImage(){
 // Two copies of a number is exactly how the marker rotted in the first place,
 // so they are not trusted to agree: .githooks/pre-commit moves both together
 // and REFUSES the commit if it ever finds them apart.
-const APP_VERSION='V417';
+const APP_VERSION='V418';
 try{ console.log('%cNeedles\u2019 Studio '+APP_VERSION,'color:#29a3ff;font-weight:700'); }catch(e){}
 
 function getDeviceId(){
@@ -13297,19 +13298,27 @@ function premadesCrumb(parts){ return '<div class="pm-crumb">'+['Pre-mades &amp;
 // what shows until the cup is drawn, and all there is on a device that
 // cannot draw one.
 const SHELF_MUG_3D={sizeLabel:'11oz',styleName:'Magic',colorHex:'#1c1c1c',startAngle:-90,spinStep:0.6,restartOnView:true,turns:1};
+// How it works, step 4: the pictures there are Golden Brown, so the mug is;
+// it holds on step 3's side, swivels half round in about a second, stops on
+// the punchline, and plays again whenever it comes back into view.
+const HOW_MUG_FILE='golden-brown';
+const HOW_MUG_3D=Object.assign({},SHELF_MUG_3D,{spinStep:4,turns:0.5,easeOut:true,holdMs:900,replayOnView:true});
 let shelfMugLive=null;
 function shelfMugHtml(x,id,i){
   return '<div class="pm-mug3d" data-mug3d="'+x.file+'"'+(i==null?'':' onclick="spinShelfMug(this)"')+'>'
     +'<img'+(id?' id="'+id+'"':'')+' src="art/surprise/mug/'+x.file+'.jpg" width="960" height="720" alt="'+x.label+'"'+(i?' loading="lazy"':'')+'/>'
     +'<div class="pm-mug3d-stage"></div><div class="pm-spin-cue">↻ Click to spin</div></div>';
 }
-function spinShelfMug(el){
+function spinShelfMug(el,opts){
   if(!el||el===shelfMugLive||typeof MUG3D==='undefined'||(typeof mug3dFailed!=='undefined'&&mug3dFailed))return;
   if(shelfMugLive)shelfMugLive.classList.remove('live','spinning');
   shelfMugLive=el;
   if(!el._spinCue){ el._spinCue=true; el.addEventListener('mug3dspin',e=>el.classList.toggle('spinning',!!e.detail)); }
-  MUG3D.open(el.querySelector('.pm-mug3d-stage'),Object.assign({panoramaUrl:'art/surprise/wrap/'+el.dataset.mug3d+'.jpg',panelUrls:[]},SHELF_MUG_3D))
-    .then(()=>{ if(shelfMugLive===el)el.classList.add('live'); })
+  const stage=el.querySelector('.pm-mug3d-stage');
+  MUG3D.open(stage,Object.assign({panoramaUrl:'art/surprise/wrap/'+el.dataset.mug3d+'.jpg',panelUrls:[]},opts||SHELF_MUG_3D))
+    // A Back that came while the cup was still being built: it was let go
+    // before it existed, so let it go now.
+    .then(()=>{ if(shelfMugLive===el)el.classList.add('live'); else if(MUG3D.host()===stage)MUG3D.close(); })
     .catch(err=>{ console.error('The shelf mug could not turn; its still stands in:',err); if(shelfMugLive===el)shelfMugLive=null;
       // No cup can be drawn here, so no mug on this page will spin: say nothing about clicking.
       const v=document.getElementById('premadesView'); if(v)v.classList.add('no3d'); });
@@ -13364,11 +13373,16 @@ function renderPremades(){
       +step(1,"Cold, it's a plain black mug.","Nothing to see. Nobody knows what's coming.",'black')
       +step(2,'Pour in something hot.',"Coffee, tea, cocoa. It doesn't switch on all at once: as the mug warms, the picture slowly rises up through the black.",'emerge',true)
       +step(3,'The joke appears.',"Once it's hot, the first half of the joke is there in full, facing them.",'hot')
-      +step(4,'They turn it round.','Nobody can leave a joke half told. Curious, they turn the mug, and the punchline is waiting on the other side.','other')
+      +step(4,'They turn it round.','Nobody can leave a joke half told. Curious, they turn the mug, and the punchline is waiting on the other side.','')
       +step(5,'Let it cool, and it hides again.','As the mug cools it goes back to plain black, ready to surprise the next unsuspecting victim.','black')
       +step(6,'Left hand or right.','When you order, tell us which hand they hold a mug in, and we print it so the joke starts on the side facing them.','')
       +step(7,'Mix and match.','Pick any four mugs for a set, '+$(SMART_MUG_SET_PRICE)+'. The same one four times if you like. Add more to a set at '+$(SMART_MUG_EXTRA_PRICE)+' each, or buy one on its own for '+$(SMART_MUG_PRICE)+'.','')
       +'<button type="button" class="generate-btn" id="premadesShelfBtn" onclick="premadesGo(\'shelf\')">'+PREMADE_MUGS.icon+' See all the mugs and build your set</button>';
+    // Step 4 turns the mug round itself: the 3D mug, from step 3's side.
+    const s4=view.querySelectorAll('.pm-step')[3];
+    if(s4){ s4.insertAdjacentHTML('beforeend','<div class="pm-mug3d pm-how3d" id="premadesHowMug" data-mug3d="'+HOW_MUG_FILE+'">'
+      +'<img src="art/surprise/mug/'+HOW_MUG_FILE+'.jpg" width="960" height="720" alt="The mug turned round to its punchline"/><div class="pm-mug3d-stage"></div></div>');
+      spinShelfMug(document.getElementById('premadesHowMug'),HOW_MUG_3D); }
   } else if(premadesView==='gallery'&&premadeCat()){
     const c=premadeCat(), shown=premadeItems(c), m=shown[premadesIndex]||shown[0], spec=itemSpec(c,m), [sw,sh]=spec.show, pack=spec.packs.find(p=>p.n===premadesPack)||spec.packs[0];
     title.textContent=c.icon+' '+c.label;
@@ -18945,6 +18959,14 @@ const MUG3D = (function(){
   // tap, which starts a new one.
   let turns=0, travelled=0;
   function spinDone(){ return turns>0 && travelled>=turns*360; }
+  // HOW IT WORKS, STEP 4 (Alyx, 27 Sep 2026: "It starts off with the same
+  // image as number three but then quickly swivels itself around to number 4
+  // and stops"). holdMs: a beat on the start before the turn, so the setup is
+  // seen first; easeOut: the turn slows into its stop; replayOnView: every
+  // time it comes back into view it plays again from the start, finished or
+  // not, and a click on a finished one does the same.
+  let holdMs=0, holdUntil=0, easeOut=false, replayOnView=false;
+  function replay(){ setSpin(startAngle); travelled=0; holdUntil=holdMs?performance.now()+holdMs:0; }
   // 1 = the framing every product photo here has used. Up to 4 for a close
   // look at the seam, done by narrowing the lens rather than moving in --
   // see placeCamera.
@@ -19913,12 +19935,13 @@ const MUG3D = (function(){
     // after anything changes, so a cup waiting out of view to be looked at is
     // already painted, and at its starting angle, when it arrives.
     if(!visible){ if(needsFrame){ needsFrame=false; renderer.render(scene,camera); } return; }
-    if(spinning && !dragging){
+    if(spinning && !dragging && !(holdUntil && performance.now()<holdUntil)){
       if(!turns){ setSpin(spin+spinStep); }
       else {
         const left=turns*360-travelled;
-        if(spinStep>=left){ setSpin(spin+left); travelled=turns*360; setSpinning(false); }
-        else { setSpin(spin+spinStep); travelled+=spinStep; }
+        const step=easeOut?Math.min(spinStep,Math.max(0.4,left*0.1)):spinStep;
+        if(step>=left){ setSpin(spin+left); travelled=turns*360; setSpinning(false); }
+        else { setSpin(spin+step); travelled+=step; }
       }
     }
     renderer.render(scene,camera);
@@ -19956,7 +19979,7 @@ const MUG3D = (function(){
         visible = !document.hidden && es.some(e=>e.isIntersecting&&e.intersectionRatio>=viewRatio);
         // Back in view part-way through a turn: that turn starts again from
         // the start. A finished one stays finished until it is tapped.
-        if(visible&&!was&&restartOnView&&startAngle!=null&&!spinDone()){ setSpin(startAngle); travelled=0; }
+        if(visible&&!was&&restartOnView&&startAngle!=null&&(replayOnView||!spinDone())){ replay(); if(!spinning&&!reducedMotion())setSpinning(true); }
       },{threshold:[0.01,0.6]});
       io.observe(host);
       host._io=io;
@@ -19966,7 +19989,7 @@ const MUG3D = (function(){
   function onVis(){ visible = !document.hidden; }
 
   function setSpinning(on){
-    if(on&&spinDone())travelled=0;   // a tap after the last turn: one more
+    if(on&&spinDone()){ if(replayOnView&&startAngle!=null)replay(); else travelled=0; }   // a tap after the last turn: one more
     spinning=!!on;
     // Said out loud, for whatever sits round the stage (the shelf's "Click to
     // spin" shows only while the mug is still).
@@ -19995,6 +20018,7 @@ const MUG3D = (function(){
     onSpin(fn){ onSpinChange=fn; },
     resize,
     mounted(){ return mounted; },
+    host(){ return host; },
     // Read-only, for the suite. The z-fighting that made the band trade pixels
     // with the body on a phone is invisible to a headless renderer -- it is a
     // depth-precision artifact of the device -- so what can be guarded is the
@@ -20067,6 +20091,7 @@ const MUG3D = (function(){
       startAngle=(opts&&opts.startAngle!=null)?opts.startAngle:null;
       restartOnView=!!(opts&&opts.restartOnView);
       turns=(opts&&opts.turns)||0; travelled=0;
+      holdMs=(opts&&opts.holdMs)||0; holdUntil=0; easeOut=!!(opts&&opts.easeOut); replayOnView=!!(opts&&opts.replayOnView);
       viewRatio=restartOnView?0.6:0.01;
       return loadThree().then(THREE=>{
         if(!mounted){
