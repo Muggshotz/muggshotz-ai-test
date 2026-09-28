@@ -82,7 +82,8 @@ scenarios.theThreeListsAndTheFiles = async (page) => {
     if (orderLabels[k] !== s.label) bad.push(`${k}: the order page calls it ${orderLabels[k]}`);
     const mine = (studioSets[k] || {}).designs || [];
     if (JSON.stringify(mine.map((d) => [d.key, d.label, d.file])) !== JSON.stringify(s.designs.map((d) => [d.key, d.label, d.file]))) bad.push(`${k}: the studio's mugs differ from the server's`);
-    if (s.designs.length < 4) bad.push(`${k} has ${s.designs.length} mugs, fewer than a set`);
+    // One design is a shelf: a set may be the same mug four times over.
+    if (s.designs.length < 1) bad.push(`${k} has no mugs`);
     if (new Set(s.designs.map((d) => d.key)).size !== s.designs.length) bad.push(`${k}: two mugs share a key`);
   }
   // The files, measured in the page (the browser reads the PNGs).
@@ -145,7 +146,9 @@ scenarios.thePanelAndTheOrder = async (page, log) => {
   if (st1.view !== 'shelf' || st1.imgs !== 1 || st1.loaded !== 1 || !/\$19\.95/.test(st1.text) || !/\$59\.95/.test(st1.text) || !st1.landed || !/Magic Mugs/i.test(st1.title))
     return `FAIL: Thanksgiving did not open on its shelf (${JSON.stringify(st1)})`;
   const tabs = await page.evaluate(() => [...document.querySelectorAll('#premadesHolidayTabs .pm-tab')].map((t) => t.className.replace('pm-tab', '').trim() + ':' + t.dataset.holiday));
-  if (tabs[0] !== 'on:thanksgiving' || !tabs.slice(1).every((t) => /^soon:/.test(t))) return `FAIL: the holiday tabs read ${JSON.stringify(tabs)}`;
+  // Thanksgiving lit; every other holiday live if it has mugs, "soon" if not.
+  const want = await page.evaluate(() => PREMADE_OCCASIONS.map((o, i) => (i === 0 ? 'on' : (o.set && SURPRISE_SETS[o.set] ? '' : 'soon')) + ':' + o.key));
+  if (tabs[0] !== 'on:thanksgiving' || JSON.stringify(tabs) !== JSON.stringify(want)) return `FAIL: the holiday tabs read ${JSON.stringify(tabs)}, not ${JSON.stringify(want)}`;
   if (!/Add to my mugs/.test(st1.text) || !/Just this one/.test(st1.text)) return `FAIL: the shelf's mug cannot be added or bought alone (${st1.text.slice(0, 300)})`;
   // How it works: seven steps, ending on the prices, then on to the shelf.
   await tap(page, '#premadesHowBtn'); await T(page, 1900);

@@ -1,5 +1,5 @@
 <!-- ============================================================
-     VERSION: V418
+     VERSION: V419
      ============================================================
      THE ONE LINE THAT SAYS WHICH BUILD YOU ARE LOOKING AT.
 
@@ -4795,7 +4795,7 @@ function toggleWorkingImage(){
 // Two copies of a number is exactly how the marker rotted in the first place,
 // so they are not trusted to agree: .githooks/pre-commit moves both together
 // and REFUSES the commit if it ever finds them apart.
-const APP_VERSION='V418';
+const APP_VERSION='V419';
 try{ console.log('%cNeedles\u2019 Studio '+APP_VERSION,'color:#29a3ff;font-weight:700'); }catch(e){}
 
 function getDeviceId(){
@@ -13027,6 +13027,11 @@ const SURPRISE_SETS={
     {key:'uncle-gerald',label:'Uncle Gerald',file:'uncle-gerald'},
     {key:'the-diet',label:'The Diet',file:'the-diet'},
     {key:'dark-meat',label:'Dark Meat',file:'dark-meat'}
+  ]},
+  // Raise the Dead (Bud, 28 Sep 2026): one continuous scene, a tree between
+  // the setup and the punchline, its edges fading to white as the hot mug is.
+  'halloween':{label:'Halloween',designs:[
+    {key:'raise-the-dead',label:'Raise the Dead',file:'halloween-raise-the-dead'}
   ]}
 };
 function holidayPrice(n){ return n>=4 ? Math.round((SMART_MUG_SET_PRICE+(n-4)*SMART_MUG_EXTRA_PRICE)*100)/100 : Math.round(n*SMART_MUG_PRICE*100)/100; }
@@ -13183,7 +13188,7 @@ function goToSurpriseOrder(){
 const PREMADE_OCCASIONS=[
   {key:'thanksgiving',icon:'🦃',label:'Thanksgiving',set:'thanksgiving'},
   {key:'christmas',icon:'🎄',label:'Christmas',soon:true},
-  {key:'halloween',icon:'🎃',label:'Halloween',soon:true},
+  {key:'halloween',icon:'🎃',label:'Halloween',set:'halloween'},
   {key:'valentines',icon:'💘',label:"Valentine's Day",tab:"Valentine's",soon:true}
 ];
 // The Magic Mugs' row on the products list: its picture and its line.
@@ -13289,7 +13294,7 @@ function premadesCrumb(parts){ return '<div class="pm-crumb">'+['Pre-mades &amp;
 // automatically", "slightly faster for this display", and "a mug doesn't need
 // to start spinning until you're looking at it ... that way it always starts
 // in the proper position"). One full turn, then it stops on the setup again
-// until it is tapped ("only spin once and then stop"). The mockup's own 3D mug, in black, wearing the
+// until it is tapped ("only spin once and then stop"). The mockup's own 3D mug, hot, wearing the
 // right-handed print: handle on the right, the setup facing (-90, measured),
 // turning on to the punchline. All at once: "still pictures of the first
 // frames. The setup ... the very first one is already the carousel", and a
@@ -13297,7 +13302,13 @@ function premadesCrumb(parts){ return '<div class="pm-crumb">'+['Pre-mades &amp;
 // the same angle (art/surprise/mug/, tools/surprise/mug-stills.cjs), so it is
 // what shows until the cup is drawn, and all there is on a device that
 // cannot draw one.
-const SHELF_MUG_3D={sizeLabel:'11oz',styleName:'Magic',colorHex:'#1c1c1c',startAngle:-90,spinStep:0.6,restartOnView:true,turns:1};
+// THE MUG HOT (Alyx, 28 Sep 2026): "The mug is always white but is painted
+// with" a black coating that clears when it is hot -- so the hot mug is white
+// wherever nothing is printed, the strip either side of the handle included;
+// "Handle remains black". The inside and rim are kept black too. That is
+// Color Pop's colouring (inside, rim and handle coloured, a white wall), in
+// black.
+const SHELF_MUG_3D={sizeLabel:'11oz',styleName:'Color Pop',colorHex:'#1c1c1c',startAngle:-90,spinStep:0.6,restartOnView:true,turns:1};
 // How it works, step 4: the pictures there are Golden Brown, so the mug is;
 // it holds on step 3's side, swivels half round in about a second, stops on
 // the punchline, and plays again whenever it comes back into view.
@@ -19147,8 +19158,7 @@ const MUG3D = (function(){
   function assembleMug(THREE,S,opts,mats){
     const g=new THREE.Group();
     // COLOR BURST (22 Sep 2026): the first style whose colour is the body.
-    // THE MAGIC MUG: black all over, the SURPRISE!!! smart mug's body.
-    const wholeBody=((opts.styleName||'')==='Color Burst'||(opts.styleName||'')==='Magic');
+    const wholeBody=((opts.styleName||'')==='Color Burst');
     const outer=new THREE.Mesh(new THREE.LatheGeometry(outerProfile(THREE,S),160),wholeBody?mats.accent:mats.white);
     outer.castShadow=true; outer.receiveShadow=true; g.add(outer);
     // PER STYLE (Alyx, Sep 2026, definitive): "Trimmed -- think rimmed with a
