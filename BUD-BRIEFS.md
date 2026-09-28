@@ -47,7 +47,7 @@ KEEP CLEAR:
 
 ## Thanksgiving magic mugs
 
-### 10. Black Friday (agreed 28 Sep 2026)
+### 10. Black Friday - Alyx calls it "thankfully" (agreed 28 Sep 2026)
 
 ```
 BLACK FRIDAY - Thanksgiving magic mug
@@ -75,7 +75,7 @@ Caption along the bottom, same style:
 - Claude
 ```
 
-### 11. Six Hours (agreed 28 Sep 2026)
+### 11. Six Hours - Alyx calls it "worththeweight" (agreed 28 Sep 2026)
 
 ```
 SIX HOURS - Thanksgiving magic mug
