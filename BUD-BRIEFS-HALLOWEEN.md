@@ -41,16 +41,19 @@ PAINT THE SCENES HARD-EDGED:
 - NO fade to black, NO fade to white, NO vignette.
 - The middle gap PURE black (that is how the build finds the scenes).
 - NO frame, NO border, NO corner decorations.
+- NO captions, NO headings, NO speech bubbles. Claude sets all the words
+  on the finished print. Signs and labels that are part of the scene
+  itself (a sign on a door, a box, a badge) stay in the painting.
   (Claude adds the fade into the black middle, the white outside
   and the autumn / Halloween frame on top - all exactly the same on
   every mug.)
 
 KEEP CLEAR:
-- All lettering (headings and captions) inside the middle 60% of each
-  scene's width, and at least 8% down from the top and up from the
-  bottom - the frame's corner pumpkins cover about a fifth of each
-  scene at the outer corners.
-- Faces at least 5% in from every edge of each scene.
+- Leave the top 15% and bottom 20% of each scene free of faces and of
+  anything important - Claude sets the words there.
+- Faces and any in-scene signs at least 5% in from every edge, and out
+  of the outer corners - the frame's corner pumpkins cover about a
+  fifth of each scene there.
 
 - Claude
 ```
@@ -69,22 +72,24 @@ KEEP CLEAR:
 CANDY TAX - Halloween magic mug
 2475 x 1155. Punchline scene on the LEFT half, setup scene on the RIGHT
 half, plain black in the middle. Paint the two scenes only: NO frame,
-NO border - Claude lays the Halloween frame on top. Keep all words and
-faces well clear of the outer edges. Each scene a sharp rectangle,
-square corners, no fades - see HOW TO PAINT IT.
+NO border - Claude lays the Halloween frame on top. Paint NO captions,
+headings or speech bubbles - Claude sets all the words. Each scene a
+sharp rectangle, square corners, no fades - see HOW TO PAINT IT.
 
 SETUP (right half):
 A kid sitting behind a mountain of Halloween candy, arms spread,
 beaming.
-"Best. Haul. EVER."
 
 PUNCHLINE (left half):
 Dad behind the pile, cheeks stuffed, wrappers everywhere, wearing an
 official-looking badge: "IRS - Internal Reese's Service".
-"Candy tax."
 
 - Claude
 ```
+
+Words (Claude typesets these on the finished print - NOT for Bud):
+- Setup: "Best. Haul. EVER."
+- Punchline: "Candy tax."
 
 ### 4. Not Desperate (agreed 28 Sep 2026)
 
@@ -92,22 +97,24 @@ official-looking badge: "IRS - Internal Reese's Service".
 NOT DESPERATE - Halloween magic mug
 2475 x 1155. Punchline scene on the LEFT half, setup scene on the RIGHT
 half, plain black in the middle. Paint the two scenes only: NO frame,
-NO border - Claude lays the Halloween frame on top. Keep all words and
-faces well clear of the outer edges. Each scene a sharp rectangle,
-square corners, no fades - see HOW TO PAINT IT.
+NO border - Claude lays the Halloween frame on top. Paint NO captions,
+headings or speech bubbles - Claude sets all the words. Each scene a
+sharp rectangle, square corners, no fades - see HOW TO PAINT IT.
 
 SETUP (right half):
 A trick-or-treater holding out a handful of candy corn to a zombie on
 the sidewalk.
-"Want some?"
 
 PUNCHLINE (left half):
 The zombie recoiling in disgust, one hand up, the other covering his
 mouth.
-"I'm dead. Not desperate."
 
 - Claude
 ```
+
+Words (Claude typesets these on the finished print - NOT for Bud):
+- Setup: "Want some?"
+- Punchline: "I'm dead. Not desperate."
 
 ### 5. A Little Old for This (agreed 28 Sep 2026)
 
@@ -115,14 +122,13 @@ mouth.
 A LITTLE OLD FOR THIS - Halloween magic mug
 2475 x 1155. Punchline scene on the LEFT half, setup scene on the RIGHT
 half, plain black in the middle. Paint the two scenes only: NO frame,
-NO border - Claude lays the Halloween frame on top. Keep all words and
-faces well clear of the outer edges. Each scene a sharp rectangle,
-square corners, no fades - see HOW TO PAINT IT.
+NO border - Claude lays the Halloween frame on top. Paint NO captions,
+headings or speech bubbles - Claude sets all the words. Each scene a
+sharp rectangle, square corners, no fades - see HOW TO PAINT IT.
 
 SETUP (right half):
 A six-foot teenager with a full beard, a cheap paper mask pushed up
 on his head and a pillowcase for candy, at a spooky front door.
-"Trick or treat."
 
 PUNCHLINE (left half):
 The door opened by a vampire who is plainly ancient: leaning on a
@@ -130,10 +136,13 @@ walker with tennis balls on the feet, reading glasses on a chain,
 cobwebs on his shoulders. Behind him, a "HAPPY 600th!" banner and a
 birthday cake with so many candles it is basically a bonfire. He peers
 up at the teenager:
-"Aren't you a little OLD for this?"
 
 - Claude
 ```
+
+Words (Claude typesets these on the finished print - NOT for Bud):
+- Setup: "Trick or treat."
+- Punchline: "Aren't you a little OLD for this?"
 
 ### 6. The Raisin House (agreed 28 Sep 2026)
 
@@ -141,14 +150,13 @@ up at the teenager:
 THE RAISIN HOUSE - Halloween magic mug
 2475 x 1155. Punchline scene on the LEFT half, setup scene on the RIGHT
 half, plain black in the middle. Paint the two scenes only: NO frame,
-NO border - Claude lays the Halloween frame on top. Keep all words and
-faces well clear of the outer edges. Each scene a sharp rectangle,
-square corners, no fades - see HOW TO PAINT IT.
+NO border - Claude lays the Halloween frame on top. Paint NO captions,
+headings or speech bubbles - Claude sets all the words. Each scene a
+sharp rectangle, square corners, no fades - see HOW TO PAINT IT.
 
 SETUP (right half):
 Kids in costumes racing up the path of the fanciest house on the
 street.
-"This place HAS to do full-size bars!"
 
 PUNCHLINE (left half):
 A cheerful lady at the door holding out a bowl of little boxes of
@@ -158,30 +166,35 @@ vampire) running away from the house screaming.
 - Claude
 ```
 
+Words (Claude typesets these on the finished print - NOT for Bud):
+- Setup: "This place HAS to do full-size bars!"
+
 ### 7. Guess What I Am (agreed 28 Sep 2026)
 
 ```
 GUESS WHAT I AM - Halloween magic mug
 2475 x 1155. Punchline scene on the LEFT half, setup scene on the RIGHT
 half, plain black in the middle. Paint the two scenes only: NO frame,
-NO border - Claude lays the Halloween frame on top. Keep all words and
-faces well clear of the outer edges. Each scene a sharp rectangle,
-square corners, no fades - see HOW TO PAINT IT.
+NO border - Claude lays the Halloween frame on top. Paint NO captions,
+headings or speech bubbles - Claude sets all the words. Each scene a
+sharp rectangle, square corners, no fades - see HOW TO PAINT IT.
 
 SETUP (right half):
 A kid inside an enormous homemade costume - a lumpy cardboard-and-
 tinfoil contraption, one arm through a hole - clearly a huge effort
 and clearly nothing recognisable. Very proud.
-"Guess what I am!"
 
 PUNCHLINE (left half):
 Three grown-ups squinting at it:
-"A sad lamp?"  "A haunted fridge?"  "...Is it the tax man?"
 (Alyx wants to see a rough of the costume first - its drawing is the
 joke.)
 
 - Claude
 ```
+
+Words (Claude typesets these on the finished print - NOT for Bud):
+- Setup: "Guess what I am!"
+- Punchline: "A sad lamp?"  "A haunted fridge?"  "...Is it the tax man?"
 
 ### 8. For Grandma (agreed 28 Sep 2026)
 
@@ -189,14 +202,13 @@ joke.)
 FOR GRANDMA - Halloween magic mug
 2475 x 1155. Punchline scene on the LEFT half, setup scene on the RIGHT
 half, plain black in the middle. Paint the two scenes only: NO frame,
-NO border - Claude lays the Halloween frame on top. Keep all words and
-faces well clear of the outer edges. Each scene a sharp rectangle,
-square corners, no fades - see HOW TO PAINT IT.
+NO border - Claude lays the Halloween frame on top. Paint NO captions,
+headings or speech bubbles - Claude sets all the words. Each scene a
+sharp rectangle, square corners, no fades - see HOW TO PAINT IT.
 
 SETUP (right half):
 A kid cross-legged on the floor after trick-or-treating, sorting the
 night's haul into piles.
-"Keep. Keep. Keep. Trade. Keep..."
 
 PUNCHLINE (left half):
 A sad little pile off to one side - candy corn, marshmallow pumpkins,
@@ -206,28 +218,33 @@ one box of raisins - under a hand-lettered sign:
 - Claude
 ```
 
+Words (Claude typesets these on the finished print - NOT for Bud):
+- Setup: "Keep. Keep. Keep. Trade. Keep..."
+
 ### 9. Nobody's Home (agreed 28 Sep 2026)
 
 ```
 NOBODY'S HOME - Halloween magic mug
 2475 x 1155. Punchline scene on the LEFT half, setup scene on the RIGHT
 half, plain black in the middle. Paint the two scenes only: NO frame,
-NO border - Claude lays the Halloween frame on top. Keep all words and
-faces well clear of the outer edges. Each scene a sharp rectangle,
-square corners, no fades - see HOW TO PAINT IT.
+NO border - Claude lays the Halloween frame on top. Paint NO captions,
+headings or speech bubbles - Claude sets all the words. Each scene a
+sharp rectangle, square corners, no fades - see HOW TO PAINT IT.
 
 SETUP (right half):
 Two trick-or-treaters on the path of a dark, creepy house, the porch
 light off.
-"Porch light's off... nobody's home."
 
 PUNCHLINE (left half):
 The porch light blazes on and the door flies open: a whole monster
 family in party hats, holding out a cauldron of candy.
-"We've waited ALL YEAR!"
 
 - Claude
 ```
+
+Words (Claude typesets these on the finished print - NOT for Bud):
+- Setup: "Porch light's off... nobody's home."
+- Punchline: "We've waited ALL YEAR!"
 
 ### 10. Nice Costume (agreed 28 Sep 2026)
 
@@ -235,21 +252,23 @@ family in party hats, holding out a cauldron of candy.
 NICE COSTUME - Halloween magic mug
 2475 x 1155. Punchline scene on the LEFT half, setup scene on the RIGHT
 half, plain black in the middle. Paint the two scenes only: NO frame,
-NO border - Claude lays the Halloween frame on top. Keep all words and
-faces well clear of the outer edges. Each scene a sharp rectangle,
-square corners, no fades - see HOW TO PAINT IT.
+NO border - Claude lays the Halloween frame on top. Paint NO captions,
+headings or speech bubbles - Claude sets all the words. Each scene a
+sharp rectangle, square corners, no fades - see HOW TO PAINT IT.
 
 SETUP (right half):
 A kid in a bedsheet ghost costume at a spooky front door.
-"Trick or treat!"
 
 PUNCHLINE (left half):
 The porch light snaps on and the door is opened by a REAL ghost,
 thrilled, looking the kid up and down.
-"Oh my gosh... who did your makeup?"
 
 - Claude
 ```
+
+Words (Claude typesets these on the finished print - NOT for Bud):
+- Setup: "Trick or treat!"
+- Punchline: "Oh my gosh... who did your makeup?"
 
 ### 11. Full-Size Bars (agreed 28 Sep 2026)
 
@@ -257,14 +276,13 @@ thrilled, looking the kid up and down.
 FULL-SIZE BARS - Halloween magic mug
 2475 x 1155. Punchline scene on the LEFT half, setup scene on the RIGHT
 half, plain black in the middle. Paint the two scenes only: NO frame,
-NO border - Claude lays the Halloween frame on top. Keep all words and
-faces well clear of the outer edges. Each scene a sharp rectangle,
-square corners, no fades - see HOW TO PAINT IT.
+NO border - Claude lays the Halloween frame on top. Paint NO captions,
+headings or speech bubbles - Claude sets all the words. Each scene a
+sharp rectangle, square corners, no fades - see HOW TO PAINT IT.
 
 SETUP (right half):
 A spooky house at the end of the street, one kid whispering to
 another.
-"They say this house gives out FULL-SIZE candy bars..."
 
 PUNCHLINE (left half):
 The porch light on, and the line up the path is all monsters -
@@ -272,6 +290,9 @@ werewolf, mummy, witch, zombie - with the kid at the very back.
 
 - Claude
 ```
+
+Words (Claude typesets these on the finished print - NOT for Bud):
+- Setup: "They say this house gives out FULL-SIZE candy bars..."
 
 ## Still deciding (ideas, not yet agreed)
 

@@ -31,16 +31,19 @@ PAINT THE SCENES HARD-EDGED:
 - NO fade to black, NO fade to white, NO vignette.
 - The middle gap PURE black (that is how the build finds the scenes).
 - NO frame, NO border, NO corner decorations.
+- NO captions, NO headings, NO speech bubbles. Claude sets all the words
+  on the finished print. Signs and labels that are part of the scene
+  itself (a sign on a door, a box, a badge) stay in the painting.
   (Claude adds the fade into the black middle, the white outside
   and the autumn / Halloween frame on top - all exactly the same on
   every mug.)
 
 KEEP CLEAR:
-- All lettering (headings and captions) inside the middle 60% of each
-  scene's width, and at least 8% down from the top and up from the
-  bottom - the frame's corner pumpkins cover about a fifth of each
-  scene at the outer corners.
-- Faces at least 5% in from every edge of each scene.
+- Leave the top 15% and bottom 20% of each scene free of faces and of
+  anything important - Claude sets the words there.
+- Faces and any in-scene signs at least 5% in from every edge, and out
+  of the outer corners - the frame's corner pumpkins cover about a
+  fifth of each scene there.
 
 - Claude
 ```
@@ -53,27 +56,27 @@ KEEP CLEAR:
 BLACK FRIDAY - Thanksgiving magic mug
 2475 x 1155. Punchline scene on the LEFT half, setup scene on the RIGHT
 half, plain black in the middle. Paint the two scenes only: NO frame,
-NO border - Claude lays the autumn frame on top. Keep all words and
-faces well clear of the outer edges. Each scene a sharp rectangle,
-square corners, no fades - see HOW TO PAINT IT.
+NO border - Claude lays the autumn frame on top. Paint NO captions,
+headings or speech bubbles - Claude sets all the words. Each scene a
+sharp rectangle, square corners, no fades - see HOW TO PAINT IT.
 
 SETUP (right half):
-Hero heading across the top:  THANKSGIVING:
 The family asleep on the couch after dinner, pants unbuttoned, a look
 of smug contentment on every face, the carved turkey on the table, a
 candle glowing, warm and peaceful.
-Caption along the bottom:
-"a day to reflect upon all that we have with gratitude and thankfulness..."
 
 PUNCHLINE (left half):
-Hero heading across the top, same size and style:  BLACK FRIDAY:
 The same family at 4 AM, crushed against store doors with a mob of
 shoppers, grandma elbowing through with a giant TV box.
-Caption along the bottom, same style:
-"...until the things that we don't have get cheap."
 
 - Claude
 ```
+
+Words (Claude typesets these on the finished print - NOT for Bud):
+- Setup: Heading: THANKSGIVING:
+- Setup: "a day to reflect upon all that we have with gratitude and thankfulness..."
+- Punchline: Heading: BLACK FRIDAY:
+- Punchline: "...until the things that we don't have get cheap."
 
 ### 11. Six Hours - Alyx calls it "worththeweight" (agreed 28 Sep 2026)
 
@@ -81,23 +84,25 @@ Caption along the bottom, same style:
 SIX HOURS - Thanksgiving magic mug
 2475 x 1155. Punchline scene on the LEFT half, setup scene on the RIGHT
 half, plain black in the middle. Paint the two scenes only: NO frame,
-NO border - Claude lays the autumn frame on top. Keep all words and
-faces well clear of the outer edges. Each scene a sharp rectangle,
-square corners, no fades - see HOW TO PAINT IT.
+NO border - Claude lays the autumn frame on top. Paint NO captions,
+headings or speech bubbles - Claude sets all the words. Each scene a
+sharp rectangle, square corners, no fades - see HOW TO PAINT IT.
 
 SETUP (right half):
 6:00 AM, a mom in a flour-dusted kitchen, three pies cooling, the oven
 glowing, a clock on the wall.
-"Six hours of cooking..."
 
 PUNCHLINE (left half):
 The same table twelve minutes after serving - every plate licked clean,
 one bone on the platter, the whole family slumped in a groaning food
 coma, the clock twelve minutes on.
-"...gone in twelve minutes."
 
 - Claude
 ```
+
+Words (Claude typesets these on the finished print - NOT for Bud):
+- Setup: "Six hours of cooking..."
+- Punchline: "...gone in twelve minutes."
 
 ### 12. One Rule (agreed 28 Sep 2026)
 
@@ -105,16 +110,15 @@ coma, the clock twelve minutes on.
 ONE RULE - Thanksgiving magic mug
 2475 x 1155. Punchline scene on the LEFT half, setup scene on the RIGHT
 half, plain black in the middle. Paint the two scenes only: NO frame,
-NO border - Claude lays the autumn frame on top. Keep all words and
-faces well clear of the outer edges. Each scene a sharp rectangle,
-square corners, no fades - see HOW TO PAINT IT.
+NO border - Claude lays the autumn frame on top. Paint NO captions,
+headings or speech bubbles - Claude sets all the words. Each scene a
+sharp rectangle, square corners, no fades - see HOW TO PAINT IT.
 
 SETUP (right half):
 Mom proudly taping a sign to the front door as relatives arrive:
 "LEAVE YOUR POLITICS AT THE DOOR", everyone smiling and nodding.
 On the floor by the door, an empty cardboard box with "POLITICS"
 scrawled on it in black marker.
-"One rule this year..."
 
 PUNCHLINE (left half):
 Total chaos at the dinner table - relatives on their feet shouting,
@@ -123,10 +127,13 @@ can-shaped log of cranberry sauce with the ridges still on it.
 Way in the background, through the doorway, the "POLITICS" box by the
 front door with the family dog's head stuck in it, sniffing - a tiny
 throwaway detail, easy to miss.
-"...then someone brought the canned cranberry sauce."
 
 - Claude
 ```
+
+Words (Claude typesets these on the finished print - NOT for Bud):
+- Setup: "One rule this year..."
+- Punchline: "...then someone brought the canned cranberry sauce."
 
 ## Year-round monster line (not Halloween)
 
