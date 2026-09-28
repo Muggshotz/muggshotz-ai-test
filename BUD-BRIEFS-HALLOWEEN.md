@@ -36,7 +36,9 @@ EACH SCENE (so it fills its space exactly, nothing trimmed):
 - Each scene about as wide as it is tall (roughly 0.93 : 1).
 
 PAINT THE SCENES HARD-EDGED:
+- Each scene a sharp rectangle with SQUARE corners - no rounding.
 - NO fade to black, NO fade to white, NO vignette.
+- The middle gap PURE black (that is how the build finds the scenes).
 - NO frame, NO border, NO corner decorations.
   (Claude adds the fade into the black middle, the white outside
   and the autumn / Halloween frame on top - all exactly the same on
@@ -64,7 +66,8 @@ CANDY TAX - Halloween magic mug
 2475 x 1155. Punchline scene on the LEFT half, setup scene on the RIGHT
 half, plain black in the middle. Paint the two scenes only: NO frame,
 NO border - Claude lays the Halloween frame on top. Keep all words and
-faces well clear of the outer edges.
+faces well clear of the outer edges. Each scene a sharp rectangle,
+square corners, no fades - see HOW TO PAINT IT.
 
 SETUP (right half):
 A kid sitting behind a mountain of Halloween candy, arms spread,
@@ -86,7 +89,8 @@ NOT DESPERATE - Halloween magic mug
 2475 x 1155. Punchline scene on the LEFT half, setup scene on the RIGHT
 half, plain black in the middle. Paint the two scenes only: NO frame,
 NO border - Claude lays the Halloween frame on top. Keep all words and
-faces well clear of the outer edges.
+faces well clear of the outer edges. Each scene a sharp rectangle,
+square corners, no fades - see HOW TO PAINT IT.
 
 SETUP (right half):
 A trick-or-treater holding out a handful of candy corn to a zombie on
@@ -108,7 +112,8 @@ A LITTLE OLD FOR THIS - Halloween magic mug
 2475 x 1155. Punchline scene on the LEFT half, setup scene on the RIGHT
 half, plain black in the middle. Paint the two scenes only: NO frame,
 NO border - Claude lays the Halloween frame on top. Keep all words and
-faces well clear of the outer edges.
+faces well clear of the outer edges. Each scene a sharp rectangle,
+square corners, no fades - see HOW TO PAINT IT.
 
 SETUP (right half):
 A six-foot teenager with a full beard, a cheap paper mask pushed up
@@ -133,7 +138,8 @@ THE RAISIN HOUSE - Halloween magic mug
 2475 x 1155. Punchline scene on the LEFT half, setup scene on the RIGHT
 half, plain black in the middle. Paint the two scenes only: NO frame,
 NO border - Claude lays the Halloween frame on top. Keep all words and
-faces well clear of the outer edges.
+faces well clear of the outer edges. Each scene a sharp rectangle,
+square corners, no fades - see HOW TO PAINT IT.
 
 SETUP (right half):
 Kids in costumes racing up the path of the fanciest house on the
@@ -155,7 +161,8 @@ GUESS WHAT I AM - Halloween magic mug
 2475 x 1155. Punchline scene on the LEFT half, setup scene on the RIGHT
 half, plain black in the middle. Paint the two scenes only: NO frame,
 NO border - Claude lays the Halloween frame on top. Keep all words and
-faces well clear of the outer edges.
+faces well clear of the outer edges. Each scene a sharp rectangle,
+square corners, no fades - see HOW TO PAINT IT.
 
 SETUP (right half):
 A kid inside an enormous homemade costume - a lumpy cardboard-and-
@@ -179,7 +186,8 @@ FOR GRANDMA - Halloween magic mug
 2475 x 1155. Punchline scene on the LEFT half, setup scene on the RIGHT
 half, plain black in the middle. Paint the two scenes only: NO frame,
 NO border - Claude lays the Halloween frame on top. Keep all words and
-faces well clear of the outer edges.
+faces well clear of the outer edges. Each scene a sharp rectangle,
+square corners, no fades - see HOW TO PAINT IT.
 
 SETUP (right half):
 A kid cross-legged on the floor after trick-or-treating, sorting the
@@ -201,7 +209,8 @@ NOBODY'S HOME - Halloween magic mug
 2475 x 1155. Punchline scene on the LEFT half, setup scene on the RIGHT
 half, plain black in the middle. Paint the two scenes only: NO frame,
 NO border - Claude lays the Halloween frame on top. Keep all words and
-faces well clear of the outer edges.
+faces well clear of the outer edges. Each scene a sharp rectangle,
+square corners, no fades - see HOW TO PAINT IT.
 
 SETUP (right half):
 Two trick-or-treaters on the path of a dark, creepy house, the porch
@@ -223,7 +232,8 @@ NICE COSTUME - Halloween magic mug
 2475 x 1155. Punchline scene on the LEFT half, setup scene on the RIGHT
 half, plain black in the middle. Paint the two scenes only: NO frame,
 NO border - Claude lays the Halloween frame on top. Keep all words and
-faces well clear of the outer edges.
+faces well clear of the outer edges. Each scene a sharp rectangle,
+square corners, no fades - see HOW TO PAINT IT.
 
 SETUP (right half):
 A kid in a bedsheet ghost costume at a spooky front door.
@@ -244,7 +254,8 @@ FULL-SIZE BARS - Halloween magic mug
 2475 x 1155. Punchline scene on the LEFT half, setup scene on the RIGHT
 half, plain black in the middle. Paint the two scenes only: NO frame,
 NO border - Claude lays the Halloween frame on top. Keep all words and
-faces well clear of the outer edges.
+faces well clear of the outer edges. Each scene a sharp rectangle,
+square corners, no fades - see HOW TO PAINT IT.
 
 SETUP (right half):
 A spooky house at the end of the street, one kid whispering to

@@ -26,7 +26,9 @@ EACH SCENE (so it fills its space exactly, nothing trimmed):
 - Each scene about as wide as it is tall (roughly 0.93 : 1).
 
 PAINT THE SCENES HARD-EDGED:
+- Each scene a sharp rectangle with SQUARE corners - no rounding.
 - NO fade to black, NO fade to white, NO vignette.
+- The middle gap PURE black (that is how the build finds the scenes).
 - NO frame, NO border, NO corner decorations.
   (Claude adds the fade into the black middle, the white outside
   and the autumn / Halloween frame on top - all exactly the same on
@@ -48,7 +50,8 @@ BLACK FRIDAY - Thanksgiving magic mug
 2475 x 1155. Punchline scene on the LEFT half, setup scene on the RIGHT
 half, plain black in the middle. Paint the two scenes only: NO frame,
 NO border - Claude lays the autumn frame on top. Keep all words and
-faces well clear of the outer edges.
+faces well clear of the outer edges. Each scene a sharp rectangle,
+square corners, no fades - see HOW TO PAINT IT.
 
 SETUP (right half):
 Hero heading across the top:  THANKSGIVING:
@@ -75,7 +78,8 @@ SIX HOURS - Thanksgiving magic mug
 2475 x 1155. Punchline scene on the LEFT half, setup scene on the RIGHT
 half, plain black in the middle. Paint the two scenes only: NO frame,
 NO border - Claude lays the autumn frame on top. Keep all words and
-faces well clear of the outer edges.
+faces well clear of the outer edges. Each scene a sharp rectangle,
+square corners, no fades - see HOW TO PAINT IT.
 
 SETUP (right half):
 6:00 AM, a mom in a flour-dusted kitchen, three pies cooling, the oven
@@ -98,7 +102,8 @@ ONE RULE - Thanksgiving magic mug
 2475 x 1155. Punchline scene on the LEFT half, setup scene on the RIGHT
 half, plain black in the middle. Paint the two scenes only: NO frame,
 NO border - Claude lays the autumn frame on top. Keep all words and
-faces well clear of the outer edges.
+faces well clear of the outer edges. Each scene a sharp rectangle,
+square corners, no fades - see HOW TO PAINT IT.
 
 SETUP (right half):
 Mom proudly taping a sign to the front door as relatives arrive:
