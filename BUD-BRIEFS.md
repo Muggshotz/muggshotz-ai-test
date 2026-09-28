@@ -3,6 +3,42 @@
 The exact, finished version of every brief agreed with Alyx, in one place.
 Newest at the bottom. Each is ready to paste to Bud as it stands.
 
+## How to paint a magic mug (send with every brief)
+
+Matches tools/surprise/compose-set.py as built on 28 Sep 2026.
+
+```
+MAGIC MUG - HOW TO PAINT IT (for every mug)
+
+SIZE: 2475 x 1155 (or the same shape smaller, e.g. 1836 x 857).
+
+LAYOUT:
+- Two separate scenes on a plain BLACK background.
+- PUNCHLINE scene on the LEFT, SETUP scene on the RIGHT.
+- Solid black gap in the middle between them.
+
+EACH SCENE (so it fills its space exactly, nothing trimmed):
+- Left scene:  from the left edge to 41% of the width
+               (about 0-1015 px at 2475 wide, 0-753 at 1836).
+- Right scene: from 56% of the width to the right edge
+               (about 1386-2475 px at 2475 wide, 1028-1836 at 1836).
+- Full height, top to bottom.
+- Each scene about as wide as it is tall (roughly 0.93 : 1).
+
+PAINT THE SCENES HARD-EDGED:
+- NO fade to black, NO fade to white, NO vignette.
+- NO frame, NO border, NO corner decorations.
+  (Claude adds the fade into the black middle, the white outside
+  and the autumn / Halloween frame on top - all exactly the same on
+  every mug.)
+
+KEEP CLEAR:
+- All words and faces at least 5% in from every edge of each scene -
+  the frame's corners and rail cover the outer edges.
+
+- Claude
+```
+
 ## Thanksgiving magic mugs
 
 ### 10. Black Friday (agreed 28 Sep 2026)
