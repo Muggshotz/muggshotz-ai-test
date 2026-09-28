@@ -61,14 +61,44 @@ if sys.argv[1] == 'frame':
     out = Image.fromarray(np.dstack([rgb, al]).astype(np.uint8), 'RGBA')
     sharp = out.convert('RGB').filter(ImageFilter.UnsharpMask(radius=1.6, percent=70, threshold=2))
     fr = Image.merge('RGBA', (*sharp.split(), out.split()[3]))
-    # THE MIDDLE ORNAMENTS (Alyx, 28 Sep 2026): a harvest cluster hanging
-    # down from the top rail and a companion rising from the bottom rail,
-    # over the black middle, painted by Bud (art/surprise/set-frame-middle.*,
-    # on hot pink). Laid on once they exist.
-    import glob
+    # THE MIDDLE ORNAMENTS (Alyx, 28 Sep 2026): "coming down in a triangle
+    # almost like a stalactite" from the top rail and "coming up" from the
+    # bottom one, over the black middle; then "thinner ... a little bit more
+    # elegant and a little bit more long". Bud painted the pair side by side
+    # on one transparent canvas (art/surprise/set-frame-middle.png): the
+    # hanging one on the left, the rising one on the right. Each is cut out
+    # by its own shape, both scaled by the same amount (the hanging one to
+    # ORN_LEN px long) in premultiplied colour, centred on the print, and
+    # slid UNDER the frame: the hanging one's top at the top rail's upper
+    # edge, the rising one's base 10 px above the bottom rail's lower edge (its
+    # branch then sits on the rail as the top one's hangs under it), so the
+    # rail covers where each joins it.
+    import glob, cv2
     mids = sorted(glob.glob('art/surprise/set-frame-middle.*'))
     if mids:
-        print('middle ornaments: not placed yet -', mids[0])
+        ORN_LEN = int(os.environ.get('COMPOSE_ORN_LEN', 480))
+        m = np.asarray(Image.open(mids[0]).convert('RGBA')).astype(float)
+        n, lab, st, _ = cv2.connectedComponentsWithStats((m[..., 3] > 8).astype(np.uint8), 8)
+        pieces = sorted((i for i in range(1, n) if st[i][4] > 2000), key=lambda i: st[i][0])
+        under = Image.new('RGBA', (W, H), (0, 0, 0, 0))
+        k = ORN_LEN / st[pieces[0]][3]
+        for i, where in zip(pieces, ('top', 'bottom')):
+            x, y, w, h = st[i][:4]
+            own = cv2.dilate((lab == i).astype(np.uint8), np.ones((9, 9), np.uint8)) > 0
+            c = m[y:y + h, x:x + w].copy()
+            c[..., 3] *= own[y:y + h, x:x + w]
+            ow, oh = round(w * k), round(h * k)
+            pm = np.dstack([c[..., :3] * c[..., 3:] / 255, c[..., 3]])
+            chans = [np.asarray(Image.fromarray(pm[..., k].astype(np.float32), 'F').resize((ow, oh), Image.LANCZOS))
+                     for k in range(4)]
+            al2 = np.clip(chans[3], 0, 255)
+            rgb2 = np.dstack([np.clip(ch * 255 / np.maximum(al2, 1), 0, 255) for ch in chans[:3]])
+            piece = Image.fromarray(np.dstack([rgb2, al2]).astype(np.uint8), 'RGBA')
+            px = (W - ow) // 2
+            py = 16 if where == 'top' else 1088 - oh
+            under.alpha_composite(piece, (px, py))
+            print(f'middle ornament ({where}): {ow} x {oh} at {px},{py}')
+        fr = Image.alpha_composite(under, fr)
     fr.save(FRAME_OUT, optimize=True)
     print(f'{FRAME_OUT}: {100 * (al > 127).mean():.1f}% of the print is frame')
     sys.exit()
@@ -143,6 +173,24 @@ FONT = '/usr/share/fonts/truetype/dejavu/DejaVuSerif-Bold.ttf'
 ROOM = {('left', 'top'): (190, MID0 - 20), ('left', 'bottom'): (250, MID0 - 20),
         ('right', 'top'): (MID1 + 20, 2290), ('right', 'bottom'): (MID1 + 20, 2230)}
 TOP_BAND, BOTTOM_BAND = (100, 215), (780, 1000)
+# NO BLACK MIDDLE (Alyx, 28 Sep 2026, a trial: "just have the image extend
+# ... forgo the black fade altogether and just frame the whole thing").
+# COMPOSE_LAYOUT=rail: each scene fills its half, meeting at the centre under
+# a rail cut from the frame's own top rail, the vines over it; butt: the
+# same with no rail, the vines alone over the join. fade (the default) is the
+# black middle.
+LAYOUT = os.environ.get('COMPOSE_LAYOUT', 'fade')
+# narrow: the black middle kept, but only COMPOSE_BLACK of the width (Alyx:
+# "we're going to need some black fade, but not nearly that much ... keep
+# them separated"); each scene enlarged to fill the rest, fading into it.
+NB = float(os.environ.get('COMPOSE_BLACK', .06))
+NM0, NM1 = round(W * (.5 - NB / 2)), round(W * (.5 + NB / 2))
+if LAYOUT == 'narrow':
+    ROOM = {('left', 'top'): (190, NM0 - 30), ('left', 'bottom'): (250, NM0 - 30),
+            ('right', 'top'): (NM1 + 30, 2290), ('right', 'bottom'): (NM1 + 30, 2230)}
+elif LAYOUT != 'fade':
+    ROOM = {('left', 'top'): (190, W // 2 - 50), ('left', 'bottom'): (250, W // 2 - 50),
+            ('right', 'top'): (W // 2 + 50, 2290), ('right', 'bottom'): (W // 2 + 50, 2230)}
 def fit_size(text, x0, x1, y0, y1, biggest):
     lines = text.split('\n'); d = ImageDraw.Draw(Image.new('L', (8, 8))); size = biggest
     while size > 20:
@@ -182,10 +230,48 @@ def words(out, caps, side):
             d.text(((x0 + x1 - w) // 2, top + i * lh), l, font=f, fill=(247, 236, 210), stroke_width=sw, stroke_fill=(42, 24, 12))
     return np.asarray(im).astype(float)
 
+def cover(img, zw, zh):
+    # Enlarged evenly until it fills the place, the spare trimmed: from the
+    # sides equally, and from the top and bottom 40 : 60.
+    h, w = img.shape[:2]; k = max(zw / w, zh / h)
+    bw, bh = round(w * k), round(h * k)
+    big = np.asarray(Image.fromarray(np.clip(img, 0, 255).astype(np.uint8)).resize((bw, bh), Image.LANCZOS)).astype(float)
+    x0, y0 = (bw - zw) // 2, round((bh - zh) * .4)
+    return big[y0:y0 + zh, x0:x0 + zw]
+
+def middle_rail():
+    # A length of the frame's own top rail, turned upright.
+    strip = frame[10:44, 700:700 + (IY1 - IY0) + 20]
+    return np.rot90(strip, 3)
+
 def compose(left_img, right_img, left_caps=None, right_caps=None):
     out = np.full((H, W, 3), 255.0)
     out[IY0:IY1, IX0:IX1] = 0
     zh = IY1 - IY0
+    if LAYOUT == 'narrow':
+        nf, nc = NB * W * .35, NB * W * 1.1               # the fade: at mid-height, at the top and bottom rows
+        for img, x0, x1, inner in ((left_img, IX0, NM0, 'right'), (right_img, NM1, IX1, 'left')):
+            im = cover(img, x1 - x0, zh); w = x1 - x0
+            xs = np.arange(x0, x1)
+            ys = (np.arange(zh) + 0.5) / zh * 2 - 1
+            reach = nf + (nc - nf) * np.abs(ys) ** 2.2
+            dist = (x1 - xs[None, :]) if inner == 'right' else (xs[None, :] - x0)
+            out[IY0:IY1, x0:x1] = im * ss(dist / reach[:, None])[:, :, None]
+        out = words(out, left_caps, 'left'); out = words(out, right_caps, 'right')
+        a = frame[..., 3:] / 255
+        out = frame[..., :3] * a + out * (1 - a)
+        return Image.fromarray(np.clip(out, 0, 255).astype(np.uint8))
+    if LAYOUT != 'fade':
+        out[IY0:IY1, IX0:W // 2] = cover(left_img, W // 2 - IX0, zh)
+        out[IY0:IY1, W // 2:IX1] = cover(right_img, IX1 - W // 2, zh)
+        out = words(out, left_caps, 'left'); out = words(out, right_caps, 'right')
+        if LAYOUT == 'rail':
+            r = middle_rail(); rh, rw = r.shape[:2]; x, y = W // 2 - rw // 2, IY0 - 10
+            a = r[..., 3:] / 255
+            out[y:y + rh, x:x + rw] = r[..., :3] * a + out[y:y + rh, x:x + rw] * (1 - a)
+        a = frame[..., 3:] / 255
+        out = frame[..., :3] * a + out * (1 - a)
+        return Image.fromarray(np.clip(out, 0, 255).astype(np.uint8))
     for img, x0, x1, inner in ((left_img, IX0, MID0, 'right'), (right_img, MID1, IX1, 'left')):
         im = fit(img, x1 - x0, zh); h, w = im.shape[:2]
         y = IY0 + (zh - h) // 2
