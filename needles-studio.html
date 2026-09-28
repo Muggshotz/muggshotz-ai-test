@@ -1,5 +1,5 @@
 <!-- ============================================================
-     VERSION: V419
+     VERSION: V420
      ============================================================
      THE ONE LINE THAT SAYS WHICH BUILD YOU ARE LOOKING AT.
 
@@ -676,12 +676,12 @@ body.premades-focus :is(#generateBtn,#generateTokenNote,#finalGenerateGuidance,#
 #premadesCard .pm-name{text-align:center;color:#cfe3ff;font-size:16px}
 #premadesCard .pm-line{text-align:center;color:#29a3ff;font-size:13px;margin:4px 0 1.1rem}
 #premadesCard .pm-big{display:block;width:100%;height:auto;border-radius:10px}
-#premadesCard .pm-step{text-align:center;padding:2rem 0 1.8rem;border-top:1px solid #1c2738}
-#premadesCard .pm-sn{width:30px;height:30px;border-radius:50%;border:1px solid #29a3ff;color:#29a3ff;margin:0 auto 14px;display:flex;align-items:center;justify-content:center;font-size:14px}
-#premadesCard .pm-sh{color:#cfe3ff;font-size:18px;margin-bottom:6px}
-#premadesCard .pm-sl{color:#7ab8ff;font-size:13px;line-height:1.5;max-width:360px;margin:0 auto}
-#premadesCard .pm-simg{display:block;width:min(100%,300px);height:auto;margin:1.3rem auto 0;border-radius:10px}
-#premadesCard .pm-simg.pm-wide{width:100%}
+#premadesCard .pm-step,#smartHowCard .pm-step{text-align:center;padding:2rem 0 1.8rem;border-top:1px solid #1c2738}
+#premadesCard .pm-sn,#smartHowCard .pm-sn{width:30px;height:30px;border-radius:50%;border:1px solid #29a3ff;color:#29a3ff;margin:0 auto 14px;display:flex;align-items:center;justify-content:center;font-size:14px}
+#premadesCard .pm-sh,#smartHowCard .pm-sh{color:#cfe3ff;font-size:18px;margin-bottom:6px}
+#premadesCard .pm-sl,#smartHowCard .pm-sl{color:#7ab8ff;font-size:13px;line-height:1.5;max-width:360px;margin:0 auto}
+#premadesCard .pm-simg,#smartHowCard .pm-simg{display:block;width:min(100%,300px);height:auto;margin:1.3rem auto 0;border-radius:10px}
+#premadesCard .pm-simg.pm-wide,#smartHowCard .pm-simg.pm-wide{width:100%}
 #premadesCard .pm-mat{position:relative;margin:.4rem 0 1rem}
 #premadesCard .pm-arr{position:absolute;top:50%;transform:translateY(-50%);width:36px;height:36px;border-radius:50%;background:#131b27;border:1px solid #24344a;color:#cfe3ff;display:flex;align-items:center;justify-content:center;font-size:22px;cursor:pointer;padding:0}
 #premadesCard .pm-layout{display:flex;gap:6px;justify-content:center;margin:0 0 .9rem}
@@ -719,6 +719,15 @@ html.order-page-open,html.order-page-open body{overflow:hidden}
 #premadesCard .pm-mug3d>.pm-mug3d-stage{position:absolute;inset:0;touch-action:pan-y;cursor:grab}
 #premadesCard .pm-mug3d>.pm-mug3d-stage canvas{display:block;width:100%;height:100%}
 #premadesCard .pm-mug3d.live>img{visibility:hidden}
+#preGenSizeSmartBtn{position:relative}
+.info-i{position:absolute;top:6px;right:6px;width:24px;height:24px;border-radius:50%;background:#fff;color:#1d6fd0;border:2px solid #1d6fd0;font:italic 700 15px/20px Georgia,'Times New Roman',serif;text-align:center;cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.35);z-index:2;padding:0}
+.info-i:hover{background:#e8f2ff}
+@keyframes smartBlink{0%,100%{opacity:1}50%{opacity:.25}}
+.smart-blink{animation:smartBlink 1.2s ease-in-out infinite}
+#surpriseReveal{position:relative;width:100%;aspect-ratio:4/3;background:#f2f4f7;border-radius:10px;overflow:hidden;margin-bottom:.8rem;cursor:pointer}
+#surpriseReveal>.pm-mug3d-stage{position:absolute;inset:0;touch-action:pan-y}
+#surpriseReveal canvas{display:block;width:100%;height:100%}
+#surpriseRevealWords{position:absolute;left:0;right:0;bottom:14px;text-align:center;color:#fff;font-size:17px;font-weight:700;letter-spacing:.3px;text-shadow:0 1px 3px #000,0 0 12px rgba(0,0,0,.8);pointer-events:none;padding:0 12px}
 #premadesCard .pm-how3d{width:min(100%,420px);margin:1.3rem auto 0}
 #premadesCard .pm-spin-cue{position:absolute;left:50%;bottom:10px;transform:translateX(-50%);background:rgba(11,16,24,.82);color:#cfe3ff;font-size:13px;font-weight:600;padding:5px 12px;border-radius:14px;pointer-events:none;white-space:nowrap}
 #premadesCard .pm-mug3d.live.spinning .pm-spin-cue,#premadesView.no3d .pm-spin-cue{display:none}
@@ -1676,7 +1685,7 @@ const HERO_SETTLE_MS = 1000;
 <div class="card" id="surpriseCard" style="display:none">
 <div class="card-title">🎁 SURPRISE!!!</div>
 <img src="art/options/smart-mug.jpg" alt="The black smart mug" style="display:block;width:min(100%,150px);margin:0 auto .4rem;border-radius:8px;background:#fff"/>
-<div class="note" style="text-align:center;margin:0 0 .75rem">An ordinary-looking black mug, until the hot coffee goes in. Some messages are worth the wait. <b>11oz Smart Mug · <span data-smart-price>$19.95</span></b></div>
+<div class="note smart-blink" id="surpriseHowLine" style="text-align:center;margin:0 0 .75rem;font-size:14px">An ordinary black mug until the hot coffee goes in, and then...<br><b>Make a selection to see how it works.</b></div>
 <div class="note" style="margin-top:0;margin-bottom:.4rem;font-weight:700">Pick your surprise</div>
 <div class="grid2" id="surpriseTemplateGrid"></div>
 <div id="surpriseVariantWrap" style="display:none">
@@ -1688,10 +1697,11 @@ const HERO_SETTLE_MS = 1000;
 <div class="btn-select selected" data-hand="right" onclick="pickSurpriseHand('right')" style="padding:.5rem;font-size:12px">Right-handed</div><div class="btn-select" data-hand="left" onclick="pickSurpriseHand('left')" style="padding:.5rem;font-size:12px">Left-handed</div>
 </div>
 <div id="surprisePreviewWrap" style="display:none;margin-top:.9rem">
-<img id="surpriseColdHot" alt="Cold, then hot: the surprise appears" style="display:none;width:100%;border-radius:8px;margin-bottom:.6rem"/>
+<div id="surpriseRevealBlock"><div id="surpriseReveal" title="Click to watch it again"><div class="pm-mug3d-stage" id="surpriseRevealStage"></div><div id="surpriseRevealWords"></div></div>
+<button type="button" class="generate-btn" id="surpriseContinueBtn" style="margin-top:0" onclick="goToSurpriseOrder()">🎁 See it on the mug and order</button></div>
+<img id="surpriseColdHot" alt="Cold, then hot: the surprise appears" style="display:none;width:100%;border-radius:8px;margin:.9rem 0 .6rem"/>
 <div class="note" style="margin-bottom:.4rem">The whole print, laid flat. It wraps once round the mug.</div>
 <img id="surprisePreview" alt="" style="width:100%;border-radius:8px;background:#000"/>
-<button type="button" class="generate-btn" id="surpriseContinueBtn" style="margin-top:.8rem" onclick="goToSurpriseOrder()">🎁 See it on the mug and order</button>
 </div>
 <button type="button" class="download-btn" style="margin-top:1rem" onclick="surpriseBack()">← Back</button>
 </div>
@@ -1833,11 +1843,22 @@ const HERO_SETTLE_MS = 1000;
 20oz<div class="note" style="margin-top:4px">$24.95</div>
 </div>
 <div class="btn-select" id="preGenSizeSmartBtn" style="padding:.5rem" onclick="pickSmartMug()">
+<button type="button" class="info-i" id="smartMugInfoBtn" aria-label="How the magic mug works" onclick="openSmartMugHow(event)">i</button>
 <img src="art/options/smart-mug.jpg" alt="" style="width:100%;border-radius:6px;background:#fff;margin-bottom:6px"/>
 11oz Smart Mug<div class="note" style="margin-top:4px" data-smart-price>$19.95</div>
 </div>
 </div>
 <button type="button" class="download-btn" style="margin-top:1rem" onclick="mugSizeLockBack()">← Back</button>
+</div>
+</div>
+<div id="smartHowOverlay" class="step-lock-overlay" style="display:none;overflow-y:auto;align-items:flex-start">
+<div class="card" id="smartHowCard" style="max-width:520px;width:100%;margin:2rem auto;position:relative">
+<div class="card-title">✨ How the magic mug works</div>
+<img src="art/options/smart-mug.jpg" alt="The 11oz Smart Mug" style="display:block;width:min(100%,150px);margin:0 auto .4rem;border-radius:8px;background:#fff"/>
+<div class="note" style="text-align:center;margin:0 0 .4rem">11oz Smart Mug · <span data-smart-price>$19.95</span></div>
+<div id="smartHowSteps"></div>
+<button type="button" class="generate-btn" id="smartHowOnBtn" onclick="smartMugHowOn()">🎁 Pick your surprise</button>
+<button type="button" class="download-btn" style="margin-top:.6rem" onclick="closeSmartMugHow()">← Back</button>
 </div>
 </div>
 
@@ -4795,7 +4816,7 @@ function toggleWorkingImage(){
 // Two copies of a number is exactly how the marker rotted in the first place,
 // so they are not trusted to agree: .githooks/pre-commit moves both together
 // and REFUSES the commit if it ever finds them apart.
-const APP_VERSION='V419';
+const APP_VERSION='V420';
 try{ console.log('%cNeedles\u2019 Studio '+APP_VERSION,'color:#29a3ff;font-weight:700'); }catch(e){}
 
 function getDeviceId(){
@@ -13078,6 +13099,7 @@ function renderSurpriseVariants(){
 function refreshSurpriseVisibility(){
   const card=document.getElementById('surpriseCard');
   if(card)card.style.display=(product==='smart mug')?'block':'none';
+  if(product!=='smart mug')releaseSurpriseReveal();
   if(product==='smart mug')renderSurpriseTemplates();
 }
 // The size tile: leave the coffee-mug rail for the smart mug's own.
@@ -13112,16 +13134,65 @@ function pickSurpriseHand(hand){
   document.querySelectorAll('#surpriseHandGrid .btn-select').forEach(b=>b.classList.toggle('selected',b.dataset.hand===hand));
   refreshSurprisePreview();
 }
+// THE HEAT REVEAL (Alyx, 28 Sep 2026). Picking a design plays it on the 3D
+// mug, about twelve seconds, then freezes until the next click:
+//    0s  the mug, all black (cold), setup side facing, standing still
+//    1s  "as the mug absorbs the liquid's heat" blinks under it
+//    2s  it turns on its own, half round, the picture rising out of the black
+//    5s  the picture is full; the words go
+//    7s  it stops on the punchline
+//    9s  "then, as it cools down again" blinks; it fades back to black
+//   11s  all black; the words stop blinking
+//   12s  frozen
+// A click on the mug plays it again; picking another design plays that one.
+// The mug is the right-handed print on the Smart Mug's hot body (a white
+// wall, black rim, inside and handle), cold at heat 0.
+const SURPRISE_REVEAL_T={words1:1000,spin:2000,full:5000,stop:7000,cool:9000,black:11000,frozen:12000};
+let surpriseRevealRun=0, surpriseRevealFile=null;
+function surpriseRevealWords(text,blink){
+  const w=document.getElementById('surpriseRevealWords'); if(!w)return;
+  w.textContent=text||''; w.classList.toggle('smart-blink',!!blink);
+}
+function releaseSurpriseReveal(){
+  surpriseRevealRun++; surpriseRevealFile=null;
+  surpriseRevealWords('',false);
+  const st=document.getElementById('surpriseRevealStage');
+  try{ if(st&&typeof MUG3D!=='undefined'&&MUG3D.mounted()&&MUG3D.host()===st)MUG3D.close(); }catch(e){}
+}
+function playSurpriseReveal(file){
+  const st=document.getElementById('surpriseRevealStage');
+  if(!st||!file||typeof MUG3D==='undefined'||(typeof mug3dFailed!=='undefined'&&mug3dFailed))return;
+  const run=++surpriseRevealRun; surpriseRevealFile=file;
+  surpriseRevealWords('',false);
+  const T=SURPRISE_REVEAL_T, ease=x=>{ x=Math.max(0,Math.min(1,x)); return x*x*(3-2*x); };
+  MUG3D.open(st,Object.assign({},SHELF_MUG_3D,{panoramaUrl:'art/surprise/'+file+'-print.png',panelUrls:[],
+    startAngle:-90,restartOnView:false,turns:0,still:true,heat:0,onClick:()=>playSurpriseReveal(file)}))
+  .then(()=>{
+    if(run!==surpriseRevealRun)return;
+    MUG3D.setSpinning(false); MUG3D.setAngle(-90); MUG3D.setHeat(0);
+    const t0=performance.now();
+    const tick=()=>{
+      if(run!==surpriseRevealRun)return;
+      const t=performance.now()-t0;
+      if(t<T.words1)surpriseRevealWords('',false);
+      else if(t<T.full)surpriseRevealWords("as the mug absorbs the liquid's heat",true);
+      else if(t<T.cool)surpriseRevealWords('',false);
+      else if(t<T.black)surpriseRevealWords('then, as it cools down again',true);
+      else surpriseRevealWords('then, as it cools down again',false);
+      MUG3D.setAngle(-90+180*ease((t-T.spin)/(T.stop-T.spin)));
+      const heat=t<T.cool?ease((t-T.spin)/(T.full-T.spin)):1-ease((t-T.cool)/(T.black-T.cool));
+      MUG3D.setHeat(heat);
+      if(t<T.frozen)requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  })
+  .catch(err=>{ console.error('The heat reveal could not start:',err); const r=document.getElementById('surpriseReveal'); if(r)r.style.display='none'; });
+}
 function refreshSurprisePreview(){
   const url=surprisePrintUrl(), wrap=document.getElementById('surprisePreviewWrap');
   if(!wrap)return;
   wrap.style.display=url?'block':'none';
   if(url)document.getElementById('surprisePreview').src=url;
-  // Picking lands on the preview with its Continue button on screen (the
-  // checklist's landing rule; on a 770px laptop the button sat 3px under
-  // the fold once the COLD -> HOT picture joined the preview). The scroll
-  // helper waits for the pictures to settle before it moves.
-  if(url)smoothScrollToTarget('surprisePreviewWrap','end');
   // The COLD -> HOT picture: the mug cold, then hot with the opener facing
   // the holder (handle on the right), then turned round to the punchline. It
   // shows what the mug does, which the flat print cannot. Every print has one
@@ -13129,12 +13200,18 @@ function refreshSurprisePreview(){
   // (tools/surprise/coldhot.py).
   const ch=document.getElementById('surpriseColdHot'), file=surpriseFile();
   if(ch){ ch.style.display=(url&&file)?'block':'none'; if(url&&file)ch.src='art/surprise/'+file+'-coldhot.jpg'; }
-  // The next thing to do is look and press Continue: land on the preview and
-  // its button, not back at the top of the panel with both below the screen.
-  if(url)smoothScrollToTarget('surprisePreviewWrap','end');
+  // Picking lands on the mug with Continue under it (the checklist's landing
+  // rule). A new design's heat reveal starts once the page has landed, so
+  // the customer sees it from the first second, and the cup's first build
+  // cannot hold the landing up; the hand changing does not replay it.
+  if(!(url&&file)){ releaseSurpriseReveal(); return; }
+  if(file!==surpriseRevealFile){ surpriseRevealFile=file; surpriseRevealRun++;
+    smoothScrollToTarget('surpriseRevealBlock','center',()=>{ if(surpriseRevealFile===file)playSurpriseReveal(file); }); }
+  else smoothScrollToTarget('surpriseRevealBlock','center');
 }
 // Back is the panel before: Coffee Mug Size.
 function surpriseBack(){
+  releaseSurpriseReveal();
   clearAllFocusModes();
   product='mug';
   mugSizeChosenPreGen=false;
@@ -13147,6 +13224,7 @@ function surpriseBack(){
 // Printify's mockup of it on the mug and takes the order.
 function goToSurpriseOrder(){
   const url=surprisePrintUrl(); if(!url)return;
+  releaseSurpriseReveal();
   const orderData={
     placements:{left:url,front:null,right:null},
     deviceId:deviceId,
@@ -13341,6 +13419,34 @@ function releaseShelfMug(){
   shelfMugLive=null;
   try{ if(MUG3D.mounted())MUG3D.close(); }catch(e){}
 }
+// HOW THE MAGIC MUG WORKS: steps 1 to 6, the same wherever they are told --
+// the holiday shelf's How it works, and the (i) on the 11oz Smart Mug button
+// (Alyx, 28 Sep 2026). step4img: the picture for step 4, or '' where the page
+// sets its own turning 3D mug into it.
+function magicMugStep(n,head,line,img,wide){
+  return '<div class="pm-step"><div class="pm-sn">'+n+'</div><div class="pm-sh">'+head+'</div><div class="pm-sl">'+line+'</div>'
+    +(img?'<img class="pm-simg'+(wide?' pm-wide':'')+'" src="art/premades/how/'+img+'.jpg" width="'+(wide?924:455)+'" height="'+(wide?674:330)+'" alt=""/>':'')+'</div>';
+}
+function magicMugStepsHtml(step4img){
+  const step=magicMugStep;
+  return step(1,"Cold, it's a plain black mug.","Nothing to see. Nobody knows what's coming.",'black')
+    +step(2,'Pour in something hot.',"Coffee, tea, cocoa. It doesn't switch on all at once: as the mug warms, the picture slowly rises up through the black.",'emerge',true)
+    +step(3,'The joke appears.',"Once it's hot, the first half of the joke is there in full, facing them.",'hot')
+    +step(4,'They turn it round.','Nobody can leave a joke half told. Curious, they turn the mug, and the punchline is waiting on the other side.',step4img)
+    +step(5,'Let it cool, and it hides again.','As the mug cools it goes back to plain black, ready to surprise the next unsuspecting victim.','black')
+    +step(6,'Left hand or right.','When you order, tell us which hand they hold a mug in, and we print it so the joke starts on the side facing them.','');
+}
+// The (i) on the Smart Mug button: the explanation, for whoever wants it;
+// the button itself goes straight to the designs.
+function openSmartMugHow(e){
+  if(e){ e.stopPropagation(); e.preventDefault(); }
+  const o=document.getElementById('smartHowOverlay'), body=document.getElementById('smartHowSteps'); if(!o||!body)return;
+  body.innerHTML=magicMugStepsHtml('other');
+  o.style.display='flex';
+  o.scrollTop=0;
+}
+function closeSmartMugHow(){ const o=document.getElementById('smartHowOverlay'); if(o)o.style.display='none'; }
+function smartMugHowOn(){ closeSmartMugHow(); pickSmartMug(); }
 function renderPremades(){
   const view=document.getElementById('premadesView'), title=document.getElementById('premadesTitle'); if(!view)return;
   releaseShelfMug();
@@ -13377,16 +13483,10 @@ function renderPremades(){
     // and the rest wait as stills until one is tapped.
     spinShelfMug(view.querySelector('.pm-mug3d'));
   } else if(premadesView==='how'&&set){
-    const step=(n,head,line,img,wide)=>'<div class="pm-step"><div class="pm-sn">'+n+'</div><div class="pm-sh">'+head+'</div><div class="pm-sl">'+line+'</div>'
-      +(img?'<img class="pm-simg'+(wide?' pm-wide':'')+'" src="art/premades/how/'+img+'.jpg" width="'+(wide?924:455)+'" height="'+(wide?674:330)+'" alt=""/>':'')+'</div>';
+    const step=magicMugStep;
     title.textContent='✨ How the magic mug works';
     view.innerHTML=premadesCrumb([PREMADE_MUGS.label,'How it works'])
-      +step(1,"Cold, it's a plain black mug.","Nothing to see. Nobody knows what's coming.",'black')
-      +step(2,'Pour in something hot.',"Coffee, tea, cocoa. It doesn't switch on all at once: as the mug warms, the picture slowly rises up through the black.",'emerge',true)
-      +step(3,'The joke appears.',"Once it's hot, the first half of the joke is there in full, facing them.",'hot')
-      +step(4,'They turn it round.','Nobody can leave a joke half told. Curious, they turn the mug, and the punchline is waiting on the other side.','')
-      +step(5,'Let it cool, and it hides again.','As the mug cools it goes back to plain black, ready to surprise the next unsuspecting victim.','black')
-      +step(6,'Left hand or right.','When you order, tell us which hand they hold a mug in, and we print it so the joke starts on the side facing them.','')
+      +magicMugStepsHtml('')
       +step(7,'Mix and match.','Pick any four mugs for a set, '+$(SMART_MUG_SET_PRICE)+'. The same one four times if you like. Add more to a set at '+$(SMART_MUG_EXTRA_PRICE)+' each, or buy one on its own for '+$(SMART_MUG_PRICE)+'.','')
       +'<button type="button" class="generate-btn" id="premadesShelfBtn" onclick="premadesGo(\'shelf\')">'+PREMADE_MUGS.icon+' See all the mugs and build your set</button>';
     // Step 4 turns the mug round itself: the 3D mug, from step 3's side.
@@ -18968,7 +19068,7 @@ const MUG3D = (function(){
   // is how many full turns a spin makes (0: for ever, the mockup's way);
   // travelled is how far this one has gone, and a finished spin waits for a
   // tap, which starts a new one.
-  let turns=0, travelled=0;
+  let turns=0, travelled=0, clickHandler=null;
   function spinDone(){ return turns>0 && travelled>=turns*360; }
   // HOW IT WORKS, STEP 4 (Alyx, 27 Sep 2026: "It starts off with the same
   // image as number three but then quickly swivels itself around to number 4
@@ -19979,8 +20079,10 @@ const MUG3D = (function(){
     const up=()=>{ dragging=false; };
     host.addEventListener('pointerup',up);
     host.addEventListener('pointercancel',up);
-    // A click that did not drag is the stop/start toggle.
-    host.addEventListener('click',()=>{ setSpinning(!spinning); });
+    // A click that did not drag is the stop/start toggle, unless whoever
+    // opened the cup gave it its own click (the Smart Mug's heat reveal
+    // replays on a click instead).
+    host.addEventListener('click',()=>{ if(clickHandler)clickHandler(); else setSpinning(!spinning); });
 
     document.addEventListener('visibilitychange',onVis);
     if(window.IntersectionObserver){
@@ -20029,6 +20131,22 @@ const MUG3D = (function(){
     resize,
     mounted(){ return mounted; },
     host(){ return host; },
+    // THE MAGIC MUG'S HEAT (Alyx, 28 Sep 2026): 0 is cold -- the whole cup
+    // black, the picture hidden under the coating; 1 is hot -- the bare wall
+    // white and the picture full. Everything that is not the body's white or
+    // a picture is left as it is (the Smart Mug's rim, inside and handle stay
+    // black either way).
+    setHeat(t){
+      if(!mounted||!mugGroup||!baseMats)return false;
+      // Even to the eye: the renderer works in linear light, where half is
+      // already most of the way to full.
+      const k=Math.pow(Math.max(0,Math.min(1,t)),2.2);
+      baseMats.white.color.setRGB(k,k,k);
+      mugGroup.traverse(o=>{ const ms=o.material?(Array.isArray(o.material)?o.material:[o.material]):[];
+        ms.forEach(m=>{ if(m&&m.map&&m.color)m.color.setRGB(k,k,k); }); });
+      needsFrame=true;
+      return true;
+    },
     // Read-only, for the suite. The z-fighting that made the band trade pixels
     // with the body on a phone is invisible to a headless renderer -- it is a
     // depth-precision artifact of the device -- so what can be guarded is the
@@ -20101,6 +20219,7 @@ const MUG3D = (function(){
       startAngle=(opts&&opts.startAngle!=null)?opts.startAngle:null;
       restartOnView=!!(opts&&opts.restartOnView);
       turns=(opts&&opts.turns)||0; travelled=0;
+      clickHandler=(opts&&typeof opts.onClick==='function')?opts.onClick:null;
       holdMs=(opts&&opts.holdMs)||0; holdUntil=0; easeOut=!!(opts&&opts.easeOut); replayOnView=!!(opts&&opts.replayOnView);
       viewRatio=restartOnView?0.6:0.01;
       return loadThree().then(THREE=>{
@@ -20111,8 +20230,9 @@ const MUG3D = (function(){
           mounted=true;
           loop();
         }
-        spinning = !reducedMotion();      // queasy customers get it still
+        spinning = (opts&&opts.still)?false:!reducedMotion();      // queasy customers get it still
         setSpinning(spinning);
+        if(opts&&opts.heat!=null)this.setHeat(opts.heat);
         // The shelf's mug waits for the observer to say it is in view; the
         // mockup's is on screen the moment it opens.
         visible=restartOnView?false:!document.hidden;
