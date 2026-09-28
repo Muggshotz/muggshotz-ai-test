@@ -1,7 +1,7 @@
 # A HOLIDAY MUG LAID INTO THE SET'S FRAME (Alyx, 28 Sep 2026: "you could fix
 # some of these by just adjusting the fade to the exact criteria that you've
 # laid out for bud. And then recopying the frame").
-#   compose-set.py frame                       -> art/surprise/set-frame.png
+#   compose-set.py frame                       -> art/surprise/set-frame.png (from Bud's frame)
 #   compose-set.py <design> <out right.png> <out left.png>
 # <design> is right-handed: the punchline on its LEFT half.
 #
@@ -15,38 +15,42 @@
 #              nowhere else;
 #   frame   -- the autumn frame, on top, sharp, never faded: "frames ... should
 #              always go on top of fade ... they provide an excuse for sharp
-#              edges" (Alyx). It is lifted once from Power's Out, whose frame
-#              is the crispest: its line, and the pumpkins, wheat and leaves in
-#              its corners, cut out by colour into an alpha channel.
+#              edges" (Alyx). Bud painted it alone with a transparent middle
+#              (art/surprise/set-frame-bud.webp, 1836 x 857, 28 Sep 2026); it
+#              is brought to the print's 2475 x 1155 in premultiplied colour so
+#              no dark fringe comes in from its transparent pixels, lightly
+#              sharpened, and laid on last. The scenes run right up to its rail
+#              and under it: the rail is the edge.
 # A scene is only ever scaled, evenly both ways, to fill its place; nothing is
 # cropped but the old border line round the older designs' scenes. The
 # left-handed print is the same with the two scenes swapped.
 import sys, numpy as np
 from PIL import Image, ImageFilter
 W, H = 2475, 1155
-FRAME_SRC = 'art/surprise/thanksgiving-power-out-print.png'
+FRAME_SRC = 'art/surprise/set-frame-bud.webp'
 FRAME_OUT = 'art/surprise/set-frame.png'
-# The frame's line, measured on FRAME_SRC: top 14-19, bottom 1108-1118,
-# left 13-18, right 2457-2462. Inside it:
-IX0, IX1, IY0, IY1 = 19, 2457, 20, 1108
+# Bud's rail at 2475 x 1155, measured: top 16-36, bottom 1075-1098, left 20-38,
+# right 2439-2456. The black and the scenes start halfway under it:
+IX0, IX1, IY0, IY1 = 29, 2448, 26, 1087
 MID0, MID1 = round(W * .41), round(W * .56)            # the solid black
 FADE = round(W * .04)                                  # each scene's fade into it
-PAD = round(W * .014)                                  # a scene stops this far short of the frame's sides,
-                                                       # melting into the black there, so no lettering
-                                                       # ends up under the frame ("Stand back, everybo")
+PAD = round(W * .012)                                  # the rail's own width: a scene is fitted inside
+                                                       # the rail, so no lettering ends up under it
+                                                       # ("Stand back, everybo")
+EDGE = 45                                              # a scene's soft edge where it stops short of the rail
 def ss(t): t = np.clip(t, 0, 1); return t * t * (3 - 2 * t)
 def load(p): return np.asarray(Image.open(p).convert('RGB').resize((W, H), Image.LANCZOS)).astype(float)
 
 if sys.argv[1] == 'frame':
-    T = load(FRAME_SRC)
-    sat = T.max(axis=2) - T.min(axis=2)
-    ys, xs = np.mgrid[0:H, 0:W]
-    line = ((ys >= 11) & (ys <= 22)) | ((ys >= 1105) & (ys <= 1121)) | ((xs >= 10) & (xs <= 21)) | ((xs >= 2454) & (xs <= 2465))
-    corner = np.minimum.reduce([np.hypot(xs - cx, ys - cy) for cx, cy in ((0, 0), (W, 0), (0, H), (W, H))]) < 190
-    m = (sat > 60) & (line | corner)
-    m = np.asarray(Image.fromarray((m * 255).astype(np.uint8)).filter(ImageFilter.MaxFilter(3)).filter(ImageFilter.GaussianBlur(1.0))).astype(float)
-    Image.fromarray(np.dstack([T, m]).astype(np.uint8), 'RGBA').save(FRAME_OUT, optimize=True)
-    print(f'{FRAME_OUT}: {100 * (m > 127).mean():.1f}% of the print is frame')
+    a = np.asarray(Image.open(FRAME_SRC).convert('RGBA')).astype(float)
+    pm = a.copy(); pm[..., :3] *= a[..., 3:] / 255
+    ch = [np.asarray(Image.fromarray(pm[..., i].astype(np.uint8)).resize((W, H), Image.LANCZOS)).astype(float) for i in range(4)]
+    al = np.clip(ch[3], 0, 255); rgb = np.stack(ch[:3], -1)
+    rgb = np.where(al[..., None] > 0, np.clip(rgb * 255 / np.maximum(al[..., None], 1), 0, 255), 0)
+    out = Image.fromarray(np.dstack([rgb, al]).astype(np.uint8), 'RGBA')
+    sharp = out.convert('RGB').filter(ImageFilter.UnsharpMask(radius=1.6, percent=70, threshold=2))
+    Image.merge('RGBA', (*sharp.split(), out.split()[3])).save(FRAME_OUT, optimize=True)
+    print(f'{FRAME_OUT}: {100 * (al > 127).mean():.1f}% of the print is frame')
     sys.exit()
 
 src, out_r, out_l = sys.argv[1:4]
@@ -96,14 +100,21 @@ def compose(left_img, right_img):
     out = np.full((H, W, 3), 255.0)
     out[IY0:IY1, IX0:IX1] = 0
     zh = IY1 - IY0
-    for img, x0, x1, inner in ((left_img, IX0 + PAD, MID0, 'right'), (right_img, MID1, IX1 - PAD, 'left')):
+    for img, x0, x1, inner in ((left_img, IX0, MID0, 'right'), (right_img, MID1, IX1, 'left')):
         im = fit(img, x1 - x0, zh); h, w = im.shape[:2]
         y = IY0 + (zh - h) // 2
         x = x1 - w if inner == 'right' else x0                # the inner edge on the black
         xs = np.arange(x, x + w)
         k = ss((MID0 - xs) / FADE) if inner == 'right' else ss((xs - MID1) / FADE)
-        k = k * (ss((xs - x) / PAD) if inner == 'right' else ss((x + w - 1 - xs) / PAD))
-        out[y:y + h, x:x + w] = im * k[None, :, None]
+        # A scene narrower (or shorter) than its place leaves black between it
+        # and the rail; its edge there melts into that black instead of
+        # stopping hard. Where it reaches the rail, the rail is its edge.
+        if (x1 - x0) - w > 4:
+            k = k * (ss((xs - x) / EDGE) if inner == 'right' else ss((x + w - 1 - xs) / EDGE))
+        kyv = np.ones(h)
+        if zh - h > 4:
+            yy = np.arange(h); kyv = ss(yy / EDGE) * ss((h - 1 - yy) / EDGE)
+        out[y:y + h, x:x + w] = im * k[None, :, None] * kyv[:, None, None]
     a = frame[..., 3:] / 255
     out = frame[..., :3] * a + out * (1 - a)
     return Image.fromarray(np.clip(out, 0, 255).astype(np.uint8))
