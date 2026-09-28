@@ -14,6 +14,11 @@
 #   wrap/<name>.jpg: the right-handed print as a JPEG, the texture the
 #   shelf's turning 3D mug wears; then tools/surprise/mug-stills.cjs <name>
 #   draws mug/<name>.jpg, its still (the page must be served on :8788).
+# A THANKSGIVING mug goes into the set's frame first (Alyx, 28 Sep 2026):
+#   python3 tools/surprise/compose-set.py <painting> <right.png> <left.png>
+# then run this on those two (the right one as the painting, the left as the
+# left-handed painting): the autumn frame on top, white outside it, the two
+# scenes at the fade plan's places.
 # Then one line, {key, label, file}, in the holiday's designs in
 # lib/surprise-sets.js and the same line in needles-studio.html's
 # SURPRISE_SETS (flow-tests/verify-surprise-sets.js holds the two together).
