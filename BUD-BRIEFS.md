@@ -18,12 +18,13 @@ LAYOUT:
 - Solid black gap in the middle between them.
 
 EACH SCENE (so it fills its space exactly, nothing trimmed):
-- Left scene:  from the left edge to 41% of the width
-               (about 0-1015 px at 2475 wide, 0-753 at 1836).
-- Right scene: from 56% of the width to the right edge
-               (about 1386-2475 px at 2475 wide, 1028-1836 at 1836).
+- Left scene:  from the left edge to 42.5% of the width
+               (about 0-1052 px at 2475 wide, 0-780 at 1836).
+- Right scene: from 57.5% of the width to the right edge
+               (about 1423-2475 px at 2475 wide, 1056-1836 at 1836).
+- The black middle is centred: 42.5% to 57.5%.
 - Full height, top to bottom.
-- Each scene about as wide as it is tall (roughly 0.93 : 1).
+- Each scene very slightly taller than it is wide (about 0.96 : 1).
 
 PAINT THE SCENES HARD-EDGED:
 - Each scene a sharp rectangle with SQUARE corners - no rounding.
@@ -35,8 +36,11 @@ PAINT THE SCENES HARD-EDGED:
   every mug.)
 
 KEEP CLEAR:
-- All words and faces at least 5% in from every edge of each scene -
-  the frame's corners and rail cover the outer edges.
+- All lettering (headings and captions) inside the middle 60% of each
+  scene's width, and at least 8% down from the top and up from the
+  bottom - the frame's corner pumpkins cover about a fifth of each
+  scene at the outer corners.
+- Faces at least 5% in from every edge of each scene.
 
 - Claude
 ```

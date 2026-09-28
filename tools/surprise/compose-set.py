@@ -10,8 +10,8 @@
 #              wherever nothing is printed;
 #   black   -- inside the line;
 #   scenes  -- the design's two scenes, each filling its place in the fade plan
-#              (the punchline's to 41% of the width, black 41%-56%, the setup's
-#              from 56%), fading into the black middle over the plan's 4% and
+#              (the punchline's to 42.5% of the width, black 42.5%-57.5%, the
+#              setup's from 57.5%: the black centred opposite the handle), fading into the black middle over the plan's 4% and
 #              nowhere else;
 #   frame   -- the autumn frame, on top, sharp, never faded: "frames ... should
 #              always go on top of fade ... they provide an excuse for sharp
@@ -32,7 +32,7 @@ FRAME_OUT = 'art/surprise/set-frame.png'
 # Bud's rail at 2475 x 1155, measured: top 16-36, bottom 1075-1098, left 20-38,
 # right 2439-2456. The black and the scenes start halfway under it:
 IX0, IX1, IY0, IY1 = 29, 2448, 26, 1087
-MID0, MID1 = round(W * .41), round(W * .56)            # the solid black
+MID0, MID1 = round(W * .425), round(W * .575)          # the solid black, centred on the side opposite the handle
 FADE = round(W * .04)                                  # each scene's fade into it
 PAD = round(W * .012)                                  # the rail's own width: a scene is fitted inside
                                                        # the rail, so no lettering ends up under it
@@ -93,7 +93,16 @@ punch, setup = scene(0, g0), scene(g1, W)
 frame = np.asarray(Image.open(FRAME_OUT).convert('RGBA')).astype(float)
 
 def fit(img, zw, zh):
+    # Fitted whole; but a scene only a hair off its place's shape is enlarged
+    # to fill it instead, trimming at most 7% of its height top and bottom,
+    # rather than leaving a sliver beside the rail to fade (Black Friday's
+    # "a day to reflect" lost its "a" to that fade).
     h, w = img.shape[:2]; s = min(zw / w, zh / h, 1.25)
+    cover = max(zw / w, zh / h)
+    if cover > s and (h * cover - zh) <= 0.07 * zh and (w * cover - zw) <= 0.07 * zw:
+        big = np.asarray(Image.fromarray(img.astype(np.uint8)).resize((round(w * cover), round(h * cover)), Image.LANCZOS)).astype(float)
+        bh, bw = big.shape[:2]; y0 = (bh - zh) // 2; x0 = (bw - zw) // 2
+        return big[y0:y0 + zh, x0:x0 + zw]
     return np.asarray(Image.fromarray(img.astype(np.uint8)).resize((round(w * s), round(h * s)), Image.LANCZOS)).astype(float)
 
 def compose(left_img, right_img):
