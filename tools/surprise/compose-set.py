@@ -2,7 +2,10 @@
 # some of these by just adjusting the fade to the exact criteria that you've
 # laid out for bud. And then recopying the frame").
 #   compose-set.py frame                       -> art/surprise/set-frame.png (from Bud's frame)
-#   compose-set.py <design> <out right.png> <out left.png>
+#   compose-set.py <design> <out right.png> <out left.png> [<captions.json>]
+# captions.json (optional): the words, typeset by the build rather than
+# painted - {"punch": {"top": "...", "bottom": "..."}, "setup": {...}}; each
+# "top" is a heading, each "bottom" a caption; "\n" breaks a line.
 # <design> is right-handed: the punchline on its LEFT half.
 #
 # In layers, bottom to top:
@@ -54,6 +57,8 @@ if sys.argv[1] == 'frame':
     sys.exit()
 
 src, out_r, out_l = sys.argv[1:4]
+import json
+CAPS = json.load(open(sys.argv[4])) if len(sys.argv) > 4 else {}
 S = load(src)
 mx = S.max(axis=2)
 col = np.percentile(mx[int(H * .2):int(H * .8)], 95, axis=0)
@@ -94,18 +99,73 @@ frame = np.asarray(Image.open(FRAME_OUT).convert('RGBA')).astype(float)
 
 def fit(img, zw, zh):
     # Fitted whole; but a scene only a hair off its place's shape is enlarged
-    # to fill it instead, trimming at most 7% of its height top and bottom,
+    # to fill it instead, trimming at most 10% of its height, mostly from the bottom,
     # rather than leaving a sliver beside the rail to fade (Black Friday's
     # "a day to reflect" lost its "a" to that fade).
     h, w = img.shape[:2]; s = min(zw / w, zh / h, 1.25)
+    # A trim of height comes off the bottom (the foreground), keeping the
+    # top whole: that is where the painted clocks and signs are.
     cover = max(zw / w, zh / h)
-    if cover > s and (h * cover - zh) <= 0.07 * zh and (w * cover - zw) <= 0.07 * zw:
+    if cover > s and (h * cover - zh) <= 0.10 * zh and (w * cover - zw) <= 0.07 * zw:
         big = np.asarray(Image.fromarray(img.astype(np.uint8)).resize((round(w * cover), round(h * cover)), Image.LANCZOS)).astype(float)
-        bh, bw = big.shape[:2]; y0 = (bh - zh) // 2; x0 = (bw - zw) // 2
+        bh, bw = big.shape[:2]; y0 = min((bh - zh) // 2, round(0.012 * bh)); x0 = (bw - zw) // 2
         return big[y0:y0 + zh, x0:x0 + zw]
     return np.asarray(Image.fromarray(img.astype(np.uint8)).resize((round(w * s), round(h * s)), Image.LANCZOS)).astype(float)
 
-def compose(left_img, right_img):
+# THE WORDS (Alyx, 28 Sep 2026: Bud "forgot to put the captions on them
+# but ... you could probably do it even better than him"). Typeset in the
+# room the frame leaves clear, measured off set-frame.png: under the top
+# rail between the corner leaves (from y 100), and above the bottom corner
+# pumpkins (to y 1000), and never into a scene's fade into the black middle.
+# Cream letters, a dark brown outline and a soft shadow, sized to fit.
+from PIL import ImageDraw, ImageFont
+FONT = '/usr/share/fonts/truetype/dejavu/DejaVuSerif-Bold.ttf'
+# (x from, x to) by side and band: the bottom corners' pumpkins reach further in
+# than the top corners' leaves. The words may run over a scene's fade into the
+# black - they are drawn after it, so they stay whole.
+ROOM = {('left', 'top'): (190, MID0 - 20), ('left', 'bottom'): (250, MID0 - 20),
+        ('right', 'top'): (MID1 + 20, 2290), ('right', 'bottom'): (MID1 + 20, 2230)}
+TOP_BAND, BOTTOM_BAND = (100, 215), (780, 1000)
+def fit_size(text, x0, x1, y0, y1, biggest):
+    lines = text.split('\n'); d = ImageDraw.Draw(Image.new('L', (8, 8))); size = biggest
+    while size > 20:
+        f = ImageFont.truetype(FONT, size); sw = max(2, size // 11)
+        wd = max(d.textbbox((0, 0), l, font=f, stroke_width=sw)[2] for l in lines)
+        if wd <= x1 - x0 and int(size * 1.18) * len(lines) <= y1 - y0: break
+        size -= 2
+    return size
+BIGGEST = {'top': 92, 'bottom': 60}
+# A heading, or a caption, is the same size on both scenes: the smaller of
+# the two sizes that fit.
+PAIR = {}
+for key, (y0, y1) in (('top', TOP_BAND), ('bottom', BOTTOM_BAND)):
+    got = [fit_size(CAPS[who][key], *ROOM[(side, key)], y0, y1, BIGGEST[key])
+           for who in ('punch', 'setup') for side in ('left', 'right') if CAPS.get(who, {}).get(key)]
+    if got: PAIR[key] = min(got)
+def words(out, caps, side):
+    if not caps: return out
+    im = Image.fromarray(np.clip(out, 0, 255).astype(np.uint8))
+    for key, (y0, y1), biggest in (('top', TOP_BAND, 92), ('bottom', BOTTOM_BAND, 60)):
+        text = caps.get(key)
+        if not text: continue
+        x0, x1 = ROOM[(side, key)]
+        lines = text.split('\n')
+        size = PAIR.get(key, fit_size(text, x0, x1, y0, y1, biggest))
+        f = ImageFont.truetype(FONT, size); sw = max(2, size // 11); lh = int(size * 1.18)
+        top = y0 + ((y1 - y0) - lh * len(lines)) // 2 if key == 'top' else y1 - lh * len(lines)
+        shadow = Image.new('L', im.size, 0); sd = ImageDraw.Draw(shadow)
+        for i, l in enumerate(lines):
+            w = sd.textbbox((0, 0), l, font=f, stroke_width=sw)[2]
+            sd.text(((x0 + x1 - w) // 2 + 3, top + i * lh + 4), l, font=f, fill=255, stroke_width=sw + 3, stroke_fill=255)
+        shadow = shadow.filter(ImageFilter.GaussianBlur(6))
+        im = Image.composite(Image.new('RGB', im.size, (10, 5, 0)), im, shadow.point(lambda v: int(v * 0.75)))
+        d = ImageDraw.Draw(im)
+        for i, l in enumerate(lines):
+            w = d.textbbox((0, 0), l, font=f, stroke_width=sw)[2]
+            d.text(((x0 + x1 - w) // 2, top + i * lh), l, font=f, fill=(247, 236, 210), stroke_width=sw, stroke_fill=(42, 24, 12))
+    return np.asarray(im).astype(float)
+
+def compose(left_img, right_img, left_caps=None, right_caps=None):
     out = np.full((H, W, 3), 255.0)
     out[IY0:IY1, IX0:IX1] = 0
     zh = IY1 - IY0
@@ -124,10 +184,11 @@ def compose(left_img, right_img):
         if zh - h > 4:
             yy = np.arange(h); kyv = ss(yy / EDGE) * ss((h - 1 - yy) / EDGE)
         out[y:y + h, x:x + w] = im * k[None, :, None] * kyv[:, None, None]
+    out = words(out, left_caps, 'left'); out = words(out, right_caps, 'right')
     a = frame[..., 3:] / 255
     out = frame[..., :3] * a + out * (1 - a)
     return Image.fromarray(np.clip(out, 0, 255).astype(np.uint8))
 
-compose(punch, setup).save(out_r, optimize=True)
-compose(setup, punch).save(out_l, optimize=True)
+compose(punch, setup, CAPS.get('punch'), CAPS.get('setup')).save(out_r, optimize=True)
+compose(setup, punch, CAPS.get('setup'), CAPS.get('punch')).save(out_l, optimize=True)
 print(f'{src}: scenes {punch.shape[1]}x{punch.shape[0]} and {setup.shape[1]}x{setup.shape[0]} ({"Bud remake" if white_edged else "older, framed" if framed else "older"})')
