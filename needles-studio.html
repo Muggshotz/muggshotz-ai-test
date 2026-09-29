@@ -1,5 +1,5 @@
 <!-- ============================================================
-     VERSION: V421
+     VERSION: V422
      ============================================================
      THE ONE LINE THAT SAYS WHICH BUILD YOU ARE LOOKING AT.
 
@@ -724,10 +724,14 @@ html.order-page-open,html.order-page-open body{overflow:hidden}
 .info-i:hover{background:#e8f2ff}
 @keyframes smartBlink{0%,100%{opacity:1}50%{opacity:.25}}
 .smart-blink{animation:smartBlink 1.2s ease-in-out infinite}
+@keyframes smartBlinkSoft{0%,100%{opacity:1}50%{opacity:.55}}
+#surpriseRevealWords.smart-blink,#smartHowRevealWords.smart-blink{animation-name:smartBlinkSoft}
 #surpriseReveal,#smartHowReveal{position:relative;width:100%;aspect-ratio:4/3;background:#f2f4f7;border-radius:10px;overflow:hidden;margin-bottom:.8rem;cursor:pointer}
 #surpriseReveal>.pm-mug3d-stage,#smartHowReveal>.pm-mug3d-stage{position:absolute;inset:0;touch-action:pan-y}
 #surpriseReveal canvas,#smartHowReveal canvas{display:block;width:100%;height:100%}
-#surpriseRevealWords,#smartHowRevealWords{position:absolute;left:0;right:0;bottom:14px;text-align:center;color:#fff;font-size:17px;font-weight:700;letter-spacing:.3px;text-shadow:0 1px 3px #000,0 0 12px rgba(0,0,0,.8);pointer-events:none;padding:0 12px}
+#surpriseRevealWords,#smartHowRevealWords{position:absolute;left:0;right:0;margin:0 auto;width:fit-content;text-wrap:balance;bottom:12px;max-width:calc(100% - 24px);box-sizing:border-box;text-align:center;color:#fff;font-size:18px;font-weight:700;line-height:1.3;letter-spacing:.2px;background:rgba(10,14,22,.86);border-radius:10px;padding:8px 16px;pointer-events:none}
+#surpriseRevealWords:empty,#smartHowRevealWords:empty{display:none}
+@media(max-width:480px){#surpriseRevealWords,#smartHowRevealWords{font-size:14px;padding:5px 10px;bottom:8px;max-width:calc(100% - 16px)}}
 #premadesCard .pm-how3d{width:min(100%,420px);margin:1.3rem auto 0}
 #premadesCard .pm-spin-cue{position:absolute;left:50%;bottom:10px;transform:translateX(-50%);background:rgba(11,16,24,.82);color:#cfe3ff;font-size:13px;font-weight:600;padding:5px 12px;border-radius:14px;pointer-events:none;white-space:nowrap}
 #premadesCard .pm-mug3d.live.spinning .pm-spin-cue,#premadesView.no3d .pm-spin-cue{display:none}
@@ -4817,7 +4821,7 @@ function toggleWorkingImage(){
 // Two copies of a number is exactly how the marker rotted in the first place,
 // so they are not trusted to agree: .githooks/pre-commit moves both together
 // and REFUSES the commit if it ever finds them apart.
-const APP_VERSION='V421';
+const APP_VERSION='V422';
 try{ console.log('%cNeedles\u2019 Studio '+APP_VERSION,'color:#29a3ff;font-weight:700'); }catch(e){}
 
 function getDeviceId(){
@@ -13135,20 +13139,24 @@ function pickSurpriseHand(hand){
   document.querySelectorAll('#surpriseHandGrid .btn-select').forEach(b=>b.classList.toggle('selected',b.dataset.hand===hand));
   refreshSurprisePreview();
 }
-// THE HEAT REVEAL (Alyx, 28 Sep 2026). Picking a design plays it on the 3D
-// mug, about twelve seconds, then freezes until the next click:
-//    0s  the mug, all black (cold), setup side facing, standing still
-//    1s  "as the mug absorbs the liquid's heat" blinks under it
-//    2s  it turns on its own, half round, the picture rising out of the black
-//    5s  the picture is full; the words go
-//    7s  it stops on the punchline
-//    9s  "then, as it cools down again" blinks; it fades back to black
-//   11s  all black; the words stop blinking
-//   12s  frozen
+// THE HEAT REVEAL (Alyx, 28 Sep 2026; retimed 29 Sep: "It fades in to the
+// picture and then give you time to read the picture. Then begin to swivel
+// ... slowly ... stops on the punchline and give you time to read the
+// punchline then it begins to fade to black"). Picking a design plays it on
+// the 3D mug, about 22 seconds, then freezes until the next click:
+//    0s    the mug, all black (cold), setup side facing, standing still
+//    1s    "as the mug absorbs the liquid's heat" blinks under it
+//    1.5s  the setup rises out of the black, the mug still
+//    4.5s  the setup is full; the words go; time to read it
+//    8s    it turns, slowly, half round
+//   14s    it stops on the punchline; time to read it
+//   18s    "then, as it cools down again" blinks; it fades back to black
+//   21s    all black; the words stop blinking
+//   22s    frozen
 // A click on the mug plays it again; picking another design plays that one.
 // The mug is the right-handed print on the Smart Mug's hot body (a white
 // wall, black rim, inside and handle), cold at heat 0.
-const SURPRISE_REVEAL_T={words1:1000,spin:2000,full:5000,stop:7000,cool:9000,black:11000,frozen:12000};
+const SURPRISE_REVEAL_T={words1:1000,heat:1500,full:4500,spin:8000,stop:14000,cool:18000,black:21000,frozen:22000};
 let surpriseRevealRun=0, surpriseRevealFile=null;
 // Where it plays (Alyx, 28 Sep 2026: "this How it Works panel is the absolute
 // best panel to do the three D carousel"): on the designs, the design picked;
@@ -13194,7 +13202,7 @@ function playSurpriseReveal(file,spot){
       else if(t<T.black)words('then, as it cools down again',true);
       else words('then, as it cools down again',false);
       MUG3D.setAngle(-90+180*ease((t-T.spin)/(T.stop-T.spin)));
-      const heat=t<T.cool?ease((t-T.spin)/(T.full-T.spin)):1-ease((t-T.cool)/(T.black-T.cool));
+      const heat=t<T.cool?ease((t-T.heat)/(T.full-T.heat)):1-ease((t-T.cool)/(T.black-T.cool));
       MUG3D.setHeat(heat);
       if(t<T.frozen)requestAnimationFrame(tick);
     };
