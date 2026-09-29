@@ -1,5 +1,5 @@
 <!-- ============================================================
-     VERSION: V426
+     VERSION: V427
      ============================================================
      THE ONE LINE THAT SAYS WHICH BUILD YOU ARE LOOKING AT.
 
@@ -733,6 +733,7 @@ html.order-page-open,html.order-page-open body{overflow:hidden}
 @keyframes smartBlinkSoft{0%,100%{opacity:1}50%{opacity:.55}}
 #surpriseRevealWords.smart-blink,#smartHowRevealWords.smart-blink{animation-name:smartBlinkSoft}
 #surpriseReveal,#smartHowReveal{position:relative;width:100%;aspect-ratio:4/3;background:#f2f4f7;border-radius:10px;overflow:hidden;margin-bottom:.8rem;cursor:pointer}
+#surpriseReveal{aspect-ratio:16/10}   /* the frame and hand buttons, the row and "This is the one" under it, all on a laptop screen */
 #surpriseReveal>.pm-mug3d-stage,#smartHowReveal>.pm-mug3d-stage{position:absolute;inset:0;touch-action:pan-y}
 #surpriseReveal canvas,#smartHowReveal canvas{display:block;width:100%;height:100%}
 #surpriseRevealWords,#smartHowRevealWords{position:absolute;left:0;right:0;margin:0 auto;width:fit-content;text-wrap:balance;bottom:12px;max-width:calc(100% - 24px);box-sizing:border-box;text-align:center;color:#fff;font-size:18px;font-weight:700;line-height:1.3;letter-spacing:.2px;background:rgba(10,14,22,.86);border-radius:10px;padding:8px 16px;pointer-events:none}
@@ -4847,7 +4848,7 @@ function toggleWorkingImage(){
 // Two copies of a number is exactly how the marker rotted in the first place,
 // so they are not trusted to agree: .githooks/pre-commit moves both together
 // and REFUSES the commit if it ever finds them apart.
-const APP_VERSION='V426';
+const APP_VERSION='V427';
 try{ console.log('%cNeedles\u2019 Studio '+APP_VERSION,'color:#29a3ff;font-weight:700'); }catch(e){}
 
 function getDeviceId(){
@@ -8523,7 +8524,7 @@ function refreshMugSizeCardVisibility(){
   // The Smart Mug is on this panel, and its (i) and its designs both play the
   // heat reveal on the 3D mug: fetch the 3D engine and the (i)'s picture now,
   // so the first play starts at once instead of waiting on the download.
-  if(show&&typeof MUG3D!=='undefined'){ MUG3D.warm(); if(!window.__howRevealWarm){ window.__howRevealWarm=new Image(); window.__howRevealWarm.src='art/surprise/reveal/'+HOW_MUG_FILE+'.jpg'; } }
+  if(show&&typeof MUG3D!=='undefined'){ MUG3D.warm(); if(!window.__howRevealWarm){ window.__howRevealWarm=new Image(); window.__howRevealWarm.src='art/surprise/reveal/'+SMART_HOW_FILE+'.jpg'; } }
   document.body.classList.toggle('step-locked',show || (product==='mug' && mugSizeChosenPreGen && !mugColorFinishedPreGen));
 }
 
@@ -13039,9 +13040,13 @@ function refreshPlacematVisibility(){
 // (the print rolled by half its width) so the surprise faces the person
 // holding it.
 const SMART_MUG_PRICE=19.95; // Alyx's price, before shipping: wholesale 9.06 + $10, customer total under $30
+function DECAL_FRAMES(f){ return {none:{label:'No frame',file:f},one:{label:'One frame',file:f+'-one'},two:{label:'A frame each side',file:f+'-two'}}; }
 const SURPRISE_TEMPLATES={
-  'proposal':{label:'Will You Marry Me?',file:'proposal'},
-  'valentine':{label:'Will You Be My Valentine?',file:'valentine'},
+  // DECALS (Bud, 29 Sep 2026): the setup and punchline each a decal on white,
+  // laid out by tools/surprise/decal-mug.py in three frames the customer
+  // switches between on the mug, No frame first (the default, tentatively).
+  'proposal':{label:'Will You Marry Me?',file:'proposal',frames:DECAL_FRAMES('proposal')},
+  'valentine':{label:'Will You Be My Valentine?',file:'valentine',frames:DECAL_FRAMES('valentine')},
   'congratulations':{label:'Congratulations',file:'congratulations'},
   'apology':{label:'The Apology',file:'apology'},
   'appeal':{label:'The Appeal',file:'appeal'},
@@ -13122,6 +13127,7 @@ function renderSurpriseFrames(){
   const fr=surpriseFrames(surpriseDesign());
   if(fr&&!fr[selectedSurpriseFrame])selectedSurpriseFrame=Object.keys(fr)[0];
   wrap.style.display=fr?'block':'none';
+  grid.className=fr&&Object.keys(fr).length===3?'grid3':'grid2';
   grid.innerHTML=fr?Object.entries(fr).map(([k,x])=>'<div class="btn-select'+(k===selectedSurpriseFrame?' selected':'')+'" data-frame="'+k+'" onclick="pickSurpriseFrame(\''+k+'\')" style="padding:.5rem;font-size:12px">'+x.label+'</div>').join(''):'';
 }
 function pickSurpriseFrame(key){
@@ -13203,7 +13209,7 @@ function surpriseBrewItems(){
 }
 function renderSurpriseBrew(){
   const row=document.getElementById('surpriseBrewRow'); if(!row)return;
-  const cur=surpriseFile();
+  const cur=(surpriseDesign()||{}).file;   // the design, whatever frame it is in
   row.innerHTML=surpriseBrewItems().map(x=>'<div class="brew-item'+(x.file===cur?' on':'')+'" role="button" tabindex="0" data-file="'+x.file+'"'
     +' onclick="brewPick(\''+x.key+'\','+(x.variant?'\''+x.variant+'\'':'null')+')" onkeydown="if(event.key===\'Enter\')this.click()">'
     +'<img src="art/options/surprise-'+x.tile+'.jpg" alt="" loading="lazy"/>'+x.label+'</div>').join('');
@@ -13249,7 +13255,7 @@ const SURPRISE_REVEAL_T={words1:1000,heat:1500,full:4500,spin:8000,stop:14000,co
 let surpriseRevealRun=0, surpriseRevealFile=null;
 // Where it plays (Alyx, 28 Sep 2026: "this How it Works panel is the absolute
 // best panel to do the three D carousel"): on the designs, the design picked;
-// on How the magic mug works, HOW_MUG_FILE. One 3D mug at a time, so the two
+// on How the magic mug works, SMART_HOW_FILE. One 3D mug at a time, so the two
 // share the run count; only the designs' play is surpriseRevealFile.
 const REVEAL_SPOTS={design:{stage:'surpriseRevealStage',words:'surpriseRevealWords',box:'surpriseReveal'},
   how:{stage:'smartHowRevealStage',words:'smartHowRevealWords',box:'smartHowReveal'}};
@@ -13535,6 +13541,9 @@ const SHELF_MUG_3D={sizeLabel:'11oz',styleName:'Color Pop',colorHex:'#1c1c1c',st
 // it holds on step 3's side, swivels half round in about a second, stops on
 // the punchline, and plays again whenever it comes back into view.
 const HOW_MUG_FILE='golden-brown';
+// The Smart Mug's demonstration (How the magic mug works): a decal mug
+// (Alyx, 29 Sep 2026: "swap this out for one of the new Decal designs").
+const SMART_HOW_FILE='proposal';
 const HOW_MUG_3D=Object.assign({},SHELF_MUG_3D,{spinStep:4,turns:0.5,easeOut:true,holdMs:900,replayOnView:true});
 let shelfMugLive=null;
 function shelfMugHtml(x,id,i){
@@ -13590,7 +13599,7 @@ function openSmartMugHow(e){
   o.scrollTop=0;
   // The 3D mug at the top plays the whole thing, cold to hot to cold: steps
   // 1 to 5 in motion, so those steps are words only.
-  playSurpriseReveal(HOW_MUG_FILE,'how');
+  playSurpriseReveal(SMART_HOW_FILE,'how');
 }
 function closeSmartMugHow(){ releaseHowReveal(); const o=document.getElementById('smartHowOverlay'); if(o)o.style.display='none'; }
 function smartMugHowOn(){ closeSmartMugHow(); pickSmartMug(); }

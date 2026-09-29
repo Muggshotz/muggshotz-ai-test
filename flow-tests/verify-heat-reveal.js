@@ -80,7 +80,7 @@ async function run(viewport, tag) {
   const band = await page.evaluate(() => { const c = getComputedStyle(document.getElementById('smartHowRevealWords')); return { bg: c.backgroundColor, color: c.color }; });
   ok('the words are white on a dark band', /rgba?\(10, 14, 22/.test(band.bg) && band.color === 'rgb(255, 255, 255)', JSON.stringify(band));
   ok('it wears the light picture, not the full print', await page.evaluate(() =>
-    performance.getEntriesByType('resource').some((e) => /art\/surprise\/reveal\/golden-brown\.jpg/.test(e.name))));
+    performance.getEntriesByType('resource').some((e) => /art\/surprise\/reveal\/proposal\.jpg/.test(e.name))));
   const replay = await page.evaluate(async () => {
     const t0 = performance.now(); document.getElementById('smartHowRevealStage').click();
     const w = document.getElementById('smartHowRevealWords');
@@ -113,7 +113,7 @@ async function run(viewport, tag) {
     const m = r('surpriseReveal'), h = r('surpriseHandGrid'), b = r('surpriseBrew'), c = r('surpriseContinueBtn');
     return { order: m.bottom <= h.top + 1 && h.bottom <= b.top + 1 && b.bottom <= c.top + 1, frameShown: getComputedStyle(document.getElementById('surpriseFrameWrap')).display !== 'none',
       btn: document.getElementById('surpriseContinueBtn').textContent, head: document.querySelector('#surpriseBrew .brew-h').textContent, onscreen: m.top >= -2 && c.bottom <= innerHeight + 2 }; });
-  ok('under the mug: the hand buttons, "What else is brewing?", "This is the one"; no frame buttons on a design with one frame', lay.order && !lay.frameShown && /This is the one/.test(lay.btn) && lay.head === 'What else is brewing?', JSON.stringify(lay));
+  ok('under the mug: the frame buttons, the hand buttons, "What else is brewing?", "This is the one"', lay.order && lay.frameShown && /This is the one/.test(lay.btn) && lay.head === 'What else is brewing?', JSON.stringify(lay));
   ok('the mug and "This is the one" are both on screen', lay.onscreen, JSON.stringify(lay));
 
   // The hand: the mug changes to that hand's print and plays it again.
@@ -124,21 +124,21 @@ async function run(viewport, tag) {
   const hand = await page.evaluate((r) => ({ replayed: surpriseRevealRun > r, url: surprisePrintUrl() }), r0);
   ok('the left-hand button puts the left-handed print on the mug and plays it again, and that print is the one ordered', hand.replayed && /proposal-print-left\.png$/.test(hand.url), JSON.stringify(hand));
 
-  // The frame, as a prop: a design framed two ways shows the two buttons; the
-  // one chosen is on the mug and is the print ordered.
+  // The frame, as a prop (the decal mugs, 29 Sep 2026): No frame, One frame,
+  // A frame each side, No frame the default; the one chosen is on the mug and
+  // is the print ordered.
   const fr = await page.evaluate(async () => {
-    SURPRISE_TEMPLATES.proposal.frames = { one: { label: 'One frame', file: 'proposal' }, two: { label: 'A frame each side', file: 'valentine' } };
-    refreshSurprisePreview();
     const btns = [...document.querySelectorAll('#surpriseFrameGrid .btn-select')].map((b) => b.textContent + (b.classList.contains('selected') ? '*' : ''));
     pickSurpriseFrame('two');
     await new Promise((r) => setTimeout(r, 2500));
-    const out = { btns, shown: getComputedStyle(document.getElementById('surpriseFrameWrap')).display !== 'none', file: surpriseFile(), url: surprisePrintUrl(),
-      pic: performance.getEntriesByType('resource').some((e) => /reveal\/valentine-left\.jpg/.test(e.name)) };
-    delete SURPRISE_TEMPLATES.proposal.frames; selectedSurpriseFrame = null; refreshSurprisePreview();
+    const out = { btns, file: surpriseFile(), url: surprisePrintUrl(),
+      pic: performance.getEntriesByType('resource').some((e) => /reveal\/proposal-two-left\.jpg/.test(e.name)) };
+    out.outlined = [...document.querySelectorAll('#surpriseBrewRow .brew-item.on')].map((i) => i.dataset.file).join();
+    pickSurpriseFrame('none');
     return out;
   });
-  ok('frame buttons appear for a design framed two ways; the chosen frame is on the mug and is the print ordered',
-    fr.shown && fr.btns.length === 2 && /\*$/.test(fr.btns[0]) && fr.file === 'valentine' && /valentine-print-left\.png$/.test(fr.url) && fr.pic, JSON.stringify(fr));
+  ok('three frame buttons, No frame the default; the frame chosen is on the mug and is the print ordered',
+    fr.btns.join('|') === 'No frame*|One frame|A frame each side' && fr.outlined === 'proposal' && fr.file === 'proposal-two' && /proposal-two-print-left\.png$/.test(fr.url) && fr.pic, JSON.stringify(fr));
   await page.evaluate(() => pickSurpriseHand('right')); await T(page, 1500);
 
   // What else is brewing?
