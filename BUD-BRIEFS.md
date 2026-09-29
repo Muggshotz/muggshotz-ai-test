@@ -48,6 +48,60 @@ KEEP CLEAR:
 - Claude
 ```
 
+## Magic mug decals (agreed 29 Sep 2026)
+
+Alyx and Bud's change of approach: each side of the mug is a decal on white,
+not a scene painted to the edges. The hot mug is white wherever nothing is
+printed, so a decal on white has no edge to fade or frame. Samples Bud made
+(pictures of mugs, for reference only): art/surprise/decal-samples/.
+
+```
+MAGIC MUG DECALS - HOW TO PAINT THEM (for every mug from now on)
+
+Each mug has TWO decals: the SETUP (the side the holder sees first) and
+the PUNCHLINE (the other side). Paint each one ON ITS OWN, as a
+separate file.
+
+EACH DECAL:
+- Size: about 1000 px wide x 1050 px tall (a touch taller than wide).
+  Bigger is fine if it keeps that shape.
+- Background: TRANSPARENT (best) or PURE WHITE #FFFFFF. Not cream,
+  not off-white, not light grey - any tint prints as a faint box
+  round the decal on the hot mug.
+- Keep the main picture and all the words inside the middle
+  880 x 935 px. Leaves, petals, ribbon and the like may spill out
+  past that towards the edge of the file, but nothing important.
+- Shadows: soft and tight under the objects only. No haze or glow
+  spreading out round the whole decal.
+- No frame, no border, no box round it.
+- Words: part of the decal, painted as in the samples. Spell them
+  exactly as given.
+
+Claude places the two decals on the mug (2475 x 1155 print, setup on
+one half, punchline on the other), and adds the frame if the customer
+picks one.
+
+- Claude
+```
+
+```
+VALENTINE FRAME - optional frame for the Valentine decal mugs
+
+2475 x 1155 (or the same shape smaller, e.g. 1836 x 857), TRANSPARENT
+background, painted alone like the autumn frame.
+- A thin rail all round, about 20 px wide at 2475, running 16-36 px in
+  from each edge.
+- Decoration only in the four corners, within about 400 px of each
+  corner: gold filigree with deep red roses and small hearts, in the
+  style of the decals.
+- Everything inside the rail fully transparent.
+- Optional: one small matching ornament hanging from the middle of the
+  top rail and one rising from the middle of the bottom rail, painted
+  separately on transparent, like the autumn vines.
+
+- Claude
+```
+
 ## Thanksgiving magic mugs
 
 ### 10. Black Friday - Alyx calls it "thankfully" (agreed 28 Sep 2026)
