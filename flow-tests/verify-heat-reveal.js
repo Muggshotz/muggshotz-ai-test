@@ -8,11 +8,15 @@
 //     the fade back to black, still by 22s. The words sit on a dark band. A
 //     click replays it at once. Its Back returns to the question; its button
 //     goes on to the designs, whose Back returns to it.
-//   - On the designs, a tap puts the design on the large mug, hot and turning,
-//     no demonstration; the frame buttons (for a design framed more than one
+//   - On the designs, a tap plays the heat-up on the large mug (Alyx, 29 Sep
+//     2026: "pause, fade in, spin to the other side, and freeze as they fade
+//     back out to cool"); the frame buttons (for a design framed more than one
 //     way) and the hand buttons under it change the mug as it turns, and the
 //     print ordered is the one showing. Under them, "What else is brewing?",
 //     then "This is the one". Skip's designs Back returns to the question.
+//     Changing the hand or frame plays it again with the new choice.
+//   - A flashing "New" sits at the bottom of both Magic Mug squares: the
+//     Smart Mug on Coffee Mug Size, and Magic Mugs on the Pre-mades.
 const { launch, openStudio, dismissAlerts } = require('./harness');
 const T = (p, ms) => p.waitForTimeout(ms);
 const GL = ['--use-gl=swiftshader', '--enable-unsafe-swiftshader'];
@@ -26,6 +30,15 @@ async function run(viewport, tag) {
   await openStudio(page); await dismissAlerts(page);
   await page.evaluate(() => { product = 'mug'; refreshMugSizeCardVisibility(); });
   await T(page, 400);
+
+  // The flashing "New" on both Magic Mug squares.
+  const nw = await page.evaluate(() => { const b = document.querySelector('#preGenSizeSmartBtn .new-flash');
+    premadesView = 'products'; renderPremades();
+    const m = document.querySelector('#premadesProducts .pm-prod[data-product="mugs"] .new-flash');
+    const f = (el) => el && { text: el.textContent, anim: getComputedStyle(el).animationName, last: el === el.parentElement.lastElementChild };
+    return { smart: f(b), mugs: f(m) }; });
+  ok('a flashing "New" at the bottom of the Smart Mug square and of the Pre-mades Magic Mugs square',
+    nw.smart && nw.smart.text === 'New' && nw.smart.anim === 'newFlash' && nw.smart.last && nw.mugs && nw.mugs.text === 'New' && nw.mugs.anim === 'newFlash' && nw.mugs.last, JSON.stringify(nw));
 
   // The question.
   ok('the (i) is gone from the Smart Mug square', await page.evaluate(() => !document.getElementById('smartMugInfoBtn')));
@@ -92,12 +105,10 @@ async function run(viewport, tag) {
   ok('"Skip the demonstration" goes straight to the designs', await page.evaluate(() => product === 'smart mug' && getComputedStyle(document.getElementById('surpriseCard')).display === 'block'
     && getComputedStyle(document.getElementById('smartDemoOverlay')).display === 'none'));
   await page.evaluate(() => { MUG3D.onSpin((d) => { window.__deg = d; }); pickSurprise('proposal'); });
-  await page.waitForFunction(() => MUG3D.mounted() && MUG3D.host() === document.getElementById('surpriseRevealStage') && window.__deg != null, null, { timeout: 20000 });
-  await T(page, 1500);
-  const a1 = await page.evaluate(() => window.__deg); await T(page, 1200);
-  const mug = await page.evaluate(() => ({ deg: window.__deg, words: document.getElementById('surpriseRevealWords').textContent, zoom: MUG3D.zoom(),
+  await page.waitForFunction(() => /absorbs the liquid's heat/.test(document.getElementById('surpriseRevealWords').textContent), null, { timeout: 20000 });
+  const mug = await page.evaluate(() => ({ host: MUG3D.mounted() && MUG3D.host() === document.getElementById('surpriseRevealStage'), deg: window.__deg, zoom: MUG3D.zoom(),
     pic: performance.getEntriesByType('resource').some((e) => /art\/surprise\/reveal\/proposal\.jpg/.test(e.name)) }));
-  ok('a tapped design goes onto the large mug, hot and turning, no demonstration', mug.deg !== a1 && !mug.words && mug.zoom > 1.3 && mug.pic, JSON.stringify({ a1, ...mug }));
+  ok('a tapped design plays the heat-up on the large mug: the heat words, the setup facing', mug.host && mug.deg === -90 && mug.zoom > 1.3 && mug.pic, JSON.stringify(mug));
   const lay = await page.evaluate(() => { const r = (id) => document.getElementById(id).getBoundingClientRect();
     const m = r('surpriseReveal'), h = r('surpriseHandGrid'), b = r('surpriseBrew'), c = r('surpriseContinueBtn');
     return { order: m.bottom <= h.top + 1 && h.bottom <= b.top + 1 && b.bottom <= c.top + 1, frameShown: getComputedStyle(document.getElementById('surpriseFrameWrap')).display !== 'none',
@@ -105,13 +116,13 @@ async function run(viewport, tag) {
   ok('under the mug: the hand buttons, "What else is brewing?", "This is the one"; no frame buttons on a design with one frame', lay.order && !lay.frameShown && /This is the one/.test(lay.btn) && lay.head === 'What else is brewing?', JSON.stringify(lay));
   ok('the mug and "This is the one" are both on screen', lay.onscreen, JSON.stringify(lay));
 
-  // The hand: the mug changes to that hand's print, still turning.
+  // The hand: the mug changes to that hand's print and plays it again.
+  const r0 = await page.evaluate(() => surpriseRevealRun);
   await page.evaluate(() => pickSurpriseHand('left'));
   await page.waitForFunction(() => performance.getEntriesByType('resource').some((e) => /reveal\/proposal-left\.jpg/.test(e.name)), null, { timeout: 15000 });
-  await T(page, 800);
-  const b1 = await page.evaluate(() => window.__deg); await T(page, 900);
-  const hand = await page.evaluate(() => ({ deg: window.__deg, url: surprisePrintUrl() }));
-  ok('the left-hand button puts the left-handed print on the mug, still turning, and that print is the one ordered', hand.deg !== b1 && /proposal-print-left\.png$/.test(hand.url), JSON.stringify({ b1, ...hand }));
+  await page.waitForFunction(() => /absorbs/.test(document.getElementById('surpriseRevealWords').textContent), null, { timeout: 15000 });
+  const hand = await page.evaluate((r) => ({ replayed: surpriseRevealRun > r, url: surprisePrintUrl() }), r0);
+  ok('the left-hand button puts the left-handed print on the mug and plays it again, and that print is the one ordered', hand.replayed && /proposal-print-left\.png$/.test(hand.url), JSON.stringify(hand));
 
   // The frame, as a prop: a design framed two ways shows the two buttons; the
   // one chosen is on the mug and is the print ordered.

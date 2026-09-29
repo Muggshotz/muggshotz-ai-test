@@ -1,5 +1,5 @@
 <!-- ============================================================
-     VERSION: V425
+     VERSION: V426
      ============================================================
      THE ONE LINE THAT SAYS WHICH BUILD YOU ARE LOOKING AT.
 
@@ -724,6 +724,12 @@ html.order-page-open,html.order-page-open body{overflow:hidden}
 .info-i:hover{background:#e8f2ff}
 @keyframes smartBlink{0%,100%{opacity:1}50%{opacity:.25}}
 .smart-blink{animation:smartBlink 1.2s ease-in-out infinite}
+/* NEW (Alyx, 29 Sep 2026: a flashing "New" at the bottom of both Magic Mug
+   squares, "It doesn't have to be awkwardly big, but it should catch the eye"). */
+.new-flash{display:block;width:fit-content;margin:6px auto 0;padding:2px 10px;border-radius:999px;background:#e0245e;color:#fff;font-size:11px;font-weight:800;letter-spacing:.14em;line-height:1.5;text-transform:uppercase;animation:newFlash 1.1s ease-in-out infinite}
+@keyframes newFlash{0%,100%{opacity:1;box-shadow:0 0 8px rgba(224,36,94,.8)}50%{opacity:.35;box-shadow:0 0 0 rgba(224,36,94,0)}}
+@media (prefers-reduced-motion:reduce){.new-flash{animation:none}}
+.pm-prod .new-flash{margin:4px 0 0}
 @keyframes smartBlinkSoft{0%,100%{opacity:1}50%{opacity:.55}}
 #surpriseRevealWords.smart-blink,#smartHowRevealWords.smart-blink{animation-name:smartBlinkSoft}
 #surpriseReveal,#smartHowReveal{position:relative;width:100%;aspect-ratio:4/3;background:#f2f4f7;border-radius:10px;overflow:hidden;margin-bottom:.8rem;cursor:pointer}
@@ -1858,6 +1864,7 @@ const HERO_SETTLE_MS = 1000;
 <div class="btn-select" id="preGenSizeSmartBtn" style="padding:.5rem" onclick="askSmartDemo()">
 <img src="art/options/smart-mug.jpg" alt="" style="width:100%;border-radius:6px;background:#fff;margin-bottom:6px"/>
 11oz Smart Mug<div class="note" style="margin-top:4px" data-smart-price>$19.95</div>
+<span class="new-flash">New</span>
 </div>
 </div>
 <button type="button" class="download-btn" style="margin-top:1rem" onclick="mugSizeLockBack()">← Back</button>
@@ -4840,7 +4847,7 @@ function toggleWorkingImage(){
 // Two copies of a number is exactly how the marker rotted in the first place,
 // so they are not trusted to agree: .githooks/pre-commit moves both together
 // and REFUSES the commit if it ever finds them apart.
-const APP_VERSION='V425';
+const APP_VERSION='V426';
 try{ console.log('%cNeedles\u2019 Studio '+APP_VERSION,'color:#29a3ff;font-weight:700'); }catch(e){}
 
 function getDeviceId(){
@@ -13265,8 +13272,8 @@ function releaseHowReveal(){
 // used to open the cup again, reloading and repainting the picture first
 // (Alyx, 29 Sep 2026: "it takes about 7 seconds before it even starts").
 const revealPainted={};
-function playSurpriseReveal(file,spot){
-  spot=spot||'design'; const S=REVEAL_SPOTS[spot];
+function playSurpriseReveal(file,spot,url){
+  spot=spot||'design'; const S=REVEAL_SPOTS[spot]; url=url||'art/surprise/reveal/'+file+'.jpg';
   const st=document.getElementById(S.stage);
   if(!st||!file||typeof MUG3D==='undefined'||(typeof mug3dFailed!=='undefined'&&mug3dFailed))return;
   const run=++surpriseRevealRun; if(spot==='design')surpriseRevealFile=file;
@@ -13292,15 +13299,15 @@ function playSurpriseReveal(file,spot){
     };
     requestAnimationFrame(tick);
   };
-  if(MUG3D.mounted()&&MUG3D.host()===st&&revealPainted[S.stage]===file){ clock(); return; }
+  if(MUG3D.mounted()&&MUG3D.host()===st&&revealPainted[S.stage]===url){ clock(); return; }
   revealPainted[S.stage]=null;
   // The picture is reveal/<file>.jpg, the print at two thirds size (about a
   // quarter of a megabyte) rather than the 2475 x 1155 print itself (two to
   // three and a half): the first play waited on that download, sometimes for
   // most of half a minute (Alyx, 29 Sep 2026). Made by tools/surprise/reveal-jpgs.py.
-  MUG3D.open(st,Object.assign({},SHELF_MUG_3D,{panoramaUrl:'art/surprise/reveal/'+file+'.jpg',panelUrls:[],
-    startAngle:-90,restartOnView:false,turns:0,still:true,heat:0,onClick:()=>playSurpriseReveal(file,spot)}))
-  .then(()=>{ if(run!==surpriseRevealRun)return; revealPainted[S.stage]=file; clock(); })
+  MUG3D.open(st,Object.assign({},SHELF_MUG_3D,{panoramaUrl:url,panelUrls:[],
+    startAngle:-90,restartOnView:false,turns:0,still:true,heat:0,onClick:()=>playSurpriseReveal(file,spot,url)}))
+  .then(()=>{ if(run!==surpriseRevealRun)return; revealPainted[S.stage]=url; MUG3D.setZoom(spot==='design'?SURPRISE_MUG_ZOOM:1); clock(); })
   .catch(err=>{ console.error('The heat reveal could not start:',err); const r=document.getElementById(S.box); if(r)r.style.display='none'; });
 }
 function refreshSurprisePreview(){
@@ -13336,18 +13343,14 @@ function refreshSurprisePreview(){
 }
 let surpriseShownDesign=null, surpriseLandingFor=null;
 const SURPRISE_MUG_ZOOM=1.4;   // "I would have the mug larger because it's hard to check out the funny"
+// The design on the large mug, playing the heat-up (Alyx, 29 Sep 2026: "I'd
+// like for these mugs to pause, fade in, spin to the other side, and freeze
+// as they fade back out to cool"), in the hand and frame chosen; changing
+// either plays it again with the new choice, never leaving a black mug to
+// judge a frame by. A click on the mug plays it again.
 function showSurpriseMug(){
-  const st=document.getElementById('surpriseRevealStage'), file=surpriseFile();
-  if(!st||!file||typeof MUG3D==='undefined'||(typeof mug3dFailed!=='undefined'&&mug3dFailed))return;
-  const url='art/surprise/reveal/'+file+(selectedSurpriseHand==='left'?'-left':'')+'.jpg';
-  surpriseRevealFile=file;
-  if(MUG3D.mounted()&&MUG3D.host()===st&&revealPainted[st.id]===url)return;
-  const run=++surpriseRevealRun; revealPainted[st.id]=null;
-  surpriseRevealWords('',false);
-  const angle=(MUG3D.mounted()&&MUG3D.host()===st)?null:-90;   // a change of frame or hand keeps it turning where it is
-  MUG3D.open(st,Object.assign({},SHELF_MUG_3D,{panoramaUrl:url,panelUrls:[],startAngle:angle,restartOnView:false,turns:0,spinStep:0.32,heat:1}))
-  .then(()=>{ if(run!==surpriseRevealRun)return; revealPainted[st.id]=url; MUG3D.setZoom(SURPRISE_MUG_ZOOM); })
-  .catch(err=>{ console.error('The mug could not start:',err); const r=document.getElementById('surpriseReveal'); if(r)r.style.display='none'; });
+  const file=surpriseFile(); if(!file)return;
+  playSurpriseReveal(file,'design','art/surprise/reveal/'+file+(selectedSurpriseHand==='left'?'-left':'')+'.jpg');
 }
 // Back is the panel before: Coffee Mug Size.
 function surpriseBack(){
@@ -13675,12 +13678,12 @@ function renderPremades(){
   } else {
     premadesView='products';
     title.textContent='🎁 Pre-mades & Sets';
-    const row=(key,pic,icon,label,sub,count,price)=>'<div class="pm-prod" data-product="'+key+'" onclick="pickPremadeProduct(\''+key+'\')">'
+    const row=(key,pic,icon,label,sub,count,price,isNew)=>'<div class="pm-prod" data-product="'+key+'" onclick="pickPremadeProduct(\''+key+'\')">'
       +'<img src="'+pic+'" alt="" width="96" height="64"/><span class="pm-tx"><span class="pm-nm">'+icon+' '+label+'</span><span class="pm-sub">'+sub+'</span>'
-      +'<span class="pm-pr">'+count+' designs · '+price+'</span></span><span class="pm-ar">›</span></div>';
+      +'<span class="pm-pr">'+count+' designs · '+price+'</span>'+(isNew?'<span class="new-flash">New</span>':'')+'</span><span class="pm-ar">›</span></div>';
     const hol=liveHolidays(), mugCount=hol.reduce((n,o)=>n+SURPRISE_SETS[o.set].designs.length,0);
     view.innerHTML='<div class="pm-ask">What are you looking for?</div><div id="premadesProducts">'
-      +(hol.length?row('mugs',PREMADE_MUGS.pic,PREMADE_MUGS.icon,PREMADE_MUGS.label,PREMADE_MUGS.sub+' · any four '+$(SMART_MUG_SET_PRICE),mugCount,'from '+$(SMART_MUG_PRICE)):'')
+      +(hol.length?row('mugs',PREMADE_MUGS.pic,PREMADE_MUGS.icon,PREMADE_MUGS.label,PREMADE_MUGS.sub+' · any four '+$(SMART_MUG_SET_PRICE),mugCount,'from '+$(SMART_MUG_PRICE),true):'')
       +liveCategories().map(k=>{ const c=PREMADE_CATEGORIES[k], lo=catFrom(c), one=c.packs.length===1;
         return row(k,c.dir+'/show/'+(c.pic||c.items[0].key)+'.jpg',c.icon,c.label,c.sub||'',c.items.length,(one?'':'from ')+$(lo)); }).join('')
       +'</div><div class="note" style="text-align:center;margin-top:1rem;color:#5b7aa6">Finished designs, ready to order. No photo needed.</div>';
