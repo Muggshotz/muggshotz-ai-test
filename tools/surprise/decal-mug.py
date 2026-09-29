@@ -12,7 +12,8 @@
 # each with its -print-left.png, and for each the 3D mug's pictures
 # (reveal-jpgs.py) and the cold -> hot picture (coldhot.py); and the tile,
 # art/options/surprise-<name>.jpg, the punchline on white.
-#   decal-mug.py <name> [frame]      frame: the frame's name, default valentine
+#   decal-mug.py <name> [frame]      frame: the frame's name, default valentine;
+#                                    none builds the No frame print only
 import os, sys, subprocess, glob
 from PIL import Image
 W, H = 2475, 1155
@@ -47,6 +48,7 @@ STYLES = {
     '-one': dict(box=900, edge=53, over=[(f'art/surprise/{frame}-frame-one.png', 0)]),
     '-two': dict(box=840, edge=72, over=[(f'art/surprise/{frame}-frame-half.png', 25), (f'art/surprise/{frame}-frame-half.png', W - 25 - 1200)]),
 }
+if frame == 'none': STYLES = {'': STYLES['']}
 for sfx, st in STYLES.items():
     for hand, ((left, lin), (right, rin)) in (('', ((punch, pin), (setup, sin))), ('-left', ((setup, sin), (punch, pin)))):
         out = Image.new('RGB', (W, H), 'white')
