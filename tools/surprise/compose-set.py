@@ -185,10 +185,22 @@ LAYOUT = os.environ.get('COMPOSE_LAYOUT', 'fade')
 # them separated"); each scene enlarged to fill the rest, fading into it.
 NB = float(os.environ.get('COMPOSE_BLACK', .06))
 NM0, NM1 = round(W * (.5 - NB / 2)), round(W * (.5 + NB / 2))
+# white1 / white2 (Alyx, 29 Sep 2026: "get rid of the black and do it as if
+# it's all gonna be imprinted on a white background, because ultimately it
+# is"): everything on white, the scenes soft-edged into it; white1 inside the
+# one big frame, white2 in a frame of its own each, the frame rebuilt at that
+# size from Bud's corners and rails. COMPOSE_FRAME names a frame without the
+# middle vines (a trial).
+if LAYOUT in ('white1', 'white2'):
+    ROOM = {('left', 'top'): (IX0 + 280, W // 2 - 110), ('left', 'bottom'): (IX0 + 330, W // 2 - 110),
+            ('right', 'top'): (W // 2 + 110, IX1 - 280), ('right', 'bottom'): (W // 2 + 110, IX1 - 330)}
+if LAYOUT == 'white2':                                    # clear of each frame's own corner leaves
+    ROOM = {('left', 'top'): (190, W // 2 - 190), ('left', 'bottom'): (260, W // 2 - 260),
+            ('right', 'top'): (W // 2 + 190, W - 190), ('right', 'bottom'): (W // 2 + 260, W - 260)}
 if LAYOUT == 'narrow':
     ROOM = {('left', 'top'): (190, NM0 - 30), ('left', 'bottom'): (250, NM0 - 30),
             ('right', 'top'): (NM1 + 30, 2290), ('right', 'bottom'): (NM1 + 30, 2230)}
-elif LAYOUT != 'fade':
+elif LAYOUT in ('rail', 'butt'):
     ROOM = {('left', 'top'): (190, W // 2 - 50), ('left', 'bottom'): (250, W // 2 - 50),
             ('right', 'top'): (W // 2 + 50, 2290), ('right', 'bottom'): (W // 2 + 50, 2230)}
 def fit_size(text, x0, x1, y0, y1, biggest):
@@ -248,6 +260,49 @@ def compose(left_img, right_img, left_caps=None, right_caps=None):
     out = np.full((H, W, 3), 255.0)
     out[IY0:IY1, IX0:IX1] = 0
     zh = IY1 - IY0
+    if LAYOUT in ('white1', 'white2'):
+        out = np.full((H, W, 3), 255.0)
+        plain = np.asarray(Image.open(os.environ.get('COMPOSE_FRAME', FRAME_OUT)).convert('RGBA')).astype(float)
+        FEATHER, GAP = 70, 40
+        def soft(img, x0, x1, y0, y1):
+            # The scene fitted into its box, its edges melting into the white:
+            # a stand-in for the vignettes Bud will paint.
+            w, h = x1 - x0, y1 - y0; im = cover(img, w, h)
+            xs, ys = np.arange(w), np.arange(h)
+            k = ss(np.minimum(xs, w - 1 - xs) / FEATHER)[None, :] * ss(np.minimum(ys, h - 1 - ys) / FEATHER)[:, None]
+            out[y0:y1, x0:x1] = im * k[..., None] + out[y0:y1, x0:x1] * (1 - k[..., None])
+        if LAYOUT == 'white1':
+            soft(left_img, IX0 + 60, W // 2 - GAP, IY0 + 60, IY1 - 60)
+            soft(right_img, W // 2 + GAP, IX1 - 60, IY0 + 60, IY1 - 60)
+            out = words(out, left_caps, 'left'); out = words(out, right_caps, 'right')
+            fr = plain
+        else:
+            # Two frames: Bud's corners (600 x 440 of the print, where his
+            # leaves reach) scaled by K, the plain rails between them stretched.
+            K, CW, CH = 0.72, 600, 440
+            def piece(y0, y1, x0, x1, w, h):
+                a = plain[y0:y1, x0:x1]; pm = np.dstack([a[..., :3] * a[..., 3:] / 255, a[..., 3]])
+                ch = [np.asarray(Image.fromarray(pm[..., i].astype(np.float32), 'F').resize((w, h), Image.LANCZOS)) for i in range(4)]
+                al = np.clip(ch[3], 0, 255); return np.dstack([np.clip(c * 255 / np.maximum(al, 1), 0, 255) for c in ch[:3]] + [al])
+            def panel(pw, ph):
+                cw, chh = round(CW * K), round(CH * K); f = np.zeros((ph, pw, 4))
+                f[:chh, :cw] = piece(0, CH, 0, CW, cw, chh); f[:chh, pw - cw:] = piece(0, CH, W - CW, W, cw, chh)
+                f[ph - chh:, :cw] = piece(H - CH, H, 0, CW, cw, chh); f[ph - chh:, pw - cw:] = piece(H - CH, H, W - CW, W, cw, chh)
+                f[:chh, cw:pw - cw] = piece(0, CH, 1000, 1100, pw - 2 * cw, chh); f[ph - chh:, cw:pw - cw] = piece(H - CH, H, 1000, 1100, pw - 2 * cw, chh)
+                f[chh:ph - chh, :cw] = piece(470, 560, 0, CW, cw, ph - 2 * chh); f[chh:ph - chh, pw - cw:] = piece(470, 560, W - CW, W, cw, ph - 2 * chh)
+                return f
+            M = 30                                            # white round each frame, and between them
+            pw, ph = W // 2 - M - M // 2, H
+            fr = np.zeros((H, W, 4))
+            for x in (M, W // 2 + M // 2):
+                fr[:, x:x + pw] = panel(pw, ph)
+            t = round(20 * K) + 12                            # inside the rail
+            soft(left_img, M + t, M + pw - t, t + 4, H - t - 4)
+            soft(right_img, W // 2 + M // 2 + t, W // 2 + M // 2 + pw - t, t + 4, H - t - 4)
+            out = words(out, left_caps, 'left'); out = words(out, right_caps, 'right')
+        a = fr[..., 3:] / 255
+        out = fr[..., :3] * a + out * (1 - a)
+        return Image.fromarray(np.clip(out, 0, 255).astype(np.uint8))
     if LAYOUT == 'narrow':
         nf, nc = NB * W * .35, NB * W * 1.1               # the fade: at mid-height, at the top and bottom rows
         for img, x0, x1, inner in ((left_img, IX0, NM0, 'right'), (right_img, NM1, IX1, 'left')):
