@@ -22,8 +22,15 @@ here = os.path.dirname(os.path.abspath(__file__))
 def decal(side):
     f = glob.glob(f'art/surprise/decals/{name}-{side}.*')[0]
     im = Image.open(f).convert('RGBA')
-    return im.crop(im.getbbox())                      # the decal itself, its empty margin off
-punch, setup = decal('punch'), decal('setup')
+    im = im.crop(im.getbbox())                        # the decal itself, its empty margin off
+    # Some decals carry a faint, all but invisible haze out to the canvas
+    # edges (the question mark's reaches ~150 px past the picture). It sets
+    # the size, as it always has, but the VISIBLE picture is what is set
+    # against the print's edge: vis is its left and right inset.
+    a = im.split()[3].point(lambda v: 255 if v > 24 else 0)
+    b = a.getbbox()
+    return im, (b[0], im.width - b[2])
+(punch, pin), (setup, sin) = decal('punch'), decal('setup')
 def fit(im, bw, bh):
     k = min(bw / im.width, bh / im.height)
     return im.resize((round(im.width * k), round(im.height * k)), Image.LANCZOS)
@@ -41,11 +48,13 @@ STYLES = {
     '-two': dict(box=840, edge=72, over=[(f'art/surprise/{frame}-frame-half.png', 25), (f'art/surprise/{frame}-frame-half.png', W - 25 - 1200)]),
 }
 for sfx, st in STYLES.items():
-    for hand, (left, right) in (('', (punch, setup)), ('-left', (setup, punch))):
+    for hand, ((left, lin), (right, rin)) in (('', ((punch, pin), (setup, sin))), ('-left', ((setup, sin), (punch, pin)))):
         out = Image.new('RGB', (W, H), 'white')
         b = round(st['box'] * SCALE)
-        d = fit(left, b, b); out.paste(d, (st['edge'], H // 2 - d.height // 2), d)
-        d = fit(right, b, b); out.paste(d, (W - st['edge'] - d.width, H // 2 - d.height // 2), d)
+        d = fit(left, b, b); k = d.width / left.width
+        out.paste(d, (st['edge'] - round(lin[0] * k), H // 2 - d.height // 2), d)
+        d = fit(right, b, b); k = d.width / right.width
+        out.paste(d, (W - st['edge'] - d.width + round(rin[1] * k), H // 2 - d.height // 2), d)
         for f, x in (st['over'] or []):
             fr = Image.open(f).convert('RGBA'); out.paste(fr, (x, 0), fr)
         p = f'art/surprise/{name}{sfx}-print{hand}.png'
