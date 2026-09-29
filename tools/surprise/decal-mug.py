@@ -14,14 +14,18 @@
 # art/options/surprise-<name>.jpg, the punchline on white.
 #   decal-mug.py <name> [frame]      frame: the frame's name, default valentine;
 #                                    none builds the No frame print only
+#   decal-mug.py <name> <frame> <setup>   the setup decal borrowed from another
+#                                    design (Ready?'s six sides share one opener:
+#                                    decals/ready-setup)
 import os, sys, subprocess, glob
 from PIL import Image
 W, H = 2475, 1155
 name = sys.argv[1]
 frame = sys.argv[2] if len(sys.argv) > 2 else 'valentine'
 here = os.path.dirname(os.path.abspath(__file__))
+SETUP_OF = sys.argv[3] if len(sys.argv) > 3 else name
 def decal(side):
-    f = glob.glob(f'art/surprise/decals/{name}-{side}.*')[0]
+    f = glob.glob(f'art/surprise/decals/{SETUP_OF if side == "setup" else name}-{side}.*')[0]
     im = Image.open(f).convert('RGBA')
     im = im.crop(im.getbbox())                        # the decal itself, its empty margin off
     # Some decals carry a faint, all but invisible haze out to the canvas
