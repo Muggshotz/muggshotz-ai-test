@@ -54,6 +54,9 @@ Alyx and Bud's change of approach: each side of the mug is a decal on white,
 not a scene painted to the edges. The hot mug is white wherever nothing is
 printed, so a decal on white has no edge to fade or frame. Samples Bud made
 (pictures of mugs, for reference only): art/surprise/decal-samples/.
+Words are painted into the decals (Alyx, 29 Sep 2026: "do it the way you
+planned"). On the site each decal mug gets frame buttons: No frame (the
+default, tentatively), One frame, A frame each side.
 
 ```
 MAGIC MUG DECALS - HOW TO PAINT THEM (for every mug from now on)
