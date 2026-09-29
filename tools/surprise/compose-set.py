@@ -197,6 +197,27 @@ if LAYOUT in ('white1', 'white2'):
 if LAYOUT == 'white2':                                    # clear of each frame's own corner leaves
     ROOM = {('left', 'top'): (190, W // 2 - 190), ('left', 'bottom'): (260, W // 2 - 260),
             ('right', 'top'): (W // 2 + 190, W - 190), ('right', 'bottom'): (W // 2 + 260, W - 260)}
+# COMPOSE_SCALE shrinks the pictures (and in white2 their frames) round
+# their centres, for more white between them (Alyx: "it looks very busy ...
+# the images shouldn't be smaller to provide more space between the two").
+SC = float(os.environ.get('COMPOSE_SCALE', 1))
+def shrink(x0, x1, y0, y1, k):
+    cx, cy, w, h = (x0 + x1) / 2, (y0 + y1) / 2, (x1 - x0) * k, (y1 - y0) * k
+    return round(cx - w / 2), round(cx + w / 2), round(cy - h / 2), round(cy + h / 2)
+if LAYOUT == 'white1':
+    BOXES = [shrink(IX0 + 60, W // 2 - 40, IY0 + 60, IY1 - 60, SC), shrink(W // 2 + 40, IX1 - 60, IY0 + 60, IY1 - 60, SC)]
+if LAYOUT == 'white2':
+    PANELS = [shrink(x, x + W // 2 - 45, 0, H, SC) for x in (30, W // 2 + 15)]
+if LAYOUT in ('white1', 'white2') and SC < 1:
+    bx = BOXES if LAYOUT == 'white1' else PANELS
+    it, ib = (60, 80) if LAYOUT == 'white1' else (190 * SC, 260 * SC)
+    ROOM = {(side, key): (round(b[0] + (it if key == 'top' else ib)), round(b[1] - (it if key == 'top' else ib)))
+            for side, b in (('left', bx[0]), ('right', bx[1])) for key in ('top', 'bottom')}
+    y0, h = bx[0][2], bx[0][3] - bx[0][2]
+    TOP_BAND, BOTTOM_BAND = (round(y0 + .07 * h), round(y0 + .18 * h)), (round(y0 + .66 * h), round(y0 + .87 * h))
+    BIGGEST_K = SC
+else:
+    BIGGEST_K = 1
 if LAYOUT == 'narrow':
     ROOM = {('left', 'top'): (190, NM0 - 30), ('left', 'bottom'): (250, NM0 - 30),
             ('right', 'top'): (NM1 + 30, 2290), ('right', 'bottom'): (NM1 + 30, 2230)}
@@ -211,7 +232,7 @@ def fit_size(text, x0, x1, y0, y1, biggest):
         if wd <= x1 - x0 and int(size * 1.18) * len(lines) <= y1 - y0: break
         size -= 2
     return size
-BIGGEST = {'top': 92, 'bottom': 60}
+BIGGEST = {'top': round(92 * BIGGEST_K), 'bottom': round(60 * BIGGEST_K)}
 # A heading, or a caption, is the same size on both scenes: the smaller of
 # the two sizes that fit.
 PAIR = {}
@@ -222,7 +243,7 @@ for key, (y0, y1) in (('top', TOP_BAND), ('bottom', BOTTOM_BAND)):
 def words(out, caps, side):
     if not caps: return out
     im = Image.fromarray(np.clip(out, 0, 255).astype(np.uint8))
-    for key, (y0, y1), biggest in (('top', TOP_BAND, 92), ('bottom', BOTTOM_BAND, 60)):
+    for key, (y0, y1), biggest in (('top', TOP_BAND, BIGGEST['top']), ('bottom', BOTTOM_BAND, BIGGEST['bottom'])):
         text = caps.get(key)
         if not text: continue
         x0, x1 = ROOM[(side, key)]
@@ -272,14 +293,13 @@ def compose(left_img, right_img, left_caps=None, right_caps=None):
             k = ss(np.minimum(xs, w - 1 - xs) / FEATHER)[None, :] * ss(np.minimum(ys, h - 1 - ys) / FEATHER)[:, None]
             out[y0:y1, x0:x1] = im * k[..., None] + out[y0:y1, x0:x1] * (1 - k[..., None])
         if LAYOUT == 'white1':
-            soft(left_img, IX0 + 60, W // 2 - GAP, IY0 + 60, IY1 - 60)
-            soft(right_img, W // 2 + GAP, IX1 - 60, IY0 + 60, IY1 - 60)
+            for img, (x0, x1, y0, y1) in zip((left_img, right_img), BOXES): soft(img, x0, x1, y0, y1)
             out = words(out, left_caps, 'left'); out = words(out, right_caps, 'right')
             fr = plain
         else:
             # Two frames: Bud's corners (600 x 440 of the print, where his
             # leaves reach) scaled by K, the plain rails between them stretched.
-            K, CW, CH = 0.72, 600, 440
+            K, CW, CH = 0.72 * SC, 600, 440
             def piece(y0, y1, x0, x1, w, h):
                 a = plain[y0:y1, x0:x1]; pm = np.dstack([a[..., :3] * a[..., 3:] / 255, a[..., 3]])
                 ch = [np.asarray(Image.fromarray(pm[..., i].astype(np.float32), 'F').resize((w, h), Image.LANCZOS)) for i in range(4)]
@@ -291,14 +311,11 @@ def compose(left_img, right_img, left_caps=None, right_caps=None):
                 f[:chh, cw:pw - cw] = piece(0, CH, 1000, 1100, pw - 2 * cw, chh); f[ph - chh:, cw:pw - cw] = piece(H - CH, H, 1000, 1100, pw - 2 * cw, chh)
                 f[chh:ph - chh, :cw] = piece(470, 560, 0, CW, cw, ph - 2 * chh); f[chh:ph - chh, pw - cw:] = piece(470, 560, W - CW, W, cw, ph - 2 * chh)
                 return f
-            M = 30                                            # white round each frame, and between them
-            pw, ph = W // 2 - M - M // 2, H
             fr = np.zeros((H, W, 4))
-            for x in (M, W // 2 + M // 2):
-                fr[:, x:x + pw] = panel(pw, ph)
             t = round(20 * K) + 12                            # inside the rail
-            soft(left_img, M + t, M + pw - t, t + 4, H - t - 4)
-            soft(right_img, W // 2 + M // 2 + t, W // 2 + M // 2 + pw - t, t + 4, H - t - 4)
+            for img, (x0, x1, y0, y1) in zip((left_img, right_img), PANELS):
+                fr[y0:y1, x0:x1] = panel(x1 - x0, y1 - y0)
+                soft(img, x0 + t, x1 - t, y0 + t + 4, y1 - t - 4)
             out = words(out, left_caps, 'left'); out = words(out, right_caps, 'right')
         a = fr[..., 3:] / 255
         out = fr[..., :3] * a + out * (1 - a)
