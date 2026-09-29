@@ -97,6 +97,32 @@ async function run(viewport, tag) {
     return Math.round(performance.now() - t0);
   });
   ok('a click on the mug replays it: the heat words within 1.6s', replay < 1600, replay + 'ms');
+  // WHAT ELSE IS BREWING? (Alyx, 29 Sep 2026): under the mug, every design in
+  // a sideways row, the one playing outlined; a tap plays that one right there;
+  // the order button says "This is the one".
+  const brew = await page.evaluate(() => {
+    const row = document.getElementById('surpriseBrewRow'), items = [...row.querySelectorAll('.brew-item')];
+    const m = document.getElementById('surpriseReveal').getBoundingClientRect(), b = document.getElementById('surpriseBrew').getBoundingClientRect(),
+      c = document.getElementById('surpriseContinueBtn').getBoundingClientRect();
+    return { n: items.length, pics: items.every((i) => i.querySelector('img')), on: items.filter((i) => i.classList.contains('on')).map((i) => i.dataset.file),
+      head: document.querySelector('#surpriseBrew .brew-h').textContent, order: m.bottom <= b.top + 1 && b.bottom <= c.top + 1,
+      btn: document.getElementById('surpriseContinueBtn').textContent, rowScrolls: row.scrollWidth > row.clientWidth };
+  });
+  ok('"What else is brewing?" sits between the mug and the order button: every design, pictured, the playing one outlined',
+    brew.head === 'What else is brewing?' && brew.n >= 12 && brew.pics && brew.on.length === 1 && brew.on[0] === 'proposal' && brew.order, JSON.stringify(brew));
+  ok('the order button says "This is the one"', /This is the one/.test(brew.btn), brew.btn);
+  const y0 = await page.evaluate(() => scrollY);
+  const r1 = await page.evaluate(() => surpriseRevealRun);
+  await page.evaluate(() => document.querySelector('#surpriseBrewRow .brew-item[data-file="valentine"]').click()); await T(page, 1500);
+  const after = await page.evaluate((r) => { const m = document.getElementById('surpriseReveal').getBoundingClientRect();
+    return { file: surpriseRevealFile, replayed: surpriseRevealRun > r, sel: selectedSurprise, onscreen: m.top >= -2 && m.bottom <= innerHeight + 2,
+      on: [...document.querySelectorAll('#surpriseBrewRow .brew-item.on')].map((i) => i.dataset.file), y: scrollY }; }, r1);
+  ok('a tap in the row plays that design on the mug, where the customer is', after.file === 'valentine' && after.replayed && after.sel === 'valentine' && after.onscreen && after.on.join() === 'valentine' && Math.abs(after.y - y0) < 250, JSON.stringify({ y0, ...after }));
+  await page.evaluate(() => document.querySelector('#surpriseBrewRow .brew-item[data-file="reveal-girl"]').click()); await T(page, 1500);
+  const girl = await page.evaluate(() => ({ file: surpriseRevealFile, t: selectedSurprise, v: selectedSurpriseVariant }));
+  ok('a Ready? side in the row plays that side', girl.file === 'reveal-girl' && girl.t === 'ready' && girl.v === 'girl', JSON.stringify(girl));
+  await page.evaluate(() => pickSurprise('proposal'));
+  await page.waitForFunction(() => /absorbs/.test(document.getElementById('surpriseRevealWords').textContent), null, { timeout: 20000 });
   // Another design plays that one; the hand does not replay.
   const r0 = await page.evaluate(() => surpriseRevealRun);
   await page.evaluate(() => pickSurpriseHand('left')); await T(page, 300);

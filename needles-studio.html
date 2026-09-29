@@ -1,5 +1,5 @@
 <!-- ============================================================
-     VERSION: V423
+     VERSION: V424
      ============================================================
      THE ONE LINE THAT SAYS WHICH BUILD YOU ARE LOOKING AT.
 
@@ -731,6 +731,13 @@ html.order-page-open,html.order-page-open body{overflow:hidden}
 #surpriseReveal canvas,#smartHowReveal canvas{display:block;width:100%;height:100%}
 #surpriseRevealWords,#smartHowRevealWords{position:absolute;left:0;right:0;margin:0 auto;width:fit-content;text-wrap:balance;bottom:12px;max-width:calc(100% - 24px);box-sizing:border-box;text-align:center;color:#fff;font-size:18px;font-weight:700;line-height:1.3;letter-spacing:.2px;background:rgba(10,14,22,.86);border-radius:10px;padding:8px 16px;pointer-events:none}
 #surpriseRevealWords:empty,#smartHowRevealWords:empty{display:none}
+#surpriseBrew{margin:0 0 .8rem}
+#surpriseBrew .brew-h{color:#cfe3ff;font-weight:700;font-style:italic;font-size:15px;text-align:center;margin:0 0 .45rem}
+#surpriseBrew .brew-row{display:flex;gap:8px;overflow-x:auto;padding:2px 2px 6px;scroll-snap-type:x proximity}
+#surpriseBrew .brew-item{flex:0 0 92px;scroll-snap-align:start;background:#0d1520;border:2px solid #1c2738;border-radius:8px;padding:4px;cursor:pointer;color:#7ab8ff;font-size:11px;line-height:1.25;text-align:center}
+#surpriseBrew .brew-item img{display:block;width:100%;aspect-ratio:1;object-fit:cover;border-radius:5px;margin-bottom:4px;background:#000}
+#surpriseBrew .brew-item.on{border-color:#29a3ff;color:#cfe3ff}
+#surpriseBrew .brew-item:focus-visible{outline:2px solid #29a3ff;outline-offset:2px}
 @media(max-width:480px){#surpriseRevealWords,#smartHowRevealWords{font-size:14px;padding:5px 10px;bottom:8px;max-width:calc(100% - 16px)}}
 #premadesCard .pm-how3d{width:min(100%,420px);margin:1.3rem auto 0}
 #premadesCard .pm-spin-cue{position:absolute;left:50%;bottom:10px;transform:translateX(-50%);background:rgba(11,16,24,.82);color:#cfe3ff;font-size:13px;font-weight:600;padding:5px 12px;border-radius:14px;pointer-events:none;white-space:nowrap}
@@ -1702,7 +1709,8 @@ const HERO_SETTLE_MS = 1000;
 </div>
 <div id="surprisePreviewWrap" style="display:none;margin-top:.9rem">
 <div id="surpriseRevealBlock"><div id="surpriseReveal" title="Click to watch it again"><div class="pm-mug3d-stage" id="surpriseRevealStage"></div><div id="surpriseRevealWords"></div></div>
-<button type="button" class="generate-btn" id="surpriseContinueBtn" style="margin-top:0" onclick="goToSurpriseOrder()">🎁 See it on the mug and order</button></div>
+<div id="surpriseBrew"><div class="brew-h">What else is brewing?</div><div class="brew-row" id="surpriseBrewRow"></div></div>
+<button type="button" class="generate-btn" id="surpriseContinueBtn" style="margin-top:0" onclick="goToSurpriseOrder()">🎁 This is the one</button></div>
 <img id="surpriseColdHot" alt="Cold, then hot: the surprise appears" style="display:none;width:100%;border-radius:8px;margin:.9rem 0 .6rem"/>
 <div class="note" style="margin-bottom:.4rem">The whole print, laid flat. It wraps once round the mug.</div>
 <img id="surprisePreview" alt="" style="width:100%;border-radius:8px;background:#000"/>
@@ -4821,7 +4829,7 @@ function toggleWorkingImage(){
 // Two copies of a number is exactly how the marker rotted in the first place,
 // so they are not trusted to agree: .githooks/pre-commit moves both together
 // and REFUSES the commit if it ever finds them apart.
-const APP_VERSION='V423';
+const APP_VERSION='V424';
 try{ console.log('%cNeedles\u2019 Studio '+APP_VERSION,'color:#29a3ff;font-weight:700'); }catch(e){}
 
 function getDeviceId(){
@@ -13133,6 +13141,38 @@ function pickSurprise(key){
   // Nothing to preview until the other side is chosen: land on that choice.
   if(SURPRISE_TEMPLATES[key]?.variants&&!selectedSurpriseVariant)smoothScrollToTarget('surpriseVariantWrap','center');
 }
+// WHAT ELSE IS BREWING? (Alyx, 29 Sep 2026: "there should be an option to
+// browse other messages so that I can click on them and they do their thing
+// ... until I finally find one that I say OK I'll get this one"). Under the
+// mug, every design as a small picture in a sideways row, the one playing
+// outlined; a tap plays that one on the same mug, where the customer already
+// is. The order button under it says "This is the one". A template with
+// other sides ("Ready?") shows each side as its own picture.
+function surpriseBrewItems(){
+  const out=[];
+  Object.entries(SURPRISE_TEMPLATES).filter(([k,t])=>!t.hidden||k===SURPRISE_UNLOCKED).forEach(([k,t])=>{
+    if(t.variants)Object.entries(t.variants).forEach(([v,x])=>out.push({key:k,variant:v,label:x.label,file:x.file,tile:x.file}));
+    else out.push({key:k,variant:null,label:t.label,file:t.file,tile:t.tile||t.file});
+  });
+  return out;
+}
+function renderSurpriseBrew(){
+  const row=document.getElementById('surpriseBrewRow'); if(!row)return;
+  const cur=surpriseFile();
+  row.innerHTML=surpriseBrewItems().map(x=>'<div class="brew-item'+(x.file===cur?' on':'')+'" role="button" tabindex="0" data-file="'+x.file+'"'
+    +' onclick="brewPick(\''+x.key+'\','+(x.variant?'\''+x.variant+'\'':'null')+')" onkeydown="if(event.key===\'Enter\')this.click()">'
+    +'<img src="art/options/surprise-'+x.tile+'.jpg" alt="" loading="lazy"/>'+x.label+'</div>').join('');
+  // The one playing in view in its row, without moving the page.
+  const on=row.querySelector('.brew-item.on');
+  if(on)row.scrollLeft=Math.max(0,on.offsetLeft-row.offsetLeft-(row.clientWidth-on.offsetWidth)/2);
+}
+function brewPick(key,variant){
+  if(!variant){ pickSurprise(key); return; }
+  selectedSurprise=key; selectedSurpriseVariant=variant;
+  document.querySelectorAll('#surpriseTemplateGrid .btn-select').forEach(b=>b.classList.toggle('selected',b.dataset.surprise===key));
+  renderSurpriseVariants();
+  refreshSurprisePreview();
+}
 function pickSurpriseVariant(key){
   selectedSurpriseVariant=key;
   document.querySelectorAll('#surpriseVariantGrid .btn-select').forEach(b=>b.classList.toggle('selected',b.dataset.variant===key));
@@ -13242,6 +13282,7 @@ function refreshSurprisePreview(){
   // the customer sees it from the first second, and the cup's first build
   // cannot hold the landing up; the hand changing does not replay it.
   if(!(url&&file)){ releaseSurpriseReveal(); return; }
+  renderSurpriseBrew();
   if(file!==surpriseRevealFile){ surpriseRevealFile=file; surpriseRevealRun++;
     smoothScrollToTarget('surpriseRevealBlock','center',()=>{ if(surpriseRevealFile===file)playSurpriseReveal(file); }); }
   else smoothScrollToTarget('surpriseRevealBlock','center');
