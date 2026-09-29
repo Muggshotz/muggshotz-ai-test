@@ -39,7 +39,7 @@ scenarios.theTileAndThePanel = async (page, log) => {
   if (!tile) return 'FAIL: no Smart Mug tile on Coffee Mug Size';
   if (tile.siblings !== 4) return `FAIL: Coffee Mug Size has ${tile.siblings} tiles, not 4`;
   if (!tile.img || !tile.price) return `FAIL: the Smart Mug tile lacks its picture or price (${JSON.stringify(tile)})`;
-  await tap(page, '#preGenSizeSmartBtn');
+  await tap(page, '#preGenSizeSmartBtn'); await T(page, 300); await tap(page, '#smartDemoSkipBtn');
   await T(page, 1900);
   const st = await page.evaluate(() => {
     const card = document.getElementById('surpriseCard'); const r = card.getBoundingClientRect();
@@ -68,10 +68,14 @@ scenarios.theTileAndThePanel = async (page, log) => {
 
 scenarios.backIsCoffeeMugSize = async (page) => {
   await toMugSize(page);
-  await tap(page, '#preGenSizeSmartBtn');
+  await tap(page, '#preGenSizeSmartBtn'); await T(page, 300); await tap(page, '#smartDemoSkipBtn');
   await T(page, 1500);
   await tap(page, '#surpriseCard button[onclick="surpriseBack()"]');
   await T(page, 1200);
+  // Back goes to the panel before: the demonstration question, then its Back to the sizes.
+  if (!(await vis(page, 'smartDemoOverlay'))) return 'FAIL: Back from SURPRISE!!! did not return to the demonstration question';
+  await tap(page, '#smartDemoCard button[onclick="closeSmartDemo()"]');
+  await T(page, 600);
   const st = await page.evaluate(() => ({ product, overlay: getComputedStyle(document.getElementById('mugSizeLockOverlay')).display,
     card: getComputedStyle(document.getElementById('surpriseCard')).display, focus: [...document.body.classList].filter((c) => c.endsWith('-focus')) }));
   if (st.card !== 'none') return 'FAIL: Back left the SURPRISE!!! panel up';
@@ -82,12 +86,12 @@ scenarios.backIsCoffeeMugSize = async (page) => {
   await T(page, 900);
   const sized = await page.evaluate(() => ({ product, size: selectedGenSize }));
   if (sized.product !== 'mug' || sized.size !== '11oz') return 'FAIL: after Back, the ordinary 11oz could not be picked';
-  return 'PASS: Back from SURPRISE!!! returns to Coffee Mug Size, where an ordinary mug can still be picked';
+  return 'PASS: Back from SURPRISE!!! returns to the demonstration question, and its Back to Coffee Mug Size, where an ordinary mug can still be picked';
 };
 
 scenarios.leftHandedAndThePrints = async (page) => {
   await toMugSize(page);
-  await tap(page, '#preGenSizeSmartBtn');
+  await tap(page, '#preGenSizeSmartBtn'); await T(page, 300); await tap(page, '#smartDemoSkipBtn');
   await T(page, 1500);
   await tap(page, '#surpriseTemplateGrid .btn-select[data-surprise="valentine"]');
   await tap(page, '#surpriseHandGrid .btn-select[data-hand="left"]');
@@ -152,7 +156,7 @@ scenarios.leftHandedAndThePrints = async (page) => {
 // previewed or ordered until they have.
 scenarios.readyAndItsOtherSide = async (page) => {
   await toMugSize(page);
-  await tap(page, '#preGenSizeSmartBtn');
+  await tap(page, '#preGenSizeSmartBtn'); await T(page, 300); await tap(page, '#smartDemoSkipBtn');
   await T(page, 1500);
   await tap(page, '#surpriseTemplateGrid .btn-select[data-surprise="ready"]');
   await T(page, 1200);
@@ -197,14 +201,14 @@ scenarios.readyAndItsOtherSide = async (page) => {
 // and then it orders like any other.
 scenarios.hiddenTemplate = async (page) => {
   await toMugSize(page);
-  await tap(page, '#preGenSizeSmartBtn');
+  await tap(page, '#preGenSizeSmartBtn'); await T(page, 300); await tap(page, '#smartDemoSkipBtn');
   await T(page, 1500);
   if (await page.evaluate(() => !!document.querySelector('#surpriseTemplateGrid .btn-select[data-surprise="i-know"]'))) return 'FAIL: the hidden mug shows in the panel without its link';
   await page.goto(page.url().split('?')[0] + '?surprise=i-know', { waitUntil: 'domcontentloaded' });
   await T(page, 800);
   await uploadPhoto(page); await dismissAlerts(page);
   await toMugSize(page);
-  await tap(page, '#preGenSizeSmartBtn');
+  await tap(page, '#preGenSizeSmartBtn'); await T(page, 300); await tap(page, '#smartDemoSkipBtn');
   await T(page, 1500);
   const tile = await page.evaluate(() => { const t = document.querySelector('#surpriseTemplateGrid .btn-select[data-surprise="i-know"]'); return t && { img: !!t.querySelector('img')?.naturalWidth, price: /\$\d/.test(t.innerText) }; });
   if (!tile) return 'FAIL: the link ?surprise=i-know does not show the hidden mug';
@@ -224,7 +228,7 @@ scenarios.theOrderPage = async (page, log) => {
   page.on('request', (r) => { if (r.url().includes('/api/create-checkout-session')) { try { bodies.push(r.postDataJSON()); } catch (e) {} } });
   await page.route('**/api/printify-catalog**', (route) => route.fulfill({ json: { shipping: 6.9, shippingSeparate: true, source: 'live' } }));
   await toMugSize(page);
-  await tap(page, '#preGenSizeSmartBtn');
+  await tap(page, '#preGenSizeSmartBtn'); await T(page, 300); await tap(page, '#smartDemoSkipBtn');
   await T(page, 1500);
   await tap(page, '#surpriseTemplateGrid .btn-select[data-surprise="congratulations"]');
   await T(page, 900);

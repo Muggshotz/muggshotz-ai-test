@@ -1,5 +1,5 @@
 <!-- ============================================================
-     VERSION: V424
+     VERSION: V425
      ============================================================
      THE ONE LINE THAT SAYS WHICH BUILD YOU ARE LOOKING AT.
 
@@ -1696,20 +1696,21 @@ const HERO_SETTLE_MS = 1000;
 <div class="card" id="surpriseCard" style="display:none">
 <div class="card-title">🎁 SURPRISE!!!</div>
 <img src="art/options/smart-mug.jpg" alt="The black smart mug" style="display:block;width:min(100%,150px);margin:0 auto .4rem;border-radius:8px;background:#fff"/>
-<div class="note smart-blink" id="surpriseHowLine" style="text-align:center;margin:0 0 .75rem;font-size:14px">An ordinary black mug until the hot coffee goes in, and then...<br><b>Make a selection to see how it works.</b></div>
+<div class="note smart-blink" id="surpriseHowLine" style="text-align:center;margin:0 0 .75rem;font-size:14px">An ordinary black mug until the hot coffee goes in, and then...<br><b>Tap a design to see it on your mug.</b></div>
 <div class="note" style="margin-top:0;margin-bottom:.4rem;font-weight:700">Pick your surprise</div>
 <div class="grid2" id="surpriseTemplateGrid"></div>
 <div id="surpriseVariantWrap" style="display:none">
 <div class="note" style="margin-top:.9rem;margin-bottom:.4rem;font-weight:700">And on the other side?</div>
 <div class="grid3" id="surpriseVariantGrid"></div>
 </div>
-<div class="note" style="margin-top:.9rem;margin-bottom:.4rem;font-weight:700">Who is it for? The surprise faces them as they hold it.</div>
+<div id="surprisePreviewWrap" style="display:none;margin-top:.9rem">
+<div id="surpriseRevealBlock"><div id="surpriseReveal" title="Drag to turn it; click to stop or start"><div class="pm-mug3d-stage" id="surpriseRevealStage"></div><div id="surpriseRevealWords"></div></div>
+<div id="surpriseFrameWrap" style="display:none"><div class="note" style="margin-top:0;margin-bottom:.4rem;font-weight:700">The frame</div><div class="grid2" id="surpriseFrameGrid" data-words="the frame: the mug above carries the picture"></div></div>
+<div class="note" style="margin-top:.2rem;margin-bottom:.4rem;font-weight:700">Who is it for? The surprise faces them as they hold it.</div>
 <div class="grid2" id="surpriseHandGrid" data-words="which hand: the mug and its surprise carry the pictures">
 <div class="btn-select selected" data-hand="right" onclick="pickSurpriseHand('right')" style="padding:.5rem;font-size:12px">Right-handed</div><div class="btn-select" data-hand="left" onclick="pickSurpriseHand('left')" style="padding:.5rem;font-size:12px">Left-handed</div>
 </div>
-<div id="surprisePreviewWrap" style="display:none;margin-top:.9rem">
-<div id="surpriseRevealBlock"><div id="surpriseReveal" title="Click to watch it again"><div class="pm-mug3d-stage" id="surpriseRevealStage"></div><div id="surpriseRevealWords"></div></div>
-<div id="surpriseBrew"><div class="brew-h">What else is brewing?</div><div class="brew-row" id="surpriseBrewRow"></div></div>
+<div id="surpriseBrew" style="margin-top:.9rem"><div class="brew-h">What else is brewing?</div><div class="brew-row" id="surpriseBrewRow"></div></div>
 <button type="button" class="generate-btn" id="surpriseContinueBtn" style="margin-top:0" onclick="goToSurpriseOrder()">🎁 This is the one</button></div>
 <img id="surpriseColdHot" alt="Cold, then hot: the surprise appears" style="display:none;width:100%;border-radius:8px;margin:.9rem 0 .6rem"/>
 <div class="note" style="margin-bottom:.4rem">The whole print, laid flat. It wraps once round the mug.</div>
@@ -1854,8 +1855,7 @@ const HERO_SETTLE_MS = 1000;
 <img src="size-20oz.jpg" style="width:100%;border-radius:6px;background:#fff;margin-bottom:6px"/>
 20oz<div class="note" style="margin-top:4px">$24.95</div>
 </div>
-<div class="btn-select" id="preGenSizeSmartBtn" style="padding:.5rem" onclick="pickSmartMug()">
-<button type="button" class="info-i" id="smartMugInfoBtn" aria-label="How the magic mug works" onclick="openSmartMugHow(event)">i</button>
+<div class="btn-select" id="preGenSizeSmartBtn" style="padding:.5rem" onclick="askSmartDemo()">
 <img src="art/options/smart-mug.jpg" alt="" style="width:100%;border-radius:6px;background:#fff;margin-bottom:6px"/>
 11oz Smart Mug<div class="note" style="margin-top:4px" data-smart-price>$19.95</div>
 </div>
@@ -1871,7 +1871,18 @@ const HERO_SETTLE_MS = 1000;
 <div id="smartHowReveal" title="Click to watch it again"><div class="pm-mug3d-stage" id="smartHowRevealStage"></div><div id="smartHowRevealWords"></div></div>
 <div id="smartHowSteps"></div>
 <button type="button" class="generate-btn" id="smartHowOnBtn" onclick="smartMugHowOn()">🎁 Pick your surprise</button>
-<button type="button" class="download-btn" style="margin-top:.6rem" onclick="closeSmartMugHow()">← Back</button>
+<button type="button" class="download-btn" style="margin-top:.6rem" onclick="smartHowBack()">← Back</button>
+</div>
+</div>
+<div id="smartDemoOverlay" class="step-lock-overlay" style="display:none;overflow-y:auto;align-items:flex-start">
+<div class="card" id="smartDemoCard" style="max-width:520px;width:100%;margin:2rem auto;position:relative">
+<div class="card-title">✨ The Magic Mug</div>
+<img src="art/options/smart-mug.jpg" alt="The 11oz Smart Mug" style="display:block;width:min(100%,150px);margin:0 auto .4rem;border-radius:8px;background:#fff"/>
+<div class="note" style="text-align:center;margin:0 0 .9rem">11oz Smart Mug · <span data-smart-price>$19.95</span></div>
+<div class="note" style="text-align:center;margin:0 0 .9rem;font-size:15px;color:#cfe3ff">A black mug with a surprise under the black. Want to see it happen first?</div>
+<button type="button" class="generate-btn" id="smartDemoYesBtn" onclick="smartDemoYes()">▶ See the demonstration</button>
+<button type="button" class="generate-btn" id="smartDemoSkipBtn" style="margin-top:.6rem" onclick="smartDemoSkip()">Skip the demonstration</button>
+<button type="button" class="download-btn" style="margin-top:.6rem" onclick="closeSmartDemo()">← Back</button>
 </div>
 </div>
 
@@ -4829,7 +4840,7 @@ function toggleWorkingImage(){
 // Two copies of a number is exactly how the marker rotted in the first place,
 // so they are not trusted to agree: .githooks/pre-commit moves both together
 // and REFUSES the commit if it ever finds them apart.
-const APP_VERSION='V424';
+const APP_VERSION='V425';
 try{ console.log('%cNeedles\u2019 Studio '+APP_VERSION,'color:#29a3ff;font-weight:700'); }catch(e){}
 
 function getDeviceId(){
@@ -13082,7 +13093,34 @@ function smartMugPriceText(){ return typeof SMART_MUG_PRICE==='number' ? '$'+SMA
 // The print file chosen: the template's own, or its chosen variant's.
 function surpriseFile(){
   const t=SURPRISE_TEMPLATES[selectedSurprise]; if(!t)return null;
-  return (t.variants?(t.variants[selectedSurpriseVariant]||{}).file:t.file)||null;
+  const d=t.variants?(t.variants[selectedSurpriseVariant]||{}):t, fr=surpriseFrames(d);
+  if(fr&&fr[selectedSurpriseFrame])return fr[selectedSurpriseFrame].file;
+  return d.file||null;
+}
+// THE FRAME, A CHOICE LIKE A PROP (Alyx, 29 Sep 2026: "we just have the two
+// frame choice up as if they were props ... they can click it right onto the
+// mock up as it's spinning"). A design laid out on white may come framed more
+// than one way: frames:{key:{label,file}}, the first the default. Each file is
+// a finished print (tools/surprise/compose-set.py builds them all from the
+// one painting), so the frame showing on the mug is the one printed.
+let selectedSurpriseFrame=null;
+function surpriseFrames(d){ return d&&d.frames&&Object.keys(d.frames).length>1?d.frames:null; }
+function surpriseDesign(){
+  const t=SURPRISE_TEMPLATES[selectedSurprise]; if(!t)return null;
+  return t.variants?(t.variants[selectedSurpriseVariant]||null):t;
+}
+function renderSurpriseFrames(){
+  const wrap=document.getElementById('surpriseFrameWrap'), grid=document.getElementById('surpriseFrameGrid');
+  if(!wrap||!grid)return;
+  const fr=surpriseFrames(surpriseDesign());
+  if(fr&&!fr[selectedSurpriseFrame])selectedSurpriseFrame=Object.keys(fr)[0];
+  wrap.style.display=fr?'block':'none';
+  grid.innerHTML=fr?Object.entries(fr).map(([k,x])=>'<div class="btn-select'+(k===selectedSurpriseFrame?' selected':'')+'" data-frame="'+k+'" onclick="pickSurpriseFrame(\''+k+'\')" style="padding:.5rem;font-size:12px">'+x.label+'</div>').join(''):'';
+}
+function pickSurpriseFrame(key){
+  selectedSurpriseFrame=key;
+  document.querySelectorAll('#surpriseFrameGrid .btn-select').forEach(b=>b.classList.toggle('selected',b.dataset.frame===key));
+  refreshSurprisePreview();
 }
 function surprisePrintUrl(){
   const file=surpriseFile(); if(!file)return null;
@@ -13282,14 +13320,38 @@ function refreshSurprisePreview(){
   // the customer sees it from the first second, and the cup's first build
   // cannot hold the landing up; the hand changing does not replay it.
   if(!(url&&file)){ releaseSurpriseReveal(); return; }
+  renderSurpriseFrames();
   renderSurpriseBrew();
-  if(file!==surpriseRevealFile){ surpriseRevealFile=file; surpriseRevealRun++;
-    smoothScrollToTarget('surpriseRevealBlock','center',()=>{ if(surpriseRevealFile===file)playSurpriseReveal(file); }); }
-  else smoothScrollToTarget('surpriseRevealBlock','center');
+  // THE MUG, NOT THE DEMONSTRATION (Alyx, 29 Sep 2026): the heat-up is asked
+  // for once, on the Smart Mug square; a design tapped here goes straight onto
+  // the large mug, hot and turning, in the hand and frame chosen, and the
+  // frame and hand buttons under it change it as it turns.
+  // A hand or frame tapped while the page is still landing waits for it: the
+  // mug opens once, at the end, in whatever is chosen by then (building it
+  // mid-landing held the scroll up).
+  const design=selectedSurprise+'|'+(selectedSurpriseVariant||'');
+  if(design!==surpriseShownDesign){ surpriseShownDesign=design; surpriseLandingFor=design;
+    smoothScrollToTarget('surpriseRevealBlock','center',()=>{ if(surpriseLandingFor===design)surpriseLandingFor=null; if(surpriseShownDesign===design)showSurpriseMug(); }); }
+  else if(surpriseLandingFor!==design)showSurpriseMug();
+}
+let surpriseShownDesign=null, surpriseLandingFor=null;
+const SURPRISE_MUG_ZOOM=1.4;   // "I would have the mug larger because it's hard to check out the funny"
+function showSurpriseMug(){
+  const st=document.getElementById('surpriseRevealStage'), file=surpriseFile();
+  if(!st||!file||typeof MUG3D==='undefined'||(typeof mug3dFailed!=='undefined'&&mug3dFailed))return;
+  const url='art/surprise/reveal/'+file+(selectedSurpriseHand==='left'?'-left':'')+'.jpg';
+  surpriseRevealFile=file;
+  if(MUG3D.mounted()&&MUG3D.host()===st&&revealPainted[st.id]===url)return;
+  const run=++surpriseRevealRun; revealPainted[st.id]=null;
+  surpriseRevealWords('',false);
+  const angle=(MUG3D.mounted()&&MUG3D.host()===st)?null:-90;   // a change of frame or hand keeps it turning where it is
+  MUG3D.open(st,Object.assign({},SHELF_MUG_3D,{panoramaUrl:url,panelUrls:[],startAngle:angle,restartOnView:false,turns:0,spinStep:0.32,heat:1}))
+  .then(()=>{ if(run!==surpriseRevealRun)return; revealPainted[st.id]=url; MUG3D.setZoom(SURPRISE_MUG_ZOOM); })
+  .catch(err=>{ console.error('The mug could not start:',err); const r=document.getElementById('surpriseReveal'); if(r)r.style.display='none'; });
 }
 // Back is the panel before: Coffee Mug Size.
 function surpriseBack(){
-  releaseSurpriseReveal();
+  releaseSurpriseReveal(); surpriseShownDesign=null;
   clearAllFocusModes();
   product='mug';
   mugSizeChosenPreGen=false;
@@ -13297,6 +13359,7 @@ function surpriseBack(){
   refreshSurpriseVisibility();
   refreshMugSizeCardVisibility();
   refreshMugStyleCardVisibility();
+  if(smartCameFrom==='demo')openSmartMugHow(); else askSmartDemo();
 }
 // The design is the template itself: straight to the order page, which shows
 // Printify's mockup of it on the mug and takes the order.
@@ -13528,6 +13591,16 @@ function openSmartMugHow(e){
 }
 function closeSmartMugHow(){ releaseHowReveal(); const o=document.getElementById('smartHowOverlay'); if(o)o.style.display='none'; }
 function smartMugHowOn(){ closeSmartMugHow(); pickSmartMug(); }
+// DEMONSTRATION, OR SKIP IT (Alyx, 29 Sep 2026: "When a customer clicks on
+// the magic mug square a quick panel opens up and that panel gives a binary
+// option demonstration? or skip demonstration"). It replaces the (i). Back on
+// the designs returns to whichever was taken; Back here, to the sizes.
+let smartCameFrom='skip';
+function askSmartDemo(){ const o=document.getElementById('smartDemoOverlay'); if(!o)return; o.style.display='flex'; o.scrollTop=0; }
+function closeSmartDemo(){ const o=document.getElementById('smartDemoOverlay'); if(o)o.style.display='none'; }
+function smartDemoYes(){ closeSmartDemo(); smartCameFrom='demo'; openSmartMugHow(); }
+function smartDemoSkip(){ closeSmartDemo(); smartCameFrom='skip'; pickSmartMug(); }
+function smartHowBack(){ closeSmartMugHow(); askSmartDemo(); }
 function renderPremades(){
   const view=document.getElementById('premadesView'), title=document.getElementById('premadesTitle'); if(!view)return;
   releaseShelfMug();

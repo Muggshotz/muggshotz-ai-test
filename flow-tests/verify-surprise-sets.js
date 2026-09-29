@@ -29,7 +29,7 @@ async function toSurprise(page) {
   await tap(page, '#productCard .btn-select[data-val="mug"]');
   await T(page, 1200);
   await dismissAlerts(page);
-  await tap(page, '#preGenSizeSmartBtn');
+  await tap(page, '#preGenSizeSmartBtn'); await T(page, 300); await tap(page, '#smartDemoSkipBtn');
   await T(page, 1500);
 }
 
