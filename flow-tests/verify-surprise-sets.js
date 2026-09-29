@@ -81,13 +81,19 @@ scenarios.theThreeListsAndTheFiles = async (page) => {
   for (const [k, s] of live) {
     if (orderLabels[k] !== s.label) bad.push(`${k}: the order page calls it ${orderLabels[k]}`);
     const mine = (studioSets[k] || {}).designs || [];
-    if (JSON.stringify(mine.map((d) => [d.key, d.label, d.file])) !== JSON.stringify(s.designs.map((d) => [d.key, d.label, d.file]))) bad.push(`${k}: the studio's mugs differ from the server's`);
+    if (JSON.stringify(mine.map((d) => [d.key, d.label, d.file, !!d.frames])) !== JSON.stringify(s.designs.map((d) => [d.key, d.label, d.file, !!d.frames]))) bad.push(`${k}: the studio's mugs differ from the server's`);
     // One design is a shelf: a set may be the same mug four times over.
     if (s.designs.length < 1) bad.push(`${k} has no mugs`);
     if (new Set(s.designs.map((d) => d.key)).size !== s.designs.length) bad.push(`${k}: two mugs share a key`);
   }
   // The files, measured in the page (the browser reads the PNGs).
   await page.goto('http://127.0.0.1:8788/needles-studio.html');
+  // A framed mug (frames: true) has its two framed prints too, each hand.
+  const framed = live.flatMap(([, s]) => s.designs.filter((d) => d.frames).flatMap((d) => ['one', 'two'].flatMap((f) => [`${d.file}-${f}-print.png`, `${d.file}-${f}-print-left.png`])));
+  const missing = await page.evaluate(async (fs) => { const out = [];
+    for (const f of fs) { const ok = await new Promise((r) => { const im = new Image(); im.onload = () => r(im.naturalWidth === 2475 && im.naturalHeight === 1155); im.onerror = () => r(false); im.src = '/art/surprise/' + f; }); if (!ok) out.push(f); }
+    return out; }, framed);
+  if (missing.length) bad.push(`framed prints missing or not 2475 x 1155: ${missing.join(', ')}`);
   const files = live.flatMap(([, s]) => s.designs.map((d) => d.file));
   const measured = await page.evaluate(async (files) => {
     const load = (u) => new Promise((r) => { const im = new Image(); im.onload = () => r(im); im.onerror = () => r(null); im.src = u; });
@@ -98,8 +104,14 @@ scenarios.theThreeListsAndTheFiles = async (page) => {
       const p = await load(`/art/surprise/${f}-print.png`), l = await load(`/art/surprise/${f}-print-left.png`);
       const c = await load(`/art/surprise/${f}-coldhot.jpg`), t = await load(`/art/options/surprise-${f}.jpg`), sh = await load(`/art/surprise/show/${f}.jpg`);
       const row = { f, print: p && `${p.naturalWidth}x${p.naturalHeight}`, left: l && `${l.naturalWidth}x${l.naturalHeight}`, coldhot: !!c, tile: !!t, show: sh && `${sh.naturalWidth}x${sh.naturalHeight}` };
-      if (p && t) { const w = p.naturalWidth / 2, h = p.naturalHeight, tt = tiny(t, 0, 0, t.naturalWidth, t.naturalHeight);
-        row.punchlineLeft = diff(tiny(p, (w - h) / 2, 0, h, h), tt) < diff(tiny(p, w + (w - h) / 2, 0, h, h), tt); }
+      // Each half compared by its picture, wherever in the half it sits (the
+      // decal mugs hug the handle ends): cropped to what is not white.
+      const box = (im, x0, y0, bw, bh) => { const c = document.createElement('canvas'); c.width = bw; c.height = bh; const g = c.getContext('2d'); g.drawImage(im, x0, y0, bw, bh, 0, 0, bw, bh);
+        const d = g.getImageData(0, 0, bw, bh).data; let a = bw, b = bh, e = 0, f = 0;
+        for (let y = 0; y < bh; y += 3) for (let x = 0; x < bw; x += 3) { const i = (y * bw + x) * 4; if (d[i] < 235 || d[i + 1] < 235 || d[i + 2] < 235) { if (x < a) a = x; if (x > e) e = x; if (y < b) b = y; if (y > f) f = y; } }
+        return e > a && f > b ? [x0 + a, y0 + b, e - a, f - b] : [x0, y0, bw, bh]; };
+      if (p && t) { const w = p.naturalWidth / 2, h = p.naturalHeight, tt = tiny(t, ...box(t, 0, 0, t.naturalWidth, t.naturalHeight));
+        row.punchlineLeft = diff(tiny(p, ...box(p, 0, 0, w, h)), tt) < diff(tiny(p, ...box(p, w, 0, w, h)), tt); }
       out.push(row);
     }
     return out;
@@ -250,6 +262,46 @@ scenarios.theLink = async (page) => {
     const b = await pmState(page); if (b.view !== want) return `FAIL: Back went to ${b.view}, not ${want}`;
   }
   return 'PASS: ?set=thanksgiving opens How the magic mug works, lit, landed at its title, no photo needed; its button goes on to the shelf; Back goes to How it works, then the products list';
+};
+
+// THE FRAME, A PROP ON THE SHELF (Alyx, 29 Sep 2026): a framed mug shows No
+// frame (the default), One frame and A frame each side under it; the one
+// picked turns on the mug, goes into the tray with the mug, and is ordered.
+scenarios.theFrames = async (page) => {
+  const bodies = [];
+  page.on('request', (r) => { if (r.url().includes('/api/create-checkout-session')) { try { bodies.push(r.postDataJSON()); } catch (e) {} } });
+  await page.route('**/api/printify-catalog**', (route) => route.fulfill({ json: { shipping: 7.99, shippingSeparate: true, source: 'live' } }));
+  await openStudio(page); await dismissAlerts(page);
+  await tap(page, '#premadesFrontBtn'); await T(page, 1500);
+  await tap(page, '#premadesView .pm-prod[data-product="mugs"]'); await T(page, 1500);
+  await page.evaluate(() => premadesSetLayout('one'));
+  await page.evaluate(() => holidayStep(SURPRISE_SETS.thanksgiving.designs.findIndex((d) => d.key === 'pardon'))); await T(page, 700);
+  const btns = await page.evaluate(() => [...document.querySelectorAll('#premadesFrameGrid .btn-select')].map((b) => b.textContent + (b.classList.contains('selected') ? '*' : '')));
+  if (btns.join('|') !== 'No frame*|One frame|A frame each side') return `FAIL: the Pardon's frame buttons read ${JSON.stringify(btns)}`;
+  await page.evaluate(() => pickPremadesFrame('two')); await T(page, 600);
+  const mug = await page.evaluate(() => document.querySelector('#premadesView .pm-mat .pm-mug3d').dataset.mug3d);
+  if (mug !== 'thanksgiving-pardon-two') return `FAIL: A frame each side put ${mug} on the mug`;
+  await tap(page, '#premadesAddBtn'); await T(page, 300);
+  const tray = await page.evaluate(() => [...document.querySelectorAll('#premadesTray .pm-traymug span')].map((s) => s.textContent));
+  if (JSON.stringify(tray) !== '["The Pardon · A frame each side"]') return `FAIL: the tray reads ${JSON.stringify(tray)}`;
+  await page.evaluate(() => holidayStep(SURPRISE_SETS.thanksgiving.designs.findIndex((d) => d.key === 'the-diet') - premadesMugIndex)); await T(page, 700);
+  if (await page.evaluate(() => !!document.getElementById('premadesFrameGrid'))) return 'FAIL: The Diet, not yet framed, shows frame buttons';
+  await tap(page, '#premadesAddBtn'); await T(page, 300);
+  await followToOrder(page, () => tap(page, '#premadesContinueBtn'));
+  await T(page, 3500);
+  await page.evaluate(() => {
+    const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v; };
+    set('fullName', 'Test Customer'); set('email', 'test@example.com'); set('phone', '5555550100');
+    set('address1', '123 Test St'); set('city', 'Westland'); set('state', 'MI'); set('zip', '48185'); set('country', 'US');
+    submitOrder();
+  });
+  await T(page, 2000);
+  const b = bodies[bodies.length - 1];
+  if (!b || JSON.stringify(b.mugs) !== '["pardon~two","the-diet"]') return `FAIL: checkout got ${JSON.stringify(b && b.mugs)}`;
+  const { SURPRISE_SETS, holidayMugs, setPrintUrls } = await import(pathToFileURL(path.join(ROOT, 'lib', 'surprise-sets.js')).href);
+  const urls = setPrintUrls(holidayMugs(SURPRISE_SETS.thanksgiving, b.mugs), 'right');
+  if (!/thanksgiving-pardon-two-print\.png$/.test(urls[0]) || !/the-diet-print\.png$/.test(urls[1])) return `FAIL: the server would print ${urls}`;
+  return 'PASS: a framed mug on the shelf offers No frame, One frame, A frame each side; the pick turns on the mug, rides into the tray and the order ("pardon~two"), and the server prints that framed file';
 };
 
 // One mug on its own: Just this one, on the shelf, orders that one at $19.95.
