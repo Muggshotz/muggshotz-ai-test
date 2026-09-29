@@ -24,9 +24,25 @@ name = sys.argv[1]
 frame = sys.argv[2] if len(sys.argv) > 2 else 'valentine'
 here = os.path.dirname(os.path.abspath(__file__))
 SETUP_OF = sys.argv[3] if len(sys.argv) > 3 else name
+def unwhite(im):
+    # A decal delivered on solid white rather than transparent (Bud's
+    # Thanksgiving ones, 29 Sep 2026): the white that reaches the canvas
+    # edge becomes transparent, feathered at its border; white inside the
+    # picture (a sign, a sheet of paper) is left alone.
+    import numpy as np, cv2
+    a = np.asarray(im).copy()
+    if a[..., 3].min() < 250: return im               # already transparent
+    near = (a[..., :3].min(axis=2) > 238).astype(np.uint8)
+    n, lab = cv2.connectedComponents(near, connectivity=4)
+    edge = set(np.unique(np.concatenate([lab[0], lab[-1], lab[:, 0], lab[:, -1]]))) - {0}
+    bg = np.isin(lab, list(edge)).astype(np.float32)
+    bg = cv2.GaussianBlur(cv2.dilate(bg, np.ones((3, 3), np.uint8)), (0, 0), 1.2)
+    a[..., 3] = np.clip(255 * (1 - bg), 0, 255).astype(np.uint8)
+    return Image.fromarray(a, 'RGBA')
 def decal(side):
     f = glob.glob(f'art/surprise/decals/{SETUP_OF if side == "setup" else name}-{side}.*')[0]
     im = Image.open(f).convert('RGBA')
+    im = unwhite(im)
     im = im.crop(im.getbbox())                        # the decal itself, its empty margin off
     # Some decals carry a faint, all but invisible haze out to the canvas
     # edges (the question mark's reaches ~150 px past the picture). It sets
