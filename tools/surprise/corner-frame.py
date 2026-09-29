@@ -15,16 +15,18 @@ ROD_IN = float(sys.argv[5]) if len(sys.argv) > 5 else 46
 K = float(sys.argv[6]) if len(sys.argv) > 6 else 0.48
 c = np.asarray(Image.open(src).convert('RGBA')).astype(float)
 al = c[..., 3]
-# The rods, measured: the top rod's rows at its far end, the left rod's columns at its foot.
-rows = [y for y in range(0, c.shape[0] // 2) if al[y, -40] > 128]
-cols = [x for x in range(0, c.shape[1] // 2) if al[-40, x] > 128]
+# The rods, measured part-way along (60%), clear of the corner and of a rod
+# that stops short of the canvas edge (Bud's hairline corners, 29 Sep 2026).
+M = int(c.shape[1] * .6)
+rows = [y for y in range(0, c.shape[0] // 2) if al[y, M] > 128]
+cols = [x for x in range(0, c.shape[1] // 2) if al[M, x] > 128]
 ry, rx = (rows[0] + rows[-1]) / 2, (cols[0] + cols[-1]) / 2
 # The corner's decoration, and a margin of plain rod after it.
 dx = int(np.nonzero((al[int(ry) + 30:, int(rx) + 30:] > 40).any(0))[0].max() + rx + 30) + 50
 dy = int(np.nonzero((al[int(ry) + 30:, int(rx) + 30:] > 40).any(1))[0].max() + ry + 30) + 50
 corner = c[:dy, :dx]
-top_rod = c[int(ry) - 30:int(ry) + 31, -120:-20]        # plain rod, lengthways
-left_rod = c[-120:-20, int(rx) - 30:int(rx) + 31]
+top_rod = c[int(ry) - 30:int(ry) + 31, M:M + 100]        # plain rod, lengthways
+left_rod = c[M:M + 100, int(rx) - 30:int(rx) + 31]
 BW, BH, IN = round(W / K), round(H / K), ROD_IN / K     # built at Bud's scale, then brought down
 big = np.zeros((BH, BW, 4))
 def paste(img, x, y):

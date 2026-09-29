@@ -124,8 +124,16 @@ scenarios.leftHandedAndThePrints = async (page) => {
     const files = Object.values(SURPRISE_TEMPLATES).flatMap((t) => t.variants ? Object.values(t.variants).map((v) => v.file) : [t.file]);
     for (const f of files) {
       const p = await loadImageFromUrl('/art/surprise/' + f + '-print.png'), t = await loadImageFromUrl('/art/options/surprise-' + f + '.jpg');
-      const w = p.naturalWidth / 2, h = p.naturalHeight, tt = tiny(t, 0, 0, t.naturalWidth, t.naturalHeight);
-      const L = diff(tiny(p, (w - h) / 2, 0, h, h), tt), R = diff(tiny(p, w + (w - h) / 2, 0, h, h), tt);
+      const w = p.naturalWidth / 2, h = p.naturalHeight;
+      // Each half compared by its picture, wherever in the half it sits (the
+      // decal mugs hug the handle ends, 29 Sep 2026): the half cropped to
+      // what is not white, against the tile cropped the same way.
+      const box = (im, x0, y0, bw, bh) => { const c = document.createElement('canvas'); c.width = bw; c.height = bh; const g = c.getContext('2d'); g.drawImage(im, x0, y0, bw, bh, 0, 0, bw, bh);
+        const d = g.getImageData(0, 0, bw, bh).data; let a = bw, b = bh, e = 0, f = 0;
+        for (let y = 0; y < bh; y += 3) for (let x = 0; x < bw; x += 3) { const i = (y * bw + x) * 4; if (d[i] < 235 || d[i + 1] < 235 || d[i + 2] < 235) { if (x < a) a = x; if (x > e) e = x; if (y < b) b = y; if (y > f) f = y; } }
+        return e > a && f > b ? [x0 + a, y0 + b, e - a, f - b] : [x0, y0, bw, bh]; };
+      const tb = box(t, 0, 0, t.naturalWidth, t.naturalHeight), tc = tiny(t, ...tb);
+      const L = diff(tiny(p, ...box(p, 0, 0, w, h)), tc), R = diff(tiny(p, ...box(p, w, 0, w, h)), tc);
       if (!(L < R)) wrong.push(f);
     }
     return wrong;
