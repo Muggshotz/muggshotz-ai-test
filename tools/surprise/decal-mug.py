@@ -27,19 +27,25 @@ punch, setup = decal('punch'), decal('setup')
 def fit(im, bw, bh):
     k = min(bw / im.width, bh / im.height)
     return im.resize((round(im.width * k), round(im.height * k)), Image.LANCZOS)
-# Each style: the box a decal fits in, the centres of the two halves, and the
-# frame laid over it.
+# Each style: the box a decal fits in and how far each decal sits from its own
+# end of the print (the ends meet at the handle), and the frame laid over it.
+# PUSHED TO THE HANDLE ENDS (Alyx, 29 Sep 2026): centred in each half, a decal
+# sat off-centre on its face of the mug, towards the middle of the print; each
+# is 10% smaller than its box and set 15 px from its end (No frame), or just
+# inside the rail when framed. The punchline hugs the left end, the setup the
+# right.
+SCALE = 0.90
 STYLES = {
-    '':     dict(box=(1040, 1040), cx=(619, 1856), cy=578, over=None),
-    '-one': dict(box=(900, 900), cx=(640, 1835), cy=578, over=[(f'art/surprise/{frame}-frame-one.png', 0)]),
-    '-two': dict(box=(840, 840), cx=(625, 1850), cy=578, over=[(f'art/surprise/{frame}-frame-half.png', 25), (f'art/surprise/{frame}-frame-half.png', W - 25 - 1200)]),
+    '':     dict(box=1040, edge=15, over=None),
+    '-one': dict(box=900, edge=53, over=[(f'art/surprise/{frame}-frame-one.png', 0)]),
+    '-two': dict(box=840, edge=72, over=[(f'art/surprise/{frame}-frame-half.png', 25), (f'art/surprise/{frame}-frame-half.png', W - 25 - 1200)]),
 }
 for sfx, st in STYLES.items():
     for hand, (left, right) in (('', (punch, setup)), ('-left', (setup, punch))):
         out = Image.new('RGB', (W, H), 'white')
-        for im, cx in ((left, st['cx'][0]), (right, st['cx'][1])):
-            d = fit(im, *st['box'])
-            out.paste(d, (cx - d.width // 2, st['cy'] - d.height // 2), d)
+        b = round(st['box'] * SCALE)
+        d = fit(left, b, b); out.paste(d, (st['edge'], H // 2 - d.height // 2), d)
+        d = fit(right, b, b); out.paste(d, (W - st['edge'] - d.width, H // 2 - d.height // 2), d)
         for f, x in (st['over'] or []):
             fr = Image.open(f).convert('RGBA'); out.paste(fr, (x, 0), fr)
         p = f'art/surprise/{name}{sfx}-print{hand}.png'
