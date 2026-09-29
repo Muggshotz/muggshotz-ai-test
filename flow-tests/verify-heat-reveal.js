@@ -83,6 +83,20 @@ async function run(viewport, tag) {
   const land = await page.evaluate(() => { const r = document.getElementById('surpriseContinueBtn').getBoundingClientRect(), s = document.getElementById('surpriseReveal').getBoundingClientRect(); return { btn: [r.top, r.bottom], stage: [s.top, s.bottom], H: innerHeight }; });
   ok('the mug and Continue are both on screen', land.stage[0] >= -2 && land.btn[1] <= land.H + 2, JSON.stringify(land));
 
+  // It wears the light picture, not the full print (Alyx, 29 Sep 2026: the
+  // first play sat for half a minute on the download).
+  ok('the mug loads the reveal picture, not the full print', await page.evaluate(() =>
+    performance.getEntriesByType('resource').some((e) => /art\/surprise\/reveal\/proposal\.jpg/.test(e.name))
+    && !performance.getEntriesByType('resource').some((e) => /art\/surprise\/proposal-print\.png/.test(e.name) && e.initiatorType === 'img' && /reveal/.test(document.getElementById('surpriseReveal').innerHTML))));
+  // A click replays it at once, the picture already on the mug ("it takes
+  // about 7 seconds before it even starts with the first text").
+  const replay = await page.evaluate(async () => {
+    const t0 = performance.now(); document.getElementById('surpriseRevealStage').click();
+    const w = document.getElementById('surpriseRevealWords');
+    await new Promise((r) => { const iv = setInterval(() => { if (/absorbs/.test(w.textContent)) { clearInterval(iv); r(); } }, 50); setTimeout(() => { clearInterval(iv); r(); }, 8000); });
+    return Math.round(performance.now() - t0);
+  });
+  ok('a click on the mug replays it: the heat words within 1.6s', replay < 1600, replay + 'ms');
   // Another design plays that one; the hand does not replay.
   const r0 = await page.evaluate(() => surpriseRevealRun);
   await page.evaluate(() => pickSurpriseHand('left')); await T(page, 300);

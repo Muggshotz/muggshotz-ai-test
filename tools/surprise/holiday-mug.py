@@ -36,3 +36,5 @@ print(f'{name}: show/{name}.jpg (1050 x 490)')
 os.makedirs('art/surprise/wrap', exist_ok=True)
 Image.open(f'art/surprise/{name}-print.png').convert('RGB').save(f'art/surprise/wrap/{name}.jpg', quality=88, optimize=True)
 print(f'{name}: wrap/{name}.jpg; now node tools/surprise/mug-stills.cjs {name} for mug/{name}.jpg')
+# The heat reveal's lighter picture (reveal-jpgs.py).
+subprocess.run([sys.executable, f'{here}/reveal-jpgs.py', name], check=True)

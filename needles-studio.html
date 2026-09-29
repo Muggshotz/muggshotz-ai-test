@@ -1,5 +1,5 @@
 <!-- ============================================================
-     VERSION: V422
+     VERSION: V423
      ============================================================
      THE ONE LINE THAT SAYS WHICH BUILD YOU ARE LOOKING AT.
 
@@ -4821,7 +4821,7 @@ function toggleWorkingImage(){
 // Two copies of a number is exactly how the marker rotted in the first place,
 // so they are not trusted to agree: .githooks/pre-commit moves both together
 // and REFUSES the commit if it ever finds them apart.
-const APP_VERSION='V422';
+const APP_VERSION='V423';
 try{ console.log('%cNeedles\u2019 Studio '+APP_VERSION,'color:#29a3ff;font-weight:700'); }catch(e){}
 
 function getDeviceId(){
@@ -8494,6 +8494,10 @@ function refreshMugSizeCardVisibility(){
   // this overlay closes on its own via pickPreGenMugSize.
   const show=(product==='mug' && !mugSizeChosenPreGen);
   overlay.style.display=show?'flex':'none';
+  // The Smart Mug is on this panel, and its (i) and its designs both play the
+  // heat reveal on the 3D mug: fetch the 3D engine and the (i)'s picture now,
+  // so the first play starts at once instead of waiting on the download.
+  if(show&&typeof MUG3D!=='undefined'){ MUG3D.warm(); if(!window.__howRevealWarm){ window.__howRevealWarm=new Image(); window.__howRevealWarm.src='art/surprise/reveal/'+HOW_MUG_FILE+'.jpg'; } }
   document.body.classList.toggle('step-locked',show || (product==='mug' && mugSizeChosenPreGen && !mugColorFinishedPreGen));
 }
 
@@ -13179,6 +13183,10 @@ function releaseHowReveal(){
   const st=document.getElementById('smartHowRevealStage');
   try{ if(st&&typeof MUG3D!=='undefined'&&MUG3D.mounted()&&MUG3D.host()===st){ surpriseRevealRun++; MUG3D.close(); } }catch(e){}
 }
+// What each stage has painted, so a replay only restarts the clock: it
+// used to open the cup again, reloading and repainting the picture first
+// (Alyx, 29 Sep 2026: "it takes about 7 seconds before it even starts").
+const revealPainted={};
 function playSurpriseReveal(file,spot){
   spot=spot||'design'; const S=REVEAL_SPOTS[spot];
   const st=document.getElementById(S.stage);
@@ -13187,9 +13195,7 @@ function playSurpriseReveal(file,spot){
   const words=(text,blink)=>surpriseRevealWords(text,blink,spot);
   words('',false);
   const T=SURPRISE_REVEAL_T, ease=x=>{ x=Math.max(0,Math.min(1,x)); return x*x*(3-2*x); };
-  MUG3D.open(st,Object.assign({},SHELF_MUG_3D,{panoramaUrl:'art/surprise/'+file+'-print.png',panelUrls:[],
-    startAngle:-90,restartOnView:false,turns:0,still:true,heat:0,onClick:()=>playSurpriseReveal(file,spot)}))
-  .then(()=>{
+  const clock=()=>{
     if(run!==surpriseRevealRun)return;
     MUG3D.setSpinning(false); MUG3D.setAngle(-90); MUG3D.setHeat(0);
     const t0=performance.now();
@@ -13207,7 +13213,16 @@ function playSurpriseReveal(file,spot){
       if(t<T.frozen)requestAnimationFrame(tick);
     };
     requestAnimationFrame(tick);
-  })
+  };
+  if(MUG3D.mounted()&&MUG3D.host()===st&&revealPainted[S.stage]===file){ clock(); return; }
+  revealPainted[S.stage]=null;
+  // The picture is reveal/<file>.jpg, the print at two thirds size (about a
+  // quarter of a megabyte) rather than the 2475 x 1155 print itself (two to
+  // three and a half): the first play waited on that download, sometimes for
+  // most of half a minute (Alyx, 29 Sep 2026). Made by tools/surprise/reveal-jpgs.py.
+  MUG3D.open(st,Object.assign({},SHELF_MUG_3D,{panoramaUrl:'art/surprise/reveal/'+file+'.jpg',panelUrls:[],
+    startAngle:-90,restartOnView:false,turns:0,still:true,heat:0,onClick:()=>playSurpriseReveal(file,spot)}))
+  .then(()=>{ if(run!==surpriseRevealRun)return; revealPainted[S.stage]=file; clock(); })
   .catch(err=>{ console.error('The heat reveal could not start:',err); const r=document.getElementById(S.box); if(r)r.style.display='none'; });
 }
 function refreshSurprisePreview(){
