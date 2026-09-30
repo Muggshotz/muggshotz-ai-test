@@ -125,13 +125,19 @@ async function walk(page, val, variant) {
   if (!(await page.evaluate(() => document.body.classList.contains('ideafirst-focus')))) { fails.push('never reached the description box'); return fails; }
   let l = await landing(page, '#ideaCard'); if (l) fails.push(`forward: ${l}`);
   await page.fill('#ideaDesc', 'a golden retriever in a bow tie');
-  await page.evaluate(() => confirmIdeaSatisfied());
+  // "Satisfied — Generate" paints in one click (Alyx, 30 Sep 2026): there is
+  // no Generate panel after the description, so the walk goes description ->
+  // the finished picture -> Back to the description.
+  const label = await page.evaluate(() => { refreshIdeaPromptLabel(); const el = document.getElementById('ideaGuidancePrompt'); el.click(); return el.textContent; });
+  if (!/Satisfied — Generate \(paid step, 1 token\)/.test(label)) fails.push(`the satisfied button reads "${label}", not Satisfied — Generate with its cost`);
+  try { await page.waitForFunction(() => document.getElementById('approveRow')?.style.display !== 'none', null, { timeout: 60000 }); }
+  catch (e) { fails.push('Satisfied — Generate never put a picture up'); return fails; }
   await settle(page);
-  l = await landing(page, '#generateBtn'); if (l) fails.push(`forward: ${l}`);
+  await dismissAlerts(page);
   // And back, one panel at a time.
-  await page.evaluate(() => document.getElementById('generateBackBtn').click());
+  await page.evaluate(() => document.getElementById('approveBackBtn').click());
   await settle(page);
-  if (!(await page.evaluate(() => document.body.classList.contains('ideafirst-focus')))) fails.push('Back under Generate did not return to the description box');
+  if (!(await page.evaluate(() => document.body.classList.contains('ideafirst-focus')))) fails.push('Back from the picture did not return to the description box');
   l = await landing(page, '#ideaCard'); if (l) fails.push(`back: ${l}`);
   await page.evaluate(() => [...document.querySelectorAll('#ideaCard button')].find((b) => /back/i.test(b.innerText) && b.offsetParent).click());
   await settle(page);
@@ -145,7 +151,7 @@ async function walk(page, val, variant) {
   const end = await litPanel(page);
   if (end.focus.length) fails.push(`the last Back left a spotlight on: ${end.focus.join(' ')}`);
   l = await landing(page, '#productCard .btn-select.selected'); if (l) fails.push(`back to the grid: ${l}`);
-  return fails.length ? fails : [`PASS: ${['tile', ...rail, 'idea', 'Generate'].join(' → ')} and back`];
+  return fails.length ? fails : [`PASS: ${['tile', ...rail, 'idea', 'picture'].join(' → ')} and back`];
 }
 
 (async () => {
