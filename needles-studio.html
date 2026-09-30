@@ -1,5 +1,5 @@
 <!-- ============================================================
-     VERSION: V434
+     VERSION: V435
      ============================================================
      THE ONE LINE THAT SAYS WHICH BUILD YOU ARE LOOKING AT.
 
@@ -727,6 +727,9 @@ html.order-page-open,html.order-page-open body{overflow:hidden}
 #premadesCard .pm-mug3d>.pm-mug3d-stage canvas{display:block;width:100%;height:100%}
 #premadesCard .pm-mug3d.live>img{visibility:hidden}
 #premadesCard .pm-mug3d.pm-case3d{aspect-ratio:4/5;max-width:440px;margin:0 auto}
+#premadesCard .pm-fade{display:flex;align-items:center;gap:10px;max-width:440px;margin:.6rem auto 0}
+#premadesCard .pm-fade input{flex:1}
+#premadesCard .pm-fade span{min-width:3.2em;text-align:right;color:#29a3ff;font-size:13px}
 #preGenSizeSmartBtn{position:relative}
 .info-i{position:absolute;top:6px;right:6px;width:24px;height:24px;border-radius:50%;background:#fff;color:#1d6fd0;border:2px solid #1d6fd0;font:italic 700 15px/20px Georgia,'Times New Roman',serif;text-align:center;cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.35);z-index:2;padding:0}
 .info-i:hover{background:#e8f2ff}
@@ -4889,7 +4892,7 @@ function toggleWorkingImage(){
 // Two copies of a number is exactly how the marker rotted in the first place,
 // so they are not trusted to agree: .githooks/pre-commit moves both together
 // and REFUSES the commit if it ever finds them apart.
-const APP_VERSION='V434';
+const APP_VERSION='V435';
 try{ console.log('%cNeedles\u2019 Studio '+APP_VERSION,'color:#29a3ff;font-weight:700'); }catch(e){}
 
 function getDeviceId(){
@@ -13608,6 +13611,37 @@ const SHELF_MUG_3D={sizeLabel:'11oz',styleName:'Color Pop',colorHex:'#1c1c1c',st
 // its front, like the shelf's mugs. The still under it is its first frame
 // (tools/suitcase-stills.cjs).
 const SHELF_CASE_3D={boxKey:'suitcase',colorHex:'#ffffff',startAngle:-30,spinStep:0.6,restartOnView:true,turns:1};
+// THE FADE ON THE SUITCASE SHELF (Alyx, 30 Sep 2026: "Put a fade tool on the
+// panel so that they can adjust slide from zero to 100"). The customer's fade,
+// 0 to 100, into the suitcase's own colour (suitcaseFadeHex: the studio's one
+// rule, getSelectedProductColorHex, asked about the suitcase). It starts at the
+// default the shelf's print files are baked at (tools/suitcase-fade.cjs), so an
+// untouched slider orders those files as they are; a moved one fades the
+// size's plain file (art/suitcases/plain/) on the page, as the preview did,
+// and uploads it for the order.
+const SUITCASE_FADE_DEFAULT=30;
+let premadesFade=SUITCASE_FADE_DEFAULT;
+function suitcaseFadeHex(){ const was=product; product='suitcase'; try{ return getSelectedProductColorHex(); } finally{ product=was; } }
+function premadeCaseFile(c,m,size){ return c.dir+'/'+(premadesFade===SUITCASE_FADE_DEFAULT?'print':'plain')+'/'+m.key+'-'+size+'.jpg'; }
+// The picture the case wears: the baked file at the default, else faded here.
+function premadeCaseArt(c,m,size){
+  const f=premadeCaseFile(c,m,size);
+  return premadesFade===SUITCASE_FADE_DEFAULT?Promise.resolve(f):renderFadedArtwork(f,suitcaseFadeHex(),premadesFade,100);
+}
+let premadesFadeTimer=null, premadesFadeRun=0;
+function setPremadesFade(v){
+  premadesFade=Math.max(0,Math.min(100,Math.round(Number(v)||0)));
+  const out=document.getElementById('premadesFadeVal'); if(out)out.textContent=premadesFade+'%';
+  clearTimeout(premadesFadeTimer);
+  premadesFadeTimer=setTimeout(()=>{
+    const c=premadeCat(), m=c&&premadeItems(c)[premadesIndex], pack=c&&(c.packs.find(p=>p.n===premadesPack)||c.packs[0]); if(!m||!c.sizes)return;
+    const run=++premadesFadeRun;
+    premadeCaseArt(c,m,pack.size).then(u=>{ if(run!==premadesFadeRun)return;
+      const el=document.querySelector('#premadesView .pm-case3d'); if(el)el.dataset.art=u;
+      if(el&&el.classList.contains('live')&&MUG3D.mounted())MUG3D.setArtwork(u); })
+      .catch(err=>console.error('The suitcase fade could not be drawn:',err));
+  },120);
+}
 // How it works, step 4: the pictures there are Golden Brown, so the mug is;
 // it holds on step 3's side, swivels half round in about a second, stops on
 // the punchline, and plays again whenever it comes back into view.
@@ -13637,7 +13671,13 @@ function spinShelfMug(el,opts){
       const v=document.getElementById('premadesView'); if(v)v.classList.add('no3d'); });
 }
 // The suitcase turns the same way, on its own print file.
-function spinShelfCase(el){ if(el)spinShelfMug(el,Object.assign({},SHELF_CASE_3D,{panoramaUrl:el.dataset.case})); }
+function spinShelfCase(el){
+  if(!el)return;
+  if(el.dataset.art){ spinShelfMug(el,Object.assign({},SHELF_CASE_3D,{panoramaUrl:el.dataset.art})); return; }
+  const c=premadeCat(), m=c&&premadeItems(c)[premadesIndex]; if(!m)return;
+  premadeCaseArt(c,m,el.dataset.size).then(u=>{ if(!el.isConnected)return; el.dataset.art=u; spinShelfMug(el,Object.assign({},SHELF_CASE_3D,{panoramaUrl:u})); })
+    .catch(err=>console.error('The suitcase could not be drawn:',err));
+}
 // Any other view, or the card leaving: the cup is let go, so whatever opens it
 // next (the mockup, the fade slider, Trimmings) builds it fresh.
 function releaseShelfMug(){
@@ -13756,10 +13796,11 @@ function renderPremades(){
     } else {
       view.innerHTML=premadesCrumb([c.label])+premadeLineTabs(c)+layout
         +'<div class="pm-mat">'+(c.sizes
-          ?'<div class="pm-mug3d pm-case3d" data-case="'+c.dir+'/print/'+m.key+'-'+pack.size+'.jpg" onclick="spinShelfCase(this)"><img id="premadesMatPic" src="'+c.dir+'/still/'+m.key+'.jpg" width="800" height="1000" alt="'+m.label+'"/><div class="pm-mug3d-stage"></div><div class="pm-spin-cue">↻ Click to spin</div></div>'
+          ?'<div class="pm-mug3d pm-case3d" data-size="'+pack.size+'" onclick="spinShelfCase(this)"><img id="premadesMatPic" src="'+c.dir+'/still/'+m.key+'.jpg" width="800" height="1000" alt="'+m.label+'"/><div class="pm-mug3d-stage"></div><div class="pm-spin-cue">↻ Click to spin</div></div>'
           :'<img class="pm-big" id="premadesMatPic" src="'+c.dir+'/show/'+m.key+'.jpg" width="'+sw+'" height="'+sh+'" alt="'+m.label+'"/>')
         +'<button type="button" class="pm-arr" style="left:-12px" aria-label="Previous" onclick="premadesStep(-1)">‹</button>'
         +'<button type="button" class="pm-arr" style="right:-12px" aria-label="Next" onclick="premadesStep(1)">›</button></div>'
+        +(c.sizes?'<div class="cap-row pm-fade" id="premadesFadeRow" data-words="the fade: the suitcase above is the picture"><label for="premadesFade">Fade</label><input type="range" id="premadesFade" min="0" max="100" step="1" value="'+premadesFade+'" oninput="setPremadesFade(this.value)"/><span id="premadesFadeVal">'+premadesFade+'%</span></div>':'')
         +'<div class="pm-name" id="premadesMatName">'+m.label+'</div>'
         +'<div class="pm-line" style="margin-bottom:.5rem">'+spec.line+' · '+$(pack.price)+'</div>'
         +'<div class="pm-dots">'+shown.map((x,i)=>'<span class="'+(i===premadesIndex?'on':'')+'" onclick="premadesStep('+(i-premadesIndex)+')"></span>').join('')+'</div>'
@@ -13950,11 +13991,22 @@ function goToPremadeSetOrder(mugs){
 // A premade design, ordered as its category's product with the design's print
 // file as the picture: the doormat, or a placemat of the category's kind, one
 // or a set.
-function goToPremadeOrder(){
+async function goToPremadeOrder(){
   const c=premadeCat(), m=c&&premadeItems(c)[premadesIndex]; if(!m)return;
   const size=c.sizes?(c.packs.find(p=>p.n===premadesPack)||c.packs[0]).size:null;
+  let printUrl=location.origin+'/'+c.dir+'/print/'+m.key+(size?'-'+size:'')+'.jpg';
+  // A suitcase faded by hand: its own file, faded as the preview was, uploaded.
+  if(c.sizes&&premadesFade!==SUITCASE_FADE_DEFAULT){
+    const btn=document.getElementById('premadesMatOrderBtn'), was=btn&&btn.innerHTML;
+    if(btn){ btn.disabled=true; btn.textContent='Preparing your suitcase…'; }
+    try{ printUrl=await uploadCompositedImage(await premadeCaseArt(c,m,size),{strict:true}); }
+    catch(err){ console.error('The faded suitcase could not be uploaded:',err);
+      if(btn){ btn.disabled=false; btn.innerHTML=was; }
+      setStatus('Your fade could not be saved just now. Please try again in a moment.',true); return; }
+    if(btn){ btn.disabled=false; btn.innerHTML=was; }
+  }
   const pending={
-    placements:{left:location.origin+'/'+c.dir+'/print/'+m.key+(size?'-'+size:'')+'.jpg',front:null,right:null},
+    placements:{left:printUrl,front:null,right:null},
     deviceId:deviceId,
     productIcon:c.order.family,
     premadeItem:premadesCategory+'/'+m.key
@@ -19829,10 +19881,18 @@ const MUG3D = (function(){
   // renders it: the design paints portrait (1024 x 1536) and paint() crops it
   // to the face's own proportion (2:3, near enough).
   const BOXES = {
+    // THE REAL CASE'S SHAPE (Alyx, 30 Sep 2026: "You need to look at the
+    // actual mockup images for the suitcases"). Printify's photos of blueprint
+    // 624: a white polycarbonate FRONT that carries the print and a black ABS
+    // BACK (their description: "polycarbonate front and ABS back hard-shell"),
+    // with the telescoping handle's housing on the back. The front is as wide
+    // as Printify's print area is -- 5433 x 7323 on the Small, about 0.74 wide
+    // for 1 tall -- so the face is that shape and the design is not cropped
+    // at its sides. It was 6.2 wide with a 0.65 face, which cut the edges off.
     'suitcase': {
-      w:6.2, h:9.0, d:3.9, r:0.75,     // the shell: width, height, depth, corner radius
+      w:6.68, h:9.0, d:3.9, r:0.75,    // the shell: width, height, depth, corner radius
       bevel:0.42,                       // how far the shell's edges round off
-      face:{ w:5.26, h:8.06, r:0.5 },   // the printed front: the flat of the face, inside the rounding
+      face:{ w:5.84, h:7.87, r:0.5 },   // the printed front: the flat of the face, inside the rounding, the print area's shape
       wheel:{ r:0.40, t:0.30, inset:0.55 },
       grip:{ w:3.0, h:0.42, d:0.5, rods:1.15, rodR:0.11, up:3.0 },
       latches:[0.30,0.66],              // the two side latches, as fractions of the height
@@ -19871,16 +19931,21 @@ const MUG3D = (function(){
     const rounded=(w,h,r,depth,bevel)=>new THREE.ExtrudeGeometry(roundedRect(THREE,w,h,r),
       bevel?{depth, bevelEnabled:true, bevelThickness:bevel, bevelSize:bevel, bevelSegments:8, curveSegments:24}
            :{depth, bevelEnabled:false, curveSegments:24});
-    // The shell: a rounded rectangle extruded to the depth, its edges rounded
-    // off by the bevel (which adds the bevel back on every side).
-    const depth=B.d-2*B.bevel;
-    const shell=new THREE.Mesh(rounded(B.w-2*B.bevel,B.h-2*B.bevel,Math.max(0.05,B.r-B.bevel),depth,B.bevel),mats.white);
-    shell.position.set(0,cy,-depth/2);
-    shell.castShadow=true; shell.receiveShadow=true;
-    g.add(shell);
-    // The seam where the two halves meet.
-    const ring=new THREE.Mesh(rounded(B.w+0.05,B.h+0.05,B.r+0.02,0.14,0),seam);
-    ring.position.set(0,cy,-0.07);
+    // The shell, in its two halves: the white front that takes the print and
+    // the black back. Each is a rounded rectangle extruded to half the depth,
+    // its edges rounded off by the bevel (which adds the bevel back on every
+    // side); where the two roundings meet in the middle, the zip band covers.
+    const depth=B.d-2*B.bevel, half=depth/2;
+    const halfGeo=()=>rounded(B.w-2*B.bevel,B.h-2*B.bevel,Math.max(0.05,B.r-B.bevel),half,B.bevel);
+    const front=new THREE.Mesh(halfGeo(),mats.white);
+    front.position.set(0,cy,0);
+    const backShell=new THREE.Mesh(halfGeo(),black);
+    backShell.position.set(0,cy,-half);
+    [front,backShell].forEach(m=>{ m.castShadow=true; m.receiveShadow=true; g.add(m); });
+    // The zip band where the two halves meet, wide enough to hide both roundings.
+    const bandD=2*B.bevel+0.12;
+    const ring=new THREE.Mesh(rounded(B.w+0.05,B.h+0.05,B.r+0.02,bandD,0),seam);
+    ring.position.set(0,cy,-bandD/2);
     g.add(ring);
     // Four spinner wheels on their forks.
     const wheelGeo=new THREE.CylinderGeometry(B.wheel.r,B.wheel.r,B.wheel.t,28);

@@ -317,12 +317,13 @@ scenarios.theSuitcases = async (page) => {
   const files = await page.evaluate(async () => {
     const c = PREMADE_CATEGORIES.suitcases, load = (u) => new Promise((r) => { const im = new Image(); im.onload = () => r(im.naturalWidth / im.naturalHeight); im.onerror = () => r(null); im.src = u; });
     const out = []; for (const x of c.items) for (const p of c.packs) out.push([x.key, p.size, await load(`${c.dir}/print/${x.key}-${p.size}.jpg`)]);
+    for (const x of c.items) for (const p of c.packs) out.push([x.key, p.size, await load(`${c.dir}/plain/${x.key}-${p.size}.jpg`)]);
     for (const x of c.items) out.push([x.key, 'show', await load(`${c.dir}/show/${x.key}.jpg`)]);
     return out;
   });
   const SHAPE = { Small: 5433 / 7323, Medium: 6260 / 8504, Large: 7217 / 9561, show: 600 / 800 };
   const bad = files.find(([, s, r]) => !r || Math.abs(r - SHAPE[s]) > 0.002);
-  if (files.length !== 48 || bad) return `FAIL: suitcase files ${JSON.stringify(bad || files.length)}`;
+  if (files.length !== 84 || bad) return `FAIL: suitcase files ${JSON.stringify(bad || files.length)}`;
   await page.evaluate(() => document.getElementById('premadesFrontBtn').click()); await T(page, 1500);
   const row = await page.evaluate(() => document.querySelector('#premadesView .pm-prod[data-product="suitcases"]')?.innerText.replace(/\n/g, ' '));
   if (!/Suitcases/.test(row || '') || !/12 designs · from \$169\.95/.test(row)) return `FAIL: the products list shows ${JSON.stringify(row)}`;
@@ -352,6 +353,33 @@ scenarios.theSuitcases = async (page) => {
   const b = bodies[bodies.length - 1];
   if (!b || b.productKey !== 'suitcase' || b.sizeLabel !== 'Medium' || !(b.image || '').endsWith(`/art/suitcases/print/${lastKey}-Medium.jpg`)) return `FAIL: checkout got ${JSON.stringify(b && { k: b.productKey, s: b.sizeLabel, image: b.image })}`;
   return `PASS: 12 suitcases on the list from $169.95; each size its own print file at its case's shape; the gallery offers Small $169.95, Medium $194.95, Large $214.95 with pictures; Back steps to the list; the last, as a Medium, checks out as suitcase / Medium at $194.95 with ${lastKey}-Medium.jpg`;
+};
+
+// THE SUITCASE FADE (Alyx, 30 Sep 2026: "a fade tool on the panel ... from
+// zero to 100"). The slider starts at the default the print files are baked
+// at; the 3D case turns with the fade; a moved slider orders its own file,
+// faded on the page and uploaded; the fade's colour is the studio's rule for
+// the suitcase.
+scenarios.theSuitcaseFade = async (page) => {
+  const bodies = [], uploads = [];
+  page.on('request', (r) => { const u = r.url(); try {
+    if (u.includes('/api/create-checkout-session')) bodies.push(r.postDataJSON());
+    if (u.includes('/api/generate') && (r.postDataJSON() || {}).action === 'uploadComposite') uploads.push(1); } catch (e) {} });
+  await page.route('**/api/printify-catalog**', (route) => route.fulfill({ json: { shipping: 35.00, shippingSeparate: true, source: 'live' } }));
+  await openStudio(page); await dismissAlerts(page);
+  await page.evaluate(() => { pickPremadeCategory('suitcases'); premadesSetLayout('one'); }); await T(page, 1500);
+  const s0 = await page.evaluate(() => { const r = document.getElementById('premadesFade'); return r && { min: r.min, max: r.max, v: r.value, shown: document.getElementById('premadesFadeVal').textContent, hex: suitcaseFadeHex(), d: SUITCASE_FADE_DEFAULT, back: typeof MUG3D !== 'undefined' }; });
+  if (!s0 || s0.min !== '0' || s0.max !== '100' || s0.v !== String(s0.d) || s0.shown !== s0.d + '%') return `FAIL: the fade slider reads ${JSON.stringify(s0)}`;
+  await page.evaluate(() => { const r = document.getElementById('premadesFade'); r.value = 55; r.dispatchEvent(new Event('input')); }); await T(page, 1500);
+  const s1 = await page.evaluate(() => ({ v: premadesFade, shown: document.getElementById('premadesFadeVal').textContent, art: (document.querySelector('.pm-case3d')?.dataset.art || '').slice(0, 11) }));
+  if (s1.v !== 55 || s1.shown !== '55%' || s1.art !== 'data:image/') return `FAIL: moving the slider to 55 gave ${JSON.stringify(s1)}`;
+  await page.evaluate(() => pickPremadesPack(3)); await T(page, 900);
+  if (await page.evaluate(() => document.getElementById('premadesFade').value) !== '55') return 'FAIL: choosing a size reset the fade';
+  await followToOrder(page, () => page.evaluate(() => document.getElementById('premadesMatOrderBtn').click()));
+  await T(page, 3000);
+  const pend = await page.evaluate(() => { try { return JSON.parse(localStorage.getItem('muggshotz_pending_order')); } catch (e) { return null; } });
+  if (!uploads.length || !pend || !/__fake\/generated\.jpg$/.test(pend.placements.left) || pend.preselectedSuitcaseSize !== 'Large') return `FAIL: a fade of 55 ordered ${JSON.stringify(pend && { left: pend.placements.left, size: pend.preselectedSuitcaseSize, uploads: uploads.length })}`;
+  return `PASS: the fade runs 0 to 100 from ${s0.d}% into ${s0.hex}; at 55 the 3D case wears the faded picture, a size change keeps it, and the Large orders its own uploaded file`;
 };
 
 // One mug on its own: Just this one, on the shelf, orders that one at $19.95.
