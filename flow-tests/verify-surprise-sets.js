@@ -285,7 +285,9 @@ scenarios.theFrames = async (page) => {
   const tray = await page.evaluate(() => [...document.querySelectorAll('#premadesTray .pm-traymug span')].map((s) => s.textContent));
   if (JSON.stringify(tray) !== '["The Pardon · A frame each side"]') return `FAIL: the tray reads ${JSON.stringify(tray)}`;
   await page.evaluate(() => holidayStep(SURPRISE_SETS.thanksgiving.designs.findIndex((d) => d.key === 'the-diet') - premadesMugIndex)); await T(page, 700);
-  if (await page.evaluate(() => !!document.getElementById('premadesFrameGrid'))) return 'FAIL: The Diet, not yet framed, shows frame buttons';
+  const dietBtns = await page.evaluate(() => [...document.querySelectorAll('#premadesFrameGrid .btn-select')].map((b) => b.textContent + (b.classList.contains('selected') ? '*' : '')));
+  if (dietBtns.join('|') !== 'No frame|One frame|A frame each side*') return `FAIL: The Diet's frame buttons read ${JSON.stringify(dietBtns)}; the shelf's frame pick should carry over`;
+  await page.evaluate(() => pickPremadesFrame('none')); await T(page, 600);
   await tap(page, '#premadesAddBtn'); await T(page, 300);
   await followToOrder(page, () => tap(page, '#premadesContinueBtn'));
   await T(page, 3500);
@@ -301,7 +303,7 @@ scenarios.theFrames = async (page) => {
   const { SURPRISE_SETS, holidayMugs, setPrintUrls } = await import(pathToFileURL(path.join(ROOT, 'lib', 'surprise-sets.js')).href);
   const urls = setPrintUrls(holidayMugs(SURPRISE_SETS.thanksgiving, b.mugs), 'right');
   if (!/thanksgiving-pardon-two-print\.png$/.test(urls[0]) || !/the-diet-print\.png$/.test(urls[1])) return `FAIL: the server would print ${urls}`;
-  return 'PASS: a framed mug on the shelf offers No frame, One frame, A frame each side; the pick turns on the mug, rides into the tray and the order ("pardon~two"), and the server prints that framed file';
+  return 'PASS: a framed mug on the shelf offers No frame, One frame, A frame each side; the pick turns on the mug, rides into the tray and the order ("pardon~two"), and the server prints that framed file; the pick carries to The Diet, and No frame there orders the plain print';
 };
 
 // One mug on its own: Just this one, on the shelf, orders that one at $19.95.
