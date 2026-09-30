@@ -1,5 +1,5 @@
 <!-- ============================================================
-     VERSION: V433
+     VERSION: V434
      ============================================================
      THE ONE LINE THAT SAYS WHICH BUILD YOU ARE LOOKING AT.
 
@@ -726,6 +726,7 @@ html.order-page-open,html.order-page-open body{overflow:hidden}
 #premadesCard .pm-mug3d>.pm-mug3d-stage{position:absolute;inset:0;touch-action:pan-y;cursor:grab}
 #premadesCard .pm-mug3d>.pm-mug3d-stage canvas{display:block;width:100%;height:100%}
 #premadesCard .pm-mug3d.live>img{visibility:hidden}
+#premadesCard .pm-mug3d.pm-case3d{aspect-ratio:4/5;max-width:440px;margin:0 auto}
 #preGenSizeSmartBtn{position:relative}
 .info-i{position:absolute;top:6px;right:6px;width:24px;height:24px;border-radius:50%;background:#fff;color:#1d6fd0;border:2px solid #1d6fd0;font:italic 700 15px/20px Georgia,'Times New Roman',serif;text-align:center;cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.35);z-index:2;padding:0}
 .info-i:hover{background:#e8f2ff}
@@ -4888,7 +4889,7 @@ function toggleWorkingImage(){
 // Two copies of a number is exactly how the marker rotted in the first place,
 // so they are not trusted to agree: .githooks/pre-commit moves both together
 // and REFUSES the commit if it ever finds them apart.
-const APP_VERSION='V433';
+const APP_VERSION='V434';
 try{ console.log('%cNeedles\u2019 Studio '+APP_VERSION,'color:#29a3ff;font-weight:700'); }catch(e){}
 
 function getDeviceId(){
@@ -13601,6 +13602,12 @@ function premadesCrumb(parts){ return '<div class="pm-crumb">'+['Pre-mades &amp;
 // Color Pop's colouring (inside, rim and handle coloured, a white wall), in
 // black.
 const SHELF_MUG_3D={sizeLabel:'11oz',styleName:'Color Pop',colorHex:'#1c1c1c',startAngle:-90,spinStep:0.6,restartOnView:true,turns:1};
+// THE SUITCASE ON THE SHELF (Alyx, 30 Sep 2026: "why have I not seen a suitcase
+// mock up or the suitcase on a carousel"). The studio's own 3D suitcase (V380),
+// wearing the design's print file for the size chosen, one turn and stopped on
+// its front, like the shelf's mugs. The still under it is its first frame
+// (tools/suitcase-stills.cjs).
+const SHELF_CASE_3D={boxKey:'suitcase',colorHex:'#ffffff',startAngle:-30,spinStep:0.6,restartOnView:true,turns:1};
 // How it works, step 4: the pictures there are Golden Brown, so the mug is;
 // it holds on step 3's side, swivels half round in about a second, stops on
 // the punchline, and plays again whenever it comes back into view.
@@ -13629,6 +13636,8 @@ function spinShelfMug(el,opts){
       // No cup can be drawn here, so no mug on this page will spin: say nothing about clicking.
       const v=document.getElementById('premadesView'); if(v)v.classList.add('no3d'); });
 }
+// The suitcase turns the same way, on its own print file.
+function spinShelfCase(el){ if(el)spinShelfMug(el,Object.assign({},SHELF_CASE_3D,{panoramaUrl:el.dataset.case})); }
 // Any other view, or the card leaving: the cup is let go, so whatever opens it
 // next (the mockup, the fade slider, Trimmings) builds it fresh.
 function releaseShelfMug(){
@@ -13746,7 +13755,9 @@ function renderPremades(){
           +'<div class="note" style="margin-top:2px">'+$(Math.min(...xs.packs.map(p=>p.price)))+'</div></div>'; }).join('')+'</div>';
     } else {
       view.innerHTML=premadesCrumb([c.label])+premadeLineTabs(c)+layout
-        +'<div class="pm-mat"><img class="pm-big" id="premadesMatPic" src="'+c.dir+'/show/'+m.key+'.jpg" width="'+sw+'" height="'+sh+'" alt="'+m.label+'"/>'
+        +'<div class="pm-mat">'+(c.sizes
+          ?'<div class="pm-mug3d pm-case3d" data-case="'+c.dir+'/print/'+m.key+'-'+pack.size+'.jpg" onclick="spinShelfCase(this)"><img id="premadesMatPic" src="'+c.dir+'/still/'+m.key+'.jpg" width="800" height="1000" alt="'+m.label+'"/><div class="pm-mug3d-stage"></div><div class="pm-spin-cue">↻ Click to spin</div></div>'
+          :'<img class="pm-big" id="premadesMatPic" src="'+c.dir+'/show/'+m.key+'.jpg" width="'+sw+'" height="'+sh+'" alt="'+m.label+'"/>')
         +'<button type="button" class="pm-arr" style="left:-12px" aria-label="Previous" onclick="premadesStep(-1)">‹</button>'
         +'<button type="button" class="pm-arr" style="right:-12px" aria-label="Next" onclick="premadesStep(1)">›</button></div>'
         +'<div class="pm-name" id="premadesMatName">'+m.label+'</div>'
@@ -13754,7 +13765,8 @@ function renderPremades(){
         +'<div class="pm-dots">'+shown.map((x,i)=>'<span class="'+(i===premadesIndex?'on':'')+'" onclick="premadesStep('+(i-premadesIndex)+')"></span>').join('')+'</div>'
         +packs
         +'<button type="button" class="generate-btn" id="premadesMatOrderBtn" onclick="goToPremadeOrder()">'+c.icon+' Order this '+(c.sizes?pack.label.toLowerCase()+' suitcase':pack.n>1?'set':'one')+' · '+$(pack.price)+'</button>';
-      const next=new Image(); next.src=c.dir+'/show/'+shown[(premadesIndex+1)%shown.length].key+'.jpg';
+      const next=new Image(); next.src=c.dir+'/'+(c.sizes?'still':'show')+'/'+shown[(premadesIndex+1)%shown.length].key+'.jpg';
+      if(c.sizes)spinShelfCase(view.querySelector('.pm-case3d'));
     }
   } else {
     premadesView='products';
