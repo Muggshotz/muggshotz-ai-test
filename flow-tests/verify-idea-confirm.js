@@ -37,24 +37,24 @@ const prepPhone = async (p) => {
 const scenarios = {
 
   // Confirming the description must go FORWARD to Generate, not back to Product.
-  async confirmGoesToGenerate(page) {
+  // ONE CLICK (Alyx, 30 Sep 2026: "If a step is unnecessary ... the steps
+  // should be removed"). Satisfied paints; there is no Generate panel after
+  // it, and the button names the paid step. Once the picture is up, the
+  // doors above it (title, banner, the three boards) dim; the picture does not.
+  async confirmPaints(page) {
     await toDescription(page, 'phone case', prepPhone);
-    await page.evaluate(() => confirmIdeaSatisfied());
-    await page.waitForTimeout(2500);
+    const label = await page.evaluate(() => { refreshIdeaPromptLabel(); return document.getElementById('ideaGuidancePrompt').textContent; });
+    if (!/Satisfied — Generate \(paid step, 1 token\)/.test(label)) return `FAIL: the satisfied button reads "${label}"`;
+    await page.evaluate(() => document.getElementById('ideaGuidancePrompt').click());
+    await page.waitForFunction(() => document.getElementById('approveRow')?.style.display !== 'none', null, { timeout: 60000 });
+    await page.waitForTimeout(1200);
     const st = await page.evaluate(() => {
-      const g = document.getElementById('generateBtn');
-      const p = document.getElementById('productCard');
-      const gr = g.getBoundingClientRect(), pr = p.getBoundingClientRect();
-      return {
-        generateInView: gr.top < innerHeight && gr.bottom > 0,
-        productInView: pr.top < innerHeight && pr.bottom > 0,
-        generateTop: Math.round(gr.top),
-        body: [...document.body.classList],
-      };
+      const op = (sel) => { const el = document.querySelector(sel); return el ? parseFloat(getComputedStyle(el).opacity) : null; };
+      return { boards: op('#uploadPhotoCard .needles-clipboard'), title: op('#uploadPhotoCard > .card-title'), stage: op('#needlesStageWrap'), card: op('#uploadPhotoCard') };
     });
-    if (st.body.includes('product-focus')) return `FAIL: product-focus left on the body — everything else will be dimmed`;
-    if (!st.generateInView) return `FAIL: Generate not in view after confirming (top=${st.generateTop})`;
-    return `PASS: confirming the description lands on Generate (top=${st.generateTop}), no product-focus left behind`;
+    if (!(st.boards < 0.5) || !(st.title < 0.5)) return `FAIL: the upload doors above the finished picture are still lit ${JSON.stringify(st)}`;
+    if (!(st.stage > 0.99) || !(st.card > 0.99)) return `FAIL: the finished picture itself was dimmed ${JSON.stringify(st)}`;
+    return `PASS: "${label}" paints in one click; once the picture is up the doors above it dim (${st.boards}) and the picture stays lit`;
   },
 
   // "No -- Let's Try Another" lands on the idea box and STAYS there (Alyx,

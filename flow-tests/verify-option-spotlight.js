@@ -114,11 +114,12 @@ const scenarios = {
     await page.fill('#ideaDesc', 'riding a dragon over a volcano');
     await page.waitForTimeout(600);
     await dismissAlerts(page);
+    const painted = page.waitForRequest((r) => r.url().includes('/api/generate'), { timeout: 15000 }).then(() => true, () => false);
     await page.evaluate(() => confirmIdeaSatisfied());
-    await page.waitForTimeout(1500);
+    if (!await painted) return 'FAIL: confirming the description did not start the painting';
     const focus = await page.evaluate(() => [...document.body.classList].filter(c => c.endsWith('-focus')));
-    if (focus.length !== 1 || focus[0] !== 'generate-focus') return `FAIL: after confirming the description the spotlight is ${JSON.stringify(focus)}, not Generate's alone`;
-    return 'PASS: confirming the description hands the spotlight to Generate, and only to Generate';
+    if (focus.includes('generate-focus')) return 'FAIL: confirming the description still stopped on a Generate panel';
+    return 'PASS: confirming the description paints in one click, no Generate panel in between';
   },
 
   // Reset must sweep the new spotlights too -- it used to remove by name.

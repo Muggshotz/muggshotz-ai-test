@@ -1283,10 +1283,10 @@ scenarios.theSpotlitPanelIsPinned = async (page) => {
   return `PASS: with Art Style spotlit the page holds between ${Math.round(r.top)} and ${Math.round(r.bottom)}`;
 };
 
-// THE IDEA BOX LANDS ON GENERATE (Alyx, v101: "Meanwhile the Generate Image
-// button is way here at the bottom"). With the product, cup and print style
-// already chosen, "Click here when you are satisfied" goes to Generate, lit,
-// with a Back, and the frame catalogue dimmed like everything else.
+// THE IDEA BOX PAINTS (Alyx, v101 landed it on Generate; 30 Sep 2026 took
+// the lone Generate panel out: "If a step is unnecessary ... the steps should
+// be removed"). With the product, cup and print style already chosen,
+// "Satisfied — Generate" paints the wrap straight away.
 scenarios.ideaSatisfiedLandsOnGenerate = async (page) => {
   await pickProduct(page, 'water bottle');
   await page.evaluate(() => pickPreGenTravelVariant('travel-mug-30oz-tundra'));
@@ -1298,26 +1298,12 @@ scenarios.ideaSatisfiedLandsOnGenerate = async (page) => {
   await page.evaluate(() => handOffToIdeaAfterProductChoice());
   await T(page, 600);
   await page.fill('#ideaDesc', 'a lighthouse in a storm');
+  const painted = page.waitForRequest((r) => r.url().includes('/api/generate'), { timeout: 15000 }).then(() => true, () => false);
   await page.evaluate(() => confirmIdeaSatisfied());
-  await T(page, 1500);
-  const r = await page.evaluate(() => {
-    const vis = (el) => !!el && el.offsetParent !== null;
-    const gen = document.getElementById('generateBtn').getBoundingClientRect();
-    const back = document.getElementById('generateBackBtn');
-    const frames = document.getElementById('frameSectionCard');
-    return {
-      focus: Array.from(document.body.classList).find((c) => c.endsWith('-focus')),
-      genInView: gen.top >= 0 && gen.bottom <= window.innerHeight,
-      backShown: vis(back), backWired: !!back && back.getAttribute('onclick') === 'generateStepBack()',
-      framesOpacity: frames ? parseFloat(getComputedStyle(frames).opacity) : null,
-      framesShown: vis(frames),
-    };
-  });
-  if (r.focus !== 'generate-focus') return `FAIL: expected the Generate step lit, body has ${r.focus}`;
-  if (!r.genInView) return 'FAIL: Generate is not on screen after "satisfied"';
-  if (!r.backShown || !r.backWired) return 'FAIL: the Generate step has no wired Back: ' + JSON.stringify(r);
-  if (r.framesShown && r.framesOpacity >= 0.99) return `FAIL: the frame catalogue is still lit under the Generate dim (opacity ${r.framesOpacity})`;
-  return 'PASS: "satisfied" lands on Generate, lit, with a Back, and the frames dim with the rest';
+  if (!await painted) return 'FAIL: "satisfied" did not start the painting';
+  const focus = await page.evaluate(() => Array.from(document.body.classList).find((c) => c === 'generate-focus'));
+  if (focus) return 'FAIL: "satisfied" still stopped on the Generate panel';
+  return 'PASS: "satisfied" paints the wrap in one click, no Generate panel in between';
 };
 
 // THE TUNDRA COMES IN THREE (Alyx, v101, from Printify's own variant list:
