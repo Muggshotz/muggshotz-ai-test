@@ -147,7 +147,7 @@ scenarios.thePanelAndTheOrder = async (page, log) => {
   if (!st0.shown || st0.focus !== 'premades-focus' || st0.view !== 'products') return `FAIL: the tile did not open the lit products list (${JSON.stringify(st0)})`;
   if (!/Pre-mades/i.test(st0.title) || !st0.back || !/\$59\.95/.test(st0.text) || !/from \$11\.95/.test(st0.text)) return `FAIL: the list lacks its name, Back or prices (${JSON.stringify(st0)})`;
   const rows = await page.evaluate(() => [...document.querySelectorAll('#premadesProducts .pm-prod')].map((r) => ({ key: r.dataset.product, pic: r.querySelector('img')?.naturalWidth > 0, text: r.innerText.replace(/\n/g, ' ') })));
-  if (JSON.stringify(rows.map((r) => r.key)) !== JSON.stringify(['mugs', 'welcome-mats', 'placemats']) || rows.some((r) => !r.pic || !/\d+ designs · (from )?\$\d+\.\d\d/.test(r.text)))
+  if (JSON.stringify(rows.map((r) => r.key)) !== JSON.stringify(['mugs', 'welcome-mats', 'placemats', 'suitcases']) || rows.some((r) => !r.pic || !/\d+ designs · (from )?\$\d+\.\d\d/.test(r.text)))
     return `FAIL: the products list reads ${JSON.stringify(rows)}`;
   if (st0.generate.length) return `FAIL: with a photo uploaded, Pre-mades still shows ${st0.generate.join(', ')}`;
   if (!st0.landed) return `FAIL: the list did not land at its title (${JSON.stringify(st0)})`;
@@ -306,6 +306,54 @@ scenarios.theFrames = async (page) => {
   return 'PASS: a framed mug on the shelf offers No frame, One frame, A frame each side; the pick turns on the mug, rides into the tray and the order ("pardon~two"), and the server prints that framed file; the pick carries to The Diet, and No frame there orders the plain print';
 };
 
+// SUITCASES ON THE SHELF (Alyx, 30 Sep 2026). Twelve finished designs; the
+// choice is the size, each with its case's picture and price; each size prints
+// its own file, cut to that case's print shape; the order carries the size.
+scenarios.theSuitcases = async (page) => {
+  const bodies = [];
+  page.on('request', (r) => { if (r.url().includes('/api/create-checkout-session')) { try { bodies.push(r.postDataJSON()); } catch (e) {} } });
+  await page.route('**/api/printify-catalog**', (route) => route.fulfill({ json: { shipping: 35.00, shippingSeparate: true, source: 'live' } }));
+  await openStudio(page); await dismissAlerts(page);
+  const files = await page.evaluate(async () => {
+    const c = PREMADE_CATEGORIES.suitcases, load = (u) => new Promise((r) => { const im = new Image(); im.onload = () => r(im.naturalWidth / im.naturalHeight); im.onerror = () => r(null); im.src = u; });
+    const out = []; for (const x of c.items) for (const p of c.packs) out.push([x.key, p.size, await load(`${c.dir}/print/${x.key}-${p.size}.jpg`)]);
+    for (const x of c.items) out.push([x.key, 'show', await load(`${c.dir}/show/${x.key}.jpg`)]);
+    return out;
+  });
+  const SHAPE = { Small: 5433 / 7323, Medium: 6260 / 8504, Large: 7217 / 9561, show: 600 / 800 };
+  const bad = files.find(([, s, r]) => !r || Math.abs(r - SHAPE[s]) > 0.002);
+  if (files.length !== 48 || bad) return `FAIL: suitcase files ${JSON.stringify(bad || files.length)}`;
+  await page.evaluate(() => document.getElementById('premadesFrontBtn').click()); await T(page, 1500);
+  const row = await page.evaluate(() => document.querySelector('#premadesView .pm-prod[data-product="suitcases"]')?.innerText.replace(/\n/g, ' '));
+  if (!/Suitcases/.test(row || '') || !/12 designs · from \$169\.95/.test(row)) return `FAIL: the products list shows ${JSON.stringify(row)}`;
+  await page.evaluate(() => document.querySelector('#premadesView .pm-prod[data-product="suitcases"]').click()); await T(page, 1500);
+  await page.evaluate(() => premadesSetLayout('one')); await T(page, 400);
+  const g = await page.evaluate(() => ({ view: premadesView, packs: [...document.querySelectorAll('#premadesPackGrid .btn-select')].map((b) => [b.innerText.replace(/\n/g, ' '), !!b.querySelector('img')]) }));
+  const want = [['Small', '169.95'], ['Medium', '194.95'], ['Large', '214.95']];
+  if (g.view !== 'gallery' || g.packs.length !== 3 || want.some(([l, pr], i) => !g.packs[i][1] || !g.packs[i][0].includes(l) || !g.packs[i][0].includes(pr))) return `FAIL: the suitcase gallery offers ${JSON.stringify(g)}`;
+  await page.evaluate(() => pickPremadesPack(2)); await T(page, 300);
+  const btn = await page.evaluate(() => document.getElementById('premadesMatOrderBtn').innerText);
+  if (!/Order this medium suitcase · \$194\.95/.test(btn)) return `FAIL: the order button reads ${JSON.stringify(btn)}`;
+  await page.evaluate(() => premadesBack()); await T(page, 900);
+  if (await page.evaluate(() => premadesView) !== 'products') return 'FAIL: Back from the suitcases did not go to the products list';
+  await page.evaluate(() => { pickPremadeCategory('suitcases'); premadesSetLayout('one'); premadesStep(-1); pickPremadesPack(2); }); await T(page, 900);
+  const lastKey = await page.evaluate(() => PREMADE_CATEGORIES.suitcases.items.slice(-1)[0].key);
+  await followToOrder(page, () => page.evaluate(() => document.getElementById('premadesMatOrderBtn').click()));
+  await T(page, 3000);
+  const o = await page.evaluate(() => ({ base: document.getElementById('summaryBase').textContent, label: document.getElementById('summaryStyleSize')?.textContent || '' }));
+  if (o.base !== '$194.95' || !/Suitcase, Medium/.test(o.label)) return `FAIL: the order page shows ${JSON.stringify(o)}`;
+  await page.evaluate(() => {
+    const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v; };
+    set('fullName', 'Test Customer'); set('email', 'test@example.com'); set('phone', '5555550100');
+    set('address1', '123 Test St'); set('city', 'Westland'); set('state', 'MI'); set('zip', '48185'); set('country', 'US');
+    submitOrder();
+  });
+  await T(page, 2000);
+  const b = bodies[bodies.length - 1];
+  if (!b || b.productKey !== 'suitcase' || b.sizeLabel !== 'Medium' || !(b.image || '').endsWith(`/art/suitcases/print/${lastKey}-Medium.jpg`)) return `FAIL: checkout got ${JSON.stringify(b && { k: b.productKey, s: b.sizeLabel, image: b.image })}`;
+  return `PASS: 12 suitcases on the list from $169.95; each size its own print file at its case's shape; the gallery offers Small $169.95, Medium $194.95, Large $214.95 with pictures; Back steps to the list; the last, as a Medium, checks out as suitcase / Medium at $194.95 with ${lastKey}-Medium.jpg`;
+};
+
 // One mug on its own: Just this one, on the shelf, orders that one at $19.95.
 scenarios.theJustOne = async (page) => {
   const bodies = [];
@@ -425,7 +473,7 @@ scenarios.thePlacematSlot = async (page) => {
   await page.route('**/api/printify-catalog**', (route) => route.fulfill({ json: { shipping: 6.78, shippingSeparate: true, source: 'live' } }));
   await openStudio(page); await dismissAlerts(page);
   const hidden = await page.evaluate(() => { const c = PREMADE_CATEGORIES.placemats, keep = c.items; c.items = []; const l = liveCategories().join(); c.items = keep; return l; });
-  if (hidden !== 'welcome-mats') return `FAIL: with no placemat designs the list offers ${hidden}`;
+  if (hidden.split(',').includes('placemats')) return `FAIL: with no placemat designs the list still offers placemats (${hidden})`;
   const files = await page.evaluate(async () => {
     const c = PREMADE_CATEGORIES.placemats, load = (u) => new Promise((r) => { const im = new Image(); im.onload = () => r(`${im.naturalWidth}x${im.naturalHeight}`); im.onerror = () => r(null); im.src = u; });
     const out = []; for (const x of c.items) out.push([x.key, await load(`${c.dir}/print/${x.key}.jpg`), await load(`${c.dir}/show/${x.key}.jpg`), x.kind || 'Neoprene']); return out;

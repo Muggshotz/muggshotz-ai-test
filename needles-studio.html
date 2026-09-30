@@ -1,5 +1,5 @@
 <!-- ============================================================
-     VERSION: V432
+     VERSION: V433
      ============================================================
      THE ONE LINE THAT SAYS WHICH BUILD YOU ARE LOOKING AT.
 
@@ -4888,7 +4888,7 @@ function toggleWorkingImage(){
 // Two copies of a number is exactly how the marker rotted in the first place,
 // so they are not trusted to agree: .githooks/pre-commit moves both together
 // and REFUSES the commit if it ever finds them apart.
-const APP_VERSION='V432';
+const APP_VERSION='V433';
 try{ console.log('%cNeedles\u2019 Studio '+APP_VERSION,'color:#29a3ff;font-weight:700'); }catch(e){}
 
 function getDeviceId(){
@@ -13505,6 +13505,23 @@ const PREMADE_CATEGORIES={
       {key:'dino-valley',label:'Dino Valley'},{key:'dino-pals',label:'Dino Pals'},{key:'feed-me',label:'Feed Me!'},
       {key:'turntable',label:'Turntable',kind:'Large'},{key:'koi-pond',label:'Koi Pond',kind:'Large'},
       {key:'knights-table',label:"Knight's Table",kind:'Large'},{key:'lift-off',label:'Lift Off',kind:'Large'}
+    ]},
+  // Suitcases (Alyx, 30 Sep 2026): Bud's designs, repainted flat and faded to
+  // the suitcase's colour (tools/suitcase-fade.cjs, then
+  // tools/suitcase-premade.py). The choice here is the SIZE, not how many:
+  // sizes:true, each pack a size; the print file is <dir>/print/<key>-<size>.jpg,
+  // cut to that case's own print shape. Prices as the suitcase panel's.
+  'suitcases':{label:'Suitcases',icon:'🧳',dir:'art/suitcases',show:[600,800],line:'Hard-shell suitcase',
+    pic:'next-stop-somewhere-amazing',sub:'Finished designs, three sizes',
+    order:{family:'suitcase'},sizes:true,
+    packs:[{n:1,label:'Small',size:'Small',price:169.95,pic:'art/options/suitcase-small.jpg'},{n:2,label:'Medium',size:'Medium',price:194.95,pic:'art/options/suitcase-medium.jpg'},{n:3,label:'Large',size:'Large',price:214.95,pic:'art/options/suitcase-large.jpg'}],
+    items:[
+      {key:'next-stop-somewhere-amazing',label:'Next Stop Somewhere Amazing'},{key:'security-x-ray',label:'Security X-Ray'},
+      {key:'packed-for-adventure',label:'Packed for Adventure'},{key:'emotional-baggage',label:'Emotional Baggage'},
+      {key:'ocean-adventure',label:'Ocean Adventure'},{key:'peek-a-boo-kitty',label:'Peek-a-Boo Kitty'},
+      {key:'out-of-this-world',label:'Out of This World'},{key:'i-pack-light',label:'I Pack Light'},
+      {key:'nothing-to-declare',label:'Nothing to Declare'},{key:'window-to-anywhere',label:'Window to Anywhere'},
+      {key:'frequent-flyer',label:'Frequent Flyer'},{key:'octopus-reef',label:'Octopus Reef'}
     ]}
 };
 // The mats' list by its old name (the tests and the ?set links read it).
@@ -13715,8 +13732,13 @@ function renderPremades(){
     title.textContent=c.icon+' '+c.label;
     const layout='<div class="pm-layout" data-words="how to browse: the designs carry the pictures">'
       +[['one','One at a time'],['all','All at once']].map(([k,l])=>'<button type="button" class="pm-lay'+(premadesLayout===k?' on':'')+'" data-layout="'+k+'" onclick="premadesSetLayout(\''+k+'\')">'+l+'</button>').join('')+'</div>';
-    const packs=spec.packs.length>1?'<div class="grid2" id="premadesPackGrid" data-words="how many: the design above is the picture" style="margin:.2rem 0 1rem">'
-      +spec.packs.map(p=>'<div class="btn-select'+(p.n===pack.n?' selected':'')+'" data-pack="'+p.n+'" onclick="pickPremadesPack('+p.n+')" style="padding:.6rem">'+p.label+'<div class="note" style="margin-top:4px">'+$(p.price)+'</div></div>').join('')+'</div>':'';
+    // A size choice (the suitcases) carries each case's own picture; a how-many
+    // choice is words beside the design.
+    const packs=spec.packs.length>1?(c.sizes
+      ?'<div class="grid3" id="premadesPackGrid" style="margin:.2rem 0 1rem">'
+        +spec.packs.map(p=>'<div class="btn-select'+(p.n===pack.n?' selected':'')+'" data-pack="'+p.n+'" onclick="pickPremadesPack('+p.n+')" style="padding:.5rem"><img src="'+p.pic+'" alt="" style="width:100%;border-radius:6px;background:#fff;margin-bottom:6px"/>'+p.label+'<div class="note" style="margin-top:4px">'+$(p.price)+'</div></div>').join('')+'</div>'
+      :'<div class="grid2" id="premadesPackGrid" data-words="how many: the design above is the picture" style="margin:.2rem 0 1rem">'
+        +spec.packs.map(p=>'<div class="btn-select'+(p.n===pack.n?' selected':'')+'" data-pack="'+p.n+'" onclick="pickPremadesPack('+p.n+')" style="padding:.6rem">'+p.label+'<div class="note" style="margin-top:4px">'+$(p.price)+'</div></div>').join('')+'</div>'):'';
     if(premadesLayout==='all'){
       view.innerHTML=premadesCrumb([c.label])+premadeLineTabs(c)+layout
         +'<div class="grid2" id="premadesAll">'+shown.map((x,i)=>{ const xs=itemSpec(c,x); return '<div class="btn-select" data-item="'+x.key+'" style="padding:.4rem" onclick="premadesShowOne('+i+')">'
@@ -13731,7 +13753,7 @@ function renderPremades(){
         +'<div class="pm-line" style="margin-bottom:.5rem">'+spec.line+' · '+$(pack.price)+'</div>'
         +'<div class="pm-dots">'+shown.map((x,i)=>'<span class="'+(i===premadesIndex?'on':'')+'" onclick="premadesStep('+(i-premadesIndex)+')"></span>').join('')+'</div>'
         +packs
-        +'<button type="button" class="generate-btn" id="premadesMatOrderBtn" onclick="goToPremadeOrder()">'+c.icon+' Order this '+(pack.n>1?'set':'one')+' · '+$(pack.price)+'</button>';
+        +'<button type="button" class="generate-btn" id="premadesMatOrderBtn" onclick="goToPremadeOrder()">'+c.icon+' Order this '+(c.sizes?pack.label.toLowerCase()+' suitcase':pack.n>1?'set':'one')+' · '+$(pack.price)+'</button>';
       const next=new Image(); next.src=c.dir+'/show/'+shown[(premadesIndex+1)%shown.length].key+'.jpg';
     }
   } else {
@@ -13918,13 +13940,15 @@ function goToPremadeSetOrder(mugs){
 // or a set.
 function goToPremadeOrder(){
   const c=premadeCat(), m=c&&premadeItems(c)[premadesIndex]; if(!m)return;
+  const size=c.sizes?(c.packs.find(p=>p.n===premadesPack)||c.packs[0]).size:null;
   const pending={
-    placements:{left:location.origin+'/'+c.dir+'/print/'+m.key+'.jpg',front:null,right:null},
+    placements:{left:location.origin+'/'+c.dir+'/print/'+m.key+(size?'-'+size:'')+'.jpg',front:null,right:null},
     deviceId:deviceId,
     productIcon:c.order.family,
     premadeItem:premadesCategory+'/'+m.key
   };
   if(c.order.family==='placemat'){ pending.preselectedPlacemat=itemSpec(c,m).kind; pending.preselectedPlacematPack=premadesPack===2?2:1; }
+  if(c.order.family==='suitcase')pending.preselectedSuitcaseSize=size;
   localStorage.setItem('muggshotz_pending_order',JSON.stringify(pending));
   openOrderPage();
 }
