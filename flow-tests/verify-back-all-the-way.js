@@ -146,8 +146,9 @@ async function forward(page, val) {
   }
   if (!(await page.evaluate(() => /\b(ideafirst|idea)-focus\b/.test(document.body.className)))) return { trail, error: `never reached the description box (at ${await screenOf(page)})` };
   await page.fill('#ideaDesc', 'a golden retriever in a bow tie'); await dismissAlerts(page);
-  await page.evaluate(() => confirmIdeaSatisfied()); await settle(page); await note();
-  await page.evaluate(() => { const b = document.getElementById('generateBtn'); b.scrollIntoView({ block: 'center' }); b.click(); });
+  // "Satisfied — Generate" paints in one click (Alyx, 30 Sep 2026): the
+  // description's button is the last press before the picture, no Generate panel.
+  await page.evaluate(() => { refreshIdeaPromptLabel(); document.getElementById('ideaGuidancePrompt').click(); });
   const made = await page.waitForFunction(() => document.getElementById('approveRow')?.style.display !== 'none', null, { timeout: 90000 }).then(() => true).catch(() => false);
   if (!made) return { trail, error: 'no finished picture' };
   await settle(page); await note();
