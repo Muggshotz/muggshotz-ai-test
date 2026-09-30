@@ -17,6 +17,12 @@
 #   decal-mug.py <name> <frame> <setup>   the setup decal borrowed from another
 #                                    design (Ready?'s six sides share one opener:
 #                                    decals/ready-setup)
+# WORDS IN THE SPACE (Alyx, 30 Sep 2026): the decals hug the handle ends, which
+# leaves a gap each side of the centre line; a mug listed in
+# art/surprise/decal-words.json gets its two words there, one centred in each
+# gap, in script (Great Vibes, art/fonts, OFL), the same brown on every mug,
+# as large as the narrower gap allows. The left word is on the left of the
+# print in both hands, so the pair reads across the back of the mug.
 import os, sys, subprocess, glob
 from PIL import Image
 W, H = 2475, 1155
@@ -62,6 +68,22 @@ def fit(im, bw, bh):
 # is 10% smaller than its box and set 15 px from its end (No frame), or just
 # inside the rail when framed. The punchline hugs the left end, the setup the
 # right.
+import json
+from PIL import ImageDraw, ImageFont
+WORDS = json.load(open('art/surprise/decal-words.json')).get(name)
+WORD_FONT, WORD_INK = 'art/fonts/GreatVibes-Regular.ttf', (122, 52, 18)
+WORD_PAD = {'': 50, '-one': 70, '-two': 90}           # kept clear of the pictures and the centre rails
+def set_words(out, lx, rx, sfx):
+    if not WORDS: return
+    d = ImageDraw.Draw(out); room = min(W // 2 - lx, rx - W // 2) - WORD_PAD[sfx]; size = 220
+    while size > 60:
+        f = ImageFont.truetype(WORD_FONT, size)
+        if max(d.textbbox((0, 0), w, font=f)[2] for w in WORDS) <= room: break
+        size -= 4
+    f = ImageFont.truetype(WORD_FONT, size)
+    for word, cx in ((WORDS[0], (lx + W // 2) // 2), (WORDS[1], (rx + W // 2) // 2)):
+        bb = d.textbbox((0, 0), word, font=f)
+        d.text((cx - (bb[2] - bb[0]) // 2 - bb[0], H // 2 - (bb[3] - bb[1]) // 2 - bb[1]), word, font=f, fill=WORD_INK)
 SCALE = 0.90
 STYLES = {
     '':     dict(box=1040, edge=15, over=None),
@@ -74,9 +96,12 @@ for sfx, st in STYLES.items():
         out = Image.new('RGB', (W, H), 'white')
         b = round(st['box'] * SCALE)
         d = fit(left, b, b); k = d.width / left.width
-        out.paste(d, (st['edge'] - round(lin[0] * k), H // 2 - d.height // 2), d)
+        x = st['edge'] - round(lin[0] * k); out.paste(d, (x, H // 2 - d.height // 2), d)
+        lx = x + d.width - round(lin[1] * k)              # the left picture's visible right edge
         d = fit(right, b, b); k = d.width / right.width
-        out.paste(d, (W - st['edge'] - d.width + round(rin[1] * k), H // 2 - d.height // 2), d)
+        x = W - st['edge'] - d.width + round(rin[1] * k); out.paste(d, (x, H // 2 - d.height // 2), d)
+        rx = x + round(rin[0] * k)                        # the right picture's visible left edge
+        set_words(out, lx, rx, sfx)
         for f, x in (st['over'] or []):
             fr = Image.open(f).convert('RGBA'); out.paste(fr, (x, 0), fr)
         p = f'art/surprise/{name}{sfx}-print{hand}.png'
