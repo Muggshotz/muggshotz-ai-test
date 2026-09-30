@@ -149,6 +149,14 @@ async function forward(page, val) {
   // "Satisfied — Generate" paints in one click (Alyx, 30 Sep 2026): the
   // description's button is the last press before the picture, no Generate panel.
   await page.evaluate(() => { refreshIdeaPromptLabel(); document.getElementById('ideaGuidancePrompt').click(); });
+  // The mug's describe route stays on the description with a choice (Return
+  // to photos, or Generate); there a customer presses that Generate.
+  await page.waitForTimeout(2500);
+  await page.evaluate(() => {
+    if (document.body.classList.contains('generation-active') || document.getElementById('approveRow')?.style.display !== 'none') return;
+    const b = [...document.querySelectorAll('#mugIdeaActionRow .generate-btn, #generateBtn')].find((x) => x.offsetParent);
+    if (b) { b.scrollIntoView({ block: 'center' }); b.click(); }
+  });
   const made = await page.waitForFunction(() => document.getElementById('approveRow')?.style.display !== 'none', null, { timeout: 90000 }).then(() => true).catch(() => false);
   if (!made) return { trail, error: 'no finished picture' };
   await settle(page); await note();
