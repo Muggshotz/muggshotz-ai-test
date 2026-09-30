@@ -1,5 +1,5 @@
 <!-- ============================================================
-     VERSION: V431
+     VERSION: V432
      ============================================================
      THE ONE LINE THAT SAYS WHICH BUILD YOU ARE LOOKING AT.
 
@@ -586,6 +586,13 @@ body.generation-active #creditsModalOverlay .card{opacity:1!important;filter:non
    spotlights below already follow -- a dim is a guide, not a cage. */
 body.design-revealed .card:not(#uploadPhotoCard):not(#captionCard){opacity:.35;filter:brightness(.6) saturate(.75);transition:opacity .5s,filter .5s}
 body.design-revealed #uploadPhotoCard{position:relative;z-index:5}
+/* THE PICTURE, NOT THE DOORS (Alyx, 30 Sep 2026: "after your image is
+   completed what's the use of having all of this above the image ... all this
+   should be subdued at this point. All except the finished product and the
+   stuff below it"). The easel lives inside the Upload Photo card, so the card
+   stays lit; the doors in above it -- banner, the three boards, the recall
+   row -- dim with the rest. Dimmed, not hidden or locked. */
+body.design-revealed #uploadPhotoCard :is(.card-title,#byoArtBanner,.needles-clipboard,#workshopRecallRow){opacity:.35;filter:brightness(.6) saturate(.75);transition:opacity .5s,filter .5s}
 body.design-revealed #creditsModalOverlay .card{opacity:1!important;filter:none!important;pointer-events:auto!important}
 body .step-lock-overlay .card{opacity:1!important;filter:none!important;pointer-events:auto!important}
 body #accessorizeCard{opacity:1!important;filter:none!important;pointer-events:auto!important}
@@ -4527,11 +4534,38 @@ function ideaPromptClicked(){
 function refreshIdeaPromptLabel(){
   const el=document.getElementById('ideaGuidancePrompt');
   if(!el)return;
-  el.textContent=describeOnlyMode()
-    ? "🎨 Draw it — this is the paid step, 1 token"
+  el.textContent=(describeOnlyMode()||ideaSatisfiedPaints())
+    ? "✅ Satisfied — Generate (paid step, 1 token)"
     : 'Click here when you are satisfied with your descriptive requests for the image.';
 }
 
+// NO STOP ON A LONE GENERATE (Alyx, 30 Sep 2026, on wrapping paper with a
+// photo: "If clicking that you're satisfied with the art takes you to only one
+// option and that's to click the Generate button, then what's the point of the
+// generate button? ... If a step is unnecessary, and adds nothing to the flow
+// except the step itself, then the steps should be removed"). The describe
+// path already painted on this click (ideaPromptClicked above); the photo path
+// and the mug/cup rail still landed on a Generate panel with every other card
+// dimmed -- a panel whose only content was the button. Where the click would
+// have gone there, it now paints. Its label says so on the button itself:
+// "Satisfied — Generate" and the paid step (Alyx: "They should get fair
+// warning that what happens next is a paid move but there's no reason to have
+// a whole complete panel for that").
+// Back from the picture then returns to the description (generate() only
+// records a Generate stop when the page was lit on one).
+function ideaSatisfiedPaints(){
+  if(byoDeclaredIntent==='byo')return false;
+  if(ideaReturnTarget==='descriptionOnly'){
+    const box=document.getElementById('ideaDesc');
+    return product==='water bottle' && !!(box && box.value.trim());
+  }
+  if(ideaReturnTarget)return false;
+  return PRODUCTS_NEEDING_IDEA.includes(product) || productRailIsComplete();
+}
+function paintFromIdea(){
+  clearAllFocusModes();
+  Promise.resolve(generate()).catch(()=>{});
+}
 function confirmIdeaSatisfied(){
   pauseIdeaGuideCycle();
   document.body.classList.remove('initial-upload-focus');
@@ -4545,6 +4579,10 @@ function confirmIdeaSatisfied(){
     const target=ideaReturnTarget;
     ideaReturnTarget=null;
     if(target==='descriptionOnly'){
+      ideaReturnTarget=target;
+      const paints=ideaSatisfiedPaints();
+      ideaReturnTarget=null;
+      if(paints){ paintFromIdea(); return; }
       // FIXED (Aug 2026): this scrolled to the Edge Fade card but never
       // actually revealed the Generate button below it -- mugIdeaActionRow
       // only shows when mugGuidedChangesActive is true (see
@@ -4574,6 +4612,7 @@ function confirmIdeaSatisfied(){
   // smooth scroll for the same reason the approve handoff needs it: the
   // dim-clearing above changes layout as this runs and cancels a plain
   // scrollIntoView.
+  if(ideaSatisfiedPaints()){ paintFromIdea(); return; }
   if(PRODUCTS_NEEDING_IDEA.includes(product)){
     // Generate lit, everything else dimmed (Alyx, 22 Sep 2026: "the generate
     // image bar should be the only thing showing ... everything else should
@@ -4621,6 +4660,7 @@ function scheduleNextIdeaFlash(delay=30000){
   ideaGuideTimer=setTimeout(()=>{
     const prompt=document.getElementById('ideaGuidancePrompt');
     if(prompt){
+      refreshIdeaPromptLabel();
       prompt.classList.add('visible');
       prompt.classList.toggle('soft',ideaGuideHasFlashedOnce);
     }
@@ -4848,7 +4888,7 @@ function toggleWorkingImage(){
 // Two copies of a number is exactly how the marker rotted in the first place,
 // so they are not trusted to agree: .githooks/pre-commit moves both together
 // and REFUSES the commit if it ever finds them apart.
-const APP_VERSION='V431';
+const APP_VERSION='V432';
 try{ console.log('%cNeedles\u2019 Studio '+APP_VERSION,'color:#29a3ff;font-weight:700'); }catch(e){}
 
 function getDeviceId(){

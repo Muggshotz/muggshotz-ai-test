@@ -534,10 +534,9 @@ scenarios.travelResultBackReachesTheColourPanel = async (page) => {
   await page.fill('#ideaDesc', 'surfing a giant wave at sunset');
   await T(page, 400);
   await dismissAlerts(page);
-  await page.evaluate(() => confirmIdeaSatisfied());
-  await T(page, 1200);
-  await page.evaluate(() => document.getElementById('generateBtn')?.scrollIntoView({ block: 'center' }));
-  await page.click('#generateBtn');
+  // Satisfied paints in one click (Alyx, 30 Sep 2026): no Generate panel.
+  const label = await page.evaluate(() => { refreshIdeaPromptLabel(); const el = document.getElementById('ideaGuidancePrompt'); el.click(); return el.textContent; });
+  if (!/Satisfied — Generate \(paid step, 1 token\)/.test(label)) return `FAIL: the satisfied button reads "${label}", not Satisfied — Generate with its cost`;
   await page.waitForFunction(() => document.getElementById('approveRow')?.style.display !== 'none',
     null, { timeout: 90000 });
   await T(page, 800);
