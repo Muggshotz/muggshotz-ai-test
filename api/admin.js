@@ -20,6 +20,8 @@ import { readPaymentRail, writePaymentRail } from "../lib/payment-rail.js";
 import { squareConfigured, squareEnv, squareTokenPresent, listLocations, createGiftCard, activateGiftCard } from "../lib/square.js";
 import { sendAlert, alertTopics } from "../lib/alerts.js";
 import crypto from 'crypto';
+import { getProduct } from '../lib/products-catalog.js';
+import { getPlaceholderDimensions, buildSingleImage, uploadImageToPrintify, createPrintifyProduct } from './create-printify-order.js';
 
 const SUPABASE_URL              = process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -262,6 +264,36 @@ async function printifyCall(path, opts = {}) {
   try { body = JSON.parse(text); } catch { body = text; }
   if (!res.ok) throw new Error(`Printify ${res.status} on ${path}: ${String(text).slice(0, 300)}`);
   return body;
+}
+
+// PLACEMENT TEST (Alyx, 1 Oct 2026: "How can we guarantee that they will
+// follow our directions as to how exactly to resize our images"). Builds a
+// design exactly as a real order does -- the print area's live size
+// (getPlaceholderDimensions), the file fitted to it (buildSingleImage), placed
+// centred at scale 1 (createPrintifyProduct) -- and stops there: a product in
+// the Printify shop, no order, NOT deleted, so it can be opened in Printify's
+// own editor and seen as the printer will print it.
+// body: { password, productKey, sizeLabel, imageUrl }
+async function handlePlacementTest(req, res) {
+  const { password, productKey, sizeLabel, imageUrl } = req.body || {};
+  if (password !== ADMIN_PASSWORD) return res.status(403).json({ error: 'Unauthorized.' });
+  if (!PRINTIFY_API_TOKEN) return res.status(500).json({ error: 'Printify token is not configured on the server.' });
+  const product = getProduct(productKey);
+  const size = product?.sizes?.[sizeLabel];
+  if (!product || !size?.variantId || !imageUrl) return res.status(400).json({ error: 'productKey, a sizeLabel with a variant, and imageUrl are required.' });
+  try {
+    const dims = await getPlaceholderDimensions(product.blueprintId, product.printProviderId, size.variantId);
+    const buffer = await buildSingleImage(imageUrl, dims.width, dims.height);
+    const imageId = await uploadImageToPrintify(buffer, `muggshotz-placement-test-${Date.now()}.png`);
+    const title = `PLACEMENT TEST - ${product.displayName} ${sizeLabel} - ${new Date().toISOString().slice(0, 16)}`;
+    const { productId } = await createPrintifyProduct({ [dims.position || 'front']: imageId },
+      { blueprintId: product.blueprintId, printProviderId: product.printProviderId, displayName: product.displayName }, size.variantId, title);
+    return res.status(200).json({ productId, title, printArea: { width: dims.width, height: dims.height, position: dims.position },
+      placement: { x: 0.5, y: 0.5, scale: 1 }, blueprintId: product.blueprintId, printProviderId: product.printProviderId, variantId: size.variantId });
+  } catch (err) {
+    console.error('placement test failed:', err.message);
+    return res.status(502).json({ error: err.message });
+  }
 }
 
 async function handleCostProbe(req, res) {
@@ -1080,6 +1112,7 @@ export default async function handler(req, res) {
   if (action === 'lookup') return handleLookup(req, res);
   if (action === 'grant' || action === 'deduct') return handleAdjust(req, res);
   if (action === 'cost-probe') return handleCostProbe(req, res);
+  if (action === 'placement-test') return handlePlacementTest(req, res);
   if (action === 'storage-cleanup') return handleStorageCleanup(req, res);
   if (action === 'onboard') return handleOnboard(req, res);
   if (action === 'betas') return handleBetas(req, res);
