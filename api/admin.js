@@ -296,6 +296,14 @@ async function handlePlacementTest(req, res) {
   }
 }
 
+// Which Printify shop(s) the site's token reaches, by name (read-only).
+async function handlePrintifyShops(req, res) {
+  if ((req.body || {}).password !== ADMIN_PASSWORD) return res.status(403).json({ error: 'Unauthorized.' });
+  if (!PRINTIFY_API_TOKEN) return res.status(500).json({ error: 'Printify token is not configured on the server.' });
+  try { return res.status(200).json({ shops: await printifyCall('shops.json'), siteShopId: PROBE_SHOP_ID }); }
+  catch (err) { return res.status(502).json({ error: err.message }); }
+}
+
 async function handleCostProbe(req, res) {
   const { password, blueprintId, printProviderId, variantIds: onlyVariantIds } = req.body || {};
   if (password !== ADMIN_PASSWORD) return res.status(403).json({ error: 'Unauthorized.' });
@@ -1113,6 +1121,7 @@ export default async function handler(req, res) {
   if (action === 'grant' || action === 'deduct') return handleAdjust(req, res);
   if (action === 'cost-probe') return handleCostProbe(req, res);
   if (action === 'placement-test') return handlePlacementTest(req, res);
+  if (action === 'printify-shops') return handlePrintifyShops(req, res);
   if (action === 'storage-cleanup') return handleStorageCleanup(req, res);
   if (action === 'onboard') return handleOnboard(req, res);
   if (action === 'betas') return handleBetas(req, res);
