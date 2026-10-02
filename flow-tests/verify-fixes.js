@@ -260,11 +260,11 @@ const scenarios = {
     await dismissAlerts(page);
     await page.waitForTimeout(300);
     await page.fill('#ideaDesc', 'superhero over the city');
+    // "Yes, I'm Satisfied — Generate My Image" paints in one click (Alyx,
+    // 2 Oct 2026): the Return-to-photos / Generate panel after it is gone.
     await page.click('#ideaGuidancePrompt');
     await page.waitForTimeout(1600);
-    const genBtn = page.locator('#mugIdeaActionRow button:has-text("Generate")');
-    if (!(await genBtn.isVisible())) return 'FAIL: guided Generate missing';
-    await genBtn.click();
+    if (await page.locator('#mugIdeaActionRow button:has-text("Generate")').isVisible()) return 'FAIL: the separate Generate panel still came up after Satisfied';
     await waitApprove(page);
     // Rail: spotlight held at approve; YES hands off to the panel screen,
     // which clears every focus mode (parallel-session convergence).
