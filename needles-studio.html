@@ -1,5 +1,5 @@
 <!-- ============================================================
-     VERSION: V439
+     VERSION: V440
      ============================================================
      THE ONE LINE THAT SAYS WHICH BUILD YOU ARE LOOKING AT.
 
@@ -375,7 +375,9 @@ body.frame-tools-open #accessorizeCancelBtn{padding:.45rem;font-size:12px;margin
    the page never shifts beneath a tap. */
 img[src^="art/options/"]{aspect-ratio:1/1;height:auto;object-fit:cover}
 .guidance-prompt{display:none;margin:14px 0;padding:12px 14px;border:1px solid #003c8c;border-radius:10px;background:#211006;color:#cfe6ff;text-align:center;font-size:13px;font-weight:700;line-height:1.4;box-shadow:0 0 0 rgba(0,60,140,0)}
-.quote-text-reminder{margin:0 0 14px;padding:10px 14px;border:1px solid rgba(226,75,74,0.55);border-radius:10px;background:rgba(226,75,74,0.12);color:#ff6b6b;text-align:center;font-size:12.5px;font-weight:800;letter-spacing:.3px;line-height:1.45}
+/* YELLOW, A CAUTION (Alyx, 2 Oct 2026: "I don't want it in red or blue. Put it
+   in yellow, a cautionary color"). Red read as something gone wrong. */
+.quote-text-reminder{margin:0 0 14px;padding:10px 14px;border:1px solid rgba(255,204,0,0.6);border-radius:10px;background:rgba(255,204,0,0.10);color:#ffd23f;text-align:center;font-size:12.5px;font-weight:800;letter-spacing:.3px;line-height:1.45}
 @keyframes quoteReminderBlink{0%,100%{opacity:1}50%{opacity:.45}}
 .guidance-prompt.visible{display:block;animation:gentlePulse 1.8s ease-in-out infinite}
 /* BLUE, NOT RED (Alyx, 2 Oct 2026: "it should be in blue lettering not red.
@@ -1814,7 +1816,7 @@ const HERO_SETTLE_MS = 1000;
 </div>
 </div>
 
-<div class="card" id="ideaCard"><div class="card-title">💬 Tell Us Your Idea</div><div class="quote-text-reminder">⚠️ PLEASE REMEMBER TO SHOW ALL TEXT AND/OR CAPTIONS YOU WISH TO HAVE INCLUDED WITH YOUR IMAGE INSIDE QUOTES " "!</div><div id="wrapOccasionForm" style="display:none;margin-bottom:.9rem">
+<div class="card" id="ideaCard"><div class="card-title">💬 Tell Us Your Idea</div><div class="quote-text-reminder">⚠️ IMPORTANT! PLEASE REMEMBER TO SHOW ALL TEXT AND/OR CAPTIONS YOU WISH TO HAVE INCLUDED WITH YOUR IMAGE INSIDE QUOTES " "!</div><div id="wrapOccasionForm" style="display:none;margin-bottom:.9rem">
 <div class="note" style="margin-top:0;margin-bottom:.6rem;color:#7ab8ff">Tell us about the occasion and we'll design the whole sheet around it.</div>
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem">
 <label style="font-size:12px;color:#7ab8ff">Occasion<select id="wrapOccasion" style="width:100%;margin-top:3px"><option value="">Choose…</option><option>Birthday</option><option>Christmas</option><option>Anniversary</option><option>Valentine's Day</option><option>Graduation</option><option>Baby Shower</option><option>Other</option></select></label>
@@ -4932,7 +4934,7 @@ function toggleWorkingImage(){
 // Two copies of a number is exactly how the marker rotted in the first place,
 // so they are not trusted to agree: .githooks/pre-commit moves both together
 // and REFUSES the commit if it ever finds them apart.
-const APP_VERSION='V439';
+const APP_VERSION='V440';
 try{ console.log('%cNeedles\u2019 Studio '+APP_VERSION,'color:#29a3ff;font-weight:700'); }catch(e){}
 
 function getDeviceId(){
