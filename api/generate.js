@@ -777,7 +777,7 @@ FINAL REMINDER ON LIKENESS: Do not add facial hair, tattoos, piercings, scars, j
       if (!customer) {
         customer = await createCustomerForDevice(deviceId);
       }
-      const isAdmin = customer.role === "admin";
+      const isAdmin = customer.role === "admin" || !!req.__likenessTest;
       if (!isAdmin && customer.token_balance <= 0) {
         return res.status(403).json({
           error: "You're out of free tokens. Verify your email to unlock another, or grab the $5 Preview Reservation for 4 more."
@@ -921,7 +921,14 @@ ${buildStyleBlock(styleDirective, styleIsDefault)}`;
     const extension = mimeType === "image/png" ? "png" : "jpg";
 
     const formData = new FormData();
-    formData.append("model", "gpt-image-2.5-sunburst");
+    // THE LIKENESS TEST (Alyx, 2 Oct 2026). Only api/admin.js can set
+    // req.__likenessTest -- it is a property on the request object, never
+    // read from the body -- to run this exact prompt on another model and/or
+    // with OpenAI's input_fidelity. Every customer request takes the line
+    // below unchanged.
+    const lt = req.__likenessTest || null;
+    formData.append("model", (lt && lt.model) || "gpt-image-2.5-sunburst");
+    if (lt && lt.fidelity) formData.append("input_fidelity", lt.fidelity);
     formData.append("prompt", finalPrompt);
     formData.append("size", imageSize);
     formData.append(
@@ -1026,14 +1033,14 @@ ${buildStyleBlock(styleDirective, styleIsDefault)}`;
     // Record this generation so it can be picked later for multi-placement
     // mug orders. Never lets a record-keeping failure block the customer's
     // actual image from coming back.
-    await saveGenerationRecord(customer.id, prompt, theme, publicImageUrl);
+    if (!req.__likenessTest) await saveGenerationRecord(customer.id, prompt, theme, publicImageUrl);
 
     // Only deduct the token AFTER a successful generation, so a failed
     // OpenAI call never costs anyone a token. Admin accounts are deducted
     // the same as everyone else now (for a real, visible countdown on the
     // token meter) — they just can never be BLOCKED by the zero-token
     // check above, no matter how low this number goes.
-    await deductOneToken(customer.id, customer.token_balance);
+    if (!req.__likenessTest) await deductOneToken(customer.id, customer.token_balance);
 
     return res.status(200).json({ imageUrl: publicImageUrl });
   } catch (error) {

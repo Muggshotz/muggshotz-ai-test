@@ -20,7 +20,11 @@ import { readPaymentRail, writePaymentRail } from "../lib/payment-rail.js";
 import { squareConfigured, squareEnv, squareTokenPresent, listLocations, createGiftCard, activateGiftCard } from "../lib/square.js";
 import { sendAlert, alertTopics } from "../lib/alerts.js";
 import crypto from 'crypto';
+
+// The likeness test waits on four paintings at once.
+export const config = { maxDuration: 300 };
 import { getProduct } from '../lib/products-catalog.js';
+import generateHandler from './generate.js';
 import { getPlaceholderDimensions, buildSingleImage, uploadImageToPrintify, createPrintifyProduct } from './create-printify-order.js';
 
 const SUPABASE_URL              = process.env.SUPABASE_URL;
@@ -294,6 +298,34 @@ async function handlePlacementTest(req, res) {
     console.error('placement test failed:', err.message);
     return res.status(502).json({ error: err.message });
   }
+}
+
+// THE LIKENESS TEST (Alyx, 2 Oct 2026: "Something has gone horribly wrong
+// with the generator ... no longer reproducing accurate likenesses"). One
+// studio request -- the exact body the studio posts to /api/generate -- run
+// through the real generator four ways: the current model and gpt-image-2,
+// each with and without OpenAI's input_fidelity "high". Nothing else differs.
+// No tokens are spent and nothing is recorded as a customer generation.
+// body: { password, request } -> { results: [{ model, fidelity, imageUrl | error }] }
+async function handleLikenessTest(req, res) {
+  const { password, request } = req.body || {};
+  if (password !== ADMIN_PASSWORD) return res.status(403).json({ error: 'Unauthorized.' });
+  if (!request || !request.image) return res.status(400).json({ error: 'request (the studio body, with its image) is required.' });
+  const runs = [
+    { model: 'gpt-image-2.5-sunburst', fidelity: null },
+    { model: 'gpt-image-2.5-sunburst', fidelity: 'high' },
+    { model: 'gpt-image-2', fidelity: null },
+    { model: 'gpt-image-2', fidelity: 'high' }
+  ];
+  const one = (run) => new Promise((resolve) => {
+    const fakeReq = { method: 'POST', body: { ...request, deviceId: 'admin-likeness-test' }, headers: {}, query: {}, __likenessTest: run };
+    let code = 200;
+    const fakeRes = { status(c) { code = c; return this; }, json(d) { resolve({ ...run, code, ...(d.imageUrl ? { imageUrl: d.imageUrl } : { error: d.error || d }) }); return this; },
+      setHeader() { return this; }, end() { resolve({ ...run, code, error: 'no body' }); } };
+    Promise.resolve(generateHandler(fakeReq, fakeRes)).catch((e) => resolve({ ...run, code: 500, error: e.message }));
+  });
+  const results = await Promise.all(runs.map(one));
+  return res.status(200).json({ results });
 }
 
 // Which Printify shop(s) the site's token reaches, by name (read-only).
@@ -1122,6 +1154,7 @@ export default async function handler(req, res) {
   if (action === 'cost-probe') return handleCostProbe(req, res);
   if (action === 'placement-test') return handlePlacementTest(req, res);
   if (action === 'printify-shops') return handlePrintifyShops(req, res);
+  if (action === 'likeness-test') return handleLikenessTest(req, res);
   if (action === 'storage-cleanup') return handleStorageCleanup(req, res);
   if (action === 'onboard') return handleOnboard(req, res);
   if (action === 'betas') return handleBetas(req, res);
