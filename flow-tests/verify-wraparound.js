@@ -343,7 +343,9 @@ scenarios.travelWraparoundUsesUncutPanorama = async (page, log, mockupBodies) =>
   const pano = panoramaCalls(log);
   if (pano !== 1) return `FAIL: expected 1 wraparoundPanorama call, saw ${pano}`;
   if (plainGenCalls(log) !== 0) return 'FAIL: a per-panel generate call fired for a travel cup wraparound';
-  if (log.apiCalls.find(c => c.action === 'wraparoundPanorama').body.bandRatio !== undefined) return 'FAIL: a travel cup wraparound sent a bandRatio -- travel cups stay on the Gemini panorama';
+  const tBand = log.apiCalls.find(c => c.action === 'wraparoundPanorama').body.bandRatio;
+  const tWant = await page.evaluate(() => Math.round(Math.min(TRAVEL_WRAP_RATIO[selectedTravelProductKey], 21 / 9) * 100) / 100);
+  if (tBand !== tWant) return `FAIL: the travel cup's wraparound request carries bandRatio ${tBand}, not ${tWant} -- without it the server paints with Gemini, which loses the likeness`;
   const standby = await page.evaluate(() => document.getElementById('wraparoundStandbyPrompt')?.style.display);
   if (standby === 'block') return 'FAIL: "Please Stand By" never cleared on the travel-cup path';
 

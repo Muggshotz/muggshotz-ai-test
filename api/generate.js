@@ -508,18 +508,18 @@ ${strengthLine}
       // told beforehand that the top and bottom are cut off, and the band is
       // trimmed here: a thin strip off the top, the rest off the bottom, where
       // the scene has only desk and floor (in the tests an even trim cut the
-      // top of her hair). Without bandRatio (travel cups) it is Gemini as before.
+      // top of her hair). Travel cups send their band too (capped at 21:9; the Tundra's mirrored ends widen it after). Without bandRatio it is Gemini as before.
       const wrapBand = Number(bandRatio) > 1.6 ? Number(bandRatio) : 0;
       const OPENAI_WRAP_SIZE = { w: 1536, h: 1024 };
       const wrapKeep = wrapBand ? Math.min(1, (OPENAI_WRAP_SIZE.w / wrapBand) / OPENAI_WRAP_SIZE.h) : 1;
       const wrapCutPct = Math.round((1 - wrapKeep) * 100);
       const panoramaLayout = wrapBand ? `
 WRAP LAYOUT -- ONE CONTINUOUS SCENE, CROPPED TO A WIDE STRIP (technical printing instruction):
-This picture wraps all the way round a coffee mug. It will be CROPPED to a wide strip: about ${wrapCutPct}% of the canvas height is cut off and thrown away, a sliver from the top and the rest from the bottom. Only the upper ${Math.round(wrapKeep * 100)}% of the height (less a sliver at the very top) is printed. So:
+This picture wraps all the way round a mug or cup. It will be CROPPED to a wide strip: about ${wrapCutPct}% of the canvas height is cut off and thrown away, a sliver from the top and the rest from the bottom. Only the upper ${Math.round(wrapKeep * 100)}% of the height (less a sliver at the very top) is printed. So:
 - Keep the subject's ENTIRE head, including all of the hair, and the face well inside that upper ${Math.round(wrapKeep * 100)}%, with clear space above the top of the hair.
 - Frame the subject from a little further back (head and upper body), not a close-up.
 - Fill the bottom ${wrapCutPct}% with background only (desk surface, floor, ground): nothing important there.
-- Place the subject centred horizontally. One continuous scene across the full width -- the same environment, lighting and perspective -- and the left and right edges meet at the mug's handle, so keep nothing important at the far left and right edges.
+- Place the subject centred horizontally. One continuous scene across the full width -- the same environment, lighting and perspective -- and the left and right edges meet at the back of the cup, so keep nothing important at the far left and right edges.
 ` : `
 PANORAMA LAYOUT — ONE SINGLE UNINTERRUPTED ULTRA-WIDE SCENE:
 Generate exactly ONE continuous ultra-wide image, composed as a single sweeping panoramic photograph taken in one shot.

@@ -1,5 +1,5 @@
 <!-- ============================================================
-     VERSION: V436
+     VERSION: V437
      ============================================================
      THE ONE LINE THAT SAYS WHICH BUILD YOU ARE LOOKING AT.
 
@@ -4892,7 +4892,7 @@ function toggleWorkingImage(){
 // Two copies of a number is exactly how the marker rotted in the first place,
 // so they are not trusted to agree: .githooks/pre-commit moves both together
 // and REFUSES the commit if it ever finds them apart.
-const APP_VERSION='V436';
+const APP_VERSION='V437';
 try{ console.log('%cNeedles\u2019 Studio '+APP_VERSION,'color:#29a3ff;font-weight:700'); }catch(e){}
 
 function getDeviceId(){
@@ -22690,7 +22690,10 @@ Use rich environmental storytelling while keeping the face as the primary focal 
             // The mug's band shape: with it the server paints the wrap with
             // OpenAI, which keeps the customer's likeness (Alyx, 2 Oct 2026).
             body:JSON.stringify({action:'wraparoundPanorama',image:workingImage,prompt:panoramaIdea,deviceId,likeness,refImageA:refASnapshot,refImageB:refBSnapshot,...currentStylePayload(),
-              ...(product==='mug'?{bandRatio:Math.round(mugWrapRatio()*100)/100}:{})}),
+              // A travel cup's band, capped at 21:9: the Tundra's 3.50 is widened
+              // past that by its mirrored, faded ends after painting, as before.
+              ...(product==='mug'?{bandRatio:Math.round(mugWrapRatio()*100)/100}
+                :(product==='water bottle'&&typeof TRAVEL_WRAP_RATIO[selectedTravelProductKey]==='number')?{bandRatio:Math.round(Math.min(TRAVEL_WRAP_RATIO[selectedTravelProductKey],21/9)*100)/100}:{})}),
             signal:currentGenerationController.signal
           });
         }catch(abortErr){
