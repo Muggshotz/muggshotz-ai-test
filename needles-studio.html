@@ -1,5 +1,5 @@
 <!-- ============================================================
-     VERSION: V440
+     VERSION: V441
      ============================================================
      THE ONE LINE THAT SAYS WHICH BUILD YOU ARE LOOKING AT.
 
@@ -4934,7 +4934,7 @@ function toggleWorkingImage(){
 // Two copies of a number is exactly how the marker rotted in the first place,
 // so they are not trusted to agree: .githooks/pre-commit moves both together
 // and REFUSES the commit if it ever finds them apart.
-const APP_VERSION='V440';
+const APP_VERSION='V441';
 try{ console.log('%cNeedles\u2019 Studio '+APP_VERSION,'color:#29a3ff;font-weight:700'); }catch(e){}
 
 function getDeviceId(){
@@ -13739,10 +13739,10 @@ function magicMugStepsHtml(step4img,noPics){
   const step=magicMugStep, pic=x=>noPics?'':x;
   return step(1,"Cold, it's a plain black mug.","Nothing to see. Nobody knows what's coming.",pic('black'))
     +step(2,'Pour in something hot.',"Coffee, tea, cocoa. It doesn't switch on all at once: as the mug warms, the picture slowly rises up through the black.",pic('emerge'),true)
-    +step(3,'The joke appears.',"Once it's hot, the first half of the joke is there in full, facing them.",pic('hot'))
-    +step(4,'They turn it round.','Nobody can leave a joke half told. Curious, they turn the mug, and the punchline is waiting on the other side.',pic(step4img))
+    +step(3,'The setup image appears.',"Once it's hot, the setup image is there in full, facing them.",pic('hot'))
+    +step(4,'They turn it round.','Nobody can stop at the setup. Curious, they turn the mug, and the punchline is waiting on the other side.',pic(step4img))
     +step(5,'Let it cool, and it hides again.','As the mug cools it goes back to plain black, ready to surprise the next unsuspecting victim.',pic('black'))
-    +step(6,'Left hand or right.','When you order, tell us which hand they hold a mug in, and we print it so the joke starts on the side facing them.','');
+    +step(6,'Left hand or right.','When you order, tell us which hand they hold a mug in, and we print it so the setup image starts on the side facing them.','');
 }
 // The (i) on the Smart Mug button: the explanation, for whoever wants it;
 // the button itself goes straight to the designs.
