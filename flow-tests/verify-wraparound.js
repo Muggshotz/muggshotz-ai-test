@@ -205,6 +205,11 @@ scenarios.mugWraparoundUsesPanorama = async (page, log) => {
   const plain = plainGenCalls(log);
   if (pano !== 1) return `FAIL: expected exactly 1 wraparoundPanorama call, saw ${pano}`;
   if (plain !== 0) return `FAIL: ${plain} per-panel generate call(s) fired alongside the panorama — both engines ran`;
+  // The mug's wrap carries its band shape, so the server paints it with
+  // OpenAI, which keeps the likeness (Alyx, 2 Oct 2026).
+  const band = log.apiCalls.find(c => c.action === 'wraparoundPanorama').body.bandRatio;
+  const wantBand = await page.evaluate(() => Math.round(mugWrapRatio() * 100) / 100);
+  if (band !== wantBand) return `FAIL: the mug's wraparound request carries bandRatio ${band}, not the mug's ${wantBand}`;
   const s = await page.evaluate(() => ({
     method: lastWraparoundMethod,
     left: !!placements.left, front: !!placements.front, right: !!placements.right,
@@ -338,6 +343,7 @@ scenarios.travelWraparoundUsesUncutPanorama = async (page, log, mockupBodies) =>
   const pano = panoramaCalls(log);
   if (pano !== 1) return `FAIL: expected 1 wraparoundPanorama call, saw ${pano}`;
   if (plainGenCalls(log) !== 0) return 'FAIL: a per-panel generate call fired for a travel cup wraparound';
+  if (log.apiCalls.find(c => c.action === 'wraparoundPanorama').body.bandRatio !== undefined) return 'FAIL: a travel cup wraparound sent a bandRatio -- travel cups stay on the Gemini panorama';
   const standby = await page.evaluate(() => document.getElementById('wraparoundStandbyPrompt')?.style.display);
   if (standby === 'block') return 'FAIL: "Please Stand By" never cleared on the travel-cup path';
 

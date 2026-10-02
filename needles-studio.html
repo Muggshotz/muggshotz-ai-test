@@ -1,5 +1,5 @@
 <!-- ============================================================
-     VERSION: V435
+     VERSION: V436
      ============================================================
      THE ONE LINE THAT SAYS WHICH BUILD YOU ARE LOOKING AT.
 
@@ -4892,7 +4892,7 @@ function toggleWorkingImage(){
 // Two copies of a number is exactly how the marker rotted in the first place,
 // so they are not trusted to agree: .githooks/pre-commit moves both together
 // and REFUSES the commit if it ever finds them apart.
-const APP_VERSION='V435';
+const APP_VERSION='V436';
 try{ console.log('%cNeedles\u2019 Studio '+APP_VERSION,'color:#29a3ff;font-weight:700'); }catch(e){}
 
 function getDeviceId(){
@@ -22687,7 +22687,10 @@ Use rich environmental storytelling while keeping the face as the primary focal 
           panoramaResp=await fetch('/api/generate',{
             method:'POST',
             headers:{'Content-Type':'application/json'},
-            body:JSON.stringify({action:'wraparoundPanorama',image:workingImage,prompt:panoramaIdea,deviceId,likeness,refImageA:refASnapshot,refImageB:refBSnapshot,...currentStylePayload()}),
+            // The mug's band shape: with it the server paints the wrap with
+            // OpenAI, which keeps the customer's likeness (Alyx, 2 Oct 2026).
+            body:JSON.stringify({action:'wraparoundPanorama',image:workingImage,prompt:panoramaIdea,deviceId,likeness,refImageA:refASnapshot,refImageB:refBSnapshot,...currentStylePayload(),
+              ...(product==='mug'?{bandRatio:Math.round(mugWrapRatio()*100)/100}:{})}),
             signal:currentGenerationController.signal
           });
         }catch(abortErr){

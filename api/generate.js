@@ -419,7 +419,7 @@ The uploaded customer photo remains the ONLY source of identity.
       if (!panoramaCustomer) {
         panoramaCustomer = await createCustomerForDevice(deviceId);
       }
-      const panoramaIsAdmin = panoramaCustomer.role === "admin";
+      const panoramaIsAdmin = panoramaCustomer.role === "admin" || !!req.__likenessTest;
       if (!panoramaIsAdmin && panoramaCustomer.token_balance <= 0) {
         return res.status(403).json({
           error: "You're out of free tokens. Verify your email to unlock another, or grab the $5 Preview Reservation for 4 more."
@@ -500,6 +500,39 @@ A stranger who knows this person must recognise them instantly.${wildFace ? " At
 ${strengthLine}
 `;
 
+      // THE MUG'S WRAP IS PAINTED BY OPENAI (Alyx, 2 Oct 2026). Side by side on
+      // his daughter's photo -- same photo, words and settings -- Gemini drew a
+      // big-headed generic cartoon on the wraparound while OpenAI kept her face
+      // on every try (art/likeness-test/). The studio sends the mug's band
+      // shape as bandRatio; with it, OpenAI paints its widest canvas (3:2),
+      // told beforehand that the top and bottom are cut off, and the band is
+      // trimmed here: a thin strip off the top, the rest off the bottom, where
+      // the scene has only desk and floor (in the tests an even trim cut the
+      // top of her hair). Without bandRatio (travel cups) it is Gemini as before.
+      const wrapBand = Number(bandRatio) > 1.6 ? Number(bandRatio) : 0;
+      const OPENAI_WRAP_SIZE = { w: 1536, h: 1024 };
+      const wrapKeep = wrapBand ? Math.min(1, (OPENAI_WRAP_SIZE.w / wrapBand) / OPENAI_WRAP_SIZE.h) : 1;
+      const wrapCutPct = Math.round((1 - wrapKeep) * 100);
+      const panoramaLayout = wrapBand ? `
+WRAP LAYOUT -- ONE CONTINUOUS SCENE, CROPPED TO A WIDE STRIP (technical printing instruction):
+This picture wraps all the way round a coffee mug. It will be CROPPED to a wide strip: about ${wrapCutPct}% of the canvas height is cut off and thrown away, a sliver from the top and the rest from the bottom. Only the upper ${Math.round(wrapKeep * 100)}% of the height (less a sliver at the very top) is printed. So:
+- Keep the subject's ENTIRE head, including all of the hair, and the face well inside that upper ${Math.round(wrapKeep * 100)}%, with clear space above the top of the hair.
+- Frame the subject from a little further back (head and upper body), not a close-up.
+- Fill the bottom ${wrapCutPct}% with background only (desk surface, floor, ground): nothing important there.
+- Place the subject centred horizontally. One continuous scene across the full width -- the same environment, lighting and perspective -- and the left and right edges meet at the mug's handle, so keep nothing important at the far left and right edges.
+` : `
+PANORAMA LAYOUT — ONE SINGLE UNINTERRUPTED ULTRA-WIDE SCENE:
+Generate exactly ONE continuous ultra-wide image, composed as a single sweeping panoramic photograph taken in one shot.
+Place the caricature of the customer, based on the uploaded photo, centred horizontally in the middle of the frame.
+To the left and to the right of the subject, continue the SAME environment outward without interruption — the same room, the same landscape, the same crowd, the same lighting — exactly as if the camera had simply panned further in that direction. Do NOT repeat the subject's face or body anywhere else in the scene unless the environment naturally calls for it (a shadow, a reflection, a distant object they would plausibly be near).
+Lighting direction, colour grading, horizon line, perspective and visual style must stay perfectly consistent all the way across the full width.
+The scene must fill the ENTIRE height of the canvas everywhere, including directly above and below the subject. Do NOT shrink, inset, or pad the subject inside a smaller box of their own — the same environment that fills the left and right edges top-to-bottom must also fill the space immediately above and below the subject, with no gap, band, or empty area of any colour separating the subject from the rest of the scene.
+Any continuous physical structure that appears in the scene — a fence, wall, tree line, mountain range, roofline, or similar — must behave as ONE real object running the full width of the image: same height, same spacing, same angle, same material, with no jump, reset, or restart at any point, as if it were photographed in a single unbroken panoramic shot rather than painted separately in different regions.
+If the attached reference image already shows a background environment (not just a plain backdrop behind the person), any large environmental feature visible in it — a mountain range, tree line, skyline, or similar — must appear at that EXACT SAME apparent scale and distance everywhere across the width. Do not draw a larger, closer, or more dramatic version of it near the subject and a smaller, more distant version elsewhere, or the reverse. Match the reference image's own scale first, then continue outward from it at that same scale.
+The sky is a single sky: its color, gradient, and cloud shapes must blend smoothly across the entire width with no abrupt shift in hue, brightness, or cloud pattern anywhere.
+The far left edge and the far right edge of the image must continue into each other, so the picture joins seamlessly when wrapped around a cylinder.
+`;
+
       const panoramaPrompt = `${identityGuard}
 CRITICAL MUGGSHOTZ LIKENESS RULE:
 This is a caricature of the exact person in the uploaded photo.
@@ -514,17 +547,7 @@ If the uploaded photo shows the person smiling, study exactly how THIS person's 
 ${wildFace ? `This is a HEAVY caricature: deliberately exaggerate, enlarge and reshape the head and the facial proportions as directed above. Identity must survive through the SHAPE of the real features listed above -- eye shape, nose shape, mouth shape, jaw, ears, hairline, skin tone, age -- and NOT through realistic geometry. A stranger who knows this person must still recognise them instantly.` : balancedFace ? `Push the head and facial proportions moderately beyond life as directed above, keeping every feature's own character intact.` : `Preserve normal head-to-body proportions.`}
 Keep the person's actual clothing and outfit from the uploaded photo (garment type, color, and style) unless a costume change is requested or strongly implied by the set and setting. Keep the photo's own setting, background, and pose unless a different scene or pose is requested or strongly implied by the customer's idea. Do not add props unless they are requested or strongly implied by the set and setting.
 
-PANORAMA LAYOUT — ONE SINGLE UNINTERRUPTED ULTRA-WIDE SCENE:
-Generate exactly ONE continuous ultra-wide image, composed as a single sweeping panoramic photograph taken in one shot.
-Place the caricature of the customer, based on the uploaded photo, centred horizontally in the middle of the frame.
-To the left and to the right of the subject, continue the SAME environment outward without interruption — the same room, the same landscape, the same crowd, the same lighting — exactly as if the camera had simply panned further in that direction. Do NOT repeat the subject's face or body anywhere else in the scene unless the environment naturally calls for it (a shadow, a reflection, a distant object they would plausibly be near).
-Lighting direction, colour grading, horizon line, perspective and visual style must stay perfectly consistent all the way across the full width.
-The scene must fill the ENTIRE height of the canvas everywhere, including directly above and below the subject. Do NOT shrink, inset, or pad the subject inside a smaller box of their own — the same environment that fills the left and right edges top-to-bottom must also fill the space immediately above and below the subject, with no gap, band, or empty area of any colour separating the subject from the rest of the scene.
-Any continuous physical structure that appears in the scene — a fence, wall, tree line, mountain range, roofline, or similar — must behave as ONE real object running the full width of the image: same height, same spacing, same angle, same material, with no jump, reset, or restart at any point, as if it were photographed in a single unbroken panoramic shot rather than painted separately in different regions.
-If the attached reference image already shows a background environment (not just a plain backdrop behind the person), any large environmental feature visible in it — a mountain range, tree line, skyline, or similar — must appear at that EXACT SAME apparent scale and distance everywhere across the width. Do not draw a larger, closer, or more dramatic version of it near the subject and a smaller, more distant version elsewhere, or the reverse. Match the reference image's own scale first, then continue outward from it at that same scale.
-The sky is a single sky: its color, gradient, and cloud shapes must blend smoothly across the entire width with no abrupt shift in hue, brightness, or cloud pattern anywhere.
-The far left edge and the far right edge of the image must continue into each other, so the picture joins seamlessly when wrapped around a cylinder.
-
+${panoramaLayout}
 ${referenceLine}
 
 CUSTOMER REQUEST:
@@ -544,6 +567,37 @@ These composition rules are technical printing requirements. They override the S
 FINAL REMINDER ON LIKENESS: Do not add facial hair, tattoos, piercings, scars, jewelry, or any other feature to the subject's face or head that is not clearly visible in the uploaded photo, unless the customer's request above explicitly asks for it. The subject's face must remain a faithful likeness of the real uploaded photo at all times, even while everything else in the scene is invented. Keep the subject's actual clothing from the uploaded photo (garment type, color, style) unless a costume change is requested or strongly implied by the set and setting. Keep the photo's own setting, background, and pose unless a different scene or pose is requested or strongly implied by the customer's idea. Do not add props unless they are requested or strongly implied by the set and setting.
 `;
 
+      let panoramaBuffer;
+      if (wrapBand) {
+        const fd = new FormData();
+        fd.append("model", (req.__likenessTest && req.__likenessTest.model) || "gpt-image-2.5-sunburst");
+        fd.append("prompt", panoramaPrompt);
+        fd.append("size", `${OPENAI_WRAP_SIZE.w}x${OPENAI_WRAP_SIZE.h}`);
+        const addOpenAiImage = (dataUrl, name) => {
+          const m = dataUrl && dataUrl.match(/^data:(image\/\w+);base64,(.+)$/);
+          if (!m) return;
+          fd.append("image[]", new Blob([Buffer.from(m[2], "base64")], { type: m[1] }), `${name}.${m[1] === "image/png" ? "png" : "jpg"}`);
+        };
+        addOpenAiImage(image, "upload");
+        addOpenAiImage(refImageA, "reference-a");
+        addOpenAiImage(refImageB, "reference-b");
+        if (styleRefBuffer) fd.append("image[]", new Blob([styleRefBuffer], { type: "image/png" }), "style-reference.png");
+        const oaResp = await fetch("https://api.openai.com/v1/images/edits", {
+          method: "POST", headers: { "Authorization": `Bearer ${process.env.OPENAI_API_KEY}` }, body: fd
+        });
+        const oaData = await oaResp.json();
+        if (!oaResp.ok) {
+          const e = oaData?.error;
+          return res.status(oaResp.status).json({ error: typeof e === "string" ? e : e?.message || JSON.stringify(e) || "Unknown error from image service." });
+        }
+        const oaB64 = oaData?.data?.[0]?.b64_json;
+        if (!oaB64) return res.status(502).json({ error: "No image returned from OpenAI." });
+        const painted = Buffer.from(oaB64, "base64");
+        const pm = await sharp(painted).metadata();
+        const bandH = Math.min(pm.height, Math.round(pm.width / wrapBand));
+        const top = Math.min(Math.round(pm.height * 0.02), pm.height - bandH);
+        panoramaBuffer = await sharp(painted).extract({ left: 0, top, width: pm.width, height: bandH }).png().toBuffer();
+      } else {
       const geminiParts = [
         { text: panoramaPrompt },
         { inlineData: { mimeType: panoramaMatch[1], data: panoramaMatch[2] } }
@@ -588,7 +642,8 @@ FINAL REMINDER ON LIKENESS: Do not add facial hair, tattoos, piercings, scars, j
         return res.status(502).json({ error: "No image returned from Gemini.", raw: geminiData });
       }
 
-      const panoramaBuffer = Buffer.from(geminiImagePart.inlineData.data, "base64");
+      panoramaBuffer = Buffer.from(geminiImagePart.inlineData.data, "base64");
+      }
       const panoramaMeta = await sharp(panoramaBuffer).metadata();
       const fullWidth = panoramaMeta.width;
       const fullHeight = panoramaMeta.height;
@@ -623,8 +678,10 @@ FINAL REMINDER ON LIKENESS: Do not add facial hair, tattoos, piercings, scars, j
         uploadGenerationToStorage(panoramaPngBuffer, deviceId + "-panorama")
       ]);
 
-      await saveGenerationRecord(panoramaCustomer.id, prompt, null, centerUrl);
-      await deductOneToken(panoramaCustomer.id, panoramaCustomer.token_balance);
+      if (!req.__likenessTest) {
+        await saveGenerationRecord(panoramaCustomer.id, prompt, null, centerUrl);
+        await deductOneToken(panoramaCustomer.id, panoramaCustomer.token_balance);
+      }
 
       return res.status(200).json({ leftUrl, centerUrl, rightUrl, panoramaUrl });
     }
