@@ -1,5 +1,5 @@
 <!-- ============================================================
-     VERSION: V437
+     VERSION: V438
      ============================================================
      THE ONE LINE THAT SAYS WHICH BUILD YOU ARE LOOKING AT.
 
@@ -4559,13 +4559,48 @@ function refreshIdeaPromptLabel(){
 // records a Generate stop when the page was lit on one).
 function ideaSatisfiedPaints(){
   if(byoDeclaredIntent==='byo')return false;
+  // The mug's describe route too (Alyx, 2 Oct 2026: "they've already told you
+  // they're satisfied with the image why should they also click again to
+  // generate"). It used to land on a panel of its own -- Return to photos, or
+  // Generate -- the last lone Generate after a Satisfied.
   if(ideaReturnTarget==='descriptionOnly'){
     const box=document.getElementById('ideaDesc');
-    return product==='water bottle' && !!(box && box.value.trim());
+    return (product==='water bottle'||product==='mug') && !!(box && box.value.trim());
   }
   if(ideaReturnTarget)return false;
   return PRODUCTS_NEEDING_IDEA.includes(product) || productRailIsComplete();
 }
+// THE NEWEST VERSION, WITHOUT ASKING (Alyx, 2 Oct 2026: "whenever they reopen
+// the app they automatically have the newest version"). The server already
+// tells the browser to recheck the page on every load; the gap is a phone that
+// never loads it again -- it wakes the copy it kept in memory. So whenever the
+// page comes back to the screen it asks the server, cheaply (HEAD, the page's
+// ETag), whether the page has changed since it was loaded, and if it has and
+// nothing has been started yet -- no photo, no picture, no product -- it
+// reloads onto the newest version. Mid-design it never reloads: the customer's
+// work is worth more than the update, which they get on their next fresh start
+// (Alyx: "from the beginning of their design not mid design").
+let pageEtagAtLoad=null;
+function designUnderway(){
+  return !!(uploadedImageData||resultUrl||finalImageUrl||currentDesignId||product||
+    (typeof premadesMugs!=='undefined'&&premadesMugs.length));
+}
+async function pageEtagNow(){
+  try{ const r=await fetch(location.pathname+'?etag='+Date.now(),{method:'HEAD',cache:'no-store'}); return r.ok?r.headers.get('etag'):null; }catch(e){ return null; }
+}
+async function loadNewestIfIdle(){
+  if(designUnderway())return;
+  const tag=await pageEtagNow(); if(!tag)return;
+  if(!pageEtagAtLoad){ pageEtagAtLoad=tag; return; }
+  if(tag===pageEtagAtLoad||designUnderway())return;
+  // Once per new version, so a CDN still serving the old copy cannot loop.
+  try{ if(sessionStorage.getItem('mz_reload_for')===tag)return; sessionStorage.setItem('mz_reload_for',tag); }catch(e){}
+  location.reload();
+}
+window.addEventListener('load',()=>setTimeout(loadNewestIfIdle,1500));
+document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible')loadNewestIfIdle(); });
+window.addEventListener('pageshow',e=>{ if(e.persisted)loadNewestIfIdle(); });
+
 function paintFromIdea(){
   clearAllFocusModes();
   Promise.resolve(generate()).catch(()=>{});
@@ -4892,7 +4927,7 @@ function toggleWorkingImage(){
 // Two copies of a number is exactly how the marker rotted in the first place,
 // so they are not trusted to agree: .githooks/pre-commit moves both together
 // and REFUSES the commit if it ever finds them apart.
-const APP_VERSION='V437';
+const APP_VERSION='V438';
 try{ console.log('%cNeedles\u2019 Studio '+APP_VERSION,'color:#29a3ff;font-weight:700'); }catch(e){}
 
 function getDeviceId(){

@@ -3904,6 +3904,11 @@ if (studioDriven) {
   try { renderBasket(); applyBasketOnlyMode(); updateSummary(); }
   catch (err) { console.error('The basket could not be drawn:', err); }
 })();
+function exitAfterOrder(){
+  ['muggshotz_pending_order','muggshotz_basket'].forEach(k=>{ try{ localStorage.removeItem(k); }catch(e){} });
+  try{ sessionStorage.clear(); }catch(e){}
+  location.replace('needles-studio.html?fresh=' + Date.now());
+}
 (function handleCheckoutReturn(){
   const params = new URLSearchParams(location.search);
   const state = params.get('checkout');
@@ -3928,6 +3933,12 @@ if (studioDriven) {
         '<div style="font-size:16px;line-height:1.6;margin-bottom:1rem">Your payment went through and your order is on its way to production.</div>' +
         '<div class="note" style="font-size:12px;color:#888;line-height:1.6">A receipt is on its way to your email from our payment processor. Your piece is custom-made just for you, so please allow production and shipping time.</div>' +
         '<a class="generate-btn" href="needles-studio.html" style="display:block;text-decoration:none;margin-top:1.25rem">🎨 Make Another</a>' +
+        // EXIT (Alyx, 2 Oct 2026): the order is done, so nothing is left to
+        // lose. It clears what this device kept of the order and reloads the
+        // opening page fresh off the server, so the next start is always the
+        // newest version. A page cannot close the tab or the app itself
+        // (browsers do not allow it); this is the nearest a page can do.
+        '<button type="button" class="download-btn" id="exitAfterOrderBtn" style="display:block;width:100%;margin-top:.75rem" onclick="exitAfterOrder()">🚪 Exit</button>' +
         '</div>';
       main.parentNode.insertBefore(done, main);
     }
