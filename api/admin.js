@@ -308,10 +308,11 @@ async function handlePlacementTest(req, res) {
 // No tokens are spent and nothing is recorded as a customer generation.
 // body: { password, request } -> { results: [{ model, fidelity, imageUrl | error }] }
 async function handleLikenessTest(req, res) {
-  const { password, request } = req.body || {};
+  const { password, request, runs: asked } = req.body || {};
   if (password !== ADMIN_PASSWORD) return res.status(403).json({ error: 'Unauthorized.' });
   if (!request || !request.image) return res.status(400).json({ error: 'request (the studio body, with its image) is required.' });
-  const runs = [
+  // runs: [{ model, fidelity }] to choose; [{}] runs the request exactly as the studio sent it.
+  const runs = Array.isArray(asked) && asked.length ? asked : [
     { model: 'gpt-image-2.5-sunburst', fidelity: null },
     { model: 'gpt-image-2.5-sunburst', fidelity: 'high' },
     { model: 'gpt-image-2', fidelity: null },
@@ -320,7 +321,7 @@ async function handleLikenessTest(req, res) {
   const one = (run) => new Promise((resolve) => {
     const fakeReq = { method: 'POST', body: { ...request, deviceId: 'admin-likeness-test' }, headers: {}, query: {}, __likenessTest: run };
     let code = 200;
-    const fakeRes = { status(c) { code = c; return this; }, json(d) { resolve({ ...run, code, ...(d.imageUrl ? { imageUrl: d.imageUrl } : { error: d.error || d }) }); return this; },
+    const fakeRes = { status(c) { code = c; return this; }, json(d) { resolve({ ...run, code, ...(d.imageUrl || d.panoramaUrl ? { imageUrl: d.imageUrl || d.panoramaUrl, panels: d.leftUrl ? [d.leftUrl, d.centerUrl, d.rightUrl] : undefined } : { error: d.error || d }) }); return this; },
       setHeader() { return this; }, end() { resolve({ ...run, code, error: 'no body' }); } };
     Promise.resolve(generateHandler(fakeReq, fakeRes)).catch((e) => resolve({ ...run, code: 500, error: e.message }));
   });
