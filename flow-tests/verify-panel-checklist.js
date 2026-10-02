@@ -129,7 +129,7 @@ async function walk(page, val, variant) {
   // no Generate panel after the description, so the walk goes description ->
   // the finished picture -> Back to the description.
   const label = await page.evaluate(() => { refreshIdeaPromptLabel(); const el = document.getElementById('ideaGuidancePrompt'); el.click(); return el.textContent; });
-  if (!/Satisfied — Generate \(paid step, 1 token\)/.test(label)) fails.push(`the satisfied button reads "${label}", not Satisfied — Generate with its cost`);
+  if (!/Yes, I'm Satisfied — Generate My Image/.test(label)) fails.push(`the satisfied button reads "${label}", not Satisfied — Generate with its cost`);
   try { await page.waitForFunction(() => document.getElementById('approveRow')?.style.display !== 'none', null, { timeout: 60000 }); }
   catch (e) { fails.push('Satisfied — Generate never put a picture up'); return fails; }
   await settle(page);

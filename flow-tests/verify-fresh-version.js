@@ -26,7 +26,7 @@ scenarios.mugDescribeSatisfiedPaints = async (page, log) => {
   await page.evaluate(() => document.getElementById('ideaGuidancePrompt').click()); await T(page, 2500);
   const after = log.apiCalls.filter((c) => c.path === '/api/generate').length;
   const row = await page.evaluate(() => { const r = document.getElementById('mugIdeaActionRow'); return r && getComputedStyle(r).display; });
-  if (!/Satisfied — Generate/.test(label)) return `FAIL: the mug's satisfied button reads "${label}"`;
+  if (!/Yes, I'm Satisfied — Generate My Image/.test(label)) return `FAIL: the mug's satisfied button reads "${label}"`;
   if (after <= before) return 'FAIL: Satisfied on the mug describe route did not paint';
   if (row && row !== 'none') return 'FAIL: the Return-to-photos / Generate panel still came up after Satisfied';
   return 'PASS: the mug describe route\'s "Satisfied — Generate" paints in one click, no Generate panel after it';

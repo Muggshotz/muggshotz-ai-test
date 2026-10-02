@@ -44,7 +44,7 @@ const scenarios = {
   async confirmPaints(page) {
     await toDescription(page, 'phone case', prepPhone);
     const label = await page.evaluate(() => { refreshIdeaPromptLabel(); return document.getElementById('ideaGuidancePrompt').textContent; });
-    if (!/Satisfied — Generate \(paid step, 1 token\)/.test(label)) return `FAIL: the satisfied button reads "${label}"`;
+    if (!/Yes, I'm Satisfied — Generate My Image/.test(label)) return `FAIL: the satisfied button reads "${label}"`;
     await page.evaluate(() => document.getElementById('ideaGuidancePrompt').click());
     await page.waitForFunction(() => document.getElementById('approveRow')?.style.display !== 'none', null, { timeout: 60000 });
     await page.waitForTimeout(1200);
