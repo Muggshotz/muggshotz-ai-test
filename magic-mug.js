@@ -35,7 +35,10 @@ const SURPRISE_SETS={
     {key:'raise-the-dead',label:'Raise the Dead',file:'halloween-raise-the-dead'},
     // Sheet Happens (Bud, 26 Sep 2026; was Boo until 3 Oct, Alyx: the name went
     // to the new cartoon ghost): the ghost's face; turned round, the laundry tag.
-    {key:'sheet-happens',label:'Sheet Happens',file:'halloween-boo'}
+    {key:'sheet-happens',label:'Sheet Happens',file:'halloween-boo'},
+    // Boo (Bud, 3 Oct 2026): the ghost from the flyer, shouting BOO by the door,
+    // the black cat and the haunted street round the back.
+    {key:'boo',label:'Boo',file:'halloween-boo-ghost'}
   ]}
 };
 function holidayPrice(n){ return n>=4 ? Math.round((SMART_MUG_SET_PRICE+(n-4)*SMART_MUG_EXTRA_PRICE)*100)/100 : Math.round(n*SMART_MUG_PRICE*100)/100; }
