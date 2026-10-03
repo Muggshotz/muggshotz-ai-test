@@ -28,4 +28,4 @@ Twelve more for the Halloween line, fitted by tools/premade-fit.py from Bud's
 files (rim and rounded corners trimmed first): rising-skeleton,
 under-the-boards, witch-puddle, three-black-cats at 2000 x 1226 (enlarged
 2.36x); skeleton-gate, pumpkin-cats, ghost-letters, zombie-sign, spider-web,
-bat-sign, coffin-sign, cat-on-the-mat at 1602 x 982 (enlarged 2.94x).
+bat-sign, coffin-sign, halloween-silhouettes at 1602 x 982 (enlarged 2.94x).
