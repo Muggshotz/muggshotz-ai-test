@@ -74,7 +74,7 @@ window.OCCASION = {
     title: "Halloween Magic Mugs",
     line: "The picture appears when you pour in something hot.",
     set: "halloween",
-    demo: "halloween-boo-ghost",   // Boo: the mug on the flyer
+    demo: "halloween-boo-ghost-one",   // Boo, in the Trick or Treat frame (Alyx, 3 Oct 2026)
     frameLabel: "Trick or Treat frame"
   },
 
