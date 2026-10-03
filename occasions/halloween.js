@@ -49,7 +49,7 @@ window.OCCASION = {
       { key: "six-feet-under", label: "Six Feet Under" },
       { key: "care-for-a-bite", label: "Care for a Bite?" },
       { key: "my-parlor", label: "Welcome to My Parlor" },
-      { key: "ouija", label: "Ouija" },
+      { key: "ouija", label: "The Ouija Says Goodbye" },
       { key: "witch-parking", label: "Witch Parking Only" },
       { key: "dying-to-meet-you", label: "We're Dying to Meet You" },
       { key: "beware-of-ghost", label: "Beware of Ghost" },
