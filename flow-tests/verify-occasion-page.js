@@ -96,15 +96,15 @@ scenarios.theMagicMugs = async (page) => {
     prices: [...document.querySelectorAll('.mugname span')].map((s) => s.textContent),
     demo: typeof MUG3D !== 'undefined' && MUG3D.mounted() && MUG3D.host() === document.getElementById('smartHowRevealStage'),
   }));
-  if (m.steps !== 6 || JSON.stringify(m.mugs) !== '["Raise the Dead","Boo"]' || m.prices.some((p) => p !== '$19.95') || !m.demo) return `FAIL: the Magic Mugs show ${JSON.stringify(m)}`;
+  if (m.steps !== 6 || JSON.stringify(m.mugs) !== '["Raise the Dead","Sheet Happens"]' || m.prices.some((p) => p !== '$19.95') || !m.demo) return `FAIL: the Magic Mugs show ${JSON.stringify(m)}`;
   await page.click('.mugs .pm-mug3d >> nth=1'); await T(page, 2500);
   const spun = await page.evaluate(() => MUG3D.mounted() && MUG3D.host() === document.querySelectorAll('.mugs .pm-mug3d-stage')[1]);
-  if (!spun) return 'FAIL: tapping Boo did not turn Boo on the 3D mug';
+  if (!spun) return 'FAIL: tapping Sheet Happens did not turn it on the 3D mug';
   await page.click('[data-hand="left"]');
-  await page.click('[data-order="boo"]');
+  await page.click('[data-order="sheet-happens"]');
   const b = lineOf(await checkout(page, bodies));
-  if (b.setKey !== 'halloween' || JSON.stringify(b.mugs) !== '["boo"]' || b.hand !== 'left') return `FAIL: checkout got ${JSON.stringify({ set: b.setKey, mugs: b.mugs, hand: b.hand })}`;
-  return 'PASS: the demonstration plays on the 3D mug, six steps, Raise the Dead and Boo at $19.95, a tap turns Boo, and it checks out as halloween / boo, left-handed';
+  if (b.setKey !== 'halloween' || JSON.stringify(b.mugs) !== '["sheet-happens"]' || b.hand !== 'left') return `FAIL: checkout got ${JSON.stringify({ set: b.setKey, mugs: b.mugs, hand: b.hand })}`;
+  return 'PASS: the demonstration plays on the 3D mug, six steps, Raise the Dead and Sheet Happens at $19.95, a tap turns Sheet Happens, and it checks out as halloween / sheet-happens, left-handed';
 };
 
 scenarios.theBack = async (page) => {

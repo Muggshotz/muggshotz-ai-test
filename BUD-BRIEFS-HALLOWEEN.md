@@ -62,7 +62,8 @@ KEEP CLEAR:
 
 1. Raise the Dead - live ("I like my coffee strong..." / "...strong enough
    to raise the dead.")
-2. Boo - Bud's ghost mug, live (Alyx's yes, 3 Oct 2026)
+2. Sheet Happens - Bud's ghost-face mug, live (Alyx's yes, 3 Oct 2026; was "Boo"
+   until 3 Oct -- the name went to the cartoon ghost from the flyer, to come)
 
 ## Agreed briefs
 
@@ -318,7 +319,7 @@ Words (Claude typesets these on the finished print - NOT for Bud):
 - What Are You Supposed to Be?: kids in elaborate costumes asking a skeleton
   kid / the skeleton kid in a sheet with eye holes, bones sticking out,
   "A ghost. Obviously."
-- The Skull (a companion to Boo): the whole mug is a skull, eye sockets and
+- The Skull (a companion to Sheet Happens): the whole mug is a skull, eye sockets and
   grin wrapped round the curve; on the back one stitched label,
   "Contents: coffee. Brain sold separately."
 - Sugar Skull: an ornate Day of the Dead skull, marigolds and filigree in
