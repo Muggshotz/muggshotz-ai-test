@@ -24,6 +24,9 @@ window.OCCASION = {
   // a Bore" -- the floor takes the blame, not the reader).
   headline: "The Floor at Your Door",
   headlineBig: "Is a Bit of a Bore.",   // anapests: the FLOOR at your DOOR is a BIT of a BORE
+  // Bud's banner of the headline and the raccoon (3 Oct 2026), shown in place of
+  // the plain words; 2000 x 750.
+  banner: "art/occasions/halloween/banner.jpg",
   subline: "Fix that this Halloween!",
   orderBy: "Order now so it arrives before Halloween.",
   colors: { bg: "#0d0a12", panel: "#17121f", accent: "#ff7a1a", accent2: "#8bd34a", text: "#f3ead8", muted: "#b9a98f" },

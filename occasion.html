@@ -32,6 +32,9 @@ button{font:inherit}
 .hero{text-align:center;padding:28px 0 8px}
 .hero h1{font-size:clamp(34px,7vw,64px);line-height:1.02;margin:0;letter-spacing:.5px;color:var(--text);text-transform:uppercase}
 .hero h1 b{color:var(--accent)}
+.hero-banner{padding-top:12px}
+.hero .banner{display:block;width:100%;height:auto;border-radius:12px;margin:0 0 10px}
+.sr{position:absolute!important;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 .hero h1 b.big{display:inline-block;font-size:1.45em;line-height:1}
 .hero .sub{font-size:clamp(18px,3.4vw,26px);color:var(--accent2);font-weight:800;margin:8px 0 4px}
 .hero .by{color:var(--muted);font-size:15px;margin:6px 0 0}
@@ -165,6 +168,11 @@ function heroHtml() {
   // otherwise the headline's last word is.
   const h = O.headlineBig ? esc(O.headline) + '<br><b class="big">' + esc(O.headlineBig) + '</b>'
     : esc(O.headline).replace(/(\S+)\.?$/, '<b>$&</b>');
+  // banner, when given, is the artist's picture of the headline (Bud's, for
+  // Halloween): it is shown, and the words stay in the h1 for screen readers.
+  if (O.banner) return '<div class="hero hero-banner"><img class="banner" src="' + O.banner + '" alt="' + esc(O.headline + ' ' + (O.headlineBig || '')) + '"/>'
+    + '<h1 class="sr">' + h + '</h1><div class="sub">' + esc(O.subline || '') + '</div>'
+    + (O.orderBy ? '<p class="by">' + esc(O.orderBy) + '</p>' : '') + '</div>';
   return '<div class="hero"><h1>' + h + '</h1><div class="sub">' + esc(O.subline || '') + '</div>'
     + (O.orderBy ? '<p class="by">' + esc(O.orderBy) + '</p>' : '') + '</div>';
 }
