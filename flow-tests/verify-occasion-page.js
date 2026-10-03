@@ -4,7 +4,8 @@
 //   * home: the headline, every Halloween mat pictured and priced, the Magic
 //     Mugs, no "more" section while it has no designs; a flyer's ?ref= kept;
 //   * a mat: lands on its view with Back and its title, steps round, and
-//     Order checks out as the doormat with that mat's print file and the code;
+//     Order checks out as the doormat with that mat's print file and the code,
+//     marked as from the flyer (?from=flyer, kept when they come back without it);
 //   * the Magic Mugs: the demonstration plays on the 3D mug, How it works
 //     (six steps), each mug pictured and priced, and Order checks out the
 //     halloween set with that one mug in the hand chosen;
@@ -68,6 +69,8 @@ scenarios.theHome = async (page) => {
 
 scenarios.theMat = async (page) => {
   const bodies = watchCheckout(page);
+  // Scanned the flyer once, came back later by the plain address.
+  await page.goto(`${BASE}/occasion.html?o=halloween&from=flyer`); await T(page, 1200);
   await page.goto(`${BASE}/occasion.html?o=halloween&ref=TEST-07`); await T(page, 2000);
   await page.click('#secFeatured .tile[data-mat="six-feet-under"]'); await T(page, 900);
   if (!(await landed(page))) return 'FAIL: the mat view did not land with its Back and title on screen';
@@ -78,10 +81,10 @@ scenarios.theMat = async (page) => {
   if (next !== 'Care for a Bite?') return `FAIL: next shows ${next}`;
   await page.click('.arr.l'); await T(page, 400);
   await page.click('#orderBtn');
-  const b = lineOf(await checkout(page, bodies));
-  if (b.productKey !== 'doormat' || !/\/art\/unwelcome\/print\/six-feet-under\.jpg$/.test(b.image || '') || b.referralCode !== 'TEST-07')
-    return `FAIL: checkout got ${JSON.stringify({ productKey: b.productKey, image: b.image, ref: b.referralCode })}`;
-  return 'PASS: a mat lands on its view, steps round, and checks out as the doormat with its own print file and the flyer code';
+  const raw = await checkout(page, bodies), b = lineOf(raw);
+  if (b.productKey !== 'doormat' || !/\/art\/unwelcome\/print\/six-feet-under\.jpg$/.test(b.image || '') || b.referralCode !== 'TEST-07' || (raw || {}).source !== 'halloween/flyer')
+    return `FAIL: checkout got ${JSON.stringify({ productKey: b.productKey, image: b.image, ref: b.referralCode, source: (raw || {}).source })}`;
+  return 'PASS: a mat lands on its view, steps round, and checks out as the doormat with its own print file, the flyer code, and from halloween/flyer';
 };
 
 scenarios.theMagicMugs = async (page) => {
@@ -106,9 +109,9 @@ scenarios.theMagicMugs = async (page) => {
   const fr = await page.evaluate(() => ({ files: [...document.querySelectorAll('.mugs .pm-mug3d')].map((e) => e.dataset.mug3d), handOn: document.querySelector('[data-hand="left"]').classList.contains('on'), frameOn: document.querySelector('[data-frame="one"]').classList.contains('on') }));
   if (!fr.files.every((f) => f.endsWith('-one')) || !fr.handOn || !fr.frameOn) return `FAIL: the frame choice shows ${JSON.stringify(fr)}`;
   await page.click('[data-order="sheet-happens"]');
-  const b = lineOf(await checkout(page, bodies));
-  if (b.setKey !== 'halloween' || JSON.stringify(b.mugs) !== '["sheet-happens~one"]' || b.hand !== 'left') return `FAIL: checkout got ${JSON.stringify({ set: b.setKey, mugs: b.mugs, hand: b.hand })}`;
-  return 'PASS: the demonstration plays on the 3D mug, six steps, Raise the Dead and Sheet Happens at $19.95, a tap turns Sheet Happens, the Trick or Treat frame puts every mug in it, and it checks out as halloween / sheet-happens~one, left-handed';
+  const raw = await checkout(page, bodies), b = lineOf(raw);
+  if (b.setKey !== 'halloween' || JSON.stringify(b.mugs) !== '["sheet-happens~one"]' || b.hand !== 'left' || (raw || {}).source !== 'halloween') return `FAIL: checkout got ${JSON.stringify({ set: b.setKey, mugs: b.mugs, hand: b.hand, source: (raw || {}).source })}`;
+  return 'PASS: the demonstration plays on the 3D mug, six steps, Raise the Dead and Sheet Happens at $19.95, a tap turns Sheet Happens, the Trick or Treat frame puts every mug in it, and it checks out as halloween / sheet-happens~one, left-handed, from halloween';
 };
 
 scenarios.theBack = async (page) => {

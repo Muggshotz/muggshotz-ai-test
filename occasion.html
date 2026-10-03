@@ -143,6 +143,23 @@ function loadOccasion(name) {
   } catch (e) {}
 })();
 
+// WHERE THEY CAME FROM (Alyx, 3 Oct 2026: which orders came from the flyers,
+// which from Facebook). The QR codes differ only in ?from= (flyer, facebook);
+// it is kept per occasion, so someone who scans the flyer and comes back later
+// by typing the address still counts as the flyer's. Every order from here
+// carries the occasion, and the from when there is one: "halloween/flyer".
+const OCC_FROM_KEY = 'mz_occasion_from';
+function occasionFrom(key) {
+  let from = '';
+  try {
+    from = (new URLSearchParams(location.search).get('from') || '').trim().toLowerCase().replace(/[^a-z0-9-]/g, '').slice(0, 24);
+    const kept = JSON.parse(localStorage.getItem(OCC_FROM_KEY) || '{}');
+    if (from) { kept[key] = from; localStorage.setItem(OCC_FROM_KEY, JSON.stringify(kept)); }
+    else from = kept[key] || '';
+  } catch (e) {}
+  return from;
+}
+
 // The studio's device id, so an order from here is the same customer's.
 function deviceId() {
   try {
@@ -337,6 +354,8 @@ function abs(u) { return /^https?:/.test(u) ? u : location.origin + '/' + u.repl
 function hand_off(pending) {
   pending.deviceId = deviceId();
   pending.occasion = O.key;
+  const from = occasionFrom(O.key);
+  pending.source = O.key + (from ? '/' + from : '');
   localStorage.setItem('muggshotz_pending_order', JSON.stringify(pending));
   openOrderPage();
 }
@@ -408,6 +427,7 @@ const name = occasionName();
 if (!name) { root.innerHTML = '<div class="missing">This page needs an occasion, like /halloween.</div>'; }
 else loadOccasion(name).then(o => {
   O = o; document.title = o.title || 'Muggshotz';
+  occasionFrom(o.key);   // the flyer's ?from=, kept on arrival, not only at an order
   const c = o.colors || {}; for (const k of Object.keys(c)) document.documentElement.style.setProperty('--' + k, c[k]);
   try { history.replaceState({ occ: view }, '', location.href); } catch (e) {}
   render(null);

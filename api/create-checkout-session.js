@@ -308,6 +308,18 @@ async function handleReservation(req, res) {
 // way: the product exists, the size (and colour, and poster pair) is real, the
 // artwork its layout needs is present. Throws an Error carrying .status on
 // anything a customer must fix. Prices come from the catalog, never the page.
+// WHERE AN ORDER CAME FROM (Alyx, 3 Oct 2026): an occasion page and its
+// link's ?from=, e.g. "halloween/flyer" or "halloween/facebook" (occasion.html
+// puts it on the order, order.html sends it). It goes on the order's metadata
+// and, on Stripe, on the payment itself: its description is what the
+// Dashboard's Payments list shows, so the flyer's orders can be told apart.
+function orderSource(body) { return String(body?.source || "").toLowerCase().replace(/[^a-z0-9/-]/g, "").slice(0, 60); }
+function withSource(spec, source) {
+  if (!source) return spec;
+  spec.metadata.source = source;
+  spec.payment_intent_data = { ...(spec.payment_intent_data || {}), description: "From " + source.split("/").join(" · "), metadata: { source } };
+  return spec;
+}
 function orderError(message, status = 400) { const e = new Error(message); e.status = status; return e; }
 function catalogVariantId(product, sizeLabel, colorName) {
   const s = product.sizes?.[sizeLabel];
@@ -594,6 +606,7 @@ async function handleProductOrder(req, res) {
     cancel_url: `${origin}/order.html?checkout=cancelled`
   };
 
+  withSource(spec, orderSource(req.body));
   return res.status(200).json(await createCheckout(rail, spec, { discounts, squareGift }));
 }
 
@@ -747,6 +760,7 @@ async function handleBasketOrder(req, res) {
     success_url: `${origin}/order.html?checkout=success&basket=1`,
     cancel_url: `${origin}/order.html?checkout=cancelled`
   };
+  withSource(spec, orderSource(req.body));
   return res.status(200).json(await createCheckout(rail, spec, { discounts, squareGift }));
 }
 

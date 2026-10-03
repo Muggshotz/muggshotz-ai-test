@@ -3541,6 +3541,9 @@ async function submitOrder(){
       if (appliedGiftCert.square) body.squareGan = appliedGiftCert.gan;
       else body.giftCode = appliedGiftCert.code;
     }
+    // An order from an occasion page says so, and where its visitor came
+    // from ("halloween/flyer"): the occasion page puts it on the pending order.
+    if (body && (body.type === 'mug_order' || body.type === 'basket_order') && pendingOrder?.source) body.source = pendingOrder.source;
     const resp = await fetch('/api/create-checkout-session', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
