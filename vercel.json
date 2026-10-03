@@ -1,5 +1,12 @@
 {
   "rewrites": [
-    { "source": "/api/square-webhook", "destination": "/api/stripe-webhook" }
+    {
+      "source": "/api/square-webhook",
+      "destination": "/api/stripe-webhook"
+    },
+    {
+      "source": "/halloween",
+      "destination": "/occasion.html"
+    }
   ]
 }

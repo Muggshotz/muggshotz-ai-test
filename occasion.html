@@ -1,0 +1,360 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<base href="/">
+<title>Muggshotz</title>
+<!--
+  THE OCCASION SITE (Alyx, 3 Oct 2026). The page a flyer's QR code and a Facebook
+  post open: one occasion's products and nothing else -- "We shouldn't route them
+  through the generator ... a special site, created just for this flyer, but built
+  in a 'plug and play' way which allows us to quickly re-tool it for whatever
+  special occasion." This file never changes from one occasion to the next;
+  everything that does is occasions/<name>.js. /halloween serves it with
+  ?o=halloween (vercel.json); here, ?o= or the last part of the address names it.
+
+  Ordering goes straight to the studio's own order page (order.html, the Stripe
+  pipeline), opened over this page as the studio opens it, so its Back comes
+  back here. The 3D mug (mug3d.js) and the Magic Mug's demonstration, shelf and
+  prices (magic-mug.js) are the studio's own, shared.
+
+  Every view follows the panel checklist (CLAUDE.md): a name, a Back to the view
+  before it, pictures, prices, and a landing on the title.
+-->
+<style>
+:root{--bg:#0d0a12;--panel:#17121f;--accent:#ff7a1a;--accent2:#8bd34a;--text:#f3ead8;--muted:#b9a98f}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+#page{max-width:980px;margin:0 auto;padding:0 16px 48px}
+img{max-width:100%}
+button{font:inherit}
+.hero{text-align:center;padding:28px 0 8px}
+.hero h1{font-size:clamp(34px,7vw,64px);line-height:1.02;margin:0;letter-spacing:.5px;color:var(--text);text-transform:uppercase}
+.hero h1 b{color:var(--accent)}
+.hero .sub{font-size:clamp(18px,3.4vw,26px);color:var(--accent2);font-weight:800;margin:8px 0 4px}
+.hero .by{color:var(--muted);font-size:15px;margin:6px 0 0}
+.sec{margin:34px 0 0}
+.sec h2,.view h2{font-size:clamp(22px,4vw,30px);margin:0 0 4px;color:var(--accent)}
+.sec .line,.view .line{color:var(--muted);font-size:14px;margin:0 0 14px}
+.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+@media (min-width:720px){.grid{grid-template-columns:repeat(3,1fr)}}
+.tile{background:var(--panel);border:1px solid #2a2236;border-radius:10px;padding:6px;text-align:center;cursor:pointer;color:var(--text)}
+.tile:hover{border-color:var(--accent)}
+.tile img{display:block;width:100%;height:auto;border-radius:6px;margin-bottom:6px}
+.tile .nm{font-size:14px}
+.tile .pr{font-size:13px;color:var(--accent2);margin-top:2px}
+.card{display:flex;gap:14px;align-items:center;background:var(--panel);border:1px solid #2a2236;border-radius:12px;padding:12px;cursor:pointer}
+.card:hover{border-color:var(--accent)}
+.card img{width:120px;height:90px;object-fit:cover;border-radius:8px;flex:none;background:#fff}
+.card .tx{flex:1}
+.card .nm{font-size:18px;font-weight:700}
+.card .ln{font-size:13px;color:var(--muted);margin-top:3px}
+.card .pr{font-size:14px;color:var(--accent2);margin-top:4px}
+.card .ar{color:var(--accent);font-size:24px}
+.cards{display:grid;gap:10px}
+.view{padding-top:18px}
+.back{background:transparent;border:1px solid #3a2f49;color:var(--text);border-radius:18px;padding:6px 14px;cursor:pointer;margin-bottom:14px}
+.back:hover{border-color:var(--accent)}
+.big{position:relative;margin:4px 0 12px}
+.big img{display:block;width:100%;height:auto;border-radius:10px}
+.arr{position:absolute;top:50%;transform:translateY(-50%);width:40px;height:40px;border-radius:50%;background:rgba(13,10,18,.85);border:1px solid #3a2f49;color:var(--text);font-size:22px;cursor:pointer}
+.arr.l{left:-10px}.arr.r{right:-10px}
+.nm-big{text-align:center;font-size:20px;margin:0}
+.pr-big{text-align:center;color:var(--accent2);margin:4px 0 14px}
+.order{display:block;width:100%;background:linear-gradient(180deg,#ff9a3d,#e0590a);border:0;border-radius:12px;padding:16px;color:#fff;font-size:18px;font-weight:800;cursor:pointer;letter-spacing:.5px}
+.order:hover{filter:brightness(1.07)}
+.hands{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0 12px}
+.hands button{background:var(--panel);border:1px solid #3a2f49;color:var(--text);border-radius:10px;padding:10px;cursor:pointer}
+.hands button.on{border-color:var(--accent);box-shadow:0 0 10px rgba(255,122,26,.5)}
+.foot{text-align:center;color:var(--muted);font-size:12px;margin-top:40px}
+/* The Magic Mug: its demonstration (the heat-up), How it works, and the shelf. */
+#smartHowReveal{position:relative;max-width:620px;margin-left:auto!important;margin-right:auto!important;aspect-ratio:4/3;background:#f2f4f7;border-radius:10px;overflow:hidden;cursor:pointer;margin:6px 0 4px}
+#smartHowReveal>img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+#smartHowReveal>.pm-mug3d-stage{position:absolute;inset:0;touch-action:pan-y}
+#smartHowReveal>.pm-mug3d-stage canvas{display:block;width:100%;height:100%}
+#smartHowRevealWords{min-height:1.4em;text-align:center;color:var(--accent2);font-weight:700;margin:6px 0 2px}
+.smart-blink{animation:occBlink 1.1s ease-in-out infinite}
+@keyframes occBlink{0%,100%{opacity:1}50%{opacity:.35}}
+.replay{display:block;margin:4px auto 0;background:transparent;border:0;color:var(--accent);text-decoration:underline;cursor:pointer}
+.pm-step{text-align:center;padding:1.6rem 0 1.4rem;border-top:1px solid #2a2236}
+.pm-sn{width:30px;height:30px;border-radius:50%;border:1px solid var(--accent);color:var(--accent);margin:0 auto 12px;display:flex;align-items:center;justify-content:center;font-size:14px}
+.pm-sh{font-size:18px;margin-bottom:6px}
+.pm-sl{color:var(--muted);font-size:14px;line-height:1.5;max-width:420px;margin:0 auto}
+.pm-simg{display:block;width:min(100%,300px);height:auto;margin:1.1rem auto 0;border-radius:10px}
+.pm-simg.pm-wide{width:100%}
+.pm-mug3d{position:relative;width:100%;aspect-ratio:4/3;background:#f2f4f7;border-radius:10px;overflow:hidden;cursor:pointer}
+.pm-mug3d>img{display:block;width:100%;height:100%;object-fit:cover}
+.pm-mug3d>.pm-mug3d-stage{position:absolute;inset:0;touch-action:pan-y;cursor:grab}
+.pm-mug3d>.pm-mug3d-stage canvas{display:block;width:100%;height:100%}
+.pm-mug3d.live>img{visibility:hidden}
+.pm-spin-cue{position:absolute;left:50%;bottom:10px;transform:translateX(-50%);background:rgba(11,16,24,.82);color:#fff;font-size:13px;font-weight:600;padding:5px 12px;border-radius:14px;pointer-events:none;white-space:nowrap}
+.pm-mug3d.live.spinning .pm-spin-cue,.no3d .pm-spin-cue{display:none}
+.mugs{display:grid;gap:22px;margin-top:8px}
+@media (min-width:720px){.mugs{grid-template-columns:1fr 1fr}}
+.mugname{display:flex;justify-content:space-between;align-items:baseline;margin:8px 2px}
+.mugname span{color:var(--accent2);font-size:14px}
+.mugorder{background:transparent;border:1px solid var(--accent);color:var(--text);border-radius:18px;padding:8px 14px;cursor:pointer;width:100%;font-weight:700}
+.mugorder:hover{background:rgba(255,122,26,.12)}
+/* The order page, opened over this one as the studio opens it. */
+#orderPageOverlay{position:fixed;inset:0;z-index:2147483000;background:#0b0f16}
+#orderPageOverlay iframe{width:100%;height:100%;border:0;display:block}
+html.order-page-open{overflow:hidden}
+.missing{text-align:center;padding:80px 0;color:var(--muted)}
+</style>
+<script src="mug3d.js"></script>
+<script src="magic-mug.js"></script>
+</head>
+<body>
+<div id="page"><div id="occRoot"><div class="missing">Loading…</div></div></div>
+<script type="module">
+import { PRODUCTS_CATALOG } from './lib/products-catalog.js';
+
+const $ = n => '$' + Number(n).toFixed(2);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const root = document.getElementById('occRoot');
+
+// WHICH OCCASION: ?o=halloween, or /halloween (vercel.json serves this page there).
+function occasionName() {
+  const q = new URLSearchParams(location.search).get('o');
+  const last = location.pathname.split('/').filter(Boolean).pop() || '';
+  const name = (q || (last.endsWith('.html') ? '' : last)).toLowerCase();
+  return /^[a-z0-9-]{2,40}$/.test(name) ? name : '';
+}
+function loadOccasion(name) {
+  return new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = 'occasions/' + name + '.js';
+    s.onload = () => window.OCCASION ? resolve(window.OCCASION) : reject(new Error('no OCCASION'));
+    s.onerror = () => reject(new Error('no occasion file'));
+    document.head.appendChild(s);
+  });
+}
+
+// A FLYER'S CODE (start.html's rule): kept for the order page, which fills it in.
+(function rememberReferral() {
+  try {
+    const ref = (new URLSearchParams(location.search).get('ref') || '').trim().toUpperCase();
+    if (/^[A-Z0-9]{3,16}-[A-Z]?\d{2}$/.test(ref)) localStorage.setItem('muggshotz_referral_code', ref);
+  } catch (e) {}
+})();
+
+// The studio's device id, so an order from here is the same customer's.
+function deviceId() {
+  try {
+    let d = localStorage.getItem('muggshotz_device_id');
+    if (!d) { d = 'dev-' + Date.now() + '-' + Math.random().toString(36).slice(2, 10); localStorage.setItem('muggshotz_device_id', d); }
+    return d;
+  } catch (e) { return 'dev-' + Date.now(); }
+}
+
+function price(catalogKey, size) {
+  const p = PRODUCTS_CATALOG[catalogKey];
+  return p && p.sizes && p.sizes[size] ? p.sizes[size].price : null;
+}
+
+let O = null;                 // the occasion
+let view = { name: 'home' };  // home | mat | magic | more
+let hand = 'right';           // the Magic Mug's hand
+let moreIndex = 0;
+
+// ---- views -----------------------------------------------------------------
+function heroHtml() {
+  const h = esc(O.headline).replace(/(\S+)\.?$/, '<b>$&</b>');
+  return '<div class="hero"><h1>' + h + '</h1><div class="sub">' + esc(O.subline || '') + '</div>'
+    + (O.orderBy ? '<p class="by">' + esc(O.orderBy) + '</p>' : '') + '</div>';
+}
+function featuredPrice() { return price(O.featured.catalog, O.featured.size); }
+function moreShown() { return (O.more || []).filter(m => m.designs && m.designs.length).slice(0, 4); }
+function moreFrom(m) { return price(m.catalog, m.size); }
+
+function homeHtml() {
+  const F = O.featured, fp = featuredPrice();
+  let h = heroHtml();
+  h += '<section class="sec" id="secFeatured"><h2>' + esc(F.title) + ' · ' + $(fp) + '</h2><p class="line">' + esc(F.line) + ' · tap one to see it big</p><div class="grid">'
+    + F.designs.map((d, i) => '<div class="tile" data-mat="' + d.key + '" onclick="occGo(\'mat\',' + i + ')"><img src="' + F.dir + '/show/' + d.key + '.jpg" width="' + F.show[0] + '" height="' + F.show[1] + '" alt="" loading="' + (i < 6 ? 'eager' : 'lazy') + '"/><div class="nm">' + esc(d.label) + '</div><div class="pr">' + $(fp) + '</div></div>').join('')
+    + '</div></section>';
+  const M = O.magicMugs, set = M && typeof SURPRISE_SETS !== 'undefined' && SURPRISE_SETS[M.set];
+  if (set && set.designs.length) {
+    h += '<section class="sec" id="secMagic"><h2>' + esc(M.title) + '</h2><p class="line">' + esc(M.line) + '</p>'
+      + '<div class="card" onclick="occGo(\'magic\')"><img src="art/surprise/mug/' + set.designs[0].file + '.jpg" alt=""/><div class="tx"><div class="nm">See how they work</div><div class="ln">' + set.designs.map(d => esc(d.label)).join(', ') + '</div><div class="pr">' + $(SMART_MUG_PRICE) + ' each</div></div><div class="ar">›</div></div></section>';
+  }
+  const more = moreShown();
+  if (more.length) {
+    h += '<section class="sec" id="secMore"><h2>' + esc(O.moreTitle) + '</h2><p class="line">Tap one to see its designs</p><div class="cards">'
+      + more.map(m => '<div class="card" data-more="' + m.key + '" onclick="occGo(\'more\',\'' + m.key + '\')"><img src="' + m.pic + '" alt=""/><div class="tx"><div class="nm">' + esc(m.title) + '</div><div class="ln">' + esc(m.line) + '</div><div class="pr">from ' + $(moreFrom(m)) + '</div></div><div class="ar">›</div></div>').join('')
+      + '</div></section>';
+  }
+  return h + '<div class="foot">MUGGSHOTZ · ' + esc(O.title) + '</div>';
+}
+
+function matHtml(i) {
+  const F = O.featured, d = F.designs[i], fp = featuredPrice();
+  return '<div class="view" id="viewMat"><button class="back" onclick="occBack()">← All the mats</button>'
+    + '<h2 id="viewTitle">' + esc(F.title) + '</h2><p class="line">' + (i + 1) + ' of ' + F.designs.length + '</p>'
+    + '<div class="big"><img id="matPic" src="' + F.dir + '/show/' + d.key + '.jpg" width="' + F.show[0] + '" height="' + F.show[1] + '" alt="' + esc(d.label) + '"/>'
+    + '<button class="arr l" aria-label="Previous" onclick="occStep(-1)">‹</button><button class="arr r" aria-label="Next" onclick="occStep(1)">›</button></div>'
+    + '<p class="nm-big">' + esc(d.label) + '</p><p class="pr-big">' + esc(F.line) + ' · ' + $(fp) + '</p>'
+    + '<button class="order" id="orderBtn" onclick="occOrderMat()">Order this mat · ' + $(fp) + '</button></div>';
+}
+
+function magicHtml() {
+  const M = O.magicMugs, set = SURPRISE_SETS[M.set], demo = M.demo || set.designs[0].file;
+  return '<div class="view" id="viewMagic"><button class="back" onclick="occBack()">← Back</button>'
+    + '<h2 id="viewTitle">' + esc(M.title) + '</h2><p class="line">' + esc(M.line) + ' Watch it heat up:</p>'
+    + '<div id="smartHowReveal" onclick="occPlayDemo()"><img src="art/surprise/mug/' + demo + '.jpg" alt=""/><div id="smartHowRevealStage" class="pm-mug3d-stage"></div></div>'
+    + '<div id="smartHowRevealWords"></div><button class="replay" onclick="occPlayDemo()">▶ Play it again</button>'
+    + '<div style="margin-top:14px">' + magicMugStepsHtml('other') + '</div>'
+    + '<h2 style="margin-top:22px">Pick yours</h2><p class="line">Which hand do they hold a mug in? We print it so the setup faces them.</p>'
+    + '<div class="hands"><button data-hand="right" class="' + (hand === 'right' ? 'on' : '') + '" onclick="occHand(\'right\')">Right-handed</button><button data-hand="left" class="' + (hand === 'left' ? 'on' : '') + '" onclick="occHand(\'left\')">Left-handed</button></div>'
+    + '<div class="mugs">' + set.designs.map(d => '<div><div class="pm-mug3d" data-mug3d="' + d.file + '" onclick="occSpin(this)"><img src="art/surprise/mug/' + d.file + '.jpg" width="960" height="720" alt="' + esc(d.label) + '"/><div class="pm-mug3d-stage"></div><div class="pm-spin-cue">↻ Click to spin</div></div>'
+      + '<div class="mugname"><b>' + esc(d.label) + '</b><span>' + $(SMART_MUG_PRICE) + '</span></div>'
+      + '<button class="mugorder" data-order="' + d.key + '" onclick="occOrderMagic(\'' + d.key + '\')">Order ' + esc(d.label) + ' · ' + $(SMART_MUG_PRICE) + '</button></div>').join('') + '</div></div>';
+}
+
+function moreHtml(key) {
+  const m = (O.more || []).find(x => x.key === key), d = m.designs[moreIndex] || m.designs[0], p = moreFrom(m);
+  const pic = d.pic || d.file;
+  const stage = m.kind === 'mug'
+    ? '<div class="pm-mug3d" id="moreMug" data-wrap="' + d.file + '" onclick="occSpinMore(this)"><img src="' + pic + '" alt="' + esc(d.label) + '"/><div class="pm-mug3d-stage"></div><div class="pm-spin-cue">↻ Click to spin</div></div>'
+    : '<img id="morePic" src="' + pic + '" alt="' + esc(d.label) + '" style="display:block;width:100%;border-radius:10px"/>';
+  return '<div class="view" id="viewMore"><button class="back" onclick="occBack()">← Back</button>'
+    + '<h2 id="viewTitle">' + esc(m.title) + '</h2><p class="line">' + esc(m.line) + '</p>'
+    + '<div class="big">' + stage + (m.designs.length > 1 ? '<button class="arr l" aria-label="Previous" onclick="occMoreStep(-1)">‹</button><button class="arr r" aria-label="Next" onclick="occMoreStep(1)">›</button>' : '') + '</div>'
+    + '<p class="nm-big">' + esc(d.label) + '</p><p class="pr-big">' + $(p) + '</p>'
+    + '<button class="order" id="orderBtn" onclick="occOrderMore()">Order this one · ' + $(p) + '</button></div>';
+}
+
+// ---- moving between views ----------------------------------------------------
+// Forward and Back are the same list of views, reversed (the panel checklist).
+// Each view is a history entry, so the phone's own back button agrees.
+function release() {
+  try { if (typeof releaseHowReveal === 'function') releaseHowReveal(); } catch (e) {}
+  try { if (typeof releaseShelfMug === 'function') releaseShelfMug(); } catch (e) {}
+  try { if (typeof MUG3D !== 'undefined' && MUG3D.mounted()) MUG3D.close(); } catch (e) {}
+}
+function render(from) {
+  release();
+  if (view.name === 'mat') root.innerHTML = matHtml(view.i);
+  else if (view.name === 'magic') root.innerHTML = magicHtml();
+  else if (view.name === 'more') root.innerHTML = moreHtml(view.key);
+  else root.innerHTML = homeHtml();
+  land(from);
+}
+// THE LANDING: a view lands at its title; Home, come back to, lands on the
+// section left (the mat itself, for a mat).
+function land(from) {
+  requestAnimationFrame(() => {
+    let el = null;
+    if (view.name !== 'home') el = document.querySelector('.view');
+    else if (from && from.name === 'mat') el = document.querySelector('.tile[data-mat="' + O.featured.designs[from.i].key + '"]');
+    else if (from && from.name === 'magic') el = document.getElementById('secMagic');
+    else if (from && from.name === 'more') el = document.getElementById('secMore');
+    if (el) el.scrollIntoView({ block: view.name === 'home' && from && from.name === 'mat' ? 'center' : 'start' });
+    else window.scrollTo(0, 0);
+    if (view.name === 'magic') setTimeout(() => { if (view.name === 'magic') occPlayDemo(); }, 300);
+    if (view.name === 'more') { const mm = document.getElementById('moreMug'); if (mm) occSpinMore(mm); }
+  });
+}
+function go(next) {
+  const from = view; view = next;
+  try { history.pushState({ occ: next }, '', location.href); } catch (e) {}
+  render(from);
+}
+window.occGo = (name, arg) => {
+  if (name === 'mat') go({ name: 'mat', i: arg });
+  else if (name === 'more') { moreIndex = 0; go({ name: 'more', key: arg }); }
+  else go({ name });
+};
+window.occBack = () => { history.back(); };
+window.addEventListener('popstate', e => {
+  if (document.documentElement.classList.contains('order-page-open')) { closeOrderPage(true); return; }
+  const from = view; view = (e.state && e.state.occ) || { name: 'home' };
+  render(from);
+});
+window.occStep = d => {
+  const n = O.featured.designs.length; const i = ((view.i + d) % n + n) % n;
+  view = { name: 'mat', i }; try { history.replaceState({ occ: view }, '', location.href); } catch (e) {}
+  root.innerHTML = matHtml(i);
+};
+window.occMoreStep = d => {
+  const m = O.more.find(x => x.key === view.key), n = m.designs.length;
+  moreIndex = ((moreIndex + d) % n + n) % n; release(); root.innerHTML = moreHtml(view.key);
+  const mm = document.getElementById('moreMug'); if (mm) occSpinMore(mm);
+};
+
+// ---- the Magic Mug ---------------------------------------------------------------
+// One 3D mug at a time: the demonstration and the shelf's mugs take turns.
+window.occPlayDemo = () => {
+  const M = O.magicMugs, set = SURPRISE_SETS[M.set];
+  try { releaseShelfMug(); } catch (e) {}
+  playSurpriseReveal(M.demo || set.designs[0].file, 'how');
+};
+window.occSpin = el => { try { releaseHowReveal(); } catch (e) {} spinShelfMug(el); };
+window.occHand = h => { hand = h === 'left' ? 'left' : 'right'; document.querySelectorAll('.hands button').forEach(b => b.classList.toggle('on', b.dataset.hand === hand)); };
+
+// A coffee mug turns on the studio's own 3D mug: Classic White, the design all round.
+window.occSpinMore = el => {
+  if (!el || typeof MUG3D === 'undefined' || (typeof mug3dFailed !== 'undefined' && mug3dFailed)) return;
+  if (!el._cue) { el._cue = true; el.addEventListener('mug3dspin', e => el.classList.toggle('spinning', !!e.detail)); }
+  MUG3D.open(el.querySelector('.pm-mug3d-stage'), { sizeLabel: '11oz', styleName: 'Classic White', colorHex: '#ffffff', panoramaUrl: el.dataset.wrap, panelUrls: [], startAngle: -90, spinStep: 0.6, restartOnView: true, turns: 1 })
+    .then(() => el.classList.add('live'))
+    .catch(err => { console.error('The mug could not turn; its picture stands in:', err); document.getElementById('page').classList.add('no3d'); });
+};
+
+// ---- ordering: straight to the order page, never the studio ----------------------
+function abs(u) { return /^https?:/.test(u) ? u : location.origin + '/' + u.replace(/^\//, ''); }
+function hand_off(pending) {
+  pending.deviceId = deviceId();
+  pending.occasion = O.key;
+  localStorage.setItem('muggshotz_pending_order', JSON.stringify(pending));
+  openOrderPage();
+}
+window.occOrderMat = () => {
+  const F = O.featured, d = F.designs[view.i];
+  hand_off(Object.assign({ placements: { left: abs(F.dir + '/print/' + d.key + '.jpg'), front: null, right: null }, premadeItem: 'welcome-mats/' + d.key }, F.order));
+};
+window.occOrderMagic = key => {
+  const set = O.magicMugs.set, urls = setPrintUrls(set, hand, [key]);
+  if (!urls || !urls.length) return;
+  hand_off({ placements: { left: urls[0], front: null, right: null }, productIcon: 'smart mug', surpriseSet: set, surpriseMugs: [key], surpriseSetPrints: urls, preselectedSurpriseHand: hand });
+};
+window.occOrderMore = () => {
+  const m = O.more.find(x => x.key === view.key), d = m.designs[moreIndex] || m.designs[0], url = abs(d.file);
+  const pending = { placements: { left: url, front: null, right: null } };
+  if (m.kind === 'mug') Object.assign(pending, { productIcon: 'mug', mugPrintMode: 'wraparound', panoramaImage: url, preselectedMugStyle: 'Classic White', preselectedMugSize: m.size || '11oz' });
+  else if (m.kind === 'coaster') Object.assign(pending, { productIcon: 'coaster', coasterShape: m.shape === 'round' ? 'round' : 'square' });
+  else if (m.kind === 'placemat') Object.assign(pending, { productIcon: 'placemat', preselectedPlacemat: m.placemat || 'Neoprene', preselectedPlacematPack: 1 });
+  hand_off(pending);
+};
+
+// The order page over this one, as the studio opens it (needles-studio.html,
+// openOrderPage): its Back closes it and lands back here.
+function openOrderPage() {
+  let ov = document.getElementById('orderPageOverlay'); if (ov) ov.remove();
+  ov = document.createElement('div'); ov.id = 'orderPageOverlay';
+  ov.innerHTML = '<iframe id="orderPageFrame" title="Your order" src="order.html?embedded=1"></iframe>';
+  document.body.appendChild(ov);
+  document.documentElement.classList.add('order-page-open');
+  try { history.pushState({ occ: view, orderPage: 1 }, '', location.href); } catch (e) {}
+}
+function closeOrderPage(fromHistory) {
+  const ov = document.getElementById('orderPageOverlay'); if (ov) ov.remove();
+  document.documentElement.classList.remove('order-page-open');
+  if (!fromHistory) { try { history.back(); } catch (e) {} }
+}
+window.closeOrderOverlay = () => closeOrderPage(false);
+
+// ---- start -------------------------------------------------------------------------
+const name = occasionName();
+if (!name) { root.innerHTML = '<div class="missing">This page needs an occasion, like /halloween.</div>'; }
+else loadOccasion(name).then(o => {
+  O = o; document.title = o.title || 'Muggshotz';
+  const c = o.colors || {}; for (const k of Object.keys(c)) document.documentElement.style.setProperty('--' + k, c[k]);
+  try { history.replaceState({ occ: view }, '', location.href); } catch (e) {}
+  render(null);
+  try { if (typeof MUG3D !== 'undefined') MUG3D.warm(); } catch (e) {}
+}).catch(() => { root.innerHTML = '<div class="missing">That occasion isn\'t here. Try <a href="occasion.html?o=halloween" style="color:var(--accent)">Halloween</a>.</div>'; });
+</script>
+</body>
+</html>
