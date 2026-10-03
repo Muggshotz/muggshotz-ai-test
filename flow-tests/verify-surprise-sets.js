@@ -82,7 +82,7 @@ scenarios.theThreeListsAndTheFiles = async (page) => {
   for (const [k, s] of live) {
     if (orderLabels[k] !== s.label) bad.push(`${k}: the order page calls it ${orderLabels[k]}`);
     const mine = (studioSets[k] || {}).designs || [];
-    if (JSON.stringify(mine.map((d) => [d.key, d.label, d.file, !!d.frames])) !== JSON.stringify(s.designs.map((d) => [d.key, d.label, d.file, !!d.frames]))) bad.push(`${k}: the studio's mugs differ from the server's`);
+    if (JSON.stringify(mine.map((d) => [d.key, d.label, d.file, JSON.stringify(d.frames || null)])) !== JSON.stringify(s.designs.map((d) => [d.key, d.label, d.file, JSON.stringify(d.frames || null)]))) bad.push(`${k}: the studio's mugs differ from the server's`);
     // One design is a shelf: a set may be the same mug four times over.
     if (s.designs.length < 1) bad.push(`${k} has no mugs`);
     if (new Set(s.designs.map((d) => d.key)).size !== s.designs.length) bad.push(`${k}: two mugs share a key`);
@@ -90,7 +90,7 @@ scenarios.theThreeListsAndTheFiles = async (page) => {
   // The files, measured in the page (the browser reads the PNGs).
   await page.goto('http://127.0.0.1:8788/needles-studio.html');
   // A framed mug (frames: true) has its two framed prints too, each hand.
-  const framed = live.flatMap(([, s]) => s.designs.filter((d) => d.frames).flatMap((d) => ['one', 'two'].flatMap((f) => [`${d.file}-${f}-print.png`, `${d.file}-${f}-print-left.png`])));
+  const framed = live.flatMap(([, s]) => s.designs.filter((d) => d.frames).flatMap((d) => (d.frames === true ? ['one', 'two'] : d.frames).flatMap((f) => [`${d.file}-${f}-print.png`, `${d.file}-${f}-print-left.png`])));
   const missing = await page.evaluate(async (fs) => { const out = [];
     for (const f of fs) { const ok = await new Promise((r) => { const im = new Image(); im.onload = () => r(im.naturalWidth === 2475 && im.naturalHeight === 1155); im.onerror = () => r(false); im.src = '/art/surprise/' + f; }); if (!ok) out.push(f); }
     return out; }, framed);

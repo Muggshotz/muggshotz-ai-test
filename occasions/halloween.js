@@ -74,7 +74,8 @@ window.OCCASION = {
     title: "Halloween Magic Mugs",
     line: "The picture appears when you pour in something hot.",
     set: "halloween",
-    demo: "halloween-boo-ghost"   // Boo: the mug on the flyer
+    demo: "halloween-boo-ghost",   // Boo: the mug on the flyer
+    frameLabel: "Trick or Treat frame"
   },
 
   moreTitle: "While you're here, take a look at a few more of our favorites",

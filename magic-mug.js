@@ -33,11 +33,11 @@ const SURPRISE_SETS={
   // the setup and the punchline, its edges fading to white as the hot mug is.
   'halloween':{label:'Halloween',designs:[
     // Boo first: it is the mug on the Halloween flyer (Alyx, 3 Oct 2026).
-    {key:'boo',label:'Boo',file:'halloween-boo-ghost'},
-    {key:'raise-the-dead',label:'Raise the Dead',file:'halloween-raise-the-dead'},
+    {key:'boo',label:'Boo',file:'halloween-boo-ghost',frames:['one']},
+    {key:'raise-the-dead',label:'Raise the Dead',file:'halloween-raise-the-dead',frames:['one']},
     // Sheet Happens (Bud, 26 Sep 2026; was Boo until 3 Oct, Alyx: the name went
     // to the new cartoon ghost): the ghost's face; turned round, the laundry tag.
-    {key:'sheet-happens',label:'Sheet Happens',file:'halloween-boo'}
+    {key:'sheet-happens',label:'Sheet Happens',file:'halloween-boo',frames:['one']}
   ]}
 };
 function holidayPrice(n){ return n>=4 ? Math.round((SMART_MUG_SET_PRICE+(n-4)*SMART_MUG_EXTRA_PRICE)*100)/100 : Math.round(n*SMART_MUG_PRICE*100)/100; }
@@ -52,6 +52,10 @@ function setPrintUrls(key,hand,mugs){
 // travels with it as "key~frame" (lib/surprise-sets.js SET_FRAMES): one
 // frame round everything, or a frame round each side; no frame is the key.
 const SET_FRAMES={none:'No frame',one:'One frame',two:'A frame each side'};
+// The frames a design comes in: frames:true is both (the Thanksgiving decals),
+// a list names its own -- the Halloween mugs come in the one Halloween frame
+// (Alyx, 3 Oct 2026; tools/surprise/frame-mug.py builds its files).
+function designFrames(d){ return !d||!d.frames?[]:d.frames===true?['one','two']:d.frames.filter(f=>SET_FRAMES[f]); }
 
 // THE MUG ON THE SHELF TURNS (Alyx, 27 Sep 2026: "the exact same carousel
 // layout that we have for our mockups at the end ... a carousel that spins

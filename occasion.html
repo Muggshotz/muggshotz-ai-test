@@ -160,6 +160,7 @@ function price(catalogKey, size) {
 let O = null;                 // the occasion
 let view = { name: 'home' };  // home | mat | magic | more
 let hand = 'right';           // the Magic Mug's hand
+let frame = 'none';           // the Magic Mug's frame: 'none', or one its designs come in
 let moreIndex = 0;
 
 // ---- views -----------------------------------------------------------------
@@ -210,6 +211,14 @@ function matHtml(i) {
     + '<button class="order" id="orderBtn" onclick="occOrderMat()">Order this mat · ' + $(fp) + '</button></div>';
 }
 
+// THE FRAME (Alyx, 3 Oct 2026: the Halloween frame "offered to all"): a choice
+// over the mugs, like the hand, offered when the holiday's mugs come in one.
+function frameChoices(set) { const f = [...new Set(set.designs.flatMap(d => designFrames(d)))]; return f.length ? ['none'].concat(f) : []; }
+function mugFile(d) { return d.file + (frame !== 'none' && designFrames(d).includes(frame) ? '-' + frame : ''); }
+function frameChoiceHtml(set) {
+  const fs = frameChoices(set); if (!fs.length) return '';
+  return '<p class="line" style="margin-top:4px">Frame it?</p><div class="hands frames">' + fs.map(k => '<button data-frame="' + k + '" class="' + (k === frame ? 'on' : '') + '" onclick="occFrame(\'' + k + '\')">' + (k === 'none' ? 'No frame' : (O.magicMugs.frameLabel || SET_FRAMES[k])) + '</button>').join('') + '</div>';
+}
 function magicHtml() {
   const M = O.magicMugs, set = SURPRISE_SETS[M.set], demo = M.demo || set.designs[0].file;
   return '<div class="view" id="viewMagic"><button class="back" onclick="occBack()">← Back</button>'
@@ -219,7 +228,8 @@ function magicHtml() {
     + '<div style="margin-top:14px">' + magicMugStepsHtml('other') + '</div>'
     + '<h2 style="margin-top:22px">Pick yours</h2><p class="line">Which hand do they hold a mug in? We print it so the setup faces them.</p>'
     + '<div class="hands"><button data-hand="right" class="' + (hand === 'right' ? 'on' : '') + '" onclick="occHand(\'right\')">Right-handed</button><button data-hand="left" class="' + (hand === 'left' ? 'on' : '') + '" onclick="occHand(\'left\')">Left-handed</button></div>'
-    + '<div class="mugs">' + set.designs.map(d => '<div><div class="pm-mug3d" data-mug3d="' + d.file + '" onclick="occSpin(this)"><img src="art/surprise/mug/' + d.file + '.jpg" width="960" height="720" alt="' + esc(d.label) + '"/><div class="pm-mug3d-stage"></div><div class="pm-spin-cue">↻ Click to spin</div></div>'
+    + frameChoiceHtml(set)
+    + '<div class="mugs">' + set.designs.map(d => '<div><div class="pm-mug3d" data-key="' + d.key + '" data-mug3d="' + mugFile(d) + '" onclick="occSpin(this)"><img src="art/surprise/mug/' + d.file + '.jpg" width="960" height="720" alt="' + esc(d.label) + '"/><div class="pm-mug3d-stage"></div><div class="pm-spin-cue">↻ Click to spin</div></div>'
       + '<div class="mugname"><b>' + esc(d.label) + '</b><span>' + $(SMART_MUG_PRICE) + '</span></div>'
       + '<button class="mugorder" data-order="' + d.key + '" onclick="occOrderMagic(\'' + d.key + '\')">Order ' + esc(d.label) + ' · ' + $(SMART_MUG_PRICE) + '</button></div>').join('') + '</div></div>';
 }
@@ -303,7 +313,15 @@ window.occPlayDemo = () => {
   playSurpriseReveal(M.demo || set.designs[0].file, 'how');
 };
 window.occSpin = el => { try { releaseHowReveal(); } catch (e) {} spinShelfMug(el); };
-window.occHand = h => { hand = h === 'left' ? 'left' : 'right'; document.querySelectorAll('.hands button').forEach(b => b.classList.toggle('on', b.dataset.hand === hand)); };
+window.occFrame = f => {
+  frame = SET_FRAMES[f] ? f : 'none';
+  document.querySelectorAll('.frames button').forEach(b => b.classList.toggle('on', b.dataset.frame === frame));
+  const set = SURPRISE_SETS[O.magicMugs.set];
+  document.querySelectorAll('.mugs .pm-mug3d').forEach(el => { const d = set.designs.find(x => x.key === el.dataset.key); if (d) el.dataset.mug3d = mugFile(d); });
+  const live = document.querySelector('.mugs .pm-mug3d.live');
+  if (live) { try { releaseShelfMug(); } catch (e) {} occSpin(live); }
+};
+window.occHand = h => { hand = h === 'left' ? 'left' : 'right'; document.querySelectorAll('.hands:not(.frames) button').forEach(b => b.classList.toggle('on', b.dataset.hand === hand)); };
 
 // A coffee mug turns on the studio's own 3D mug: Classic White, the design all round.
 window.occSpinMore = el => {
@@ -327,7 +345,9 @@ window.occOrderMat = () => {
   hand_off(Object.assign({ placements: { left: abs(F.dir + '/print/' + d.key + '.jpg'), front: null, right: null }, premadeItem: 'welcome-mats/' + d.key }, F.order));
 };
 window.occOrderMagic = key => {
-  const set = O.magicMugs.set, urls = setPrintUrls(set, hand, [key]);
+  const set = O.magicMugs.set, d = SURPRISE_SETS[set].designs.find(x => x.key === key);
+  if (d && frame !== 'none' && designFrames(d).includes(frame)) key = key + '~' + frame;
+  const urls = setPrintUrls(set, hand, [key]);
   if (!urls || !urls.length) return;
   hand_off({ placements: { left: urls[0], front: null, right: null }, productIcon: 'smart mug', surpriseSet: set, surpriseMugs: [key], surpriseSetPrints: urls, preselectedSurpriseHand: hand });
 };

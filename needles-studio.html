@@ -1,5 +1,5 @@
 <!-- ============================================================
-     VERSION: V445
+     VERSION: V446
      ============================================================
      THE ONE LINE THAT SAYS WHICH BUILD YOU ARE LOOKING AT.
 
@@ -4938,7 +4938,7 @@ function toggleWorkingImage(){
 // Two copies of a number is exactly how the marker rotted in the first place,
 // so they are not trusted to agree: .githooks/pre-commit moves both together
 // and REFUSES the commit if it ever finds them apart.
-const APP_VERSION='V445';
+const APP_VERSION='V446';
 try{ console.log('%cNeedles\u2019 Studio '+APP_VERSION,'color:#29a3ff;font-weight:700'); }catch(e){}
 
 function getDeviceId(){
@@ -13200,7 +13200,7 @@ function surprisePrintUrl(){
   return location.origin+'/art/surprise/'+file+'-print'+(selectedSurpriseHand==='left'?'-left':'')+'.png';
 }
 let premadesFrame='none';
-function holidayEntry(key){ const d=holidayDesigns().find(x=>x.key===key); return key+(d&&d.frames&&premadesFrame!=='none'?'~'+premadesFrame:''); }
+function holidayEntry(key){ const d=holidayDesigns().find(x=>x.key===key); return key+(designFrames(d).includes(premadesFrame)?'~'+premadesFrame:''); }
 function renderSurpriseTemplates(){
   const grid=document.getElementById('surpriseTemplateGrid'); if(!grid)return;
   grid.innerHTML=Object.entries(SURPRISE_TEMPLATES).filter(([k,t])=>!t.hidden||k===SURPRISE_UNLOCKED).map(([k,t])=>
@@ -13601,7 +13601,7 @@ function renderPremades(){
         +'<div class="pm-mugbar"><span class="pm-mugname">'+x.label+' <span class="pm-mugprice">'+$(SMART_MUG_PRICE)+'</span></span>'
         +'<button type="button" class="pm-add" data-add="'+x.key+'" onclick="holidayAdd(\''+x.key+'\',true)">'+holidayAddText(x.key)+'</button></div></div>').join('')+'</div>';
     } else {
-      const fr=m.frames?premadesFrame:'none';
+      const fr=designFrames(m).includes(premadesFrame)?premadesFrame:'none', frs=['none'].concat(designFrames(m));
       body='<div class="pm-mat">'+shelfMugHtml(m,'premadesMugPic',undefined,fr)
         +'<button type="button" class="pm-arr" style="left:-12px" aria-label="Previous" onclick="holidayStep(-1)">‹</button>'
         +'<button type="button" class="pm-arr" style="right:-12px" aria-label="Next" onclick="holidayStep(1)">›</button></div>'
@@ -13609,8 +13609,8 @@ function renderPremades(){
         +'<div class="pm-name" id="premadesMugName">'+m.label+'</div>'
         +'<div class="pm-line" style="margin-bottom:.5rem">SURPRISE!!! smart mug · '+$(SMART_MUG_PRICE)+' on its own</div>'
         +'<div class="pm-dots">'+d.map((x,i)=>'<span class="'+(i===premadesMugIndex?'on':'')+'" onclick="holidayStep('+(i-premadesMugIndex)+')"></span>').join('')+'</div>'
-        +(m.frames?'<div class="grid3" id="premadesFrameGrid" data-words="the frame: the mug above carries the picture" style="margin:.2rem 0 .8rem">'
-          +Object.entries(SET_FRAMES).map(([k,l])=>'<div class="btn-select'+(k===fr?' selected':'')+'" data-frame="'+k+'" onclick="pickPremadesFrame(\''+k+'\')" style="padding:.5rem;font-size:12px">'+l+'</div>').join('')+'</div>':'')
+        +(frs.length>1?'<div class="'+(frs.length===3?'grid3':'grid2')+'" id="premadesFrameGrid" data-words="the frame: the mug above carries the picture" style="margin:.2rem 0 .8rem">'
+          +frs.map(k=>[k,SET_FRAMES[k]]).map(([k,l])=>'<div class="btn-select'+(k===fr?' selected':'')+'" data-frame="'+k+'" onclick="pickPremadesFrame(\''+k+'\')" style="padding:.5rem;font-size:12px">'+l+'</div>').join('')+'</div>':'')
         +'<button type="button" class="generate-btn" id="premadesAddBtn" data-add="'+m.key+'" onclick="holidayAdd(\''+m.key+'\')">'+holidayAddText(m.key)+'</button>'
         +'<button type="button" class="download-btn" id="premadesJustOneBtn" style="margin-top:.6rem" onclick="holidayJustOne(\''+m.key+'\')">Just this one · '+$(SMART_MUG_PRICE)+'</button>';
       const next=new Image(); next.src='art/surprise/mug/'+d[(premadesMugIndex+1)%d.length].file+'.jpg';
@@ -13750,7 +13750,7 @@ function pickPremadesFrame(f){
   premadesFrame=SET_FRAMES[f]?f:'none';
   document.querySelectorAll('#premadesFrameGrid .btn-select').forEach(b=>b.classList.toggle('selected',b.dataset.frame===premadesFrame));
   const d=holidayDesigns()[premadesMugIndex], el=document.querySelector('#premadesView .pm-mat .pm-mug3d'); if(!d||!el)return;
-  el.dataset.mug3d=d.file+(premadesFrame!=='none'?'-'+premadesFrame:'');
+  el.dataset.mug3d=d.file+(designFrames(d).includes(premadesFrame)?'-'+premadesFrame:'');
   releaseShelfMug(); spinShelfMug(el);
 }
 function holidayRemove(i){

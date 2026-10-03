@@ -101,10 +101,14 @@ scenarios.theMagicMugs = async (page) => {
   const spun = await page.evaluate(() => MUG3D.mounted() && MUG3D.host() === document.querySelectorAll('.mugs .pm-mug3d-stage')[1]);
   if (!spun) return 'FAIL: tapping Sheet Happens did not turn it on the 3D mug';
   await page.click('[data-hand="left"]');
+  // The Trick or Treat frame: the mugs wear it, and the order names it.
+  await page.click('[data-frame="one"]'); await T(page, 1500);
+  const fr = await page.evaluate(() => ({ files: [...document.querySelectorAll('.mugs .pm-mug3d')].map((e) => e.dataset.mug3d), handOn: document.querySelector('[data-hand="left"]').classList.contains('on'), frameOn: document.querySelector('[data-frame="one"]').classList.contains('on') }));
+  if (!fr.files.every((f) => f.endsWith('-one')) || !fr.handOn || !fr.frameOn) return `FAIL: the frame choice shows ${JSON.stringify(fr)}`;
   await page.click('[data-order="sheet-happens"]');
   const b = lineOf(await checkout(page, bodies));
-  if (b.setKey !== 'halloween' || JSON.stringify(b.mugs) !== '["sheet-happens"]' || b.hand !== 'left') return `FAIL: checkout got ${JSON.stringify({ set: b.setKey, mugs: b.mugs, hand: b.hand })}`;
-  return 'PASS: the demonstration plays on the 3D mug, six steps, Raise the Dead and Sheet Happens at $19.95, a tap turns Sheet Happens, and it checks out as halloween / sheet-happens, left-handed';
+  if (b.setKey !== 'halloween' || JSON.stringify(b.mugs) !== '["sheet-happens~one"]' || b.hand !== 'left') return `FAIL: checkout got ${JSON.stringify({ set: b.setKey, mugs: b.mugs, hand: b.hand })}`;
+  return 'PASS: the demonstration plays on the 3D mug, six steps, Raise the Dead and Sheet Happens at $19.95, a tap turns Sheet Happens, the Trick or Treat frame puts every mug in it, and it checks out as halloween / sheet-happens~one, left-handed';
 };
 
 scenarios.theBack = async (page) => {
