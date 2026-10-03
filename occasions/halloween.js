@@ -16,6 +16,10 @@
 //              where file is its print (a coffee mug's full wrap, 2475 x 1155;
 //              a coaster's or placemat's own print shape) and pic its picture.
 //
+// ON THE FLYER, FIRST (Alyx, 3 Oct 2026, standard practice): whatever the
+// occasion's flyer shows -- its mats, its mug -- goes first in these lists, in
+// the flyer's order, and the flyer's mug is the demonstration.
+//
 // Prices are never written here: the page reads them from lib/products-catalog.js.
 window.OCCASION = {
   key: "halloween",
@@ -38,10 +42,12 @@ window.OCCASION = {
     order: { productIcon: "doormat" },
     dir: "art/unwelcome", show: [900, 552],
     designs: [
-      { key: "six-feet-under", label: "Six Feet Under" },
+      // On the flyer, first, in the flyer's order (Alyx, 3 Oct 2026: standard practice).
+      { key: "halloween-silhouettes", label: "Witch Silhouette" },
       { key: "vampires-welcome", label: "Consider Yourself Inbited" },
-      { key: "care-for-a-bite", label: "Care for a Bite?" },
       { key: "treat-or-trick", label: "Treat or Trick" },
+      { key: "six-feet-under", label: "Six Feet Under" },
+      { key: "care-for-a-bite", label: "Care for a Bite?" },
       { key: "my-parlor", label: "Welcome to My Parlor" },
       { key: "ouija", label: "Ouija" },
       { key: "witch-parking", label: "Witch Parking Only" },
@@ -60,8 +66,7 @@ window.OCCASION = {
       { key: "zombie-sign", label: "Zombie Sign" },
       { key: "spider-web", label: "Spider Web" },
       { key: "bat-sign", label: "Bat Sign" },
-      { key: "coffin-sign", label: "Coffin Sign" },
-      { key: "halloween-silhouettes", label: "Witch Silhouette" }
+      { key: "coffin-sign", label: "Coffin Sign" }
     ]
   },
 
@@ -69,7 +74,7 @@ window.OCCASION = {
     title: "Halloween Magic Mugs",
     line: "The picture appears when you pour in something hot.",
     set: "halloween",
-    demo: "halloween-raise-the-dead"
+    demo: "halloween-boo-ghost"   // Boo: the mug on the flyer
   },
 
   moreTitle: "While you're here, take a look at a few more of our favorites",

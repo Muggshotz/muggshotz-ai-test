@@ -101,6 +101,17 @@ return. `flow-tests/verify-back-all-the-way.js` walks every product from the
 opening page to Checkout and back, and fails on a Back that stalls, goes
 forward, skips a screen or loops.
 
+## What a flyer shows comes first
+
+Alyx, 3 Oct 2026: *"any time we have a featured mug or product at all on a flyer
+That is currently being featured, move objects depicted on said flyers to
+positions of prominence in the order list. This should be standard practice."*
+Whatever a live flyer pictures goes first, in the flyer's order, everywhere it
+is listed: the studio's shelves (`PREMADE_CATEGORIES`, `SURPRISE_SETS` in
+`magic-mug.js` and `lib/surprise-sets.js`) and the occasion page
+(`occasions/<name>.js`, whose demonstration mug is the flyer's mug). When the
+flyer changes, the order changes with it.
+
 ## Paint it in one pass, into its own shape
 
 Alyx, 23 Sep 2026: *"We shouldn't force the AI to try to stitch pictures

@@ -474,8 +474,8 @@ scenarios.theMats = async (page) => {
   if (!everyday) return 'FAIL: the Everyday line shows a holiday mat';
   await page.evaluate(() => document.querySelector('#premadesLineTabs .pm-tab[data-line="halloween"]').click()); await T(page, 900);
   const hw = await page.evaluate(() => ({ name: document.getElementById('premadesMatName')?.textContent, dots: document.querySelectorAll('.pm-dots span').length, keys: premadeItems().map((x) => x.key), allHalloween: premadeItems().every((x) => x.occasion === 'halloween') }));
-  if (hw.name !== 'Six Feet Under' || hw.dots !== hw.keys.length || !hw.allHalloween) return `FAIL: the Halloween line shows ${JSON.stringify(hw)}`;
-  const lastKey = 'six-feet-under';
+  if (hw.name !== 'Witch Silhouette' || hw.dots !== hw.keys.length || !hw.allHalloween) return `FAIL: the Halloween line shows ${JSON.stringify(hw)}`;
+  const lastKey = 'halloween-silhouettes';  // first: on the Halloween flyer
   await followToOrder(page, () => tap(page, '#premadesMatOrderBtn'));
   await T(page, 3500);
   const o = await page.evaluate(() => ({ base: document.getElementById('summaryBase').textContent, head: document.getElementById('orderHeadlineName').textContent }));
@@ -489,7 +489,7 @@ scenarios.theMats = async (page) => {
   await T(page, 2000);
   const b = bodies[bodies.length - 1];
   if (!b || b.productKey !== 'doormat' || !(b.image || '').endsWith(`/art/unwelcome/print/${lastKey}.jpg`)) return `FAIL: checkout got ${JSON.stringify(b && { k: b.productKey, s: b.sizeLabel, image: b.image })}`;
-  return `PASS: Everyday opens one mat at a time at $19.95, all at once shows every mat and a tap opens it, next goes round all ${n} Everyday mats and back; every mat has its 4650 x 2850 print and 900 x 552 picture; the Halloween tab holds only Halloween mats, Six Feet Under first, which orders as the doormat at $19.95 with its own print file (${o.head})`;
+  return `PASS: Everyday opens one mat at a time at $19.95, all at once shows every mat and a tap opens it, next goes round all ${n} Everyday mats and back; every mat has its 4650 x 2850 print and 900 x 552 picture; the Halloween tab holds only Halloween mats, Witch Silhouette (on the flyer) first, which orders as the doormat at $19.95 with its own print file (${o.head})`;
 };
 
 // The placemats: a category with no designs stays hidden; with Bud's,

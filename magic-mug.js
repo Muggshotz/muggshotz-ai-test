@@ -32,13 +32,12 @@ const SURPRISE_SETS={
   // Raise the Dead (Bud, 28 Sep 2026): one continuous scene, a tree between
   // the setup and the punchline, its edges fading to white as the hot mug is.
   'halloween':{label:'Halloween',designs:[
+    // Boo first: it is the mug on the Halloween flyer (Alyx, 3 Oct 2026).
+    {key:'boo',label:'Boo',file:'halloween-boo-ghost'},
     {key:'raise-the-dead',label:'Raise the Dead',file:'halloween-raise-the-dead'},
     // Sheet Happens (Bud, 26 Sep 2026; was Boo until 3 Oct, Alyx: the name went
     // to the new cartoon ghost): the ghost's face; turned round, the laundry tag.
-    {key:'sheet-happens',label:'Sheet Happens',file:'halloween-boo'},
-    // Boo (Bud, 3 Oct 2026): the ghost from the flyer, shouting BOO by the door,
-    // the black cat and the haunted street round the back.
-    {key:'boo',label:'Boo',file:'halloween-boo-ghost'}
+    {key:'sheet-happens',label:'Sheet Happens',file:'halloween-boo'}
   ]}
 };
 function holidayPrice(n){ return n>=4 ? Math.round((SMART_MUG_SET_PRICE+(n-4)*SMART_MUG_EXTRA_PRICE)*100)/100 : Math.round(n*SMART_MUG_PRICE*100)/100; }
