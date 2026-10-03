@@ -62,7 +62,7 @@ scenarios.theHome = async (page) => {
     cols: getComputedStyle(document.querySelector('#secFeatured .grid')).gridTemplateColumns.split(' ').length,
   }));
   const want = page.viewportSize().width >= 720 ? 3 : 2;
-  if (h.h1 !== 'Your Door Is Boring.' || h.tiles !== 24 || !h.priced || !h.magic || h.more || h.ref !== 'TEST-07' || h.cols !== want) return `FAIL: home is ${JSON.stringify(h)}`;
+  if (h.h1 !== 'The Floor at Your DoorIs a Bore.' || h.tiles !== 24 || !h.priced || !h.magic || h.more || h.ref !== 'TEST-07' || h.cols !== want) return `FAIL: home is ${JSON.stringify(h)}`;
   return `PASS: the headline, all 24 mats pictured at $19.95 (${want} across), the Magic Mugs, no empty "more", the flyer's code kept`;
 };
 

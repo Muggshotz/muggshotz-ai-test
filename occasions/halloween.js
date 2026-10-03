@@ -20,7 +20,10 @@
 window.OCCASION = {
   key: "halloween",
   title: "Halloween at Muggshotz",
-  headline: "Your Door Is Boring.",
+  // Two lines, the last the big one (Alyx, 3 Oct 2026: "The Floor at Your Door is
+  // a Bore" -- the floor takes the blame, not the reader).
+  headline: "The Floor at Your Door",
+  headlineBig: "Is a Bore.",
   subline: "Fix that this Halloween!",
   orderBy: "Order now so it arrives before Halloween.",
   colors: { bg: "#0d0a12", panel: "#17121f", accent: "#ff7a1a", accent2: "#8bd34a", text: "#f3ead8", muted: "#b9a98f" },
