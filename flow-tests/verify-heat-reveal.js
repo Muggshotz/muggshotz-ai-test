@@ -2,10 +2,10 @@
 //   - The 11oz Smart Mug square asks first: "See the demonstration" or "Skip
 //     the demonstration" (it replaced the (i)); Back there leaves the sizes up.
 //   - The demonstration is How the magic mug works: its 3D mug plays the heat
-//     reveal, about 22 seconds: cold black and still, the heat words at 1s
+//     reveal, about 21 seconds: cold black and still, the heat words at 1s
 //     while the setup rises, the setup to be read from 4.5s, a slow turn from
-//     8s, stopped on the punchline (+90) at 14s, the cooling words at 18s and
-//     the fade back to black, still by 22s. The words sit on a dark band. A
+//     6s (retimed 3 Oct 2026), stopped on the punchline (+90) at 12.7s, the
+//     cooling words at 16.7s and the fade back to black, still by 20.7s. The words sit on a dark band. A
 //     click replays it at once. Its Back returns to the question; its button
 //     goes on to the designs, whose Back returns to it.
 //   - On the designs, a tap plays the heat-up on the large mug (Alyx, 29 Sep
@@ -69,14 +69,14 @@ async function run(viewport, tag) {
   const first = tl.find((r) => r.w);
   const start = first ? first.t - 1000 : 0;
   const at = (s) => tl.reduce((a, r) => (Math.abs(r.t - start - s * 1000) < Math.abs(a.t - start - s * 1000) ? r : a), tl[0]);
-  const s0 = tl.filter((r) => r.t < start + 900 && r.deg !== undefined), s3 = at(3), s6 = at(6.5), s11 = at(11), s16 = at(16), s19 = at(19.5), s24 = at(24), end = tl[tl.length - 1];
+  const s0 = tl.filter((r) => r.t < start + 900 && r.deg !== undefined), s3 = at(3), s6 = at(5.2), s11 = at(9.3), s16 = at(14.5), s19 = at(18.2), s24 = at(23), end = tl[tl.length - 1];
   ok('cold and still, no words, before 1s', s0.length > 0 && s0.every((r) => r.deg === -90 && !r.w), JSON.stringify(s0.slice(-1)));
   ok('the heat words blink while the setup rises, the mug still', /absorbs the liquid's heat/.test(s3.w) && s3.b && s3.deg === -90, JSON.stringify(s3));
-  ok('the setup to be read at 6.5s: no words, still facing', !s6.w && s6.deg === -90, JSON.stringify(s6));
-  ok('turning slowly at 11s, no words', !s11.w && s11.deg > -90 && s11.deg < 90, JSON.stringify(s11));
-  ok('stopped on the punchline (+90) at 16s, no words', s16.deg === 90 && !s16.w, JSON.stringify(s16));
-  ok('the cooling words blink at 19.5s', /cools down again/.test(s19.w) && s19.b && s19.deg === 90, JSON.stringify(s19));
-  ok('still, the blinking stopped, at 24s and after', !s24.b && s24.deg === 90 && end.deg === 90 && !end.b, JSON.stringify([s24, end]));
+  ok('the setup to be read at 5.2s: no words, still facing', !s6.w && s6.deg === -90, JSON.stringify(s6));
+  ok('turning slowly at 9.3s, no words', !s11.w && s11.deg > -90 && s11.deg < 90, JSON.stringify(s11));
+  ok('stopped on the punchline (+90) at 14.5s, no words', s16.deg === 90 && !s16.w, JSON.stringify(s16));
+  ok('the cooling words blink at 18.2s', /cools down again/.test(s19.w) && s19.b && s19.deg === 90, JSON.stringify(s19));
+  ok('still, the blinking stopped, at 23s and after', !s24.b && s24.deg === 90 && end.deg === 90 && !end.b, JSON.stringify([s24, end]));
   const band = await page.evaluate(() => { const c = getComputedStyle(document.getElementById('smartHowRevealWords')); return { bg: c.backgroundColor, color: c.color }; });
   ok('the words are white on a dark band', /rgba?\(10, 14, 22/.test(band.bg) && band.color === 'rgb(255, 255, 255)', JSON.stringify(band));
   ok('it wears the light picture, not the full print', await page.evaluate(() =>

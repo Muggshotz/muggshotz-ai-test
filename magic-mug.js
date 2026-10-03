@@ -136,15 +136,19 @@ function magicMugStepsHtml(step4img,noPics){
 //    1s    "as the mug absorbs the liquid's heat" blinks under it
 //    1.5s  the setup rises out of the black, the mug still
 //    4.5s  the setup is full; the words go; time to read it
-//    8s    it turns, slowly, half round
-//   14s    it stops on the punchline; time to read it
-//   18s    "then, as it cools down again" blinks; it fades back to black
-//   21s    all black; the words stop blinking
-//   22s    frozen
+//    6s    it turns, slowly, half round
+//   12.7s  it stops on the punchline; time to read it
+//   16.7s  "then, as it cools down again" blinks; it fades back to black
+//   19.7s  all black; the words stop blinking
+//   20.7s  frozen
 // A click on the mug plays it again; picking another design plays that one.
 // The mug is the right-handed print on the Smart Mug's hot body (a white
 // wall, black rim, inside and handle), cold at heat 0.
-const SURPRISE_REVEAL_T={words1:1000,heat:1500,full:4500,spin:8000,stop:14000,cool:18000,black:21000,frozen:22000};
+// RETIMED (Alyx, 3 Oct 2026: "reduce the time lapse between when the image
+// first shows and when it begins to spin ... by about two seconds", and the
+// spin "about 10%" slower): the turn starts at 6s, not 8, and takes 6.7s, not
+// 6; the hold on the punchline and the cooling keep their lengths.
+const SURPRISE_REVEAL_T={words1:1000,heat:1500,full:4500,spin:6000,stop:12700,cool:16700,black:19700,frozen:20700};
 let surpriseRevealRun=0, surpriseRevealFile=null;
 // Where it plays (Alyx, 28 Sep 2026: "this How it Works panel is the absolute
 // best panel to do the three D carousel"): on the designs, the design picked;
