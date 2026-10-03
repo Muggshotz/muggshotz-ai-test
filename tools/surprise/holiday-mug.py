@@ -20,7 +20,7 @@
 # left-handed painting): the autumn frame on top, white outside it, the two
 # scenes at the fade plan's places.
 # Then one line, {key, label, file}, in the holiday's designs in
-# lib/surprise-sets.js and the same line in needles-studio.html's
+# lib/surprise-sets.js and the same line in magic-mug.js's
 # SURPRISE_SETS (flow-tests/verify-surprise-sets.js holds the two together).
 import sys, os, subprocess
 from PIL import Image

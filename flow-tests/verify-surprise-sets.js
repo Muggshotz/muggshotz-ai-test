@@ -64,7 +64,8 @@ const pmState = (page) => page.evaluate(async () => {
 scenarios.theThreeListsAndTheFiles = async (page) => {
   const { SURPRISE_SETS } = await import(pathToFileURL(path.join(ROOT, 'lib', 'surprise-sets.js')).href);
   const { PRODUCTS_CATALOG } = await import(pathToFileURL(path.join(ROOT, 'lib', 'products-catalog.js')).href);
-  const studio = fs.readFileSync(path.join(ROOT, 'needles-studio.html'), 'utf8');
+  // The studio's Magic Mug prices and holiday sets live in magic-mug.js (shared with occasion.html).
+  const studio = fs.readFileSync(path.join(ROOT, 'magic-mug.js'), 'utf8');
   const order = fs.readFileSync(path.join(ROOT, 'order.html'), 'utf8');
   const price = PRODUCTS_CATALOG['smart-mug-set'].sizes['Set of 4'].price;
   const bad = [];
