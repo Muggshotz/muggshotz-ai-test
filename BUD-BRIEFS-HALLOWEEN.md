@@ -62,7 +62,7 @@ KEEP CLEAR:
 
 1. Raise the Dead - live ("I like my coffee strong..." / "...strong enough
    to raise the dead.")
-2. Boo - Bud's ghost mug, finished, not on sale yet (Alyx's yes pending)
+2. Boo - Bud's ghost mug, live (Alyx's yes, 3 Oct 2026)
 
 ## Agreed briefs
 

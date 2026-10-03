@@ -1,5 +1,5 @@
 <!-- ============================================================
-     VERSION: V441
+     VERSION: V442
      ============================================================
      THE ONE LINE THAT SAYS WHICH BUILD YOU ARE LOOKING AT.
 
@@ -698,6 +698,8 @@ body.premades-focus :is(#generateBtn,#generateTokenNote,#finalGenerateGuidance,#
 #premadesCard .pm-simg.pm-wide,#smartHowCard .pm-simg.pm-wide{width:100%}
 #premadesCard .pm-mat{position:relative;margin:.4rem 0 1rem}
 #premadesCard .pm-arr{position:absolute;top:50%;transform:translateY(-50%);width:36px;height:36px;border-radius:50%;background:#131b27;border:1px solid #24344a;color:#cfe3ff;display:flex;align-items:center;justify-content:center;font-size:22px;cursor:pointer;padding:0}
+/* ALL AT ONCE, THREE ACROSS ON A LAPTOP (Alyx, 3 Oct 2026: "make it 3 across rather than two across if that will fit"); a phone keeps two, so the words on a mat stay readable. */
+@media (min-width:720px){#premadesCard #premadesAll{grid-template-columns:repeat(3,1fr)}}
 #premadesCard .pm-layout{display:flex;gap:6px;justify-content:center;margin:0 0 .9rem}
 #premadesCard .pm-lay{background:transparent;border:1px solid #24344a;border-radius:16px;color:#7ab8ff;font-size:12px;padding:5px 12px;cursor:pointer}
 #premadesCard .pm-lay.on{border-color:#29a3ff;color:#cfe3ff;background:rgba(41,163,255,.08)}
@@ -4934,7 +4936,7 @@ function toggleWorkingImage(){
 // Two copies of a number is exactly how the marker rotted in the first place,
 // so they are not trusted to agree: .githooks/pre-commit moves both together
 // and REFUSES the commit if it ever finds them apart.
-const APP_VERSION='V441';
+const APP_VERSION='V442';
 try{ console.log('%cNeedles\u2019 Studio '+APP_VERSION,'color:#29a3ff;font-weight:700'); }catch(e){}
 
 function getDeviceId(){
@@ -13178,7 +13180,9 @@ const SURPRISE_SETS={
   // Raise the Dead (Bud, 28 Sep 2026): one continuous scene, a tree between
   // the setup and the punchline, its edges fading to white as the hot mug is.
   'halloween':{label:'Halloween',designs:[
-    {key:'raise-the-dead',label:'Raise the Dead',file:'halloween-raise-the-dead'}
+    {key:'raise-the-dead',label:'Raise the Dead',file:'halloween-raise-the-dead'},
+    // Boo (Bud, 26 Sep 2026): the ghost's face; turned round, the laundry tag.
+    {key:'boo',label:'Boo',file:'halloween-boo'}
   ]}
 };
 function holidayPrice(n){ return n>=4 ? Math.round((SMART_MUG_SET_PRICE+(n-4)*SMART_MUG_EXTRA_PRICE)*100)/100 : Math.round(n*SMART_MUG_PRICE*100)/100; }
@@ -13536,7 +13540,8 @@ const PREMADE_CATEGORIES={
       {key:'lava-pit',label:'Lava Pit'},{key:'crocodile',label:'Crocodile'},{key:'shark-pier',label:'Shark Pier'},
       {key:'sharks-under-pier',label:'Chum'},{key:'ice-hole',label:'Thin Ice'},{key:'dock-shallow',label:'The Dock'},
       {key:'abandon-hope',label:'Abandon Hope'},{key:'pearly-gates',label:'Pearly Gates'},{key:'bear-trap',label:'Bear Trap'},
-      {key:'six-feet-under',label:'Six Feet Under',occasion:'halloween'},{key:'vampires-welcome',label:'Consider Yourself Inbited',occasion:'halloween'},{key:'care-for-a-bite',label:'Care for a Bite?',occasion:'halloween'},{key:'treat-or-trick',label:'Treat or Trick',occasion:'halloween'},{key:'my-parlor',label:'Welcome to My Parlor',occasion:'halloween'},{key:'ouija',label:'Ouija',occasion:'halloween'},{key:'witch-parking',label:'Witch Parking Only',occasion:'halloween'},{key:'dying-to-meet-you',label:'We\'re Dying to Meet You',occasion:'halloween'},{key:'beware-of-ghost',label:'Beware of Ghost',occasion:'halloween'},{key:'go-away',label:'Go Away',occasion:'halloween'},{key:'no-soliciting',label:'No Soliciting',occasion:'halloween'},{key:'no-body-here',label:'No Body Here',occasion:'halloween'}
+      {key:'six-feet-under',label:'Six Feet Under',occasion:'halloween'},{key:'vampires-welcome',label:'Consider Yourself Inbited',occasion:'halloween'},{key:'care-for-a-bite',label:'Care for a Bite?',occasion:'halloween'},{key:'treat-or-trick',label:'Treat or Trick',occasion:'halloween'},{key:'my-parlor',label:'Welcome to My Parlor',occasion:'halloween'},{key:'ouija',label:'Ouija',occasion:'halloween'},{key:'witch-parking',label:'Witch Parking Only',occasion:'halloween'},{key:'dying-to-meet-you',label:'We\'re Dying to Meet You',occasion:'halloween'},{key:'beware-of-ghost',label:'Beware of Ghost',occasion:'halloween'},{key:'go-away',label:'Go Away',occasion:'halloween'},{key:'no-soliciting',label:'No Soliciting',occasion:'halloween'},{key:'no-body-here',label:'No Body Here',occasion:'halloween'},
+      {key:'rising-skeleton',label:'Rising Skeleton',occasion:'halloween'},{key:'under-the-boards',label:'Under the Boards',occasion:'halloween'},{key:'witch-puddle',label:'Witch Puddle',occasion:'halloween'},{key:'three-black-cats',label:'Three Black Cats',occasion:'halloween'},{key:'skeleton-gate',label:'Skeleton Gate',occasion:'halloween'},{key:'pumpkin-cats',label:'Pumpkin Cats',occasion:'halloween'},{key:'ghost-letters',label:'Ghost Letters',occasion:'halloween'},{key:'zombie-sign',label:'Zombie Sign',occasion:'halloween'},{key:'spider-web',label:'Spider Web',occasion:'halloween'},{key:'bat-sign',label:'Bat Sign',occasion:'halloween'},{key:'coffin-sign',label:'Coffin Sign',occasion:'halloween'},{key:'cat-on-the-mat',label:'Cat on the Mat',occasion:'halloween'}
     ]},
   // Placemats: Bud's designs at the neoprene mat's print shape, 5610 x 3839
   // (Alyx and Bud, 27 Sep: singly, or a set of two priced as one item).
