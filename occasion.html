@@ -128,7 +128,7 @@ function occasionName() {
 function loadOccasion(name) {
   return new Promise((resolve, reject) => {
     const s = document.createElement('script');
-    s.src = 'occasions/' + name + '.js';
+    s.src = 'occasions/' + name + '.js?v=' + Date.now();
     s.onload = () => window.OCCASION ? resolve(window.OCCASION) : reject(new Error('no OCCASION'));
     s.onerror = () => reject(new Error('no occasion file'));
     document.head.appendChild(s);
@@ -376,6 +376,32 @@ function closeOrderPage(fromHistory) {
   if (!fromHistory) { try { history.back(); } catch (e) {} }
 }
 window.closeOrderOverlay = () => closeOrderPage(false);
+
+// THE NEWEST VERSION, WITHOUT ASKING (Alyx, 3 Oct 2026: "Make sure the
+// platform SELF updates when ever you reload it. As we did with the
+// generator"). The studio's rule (needles-studio.html, loadNewestIfIdle), for
+// a page made of four files: whenever it comes back to the screen it asks the
+// server for each file's ETag, and if any has changed since it loaded, and no
+// order is open over it, it reloads onto the newest version.
+let partsAtLoad = null;
+async function partsNow() {
+  const files = [location.pathname, 'occasion.html', 'occasions/' + occasionName() + '.js', 'magic-mug.js', 'mug3d.js'];
+  try {
+    const tags = await Promise.all(files.map(f => fetch(f + (f.includes('?') ? '&' : '?') + 'etag=' + Date.now(), { method: 'HEAD', cache: 'no-store' }).then(r => r.ok ? r.headers.get('etag') : '')));
+    return tags.join('|');
+  } catch (e) { return null; }
+}
+async function loadNewestIfIdle() {
+  if (document.documentElement.classList.contains('order-page-open')) return;
+  const tag = await partsNow(); if (!tag) return;
+  if (!partsAtLoad) { partsAtLoad = tag; return; }
+  if (tag === partsAtLoad || document.documentElement.classList.contains('order-page-open')) return;
+  try { if (sessionStorage.getItem('mz_occ_reload_for') === tag) return; sessionStorage.setItem('mz_occ_reload_for', tag); } catch (e) {}
+  location.reload();
+}
+window.addEventListener('load', () => setTimeout(loadNewestIfIdle, 1500));
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') loadNewestIfIdle(); });
+window.addEventListener('pageshow', e => { if (e.persisted) loadNewestIfIdle(); });
 
 // ---- start -------------------------------------------------------------------------
 const name = occasionName();

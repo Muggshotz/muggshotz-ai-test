@@ -150,7 +150,7 @@ const TEST_OCCASION = `window.OCCASION = {
 };`;
 
 scenarios.theMore = async (page) => {
-  await page.route('**/occasions/testocc.js', (route) => route.fulfill({ contentType: 'application/javascript', body: TEST_OCCASION }));
+  await page.route('**/occasions/testocc.js*', (route) => route.fulfill({ contentType: 'application/javascript', body: TEST_OCCASION }));
   const results = [];
   for (const [key, want] of [['coffee-mugs', 'classic-white-mug'], ['coasters', 'coaster-set'], ['placemats', 'placemat-neoprene']]) {
     const bodies = watchCheckout(page);

@@ -66,17 +66,19 @@ async function run(viewport, tag) {
     return log;
   });
   // The clock starts once the mug has loaded: find it by the first words.
+  // The clock starts once the mug has loaded: find it by the first words, which come at T.words1.
+  const RT = await page.evaluate(() => SURPRISE_REVEAL_T);
   const first = tl.find((r) => r.w);
-  const start = first ? first.t - 1000 : 0;
+  const start = first ? first.t - RT.words1 : 0;
   const at = (s) => tl.reduce((a, r) => (Math.abs(r.t - start - s * 1000) < Math.abs(a.t - start - s * 1000) ? r : a), tl[0]);
-  const s0 = tl.filter((r) => r.t < start + 900 && r.deg !== undefined), s3 = at(3), s6 = at(5.2), s11 = at(9.3), s16 = at(14.5), s19 = at(18.2), s24 = at(23), end = tl[tl.length - 1];
-  ok('cold and still, no words, before 1s', s0.length > 0 && s0.every((r) => r.deg === -90 && !r.w), JSON.stringify(s0.slice(-1)));
+  const s0 = tl.filter((r) => r.t < start + RT.words1 - 100 && r.deg !== undefined), s3 = at((RT.heat + RT.full) / 2000), s6 = at(RT.full / 1000 - 0.5), s11 = at((RT.spin + RT.stop) / 2000), s16 = at((RT.stop + RT.cool) / 2000), s19 = at((RT.cool + RT.black) / 2000), s24 = at(RT.frozen / 1000 + 1.5), end = tl[tl.length - 1];
+  ok('cold and still, no words, before the heat words', s0.length > 0 && s0.every((r) => r.deg === -90 && !r.w), JSON.stringify(s0.slice(-1)));
   ok('the heat words blink while the setup rises, the mug still', /absorbs the liquid's heat/.test(s3.w) && s3.b && s3.deg === -90, JSON.stringify(s3));
-  ok('the setup to be read at 5.2s: no words, still facing', !s6.w && s6.deg === -90, JSON.stringify(s6));
-  ok('turning slowly at 9.3s, no words', !s11.w && s11.deg > -90 && s11.deg < 90, JSON.stringify(s11));
-  ok('stopped on the punchline (+90) at 14.5s, no words', s16.deg === 90 && !s16.w, JSON.stringify(s16));
-  ok('the cooling words blink at 18.2s', /cools down again/.test(s19.w) && s19.b && s19.deg === 90, JSON.stringify(s19));
-  ok('still, the blinking stopped, at 23s and after', !s24.b && s24.deg === 90 && end.deg === 90 && !end.b, JSON.stringify([s24, end]));
+  ok('the setup still facing as it fills, just before the turn', s6.deg === -90, JSON.stringify(s6));
+  ok('turning, no words', !s11.w && s11.deg > -90 && s11.deg < 90, JSON.stringify(s11));
+  ok('stopped on the punchline (+90), no words', s16.deg === 90 && !s16.w, JSON.stringify(s16));
+  ok('the cooling words blink as it cools', /cools down again/.test(s19.w) && s19.b && s19.deg === 90, JSON.stringify(s19));
+  ok('still, the blinking stopped, once frozen', !s24.b && s24.deg === 90 && end.deg === 90 && !end.b, JSON.stringify([s24, end]));
   const band = await page.evaluate(() => { const c = getComputedStyle(document.getElementById('smartHowRevealWords')); return { bg: c.backgroundColor, color: c.color }; });
   ok('the words are white on a dark band', /rgba?\(10, 14, 22/.test(band.bg) && band.color === 'rgb(255, 255, 255)', JSON.stringify(band));
   ok('it wears the light picture, not the full print', await page.evaluate(() =>
@@ -87,7 +89,7 @@ async function run(viewport, tag) {
     await new Promise((r) => { const iv = setInterval(() => { if (/absorbs/.test(w.textContent)) { clearInterval(iv); r(); } }, 50); setTimeout(() => { clearInterval(iv); r(); }, 8000); });
     return Math.round(performance.now() - t0);
   });
-  ok('a click on the mug replays it: the heat words within 1.6s', replay < 1600, replay + 'ms');
+  ok('a click on the mug replays it at once: the heat words on cue', replay < RT.words1 + 600, replay + 'ms');
   await page.evaluate(() => smartHowBack()); await T(page, 300);
   ok('its Back returns to the question, the mug let go', await shown(page, 'smartDemoOverlay') && !(await shown(page, 'smartHowOverlay')) && await page.evaluate(() => !MUG3D.mounted()));
   await page.locator('#smartDemoYesBtn').click(); await T(page, 400);

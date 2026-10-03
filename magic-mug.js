@@ -148,11 +148,34 @@ function magicMugStepsHtml(step4img,noPics){
 // A click on the mug plays it again; picking another design plays that one.
 // The mug is the right-handed print on the Smart Mug's hot body (a white
 // wall, black rim, inside and handle), cold at heat 0.
-// RETIMED (Alyx, 3 Oct 2026: "reduce the time lapse between when the image
-// first shows and when it begins to spin ... by about two seconds", and the
-// spin "about 10%" slower): the turn starts at 6s, not 8, and takes 6.7s, not
-// 6; the hold on the punchline and the cooling keep their lengths.
-const SURPRISE_REVEAL_T={words1:1000,heat:1500,full:4500,spin:6000,stop:12700,cool:16700,black:19700,frozen:20700};
+// THE POUR (Alyx, 3 Oct 2026): "We start off with still image of black mug.
+// At 2 seconds in we superimpose the stream of coffee image over the plain
+// black mug. The image begins to fade in ... stream withdraws simultaneous to
+// mug beginning its spin. Takes 2 seconds to spin to other side. Stops. Image
+// fully illustrated. Mug fades back to black." Timing his to tweak:
+//   0s     the black mug, still
+//   1.5s   the coffee pours in (art/surprise/pour.png, Bud's, over the mouth)
+//   1.8s   the picture fades in, "as the mug absorbs the liquid's heat"
+//   4.3s   the setup in full: the pour lifts away as the mug turns, 2s
+//          (Alyx: no trace of the stream once the turn begins)
+//   6.3s   stopped on the punchline; four seconds to read it
+//  10.3s   "then, as it cools down again", back to black by 13.3s
+// The pour shows only on the demonstrations (How it works), not on a design's
+// own large mug, which is zoomed and has no room above the rim.
+const SURPRISE_REVEAL_T={pourIn:1500,words1:1800,heat:1800,full:4300,pourOut:4300,spin:4300,stop:6300,cool:10300,black:13300,frozen:14300};
+// Where Bud's pour sits over the stage (a 4:3 box): its coffee surface on the
+// cold mug's mouth, the stream coming in from above the top edge. Measured
+// off the 960 x 720 stills: the mouth's centre (481, 136), 370 across.
+const REVEAL_POUR={src:'art/surprise/pour.png',left:'5.9%',top:'-12.9%',width:'89.5%'};
+function revealPour(spot,opacity){
+  const S=REVEAL_SPOTS[spot]; const box=S&&document.getElementById(S.box); if(!box)return;
+  let im=box.querySelector('img.reveal-pour');
+  if(!im){ if(!opacity)return;
+    im=document.createElement('img'); im.className='reveal-pour'; im.alt=''; im.src=REVEAL_POUR.src;
+    im.style.cssText='position:absolute;left:'+REVEAL_POUR.left+';top:'+REVEAL_POUR.top+';width:'+REVEAL_POUR.width+';height:auto;right:auto;bottom:auto;max-width:none;object-fit:fill;pointer-events:none;z-index:3;opacity:0;transition:none';
+    box.appendChild(im); }
+  im.style.opacity=String(opacity);
+}
 let surpriseRevealRun=0, surpriseRevealFile=null;
 // Where it plays (Alyx, 28 Sep 2026: "this How it Works panel is the absolute
 // best panel to do the three D carousel"): on the designs, the design picked;
@@ -171,6 +194,7 @@ function releaseSurpriseReveal(){
   try{ if(st&&typeof MUG3D!=='undefined'&&MUG3D.mounted()&&MUG3D.host()===st)MUG3D.close(); }catch(e){}
 }
 function releaseHowReveal(){
+  revealPour('how',0);
   surpriseRevealWords('',false,'how');
   const st=document.getElementById('smartHowRevealStage');
   try{ if(st&&typeof MUG3D!=='undefined'&&MUG3D.mounted()&&MUG3D.host()===st){ surpriseRevealRun++; MUG3D.close(); } }catch(e){}
@@ -190,6 +214,7 @@ function playSurpriseReveal(file,spot,url){
   const clock=()=>{
     if(run!==surpriseRevealRun)return;
     MUG3D.setSpinning(false); MUG3D.setAngle(-90); MUG3D.setHeat(0);
+    if(spot!=='design')revealPour(spot,0);
     const t0=performance.now();
     const tick=()=>{
       if(run!==surpriseRevealRun)return;
@@ -202,6 +227,7 @@ function playSurpriseReveal(file,spot,url){
       MUG3D.setAngle(-90+180*ease((t-T.spin)/(T.stop-T.spin)));
       const heat=t<T.cool?ease((t-T.heat)/(T.full-T.heat)):1-ease((t-T.cool)/(T.black-T.cool));
       MUG3D.setHeat(heat);
+      if(spot!=='design')revealPour(spot,Math.min(Math.max(0,Math.min(1,(t-T.pourIn)/300)),1-Math.max(0,Math.min(1,(t-T.pourOut)/400))));
       if(t<T.frozen)requestAnimationFrame(tick);
     };
     requestAnimationFrame(tick);
