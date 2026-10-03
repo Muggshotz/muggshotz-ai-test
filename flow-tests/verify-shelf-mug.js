@@ -77,24 +77,18 @@ async function run(viewport, tag) {
   const all1 = await page.evaluate(() => [...document.querySelectorAll('#premadesMugsAll .pm-mug3d')].map((b) => b.classList.contains('live') ? 'live' : (b.querySelector('canvas') ? 'canvas' : 'still')));
   ok('a tap turns that one, and the first goes back to its still', all1[2] === 'live' && all1.filter((s) => s !== 'still').length === 1, all1.join());
 
-  // How it works, step 4: holds on the setup, swivels half round, stops on
-  // the punchline (+90); plays again when it comes back into view. Sped up.
-  await page.evaluate(() => { HOW_MUG_3D.spinStep = 45; HOW_MUG_3D.holdMs = 1500; premadesGo('how'); }); await T(page, 1200);
-  await page.evaluate(() => document.getElementById('premadesHowMug').scrollIntoView({ block: 'center' })); await T(page, 500);
-  const h0 = await page.evaluate(() => ({ live: document.getElementById('premadesHowMug').classList.contains('live'), deg: window.__deg,
-    step: document.getElementById('premadesHowMug').closest('.pm-step').innerText.includes('They turn it round') }));
-  ok('How it works, step 4: the 3D mug, holding on the setup (-90) first', h0.live && h0.step && h0.deg === -90, JSON.stringify(h0));
-  await page.waitForFunction(() => !MUG3D.spinning(), null, { timeout: 30000 }).catch(() => {});
-  const h1 = await page.evaluate(() => ({ spinning: MUG3D.spinning(), deg: window.__deg }));
-  ok('then it swivels round and stops on the punchline (+90)', !h1.spinning && h1.deg === 90, JSON.stringify(h1));
-  await page.mouse.move(viewport.width / 2, viewport.height / 2);
-  for (let i = 0; i < 4; i++) { await page.mouse.wheel(0, -700); await T(page, 60); }
-  await T(page, 500);
-  const hGone = await page.evaluate(() => document.getElementById('premadesHowMug').getBoundingClientRect().top > innerHeight || document.getElementById('premadesHowMug').getBoundingClientRect().bottom < 0);
-  await page.evaluate(() => document.getElementById('premadesHowMug').scrollIntoView({ block: 'center' })); await T(page, 300);
-  const h2 = await angle(page);
-  ok('back in view, it plays again from the setup', hGone && h2 === -90, `off screen ${hGone}, ${h2}`);
-  await page.evaluate(() => { HOW_MUG_3D.spinStep = 4; HOW_MUG_3D.holdMs = 900; });
+  // How it works: the heat-up at the top, the holiday's own demonstration
+  // mug, the coffee pouring in, cold to hot to cold (Alyx, 3 Oct 2026).
+  await page.evaluate(() => premadesGo('how'));
+  await page.waitForFunction(() => { const st = document.getElementById('premadesHowRevealStage'); return st && MUG3D.mounted() && MUG3D.host() === st; }, null, { timeout: 30000 }).catch(() => {});
+  const how = await page.evaluate(() => ({ mounted: MUG3D.mounted() && MUG3D.host() === document.getElementById('premadesHowRevealStage'),
+    still: document.querySelector('#premadesHowReveal>img').getAttribute('src'), demo: holidayDemoFile(premadeOccasion().set),
+    pic: performance.getEntriesByType('resource').some((e) => e.name.endsWith('art/surprise/reveal/' + holidayDemoFile(premadeOccasion().set) + '.jpg')),
+    steps: document.querySelectorAll('#premadesView .pm-step').length, oldMug: !!document.getElementById('premadesHowMug') }));
+  ok('How it works opens on the heat-up, the holiday\'s demonstration mug, over its still', how.mounted && how.pic && how.still === `art/surprise/mug/${how.demo}.jpg` && how.steps === 7 && !how.oldMug, JSON.stringify(how));
+  await page.waitForFunction(() => { const p = document.querySelector('#premadesHowReveal img.reveal-pour'); return p && +p.style.opacity > 0.5; }, null, { timeout: 20000 }).catch(() => {});
+  const pour = await page.evaluate(() => { const p = document.querySelector('#premadesHowReveal img.reveal-pour'); return p ? { o: +p.style.opacity, src: p.getAttribute('src') } : null; });
+  ok('the coffee pours in', !!pour && pour.o > 0.5 && pour.src === 'art/surprise/pour.png', JSON.stringify(pour));
 
   // Leaving lets the cup go.
   await page.evaluate(() => { while (premadesView !== 'products') premadesBack(); }); await T(page, 900);

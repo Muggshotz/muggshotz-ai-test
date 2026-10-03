@@ -50,7 +50,7 @@ const scenarios = {};
 // (and how many loaded), steps, and whether it landed with its title on screen.
 const pmState = (page) => page.evaluate(async () => {
   const card = document.getElementById('premadesCard'), r = card.getBoundingClientRect();
-  const imgs = [...card.querySelectorAll('img')].filter((im) => im.offsetParent);
+  const imgs = [...card.querySelectorAll('img:not(.reveal-pour)')].filter((im) => im.offsetParent); // the pour comes and goes with the clock
   await Promise.all(imgs.map((im) => im.complete ? null : new Promise((res) => { im.onload = im.onerror = res; })));
   return { shown: getComputedStyle(card).display !== 'none', view: premadesView, focus: [...document.body.classList].filter((c) => c.endsWith('-focus')).join(),
     title: card.querySelector('.card-title').innerText, back: [...card.querySelectorAll('button')].some((b) => b.offsetParent && /back/i.test(b.innerText)),
@@ -163,10 +163,11 @@ scenarios.thePanelAndTheOrder = async (page, log) => {
   const want = await page.evaluate(() => PREMADE_OCCASIONS.map((o, i) => (i === 0 ? 'on' : (o.set && SURPRISE_SETS[o.set] ? '' : 'soon')) + ':' + o.key));
   if (tabs[0] !== 'on:thanksgiving' || JSON.stringify(tabs) !== JSON.stringify(want)) return `FAIL: the holiday tabs read ${JSON.stringify(tabs)}, not ${JSON.stringify(want)}`;
   if (!/Add to my mugs/.test(st1.text) || !/Just this one/.test(st1.text)) return `FAIL: the shelf's mug cannot be added or bought alone (${st1.text.slice(0, 300)})`;
-  // How it works: seven steps, ending on the prices, then on to the shelf.
+  // How it works: the heat-up's still and five step pictures, seven steps,
+  // ending on the prices, then on to the shelf.
   await tap(page, '#premadesHowBtn'); await T(page, 1900);
   const st2 = await pmState(page);
-  if (st2.view !== 'how' || st2.steps !== 7 || st2.imgs !== 5 || st2.loaded !== 5 || !st2.landed || !/How the magic mug works/i.test(st2.title)) return `FAIL: How it works shows ${JSON.stringify(st2)}`;
+  if (st2.view !== 'how' || st2.steps !== 7 || st2.imgs !== 6 || st2.loaded !== 6 || !st2.landed || !/How the magic mug works/i.test(st2.title)) return `FAIL: How it works shows ${JSON.stringify(st2)}`;
   if (!/\$59\.95/.test(st2.text) || !/\$17\.95/.test(st2.text) || !/\$19\.95/.test(st2.text) || !/See all the mugs and build your set/.test(st2.text)) return 'FAIL: How it works does not end on the prices and the way to the shelf';
   // Back, one view at a time: How it works -> the shelf -> the list -> the grid.
   for (const want of ['shelf', 'products']) {

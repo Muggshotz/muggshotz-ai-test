@@ -18,7 +18,7 @@ const SMART_MUG_PRICE=19.95; // Alyx's price, before shipping: wholesale 9.06 + 
 const SMART_MUG_SET_PRICE=59.95; // Alyx's price for any four (26 Sep 2026)
 const SMART_MUG_EXTRA_PRICE=17.95; // each more with a set, $2 off the single (26 Sep 2026)
 const SURPRISE_SETS={
-  'thanksgiving':{label:'Thanksgiving',designs:[
+  'thanksgiving':{label:'Thanksgiving',demo:'golden-brown',designs:[
     {key:'power-out',label:"Power's Out",file:'thanksgiving-power-out',frames:true},
     {key:'witness',label:'Witness Protection',file:'thanksgiving-witness',frames:true},
     {key:'pardon',label:'The Pardon',file:'thanksgiving-pardon',frames:true},
@@ -31,7 +31,7 @@ const SURPRISE_SETS={
   ]},
   // Raise the Dead (Bud, 28 Sep 2026): one continuous scene, a tree between
   // the setup and the punchline, its edges fading to white as the hot mug is.
-  'halloween':{label:'Halloween',designs:[
+  'halloween':{label:'Halloween',demo:'halloween-boo-ghost-one',designs:[
     // Boo first: it is the mug on the Halloween flyer (Alyx, 3 Oct 2026).
     {key:'boo',label:'Boo',file:'halloween-boo-ghost',frames:['one']},
     {key:'raise-the-dead',label:'Raise the Dead',file:'halloween-raise-the-dead',frames:['one']},
@@ -78,14 +78,9 @@ function designFrames(d){ return !d||!d.frames?[]:d.frames===true?['one','two']:
 // black.
 const SHELF_MUG_3D={sizeLabel:'11oz',styleName:'Color Pop',colorHex:'#1c1c1c',startAngle:-90,spinStep:0.6,restartOnView:true,turns:1};
 
-// How it works, step 4: the pictures there are Golden Brown, so the mug is;
-// it holds on step 3's side, swivels half round in about a second, stops on
-// the punchline, and plays again whenever it comes back into view.
-const HOW_MUG_FILE='golden-brown';
 // The Smart Mug's demonstration (How the magic mug works): a decal mug
 // (Alyx, 29 Sep 2026: "swap this out for one of the new Decal designs").
 const SMART_HOW_FILE='proposal';
-const HOW_MUG_3D=Object.assign({},SHELF_MUG_3D,{spinStep:4,turns:0.5,easeOut:true,holdMs:900,replayOnView:true});
 let shelfMugLive=null;
 function shelfMugHtml(x,id,i,frame){
   return '<div class="pm-mug3d" data-mug3d="'+x.file+(frame&&frame!=='none'?'-'+frame:'')+'"'+(i==null?'':' onclick="spinShelfMug(this)"')+'>'
@@ -160,19 +155,25 @@ function magicMugStepsHtml(step4img,noPics){
 //          (Alyx: no trace of the stream once the turn begins)
 //   6.3s   stopped on the punchline; four seconds to read it
 //  10.3s   "then, as it cools down again", back to black by 13.3s
-// The pour shows only on the demonstrations (How it works), not on a design's
-// own large mug, which is zoomed and has no room above the rim.
 const SURPRISE_REVEAL_T={pourIn:1500,words1:1800,heat:1800,full:4300,pourOut:4300,spin:4300,stop:6300,cool:10300,black:13300,frozen:14300};
 // Where Bud's pour sits over the stage (a 4:3 box): its coffee surface on the
 // cold mug's mouth, the stream coming in from above the top edge. Measured
 // off the 960 x 720 stills: the mouth's centre (481, 136), 370 across.
-const REVEAL_POUR={src:'art/surprise/pour.png',left:'5.9%',top:'-12.9%',width:'89.5%'};
+// Each spot's own placement (Alyx, 3 Oct 2026: "Make that the demo for all"):
+// the demonstrations' 4:3 boxes share one; a design's large mug is zoomed in a
+// 16:10 box and has its own, measured off that mug.
+const REVEAL_POUR_SRC='art/surprise/pour.png';
+// The design's mug (zoom 1.4, a 960 x 600 box): the mouth's centre (480, 39),
+// 435 across, its rim 21px under the top edge, so the stream shows short.
+const REVEAL_POURS={how:{left:'5.9%',top:'-12.9%',width:'89.5%'},shelf:{left:'5.9%',top:'-12.9%',width:'89.5%'},
+  design:{left:'-1.95%',top:'-38.4%',width:'105.2%'}};
 function revealPour(spot,opacity){
   const S=REVEAL_SPOTS[spot]; const box=S&&document.getElementById(S.box); if(!box)return;
+  const P=REVEAL_POURS[spot]||REVEAL_POURS.how;
   let im=box.querySelector('img.reveal-pour');
   if(!im){ if(!opacity)return;
-    im=document.createElement('img'); im.className='reveal-pour'; im.alt=''; im.src=REVEAL_POUR.src;
-    im.style.cssText='position:absolute;left:'+REVEAL_POUR.left+';top:'+REVEAL_POUR.top+';width:'+REVEAL_POUR.width+';height:auto;right:auto;bottom:auto;max-width:none;object-fit:fill;pointer-events:none;z-index:3;opacity:0;transition:none';
+    im=document.createElement('img'); im.className='reveal-pour'; im.alt=''; im.src=REVEAL_POUR_SRC;
+    im.style.cssText='position:absolute;left:'+P.left+';top:'+P.top+';width:'+P.width+';height:auto;right:auto;bottom:auto;max-width:none;object-fit:fill;pointer-events:none;z-index:3;opacity:0;transition:none';
     box.appendChild(im); }
   im.style.opacity=String(opacity);
 }
@@ -182,21 +183,40 @@ let surpriseRevealRun=0, surpriseRevealFile=null;
 // on How the magic mug works, SMART_HOW_FILE. One 3D mug at a time, so the two
 // share the run count; only the designs' play is surpriseRevealFile.
 const REVEAL_SPOTS={design:{stage:'surpriseRevealStage',words:'surpriseRevealWords',box:'surpriseReveal'},
-  how:{stage:'smartHowRevealStage',words:'smartHowRevealWords',box:'smartHowReveal'}};
+  how:{stage:'smartHowRevealStage',words:'smartHowRevealWords',box:'smartHowReveal'},
+  // The holiday shelf's How it works (Alyx, 3 Oct 2026: "all versions of the
+  // tutorial to use the carousel"), playing the holiday's own demonstration mug.
+  shelf:{stage:'premadesHowRevealStage',words:'premadesHowRevealWords',box:'premadesHowReveal'}};
+// WHICH MUG DEMONSTRATES (Alyx, 3 Oct 2026: "so long as we can simply swap out
+// mugs depending upon occasion"). A holiday names its own (SURPRISE_SETS[k].demo,
+// else its first mug). The Smart Mug's demonstration follows the calendar:
+// each line is a season, month-day to month-day, and its mug; outside them all,
+// SMART_HOW_FILE. Swapping a season's mug is changing its line here.
+const DEMO_SEASONS=[
+  {from:'09-25',to:'10-31',file:'halloween-boo-ghost-one'},
+  {from:'11-01',to:'11-30',file:'golden-brown'}
+];
+function smartHowFile(now){
+  const d=now||new Date(), md=String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  const s=DEMO_SEASONS.find(x=>md>=x.from&&md<=x.to);
+  return s?s.file:SMART_HOW_FILE;
+}
+function holidayDemoFile(key){ const s=SURPRISE_SETS[key]; return s?(s.demo||(s.designs[0]&&s.designs[0].file)):null; }
 function surpriseRevealWords(text,blink,spot){
   const w=document.getElementById(REVEAL_SPOTS[spot||'design'].words); if(!w)return;
   w.textContent=text||''; w.classList.toggle('smart-blink',!!blink);
 }
 function releaseSurpriseReveal(){
-  surpriseRevealRun++; surpriseRevealFile=null;
+  surpriseRevealRun++; surpriseRevealFile=null; revealPour('design',0);
   surpriseRevealWords('',false);
   const st=document.getElementById('surpriseRevealStage');
   try{ if(st&&typeof MUG3D!=='undefined'&&MUG3D.mounted()&&MUG3D.host()===st)MUG3D.close(); }catch(e){}
 }
-function releaseHowReveal(){
-  revealPour('how',0);
-  surpriseRevealWords('',false,'how');
-  const st=document.getElementById('smartHowRevealStage');
+function releaseHowReveal(spot){
+  spot=spot||'how';
+  revealPour(spot,0);
+  surpriseRevealWords('',false,spot);
+  const st=document.getElementById(REVEAL_SPOTS[spot].stage);
   try{ if(st&&typeof MUG3D!=='undefined'&&MUG3D.mounted()&&MUG3D.host()===st){ surpriseRevealRun++; MUG3D.close(); } }catch(e){}
 }
 // What each stage has painted, so a replay only restarts the clock: it
@@ -214,7 +234,7 @@ function playSurpriseReveal(file,spot,url){
   const clock=()=>{
     if(run!==surpriseRevealRun)return;
     MUG3D.setSpinning(false); MUG3D.setAngle(-90); MUG3D.setHeat(0);
-    if(spot!=='design')revealPour(spot,0);
+    revealPour(spot,0);
     const t0=performance.now();
     const tick=()=>{
       if(run!==surpriseRevealRun)return;
@@ -227,7 +247,7 @@ function playSurpriseReveal(file,spot,url){
       MUG3D.setAngle(-90+180*ease((t-T.spin)/(T.stop-T.spin)));
       const heat=t<T.cool?ease((t-T.heat)/(T.full-T.heat)):1-ease((t-T.cool)/(T.black-T.cool));
       MUG3D.setHeat(heat);
-      if(spot!=='design')revealPour(spot,Math.min(Math.max(0,Math.min(1,(t-T.pourIn)/300)),1-Math.max(0,Math.min(1,(t-T.pourOut)/400))));
+      revealPour(spot,Math.min(Math.max(0,Math.min(1,(t-T.pourIn)/300)),1-Math.max(0,Math.min(1,(t-T.pourOut)/400))));
       if(t<T.frozen)requestAnimationFrame(tick);
     };
     requestAnimationFrame(tick);

@@ -81,8 +81,9 @@ async function run(viewport, tag) {
   ok('still, the blinking stopped, once frozen', !s24.b && s24.deg === 90 && end.deg === 90 && !end.b, JSON.stringify([s24, end]));
   const band = await page.evaluate(() => { const c = getComputedStyle(document.getElementById('smartHowRevealWords')); return { bg: c.backgroundColor, color: c.color }; });
   ok('the words are white on a dark band', /rgba?\(10, 14, 22/.test(band.bg) && band.color === 'rgb(255, 255, 255)', JSON.stringify(band));
-  ok('it wears the light picture, not the full print', await page.evaluate(() =>
-    performance.getEntriesByType('resource').some((e) => /art\/surprise\/reveal\/proposal\.jpg/.test(e.name))));
+  // The season's demonstration mug (DEMO_SEASONS), in its light picture.
+  ok('it wears the season\'s demonstration mug, the light picture, not the full print', await page.evaluate(() =>
+    performance.getEntriesByType('resource').some((e) => e.name.endsWith('art/surprise/reveal/' + smartHowFile() + '.jpg'))));
   const replay = await page.evaluate(async () => {
     const t0 = performance.now(); document.getElementById('smartHowRevealStage').click();
     const w = document.getElementById('smartHowRevealWords');
