@@ -408,10 +408,17 @@ const MUG3D = (function(){
         { mat:'body', pts:()=>[[0,9.60],[1.87,9.60],[1.87,9.85],[1.75,9.95],[0,9.95]] }
       ]
     },
+    // THE HANDLE SITS OVER THE PRINT'S ENDS (4 Oct 2026). Printify's own
+    // mockup of a numbered-stripe band puts this cup's handle on the line
+    // where stripe 9 meets stripe 0: the band's two ends, which this model
+    // closes at the back. It was drawn a quarter turn round, at the side,
+    // so a picture turned to land the handle on screen landed it a quarter
+    // turn away on the real cup (Alyx's sister's cup). Back at PI, opening
+    // with the handle on the right, as the 14oz does.
     'travel-mug-40oz-vacuum': {
-      totalH:12.0, maxR:1.96, bandR:1.85, snapAngle:0,
+      totalH:12.0, maxR:1.96, bandR:1.85, snapAngle:-90,
       band:{ h:9.39, y:5.20, wrapIn:12.37 },
-      handle:{ y0:5.30, y1:9.60, reach:1.50, r:0.19, angle:-Math.PI/2, mat:'body' },
+      handle:{ y0:5.30, y1:9.60, reach:1.50, r:0.19, angle:Math.PI, mat:'body' },
       straw:{ r:0.15, y0:10.5, y1:12.0, x:0, mat:'lid' },
       parts:[
         { mat:'body',  pts:()=>{

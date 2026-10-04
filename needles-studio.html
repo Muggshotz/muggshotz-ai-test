@@ -1,5 +1,5 @@
 <!-- ============================================================
-     VERSION: V448
+     VERSION: V449
      ============================================================
      THE ONE LINE THAT SAYS WHICH BUILD YOU ARE LOOKING AT.
 
@@ -2501,8 +2501,8 @@ Tell Needles <span style="color:#7ab8ff">what you have in mind</span>
      exact placement. And for every picture, every amount of text, I can
      always pick and choose the best place to land the handle").
      On a cup whose handle sits ON the print, the handle covers the same spot
-     of every design -- a quarter of the way in from the picture's left edge
-     on the Vacuum 40oz, measured on the cup. This rolls the picture round the
+     of every design -- on the Vacuum 40oz, the picture's two ends (Printify's
+     own mockup, 4 Oct 2026). This rolls the picture round the
      band so that spot lands wherever the customer wants it, live on the cup.
      Only drawn for such cups (WRAP_HANDLE_ON_PRINT). -->
 <div id="trimmingsRollRow" style="display:none;margin:0 0 .3rem">
@@ -4939,7 +4939,7 @@ function toggleWorkingImage(){
 // Two copies of a number is exactly how the marker rotted in the first place,
 // so they are not trusted to agree: .githooks/pre-commit moves both together
 // and REFUSES the commit if it ever finds them apart.
-const APP_VERSION='V448';
+const APP_VERSION='V449';
 try{ console.log('%cNeedles\u2019 Studio '+APP_VERSION,'color:#29a3ff;font-weight:700'); }catch(e){}
 
 function getDeviceId(){
@@ -22924,7 +22924,10 @@ let trimmingsBaseUrl=null;
 // the handle's centre covers the picture one quarter in from its left edge
 // (numbered-stripe test on the cup, Sep 2026). Every other cup keeps its
 // handle in the gap between the band's ends, so there is nothing to turn.
-const WRAP_HANDLE_ON_PRINT={ 'travel-mug-40oz-vacuum': { at: 0.25 } };
+// The handle sits over the band's two ends (Printify's own mockup, 4 Oct
+// 2026; it was written here as a quarter in, which was only the 3D model's
+// mistake, and the model now matches Printify).
+const WRAP_HANDLE_ON_PRINT={ 'travel-mug-40oz-vacuum': { at: 0 } };
 function cupHandleSitsOnPrint(){ return product==='water bottle' && !!WRAP_HANDLE_ON_PRINT[selectedTravelProductKey]; }
 // How far the picture has been turned round the band, as a percentage of its
 // width, -50..50. 0 is as generated. Baked on Continue with the trimming (or

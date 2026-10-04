@@ -969,6 +969,57 @@ export async function buildCutoutImage(imageSource, canvasWidth, canvasHeight) {
     .toBuffer();
 }
 
+// THE PICTURE HELD INSIDE PRINTIFY'S SAFE AREA (Alyx, 4 Oct 2026: "we fade
+// the color at those edges so that it all blends in ... ensure that the ...
+// blush at either edge are the same hex color exactly. So that when the edges
+// meet, they will naturally blend together"). For a product with a safeArea
+// (the 40oz Vacuum, whose wrap's two ends overlap): the picture is scaled to
+// fit inside the safe area and centred; the canvas round it is one colour,
+// the average of the design's own two ends; and the picture's outer edge
+// fades into that colour, so both ends of the print are the identical hex.
+export async function buildSafeFadedImage(imageSource, canvasWidth, canvasHeight, safeArea) {
+  const W = canvasWidth, H = canvasHeight;
+  const full = await sharp(await resolveImageBuffer(imageSource))
+    .flatten({ background: { r: 255, g: 255, b: 255 } })
+    .resize(W, H, { fit: "contain", background: { r: 255, g: 255, b: 255 } })
+    .removeAlpha().raw().toBuffer();
+  // The one colour: the mean of both ends' outer strips (2% of the width each).
+  const strip = Math.max(1, Math.round(W * 0.02));
+  const sum = [0, 0, 0]; let n = 0;
+  for (let y = 0; y < H; y += 2) {
+    for (let x = 0; x < strip; x++) {
+      for (const xx of [x, W - 1 - x]) {
+        const i = (y * W + xx) * 3;
+        sum[0] += full[i]; sum[1] += full[i + 1]; sum[2] += full[i + 2]; n++;
+      }
+    }
+  }
+  const edge = sum.map((v) => Math.round(v / n));
+  // Scaled to sit inside the safe area on all four sides, one scale both ways.
+  const mx = Math.ceil(W * safeArea.x), my = Math.ceil(H * safeArea.y);
+  const s = Math.min((W - 2 * mx) / W, (H - 2 * my) / H);
+  const w = Math.floor(W * s), h = Math.floor(H * s);
+  const pic = await sharp(full, { raw: { width: W, height: H, channels: 3 } }).resize(w, h).raw().toBuffer();
+  // The fade: the picture's own outer band, as wide as the margin, ramps from
+  // the edge colour (at its edge) to itself (inside).
+  const F = Math.max(mx, my);
+  const rgba = Buffer.alloc(w * h * 4);
+  for (let y = 0; y < h; y++) {
+    const dy = Math.min(y, h - 1 - y);
+    for (let x = 0; x < w; x++) {
+      const d = Math.min(Math.min(x, w - 1 - x), dy);
+      const t = d >= F ? 1 : d / F;
+      const a = t * t * (3 - 2 * t);
+      const i = (y * w + x) * 3, o = (y * w + x) * 4;
+      rgba[o] = pic[i]; rgba[o + 1] = pic[i + 1]; rgba[o + 2] = pic[i + 2]; rgba[o + 3] = Math.round(a * 255);
+    }
+  }
+  return await sharp({ create: { width: W, height: H, channels: 3, background: { r: edge[0], g: edge[1], b: edge[2] } } })
+    .composite([{ input: rgba, raw: { width: w, height: h, channels: 4 }, left: Math.round((W - w) / 2), top: Math.round((H - h) / 2) }])
+    .jpeg({ quality: 92, chromaSubsampling: "4:4:4" })
+    .toBuffer();
+}
+
 export async function buildSingleImage(imageSource, canvasWidth, canvasHeight) {
   const WHITE = { r: 255, g: 255, b: 255 };
   return await sharp(await resolveImageBuffer(imageSource))
@@ -1286,7 +1337,9 @@ export async function placeProductOrder({
       ? await buildTiledPattern(image, width, height)
       : product.cutToShape
         ? await buildCutoutImage(image, width, height)
-        : await buildSingleImage(image, width, height);
+        : product.safeArea
+          ? await buildSafeFadedImage(image, width, height, product.safeArea)
+          : await buildSingleImage(image, width, height);
     const uploadedId = product.tilePattern
       ? await uploadLargeImageToPrintify(buffer, `muggshotz-wrap-${Date.now()}.jpg`)
       : await uploadImageToPrintify(buffer, `muggshotz-${Date.now()}.png`);

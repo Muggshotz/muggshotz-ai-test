@@ -14,6 +14,7 @@ import {
   wrapBorderHex,
   buildFrontBackImages,
   buildSingleImage,
+  buildSafeFadedImage,
   buildTiledPattern,
   buildCutoutImage,
   buildCalendarPrintFiles,
@@ -120,7 +121,9 @@ async function handleStart(req, res) {
       ? await buildTiledPattern(image, width, height, 3, 1450)
       : product.cutToShape
         ? await buildCutoutImage(image, width, height)
-        : await buildSingleImage(image, width, height);
+        : product.safeArea
+          ? await buildSafeFadedImage(image, width, height, product.safeArea)
+          : await buildSingleImage(image, width, height);
     const uploadedId = await uploadImageToPrintify(buffer, `muggshotz-mockup-preview-${Date.now()}.png`);
     for (const pos of (product.repeatPositions || [position])) printifyImages[pos] = uploadedId;
 
