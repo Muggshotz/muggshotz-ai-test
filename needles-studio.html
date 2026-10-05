@@ -1,5 +1,5 @@
 <!-- ============================================================
-     VERSION: V451
+     VERSION: V452
      ============================================================
      THE ONE LINE THAT SAYS WHICH BUILD YOU ARE LOOKING AT.
 
@@ -4941,7 +4941,7 @@ function toggleWorkingImage(){
 // Two copies of a number is exactly how the marker rotted in the first place,
 // so they are not trusted to agree: .githooks/pre-commit moves both together
 // and REFUSES the commit if it ever finds them apart.
-const APP_VERSION='V451';
+const APP_VERSION='V452';
 try{ console.log('%cNeedles\u2019 Studio '+APP_VERSION,'color:#29a3ff;font-weight:700'); }catch(e){}
 
 function getDeviceId(){
@@ -13596,7 +13596,7 @@ function renderPremades(){
       +[['one','One at a time'],['all','All at once']].map(([k,l])=>'<button type="button" class="pm-lay'+(premadesLayout===k?' on':'')+'" data-layout="'+k+'" onclick="premadesSetLayout(\''+k+'\')">'+l+'</button>').join('')+'</div>';
     // The 4-pack said plainly (Alyx and Bud, 5 Oct 2026: "nothing is clearer than
     // simply displaying the actual package price"): a holiday's own name for it.
-    const pack=set.packLine?'<b style="text-transform:uppercase;letter-spacing:.03em">'+set.packLine+'</b><br>Any 4 '+set.label+' Magic Mugs · '+$(SMART_MUG_SET_PRICE)
+    const pack=set.packLine?'<b style="text-transform:uppercase;letter-spacing:.03em">'+set.packLine.replace('4-','4\u2011')+'</b><br>Any 4 '+set.label+' Magic Mugs · '+$(SMART_MUG_SET_PRICE)
       :'Mix and match. Any four are a set, '+$(SMART_MUG_SET_PRICE)+'.';
     const head=premadesCrumb([PREMADE_MUGS.label])+holidayTabs()+holidayStyleTabs()
       +'<div class="pm-ask" id="premadesPackLine" style="margin-bottom:.4rem;text-align:center">'+pack+'</div>'
