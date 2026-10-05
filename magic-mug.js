@@ -67,7 +67,15 @@ const SURPRISE_SETS={
     {key:'silhouette-pumpkin',label:'Silhouette Pumpkin',file:'halloween-silhouette-pumpkin'},
     {key:'silhouette-spider',label:'Silhouette Spider',file:'halloween-silhouette-spider'},
     {key:'silhouette-cat',label:'Silhouette Cat',file:'halloween-silhouette-cat'},
-    {key:'silhouette-witch',label:'Silhouette Witch',file:'halloween-silhouette-witch'}
+    {key:'silhouette-witch',label:'Silhouette Witch',file:'halloween-silhouette-witch'},
+    {key:'silhouette-tree',label:'Silhouette Tree',file:'halloween-silhouette-tree'},
+    {key:'silhouette-skull',label:'Silhouette Skull',file:'halloween-silhouette-skull'},
+    {key:'silhouette-cauldron',label:'Silhouette Cauldron',file:'halloween-silhouette-cauldron'},
+    {key:'silhouette-hand',label:'Silhouette Hand',file:'halloween-silhouette-hand'},
+    {key:'silhouette-raven',label:'Silhouette Raven',file:'halloween-silhouette-raven'},
+    {key:'silhouette-haunted-house',label:'Silhouette Haunted House',file:'halloween-silhouette-haunted-house'},
+    {key:'silhouette-bat',label:'Silhouette Bat',file:'halloween-silhouette-bat'},
+    {key:'silhouette-ghost',label:'Silhouette Ghost',file:'halloween-silhouette-ghost'}
   ]}
 };
 function holidayPrice(n){ return n>=4 ? Math.round((SMART_MUG_SET_PRICE+(n-4)*SMART_MUG_EXTRA_PRICE)*100)/100 : Math.round(n*SMART_MUG_PRICE*100)/100; }
