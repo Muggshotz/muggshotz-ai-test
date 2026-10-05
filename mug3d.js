@@ -417,6 +417,13 @@ const MUG3D = (function(){
     // with the handle on the right, as the 14oz does.
     'travel-mug-40oz-vacuum': {
       totalH:12.0, maxR:1.96, bandR:1.85, snapAngle:-90,
+      // PRINTIFY'S SAFE AREA (lib/products-catalog.js, the same numbers): the
+      // print is the picture held inside it, its ends faded into one colour
+      // (api/create-printify-order.js buildSafeFadedImage). The band shows
+      // that same print, never the picture before it (Alyx, 5 Oct 2026: "The
+      // Studio 3D ... should directly reflect exactly what will be seen on
+      // the print"). verify-safe-area-preview.js holds the two together.
+      safeArea:{ x:68/3710, y:57/2817 },
       band:{ h:9.39, y:5.20, wrapIn:12.37 },
       handle:{ y0:5.30, y1:9.60, reach:1.50, r:0.19, angle:Math.PI, mat:'body' },
       straw:{ r:0.15, y0:10.5, y1:12.0, x:0, mat:'lid' },
@@ -820,6 +827,7 @@ const MUG3D = (function(){
       tumblerBands(T).forEach(band=>{
         const st=makeTex(band.wrapIn/band.h);
         st.fit=band.fit||'cover';
+        st.safeArea=T.safeArea||null;
         const mesh=new THREE.Mesh(bandGeo(THREE,T,band),
           new THREE.MeshPhysicalMaterial(Object.assign({map:st.tex, side:THREE.FrontSide, transparent:true,
             // The other half of the fix, and the one that does not depend on
@@ -996,9 +1004,59 @@ const MUG3D = (function(){
   // the file fills the print area, and whatever does not fit is cropped
   // rather than letterboxed, so the customer never sees a white bar that
   // will not be on the mug.
+  // THE PRINT INSIDE THE SAFE AREA, drawn exactly as the server draws it
+  // (api/create-printify-order.js buildSafeFadedImage), step for step: the
+  // picture fitted whole into the print area on white; one colour, the mean
+  // of both ends' outer 2% strips; the picture scaled to sit inside the safe
+  // area, centred, its outer band (as wide as the wider margin) fading into
+  // that colour on a smoothstep; the rest of the print that one colour.
+  // Worked at half the print's width by default: the same proportions, a
+  // quarter of the pixels.
+  function safeFaded(img,aspect,safeArea,width){
+    const W=Math.round(width||1855), H=Math.round(W/aspect);
+    const full=document.createElement('canvas'); full.width=W; full.height=H;
+    const fg=full.getContext('2d');
+    fg.fillStyle='#ffffff'; fg.fillRect(0,0,W,H);
+    const iw=img.width, ih=img.height, k=Math.min(W/iw,H/ih);
+    const cw=Math.round(iw*k), ch=Math.round(ih*k);
+    fg.imageSmoothingEnabled=true; fg.imageSmoothingQuality='high';
+    fg.drawImage(img,Math.round((W-cw)/2),Math.round((H-ch)/2),cw,ch);
+    const strip=Math.max(1,Math.round(W*0.02));
+    const L=fg.getImageData(0,0,strip,H).data, R=fg.getImageData(W-strip,0,strip,H).data;
+    const sum=[0,0,0]; let n=0;
+    for(let y=0;y<H;y+=2) for(let x=0;x<strip;x++) for(const D of [L,R]){
+      const i=(y*strip+x)*4; sum[0]+=D[i]; sum[1]+=D[i+1]; sum[2]+=D[i+2]; n++;
+    }
+    const edge=sum.map(v=>Math.round(v/n));
+    const mx=Math.ceil(W*safeArea.x), my=Math.ceil(H*safeArea.y);
+    const s=Math.min((W-2*mx)/W,(H-2*my)/H);
+    const w=Math.floor(W*s), h=Math.floor(H*s);
+    const pic=document.createElement('canvas'); pic.width=w; pic.height=h;
+    const pg=pic.getContext('2d');
+    pg.imageSmoothingEnabled=true; pg.imageSmoothingQuality='high';
+    pg.drawImage(full,0,0,W,H,0,0,w,h);
+    const px=pg.getImageData(0,0,w,h), d=px.data, F=Math.max(mx,my);
+    for(let y=0;y<h;y++){
+      const dy=Math.min(y,h-1-y);
+      for(let x=0;x<w;x++){
+        const dd=Math.min(Math.min(x,w-1-x),dy);
+        const t=dd>=F?1:dd/F;
+        d[(y*w+x)*4+3]=Math.round(t*t*(3-2*t)*255);
+      }
+    }
+    pg.putImageData(px,0,0);
+    const out=document.createElement('canvas'); out.width=W; out.height=H;
+    const og=out.getContext('2d');
+    og.fillStyle=`rgb(${edge[0]},${edge[1]},${edge[2]})`; og.fillRect(0,0,W,H);
+    og.drawImage(pic,Math.round((W-w)/2),Math.round((H-h)/2));
+    return out;
+  }
+
   function paint(img,idx){
     const st=bandStates[idx||0];
     if(!st)return;
+    // A cup with a safe area shows its print, not the picture before it.
+    if(img && st.safeArea) img=safeFaded(img,st.aspect||(st.canvas.width/st.canvas.height),st.safeArea);
     const W=st.canvas.width, Hc=st.canvas.height;
     const g=st.canvas.getContext('2d');
     g.clearRect(0,0,W,Hc);
@@ -1179,6 +1237,13 @@ const MUG3D = (function(){
     onSpin(fn){ onSpinChange=fn; },
     resize,
     mounted(){ return mounted; },
+    // For the tests (verify-safe-area-preview.js): the band's painted canvas,
+    // and the safe-area print drawn from a picture, as paint() draws it.
+    bandCanvas(i){ const st=bandStates[i||0]; return st?st.canvas:null; },
+    safeFadedFrom(url,aspect,safeArea,width){
+      return new Promise((res,rej)=>{ const im=new Image(); im.crossOrigin='anonymous';
+        im.onload=()=>res(safeFaded(im,aspect,safeArea,width)); im.onerror=rej; im.src=url; });
+    },
     host(){ return host; },
     // THE MAGIC MUG'S HEAT (Alyx, 28 Sep 2026): 0 is cold -- the whole cup
     // black, the picture hidden under the coating; 1 is hot -- the bare wall
