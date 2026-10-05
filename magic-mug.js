@@ -53,7 +53,21 @@ const SURPRISE_SETS={
     {key:'sugar-skull',label:'Sugar Skull',file:'halloween-sugar-skull'},
     // The Witching Hour (Bud, 5 Oct 2026): for new parents and everyone who buys
     // for them. Bud's lettering; framed at 0.87 so the frame covers none of it.
-    {key:'witching-hour',label:'The Witching Hour',file:'halloween-witching-hour',frames:['one']}
+    {key:'witching-hour',label:'The Witching Hour',file:'halloween-witching-hour',frames:['one']},
+    // Two sets of four with Sugar Skull (Bud, 5 Oct 2026). Marigold: a black
+    // raven, a black cat and a carved jack-o'-lantern in Sugar Skull's marigolds
+    // and gold. Silhouette: black cut-paper shapes on orange in Bud's own thin
+    // border. Each picture is centred and one piece, so the left-handed print is
+    // the same picture (rolled, it would split behind the handle) and no Trick or
+    // Treat frame (its middle ornaments would cross the subject; Bud framed the
+    // silhouettes himself).
+    {key:'marigold-raven',label:'Marigold Raven',file:'halloween-marigold-raven'},
+    {key:'marigold-cat',label:'Marigold Cat',file:'halloween-marigold-cat'},
+    {key:'marigold-jack-o-lantern',label:'Marigold Jack-o’-Lantern',file:'halloween-marigold-jack-o-lantern'},
+    {key:'silhouette-pumpkin',label:'Silhouette Pumpkin',file:'halloween-silhouette-pumpkin'},
+    {key:'silhouette-spider',label:'Silhouette Spider',file:'halloween-silhouette-spider'},
+    {key:'silhouette-cat',label:'Silhouette Cat',file:'halloween-silhouette-cat'},
+    {key:'silhouette-witch',label:'Silhouette Witch',file:'halloween-silhouette-witch'}
   ]}
 };
 function holidayPrice(n){ return n>=4 ? Math.round((SMART_MUG_SET_PRICE+(n-4)*SMART_MUG_EXTRA_PRICE)*100)/100 : Math.round(n*SMART_MUG_PRICE*100)/100; }
