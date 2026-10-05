@@ -416,7 +416,7 @@ const MUG3D = (function(){
     // turn away on the real cup (Alyx's sister's cup). Back at PI, opening
     // with the handle on the right, as the 14oz does.
     'travel-mug-40oz-vacuum': {
-      totalH:12.0, maxR:1.96, bandR:1.85, snapAngle:-90,
+      totalH:12.25, maxR:1.96, bandR:1.85, snapAngle:-90,
       // PRINTIFY'S SAFE AREA (lib/products-catalog.js, the same numbers): the
       // print is the picture held inside it, its ends faded into one colour
       // (api/create-printify-order.js buildSafeFadedImage). The band shows
@@ -425,8 +425,18 @@ const MUG3D = (function(){
       // the print"). verify-safe-area-preview.js holds the two together.
       safeArea:{ x:68/3710, y:57/2817 },
       band:{ h:9.39, y:5.20, wrapIn:12.37 },
-      handle:{ y0:5.30, y1:9.60, reach:1.50, r:0.19, angle:Math.PI, mat:'body' },
-      straw:{ r:0.15, y0:10.5, y1:12.0, x:0, mat:'lid' },
+      // THE HANDLE AS IT IS (Alyx, 5 Oct 2026: "Our handle looks flimsy, and
+      // rail-like. Their handle is more stout and sturdy and it tapers up from
+      // the bottom"). Traced off Printify's own side photo of this cup (35.6 px
+      // to the unit, scaled by the body's width; the foot checks at 1.52 against
+      // the model's 1.55): a squared grip, the top arm 0.47 thick at the wall,
+      // the grip 0.38 at the top to 0.42 at the bottom, the bottom arm 0.68 at
+      // the wall, reaching 1.91 out, about an inch across. Same angle as before
+      // (PI, over the band's ends), so nothing about the print moves.
+      handle:{ angle:Math.PI, mat:'body', depth:0.78, bevel:0.1, outline:[
+        ['M',1.80,9.86],['L',3.05,9.89],['Q',3.62,9.88,3.64,9.30],['L',3.86,6.10],['Q',3.88,5.36,3.20,5.32],
+        ['L',1.80,5.18],['L',1.80,5.90],['L',3.00,5.92],['Q',3.42,5.96,3.44,6.35],['L',3.24,9.15],['Q',3.22,9.37,2.95,9.37],['L',1.80,9.38]] },
+      straw:{ r:0.14, y0:10.5, y1:12.25, x:0, mat:'lid' },
       parts:[
         { mat:'body',  pts:()=>{
             const p=[[0,0],[1.35,0]];
@@ -435,9 +445,16 @@ const MUG3D = (function(){
             for(let i=1;i<=8;i++){ const t=i/8, e=t*t*(3-2*t); p.push([1.55+(1.95-1.55)*e, 3.0+1.2*t]); }
             p.push([1.95,10.0]);
             return p; } },
-        { mat:'steel',   pts:()=>[[1.95,10.0],[1.95,10.25],[1.86,10.28]] },
-        { mat:'lidBlue', pts:()=>[[0,10.25],[1.92,10.25],[1.92,10.50],[1.80,10.60],[0.8,10.65],[0,10.65]] }
-      ]
+        // THE TOP AS IT IS (Printify's photos, 5 Oct 2026): a tall brushed-steel
+        // ring (0.45), then a clear blue-tinted lid with a raised rim, a black
+        // slide latch at the front and a clear tab each side of it, and a clear
+        // straw standing 1.35 above. The body and its band below are untouched.
+        { mat:'brushed', pts:()=>[[1.95,10.0],[1.97,10.03],[1.97,10.42],[1.95,10.45],[1.85,10.45]] },
+        { mat:'lidBlue', pts:()=>[[0,10.45],[1.96,10.45],[1.98,10.52],[1.97,10.70],[1.90,10.80],[1.60,10.86],[0.6,10.90],[0,10.90]] }
+      ],
+      // The latch a quarter turn from the handle: face it, and the handle is on
+      // your right, as in Printify's side photo.
+      lidBits:{ angle:-Math.PI/2, y:10.90, latch:{ w:1.25, h:0.26, d:0.70, z:1.05 }, tabs:{ x:0.80, span:0.85, rise:0.45, tube:0.10 } },
     },
     // THE BEER STEIN (22 Sep 2026, Alyx: "Why does a Stein not have the 3D
     // model?"). Blueprint 1088, not a travel cup, but the same engine: a
@@ -532,13 +549,15 @@ const MUG3D = (function(){
     const steel=new THREE.MeshStandardMaterial({color:0xc9ced4, metalness:0.92, roughness:0.32, envMapIntensity:1.1, side:THREE.DoubleSide});
     const lid=new THREE.MeshPhysicalMaterial({color:0xdfe7f1, transparent:true, opacity:0.55, roughness:0.12, metalness:0.0, clearcoat:0.6, envMapIntensity:1.0, side:THREE.DoubleSide, depthWrite:false});
     const cap=new THREE.MeshPhysicalMaterial({color:0x0a0b0d, roughness:0.6, metalness:0.0, clearcoat:0.1, envMapIntensity:0.35, side:THREE.DoubleSide});
-    const lidBlue=new THREE.MeshPhysicalMaterial({color:0x8fb4ff, transparent:true, opacity:0.6, roughness:0.15, metalness:0.0, clearcoat:0.5, envMapIntensity:0.9, side:THREE.DoubleSide, depthWrite:false});
+    const lidBlue=new THREE.MeshPhysicalMaterial({color:0x4a6fe8, transparent:true, opacity:0.85, roughness:0.15, metalness:0.0, clearcoat:0.5, envMapIntensity:0.9, side:THREE.DoubleSide, depthWrite:false});
+    // Brushed steel, darker and duller than the polished rim, as the Vacuum's ring reads in Printify's photo.
+    const brushed=new THREE.MeshStandardMaterial({color:0xc2c8ce, metalness:0.9, roughness:0.28, envMapIntensity:1.0, side:THREE.DoubleSide});
     // The stein's gold lines.
     const gold=new THREE.MeshStandardMaterial({color:new THREE.Color('#d4a73c').convertSRGBToLinear(), metalness:1.0, roughness:0.28, envMapIntensity:1.2, side:THREE.DoubleSide});
     // THE CUP'S OWN COLOUR (Alyx, v101). White is the glazed white the mug
     // uses; Steel is bare metal; anything else is a powder coat in that hex.
     const body=bodyMaterialFor(THREE,mats,steel,(opts&&opts.colorHex)||'#ffffff',opts&&opts.finish);
-    return { body, steel, lid, lidBlue, cap, gold };
+    return { body, steel, lid, lidBlue, cap, gold, brushed };
   }
   function assembleTumbler(THREE,T,mats,opts){
     const g=new THREE.Group();
@@ -557,6 +576,20 @@ const MUG3D = (function(){
       // A handle traced off a photo brings its own path (the stein's), and
       // swells at the feet the way the mug's does.
       const h=T.handle;
+      if(h.outline){
+        // A handle drawn as its side outline (radial out, height up), thickened
+        // into a solid with rounded edges, its centre on the handle's angle.
+        const sh=new THREE.Shape();
+        h.outline.forEach(([k,...v])=>{ if(k==='M')sh.moveTo(v[0],v[1]); else if(k==='L')sh.lineTo(v[0],v[1]); else sh.quadraticCurveTo(v[0],v[1],v[2],v[3]); });
+        const geo=new THREE.ExtrudeGeometry(sh,{depth:h.depth,bevelEnabled:true,bevelThickness:h.bevel,bevelSize:h.bevel,bevelOffset:-h.bevel,bevelSegments:4,curveSegments:16});
+        geo.translate(0,0,-h.depth/2);
+        geo.computeVertexNormals();
+        const mat=tm[h.mat]||tm.body;
+        const hand=new THREE.Mesh(geo,mat);
+        hand.rotation.y=h.angle+Math.PI*1.5;
+        hand.castShadow=true; hand.receiveShadow=true;
+        g.add(hand);
+      } else {
       let path, radiusAt=()=>h.r;
       if(h.path){
         path=h.path;
@@ -572,6 +605,7 @@ const MUG3D = (function(){
       hand.rotation.y=h.angle+Math.PI;
       hand.castShadow=true; hand.receiveShadow=true;
       g.add(hand);
+      }
     }
     if(T.beads){
       // One instanced mesh per row: a hundred-odd beads for the cost of one draw.
@@ -582,6 +616,20 @@ const MUG3D = (function(){
         beads.receiveShadow=true;
         g.add(beads);
       });
+    }
+    if(T.lidBits){
+      // The lid's latch and tabs, built facing +z and turned to their angle.
+      const lb=T.lidBits, grp=new THREE.Group();
+      const L=lb.latch, latch=new THREE.Mesh(new THREE.BoxGeometry(L.w,L.h,L.d),tm.cap);
+      latch.position.set(0,lb.y+L.h/2-0.02,L.z); latch.castShadow=true; grp.add(latch);
+      const tb=lb.tabs;
+      [-1,1].forEach(sx=>{
+        const arc=new THREE.Mesh(new THREE.TorusGeometry(tb.span,tb.tube,8,40,Math.PI),tm.lidBlue);
+        arc.rotation.y=Math.PI/2; arc.scale.set(1,tb.rise/tb.span,1);
+        arc.position.set(sx*tb.x,lb.y-0.02,0); arc.renderOrder=2; grp.add(arc);
+      });
+      grp.rotation.y=lb.angle;
+      g.add(grp);
     }
     if(T.straw){
       const st=T.straw;
@@ -919,7 +967,7 @@ const MUG3D = (function(){
       const url=snapRenderer.domElement.toDataURL('image/png');
       g.traverse(o=>{ if(o.geometry)o.geometry.dispose(); });
       mats.white.dispose(); mats.accent.dispose();
-      if(g.userData.tumblerMats){ const tm=g.userData.tumblerMats; tm.steel.dispose(); tm.lid.dispose(); tm.cap.dispose(); }
+      if(g.userData.tumblerMats){ const tm=g.userData.tumblerMats; tm.steel.dispose(); tm.lid.dispose(); tm.cap.dispose(); if(tm.brushed)tm.brushed.dispose(); }
       return url;
     });
     snapCache.set(key,pr);
