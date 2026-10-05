@@ -50,7 +50,10 @@ const SURPRISE_SETS={
     // handle. The left-handed print is the same picture (rolled, the skull would
     // split behind the handle), and no frame: its middle ornaments would cross
     // the skull's brow and chin.
-    {key:'sugar-skull',label:'Sugar Skull',file:'halloween-sugar-skull'}
+    {key:'sugar-skull',label:'Sugar Skull',file:'halloween-sugar-skull'},
+    // The Witching Hour (Bud, 5 Oct 2026): for new parents and everyone who buys
+    // for them. Bud's lettering; framed at 0.87 so the frame covers none of it.
+    {key:'witching-hour',label:'The Witching Hour',file:'halloween-witching-hour',frames:['one']}
   ]}
 };
 function holidayPrice(n){ return n>=4 ? Math.round((SMART_MUG_SET_PRICE+(n-4)*SMART_MUG_EXTRA_PRICE)*100)/100 : Math.round(n*SMART_MUG_PRICE*100)/100; }
