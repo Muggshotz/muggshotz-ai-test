@@ -41,7 +41,11 @@ const SURPRISE_SETS={
     // Goes Right Through Me (Bud, 5 Oct 2026; coffee cleaned off the bones with
     // Alyx): two scenes on black, Bud's own lettering; framed at 0.87 so the
     // frame covers none of it (frame-mug.py's scale).
-    {key:'goes-right-through-me',label:'Goes Right Through Me',file:'halloween-goes-right-through-me',frames:['one']}
+    {key:'goes-right-through-me',label:'Goes Right Through Me',file:'halloween-goes-right-through-me',frames:['one']},
+    // When Pumpkins Dream (Bud, 5 Oct 2026; Alyx's caption, set by Claude on the
+    // plain pumpkin's side, clear of the frame on both hands): the jack-o'-lantern
+    // it dreams of is the punchline, no words.
+    {key:'when-pumpkins-dream',label:'When Pumpkins Dream',file:'halloween-when-pumpkins-dream',frames:['one']}
   ]}
 };
 function holidayPrice(n){ return n>=4 ? Math.round((SMART_MUG_SET_PRICE+(n-4)*SMART_MUG_EXTRA_PRICE)*100)/100 : Math.round(n*SMART_MUG_PRICE*100)/100; }

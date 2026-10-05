@@ -99,7 +99,7 @@ scenarios.theMagicMugs = async (page) => {
     prices: [...document.querySelectorAll('.mugname span')].map((s) => s.textContent),
     demo: typeof MUG3D !== 'undefined' && MUG3D.mounted() && MUG3D.host() === document.getElementById('smartHowRevealStage'),
   }));
-  if (m.steps !== 6 || JSON.stringify(m.mugs) !== '["Boo","Raise the Dead","Sheet Happens","Goes Right Through Me"]' || m.prices.some((p) => p !== '$19.95') || !m.demo) return `FAIL: the Magic Mugs show ${JSON.stringify(m)}`;
+  if (m.steps !== 6 || JSON.stringify(m.mugs) !== '["Boo","Raise the Dead","Sheet Happens","Goes Right Through Me","When Pumpkins Dream"]' || m.prices.some((p) => p !== '$19.95') || !m.demo) return `FAIL: the Magic Mugs show ${JSON.stringify(m)}`;
   await page.click('.mugs .pm-mug3d >> nth=1'); await T(page, 2500);
   const spun = await page.evaluate(() => MUG3D.mounted() && MUG3D.host() === document.querySelectorAll('.mugs .pm-mug3d-stage')[1]);
   if (!spun) return 'FAIL: tapping Sheet Happens did not turn it on the 3D mug';
