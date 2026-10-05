@@ -99,7 +99,7 @@ scenarios.theMagicMugs = async (page) => {
     prices: [...document.querySelectorAll('.mugname span')].map((s) => s.textContent),
     demo: typeof MUG3D !== 'undefined' && MUG3D.mounted() && MUG3D.host() === document.getElementById('smartHowRevealStage'),
   }));
-  if (m.steps !== 6 || JSON.stringify(m.mugs) !== '["Boo","Raise the Dead","Sheet Happens","Goes Right Through Me","When Pumpkins Dream"]' || m.prices.some((p) => p !== '$19.95') || !m.demo) return `FAIL: the Magic Mugs show ${JSON.stringify(m)}`;
+  if (m.steps !== 6 || JSON.stringify(m.mugs) !== '["Boo","Raise the Dead","Sheet Happens","Goes Right Through Me","When Pumpkins Dream","Sugar Skull"]' || m.prices.some((p) => p !== '$19.95') || !m.demo) return `FAIL: the Magic Mugs show ${JSON.stringify(m)}`;
   await page.click('.mugs .pm-mug3d >> nth=1'); await T(page, 2500);
   const spun = await page.evaluate(() => MUG3D.mounted() && MUG3D.host() === document.querySelectorAll('.mugs .pm-mug3d-stage')[1]);
   if (!spun) return 'FAIL: tapping Sheet Happens did not turn it on the 3D mug';
@@ -107,7 +107,8 @@ scenarios.theMagicMugs = async (page) => {
   // The Trick or Treat frame: the mugs wear it, and the order names it.
   await page.click('[data-frame="one"]'); await T(page, 1500);
   const fr = await page.evaluate(() => ({ files: [...document.querySelectorAll('.mugs .pm-mug3d')].map((e) => e.dataset.mug3d), handOn: document.querySelector('[data-hand="left"]').classList.contains('on'), frameOn: document.querySelector('[data-frame="one"]').classList.contains('on') }));
-  if (!fr.files.every((f) => f.endsWith('-one')) || !fr.handOn || !fr.frameOn) return `FAIL: the frame choice shows ${JSON.stringify(fr)}`;
+  // Every mug that offers the frame wears it; Sugar Skull offers none and stays plain.
+  if (!fr.files.every((f) => f === 'halloween-sugar-skull' || f.endsWith('-one')) || !fr.files.includes('halloween-sugar-skull') || !fr.handOn || !fr.frameOn) return `FAIL: the frame choice shows ${JSON.stringify(fr)}`;
   await page.click('[data-order="sheet-happens"]');
   const raw = await checkout(page, bodies), b = lineOf(raw);
   if (b.setKey !== 'halloween' || JSON.stringify(b.mugs) !== '["sheet-happens~one"]' || b.hand !== 'left' || (raw || {}).source !== 'halloween') return `FAIL: checkout got ${JSON.stringify({ set: b.setKey, mugs: b.mugs, hand: b.hand, source: (raw || {}).source })}`;

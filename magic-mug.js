@@ -45,7 +45,12 @@ const SURPRISE_SETS={
     // When Pumpkins Dream (Bud, 5 Oct 2026; Alyx's caption, set by Claude on the
     // plain pumpkin's side, clear of the frame on both hands): the jack-o'-lantern
     // it dreams of is the punchline, no words.
-    {key:'when-pumpkins-dream',label:'When Pumpkins Dream',file:'halloween-when-pumpkins-dream',frames:['one']}
+    {key:'when-pumpkins-dream',label:'When Pumpkins Dream',file:'halloween-when-pumpkins-dream',frames:['one']},
+    // Sugar Skull (Bud, 5 Oct 2026): one picture, no joke, the skull opposite the
+    // handle. The left-handed print is the same picture (rolled, the skull would
+    // split behind the handle), and no frame: its middle ornaments would cross
+    // the skull's brow and chin.
+    {key:'sugar-skull',label:'Sugar Skull',file:'halloween-sugar-skull'}
   ]}
 };
 function holidayPrice(n){ return n>=4 ? Math.round((SMART_MUG_SET_PRICE+(n-4)*SMART_MUG_EXTRA_PRICE)*100)/100 : Math.round(n*SMART_MUG_PRICE*100)/100; }
