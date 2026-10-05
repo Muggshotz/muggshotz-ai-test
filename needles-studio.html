@@ -1,5 +1,5 @@
 <!-- ============================================================
-     VERSION: V450
+     VERSION: V451
      ============================================================
      THE ONE LINE THAT SAYS WHICH BUILD YOU ARE LOOKING AT.
 
@@ -4941,7 +4941,7 @@ function toggleWorkingImage(){
 // Two copies of a number is exactly how the marker rotted in the first place,
 // so they are not trusted to agree: .githooks/pre-commit moves both together
 // and REFUSES the commit if it ever finds them apart.
-const APP_VERSION='V450';
+const APP_VERSION='V451';
 try{ console.log('%cNeedles\u2019 Studio '+APP_VERSION,'color:#29a3ff;font-weight:700'); }catch(e){}
 
 function getDeviceId(){
@@ -13590,12 +13590,16 @@ function renderPremades(){
   releaseShelfMug(); releaseHowReveal('shelf');
   const occ=premadeOccasion(), set=occ&&occ.set?SURPRISE_SETS[occ.set]:null, $=n=>'$'+n.toFixed(2);
   if(premadesView==='shelf'&&set){
-    const d=set.designs, m=d[premadesMugIndex]||d[0];
+    const d=holidayShown(), m=d[premadesMugIndex]||d[0];
     title.textContent=PREMADE_MUGS.icon+' '+PREMADE_MUGS.label;
     const layout='<div class="pm-layout" data-words="how to browse: the mugs carry the pictures">'
       +[['one','One at a time'],['all','All at once']].map(([k,l])=>'<button type="button" class="pm-lay'+(premadesLayout===k?' on':'')+'" data-layout="'+k+'" onclick="premadesSetLayout(\''+k+'\')">'+l+'</button>').join('')+'</div>';
-    const head=premadesCrumb([PREMADE_MUGS.label])+holidayTabs()
-      +'<div class="pm-ask" style="margin-bottom:.4rem;text-align:center">Mix and match. Any four are a set, '+$(SMART_MUG_SET_PRICE)+'.</div>'
+    // The 4-pack said plainly (Alyx and Bud, 5 Oct 2026: "nothing is clearer than
+    // simply displaying the actual package price"): a holiday's own name for it.
+    const pack=set.packLine?'<b style="text-transform:uppercase;letter-spacing:.03em">'+set.packLine+'</b><br>Any 4 '+set.label+' Magic Mugs · '+$(SMART_MUG_SET_PRICE)
+      :'Mix and match. Any four are a set, '+$(SMART_MUG_SET_PRICE)+'.';
+    const head=premadesCrumb([PREMADE_MUGS.label])+holidayTabs()+holidayStyleTabs()
+      +'<div class="pm-ask" id="premadesPackLine" style="margin-bottom:.4rem;text-align:center">'+pack+'</div>'
       +'<button type="button" class="pm-how" id="premadesHowBtn" onclick="premadesGo(\'how\')">✨ How the magic mug works</button>'+layout;
     let body;
     if(premadesLayout==='all'){
@@ -13704,7 +13708,7 @@ function pickPremadeProduct(key){
 const premadesTrays={};
 function pickHoliday(key,quiet){
   const o=PREMADE_OCCASIONS.find(x=>x.key===key); if(!o||!o.set||!SURPRISE_SETS[o.set])return;
-  premadesOccasion=o.key; premadesSet=o.set; premadesMugIndex=0;
+  premadesOccasion=o.key; premadesSet=o.set; premadesMugIndex=0; premadesStyle=null;
   premadesMugs=premadesTrays[o.set]=premadesTrays[o.set]||[];
   if(!quiet)renderPremades();
 }
@@ -13733,12 +13737,23 @@ function pickPremadeSet(key){
 // THE HOLIDAY SHELF. The mugs chosen are a list of keys, repeats kept; the
 // tray under the shelf shows them, prices them, asks the hand and orders.
 function holidayDesigns(){ const s=SURPRISE_SETS[premadesSet]; return s?s.designs:[]; }
+// THE STYLES (Alyx and Bud, 5 Oct 2026): a holiday with kinds of mug shows one
+// kind at a time under its own tabs; the tray holds any of them.
+let premadesStyle=null;
+function holidayShown(){ return styleDesigns(SURPRISE_SETS[premadesSet],premadesStyle); }
+function holidayStyleTabs(){
+  const set=SURPRISE_SETS[premadesSet], sts=setStyles(set); if(sts.length<2)return '';
+  const cur=sts.some(s=>s.key===premadesStyle)?premadesStyle:sts[0].key;
+  return '<div class="pm-tabs" id="premadesStyleTabs" data-words="kinds of mug: the mugs below carry the pictures">'+sts.map(s=>
+    '<span class="pm-tab'+(s.key===cur?' on':'')+'" data-style="'+s.key+'" onclick="pickHolidayStyle(\''+s.key+'\')">'+s.label+' <span class="pm-soontag" style="opacity:.75">'+set.designs.filter(d=>d.style===s.key).length+'</span></span>').join('')+'</div>';
+}
+function pickHolidayStyle(k){ premadesStyle=k; premadesMugIndex=0; renderPremades(); }
 function holidayAddText(key){
   const n=premadesMugs.filter(k=>k.split('~')[0]===key).length;
   return n?'✓ In your mugs'+(n>1?' ×'+n:'')+' · add another':'➕ Add to my mugs';
 }
 function holidayStep(d){
-  const n=holidayDesigns().length; if(!n)return;
+  const n=holidayShown().length; if(!n)return;
   premadesMugIndex=((premadesMugIndex+d)%n+n)%n;
   renderPremades();
 }
@@ -13753,7 +13768,7 @@ function holidayAdd(key,plain){
 function pickPremadesFrame(f){
   premadesFrame=SET_FRAMES[f]?f:'none';
   document.querySelectorAll('#premadesFrameGrid .btn-select').forEach(b=>b.classList.toggle('selected',b.dataset.frame===premadesFrame));
-  const d=holidayDesigns()[premadesMugIndex], el=document.querySelector('#premadesView .pm-mat .pm-mug3d'); if(!d||!el)return;
+  const d=holidayShown()[premadesMugIndex], el=document.querySelector('#premadesView .pm-mat .pm-mug3d'); if(!d||!el)return;
   el.dataset.mug3d=d.file+(designFrames(d).includes(premadesFrame)?'-'+premadesFrame:'');
   releaseShelfMug(); spinShelfMug(el);
 }

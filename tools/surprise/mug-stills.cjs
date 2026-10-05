@@ -23,8 +23,12 @@ const OUT = path.join(__dirname, '../../art/surprise/mug');
   for (const f of files) {
     await page.evaluate(async (f) => {
       const host = document.getElementById('mugStill');
-      await MUG3D.open(host, Object.assign({}, SHELF_MUG_3D, { panoramaUrl: 'art/surprise/wrap/' + f + '.jpg', panelUrls: [], restartOnView: false }));
-      MUG3D.setSpinning(false); MUG3D.setAngle(SHELF_MUG_3D.startAngle);
+      // Each design at the angle its shelf mug starts at (designAngle: the
+      // Silhouettes and Ornate face on, the story mugs on their setup).
+      const d = Object.values(SURPRISE_SETS).flatMap((s) => s.designs).find((x) => x.file === f || f.startsWith(x.file + '-'));
+      const angle = d ? designAngle(d) : SHELF_MUG_3D.startAngle;
+      await MUG3D.open(host, Object.assign({}, SHELF_MUG_3D, { panoramaUrl: 'art/surprise/wrap/' + f + '.jpg', panelUrls: [], restartOnView: false, startAngle: angle }));
+      MUG3D.setSpinning(false); MUG3D.setAngle(angle);
     }, f);
     await page.waitForTimeout(700);
     await page.locator('#mugStill').screenshot({ path: path.join(OUT, f + '.jpg'), type: 'jpeg', quality: 86 });

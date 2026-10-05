@@ -4,6 +4,21 @@ Started 24 Sep 2026, when the old lists ran out.
 
 ## This week
 
+- [ ] **REMIND ALYX: NERDWEAR, the T-shirt slogan line** (5 Oct 2026). There
+      is a list of T-shirt slogans, the line called Nerdwear, "some of those
+      would be really really good." "Nerdwear" is in neither this repo nor
+      Claude's chat of 4-5 Oct, so the list is most likely in Alyx's chats
+      with Bud: search there for "Nerdwear". Better name (Alyx, 5 Oct):
+      **NerdWare**, said the same, but -ware as in software and hardware, so
+      the name is itself the line's kind of joke. A name or tagline for the line,
+      from a typo (Alyx, 5 Oct): "If you don't get it, don't get it."
+      Example, a workout shirt: "Dude... don't get it twisted -- I'm stronger
+      than GRAVITY" (a brag to the gym; to a physicist, the weakest force
+      there is, and gravity *is* twisted space-time). Back: "9.8 m/s²?...
+      how adorable" (Earth's gravity, talked down to; set the ² as a true
+      superscript). One to add:
+      "Never assume a thing cannot be improved." (Alyx, 5 Oct). Shirts need
+      the Apparel tile pushed first (below).
 - [x] **Flyers wired in** (25 Sep): a beta's featured product now reaches
       the flyer and the landing page. lib/flyer-products.js holds each
       product's headline, pitch, three steps and picture, priced from the

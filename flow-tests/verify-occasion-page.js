@@ -99,7 +99,22 @@ scenarios.theMagicMugs = async (page) => {
     prices: [...document.querySelectorAll('.mugname span')].map((s) => s.textContent),
     demo: typeof MUG3D !== 'undefined' && MUG3D.mounted() && MUG3D.host() === document.getElementById('smartHowRevealStage'),
   }));
-  if (m.steps !== 6 || JSON.stringify(m.mugs) !== '["Boo","Raise the Dead","Sheet Happens","Goes Right Through Me","When Pumpkins Dream","Sugar Skull","The Witching Hour","Marigold Raven","Marigold Cat","Marigold Jack-o’-Lantern","Silhouette Pumpkin","Silhouette Spider","Silhouette Cat","Silhouette Witch","Silhouette Tree","Silhouette Skull","Silhouette Cauldron","Silhouette Hand","Silhouette Raven","Silhouette Haunted House","Silhouette Bat","Silhouette Ghost"]' || m.prices.some((p) => p !== '$19.95') || !m.demo) return `FAIL: the Magic Mugs show ${JSON.stringify(m)}`;
+  // The Story / Joke tab first (Boo, the flyer's mug, leads), every mug on it priced.
+  const JOKES = '["Boo","Raise the Dead","Sheet Happens","Goes Right Through Me","When Pumpkins Dream","The Witching Hour"]';
+  if (m.steps !== 6 || JSON.stringify(m.mugs) !== JOKES || m.prices.some((p) => p !== '$19.95') || !m.demo) return `FAIL: the Magic Mugs show ${JSON.stringify(m)}`;
+  // THE TABS (Alyx and Bud, 5 Oct 2026): Story / Joke 6, Silhouette 12, Ornate 12;
+  // the Silhouette and Ornate mugs start face on (angle 0), the story mugs on their setup (-90).
+  const tabs = await page.evaluate(() => [...document.querySelectorAll('#magicStyles button')].map((b) => (b.classList.contains('on') ? '*' : '') + b.textContent));
+  if (JSON.stringify(tabs) !== '["*Story / Joke (6)","Silhouette (12)","Ornate (12)"]') return `FAIL: the tabs read ${JSON.stringify(tabs)}`;
+  const tabState = (k) => page.click(`[data-style="${k}"]`).then(() => T(page, 900)).then(() => page.evaluate(() => ({
+    n: document.querySelectorAll('.mugs .pm-mug3d').length, angles: [...new Set([...document.querySelectorAll('.mugs .pm-mug3d')].map((e) => e.dataset.angle))],
+    loaded: [...document.querySelectorAll('.mugs .pm-mug3d img')].slice(0, 2).every((i) => i.complete), frames: document.querySelectorAll('.frames button').length,
+    first: (document.querySelector('.mugs .pm-mug3d img') || {}).alt })));
+  const sil = await tabState('silhouette'), orn = await tabState('ornate');
+  if (sil.n !== 12 || JSON.stringify(sil.angles) !== '["0"]' || sil.frames || orn.n !== 12 || JSON.stringify(orn.angles) !== '["0"]' || orn.frames || orn.first !== 'Sugar Skull')
+    return `FAIL: the Silhouette and Ornate tabs show ${JSON.stringify({ sil, orn })}`;
+  const jk = await tabState('joke');
+  if (jk.n !== 6 || JSON.stringify(jk.angles) !== '["-90"]' || jk.frames !== 2) return `FAIL: back on Story / Joke shows ${JSON.stringify(jk)}`;
   await page.click('.mugs .pm-mug3d >> nth=1'); await T(page, 2500);
   const spun = await page.evaluate(() => MUG3D.mounted() && MUG3D.host() === document.querySelectorAll('.mugs .pm-mug3d-stage')[1]);
   if (!spun) return 'FAIL: tapping Sheet Happens did not turn it on the 3D mug';
@@ -107,12 +122,12 @@ scenarios.theMagicMugs = async (page) => {
   // The Trick or Treat frame: the mugs wear it, and the order names it.
   await page.click('[data-frame="one"]'); await T(page, 1500);
   const fr = await page.evaluate(() => ({ files: [...document.querySelectorAll('.mugs .pm-mug3d')].map((e) => e.dataset.mug3d), handOn: document.querySelector('[data-hand="left"]').classList.contains('on'), frameOn: document.querySelector('[data-frame="one"]').classList.contains('on') }));
-  // Every mug that offers the frame wears it; Sugar Skull and the Marigold and Silhouette sets offer none and stay plain.
-  if (!fr.files.every((f) => /^halloween-(sugar-skull|marigold-|silhouette-)/.test(f) || f.endsWith('-one')) || !fr.files.includes('halloween-sugar-skull') || !fr.handOn || !fr.frameOn) return `FAIL: the frame choice shows ${JSON.stringify(fr)}`;
+  // Every story mug comes in the frame and wears it.
+  if (fr.files.length !== 6 || !fr.files.every((f) => f.endsWith('-one')) || !fr.handOn || !fr.frameOn) return `FAIL: the frame choice shows ${JSON.stringify(fr)}`;
   await page.click('[data-order="sheet-happens"]');
   const raw = await checkout(page, bodies), b = lineOf(raw);
   if (b.setKey !== 'halloween' || JSON.stringify(b.mugs) !== '["sheet-happens~one"]' || b.hand !== 'left' || (raw || {}).source !== 'halloween') return `FAIL: checkout got ${JSON.stringify({ set: b.setKey, mugs: b.mugs, hand: b.hand, source: (raw || {}).source })}`;
-  return 'PASS: the demonstration plays on the 3D mug, six steps, Raise the Dead and Sheet Happens at $19.95, a tap turns Sheet Happens, the Trick or Treat frame puts every mug in it, and it checks out as halloween / sheet-happens~one, left-handed, from halloween';
+  return 'PASS: the demonstration plays on the 3D mug, six steps, the Story / Joke tab first with its six at $19.95, Silhouette 12 and Ornate 12 face on with no frame, a tap turns Sheet Happens, the Trick or Treat frame puts every mug in it, and it checks out as halloween / sheet-happens~one, left-handed, from halloween';
 };
 
 scenarios.theBack = async (page) => {

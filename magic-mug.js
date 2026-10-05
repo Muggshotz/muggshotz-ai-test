@@ -31,51 +31,65 @@ const SURPRISE_SETS={
   ]},
   // Raise the Dead (Bud, 28 Sep 2026): one continuous scene, a tree between
   // the setup and the punchline, its edges fading to white as the hot mug is.
-  'halloween':{label:'Halloween',demo:'halloween-boo-ghost-one',designs:[
+  'halloween':{label:'Halloween',demo:'halloween-boo-ghost-one',
+    // THREE KINDS OF HALLOWEEN MUG (Alyx and Bud, 5 Oct 2026: "Some customers
+    // want FUNNY. Some want SIMPLE. Some want BEAUTIFUL."): each design's style
+    // puts it under one tab; any four of them, across the tabs, are the 4-pack.
+    styles:[{key:'joke',label:'Story / Joke'},{key:'silhouette',label:'Silhouette'},{key:'ornate',label:'Ornate'}],
+    packLine:'Build your own haunted 4-pack',
+    designs:[
     // Boo first: it is the mug on the Halloween flyer (Alyx, 3 Oct 2026).
-    {key:'boo',label:'Boo',file:'halloween-boo-ghost',frames:['one']},
-    {key:'raise-the-dead',label:'Raise the Dead',file:'halloween-raise-the-dead',frames:['one']},
+    {key:'boo',label:'Boo',file:'halloween-boo-ghost',frames:['one'],style:'joke'},
+    {key:'raise-the-dead',label:'Raise the Dead',file:'halloween-raise-the-dead',frames:['one'],style:'joke'},
     // Sheet Happens (Bud, 26 Sep 2026; was Boo until 3 Oct, Alyx: the name went
     // to the new cartoon ghost): the ghost's face; turned round, the laundry tag.
-    {key:'sheet-happens',label:'Sheet Happens',file:'halloween-boo',frames:['one']},
+    {key:'sheet-happens',label:'Sheet Happens',file:'halloween-boo',frames:['one'],style:'joke'},
     // Goes Right Through Me (Bud, 5 Oct 2026; coffee cleaned off the bones with
     // Alyx): two scenes on black, Bud's own lettering; framed at 0.87 so the
     // frame covers none of it (frame-mug.py's scale).
-    {key:'goes-right-through-me',label:'Goes Right Through Me',file:'halloween-goes-right-through-me',frames:['one']},
+    {key:'goes-right-through-me',label:'Goes Right Through Me',file:'halloween-goes-right-through-me',frames:['one'],style:'joke'},
     // When Pumpkins Dream (Bud, 5 Oct 2026; Alyx's caption, set by Claude on the
     // plain pumpkin's side, clear of the frame on both hands): the jack-o'-lantern
     // it dreams of is the punchline, no words.
-    {key:'when-pumpkins-dream',label:'When Pumpkins Dream',file:'halloween-when-pumpkins-dream',frames:['one']},
+    {key:'when-pumpkins-dream',label:'When Pumpkins Dream',file:'halloween-when-pumpkins-dream',frames:['one'],style:'joke'},
     // Sugar Skull (Bud, 5 Oct 2026): one picture, no joke, the skull opposite the
     // handle. The left-handed print is the same picture (rolled, the skull would
     // split behind the handle), and no frame: its middle ornaments would cross
     // the skull's brow and chin.
-    {key:'sugar-skull',label:'Sugar Skull',file:'halloween-sugar-skull'},
+    {key:'sugar-skull',label:'Sugar Skull',file:'halloween-sugar-skull',style:'ornate'},
     // The Witching Hour (Bud, 5 Oct 2026): for new parents and everyone who buys
     // for them. Bud's lettering; framed at 0.87 so the frame covers none of it.
-    {key:'witching-hour',label:'The Witching Hour',file:'halloween-witching-hour',frames:['one']},
-    // Two sets of four with Sugar Skull (Bud, 5 Oct 2026). Marigold: a black
+    {key:'witching-hour',label:'The Witching Hour',file:'halloween-witching-hour',frames:['one'],style:'joke'},
+    // Two sets of twelve (Bud, 5 Oct 2026). Ornate, with Sugar Skull: a black
     // raven, a black cat and a carved jack-o'-lantern in Sugar Skull's marigolds
     // and gold. Silhouette: black cut-paper shapes on orange in Bud's own thin
     // border. Each picture is centred and one piece, so the left-handed print is
     // the same picture (rolled, it would split behind the handle) and no Trick or
     // Treat frame (its middle ornaments would cross the subject; Bud framed the
     // silhouettes himself).
-    {key:'marigold-raven',label:'Marigold Raven',file:'halloween-marigold-raven'},
-    {key:'marigold-cat',label:'Marigold Cat',file:'halloween-marigold-cat'},
-    {key:'marigold-jack-o-lantern',label:'Marigold Jack-o’-Lantern',file:'halloween-marigold-jack-o-lantern'},
-    {key:'silhouette-pumpkin',label:'Silhouette Pumpkin',file:'halloween-silhouette-pumpkin'},
-    {key:'silhouette-spider',label:'Silhouette Spider',file:'halloween-silhouette-spider'},
-    {key:'silhouette-cat',label:'Silhouette Cat',file:'halloween-silhouette-cat'},
-    {key:'silhouette-witch',label:'Silhouette Witch',file:'halloween-silhouette-witch'},
-    {key:'silhouette-tree',label:'Silhouette Tree',file:'halloween-silhouette-tree'},
-    {key:'silhouette-skull',label:'Silhouette Skull',file:'halloween-silhouette-skull'},
-    {key:'silhouette-cauldron',label:'Silhouette Cauldron',file:'halloween-silhouette-cauldron'},
-    {key:'silhouette-hand',label:'Silhouette Hand',file:'halloween-silhouette-hand'},
-    {key:'silhouette-raven',label:'Silhouette Raven',file:'halloween-silhouette-raven'},
-    {key:'silhouette-haunted-house',label:'Silhouette Haunted House',file:'halloween-silhouette-haunted-house'},
-    {key:'silhouette-bat',label:'Silhouette Bat',file:'halloween-silhouette-bat'},
-    {key:'silhouette-ghost',label:'Silhouette Ghost',file:'halloween-silhouette-ghost'}
+    {key:'marigold-raven',label:'Ornate Raven',file:'halloween-marigold-raven',style:'ornate'},
+    {key:'marigold-cat',label:'Ornate Cat',file:'halloween-marigold-cat',style:'ornate'},
+    {key:'marigold-jack-o-lantern',label:'Ornate Jack-o’-Lantern',file:'halloween-marigold-jack-o-lantern',style:'ornate'},
+    {key:'marigold-moon-bats',label:'Ornate Moon & Bats',file:'halloween-marigold-moon-bats',style:'ornate'},
+    {key:'marigold-owl',label:'Ornate Owl',file:'halloween-marigold-owl',style:'ornate'},
+    {key:'marigold-hand',label:'Ornate Hand',file:'halloween-marigold-hand',style:'ornate'},
+    {key:'marigold-cauldron',label:'Ornate Cauldron',file:'halloween-marigold-cauldron',style:'ornate'},
+    {key:'marigold-spider',label:'Ornate Spider',file:'halloween-marigold-spider',style:'ornate'},
+    {key:'marigold-haunted-house',label:'Ornate Haunted House',file:'halloween-marigold-haunted-house',style:'ornate'},
+    {key:'marigold-bat',label:'Ornate Bat',file:'halloween-marigold-bat',style:'ornate'},
+    {key:'marigold-ghost',label:'Ornate Ghost',file:'halloween-marigold-ghost',style:'ornate'},
+    {key:'silhouette-pumpkin',label:'Silhouette Pumpkin',file:'halloween-silhouette-pumpkin',style:'silhouette'},
+    {key:'silhouette-spider',label:'Silhouette Spider',file:'halloween-silhouette-spider',style:'silhouette'},
+    {key:'silhouette-cat',label:'Silhouette Cat',file:'halloween-silhouette-cat',style:'silhouette'},
+    {key:'silhouette-witch',label:'Silhouette Witch',file:'halloween-silhouette-witch',style:'silhouette'},
+    {key:'silhouette-tree',label:'Silhouette Tree',file:'halloween-silhouette-tree',style:'silhouette'},
+    {key:'silhouette-skull',label:'Silhouette Skull',file:'halloween-silhouette-skull',style:'silhouette'},
+    {key:'silhouette-cauldron',label:'Silhouette Cauldron',file:'halloween-silhouette-cauldron',style:'silhouette'},
+    {key:'silhouette-hand',label:'Silhouette Hand',file:'halloween-silhouette-hand',style:'silhouette'},
+    {key:'silhouette-raven',label:'Silhouette Raven',file:'halloween-silhouette-raven',style:'silhouette'},
+    {key:'silhouette-haunted-house',label:'Silhouette Haunted House',file:'halloween-silhouette-haunted-house',style:'silhouette'},
+    {key:'silhouette-bat',label:'Silhouette Bat',file:'halloween-silhouette-bat',style:'silhouette'},
+    {key:'silhouette-ghost',label:'Silhouette Ghost',file:'halloween-silhouette-ghost',style:'silhouette'}
   ]}
 };
 function holidayPrice(n){ return n>=4 ? Math.round((SMART_MUG_SET_PRICE+(n-4)*SMART_MUG_EXTRA_PRICE)*100)/100 : Math.round(n*SMART_MUG_PRICE*100)/100; }
@@ -93,6 +107,16 @@ const SET_FRAMES={none:'No frame',one:'One frame',two:'A frame each side'};
 // The frames a design comes in: frames:true is both (the Thanksgiving decals),
 // a list names its own -- the Halloween mugs come in the one Halloween frame
 // (Alyx, 3 Oct 2026; tools/surprise/frame-mug.py builds its files).
+// THE STYLES' TABS. A set with styles shows one style at a time; the first is
+// where the shelf opens (Story / Joke on Halloween: Boo, the flyer's mug, leads).
+function setStyles(set){ return set&&set.styles?set.styles.filter(st=>set.designs.some(d=>d.style===st.key)):[]; }
+function styleDesigns(set,style){ const sts=setStyles(set); if(!sts.length)return set?set.designs:[];
+  const k=sts.some(st=>st.key===style)?style:sts[0].key; return set.designs.filter(d=>d.style===k); }
+// FACE ON (Alyx, 5 Oct 2026): a one-picture design -- the Silhouettes and the
+// Ornate set, their subject in the middle of the print -- starts with it facing
+// you and the handle behind (0, measured); a story mug starts on its setup with
+// the handle on the right (-90), as every holiday mug did.
+function designAngle(d){ return d&&(d.style==='silhouette'||d.style==='ornate')?0:-90; }
 function designFrames(d){ return !d||!d.frames?[]:d.frames===true?['one','two']:d.frames.filter(f=>SET_FRAMES[f]); }
 
 // THE MUG ON THE SHELF TURNS (Alyx, 27 Sep 2026: "the exact same carousel
@@ -121,7 +145,7 @@ const SHELF_MUG_3D={sizeLabel:'11oz',styleName:'Color Pop',colorHex:'#1c1c1c',st
 const SMART_HOW_FILE='proposal';
 let shelfMugLive=null;
 function shelfMugHtml(x,id,i,frame){
-  return '<div class="pm-mug3d" data-mug3d="'+x.file+(frame&&frame!=='none'?'-'+frame:'')+'"'+(i==null?'':' onclick="spinShelfMug(this)"')+'>'
+  return '<div class="pm-mug3d" data-mug3d="'+x.file+(frame&&frame!=='none'?'-'+frame:'')+'" data-angle="'+designAngle(x)+'"'+(i==null?'':' onclick="spinShelfMug(this)"')+'>'
     +'<img'+(id?' id="'+id+'"':'')+' src="art/surprise/mug/'+x.file+'.jpg" width="960" height="720" alt="'+x.label+'"'+(i?' loading="lazy"':'')+'/>'
     +'<div class="pm-mug3d-stage"></div><div class="pm-spin-cue">↻ Click to spin</div></div>';
 }
@@ -131,7 +155,8 @@ function spinShelfMug(el,opts){
   shelfMugLive=el;
   if(!el._spinCue){ el._spinCue=true; el.addEventListener('mug3dspin',e=>el.classList.toggle('spinning',!!e.detail)); }
   const stage=el.querySelector('.pm-mug3d-stage');
-  MUG3D.open(stage,Object.assign({panoramaUrl:'art/surprise/wrap/'+el.dataset.mug3d+'.jpg',panelUrls:[]},opts||SHELF_MUG_3D))
+  const base=el.dataset.angle!=null&&el.dataset.angle!==''?Object.assign({},SHELF_MUG_3D,{startAngle:Number(el.dataset.angle)}):SHELF_MUG_3D;
+  MUG3D.open(stage,Object.assign({panoramaUrl:'art/surprise/wrap/'+el.dataset.mug3d+'.jpg',panelUrls:[]},opts||base))
     // A Back that came while the cup was still being built: it was let go
     // before it existed, so let it go now.
     .then(()=>{ if(shelfMugLive===el)el.classList.add('live'); else if(MUG3D.host()===stage)MUG3D.close(); })
