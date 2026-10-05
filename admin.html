@@ -91,6 +91,15 @@ select{width:100%;background:#0d0d0d;border:1px solid #444;border-radius:8px;pad
 </div>
 
 <div class="card">
+  <h2 class="section-title">👀 Visitors</h2>
+  <div class="sub">People who opened the site: each browser once a page a day. Not you, not robots, not our tests.</div>
+  <div id="visitsStaff" style="font-size:12px;color:#999;line-height:1.6;margin-bottom:.75rem"></div>
+  <button class="btn-full" onclick="loadVisits()">🔄 Refresh the count</button>
+  <div class="result" id="visitsResult"></div>
+  <div id="visitsTable" style="margin-top:.75rem"></div>
+</div>
+
+<div class="card">
   <div class="card-title">🚂 Payment track</div>
   <div class="note" style="margin-top:0;margin-bottom:.75rem">
     Which payment company takes the money. Stripe is the everyday track (the cheaper rate for the
@@ -329,7 +338,9 @@ async function checkPw(){
     try{ localStorage.removeItem(REMEMBER_KEY); }catch(e){}
   }
   document.getElementById('lockScreen').style.display = 'none';
+  markStaff();
   loadLedger();
+  loadVisits();
 }
 
 // On page load, if a password was previously remembered on this
@@ -345,7 +356,9 @@ async function checkPw(){
   if(ok){
     enteredPassword = saved;
     document.getElementById('lockScreen').style.display = 'none';
+    markStaff();
     loadLedger();
+    loadVisits();
   } else {
     try{ localStorage.removeItem(REMEMBER_KEY); }catch(e){}
   }
@@ -916,6 +929,53 @@ async function loadLedger(){
         <div id="codes-${b.id}" style="display:none;margin-top:.6rem;font-family:monospace;font-size:12px;line-height:1.7;color:#bbb"></div>
       </div>`).join('');
   }catch(err){ showResultIn('ledgerResult', 'Ledger failed: ' + err.message, 'error'); }
+}
+
+// ---------------------------------------------------------------------------
+// VISITORS (Alyx, 5 Oct 2026). count-visit.js on the studio, checkout, the
+// start and gift pages and every occasion page sends one note per browser per
+// page per day; this adds the rows up by this browser's own today. Unlocking
+// this page marks the browser as staff, so it never counts itself again.
+// ---------------------------------------------------------------------------
+const VISIT_PAGE_NAMES = { studio: 'Studio', order: 'Checkout', start: 'Start (beta) page', gift: 'Gift page', halloween: 'Halloween page' };
+function markStaff(){
+  try { localStorage.setItem('mz_staff', '1'); } catch (e) {}
+  const el = document.getElementById('visitsStaff');
+  if (el) el.textContent = 'This browser is marked as yours and is never counted. Unlock this page once on each phone and computer you use.';
+}
+function visitDayOffset(days){
+  const d = new Date(); d.setDate(d.getDate() - days);
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+function visitSums(rows){
+  const today = visitDayOffset(0), weekFrom = visitDayOffset(6);
+  const sum = (keep) => rows.filter(keep).reduce((a, r) => ({ v: a.v + r.visits, n: a.n + r.new_visitors }), { v: 0, n: 0 });
+  return { today: sum(r => r.day === today), week: sum(r => r.day >= weekFrom && r.day <= today), all: sum(() => true) };
+}
+async function loadVisits(){
+  const table = document.getElementById('visitsTable');
+  try{
+    const { rows } = await adminPost({ action: 'visits' });
+    document.getElementById('visitsResult').style.display = 'none';
+    if (!rows.length) { table.innerHTML = '<div style="color:#555;font-size:13px">No visits counted yet.</div>'; return; }
+    const cell = (s) => `<td style="padding:.35rem .5rem;text-align:right;white-space:nowrap">${s.v}${s.n ? ` <span style="color:#5ddb7a;font-size:11px">(${s.n} new)</span>` : ''}</td>`;
+    const line = (label, rs, strong) => { const s = visitSums(rs);
+      return `<tr style="border-top:1px solid #2a2a2a${strong ? ';color:#fff;font-weight:600' : ''}"><td style="padding:.35rem .5rem">${label}</td>${cell(s.today)}${cell(s.week)}${cell(s.all)}</tr>`; };
+    const head = `<tr style="color:#888;font-size:11px;text-transform:uppercase"><td style="padding:.35rem .5rem"></td><td style="padding:.35rem .5rem;text-align:right">Today</td><td style="padding:.35rem .5rem;text-align:right">7 days</td><td style="padding:.35rem .5rem;text-align:right">All time</td></tr>`;
+    const pages = [...new Set(rows.map(r => r.page))];
+    const sources = [...new Set(rows.filter(r => r.source).map(r => r.page + '|' + r.source))];
+    const name = (p) => VISIT_PAGE_NAMES[p] || (p.charAt(0).toUpperCase() + p.slice(1) + ' page');
+    const total = visitSums(rows);
+    table.innerHTML =
+      `<div style="font-size:13px;color:#ccc;margin-bottom:.6rem">New people, all time: <b style="color:#5ddb7a">${total.all.n}</b></div>` +
+      `<table style="width:100%;border-collapse:collapse;font-size:13px;color:#ccc">${head}` +
+      line('All pages', rows, true) +
+      pages.map(p => line(name(p), rows.filter(r => r.page === p))).join('') +
+      (sources.length ? `<tr><td colspan="4" style="padding:.9rem .5rem .3rem;color:#ff6a00;font-size:12px;font-weight:600">From a flyer tag (?from=)</td></tr>` +
+        sources.map(k => { const [p, s] = k.split('|'); return line(`${name(p)} · <b>${s}</b>`, rows.filter(r => r.page === p && r.source === s)); }).join('') : '') +
+      `</table>` +
+      `<div style="font-size:11px;color:#777;line-height:1.6;margin-top:.6rem">A visit is one browser on one page on one day; the same person on the studio and then checkout is two. "New" is a browser the site had never seen. The same person on a phone and a laptop counts as two.</div>`;
+  }catch(err){ showResultIn('visitsResult', err.message, 'error'); table.innerHTML = ''; }
 }
 
 function toggleCodes(betaId){

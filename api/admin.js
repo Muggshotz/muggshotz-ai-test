@@ -786,6 +786,23 @@ async function buildLedger() {
   };
 }
 
+// THE VISITOR COUNT (Alyx, 5 Oct 2026): every day/page/source row of
+// page_visits (supabase/page-visits.sql), newest first; admin.html adds them
+// up by its own today. Rows are small (a day x a page x a tag), so a year is
+// a few thousand at most.
+async function handleVisits(req, res) {
+  const { password } = req.body || {};
+  if (password !== ADMIN_PASSWORD) return res.status(403).json({ error: 'Unauthorized.' });
+  try {
+    const rows = await sb('GET', 'page_visits?select=day,page,source,visits,new_visitors&order=day.desc&limit=20000');
+    return res.status(200).json({ rows });
+  } catch (err) {
+    if (isMissingTable(err)) return res.status(409).json({ error: 'The page_visits table does not exist yet — run supabase/page-visits.sql in the Supabase SQL editor first.' });
+    console.error('Admin visits error:', err.message, err.detail || '');
+    return res.status(500).json({ error: err.message });
+  }
+}
+
 async function handleLedger(req, res) {
   const { password } = req.body || {};
   if (password !== ADMIN_PASSWORD) return res.status(403).json({ error: 'Unauthorized.' });
@@ -1160,6 +1177,7 @@ export default async function handler(req, res) {
   if (action === 'onboard') return handleOnboard(req, res);
   if (action === 'betas') return handleBetas(req, res);
   if (action === 'ledger') return handleLedger(req, res);
+  if (action === 'visits') return handleVisits(req, res);
   if (action === 'payout') return handlePayout(req, res);
   if (action === 'campaign-create') return handleCampaignCreate(req, res);
   if (action === 'maintenance-set') return handleMaintenanceSet(req, res);

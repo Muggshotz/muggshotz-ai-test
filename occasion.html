@@ -108,6 +108,7 @@ html.order-page-open{overflow:hidden}
 </style>
 <script src="mug3d.js"></script>
 <script src="magic-mug.js"></script>
+<script src="count-visit.js"></script>
 </head>
 <body>
 <div id="page"><div id="occRoot"><div class="missing">Loading…</div></div></div>
@@ -428,6 +429,7 @@ if (!name) { root.innerHTML = '<div class="missing">This page needs an occasion,
 else loadOccasion(name).then(o => {
   O = o; document.title = o.title || 'Muggshotz';
   occasionFrom(o.key);   // the flyer's ?from=, kept on arrival, not only at an order
+  if (window.mzCountVisit) mzCountVisit(o.key);   // the visitor count (count-visit.js)
   const c = o.colors || {}; for (const k of Object.keys(c)) document.documentElement.style.setProperty('--' + k, c[k]);
   try { history.replaceState({ occ: view }, '', location.href); } catch (e) {}
   render(null);
