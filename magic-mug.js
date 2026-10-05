@@ -37,7 +37,11 @@ const SURPRISE_SETS={
     {key:'raise-the-dead',label:'Raise the Dead',file:'halloween-raise-the-dead',frames:['one']},
     // Sheet Happens (Bud, 26 Sep 2026; was Boo until 3 Oct, Alyx: the name went
     // to the new cartoon ghost): the ghost's face; turned round, the laundry tag.
-    {key:'sheet-happens',label:'Sheet Happens',file:'halloween-boo',frames:['one']}
+    {key:'sheet-happens',label:'Sheet Happens',file:'halloween-boo',frames:['one']},
+    // Goes Right Through Me (Bud, 5 Oct 2026; coffee cleaned off the bones with
+    // Alyx): two scenes on black, Bud's own lettering; framed at 0.87 so the
+    // frame covers none of it (frame-mug.py's scale).
+    {key:'goes-right-through-me',label:'Goes Right Through Me',file:'halloween-goes-right-through-me',frames:['one']}
   ]}
 };
 function holidayPrice(n){ return n>=4 ? Math.round((SMART_MUG_SET_PRICE+(n-4)*SMART_MUG_EXTRA_PRICE)*100)/100 : Math.round(n*SMART_MUG_PRICE*100)/100; }
