@@ -156,6 +156,21 @@ asks.
 If he restricts pushing, that holds until he lifts it in words. The git hook
 nagging about uncommitted changes does not override him.
 
+## Never go quiet on him
+
+Alyx, 5 Oct 2026, after pictures he sent twice were lost: *"You need to tell me
+when you're in the middle of something and when you're not ... I can't imagine
+a single good reason why that wasn't the normal operating function anyway."*
+
+- **Long work runs in the background.** A test run, a build, anything over a
+  minute: start it in the background and end the turn. Never sit in a blocking
+  wait. While you wait, his messages arrive inside your step instead of as a new
+  turn, and a picture sent that way is shown but never saved as a file.
+- **Say when it starts and when it ends.** One line when it starts: what is
+  running and roughly how long. One line with the result when it finishes.
+- **Say when you are free.** If he asks, answer exactly what is running, or
+  that nothing is.
+
 ## Handing him things
 
 **Anything he has to type, give him ready to paste** — a fenced block in chat,
