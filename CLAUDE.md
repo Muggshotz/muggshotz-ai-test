@@ -171,6 +171,19 @@ a single good reason why that wasn't the normal operating function anyway."*
 - **Say when you are free.** If he asks, answer exactly what is running, or
   that nothing is.
 
+## Pushed is not live
+
+Alyx, 6 Oct 2026, after refreshing the admin page again and again for a fix I
+had called live: *"what sense does it make for you to tell me that it was live
+and you haven't even made it live yet"*. It was on GitHub; Vercel never built it.
+
+- **"Live" means I loaded the live site (muggshotz.com) and saw the change in
+  it.** Not "pushed", not "the commit is on main". Until then say "pushed,
+  waiting for Vercel".
+- **After every push he will look at, watch the live site** (a background
+  `curl` for a string the change adds) and tell him only when it is there. If
+  Vercel shows no build for the commit within a couple of minutes, say so.
+
 ## Handing him things
 
 **Anything he has to type, give him ready to paste** — a fenced block in chat,
