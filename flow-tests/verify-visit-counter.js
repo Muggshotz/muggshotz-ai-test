@@ -106,6 +106,7 @@ async function theAdminPanel() {
       staff: localStorage.getItem('mz_staff'),
       rows: [...document.querySelectorAll('#visitsTable tr')].map((tr) => [...tr.children].map((td) => td.textContent.trim().replace(/\s+/g, ' '))),
       newAll: (document.querySelector('#visitsTable b') || {}).textContent,
+      checked: (document.getElementById('visitsChecked') || {}).textContent || '',
     }));
     if (got.staff !== '1') return 'FAIL: unlocking did not mark this browser as staff';
     const row = (label) => (got.rows.find((r) => r[0] === label) || []).slice(1).join(' | ');
@@ -119,7 +120,8 @@ async function theAdminPanel() {
     };
     for (const [label, w] of Object.entries(want)) if (row(label) !== w) return `FAIL: "${label}" reads "${row(label)}", not "${w}" (${JSON.stringify(got.rows)})`;
     if (got.newAll !== '7') return `FAIL: new people all time reads ${got.newAll}`;
-    return 'PASS: unlocking marks the browser as staff; the Visitors panel adds up today, 7 days and all time by page and by flyer tag';
+    if (!/^Checked at \d{1,2}:\d{2}:\d{2}/.test(got.checked)) return `FAIL: the refresh shows no time it was checked (${JSON.stringify(got.checked)})`;
+    return 'PASS: unlocking marks the browser as staff; the Visitors panel adds up today, 7 days and all time by page and by flyer tag, and says when it was checked';
   } finally { await browser.close(); }
 }
 
