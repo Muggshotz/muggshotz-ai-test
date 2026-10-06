@@ -291,6 +291,35 @@ Pitch In. The grid is three across today (needles-studio.html, #productCard
   cards carry no amount; the number is laid on). Muggsy joins the moment
   Bud's card arrives without the "$50" on it (BRIEF-GIFT-CARDS.md).
 
+## The flyer's "Got a better idea?" box and consignment — decided, not built
+
+**The box** (Alyx, 6 Oct 2026). The last tile of each product section on a
+flyer's page reads "Got a better idea?" / "Tap here to enter your idea". Their
+idea comes back painted as that section's product only (a mat on the mats,
+a Magic Mug on the Magic Mugs), in the tile, with a choice to keep it (order)
+or try another. It is a separate little shop as far as the visitor knows:
+never a door into the main generator, and nothing else offered after it for
+now. Every flyer gets its own. Two free tries. Waiting on Alyx: whether the
+free tries need an email address, and the daily ceiling on free pictures.
+
+**Consignment** (Alyx, 6 Oct 2026). A visitor who loves their idea can submit
+it, free, for a consignment spot. Alyx reviews; if it is chosen, they earn
+**25% of the net profit** of every sale of it:
+- **A flyer's design** earns from the day it goes on sale and stops one year
+  after the day after the flyer's event. Every Halloween 2026 design stops on
+  1 Nov 2027, however late it came in, so a late idea still gets the whole of
+  next Halloween. The same end date for every design from one flyer.
+- **A design not tied to a flyer** earns for one year from the day it goes
+  into commission.
+
+Still to settle: what comes out before "net profit" (Printify's cost and
+shipping, surely; processor fees? flyer costs?); the submission's rights
+checkbox (the wording looked over before it goes live); how they are paid
+(email at least, then a payout method; tax details over $600 a year in the
+US); whether the flyer program's commission ledger can carry it. First build
+when Alyx says so: submission and the review queue, every order recording
+which consigned design it was. Payouts can be worked out from those records later.
+
 ## Waiting on Alyx or Bud
 
 - The bug-report email address (Alyx is making a dedicated one).
