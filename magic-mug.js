@@ -60,6 +60,16 @@ const SURPRISE_SETS={
     // The Witching Hour (Bud, 5 Oct 2026): for new parents and everyone who buys
     // for them. Bud's lettering; framed at 0.87 so the frame covers none of it.
     {key:'witching-hour',label:'The Witching Hour',file:'halloween-witching-hour',frames:['one'],style:'joke'},
+    // Six more (Alyx and Bud, 5-6 Oct 2026), each with a buyer: vampires who
+    // changed their type, deadlines, retail's skeleton crew, the ghosted date,
+    // the meeting that could have been an email, sleep when I'm dead. Bud's
+    // lettering; framed at the scale that leaves every letter clear.
+    {key:'whats-your-type',label:'What\'s Your Type?',file:'halloween-whats-your-type',frames:['one'],style:'joke'},
+    {key:'deadlines',label:'Deadlines',file:'halloween-deadlines',frames:['one'],style:'joke'},
+    {key:'skeleton-crew',label:'Skeleton Crew',file:'halloween-skeleton-crew',frames:['one'],style:'joke'},
+    {key:'ghosted',label:'Ghosted',file:'halloween-ghosted',frames:['one'],style:'joke'},
+    {key:'the-email',label:'Could\'ve Been an Email',file:'halloween-the-email',frames:['one'],style:'joke'},
+    {key:'sleep-when-dead',label:'I\'ll Sleep When I\'m Dead',file:'halloween-sleep-when-dead',frames:['one'],style:'joke'},
     // Two sets of twelve (Bud, 5 Oct 2026). Ornate, with Sugar Skull: a black
     // raven, a black cat and a carved jack-o'-lantern in Sugar Skull's marigolds
     // and gold. Silhouette: black cut-paper shapes on orange in Bud's own thin

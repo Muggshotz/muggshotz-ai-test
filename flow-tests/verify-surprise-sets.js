@@ -95,6 +95,9 @@ scenarios.theThreeListsAndTheFiles = async (page) => {
     for (const f of fs) { const ok = await new Promise((r) => { const im = new Image(); im.onload = () => r(im.naturalWidth === 2475 && im.naturalHeight === 1155); im.onerror = () => r(false); im.src = '/art/surprise/' + f; }); if (!ok) out.push(f); }
     return out; }, framed);
   if (missing.length) bad.push(`framed prints missing or not 2475 x 1155: ${missing.join(', ')}`);
+  // A one-picture design (the Silhouettes, the Ornate set) has no punchline half:
+  // its tile is cut from the print's centre, where the subject is.
+  const centred = new Set(Object.values(studioSets).flatMap((s) => s.designs.filter((d) => d.style === 'silhouette' || d.style === 'ornate').map((d) => d.file)));
   const files = live.flatMap(([, s]) => s.designs.map((d) => d.file));
   const measured = await page.evaluate(async (files) => {
     const load = (u) => new Promise((r) => { const im = new Image(); im.onload = () => r(im); im.onerror = () => r(null); im.src = u; });
@@ -120,7 +123,7 @@ scenarios.theThreeListsAndTheFiles = async (page) => {
   for (const r of measured) {
     if (r.print !== '2475x1155' || r.left !== '2475x1155') bad.push(`${r.f}: prints ${r.print} / ${r.left}`);
     if (!r.coldhot || !r.tile || r.show !== '1050x490') bad.push(`${r.f}: COLD -> HOT ${r.coldhot}, tile ${r.tile}, shelf picture ${r.show}`);
-    if (!r.punchlineLeft) bad.push(`${r.f}: the right-handed print's punchline is not on its left half`);
+    if (!r.punchlineLeft && !centred.has(r.f)) bad.push(`${r.f}: the right-handed print's punchline is not on its left half`);
   }
   return bad.length ? `FAIL: ${bad.join('; ')}` : `PASS: ${live.length} holiday(s), the same mugs on the server, the studio and the order page, priced as the catalog ($${single} one, $${price} four, $${extra} each more); ${files.length} mugs each with both prints at 2475 x 1155, COLD -> HOT, shelf picture and tile, punchline on the left`;
 };
