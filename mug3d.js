@@ -449,12 +449,23 @@ const MUG3D = (function(){
         // ring (0.45), then a clear blue-tinted lid with a raised rim, a black
         // slide latch at the front and a clear tab each side of it, and a clear
         // straw standing 1.35 above. The body and its band below are untouched.
-        { mat:'brushed', pts:()=>[[1.95,10.0],[1.97,10.03],[1.97,10.42],[1.95,10.45],[1.85,10.45]] },
-        { mat:'lidBlue', pts:()=>[[0,10.45],[1.96,10.45],[1.98,10.52],[1.97,10.70],[1.90,10.80],[1.60,10.86],[0.6,10.90],[0,10.90]] }
+        // Gently rounded, as a pressed steel ring is: a straight band seen level
+        // mirrors only the studio's grey horizon; rounded, its top catches the
+        // bright sky and its bottom the dark floor, the light and dark bands of
+        // the photo.
+        { mat:'brushed', pts:()=>{ const p=[[1.95,10.0]]; for(let i=0;i<=16;i++){ const t=i/16; p.push([1.95+0.035*Math.sin(Math.PI*t),10.0+0.45*t]); } p.push([1.85,10.45]); return p; } },
+        // The lid sits down in the ring: a thick blue rim (it is the rim's
+        // thickness that reads blue in the photo), then a flat clear top a little
+        // below the rim's crest.
+        { mat:'lidBlue', pts:()=>[[1.84,10.42],[1.93,10.45],[1.95,10.50],[1.95,10.66],[1.92,10.70],[0,10.70]] }
       ],
-      // The latch a quarter turn from the handle: face it, and the handle is on
-      // your right, as in Printify's side photo.
-      lidBits:{ angle:-Math.PI/2, y:10.90, latch:{ w:1.25, h:0.26, d:0.70, z:1.05 }, tabs:{ x:0.80, span:0.85, rise:0.45, tube:0.10 } },
+      // THE LID'S TOP AND THE RING ARE BUD'S PICTURES (6 Oct 2026), copied off
+      // Printify's photos: the lid seen straight down (art/models/40oz-lid-top,
+      // the latch at its bottom edge) laid on the flat top, and a strip of the
+      // polished ring wrapped round it. The latch a quarter turn from the handle:
+      // face it, and the handle is on your right, as in Printify's side photo.
+      lidTop:{ url:'art/models/40oz-lid-top.webp', y:10.705, r:1.95, angle:Math.PI/2 },
+      ringMap:'art/models/40oz-steel.jpg',
     },
     // THE BEER STEIN (22 Sep 2026, Alyx: "Why does a Stein not have the 3D
     // model?"). Blueprint 1088, not a travel cup, but the same engine: a
@@ -549,9 +560,9 @@ const MUG3D = (function(){
     const steel=new THREE.MeshStandardMaterial({color:0xc9ced4, metalness:0.92, roughness:0.32, envMapIntensity:1.1, side:THREE.DoubleSide});
     const lid=new THREE.MeshPhysicalMaterial({color:0xdfe7f1, transparent:true, opacity:0.55, roughness:0.12, metalness:0.0, clearcoat:0.6, envMapIntensity:1.0, side:THREE.DoubleSide, depthWrite:false});
     const cap=new THREE.MeshPhysicalMaterial({color:0x0a0b0d, roughness:0.6, metalness:0.0, clearcoat:0.1, envMapIntensity:0.35, side:THREE.DoubleSide});
-    const lidBlue=new THREE.MeshPhysicalMaterial({color:0x4a6fe8, transparent:true, opacity:0.85, roughness:0.15, metalness:0.0, clearcoat:0.5, envMapIntensity:0.9, side:THREE.DoubleSide, depthWrite:false});
+    const lidBlue=new THREE.MeshPhysicalMaterial({color:0x2f52c8, transparent:true, opacity:0.62, roughness:0.15, metalness:0.0, clearcoat:0.5, envMapIntensity:0.9, side:THREE.DoubleSide, depthWrite:false});
     // Brushed steel, darker and duller than the polished rim, as the Vacuum's ring reads in Printify's photo.
-    const brushed=new THREE.MeshStandardMaterial({color:0xc2c8ce, metalness:0.9, roughness:0.28, envMapIntensity:1.0, side:THREE.DoubleSide});
+    const brushed=new THREE.MeshStandardMaterial({color:0xeef1f4, metalness:1.0, roughness:0.1, envMapIntensity:1.0, side:THREE.DoubleSide});
     // The stein's gold lines.
     const gold=new THREE.MeshStandardMaterial({color:new THREE.Color('#d4a73c').convertSRGBToLinear(), metalness:1.0, roughness:0.28, envMapIntensity:1.2, side:THREE.DoubleSide});
     // THE CUP'S OWN COLOUR (Alyx, v101). White is the glazed white the mug
@@ -617,17 +628,47 @@ const MUG3D = (function(){
         g.add(beads);
       });
     }
+    if(T.lidTop||T.ringMap){
+      const load=(url,fn)=>new THREE.TextureLoader().load(url,t=>{ t.encoding=THREE.sRGBEncoding; t.anisotropy=8; fn&&fn(t); t.needsUpdate=true; needsFrame=true; });
+      if(T.ringMap){
+        // Bud's strip carries its own light and shade: shown as painted, not lit again.
+        const ring=new THREE.MeshBasicMaterial({map:load(T.ringMap), toneMapped:false, side:THREE.DoubleSide});
+        g.children.forEach(m=>{ if(m.material===tm.brushed)m.material=ring; });
+        tm.brushed.dispose(); tm.brushed=ring;
+      }
+      if(T.lidTop){
+        const L=T.lidTop, geo=new THREE.CircleGeometry(L.r,96);
+        geo.rotateX(-Math.PI/2);
+        // As painted: the picture has its own light, so it is not lit (or tone-mapped) again.
+        const mat=new THREE.MeshBasicMaterial({map:load(L.url), transparent:true, toneMapped:false});
+        const top=new THREE.Mesh(geo,mat);
+        top.position.y=L.y; top.rotation.y=L.angle; top.renderOrder=3; top.receiveShadow=true;
+        g.add(top);
+      }
+    }
     if(T.lidBits){
       // The lid's latch and tabs, built facing +z and turned to their angle.
       const lb=T.lidBits, grp=new THREE.Group();
-      const L=lb.latch, latch=new THREE.Mesh(new THREE.BoxGeometry(L.w,L.h,L.d),tm.cap);
-      latch.position.set(0,lb.y+L.h/2-0.02,L.z); latch.castShadow=true; grp.add(latch);
+      // The latch: a black slab with rounded corners, lying on the lid and
+      // bending down over its front edge, as the slide on the real cup does.
+      const L=lb.latch, ls=new THREE.Shape(), r=0.12, hw=L.w/2, hd=L.d/2;
+      ls.moveTo(-hw+r,-hd); ls.lineTo(hw-r,-hd); ls.quadraticCurveTo(hw,-hd,hw,-hd+r); ls.lineTo(hw,hd-r); ls.quadraticCurveTo(hw,hd,hw-r,hd);
+      ls.lineTo(-hw+r,hd); ls.quadraticCurveTo(-hw,hd,-hw,hd-r); ls.lineTo(-hw,-hd+r); ls.quadraticCurveTo(-hw,-hd,-hw+r,-hd);
+      const lg=new THREE.ExtrudeGeometry(ls,{depth:L.h,bevelEnabled:true,bevelThickness:0.04,bevelSize:0.04,bevelSegments:3,curveSegments:8});
+      lg.rotateX(-Math.PI/2); lg.computeVertexNormals();
+      const latch=new THREE.Mesh(lg,tm.cap);
+      latch.position.set(0,lb.y,L.z-hd*0.15); latch.rotation.x=0.12; latch.castShadow=true; grp.add(latch);
+      // The two tabs: tall clear arches either side of the latch, rising from
+      // near the front edge and coming down toward the middle.
       const tb=lb.tabs;
       [-1,1].forEach(sx=>{
-        const arc=new THREE.Mesh(new THREE.TorusGeometry(tb.span,tb.tube,8,40,Math.PI),tm.lidBlue);
+        const arc=new THREE.Mesh(new THREE.TorusGeometry(tb.span,tb.tube,10,40,Math.PI),tm.lidBlue);
         arc.rotation.y=Math.PI/2; arc.scale.set(1,tb.rise/tb.span,1);
-        arc.position.set(sx*tb.x,lb.y-0.02,0); arc.renderOrder=2; grp.add(arc);
+        arc.position.set(sx*tb.x,lb.y,tb.z-tb.span); arc.renderOrder=2; grp.add(arc);
       });
+      // The straw's white grommet.
+      const grom=new THREE.Mesh(new THREE.CylinderGeometry(0.24,0.26,0.1,24),tm.body);
+      grom.position.set(0,lb.y+0.05,0); grp.add(grom);
       grp.rotation.y=lb.angle;
       g.add(grp);
     }
