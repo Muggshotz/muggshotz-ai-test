@@ -114,20 +114,19 @@ scenarios.theMagicMugs = async (page) => {
   if (sil.n !== 12 || JSON.stringify(sil.angles) !== '["0"]' || sil.frames || orn.n !== 12 || JSON.stringify(orn.angles) !== '["0"]' || orn.frames || orn.first !== 'Sugar Skull')
     return `FAIL: the Silhouette and Ornate tabs show ${JSON.stringify({ sil, orn })}`;
   const jk = await tabState('joke');
-  if (jk.n !== 12 || JSON.stringify(jk.angles) !== '["-90"]' || jk.frames !== 2) return `FAIL: back on Story / Joke shows ${JSON.stringify(jk)}`;
+  if (jk.n !== 12 || JSON.stringify(jk.angles) !== '["-90"]' || jk.frames) return `FAIL: back on Story / Joke shows ${JSON.stringify(jk)}`;
   await page.click('.mugs .pm-mug3d >> nth=1'); await T(page, 2500);
   const spun = await page.evaluate(() => MUG3D.mounted() && MUG3D.host() === document.querySelectorAll('.mugs .pm-mug3d-stage')[1]);
   if (!spun) return 'FAIL: tapping Sheet Happens did not turn it on the 3D mug';
   await page.click('[data-hand="left"]');
-  // The Trick or Treat frame: the mugs wear it, and the order names it.
-  await page.click('[data-frame="one"]'); await T(page, 1500);
-  const fr = await page.evaluate(() => ({ files: [...document.querySelectorAll('.mugs .pm-mug3d')].map((e) => e.dataset.mug3d), handOn: document.querySelector('[data-hand="left"]').classList.contains('on'), frameOn: document.querySelector('[data-frame="one"]').classList.contains('on') }));
-  // Every story mug comes in the frame and wears it.
-  if (fr.files.length !== 12 || !fr.files.every((f) => f.endsWith('-one')) || !fr.handOn || !fr.frameOn) return `FAIL: the frame choice shows ${JSON.stringify(fr)}`;
+  // ALWAYS FRAMED (Alyx, 6 Oct 2026): every story mug shows its Trick or Treat
+  // framed file, the still and the turning mug alike, with no frame choice.
+  const fr = await page.evaluate(() => ({ files: [...document.querySelectorAll('.mugs .pm-mug3d')].map((e) => e.dataset.mug3d), stills: [...document.querySelectorAll('.mugs .pm-mug3d img')].map((i) => i.getAttribute('src')), handOn: document.querySelector('[data-hand="left"]').classList.contains('on') }));
+  if (fr.files.length !== 12 || !fr.files.every((f) => f.endsWith('-one')) || !fr.stills.every((u) => /-one\.jpg$/.test(u)) || !fr.handOn) return `FAIL: the story mugs are not all framed ${JSON.stringify(fr)}`;
   await page.click('[data-order="sheet-happens"]');
   const raw = await checkout(page, bodies), b = lineOf(raw);
-  if (b.setKey !== 'halloween' || JSON.stringify(b.mugs) !== '["sheet-happens~one"]' || b.hand !== 'left' || (raw || {}).source !== 'halloween') return `FAIL: checkout got ${JSON.stringify({ set: b.setKey, mugs: b.mugs, hand: b.hand, source: (raw || {}).source })}`;
-  return 'PASS: the demonstration plays on the 3D mug, six steps, the Story / Joke tab first with its twelve at $19.95, Silhouette 12 and Ornate 12 face on with no frame, a tap turns Sheet Happens, the Trick or Treat frame puts every mug in it, and it checks out as halloween / sheet-happens~one, left-handed, from halloween';
+  if (b.setKey !== 'halloween' || JSON.stringify(b.mugs) !== '["sheet-happens"]' || b.hand !== 'left' || (raw || {}).source !== 'halloween') return `FAIL: checkout got ${JSON.stringify({ set: b.setKey, mugs: b.mugs, hand: b.hand, source: (raw || {}).source })}`;
+  return 'PASS: the demonstration plays on the 3D mug, six steps, the Story / Joke tab first with its twelve at $19.95, Silhouette 12 and Ornate 12 face on with no frame, a tap turns Sheet Happens, every story mug shows framed with no frame choice, and it checks out as halloween / sheet-happens (framed), left-handed, from halloween';
 };
 
 // THE HAUNTED 4-PACK (Alyx and Bud, 5 Oct 2026): any four from any tabs, in a

@@ -31,6 +31,10 @@ const SURPRISE_SETS={
   ]},
   // Raise the Dead (Bud, 28 Sep 2026): one continuous scene, a tree between
   // the setup and the punchline, its edges fading to white as the hot mug is.
+  // THE STORY / JOKE MUGS ARE ALWAYS FRAMED (Alyx, 6 Oct 2026: "They should all
+  // have frames ... we're not supposed to be presenting these to the customer
+  // unfinished"): each one's file is its Trick or Treat framed print, so every
+  // still, turning mug, heat-up, tray and print shows it framed; no frame choice.
   'halloween':{label:'Halloween',demo:'halloween-boo-ghost-one',
     // THREE KINDS OF HALLOWEEN MUG (Alyx and Bud, 5 Oct 2026: "Some customers
     // want FUNNY. Some want SIMPLE. Some want BEAUTIFUL."): each design's style
@@ -39,19 +43,19 @@ const SURPRISE_SETS={
     packLine:'Build your own haunted 4-pack',
     designs:[
     // Boo first: it is the mug on the Halloween flyer (Alyx, 3 Oct 2026).
-    {key:'boo',label:'Boo',file:'halloween-boo-ghost',frames:['one'],style:'joke'},
-    {key:'raise-the-dead',label:'Raise the Dead',file:'halloween-raise-the-dead',frames:['one'],style:'joke'},
+    {key:'boo',label:'Boo',file:'halloween-boo-ghost-one',style:'joke'},
+    {key:'raise-the-dead',label:'Raise the Dead',file:'halloween-raise-the-dead-one',style:'joke'},
     // Sheet Happens (Bud, 26 Sep 2026; was Boo until 3 Oct, Alyx: the name went
     // to the new cartoon ghost): the ghost's face; turned round, the laundry tag.
-    {key:'sheet-happens',label:'Sheet Happens',file:'halloween-boo',frames:['one'],style:'joke'},
+    {key:'sheet-happens',label:'Sheet Happens',file:'halloween-boo-one',style:'joke'},
     // Goes Right Through Me (Bud, 5 Oct 2026; coffee cleaned off the bones with
     // Alyx): two scenes on black, Bud's own lettering; framed at 0.87 so the
     // frame covers none of it (frame-mug.py's scale).
-    {key:'goes-right-through-me',label:'Goes Right Through Me',file:'halloween-goes-right-through-me',frames:['one'],style:'joke'},
+    {key:'goes-right-through-me',label:'Goes Right Through Me',file:'halloween-goes-right-through-me-one',style:'joke'},
     // When Pumpkins Dream (Bud, 5 Oct 2026; Alyx's caption, set by Claude on the
     // plain pumpkin's side, clear of the frame on both hands): the jack-o'-lantern
     // it dreams of is the punchline, no words.
-    {key:'when-pumpkins-dream',label:'When Pumpkins Dream',file:'halloween-when-pumpkins-dream',frames:['one'],style:'joke'},
+    {key:'when-pumpkins-dream',label:'When Pumpkins Dream',file:'halloween-when-pumpkins-dream-one',style:'joke'},
     // Sugar Skull (Bud, 5 Oct 2026): one picture, no joke, the skull opposite the
     // handle. The left-handed print is the same picture (rolled, the skull would
     // split behind the handle), and no frame: its middle ornaments would cross
@@ -59,17 +63,17 @@ const SURPRISE_SETS={
     {key:'sugar-skull',label:'Sugar Skull',file:'halloween-sugar-skull',style:'ornate'},
     // The Witching Hour (Bud, 5 Oct 2026): for new parents and everyone who buys
     // for them. Bud's lettering; framed at 0.87 so the frame covers none of it.
-    {key:'witching-hour',label:'The Witching Hour',file:'halloween-witching-hour',frames:['one'],style:'joke'},
+    {key:'witching-hour',label:'The Witching Hour',file:'halloween-witching-hour-one',style:'joke'},
     // Six more (Alyx and Bud, 5-6 Oct 2026), each with a buyer: vampires who
     // changed their type, deadlines, retail's skeleton crew, the ghosted date,
     // the meeting that could have been an email, sleep when I'm dead. Bud's
     // lettering; framed at the scale that leaves every letter clear.
-    {key:'whats-your-type',label:'What\'s Your Type?',file:'halloween-whats-your-type',frames:['one'],style:'joke'},
-    {key:'deadlines',label:'Deadlines',file:'halloween-deadlines',frames:['one'],style:'joke'},
-    {key:'skeleton-crew',label:'Skeleton Crew',file:'halloween-skeleton-crew',frames:['one'],style:'joke'},
-    {key:'ghosted',label:'Ghosted',file:'halloween-ghosted',frames:['one'],style:'joke'},
-    {key:'the-email',label:'Could\'ve Been an Email',file:'halloween-the-email',frames:['one'],style:'joke'},
-    {key:'sleep-when-dead',label:'I\'ll Sleep When I\'m Dead',file:'halloween-sleep-when-dead',frames:['one'],style:'joke'},
+    {key:'whats-your-type',label:'What\'s Your Type?',file:'halloween-whats-your-type-one',style:'joke'},
+    {key:'deadlines',label:'Deadlines',file:'halloween-deadlines-one',style:'joke'},
+    {key:'skeleton-crew',label:'Skeleton Crew',file:'halloween-skeleton-crew-one',style:'joke'},
+    {key:'ghosted',label:'Ghosted',file:'halloween-ghosted-one',style:'joke'},
+    {key:'the-email',label:'Could\'ve Been an Email',file:'halloween-the-email-one',style:'joke'},
+    {key:'sleep-when-dead',label:'I\'ll Sleep When I\'m Dead',file:'halloween-sleep-when-dead-one',style:'joke'},
     // Two sets of twelve (Bud, 5 Oct 2026). Ornate, with Sugar Skull: a black
     // raven, a black cat and a carved jack-o'-lantern in Sugar Skull's marigolds
     // and gold. Silhouette: black cut-paper shapes on orange in Bud's own thin
@@ -107,7 +111,7 @@ function holidayPrice(n){ return n>=4 ? Math.round((SMART_MUG_SET_PRICE+(n-4)*SM
 // The print files of the mugs chosen (keys), for the order page's pictures.
 function setPrintUrls(key,hand,mugs){
   const set=SURPRISE_SETS[key]; if(!set)return null;
-  return mugs.map(k=>{ const [b,f]=String(k).split('~'), d=set.designs.find(x=>x.key===b); return d&&{file:d.file+(f?'-'+f:'')}; }).filter(Boolean)
+  return mugs.map(k=>{ const [b,f]=String(k).split('~'), d=set.designs.find(x=>x.key===b); return d&&{file:d.file+(f&&!d.file.endsWith('-'+f)?'-'+f:'')}; }).filter(Boolean)
     .map(d=>location.origin+'/art/surprise/'+d.file+'-print'+(hand==='left'?'-left':'')+'.png');
 }
 // A holiday mug's frame, picked on the shelf like a prop (Alyx, 29 Sep 2026),
