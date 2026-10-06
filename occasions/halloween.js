@@ -61,7 +61,7 @@ window.OCCASION = {
       { key: "witch-puddle", label: "Witch Puddle" },
       { key: "three-black-cats", label: "Three Black Cats" },
       { key: "skeleton-gate", label: "Skeleton Gate" },
-      { key: "pumpkin-cats", label: "Pumpkin Cats" },
+      { key: "take-one", label: "Take One" },  // in Pumpkin Cats' place (Alyx, 6 Oct 2026)
       { key: "ghost-letters", label: "Ghost Letters" },
       { key: "zombie-sign", label: "Zombie Sign" },
       { key: "spider-web", label: "Spider Web" },
