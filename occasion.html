@@ -258,7 +258,7 @@ function magicHtml() {
     + '<h2 id="viewTitle">' + esc(M.title) + '</h2><p class="line">' + esc(M.line) + ' Watch it heat up:</p>'
     + '<div id="smartHowReveal" onclick="occPlayDemo()"><img src="art/surprise/mug/' + demo + '.jpg" alt=""/><div id="smartHowRevealStage" class="pm-mug3d-stage"></div></div>'
     + '<div id="smartHowRevealWords"></div><button class="replay" onclick="occPlayDemo()">▶ Play it again</button>'
-    + '<div style="margin-top:14px">' + magicMugStepsHtml('other') + '</div>'
+    + '<div style="margin-top:14px">' + magicMugStepsHtml('other', false, set.how) + '</div>'
     + '<h2 style="margin-top:22px">Pick yours</h2>'
     + (set.packLine ? '<p class="packhead" id="packHead"><b>' + esc(set.packLine).replace('4-', '4\u2011') + '</b>Any 4 ' + esc(set.label) + ' Magic Mugs · ' + $(SMART_MUG_SET_PRICE) + '</p>' : '')
     + '<p class="line">Which hand do they hold a mug in? We print it so the setup faces them.</p>'

@@ -1,5 +1,5 @@
 <!-- ============================================================
-     VERSION: V453
+     VERSION: V454
      ============================================================
      THE ONE LINE THAT SAYS WHICH BUILD YOU ARE LOOKING AT.
 
@@ -4941,7 +4941,7 @@ function toggleWorkingImage(){
 // Two copies of a number is exactly how the marker rotted in the first place,
 // so they are not trusted to agree: .githooks/pre-commit moves both together
 // and REFUSES the commit if it ever finds them apart.
-const APP_VERSION='V453';
+const APP_VERSION='V454';
 try{ console.log('%cNeedles\u2019 Studio '+APP_VERSION,'color:#29a3ff;font-weight:700'); }catch(e){}
 
 function getDeviceId(){
@@ -13636,7 +13636,7 @@ function renderPremades(){
     view.innerHTML=premadesCrumb([PREMADE_MUGS.label,'How it works'])
       +'<div id="premadesHowReveal" title="Click to watch it again"><img src="art/surprise/mug/'+demo+'.jpg" width="960" height="720" alt="The Magic Mug, cold"/>'
       +'<div class="pm-mug3d-stage" id="premadesHowRevealStage"></div><div id="premadesHowRevealWords"></div></div>'
-      +magicMugStepsHtml('other')
+      +magicMugStepsHtml('other',false,set.how)
       +step(7,'Mix and match.','Pick any four mugs for a set, '+$(SMART_MUG_SET_PRICE)+'. The same one four times if you like. Add more to a set at '+$(SMART_MUG_EXTRA_PRICE)+' each, or buy one on its own for '+$(SMART_MUG_PRICE)+'.','')
       +'<button type="button" class="generate-btn" id="premadesShelfBtn" onclick="premadesGo(\'shelf\')">'+PREMADE_MUGS.icon+' See all the mugs and build your set</button>';
     playSurpriseReveal(demo,'shelf');

@@ -35,7 +35,7 @@ const SURPRISE_SETS={
   // have frames ... we're not supposed to be presenting these to the customer
   // unfinished"): each one's file is its Trick or Treat framed print, so every
   // still, turning mug, heat-up, tray and print shows it framed; no frame choice.
-  'halloween':{label:'Halloween',demo:'halloween-boo-ghost-one',
+  'halloween':{label:'Halloween',demo:'halloween-boo-ghost-one',how:'halloween',
     // THREE KINDS OF HALLOWEEN MUG (Alyx and Bud, 5 Oct 2026: "Some customers
     // want FUNNY. Some want SIMPLE. Some want BEAUTIFUL."): each design's style
     // puts it under one tab; any four of them, across the tabs, are the 4-pack.
@@ -188,13 +188,15 @@ function releaseShelfMug(){
 // HOW THE MAGIC MUG WORKS: steps 1 to 6, the same wherever they are told --
 // the holiday shelf's How it works, and the (i) on the 11oz Smart Mug button
 // (Alyx, 28 Sep 2026). step4img: the picture for step 4, or '' where the page
-// sets its own turning 3D mug into it.
+// sets its own turning 3D mug into it. how: a set's own folder of the four
+// pictures (SURPRISE_SETS[key].how, tools/surprise/how-stills.cjs), so a
+// holiday's page shows its own mug; without it, Golden Brown's.
 function magicMugStep(n,head,line,img,wide){
   return '<div class="pm-step"><div class="pm-sn">'+n+'</div><div class="pm-sh">'+head+'</div><div class="pm-sl">'+line+'</div>'
     +(img?'<img class="pm-simg'+(wide?' pm-wide':'')+'" src="art/premades/how/'+img+'.jpg" width="'+(wide?924:455)+'" height="'+(wide?674:330)+'" alt=""/>':'')+'</div>';
 }
-function magicMugStepsHtml(step4img,noPics){
-  const step=magicMugStep, pic=x=>noPics?'':x;
+function magicMugStepsHtml(step4img,noPics,how){
+  const step=magicMugStep, pic=x=>noPics||!x?'':(how?how+'/':'')+x;
   return step(1,"Cold, it's a plain black mug.","Nothing to see. Nobody knows what's coming.",pic('black'))
     +step(2,'Pour in something hot.',"Coffee, tea, cocoa. It doesn't switch on all at once: as the mug warms, the picture slowly rises up through the black.",pic('emerge'),true)
     +step(3,'The setup image appears.',"Once it's hot, the setup image is there in full, facing them.",pic('hot'))

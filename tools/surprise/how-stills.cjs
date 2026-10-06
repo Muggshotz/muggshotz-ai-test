@@ -8,11 +8,18 @@
 //   emerge.jpg  half warm, the picture rising        (step 2, the wide one)
 //   hot.jpg     hot, the setup facing                (step 3)
 //   other.jpg   hot, turned round to the punchline   (step 4)
-//   (serve the repo on 127.0.0.1:8788, then) node tools/surprise/how-stills.cjs
+//   (serve the repo on 127.0.0.1:8788, then) node tools/surprise/how-stills.cjs [<file> <set>]
+// A HOLIDAY'S OWN PICTURES (Alyx, 6 Oct 2026: the Halloween page's tutorial
+// showed Thanksgiving mugs): given a design and a set key, the four are drawn
+// from that design into art/premades/how/<set>/, and the set's `how` in
+// SURPRISE_SETS points magicMugStepsHtml there. With neither, Golden Brown
+// into art/premades/how/, the pictures every other page shows.
 const path = require('path');
+const fs = require('fs');
 const { chromium } = require('playwright');
-const OUT = path.join(__dirname, '../../art/premades/how');
-const FILE = 'golden-brown';
+const FILE = process.argv[2] || 'golden-brown';
+const OUT = path.join(__dirname, '../../art/premades/how', process.argv[3] || '');
+fs.mkdirSync(OUT, { recursive: true });
 const SHOTS = [
   { name: 'black', heat: 0, angle: -90, w: 910, h: 660 },
   { name: 'emerge', heat: 0.4, angle: -90, w: 924, h: 674 },
@@ -36,7 +43,7 @@ const SHOTS = [
     await page.waitForTimeout(900);
     await page.locator('#howStill').screenshot({ path: path.join(OUT, s.name + '.jpg'), type: 'jpeg', quality: 88 });
     await page.evaluate(() => MUG3D.close());
-    console.log('how/' + s.name + '.jpg');
+    console.log(path.relative(path.join(__dirname, '../..'), path.join(OUT, s.name + '.jpg')));
   }
   await browser.close();
 })();
