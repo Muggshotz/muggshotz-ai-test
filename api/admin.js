@@ -982,6 +982,31 @@ async function handleMaintenanceSet(req, res) {
 const PITCH_EMAIL = 'myideaformuggshotz@gmail.com';
 const PITCH_BUCKET = 'pitches';
 const PITCH_FROM = process.env.RESEND_FROM || 'Muggshotz <hello@muggshotz.com>';
+
+// THE SHIPPING NOTICE'S REGISTRATION (Alyx, 7 Oct 2026): tells Printify once
+// where to send order:shipment:created, signed with the secret the site
+// derives from its own Printify token (lib/shipping-notice.js), and lists
+// what Printify has registered. api/printify-webhook.js receives them.
+const SHIPPING_WEBHOOK_URL = 'https://muggshotz.com/api/printify-webhook';
+async function handlePrintifyWebhooks(req, res) {
+  const { password, register } = req.body || {};
+  if (password !== ADMIN_PASSWORD) return res.status(403).json({ error: 'Unauthorized.' });
+  if (!PRINTIFY_API_TOKEN) return res.status(500).json({ error: 'Printify token is not configured on the server.' });
+  try {
+    const { SHIPMENT_TOPIC, webhookSecret } = await import('../lib/shipping-notice.js');
+    const list = async () => { const r = await printifyCall(`shops/${PROBE_SHOP_ID}/webhooks.json`); return Array.isArray(r) ? r : (r && r.data) || []; };
+    let hooks = await list(), registered = false;
+    if (register && !hooks.some((h) => h.topic === SHIPMENT_TOPIC && h.url === SHIPPING_WEBHOOK_URL)) {
+      await printifyCall(`shops/${PROBE_SHOP_ID}/webhooks.json`, { method: 'POST', body: JSON.stringify({ topic: SHIPMENT_TOPIC, url: SHIPPING_WEBHOOK_URL, secret: webhookSecret(PRINTIFY_API_TOKEN) }) });
+      hooks = await list(); registered = true;
+    }
+    const ours = hooks.some((h) => h.topic === SHIPMENT_TOPIC && h.url === SHIPPING_WEBHOOK_URL);
+    return res.status(200).json({ url: SHIPPING_WEBHOOK_URL, topic: SHIPMENT_TOPIC, ours, registered, hooks: hooks.map((h) => ({ id: h.id, topic: h.topic, url: h.url })) });
+  } catch (err) {
+    console.error('Printify webhooks error:', err.message);
+    return res.status(500).json({ error: err.message });
+  }
+}
 const MAX_PITCH_IMAGE_CHARS = 3_500_000; // about 2.5 MB of picture
 let pitchBucketReady = false;
 
@@ -1258,6 +1283,7 @@ export default async function handler(req, res) {
   if (action === 'pitches') return handlePitchList(req, res);
   if (action === 'pitch-reward') return handlePitchReward(req, res);
   if (action === 'pitch-decide') return handlePitchDecide(req, res);
+  if (action === 'printify-webhooks') return handlePrintifyWebhooks(req, res);
   if (action === 'alert-topics') return handleAlertTopics(req, res);
 
   return res.status(400).json({ error: `Unknown action "${action}".` });

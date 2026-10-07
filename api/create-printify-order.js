@@ -4,7 +4,7 @@
 import sharp from "sharp";
 import { getProduct } from "../lib/products-catalog.js";
 
-const SHOP_ID = "27439202";
+export const SHOP_ID = "27439202";
 
 // EVERY image bound for Printify is compressed here, on its way out (Alyx's
 // request: "compress it to its smallest possible size without losing image

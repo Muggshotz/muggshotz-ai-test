@@ -96,6 +96,14 @@ button:not(:disabled):active{transform:scale(.97);filter:brightness(.88);box-sha
 </div>
 
 <div class="card">
+  <h2 class="section-title">📦 Shipping notices</h2>
+  <div class="sub">When Printify ships an order, it tells the site and the site emails the customer the tracking link. Printify has to be told once where to send the word; this does that and shows whether it is set.</div>
+  <div id="shipHookState" style="font-size:14px;color:#ccc;line-height:1.6;margin:.4rem 0 .75rem">…</div>
+  <button class="btn-full" id="shipHookBtn" onclick="registerShippingHook()" style="background:#22a845">📦 Register the shipping notice with Printify</button>
+  <div class="result" id="shipHookResult"></div>
+</div>
+
+<div class="card">
   <h2 class="section-title">🎟️ Flyers' free tries</h2>
   <div class="sub">The "Got a better idea?" box on a flyer's page gives each new email two free tries from that flyer's own pool of 300. Every product sold from that page buys 50 back, and what a sale buys back beyond what was handed out grows the pool, so a flyer that sells reads 0 of 348. A pool that runs dry closes and stays closed until a sale buys tries back, or you open it here for a fresh 300.</div>
   <div id="poolState" style="font-size:15px;color:#ccc;line-height:1.6;margin:.4rem 0 .75rem">…</div>
@@ -361,6 +369,7 @@ async function checkPw(){
   loadLedger();
   loadVisits();
   loadPool();
+  loadShippingHook();
 }
 
 // On page load, if a password was previously remembered on this
@@ -380,6 +389,7 @@ async function checkPw(){
     loadLedger();
     loadVisits();
     loadPool();
+    loadShippingHook();
   } else {
     try{ localStorage.removeItem(REMEMBER_KEY); }catch(e){}
   }
@@ -996,6 +1006,21 @@ function visitSums(rows){
   const today = visitDayOffset(0), weekFrom = visitDayOffset(6);
   const sum = (keep) => rows.filter(keep).reduce((a, r) => ({ v: a.v + r.visits, n: a.n + r.new_visitors }), { v: 0, n: 0 });
   return { today: sum(r => r.day === today), week: sum(r => r.day >= weekFrom && r.day <= today), all: sum(() => true) };
+}
+// THE SHIPPING NOTICE (Alyx, 7 Oct 2026): api/admin.js printify-webhooks.
+async function loadShippingHook(body){
+  const el = document.getElementById('shipHookState');
+  try{
+    const d = await adminPost({ action: 'printify-webhooks', ...(body || {}) });
+    el.innerHTML = (d.ours ? '<b style="color:#5ddb7a">Set.</b> Printify sends shipments to ' : '<b style="color:#ff9a3c">Not set.</b> Printify does not yet send shipments to ') + '<code>' + escA(d.url) + '</code>'
+      + (d.hooks.length ? '<div style="font-size:12px;color:#888;margin-top:.3rem">Registered with Printify: ' + d.hooks.map(h => escA(h.topic) + ' → ' + escA(h.url)).join('; ') + '</div>' : '');
+    const b = document.getElementById('shipHookBtn'); if (b) b.style.display = d.ours ? 'none' : 'block';
+    return d;
+  }catch(err){ el.textContent = 'Could not read: ' + err.message; return null; }
+}
+async function registerShippingHook(){
+  const d = await loadShippingHook({ register: true });
+  if (d) showResultIn('shipHookResult', d.ours ? 'Printify will now tell the site when an order ships.' : 'Printify did not accept it: ' + JSON.stringify(d.hooks), d.ours ? 'success' : 'error');
 }
 function showPools(pools){
   const el = document.getElementById('poolState');
