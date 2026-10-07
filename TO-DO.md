@@ -299,8 +299,14 @@ idea comes back painted as that section's product only (a mat on the mats,
 a Magic Mug on the Magic Mugs), in the tile, with a choice to keep it (order)
 or try another. It is a separate little shop as far as the visitor knows:
 never a door into the main generator, and nothing else offered after it for
-now. Every flyer gets its own. Two free tries. Waiting on Alyx: whether the
-free tries need an email address, and the daily ceiling on free pictures.
+now. Every flyer gets its own. Two free tries for a confirmed email address
+(Alyx, 7 Oct: "Nothing in this world is free"). **Each flyer pays its own
+keep:** its own pool of 300 free tries; every product sold from that flyer's
+page buys 50 back (floored at zero, never into another flyer's pool); token
+packs and studio orders buy nothing back. A pool that runs dry closes, Alyx's
+phone is told once, and it stays closed until a sale buys tries back or he
+opens it for a fresh 300 on the admin page. Built 7 Oct 2026 (lib/free-pool.js,
+lib/card-bonus.js HALLOWEEN, flow-tests/verify-better-idea.js).
 
 **Consignment** (Alyx, 6 Oct 2026). A visitor who loves their idea can submit
 it, free, for a consignment spot. Alyx reviews; if it is chosen, they earn

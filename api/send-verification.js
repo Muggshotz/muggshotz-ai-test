@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import crypto from 'crypto';
 import { cardOffer, cardToken, likeExact } from '../lib/card-bonus.js';
+import { readPool, poolHasRoom } from '../lib/free-pool.js';
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 
@@ -15,6 +16,18 @@ export default async function handler(req, res) {
   const offer = cardCode ? cardOffer(cardCode) : null;
   if (cardCode && !offer) {
     return res.status(400).json({ error: 'That card offer has ended.' });
+  }
+
+  // A flyer's free tries come from the shared pool (lib/free-pool.js): when
+  // it is closed, say so now rather than promise tries the link cannot pay.
+  if (offer && offer.pool) {
+    try {
+      if (!poolHasRoom(await readPool(offer.pool), offer.spins)) {
+        return res.status(409).json({ error: "Today's free tries are all taken.", closed: true });
+      }
+    } catch (e) {
+      return res.status(500).json({ error: 'Could not check the free tries just now. Please try again.' });
+    }
   }
 
   if (!email || !deviceId) {
@@ -88,8 +101,10 @@ export default async function handler(req, res) {
       body: JSON.stringify({
         from: 'Muggshotz <onboarding@resend.dev>',
         to: email,
-        subject: offer ? `Verify your email for your ${offer.spins} free spins!` : 'Verify your email for a free bonus token!',
-        html: offer
+        subject: offer && offer.pool ? `Your ${offer.spins} free tries are one tap away` : offer ? `Verify your email for your ${offer.spins} free spins!` : 'Verify your email for a free bonus token!',
+        html: offer && offer.pool
+          ? `<p>Tap below to unlock your ${offer.spins} free tries, then go back to the page you were on: your idea is still waiting there.</p><p><a href="${verifyUrl}">Unlock My ${offer.spins} Free Tries</a></p>`
+          : offer
           ? `<p>Thanks for scanning our card! Click below to verify your email and unlock your ${offer.spins} free spins:</p><p><a href="${verifyUrl}">Verify My Email</a></p>`
           : `<p>Click below to verify your email and unlock a free bonus token:</p><p><a href="${verifyUrl}">Verify My Email</a></p>`
       })

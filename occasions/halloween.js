@@ -41,6 +41,17 @@ window.OCCASION = {
     catalog: "doormat", size: "18 x 30",
     order: { productIcon: "doormat" },
     dir: "art/unwelcome", show: [900, 552],
+    // "GOT A BETTER IDEA?" (Alyx, 6-7 Oct 2026): the grid's last tile, where a
+    // visitor describes their own mat. It paints a mat and only a mat, in the
+    // mat's print shape, exactly as the studio's described doormat does
+    // (needles-studio.html getProductRules('doormat') and DOORMAT_RATIO). code
+    // is the flyer's free-try code in lib/card-bonus.js: two free tries for a
+    // confirmed email, from the flyers' pool of 300 (lib/free-pool.js).
+    idea: {
+      code: "HALLOWEEN", page: "/halloween", ratio: 1.63, size: "1536x1024",
+      rule: "doormat artwork: a wide landscape composition, 18 by 30 inches, bold shapes and large lettering readable from standing height, no fine detail, the picture 1.63 times wider than it is tall",
+      placeholder: "A black cat in a witch's hat, saying \"Go away, we're napping\"",
+    },
     designs: [
       // On the flyer, first, in the flyer's order (Alyx, 3 Oct 2026: standard practice).
       { key: "halloween-silhouettes", label: "Witch Silhouette" },

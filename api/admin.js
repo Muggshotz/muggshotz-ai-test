@@ -26,6 +26,8 @@ export const config = { maxDuration: 300 };
 import { getProduct } from '../lib/products-catalog.js';
 import generateHandler from './generate.js';
 import { getPlaceholderDimensions, buildSingleImage, uploadImageToPrintify, createPrintifyProduct } from './create-printify-order.js';
+import { readPool, reopenPool } from '../lib/free-pool.js';
+import { CARD_CODES } from '../lib/card-bonus.js';
 
 const SUPABASE_URL              = process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -790,6 +792,24 @@ async function buildLedger() {
 // page_visits (supabase/page-visits.sql), newest first; admin.html adds them
 // up by its own today. Rows are small (a day x a page x a tag), so a year is
 // a few thousand at most.
+// THE FLYERS' FREE TRIES (Alyx, 7 Oct 2026): every flyer's pool -- how many
+// of its 300 are handed out, how many sales have bought tries back, whether it
+// is open -- and his switch to open one for another 300 (lib/free-pool.js).
+async function handleFreePool(req, res) {
+  const { password, reopen } = req.body || {};
+  if (password !== ADMIN_PASSWORD) return res.status(403).json({ error: 'Unauthorized.' });
+  try {
+    const flyers = [...new Set(Object.values(CARD_CODES).map((c) => c.pool).filter(Boolean))];
+    if (reopen && !flyers.includes(reopen)) return res.status(400).json({ error: `No flyer called "${reopen}".` });
+    if (reopen) await reopenPool(reopen);
+    const pools = await Promise.all(flyers.map((f) => readPool(f)));
+    return res.status(200).json({ pools });
+  } catch (err) {
+    console.error('Admin free-pool error:', err.message);
+    return res.status(500).json({ error: err.message });
+  }
+}
+
 async function handleVisits(req, res) {
   const { password } = req.body || {};
   if (password !== ADMIN_PASSWORD) return res.status(403).json({ error: 'Unauthorized.' });
@@ -1178,6 +1198,7 @@ export default async function handler(req, res) {
   if (action === 'betas') return handleBetas(req, res);
   if (action === 'ledger') return handleLedger(req, res);
   if (action === 'visits') return handleVisits(req, res);
+  if (action === 'free-pool') return handleFreePool(req, res);
   if (action === 'payout') return handlePayout(req, res);
   if (action === 'campaign-create') return handleCampaignCreate(req, res);
   if (action === 'maintenance-set') return handleMaintenanceSet(req, res);

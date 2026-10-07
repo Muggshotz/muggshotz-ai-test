@@ -118,6 +118,22 @@ button{font:inherit}
 #orderPageOverlay iframe{width:100%;height:100%;border:0;display:block}
 html.order-page-open{overflow:hidden}
 .missing{text-align:center;padding:80px 0;color:var(--muted)}
+/* GOT A BETTER IDEA? the mats' last tile (Alyx, 6-7 Oct 2026) */
+.tile.idea{display:flex;flex-direction:column}
+.tile.idea .ideabox{aspect-ratio:900/552;border:2px dashed var(--accent);border-radius:6px;margin-bottom:6px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:8px}
+.tile.idea .ideabox b{font-size:clamp(17px,3.2vw,22px);color:var(--accent)}
+.tile.idea .ideabox span{font-size:13px;color:var(--muted)}
+.tile.idea.open{grid-column:1/-1;cursor:default;text-align:left;padding:14px;border-color:var(--accent)}
+.tile.idea.open h3{margin:0 0 4px;color:var(--accent);font-size:20px}
+.tile.idea .hint{font-size:13px;color:var(--muted);margin:0 0 10px}
+.tile.idea textarea,.tile.idea input{width:100%;box-sizing:border-box;background:#0f0b15;color:var(--text);border:1px solid #3a2f4a;border-radius:8px;padding:10px;font:inherit;font-size:16px}
+.tile.idea textarea{min-height:92px;resize:vertical}
+.tile.idea .go{display:block;width:100%;margin-top:10px;padding:13px;border:0;border-radius:10px;background:var(--accent);color:#1a0f05;font-weight:800;font-size:16px;cursor:pointer}
+.tile.idea .go.alt{background:#2a2236;color:var(--text)}
+.tile.idea .err{color:#ff7a6a;font-size:13px;margin-top:8px}
+.tile.idea .mine{display:block;width:100%;aspect-ratio:4650/2850;object-fit:cover;border-radius:8px;background:#000}
+.tile.idea .spin{width:34px;height:34px;border:4px solid #3a2f4a;border-top-color:var(--accent);border-radius:50%;animation:ideaspin 1s linear infinite;margin:18px auto}
+@keyframes ideaspin{to{transform:rotate(360deg)}}
 </style>
 <script src="mug3d.js"></script>
 <script src="magic-mug.js"></script>
@@ -219,6 +235,7 @@ function homeHtml() {
   let h = heroHtml();
   h += '<section class="sec" id="secFeatured"><h2>' + esc(F.title) + ' · ' + $(fp) + '</h2><p class="line">' + esc(F.line) + ' · tap one to see it big</p><div class="grid">'
     + F.designs.map((d, i) => '<div class="tile" data-mat="' + d.key + '" onclick="occGo(\'mat\',' + i + ')"><img src="' + F.dir + '/show/' + d.key + '.jpg" width="' + F.show[0] + '" height="' + F.show[1] + '" alt="" loading="' + (i < 6 ? 'eager' : 'lazy') + '"/><div class="nm">' + esc(d.label) + '</div><div class="pr">' + $(fp) + '</div></div>').join('')
+    + ideaTileHtml()
     + '</div></section>';
   const M = O.magicMugs, set = M && typeof SURPRISE_SETS !== 'undefined' && SURPRISE_SETS[M.set];
   if (set && set.designs.length) {
@@ -411,6 +428,163 @@ window.occSpinMore = el => {
     .catch(err => { console.error('The mug could not turn; its picture stands in:', err); document.getElementById('page').classList.add('no3d'); });
 };
 
+// ---- GOT A BETTER IDEA? ------------------------------------------------------
+// (Alyx, 6-7 Oct 2026) The mats' last tile. The visitor describes their own mat
+// and the tile turns into it, painted as a mat and nothing else, then they keep
+// it (order it) or try another. As far as they can tell it is this flyer's own
+// little shop: it never sends them into the studio. Their first two tries are
+// free for a confirmed email (the flyer's code in lib/card-bonus.js), drawn
+// from the flyers' pool of 300 (lib/free-pool.js); when the pool is closed or
+// their tries are used, it offers the token packs, and a pack bought here comes
+// back here.
+//   phase: idle | typing | email | waiting | painting | done | out
+let idea = { phase: 'idle', text: '', email: '', url: null, err: '', tries: null, verified: false, open: null, poll: null };
+function ideaCfg() { return O && O.featured && O.featured.idea; }
+function ideaTileHtml() {
+  const I = ideaCfg(); if (!I) return '';
+  const fp = featuredPrice();
+  if (idea.phase === 'idle') {
+    return '<div class="tile idea" id="ideaTile" onclick="occIdeaOpen()"><div class="ideabox"><b>Got a better idea?</b><span>Tap here to enter your idea</span></div>'
+      + '<div class="nm">Your own mat</div><div class="pr">' + $(fp) + '</div></div>';
+  }
+  const left = typeof idea.tries === 'number' && idea.tries > 0 ? '<p class="hint">' + (idea.tries === 1 ? 'You have 1 try left.' : 'You have ' + idea.tries + ' tries left.') + '</p>' : '';
+  const err = idea.err ? '<div class="err">' + esc(idea.err) + '</div>' : '';
+  let body = '';
+  if (idea.phase === 'typing') {
+    body = '<h3>Got a better idea?</h3><p class="hint">Describe your mat, words and all. We\'ll paint it as an 18 x 30 in welcome mat.</p>'
+      + '<textarea id="ideaText" maxlength="600" placeholder="' + esc(I.placeholder || 'Describe your mat') + '" oninput="occIdeaType(this.value)">' + esc(idea.text) + '</textarea>'
+      + left + '<button class="go" onclick="occIdeaGo()">Make my mat</button>' + err;
+  } else if (idea.phase === 'email') {
+    body = '<h3>Your first two are free</h3><p class="hint">Where should we send your key? Tap the link in the email, then come back here: your idea stays right where you left it.</p>'
+      + '<input id="ideaEmail" type="email" inputmode="email" autocomplete="email" placeholder="you@example.com" value="' + esc(idea.email) + '"/>'
+      + '<button class="go" onclick="occIdeaEmail()">Send my two free tries</button>'
+      + '<button class="go alt" onclick="occIdeaBack()">← Back to my idea</button>' + err;
+  } else if (idea.phase === 'waiting') {
+    body = '<h3>Check your email</h3><p class="hint">We sent a link to <b>' + esc(idea.email) + '</b>. Tap it, then come back to this page: it updates by itself, and your mat starts painting.</p>'
+      + '<div class="spin"></div><button class="go alt" onclick="occIdeaEmailAgain()">Use a different email</button>' + err;
+  } else if (idea.phase === 'painting') {
+    body = '<h3>Painting your mat…</h3><p class="hint">“' + esc(idea.text) + '”</p><div class="spin"></div><p class="hint" style="text-align:center">About a minute. Keep this page open.</p>';
+  } else if (idea.phase === 'done') {
+    body = '<h3>Your mat</h3><img class="mine" src="' + esc(idea.url) + '" alt="Your mat"/>' + left
+      + '<button class="go" onclick="occIdeaOrder()">Order this mat · ' + $(fp) + '</button>'
+      + '<button class="go alt" onclick="occIdeaAnother()">Try another idea</button>' + err;
+  } else {
+    body = '<h3>' + (idea.open === false && !idea.verified ? "Today's free tries are all taken" : 'Your free tries are used') + '</h3>'
+      + '<p class="hint">Keep going for a little more, or order any mat above.</p>'
+      + '<button class="go" onclick="occIdeaBuy(\'3tokens\')">3 more tries · $1.33</button>'
+      + '<button class="go alt" onclick="occIdeaBuy(\'20tokens\')">20 more tries · $5</button>'
+      + (idea.text ? '<button class="go alt" onclick="occIdeaBack()">← Back to my idea</button>' : '') + err;
+  }
+  return '<div class="tile idea open" id="ideaTile">' + body + '</div>';
+}
+function ideaDraw() {
+  const el = document.getElementById('ideaTile'); if (!el) return;
+  el.outerHTML = ideaTileHtml();
+}
+async function ideaRefresh() {
+  const I = ideaCfg(); if (!I) return;
+  try {
+    const b = await (await fetch('/api/get-balance?deviceId=' + encodeURIComponent(deviceId()), { cache: 'no-store' })).json();
+    idea.tries = typeof b.tokenBalance === 'number' ? b.tokenBalance : 0;
+    idea.verified = !!b.emailVerified;
+  } catch (e) { console.error('Could not read the tries left:', e); }
+  try {
+    const c = await (await fetch('/api/get-balance?card=' + encodeURIComponent(I.code), { cache: 'no-store' })).json();
+    idea.open = !!(c.on && c.open);
+  } catch (e) { console.error('Could not read the free tries:', e); }
+}
+window.occIdeaType = v => { idea.text = v; };
+window.occIdeaOpen = async () => {
+  idea.phase = 'typing'; idea.err = ''; ideaDraw();
+  const t = document.getElementById('ideaText'); if (t) t.focus();
+  // Read quietly: redrawing now would pull the box out from under their typing.
+  await ideaRefresh();
+};
+window.occIdeaBack = () => { idea.phase = 'typing'; idea.err = ''; ideaStopPoll(); ideaDraw(); };
+window.occIdeaGo = async () => {
+  const t = document.getElementById('ideaText'); if (t) idea.text = t.value;
+  idea.text = idea.text.trim(); idea.err = '';
+  if (idea.text.length < 3) { idea.err = 'Tell us a little about your mat first.'; ideaDraw(); return; }
+  if (idea.tries == null) await ideaRefresh();
+  if (idea.tries > 0) return ideaPaint();
+  if (!idea.verified && idea.open) { idea.phase = 'email'; ideaDraw(); return; }
+  idea.phase = 'out'; ideaDraw();
+};
+window.occIdeaEmail = async () => {
+  const I = ideaCfg(), el = document.getElementById('ideaEmail');
+  idea.email = (el ? el.value : idea.email).trim(); idea.err = '';
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(idea.email)) { idea.err = 'That email doesn\'t look right.'; ideaDraw(); return; }
+  try {
+    const r = await fetch('/api/send-verification', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: idea.email, deviceId: deviceId(), cardCode: I.code }) });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) {
+      if (d.closed) { idea.open = false; idea.phase = 'out'; ideaDraw(); return; }
+      if (/already/i.test(d.error || '')) { idea.verified = true; idea.phase = 'out'; idea.err = d.error; ideaDraw(); return; }
+      throw new Error(d.error || 'Could not send the email.');
+    }
+    idea.phase = 'waiting'; ideaDraw(); ideaStartPoll();
+  } catch (e) { idea.err = e.message; ideaDraw(); }
+};
+window.occIdeaEmailAgain = () => { ideaStopPoll(); idea.phase = 'email'; idea.err = ''; ideaDraw(); };
+function ideaStopPoll() { if (idea.poll) { clearInterval(idea.poll); idea.poll = null; } }
+function ideaStartPoll() {
+  ideaStopPoll();
+  idea.poll = setInterval(async () => {
+    await ideaRefresh();
+    if (idea.tries > 0 && idea.phase === 'waiting') { ideaStopPoll(); ideaPaint(); }
+  }, 4000);
+}
+async function ideaPaint() {
+  const I = ideaCfg();
+  idea.phase = 'painting'; idea.err = ''; ideaDraw();
+  const ac = new AbortController(), timer = setTimeout(() => ac.abort(), 240000);
+  try {
+    const r = await fetch('/api/generate', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: ac.signal,
+      // The studio's described-design lane (api/generate.js action textOnly):
+      // the visitor's own words, the mat's rule and its shape, nothing else.
+      body: JSON.stringify({ action: 'textOnly', prompt: idea.text, deviceId: deviceId(), size: I.size, shapingRule: I.rule, bandRatio: I.ratio })
+    });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok || !d.imageUrl) throw new Error(d.error || 'Your mat could not be painted. Your try was not used; please try again.');
+    idea.url = d.imageUrl; idea.phase = 'done';
+    if (typeof idea.tries === 'number') idea.tries = Math.max(0, idea.tries - 1);
+  } catch (e) {
+    idea.phase = 'typing';
+    idea.err = e.name === 'AbortError' ? 'That took too long. Please try again.' : e.message;
+  } finally { clearTimeout(timer); }
+  ideaDraw();
+  ideaRefresh().then(() => { if (idea.phase === 'done') ideaDraw(); });
+}
+window.occIdeaAnother = () => { idea.phase = 'typing'; idea.err = ''; ideaDraw(); const t = document.getElementById('ideaText'); if (t) t.focus(); };
+window.occIdeaOrder = () => {
+  const F = O.featured; if (!idea.url) return;
+  // Printed as the mat's full bleed: the order server covers the print with it,
+  // centred, which is exactly the crop the tile shows.
+  hand_off(Object.assign({ placements: { left: idea.url, front: null, right: null }, ideaPrompt: idea.text }, F.order));
+};
+window.occIdeaBuy = async packId => {
+  const I = ideaCfg(); idea.err = '';
+  try {
+    const r = await fetch('/api/create-checkout-session', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'token_purchase', deviceId: deviceId(), packId, returnTo: I.page }) });
+    const d = await r.json();
+    if (!r.ok || !d.url) throw new Error(d.error || 'Could not open checkout.');
+    try { sessionStorage.setItem('mz_idea_text', idea.text); } catch (e) {}
+    location.href = d.url;
+  } catch (e) { idea.err = e.message; ideaDraw(); }
+};
+// Back from buying tries (?tries=bought): the box opens again with their idea.
+function ideaOnArrival() {
+  let back = false;
+  try { back = new URLSearchParams(location.search).get('tries') === 'bought'; } catch (e) {}
+  if (!back || !ideaCfg()) return;
+  try { idea.text = sessionStorage.getItem('mz_idea_text') || ''; } catch (e) {}
+  idea.phase = 'typing'; ideaDraw();
+  const t = document.getElementById('ideaTile'); if (t) t.scrollIntoView({ block: 'start' });
+  // The purchase lands by webhook a moment after the return; read until it shows.
+  let n = 0; const tick = setInterval(async () => { await ideaRefresh(); if (idea.tries > 0 || ++n > 15) clearInterval(tick); }, 3000);
+}
+
 // ---- ordering: straight to the order page, never the studio ----------------------
 function abs(u) { return /^https?:/.test(u) ? u : location.origin + '/' + u.replace(/^\//, ''); }
 function hand_off(pending) {
@@ -506,6 +680,7 @@ else loadOccasion(name).then(o => {
   const c = o.colors || {}; for (const k of Object.keys(c)) document.documentElement.style.setProperty('--' + k, c[k]);
   try { history.replaceState({ occ: view }, '', location.href); } catch (e) {}
   render(null);
+  ideaOnArrival();
   try { if (typeof MUG3D !== 'undefined') MUG3D.warm(); } catch (e) {}
 }).catch(() => { root.innerHTML = '<div class="missing">That occasion isn\'t here. Try <a href="occasion.html?o=halloween" style="color:var(--accent)">Halloween</a>.</div>'; });
 </script>

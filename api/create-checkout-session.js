@@ -4,6 +4,7 @@ import { getProduct } from "../lib/products-catalog.js";
 import { calculateShippingCharge, calculateBasketShipping } from "../lib/printify-shipping.js";
 import { readMaintenance } from "../lib/maintenance.js";
 import { TOKEN_PACKS } from "../lib/token-packs.js";
+import { CARD_CODES } from "../lib/card-bonus.js";
 import { GIFT_AMOUNTS_CENTS, GIFT_FACES, findGiftCertificate, normalizeGiftCode, giftLedgerReady } from "../lib/gift-certificates.js";
 import { chooseRail, feeLineCentsFor, feeLineDescriptionFor, minChargeCentsFor, newCheckoutId, storeCheckoutRecord, readCheckoutRecord, updateCheckoutRecord } from "../lib/payment-rail.js";
 import { squareEnv, squarePublicConfig, squareSdkUrl, buildSquareOrder, orderTotalCents, createPaymentLink, createOrder, createPayment, payOrder, cancelPayment, giftCardFromGan, giftCardUsable } from "../lib/square.js";
@@ -765,7 +766,7 @@ async function handleBasketOrder(req, res) {
 }
 
 async function handleTokenPurchase(req, res) {
-  const { deviceId, packId } = req.body || {};
+  const { deviceId, packId, returnTo } = req.body || {};
   const pack = TOKEN_PACKS[packId];
   if (!pack) return res.status(400).json({ error: `Unknown token pack "${packId}".` });
   if (!deviceId) return res.status(400).json({ error: "Missing device ID." });
@@ -797,6 +798,13 @@ async function handleTokenPurchase(req, res) {
     success_url: `${origin}/needles-studio.html?checkout=success`,
     cancel_url: `${origin}/needles-studio.html?checkout=cancelled`
   };
+  // Bought from a flyer's "Got a better idea?" box (Alyx, 7 Oct 2026): back to
+  // that flyer's page, never the studio -- only a page a flyer code names.
+  const flyerPages = Object.values(CARD_CODES).map((c) => c.page).filter(Boolean);
+  if (flyerPages.includes(returnTo)) {
+    spec.success_url = `${origin}${returnTo}?tries=bought`;
+    spec.cancel_url = `${origin}${returnTo}`;
+  }
 
   return res.status(200).json(await createCheckout(rail, spec));
 }

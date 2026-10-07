@@ -56,15 +56,16 @@ scenarios.theHome = async (page) => {
   await page.goto(`${BASE}/occasion.html?o=halloween&ref=TEST-07`); await T(page, 2500);
   const h = await page.evaluate(() => ({
     h1: document.querySelector('h1')?.textContent,
-    tiles: document.querySelectorAll('#secFeatured .tile').length,
-    priced: [...document.querySelectorAll('#secFeatured .tile')].every((t) => t.querySelector('img') && t.querySelector('.pr')?.textContent === '$19.95'),
+    tiles: document.querySelectorAll('#secFeatured .tile[data-mat]').length,
+    priced: [...document.querySelectorAll('#secFeatured .tile[data-mat]')].every((t) => t.querySelector('img') && t.querySelector('.pr')?.textContent === '$19.95'),
+    idea: (() => { const t = [...document.querySelectorAll('#secFeatured .tile')].pop(); return t && t.id === 'ideaTile' ? t.textContent.replace(/\s+/g, ' ').trim() : null; })(),
     magic: !!document.getElementById('secMagic'), more: !!document.getElementById('secMore'),
     ref: localStorage.getItem('muggshotz_referral_code'), title: document.title,
     cols: getComputedStyle(document.querySelector('#secFeatured .grid')).gridTemplateColumns.split(' ').length,
   }));
   const want = page.viewportSize().width >= 720 ? 3 : 2;
-  if (h.h1 !== 'The Floor at Your DoorIs a Bit of a Bore.' || h.tiles !== 24 || !h.priced || !h.magic || h.more || h.ref !== 'TEST-07' || h.cols !== want) return `FAIL: home is ${JSON.stringify(h)}`;
-  return `PASS: the headline, all 24 mats pictured at $19.95 (${want} across), the Magic Mugs, no empty "more", the flyer's code kept`;
+  if (h.h1 !== 'The Floor at Your DoorIs a Bit of a Bore.' || h.tiles !== 24 || !h.priced || !h.magic || h.more || h.ref !== 'TEST-07' || h.cols !== want || !/^Got a better idea\?\s*Tap here to enter your idea\s*Your own mat\s*\$19\.95$/.test(h.idea || '')) return `FAIL: home is ${JSON.stringify(h)}`;
+  return `PASS: the headline, all 24 mats pictured at $19.95 (${want} across), then "Got a better idea?", the Magic Mugs, no empty "more", the flyer's code kept`;
 };
 
 scenarios.theMat = async (page) => {

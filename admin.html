@@ -96,6 +96,14 @@ button:not(:disabled):active{transform:scale(.97);filter:brightness(.88);box-sha
 </div>
 
 <div class="card">
+  <h2 class="section-title">🎟️ Flyers' free tries</h2>
+  <div class="sub">The "Got a better idea?" box on a flyer's page gives each new email two free tries from that flyer's own pool of 300. Every product sold from that page buys 50 back. A pool that runs dry closes and stays closed until a sale buys tries back, or you open it here for a fresh 300.</div>
+  <div id="poolState" style="font-size:15px;color:#ccc;line-height:1.6;margin:.4rem 0 .75rem">…</div>
+  <button class="btn-full" onclick="loadPool()">🔄 Refresh</button>
+  <div class="result" id="poolResult"></div>
+</div>
+
+<div class="card">
   <h2 class="section-title">👀 Visitors</h2>
   <div class="sub">People who opened the site: each browser once a page a day. Not you, not robots, not our tests.</div>
   <div id="visitsStaff" style="font-size:12px;color:#999;line-height:1.6;margin-bottom:.75rem"></div>
@@ -347,6 +355,7 @@ async function checkPw(){
   markStaff();
   loadLedger();
   loadVisits();
+  loadPool();
 }
 
 // On page load, if a password was previously remembered on this
@@ -365,6 +374,7 @@ async function checkPw(){
     markStaff();
     loadLedger();
     loadVisits();
+    loadPool();
   } else {
     try{ localStorage.removeItem(REMEMBER_KEY); }catch(e){}
   }
@@ -957,6 +967,23 @@ function visitSums(rows){
   const today = visitDayOffset(0), weekFrom = visitDayOffset(6);
   const sum = (keep) => rows.filter(keep).reduce((a, r) => ({ v: a.v + r.visits, n: a.n + r.new_visitors }), { v: 0, n: 0 });
   return { today: sum(r => r.day === today), week: sum(r => r.day >= weekFrom && r.day <= today), all: sum(() => true) };
+}
+function showPools(pools){
+  const el = document.getElementById('poolState');
+  if (!pools.length) { el.textContent = 'No flyer has a box yet.'; return; }
+  el.innerHTML = pools.map(p => `<div style="padding:.5rem 0;border-top:1px solid #2a2a2a"><b style="text-transform:capitalize">${p.flyer}</b> flyer · <b style="color:${p.open ? '#5ddb7a' : '#ff5a4a'}">${p.open ? 'Open' : 'Closed'}</b><br>` +
+    `${p.given} of ${p.size} free tries handed out · ${p.sales || 0} sale${p.sales === 1 ? '' : 's'} bought tries back` +
+    (p.openedAt ? `<br><span style="font-size:12px;color:#888">Last opened ${new Date(p.openedAt).toLocaleString()}</span>` : '') +
+    `<button class="btn-full" onclick="reopenPool('${p.flyer}')" style="background:#22a845;margin-top:.5rem">✅ Open ${p.flyer} for another ${p.size}</button></div>`).join('');
+}
+async function loadPool(){
+  try{ const { pools } = await adminPost({ action: 'free-pool' }); showPools(pools); }
+  catch(err){ showResultIn('poolResult', err.message, 'error'); }
+}
+async function reopenPool(flyer){
+  if (!confirm(`Open the ${flyer} flyer's free tries for another 300?`)) return;
+  try{ const { pools } = await adminPost({ action: 'free-pool', reopen: flyer }); showPools(pools); showResultIn('poolResult', `${flyer}: open again, 300 more free tries.`, 'success'); }
+  catch(err){ showResultIn('poolResult', err.message, 'error'); }
 }
 async function loadVisits(){
   const table = document.getElementById('visitsTable');

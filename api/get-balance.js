@@ -1,6 +1,7 @@
 import { findGiftCertificate, findGiftCertificateBySession } from "../lib/gift-certificates.js";
 import { squareConfigured, giftCardFromGan, giftCardUsable } from "../lib/square.js";
 import { cardOffer } from "../lib/card-bonus.js";
+import { readPool, poolHasRoom } from "../lib/free-pool.js";
 import { flyerProduct } from "../lib/flyer-products.js";
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -251,10 +252,16 @@ export default async function handler(req, res) {
   }
 
   // ?card= : is this business-card code's offer on, and for how many spins.
+  // A flyer's code (pool:true) also says whether the flyers' free-try pool
+  // can still pay it (lib/free-pool.js), so the box can offer tries or not.
   if (req.query.card) {
     res.setHeader("Cache-Control", "no-store, max-age=0");
     const offer = cardOffer(req.query.card);
-    return res.status(200).json(offer ? { on: true, spins: offer.spins } : { on: false });
+    if (!offer) return res.status(200).json({ on: false });
+    if (!offer.pool) return res.status(200).json({ on: true, spins: offer.spins });
+    let open = false;
+    try { open = poolHasRoom(await readPool(offer.pool), offer.spins); } catch (e) { console.error("Free-try pool unreadable:", e.message); }
+    return res.status(200).json({ on: true, spins: offer.spins, pool: true, open });
   }
 
   if (req.query.recent) {

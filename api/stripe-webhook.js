@@ -7,6 +7,8 @@ import { getProduct } from "../lib/products-catalog.js";
 import { verifyWebhookSignature, squareWebhookUrl, retrieveOrder } from "../lib/square.js";
 import { readCheckoutRecord, updateCheckoutRecord, sessionFromRecord } from "../lib/payment-rail.js";
 import { sendAlert, saleAlertText } from "../lib/alerts.js";
+import { creditPool } from "../lib/free-pool.js";
+import { CARD_CODES } from "../lib/card-bonus.js";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
@@ -495,6 +497,17 @@ async function creditTokensForPayment(customer, stripeEmail, packTokens = null) 
 // a Stripe Checkout Session, or the same shape built from a Square checkout
 // record (lib/payment-rail.js sessionFromRecord): id, metadata, the buyer's
 // email. Everything below reads only those.
+// A FLYER PAYS ITS OWN KEEP (Alyx, 7 Oct 2026): a product bought from a
+// flyer's page (its source names the flyer: "halloween/door") buys 50 free
+// tries back into THAT flyer's pool (lib/free-pool.js). Token packs and studio
+// orders carry no flyer source and buy nothing back. Never fails the order.
+async function flyerSaleCredit(session) {
+  const flyer = String(session.metadata?.source || "").split("/")[0];
+  if (!flyer || !Object.values(CARD_CODES).some((c) => c.pool === flyer)) return;
+  try { await creditPool(flyer); }
+  catch (err) { console.error("Flyer pool credit failed (order still placed):", flyer, err.message); }
+}
+
 export async function settleCheckoutSession(session) {
   if (session.metadata?.order_type === "gift_certificate") {
     await handleGiftCertificatePayment(session);
@@ -514,6 +527,7 @@ export async function settleCheckoutSession(session) {
     }
     if (session.metadata?.order_type === "basket_order") await handleBasketOrderPayment(session);
     else await handleMugOrderPayment(session);
+    await flyerSaleCredit(session);
   } else if (session.metadata?.order_type === "tier_upgrade") {
     await handleTierUpgradePayment(session);
   } else {
