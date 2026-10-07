@@ -29,7 +29,12 @@ W, H = 2475, 1155
 name = sys.argv[1]
 frame = sys.argv[2] if len(sys.argv) > 2 else 'valentine'
 here = os.path.dirname(os.path.abspath(__file__))
-SETUP_OF = sys.argv[3] if len(sys.argv) > 3 else name
+SETUP_OF = sys.argv[3] if len(sys.argv) > 3 else None
+# THE DECAL VERSION OF A PAINTED MUG (Alyx, 7 Oct 2026: "Decal versus no decal
+# ... It's a style choice"): a name ending -decal builds that mug's decal
+# files beside its painted ones, from the decals under the plain name.
+DECALS_OF = name[:-len('-decal')] if name.endswith('-decal') else name
+if SETUP_OF is None: SETUP_OF = DECALS_OF
 def unwhite(im):
     # A decal delivered on solid white rather than transparent (Bud's
     # Thanksgiving ones, 29 Sep 2026): the white that reaches the canvas
@@ -46,7 +51,7 @@ def unwhite(im):
     a[..., 3] = np.clip(255 * (1 - bg), 0, 255).astype(np.uint8)
     return Image.fromarray(a, 'RGBA')
 def decal(side):
-    f = glob.glob(f'art/surprise/decals/{SETUP_OF if side == "setup" else name}-{side}.*')[0]
+    f = glob.glob(f'art/surprise/decals/{SETUP_OF if side == "setup" else DECALS_OF}-{side}.*')[0]
     im = Image.open(f).convert('RGBA')
     im = unwhite(im)
     im = im.crop(im.getbbox())                        # the decal itself, its empty margin off

@@ -124,10 +124,26 @@ scenarios.theMagicMugs = async (page) => {
   // framed file, the still and the turning mug alike, with no frame choice.
   const fr = await page.evaluate(() => ({ files: [...document.querySelectorAll('.mugs .pm-mug3d')].map((e) => e.dataset.mug3d), stills: [...document.querySelectorAll('.mugs .pm-mug3d img')].map((i) => i.getAttribute('src')), handOn: document.querySelector('[data-hand="left"]').classList.contains('on') }));
   if (fr.files.length !== 12 || !fr.files.every((f) => f.endsWith('-one')) || !fr.stills.every((u) => /-one\.jpg$/.test(u)) || !fr.handOn) return `FAIL: the story mugs are not all framed ${JSON.stringify(fr)}`;
+  // DECAL OR NO DECAL (Alyx, 7 Oct 2026): the choice above the grid; on, every
+  // design with a decal version shows it (file, still), the dentist (decal
+  // only) and Sheet Happens (no decal version) stay as they are, and a mug
+  // added to the 4-pack carries ~decal; off again, all as before.
+  const dc = await page.evaluate(() => ({ n: document.querySelectorAll('.decals button').length, on: (document.querySelector('.decals button.on') || {}).dataset.decal }));
+  if (dc.n !== 2 || dc.on !== '0') return `FAIL: the decal choice reads ${JSON.stringify(dc)}`;
+  await page.click('[data-decal="1"]'); await T(page, 700);
+  const on = await page.evaluate(() => [...document.querySelectorAll('.mugs .pm-mug3d')].map((e) => [e.dataset.key, e.dataset.mug3d, e.querySelector('img').getAttribute('src')]));
+  const bad = on.filter(([k, f, s]) => (['sheet-happens', 'dentist'].includes(k) ? /-decal-/.test(f) : !f.endsWith('-decal-one')) || s !== 'art/surprise/mug/' + f + '.jpg');
+  if (on.length !== 12 || bad.length || !on.some(([k]) => k === 'boo')) return `FAIL: with Decal on the mugs show ${JSON.stringify(bad.length ? bad : on)}`;
+  await page.click('[data-add="boo"]'); await T(page, 400);
+  const pick = await page.evaluate(() => [...document.querySelectorAll('#packTray [data-pick]')].map((e) => [e.dataset.pick, e.querySelector('img').getAttribute('src')]));
+  if (JSON.stringify(pick) !== '[["boo~decal","art/options/surprise-halloween-boo-ghost-decal-one.jpg"]]') return `FAIL: Boo went into the 4-pack as ${JSON.stringify(pick)}`;
+  await page.click('[data-decal="0"]'); await T(page, 700);
+  const off = await page.evaluate(() => [...document.querySelectorAll('.mugs .pm-mug3d')].map((e) => e.dataset.mug3d));
+  if (off.some((f) => /-decal-/.test(f)) || !(await page.evaluate(() => !!document.querySelector('#packTray [data-pick="boo~decal"]')))) return `FAIL: with Decal off again: ${JSON.stringify(off)}`;
   await page.click('[data-order="sheet-happens"]');
   const raw = await checkout(page, bodies), b = lineOf(raw);
   if (b.setKey !== 'halloween' || JSON.stringify(b.mugs) !== '["sheet-happens"]' || b.hand !== 'left' || (raw || {}).source !== 'halloween') return `FAIL: checkout got ${JSON.stringify({ set: b.setKey, mugs: b.mugs, hand: b.hand, source: (raw || {}).source })}`;
-  return 'PASS: the demonstration plays on the 3D mug, six steps, the Story / Joke tab first with its twelve at $19.95, Silhouette 12 and Ornate 12 face on with no frame, a tap turns Sheet Happens, every story mug shows framed with no frame choice, and it checks out as halloween / sheet-happens (framed), left-handed, from halloween';
+  return 'PASS: the demonstration plays on the 3D mug, six steps, the Story / Joke tab first with its twelve at $19.95, Silhouette 12 and Ornate 12 face on with no frame, a tap turns Sheet Happens, every story mug shows framed with no frame choice, Decal switches the ten that have one (Boo into the 4-pack as boo~decal) and leaves the dentist and Sheet Happens be, and it checks out as halloween / sheet-happens (framed), left-handed, from halloween';
 };
 
 // THE HAUNTED 4-PACK (Alyx and Bud, 5 Oct 2026): any four from any tabs, in a

@@ -43,19 +43,19 @@ const SURPRISE_SETS={
     packLine:'Build your own haunted 4-pack',
     designs:[
     // Boo first: it is the mug on the Halloween flyer (Alyx, 3 Oct 2026).
-    {key:'boo',label:'Boo',file:'halloween-boo-ghost-one',style:'joke'},
-    {key:'raise-the-dead',label:'Raise the Dead',file:'halloween-raise-the-dead-one',style:'joke'},
+    {key:'boo',label:'Boo',file:'halloween-boo-ghost-one',decal:'halloween-boo-ghost-decal-one',style:'joke'},
+    {key:'raise-the-dead',label:'Raise the Dead',file:'halloween-raise-the-dead-one',decal:'halloween-raise-the-dead-decal-one',style:'joke'},
     // Sheet Happens (Bud, 26 Sep 2026; was Boo until 3 Oct, Alyx: the name went
     // to the new cartoon ghost): the ghost's face; turned round, the laundry tag.
     {key:'sheet-happens',label:'Sheet Happens',file:'halloween-boo-one',style:'joke'},
     // Goes Right Through Me (Bud, 5 Oct 2026; coffee cleaned off the bones with
     // Alyx): two scenes on black, Bud's own lettering; framed at 0.87 so the
     // frame covers none of it (frame-mug.py's scale).
-    {key:'goes-right-through-me',label:'Goes Right Through Me',file:'halloween-goes-right-through-me-one',style:'joke'},
+    {key:'goes-right-through-me',label:'Goes Right Through Me',file:'halloween-goes-right-through-me-one',decal:'halloween-goes-right-through-me-decal-one',style:'joke'},
     // When Pumpkins Dream (Bud, 5 Oct 2026; Alyx's caption, set by Claude on the
     // plain pumpkin's side, clear of the frame on both hands): the jack-o'-lantern
     // it dreams of is the punchline, no words.
-    {key:'when-pumpkins-dream',label:'When Pumpkins Dream',file:'halloween-when-pumpkins-dream-one',style:'joke'},
+    {key:'when-pumpkins-dream',label:'When Pumpkins Dream',file:'halloween-when-pumpkins-dream-one',decal:'halloween-when-pumpkins-dream-decal-one',style:'joke'},
     // Sugar Skull (Bud, 5 Oct 2026): one picture, no joke, the skull opposite the
     // handle. The left-handed print is the same picture (rolled, the skull would
     // split behind the handle), and no frame: its middle ornaments would cross
@@ -63,19 +63,19 @@ const SURPRISE_SETS={
     {key:'sugar-skull',label:'Sugar Skull',file:'halloween-sugar-skull',style:'ornate'},
     // The Witching Hour (Bud, 5 Oct 2026): for new parents and everyone who buys
     // for them. Bud's lettering; framed at 0.87 so the frame covers none of it.
-    {key:'witching-hour',label:'The Witching Hour',file:'halloween-witching-hour-one',style:'joke'},
+    {key:'witching-hour',label:'The Witching Hour',file:'halloween-witching-hour-one',decal:'halloween-witching-hour-decal-one',style:'joke'},
     // Six more (Alyx and Bud, 5-6 Oct 2026), each with a buyer: vampires who
     // changed their type, deadlines, retail's skeleton crew, the ghosted date,
     // the meeting that could have been an email, sleep when I'm dead. Bud's
     // lettering; framed at the scale that leaves every letter clear.
-    {key:'whats-your-type',label:'What\'s Your Type?',file:'halloween-whats-your-type-one',style:'joke'},
-    {key:'deadlines',label:'Deadlines',file:'halloween-deadlines-one',style:'joke'},
-    {key:'skeleton-crew',label:'Skeleton Crew',file:'halloween-skeleton-crew-one',style:'joke'},
-    {key:'ghosted',label:'Ghosted',file:'halloween-ghosted-one',style:'joke'},
-    {key:'the-email',label:'Could\'ve Been an Email',file:'halloween-the-email-one',style:'joke'},
+    {key:'whats-your-type',label:'What\'s Your Type?',file:'halloween-whats-your-type-one',decal:'halloween-whats-your-type-decal-one',style:'joke'},
+    {key:'deadlines',label:'Deadlines',file:'halloween-deadlines-one',decal:'halloween-deadlines-decal-one',style:'joke'},
+    {key:'skeleton-crew',label:'Skeleton Crew',file:'halloween-skeleton-crew-one',decal:'halloween-skeleton-crew-decal-one',style:'joke'},
+    {key:'ghosted',label:'Ghosted',file:'halloween-ghosted-one',decal:'halloween-ghosted-decal-one',style:'joke'},
+    {key:'the-email',label:'Could\'ve Been an Email',file:'halloween-the-email-one',decal:'halloween-the-email-decal-one',style:'joke'},
     // The dentist, in I'll Sleep When I'm Dead's place (Alyx, 7 Oct 2026): the
     // first Halloween mug built as decals (tools/surprise/decal-mug.py).
-    {key:'dentist',label:'Well, There\'s Your Problem',file:'halloween-dentist-one',style:'joke'},
+    {key:'dentist',label:'Well, There\'s Your Problem',file:'halloween-dentist-one',decalOnly:true,style:'joke'},
     // Two sets of twelve (Bud, 5 Oct 2026). Ornate, with Sugar Skull: a black
     // raven, a black cat and a carved jack-o'-lantern in Sugar Skull's marigolds
     // and gold. Silhouette: black cut-paper shapes on orange in Bud's own thin
@@ -113,13 +113,20 @@ function holidayPrice(n){ return n>=4 ? Math.round((SMART_MUG_SET_PRICE+(n-4)*SM
 // The print files of the mugs chosen (keys), for the order page's pictures.
 function setPrintUrls(key,hand,mugs){
   const set=SURPRISE_SETS[key]; if(!set)return null;
-  return mugs.map(k=>{ const [b,f]=String(k).split('~'), d=set.designs.find(x=>x.key===b); return d&&{file:d.file+(f&&!d.file.endsWith('-'+f)?'-'+f:'')}; }).filter(Boolean)
+  return mugs.map(k=>{ const [b,f]=String(k).split('~'), d=set.designs.find(x=>x.key===b); return d&&{file:f==='decal'&&d.decal?d.decal:d.file+(f&&f!=='decal'&&!d.file.endsWith('-'+f)?'-'+f:'')}; }).filter(Boolean)
     .map(d=>location.origin+'/art/surprise/'+d.file+'-print'+(hand==='left'?'-left':'')+'.png');
 }
 // A holiday mug's frame, picked on the shelf like a prop (Alyx, 29 Sep 2026),
 // travels with it as "key~frame" (lib/surprise-sets.js SET_FRAMES): one
 // frame round everything, or a frame round each side; no frame is the key.
 const SET_FRAMES={none:'No frame',one:'One frame',two:'A frame each side'};
+// DECAL OR NO DECAL (Alyx, 7 Oct 2026: "the Norman Rockwell style which is the
+// dentist one, or the jack-o'-lantern style, which is the full panel image ...
+// It's a style choice"). A design with `decal` comes both ways: its file is
+// the full-panel one, its decal the two-stickers-on-white one (tools/surprise/
+// decal-mug.py <file>-decal); it travels as "key~decal". decalOnly marks a
+// design that only comes as decals (the dentist).
+function designShown(d,wantDecal){ return wantDecal&&d&&d.decal?d.decal:d.file; }
 // The frames a design comes in: frames:true is both (the Thanksgiving decals),
 // a list names its own -- the Halloween mugs come in the one Halloween frame
 // (Alyx, 3 Oct 2026; tools/surprise/frame-mug.py builds its files).

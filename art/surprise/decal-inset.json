@@ -1,4 +1,14 @@
 {
   "_about": "How far in from its end of the print each decal sits, as a fraction of the print width, on top of the frame choice's own margin (tools/surprise/decal-mug.py INSET). A mug not listed sits at the margin.",
-  "halloween-dentist": 0.08
+  "halloween-dentist": 0.08,
+  "halloween-boo-ghost-decal": 0.08,
+  "halloween-raise-the-dead-decal": 0.08,
+  "halloween-goes-right-through-me-decal": 0.08,
+  "halloween-when-pumpkins-dream-decal": 0.08,
+  "halloween-witching-hour-decal": 0.08,
+  "halloween-whats-your-type-decal": 0.08,
+  "halloween-deadlines-decal": 0.08,
+  "halloween-skeleton-crew-decal": 0.08,
+  "halloween-ghosted-decal": 0.08,
+  "halloween-the-email-decal": 0.08
 }

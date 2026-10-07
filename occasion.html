@@ -100,6 +100,7 @@ button{font:inherit}
 @media (min-width:720px){.mugs{grid-template-columns:1fr 1fr}}
 .mugname{display:flex;justify-content:space-between;align-items:baseline;margin:8px 2px}
 .mugname span{color:var(--accent2);font-size:14px}
+.mugname i{font-style:normal;font-size:11px;color:var(--muted);margin-left:8px;border:1px solid #3a2f49;border-radius:9px;padding:1px 7px;vertical-align:middle}
 .mugorder{background:transparent;border:1px solid var(--accent);color:var(--text);border-radius:18px;padding:8px 14px;cursor:pointer;width:100%;font-weight:700}
 .mugorder:hover{background:rgba(255,122,26,.12)}
 .mugadd{background:var(--accent);border:1px solid var(--accent);color:#1a1020;border-radius:18px;padding:8px 14px;cursor:pointer;width:100%;font-weight:800;margin-bottom:6px}
@@ -224,6 +225,7 @@ let O = null;                 // the occasion
 let view = { name: 'home' };  // home | mat | magic | more
 let hand = 'right';           // the Magic Mug's hand
 let frame = 'none';           // the Magic Mug's frame: 'none', or one its designs come in
+let decal = false;            // Decal or no decal (Alyx, 7 Oct 2026): the decal version where a design has one
 let packPicks = [];          // the haunted 4-pack being built: design keys, '~one' when framed
 let mugStyle = null;          // the Magic Mugs' tab (magic-mug.js setStyles); null is the first, Story / Joke
 let moreIndex = 0;
@@ -280,7 +282,15 @@ function matHtml(i) {
 // THE FRAME (Alyx, 3 Oct 2026: the Halloween frame "offered to all"): a choice
 // over the mugs, like the hand, offered when the holiday's mugs come in one.
 function frameChoices(set) { const f = [...new Set(styleDesigns(set, mugStyle).flatMap(d => designFrames(d)))]; return f.length ? ['none'].concat(f) : []; }
-function mugFile(d) { return d.file + (frame !== 'none' && designFrames(d).includes(frame) ? '-' + frame : ''); }
+function mugFile(d) { return designShown(d, decal) + (frame !== 'none' && designFrames(d).includes(frame) ? '-' + frame : ''); }
+// The key a design goes into the 4-pack or the order as: its decal version when that is chosen, else its frame when one is.
+function mugKey(d) { return decal && d.decal ? d.key + '~decal' : frame !== 'none' && designFrames(d).includes(frame) ? d.key + '~' + frame : d.key; }
+function decalChoiceHtml(set) {
+  if (!styleDesigns(set, mugStyle).some(d => d.decal)) return '';
+  return '<p class="line" style="margin-top:4px">Decal, or no decal? Two looks for the same joke.</p><div class="hands decals">'
+    + '<button data-decal="0" class="' + (decal ? '' : 'on') + '" onclick="occDecal(false)">No decal · the whole picture</button>'
+    + '<button data-decal="1" class="' + (decal ? 'on' : '') + '" onclick="occDecal(true)">Decal · two stickers on white</button></div>';
+}
 function frameChoiceHtml(set) {
   const fs = frameChoices(set); if (!fs.length) return '';
   return '<p class="line" style="margin-top:4px">Frame it?</p><div class="hands frames">' + fs.map(k => '<button data-frame="' + k + '" class="' + (k === frame ? 'on' : '') + '" onclick="occFrame(\'' + k + '\')">' + (k === 'none' ? 'No frame' : (O.magicMugs.frameLabel || SET_FRAMES[k])) + '</button>').join('') + '</div>';
@@ -307,9 +317,9 @@ function styleTabsHtml(set) {
   return '<div class="hands styles" id="magicStyles">' + sts.map(s => '<button data-style="' + s.key + '" class="' + (s.key === cur ? 'on' : '') + '" onclick="occStyle(\'' + s.key + '\')">' + esc(s.label) + ' (' + set.designs.filter(d => d.style === s.key).length + ')</button>').join('') + '</div>';
 }
 function magicPickHtml(set) {
-  return frameChoiceHtml(set)
-    + '<div class="mugs">' + styleDesigns(set, mugStyle).map(d => '<div><div class="pm-mug3d" data-key="' + d.key + '" data-mug3d="' + mugFile(d) + '" data-angle="' + designAngle(d) + '" onclick="occSpin(this)"><img src="art/surprise/mug/' + d.file + '.jpg" width="960" height="720" alt="' + esc(d.label) + '"/><div class="pm-mug3d-stage"></div><div class="pm-spin-cue">↻ Click to spin</div></div>'
-      + '<div class="mugname"><b>' + esc(d.label) + '</b><span>' + $(SMART_MUG_PRICE) + '</span></div>'
+  return decalChoiceHtml(set) + frameChoiceHtml(set)
+    + '<div class="mugs">' + styleDesigns(set, mugStyle).map(d => '<div><div class="pm-mug3d" data-key="' + d.key + '" data-mug3d="' + mugFile(d) + '" data-angle="' + designAngle(d) + '" onclick="occSpin(this)"><img src="art/surprise/mug/' + designShown(d, decal) + '.jpg" width="960" height="720" alt="' + esc(d.label) + '"/><div class="pm-mug3d-stage"></div><div class="pm-spin-cue">↻ Click to spin</div></div>'
+      + '<div class="mugname"><b>' + esc(d.label) + (d.decalOnly ? '<i>decal only</i>' : decal && !d.decal ? '<i>no decal version</i>' : decal ? '<i>decal</i>' : '') + '</b><span>' + $(SMART_MUG_PRICE) + '</span></div>'
       + '<button class="mugadd" data-add="' + d.key + '" onclick="occAdd(\'' + d.key + '\')">' + addText(d.key) + '</button>'
       + '<button class="mugorder" data-order="' + d.key + '" onclick="occOrderMagic(\'' + d.key + '\')">Order just this one · ' + $(SMART_MUG_PRICE) + '</button></div>').join('')
     + ideaTileHtml('mug') + '</div>'
@@ -329,8 +339,8 @@ function trayHtml() {
   const n = packPicks.length; if (!n) return '';
   const set = SURPRISE_SETS[O.magicMugs.set];
   return '<p class="line" id="packLine">' + trayLine(n) + '</p><div class="picks">' + packPicks.map((k, i) => {
-    const [b, f] = k.split('~'), d = set.designs.find(x => x.key === b) || {}, lab = esc(d.label || '') + (f ? ' · framed' : '');
-    return '<div class="pick" data-pick="' + k + '"><img src="art/options/surprise-' + d.file + '.jpg" alt="' + lab + '"/>' + lab + '<button aria-label="Take out" onclick="occRemove(' + i + ')">✕</button></div>'; }).join('')
+    const [b, f] = k.split('~'), d = set.designs.find(x => x.key === b) || {}, lab = esc(d.label || '') + (f === 'decal' ? ' · decal' : f ? ' · framed' : '');
+    return '<div class="pick" data-pick="' + k + '"><img src="art/options/surprise-' + (f === 'decal' && d.decal ? d.decal : d.file) + '.jpg" alt="' + lab + '"/>' + lab + '<button aria-label="Take out" onclick="occRemove(' + i + ')">✕</button></div>'; }).join('')
     + '</div><button class="mugorder go" id="packOrder" onclick="occOrderPack()">' + (n === 4 ? 'Order my haunted 4-pack' : 'Order ' + n + ' mug' + (n > 1 ? 's' : '')) + ' · ' + $(holidayPrice(n)) + '</button>';
 }
 function refreshTray() {
@@ -425,6 +435,13 @@ window.occFrame = f => {
   const live = document.querySelector('.mugs .pm-mug3d.live');
   if (live) { try { releaseShelfMug(); } catch (e) {} occSpin(live); }
 };
+window.occDecal = on => {
+  decal = !!on;
+  try { releaseShelfMug(); } catch (e) {}
+  const set = SURPRISE_SETS[O.magicMugs.set];
+  const pick = document.getElementById('magicPick'); if (pick) pick.innerHTML = magicPickHtml(set);
+  refreshTray();
+};
 window.occStyle = k => {
   mugStyle = k;
   try { releaseShelfMug(); } catch (e) {}
@@ -435,7 +452,7 @@ window.occStyle = k => {
   refreshTray();
 };
 window.occHand = h => {
-  hand = h === 'left' ? 'left' : 'right'; document.querySelectorAll('.hands:not(.frames):not(.styles) button').forEach(b => b.classList.toggle('on', b.dataset.hand === hand));
+  hand = h === 'left' ? 'left' : 'right'; document.querySelectorAll('.hands:not(.frames):not(.styles):not(.decals) button').forEach(b => b.classList.toggle('on', b.dataset.hand === hand));
   if (ideaState('mug').phase === 'done') ideaDraw('mug');
 };
 
@@ -772,7 +789,7 @@ window.occOrderMat = () => {
 };
 window.occAdd = key => {
   const d = SURPRISE_SETS[O.magicMugs.set].designs.find(x => x.key === key); if (!d || packPicks.length >= 24) return;
-  packPicks.push(frame !== 'none' && designFrames(d).includes(frame) ? key + '~' + frame : key);
+  packPicks.push(mugKey(d));
   refreshTray();
 };
 window.occRemove = i => { packPicks.splice(i, 1); refreshTray(); };
@@ -784,7 +801,7 @@ window.occOrderPack = () => {
 };
 window.occOrderMagic = key => {
   const set = O.magicMugs.set, d = SURPRISE_SETS[set].designs.find(x => x.key === key);
-  if (d && frame !== 'none' && designFrames(d).includes(frame)) key = key + '~' + frame;
+  if (d) key = mugKey(d);
   const urls = setPrintUrls(set, hand, [key]);
   if (!urls || !urls.length) return;
   hand_off({ placements: { left: urls[0], front: null, right: null }, productIcon: 'smart mug', surpriseSet: set, surpriseMugs: [key], surpriseSetPrints: urls, preselectedSurpriseHand: hand });
