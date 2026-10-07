@@ -58,7 +58,7 @@ scenarios.theHome = async (page) => {
     h1: document.querySelector('h1')?.textContent,
     tiles: document.querySelectorAll('#secFeatured .tile[data-mat]').length,
     priced: [...document.querySelectorAll('#secFeatured .tile[data-mat]')].every((t) => t.querySelector('img') && t.querySelector('.pr')?.textContent === '$19.95'),
-    idea: (() => { const t = [...document.querySelectorAll('#secFeatured .tile')].pop(); return t && t.id === 'ideaTile' ? t.textContent.replace(/\s+/g, ' ').trim() : null; })(),
+    idea: (() => { const t = [...document.querySelectorAll('#secFeatured .tile')].pop(); return t && t.id === 'ideaTile-mat' ? t.textContent.replace(/\s+/g, ' ').trim() : null; })(),
     magic: !!document.getElementById('secMagic'), more: !!document.getElementById('secMore'),
     ref: localStorage.getItem('muggshotz_referral_code'), title: document.title,
     cols: getComputedStyle(document.querySelector('#secFeatured .grid')).gridTemplateColumns.split(' ').length,

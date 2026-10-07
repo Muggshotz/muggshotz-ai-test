@@ -92,7 +92,19 @@ window.OCCASION = {
     line: "The picture appears when you pour in something hot.",
     set: "halloween",
     demo: "halloween-boo-ghost-one",   // Boo, in the Trick or Treat frame (Alyx, 3 Oct 2026)
-    frameLabel: "Trick or Treat frame"
+    frameLabel: "Trick or Treat frame",
+    // "GOT A BETTER IDEA?" on the Magic Mugs too (Alyx, 7 Oct 2026: "the same
+    // box at the end of the magic mugs ... comprehensively across all product
+    // lines"). Two halves to describe, painted as one wrap in the decal mugs'
+    // own manner (tools/surprise/decal-mug.py): two sticker scenes on white,
+    // the punchline left and the setup right. The print's 2475 x 1155 shape
+    // is told to the painter as ratio (a strip across its 3:2 canvas) and cut
+    // out of the painting by the page (occasion.html ideaMugBand).
+    idea: {
+      code: "HALLOWEEN", page: "/halloween", size: "1536x1024", ratio: 2475 / 1155,
+      rule: "a Magic Mug's wrap, printed all the way round an 11oz mug: two separate sticker-style scenes side by side on pure white, the punchline on the left half and the setup on the right half, each kept well inside its own half with white around it; any words in quotation marks lettered big and readable inside the scene they belong to; bold shapes, no fine detail",
+      placeholder: { first: "A vampire in the dentist's chair, mouth wide open", then: "The dentist, holding a mirror: \"Well, there's your problem\"" }
+    }
   },
 
   moreTitle: "While you're here, take a look at a few more of our favorites",

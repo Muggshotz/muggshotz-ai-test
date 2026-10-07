@@ -36,12 +36,12 @@ async function fake(page, state) {
   await page.route('**/api/create-checkout-session', (route) => { sent.checkout.push(route.request().postDataJSON()); route.fulfill({ json: { url: `${BASE}/__fake/checkout-redirect` } }); });
   return sent;
 }
-const tile = (page) => page.evaluate(() => { const t = document.getElementById('ideaTile'); return t ? { open: t.classList.contains('open'), text: t.textContent.replace(/\s+/g, ' ').trim(), img: (t.querySelector('img.mine') || {}).src || null } : null; });
+const tile = (page) => page.evaluate(() => { const t = document.getElementById('ideaTile-mat'); return t ? { open: t.classList.contains('open'), text: t.textContent.replace(/\s+/g, ' ').trim(), img: (t.querySelector('img.mine') || {}).src || null } : null; });
 async function openAndType(page, words) {
   await page.goto(`${BASE}/occasion.html?o=halloween`); await T(page, 1800);
-  await page.click('#ideaTile'); await T(page, 700);
-  await page.fill('#ideaText', words);
-  await page.click('#ideaTile .go'); await T(page, 900);
+  await page.click('#ideaTile-mat'); await T(page, 700);
+  await page.fill('#ideaText-mat', words);
+  await page.click('#ideaTile-mat .go'); await T(page, 900);
 }
 const IDEA = 'A grumpy ghost holding a sign: No soliciting, unless you have candy';
 
@@ -52,8 +52,8 @@ scenarios.aNewVisitor = async (page) => {
   await openAndType(page, IDEA);
   let t = await tile(page);
   if (!t || !/Your first two are free/.test(t.text)) return `FAIL: no email step after Make my mat (${JSON.stringify(t)})`;
-  await page.fill('#ideaEmail', 'ghost@example.com');
-  await page.click('#ideaTile .go'); await T(page, 900);
+  await page.fill('#ideaEmail-mat', 'ghost@example.com');
+  await page.click('#ideaTile-mat .go'); await T(page, 900);
   const v = sent.verify[0] || {};
   if (v.email !== 'ghost@example.com' || v.cardCode !== 'HALLOWEEN' || !v.deviceId) return `FAIL: the email went as ${JSON.stringify(v)}`;
   t = await tile(page);
@@ -67,9 +67,9 @@ scenarios.aNewVisitor = async (page) => {
     return `FAIL: painted as ${JSON.stringify(g)}`;
   t = await tile(page);
   if (t.img !== PIC || !/Order this mat · \$19\.95/.test(t.text) || !/Try another idea/.test(t.text) || !/1 try left/.test(t.text)) return `FAIL: the tile did not become their mat (${JSON.stringify(t)})`;
-  const ratio = await page.evaluate(() => { const r = document.querySelector('#ideaTile img.mine').getBoundingClientRect(); return r.width / r.height; });
+  const ratio = await page.evaluate(() => { const r = document.querySelector('#ideaTile-mat img.mine').getBoundingClientRect(); return r.width / r.height; });
   if (Math.abs(ratio - 4650 / 2850) > 0.02) return `FAIL: their mat is shown at ${ratio.toFixed(3)}:1, not the mat's 1.632`;
-  await page.click('#ideaTile .go'); await T(page, 1200);
+  await page.click('#ideaTile-mat .go'); await T(page, 1200);
   const pending = await page.evaluate(() => JSON.parse(localStorage.getItem('muggshotz_pending_order') || 'null'));
   const overlay = await page.evaluate(() => !!document.getElementById('orderPageFrame'));
   if (!pending || pending.productIcon !== 'doormat' || pending.placements.left !== PIC || pending.premadeItem || pending.occasion !== 'halloween' || !overlay)
@@ -81,8 +81,8 @@ scenarios.withTriesLeft = async (page) => {
   const sent = await fake(page, state);
   await openAndType(page, IDEA); await T(page, 1500);
   if (sent.verify.length || sent.generate.length !== 1) return `FAIL: with tries left it asked for an email or did not paint (${sent.verify.length}, ${sent.generate.length})`;
-  await page.click('#ideaTile .go.alt'); await T(page, 600);
-  const kept = await page.inputValue('#ideaText').catch(() => null);
+  await page.click('#ideaTile-mat .go.alt'); await T(page, 600);
+  const kept = await page.inputValue('#ideaText-mat').catch(() => null);
   if (kept !== IDEA) return `FAIL: Try another lost their words (${kept})`;
   return 'PASS: tries left paint straight away; Try another keeps their words';
 };
@@ -93,10 +93,67 @@ scenarios.thePoolClosed = async (page) => {
   const t = await tile(page);
   if (!/Today's free tries are all taken/.test(t.text) || !/3 more tries · \$1\.33/.test(t.text) || !/20 more tries · \$5/.test(t.text) || sent.verify.length)
     return `FAIL: closed pool shows ${JSON.stringify(t)} (emails sent: ${sent.verify.length})`;
-  await page.click('#ideaTile .go'); await T(page, 1200);
+  await page.click('#ideaTile-mat .go'); await T(page, 1200);
   const c = sent.checkout[0] || {};
   if (c.type !== 'token_purchase' || c.packId !== '3tokens' || c.returnTo !== '/halloween') return `FAIL: the pack went as ${JSON.stringify(c)}`;
   return 'PASS: a closed pool asks for no email, offers the packs, and a pack bought here comes back to /halloween';
+};
+
+// THE MAGIC MUG'S BOX (Alyx, 7 Oct 2026: "the same box at the end of the
+// magic mugs"): the mugs' grid ends with it; two halves to describe; it paints
+// through the same lane with the wrap's 2.14 as the band, the punchline left
+// and the setup right; the tile shows the flat wrap; Order cuts the print to
+// 2475 x 1155 from the painting and checks it out as a smart mug with the hand
+// chosen, the halves swapped for the left hand.
+scenarios.theMugBox = async (page) => {
+  const state = { tries: 3, verified: true, open: true };
+  const sent = await fake(page, state);
+  await page.goto(`${BASE}/occasion.html?o=halloween`); await T(page, 1800);
+  await page.evaluate(() => occGo('magic')); await T(page, 1200);
+  const last = await page.evaluate(() => { const t = [...document.querySelectorAll('.mugs > *')].pop(); return t ? { id: t.id, text: t.textContent.replace(/\s+/g, ' ').trim() } : null; });
+  if (!last || last.id !== 'ideaTile-mug' || !/Got a better idea\?.*Your own Magic Mug.*\$19\.95/.test(last.text)) return `FAIL: the mugs' grid ends with ${JSON.stringify(last)}`;
+  await page.click('#ideaTile-mug'); await T(page, 700);
+  await page.click('#ideaTile-mug .go'); await T(page, 500);
+  if (sent.generate.length || !/both halves/.test(await page.textContent('#ideaTile-mug'))) return 'FAIL: it painted with the halves empty';
+  await page.fill('#ideaText-mug', 'A vampire at the dentist');
+  await page.fill('#ideaText2-mug', 'The dentist: "Well, there\'s your problem"');
+  await page.click('#ideaTile-mug .go'); await T(page, 1500);
+  const g = sent.generate[0];
+  if (!g) return 'FAIL: the mug did not paint';
+  if (g.action !== 'textOnly' || g.size !== '1536x1024' || Math.abs(g.bandRatio - 2475 / 1155) > 0.001 || !/^a Magic Mug's wrap/.test(g.shapingRule)
+    || !/RIGHT scene is the setup[^\n]*A vampire at the dentist/.test(g.prompt) || !/LEFT scene is the punchline[^\n]*your problem/.test(g.prompt) || g.image || g.styleDirective)
+    return `FAIL: painted as ${JSON.stringify(g)}`;
+  const t = await page.evaluate(() => { const el = document.getElementById('ideaTile-mug'), im = el.querySelector('img.mine'), r = im.getBoundingClientRect(); return { text: el.textContent.replace(/\s+/g, ' ').trim(), src: im.src, ratio: r.width / r.height }; });
+  if (t.src !== PIC || !/Order this mug · \$19\.95/.test(t.text) || !/right-handed/.test(t.text) || Math.abs(t.ratio - 2475 / 1155) > 0.02) return `FAIL: the tile became ${JSON.stringify(t)}`;
+  const order = async () => {
+    await page.click('#ideaTile-mug .go'); await T(page, 1500);
+    const p = await page.evaluate(() => JSON.parse(localStorage.getItem('muggshotz_pending_order') || 'null'));
+    const overlay = await page.evaluate(() => !!document.getElementById('orderPageFrame'));
+    await page.evaluate(() => closeOrderOverlay()); await T(page, 600);
+    const size = await page.evaluate((u) => new Promise((res) => { const i = new Image(); i.onload = () => res([i.naturalWidth, i.naturalHeight]); i.onerror = () => res(null); i.src = u; }), p.placements.left);
+    return { p, overlay, size };
+  };
+  const right = await order();
+  if (!right.overlay || right.p.productIcon !== 'smart mug' || right.p.preselectedSurpriseHand !== 'right' || !/^data:image\/jpeg/.test(right.p.placements.left) || right.p.occasion !== 'halloween'
+    || right.p.ideaPrompt !== 'A vampire at the dentist / The dentist: "Well, there\'s your problem"' || JSON.stringify(right.size) !== '[2475,1155]')
+    return `FAIL: the right-handed order went as ${JSON.stringify({ ...right, p: { ...right.p, placements: { left: right.p.placements.left.slice(0, 30) } } })}`;
+  await page.evaluate(() => occHand('left')); await T(page, 300);
+  if (!/left hand/.test(await page.textContent('#ideaTile-mug'))) return 'FAIL: picking the left hand did not change the note under the mug';
+  const left = await order();
+  if (left.p.preselectedSurpriseHand !== 'left' || JSON.stringify(left.size) !== '[2475,1155]' || left.p.placements.left === right.p.placements.left) return 'FAIL: the left-handed print is not the halves swapped';
+  // The halves really swapped: the left half of one print is the right half of the other.
+  const same = await page.evaluate(([a, b]) => new Promise((res) => {
+    const load = (u) => new Promise((r) => { const i = new Image(); i.onload = () => r(i); i.src = u; });
+    Promise.all([load(a), load(b)]).then(([ia, ib]) => {
+      const c = document.createElement('canvas'); c.width = 2475; c.height = 1155; const x = c.getContext('2d');
+      x.drawImage(ia, 0, 0); const A = x.getImageData(0, 0, 1237, 1155).data;
+      x.drawImage(ib, 0, 0); const B = x.getImageData(1238, 0, 1237, 1155).data;
+      let d = 0; for (let i = 0; i < A.length; i += 40) d += Math.abs(A[i] - B[i]);
+      res(d / (A.length / 40));
+    });
+  }), [right.p.placements.left, left.p.placements.left]);
+  if (same > 6) return `FAIL: the left print's right half differs from the right print's left half by ${same.toFixed(1)} a pixel`;
+  return 'PASS: the mugs\' grid ends with the box; two halves; painted once as a 2.14 strip, punchline left and setup right; the tile shows the flat wrap; Order cuts the 2475 x 1155 print and checks out a smart mug for the hand chosen, halves swapped for the left';
 };
 
 // THE COUNTER (Alyx, 7 Oct 2026): a confirmed email at zero tokens sees the

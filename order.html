@@ -1517,7 +1517,9 @@ const selectedSurpriseHand = pendingOrder?.preselectedSurpriseHand === 'left' ? 
 const selectedSurpriseVariant = pendingOrder?.preselectedSurpriseVariant || null;
 function surpriseLabel(){
   const v = (SURPRISE_VARIANT_LABELS[selectedSurprise] || {})[selectedSurpriseVariant];
-  return (SURPRISE_LABELS[selectedSurprise] || 'Surprise') + (v ? ' / ' + v : '');
+  // A visitor's own mug from a flyer page's "Got a better idea?" box
+  // (occasion.html): no template, their design as the print, named as theirs.
+  return (SURPRISE_LABELS[selectedSurprise] || (pendingOrder?.ideaLabel ? String(pendingOrder.ideaLabel).slice(0, 60) : 'Surprise')) + (v ? ' / ' + v : '');
 }
 // THE HOLIDAY MUGS (26-27 Sep 2026): a holiday's designs, mixed and matched
 // in the studio. The studio names the holiday, the hand and the mugs (by key);

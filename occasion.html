@@ -134,6 +134,11 @@ html.order-page-open{overflow:hidden}
 .tile.idea .mine{display:block;width:100%;aspect-ratio:4650/2850;object-fit:cover;border-radius:8px;background:#000}
 .tile.idea .spin{width:34px;height:34px;border:4px solid #3a2f4a;border-top-color:var(--accent);border-radius:50%;animation:ideaspin 1s linear infinite;margin:18px auto}
 @keyframes ideaspin{to{transform:rotate(360deg)}}
+.tile.idea .ideabox.mug{aspect-ratio:960/720}
+.tile.idea .mine.band{aspect-ratio:2475/1155}
+.tile.idea label.fld{display:block;font-size:13px;color:var(--muted);margin:0 0 8px}
+.tile.idea label.fld textarea{margin-top:4px;min-height:64px}
+.tile.idea .note{font-size:13px;color:var(--muted);margin:6px 0 8px}
 </style>
 <script src="mug3d.js"></script>
 <script src="magic-mug.js"></script>
@@ -235,7 +240,7 @@ function homeHtml() {
   let h = heroHtml();
   h += '<section class="sec" id="secFeatured"><h2>' + esc(F.title) + ' · ' + $(fp) + '</h2><p class="line">' + esc(F.line) + ' · tap one to see it big</p><div class="grid">'
     + F.designs.map((d, i) => '<div class="tile" data-mat="' + d.key + '" onclick="occGo(\'mat\',' + i + ')"><img src="' + F.dir + '/show/' + d.key + '.jpg" width="' + F.show[0] + '" height="' + F.show[1] + '" alt="" loading="' + (i < 6 ? 'eager' : 'lazy') + '"/><div class="nm">' + esc(d.label) + '</div><div class="pr">' + $(fp) + '</div></div>').join('')
-    + ideaTileHtml()
+    + ideaTileHtml('mat')
     + '</div></section>';
   const M = O.magicMugs, set = M && typeof SURPRISE_SETS !== 'undefined' && SURPRISE_SETS[M.set];
   if (set && set.designs.length) {
@@ -295,7 +300,8 @@ function magicPickHtml(set) {
     + '<div class="mugs">' + styleDesigns(set, mugStyle).map(d => '<div><div class="pm-mug3d" data-key="' + d.key + '" data-mug3d="' + mugFile(d) + '" data-angle="' + designAngle(d) + '" onclick="occSpin(this)"><img src="art/surprise/mug/' + d.file + '.jpg" width="960" height="720" alt="' + esc(d.label) + '"/><div class="pm-mug3d-stage"></div><div class="pm-spin-cue">↻ Click to spin</div></div>'
       + '<div class="mugname"><b>' + esc(d.label) + '</b><span>' + $(SMART_MUG_PRICE) + '</span></div>'
       + '<button class="mugadd" data-add="' + d.key + '" onclick="occAdd(\'' + d.key + '\')">' + addText(d.key) + '</button>'
-      + '<button class="mugorder" data-order="' + d.key + '" onclick="occOrderMagic(\'' + d.key + '\')">Order just this one · ' + $(SMART_MUG_PRICE) + '</button></div>').join('') + '</div>'
+      + '<button class="mugorder" data-order="' + d.key + '" onclick="occOrderMagic(\'' + d.key + '\')">Order just this one · ' + $(SMART_MUG_PRICE) + '</button></div>').join('')
+    + ideaTileHtml('mug') + '</div>'
     + '<div id="packTray">' + trayHtml() + '</div>';
 }
 // THE HAUNTED 4-PACK (Alyx and Bud, 5 Oct 2026: "customers should NOT be forced
@@ -417,7 +423,10 @@ window.occStyle = k => {
   const pick = document.getElementById('magicPick'); if (pick) pick.innerHTML = magicPickHtml(set);
   refreshTray();
 };
-window.occHand = h => { hand = h === 'left' ? 'left' : 'right'; document.querySelectorAll('.hands:not(.frames):not(.styles) button').forEach(b => b.classList.toggle('on', b.dataset.hand === hand)); };
+window.occHand = h => {
+  hand = h === 'left' ? 'left' : 'right'; document.querySelectorAll('.hands:not(.frames):not(.styles) button').forEach(b => b.classList.toggle('on', b.dataset.hand === hand));
+  if (ideaState('mug').phase === 'done') ideaDraw('mug');
+};
 
 // A coffee mug turns on the studio's own 3D mug: Classic White, the design all round.
 window.occSpinMore = el => {
@@ -429,162 +438,245 @@ window.occSpinMore = el => {
 };
 
 // ---- GOT A BETTER IDEA? ------------------------------------------------------
-// (Alyx, 6-7 Oct 2026) The mats' last tile. The visitor describes their own mat
-// and the tile turns into it, painted as a mat and nothing else, then they keep
-// it (order it) or try another. As far as they can tell it is this flyer's own
+// (Alyx, 6-7 Oct 2026) The last tile of each product section: the mats', the
+// Magic Mugs', and every product line's to come ("comprehensively across all
+// product lines"). The visitor describes their own, and the tile turns into
+// it, painted as that section's product and nothing else, then they keep it
+// (order it) or try another. As far as they can tell it is this flyer's own
 // little shop: it never sends them into the studio. Their first two tries are
 // free for a confirmed email (the flyer's code in lib/card-bonus.js), drawn
-// from the flyers' pool of 300 (lib/free-pool.js); when the pool is closed or
-// their tries are used, it offers the token packs, and a pack bought here comes
-// back here.
+// from the flyer's pool of 300 (lib/free-pool.js); when the pool is closed or
+// their tries are used, it offers the token packs, and a pack bought here
+// comes back to the box it left. The boxes share the device's tries and each
+// keeps its own words and picture.
+//   k: 'mat' (the featured product, O.featured.idea) | 'mug' (O.magicMugs.idea)
 //   phase: idle | typing | email | waiting | painting | done | out
-let idea = { phase: 'idle', text: '', email: '', url: null, err: '', tries: null, verified: false, open: null, poll: null };
-function ideaCfg() { return O && O.featured && O.featured.idea; }
-function ideaTileHtml() {
-  const I = ideaCfg(); if (!I) return '';
-  const fp = featuredPrice();
-  if (idea.phase === 'idle') {
-    return '<div class="tile idea" id="ideaTile" onclick="occIdeaOpen()"><div class="ideabox"><b>Got a better idea?</b><span>Tap here to enter your idea</span></div>'
-      + '<div class="nm">Your own mat</div><div class="pr">' + $(fp) + '</div></div>';
+const ideas = {};
+function ideaState(k) { return ideas[k] || (ideas[k] = { k, phase: 'idle', text: '', text2: '', email: '', url: null, err: '', tries: null, verified: false, open: null, poll: null }); }
+function ideaCfg(k) { return k === 'mug' ? (O && O.magicMugs && O.magicMugs.idea) : (O && O.featured && O.featured.idea); }
+function ideaPrice(k) { return k === 'mug' ? SMART_MUG_PRICE : featuredPrice(); }
+// The box's words, by what it paints.
+const IDEA_WORDS = {
+  mat: { own: 'Your own mat', title: 'Your mat', make: 'Make my mat', painting: 'Painting your mat…', order: 'Order this mat', empty: 'Tell us a little about your mat first.',
+    hint: 'Describe your mat. We\'ll paint it as an 18 x 30 in welcome mat. Put any words you want on the mat in quotation marks.' },
+  mug: { own: 'Your own Magic Mug', title: 'Your Magic Mug', make: 'Make my Magic Mug', painting: 'Painting your Magic Mug…', order: 'Order this mug', empty: 'Tell us both halves of your joke first.',
+    hint: 'A Magic Mug tells its joke in two halves: what they see first, and what they see when they turn the mug. Describe both. Put any words you want on the mug in quotation marks.' }
+};
+function ideaTileHtml(k) {
+  const I = ideaCfg(k); if (!I) return '';
+  const S = ideaState(k), W = IDEA_WORDS[k], p = $(ideaPrice(k)), id = 'ideaTile-' + k;
+  const on = f => ' onclick="occIdea' + f + '(\'' + k + '\')"';
+  if (S.phase === 'idle') {
+    return '<div class="tile idea" id="' + id + '"' + on('Open') + '><div class="ideabox ' + k + '"><b>Got a better idea?</b><span>Tap here to enter your idea</span></div>'
+      + '<div class="nm">' + W.own + '</div><div class="pr">' + p + '</div></div>';
   }
-  const left = typeof idea.tries === 'number' && idea.tries > 0 ? '<p class="hint">' + (idea.tries === 1 ? 'You have 1 try left.' : 'You have ' + idea.tries + ' tries left.') + '</p>' : '';
-  const err = idea.err ? '<div class="err">' + esc(idea.err) + '</div>' : '';
+  const left = typeof S.tries === 'number' && S.tries > 0 ? '<p class="hint">' + (S.tries === 1 ? 'You have 1 try left.' : 'You have ' + S.tries + ' tries left.') + '</p>' : '';
+  const err = S.err ? '<div class="err">' + esc(S.err) + '</div>' : '';
   let body = '';
-  if (idea.phase === 'typing') {
-    body = '<h3>Got a better idea?</h3><p class="hint">Describe your mat. We\'ll paint it as an 18 x 30 in welcome mat. Put any words you want on the mat in quotation marks.</p>'
-      + '<textarea id="ideaText" maxlength="600" placeholder="' + esc(I.placeholder || 'Describe your mat') + '" oninput="occIdeaType(this.value)">' + esc(idea.text) + '</textarea>'
-      + left + '<button class="go" onclick="occIdeaGo()">Make my mat</button>' + err;
-  } else if (idea.phase === 'email') {
+  if (S.phase === 'typing') {
+    const fields = k === 'mug'
+      ? '<label class="fld">What they see first<textarea id="ideaText-mug" maxlength="400" placeholder="' + esc(I.placeholder.first) + '" oninput="occIdeaType(\'mug\',this.value)">' + esc(S.text) + '</textarea></label>'
+        + '<label class="fld">What they see when they turn the mug<textarea id="ideaText2-mug" maxlength="400" placeholder="' + esc(I.placeholder.then) + '" oninput="occIdeaType(\'mug\',this.value,2)">' + esc(S.text2) + '</textarea></label>'
+      : '<textarea id="ideaText-' + k + '" maxlength="600" placeholder="' + esc(I.placeholder || '') + '" oninput="occIdeaType(\'' + k + '\',this.value)">' + esc(S.text) + '</textarea>';
+    body = '<h3>Got a better idea?</h3><p class="hint">' + W.hint + '</p>' + fields
+      + left + '<button class="go"' + on('Go') + '>' + W.make + '</button>' + err;
+  } else if (S.phase === 'email') {
     body = '<h3>Your first two are free</h3><p class="hint">Where should we send your key? Tap the link in the email, then come back here: your idea stays right where you left it.</p>'
-      + '<input id="ideaEmail" type="email" inputmode="email" autocomplete="email" placeholder="you@example.com" value="' + esc(idea.email) + '"/>'
-      + '<button class="go" onclick="occIdeaEmail()">Send my two free tries</button>'
-      + '<button class="go alt" onclick="occIdeaBack()">← Back to my idea</button>' + err;
-  } else if (idea.phase === 'waiting') {
-    body = '<h3>Check your email</h3><p class="hint">We sent a link to <b>' + esc(idea.email) + '</b>. Tap it, then come back to this page: it updates by itself, and your mat starts painting.</p>'
-      + '<div class="spin"></div><button class="go alt" onclick="occIdeaEmailAgain()">Use a different email</button>' + err;
-  } else if (idea.phase === 'painting') {
-    body = '<h3>Painting your mat…</h3><p class="hint">“' + esc(idea.text) + '”</p><div class="spin"></div><p class="hint" style="text-align:center">About a minute. Keep this page open.</p>';
-  } else if (idea.phase === 'done') {
-    body = '<h3>Your mat</h3><img class="mine" src="' + esc(idea.url) + '" alt="Your mat"/>' + left
-      + '<button class="go" onclick="occIdeaOrder()">Order this mat · ' + $(fp) + '</button>'
-      + '<button class="go alt" onclick="occIdeaAnother()">Try another idea</button>' + err;
+      + '<input id="ideaEmail-' + k + '" type="email" inputmode="email" autocomplete="email" placeholder="you@example.com" value="' + esc(S.email) + '"/>'
+      + '<button class="go"' + on('Email') + '>Send my two free tries</button>'
+      + '<button class="go alt"' + on('Back') + '>← Back to my idea</button>' + err;
+  } else if (S.phase === 'waiting') {
+    body = '<h3>Check your email</h3><p class="hint">We sent a link to <b>' + esc(S.email) + '</b>. Tap it, then come back to this page: it updates by itself, and your ' + (k === 'mug' ? 'mug' : 'mat') + ' starts painting.</p>'
+      + '<div class="spin"></div><button class="go alt"' + on('EmailAgain') + '>Use a different email</button>' + err;
+  } else if (S.phase === 'painting') {
+    body = '<h3>' + W.painting + '</h3><p class="hint">“' + esc(ideaWords(S)) + '”</p><div class="spin"></div><p class="hint" style="text-align:center">About a minute. Keep this page open.</p>';
+  } else if (S.phase === 'done') {
+    const note = k === 'mug'
+      ? '<p class="note">Laid flat, the way it wraps the mug. ' + (hand === 'left' ? 'Printed turned round for the left hand picked above, so the setup still faces them first.' : 'Printed for a right-handed drinker: the setup faces them first. Left-handed? Pick it above and we turn it round.') + '</p>'
+      : '';
+    body = '<h3>' + W.title + '</h3><img class="mine' + (k === 'mug' ? ' band' : '') + '" src="' + esc(S.url) + '" alt="' + W.title + '"/>' + note + left
+      + '<button class="go"' + on('Order') + '>' + W.order + ' · ' + p + '</button>'
+      + '<button class="go alt"' + on('Another') + '>Try another idea</button>' + err;
   } else {
-    body = '<h3>' + (idea.open === false && !idea.verified ? "Today's free tries are all taken" : 'Your free tries are used') + '</h3>'
-      + '<p class="hint">Keep going for a little more, or order any mat above.</p>'
-      + '<button class="go" onclick="occIdeaBuy(\'3tokens\')">3 more tries · $1.33</button>'
-      + '<button class="go alt" onclick="occIdeaBuy(\'20tokens\')">20 more tries · $5</button>'
-      + (idea.text ? '<button class="go alt" onclick="occIdeaBack()">← Back to my idea</button>' : '') + err;
+    body = '<h3>' + (S.open === false && !S.verified ? "Today's free tries are all taken" : 'Your free tries are used') + '</h3>'
+      + '<p class="hint">Keep going for a little more, or order any ' + (k === 'mug' ? 'mug' : 'mat') + ' above.</p>'
+      + '<button class="go" onclick="occIdeaBuy(\'' + k + '\',\'3tokens\')">3 more tries · $1.33</button>'
+      + '<button class="go alt" onclick="occIdeaBuy(\'' + k + '\',\'20tokens\')">20 more tries · $5</button>'
+      + (S.text ? '<button class="go alt"' + on('Back') + '>← Back to my idea</button>' : '') + err;
   }
-  return '<div class="tile idea open" id="ideaTile">' + body + '</div>';
+  return '<div class="tile idea open" id="' + id + '">' + body + '</div>';
 }
-function ideaDraw() {
-  const el = document.getElementById('ideaTile'); if (!el) return;
-  el.outerHTML = ideaTileHtml();
+function ideaDraw(k) {
+  const el = document.getElementById('ideaTile-' + k); if (!el) return;
+  el.outerHTML = ideaTileHtml(k);
 }
-async function ideaRefresh() {
-  const I = ideaCfg(); if (!I) return;
+// Their idea in their words (the order's record), and the painter's version.
+function ideaWords(S) { return S.k === 'mug' ? S.text + ' / ' + S.text2 : S.text; }
+// A MAGIC MUG IS TWO STICKERS ON WHITE (the decal mugs' own manner, tools/
+// surprise/decal-mug.py): the punchline on the left half, the setup on the
+// right, so that a right-handed drinker sees the setup first and turns the mug
+// to the punchline. One painting, both scenes, never stitched.
+function ideaPrompt(S) {
+  if (S.k !== 'mug') return S.text;
+  return 'Two separate sticker-style scenes side by side on a plain white background, each its own complete picture with white space around it and nothing drawn between or behind them.\n'
+    + 'The RIGHT scene is the setup, seen first: ' + S.text + '\n'
+    + 'The LEFT scene is the punchline, seen when the mug is turned: ' + S.text2;
+}
+async function ideaRefresh(k) {
+  const I = ideaCfg(k), S = ideaState(k); if (!I) return;
   try {
     const b = await (await fetch('/api/get-balance?deviceId=' + encodeURIComponent(deviceId()), { cache: 'no-store' })).json();
-    idea.tries = typeof b.tokenBalance === 'number' ? b.tokenBalance : 0;
-    idea.verified = !!b.emailVerified;
+    S.tries = typeof b.tokenBalance === 'number' ? b.tokenBalance : 0;
+    S.verified = !!b.emailVerified;
   } catch (e) { console.error('Could not read the tries left:', e); }
   try {
     const c = await (await fetch('/api/get-balance?card=' + encodeURIComponent(I.code), { cache: 'no-store' })).json();
-    idea.open = !!(c.on && c.open);
+    S.open = !!(c.on && c.open);
   } catch (e) { console.error('Could not read the free tries:', e); }
 }
-window.occIdeaType = v => { idea.text = v; };
-window.occIdeaOpen = async () => {
-  idea.phase = 'typing'; idea.err = ''; ideaDraw();
-  const t = document.getElementById('ideaText'); if (t) t.focus();
+window.occIdeaType = (k, v, which) => { const S = ideaState(k); if (which === 2) S.text2 = v; else S.text = v; };
+window.occIdeaOpen = async k => {
+  const S = ideaState(k);
+  S.phase = 'typing'; S.err = ''; ideaDraw(k);
+  const t = document.getElementById('ideaText-' + k); if (t) t.focus();
   // Read quietly: redrawing now would pull the box out from under their typing.
-  await ideaRefresh();
+  await ideaRefresh(k);
 };
-window.occIdeaBack = () => { idea.phase = 'typing'; idea.err = ''; ideaStopPoll(); ideaDraw(); };
-window.occIdeaGo = async () => {
-  const t = document.getElementById('ideaText'); if (t) idea.text = t.value;
-  idea.text = idea.text.trim(); idea.err = '';
-  if (idea.text.length < 3) { idea.err = 'Tell us a little about your mat first.'; ideaDraw(); return; }
-  if (idea.tries == null) await ideaRefresh();
-  if (idea.tries > 0) return ideaPaint();
-  if (!idea.verified && idea.open) { idea.phase = 'email'; ideaDraw(); return; }
-  idea.phase = 'out'; ideaDraw();
+window.occIdeaBack = k => { const S = ideaState(k); S.phase = 'typing'; S.err = ''; ideaStopPoll(k); ideaDraw(k); };
+function ideaReadFields(S) {
+  const t = document.getElementById('ideaText-' + S.k); if (t) S.text = t.value;
+  const t2 = document.getElementById('ideaText2-' + S.k); if (t2) S.text2 = t2.value;
+  S.text = S.text.trim(); S.text2 = S.text2.trim();
+}
+window.occIdeaGo = async k => {
+  const S = ideaState(k); ideaReadFields(S); S.err = '';
+  if (S.text.length < 3 || (k === 'mug' && S.text2.length < 3)) { S.err = IDEA_WORDS[k].empty; ideaDraw(k); return; }
+  if (S.tries == null) await ideaRefresh(k);
+  if (S.tries > 0) return ideaPaint(k);
+  if (!S.verified && S.open) { S.phase = 'email'; ideaDraw(k); return; }
+  S.phase = 'out'; ideaDraw(k);
 };
-window.occIdeaEmail = async () => {
-  const I = ideaCfg(), el = document.getElementById('ideaEmail');
-  idea.email = (el ? el.value : idea.email).trim(); idea.err = '';
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(idea.email)) { idea.err = 'That email doesn\'t look right.'; ideaDraw(); return; }
+window.occIdeaEmail = async k => {
+  const I = ideaCfg(k), S = ideaState(k), el = document.getElementById('ideaEmail-' + k);
+  S.email = (el ? el.value : S.email).trim(); S.err = '';
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(S.email)) { S.err = 'That email doesn\'t look right.'; ideaDraw(k); return; }
   try {
-    const r = await fetch('/api/send-verification', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: idea.email, deviceId: deviceId(), cardCode: I.code }) });
+    const r = await fetch('/api/send-verification', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: S.email, deviceId: deviceId(), cardCode: I.code }) });
     const d = await r.json().catch(() => ({}));
     if (!r.ok) {
-      if (d.closed) { idea.open = false; idea.phase = 'out'; ideaDraw(); return; }
-      if (/already/i.test(d.error || '')) { idea.verified = true; idea.phase = 'out'; idea.err = d.error; ideaDraw(); return; }
+      if (d.closed) { S.open = false; S.phase = 'out'; ideaDraw(k); return; }
+      if (/already/i.test(d.error || '')) { S.verified = true; S.phase = 'out'; S.err = d.error; ideaDraw(k); return; }
       // Resend's own reason, when the server passed it on (api/send-verification detail).
       let why = ''; try { why = JSON.parse(d.detail || '{}').message || ''; } catch (e) { why = String(d.detail || '').slice(0, 200); }
       throw new Error((d.error || 'Could not send the email.') + (why ? ' (' + why + ')' : ''));
     }
-    idea.phase = 'waiting'; ideaDraw(); ideaStartPoll();
-  } catch (e) { idea.err = e.message; ideaDraw(); }
+    S.phase = 'waiting'; ideaDraw(k); ideaStartPoll(k);
+  } catch (e) { S.err = e.message; ideaDraw(k); }
 };
-window.occIdeaEmailAgain = () => { ideaStopPoll(); idea.phase = 'email'; idea.err = ''; ideaDraw(); };
-function ideaStopPoll() { if (idea.poll) { clearInterval(idea.poll); idea.poll = null; } }
-function ideaStartPoll() {
-  ideaStopPoll();
-  idea.poll = setInterval(async () => {
-    await ideaRefresh();
-    if (idea.tries > 0 && idea.phase === 'waiting') { ideaStopPoll(); ideaPaint(); }
+window.occIdeaEmailAgain = k => { const S = ideaState(k); ideaStopPoll(k); S.phase = 'email'; S.err = ''; ideaDraw(k); };
+function ideaStopPoll(k) { const S = ideaState(k); if (S.poll) { clearInterval(S.poll); S.poll = null; } }
+function ideaStartPoll(k) {
+  ideaStopPoll(k);
+  const S = ideaState(k);
+  S.poll = setInterval(async () => {
+    await ideaRefresh(k);
+    if (S.tries > 0 && S.phase === 'waiting') { ideaStopPoll(k); ideaPaint(k); }
   }, 4000);
 }
-async function ideaPaint() {
-  const I = ideaCfg();
-  idea.phase = 'painting'; idea.err = ''; ideaDraw();
+async function ideaPaint(k) {
+  const I = ideaCfg(k), S = ideaState(k);
+  S.phase = 'painting'; S.err = ''; ideaDraw(k);
   const ac = new AbortController(), timer = setTimeout(() => ac.abort(), 240000);
   try {
     const r = await fetch('/api/generate', {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: ac.signal,
       // The studio's described-design lane (api/generate.js action textOnly):
-      // the visitor's own words, the mat's rule and its shape, nothing else.
-      body: JSON.stringify(Object.assign({ action: 'textOnly', prompt: idea.text, deviceId: deviceId(), size: I.size, shapingRule: I.rule }, I.ratio ? { bandRatio: I.ratio } : {}))
+      // the visitor's own words, the product's rule and its shape, nothing
+      // else. A mat is nearly the canvas's own shape and fills it (no ratio);
+      // a Magic Mug's wrap is told as bandRatio and painted as a strip across
+      // the middle, cut out by ideaMugBand for the print.
+      body: JSON.stringify(Object.assign({ action: 'textOnly', prompt: ideaPrompt(S), deviceId: deviceId(), size: I.size, shapingRule: I.rule }, I.ratio ? { bandRatio: I.ratio } : {}))
     });
     const d = await r.json().catch(() => ({}));
-    if (!r.ok || !d.imageUrl) throw new Error(d.error || 'Your mat could not be painted. Your try was not used; please try again.');
-    idea.url = d.imageUrl; idea.phase = 'done';
-    if (typeof idea.tries === 'number') idea.tries = Math.max(0, idea.tries - 1);
+    if (!r.ok || !d.imageUrl) throw new Error(d.error || 'Your ' + (k === 'mug' ? 'mug' : 'mat') + ' could not be painted. Your try was not used; please try again.');
+    S.url = d.imageUrl; S.phase = 'done';
+    if (typeof S.tries === 'number') S.tries = Math.max(0, S.tries - 1);
   } catch (e) {
-    idea.phase = 'typing';
-    idea.err = e.name === 'AbortError' ? 'That took too long. Please try again.' : e.message;
+    S.phase = 'typing';
+    S.err = e.name === 'AbortError' ? 'That took too long. Please try again.' : e.message;
   } finally { clearTimeout(timer); }
-  ideaDraw();
-  ideaRefresh().then(() => { if (idea.phase === 'done') ideaDraw(); });
+  ideaDraw(k);
+  ideaRefresh(k).then(() => { if (S.phase === 'done') ideaDraw(k); });
 }
-window.occIdeaAnother = () => { idea.phase = 'typing'; idea.err = ''; ideaDraw(); const t = document.getElementById('ideaText'); if (t) t.focus(); };
-window.occIdeaOrder = () => {
-  const F = O.featured; if (!idea.url) return;
+window.occIdeaAnother = k => { const S = ideaState(k); S.phase = 'typing'; S.err = ''; ideaDraw(k); const t = document.getElementById('ideaText-' + k); if (t) t.focus(); };
+// THE PRINT, FROM THE PAINTING. The painter's widest canvas is 3:2 and a Magic
+// Mug's wrap is 2475 x 1155 (2.14:1), so the lane paints the wrap as a strip
+// across the middle of the canvas with white above and below (api/generate.js
+// textOnly, bandRatio). This finds the strip (the rows with anything but white
+// in them), cuts the wrap's own shape around its middle and, for a left hand,
+// swaps the halves so the setup still faces the drinker. The order server
+// prints a single image contained on white (api/create-printify-order.js
+// buildSingleImage), so the band has to be the print's own shape before it goes.
+async function ideaMugBand(url, forHand) {
+  const img = await new Promise((res, rej) => { const i = new Image(); i.crossOrigin = 'anonymous'; i.onload = () => res(i); i.onerror = () => rej(new Error('the picture could not be read')); i.src = url; });
+  const W = img.naturalWidth, H = img.naturalHeight, PW = 2475, PH = 1155;
+  const probe = document.createElement('canvas'); probe.width = W; probe.height = H;
+  const px = probe.getContext('2d'); px.drawImage(img, 0, 0);
+  const data = px.getImageData(0, 0, W, H).data;
+  let top = -1, bottom = -1;
+  for (let y = 0; y < H; y++) {
+    let ink = false;
+    for (let x = 0; x < W; x += 2) { const i = (y * W + x) * 4; if (data[i] < 235 || data[i + 1] < 235 || data[i + 2] < 235) { ink = true; break; } }
+    if (ink) { if (top < 0) top = y; bottom = y; }
+  }
+  if (top < 0) { top = 0; bottom = H - 1; }
+  const bh = Math.min(H, Math.round(W * PH / PW));
+  let y0 = Math.round((top + bottom + 1) / 2 - bh / 2); y0 = Math.max(0, Math.min(H - bh, y0));
+  const out = document.createElement('canvas'); out.width = PW; out.height = PH;
+  const cx = out.getContext('2d'); cx.fillStyle = '#fff'; cx.fillRect(0, 0, PW, PH);
+  const half = W / 2;
+  if (forHand === 'left') { cx.drawImage(img, half, y0, half, bh, 0, 0, PW / 2, PH); cx.drawImage(img, 0, y0, half, bh, PW / 2, 0, PW / 2, PH); }
+  else cx.drawImage(img, 0, y0, W, bh, 0, 0, PW, PH);
+  return out.toDataURL('image/jpeg', 0.92);
+}
+window.occIdeaOrder = async k => {
+  const S = ideaState(k); if (!S.url) return;
+  if (k === 'mug') {
+    S.err = '';
+    let band;
+    try { band = await ideaMugBand(S.url, hand); }
+    catch (e) { S.err = 'Your mug\'s print could not be prepared (' + e.message + '). Please try again.'; ideaDraw(k); return; }
+    hand_off({ placements: { left: band, front: null, right: null }, productIcon: 'smart mug', preselectedSurpriseHand: hand, ideaPrompt: ideaWords(S), ideaLabel: IDEA_WORDS.mug.own });
+    return;
+  }
+  const F = O.featured;
   // Printed as the mat's full bleed: the order server covers the print with it,
   // centred, which is exactly the crop the tile shows.
-  hand_off(Object.assign({ placements: { left: idea.url, front: null, right: null }, ideaPrompt: idea.text }, F.order));
+  hand_off(Object.assign({ placements: { left: S.url, front: null, right: null }, ideaPrompt: S.text }, F.order));
 };
-window.occIdeaBuy = async packId => {
-  const I = ideaCfg(); idea.err = '';
+window.occIdeaBuy = async (k, packId) => {
+  const I = ideaCfg(k), S = ideaState(k); S.err = '';
   try {
     const r = await fetch('/api/create-checkout-session', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'token_purchase', deviceId: deviceId(), packId, returnTo: I.page }) });
     const d = await r.json();
     if (!r.ok || !d.url) throw new Error(d.error || 'Could not open checkout.');
-    try { sessionStorage.setItem('mz_idea_text', idea.text); } catch (e) {}
+    try { sessionStorage.setItem('mz_idea_box', k); sessionStorage.setItem('mz_idea_text', S.text); sessionStorage.setItem('mz_idea_text2', S.text2); } catch (e) {}
     location.href = d.url;
-  } catch (e) { idea.err = e.message; ideaDraw(); }
+  } catch (e) { S.err = e.message; ideaDraw(k); }
 };
-// Back from buying tries (?tries=bought): the box opens again with their idea.
+// Back from buying tries (?tries=bought): the box they left opens again with
+// their idea; the mug's box is in the Magic Mugs view, so that view opens first.
 function ideaOnArrival() {
-  let back = false;
-  try { back = new URLSearchParams(location.search).get('tries') === 'bought'; } catch (e) {}
-  if (!back || !ideaCfg()) return;
-  try { idea.text = sessionStorage.getItem('mz_idea_text') || ''; } catch (e) {}
-  idea.phase = 'typing'; ideaDraw();
-  const t = document.getElementById('ideaTile'); if (t) t.scrollIntoView({ block: 'start' });
+  let back = false, k = 'mat';
+  try { back = new URLSearchParams(location.search).get('tries') === 'bought'; k = sessionStorage.getItem('mz_idea_box') || 'mat'; } catch (e) {}
+  if (!back || !ideaCfg(k)) return;
+  const S = ideaState(k);
+  try { S.text = sessionStorage.getItem('mz_idea_text') || ''; S.text2 = sessionStorage.getItem('mz_idea_text2') || ''; } catch (e) {}
+  S.phase = 'typing';
+  if (k === 'mug') go({ name: 'magic' }); else ideaDraw(k);
+  setTimeout(() => { const t = document.getElementById('ideaTile-' + k); if (t) t.scrollIntoView({ block: 'start' }); }, k === 'mug' ? 450 : 0);
   // The purchase lands by webhook a moment after the return; read until it shows.
-  let n = 0; const tick = setInterval(async () => { await ideaRefresh(); if (idea.tries > 0 || ++n > 15) clearInterval(tick); }, 3000);
+  let n = 0; const tick = setInterval(async () => { await ideaRefresh(k); if (S.tries > 0 || ++n > 15) clearInterval(tick); }, 3000);
 }
 
 // ---- ordering: straight to the order page, never the studio ----------------------
