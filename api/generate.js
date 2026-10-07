@@ -796,10 +796,21 @@ FINAL REMINDER ON LIKENESS: Do not add facial hair, tattoos, piercings, scars, j
       const fillLine = strip
         ? `Compose the picture as ONE continuous panoramic strip exactly ${strip} times wider than it is tall, centred vertically on the canvas and running the full width from the left edge to the right edge. The canvas above and below the strip must be left completely empty: flat, pure, solid white (#FFFFFF) with no gradient, texture, shadow, border line or anything drawn in it. Inside the strip, draw no border, frame, margin, panel, gutter, caption, watermark or signature of any kind.`
         : "Fill the whole canvas edge to edge. Do not draw a border, frame, margin, panel, gutter, caption, watermark or signature of any kind.";
+      // THE HOUSE LOOK (Alyx, 7 Oct 2026, of his first described mat: "this
+      // odd cartoonish style ... Why it's not creating in our classic
+      // Muggshotz style?"). With no style said, the painter falls back on its
+      // own flat cartoon. This is Muggshotz Classic (needles-studio.html
+      // MUGGSHOTZ_CLASSIC_STYLE) with the face words taken out, since there is
+      // no face here; a style the studio sends on purpose would win, but the
+      // describe lane sends none (describeTextOnlyPayload), so every described
+      // design is painted in the house look at the source.
+      const DESCRIBED_HOUSE_STYLE = "Muggshotz Classic style: premium professional gift-art, rich detail, painterly shading, warm funny scene; never flat, never a simple cartoon";
+      const look = (typeof styleDirective === "string" && styleDirective.trim() && !styleIsDefault) ? styleDirective.trim() : DESCRIBED_HOUSE_STYLE;
       const textOnlyPrompt = [
         String(prompt).trim(),
         "",
         "Draw this as an original illustration. Do not include any real person's likeness unless the description itself asks for a specific public figure.",
+        `Style: ${look}.`,
         fillLine,
         shaping ? `This artwork is for ${shaping}` : ""
       ].filter(Boolean).join("\n");
