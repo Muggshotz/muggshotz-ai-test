@@ -503,9 +503,9 @@ function ideaTileHtml(k) {
   let body = '';
   if (S.phase === 'typing') {
     const fields = k === 'mug'
-      ? '<label class="fld">What they see first<textarea id="ideaText-mug" maxlength="400" placeholder="' + esc(I.placeholder.first) + '" oninput="occIdeaType(\'mug\',this.value)">' + esc(S.text) + '</textarea></label>'
-        + '<label class="fld">What they see when they turn the mug<textarea id="ideaText2-mug" maxlength="400" placeholder="' + esc(I.placeholder.then) + '" oninput="occIdeaType(\'mug\',this.value,2)">' + esc(S.text2) + '</textarea></label>'
-      : '<textarea id="ideaText-' + k + '" maxlength="600" placeholder="' + esc(I.placeholder || '') + '" oninput="occIdeaType(\'' + k + '\',this.value)">' + esc(S.text) + '</textarea>';
+      ? '<label class="fld">What they see first<textarea id="ideaText-mug" maxlength="10000" placeholder="' + esc(I.placeholder.first) + '" oninput="occIdeaType(\'mug\',this.value)">' + esc(S.text) + '</textarea></label>'
+        + '<label class="fld">What they see when they turn the mug<textarea id="ideaText2-mug" maxlength="10000" placeholder="' + esc(I.placeholder.then) + '" oninput="occIdeaType(\'mug\',this.value,2)">' + esc(S.text2) + '</textarea></label>'
+      : '<textarea id="ideaText-' + k + '" maxlength="10000" placeholder="' + esc(I.placeholder || '') + '" oninput="occIdeaType(\'' + k + '\',this.value)">' + esc(S.text) + '</textarea>';
     body = '<h3>Got a better idea?</h3><p class="hint">' + W.hint + '</p>' + fields
       + left + '<button class="go"' + on('Go') + '>' + W.make + '</button>' + err;
   } else if (S.phase === 'email') {
