@@ -63,7 +63,7 @@ scenarios.aNewVisitor = async (page) => {
   await T(page, 6000);
   const g = sent.generate[0];
   if (!g) return 'FAIL: the mat did not paint by itself once the tries arrived';
-  if (g.action !== 'textOnly' || g.prompt !== IDEA || g.size !== '1536x1024' || g.bandRatio !== 1.63 || !/^doormat artwork/.test(g.shapingRule) || g.image || g.styleDirective)
+  if (g.action !== 'textOnly' || g.prompt !== IDEA || g.size !== '1536x1024' || 'bandRatio' in g || !/^doormat artwork/.test(g.shapingRule) || g.image || g.styleDirective)
     return `FAIL: painted as ${JSON.stringify(g)}`;
   t = await tile(page);
   if (t.img !== PIC || !/Order this mat · \$19\.95/.test(t.text) || !/Try another idea/.test(t.text) || !/1 try left/.test(t.text)) return `FAIL: the tile did not become their mat (${JSON.stringify(t)})`;
@@ -74,7 +74,7 @@ scenarios.aNewVisitor = async (page) => {
   const overlay = await page.evaluate(() => !!document.getElementById('orderPageFrame'));
   if (!pending || pending.productIcon !== 'doormat' || pending.placements.left !== PIC || pending.premadeItem || pending.occasion !== 'halloween' || !overlay)
     return `FAIL: the order went as ${JSON.stringify(pending)} (checkout over the page: ${overlay})`;
-  return 'PASS: idea, email with the flyer code, a wait, then it paints by itself as a 1.63 mat from their words alone; the tile becomes their mat and orders as a doormat with it';
+  return 'PASS: idea, email with the flyer code, a wait, then it paints by itself from their words alone, filling the canvas (no strip), shown at the mat\'s 1.63; the tile becomes their mat and orders as a doormat with it';
 };
 scenarios.withTriesLeft = async (page) => {
   const state = { tries: 3, verified: true, open: true };

@@ -451,7 +451,7 @@ function ideaTileHtml() {
   const err = idea.err ? '<div class="err">' + esc(idea.err) + '</div>' : '';
   let body = '';
   if (idea.phase === 'typing') {
-    body = '<h3>Got a better idea?</h3><p class="hint">Describe your mat, words and all. We\'ll paint it as an 18 x 30 in welcome mat.</p>'
+    body = '<h3>Got a better idea?</h3><p class="hint">Describe your mat. We\'ll paint it as an 18 x 30 in welcome mat. Put any words you want on the mat in quotation marks.</p>'
       + '<textarea id="ideaText" maxlength="600" placeholder="' + esc(I.placeholder || 'Describe your mat') + '" oninput="occIdeaType(this.value)">' + esc(idea.text) + '</textarea>'
       + left + '<button class="go" onclick="occIdeaGo()">Make my mat</button>' + err;
   } else if (idea.phase === 'email') {
@@ -545,7 +545,7 @@ async function ideaPaint() {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: ac.signal,
       // The studio's described-design lane (api/generate.js action textOnly):
       // the visitor's own words, the mat's rule and its shape, nothing else.
-      body: JSON.stringify({ action: 'textOnly', prompt: idea.text, deviceId: deviceId(), size: I.size, shapingRule: I.rule, bandRatio: I.ratio })
+      body: JSON.stringify(Object.assign({ action: 'textOnly', prompt: idea.text, deviceId: deviceId(), size: I.size, shapingRule: I.rule }, I.ratio ? { bandRatio: I.ratio } : {}))
     });
     const d = await r.json().catch(() => ({}));
     if (!r.ok || !d.imageUrl) throw new Error(d.error || 'Your mat could not be painted. Your try was not used; please try again.');

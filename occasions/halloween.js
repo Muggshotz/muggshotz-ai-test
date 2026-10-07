@@ -47,9 +47,15 @@ window.OCCASION = {
     // (needles-studio.html getProductRules('doormat') and DOORMAT_RATIO). code
     // is the flyer's free-try code in lib/card-bonus.js: two free tries for a
     // confirmed email, from the flyers' pool of 300 (lib/free-pool.js).
+    // THE CANVAS, NOT A STRIP (Alyx's first live mat, 7 Oct 2026, painted as a
+    // thin strip with white above and below): told a 1.63 band, the painter
+    // letterboxes a narrow panorama in its 1.5 canvas. A mat is nearly the
+    // canvas's own shape, so it fills the canvas edge to edge, and the tile
+    // and the print both cut it to the mat's 1.63 from the centre (4% off
+    // the top and bottom), so what they see is what prints.
     idea: {
-      code: "HALLOWEEN", page: "/halloween", ratio: 1.63, size: "1536x1024",
-      rule: "doormat artwork: a wide landscape composition, 18 by 30 inches, bold shapes and large lettering readable from standing height, no fine detail, the picture 1.63 times wider than it is tall",
+      code: "HALLOWEEN", page: "/halloween", size: "1536x1024",
+      rule: "doormat artwork: a wide landscape composition, 18 by 30 inches, bold shapes and large lettering readable from standing height, no fine detail, the subject and any words kept well inside the edges",
       placeholder: "A black cat in a witch's hat, saying \"Go away, we're napping\"",
     },
     designs: [
