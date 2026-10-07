@@ -99,7 +99,11 @@ button:not(:disabled):active{transform:scale(.97);filter:brightness(.88);box-sha
   <h2 class="section-title">🎟️ Flyers' free tries</h2>
   <div class="sub">The "Got a better idea?" box on a flyer's page gives each new email two free tries from that flyer's own pool of 300. Every product sold from that page buys 50 back. A pool that runs dry closes and stays closed until a sale buys tries back, or you open it here for a fresh 300.</div>
   <div id="poolState" style="font-size:15px;color:#ccc;line-height:1.6;margin:.4rem 0 .75rem">…</div>
-  <button class="btn-full" onclick="loadPool()">🔄 Refresh</button>
+  <h3 style="margin:1rem 0 .3rem;font-size:15px;color:#ff9a3c">The generator, by product category</h3>
+  <div class="sub">A confirmed email at zero tokens spins on its product's own pool of 25. Every item sold buys 30 back; what does not fit is banked as spare spins you can move to a category that needs the help.</div>
+  <div id="catState" style="margin:.4rem 0 .75rem"></div>
+  <div style="display:flex;gap:.4rem;flex-wrap:wrap;align-items:center;font-size:13px;color:#ccc">Move <input id="moveN" type="number" min="1" value="10" style="width:4.5rem"> spare spins from <select id="moveFrom"></select> to <select id="moveTo"></select> <button onclick="movePoolSpins()">Move</button></div>
+  <button class="btn-full" onclick="loadPool()" style="margin-top:.6rem">🔄 Refresh</button>
   <div class="result" id="poolResult"></div>
 </div>
 
@@ -976,9 +980,23 @@ function showPools(pools){
     (p.openedAt ? `<br><span style="font-size:12px;color:#888">Last opened ${new Date(p.openedAt).toLocaleString()}</span>` : '') +
     `<button class="btn-full" onclick="reopenPool('${p.flyer}')" style="background:#22a845;margin-top:.5rem">✅ Open ${p.flyer} for another ${p.size}</button></div>`).join('');
 }
-async function loadPool(){
-  try{ const { pools } = await adminPost({ action: 'free-pool' }); showPools(pools); }
-  catch(err){ showResultIn('poolResult', err.message, 'error'); }
+function showCategories(cats){
+  const el = document.getElementById('catState');
+  const rows = cats.map(c => `<tr style="border-top:1px solid #2a2a2a;color:${c.open ? '#ccc' : '#ff5a4a'}"><td style="padding:.3rem .4rem">${c.name}</td><td style="text-align:right;padding:.3rem .4rem">${c.size - c.given} of ${c.size}</td><td style="text-align:right;padding:.3rem .4rem">${c.bank || 0}</td><td style="text-align:right;padding:.3rem .4rem">${c.sales || 0}</td><td style="padding:.3rem .4rem"><a href="#" onclick="reopenCategory('${c.name}');return false" style="color:#5ddb7a;font-size:12px">reset</a></td></tr>`).join('');
+  el.innerHTML = `<table style="width:100%;border-collapse:collapse;font-size:13px"><tr style="color:#888;font-size:11px;text-transform:uppercase"><td style="padding:.3rem .4rem">Category</td><td style="text-align:right;padding:.3rem .4rem">Free left</td><td style="text-align:right;padding:.3rem .4rem">Banked</td><td style="text-align:right;padding:.3rem .4rem">Sales</td><td></td></tr>${rows}</table>`;
+  for (const id of ['moveFrom', 'moveTo']) { const sel = document.getElementById(id); const was = sel.value; sel.innerHTML = cats.map(c => `<option value="${c.name}">${c.name}</option>`).join(''); if (was) sel.value = was; }
+}
+async function loadPool(body){
+  try{ const { pools, categories } = await adminPost({ action: 'free-pool', ...(body || {}) }); showPools(pools); showCategories(categories); return true; }
+  catch(err){ showResultIn('poolResult', err.message, 'error'); return false; }
+}
+async function reopenCategory(name){
+  if (!confirm(`Reset the ${name} pool to a fresh 25 free spins?`)) return;
+  if (await loadPool({ reopenCategory: name })) showResultIn('poolResult', `${name}: 25 free spins again.`, 'success');
+}
+async function movePoolSpins(){
+  const from = document.getElementById('moveFrom').value, to = document.getElementById('moveTo').value, n = Number(document.getElementById('moveN').value);
+  if (await loadPool({ move: { from, to, n } })) showResultIn('poolResult', `Moved ${n} spare spins from ${from} to ${to}.`, 'success');
 }
 async function reopenPool(flyer){
   if (!confirm(`Open the ${flyer} flyer's free tries for another 300?`)) return;

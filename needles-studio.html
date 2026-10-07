@@ -1,5 +1,5 @@
 <!-- ============================================================
-     VERSION: V454
+     VERSION: V455
      ============================================================
      THE ONE LINE THAT SAYS WHICH BUILD YOU ARE LOOKING AT.
 
@@ -4941,7 +4941,7 @@ function toggleWorkingImage(){
 // Two copies of a number is exactly how the marker rotted in the first place,
 // so they are not trusted to agree: .githooks/pre-commit moves both together
 // and REFUSES the commit if it ever finds them apart.
-const APP_VERSION='V454';
+const APP_VERSION='V455';
 try{ console.log('%cNeedles\u2019 Studio '+APP_VERSION,'color:#29a3ff;font-weight:700'); }catch(e){}
 
 function getDeviceId(){
@@ -4982,6 +4982,12 @@ const deviceId=getDeviceId();
 let hasPurchased=false;
 let isAdminDevice=false;
 let currentTokenBalance=null;
+// FREE SPINS FROM THE CATEGORY'S POOL (Alyx, 7 Oct 2026): a confirmed email at
+// zero tokens may still spin -- the server draws on the product's own pool
+// (api/generate.js spinAllowed) and refuses, in words, when it is dry. The
+// gates below let such a customer through to find out.
+let emailVerifiedFree=false;
+function outOfSpins(){ return currentTokenBalance!==null&&currentTokenBalance<=0&&!isAdminDevice&&!emailVerifiedFree; }
 
 // BACK FROM BUYING TOKENS (22 Sep 2026). Stripe sends the buyer here with
 // ?checkout=success. The webhook that credits the tokens can land a few
@@ -5025,6 +5031,7 @@ async function refreshTokenMeter(){
     if(isNaN(currentTokenBalance))currentTokenBalance=null;
     hasPurchased=!!data.hasPurchased;
     isAdminDevice=!!data.isAdmin;
+    emailVerifiedFree=!!data.freeSpin;
     checkCardBonus(!!data.emailVerified);
     refreshMugPrintModeVisibility();
   }catch(err){
@@ -5133,7 +5140,7 @@ function setupTokenInfoTriggers(){
   if(generateBtn){
 
     generateBtn.addEventListener('mouseenter',()=>{
-      if(currentTokenBalance!==null&&currentTokenBalance<=0&&!isAdminDevice)showTokenInfoPopup(generateBtn);
+      if(outOfSpins())showTokenInfoPopup(generateBtn);
     });
     generateBtn.addEventListener('mouseleave',hideTokenInfoPopup);
   }
@@ -10144,7 +10151,7 @@ async function generateFaceIt(){
     showGuidanceAlert('How tall are you? We need it to line you up against the chart.');
     return;
   }
-  if(currentTokenBalance!==null && currentTokenBalance<=0 && !isAdminDevice){
+  if(outOfSpins()){
     showTokenInfoPopup(document.getElementById('faceItGenerateBtn'));
     return;
   }
@@ -10725,7 +10732,7 @@ async function generateGoodMorning(){
     showGuidanceAlert('Please upload a photo first.');
     return;
   }
-  if(currentTokenBalance!==null && currentTokenBalance<=0 && !isAdminDevice){
+  if(outOfSpins()){
     showTokenInfoPopup(document.getElementById('goodMorningGenerateBtn'));
     return;
   }
@@ -10946,7 +10953,7 @@ async function generateCoverMe(){
     showGuidanceAlert('Please upload a photo first.');
     return;
   }
-  if(currentTokenBalance!==null && currentTokenBalance<=0 && !isAdminDevice){
+  if(outOfSpins()){
     showTokenInfoPopup(document.getElementById('coverMeGenerateBtn'));
     return;
   }
@@ -20645,6 +20652,7 @@ async function callGenerateAPI({ workingImage, prompt, refImageA, refImageB, tem
         prompt,
         theme:null,
         deviceId,
+        product,
         refImageA:refImageA||null,
         refImageB:refImageB||null,
         currentDesign:null,
@@ -20720,7 +20728,7 @@ async function generate(){
   const wrapModeNow=(product==='mug'||product==='water bottle')&&mugPrintMode==='wraparound';
   const couldBeExactTransfer=byoDeclaredIntent==='byo'
     || (emptyIdeaBoxNow && (wrapModeNow || (!windowSillChoice && !refImageAData && !refImageBData)));
-  if(currentTokenBalance!==null&&currentTokenBalance<=0&&!isAdminDevice&&!couldBeExactTransfer){
+  if(outOfSpins()&&!couldBeExactTransfer){
     showTokenInfoPopup(document.getElementById('generateBtn'));
     return;
   }
@@ -21266,7 +21274,7 @@ Use rich environmental storytelling while keeping the face as the primary focal 
             headers:{'Content-Type':'application/json'},
             // The mug's band shape: with it the server paints the wrap with
             // OpenAI, which keeps the customer's likeness (Alyx, 2 Oct 2026).
-            body:JSON.stringify({action:'wraparoundPanorama',image:workingImage,prompt:panoramaIdea,deviceId,likeness,refImageA:refASnapshot,refImageB:refBSnapshot,...currentStylePayload(),
+            body:JSON.stringify({action:'wraparoundPanorama',image:workingImage,prompt:panoramaIdea,deviceId,product,likeness,refImageA:refASnapshot,refImageB:refBSnapshot,...currentStylePayload(),
               // A travel cup's band, capped at 21:9: the Tundra's 3.50 is widened
               // past that by its mirrored, faded ends after painting, as before.
               ...(product==='mug'?{bandRatio:Math.round(mugWrapRatio()*100)/100}
@@ -21445,7 +21453,7 @@ Use rich environmental storytelling while keeping the face as the primary focal 
         // prompt that opens "Transform the uploaded person". There is no
         // uploaded person. Both sites now ask the same question.
         body:JSON.stringify(describeOnlyMode()
-          ? {image:null,prompt:describePromptText(),theme:null,deviceId,refImageA:null,refImageB:null,currentDesign:null,
+          ? {image:null,prompt:describePromptText(),theme:null,product,deviceId,refImageA:null,refImageB:null,currentDesign:null,
              size:getImageSizeParam(),...describeTextOnlyPayload()}
           : {image:workingImage,prompt,theme:null,deviceId,refImageA:refASnapshot,refImageB:refBSnapshot,currentDesign:null,size:getImageSizeParam(),...currentStylePayload(),
              ...(carMagnetIsStrip()?{bandRatio:carMagnetRatio()}:{}),
@@ -24623,7 +24631,7 @@ function updateHudMode(){
   const gone=byo||hudOverlayOpen();
   row.classList.toggle('hud-gone',gone);
   if(gone){hudExpanded=false;return;}
-  const outOfChips=currentTokenBalance!==null&&currentTokenBalance<=0&&!isAdminDevice;
+  const outOfChips=outOfSpins();
   hudGenerateOnScreen=hudGenerateButtonTrulyVisible();
   const full=hudExpanded||hudGenerateOnScreen||outOfChips;
   row.classList.toggle('compact',!full);

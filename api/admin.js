@@ -26,7 +26,8 @@ export const config = { maxDuration: 300 };
 import { getProduct } from '../lib/products-catalog.js';
 import generateHandler from './generate.js';
 import { getPlaceholderDimensions, buildSingleImage, uploadImageToPrintify, createPrintifyProduct } from './create-printify-order.js';
-import { readPool, reopenPool } from '../lib/free-pool.js';
+import { readPool, reopenPool, movePool, categoryKey, CATEGORY_POOL } from '../lib/free-pool.js';
+import { PRODUCTS_CATALOG } from '../lib/products-catalog.js';
 import { CARD_CODES } from '../lib/card-bonus.js';
 
 const SUPABASE_URL              = process.env.SUPABASE_URL;
@@ -796,14 +797,22 @@ async function buildLedger() {
 // of its 300 are handed out, how many sales have bought tries back, whether it
 // is open -- and his switch to open one for another 300 (lib/free-pool.js).
 async function handleFreePool(req, res) {
-  const { password, reopen } = req.body || {};
+  const { password, reopen, reopenCategory, move } = req.body || {};
   if (password !== ADMIN_PASSWORD) return res.status(403).json({ error: 'Unauthorized.' });
   try {
     const flyers = [...new Set(Object.values(CARD_CODES).map((c) => c.pool).filter(Boolean))];
+    const cats = [...new Set(Object.values(PRODUCTS_CATALOG).map((p) => p.generatorIcon).filter(Boolean))].sort();
     if (reopen && !flyers.includes(reopen)) return res.status(400).json({ error: `No flyer called "${reopen}".` });
     if (reopen) await reopenPool(reopen);
+    if (reopenCategory && !cats.includes(reopenCategory)) return res.status(400).json({ error: `No category called "${reopenCategory}".` });
+    if (reopenCategory) await reopenPool(categoryKey(reopenCategory), CATEGORY_POOL);
+    if (move) {
+      if (!cats.includes(move.from) || !cats.includes(move.to)) return res.status(400).json({ error: 'Pick two categories from the list.' });
+      await movePool(categoryKey(move.from), categoryKey(move.to), move.n);
+    }
     const pools = await Promise.all(flyers.map((f) => readPool(f)));
-    return res.status(200).json({ pools });
+    const categories = await Promise.all(cats.map(async (c) => ({ name: c, ...(await readPool(categoryKey(c), CATEGORY_POOL)) })));
+    return res.status(200).json({ pools, categories });
   } catch (err) {
     console.error('Admin free-pool error:', err.message);
     return res.status(500).json({ error: err.message });

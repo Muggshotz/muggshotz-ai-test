@@ -295,7 +295,11 @@ export default async function handler(req, res) {
       tokenBalance: customer.token_balance,
       isAdmin: customer.role === "admin",
       hasPurchased: !!customer.has_purchased,
-      emailVerified: !!customer.email_verified
+      emailVerified: !!customer.email_verified,
+      // A confirmed email spins on the product category's free pool when its
+      // tokens are gone (api/generate.js spinAllowed); the server says no
+      // when that category's pool is dry.
+      freeSpin: !!customer.email_verified
     });
   } catch (error) {
     return res.status(500).json({ error: error.message });

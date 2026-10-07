@@ -308,6 +308,19 @@ phone is told once, and it stays closed until a sale buys tries back or he
 opens it for a fresh 300 on the admin page. Built 7 Oct 2026 (lib/free-pool.js,
 lib/card-bonus.js HALLOWEEN, flow-tests/verify-better-idea.js).
 
+**The generator's own free spins, by category** (Alyx, 7 Oct 2026: "each
+product can generate 25 free spins without a purchase, but every purchase buys
+back 30 spins ... the surplus of spins available will constantly increase
+rather than decrease"). Built the same day: a confirmed email at zero tokens
+spins on the product category's own pool of 25 (api/generate.js spinAllowed);
+every item sold buys 30 back into its category, the surplus banked. **Five
+free spins a person**, then the lottery: past five, a spin is free only while
+the category's banked surplus has one, first come first served. The admin
+page lists every category and moves banked spins between them. His 3c a spin
+makes a category about 75c before it stops. Still as before: a brand-new
+device's one token on its first generate (api/generate.js
+createCustomerForDevice) and the email's bonus token.
+
 **Consignment** (Alyx, 6 Oct 2026). A visitor who loves their idea can submit
 it, free, for a consignment spot. Alyx reviews; if it is chosen, they earn
 **25% of the net profit** of every sale of it:

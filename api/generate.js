@@ -1,6 +1,7 @@
 import fs from "fs";
 import path from "path";
 import sharp from "sharp";
+import { readPool, poolHasRoom, takeFromPool, takeFromBank, readFreeUsed, noteFreeSpin, categoryKey, CATEGORY_POOL, FREE_SPIN_CAP } from "../lib/free-pool.js";
 
 // BUILD: 2026-09-18c — the extreme corner gets a MEDIUM, and its reference picture can no longer go missing in silence (Alyx: "I was kind of hoping to get it a whole different extreme style altogether", "I guess it didn't make a change in style any"). Caricature Assassination described a mood -- sculpted, confident brushwork, theatrical lighting -- where every other tile names a medium outright (pen-and-ink, flat cel-shaded), so it came back looking like the others. It now names one: hyperreal 3D-sculpted digital caricature, a collectible vinyl figurine, glossy rubbery skin and cinematic rim lighting, never drawn and never photographed. And the hidden reference PNG now loads by disk OR by HTTP from our own static assets, because a serverless function only carries the files the bundler chose and a readFileSync on a variable path is what it misses -- which failed silently, attaching nothing. 18b: two dials. 18a: the tiers stopped being drowned out. 17d: the style-reference mechanism. 17c: setting/pose/props. 17b: clothing. 17a: gpt-image-2.5-sunburst.
 
@@ -67,7 +68,7 @@ const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 // Looks up a customer row by device ID. Returns null if no row exists yet.
 async function findCustomerByDeviceId(deviceId) {
-  const url = `${SUPABASE_URL}/rest/v1/customers?device_id=eq.${encodeURIComponent(deviceId)}&select=id,token_balance,role`;
+  const url = `${SUPABASE_URL}/rest/v1/customers?device_id=eq.${encodeURIComponent(deviceId)}&select=id,token_balance,role,email_verified`;
   const resp = await fetch(url, {
     headers: {
       "apikey": SUPABASE_SERVICE_ROLE_KEY,
@@ -103,6 +104,38 @@ async function createCustomerForDevice(deviceId) {
 // moving countdown instead of a static infinity symbol. Admin accounts
 // are still never blocked from generating regardless of how low (or
 // negative) this number goes — that's enforced separately below, not here.
+// FREE SPINS FROM THE CATEGORY'S POOL (Alyx, 7 Oct 2026). A customer with
+// tokens spends one. A customer at zero with a confirmed email spins free:
+// their first five (FREE_SPIN_CAP) on the product category's own pool
+// (lib/free-pool.js: 25 per category, 30 back a sale), and after five only on
+// the category's banked surplus, first come first served, while any is there.
+// When neither can pay, the refusal says which. An unverified device at zero
+// is refused as before. The pool is charged only after a picture comes back,
+// as a token is.
+async function spinAllowed(customer, isAdmin, product, deviceId) {
+  if (isAdmin || customer.token_balance > 0) return { ok: true, free: false };
+  if (!customer.email_verified) return { ok: false, error: "You're out of free tokens. Verify your email to unlock another, or grab the $5 Preview Reservation for 4 more." };
+  const key = categoryKey(product), name = product || "this product";
+  let pool = null, used = 0;
+  try { pool = await readPool(key, CATEGORY_POOL); used = await readFreeUsed(deviceId); }
+  catch (e) { console.error("Category pool unreadable:", key, e.message); }
+  if (pool && used < FREE_SPIN_CAP && poolHasRoom(pool, 1)) return { ok: true, free: true, key, deviceId, from: "pool" };
+  if (pool && (pool.bank || 0) > 0) return { ok: true, free: true, key, deviceId, from: "bank" };
+  return { ok: false, error: used >= FREE_SPIN_CAP
+    ? `You've had your ${FREE_SPIN_CAP} free spins, and ${name} has no spare ones right now. Tokens are cheap.`
+    : `The free spins for ${name} are all used up for now. Tokens are cheap, or try another product.` };
+}
+async function settleSpin(customer, allow) {
+  if (allow && allow.free) {
+    try {
+      if (allow.from === "bank") await takeFromBank(allow.key); else await takeFromPool(allow.key, 1, CATEGORY_POOL);
+      await noteFreeSpin(allow.deviceId);
+    } catch (e) { console.error("Category pool charge failed:", allow.key, e.message); }
+    return;
+  }
+  await deductOneToken(customer.id, customer.token_balance);
+}
+
 async function deductOneToken(customerId, currentBalance) {
   const url = `${SUPABASE_URL}/rest/v1/customers?id=eq.${customerId}`;
   const resp = await fetch(url, {
@@ -291,6 +324,7 @@ export default async function handler(req, res) {
     // with the page about the same face.
     const faceHead = Number(req.body.faceHead) > 0 ? Number(req.body.faceHead) : 1;
     const facePush = Number(req.body.facePush) > 0 ? Number(req.body.facePush) : 0;
+    const product = String(req.body.product || "").toLowerCase().slice(0, 40);   // the category whose pool a free spin draws on
     const faceFeat = Number(req.body.faceFeat) > 0 ? Number(req.body.faceFeat) : 0;
     const wildFace = facePush > 0;
     const balancedFace = facePush > 0 && facePush < 60;
@@ -420,11 +454,8 @@ The uploaded customer photo remains the ONLY source of identity.
         panoramaCustomer = await createCustomerForDevice(deviceId);
       }
       const panoramaIsAdmin = panoramaCustomer.role === "admin" || !!req.__likenessTest;
-      if (!panoramaIsAdmin && panoramaCustomer.token_balance <= 0) {
-        return res.status(403).json({
-          error: "You're out of free tokens. Verify your email to unlock another, or grab the $5 Preview Reservation for 4 more."
-        });
-      }
+      const panoramaAllow = await spinAllowed(panoramaCustomer, panoramaIsAdmin, product, deviceId);
+      if (!panoramaAllow.ok) return res.status(403).json({ error: panoramaAllow.error });
 
       const panoramaMatch = image.match(/^data:(image\/\w+);base64,(.+)$/);
       if (!panoramaMatch) {
@@ -680,7 +711,7 @@ FINAL REMINDER ON LIKENESS: Do not add facial hair, tattoos, piercings, scars, j
 
       if (!req.__likenessTest) {
         await saveGenerationRecord(panoramaCustomer.id, prompt, null, centerUrl);
-        await deductOneToken(panoramaCustomer.id, panoramaCustomer.token_balance);
+        await settleSpin(panoramaCustomer, panoramaAllow);
       }
 
       return res.status(200).json({ leftUrl, centerUrl, rightUrl, panoramaUrl });
@@ -730,11 +761,8 @@ FINAL REMINDER ON LIKENESS: Do not add facial hair, tattoos, piercings, scars, j
       if (!textCustomer) {
         textCustomer = await createCustomerForDevice(deviceId);
       }
-      if (textCustomer.role !== "admin" && textCustomer.token_balance <= 0) {
-        return res.status(403).json({
-          error: "You're out of free tokens. Verify your email to unlock another, or grab the $5 Preview Reservation for 4 more."
-        });
-      }
+      const textAllow = await spinAllowed(textCustomer, textCustomer.role === "admin", product, deviceId);
+      if (!textAllow.ok) return res.status(403).json({ error: textAllow.error });
 
       // The ONE thing carried over, because it is not about faces: what the
       // picture has to fit. A mug wrap and a standalone download want
@@ -798,7 +826,7 @@ FINAL REMINDER ON LIKENESS: Do not add facial hair, tattoos, piercings, scars, j
       const textOnlyUrl = await uploadGenerationToStorage(textOnlyBuffer, deviceId);
 
       await saveGenerationRecord(textCustomer.id, prompt, theme, textOnlyUrl);
-      await deductOneToken(textCustomer.id, textCustomer.token_balance);
+      await settleSpin(textCustomer, textAllow);
 
       return res.status(200).json({ imageUrl: textOnlyUrl });
     }
@@ -835,11 +863,8 @@ FINAL REMINDER ON LIKENESS: Do not add facial hair, tattoos, piercings, scars, j
         customer = await createCustomerForDevice(deviceId);
       }
       const isAdmin = customer.role === "admin" || !!req.__likenessTest;
-      if (!isAdmin && customer.token_balance <= 0) {
-        return res.status(403).json({
-          error: "You're out of free tokens. Verify your email to unlock another, or grab the $5 Preview Reservation for 4 more."
-        });
-      }
+      req.__spin = await spinAllowed(customer, isAdmin, product, deviceId);
+      if (!req.__spin.ok) return res.status(403).json({ error: req.__spin.error });
       // --- END TOKEN CHECK ---
     }
 
@@ -1097,7 +1122,7 @@ ${buildStyleBlock(styleDirective, styleIsDefault)}`;
     // the same as everyone else now (for a real, visible countdown on the
     // token meter) — they just can never be BLOCKED by the zero-token
     // check above, no matter how low this number goes.
-    if (!req.__likenessTest) await deductOneToken(customer.id, customer.token_balance);
+    if (!req.__likenessTest) await settleSpin(customer, req.__spin);
 
     return res.status(200).json({ imageUrl: publicImageUrl });
   } catch (error) {

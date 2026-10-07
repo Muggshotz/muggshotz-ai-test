@@ -107,7 +107,7 @@ async function thePool() {
   global.fetch = async (url, init = {}) => {
     const u = String(url);
     if (u.startsWith('https://ntfy.sh/')) { alerts.push(init.headers.Title); return { ok: true }; }
-    const m = u.match(/\/flyer-free\/([a-z0-9-]+)\.json$/); if (!m) throw new Error('unexpected fetch ' + u);
+    const m = u.match(/\/flyer-free\/(.+)\.json$/); if (!m) throw new Error('unexpected fetch ' + u);
     if ((init.method || 'GET') === 'POST') { store[m[1]] = init.body; return { ok: true, text: async () => '' }; }
     return store[m[1]] ? { ok: true, status: 200, json: async () => JSON.parse(store[m[1]]) } : { ok: false, status: 404 };
   };
@@ -138,7 +138,34 @@ async function thePool() {
     if (p.given !== 250 || !p.open || p.sales !== 2 || !(await P.takeFromPool('halloween', 2))) return `FAIL: a sale left ${JSON.stringify(p)}`;
     const r = await P.reopenPool('halloween');
     if (!r.open || r.given !== 0 || r.sales !== 2 || !(await P.takeFromPool('halloween', 2))) return `FAIL: reopening left ${JSON.stringify(r)}`;
-    return 'PASS: each flyer its own pool; two a time, a sale buys 50 back (floored at zero, never into another flyer), closed at 300 with one alert, staying closed until a sale or a reopen';
+    // THE CATEGORY POOLS: 25 a category, one a spin, 30 back a sale with the
+    // surplus banked, and banked spins moved to a category that needs them.
+    const CP = P.CATEGORY_POOL, mug = P.categoryKey('mug'), bottle = P.categoryKey('water bottle');
+    if (mug !== 'cat-mug' || bottle !== 'cat-bottle') return `FAIL: category keys ${mug}, ${bottle}`;
+    const sold = P.saleCategories({ product_keys: 'classic-white-mug,doormat' });
+    if (JSON.stringify(sold) !== '["cat-mug","cat-doormat"]' || JSON.stringify(P.saleCategories({ product_key: 'doormat' })) !== '["cat-doormat"]' || P.saleCategories({}).length) return `FAIL: a sale feeds ${JSON.stringify(sold)}`;
+    let spins = 0; while (await P.takeFromPool(mug, 1, CP)) { spins++; if (spins > 100) break; }
+    let c = await P.readPool(mug, CP);
+    if (spins !== 25 || c.size !== 25 || c.open) return `FAIL: the mug pool gave ${spins}, reads ${JSON.stringify(c)}`;
+    c = await P.creditPool(mug, CP);
+    if (c.given !== 0 || c.bank !== 5 || !c.open || c.sales !== 1) return `FAIL: a mug sale at 25 used left ${JSON.stringify(c)}`;
+    c = await P.creditPool(mug, CP);
+    if (c.given !== 0 || c.bank !== 35) return `FAIL: a second sale left ${JSON.stringify(c)}`;
+    if ((await P.readPool('halloween')).given !== 2) return 'FAIL: a mug sale paid into the halloween flyer pool';
+    for (let i = 0; i < 25; i++) await P.takeFromPool(bottle, 1, CP);
+    let moved; try { moved = await P.movePool(mug, bottle, 40); return `FAIL: moved more than the bank holds (${JSON.stringify(moved)})`; } catch (e) {}
+    moved = await P.movePool(mug, bottle, 30);
+    const mugAfter = await P.readPool(mug, CP);
+    if (moved.given !== 0 || moved.bank !== 5 || !moved.open || mugAfter.bank !== 5 || !(await P.takeFromPool(bottle, 1, CP))) return `FAIL: moving 30 left bottle ${JSON.stringify(moved)}, mug ${JSON.stringify(mugAfter)}`;
+    // FIVE EACH, THEN THE LOTTERY: a device's free spins are counted; the bank pays one at a time until empty.
+    if (P.FREE_SPIN_CAP !== 5) return `FAIL: the cap is ${P.FREE_SPIN_CAP}`;
+    if ((await P.readFreeUsed('dev-a')) !== 0) return 'FAIL: a new device has used spins';
+    for (let i = 0; i < 5; i++) await P.noteFreeSpin('dev-a');
+    if ((await P.readFreeUsed('dev-a')) !== 5 || (await P.readFreeUsed('dev-b')) !== 0) return 'FAIL: the free-spin count is wrong';
+    let fromBank = 0; while (await P.takeFromBank(bottle)) { fromBank++; if (fromBank > 50) break; }
+    const bottleAfter = await P.readPool(bottle, CP);
+    if (fromBank !== 5 || bottleAfter.bank !== 0 || (await P.takeFromBank(bottle))) return `FAIL: the bank paid ${fromBank}, left ${JSON.stringify(bottleAfter)}`;
+    return 'PASS: each flyer its own pool, two a time, a sale buys 50 back (floored at zero, never into another flyer), closed at 300 with one alert until a sale or a reopen; each category 25, a sale buys 30 back with the surplus banked and movable; five free spins a device, then the bank one at a time';
   } finally { global.fetch = realFetch; delete process.env.SUPABASE_URL; delete process.env.SUPABASE_SERVICE_ROLE_KEY; delete process.env.RESEND_API_KEY; }
 }
 

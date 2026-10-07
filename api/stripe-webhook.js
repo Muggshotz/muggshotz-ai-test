@@ -7,7 +7,7 @@ import { getProduct } from "../lib/products-catalog.js";
 import { verifyWebhookSignature, squareWebhookUrl, retrieveOrder } from "../lib/square.js";
 import { readCheckoutRecord, updateCheckoutRecord, sessionFromRecord } from "../lib/payment-rail.js";
 import { sendAlert, saleAlertText } from "../lib/alerts.js";
-import { creditPool } from "../lib/free-pool.js";
+import { creditPool, saleCategories, CATEGORY_POOL } from "../lib/free-pool.js";
 import { CARD_CODES } from "../lib/card-bonus.js";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
@@ -508,6 +508,15 @@ async function flyerSaleCredit(session) {
   catch (err) { console.error("Flyer pool credit failed (order still placed):", flyer, err.message); }
 }
 
+// A CATEGORY PAYS ITS OWN KEEP (Alyx, 7 Oct 2026): every item sold buys 30
+// free spins back into its product category's pool, the surplus banked.
+async function categorySaleCredit(session) {
+  for (const key of saleCategories(session.metadata)) {
+    try { await creditPool(key, CATEGORY_POOL); }
+    catch (err) { console.error("Category pool credit failed (order still placed):", key, err.message); }
+  }
+}
+
 export async function settleCheckoutSession(session) {
   if (session.metadata?.order_type === "gift_certificate") {
     await handleGiftCertificatePayment(session);
@@ -528,6 +537,7 @@ export async function settleCheckoutSession(session) {
     if (session.metadata?.order_type === "basket_order") await handleBasketOrderPayment(session);
     else await handleMugOrderPayment(session);
     await flyerSaleCredit(session);
+    await categorySaleCredit(session);
   } else if (session.metadata?.order_type === "tier_upgrade") {
     await handleTierUpgradePayment(session);
   } else {
