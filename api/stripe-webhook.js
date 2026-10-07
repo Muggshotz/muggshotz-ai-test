@@ -22,6 +22,8 @@ const RESEND_API_KEY = process.env.RESEND_API_KEY;
 // emails send successfully the same way verification emails already do.
 // The verified domain (7 Oct 2026); onboarding@resend.dev reached only the account's own inbox.
 const EMAIL_FROM = process.env.RESEND_FROM || "Muggshotz <hello@muggshotz.com>";
+// Replies to any order email land in the inbox kept for them (Alyx, 7 Oct 2026).
+const EMAIL_REPLY_TO = process.env.RESEND_REPLY_TO || "muggshotzreplies@gmail.com";
 
 // Stripe sends the raw, unparsed request body so it can verify the
 // signature. Vercel parses JSON bodies by default, so we have to turn
@@ -127,7 +129,7 @@ async function sendResendEmail(to, subject, html) {
         "Authorization": `Bearer ${RESEND_API_KEY}`,
         "Content-Type": "application/json"
       },
-      body: JSON.stringify({ from: EMAIL_FROM, to, subject, html })
+      body: JSON.stringify({ from: EMAIL_FROM, reply_to: EMAIL_REPLY_TO, to, subject, html })
     });
     if (!resp.ok) {
       const err = await resp.json();

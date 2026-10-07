@@ -103,6 +103,7 @@ export default async function handler(req, res) {
         // (onboarding@resend.dev) delivered only to the account's own inbox,
         // so no flyer visitor ever got their link.
         from: process.env.RESEND_FROM || 'Muggshotz <hello@muggshotz.com>',
+        reply_to: process.env.RESEND_REPLY_TO || 'muggshotzreplies@gmail.com',
         to: email,
         subject: offer && offer.pool ? `Your ${offer.spins} free tries are one tap away` : offer ? `Verify your email for your ${offer.spins} free spins!` : 'Verify your email for a free bonus token!',
         html: offer && offer.pool
