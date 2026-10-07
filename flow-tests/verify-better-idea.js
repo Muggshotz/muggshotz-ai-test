@@ -99,6 +99,35 @@ scenarios.thePoolClosed = async (page) => {
   return 'PASS: a closed pool asks for no email, offers the packs, and a pack bought here comes back to /halloween';
 };
 
+// THE COUNTER (Alyx, 7 Oct 2026): a confirmed email at zero tokens sees the
+// product's free spins; at none, "buy some, or come back later", and Generate's
+// gate closes to the popup instead of a round trip.
+scenarios.theStudioCounter = async (page) => {
+  const pool = { left: 18, bank: 0, used: 2, cap: 5 };
+  await page.route('**/api/get-balance**', (route) => {
+    const u = new URL(route.request().url());
+    if (u.searchParams.has('pool')) return route.fulfill({ json: { name: u.searchParams.get('pool'), ...pool, canSpin: (pool.used < pool.cap && pool.left > 0) || pool.bank > 0 } });
+    return route.fulfill({ json: { tokenBalance: 0, emailVerified: true, freeSpin: true, hasPurchased: false, isAdmin: false } });
+  });
+  await page.goto(`${BASE}/needles-studio.html`); await T(page, 2500);
+  const line = () => page.evaluate(() => { const el = document.getElementById('freeSpinsLine'); return el && el.style.display !== 'none' ? el.textContent.replace(/\s+/g, ' ').trim() : null; });
+  if (await line()) return `FAIL: the counter shows before a product is picked (${await line()})`;
+  await page.evaluate(() => { product = 'mug'; }); await T(page, 2500);
+  let t = await line();
+  if (!t || !/Free spins: 18 left for mugs/.test(t) || !/3 of your 5/.test(t)) return `FAIL: with spins left it reads ${JSON.stringify(t)}`;
+  if (await page.evaluate(() => outOfSpins())) return 'FAIL: the gate is closed with 18 free spins left';
+  pool.left = 0; pool.bank = 4;
+  await page.evaluate(() => { product = 'doormat'; }); await T(page, 2500);
+  t = await line();
+  if (!t || !/4 spare free spins up for grabs for doormats/.test(t)) return `FAIL: with only the bank it reads ${JSON.stringify(t)}`;
+  pool.bank = 0;
+  await page.evaluate(() => { product = 'coaster'; }); await T(page, 2500);
+  t = await line();
+  if (!t || !/No free spins left for coasters right now/.test(t) || !/come back later/.test(t)) return `FAIL: at none it reads ${JSON.stringify(t)}`;
+  if (!(await page.evaluate(() => outOfSpins()))) return 'FAIL: the gate stays open with no free spins';
+  return 'PASS: the counter follows the product: spins left and the five, the banked spares, or buy some / come back later with the gate closed';
+};
+
 async function thePool() {
   const store = {};
   const realFetch = global.fetch;

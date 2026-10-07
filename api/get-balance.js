@@ -1,7 +1,7 @@
 import { findGiftCertificate, findGiftCertificateBySession } from "../lib/gift-certificates.js";
 import { squareConfigured, giftCardFromGan, giftCardUsable } from "../lib/square.js";
 import { cardOffer } from "../lib/card-bonus.js";
-import { readPool, poolHasRoom } from "../lib/free-pool.js";
+import { readPool, poolHasRoom, readFreeUsed, categoryKey, CATEGORY_POOL, FREE_SPIN_CAP } from "../lib/free-pool.js";
 import { flyerProduct } from "../lib/flyer-products.js";
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -266,6 +266,24 @@ export default async function handler(req, res) {
 
   if (req.query.recent) {
     return handleRecentLookup(req, res);
+  }
+
+  // ?pool=<product>&deviceId= : THE FREE-SPINS COUNTER (Alyx, 7 Oct 2026):
+  // how many free spins the product's category has left, its banked surplus,
+  // and how many of this device's five are used -- what the studio shows a
+  // confirmed email at zero tokens (lib/free-pool.js, api/generate.js
+  // spinAllowed, the same arithmetic).
+  if (req.query.pool !== undefined) {
+    res.setHeader("Cache-Control", "no-store, max-age=0");
+    const name = String(req.query.pool || "").toLowerCase().slice(0, 40);
+    try {
+      const p = await readPool(categoryKey(name), CATEGORY_POOL);
+      const used = req.query.deviceId ? await readFreeUsed(req.query.deviceId) : 0;
+      const left = p.open ? Math.max(0, p.size - p.given) : 0, bank = p.bank || 0;
+      return res.status(200).json({ name, left, bank, used, cap: FREE_SPIN_CAP, canSpin: (used < FREE_SPIN_CAP && left > 0) || bank > 0 });
+    } catch (e) {
+      return res.status(500).json({ error: "Could not read the free spins just now." });
+    }
   }
 
   try {
