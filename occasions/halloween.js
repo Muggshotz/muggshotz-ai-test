@@ -35,6 +35,14 @@ window.OCCASION = {
   orderBy: "Order now so it arrives before Halloween.",
   colors: { bg: "#0d0a12", panel: "#17121f", accent: "#ff7a1a", accent2: "#8bd34a", text: "#f3ead8", muted: "#b9a98f" },
 
+  // CONSIGNMENT (Alyx, 6-7 Oct 2026): a design submitted from this page's
+  // boxes earns 25% of its net profit from the day it goes on sale until one
+  // year after the day after the event (TO-DO.md, Consignment): every
+  // Halloween 2026 design stops on 1 Nov 2027, however late it came in. The
+  // (i) panel reads this; a page without it states the one-year-from-
+  // commission rule instead.
+  consign: { event: "Halloween", until: "1 November 2027" },
+
   featured: {
     title: "Halloween Welcome Mats",
     line: "18 x 30 in doormat",

@@ -331,13 +331,23 @@ it, free, for a consignment spot. Alyx reviews; if it is chosen, they earn
 - **A design not tied to a flyer** earns for one year from the day it goes
   into commission.
 
+Built 7 Oct 2026: under a painted design in either box, "Love it? Get paid
+for it" and an (i) panel with the terms (the page's `consign: { event, until }`
+sets the end date); the form takes a name, an email and the tick ("This idea
+is my own ..."), and sends the design itself as a picture through the pitch
+system (api/admin.js `readPitch` kind `consign`, the pitches bucket), which
+emails the pitch inbox and rings the ideas channel. The admin page's Pitches
+card lists them ("Show consignment designs") with Take it on / Pass / Undo
+stamped on each. The Magic Mugs' box was built the same day (two halves, one
+painting, occasion.html `ideaMugBand` cuts the print).
+
 Still to settle: what comes out before "net profit" (Printify's cost and
-shipping, surely; processor fees? flyer costs?); the submission's rights
-checkbox (the wording looked over before it goes live); how they are paid
-(email at least, then a payout method; tax details over $600 a year in the
-US); whether the flyer program's commission ledger can carry it. First build
-when Alyx says so: submission and the review queue, every order recording
-which consigned design it was. Payouts can be worked out from those records later.
+shipping, surely; processor fees? flyer costs?); the tick's wording (Alyx to
+look it over before the flyers go out); how they are paid (email at least,
+then a payout method; tax details over $600 a year in the US); whether the
+flyer program's commission ledger can carry it. Not built: a taken design
+going up for sale on the page by itself (by hand for now), orders recording
+which consigned design they were, and payouts.
 
 ## Waiting on Alyx or Bud
 

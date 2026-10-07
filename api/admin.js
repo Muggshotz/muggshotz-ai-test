@@ -1010,7 +1010,11 @@ const clip = (t, n) => String(t == null ? '' : t).trim().slice(0, n);
 // Checks a submission and returns the record to save, or { error }.
 export function readPitch(body) {
   const b = body || {};
-  const kind = b.kind === 'bug' ? 'bug' : b.kind === 'idea' ? 'idea' : null;
+  // CONSIGNMENT (Alyx, 6-7 Oct 2026): a design from a flyer page's "Got a
+  // better idea?" box, submitted for a consignment spot (occasion.html
+  // occIdeaConsign). The picture is the design itself, kept here because the
+  // generations bucket is swept; name and email are how they get paid.
+  const kind = b.kind === 'bug' ? 'bug' : b.kind === 'idea' ? 'idea' : b.kind === 'consign' ? 'consign' : null;
   if (!kind) return { error: 'Unknown kind.' };
   if (b.website) return { spam: true }; // the hidden field only a bot fills in
   const text = clip(b.text, 3000);
@@ -1020,6 +1024,12 @@ export function readPitch(body) {
   if (kind === 'idea') {
     if (!email) return { error: 'Please give your email, so we can reach you if we make it.' };
     if (b.agree !== true) return { error: 'Please agree to the Pitch In terms.' };
+  }
+  if (kind === 'consign') {
+    if (!name) return { error: 'Please give your name, so we know who to pay.' };
+    if (!email) return { error: 'Please give your email, so we can reach you.' };
+    if (b.agree !== true) return { error: 'Please tick the box to submit your design.' };
+    if (!b.image) return { error: 'The design itself is missing; please try again.' };
   }
   let image = null;
   if (b.image) {
@@ -1032,6 +1042,8 @@ export function readPitch(body) {
   const context = kind === 'bug' ? {
     page: clip(c.page, 300), focus: clip(c.focus, 200), version: clip(c.version, 20),
     product: clip(c.product, 60), viewport: clip(c.viewport, 20), userAgent: clip(c.userAgent, 300)
+  } : kind === 'consign' ? {
+    occasion: clip(c.occasion, 40), product: clip(c.product, 60), hand: clip(c.hand, 10), page: clip(c.page, 300)
   } : null;
   return { kind, text, name, email, deviceId: clip(b.deviceId, 80), image, context };
 }
@@ -1063,7 +1075,7 @@ async function handlePitch(req, res) {
     return res.status(500).json({ error: 'Sorry, that did not go through. Please try again in a minute.' });
   }
   const firstLine = p.text.replace(/\s+/g, ' ').slice(0, 60);
-  const subject = p.kind === 'idea' ? `My Idea: ${firstLine}` : `Bug Report: ${firstLine}`;
+  const subject = p.kind === 'idea' ? `My Idea: ${firstLine}` : p.kind === 'consign' ? `Consignment: ${firstLine}` : `Bug Report: ${firstLine}`;
   try {
     const resp = await fetch('https://api.resend.com/emails', {
       method: 'POST',
@@ -1076,7 +1088,9 @@ async function handlePitch(req, res) {
     });
     if (!resp.ok) console.error('Pitch email failed:', resp.status, await resp.text());
   } catch (err) { console.error('Pitch email failed:', err.message); }
-  await sendAlert(p.kind, p.kind === 'idea' ? `New idea from ${p.name || 'someone'}` : 'New bug report', firstLine);
+  // A consignment rings the ideas channel: a cuckoo, not a cash register.
+  await sendAlert(p.kind === 'consign' ? 'idea' : p.kind,
+    p.kind === 'idea' ? `New idea from ${p.name || 'someone'}` : p.kind === 'consign' ? `Consignment from ${p.name || 'someone'}: ${p.context?.product || 'design'}` : 'New bug report', firstLine);
   return res.status(200).json({ ok: true, id });
 }
 
@@ -1084,7 +1098,7 @@ async function handlePitch(req, res) {
 async function handlePitchList(req, res) {
   const { password, kind } = req.body || {};
   if (password !== ADMIN_PASSWORD) return res.status(403).json({ error: 'Unauthorized.' });
-  const k = kind === 'bug' ? 'bug' : 'idea';
+  const k = kind === 'bug' ? 'bug' : kind === 'consign' ? 'consign' : 'idea';
   try {
     await ensurePitchBucket();
     const list = await fetch(`${SUPABASE_URL}/storage/v1/object/list/${PITCH_BUCKET}`, {
@@ -1148,6 +1162,33 @@ async function handlePitchReward(req, res) {
     return res.status(200).json({ ok: true, rewardedAt: stamped.rewardedAt, rewardTokens: BUG_REWARD_TOKENS, grant: body });
   } catch (err) {
     console.error('Bug reward failed:', err.message);
+    return res.status(500).json({ error: err.message });
+  }
+}
+
+// THE CONSIGNMENT QUEUE'S DECISION (Alyx, 7 Oct 2026): taken on or passed,
+// stamped on the submission so the list shows where each stands. Taking one
+// on is a promise of 25% of its net profit (TO-DO.md, Consignment); putting
+// the design up for sale and paying out are done by hand for now.
+async function handlePitchDecide(req, res) {
+  const { password, id, decision } = req.body || {};
+  if (password !== ADMIN_PASSWORD) return res.status(403).json({ error: 'Unauthorized.' });
+  if (typeof id !== 'string' || !/^[\w-]{10,80}$/.test(id)) return res.status(400).json({ error: 'A submission id is required.' });
+  if (!['taken', 'passed', 'open'].includes(decision)) return res.status(400).json({ error: 'The decision is taken, passed or open.' });
+  const path = `consign/${id}.json`;
+  try {
+    const r = await fetch(`${SUPABASE_URL}/storage/v1/object/${PITCH_BUCKET}/${path}`, { headers: sbHeaders() });
+    if (r.status === 404 || r.status === 400) return res.status(404).json({ error: 'No such submission.' });
+    if (!r.ok) throw new Error('Could not read the submission: ' + r.status);
+    const rec = await r.json();
+    const stamped = { ...rec, decision: decision === 'open' ? null : decision, decidedAt: decision === 'open' ? null : new Date().toISOString() };
+    const w = await fetch(`${SUPABASE_URL}/storage/v1/object/${PITCH_BUCKET}/${path}`, {
+      method: 'POST', headers: sbHeaders({ 'Content-Type': 'application/json', 'x-upsert': 'true' }), body: JSON.stringify(stamped)
+    });
+    if (!w.ok) throw new Error('The decision could not be saved: ' + w.status);
+    return res.status(200).json({ ok: true, decision: stamped.decision, decidedAt: stamped.decidedAt });
+  } catch (err) {
+    console.error('Consignment decision failed:', err.message);
     return res.status(500).json({ error: err.message });
   }
 }
@@ -1216,6 +1257,7 @@ export default async function handler(req, res) {
   if (action === 'pitch') return handlePitch(req, res);
   if (action === 'pitches') return handlePitchList(req, res);
   if (action === 'pitch-reward') return handlePitchReward(req, res);
+  if (action === 'pitch-decide') return handlePitchDecide(req, res);
   if (action === 'alert-topics') return handleAlertTopics(req, res);
 
   return res.status(400).json({ error: `Unknown action "${action}".` });

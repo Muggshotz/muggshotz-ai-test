@@ -156,6 +156,43 @@ scenarios.theMugBox = async (page) => {
   return 'PASS: the mugs\' grid ends with the box; two halves; painted once as a 2.14 strip, punchline left and setup right; the tile shows the flat wrap; Order cuts the 2475 x 1155 print and checks out a smart mug for the hand chosen, halves swapped for the left';
 };
 
+// CONSIGNMENT (Alyx, 6-7 Oct 2026): under a painted design, "Love it? Get
+// paid for it" and an (i) that explains the terms; the form wants a name, an
+// email and the tick; the design goes to the pitch system as a consign kind
+// with the picture itself; then the tile says so and still offers the order.
+scenarios.consignIt = async (page) => {
+  const state = { tries: 3, verified: true, open: true };
+  const sent = await fake(page, state);
+  const pitches = [];
+  await page.route('**/api/admin', (route) => { pitches.push(route.request().postDataJSON()); route.fulfill({ json: { ok: true, id: 'test-1' } }); });
+  await openAndType(page, IDEA); await T(page, 1500);
+  let t = await tile(page);
+  if (!/Love it\? Get paid for it/.test(t.text)) return `FAIL: no consignment offer under the mat (${t.text})`;
+  await page.click('#ideaTile-mat .info'); await T(page, 300);
+  const info = await page.evaluate(() => { const el = document.getElementById('ideaInfo'); return el ? el.textContent.replace(/\s+/g, ' ').trim() : null; });
+  if (!info || !/25% of the net profit on every one sold/.test(info) || !/until 1 November 2027/.test(info) || !/does not use a try/.test(info)) return `FAIL: the (i) panel says ${JSON.stringify(info)}`;
+  await page.click('#ideaInfo .go'); await T(page, 200);
+  if (await page.evaluate(() => !!document.getElementById('ideaInfo'))) return 'FAIL: Got it did not close the panel';
+  await page.click('#ideaTile-mat .consignrow .go'); await T(page, 400);
+  await page.click('#ideaTile-mat .go'); await T(page, 300);
+  t = await tile(page);
+  if (pitches.length || !/who to pay/.test(t.text)) return `FAIL: it sent with no name (${pitches.length}; ${t.text})`;
+  await page.fill('#ideaName-mat', 'Casper Ghost');
+  await page.fill('#ideaEmail-mat', 'casper@example.com');
+  await page.click('#ideaTile-mat .go'); await T(page, 300);
+  t = await tile(page);
+  if (pitches.length || !/tick the box/.test(t.text)) return `FAIL: it sent without the tick (${pitches.length}; ${t.text})`;
+  await page.check('#ideaAgree-mat');
+  await page.click('#ideaTile-mat .go'); await T(page, 1500);
+  const p = pitches[0];
+  if (!p || p.action !== 'pitch' || p.kind !== 'consign' || p.text !== IDEA || p.name !== 'Casper Ghost' || p.email !== 'casper@example.com' || p.agree !== true || !p.deviceId
+    || !/^data:image\/jpeg;base64,/.test(p.image || '') || !p.context || p.context.occasion !== 'halloween' || !/Mats/.test(p.context.product))
+    return `FAIL: the submission went as ${JSON.stringify({ ...p, image: (p && p.image || '').slice(0, 24) })}`;
+  t = await tile(page);
+  if (!/Submitted for consignment/.test(t.text) || !/Order this mat · \$19\.95/.test(t.text) || /Get paid for it/.test(t.text)) return `FAIL: after sending the tile reads ${t.text}`;
+  return 'PASS: Love it? Get paid for it, the (i) terms (25% of net profit until 1 Nov 2027, no try used), name, email and the tick required, the design itself sent as a consign pitch, then the tile says so and still orders';
+};
+
 // THE COUNTER (Alyx, 7 Oct 2026): a confirmed email at zero tokens sees the
 // product's free spins; at none, "buy some, or come back later", and Generate's
 // gate closes to the popup instead of a round trip.

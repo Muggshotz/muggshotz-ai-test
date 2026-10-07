@@ -139,6 +139,17 @@ html.order-page-open{overflow:hidden}
 .tile.idea label.fld{display:block;font-size:13px;color:var(--muted);margin:0 0 8px}
 .tile.idea label.fld textarea{margin-top:4px;min-height:64px}
 .tile.idea .note{font-size:13px;color:var(--muted);margin:6px 0 8px}
+.tile.idea .consignrow{display:flex;gap:8px;align-items:center;margin-top:10px}
+.tile.idea .consignrow .go{margin-top:0;flex:1}
+.tile.idea .info{flex:0 0 38px;height:38px;border-radius:50%;border:1px solid var(--accent);background:transparent;color:var(--accent);font:700 17px Georgia,serif;cursor:pointer}
+.tile.idea label.tick{display:flex;gap:10px;align-items:flex-start;font-size:14px;margin:10px 0 2px;cursor:pointer}
+.tile.idea label.tick input{width:auto;margin:3px 0 0;flex:0 0 auto}
+.tile.idea .fld input{margin-top:4px}
+#ideaInfo{position:fixed;inset:0;z-index:2147483001;background:rgba(0,0,0,.72);display:flex;align-items:center;justify-content:center;padding:16px}
+#ideaInfo .box{background:var(--panel);border:1px solid var(--accent);border-radius:14px;max-width:520px;max-height:90vh;overflow:auto;padding:18px 18px 14px;font-size:15px;line-height:1.5}
+#ideaInfo h3{margin:0 0 8px;color:var(--accent);font-size:20px}
+#ideaInfo p{margin:0 0 10px}
+#ideaInfo .go{display:block;width:100%;padding:12px;border:0;border-radius:10px;background:var(--accent);color:#1a0f05;font-weight:800;font-size:16px;cursor:pointer}
 </style>
 <script src="mug3d.js"></script>
 <script src="magic-mug.js"></script>
@@ -452,7 +463,7 @@ window.occSpinMore = el => {
 //   k: 'mat' (the featured product, O.featured.idea) | 'mug' (O.magicMugs.idea)
 //   phase: idle | typing | email | waiting | painting | done | out
 const ideas = {};
-function ideaState(k) { return ideas[k] || (ideas[k] = { k, phase: 'idle', text: '', text2: '', email: '', url: null, err: '', tries: null, verified: false, open: null, poll: null }); }
+function ideaState(k) { return ideas[k] || (ideas[k] = { k, phase: 'idle', text: '', text2: '', email: '', name: '', url: null, sent: false, err: '', tries: null, verified: false, open: null, poll: null }); }
 function ideaCfg(k) { return k === 'mug' ? (O && O.magicMugs && O.magicMugs.idea) : (O && O.featured && O.featured.idea); }
 function ideaPrice(k) { return k === 'mug' ? SMART_MUG_PRICE : featuredPrice(); }
 // The box's words, by what it paints.
@@ -496,7 +507,19 @@ function ideaTileHtml(k) {
       : '';
     body = '<h3>' + W.title + '</h3><img class="mine' + (k === 'mug' ? ' band' : '') + '" src="' + esc(S.url) + '" alt="' + W.title + '"/>' + note + left
       + '<button class="go"' + on('Order') + '>' + W.order + ' · ' + p + '</button>'
-      + '<button class="go alt"' + on('Another') + '>Try another idea</button>' + err;
+      + '<button class="go alt"' + on('Another') + '>Try another idea</button>'
+      + (S.sent ? '<p class="note">✓ Submitted for consignment. We\'ll email you.</p>'
+        : '<div class="consignrow"><button class="go alt"' + on('Consign') + '>Love it? Get paid for it</button><button class="info" aria-label="How consignment works" onclick="occIdeaInfo()">i</button></div>') + err;
+  } else if (S.phase === 'consign') {
+    body = '<h3>Get paid for your idea</h3><p class="hint">Submit your ' + (k === 'mug' ? 'mug' : 'mat') + ' for a consignment spot, free. If we take it on, you earn 25% of the net profit on every one sold. <a href="#" onclick="occIdeaInfo();return false" style="color:var(--accent)">How it works</a></p>'
+      + '<img class="mine' + (k === 'mug' ? ' band' : '') + '" src="' + esc(S.url) + '" alt=""/>'
+      + '<label class="fld">Your name<input id="ideaName-' + k + '" type="text" autocomplete="name" maxlength="80" placeholder="So we know who to pay" value="' + esc(S.name || '') + '"/></label>'
+      + '<label class="fld">Your email<input id="ideaEmail-' + k + '" type="email" inputmode="email" autocomplete="email" placeholder="you@example.com" value="' + esc(S.email) + '"/></label>'
+      + '<label class="tick"><input id="ideaAgree-' + k + '" type="checkbox"/><span>This idea is my own. If Muggshotz takes it on, Muggshotz may make and sell it, and I\'ll be paid 25% of its net profit as described in <a href="#" onclick="occIdeaInfo();return false" style="color:var(--accent)">How it works</a>.</span></label>'
+      + '<button class="go"' + on('Submit') + '>Submit my design</button>'
+      + '<button class="go alt"' + on('Done') + '>← Back</button>' + err;
+  } else if (S.phase === 'sending') {
+    body = '<h3>Sending your design…</h3><div class="spin"></div>';
   } else {
     body = '<h3>' + (S.open === false && !S.verified ? "Today's free tries are all taken" : 'Your free tries are used') + '</h3>'
       + '<p class="hint">Keep going for a little more, or order any ' + (k === 'mug' ? 'mug' : 'mat') + ' above.</p>'
@@ -599,7 +622,7 @@ async function ideaPaint(k) {
     });
     const d = await r.json().catch(() => ({}));
     if (!r.ok || !d.imageUrl) throw new Error(d.error || 'Your ' + (k === 'mug' ? 'mug' : 'mat') + ' could not be painted. Your try was not used; please try again.');
-    S.url = d.imageUrl; S.phase = 'done';
+    S.url = d.imageUrl; S.phase = 'done'; S.sent = false;
     if (typeof S.tries === 'number') S.tries = Math.max(0, S.tries - 1);
   } catch (e) {
     S.phase = 'typing';
@@ -653,6 +676,60 @@ window.occIdeaOrder = async k => {
   // Printed as the mat's full bleed: the order server covers the print with it,
   // centred, which is exactly the crop the tile shows.
   hand_off(Object.assign({ placements: { left: S.url, front: null, right: null }, ideaPrompt: S.text }, F.order));
+};
+// CONSIGNMENT (Alyx, 6-7 Oct 2026: "they can actually get paid for their
+// creations"). A visitor who loves their design submits it, free, for a
+// consignment spot: their name and email (how they get paid), a tick that it
+// is their own, and the design itself as a picture, through the pitch system
+// (api/admin.js action pitch, kind consign), which keeps it, emails Alyx and
+// rings his phone; he takes it on or passes on the admin page. The terms are
+// in the (i) panel: 25% of the net profit on every one sold, from the day it
+// goes on sale until a year after the day after the flyer's event
+// (O.consign.until), or for a year from commission on a page with no event.
+window.occIdeaConsign = k => { const S = ideaState(k); S.phase = 'consign'; S.err = ''; ideaDraw(k); const t = document.getElementById('ideaName-' + k); if (t && !t.value) t.focus(); };
+window.occIdeaDone = k => { const S = ideaState(k); S.phase = 'done'; S.err = ''; ideaDraw(k); };
+// The design as a JPEG for the record: the mug's cut print, the mat's painting.
+async function ideaDesignJpeg(S) {
+  if (S.k === 'mug') return ideaMugBand(S.url, hand);
+  const img = await new Promise((res, rej) => { const i = new Image(); i.crossOrigin = 'anonymous'; i.onload = () => res(i); i.onerror = () => rej(new Error('the picture could not be read')); i.src = S.url; });
+  const c = document.createElement('canvas'); c.width = img.naturalWidth; c.height = img.naturalHeight;
+  c.getContext('2d').drawImage(img, 0, 0);
+  return c.toDataURL('image/jpeg', 0.9);
+}
+window.occIdeaSubmit = async k => {
+  const S = ideaState(k), name = document.getElementById('ideaName-' + k), email = document.getElementById('ideaEmail-' + k), agree = document.getElementById('ideaAgree-' + k);
+  S.name = (name ? name.value : S.name).trim(); S.email = (email ? email.value : S.email).trim(); S.err = '';
+  if (S.name.length < 2) { S.err = 'Please give your name, so we know who to pay.'; ideaDraw(k); return; }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(S.email)) { S.err = 'That email doesn\'t look right.'; ideaDraw(k); return; }
+  if (!agree || !agree.checked) { S.err = 'Please tick the box to submit your design.'; ideaDraw(k); return; }
+  S.phase = 'sending'; ideaDraw(k);
+  try {
+    const image = await ideaDesignJpeg(S);
+    const r = await fetch('/api/admin', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
+      action: 'pitch', kind: 'consign', text: ideaWords(S), name: S.name, email: S.email, agree: true, deviceId: deviceId(), image,
+      context: { occasion: O.key, product: k === 'mug' ? 'Magic Mug' : (O.featured.title || 'mat'), hand: k === 'mug' ? hand : '', page: location.href }
+    }) });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(d.error || 'That did not go through. Please try again.');
+    S.sent = true; S.phase = 'done';
+  } catch (e) { S.phase = 'consign'; S.err = e.message; }
+  ideaDraw(k);
+};
+window.occIdeaInfo = () => {
+  let el = document.getElementById('ideaInfo'); if (el) el.remove();
+  const C = O.consign || {};
+  const term = C.event && C.until
+    ? 'A design from this ' + esc(C.event) + ' page earns from the day it goes on sale until <b>' + esc(C.until) + '</b>, a year after the day after ' + esc(C.event) + ', however late in the season it comes in. So a late idea still gets the whole of next ' + esc(C.event) + '.'
+    : 'Your design earns for <b>one year</b> from the day it goes on sale.';
+  el = document.createElement('div'); el.id = 'ideaInfo';
+  el.innerHTML = '<div class="box" role="dialog" aria-label="How consignment works"><h3>Get paid for your idea</h3>'
+    + '<p>Love what you made? Submit it, free. We look at every one.</p>'
+    + '<p>If we take it on, it goes up for sale, on this page and wherever else we sell it, and you earn <b>25% of the net profit on every one sold</b>.</p>'
+    + '<p>' + term + '</p>'
+    + '<p>We email you if we take it on, and again when there is money to send you. Submitting costs nothing and does not use a try.</p>'
+    + '<button class="go" onclick="document.getElementById(\'ideaInfo\').remove()">Got it</button></div>';
+  el.addEventListener('click', e => { if (e.target === el) el.remove(); });
+  document.body.appendChild(el);
 };
 window.occIdeaBuy = async (k, packId) => {
   const I = ideaCfg(k), S = ideaState(k); S.err = '';
