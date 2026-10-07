@@ -1295,7 +1295,7 @@ async function runMockupJob(body, btn, noteEl, imgEl){
       }
     }
 
-    if (!mockupUrl) throw new Error("Printify didn't return a mockup photo in time — try again in a moment.");
+    if (!mockupUrl) throw new Error("Our printer didn't return a mockup photo in time — try again in a moment.");
 
     let anchorEl = imgEl;
     // Full set of angles for this mockup, used by the lightbox so left/
@@ -3944,7 +3944,8 @@ function exitAfterOrder(){
         '<div class="card" style="text-align:center;margin-top:2rem">' +
         '<div class="card-title">Order Placed!</div>' +
         '<div style="font-size:16px;line-height:1.6;margin-bottom:1rem">Your payment went through and your order is on its way to production.</div>' +
-        '<div class="note" style="font-size:12px;color:#888;line-height:1.6">A receipt is on its way to your email from our payment processor. Your piece is custom-made just for you, so please allow production and shipping time.</div>' +
+        '<div class="note" style="font-size:12px;color:#888;line-height:1.6">Your order confirmation is on its way to your email, and another email follows with the tracking link when it ships. Your piece is custom-made just for you, so please allow production and shipping time.</div>' +
+        '<a href="orders.html" style="display:block;margin-top:.75rem;color:#ff7a1a;font-size:14px">Where\'s my order? See every order any time</a>' +
         '<a class="generate-btn" href="needles-studio.html" style="display:block;text-decoration:none;margin-top:1.25rem">🎨 Make Another</a>' +
         // EXIT (Alyx, 2 Oct 2026): the order is done, so nothing is left to
         // lose. It clears what this device kept of the order and reloads the

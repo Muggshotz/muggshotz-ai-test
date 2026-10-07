@@ -10,6 +10,8 @@ import { sendAlert, saleAlertText } from "../lib/alerts.js";
 import { creditPool, saleCategories, CATEGORY_POOL } from "../lib/free-pool.js";
 import { CARD_CODES } from "../lib/card-bonus.js";
 import { orderPlacedEmail } from "../lib/order-email.js";
+import { recordOrder } from "../lib/orders-ledger.js";
+import { orderItemLines } from "../lib/order-email.js";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
@@ -787,7 +789,9 @@ async function handleMugOrderPayment(session) {
   try {
     const result = await placeProductOrder(orderInput);
     console.log("Order placed successfully for session", session.id, "-> Printify order", result.printifyOrderId);
-    await sendOrderPlacedEmail(session, [{ productKey, sizeLabel: m.size_label, colorName: m.color || null }]);
+    const placedItems = [{ productKey, sizeLabel: m.size_label, colorName: m.color || null }];
+    await noteOrder(session, placedItems, result.printifyOrderId);
+    await sendOrderPlacedEmail(session, placedItems);
     await afterProductOrder(session, productKey, null);
   } catch (error) {
     console.error("CRITICAL: Order payment succeeded but Printify order failed.", {
@@ -797,6 +801,19 @@ async function handleMugOrderPayment(session) {
       error: error.message
     });
   }
+}
+
+// WHERE'S MY ORDER? (Alyx, 7 Oct 2026): the order is noted against the
+// customer's email the moment it exists (lib/orders-ledger.js), so the
+// orders page can show it later. Never fails the order.
+async function noteOrder(session, items, printifyOrderId) {
+  const m = session.metadata || {};
+  const email = m.email || session.customer_details?.email || session.customer_email || null;
+  if (!email) return;
+  try {
+    await recordOrder(email, { ref: session.id, printify: printifyOrderId || null, placedAt: new Date().toISOString(), items: orderItemLines(items),
+      amountCents: typeof session.amount_total === "number" ? session.amount_total : null, currency: session.currency || "usd", firstName: m.first_name || "" });
+  } catch (err) { console.error("Order could not be noted for the orders page (order still placed):", err.message); }
 }
 
 // THE ORDER EMAIL (Alyx, 7 Oct 2026): once the Printify order exists, the
@@ -839,7 +856,9 @@ async function handleBasketOrderPayment(session) {
       shippingAddress: shippingAddressFrom(m), customerName: m.customer_name, orderId: session.id
     });
     console.log("Basket order placed for session", session.id, "-> Printify order", result.printifyOrderId, `(${result.productIds.length} items)`);
-    await sendOrderPlacedEmail(session, (basket.items || []).map((it) => ({ productKey: it.productKey, sizeLabel: it.sizeLabel, colorName: it.colorName || null })));
+    const placedItems = (basket.items || []).map((it) => ({ productKey: it.productKey, sizeLabel: it.sizeLabel, colorName: it.colorName || null }));
+    await noteOrder(session, placedItems, result.printifyOrderId);
+    await sendOrderPlacedEmail(session, placedItems);
     const firstKey = (m.product_keys || "").split(",")[0] || null;
     await afterProductOrder(session, firstKey, Number(m.net_profit) || 0);
   } catch (error) {

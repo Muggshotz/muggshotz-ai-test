@@ -351,6 +351,22 @@ flyer program's commission ledger can carry it. Not built: a taken design
 going up for sale on the page by itself (by hand for now), orders recording
 which consigned design they were, and payouts.
 
+## After the order: emails and the orders page (built 7 Oct 2026)
+
+A customer hears three times, all from hello@muggshotz.com, replies to the
+replies inbox, and never a word about where things are made:
+- **The order email**, the moment the Printify order is placed (lib/order-email.js,
+  api/stripe-webhook.js sendOrderPlacedEmail): what, what was paid, where to.
+- **The shipping notice**, when Printify says a shipment left (api/printify-webhook.js,
+  lib/shipping-notice.js; registered once from the admin page's Shipping notices
+  card, which derives the webhook secret from the server's own Printify token).
+- **Where's my order?** (orders.html, /orders; api/orders.js; lib/orders-ledger.js):
+  no account; the email they ordered with, a one-tap link good for seven days,
+  every order placed with it with its state and tracking read live from Printify.
+  The webhook notes each order against its email as it places it.
+Alyx, 7 Oct: customers "should never see the word printify" (nor Shopify); the
+five places the studio and order page said it now say "our printer".
+
 ## Waiting on Alyx or Bud
 
 - The bug-report email address (Alyx is making a dedicated one).

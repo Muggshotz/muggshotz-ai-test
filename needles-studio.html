@@ -1,5 +1,5 @@
 <!-- ============================================================
-     VERSION: V458
+     VERSION: V459
      ============================================================
      THE ONE LINE THAT SAYS WHICH BUILD YOU ARE LOOKING AT.
 
@@ -1459,7 +1459,7 @@ const HERO_SETTLE_MS = 1000;
 </div>
 <button class="download-btn" id="toggleImageBtn" onclick="toggleWorkingImage()" style="display:none;margin-top:.6rem">↔️ Toggle Between Previous & New Image</button>
 <div id="keepTweakingReminder" class="guidance-prompt" role="status">Made your changes? Scroll down and hit Generate again. Running low on tokens? Tap Credits &amp; Extras to top up.</div>
-<button class="download-btn" id="downloadDesignBtn" onclick="downloadImage()" style="display:none;margin-top:.6rem">⬇️ Download for Printify</button>
+<button class="download-btn" id="downloadDesignBtn" onclick="downloadImage()" style="display:none;margin-top:.6rem">⬇️ Download the print file</button>
 
 <!-- THE ROUND ARROW IS GONE (Alyx, Sep 2026: "that arrow underneath can just
      go away... there's nothing underneath there and if you click it it won't
@@ -2769,7 +2769,7 @@ Tell Needles <span style="color:#7ab8ff">what you have in mind</span>
 <div class="note" id="genPreviewNote" style="text-align:center;display:none"></div>
 <img id="genPreviewImg" style="display:none;width:100%;border-radius:12px;border:1px solid #003c8c"/>
 <div id="genPreviewGallery" style="display:none;gap:8px;overflow-x:auto;padding-bottom:4px"></div>
-<div class="note" id="genPreviewGalleryHint" style="display:none;margin-top:4px;text-align:center">Swipe to see all angles Printify photographed — one may show a blank side if your design doesn't cover it.</div>
+<div class="note" id="genPreviewGalleryHint" style="display:none;margin-top:4px;text-align:center">Swipe to see every angle our printer photographed — one may show a blank side if your design doesn't cover it.</div>
 </div>
 <button class="quick-btn" id="libraryToggleBtn" onclick="toggleLibrary()" style="margin-top:1.1rem;width:min(100%,320px);margin-left:auto;margin-right:auto;display:block;text-align:center;padding:.65rem;border-radius:8px">📚 My Designs (0)</button>
 <button class="quick-btn" onclick="clearAllDesigns()" style="margin-top:.5rem;width:min(100%,320px);margin-left:auto;margin-right:auto;display:block;text-align:center;padding:.65rem;border-radius:8px;border-color:#5a2a2a;color:#ff8a7a">🧹 Clear All Designs — Fresh Start</button>
@@ -4948,7 +4948,7 @@ function toggleWorkingImage(){
 // Two copies of a number is exactly how the marker rotted in the first place,
 // so they are not trusted to agree: .githooks/pre-commit moves both together
 // and REFUSES the commit if it ever finds them apart.
-const APP_VERSION='V458';
+const APP_VERSION='V459';
 try{ console.log('%cNeedles\u2019 Studio '+APP_VERSION,'color:#29a3ff;font-weight:700'); }catch(e){}
 
 function getDeviceId(){
@@ -17911,7 +17911,7 @@ async function runReallyBeginFinalMockupFetch(){
       }
     }
 
-    if(!mockupUrl)throw new Error("Printify didn't return a mockup photo in time.");
+    if(!mockupUrl)throw new Error("Our printer didn't return a mockup photo in time.");
 
     currentMockupUrls=mockupUrls.length?mockupUrls:[mockupUrl];
     // Printify's returned photo order for this coffee mug blueprint puts
@@ -22942,7 +22942,7 @@ async function runAutoMockupFetch(){
     }
 
     if (thisRequestId !== autoMockupRequestId) return;
-    if (!mockupUrl) throw new Error("Printify didn't return a mockup photo in time — it'll retry automatically the next time you change something.");
+    if (!mockupUrl) throw new Error("Our printer didn't return a mockup photo in time — it'll retry automatically the next time you change something.");
 
     loadingEl.style.display = 'none';
 

@@ -266,7 +266,7 @@ function homeHtml() {
       + more.map(m => '<div class="card" data-more="' + m.key + '" onclick="occGo(\'more\',\'' + m.key + '\')"><img src="' + m.pic + '" alt=""/><div class="tx"><div class="nm">' + esc(m.title) + '</div><div class="ln">' + esc(m.line) + '</div><div class="pr">from ' + $(moreFrom(m)) + '</div></div><div class="ar">›</div></div>').join('')
       + '</div></section>';
   }
-  return h + '<div class="foot">MUGGSHOTZ · ' + esc(O.title) + '</div>';
+  return h + '<div class="foot">MUGGSHOTZ · ' + esc(O.title) + ' · <a href="orders.html" style="color:var(--muted)">Where\'s my order?</a></div>';
 }
 
 function matHtml(i) {
