@@ -425,18 +425,23 @@ const MUG3D = (function(){
       // the print"). verify-safe-area-preview.js holds the two together.
       safeArea:{ x:68/3710, y:57/2817 },
       band:{ h:9.39, y:5.20, wrapIn:12.37 },
-      // THE HANDLE AS IT IS (Alyx, 5 Oct 2026: "Our handle looks flimsy, and
-      // rail-like. Their handle is more stout and sturdy and it tapers up from
-      // the bottom"). Traced off Printify's own side photo of this cup (35.6 px
-      // to the unit, scaled by the body's width; the foot checks at 1.52 against
-      // the model's 1.55): a squared grip, the top arm 0.47 thick at the wall,
-      // the grip 0.38 at the top to 0.42 at the bottom, the bottom arm 0.68 at
-      // the wall, reaching 1.91 out, about an inch across. Same angle as before
-      // (PI, over the band's ends), so nothing about the print moves.
-      handle:{ angle:Math.PI, mat:'body', depth:0.78, bevel:0.1, outline:[
-        ['M',1.80,9.86],['L',3.05,9.89],['Q',3.62,9.88,3.64,9.30],['L',3.86,6.10],['Q',3.88,5.36,3.20,5.32],
-        ['L',1.80,5.18],['L',1.80,5.90],['L',3.00,5.92],['Q',3.42,5.96,3.44,6.35],['L',3.24,9.15],['Q',3.22,9.37,2.95,9.37],['L',1.80,9.38]] },
-      straw:{ r:0.14, y0:10.5, y1:12.25, x:0, mat:'lid' },
+      // THE HANDLE IS BUD'S (7 Oct 2026; Alyx: his artwork "looks exactly like
+      // what he was trying to create, yours just looks kind of close"). Painted
+      // from Printify's side photo, side-on and edge-on (art/models/40oz-handle-
+      // side, -edge, cut off his sheet 40oz-parts-bud): a smooth white loop,
+      // its flange set a quarter unit into the wall. Its silhouette, traced off
+      // the painting's alpha (outer and the loop's hole), is the extruded
+      // shape, 0.86 deep (the edge view's width against the side view's
+      // height), and the painting itself is laid on both faces. Same angle as
+      // before (PI, over the band's ends), so nothing about the print moves.
+      handle:{ angle:Math.PI, mat:'body', depth:0.86, bevel:0.12, picture:'art/models/40oz-handle-side.png', box:[1.55,5.18,3.883,9.89],
+        outline:[[1.556,9.89],[1.556,5.193],[1.993,5.186],[2.019,5.244],[2.025,5.386],[2.051,5.398],[3.111,5.495],[3.388,5.572],[3.497,5.63],[3.619,5.726],[3.728,5.848],[3.805,5.99],[3.863,6.182],[3.876,6.388],[3.677,8.881],[3.645,9.055],[3.568,9.222],[3.452,9.357],[3.285,9.466],[3.182,9.504],[3.015,9.537],[2.019,9.504],[2.006,9.832],[1.968,9.877],[1.942,9.89]],
+        holes:[[[3.041,8.913],[3.144,8.83],[3.182,8.708],[3.349,6.645],[3.349,6.497],[3.33,6.427],[3.291,6.356],[3.208,6.272],[3.144,6.234],[3.009,6.189],[2.038,6.137],[2.025,6.15],[2.013,8.804],[2.109,8.83],[2.353,8.849],[2.899,8.926]]] },
+      // The straw and the lid's blue rim are Bud's too: his straw, painted
+      // side-on, wrapped round the tube (mirrored, so the highlight reads from
+      // any side); his rim strip wrapped round the rim, as the steel ring is.
+      straw:{ r:0.14, y0:10.5, y1:12.25, x:0, mat:'lid', picture:'art/models/40oz-straw.png' },
+      rimMap:'art/models/40oz-rim.png',
       parts:[
         { mat:'body',  pts:()=>{
             const p=[[0,0],[1.35,0]];
@@ -590,12 +595,21 @@ const MUG3D = (function(){
       if(h.outline){
         // A handle drawn as its side outline (radial out, height up), thickened
         // into a solid with rounded edges, its centre on the handle's angle.
-        const sh=new THREE.Shape();
-        h.outline.forEach(([k,...v])=>{ if(k==='M')sh.moveTo(v[0],v[1]); else if(k==='L')sh.lineTo(v[0],v[1]); else sh.quadraticCurveTo(v[0],v[1],v[2],v[3]); });
+        const trace=(pts,into)=>pts.forEach((pt,i)=>{ if(typeof pt[0]==='string'){ const [k,...v]=pt; if(k==='M')into.moveTo(v[0],v[1]); else if(k==='L')into.lineTo(v[0],v[1]); else into.quadraticCurveTo(v[0],v[1],v[2],v[3]); } else if(i===0)into.moveTo(pt[0],pt[1]); else into.lineTo(pt[0],pt[1]); });
+        const sh=new THREE.Shape(); trace(h.outline,sh);
+        (h.holes||[]).forEach(pts=>{ const hole=new THREE.Path(); trace(pts,hole); sh.holes.push(hole); });
         const geo=new THREE.ExtrudeGeometry(sh,{depth:h.depth,bevelEnabled:true,bevelThickness:h.bevel,bevelSize:h.bevel,bevelOffset:-h.bevel,bevelSegments:4,curveSegments:16});
         geo.translate(0,0,-h.depth/2);
         geo.computeVertexNormals();
-        const mat=tm[h.mat]||tm.body;
+        let mat=tm[h.mat]||tm.body;
+        if(h.picture){
+          // Bud's painting on the two faces (ExtrudeGeometry's face UVs are the
+          // shape's own x,y: the box maps them to the picture), the body colour
+          // round the sides. As painted, so not lit again.
+          const [x0,y0,x1,y1]=h.box, t=new THREE.TextureLoader().load(h.picture,tx=>{ tx.encoding=THREE.sRGBEncoding; tx.anisotropy=8; tx.needsUpdate=true; needsFrame=true; });
+          t.wrapS=t.wrapT=THREE.ClampToEdgeWrapping; t.repeat.set(1/(x1-x0),1/(y1-y0)); t.offset.set(-x0/(x1-x0),-y0/(y1-y0));
+          mat=[new THREE.MeshBasicMaterial({map:t,transparent:true,toneMapped:false}),tm[h.mat]||tm.body];
+        }
         const hand=new THREE.Mesh(geo,mat);
         hand.rotation.y=h.angle+Math.PI*1.5;
         hand.castShadow=true; hand.receiveShadow=true;
@@ -628,13 +642,19 @@ const MUG3D = (function(){
         g.add(beads);
       });
     }
-    if(T.lidTop||T.ringMap){
+    if(T.lidTop||T.ringMap||T.rimMap){
       const load=(url,fn)=>new THREE.TextureLoader().load(url,t=>{ t.encoding=THREE.sRGBEncoding; t.anisotropy=8; fn&&fn(t); t.needsUpdate=true; needsFrame=true; });
       if(T.ringMap){
         // Bud's strip carries its own light and shade: shown as painted, not lit again.
         const ring=new THREE.MeshBasicMaterial({map:load(T.ringMap), toneMapped:false, side:THREE.DoubleSide});
         g.children.forEach(m=>{ if(m.material===tm.brushed)m.material=ring; });
         tm.brushed.dispose(); tm.brushed=ring;
+      }
+      if(T.rimMap){
+        // Bud's rim strip round the lid's blue rim, as his ring is round the steel.
+        const t=load(T.rimMap); t.wrapS=THREE.RepeatWrapping; t.wrapT=THREE.ClampToEdgeWrapping;
+        const rim=new THREE.MeshBasicMaterial({map:t, transparent:true, toneMapped:false, side:THREE.DoubleSide, depthWrite:false});
+        g.children.forEach(m=>{ if(m.material===tm.lidBlue)m.material=rim; });
       }
       if(T.lidTop){
         const L=T.lidTop, geo=new THREE.CircleGeometry(L.r,96);
@@ -674,7 +694,13 @@ const MUG3D = (function(){
     }
     if(T.straw){
       const st=T.straw;
-      const straw=new THREE.Mesh(new THREE.CylinderGeometry(st.r,st.r,st.y1-st.y0,24),tm[st.mat]||tm.body);
+      let smat=tm[st.mat]||tm.body;
+      if(st.picture){
+        const t=new THREE.TextureLoader().load(st.picture,tx=>{ tx.encoding=THREE.sRGBEncoding; tx.needsUpdate=true; needsFrame=true; });
+        t.wrapS=THREE.MirroredRepeatWrapping; t.repeat.set(2,1);
+        smat=new THREE.MeshBasicMaterial({map:t,transparent:true,toneMapped:false});
+      }
+      const straw=new THREE.Mesh(new THREE.CylinderGeometry(st.r,st.r,st.y1-st.y0,24),smat);
       straw.position.set(st.x||0,(st.y0+st.y1)/2,0);
       straw.castShadow=true;
       g.add(straw);
