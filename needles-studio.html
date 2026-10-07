@@ -1,5 +1,5 @@
 <!-- ============================================================
-     VERSION: V456
+     VERSION: V457
      ============================================================
      THE ONE LINE THAT SAYS WHICH BUILD YOU ARE LOOKING AT.
 
@@ -4947,7 +4947,7 @@ function toggleWorkingImage(){
 // Two copies of a number is exactly how the marker rotted in the first place,
 // so they are not trusted to agree: .githooks/pre-commit moves both together
 // and REFUSES the commit if it ever finds them apart.
-const APP_VERSION='V456';
+const APP_VERSION='V457';
 try{ console.log('%cNeedles\u2019 Studio '+APP_VERSION,'color:#29a3ff;font-weight:700'); }catch(e){}
 
 function getDeviceId(){
@@ -13251,7 +13251,20 @@ function surprisePrintUrl(){
   return location.origin+'/art/surprise/'+file+'-print'+(selectedSurpriseHand==='left'?'-left':'')+'.png';
 }
 let premadesFrame='none';
-function holidayEntry(key){ const d=holidayDesigns().find(x=>x.key===key); return key+(designFrames(d).includes(premadesFrame)?'~'+premadesFrame:''); }
+// DECAL OR NO DECAL (Alyx, 7 Oct 2026: "the generator should offer it too"):
+// the shelf's choice between a design's full-panel file and its decal version
+// (magic-mug.js designShown); a decal mug travels as key~decal.
+let premadesDecal=false;
+function holidayView(d){ return d&&d.decal?Object.assign({},d,{file:designShown(d,premadesDecal)}):d; }
+function holidayEntry(key){ const d=holidayDesigns().find(x=>x.key===key); return premadesDecal&&d&&d.decal?key+'~decal':key+(designFrames(d).includes(premadesFrame)?'~'+premadesFrame:''); }
+function holidayDecalGrid(){
+  if(!holidayShown().some(d=>d.decal))return '';
+  return '<div class="pm-sl" style="text-align:center;margin:.2rem auto .3rem">Decal, or no decal? Two looks for the same joke.</div>'
+    +'<div class="grid2" id="premadesDecalGrid" data-words="decal or not: the mugs carry the pictures" style="margin:0 auto .8rem;max-width:520px">'
+    +[[false,'No decal · the whole picture'],[true,'Decal · two stickers on white']].map(([on,l])=>'<div class="btn-select'+(on===premadesDecal?' selected':'')+'" data-decal="'+(on?1:0)+'" onclick="pickPremadesDecal('+on+')" style="padding:.5rem;font-size:12px">'+l+'</div>').join('')+'</div>';
+}
+function pickPremadesDecal(on){ premadesDecal=!!on; renderPremades(); }
+function holidayTag(d){ return d.decalOnly?' <span class="pm-mugprice" style="opacity:.7">decal only</span>':premadesDecal&&!d.decal?' <span class="pm-mugprice" style="opacity:.7">no decal version</span>':premadesDecal?' <span class="pm-mugprice" style="opacity:.7">decal</span>':''; }
 function renderSurpriseTemplates(){
   const grid=document.getElementById('surpriseTemplateGrid'); if(!grid)return;
   grid.innerHTML=Object.entries(SURPRISE_TEMPLATES).filter(([k,t])=>!t.hidden||k===SURPRISE_UNLOCKED).map(([k,t])=>
@@ -13648,27 +13661,27 @@ function renderPremades(){
       :'Mix and match. Any four are a set, '+$(SMART_MUG_SET_PRICE)+'.';
     const head=premadesCrumb([PREMADE_MUGS.label])+holidayTabs()+holidayStyleTabs()
       +'<div class="pm-ask" id="premadesPackLine" style="margin-bottom:.4rem;text-align:center">'+pack+'</div>'
-      +'<button type="button" class="pm-how" id="premadesHowBtn" onclick="premadesGo(\'how\')">✨ How the magic mug works</button>'+layout;
+      +'<button type="button" class="pm-how" id="premadesHowBtn" onclick="premadesGo(\'how\')">✨ How the magic mug works</button>'+layout+holidayDecalGrid();
     let body;
     if(premadesLayout==='all'){
       body='<div id="premadesMugsAll">'+d.map((x,i)=>'<div class="pm-mugrow" data-mug="'+x.key+'">'
-        +shelfMugHtml(x,null,i)
-        +'<div class="pm-mugbar"><span class="pm-mugname">'+x.label+' <span class="pm-mugprice">'+$(SMART_MUG_PRICE)+'</span></span>'
+        +shelfMugHtml(holidayView(x),null,i)
+        +'<div class="pm-mugbar"><span class="pm-mugname">'+x.label+holidayTag(x)+' <span class="pm-mugprice">'+$(SMART_MUG_PRICE)+'</span></span>'
         +'<button type="button" class="pm-add" data-add="'+x.key+'" onclick="holidayAdd(\''+x.key+'\',true)">'+holidayAddText(x.key)+'</button></div></div>').join('')+'</div>';
     } else {
       const fr=designFrames(m).includes(premadesFrame)?premadesFrame:'none', frs=['none'].concat(designFrames(m));
-      body='<div class="pm-mat">'+shelfMugHtml(m,'premadesMugPic',undefined,fr)
+      body='<div class="pm-mat">'+shelfMugHtml(holidayView(m),'premadesMugPic',undefined,fr)
         +'<button type="button" class="pm-arr" style="left:-12px" aria-label="Previous" onclick="holidayStep(-1)">‹</button>'
         +'<button type="button" class="pm-arr" style="right:-12px" aria-label="Next" onclick="holidayStep(1)">›</button></div>'
         +'<div class="pm-mug3d-hint">Click the mug to spin it · drag it to turn it yourself</div>'
-        +'<div class="pm-name" id="premadesMugName">'+m.label+'</div>'
+        +'<div class="pm-name" id="premadesMugName">'+m.label+holidayTag(m)+'</div>'
         +'<div class="pm-line" style="margin-bottom:.5rem">SURPRISE!!! smart mug · '+$(SMART_MUG_PRICE)+' on its own</div>'
         +'<div class="pm-dots">'+d.map((x,i)=>'<span class="'+(i===premadesMugIndex?'on':'')+'" onclick="holidayStep('+(i-premadesMugIndex)+')"></span>').join('')+'</div>'
         +(frs.length>1?'<div class="'+(frs.length===3?'grid3':'grid2')+'" id="premadesFrameGrid" data-words="the frame: the mug above carries the picture" style="margin:.2rem 0 .8rem">'
           +frs.map(k=>[k,SET_FRAMES[k]]).map(([k,l])=>'<div class="btn-select'+(k===fr?' selected':'')+'" data-frame="'+k+'" onclick="pickPremadesFrame(\''+k+'\')" style="padding:.5rem;font-size:12px">'+l+'</div>').join('')+'</div>':'')
         +'<button type="button" class="generate-btn" id="premadesAddBtn" data-add="'+m.key+'" onclick="holidayAdd(\''+m.key+'\')">'+holidayAddText(m.key)+'</button>'
         +'<button type="button" class="download-btn" id="premadesJustOneBtn" style="margin-top:.6rem" onclick="holidayJustOne(\''+m.key+'\')">Just this one · '+$(SMART_MUG_PRICE)+'</button>';
-      const next=new Image(); next.src='art/surprise/mug/'+d[(premadesMugIndex+1)%d.length].file+'.jpg';
+      const next=new Image(); next.src='art/surprise/mug/'+holidayView(d[(premadesMugIndex+1)%d.length]).file+'.jpg';
     }
     view.innerHTML=head+body+'<div id="premadesTray"></div>';
     renderHolidayTray();
@@ -13817,7 +13830,7 @@ function pickPremadesFrame(f){
   premadesFrame=SET_FRAMES[f]?f:'none';
   document.querySelectorAll('#premadesFrameGrid .btn-select').forEach(b=>b.classList.toggle('selected',b.dataset.frame===premadesFrame));
   const d=holidayShown()[premadesMugIndex], el=document.querySelector('#premadesView .pm-mat .pm-mug3d'); if(!d||!el)return;
-  el.dataset.mug3d=d.file+(designFrames(d).includes(premadesFrame)?'-'+premadesFrame:'');
+  el.dataset.mug3d=designShown(d,premadesDecal)+(designFrames(d).includes(premadesFrame)?'-'+premadesFrame:'');
   releaseShelfMug(); spinShelfMug(el);
 }
 function holidayRemove(i){
@@ -13840,8 +13853,8 @@ function renderHolidayTray(){
   if(!n){ tray.innerHTML=''; return; }
   tray.innerHTML='<div class="pm-tray"><div class="pm-sh" style="text-align:center">Your mugs</div>'
     +'<div class="pm-sl" id="premadesTrayLine" style="text-align:center;max-width:none">'+holidayTrayLine(n)+'</div>'
-    +'<div class="pm-traymugs" data-words="the mugs chosen: their pictures are the tiles">'+premadesMugs.map((k,i)=>{ const [b,f]=k.split('~'), x=d.find(y=>y.key===b)||{}, lab=(x.label||'')+(f?' · '+SET_FRAMES[f]:''); return '<div class="pm-traymug" data-tray="'+k+'">'
-      +'<img src="art/options/surprise-'+x.file+'.jpg" width="360" height="360" alt="'+lab+'"/><span>'+lab+'</span>'
+    +'<div class="pm-traymugs" data-words="the mugs chosen: their pictures are the tiles">'+premadesMugs.map((k,i)=>{ const [b,f]=k.split('~'), x=d.find(y=>y.key===b)||{}, lab=(x.label||'')+(f==='decal'?' · decal':f?' · '+SET_FRAMES[f]:''); return '<div class="pm-traymug" data-tray="'+k+'">'
+      +'<img src="art/options/surprise-'+(f==='decal'&&x.decal?x.decal:x.file)+'.jpg" width="360" height="360" alt="'+lab+'"/><span>'+lab+'</span>'
       +'<button type="button" aria-label="Take out" onclick="holidayRemove('+i+')">✕</button></div>'; }).join('')+'</div>'
     +'<div class="pm-sl" style="margin:.9rem auto .5rem">Which hand do they hold a mug in?</div>'
     +'<div class="grid2" id="premadesHandGrid" data-words="which hand: the mugs above carry the pictures" style="max-width:360px;margin:0 auto 1rem">'
