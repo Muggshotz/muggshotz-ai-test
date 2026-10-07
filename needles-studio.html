@@ -1,5 +1,5 @@
 <!-- ============================================================
-     VERSION: V457
+     VERSION: V458
      ============================================================
      THE ONE LINE THAT SAYS WHICH BUILD YOU ARE LOOKING AT.
 
@@ -1744,7 +1744,8 @@ const HERO_SETTLE_MS = 1000;
 <div id="surprisePreviewWrap" style="display:none;margin-top:.9rem">
 <div id="surpriseRevealBlock"><div id="surpriseReveal" title="Drag to turn it; click to stop or start"><div class="pm-mug3d-stage" id="surpriseRevealStage"></div><div id="surpriseRevealWords"></div></div>
 <div id="surpriseFrameWrap" style="display:none"><div class="note" style="margin-top:0;margin-bottom:.4rem;font-weight:700">The frame</div><div class="grid2" id="surpriseFrameGrid" data-words="the frame: the mug above carries the picture"></div></div>
-<div class="note" style="margin-top:.2rem;margin-bottom:.4rem;font-weight:700">Who is it for? The surprise faces them as they hold it.</div>
+<div class="note" style="margin-top:.2rem;margin-bottom:.1rem;font-weight:700">Who is it for? Which hand do they drink with?</div>
+<div class="note" style="margin-top:0;margin-bottom:.4rem">Hold a mug by its handle and one side faces you. We print the surprise on that side for the hand they drink with, so they see it first and turn the mug to find the rest.</div>
 <div class="grid2" id="surpriseHandGrid" data-words="which hand: the mug and its surprise carry the pictures">
 <div class="btn-select selected" data-hand="right" onclick="pickSurpriseHand('right')" style="padding:.5rem;font-size:12px">Right-handed</div><div class="btn-select" data-hand="left" onclick="pickSurpriseHand('left')" style="padding:.5rem;font-size:12px">Left-handed</div>
 </div>
@@ -4947,7 +4948,7 @@ function toggleWorkingImage(){
 // Two copies of a number is exactly how the marker rotted in the first place,
 // so they are not trusted to agree: .githooks/pre-commit moves both together
 // and REFUSES the commit if it ever finds them apart.
-const APP_VERSION='V457';
+const APP_VERSION='V458';
 try{ console.log('%cNeedles\u2019 Studio '+APP_VERSION,'color:#29a3ff;font-weight:700'); }catch(e){}
 
 function getDeviceId(){
@@ -13856,7 +13857,8 @@ function renderHolidayTray(){
     +'<div class="pm-traymugs" data-words="the mugs chosen: their pictures are the tiles">'+premadesMugs.map((k,i)=>{ const [b,f]=k.split('~'), x=d.find(y=>y.key===b)||{}, lab=(x.label||'')+(f==='decal'?' · decal':f?' · '+SET_FRAMES[f]:''); return '<div class="pm-traymug" data-tray="'+k+'">'
       +'<img src="art/options/surprise-'+(f==='decal'&&x.decal?x.decal:x.file)+'.jpg" width="360" height="360" alt="'+lab+'"/><span>'+lab+'</span>'
       +'<button type="button" aria-label="Take out" onclick="holidayRemove('+i+')">✕</button></div>'; }).join('')+'</div>'
-    +'<div class="pm-sl" style="margin:.9rem auto .5rem">Which hand do they hold a mug in?</div>'
+    +'<div class="pm-sl" style="margin:.9rem auto .2rem">Which hand do they hold a mug in?</div>'
+    +'<div class="pm-sl" style="margin:0 auto .6rem;font-size:12px;opacity:.85;max-width:520px">Hold a mug by its handle and one side faces you. We print the setup on that side for the hand they drink with, so they see it first and turn the mug to find the punchline.</div>'
     +'<div class="grid2" id="premadesHandGrid" data-words="which hand: the mugs above carry the pictures" style="max-width:360px;margin:0 auto 1rem">'
     +['right','left'].map(h=>'<div class="btn-select'+(h===premadesHand?' selected':'')+'" data-hand="'+h+'" onclick="pickPremadesHand(\''+h+'\')" style="padding:.7rem;font-size:13px">'+(h==='right'?'Right-handed':'Left-handed')+'</div>').join('')+'</div>'
     +'<button type="button" class="generate-btn" id="premadesContinueBtn" onclick="goToPremadeSetOrder()">🎁 '+(n===1?'Order this mug':n===4?'Order your set':'Order '+n+' mugs')+' · '+$(holidayPrice(n))+'</button></div>';

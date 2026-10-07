@@ -304,7 +304,7 @@ function magicHtml() {
     + '<div style="margin-top:14px">' + magicMugStepsHtml('other', false, set.how) + '</div>'
     + '<h2 style="margin-top:22px">Pick yours</h2>'
     + (set.packLine ? '<p class="packhead" id="packHead"><b>' + esc(set.packLine).replace('4-', '4\u2011') + '</b>Any 4 ' + esc(set.label) + ' Magic Mugs · ' + $(SMART_MUG_SET_PRICE) + '</p>' : '')
-    + '<p class="line">Which hand do they hold a mug in? We print it so the setup faces them.</p>'
+    + '<p class="line" style="margin-bottom:4px">Which hand do they hold a mug in?</p><p class="line">Hold a mug by its handle and one side faces you. We print the setup on that side for the hand they drink with, so they see it first and turn the mug to find the punchline.</p>'
     + '<div class="hands"><button data-hand="right" class="' + (hand === 'right' ? 'on' : '') + '" onclick="occHand(\'right\')">Right-handed</button><button data-hand="left" class="' + (hand === 'left' ? 'on' : '') + '" onclick="occHand(\'left\')">Left-handed</button></div>'
     + styleTabsHtml(set)
     + '<div id="magicPick">' + magicPickHtml(set) + '</div></div>';
