@@ -520,7 +520,9 @@ window.occIdeaEmail = async () => {
     if (!r.ok) {
       if (d.closed) { idea.open = false; idea.phase = 'out'; ideaDraw(); return; }
       if (/already/i.test(d.error || '')) { idea.verified = true; idea.phase = 'out'; idea.err = d.error; ideaDraw(); return; }
-      throw new Error(d.error || 'Could not send the email.');
+      // Resend's own reason, when the server passed it on (api/send-verification detail).
+      let why = ''; try { why = JSON.parse(d.detail || '{}').message || ''; } catch (e) { why = String(d.detail || '').slice(0, 200); }
+      throw new Error((d.error || 'Could not send the email.') + (why ? ' (' + why + ')' : ''));
     }
     idea.phase = 'waiting'; ideaDraw(); ideaStartPoll();
   } catch (e) { idea.err = e.message; ideaDraw(); }

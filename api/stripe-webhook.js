@@ -20,7 +20,8 @@ const RESEND_API_KEY = process.env.RESEND_API_KEY;
 // send-verification.js — Resend's own default testing domain, not a
 // custom verified domain. Kept identical here so these new flyer
 // emails send successfully the same way verification emails already do.
-const EMAIL_FROM = "Muggshotz <onboarding@resend.dev>";
+// The verified domain (7 Oct 2026); onboarding@resend.dev reached only the account's own inbox.
+const EMAIL_FROM = process.env.RESEND_FROM || "Muggshotz <hello@muggshotz.com>";
 
 // Stripe sends the raw, unparsed request body so it can verify the
 // signature. Vercel parses JSON bodies by default, so we have to turn

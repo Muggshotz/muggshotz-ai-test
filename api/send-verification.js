@@ -99,7 +99,10 @@ export default async function handler(req, res) {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        from: 'Muggshotz <onboarding@resend.dev>',
+        // From the verified domain (7 Oct 2026): Resend's practice address
+        // (onboarding@resend.dev) delivered only to the account's own inbox,
+        // so no flyer visitor ever got their link.
+        from: process.env.RESEND_FROM || 'Muggshotz <hello@muggshotz.com>',
         to: email,
         subject: offer && offer.pool ? `Your ${offer.spins} free tries are one tap away` : offer ? `Verify your email for your ${offer.spins} free spins!` : 'Verify your email for a free bonus token!',
         html: offer && offer.pool

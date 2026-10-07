@@ -981,7 +981,7 @@ async function handleMaintenanceSet(req, res) {
 // told it arrived, because it did.
 const PITCH_EMAIL = 'myideaformuggshotz@gmail.com';
 const PITCH_BUCKET = 'pitches';
-const PITCH_FROM = 'Muggshotz <onboarding@resend.dev>';
+const PITCH_FROM = process.env.RESEND_FROM || 'Muggshotz <hello@muggshotz.com>';
 const MAX_PITCH_IMAGE_CHARS = 3_500_000; // about 2.5 MB of picture
 let pitchBucketReady = false;
 
