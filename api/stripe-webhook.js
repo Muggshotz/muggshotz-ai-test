@@ -9,6 +9,7 @@ import { readCheckoutRecord, updateCheckoutRecord, sessionFromRecord } from "../
 import { sendAlert, saleAlertText } from "../lib/alerts.js";
 import { creditPool, saleCategories, CATEGORY_POOL } from "../lib/free-pool.js";
 import { CARD_CODES } from "../lib/card-bonus.js";
+import { orderPlacedEmail } from "../lib/order-email.js";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
@@ -786,6 +787,7 @@ async function handleMugOrderPayment(session) {
   try {
     const result = await placeProductOrder(orderInput);
     console.log("Order placed successfully for session", session.id, "-> Printify order", result.printifyOrderId);
+    await sendOrderPlacedEmail(session, [{ productKey, sizeLabel: m.size_label, colorName: m.color || null }]);
     await afterProductOrder(session, productKey, null);
   } catch (error) {
     console.error("CRITICAL: Order payment succeeded but Printify order failed.", {
@@ -795,6 +797,23 @@ async function handleMugOrderPayment(session) {
       error: error.message
     });
   }
+}
+
+// THE ORDER EMAIL (Alyx, 7 Oct 2026): once the Printify order exists, the
+// customer hears so, at the address they gave at checkout (lib/order-email.js).
+// It can never fail the order: a send that goes wrong is logged and that is all.
+async function sendOrderPlacedEmail(session, items) {
+  const m = session.metadata || {};
+  const to = m.email || session.customer_details?.email || session.customer_email || null;
+  if (!to) { console.warn("Order email not sent: no customer email on session", session.id); return; }
+  try {
+    const { subject, html } = orderPlacedEmail({
+      items, amountCents: typeof session.amount_total === "number" ? session.amount_total : null, currency: session.currency,
+      firstName: m.first_name, lastName: m.last_name, address1: m.address1, address2: m.address2, city: m.city, region: m.region, zip: m.zip, country: m.country,
+      orderId: session.id
+    });
+    await sendResendEmail(to, subject, html);
+  } catch (err) { console.error("Order email failed (order still placed):", err.message); }
 }
 
 function shippingAddressFrom(m) {
@@ -820,6 +839,7 @@ async function handleBasketOrderPayment(session) {
       shippingAddress: shippingAddressFrom(m), customerName: m.customer_name, orderId: session.id
     });
     console.log("Basket order placed for session", session.id, "-> Printify order", result.printifyOrderId, `(${result.productIds.length} items)`);
+    await sendOrderPlacedEmail(session, (basket.items || []).map((it) => ({ productKey: it.productKey, sizeLabel: it.sizeLabel, colorName: it.colorName || null })));
     const firstKey = (m.product_keys || "").split(",")[0] || null;
     await afterProductOrder(session, firstKey, Number(m.net_profit) || 0);
   } catch (error) {
