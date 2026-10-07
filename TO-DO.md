@@ -302,7 +302,9 @@ never a door into the main generator, and nothing else offered after it for
 now. Every flyer gets its own. Two free tries for a confirmed email address
 (Alyx, 7 Oct: "Nothing in this world is free"). **Each flyer pays its own
 keep:** its own pool of 300 free tries; every product sold from that flyer's
-page buys 50 back (floored at zero, never into another flyer's pool); token
+page buys 50 back (what a sale buys back beyond what was handed out grows
+the pool's limit: "overpayment expands the limit", 7 Oct; never into another
+flyer's pool); token
 packs and studio orders buy nothing back. A pool that runs dry closes, Alyx's
 phone is told once, and it stays closed until a sale buys tries back or he
 opens it for a fresh 300 on the admin page. Built 7 Oct 2026 (lib/free-pool.js,
