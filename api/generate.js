@@ -136,6 +136,17 @@ async function settleSpin(customer, allow) {
   await deductOneToken(customer.id, customer.token_balance);
 }
 
+// A STRIP, OR THE CANVAS (Alyx, 7 Oct 2026, after his first live mat came
+// back as a thin band with white above and below: "Why not have it designed
+// in the right format in the first place"). The widest canvas is 3:2. A band
+// told as a strip is painted letterboxed across the middle, which is right
+// for a cup or a stein and wrong for anything close to the canvas's own
+// shape: told a 1.63 strip, the painter drew a 2.6:1 one. So a band narrower
+// than this is painted the right shape at the source -- the canvas filled
+// edge to edge, cut to the band from the centre after (a mat loses 4% top
+// and bottom). The Gator's 1.75 is the narrowest band that is still a strip.
+const STRIP_MIN = 1.7;
+
 async function deductOneToken(customerId, currentBalance) {
   const url = `${SUPABASE_URL}/rest/v1/customers?id=eq.${customerId}`;
   const resp = await fetch(url, {
@@ -540,7 +551,7 @@ ${strengthLine}
       // trimmed here: a thin strip off the top, the rest off the bottom, where
       // the scene has only desk and floor (in the tests an even trim cut the
       // top of her hair). Travel cups send their band too (capped at 21:9; the Tundra's mirrored ends widen it after). Without bandRatio it is Gemini as before.
-      const wrapBand = Number(bandRatio) > 1.6 ? Number(bandRatio) : 0;
+      const wrapBand = Number(bandRatio) >= STRIP_MIN ? Number(bandRatio) : 0;
       const OPENAI_WRAP_SIZE = { w: 1536, h: 1024 };
       const wrapKeep = wrapBand ? Math.min(1, (OPENAI_WRAP_SIZE.w / wrapBand) / OPENAI_WRAP_SIZE.h) : 1;
       const wrapCutPct = Math.round((1 - wrapKeep) * 100);
@@ -781,7 +792,7 @@ FINAL REMINDER ON LIKENESS: Do not add facial hair, tattoos, piercings, scars, j
       // strip at its true proportion across the middle, leave pure white
       // above and below, and the studio trims the white rows off. One token,
       // real horizon end to end, at the resolution the strip's height allows.
-      const strip = Number(bandRatio) > 1.6 ? Number(bandRatio) : 0;
+      const strip = Number(bandRatio) >= STRIP_MIN ? Number(bandRatio) : 0;
       const fillLine = strip
         ? `Compose the picture as ONE continuous panoramic strip exactly ${strip} times wider than it is tall, centred vertically on the canvas and running the full width from the left edge to the right edge. The canvas above and below the strip must be left completely empty: flat, pure, solid white (#FFFFFF) with no gradient, texture, shadow, border line or anything drawn in it. Inside the strip, draw no border, frame, margin, panel, gutter, caption, watermark or signature of any kind.`
         : "Fill the whole canvas edge to edge. Do not draw a border, frame, margin, panel, gutter, caption, watermark or signature of any kind.";
@@ -973,7 +984,7 @@ This magenta fill is a placeholder that will be programmatically removed after g
     // a print wider than the widest canvas is painted as a strip across the
     // middle, pure white above and below, and the studio trims the white off.
     // Sent only when the studio sends bandRatio; every other request is as it was.
-    const photoStrip = Number(bandRatio) > 1.6 ? Number(bandRatio) : 0;
+    const photoStrip = Number(bandRatio) >= STRIP_MIN ? Number(bandRatio) : 0;
     const stripInstruction = photoStrip
       ? `
 CANVAS SHAPE REQUIREMENT (technical printing instruction, not visible to the customer):
