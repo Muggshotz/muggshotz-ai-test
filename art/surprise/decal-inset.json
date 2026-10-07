@@ -1,0 +1,4 @@
+{
+  "_about": "How far in from its end of the print each decal sits, as a fraction of the print width, on top of the frame choice's own margin (tools/surprise/decal-mug.py INSET). A mug not listed sits at the margin.",
+  "halloween-dentist": 0.08
+}

@@ -85,13 +85,22 @@ def set_words(out, lx, rx, sfx):
         bb = d.textbbox((0, 0), word, font=f)
         d.text((cx - (bb[2] - bb[0]) // 2 - bb[0], H // 2 - (bb[3] - bb[1]) // 2 - bb[1]), word, font=f, fill=WORD_INK)
 SCALE = 0.90
+# CLOSER TO THE CENTRE (Alyx, 7 Oct 2026, of the dentist mug: "move the images
+# each about 8% closer towards the center"): a mug listed in
+# art/surprise/decal-inset.json has each decal moved in from its end by that
+# fraction of the print's width, in every frame choice and both hands.
+INSET = round(W * json.load(open('art/surprise/decal-inset.json')).get(name, 0))
 STYLES = {
     '':     dict(box=1040, edge=15, over=None),
     '-one': dict(box=900, edge=53, over=[(f'art/surprise/{frame}-frame-one.png', 0)]),
     '-two': dict(box=840, edge=72, over=[(f'art/surprise/{frame}-frame-half.png', 25), (f'art/surprise/{frame}-frame-half.png', W - 25 - 1200)]),
 }
 if frame == 'none': STYLES = {'': STYLES['']}
+# A frame that comes in one piece only (halloween has no half frame) skips the
+# choices it cannot make, rather than failing after the ones it can.
+STYLES = {k: v for k, v in STYLES.items() if all(os.path.exists(f) for f, _ in (v['over'] or []))}
 for sfx, st in STYLES.items():
+    st = dict(st, edge=st['edge'] + INSET)
     for hand, ((left, lin), (right, rin)) in (('', ((punch, pin), (setup, sin))), ('-left', ((setup, sin), (punch, pin)))):
         out = Image.new('RGB', (W, H), 'white')
         b = round(st['box'] * SCALE)

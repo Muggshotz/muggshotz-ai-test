@@ -101,7 +101,7 @@ scenarios.theMagicMugs = async (page) => {
     demo: typeof MUG3D !== 'undefined' && MUG3D.mounted() && MUG3D.host() === document.getElementById('smartHowRevealStage'),
   }));
   // The Story / Joke tab first (Boo, the flyer's mug, leads), every mug on it priced.
-  const JOKES = JSON.stringify(["Boo", "Raise the Dead", "Sheet Happens", "Goes Right Through Me", "When Pumpkins Dream", "The Witching Hour", "What's Your Type?", "Deadlines", "Skeleton Crew", "Ghosted", "Could've Been an Email", "I'll Sleep When I'm Dead"]);
+  const JOKES = JSON.stringify(["Boo", "Raise the Dead", "Sheet Happens", "Goes Right Through Me", "When Pumpkins Dream", "The Witching Hour", "What's Your Type?", "Deadlines", "Skeleton Crew", "Ghosted", "Could've Been an Email", "Well, There's Your Problem"]);
   if (m.steps !== 6 || JSON.stringify(m.mugs) !== JOKES || m.prices.some((p) => p !== '$19.95') || !m.demo) return `FAIL: the Magic Mugs show ${JSON.stringify(m)}`;
   // THE TABS (Alyx and Bud, 5 Oct 2026): Story / Joke 6, Silhouette 12, Ornate 12;
   // the Silhouette and Ornate mugs start face on (angle 0), the story mugs on their setup (-90).

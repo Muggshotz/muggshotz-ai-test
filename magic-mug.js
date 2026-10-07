@@ -73,7 +73,9 @@ const SURPRISE_SETS={
     {key:'skeleton-crew',label:'Skeleton Crew',file:'halloween-skeleton-crew-one',style:'joke'},
     {key:'ghosted',label:'Ghosted',file:'halloween-ghosted-one',style:'joke'},
     {key:'the-email',label:'Could\'ve Been an Email',file:'halloween-the-email-one',style:'joke'},
-    {key:'sleep-when-dead',label:'I\'ll Sleep When I\'m Dead',file:'halloween-sleep-when-dead-one',style:'joke'},
+    // The dentist, in I'll Sleep When I'm Dead's place (Alyx, 7 Oct 2026): the
+    // first Halloween mug built as decals (tools/surprise/decal-mug.py).
+    {key:'dentist',label:'Well, There\'s Your Problem',file:'halloween-dentist-one',style:'joke'},
     // Two sets of twelve (Bud, 5 Oct 2026). Ornate, with Sugar Skull: a black
     // raven, a black cat and a carved jack-o'-lantern in Sugar Skull's marigolds
     // and gold. Silhouette: black cut-paper shapes on orange in Bud's own thin
