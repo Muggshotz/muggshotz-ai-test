@@ -187,7 +187,10 @@ function isAllowedPrintifyPath(path) {
     path === 'catalog/blueprints.json' ||
     /^catalog\/blueprints\/\d+\.json$/.test(path) ||
     /^catalog\/blueprints\/\d+\/print_providers\.json$/.test(path) ||
-    /^catalog\/blueprints\/\d+\/print_providers\/\d+\/variants\.json$/.test(path)
+    /^catalog\/blueprints\/\d+\/print_providers\/\d+\/variants\.json$/.test(path) ||
+    // A provider's postage table (Alyx, 12 Oct 2026: "PROBE"): the same
+    // read-only catalog data lib/printify-shipping.js bills from.
+    /^catalog\/blueprints\/\d+\/print_providers\/\d+\/shipping\.json$/.test(path)
   );
 }
 
