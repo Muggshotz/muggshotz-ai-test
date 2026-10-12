@@ -37,16 +37,19 @@ const PRINTIFY_API_TOKEN        = process.env.PRINTIFY_API_TOKEN;
 // HARDENED (July 2026): previously this password lived in plain text
 // inside admin.html's own JavaScript — visible to anyone who viewed the
 // page source, no login required. Read from an environment variable so
-// it never ships to the browser. Falls back to the old hardcoded value
-// only until ADMIN_PASSWORD is confirmed set in Vercel's project
-// settings (Settings -> Environment Variables) — remove the fallback
-// once that's confirmed.
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || '$Noneya6611$';
+// it never ships to the browser. The hardcoded fallback it carried until
+// then is gone (Alyx, 12 Oct 2026, ADMIN_PASSWORD seen set in Vercel for
+// Production and Preview): with the variable missing, nothing matches and
+// every admin call is refused, rather than opened by a password in the code.
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || null;
+// Set, and matched: a missing variable refuses everything (null would
+// otherwise equal a body's null).
+const authorized = (password) => !!ADMIN_PASSWORD && password === ADMIN_PASSWORD;
 
 async function handleLookup(req, res) {
   const { password, deviceId, email } = req.body || {};
 
-  if (password !== ADMIN_PASSWORD) return res.status(403).json({ error: 'Unauthorized.' });
+  if (!authorized(password)) return res.status(403).json({ error: 'Unauthorized.' });
   if (!deviceId && !email) return res.status(400).json({ error: 'Provide a device ID or email to look up.' });
 
   try {
@@ -79,7 +82,7 @@ async function handleLookup(req, res) {
 async function handleAdjust(req, res) {
   const { password, deviceId, count, action, reason } = req.body || {};
 
-  if (password !== ADMIN_PASSWORD) return res.status(403).json({ error: 'Unauthorized.' });
+  if (!authorized(password)) return res.status(403).json({ error: 'Unauthorized.' });
   if (!deviceId)   return res.status(400).json({ error: 'deviceId is required.' });
   if (!count || count < 1) return res.status(400).json({ error: 'count must be >= 1.' });
   if (!['grant','deduct'].includes(action)) return res.status(400).json({ error: 'action must be grant or deduct.' });
@@ -286,7 +289,7 @@ async function printifyCall(path, opts = {}) {
 // body: { password, productKey, sizeLabel, imageUrl }
 async function handlePlacementTest(req, res) {
   const { password, productKey, sizeLabel, imageUrl } = req.body || {};
-  if (password !== ADMIN_PASSWORD) return res.status(403).json({ error: 'Unauthorized.' });
+  if (!authorized(password)) return res.status(403).json({ error: 'Unauthorized.' });
   if (!PRINTIFY_API_TOKEN) return res.status(500).json({ error: 'Printify token is not configured on the server.' });
   const product = getProduct(productKey);
   const size = product?.sizes?.[sizeLabel];
@@ -315,7 +318,7 @@ async function handlePlacementTest(req, res) {
 // body: { password, request } -> { results: [{ model, fidelity, imageUrl | error }] }
 async function handleLikenessTest(req, res) {
   const { password, request, runs: asked } = req.body || {};
-  if (password !== ADMIN_PASSWORD) return res.status(403).json({ error: 'Unauthorized.' });
+  if (!authorized(password)) return res.status(403).json({ error: 'Unauthorized.' });
   if (!request || !request.image) return res.status(400).json({ error: 'request (the studio body, with its image) is required.' });
   // runs: [{ model, fidelity }] to choose; [{}] runs the request exactly as the studio sent it.
   const runs = Array.isArray(asked) && asked.length ? asked : [
@@ -337,7 +340,7 @@ async function handleLikenessTest(req, res) {
 
 // Which Printify shop(s) the site's token reaches, by name (read-only).
 async function handlePrintifyShops(req, res) {
-  if ((req.body || {}).password !== ADMIN_PASSWORD) return res.status(403).json({ error: 'Unauthorized.' });
+  if (!authorized((req.body || {}).password)) return res.status(403).json({ error: 'Unauthorized.' });
   if (!PRINTIFY_API_TOKEN) return res.status(500).json({ error: 'Printify token is not configured on the server.' });
   try { return res.status(200).json({ shops: await printifyCall('shops.json'), siteShopId: PROBE_SHOP_ID }); }
   catch (err) { return res.status(502).json({ error: err.message }); }
@@ -345,7 +348,7 @@ async function handlePrintifyShops(req, res) {
 
 async function handleCostProbe(req, res) {
   const { password, blueprintId, printProviderId, variantIds: onlyVariantIds } = req.body || {};
-  if (password !== ADMIN_PASSWORD) return res.status(403).json({ error: 'Unauthorized.' });
+  if (!authorized(password)) return res.status(403).json({ error: 'Unauthorized.' });
   if (!PRINTIFY_API_TOKEN) return res.status(500).json({ error: 'Printify token is not configured on the server.' });
   if (!blueprintId || !printProviderId) {
     return res.status(400).json({ error: 'blueprintId and printProviderId are both required.' });
@@ -557,7 +560,7 @@ async function deleteGenerationFiles(names) {
 
 async function handleStorageCleanup(req, res) {
   const { password, mode, olderThanDays, confirm } = req.body || {};
-  if (password !== ADMIN_PASSWORD) return res.status(403).json({ error: 'Unauthorized.' });
+  if (!authorized(password)) return res.status(403).json({ error: 'Unauthorized.' });
   if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
     return res.status(500).json({ error: 'Supabase is not configured on the server.' });
   }
@@ -630,7 +633,7 @@ async function sb(method, path, body) {
 
 async function handleOnboard(req, res) {
   const { password } = req.body || {};
-  if (password !== ADMIN_PASSWORD) return res.status(403).json({ error: 'Unauthorized.' });
+  if (!authorized(password)) return res.status(403).json({ error: 'Unauthorized.' });
 
   const fullName = String(req.body.fullName || '').trim();
   const baseCode = String(req.body.baseCode || '').trim().toUpperCase();
@@ -699,7 +702,7 @@ async function handleOnboard(req, res) {
 // the ledger reads.
 async function handleBetas(req, res) {
   const { password } = req.body || {};
-  if (password !== ADMIN_PASSWORD) return res.status(403).json({ error: 'Unauthorized.' });
+  if (!authorized(password)) return res.status(403).json({ error: 'Unauthorized.' });
   const baseCode = String(req.body.baseCode || '').trim().toUpperCase();
   try {
     const filter = baseCode ? `base_code=eq.${encodeURIComponent(baseCode)}&` : '';
@@ -801,7 +804,7 @@ async function buildLedger() {
 // is open -- and his switch to open one for another 300 (lib/free-pool.js).
 async function handleFreePool(req, res) {
   const { password, reopen, reopenCategory, move } = req.body || {};
-  if (password !== ADMIN_PASSWORD) return res.status(403).json({ error: 'Unauthorized.' });
+  if (!authorized(password)) return res.status(403).json({ error: 'Unauthorized.' });
   try {
     const flyers = [...new Set(Object.values(CARD_CODES).map((c) => c.pool).filter(Boolean))];
     const cats = [...new Set(Object.values(PRODUCTS_CATALOG).map((p) => p.generatorIcon).filter(Boolean))].sort();
@@ -824,7 +827,7 @@ async function handleFreePool(req, res) {
 
 async function handleVisits(req, res) {
   const { password } = req.body || {};
-  if (password !== ADMIN_PASSWORD) return res.status(403).json({ error: 'Unauthorized.' });
+  if (!authorized(password)) return res.status(403).json({ error: 'Unauthorized.' });
   try {
     const rows = await sb('GET', 'page_visits?select=day,page,source,visits,new_visitors&order=day.desc&limit=20000');
     return res.status(200).json({ rows });
@@ -837,7 +840,7 @@ async function handleVisits(req, res) {
 
 async function handleLedger(req, res) {
   const { password } = req.body || {};
-  if (password !== ADMIN_PASSWORD) return res.status(403).json({ error: 'Unauthorized.' });
+  if (!authorized(password)) return res.status(403).json({ error: 'Unauthorized.' });
   try { return res.status(200).json(await buildLedger()); }
   catch (err) { console.error('Admin ledger error:', err.message, err.detail || ''); return res.status(500).json({ error: err.message }); }
 }
@@ -846,7 +849,7 @@ async function handleLedger(req, res) {
 // so the ledger can never go negative by a typo.
 async function handlePayout(req, res) {
   const { password } = req.body || {};
-  if (password !== ADMIN_PASSWORD) return res.status(403).json({ error: 'Unauthorized.' });
+  if (!authorized(password)) return res.status(403).json({ error: 'Unauthorized.' });
   const betaId = req.body.betaId != null ? String(req.body.betaId) : '';
   const amount = Math.round(Number(req.body.amount) * 100) / 100;
   const note = String(req.body.note || '').trim() || null;
@@ -871,7 +874,7 @@ async function handlePayout(req, res) {
 
 async function handleCampaignCreate(req, res) {
   const { password } = req.body || {};
-  if (password !== ADMIN_PASSWORD) return res.status(403).json({ error: 'Unauthorized.' });
+  if (!authorized(password)) return res.status(403).json({ error: 'Unauthorized.' });
   const name = String(req.body.name || '').trim();
   const productKey = String(req.body.productKey || '').trim();
   const packsAvailable = parseInt(req.body.packsAvailable, 10);
@@ -924,7 +927,7 @@ async function handlePaymentRailRead(req, res) {
 }
 async function handlePaymentRailSet(req, res) {
   const { password, rail } = req.body || {};
-  if (password !== ADMIN_PASSWORD) return res.status(403).json({ error: 'Unauthorized.' });
+  if (!authorized(password)) return res.status(403).json({ error: 'Unauthorized.' });
   if (rail === 'square' && !squareConfigured()) return res.status(400).json({ error: 'Square is not configured on the server yet (SQUARE_ACCESS_TOKEN and SQUARE_LOCATION_ID).' });
   try {
     const set = await writePaymentRail(rail);
@@ -941,7 +944,7 @@ async function handlePaymentRailSet(req, res) {
 // Sandbox only, and the password: it can never make a real card.
 async function handleSquareTestGiftCard(req, res) {
   const { password, amountCents } = req.body || {};
-  if (password !== ADMIN_PASSWORD) return res.status(403).json({ error: 'Unauthorized.' });
+  if (!authorized(password)) return res.status(403).json({ error: 'Unauthorized.' });
   if (squareEnv() !== 'sandbox') return res.status(400).json({ error: 'Test gift cards are minted in the sandbox only.' });
   if (!squareConfigured()) return res.status(400).json({ error: 'Square is not configured yet.' });
   const cents = Math.max(100, Math.min(50000, Math.round(Number(amountCents) || 2500)));
@@ -958,7 +961,7 @@ async function handleSquareTestGiftCard(req, res) {
 
 async function handleMaintenanceSet(req, res) {
   const { password, on, message, eta } = req.body || {};
-  if (password !== ADMIN_PASSWORD) return res.status(403).json({ error: 'Unauthorized.' });
+  if (!authorized(password)) return res.status(403).json({ error: 'Unauthorized.' });
   if (typeof on !== 'boolean')      return res.status(400).json({ error: '"on" must be true or false.' });
 
   try {
@@ -993,7 +996,7 @@ const PITCH_FROM = process.env.RESEND_FROM || 'Muggshotz <hello@muggshotz.com>';
 const SHIPPING_WEBHOOK_URL = 'https://muggshotz.com/api/printify-webhook';
 async function handlePrintifyWebhooks(req, res) {
   const { password, register } = req.body || {};
-  if (password !== ADMIN_PASSWORD) return res.status(403).json({ error: 'Unauthorized.' });
+  if (!authorized(password)) return res.status(403).json({ error: 'Unauthorized.' });
   if (!PRINTIFY_API_TOKEN) return res.status(500).json({ error: 'Printify token is not configured on the server.' });
   try {
     const { SHIPMENT_TOPIC, webhookSecret } = await import('../lib/shipping-notice.js');
@@ -1125,7 +1128,7 @@ async function handlePitch(req, res) {
 // The admin page's list: newest first, each with a picture link good for an hour.
 async function handlePitchList(req, res) {
   const { password, kind } = req.body || {};
-  if (password !== ADMIN_PASSWORD) return res.status(403).json({ error: 'Unauthorized.' });
+  if (!authorized(password)) return res.status(403).json({ error: 'Unauthorized.' });
   const k = kind === 'bug' ? 'bug' : kind === 'consign' ? 'consign' : 'idea';
   try {
     await ensurePitchBucket();
@@ -1167,7 +1170,7 @@ async function handlePitchList(req, res) {
 const BUG_REWARD_TOKENS = 2;
 async function handlePitchReward(req, res) {
   const { password, id } = req.body || {};
-  if (password !== ADMIN_PASSWORD) return res.status(403).json({ error: 'Unauthorized.' });
+  if (!authorized(password)) return res.status(403).json({ error: 'Unauthorized.' });
   if (typeof id !== 'string' || !/^[\w-]{10,80}$/.test(id)) return res.status(400).json({ error: 'A report id is required.' });
   const path = `bug/${id}.json`;
   try {
@@ -1200,7 +1203,7 @@ async function handlePitchReward(req, res) {
 // the design up for sale and paying out are done by hand for now.
 async function handlePitchDecide(req, res) {
   const { password, id, decision } = req.body || {};
-  if (password !== ADMIN_PASSWORD) return res.status(403).json({ error: 'Unauthorized.' });
+  if (!authorized(password)) return res.status(403).json({ error: 'Unauthorized.' });
   if (typeof id !== 'string' || !/^[\w-]{10,80}$/.test(id)) return res.status(400).json({ error: 'A submission id is required.' });
   if (!['taken', 'passed', 'open'].includes(decision)) return res.status(400).json({ error: 'The decision is taken, passed or open.' });
   const path = `consign/${id}.json`;
@@ -1225,7 +1228,7 @@ async function handlePitchDecide(req, res) {
 // of each, so each sound can be set and heard.
 async function handleAlertTopics(req, res) {
   const { password, test } = req.body || {};
-  if (password !== ADMIN_PASSWORD) return res.status(403).json({ error: 'Unauthorized.' });
+  if (!authorized(password)) return res.status(403).json({ error: 'Unauthorized.' });
   const sent = {};
   if (test) {
     sent.idea = await sendAlert('idea', 'Test: a new idea', 'This is what an idea sounds like.');
