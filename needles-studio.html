@@ -1,5 +1,5 @@
 <!-- ============================================================
-     VERSION: V461
+     VERSION: V462
      ============================================================
      THE ONE LINE THAT SAYS WHICH BUILD YOU ARE LOOKING AT.
 
@@ -754,6 +754,11 @@ html.order-page-open,html.order-page-open body{overflow:hidden}
 #surpriseRevealWords.smart-blink,#smartHowRevealWords.smart-blink,#premadesHowRevealWords.smart-blink{animation-name:smartBlinkSoft}
 #surpriseReveal,#smartHowReveal,#premadesHowReveal{position:relative;width:100%;aspect-ratio:4/3;background:#f2f4f7;border-radius:10px;overflow:hidden;margin-bottom:.8rem;cursor:pointer}
 #surpriseReveal{aspect-ratio:16/10}   /* the frame and hand buttons, the row and "This is the one" under it, all on a laptop screen */
+#surpriseIdleMug{position:relative;width:min(100%,360px);aspect-ratio:4/3;margin:0 auto .4rem;background:#f2f4f7;border-radius:10px;overflow:hidden}
+#surpriseIdleMug>img{display:block;width:100%;height:100%;object-fit:contain;background:#fff}
+#surpriseIdleMug>.pm-mug3d-stage{position:absolute;inset:0;touch-action:pan-y;cursor:grab}
+#surpriseIdleMug canvas{display:block;width:100%;height:100%}
+#surpriseIdleMug.live>img{visibility:hidden}
 #surpriseReveal>.pm-mug3d-stage,#smartHowReveal>.pm-mug3d-stage,#premadesHowReveal>.pm-mug3d-stage{position:absolute;inset:0;touch-action:pan-y}
 #surpriseReveal canvas,#smartHowReveal canvas,#premadesHowReveal canvas{display:block;width:100%;height:100%}
 #surpriseRevealWords,#smartHowRevealWords,#premadesHowRevealWords{position:absolute;left:0;right:0;margin:0 auto;width:fit-content;text-wrap:balance;bottom:12px;max-width:calc(100% - 24px);box-sizing:border-box;text-align:center;color:#fff;font-size:18px;font-weight:700;line-height:1.3;letter-spacing:.2px;background:rgba(10,14,22,.86);border-radius:10px;padding:8px 16px;pointer-events:none}
@@ -1733,8 +1738,13 @@ const HERO_SETTLE_MS = 1000;
 
 <div class="card" id="surpriseCard" style="display:none">
 <div class="card-title">🎁 SURPRISE!!!</div>
-<img src="art/options/smart-mug.jpg" alt="The black smart mug" style="display:block;width:min(100%,150px);margin:0 auto .4rem;border-radius:8px;background:#fff"/>
-<div class="note smart-blink" id="surpriseHowLine" style="text-align:center;margin:0 0 .75rem;font-size:14px">An ordinary black mug until the hot coffee goes in, and then...<br><b>Tap a design to see it on your mug.</b></div>
+<!-- THE BLACK MUG, TURNING (Alyx, 12 Oct 2026: "we can have the mug just
+     spinning, a plain black mug ... a message under the mug telling the
+     customer to click on a message"). Our own 3D cup, cold, until a design
+     is tapped; then the design plays on the large mug under the designs and
+     this one steps aside. The still stands in where the cup cannot be drawn. -->
+<div id="surpriseIdle"><div id="surpriseIdleMug" class="pm-mug3d" title="Drag to turn it"><img src="art/options/smart-mug.jpg" alt="The black smart mug" width="360" height="360"/><div class="pm-mug3d-stage" id="surpriseIdleStage"></div></div>
+<div class="note smart-blink" id="surpriseHowLine" style="text-align:center;margin:0 0 .75rem;font-size:14px">An ordinary black mug until the hot coffee goes in.<br><b>Click the message you want to deliver and we'll show you how we set it up.</b></div></div>
 <div class="note" style="margin-top:0;margin-bottom:.4rem;font-weight:700">Pick your surprise</div>
 <div class="grid2" id="surpriseTemplateGrid"></div>
 <div id="surpriseVariantWrap" style="display:none">
@@ -1744,8 +1754,8 @@ const HERO_SETTLE_MS = 1000;
 <div id="surprisePreviewWrap" style="display:none;margin-top:.9rem">
 <div id="surpriseRevealBlock"><div id="surpriseReveal" title="Drag to turn it; click to stop or start"><div class="pm-mug3d-stage" id="surpriseRevealStage"></div><div id="surpriseRevealWords"></div></div>
 <div id="surpriseFrameWrap" style="display:none"><div class="note" style="margin-top:0;margin-bottom:.4rem;font-weight:700">The frame</div><div class="grid2" id="surpriseFrameGrid" data-words="the frame: the mug above carries the picture"></div></div>
-<div class="note" style="margin-top:.2rem;margin-bottom:.1rem;font-weight:700">Who is it for? Which hand do they drink with?</div>
-<div class="note" style="margin-top:0;margin-bottom:.4rem">Hold a mug by its handle and one side faces you. We print the surprise on that side for the hand they drink with, so they see it first and turn the mug to find the rest.</div>
+<div class="note" style="margin-top:.2rem;margin-bottom:.1rem;font-weight:700">Are they right-handed or left-handed?</div>
+<div class="note" style="margin-top:0;margin-bottom:.4rem">Held by the handle, one side of the mug faces them. We print the setup on that side, so they see it first and turn the mug to find the punchline.</div>
 <div class="grid2" id="surpriseHandGrid" data-words="which hand: the mug and its surprise carry the pictures">
 <div class="btn-select selected" data-hand="right" onclick="pickSurpriseHand('right')" style="padding:.5rem;font-size:12px">Right-handed</div><div class="btn-select" data-hand="left" onclick="pickSurpriseHand('left')" style="padding:.5rem;font-size:12px">Left-handed</div>
 </div>
@@ -4948,7 +4958,7 @@ function toggleWorkingImage(){
 // Two copies of a number is exactly how the marker rotted in the first place,
 // so they are not trusted to agree: .githooks/pre-commit moves both together
 // and REFUSES the commit if it ever finds them apart.
-const APP_VERSION='V461';
+const APP_VERSION='V462';
 try{ console.log('%cNeedles\u2019 Studio '+APP_VERSION,'color:#29a3ff;font-weight:700'); }catch(e){}
 
 function getDeviceId(){
@@ -13289,8 +13299,41 @@ function renderSurpriseVariants(){
 function refreshSurpriseVisibility(){
   const card=document.getElementById('surpriseCard');
   if(card)card.style.display=(product==='smart mug')?'block':'none';
-  if(product!=='smart mug')releaseSurpriseReveal();
+  if(product!=='smart mug'){ releaseSurpriseReveal(); releaseSurpriseIdleMug(); }
   if(product==='smart mug')renderSurpriseTemplates();
+  refreshSurpriseIdle();
+}
+// THE BLACK MUG AT THE TOP (Alyx, 12 Oct 2026): the cup, cold and turning,
+// while no design is picked; a pick plays the design on the large mug below
+// and this one is hidden, so there is one cup on the page (MUG3D is one).
+// The block shows or hides here; the cup itself starts only once the panel
+// has landed (pickSmartMug), since building it mid-landing held the landing
+// up until the next tap's landing collided with it (12 Oct 2026).
+function refreshSurpriseIdle(){
+  const idle=document.getElementById('surpriseIdle'); if(!idle)return;
+  const show=product==='smart mug'&&!surprisePrintUrl();
+  idle.style.display=show?'':'none';
+  if(!show)releaseSurpriseIdleMug();
+}
+let surpriseIdleRun=0;
+function showSurpriseIdleMug(){
+  const el=document.getElementById('surpriseIdleMug'), st=document.getElementById('surpriseIdleStage'), card=document.getElementById('surpriseCard');
+  if(!el||!st||!card||typeof MUG3D==='undefined'||(typeof mug3dFailed!=='undefined'&&mug3dFailed))return;
+  if(getComputedStyle(card).display==='none')return;
+  // A demonstration playing over the page keeps the cup: never take it.
+  if(['smartHowOverlay','smartDemoOverlay'].some(id=>{ const o=document.getElementById(id); return o&&o.style.display&&o.style.display!=='none'; }))return;
+  if(MUG3D.mounted()&&MUG3D.host()===st)return;
+  const run=++surpriseIdleRun;
+  // Any design's picture will do: at heat 0 the cup is black all round.
+  MUG3D.open(st,Object.assign({},SHELF_MUG_3D,{panoramaUrl:'art/surprise/reveal/golden-brown.jpg',panelUrls:[],heat:0,restartOnView:false}))
+    .then(()=>{ if(run===surpriseIdleRun&&MUG3D.mounted()&&MUG3D.host()===st){ MUG3D.setHeat(0); el.classList.add('live'); } })
+    .catch(err=>{ console.error('The black mug could not turn; its still stands in:',err); });
+}
+function releaseSurpriseIdleMug(){
+  const el=document.getElementById('surpriseIdleMug'), st=document.getElementById('surpriseIdleStage');
+  surpriseIdleRun++;
+  if(el)el.classList.remove('live');
+  try{ if(st&&typeof MUG3D!=='undefined'&&MUG3D.mounted()&&MUG3D.host()===st)MUG3D.close(); }catch(e){}
 }
 // The size tile: leave the coffee-mug rail for the smart mug's own.
 function pickSmartMug(){
@@ -13303,7 +13346,7 @@ function pickSmartMug(){
   refreshMugPrintModeVisibility();
   refreshSurpriseVisibility();
   setOptionSpotlight('surprise-focus');
-  smoothScrollToTarget('surpriseCard','center');
+  smoothScrollToTarget('surpriseCard','center',()=>{ if(product==='smart mug')showSurpriseIdleMug(); });
 }
 function pickSurprise(key){
   if(key!==selectedSurprise)selectedSurpriseVariant=null;
@@ -13372,7 +13415,7 @@ function refreshSurprisePreview(){
   // rule). A new design's heat reveal starts once the page has landed, so
   // the customer sees it from the first second, and the cup's first build
   // cannot hold the landing up; the hand changing does not replay it.
-  if(!(url&&file)){ releaseSurpriseReveal(); return; }
+  if(!(url&&file)){ releaseSurpriseReveal(); refreshSurpriseIdle(); return; }
   renderSurpriseFrames();
   renderSurpriseBrew();
   // THE MUG, NOT THE DEMONSTRATION (Alyx, 29 Sep 2026): the heat-up is asked
@@ -13383,9 +13426,12 @@ function refreshSurprisePreview(){
   // mug opens once, at the end, in whatever is chosen by then (building it
   // mid-landing held the scroll up).
   const design=selectedSurprise+'|'+(selectedSurpriseVariant||'');
+  // The black mug at the top steps aside only once the page has landed:
+  // hiding it mid-landing moved everything above the target and threw the
+  // landing back to the panel's top (12 Oct 2026).
   if(design!==surpriseShownDesign){ surpriseShownDesign=design; surpriseLandingFor=design;
-    smoothScrollToTarget('surpriseRevealBlock','center',()=>{ if(surpriseLandingFor===design)surpriseLandingFor=null; if(surpriseShownDesign===design)showSurpriseMug(); }); }
-  else if(surpriseLandingFor!==design)showSurpriseMug();
+    smoothScrollToTarget('surpriseRevealBlock','center',()=>{ if(surpriseLandingFor===design)surpriseLandingFor=null; refreshSurpriseIdle(); if(surpriseShownDesign===design)showSurpriseMug(); }); }
+  else if(surpriseLandingFor!==design){ refreshSurpriseIdle(); showSurpriseMug(); }
 }
 let surpriseShownDesign=null, surpriseLandingFor=null;
 const SURPRISE_MUG_ZOOM=1.4;   // "I would have the mug larger because it's hard to check out the funny"
@@ -13400,7 +13446,7 @@ function showSurpriseMug(){
 }
 // Back is the panel before: Coffee Mug Size.
 function surpriseBack(){
-  releaseSurpriseReveal(); surpriseShownDesign=null;
+  releaseSurpriseReveal(); releaseSurpriseIdleMug(); surpriseShownDesign=null;
   clearAllFocusModes();
   product='mug';
   mugSizeChosenPreGen=false;

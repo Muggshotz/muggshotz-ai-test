@@ -98,7 +98,7 @@ async function run(viewport, tag) {
   const on = await page.evaluate(() => ({ product, surprise: getComputedStyle(document.getElementById('surpriseCard')).display,
     line: document.getElementById('surpriseHowLine').innerText, blink: document.getElementById('surpriseHowLine').classList.contains('smart-blink') }));
   ok('its button goes on to the designs', on.product === 'smart mug' && on.surprise === 'block', JSON.stringify(on));
-  ok('the designs\' line: tap a design to see it on your mug, blinking, no price', /Tap a design to see it on your mug/.test(on.line) && on.blink && !/\$/.test(on.line), JSON.stringify(on));
+  ok('the designs\' line: click the message you want to deliver, blinking, no price', /Click the message you want to deliver/.test(on.line) && on.blink && !/\$/.test(on.line), JSON.stringify(on));
   await page.evaluate(() => surpriseBack()); await T(page, 500);
   ok('the designs\' Back returns to the demonstration it came from', await shown(page, 'smartHowOverlay') && await page.evaluate(() => product === 'mug'));
   await page.evaluate(() => smartHowBack()); await T(page, 300);

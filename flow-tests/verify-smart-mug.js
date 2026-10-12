@@ -58,6 +58,16 @@ scenarios.theTileAndThePanel = async (page, log) => {
   if (!/SURPRISE/.test(st.title || '') || !st.back) return 'FAIL: the panel lacks its name or Back';
   if (st.tiles < 2 || st.pics !== st.tiles || st.prices !== st.tiles) return `FAIL: ${st.tiles} templates, ${st.pics} with pictures, ${st.prices} with prices`;
   if (!st.inView) return 'FAIL: the panel did not land on screen';
+  // THE BLACK MUG AT THE TOP (Alyx, 12 Oct 2026): our cup, cold and turning,
+  // with the line under it, until a design is picked; then it steps aside.
+  await T(page, 2500);
+  const idle = await page.evaluate(() => ({ shown: getComputedStyle(document.getElementById('surpriseIdle')).display !== 'none',
+    live: document.getElementById('surpriseIdleMug').classList.contains('live') && MUG3D.mounted() && MUG3D.host() === document.getElementById('surpriseIdleStage'),
+    still: document.querySelector('#surpriseIdleMug img').naturalWidth > 0, line: document.getElementById('surpriseHowLine').innerText,
+    hand: document.getElementById('surpriseHandGrid').previousElementSibling.previousElementSibling.innerText }));
+  if (!idle.shown || !idle.live || !idle.still) return `FAIL: the black mug at the top is not turning (${JSON.stringify(idle)})`;
+  if (!/Click the message you want to deliver/.test(idle.line)) return `FAIL: the line under the mug reads "${idle.line}"`;
+  if (idle.hand !== 'Are they right-handed or left-handed?') return `FAIL: the hand question reads "${idle.hand}"`;
   // Generate paints nothing here.
   log.apiCalls.length = 0;
   await page.evaluate(() => generate());
@@ -101,6 +111,9 @@ scenarios.leftHandedAndThePrints = async (page) => {
   if (land.top < 0 || land.bottom > land.H + 2) return `FAIL: after picking, the Continue button is off screen (${JSON.stringify(land)})`;
   const src = await page.evaluate(() => document.getElementById('surprisePreview').src);
   if (!/\/art\/surprise\/valentine-print-left\.png$/.test(src)) return `FAIL: left-handed previews ${src}`;
+  // The black mug at the top steps aside for the design playing below.
+  const aside = await page.evaluate(() => ({ idle: getComputedStyle(document.getElementById('surpriseIdle')).display, host: MUG3D.mounted() && MUG3D.host() === document.getElementById('surpriseRevealStage') }));
+  if (aside.idle !== 'none' || !aside.host) return `FAIL: after a pick the black mug at the top did not step aside (${JSON.stringify(aside)})`;
   const sizes = await page.evaluate(async () => {
     const out = {};
     const files = Object.values(SURPRISE_TEMPLATES).flatMap((t) => t.variants ? Object.values(t.variants).map((v) => v.file) : [t.file]);
