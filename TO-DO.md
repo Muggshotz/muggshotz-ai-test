@@ -163,7 +163,8 @@ Pitch In. The grid is three across today (needles-studio.html, #productCard
   his cost for the product and the price it gives, one number each, clearly
   labelled, no shipping; shipping afterwards, on its own, labelled as the
   customer's -- never mixed in, so the numbers are not noise.
-- **Apparel** -- BUILT 26 Sep, waiting on Alyx's "push it": the T-shirt tile
+- **Apparel** -- BUILT 26 Sep, on main and live (137dd71; Alyx, 12 Oct 2026:
+  "Push the apparel tile"; it already was): the T-shirt tile
   is now Apparel, 11 garments (tees, tank, long sleeve, crewneck, hoodies,
   kids and youth), priced wholesale + $3 to the nearest $0.95 (Alyx, 26 Sep:
   the rule for everything unless stated). Table printed by
