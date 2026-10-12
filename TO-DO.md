@@ -280,11 +280,6 @@ Pitch In. The grid is three across today (needles-studio.html, #productCard
   sends it, send one test report there first: the site mails from
   onboarding@resend.dev, which may only deliver to the Resend account's own
   address.
-- **Optical Illusions** — an art style dressed as a tile in Art Style,
-  templates for nearly every product (up to ~10 each, ~250 in all) plus a
-  "suggest a template" box. Waits on the templates. Claude and Bud to agree
-  the prompts; each template drawn at its product's own print shape.
-
 - **The Square walk-through (Alyx, 24 Sep 2026: "a test that must be run
   from order to purchase just using the Square pipeline alone").** NOT
   UNTIL ALYX SAYS: it runs when he is ready to buy an actual product, and he
