@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import crypto from 'crypto';
-import { cardOffer, cardToken, likeExact } from '../lib/card-bonus.js';
+import { cardOffer, cardToken, inboxAlreadyVerified } from '../lib/card-bonus.js';
 import { readPool, poolHasRoom } from '../lib/free-pool.js';
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
@@ -61,19 +61,15 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'This device has already verified an email.' });
     }
 
-    // Once per email address: an address already verified anywhere has had
-    // its free spins, so a card cannot pay it again from another device.
+    // Once per inbox: an address already verified anywhere has had its free
+    // spins, so a card cannot pay it again from another device, nor through
+    // a +tag or Gmail dots on the same inbox (lib/card-bonus.js inboxKey).
     if (offer) {
-      const { data: used, error: usedError } = await supabase
-        .from('customers')
-        .select('id')
-        .ilike('email', likeExact(email))
-        .eq('email_verified', true)
-        .limit(1);
+      const { used, error: usedError } = await inboxAlreadyVerified(supabase, email);
       if (usedError) {
         return res.status(500).json({ error: 'Could not check your email just now. Please try again.' });
       }
-      if (used && used.length) {
+      if (used) {
         return res.status(400).json({ error: 'That email has already claimed its free spins.' });
       }
     }

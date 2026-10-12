@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
-import { cardOffer, cardFromToken, likeExact } from '../lib/card-bonus.js';
+import { cardOffer, cardFromToken, inboxAlreadyVerified } from '../lib/card-bonus.js';
 import { takeFromPool } from '../lib/free-pool.js';
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
@@ -38,17 +38,11 @@ export default async function handler(req, res) {
     if (cardCode) {
       const offer = cardOffer(cardCode);
       if (offer && offer.pool) poolOffer = offer;
-      const { data: used, error: usedError } = await supabase
-        .from('customers')
-        .select('id')
-        .ilike('email', likeExact(customer.email))
-        .eq('email_verified', true)
-        .neq('id', customer.id)
-        .limit(1);
+      const { used, error: usedError } = await inboxAlreadyVerified(supabase, customer.email, { exceptId: customer.id });
       if (usedError) {
         return res.status(500).send('Something went wrong checking your email. Please try again.');
       }
-      if (used && used.length) credit = 0;
+      if (used) credit = 0;
       // A flyer's tries are drawn from the shared pool (lib/free-pool.js); if it
       // closed between the email and the click, the ordinary bonus token.
       else if (offer && offer.pool) {

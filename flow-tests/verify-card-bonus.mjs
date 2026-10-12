@@ -5,7 +5,7 @@
 //   * the card's code is offered while it is on, and refused once it is off;
 //   * a brand-new card visitor gets a row at 0 and 5 spins only when the
 //     email is verified;
-//   * once per email address, whatever its capitals, from any device;
+//   * once per inbox: whatever its capitals, a +tag, Gmail's dots, from any device;
 //   * two claims sent before either is verified pay once;
 //   * the ordinary one-spin verification is unchanged.
 process.env.SUPABASE_URL = 'https://fake.supabase.test';
@@ -21,7 +21,11 @@ function match(row, params) {
     const cell = row[k] == null ? null : String(row[k]);
     if (op === 'eq' && cell !== val) return false;
     if (op === 'neq' && cell === val) return false;
-    if (op === 'ilike' && (cell || '').toLowerCase() !== unesc(val).toLowerCase()) return false;
+    if (op === 'ilike') {
+      // Postgres ilike: % any run, _ any one, a backslash escapes.
+      const rx = new RegExp('^' + val.replace(/\\(.)|[%_]|[.*+?^${}()|[\]\\]/g, (m, esc) => esc != null ? esc.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') : m === '%' ? '.*' : m === '_' ? '.' : '\\' + m) + '$', 'i');
+      if (!rx.test(cell || '')) return false;
+    }
   }
   return true;
 }
@@ -92,6 +96,26 @@ await post({ email: 'Carol@example.com', deviceId: 'dev-C2', cardCode: 'MUGGSY' 
 await click(tokC1); r = await click(tokC2);
 check('two claims sent before either is verified pay once', row('dev-C1').token_balance === 5 && row('dev-C2').token_balance === 0, `C1 ${row('dev-C1').token_balance}, C2 ${row('dev-C2').token_balance}`);
 check('...and the second page says the email has claimed', /already claimed/.test(r.body), r.body.slice(0, 120));
+
+// THE PLUS-TAG LOOPHOLE (Alyx, 12 Oct 2026): one inbox, one claim, however
+// the address is dressed up: a +tag, Gmail's dots, googlemail.com.
+await post({ email: 'hal.jordan@gmail.com', deviceId: 'dev-H1', cardCode: 'MUGGSY' }); await click(lastToken());
+check('a Gmail inbox claims once', row('dev-H1').token_balance === 5, JSON.stringify(row('dev-H1')));
+for (const [addr, why] of [['hal.jordan+promo@gmail.com', 'a +tag'], ['haljordan@gmail.com', 'the dots left out'], ['H.a.l.Jordan@googlemail.com', 'googlemail and other dots']]) {
+  r = await post({ email: addr, deviceId: 'dev-H-' + why.replace(/\W+/g, ''), cardCode: 'MUGGSY' });
+  check(`...and ${why} on the same inbox is refused`, r.code === 400 && /already claimed/.test(r.body.error), JSON.stringify(r.body));
+}
+r = await post({ email: 'hal.jordan2@gmail.com', deviceId: 'dev-H-other', cardCode: 'MUGGSY' });
+check('...but a different Gmail inbox is not', r.code === 200, JSON.stringify(r.body));
+await post({ email: 'ivy@example.com', deviceId: 'dev-I1', cardCode: 'MUGGSY' }); await click(lastToken());
+r = await post({ email: 'ivy+again@example.com', deviceId: 'dev-I2', cardCode: 'MUGGSY' });
+check('a +tag on an ordinary inbox is refused too', r.code === 400 && /already claimed/.test(r.body.error), JSON.stringify(r.body));
+r = await post({ email: 'i.vy@example.com', deviceId: 'dev-I3', cardCode: 'MUGGSY' });
+check('...while dots outside Gmail are a different address', r.code === 200, JSON.stringify(r.body));
+await post({ email: 'jo@example.com', deviceId: 'dev-J1', cardCode: 'MUGGSY' }); const tokJ1 = lastToken();
+await post({ email: 'jo+two@example.com', deviceId: 'dev-J2', cardCode: 'MUGGSY' }); const tokJ2 = lastToken();
+await click(tokJ1); await click(tokJ2);
+check('two claims from one inbox, both links clicked, pay once', row('dev-J1').token_balance === 5 && row('dev-J2').token_balance === 0, `J1 ${row('dev-J1').token_balance}, J2 ${row('dev-J2').token_balance}`);
 
 rows.push({ id: nextId++, device_id: 'dev-D', token_balance: 0, email: null, email_verified: false, verification_token: null });
 r = await post({ email: 'dan@example.com', deviceId: 'dev-D' }); await click(lastToken());
