@@ -108,6 +108,8 @@ button{font:inherit}
 .packhead{text-align:center;margin:6px 0 4px}
 .packhead b{display:block;text-transform:uppercase;letter-spacing:.04em;color:var(--accent);font-size:17px}
 #packTray{position:sticky;bottom:0;z-index:5;margin:18px -4px 0;padding:10px 12px 12px;background:var(--panel);border:1px solid var(--accent);border-radius:14px 14px 0 0;box-shadow:0 -6px 18px rgba(0,0,0,.45)}
+/* THE EMPTY TRAY (Alyx, 12 Oct 2026): no bar until the first mug goes in. */
+#packTray:empty{display:none}
 #packTray .line{text-align:center;margin:0 0 8px}
 #packTray .picks{display:flex;gap:8px;overflow-x:auto;padding-bottom:6px}
 #packTray .pick{position:relative;flex:0 0 64px;text-align:center;font-size:10px;color:var(--muted)}

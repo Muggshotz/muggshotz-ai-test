@@ -156,7 +156,11 @@ scenarios.theHauntedFourPack = async (page) => {
   if (!/BUILD YOUR OWN HAUNTED 4[-\u2011]PACK/i.test(head || '') || !/Any 4 Halloween Magic Mugs · \$69\.95, shipping included/.test(head)) return `FAIL: the 4-pack headline reads ${JSON.stringify(head)}`;
   const tray = () => page.evaluate(() => ({ line: (document.getElementById('packLine') || {}).textContent || '', picks: [...document.querySelectorAll('#packTray .pick')].map((p) => p.dataset.pick),
     btn: (document.getElementById('packOrder') || {}).textContent || '', added: [...document.querySelectorAll('.mugadd.in')].map((b) => b.dataset.add) }));
+  // THE EMPTY TRAY (Alyx, 12 Oct 2026): no bar until the first mug goes in.
+  const trayShown = () => page.evaluate(() => getComputedStyle(document.getElementById('packTray')).display !== 'none');
+  if (await trayShown()) return 'FAIL: the 4-pack tray draws its bar with nothing in it';
   await page.click('[data-add="boo"]'); await T(page, 300);
+  if (!(await trayShown())) return 'FAIL: the 4-pack tray stays hidden with a mug in it';
   let t = await tray();
   if (JSON.stringify(t.picks) !== '["boo"]' || t.line !== '1 of 4 · add 3 more and all four are $69.95' || t.btn !== 'Order 1 mug · $21.95' || JSON.stringify(t.added) !== '["boo"]') return `FAIL: one mug in, the tray reads ${JSON.stringify(t)}`;
   await page.click('[data-style="silhouette"]'); await T(page, 900);
