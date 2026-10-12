@@ -46,6 +46,18 @@ Started 24 Sep 2026, when the old lists ran out.
   Unwelcome Mats, the Wet Paint mat. Alyx: "through pushing this button we
   will educate the American public what this phrase actually means."
 
+- **Shipping included on the flyer's products** -- DONE 12 Oct 2026 (Alyx: "to
+  list it as one thing and it'd be nearly double at checkout is going to kill
+  all sales"; "two times zero is zero"). Doormat $34.95, Magic Mug $21.95, the
+  4-pack $69.95 (each more with a set still $17.95), each with its US postage
+  inside the price, US only (`shipsTo`), Stripe's tax on top. The catalog's
+  `shippingSeparate: false` does the billing; order.html's `SHIPPING_INCLUDED`
+  shows "Included" instead of an estimate, held to the catalog by
+  verify-surprise-sets. His cut: mat about $6.13, mug $5.26, 4-pack $15.73,
+  after Stripe, on the September postage probe (mat landed at $27.51 all in
+  on his own order, 10 Oct). The flyer print files carry $34.95 and "shipping
+  included · plus tax"; the 50 wall flyers already printed say $19.95.
+
 - **"Hmm... seems like I'm forgetting something"** (Alyx, 25 Sep): a category
   of mouse pad premades, each a thing you should be doing instead of sitting
   at the computer: a washing machine mid-cycle (Bud's trompe-l'oeil result,
@@ -168,7 +180,7 @@ Pitch In. The grid is three across today (needles-studio.html, #productCard
   a time (Alyx: "like trying to drink from a fire hose"): a plain list of
   occasions -> the occasion's flyer alone -> "How the magic mug works" in
   seven steps -> the order page. Everyday holds Bud's Unwelcome mats, one at a
-  time, ordered as the doormat at $19.95. `/?set=thanksgiving` (the flyer's
+  time, ordered as the doormat at $34.95, shipping included. `/?set=thanksgiving` (the flyer's
   QR) opens How it works. Still to do:
   - The How it works pictures are Golden Brown (Claude's joke, Bud's
     painting, 26 Sep: `art/surprise/golden-brown*`), the demo mug, so no

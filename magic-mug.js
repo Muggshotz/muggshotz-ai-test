@@ -5,7 +5,7 @@
 // works, and the heat reveal. Classic-script globals, as they were; needs mug3d.js
 // first. flow-tests/verify-surprise-sets.js reads the prices and SURPRISE_SETS here.
 
-const SMART_MUG_PRICE=19.95; // Alyx's price, before shipping: wholesale 9.06 + $10, customer total under $30
+const SMART_MUG_PRICE=21.95; // Alyx's price, shipping included (12 Oct 2026; was 19.95 + shipping)
 
 // THE HOLIDAY MUGS (Alyx, 26-27 Sep 2026). A holiday is a shelf of single
 // smart-mug designs, mixed and matched: "you decide the participants". Any
@@ -15,8 +15,8 @@ const SMART_MUG_PRICE=19.95; // Alyx's price, before shipping: wholesale 9.06 + 
 // is printed; this copy is the Pre-mades panel's, and
 // flow-tests/verify-surprise-sets.js holds the two together. A new mug is
 // tools/surprise/holiday-mug.py on the artist's file and one line in each.
-const SMART_MUG_SET_PRICE=59.95; // Alyx's price for any four (26 Sep 2026)
-const SMART_MUG_EXTRA_PRICE=17.95; // each more with a set, $2 off the single (26 Sep 2026)
+const SMART_MUG_SET_PRICE=69.95; // Alyx's price for any four, shipping included (12 Oct 2026; was 59.95 + shipping)
+const SMART_MUG_EXTRA_PRICE=17.95; // each more with a set, $4 off the single (26 Sep 2026)
 const SURPRISE_SETS={
   'thanksgiving':{label:'Thanksgiving',demo:'golden-brown',designs:[
     {key:'power-out',label:"Power's Out",file:'thanksgiving-power-out',frames:true},

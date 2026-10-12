@@ -353,8 +353,10 @@ function bodiesFor(key, p) {
         if (!/Thanksgiving Set \(4 smart mugs\)/.test(productLines[0].price_data.product_data.name)) bad.push(`${hand}: the line reads "${productLines[0].price_data.product_data.name}"`);
       }
       const ship = lines.find((li) => /^Shipping/.test(li.price_data.product_data.name));
-      const wantShip = cushion(599) + 3 * cushion(199);
-      if (!ship || ship.price_data.unit_amount !== wantShip) bad.push(`${hand}: shipping ${ship ? ship.price_data.unit_amount : 'none'} cents, expected ${wantShip} (four mugs: one first item, three additional)`);
+      if (setP.shippingSeparate) {
+        const wantShip = cushion(599) + 3 * cushion(199);
+        if (!ship || ship.price_data.unit_amount !== wantShip) bad.push(`${hand}: shipping ${ship ? ship.price_data.unit_amount : 'none'} cents, expected ${wantShip} (four mugs: one first item, three additional)`);
+      } else if (ship) bad.push(`${hand}: the set's price carries its postage, yet a shipping line of ${ship.price_data.unit_amount} cents was billed`);
       const stored = (wire.baskets[meta.basket_id + '.json'] || {}).items || [];
       const images = stored.map((it) => it.image);
       if (JSON.stringify(images) !== JSON.stringify(want(hand))) bad.push(`${hand}: stored prints ${JSON.stringify(images)}`);
@@ -381,8 +383,10 @@ function bodiesFor(key, p) {
     if (r5.code !== 200 || !s5) bad.push(`a set plus a mug answered ${r5.code}`);
     else {
       const ship = s5.line_items.find((li) => /^Shipping/.test(li.price_data.product_data.name));
-      const wantShip = cushion(599) + 4 * cushion(199);
-      if (!ship || ship.price_data.unit_amount !== wantShip) bad.push(`a set plus a mug ships at ${ship ? ship.price_data.unit_amount : 'none'} cents, expected ${wantShip} (five mugs from one maker)`);
+      if (catalog['smart-mug-set'].shippingSeparate || catalog['smart-mug'].shippingSeparate) {
+        const wantShip = cushion(599) + 4 * cushion(199);
+        if (!ship || ship.price_data.unit_amount !== wantShip) bad.push(`a set plus a mug ships at ${ship ? ship.price_data.unit_amount : 'none'} cents, expected ${wantShip} (five mugs from one maker)`);
+      } else if (ship) bad.push(`a set plus a mug, both priced with their postage, were billed a shipping line of ${ship.price_data.unit_amount} cents`);
       if (((wire.baskets[s5.metadata.basket_id + '.json'] || {}).items || []).length !== 5) bad.push('a set plus a mug is not stored as five mugs');
     }
     const sv = bad.length ? `FAIL: ${bad.join('; ')}` : 'PASS: the Thanksgiving set, both hands, is one line at the set price, ships as four mugs, prints the server\'s own four files, and reaches Printify as one order of four; an unknown set or no hand is refused; beside a single mug it ships as five';
@@ -392,18 +396,19 @@ function bodiesFor(key, p) {
 
   // MIX AND MATCH (Alyx, 27 Sep 2026: "you decide the participants"). The page
   // names the mugs, repeats and all; the server checks each against its list
-  // and prices them by Alyx's rule: under four at $19.95 each, four the set,
-  // each more $17.95. Shipping counts every mug; every mug is printed.
+  // and prices them by Alyx's rule: under four at $21.95 each, four the set
+  // ($69.95), each more $17.95, shipping included (12 Oct 2026). Every mug is
+  // printed.
   {
     const bad = [];
     const { SURPRISE_SETS } = await import(pathToFileURL(path.join(ROOT, 'lib', 'surprise-sets.js')).href);
     const file = (k) => SURPRISE_SETS.thanksgiving.designs.find((d) => d.key === k).file;
     const cushion = (c) => Math.ceil(c * 1.03);
     const cases = [
-      { mugs: ['golden-brown', 'golden-brown', 'dark-meat', 'thankful', 'uncle-gerald', 'golden-brown'], hand: 'left', cents: 9585, name: /Thanksgiving Set \+ 2 more \(6 smart mugs\)/ },
-      { mugs: ['the-diet', 'the-diet', 'the-diet', 'the-diet'], hand: 'right', cents: 5995, name: /Thanksgiving Set \(4 smart mugs\)/ },
-      { mugs: ['the-diet', 'dark-meat'], hand: 'right', cents: 3990, name: /Thanksgiving smart mugs \(2\)/ },
-      { mugs: ['uncle-gerald'], hand: 'right', cents: 1995, name: /Thanksgiving smart mug(?! )/ }
+      { mugs: ['golden-brown', 'golden-brown', 'dark-meat', 'thankful', 'uncle-gerald', 'golden-brown'], hand: 'left', cents: 10585, name: /Thanksgiving Set \+ 2 more \(6 smart mugs\)/ },
+      { mugs: ['the-diet', 'the-diet', 'the-diet', 'the-diet'], hand: 'right', cents: 6995, name: /Thanksgiving Set \(4 smart mugs\)/ },
+      { mugs: ['the-diet', 'dark-meat'], hand: 'right', cents: 4390, name: /Thanksgiving smart mugs \(2\)/ },
+      { mugs: ['uncle-gerald'], hand: 'right', cents: 2195, name: /Thanksgiving smart mug(?! )/ }
     ];
     for (const c of cases) {
       wire.products.length = 0; wire.orders.length = 0; wire.unstubbed.length = 0; errors.length = 0;
@@ -417,8 +422,10 @@ function bodiesFor(key, p) {
       if (product.length !== 1 || product[0].price_data.unit_amount !== c.cents) bad.push(`${tag}: charged ${product.map((l) => l.price_data.unit_amount)} cents, expected ${c.cents}`);
       else if (!c.name.test(product[0].price_data.product_data.name)) bad.push(`${tag}: the line reads "${product[0].price_data.product_data.name}"`);
       const ship = lines.find((li) => /^Shipping/.test(li.price_data.product_data.name));
-      const wantShip = cushion(599) + (c.mugs.length - 1) * cushion(199);
-      if (!ship || ship.price_data.unit_amount !== wantShip) bad.push(`${tag}: shipping ${ship ? ship.price_data.unit_amount : 'none'} cents, expected ${wantShip}`);
+      if (catalog['smart-mug-set'].shippingSeparate) {
+        const wantShip = cushion(599) + (c.mugs.length - 1) * cushion(199);
+        if (!ship || ship.price_data.unit_amount !== wantShip) bad.push(`${tag}: shipping ${ship ? ship.price_data.unit_amount : 'none'} cents, expected ${wantShip}`);
+      } else if (ship) bad.push(`${tag}: the price carries the postage, yet a shipping line of ${ship.price_data.unit_amount} cents was billed`);
       const stored = ((wire.baskets[s.metadata.basket_id + '.json'] || {}).items || []).map((it) => it.image);
       const wantImgs = c.mugs.map((k) => `https://muggshotz.test/art/surprise/${file(k)}${c.hand === 'left' ? '-print-left' : '-print'}.png`);
       if (JSON.stringify(stored) !== JSON.stringify(wantImgs)) bad.push(`${tag}: stored prints ${JSON.stringify(stored)}`);
@@ -432,7 +439,7 @@ function bodiesFor(key, p) {
       if (r.code !== 400) bad.push(`${why} answered ${r.code}`);
     }
     console.log = origLog;
-    const mv = bad.length ? `FAIL: ${bad.join('; ')}` : 'PASS: mix and match: six with repeats (left-handed) are the set + 2 more at $95.85, four of one mug the set at $59.95, two $39.90, one $19.95; each ships and prints every mug chosen, from the server\'s files, as one Printify order; a mug not on the list, none, 25, or not a list is refused';
+    const mv = bad.length ? `FAIL: ${bad.join('; ')}` : 'PASS: mix and match: six with repeats (left-handed) are the set + 2 more at $105.85, four of one mug the set at $69.95, two $43.90, one $21.95, shipping included; each prints every mug chosen, from the server\'s files, as one Printify order; a mug not on the list, none, 25, or not a list is refused';
     if (bad.length) fails++;
     console.log(`[holidayMixAndMatch] ${mv}`);
   }

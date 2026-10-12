@@ -66,7 +66,7 @@ scenarios.aNewVisitor = async (page) => {
   if (g.action !== 'textOnly' || g.prompt !== IDEA || g.size !== '1536x1024' || 'bandRatio' in g || !/^doormat artwork/.test(g.shapingRule) || g.image || g.styleDirective)
     return `FAIL: painted as ${JSON.stringify(g)}`;
   t = await tile(page);
-  if (t.img !== PIC || !/Order this mat · \$19\.95/.test(t.text) || !/Try another idea/.test(t.text) || !/1 try left/.test(t.text)) return `FAIL: the tile did not become their mat (${JSON.stringify(t)})`;
+  if (t.img !== PIC || !/Order this mat · \$34\.95/.test(t.text) || !/Try another idea/.test(t.text) || !/1 try left/.test(t.text)) return `FAIL: the tile did not become their mat (${JSON.stringify(t)})`;
   const ratio = await page.evaluate(() => { const r = document.querySelector('#ideaTile-mat img.mine').getBoundingClientRect(); return r.width / r.height; });
   if (Math.abs(ratio - 4650 / 2850) > 0.02) return `FAIL: their mat is shown at ${ratio.toFixed(3)}:1, not the mat's 1.632`;
   await page.click('#ideaTile-mat .go'); await T(page, 1200);
@@ -111,7 +111,7 @@ scenarios.theMugBox = async (page) => {
   await page.goto(`${BASE}/occasion.html?o=halloween`); await T(page, 1800);
   await page.evaluate(() => occGo('magic')); await T(page, 1200);
   const last = await page.evaluate(() => { const t = [...document.querySelectorAll('.mugs > *')].pop(); return t ? { id: t.id, text: t.textContent.replace(/\s+/g, ' ').trim() } : null; });
-  if (!last || last.id !== 'ideaTile-mug' || !/Got a better idea\?.*Your own Magic Mug.*\$19\.95/.test(last.text)) return `FAIL: the mugs' grid ends with ${JSON.stringify(last)}`;
+  if (!last || last.id !== 'ideaTile-mug' || !/Got a better idea\?.*Your own Magic Mug.*\$21\.95/.test(last.text)) return `FAIL: the mugs' grid ends with ${JSON.stringify(last)}`;
   await page.click('#ideaTile-mug'); await T(page, 700);
   await page.click('#ideaTile-mug .go'); await T(page, 500);
   if (sent.generate.length || !/both halves/.test(await page.textContent('#ideaTile-mug'))) return 'FAIL: it painted with the halves empty';
@@ -124,7 +124,7 @@ scenarios.theMugBox = async (page) => {
     || !/RIGHT scene is the setup[^\n]*A vampire at the dentist/.test(g.prompt) || !/LEFT scene is the punchline[^\n]*your problem/.test(g.prompt) || g.image || g.styleDirective)
     return `FAIL: painted as ${JSON.stringify(g)}`;
   const t = await page.evaluate(() => { const el = document.getElementById('ideaTile-mug'), im = el.querySelector('img.mine'), r = im.getBoundingClientRect(); return { text: el.textContent.replace(/\s+/g, ' ').trim(), src: im.src, ratio: r.width / r.height }; });
-  if (t.src !== PIC || !/Order this mug · \$19\.95/.test(t.text) || !/right-handed/.test(t.text) || Math.abs(t.ratio - 2475 / 1155) > 0.02) return `FAIL: the tile became ${JSON.stringify(t)}`;
+  if (t.src !== PIC || !/Order this mug · \$21\.95/.test(t.text) || !/right-handed/.test(t.text) || Math.abs(t.ratio - 2475 / 1155) > 0.02) return `FAIL: the tile became ${JSON.stringify(t)}`;
   const order = async () => {
     await page.click('#ideaTile-mug .go'); await T(page, 1500);
     const p = await page.evaluate(() => JSON.parse(localStorage.getItem('muggshotz_pending_order') || 'null'));
@@ -189,7 +189,7 @@ scenarios.consignIt = async (page) => {
     || !/^data:image\/jpeg;base64,/.test(p.image || '') || !p.context || p.context.occasion !== 'halloween' || !/Mats/.test(p.context.product))
     return `FAIL: the submission went as ${JSON.stringify({ ...p, image: (p && p.image || '').slice(0, 24) })}`;
   t = await tile(page);
-  if (!/Submitted for consignment/.test(t.text) || !/Order this mat · \$19\.95/.test(t.text) || /Get paid for it/.test(t.text)) return `FAIL: after sending the tile reads ${t.text}`;
+  if (!/Submitted for consignment/.test(t.text) || !/Order this mat · \$34\.95/.test(t.text) || /Get paid for it/.test(t.text)) return `FAIL: after sending the tile reads ${t.text}`;
   return 'PASS: Love it? Get paid for it, the (i) terms (25% of net profit until 1 Nov 2027, no try used), name, email and the tick required, the design itself sent as a consign pitch, then the tile says so and still orders';
 };
 

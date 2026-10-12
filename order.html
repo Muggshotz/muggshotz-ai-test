@@ -771,6 +771,12 @@ const TRAVEL_MUG_CATALOG = {
 // having its own api/get-shipping.js because Vercel's Hobby plan allows 12
 // serverless functions and a 13th file breaks every deploy.)
 const SHIPPING_FALLBACK_ESTIMATE = 6.95;
+// SHIPPING INCLUDED (Alyx, 12 Oct 2026: "to list it as one thing and it'd be
+// nearly double at checkout is going to kill all sales"): the products whose
+// price carries their postage (shippingSeparate: false in the catalog). Their
+// summary reads "Included", never an estimate, and checkout bills no shipping
+// line for them. flow-tests/verify-surprise-sets.js holds this to the catalog.
+const SHIPPING_INCLUDED = ['doormat', 'smart-mug', 'smart-mug-set'];
 let liveShipping = null;      // real resolved dollars, or null if not yet known
 let liveShippingKey = '';     // productKey|basePrice|country this value is for
 let shippingLookupInFlight = '';
@@ -1419,7 +1425,7 @@ const STANDEE_PRICE = 14.95; // From Where I Stand, one size (22 Sep 2026)
 const LUGGAGETAG_PRICE = 16.95; // Luggage Tag (22 Sep 2026)
 const DESKCALENDAR_PRICE = 9.95; // Desk Calendar (22 Sep 2026)
 const BEERSTEIN_PRICE = 24.95; // Beer Stein (22 Sep 2026)
-const DOORMAT_PRICE = 19.95; // Doormat (22 Sep 2026)
+const DOORMAT_PRICE = 34.95; // Doormat, shipping included (12 Oct 2026; was 19.95 + shipping)
 // PLACEMATS (27 Sep 2026). The same kinds as the studio's card, each naming its
 // catalog product and size; picked in the studio and carried here.
 const PLACEMAT_OPTIONS = {
@@ -1503,7 +1509,7 @@ function apparelPrice(size, color){
 // CAR MAGNET (22 Sep 2026). Keys match lib/products-catalog.js.
 // SURPRISE!!! -- the smart mug (23 Sep 2026). One size; the template and the
 // hand were chosen in the studio and the print arrives ready-made.
-const SMART_MUG_PRICE = 19.95;
+const SMART_MUG_PRICE = 21.95; // shipping included (12 Oct 2026)
 // The COLD -> HOT picture sits beside every print: <file>-coldhot.jpg, found
 // from the print the studio handed over (right- or left-handed alike).
 function surpriseColdHotUrl(){
@@ -1526,7 +1532,7 @@ function surpriseLabel(){
 // checkout prints the server's own files for those keys and prices them by
 // the server's rule (lib/surprise-sets.js holidayPrice), which this page only
 // mirrors for the summary. The prints handed over are for the pictures here.
-const SMART_MUG_SET_PRICE = 59.95;
+const SMART_MUG_SET_PRICE = 69.95; // shipping included (12 Oct 2026)
 const SMART_MUG_EXTRA_PRICE = 17.95;
 const SURPRISE_SET_LABELS = { 'thanksgiving': 'Thanksgiving', 'halloween': 'Halloween' };
 const selectedSurpriseSet = SURPRISE_SET_LABELS[pendingOrder?.surpriseSet] ? pendingOrder.surpriseSet : null;
@@ -1767,7 +1773,7 @@ const BRIDGE_GRID_PRODUCTS = [
   { key: 'sticker sheet', icon: '⭐', label: 'Sticker Sheet', priceFrom: '$9.95' },
   // Night-Buddy is off the grid (Alyx, 24 Sep 2026); its pricing branch stays.
   { key: 'beer stein', icon: '🍺', label: 'Beer Stein', priceFrom: '$24.95' },
-  { key: 'doormat', icon: '🚪', label: 'Doormat', priceFrom: '$19.95' },
+  { key: 'doormat', icon: '🚪', label: 'Doormat', priceFrom: '$34.95' },
   { key: 'placemat', icon: '🍽️', label: 'Placemats', priceFrom: '$15.95' },
   { key: 'air freshener', icon: '🌲', label: 'Car Air Freshener', priceFrom: '$9.95' },
   { key: 'playing cards', icon: '🃏', label: "Just Playin'", priceFrom: '$16.95' },
@@ -2882,6 +2888,8 @@ function updateSummary(){
   const shippingKeyNow = currentProductKey() + '|' + basePrice + '|' + currentCountry();
   let shippingIsLive = (liveShipping !== null && liveShippingKey === shippingKeyNow);
   let shipping = shippingIsLive ? liveShipping : SHIPPING_FALLBACK_ESTIMATE;
+  let shippingIncluded = SHIPPING_INCLUDED.includes(currentProductKey());
+  if (shippingIncluded) { shipping = 0; shippingIsLive = true; }
   let basketEntries = null;
   if (basketNow.length) {
     // One quote for everything, from the function checkout bills a basket with.
@@ -2894,6 +2902,8 @@ function updateSummary(){
     const bKey = JSON.stringify(basketEntries) + '|' + currentCountry();
     shippingIsLive = (liveBasketShipping !== null && liveBasketShippingKey === bKey);
     shipping = shippingIsLive ? liveBasketShipping : SHIPPING_FALLBACK_ESTIMATE * basketEntries.length;
+    shippingIncluded = basketEntries.every(e => SHIPPING_INCLUDED.includes(e.productKey));
+    if (shippingIncluded) { shipping = 0; shippingIsLive = true; }
   }
   // FEES (Alyx, 2026-08-28, revised same day: explained, not mysterious):
   // exactly what the note under the summary says -- the processor's
@@ -2958,14 +2968,15 @@ function updateSummary(){
     giftRow.style.display = 'none';
   }
 
-  document.getElementById('summaryShipping').textContent =
-    '$' + shipping.toFixed(2) + (shippingIsLive ? '' : ' (estimate)');
+  document.getElementById('summaryShipping').textContent = shippingIncluded ? 'Included'
+    : '$' + shipping.toFixed(2) + (shippingIsLive ? '' : ' (estimate)');
   document.getElementById('summaryFees').textContent = '$' + feesAfter.toFixed(2);
   document.getElementById('summaryTotal').textContent = '$' + total.toFixed(2);
 
   // Kick off (or refresh) the real lookup. Deduped inside refreshShipping,
   // which calls updateSummary() again once a real number arrives.
-  if (basketEntries) refreshBasketShipping(basketEntries);
+  if (shippingIncluded) { /* nothing to look up */ }
+  else if (basketEntries) refreshBasketShipping(basketEntries);
   else refreshShipping(basePrice);
 
   // RESTORED: reminds the customer the 10% discount is checked

@@ -80,9 +80,9 @@ scenarios.theServer = async () => {
   const at = await call({ action: 'alert-topics', password: 'admin-pw' });
   if (JSON.stringify(at.json?.topics) !== JSON.stringify(topics)) bad.push('the admin page does not get the channels');
   // A sale's words.
-  const s1 = alerts.saleAlertText({ amount_total: 5995, metadata: { order_type: 'mug_order', product_key: 'smart-mug-set', size_label: 'Set of 4' } }, 'SURPRISE!!! Smart Mug Set');
+  const s1 = alerts.saleAlertText({ amount_total: 6995, metadata: { order_type: 'mug_order', product_key: 'smart-mug-set', size_label: 'Set of 4' } }, 'SURPRISE!!! Smart Mug Set');
   const s2 = alerts.saleAlertText({ metadata: { order_type: 'gift_certificate', amount_cents: '2500' }, rail: 'square' });
-  if (s1.title !== 'Sale: SURPRISE!!! Smart Mug Set (Set of 4)' || !/\$59\.95/.test(s1.message) || !/Gift certificate \$25\.00/.test(s2.title) || !/Square/.test(s2.message)) bad.push(`sale words ${JSON.stringify([s1, s2])}`);
+  if (s1.title !== 'Sale: SURPRISE!!! Smart Mug Set (Set of 4)' || !/\$69\.95/.test(s1.message) || !/Gift certificate \$25\.00/.test(s2.title) || !/Square/.test(s2.message)) bad.push(`sale words ${JSON.stringify([s1, s2])}`);
   // And the webhook rings it once a checkout settles.
   const hook = require('fs').readFileSync(path.join(ROOT, 'api', 'stripe-webhook.js'), 'utf8');
   const settle = hook.slice(hook.indexOf('export async function settleCheckoutSession'), hook.indexOf('export async function settleSquareCheckout'));
