@@ -265,7 +265,7 @@ scenarios.theOrderPage = async (page, log) => {
   if (!st.pending || st.pending.productIcon !== 'smart mug') return `FAIL: the hand-off carried ${JSON.stringify(st.pending)}`;
   if (!/\/art\/surprise\/congratulations-print\.png$/.test(st.pending.placements.left)) return `FAIL: the hand-off print is ${st.pending.placements.left}`;
   if (st.card === 'none') return 'FAIL: the order page shows no SURPRISE!!! card';
-  if (!/Congratulations/.test(st.note) || !/right-handed/.test(st.note)) return `FAIL: the card says "${st.note}"`;
+  if (!/Any Preference\?/.test(st.note) || !/right-handed/.test(st.note)) return `FAIL: the card says "${st.note}"`;
   const oc = await page.evaluate(async () => { const im = document.getElementById('smartMugColdHot'); if (getComputedStyle(im).display === 'none') return null; await (im.complete ? null : new Promise((r) => { im.onload = im.onerror = r; })); return im.naturalWidth ? im.getAttribute('src') : 'broken'; });
   if (!oc || !oc.endsWith('art/surprise/congratulations-coldhot.jpg')) return `FAIL: the order page's COLD -> HOT picture is ${oc}`;
   const head = await page.evaluate(() => document.getElementById('orderHeadlineName').textContent);
@@ -285,7 +285,7 @@ scenarios.theOrderPage = async (page, log) => {
   const b = bodies[bodies.length - 1];
   if (!b || b.productKey !== 'smart-mug' || b.sizeLabel !== '11oz' || b.image !== st.pending.placements.left)
     return `FAIL: checkout got ${JSON.stringify(b && { k: b.productKey, s: b.sizeLabel, i: b.image })}`;
-  return `PASS: Continue hands the Congratulations print to the order page, which shows it for a right-handed recipient at ${st.base}, fetches the smart-mug mockup, and checks out smart-mug / 11oz`;
+  return `PASS: Continue hands the Any Preference? (congratulations) print to the order page, which shows it for a right-handed recipient at ${st.base}, fetches the smart-mug mockup, and checks out smart-mug / 11oz`;
 };
 
 (async () => {

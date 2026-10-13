@@ -1,5 +1,5 @@
 <!-- ============================================================
-     VERSION: V462
+     VERSION: V463
      ============================================================
      THE ONE LINE THAT SAYS WHICH BUILD YOU ARE LOOKING AT.
 
@@ -4958,7 +4958,7 @@ function toggleWorkingImage(){
 // Two copies of a number is exactly how the marker rotted in the first place,
 // so they are not trusted to agree: .githooks/pre-commit moves both together
 // and REFUSES the commit if it ever finds them apart.
-const APP_VERSION='V462';
+const APP_VERSION='V463';
 try{ console.log('%cNeedles\u2019 Studio '+APP_VERSION,'color:#29a3ff;font-weight:700'); }catch(e){}
 
 function getDeviceId(){
@@ -13198,7 +13198,7 @@ const SURPRISE_TEMPLATES={
   // switches between on the mug, No frame first (the default, tentatively).
   'proposal':{label:'Will You Marry Me?',file:'proposal',frames:DECAL_FRAMES('proposal')},
   'valentine':{label:'Will You Be My Valentine?',file:'valentine',frames:DECAL_FRAMES('valentine')},
-  'congratulations':{label:'Congratulations',file:'congratulations',frames:DECAL_FRAMES('congratulations')},
+  'congratulations':{label:'Any Preference?',file:'congratulations',frames:DECAL_FRAMES('congratulations')}, // named for its punchline, the picture on the tile (Alyx, 13 Oct 2026)
   'apology':{label:'The Apology',file:'apology',frames:DECAL_FRAMES('apology')},
   'appeal':{label:'The Appeal',file:'appeal',frames:DECAL_FRAMES('appeal')},
   'breakup':{label:"It's Not You",file:'breakup',frames:DECAL_FRAMES('breakup')},
@@ -13316,6 +13316,7 @@ function refreshSurpriseIdle(){
   if(!show)releaseSurpriseIdleMug();
 }
 let surpriseIdleRun=0;
+const SURPRISE_IDLE_BLACK='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAIAAAABCAIAAAB7QOjdAAAAD0lEQVR4nGNgYGBgYGAAAAAHAAFXIWIZAAAAAElFTkSuQmCC';
 function showSurpriseIdleMug(){
   const el=document.getElementById('surpriseIdleMug'), st=document.getElementById('surpriseIdleStage'), card=document.getElementById('surpriseCard');
   if(!el||!st||!card||typeof MUG3D==='undefined'||(typeof mug3dFailed!=='undefined'&&mug3dFailed))return;
@@ -13324,8 +13325,10 @@ function showSurpriseIdleMug(){
   if(['smartHowOverlay','smartDemoOverlay'].some(id=>{ const o=document.getElementById(id); return o&&o.style.display&&o.style.display!=='none'; }))return;
   if(MUG3D.mounted()&&MUG3D.host()===st)return;
   const run=++surpriseIdleRun;
-  // Any design's picture will do: at heat 0 the cup is black all round.
-  MUG3D.open(st,Object.assign({},SHELF_MUG_3D,{panoramaUrl:'art/surprise/reveal/golden-brown.jpg',panelUrls:[],heat:0,restartOnView:false}))
+  // Black all round at heat 0, so the picture it wears is a 2 x 1 black
+  // pixel pair: nothing to download or upload, and the build is over before
+  // the next tap's landing (a quarter-megabyte picture held it up, 13 Oct 2026).
+  MUG3D.open(st,Object.assign({},SHELF_MUG_3D,{panoramaUrl:SURPRISE_IDLE_BLACK,panelUrls:[],heat:0,restartOnView:false}))
     .then(()=>{ if(run===surpriseIdleRun&&MUG3D.mounted()&&MUG3D.host()===st){ MUG3D.setHeat(0); el.classList.add('live'); } })
     .catch(err=>{ console.error('The black mug could not turn; its still stands in:',err); });
 }
