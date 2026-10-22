@@ -776,7 +776,7 @@ const SHIPPING_FALLBACK_ESTIMATE = 6.95;
 // price carries their postage (shippingSeparate: false in the catalog). Their
 // summary reads "Included", never an estimate, and checkout bills no shipping
 // line for them. flow-tests/verify-surprise-sets.js holds this to the catalog.
-const SHIPPING_INCLUDED = ['doormat', 'smart-mug', 'smart-mug-set'];
+const SHIPPING_INCLUDED = ['smart-mug', 'smart-mug-set']; // the doormat left it 22 Oct 2026: $29.95 + a set $5 shipping, quoted by the server like any other
 let liveShipping = null;      // real resolved dollars, or null if not yet known
 let liveShippingKey = '';     // productKey|basePrice|country this value is for
 let shippingLookupInFlight = '';
@@ -1425,7 +1425,7 @@ const STANDEE_PRICE = 14.95; // From Where I Stand, one size (22 Sep 2026)
 const LUGGAGETAG_PRICE = 16.95; // Luggage Tag (22 Sep 2026)
 const DESKCALENDAR_PRICE = 9.95; // Desk Calendar (22 Sep 2026)
 const BEERSTEIN_PRICE = 24.95; // Beer Stein (22 Sep 2026)
-const DOORMAT_PRICE = 34.95; // Doormat, shipping included (12 Oct 2026; was 19.95 + shipping)
+const DOORMAT_PRICE = 29.95; // Doormat + a set $5 shipping (22 Oct 2026; 12 Oct: 34.95 included; 24 Sep: 19.95 + shipping)
 // PLACEMATS (27 Sep 2026). The same kinds as the studio's card, each naming its
 // catalog product and size; picked in the studio and carried here.
 const PLACEMAT_OPTIONS = {
@@ -1773,7 +1773,7 @@ const BRIDGE_GRID_PRODUCTS = [
   { key: 'sticker sheet', icon: '⭐', label: 'Sticker Sheet', priceFrom: '$9.95' },
   // Night-Buddy is off the grid (Alyx, 24 Sep 2026); its pricing branch stays.
   { key: 'beer stein', icon: '🍺', label: 'Beer Stein', priceFrom: '$24.95' },
-  { key: 'doormat', icon: '🚪', label: 'Doormat', priceFrom: '$34.95' },
+  { key: 'doormat', icon: '🚪', label: 'Doormat', priceFrom: '$29.95' },
   { key: 'placemat', icon: '🍽️', label: 'Placemats', priceFrom: '$15.95' },
   { key: 'air freshener', icon: '🌲', label: 'Car Air Freshener', priceFrom: '$9.95' },
   { key: 'playing cards', icon: '🃏', label: "Just Playin'", priceFrom: '$16.95' },

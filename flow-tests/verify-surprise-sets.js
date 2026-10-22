@@ -456,7 +456,7 @@ scenarios.theMats = async (page) => {
   await tap(page, '#premadesFrontBtn'); await T(page, 1500);
   await tap(page, '#premadesView .pm-prod[data-product="welcome-mats"]'); await T(page, 1900);
   const a = await pmState(page);
-  if (a.view !== 'gallery' || a.imgs !== 1 || a.loaded !== 1 || !/\$34\.95/.test(a.text) || !a.landed) return `FAIL: Everyday opened ${JSON.stringify(a)}`;
+  if (a.view !== 'gallery' || a.imgs !== 1 || a.loaded !== 1 || !/\$29\.95/.test(a.text) || !a.landed) return `FAIL: Everyday opened ${JSON.stringify(a)}`;
   // All at once: every mat on one page, each pictured and priced; tapping one
   // opens it on its own.
   await page.evaluate(() => document.querySelector('#premadesView .pm-lay[data-layout="all"]').click()); await T(page, 900);
@@ -490,7 +490,7 @@ scenarios.theMats = async (page) => {
   await followToOrder(page, () => tap(page, '#premadesMatOrderBtn'));
   await T(page, 3500);
   const o = await page.evaluate(() => ({ base: document.getElementById('summaryBase').textContent, head: document.getElementById('orderHeadlineName').textContent }));
-  if (o.base !== '$34.95') return `FAIL: the order page prices the mat at ${o.base} (${o.head})`;
+  if (o.base !== '$29.95') return `FAIL: the order page prices the mat at ${o.base} (${o.head})`;
   await page.evaluate(() => {
     const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v; };
     set('fullName', 'Test Customer'); set('email', 'test@example.com'); set('phone', '5555550100');
@@ -500,7 +500,7 @@ scenarios.theMats = async (page) => {
   await T(page, 2000);
   const b = bodies[bodies.length - 1];
   if (!b || b.productKey !== 'doormat' || !(b.image || '').endsWith(`/art/unwelcome/print/${lastKey}.jpg`)) return `FAIL: checkout got ${JSON.stringify(b && { k: b.productKey, s: b.sizeLabel, image: b.image })}`;
-  return `PASS: Everyday opens one mat at a time at $34.95, all at once shows every mat and a tap opens it, next goes round all ${n} Everyday mats and back; every mat has its 4650 x 2850 print and 900 x 552 picture; the Halloween tab holds only Halloween mats, Witch Silhouette (on the flyer) first, which orders as the doormat at $34.95 with its own print file (${o.head})`;
+  return `PASS: Everyday opens one mat at a time at $29.95, all at once shows every mat and a tap opens it, next goes round all ${n} Everyday mats and back; every mat has its 4650 x 2850 print and 900 x 552 picture; the Halloween tab holds only Halloween mats, Witch Silhouette (on the flyer) first, which orders as the doormat at $29.95 with its own print file (${o.head})`;
 };
 
 // The placemats: a category with no designs stays hidden; with Bud's,

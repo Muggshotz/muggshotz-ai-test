@@ -247,13 +247,20 @@ function heroHtml() {
     + (O.orderBy ? '<p class="by">' + esc(O.orderBy) + '</p>' : '') + '</div>';
 }
 function featuredPrice() { return price(O.featured.catalog, O.featured.size); }
+// How a product's postage reads beside its price: a set charge ("+ $5
+// shipping"), built in ("shipping included"), or Printify's rate ("+ shipping").
+function shipWords(catalogKey) {
+  const p = PRODUCTS_CATALOG[catalogKey]; if (!p) return '';
+  if (typeof p.shippingCharge === 'number') return '+ ' + $(p.shippingCharge).replace(/\.00$/, '') + ' shipping';
+  return p.shippingSeparate === false ? 'shipping included' : '+ shipping';
+}
 function moreShown() { return (O.more || []).filter(m => m.designs && m.designs.length).slice(0, 4); }
 function moreFrom(m) { return price(m.catalog, m.size); }
 
 function homeHtml() {
   const F = O.featured, fp = featuredPrice();
   let h = heroHtml();
-  h += '<section class="sec" id="secFeatured"><h2>' + esc(F.title) + ' · ' + $(fp) + '</h2><p class="line">' + esc(F.line) + ' · shipping included · tap one to see it big</p><div class="grid">'
+  h += '<section class="sec" id="secFeatured"><h2>' + esc(F.title) + ' · ' + $(fp) + '</h2><p class="line">' + esc(F.line) + ' · ' + shipWords(F.catalog) + ' · tap one to see it big</p><div class="grid">'
     + F.designs.map((d, i) => '<div class="tile" data-mat="' + d.key + '" onclick="occGo(\'mat\',' + i + ')"><img src="' + F.dir + '/show/' + d.key + '.jpg" width="' + F.show[0] + '" height="' + F.show[1] + '" alt="" loading="' + (i < 6 ? 'eager' : 'lazy') + '"/><div class="nm">' + esc(d.label) + '</div><div class="pr">' + $(fp) + '</div></div>').join('')
     + ideaTileHtml('mat')
     + '</div></section>';
@@ -277,7 +284,7 @@ function matHtml(i) {
     + '<h2 id="viewTitle">' + esc(F.title) + '</h2><p class="line">' + (i + 1) + ' of ' + F.designs.length + '</p>'
     + '<div class="big"><img id="matPic" src="' + F.dir + '/show/' + d.key + '.jpg" width="' + F.show[0] + '" height="' + F.show[1] + '" alt="' + esc(d.label) + '"/>'
     + '<button class="arr l" aria-label="Previous" onclick="occStep(-1)">‹</button><button class="arr r" aria-label="Next" onclick="occStep(1)">›</button></div>'
-    + '<p class="nm-big">' + esc(d.label) + '</p><p class="pr-big">' + esc(F.line) + ' · ' + $(fp) + ' · shipping included</p>'
+    + '<p class="nm-big">' + esc(d.label) + '</p><p class="pr-big">' + esc(F.line) + ' · ' + $(fp) + ' · ' + shipWords(F.catalog) + '</p>'
     + '<button class="order" id="orderBtn" onclick="occOrderMat()">Order this mat · ' + $(fp) + '</button></div>';
 }
 

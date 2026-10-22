@@ -277,9 +277,11 @@ function bodiesFor(key, p) {
     // one first item and additional items after it, each with the 3% cushion.
     const keyOf = (it) => it.productKey || { 'Classic White': 'classic-white-mug' }[it.mugType];
     const groups = {};
-    for (const it of items) { const p = catalog[keyOf(it)]; if (!p.shippingSeparate) continue; const g = `${p.blueprintId}/${p.printProviderId}`; groups[g] = (groups[g] || 0) + 1; }
+    // A product with a set charge (the doormat's $5, 22 Oct 2026) pays that, outside the groups.
+    let fixedShip = 0;
+    for (const it of items) { const p = catalog[keyOf(it)]; if (!p.shippingSeparate) continue; if (typeof p.shippingCharge === 'number') { fixedShip += Math.round(p.shippingCharge * 100); continue; } const g = `${p.blueprintId}/${p.printProviderId}`; groups[g] = (groups[g] || 0) + 1; }
     const cushion = (c) => Math.ceil(c * 1.03);
-    const wantShip = Object.values(groups).reduce((a, n) => a + cushion(599) + (n - 1) * cushion(199), 0);
+    const wantShip = fixedShip + Object.values(groups).reduce((a, n) => a + cushion(599) + (n - 1) * cushion(199), 0);
     const wantProduct = items.reduce((a, it) => { const p = catalog[keyOf(it)]; return a + Math.round(p.sizes[it.sizeLabel].price * 100); }, 0);
 
     wire.uploads = 0; wire.products.length = 0; wire.orders.length = 0; wire.unstubbed.length = 0; errors.length = 0;

@@ -66,7 +66,7 @@ scenarios.aNewVisitor = async (page) => {
   if (g.action !== 'textOnly' || g.prompt !== IDEA || g.size !== '1536x1024' || 'bandRatio' in g || !/^doormat artwork/.test(g.shapingRule) || g.image || g.styleDirective)
     return `FAIL: painted as ${JSON.stringify(g)}`;
   t = await tile(page);
-  if (t.img !== PIC || !/Order this mat · \$34\.95/.test(t.text) || !/Try another idea/.test(t.text) || !/1 try left/.test(t.text)) return `FAIL: the tile did not become their mat (${JSON.stringify(t)})`;
+  if (t.img !== PIC || !/Order this mat · \$29\.95/.test(t.text) || !/Try another idea/.test(t.text) || !/1 try left/.test(t.text)) return `FAIL: the tile did not become their mat (${JSON.stringify(t)})`;
   const ratio = await page.evaluate(() => { const r = document.querySelector('#ideaTile-mat img.mine').getBoundingClientRect(); return r.width / r.height; });
   if (Math.abs(ratio - 4650 / 2850) > 0.02) return `FAIL: their mat is shown at ${ratio.toFixed(3)}:1, not the mat's 1.632`;
   await page.click('#ideaTile-mat .go'); await T(page, 1200);
@@ -189,7 +189,7 @@ scenarios.consignIt = async (page) => {
     || !/^data:image\/jpeg;base64,/.test(p.image || '') || !p.context || p.context.occasion !== 'halloween' || !/Mats/.test(p.context.product))
     return `FAIL: the submission went as ${JSON.stringify({ ...p, image: (p && p.image || '').slice(0, 24) })}`;
   t = await tile(page);
-  if (!/Submitted for consignment/.test(t.text) || !/Order this mat · \$34\.95/.test(t.text) || /Get paid for it/.test(t.text)) return `FAIL: after sending the tile reads ${t.text}`;
+  if (!/Submitted for consignment/.test(t.text) || !/Order this mat · \$29\.95/.test(t.text) || /Get paid for it/.test(t.text)) return `FAIL: after sending the tile reads ${t.text}`;
   return 'PASS: Love it? Get paid for it, the (i) terms (25% of net profit until 1 Nov 2027, no try used), name, email and the tick required, the design itself sent as a consign pitch, then the tile says so and still orders';
 };
 

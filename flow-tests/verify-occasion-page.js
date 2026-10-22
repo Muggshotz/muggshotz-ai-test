@@ -57,15 +57,15 @@ scenarios.theHome = async (page) => {
   const h = await page.evaluate(() => ({
     h1: document.querySelector('h1')?.textContent,
     tiles: document.querySelectorAll('#secFeatured .tile[data-mat]').length,
-    priced: [...document.querySelectorAll('#secFeatured .tile[data-mat]')].every((t) => t.querySelector('img') && t.querySelector('.pr')?.textContent === '$34.95'),
+    priced: [...document.querySelectorAll('#secFeatured .tile[data-mat]')].every((t) => t.querySelector('img') && t.querySelector('.pr')?.textContent === '$29.95'),
     idea: (() => { const t = [...document.querySelectorAll('#secFeatured .tile')].pop(); return t && t.id === 'ideaTile-mat' ? t.textContent.replace(/\s+/g, ' ').trim() : null; })(),
     magic: !!document.getElementById('secMagic'), more: !!document.getElementById('secMore'),
     ref: localStorage.getItem('muggshotz_referral_code'), title: document.title,
     cols: getComputedStyle(document.querySelector('#secFeatured .grid')).gridTemplateColumns.split(' ').length,
   }));
   const want = page.viewportSize().width >= 720 ? 3 : 2;
-  if (h.h1 !== 'The Floor at Your DoorIs a Bit of a Bore.' || h.tiles !== 24 || !h.priced || !h.magic || h.more || h.ref !== 'TEST-07' || h.cols !== want || !/^Got a better idea\?\s*Tap here to enter your idea\s*Your own mat\s*\$34\.95$/.test(h.idea || '')) return `FAIL: home is ${JSON.stringify(h)}`;
-  return `PASS: the headline, all 24 mats pictured at $34.95 (${want} across), then "Got a better idea?", the Magic Mugs, no empty "more", the flyer's code kept`;
+  if (h.h1 !== 'The Floor at Your DoorIs a Bit of a Bore.' || h.tiles !== 24 || !h.priced || !h.magic || h.more || h.ref !== 'TEST-07' || h.cols !== want || !/^Got a better idea\?\s*Tap here to enter your idea\s*Your own mat\s*\$29\.95$/.test(h.idea || '')) return `FAIL: home is ${JSON.stringify(h)}`;
+  return `PASS: the headline, all 24 mats pictured at $29.95 (${want} across), then "Got a better idea?", the Magic Mugs, no empty "more", the flyer's code kept`;
 };
 
 scenarios.theMat = async (page) => {
@@ -76,7 +76,7 @@ scenarios.theMat = async (page) => {
   await page.click('#secFeatured .tile[data-mat="six-feet-under"]'); await T(page, 900);
   if (!(await landed(page))) return 'FAIL: the mat view did not land with its Back and title on screen';
   const v = await page.evaluate(() => ({ name: document.querySelector('.nm-big')?.textContent, btn: document.getElementById('orderBtn')?.textContent }));
-  if (v.name !== 'Six Feet Under' || v.btn !== 'Order this mat · $34.95') return `FAIL: the mat view shows ${JSON.stringify(v)}`;
+  if (v.name !== 'Six Feet Under' || v.btn !== 'Order this mat · $29.95') return `FAIL: the mat view shows ${JSON.stringify(v)}`;
   await page.click('.arr.r'); await T(page, 400);
   const next = await page.evaluate(() => document.querySelector('.nm-big')?.textContent);
   if (next !== 'Care for a Bite?') return `FAIL: next shows ${next}`;
