@@ -82,7 +82,7 @@ scenarios.theSmartMugFlyerTellsItsStory = async () => {
     if (got.flyers.length !== 2) return `FAIL: ${got.flyers.length} flyers for two codes`;
     const f = got.flyers[0];
     if (f.headline !== 'Heat reveals what matters.') return `FAIL: headline "${f.headline}"`;
-    if (!/\$21\.95/.test(f.price)) return `FAIL: price "${f.price}" (catalog smart-mug 21.95)`;
+    if (!/\$19\.95/.test(f.price)) return `FAIL: price "${f.price}" (catalog smart-mug 19.95)`;
     if (!f.picture || !/proposal-coldhot\.jpg$/.test(f.picture.src)) return `FAIL: picture ${JSON.stringify(f.picture)}`;
     if (!f.picture.loaded) return 'FAIL: the COLD -> HOT strip did not load';
     if (f.steps.length !== 3 || !/hot/i.test(f.steps[2])) return `FAIL: steps ${JSON.stringify(f.steps)}`;
@@ -92,7 +92,7 @@ scenarios.theSmartMugFlyerTellsItsStory = async () => {
     if (!got.flyers.every((x) => x.stacked)) return 'FAIL: parts of the flyer overlap or run past the bottom';
     if (!/SURPRISE!!! Smart Mug/.test(got.summary) || !/Two per page/.test(got.summary)) return `FAIL: summary "${got.summary}"`;
     await page.screenshot({ path: path.join(process.env.MZ_SHOT_DIR || __dirname, 'shot-flyer-smart-mug.png'), fullPage: true });
-    return 'PASS: two smart mug flyers, COLD -> HOT strip loaded, $21.95, three steps, code and QR to start.html?ref=CODE, nothing cut off';
+    return 'PASS: two smart mug flyers, COLD -> HOT strip loaded, $19.95, three steps, code and QR to start.html?ref=CODE, nothing cut off';
   } finally { await browser.close(); }
 };
 
@@ -153,14 +153,14 @@ scenarios.theLandingPagePitchesTheCodesProduct = async () => {
     if (!/proposal-coldhot\.jpg$/.test(got.img.src) || !got.img.loaded || !got.img.wide) return `FAIL: hero ${JSON.stringify(got.img)}`;
     if (got.cta !== 'needles-studio.html?ref=CHIPPER-01' || got.also !== got.cta) return `FAIL: links ${got.cta} / ${got.also}`;
     if (got.ctaText !== '🎁 Pick my message') return `FAIL: button "${got.ctaText}"`;
-    if (!/SURPRISE!!! Smart Mug \$21\.95/.test(got.price)) return `FAIL: price line "${got.price}"`;
+    if (!/SURPRISE!!! Smart Mug \$19\.95/.test(got.price)) return `FAIL: price line "${got.price}"`;
     if (got.steps.length !== 3 || !/pick the message/i.test(got.steps[0])) return `FAIL: steps ${JSON.stringify(got.steps)}`;
     if (got.from !== '👋 Jane sent you') return `FAIL: from "${got.from}"`;
     if (got.stored !== 'CHIPPER-01' || !/CHIPPER-01/.test(got.codeLine)) return `FAIL: code not remembered (${got.stored} / "${got.codeLine}")`;
     if (!/Smart Mug/.test(got.title)) return `FAIL: title "${got.title}"`;
     if (got.sideways) return 'FAIL: the page scrolls sideways on a phone';
     await page.screenshot({ path: path.join(process.env.MZ_SHOT_DIR || __dirname, 'shot-flyer-landing-smart-mug.png'), fullPage: true });
-    return 'PASS: smart mug headline, strip, $21.95, three steps, "Pick my message" to the studio with the code, Jane named, no sideways scroll on a phone';
+    return 'PASS: smart mug headline, strip, $19.95, three steps, "Pick my message" to the studio with the code, Jane named, no sideways scroll on a phone';
   } finally { await browser.close(); }
 };
 

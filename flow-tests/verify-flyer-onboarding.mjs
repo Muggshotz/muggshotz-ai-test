@@ -184,7 +184,7 @@ await check('theFlyerProductListIsPublicAndPricedFromTheCatalog', async () => {
   if (!Array.isArray(list) || list.length < 30) throw new Error(`${list && list.length} products listed`);
   if (list[0].key !== 'smart-mug') throw new Error(`"${list[0].key}" leads the list, not the smart mug`);
   const smart = list[0];
-  if (smart.price !== PRODUCTS_CATALOG['smart-mug'].sizes['11oz'].price || smart.priceText !== '$21.95') throw new Error(`smart mug priced ${smart.priceText}`);
+  if (smart.price !== PRODUCTS_CATALOG['smart-mug'].sizes['11oz'].price || smart.priceText !== '$19.95') throw new Error(`smart mug priced ${smart.priceText}`);
   if (!smart.wide || !/coldhot/.test(smart.picture)) throw new Error(`smart mug picture ${smart.picture}`);
   for (const p of list) {
     if (!PRODUCTS_CATALOG[p.key]) throw new Error(`${p.key} is not in the catalog`);
@@ -195,7 +195,7 @@ await check('theFlyerProductListIsPublicAndPricedFromTheCatalog', async () => {
   if (holder.priceText !== 'from $21.95') throw new Error(`card holder "${holder.priceText}" (plain 21.95, gift boxed 24.95)`);
   const ornament = list.find((p) => p.key === 'ceramic-ornament');
   if (ornament.priceText !== '$9.95') throw new Error(`ornament "${ornament.priceText}" (one price for four shapes)`);
-  return `${list.length} products, no password, smart mug first at $21.95 with the COLD -> HOT strip, every picture on disk, "from" only where sizes differ`;
+  return `${list.length} products, no password, smart mug first at $19.95 with the COLD -> HOT strip, every picture on disk, "from" only where sizes differ`;
 });
 await check('onboardingAnswersTheProductItSaved', async () => {
   if (onboarded.beta.featuredProduct !== 'classic-white-mug') throw new Error(`onboard answered featuredProduct=${onboarded.beta.featuredProduct}`);

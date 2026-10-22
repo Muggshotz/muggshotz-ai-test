@@ -776,7 +776,7 @@ const SHIPPING_FALLBACK_ESTIMATE = 6.95;
 // price carries their postage (shippingSeparate: false in the catalog). Their
 // summary reads "Included", never an estimate, and checkout bills no shipping
 // line for them. flow-tests/verify-surprise-sets.js holds this to the catalog.
-const SHIPPING_INCLUDED = ['smart-mug', 'smart-mug-set']; // the doormat left it 22 Oct 2026: $29.95 + a set $5 shipping, quoted by the server like any other
+const SHIPPING_INCLUDED = []; // empty since 22 Oct 2026: the mat is $29.95 + a set $5, the mugs $19.95 + Printify's rate; the list stays for the next product that folds its postage in
 let liveShipping = null;      // real resolved dollars, or null if not yet known
 let liveShippingKey = '';     // productKey|basePrice|country this value is for
 let shippingLookupInFlight = '';
@@ -1509,7 +1509,7 @@ function apparelPrice(size, color){
 // CAR MAGNET (22 Sep 2026). Keys match lib/products-catalog.js.
 // SURPRISE!!! -- the smart mug (23 Sep 2026). One size; the template and the
 // hand were chosen in the studio and the print arrives ready-made.
-const SMART_MUG_PRICE = 21.95; // shipping included (12 Oct 2026)
+const SMART_MUG_PRICE = 19.95; // + shipping (22 Oct 2026)
 // The COLD -> HOT picture sits beside every print: <file>-coldhot.jpg, found
 // from the print the studio handed over (right- or left-handed alike).
 function surpriseColdHotUrl(){
@@ -1532,7 +1532,7 @@ function surpriseLabel(){
 // checkout prints the server's own files for those keys and prices them by
 // the server's rule (lib/surprise-sets.js holidayPrice), which this page only
 // mirrors for the summary. The prints handed over are for the pictures here.
-const SMART_MUG_SET_PRICE = 69.95; // shipping included (12 Oct 2026)
+const SMART_MUG_SET_PRICE = 59.95; // + shipping (22 Oct 2026)
 const SMART_MUG_EXTRA_PRICE = 17.95;
 const SURPRISE_SET_LABELS = { 'thanksgiving': 'Thanksgiving', 'halloween': 'Halloween' };
 const selectedSurpriseSet = SURPRISE_SET_LABELS[pendingOrder?.surpriseSet] ? pendingOrder.surpriseSet : null;

@@ -102,7 +102,7 @@ scenarios.theMagicMugs = async (page) => {
   }));
   // The Story / Joke tab first (Boo, the flyer's mug, leads), every mug on it priced.
   const JOKES = JSON.stringify(["Boo", "Raise the Dead", "Sheet Happens", "Goes Right Through Me", "When Pumpkins Dream", "The Witching Hour", "What's Your Type?", "Deadlines", "Skeleton Crew", "Ghosted", "Could've Been an Email", "Well, There's Your Problem"]);
-  if (m.steps !== 6 || JSON.stringify(m.mugs) !== JOKES || m.prices.some((p) => p !== '$21.95') || !m.demo) return `FAIL: the Magic Mugs show ${JSON.stringify(m)}`;
+  if (m.steps !== 6 || JSON.stringify(m.mugs) !== JOKES || m.prices.some((p) => p !== '$19.95') || !m.demo) return `FAIL: the Magic Mugs show ${JSON.stringify(m)}`;
   // THE TABS (Alyx and Bud, 5 Oct 2026): Story / Joke 6, Silhouette 12, Ornate 12;
   // the Silhouette and Ornate mugs start face on (angle 0), the story mugs on their setup (-90).
   const tabs = await page.evaluate(() => [...document.querySelectorAll('#magicStyles button')].map((b) => (b.classList.contains('on') ? '*' : '') + b.textContent));
@@ -143,17 +143,17 @@ scenarios.theMagicMugs = async (page) => {
   await page.click('[data-order="sheet-happens"]');
   const raw = await checkout(page, bodies), b = lineOf(raw);
   if (b.setKey !== 'halloween' || JSON.stringify(b.mugs) !== '["sheet-happens"]' || b.hand !== 'left' || (raw || {}).source !== 'halloween') return `FAIL: checkout got ${JSON.stringify({ set: b.setKey, mugs: b.mugs, hand: b.hand, source: (raw || {}).source })}`;
-  return 'PASS: the demonstration plays on the 3D mug, six steps, the Story / Joke tab first with its twelve at $21.95, Silhouette 12 and Ornate 12 face on with no frame, a tap turns Sheet Happens, every story mug shows framed with no frame choice, Decal switches the ten that have one (Boo into the 4-pack as boo~decal) and leaves the dentist and Sheet Happens be, and it checks out as halloween / sheet-happens (framed), left-handed, from halloween';
+  return 'PASS: the demonstration plays on the 3D mug, six steps, the Story / Joke tab first with its twelve at $19.95, Silhouette 12 and Ornate 12 face on with no frame, a tap turns Sheet Happens, every story mug shows framed with no frame choice, Decal switches the ten that have one (Boo into the 4-pack as boo~decal) and leaves the dentist and Sheet Happens be, and it checks out as halloween / sheet-happens (framed), left-handed, from halloween';
 };
 
 // THE HAUNTED 4-PACK (Alyx and Bud, 5 Oct 2026): any four from any tabs, in a
-// tray that follows across the tabs, ordered as one set at $69.95, shipping included.
+// tray that follows across the tabs, ordered as one set at $59.95 + shipping.
 scenarios.theHauntedFourPack = async (page) => {
   const bodies = watchCheckout(page);
   await page.goto(`${BASE}/occasion.html?o=halloween`); await T(page, 2000);
   await page.click('#secMagic .card'); await T(page, 1500);
   const head = await page.evaluate(() => (document.getElementById('packHead') || {}).textContent);
-  if (!/BUILD YOUR OWN HAUNTED 4[-\u2011]PACK/i.test(head || '') || !/Any 4 Halloween Magic Mugs · \$69\.95, shipping included/.test(head)) return `FAIL: the 4-pack headline reads ${JSON.stringify(head)}`;
+  if (!/BUILD YOUR OWN HAUNTED 4[-\u2011]PACK/i.test(head || '') || !/Any 4 Halloween Magic Mugs · \$59\.95 \+ shipping/.test(head)) return `FAIL: the 4-pack headline reads ${JSON.stringify(head)}`;
   const tray = () => page.evaluate(() => ({ line: (document.getElementById('packLine') || {}).textContent || '', picks: [...document.querySelectorAll('#packTray .pick')].map((p) => p.dataset.pick),
     btn: (document.getElementById('packOrder') || {}).textContent || '', added: [...document.querySelectorAll('.mugadd.in')].map((b) => b.dataset.add) }));
   // THE EMPTY TRAY (Alyx, 12 Oct 2026): no bar until the first mug goes in.
@@ -162,18 +162,18 @@ scenarios.theHauntedFourPack = async (page) => {
   await page.click('[data-add="boo"]'); await T(page, 300);
   if (!(await trayShown())) return 'FAIL: the 4-pack tray stays hidden with a mug in it';
   let t = await tray();
-  if (JSON.stringify(t.picks) !== '["boo"]' || t.line !== '1 of 4 · add 3 more and all four are $69.95' || t.btn !== 'Order 1 mug · $21.95' || JSON.stringify(t.added) !== '["boo"]') return `FAIL: one mug in, the tray reads ${JSON.stringify(t)}`;
+  if (JSON.stringify(t.picks) !== '["boo"]' || t.line !== '1 of 4 · add 3 more and all four are $59.95' || t.btn !== 'Order 1 mug · $19.95' || JSON.stringify(t.added) !== '["boo"]') return `FAIL: one mug in, the tray reads ${JSON.stringify(t)}`;
   await page.click('[data-style="silhouette"]'); await T(page, 900);
   await page.click('[data-add="silhouette-witch"]'); await page.click('[data-add="silhouette-bat"]'); await T(page, 300);
   await page.click('[data-style="ornate"]'); await T(page, 900);
   await page.click('[data-add="marigold-owl"]'); await T(page, 300);
   t = await tray();
   const FOUR = '["boo","silhouette-witch","silhouette-bat","marigold-owl"]';
-  if (JSON.stringify(t.picks) !== FOUR || t.line !== 'Your haunted 4-pack · $69.95' || t.btn !== 'Order my haunted 4-pack · $69.95') return `FAIL: four across the tabs, the tray reads ${JSON.stringify(t)}`;
+  if (JSON.stringify(t.picks) !== FOUR || t.line !== 'Your haunted 4-pack · $59.95' || t.btn !== 'Order my haunted 4-pack · $59.95') return `FAIL: four across the tabs, the tray reads ${JSON.stringify(t)}`;
   // a fifth, then taken out again
   await page.click('[data-add="marigold-cat"]'); await T(page, 300);
   t = await tray();
-  if (t.picks.length !== 5 || t.line !== 'Your 4-pack and 1 more · $87.90. Each more is $17.95.' || t.btn !== 'Order 5 mugs · $87.90') return `FAIL: with a fifth, the tray reads ${JSON.stringify(t)}`;
+  if (t.picks.length !== 5 || t.line !== 'Your 4-pack and 1 more · $77.90. Each more is $17.95.' || t.btn !== 'Order 5 mugs · $77.90') return `FAIL: with a fifth, the tray reads ${JSON.stringify(t)}`;
   await page.click('#packTray .pick[data-pick="marigold-cat"] button'); await T(page, 300);
   t = await tray();
   if (JSON.stringify(t.picks) !== FOUR) return `FAIL: taking one out left ${JSON.stringify(t.picks)}`;
@@ -182,7 +182,7 @@ scenarios.theHauntedFourPack = async (page) => {
   const raw = await checkout(page, bodies), b = lineOf(raw);
   if (b.productKey !== 'smart-mug-set' || b.setKey !== 'halloween' || JSON.stringify(b.mugs) !== FOUR || b.hand !== 'left' || (raw || {}).source !== 'halloween')
     return `FAIL: checkout got ${JSON.stringify({ k: b.productKey, set: b.setKey, mugs: b.mugs, hand: b.hand, source: (raw || {}).source })}`;
-  return 'PASS: the headline reads BUILD YOUR OWN HAUNTED 4-PACK · Any 4 Halloween Magic Mugs · $69.95, shipping included; a Story / Joke, two Silhouette and an Ornate mug fill the tray across the tabs at $69.95, a fifth makes it $87.90 and comes out again, and the four check out as one halloween set, left-handed';
+  return 'PASS: the headline reads BUILD YOUR OWN HAUNTED 4-PACK · Any 4 Halloween Magic Mugs · $59.95 + shipping; a Story / Joke, two Silhouette and an Ornate mug fill the tray across the tabs at $59.95, a fifth makes it $77.90 and comes out again, and the four check out as one halloween set, left-handed';
 };
 
 scenarios.theBack = async (page) => {

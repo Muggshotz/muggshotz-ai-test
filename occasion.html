@@ -267,7 +267,7 @@ function homeHtml() {
   const M = O.magicMugs, set = M && typeof SURPRISE_SETS !== 'undefined' && SURPRISE_SETS[M.set];
   if (set && set.designs.length) {
     h += '<section class="sec" id="secMagic"><h2>' + esc(M.title) + '</h2><p class="line">' + esc(M.line) + '</p>'
-      + '<div class="card" onclick="occGo(\'magic\')"><img src="art/surprise/mug/' + set.designs[0].file + '.jpg" alt=""/><div class="tx"><div class="nm">See how they work</div><div class="ln">' + (setStyles(set).length ? setStyles(set).map(s => esc(s.label) + ' (' + set.designs.filter(d => d.style === s.key).length + ')').join(' · ') : set.designs.map(d => esc(d.label)).join(', ')) + '</div><div class="pr">' + $(SMART_MUG_PRICE) + ' each, shipping included</div></div><div class="ar">›</div></div></section>';
+      + '<div class="card" onclick="occGo(\'magic\')"><img src="art/surprise/mug/' + set.designs[0].file + '.jpg" alt=""/><div class="tx"><div class="nm">See how they work</div><div class="ln">' + (setStyles(set).length ? setStyles(set).map(s => esc(s.label) + ' (' + set.designs.filter(d => d.style === s.key).length + ')').join(' · ') : set.designs.map(d => esc(d.label)).join(', ')) + '</div><div class="pr">' + $(SMART_MUG_PRICE) + ' each ' + shipWords('smart-mug') + '</div></div><div class="ar">›</div></div></section>';
   }
   const more = moreShown();
   if (more.length) {
@@ -312,8 +312,8 @@ function magicHtml() {
     + '<div id="smartHowRevealWords"></div><button class="replay" onclick="occPlayDemo()">▶ Play it again</button>'
     + '<div style="margin-top:14px">' + magicMugStepsHtml('other', false, set.how) + '</div>'
     + '<h2 style="margin-top:22px">Pick yours</h2>'
-    + (set.packLine ? '<p class="packhead" id="packHead"><b>' + esc(set.packLine).replace('4-', '4\u2011') + '</b>Any 4 ' + esc(set.label) + ' Magic Mugs · ' + $(SMART_MUG_SET_PRICE) + ', shipping included</p>' : '')
-    + '<p class="line" style="margin-bottom:4px">' + $(SMART_MUG_PRICE) + ' a mug, shipping included. Which hand do they hold a mug in?</p><p class="line">Hold a mug by its handle and one side faces you. We print the setup on that side for the hand they drink with, so they see it first and turn the mug to find the punchline.</p>'
+    + (set.packLine ? '<p class="packhead" id="packHead"><b>' + esc(set.packLine).replace('4-', '4\u2011') + '</b>Any 4 ' + esc(set.label) + ' Magic Mugs · ' + $(SMART_MUG_SET_PRICE) + ' ' + shipWords('smart-mug-set') + '</p>' : '')
+    + '<p class="line" style="margin-bottom:4px">' + $(SMART_MUG_PRICE) + ' a mug ' + shipWords('smart-mug') + '. Which hand do they hold a mug in?</p><p class="line">Hold a mug by its handle and one side faces you. We print the setup on that side for the hand they drink with, so they see it first and turn the mug to find the punchline.</p>'
     + '<div class="hands"><button data-hand="right" class="' + (hand === 'right' ? 'on' : '') + '" onclick="occHand(\'right\')">Right-handed</button><button data-hand="left" class="' + (hand === 'left' ? 'on' : '') + '" onclick="occHand(\'left\')">Left-handed</button></div>'
     + styleTabsHtml(set)
     + '<div id="magicPick">' + magicPickHtml(set) + '</div></div>';

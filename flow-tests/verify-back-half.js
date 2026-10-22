@@ -398,19 +398,19 @@ function bodiesFor(key, p) {
 
   // MIX AND MATCH (Alyx, 27 Sep 2026: "you decide the participants"). The page
   // names the mugs, repeats and all; the server checks each against its list
-  // and prices them by Alyx's rule: under four at $21.95 each, four the set
-  // ($69.95), each more $17.95, shipping included (12 Oct 2026). Every mug is
-  // printed.
+  // and prices them by Alyx's rule: under four at $19.95 each, four the set
+  // ($59.95), each more $17.95, + shipping at Printify's rates with the cushion
+  // (22 Oct 2026). Every mug is printed.
   {
     const bad = [];
     const { SURPRISE_SETS } = await import(pathToFileURL(path.join(ROOT, 'lib', 'surprise-sets.js')).href);
     const file = (k) => SURPRISE_SETS.thanksgiving.designs.find((d) => d.key === k).file;
     const cushion = (c) => Math.ceil(c * 1.03);
     const cases = [
-      { mugs: ['golden-brown', 'golden-brown', 'dark-meat', 'thankful', 'uncle-gerald', 'golden-brown'], hand: 'left', cents: 10585, name: /Thanksgiving Set \+ 2 more \(6 smart mugs\)/ },
-      { mugs: ['the-diet', 'the-diet', 'the-diet', 'the-diet'], hand: 'right', cents: 6995, name: /Thanksgiving Set \(4 smart mugs\)/ },
-      { mugs: ['the-diet', 'dark-meat'], hand: 'right', cents: 4390, name: /Thanksgiving smart mugs \(2\)/ },
-      { mugs: ['uncle-gerald'], hand: 'right', cents: 2195, name: /Thanksgiving smart mug(?! )/ }
+      { mugs: ['golden-brown', 'golden-brown', 'dark-meat', 'thankful', 'uncle-gerald', 'golden-brown'], hand: 'left', cents: 9585, name: /Thanksgiving Set \+ 2 more \(6 smart mugs\)/ },
+      { mugs: ['the-diet', 'the-diet', 'the-diet', 'the-diet'], hand: 'right', cents: 5995, name: /Thanksgiving Set \(4 smart mugs\)/ },
+      { mugs: ['the-diet', 'dark-meat'], hand: 'right', cents: 3990, name: /Thanksgiving smart mugs \(2\)/ },
+      { mugs: ['uncle-gerald'], hand: 'right', cents: 1995, name: /Thanksgiving smart mug(?! )/ }
     ];
     for (const c of cases) {
       wire.products.length = 0; wire.orders.length = 0; wire.unstubbed.length = 0; errors.length = 0;
@@ -441,7 +441,7 @@ function bodiesFor(key, p) {
       if (r.code !== 400) bad.push(`${why} answered ${r.code}`);
     }
     console.log = origLog;
-    const mv = bad.length ? `FAIL: ${bad.join('; ')}` : 'PASS: mix and match: six with repeats (left-handed) are the set + 2 more at $105.85, four of one mug the set at $69.95, two $43.90, one $21.95, shipping included; each prints every mug chosen, from the server\'s files, as one Printify order; a mug not on the list, none, 25, or not a list is refused';
+    const mv = bad.length ? `FAIL: ${bad.join('; ')}` : 'PASS: mix and match: six with repeats (left-handed) are the set + 2 more at $95.85, four of one mug the set at $59.95, two $39.90, one $19.95, + shipping; each prints every mug chosen, from the server\'s files, as one Printify order; a mug not on the list, none, 25, or not a list is refused';
     if (bad.length) fails++;
     console.log(`[holidayMixAndMatch] ${mv}`);
   }

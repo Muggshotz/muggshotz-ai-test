@@ -1906,7 +1906,7 @@ const HERO_SETTLE_MS = 1000;
 </div>
 <div class="btn-select" id="preGenSizeSmartBtn" style="padding:.5rem" onclick="askSmartDemo()">
 <img src="art/options/smart-mug.jpg" alt="" style="width:100%;border-radius:6px;background:#fff;margin-bottom:6px"/>
-11oz Smart Mug<div class="note" style="margin-top:4px" data-smart-price>$21.95</div>
+11oz Smart Mug<div class="note" style="margin-top:4px" data-smart-price>$19.95</div>
 <span class="new-flash">New</span>
 </div>
 </div>
@@ -1917,7 +1917,7 @@ const HERO_SETTLE_MS = 1000;
 <div class="card" id="smartHowCard" style="max-width:520px;width:100%;margin:2rem auto;position:relative">
 <div class="card-title">✨ How the magic mug works</div>
 <img src="art/options/smart-mug.jpg" alt="The 11oz Smart Mug" style="display:block;width:min(100%,150px);margin:0 auto .4rem;border-radius:8px;background:#fff"/>
-<div class="note" style="text-align:center;margin:0 0 .4rem">11oz Smart Mug · <span data-smart-price>$21.95</span></div>
+<div class="note" style="text-align:center;margin:0 0 .4rem">11oz Smart Mug · <span data-smart-price>$19.95</span></div>
 <div id="smartHowReveal" title="Click to watch it again"><div class="pm-mug3d-stage" id="smartHowRevealStage"></div><div id="smartHowRevealWords"></div></div>
 <div id="smartHowSteps"></div>
 <button type="button" class="generate-btn" id="smartHowOnBtn" onclick="smartMugHowOn()">🎁 Pick your surprise</button>
@@ -1928,7 +1928,7 @@ const HERO_SETTLE_MS = 1000;
 <div class="card" id="smartDemoCard" style="max-width:520px;width:100%;margin:2rem auto;position:relative">
 <div class="card-title">✨ The Magic Mug</div>
 <img src="art/options/smart-mug.jpg" alt="The 11oz Smart Mug" style="display:block;width:min(100%,150px);margin:0 auto .4rem;border-radius:8px;background:#fff"/>
-<div class="note" style="text-align:center;margin:0 0 .9rem">11oz Smart Mug · <span data-smart-price>$21.95</span></div>
+<div class="note" style="text-align:center;margin:0 0 .9rem">11oz Smart Mug · <span data-smart-price>$19.95</span></div>
 <div class="note" style="text-align:center;margin:0 0 .9rem;font-size:15px;color:#cfe3ff">A black mug with a surprise under the black. Want to see it happen first?</div>
 <button type="button" class="generate-btn" id="smartDemoYesBtn" onclick="smartDemoYes()">▶ See the demonstration</button>
 <button type="button" class="generate-btn" id="smartDemoSkipBtn" style="margin-top:.6rem" onclick="smartDemoSkip()">Skip the demonstration</button>
@@ -13707,8 +13707,8 @@ function renderPremades(){
       +[['one','One at a time'],['all','All at once']].map(([k,l])=>'<button type="button" class="pm-lay'+(premadesLayout===k?' on':'')+'" data-layout="'+k+'" onclick="premadesSetLayout(\''+k+'\')">'+l+'</button>').join('')+'</div>';
     // The 4-pack said plainly (Alyx and Bud, 5 Oct 2026: "nothing is clearer than
     // simply displaying the actual package price"): a holiday's own name for it.
-    const pack=set.packLine?'<b style="text-transform:uppercase;letter-spacing:.03em">'+set.packLine.replace('4-','4\u2011')+'</b><br>Any 4 '+set.label+' Magic Mugs · '+$(SMART_MUG_SET_PRICE)+', shipping included'
-      :'Mix and match. Any four are a set, '+$(SMART_MUG_SET_PRICE)+', shipping included.';
+    const pack=set.packLine?'<b style="text-transform:uppercase;letter-spacing:.03em">'+set.packLine.replace('4-','4\u2011')+'</b><br>Any 4 '+set.label+' Magic Mugs · '+$(SMART_MUG_SET_PRICE)+' + shipping'
+      :'Mix and match. Any four are a set, '+$(SMART_MUG_SET_PRICE)+' + shipping.';
     const head=premadesCrumb([PREMADE_MUGS.label])+holidayTabs()+holidayStyleTabs()
       +'<div class="pm-ask" id="premadesPackLine" style="margin-bottom:.4rem;text-align:center">'+pack+'</div>'
       +'<button type="button" class="pm-how" id="premadesHowBtn" onclick="premadesGo(\'how\')">✨ How the magic mug works</button>'+layout+holidayDecalGrid();
@@ -13725,7 +13725,7 @@ function renderPremades(){
         +'<button type="button" class="pm-arr" style="right:-12px" aria-label="Next" onclick="holidayStep(1)">›</button></div>'
         +'<div class="pm-mug3d-hint">Click the mug to spin it · drag it to turn it yourself</div>'
         +'<div class="pm-name" id="premadesMugName">'+m.label+holidayTag(m)+'</div>'
-        +'<div class="pm-line" style="margin-bottom:.5rem">SURPRISE!!! smart mug · '+$(SMART_MUG_PRICE)+' on its own, shipping included</div>'
+        +'<div class="pm-line" style="margin-bottom:.5rem">SURPRISE!!! smart mug · '+$(SMART_MUG_PRICE)+' on its own + shipping</div>'
         +'<div class="pm-dots">'+d.map((x,i)=>'<span class="'+(i===premadesMugIndex?'on':'')+'" onclick="holidayStep('+(i-premadesMugIndex)+')"></span>').join('')+'</div>'
         +(frs.length>1?'<div class="'+(frs.length===3?'grid3':'grid2')+'" id="premadesFrameGrid" data-words="the frame: the mug above carries the picture" style="margin:.2rem 0 .8rem">'
           +frs.map(k=>[k,SET_FRAMES[k]]).map(([k,l])=>'<div class="btn-select'+(k===fr?' selected':'')+'" data-frame="'+k+'" onclick="pickPremadesFrame(\''+k+'\')" style="padding:.5rem;font-size:12px">'+l+'</div>').join('')+'</div>':'')
@@ -13748,7 +13748,7 @@ function renderPremades(){
       +'<div id="premadesHowReveal" title="Click to watch it again"><img src="art/surprise/mug/'+demo+'.jpg" width="960" height="720" alt="The Magic Mug, cold"/>'
       +'<div class="pm-mug3d-stage" id="premadesHowRevealStage"></div><div id="premadesHowRevealWords"></div></div>'
       +magicMugStepsHtml('other',false,set.how)
-      +step(7,'Mix and match.','Pick any four mugs for a set, '+$(SMART_MUG_SET_PRICE)+'. The same one four times if you like. Add more to a set at '+$(SMART_MUG_EXTRA_PRICE)+' each, or buy one on its own for '+$(SMART_MUG_PRICE)+'. Shipping is included in every price.','')
+      +step(7,'Mix and match.','Pick any four mugs for a set, '+$(SMART_MUG_SET_PRICE)+'. The same one four times if you like. Add more to a set at '+$(SMART_MUG_EXTRA_PRICE)+' each, or buy one on its own for '+$(SMART_MUG_PRICE)+'. Shipping is added at checkout.','')
       +'<button type="button" class="generate-btn" id="premadesShelfBtn" onclick="premadesGo(\'shelf\')">'+PREMADE_MUGS.icon+' See all the mugs and build your set</button>';
     playSurpriseReveal(demo,'shelf');
   } else if(premadesView==='gallery'&&premadeCat()){

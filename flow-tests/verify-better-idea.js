@@ -111,7 +111,7 @@ scenarios.theMugBox = async (page) => {
   await page.goto(`${BASE}/occasion.html?o=halloween`); await T(page, 1800);
   await page.evaluate(() => occGo('magic')); await T(page, 1200);
   const last = await page.evaluate(() => { const t = [...document.querySelectorAll('.mugs > *')].pop(); return t ? { id: t.id, text: t.textContent.replace(/\s+/g, ' ').trim() } : null; });
-  if (!last || last.id !== 'ideaTile-mug' || !/Got a better idea\?.*Your own Magic Mug.*\$21\.95/.test(last.text)) return `FAIL: the mugs' grid ends with ${JSON.stringify(last)}`;
+  if (!last || last.id !== 'ideaTile-mug' || !/Got a better idea\?.*Your own Magic Mug.*\$19\.95/.test(last.text)) return `FAIL: the mugs' grid ends with ${JSON.stringify(last)}`;
   await page.click('#ideaTile-mug'); await T(page, 700);
   await page.click('#ideaTile-mug .go'); await T(page, 500);
   if (sent.generate.length || !/both halves/.test(await page.textContent('#ideaTile-mug'))) return 'FAIL: it painted with the halves empty';
@@ -124,7 +124,7 @@ scenarios.theMugBox = async (page) => {
     || !/RIGHT scene is the setup[^\n]*A vampire at the dentist/.test(g.prompt) || !/LEFT scene is the punchline[^\n]*your problem/.test(g.prompt) || g.image || g.styleDirective)
     return `FAIL: painted as ${JSON.stringify(g)}`;
   const t = await page.evaluate(() => { const el = document.getElementById('ideaTile-mug'), im = el.querySelector('img.mine'), r = im.getBoundingClientRect(); return { text: el.textContent.replace(/\s+/g, ' ').trim(), src: im.src, ratio: r.width / r.height }; });
-  if (t.src !== PIC || !/Order this mug · \$21\.95/.test(t.text) || !/right-handed/.test(t.text) || Math.abs(t.ratio - 2475 / 1155) > 0.02) return `FAIL: the tile became ${JSON.stringify(t)}`;
+  if (t.src !== PIC || !/Order this mug · \$19\.95/.test(t.text) || !/right-handed/.test(t.text) || Math.abs(t.ratio - 2475 / 1155) > 0.02) return `FAIL: the tile became ${JSON.stringify(t)}`;
   const order = async () => {
     await page.click('#ideaTile-mug .go'); await T(page, 1500);
     const p = await page.evaluate(() => JSON.parse(localStorage.getItem('muggshotz_pending_order') || 'null'));
