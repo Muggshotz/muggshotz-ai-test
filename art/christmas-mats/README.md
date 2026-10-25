@@ -1,6 +1,6 @@
 # The Christmas Mats (Bud, 25 Oct 2026)
 
-Flat artwork, as Bud sent it, untouched, 1602 x 982 (1.63 : 1), the
+Flat artwork, as Bud sent it, untouched, 1602 x 982 or near it (1.63 : 1), the
 doormat's own print shape (4650 x 2850, `lib/products-catalog.js`). When
 the Christmas page is built, tools/premade-fit.py makes `print/<key>.jpg`
 and `show/<key>.jpg` from each by resizing alone.
@@ -20,3 +20,4 @@ and `show/<key>.jpg` from each by resizing alone.
 | wrapped-present | the whole mat a wrapped present: green holly-and-pine-cone paper, red and gold ribbon both ways, the bow in the middle, no words (Alyx's idea, 25 Oct; name is Claude's) |
 | beware-of-mistletoe | BEWARE OF / MISTLETOE in the Beware of Dog manner, bunches of mistletoe with white berries hanging from red bows either side (25 Oct) |
 | naughty-listers-welcome | Naughty-listers / Welcome in script, mistletoe hung at the top, bows and pine cones round the edge (Alyx's, 25 Oct: "Gonna put it at my bedroom door") |
+| gingerbread | the whole mat a gingerbread cookie, Welcome and the border piped in icing, a gingerbread man and woman either side, no joke (25 Oct; 1500 x 919) |
