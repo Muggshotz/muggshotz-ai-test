@@ -21,3 +21,4 @@ and `show/<key>.jpg` from each by resizing alone.
 | beware-of-mistletoe | BEWARE OF / MISTLETOE in the Beware of Dog manner, bunches of mistletoe with white berries hanging from red bows either side (25 Oct) |
 | naughty-listers-welcome | Naughty-listers / Welcome in script, mistletoe hung at the top, bows and pine cones round the edge (Alyx's, 25 Oct: "Gonna put it at my bedroom door") |
 | gingerbread | the whole mat a gingerbread cookie, Welcome and the border piped in icing, a gingerbread man and woman either side, no joke (25 Oct; 1500 x 919) |
+| presence-required | PRESENCE REQUIRED. / PRESENTS OPTIONAL. on red, a present in one corner and snowy boots in the other (Alyx's line, 25 Oct). FIRST VERSION, NOT PRINTABLE: a picture of a mat on porch boards, the present and boots half off it; redraw asked for |
