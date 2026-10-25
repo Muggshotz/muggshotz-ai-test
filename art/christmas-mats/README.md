@@ -19,3 +19,4 @@ and `show/<key>.jpg` from each by resizing alone.
 | snow-globe | a snow globe village on a brass-plated base: PLEASE DON'T SHAKE THE HOUSE. Second version, straight down, on a tartan cloth with pine and lights; Alyx: "pretty picture, not sure where the funny is" (Claude's premise, 25 Oct) |
 | wrapped-present | the whole mat a wrapped present: green holly-and-pine-cone paper, red and gold ribbon both ways, the bow in the middle, no words (Alyx's idea, 25 Oct; name is Claude's) |
 | beware-of-mistletoe | BEWARE OF / MISTLETOE in the Beware of Dog manner, bunches of mistletoe with white berries hanging from red bows either side (25 Oct) |
+| naughty-listers-welcome | Naughty-listers / Welcome in script, mistletoe hung at the top, bows and pine cones round the edge (Alyx's, 25 Oct: "Gonna put it at my bedroom door") |
