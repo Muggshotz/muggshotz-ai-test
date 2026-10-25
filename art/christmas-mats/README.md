@@ -8,3 +8,4 @@ and `show/<key>.jpg` from each by resizing alone.
 | Key | On the mat |
 |---|---|
 | welcome-santa | looking straight down the chimney into the living room, fire lit, cookies and milk out, "Welcome Santa" written in the rising smoke (the Halloween pit mats, turned cosy). Second version: Alyx had the first redrawn so the view is a chimney's (hearth stones below, the plate and milk half under the lip, the rug beyond), not a room with the roof off |
+| dear-santa | a child's crayon letter on lined paper, DEAR SANTA, / DEFINE "GOOD" / LOVE, ME, with the crayon, a candy cane and a bitten cookie (Claude's premise, 25 Oct) |
