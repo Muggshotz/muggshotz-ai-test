@@ -1,6 +1,6 @@
-# The Thanksgiving Mats (Bud, 23 Oct 2026)
+# The Thanksgiving Mats (Bud, 23-25 Oct 2026)
 
-Flat artwork, as Bud sent it, untouched. All ten came in at 1602 x 982
+Flat artwork, as Bud sent it, untouched. All came in at 1602 x 982
 (1.63 : 1), the doormat's own print shape (4650 x 2850,
 `lib/products-catalog.js`), so none needs trimming: when the Thanksgiving
 page is built, tools/premade-fit.py makes `print/<key>.jpg` and
@@ -20,6 +20,8 @@ In the order they were agreed:
 | stretchy-pants | STRETCHY PANTS / REQUIRED BEYOND THIS POINT. |
 | give-thanks-eat-pie | Come In / give thanks / eat pie |
 | itinerary | THANKSGIVING ITINERARY, 10 AM to 9:30 PM (Football / More Football / Still Football; a version naming the 2026 teams was set aside) |
+| food-coma | WELCOME; a turkey flat on his back, stuffed, half a pumpkin pie and a scraped plate beside him (name is Claude's; Alyx to rename) |
+| pilgrim-toast | Welcome; a turkey in a pilgrim hat raising a glass of red (name is Claude's; Alyx to rename) |
 
 Alyx, 23 Oct 2026: "I figure that's about half. We'll do more later."
 The page, its headline, its free-try code and the flyer all wait until the

@@ -7,4 +7,4 @@ and `show/<key>.jpg` from each by resizing alone.
 
 | Key | On the mat |
 |---|---|
-| welcome-santa | looking straight down the chimney into the living room, fire lit, cookies and milk out, "Welcome Santa" written in the rising smoke (the Halloween pit mats, turned cosy) |
+| welcome-santa | looking straight down the chimney into the living room, fire lit, cookies and milk out, "Welcome Santa" written in the rising smoke (the Halloween pit mats, turned cosy). Second version: Alyx had the first redrawn so the view is a chimney's (hearth stones below, the plate and milk half under the lip, the rug beyond), not a room with the roof off |
