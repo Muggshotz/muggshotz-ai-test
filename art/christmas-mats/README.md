@@ -16,4 +16,4 @@ and `show/<key>.jpg` from each by resizing alone.
 | christmas-cancelled | a fed-up Santa, arms folded, a rubber-stamped CHRISTMAS CANCELLED. and a tipped bucket of coal with a bow: EVERYBODY made the naughty list, and Santa ran out of coal. |
 | ugly-sweater | the whole mat a knitted Christmas sweater, reindeer in sweaters, a pom-pom tree, bells and tinsel, ribbed cuffs top and bottom: UGLY SWEATER / REQUIRED BEYOND THIS POINT. (Claude's premise, 25 Oct) |
 | nice-list-only | a plain sign mat, green over red, an arrow curving off to the right: NICE LIST ONLY. / NAUGHTY LIST AROUND BACK. (Claude's premise, 25 Oct) |
-| snow-globe | a snow globe village on a brass-plated base: PLEASE DON'T SHAKE THE HOUSE. First version, seen from the side; a straight-down version was asked for (Claude's premise, 25 Oct) |
+| snow-globe | a snow globe village on a brass-plated base: PLEASE DON'T SHAKE THE HOUSE. Second version, straight down, on a tartan cloth with pine and lights; Alyx: "pretty picture, not sure where the funny is" (Claude's premise, 25 Oct) |
