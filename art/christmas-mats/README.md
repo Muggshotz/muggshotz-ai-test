@@ -15,3 +15,4 @@ and `show/<key>.jpg` from each by resizing alone.
 | i-can-explain | DEAR SANTA... / I CAN EXPLAIN. with a guilty puppy, wrapping paper in his mouth, the shreds around him. Third version (25 Oct): the coir fills the frame and everything sits whole on the mat; the first was a picture of a mat on a path |
 | christmas-cancelled | a fed-up Santa, arms folded, a rubber-stamped CHRISTMAS CANCELLED. and a tipped bucket of coal with a bow: EVERYBODY made the naughty list, and Santa ran out of coal. |
 | ugly-sweater | the whole mat a knitted Christmas sweater, reindeer in sweaters, a pom-pom tree, bells and tinsel, ribbed cuffs top and bottom: UGLY SWEATER / REQUIRED BEYOND THIS POINT. (Claude's premise, 25 Oct) |
+| nice-list-only | a plain sign mat, green over red, an arrow curving off to the right: NICE LIST ONLY. / NAUGHTY LIST AROUND BACK. (Claude's premise, 25 Oct) |
