@@ -26,3 +26,4 @@ and `show/<key>.jpg` from each by resizing alone.
 | prepare-him-room | LET EVERY HEART / PREPARE HIM ROOM in gold over an open stable door, the manger empty and waiting inside, a lantern, the star over the town, "Joy to the World" in the corner; no people (Claude's premise, 26 Oct) |
 | wise-men | WISE MEN STILL SEEK HIM. in gold across the sky, the three riders on camels seen from behind, the star over Bethlehem lit in the valley (Claude's premise, 26 Oct). The wordless version is the placemat, art/christmas-placemats/wise-men.webp |
 | advent-wreath | an Advent wreath from above on dark wood, three purple candles and the rose, the white candle in the centre, HOPE / PEACE / JOY / LOVE in gold at the quarters (Claude's premise, 26 Oct; HOPE and JOY run close to the edges) |
+| doorbell-rings | EVERY TIME A DOORBELL RINGS... over a pair of empty angel wings and a floating halo, "so go on, ring it." below, a bell on a ribbon in the corner (Claude's premise, 26 Oct) |
