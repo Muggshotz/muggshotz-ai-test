@@ -11,4 +11,4 @@ and its side borders with it.
 |---|---|
 | his-presence | His Presence / is our Present, in red and green script on cream, poinsettias and holly in the corners (Alyx's line, 25 Oct; second version 26 Oct at 1536 x 1024, the placemat's shape; the first was mat-shaped and lost its side borders to the trim) |
 | wise-men | the three wise men on camels, seen from behind, the star over Bethlehem lit in the valley, a stitched edge; no words (26 Oct; the lettered version is the doormat) |
-| three-gifts | the gold, frankincense and myrrh along the top with two lanterns, the middle clear for the plate; no words (26 Oct). Came at 1602 x 982, the mat's shape: the fit trims 5% a side and clips the lanterns |
+| three-gifts | the gold, frankincense and myrrh along the top with two lanterns, the middle clear for the plate; no words (26 Oct). Second version at 1536 x 1024, the lanterns whole inside the edges; the first came mat-shaped |
