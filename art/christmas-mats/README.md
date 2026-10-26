@@ -22,3 +22,4 @@ and `show/<key>.jpg` from each by resizing alone.
 | naughty-listers-welcome | Naughty-listers / Welcome in script, mistletoe hung at the top, bows and pine cones round the edge (Alyx's, 25 Oct: "Gonna put it at my bedroom door") |
 | gingerbread | the whole mat a gingerbread cookie, Welcome and the border piped in icing, a gingerbread man and woman either side, no joke (25 Oct; 1500 x 919) |
 | presence-required | PRESENCE REQUIRED. / PRESENTS OPTIONAL. on red, a present in one corner and snowy boots in the other (Alyx's line, 25 Oct). Second version (25 Oct): the mat fills the frame; the first was a picture of a mat on porch boards |
+| wise-men | the three wise men on camels, seen from behind, the star over Bethlehem lit in the valley; no words (Claude's "Wise Men Still Seek Him" premise, 26 Oct; a first version came placemat-shaped) |
