@@ -25,3 +25,4 @@ and `show/<key>.jpg` from each by resizing alone.
 | wise-men | the three wise men on camels, seen from behind, the star over Bethlehem lit in the valley; no words (Claude's "Wise Men Still Seek Him" premise, 26 Oct; a first version came placemat-shaped) |
 | three-gifts | gold in a casket, a smoking censer of frankincense, a jar of myrrh, on purple velvet inside a star-cornered border; no words (Bud, 26 Oct; name is Claude's) |
 | prepare-him-room | LET EVERY HEART / PREPARE HIM ROOM in gold over an open stable door, the manger empty and waiting inside, a lantern, the star over the town, "Joy to the World" in the corner; no people (Claude's premise, 26 Oct) |
+| wise-men-still-seek-him | the wise men scene again, repainted with WISE MEN STILL SEEK HIM. in gold across the sky (26 Oct); kept beside the wordless wise-men |
