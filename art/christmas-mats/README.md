@@ -29,3 +29,4 @@ and `show/<key>.jpg` from each by resizing alone.
 | doorbell-rings | EVERY TIME A DOORBELL RINGS... over a pair of empty angel wings and a floating halo, "so go on, ring it." below, a bell on a ribbon in the corner (Claude's premise, 26 Oct) |
 | angels-welcome | ANGELS WELCOME. / HALOS OPTIONAL. over the same empty wings and halo on midnight blue, the bell on a ribbon in the corner (Bud, 26 Oct) |
 | jingle-bells | three brass sleigh bells on a red bow in a wreath of pine, baubles and two lanterns, on wood; no words (Bud, 26 Oct; name is Claude's) |
+| ho-ho-home | HO HO / HOME / Sweet Home in snow-topped red, green and gold on wood, bells and bows in the corners (Claude's "Ho Ho Home" line, Bud's addition, 26 Oct) |
