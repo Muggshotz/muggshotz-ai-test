@@ -16,7 +16,7 @@ and `show/<key>.jpg` from each by resizing alone.
 | christmas-cancelled | a fed-up Santa, arms folded, a rubber-stamped CHRISTMAS CANCELLED. and a tipped bucket of coal with a bow: EVERYBODY made the naughty list, and Santa ran out of coal. |
 | ugly-sweater | the whole mat a knitted Christmas sweater, reindeer in sweaters, a pom-pom tree, bells and tinsel, ribbed cuffs top and bottom: UGLY SWEATER / REQUIRED BEYOND THIS POINT. (Claude's premise, 25 Oct) |
 | nice-list-only | a plain sign mat, green over red, an arrow curving off to the right: NICE LIST ONLY. / NAUGHTY LIST AROUND BACK. (Claude's premise, 25 Oct) |
-| snow-globe | a snow globe village on a brass-plated base: PLEASE DON'T SHAKE THE HOUSE. Second version, straight down, on a tartan cloth with pine and lights; Alyx: "pretty picture, not sure where the funny is" (Claude's premise, 25 Oct) |
+| snow-globe | a snow globe village on a brass-plated base: PLEASE DON'T SHAKE THE HOUSE. Second version, straight down, on a tartan cloth with pine and lights; Alyx: "pretty picture, not sure where the funny is" (Claude's premise, 25 Oct). DROPPED (Alyx, 26 Oct: "Smash the globe"): not on the page; replaced by the carols mat |
 | wrapped-present | the whole mat a wrapped present: green holly-and-pine-cone paper, red and gold ribbon both ways, the bow in the middle, no words (Alyx's idea, 25 Oct; name is Claude's) |
 | beware-of-mistletoe | BEWARE OF / MISTLETOE in the Beware of Dog manner, bunches of mistletoe with white berries hanging from red bows either side (25 Oct) |
 | naughty-listers-welcome | Naughty-listers / Welcome in script, mistletoe hung at the top, bows and pine cones round the edge (Alyx's, 25 Oct: "Gonna put it at my bedroom door") |
