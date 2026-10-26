@@ -31,3 +31,4 @@ and `show/<key>.jpg` from each by resizing alone.
 | jingle-bells | three brass sleigh bells on a red bow in a wreath of pine, baubles and two lanterns, on wood; no words (Bud, 26 Oct; name is Claude's) |
 | ho-ho-home | HO HO / HOME / Sweet Home in snow-topped red, green and gold on wood, bells and bows in the corners (Claude's "Ho Ho Home" line, Bud's addition, 26 Oct) |
 | welcome-your-presents | We welcome your presence, "presence" struck through in red and "presents." written under it, a pile of wrapped gifts in the snow below (Alyx, 26 Oct: "Got a better idea") |
+| neighbors-love-carols | Our neighbors LOVE Christmas carols, on a red two-way arrow sign in the snow, pointing at both neighbours (Alyx's line, 26 Oct; takes the snow globe's place) |
