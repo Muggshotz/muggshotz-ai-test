@@ -10,3 +10,4 @@ and its side borders with it.
 | Key | On the placemat |
 |---|---|
 | his-presence | His Presence / is our Present, in red and green script on cream, poinsettias and holly in the corners (Alyx's line, 25 Oct; second version 26 Oct at 1536 x 1024, the placemat's shape; the first was mat-shaped and lost its side borders to the trim) |
+| wise-men | the three wise men on camels, seen from behind, the star over Bethlehem lit in the valley, a stitched edge; no words (26 Oct; the lettered version is the doormat) |
