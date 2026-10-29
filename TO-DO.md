@@ -375,6 +375,29 @@ replies inbox, and never a word about where things are made:
 Alyx, 7 Oct: customers "should never see the word printify" (nor Shopify); the
 five places the studio and order page said it now say "our printer".
 
+## The holiday lines (Thanksgiving, Christmas) — art in, pages not built
+
+- **Where the art is** (23-29 Oct 2026): `art/thanksgiving-mats/` (12),
+  `art/christmas-mats/` (24 on the page; the snow globe dropped),
+  `art/thanksgiving-placemats/`, `art/christmas-placemats/`, each with a
+  README naming every file. All as Bud sent them, untouched. Mats are
+  1602 x 982, the doormat's shape; placemats 1536 x 1024, the neoprene
+  placemat's. The fit (tools/premade-fit.py) is a resize, run when the
+  page is built.
+- **The plan** (Alyx, 26 Oct): Thanksgiving mats to 24, then placemats for
+  both holidays, then the magic mugs by the week's end. Then the pages
+  (occasions/thanksgiving.js, occasions/christmas.js, one vercel.json line
+  each), each needing its headline, Bud's banner and its free-try code;
+  then the flyers.
+- **Filling a roster by colourway** (Alyx, 29 Oct): "if we ever run into a
+  dead end on ideas one quick way to fill the roster is by simply changing
+  color schemes on certain ones which we really like." The Customs placemat
+  exists in burgundy and in black (both kept, one to choose). Claude's
+  caution: two colourways side by side read as one design; it earns its
+  place when the colour changes who the mat is for (the traditional table
+  vs the grey-and-gold one; red-and-green Christmas vs cream-and-gold or
+  navy-and-silver).
+
 ## Waiting on Alyx or Bud
 
 - The bug-report email address (Alyx is making a dedicated one).
