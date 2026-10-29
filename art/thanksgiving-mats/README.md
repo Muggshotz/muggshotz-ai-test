@@ -26,3 +26,4 @@ In the order they were agreed:
 Alyx, 23 Oct 2026: "I figure that's about half. We'll do more later."
 The page, its headline, its free-try code and the flyer all wait until the
 list is closed.
+| customs | THANKSGIVING CUSTOMS / ALL FOOD MUST BE INSPECTED. as a federal customs sign: eagle and shield, stars, a riveted brass plate, autumn leaves (Bud, 29 Oct; the placemat's doormat variant). Came at 1536 x 1024, the placemat shape: the mat fit trims 4% top and bottom, the outer rim of the black border only |
