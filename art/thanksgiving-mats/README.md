@@ -31,3 +31,4 @@ list is closed.
 | come-in-no-you-cant-help | COME IN. / NO, YOU CAN'T HELP IN THE KITCHEN. / YES, YOU CAN CARRY THINGS. on burgundy, folding chairs, a foil casserole, a bag of ice, oven mitts hung out of reach (Claude's premise, 29 Oct) |
 | gobble-till-you-wobble | GOBBLE / TILL YOU WOBBLE. in wobbling letters, the turkey mid-wobble with a drumstick and a fork, the wrecked table and one slice of pie behind him (Claude's premise, 29 Oct) |
 | howdy-pilgrim | HOWDY / PILGRIM. in navy under a pilgrim hat, leaves and berries either side, on cream coir (Bud, 29 Oct) |
+| are-you-our-leader | five turkeys peering down over a wooden sign: ARE YOU OUR / LEADER? (Bud, 29 Oct; came as a PNG, saved as webp) |
