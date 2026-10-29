@@ -32,4 +32,4 @@ list is closed.
 | gobble-till-you-wobble | GOBBLE / TILL YOU WOBBLE. in wobbling letters, the turkey mid-wobble with a drumstick and a fork, the wrecked table and one slice of pie behind him (Claude's premise, 29 Oct) |
 | howdy-pilgrim | HOWDY / PILGRIM. in navy under a pilgrim hat, leaves and berries either side, on cream coir (Bud, 29 Oct) |
 | are-you-our-leader | five turkeys peering down over a wooden sign: ARE YOU OUR / LEADER? (Bud, 29 Oct; came as a PNG, saved as webp) |
-| have-you-seen-gary | HAVE YOU SEEN GARY? over five turkeys at the door, one holding a MISSING poster of Gary (Bud, 29 Oct). Came at 1536 x 1024, the placemat shape: the mat fit trims 4% top and bottom and clips the tops of the headline; a 1602 x 982 redraw with the headline lower was suggested |
+| have-you-seen-gary | HAVE YOU SEEN GARY? over five turkeys at the door, one holding a MISSING poster of Gary (Bud, 29 Oct; second version at 1602 x 982, the first came placemat-shaped) |
