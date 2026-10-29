@@ -13,3 +13,4 @@ and the middle stays calm.
 | Key | On the placemat |
 |---|---|
 | pardoned | the Pardoned mat's turkey, bathrobe, coffee and scroll across the top, PARDONED. above him, I HOPE YOU LIKE HAM. along the bottom, the middle clear for the plate |
+| customs | THANKSGIVING CUSTOMS / ALL FOOD MUST BE INSPECTED. on burlap with autumn leaves and acorns; the words run through the middle, under the plate (29 Oct; a sliver of floor shows at two corners, inside the fit's trim) |
