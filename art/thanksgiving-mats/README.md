@@ -30,3 +30,4 @@ list is closed.
 | shoes-and-politics | LEAVE YOUR SHOES / AND POLITICS AT THE DOOR. on coir, a pair of shoes in one corner, a rolled flag and a POLITICS newspaper in the other (Claude's line, Alyx's "politics" for "opinions", 29 Oct) |
 | come-in-no-you-cant-help | COME IN. / NO, YOU CAN'T HELP IN THE KITCHEN. / YES, YOU CAN CARRY THINGS. on burgundy, folding chairs, a foil casserole, a bag of ice, oven mitts hung out of reach (Claude's premise, 29 Oct) |
 | gobble-till-you-wobble | GOBBLE / TILL YOU WOBBLE. in wobbling letters, the turkey mid-wobble with a drumstick and a fork, the wrecked table and one slice of pie behind him (Claude's premise, 29 Oct) |
+| howdy-pilgrim | HOWDY / PILGRIM. in navy under a pilgrim hat, leaves and berries either side, on cream coir (Bud, 29 Oct) |
