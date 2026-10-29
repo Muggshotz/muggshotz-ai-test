@@ -15,3 +15,4 @@ and the middle stays calm.
 | pardoned | the Pardoned mat's turkey, bathrobe, coffee and scroll across the top, PARDONED. above him, I HOPE YOU LIKE HAM. along the bottom, the middle clear for the plate |
 | customs-burgundy | THANKSGIVING CUSTOMS / ALL FOOD MUST BE INSPECTED. in burgundy and gold on burlap, autumn leaves and acorns; the words run through the middle, under the plate (29 Oct) |
 | customs-black | the same in black and sepia (29 Oct; Alyx: "getting redundant with our color schemes"). Both kept for now, one to be chosen |
+| reserved-for-turkey | an empty dinner plate from above with an autumn-leaf rim, the place card RESERVED FOR TURKEY above it, pumpkins, leaves and plaid round the edge; no cutlery, since the real plate goes down on the painted one (Bud, 29 Oct; moved here from the mats, Alyx: "Reserved should be a placemat") |

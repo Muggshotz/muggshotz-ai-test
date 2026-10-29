@@ -14,7 +14,7 @@ In the order they were agreed:
 | welcome-to-our-flock | WELCOME TO OUR Flock |
 | get-the-flock-in-here | GET THE Flock IN HERE. |
 | at-last-the-turkeys-here | AH, AT LAST THE TURKEY'S HERE. |
-| reserved-for-turkey | a dinner plate from above, place card RESERVED FOR TURKEY |
+| reserved-for-turkey | a dinner plate from above, place card RESERVED FOR TURKEY. MOVED to the placemats (Alyx, 29 Oct): not on the mat page; the file stays here |
 | pardoned | PARDONED. / I HOPE YOU LIKE HAM. |
 | youre-late-we-ate | YOU'RE LATE. WE ATE. / BUT HERE'S YOUR PLATE. |
 | stretchy-pants | STRETCHY PANTS / REQUIRED BEYOND THIS POINT. |
