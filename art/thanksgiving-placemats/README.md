@@ -16,3 +16,4 @@ and the middle stays calm.
 | customs-burgundy | THANKSGIVING CUSTOMS / ALL FOOD MUST BE INSPECTED. in burgundy and gold on burlap, autumn leaves and acorns; the words run through the middle, under the plate (29 Oct) |
 | customs-black | the same in black and sepia (29 Oct; Alyx: "getting redundant with our color schemes"). Both kept for now, one to be chosen |
 | reserved-for-turkey | an empty dinner plate from above with an autumn-leaf rim, the place card RESERVED FOR TURKEY above it, pumpkins, leaves and plaid round the edge; no cutlery, since the real plate goes down on the painted one (Bud, 29 Oct; moved here from the mats, Alyx: "Reserved should be a placemat") |
+| clean-plate-club | THE CLEAN PLATE CLUB / Certificate of Membership, an engraved parchment certificate with an empty gold portrait frame where the plate goes, a turkey, a wax seal, a quill; "Member in good standing." and "Membership reviewed after every meal." (Claude's premise, 29 Oct) |
