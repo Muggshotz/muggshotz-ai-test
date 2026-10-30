@@ -34,3 +34,4 @@ list is closed.
 | are-you-our-leader | five turkeys peering down over a wooden sign: ARE YOU OUR / LEADER? (Bud, 29 Oct; came as a PNG, saved as webp) |
 | have-you-seen-gary | HAVE YOU SEEN GARY? over five turkeys at the door, one holding a MISSING poster of Gary (Bud, 29 Oct; second version at 1602 x 982, the first came placemat-shaped) |
 | send-fred-out | JUST SEND FRED OUT, / AND THERE DOESN'T HAVE TO BE ANY TROUBLE. The Gary flock at the door again (Bud, 29 Oct) |
+| two-or-three | "For where two or three are gathered in my name, there am I with them." Matthew 18:20, in script on cream parchment with gold scrollwork, wheat, oak leaves and acorns; a Thanksgiving riff on the Christmas placemat His Presence (Alyx, 30 Oct; the first religious Thanksgiving piece) |
