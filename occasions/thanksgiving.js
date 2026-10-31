@@ -18,7 +18,7 @@ window.OCCASION = {
   // The flyer's own hero, cropped from Bud's flyer (31 Oct 2026); replaced by
   // his banner of it if one comes.
   banner: "art/occasions/thanksgiving/banner.jpg",
-  subline: "Doormats, placemats and magic mugs for the table this Thanksgiving.",
+  subline: "Get doormats, placemats and magic mugs this Thanksgiving.",
   orderBy: "Order now so it arrives before Thanksgiving.",
   colors: { bg: "#1c1109", panel: "#2b1a0d", accent: "#e9a93a", accent2: "#c7442a", text: "#f6ecd9", muted: "#c7b08f" },
 
