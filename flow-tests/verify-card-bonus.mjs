@@ -6,7 +6,8 @@
 //   * a brand-new card visitor gets a row at 0 and 5 spins only when the
 //     email is verified;
 //   * once per inbox: whatever its capitals, a +tag, Gmail's dots, from any device;
-//   * two claims sent before either is verified pay once;
+//   * two claims sent before either is verified pay once, to the latest (the
+//     email column is unique: the stand-in refuses a duplicate as Postgres does);
 //   * the ordinary one-spin verification is unchanged.
 process.env.SUPABASE_URL = 'https://fake.supabase.test';
 process.env.SUPABASE_SERVICE_ROLE_KEY = 'test-key';
@@ -41,7 +42,12 @@ globalThis.fetch = async (url, opts = {}) => {
   let out;
   if (method === 'GET') { out = rows.filter((r) => match(r, params)); if (lim) out = out.slice(0, +lim); out = out.map((r) => pick(r, sel)); }
   else if (method === 'POST') { const body = [].concat(JSON.parse(opts.body)); out = body.map((b) => { const r = { id: nextId++, token_balance: 0, email: null, email_verified: false, verification_token: null, role: null, has_purchased: false, ...b }; rows.push(r); return pick(r, sel); }); }
-  else if (method === 'PATCH') { const body = JSON.parse(opts.body); out = rows.filter((r) => match(r, params)).map((r) => { Object.assign(r, body); return pick(r, sel); }); }
+  else if (method === 'PATCH') {
+    const body = JSON.parse(opts.body), hit = rows.filter((r) => match(r, params));
+    // customers_email_key: the live table's unique email (Alyx's test, 31 Oct 2026).
+    if (body.email && rows.some((r) => !hit.includes(r) && r.email && r.email.toLowerCase() === body.email.toLowerCase())) return json(409, { code: '23505', message: 'duplicate key value violates unique constraint "customers_email_key"' });
+    out = hit.map((r) => { Object.assign(r, body); return pick(r, sel); });
+  }
   if (single) { if (out.length !== 1) return json(406, { code: 'PGRST116', message: 'JSON object requested, multiple (or no) rows returned', details: `${out.length} rows` }); return json(200, out[0]); }
   return json(200, out);
 };
@@ -92,10 +98,13 @@ check('a private window with the same email (other capitals) is refused', r.code
 check('...and pays nothing', (row('dev-B-incognito')?.token_balance || 0) === 0, JSON.stringify(row('dev-B-incognito')));
 
 await post({ email: 'carol@example.com', deviceId: 'dev-C1', cardCode: 'MUGGSY' }); const tokC1 = lastToken();
-await post({ email: 'Carol@example.com', deviceId: 'dev-C2', cardCode: 'MUGGSY' }); const tokC2 = lastToken();
-await click(tokC1); r = await click(tokC2);
-check('two claims sent before either is verified pay once', row('dev-C1').token_balance === 5 && row('dev-C2').token_balance === 0, `C1 ${row('dev-C1').token_balance}, C2 ${row('dev-C2').token_balance}`);
-check('...and the second page says the email has claimed', /already claimed/.test(r.body), r.body.slice(0, 120));
+r = await post({ email: 'Carol@example.com', deviceId: 'dev-C2', cardCode: 'MUGGSY' }); const tokC2 = lastToken();
+check('the same email typed again on another device before verifying is accepted (no duplicate-key error)', r.code === 200 && tokC2 !== tokC1, JSON.stringify(r.body));
+check('...the address moves to the new device and the old link is cleared', row('dev-C2').email === 'Carol@example.com' && row('dev-C1').email == null && row('dev-C1').verification_token == null, JSON.stringify([row('dev-C1'), row('dev-C2')]));
+r = await click(tokC1);
+check('...the old link no longer pays', row('dev-C1').token_balance === 0 && r.code !== 200, `C1 ${JSON.stringify(row('dev-C1'))}, ${r.code}`);
+r = await click(tokC2);
+check('two claims sent before either is verified pay once, to the latest', row('dev-C1').token_balance === 0 && row('dev-C2').token_balance === 5, `C1 ${row('dev-C1').token_balance}, C2 ${row('dev-C2').token_balance}`);
 
 // THE PLUS-TAG LOOPHOLE (Alyx, 12 Oct 2026): one inbox, one claim, however
 // the address is dressed up: a +tag, Gmail's dots, googlemail.com.

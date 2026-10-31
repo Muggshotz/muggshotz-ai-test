@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import crypto from 'crypto';
-import { cardOffer, cardToken, inboxAlreadyVerified } from '../lib/card-bonus.js';
+import { cardOffer, cardToken, inboxAlreadyVerified, likeExact } from '../lib/card-bonus.js';
 import { readPool, poolHasRoom } from '../lib/free-pool.js';
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
@@ -72,6 +72,22 @@ export default async function handler(req, res) {
       if (used) {
         return res.status(400).json({ error: 'That email has already claimed its free spins.' });
       }
+    }
+
+    // RELEASE A STALE CLAIM (31 Oct 2026, Alyx's own test: "duplicate key
+    // value violates unique constraint customers_email_key"). The email
+    // column is unique, so an address typed on another device and never
+    // verified still sits on that row and blocks this one with a raw
+    // database error. That row earned nothing; clear it, and the claim moves
+    // here: the latest link is the one that works.
+    const { error: releaseError } = await supabase
+      .from('customers')
+      .update({ email: null, verification_token: null })
+      .ilike('email', likeExact(email))
+      .eq('email_verified', false)
+      .neq('id', customer.id);
+    if (releaseError) {
+      return res.status(500).json({ error: 'Could not save your email. Please try again.', detail: releaseError.message });
     }
 
     const random = crypto.randomBytes(32).toString('hex');
