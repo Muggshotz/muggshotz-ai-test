@@ -19,9 +19,9 @@ const SMART_MUG_SET_PRICE=59.95; // Alyx's price for any four, + shipping (22 Oc
 const SMART_MUG_EXTRA_PRICE=17.95; // each more with a set, $2 off the single (26 Sep 2026)
 const SURPRISE_SETS={
   'thanksgiving':{label:'Thanksgiving',demo:'golden-brown',designs:[
+    {key:'pardon',label:'The Pardon',file:'thanksgiving-pardon',frames:true},   // first: on the Thanksgiving flyer (31 Oct 2026)
     {key:'power-out',label:"Power's Out",file:'thanksgiving-power-out',frames:true},
     {key:'witness',label:'Witness Protection',file:'thanksgiving-witness',frames:true},
-    {key:'pardon',label:'The Pardon',file:'thanksgiving-pardon',frames:true},
     {key:'chickens',label:'All These Chickens',file:'thanksgiving-chickens',frames:true},
     {key:'golden-brown',label:'Golden Brown',file:'golden-brown',frames:true},
     {key:'thankful',label:'Thankful',file:'thankful',frames:true},

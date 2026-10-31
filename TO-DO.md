@@ -384,11 +384,16 @@ five places the studio and order page said it now say "our printer".
   1602 x 982, the doormat's shape; placemats 1536 x 1024, the neoprene
   placemat's. The fit (tools/premade-fit.py) is a resize, run when the
   page is built.
-- **The plan** (Alyx, 26 Oct): Thanksgiving mats to 24, then placemats for
-  both holidays, then the magic mugs by the week's end. Then the pages
-  (occasions/thanksgiving.js, occasions/christmas.js, one vercel.json line
-  each), each needing its headline, Bud's banner and its free-try code;
-  then the flyers.
+- **BUILT, 31 Oct: the Thanksgiving page** (occasions/thanksgiving.js,
+  /thanksgiving in vercel.json, THANKSGIVING in lib/card-bonus.js): 19 mats,
+  9 placemats (the neoprene, in the "more" row), the nine-mug set with The
+  Pardon first and demonstrated, the flyer's hero as the banner, everything
+  in the flyer's order. Bud's flyer "Amuse Your Guests From Greet to Eat!"
+  is approved (art/occasions/thanksgiving/README.md); its print file is
+  Bud's. Two mat names are still Claude's placeholders (food-coma,
+  pilgrim-toast); the Customs placemat ships in black (the flyer's).
+- **Still to do**: the Christmas page the same way (24 mats, 3 placemats
+  stored; its mugs, flyer, headline and free-try code to come).
 - **Filling a roster by colourway** (Alyx, 29 Oct): "if we ever run into a
   dead end on ideas one quick way to fill the roster is by simply changing
   color schemes on certain ones which we really like." The Customs placemat

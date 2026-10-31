@@ -11,6 +11,11 @@ CATEGORIES = {
     'welcome-mats': ('art/unwelcome', (4650, 2850), (900, 552)),   # the doormat
     'placemats':    ('art/placemats', (5610, 3839), (900, 616)),   # the neoprene placemat
     'placemats-large': ('art/placemats', (7350, 4350), (900, 533)),  # the Large (24 x 14) placemat
+    # The holiday lines (Oct 2026): the same two products, each holiday's art in its own folder.
+    'thanksgiving-mats': ('art/thanksgiving-mats', (4650, 2850), (900, 552)),
+    'thanksgiving-placemats': ('art/thanksgiving-placemats', (5610, 3839), (900, 616)),
+    'christmas-mats': ('art/christmas-mats', (4650, 2850), (900, 552)),
+    'christmas-placemats': ('art/christmas-placemats', (5610, 3839), (900, 616)),
 }
 cat, key, src = sys.argv[1:4]
 folder, (pw, ph), (sw, sh) = CATEGORIES[cat]

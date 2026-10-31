@@ -9,6 +9,10 @@
       "destination": "/occasion.html"
     },
     {
+      "source": "/thanksgiving",
+      "destination": "/occasion.html"
+    },
+    {
       "source": "/orders",
       "destination": "/orders.html"
     }

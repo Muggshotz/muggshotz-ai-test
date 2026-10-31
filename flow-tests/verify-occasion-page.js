@@ -206,6 +206,40 @@ scenarios.theBack = async (page) => {
   return "PASS: Back from a mat lands on Home at that mat; the order page's Back returns to the mat; Back from the Magic Mugs lands on Home at them";
 };
 
+// THE THANKSGIVING PAGE (31 Oct 2026): the flyer's three products, flyer first.
+scenarios.theThanksgiving = async (page) => {
+  await page.goto(`${BASE}/occasion.html?o=thanksgiving&from=flyer`); await T(page, 2500);
+  const h = await page.evaluate(() => ({
+    h1: document.querySelector('h1')?.textContent, banner: !!document.querySelector('.hero img.banner'),
+    tiles: [...document.querySelectorAll('#secFeatured .tile[data-mat]')].map((t) => t.dataset.mat),
+    pics: [...document.querySelectorAll('#secFeatured .tile[data-mat] img')].slice(0, 3).every((i) => i.complete && i.naturalWidth > 0),
+    priced: [...document.querySelectorAll('#secFeatured .tile[data-mat]')].every((t) => t.querySelector('.pr')?.textContent === '$29.95'),
+    idea: !!document.getElementById('ideaTile-mat'),
+    magic: !!document.getElementById('secMagic'), demo: window.OCCASION.magicMugs.demo,
+    setFirst: SURPRISE_SETS.thanksgiving.designs[0].key,
+    more: [...document.querySelectorAll('#secMore .card')].map((c) => c.dataset.more + ':' + c.querySelector('.pr').textContent),
+    placemats: window.OCCASION.more.find((m) => m.key === 'placemats').designs.map((d) => d.key),
+    from: JSON.parse(localStorage.getItem('mz_occasion_from') || '{}').thanksgiving,
+  }));
+  const first = ['have-you-seen-gary', 'get-the-flock-in-here', 'itinerary'], pm = ['eating-itinerary', 'two-or-three', 'customs-black'];
+  if (h.h1 !== 'Amuse Your GuestsFrom Greet to Eat!' || !h.banner || h.tiles.length !== 19 || JSON.stringify(h.tiles.slice(0, 3)) !== JSON.stringify(first) || !h.pics || !h.priced || !h.idea
+    || !h.magic || h.demo !== 'thanksgiving-pardon-one' || h.setFirst !== 'pardon' || JSON.stringify(h.more) !== '["placemats:from $13.95"]'
+    || h.placemats.length !== 9 || JSON.stringify(h.placemats.slice(0, 3)) !== JSON.stringify(pm) || h.from !== 'flyer') return `FAIL: thanksgiving home is ${JSON.stringify(h)}`;
+  // The placemats' view: nine, the flyer's first, each pictured at the placemat's price.
+  await page.evaluate(() => occGo('more', 'placemats')); await T(page, 1500);
+  const v = await page.evaluate(() => ({ title: document.getElementById('viewTitle')?.textContent, pic: (() => { const i = document.getElementById('morePic'); return i && i.complete && i.naturalWidth > 0 ? i.getAttribute('src') : null; })(), price: document.querySelector('.pr-big')?.textContent }));
+  if (v.title !== 'Thanksgiving Placemats' || v.pic !== 'art/thanksgiving-placemats/show/eating-itinerary.jpg' || v.price !== '$13.95') return `FAIL: the placemats view is ${JSON.stringify(v)}`;
+  // The flyer's free-try code, and the print files the page would send.
+  const C = await import('../lib/card-bonus.js'); const o = C.cardOffer('thanksgiving');
+  if (!o || o.spins !== 2 || o.pool !== 'thanksgiving' || o.page !== '/thanksgiving') return `FAIL: the flyer's code is ${JSON.stringify(o)}`;
+  const fs = require('fs'), path = require('path'), root = path.join(__dirname, '..');
+  const missing = [...h.tiles.map((k) => `art/thanksgiving-mats/print/${k}.jpg`), ...h.tiles.map((k) => `art/thanksgiving-mats/show/${k}.jpg`),
+    ...h.placemats.map((k) => `art/thanksgiving-placemats/print/${k}.jpg`), ...h.placemats.map((k) => `art/thanksgiving-placemats/show/${k}.jpg`),
+    'art/surprise/reveal/thanksgiving-pardon-one.jpg', 'art/occasions/thanksgiving/banner.jpg'].filter((f) => !fs.existsSync(path.join(root, f)));
+  if (missing.length) return `FAIL: files missing: ${missing.join(', ')}`;
+  return 'PASS: the Thanksgiving page shows the flyer\'s hero, 19 mats at $29.95 with Gary, the Flock and the Itinerary first, the idea tile, the Magic Mugs with The Pardon first and demonstrated, and the placemats from $13.95 with the Eating Itinerary first; the flyer\'s code pays two tries; every print and page file is there';
+};
+
 // A test occasion with one of each "more" product, served in place of a file.
 const TEST_OCCASION = `window.OCCASION = {
   key: "testocc", title: "Test", headline: "Test Page.", subline: "Sub", orderBy: "",
