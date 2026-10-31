@@ -1,8 +1,8 @@
 # The Thanksgiving page's art
 
-`banner.jpg` is the flyer's hero, cropped from the proof (1545 x 430), shown
-at the top of the page in place of the plain headline; Bud's own banner of
-it replaces it if one comes.
+`banner.jpg` is Bud's banner of the headline (31 Oct 2026, 2000 x 667), shown
+at the top of the page in place of the plain headline. Until it came the
+page used the flyer's hero, cropped from the proof.
 
 `print/thanksgiving-flyer-wall-letter-proof.png` is the approved flyer
 (Bud, 31 Oct 2026, "Amuse Your Guests From Greet to Eat!") as it reached

@@ -15,8 +15,8 @@ window.OCCASION = {
   title: "Thanksgiving at Muggshotz",
   headline: "Amuse Your Guests",
   headlineBig: "From Greet to Eat!",
-  // The flyer's own hero, cropped from Bud's flyer (31 Oct 2026); replaced by
-  // his banner of it if one comes.
+  // Bud's banner of the headline (31 Oct 2026), 2000 x 667: the flyer's sign
+  // with the Thanksgiving Collection ribbon under it.
   banner: "art/occasions/thanksgiving/banner.jpg",
   subline: "Get doormats, placemats and magic mugs this Thanksgiving.",
   orderBy: "Order now so it arrives before Thanksgiving.",
