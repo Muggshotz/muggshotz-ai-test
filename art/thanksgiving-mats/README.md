@@ -33,4 +33,4 @@ list is closed.
 | howdy-pilgrim | HOWDY / PILGRIM. in navy under a pilgrim hat, leaves and berries either side, on cream coir (Bud, 29 Oct) |
 | are-you-our-leader | five turkeys peering down over a wooden sign: ARE YOU OUR / LEADER? (Bud, 29 Oct; came as a PNG, saved as webp) |
 | have-you-seen-gary | HAVE YOU SEEN GARY? over five turkeys at the door, one holding a MISSING poster of Gary (Bud, 29 Oct; second version at 1602 x 982, the first came placemat-shaped) |
-| send-fred-out | JUST SEND FRED OUT, / AND THERE DOESN'T HAVE TO BE ANY TROUBLE. The Gary flock at the door again (Bud, 29 Oct) |
+| send-fred-out | JUST SEND FRED OUT, / AND THERE DOESN'T HAVE TO BE ANY TROUBLE. The Gary flock at the door again, holding up Fred's photo (Bud, 29 Oct; second version 31 Oct) |
