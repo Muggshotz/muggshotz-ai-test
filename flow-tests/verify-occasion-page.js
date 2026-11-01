@@ -222,7 +222,7 @@ scenarios.theThanksgiving = async (page) => {
     from: JSON.parse(localStorage.getItem('mz_occasion_from') || '{}').thanksgiving,
   }));
   const first = ['have-you-seen-gary', 'get-the-flock-in-here', 'itinerary'], pm = ['eating-itinerary', 'two-or-three', 'customs-black'];
-  if (h.h1 !== 'Amuse Your GuestsFrom Greet to Eat!' || !h.banner || h.tiles.length !== 19 || JSON.stringify(h.tiles.slice(0, 3)) !== JSON.stringify(first) || !h.pics || !h.priced || !h.idea
+  if (h.h1 !== 'Amuse Your GuestsFrom Greet to Eat!' || !h.banner || h.tiles.length !== 20 || JSON.stringify(h.tiles.slice(0, 3)) !== JSON.stringify(first) || !h.pics || !h.priced || !h.idea
     || !h.magic || h.demo !== 'thanksgiving-pardon-one' || h.setFirst !== 'pardon' || JSON.stringify(h.more) !== '["placemats:from $13.95"]'
     || h.placemats.length !== 9 || JSON.stringify(h.placemats.slice(0, 3)) !== JSON.stringify(pm) || h.from !== 'flyer') return `FAIL: thanksgiving home is ${JSON.stringify(h)}`;
   // The placemats' view: nine, the flyer's first, each pictured at the placemat's price.
@@ -237,7 +237,43 @@ scenarios.theThanksgiving = async (page) => {
     ...h.placemats.map((k) => `art/thanksgiving-placemats/print/${k}.jpg`), ...h.placemats.map((k) => `art/thanksgiving-placemats/show/${k}.jpg`),
     'art/surprise/reveal/thanksgiving-pardon-one.jpg', 'art/occasions/thanksgiving/banner.jpg'].filter((f) => !fs.existsSync(path.join(root, f)));
   if (missing.length) return `FAIL: files missing: ${missing.join(', ')}`;
-  return 'PASS: the Thanksgiving page shows the flyer\'s hero, 19 mats at $29.95 with Gary, the Flock and the Itinerary first, the idea tile, the Magic Mugs with The Pardon first and demonstrated, and the placemats from $13.95 with the Eating Itinerary first; the flyer\'s code pays two tries; every print and page file is there';
+  return 'PASS: the Thanksgiving page shows the flyer\'s hero, 20 mats at $29.95 with Gary, the Flock and the Itinerary first, the idea tile, the Magic Mugs with The Pardon first and demonstrated, and the placemats from $13.95 with the Eating Itinerary first; the flyer\'s code pays two tries; every print and page file is there';
+};
+
+// A NAMED MAT (1 Nov 2026): the name typed under the picture previews on it
+// and rides into the order as the print's URL with the name in it.
+scenarios.theNamedMat = async (page) => {
+  const bodies = watchCheckout(page);
+  // The server letters the name; here the local server cannot, so the API is
+  // answered with the plain page picture and the request itself is checked.
+  const asked = [];
+  await page.route('**/api/named-print*', (route) => { asked.push(new URL(route.request().url()).search); route.fulfill({ path: require('path').join(__dirname, '..', 'art/thanksgiving-mats/show/rear-entrance.jpg'), contentType: 'image/jpeg' }); });
+  await page.goto(`${BASE}/occasion.html?o=thanksgiving`); await T(page, 2000);
+  const i = await page.evaluate(() => OCCASION.featured.designs.findIndex((d) => d.key === 'rear-entrance'));
+  if (i < 0) return 'FAIL: the named mat is not on the page';
+  await page.evaluate((i) => occGo('mat', i), i); await T(page, 1500);
+  const before = await page.evaluate(() => ({ field: !!document.getElementById('matName'), prompt: document.querySelector('.named label')?.textContent, pic: document.getElementById('matPic')?.getAttribute('src'), max: document.getElementById('matName')?.maxLength }));
+  if (!before.field || !/Whose name/.test(before.prompt || '') || before.pic !== 'art/thanksgiving-mats/show/rear-entrance.jpg' || before.max !== 14) return `FAIL: the named mat's view is ${JSON.stringify(before)}`;
+  await page.type('#matName', 'bob'); await T(page, 900);
+  const after = await page.evaluate(() => document.getElementById('matPic')?.getAttribute('src'));
+  if (after !== '/api/named-print?design=rear-entrance&name=bob&size=show' || asked.length !== 1) return `FAIL: the preview went to ${after}, asked ${JSON.stringify(asked)}`;
+  // The next mat and back: the name is kept.
+  await page.evaluate(() => occStep(1)); await T(page, 800); await page.evaluate(() => occStep(-1)); await T(page, 800);
+  const kept = await page.evaluate(() => document.getElementById('matName')?.value);
+  if (kept !== 'bob') return `FAIL: the name was not kept: ${JSON.stringify(kept)}`;
+  await page.evaluate(() => occOrderMat()); await T(page, 1500);
+  const pending = await page.evaluate(() => JSON.parse(localStorage.getItem('muggshotz_pending_order') || 'null'));
+  if (!pending || pending.productIcon !== 'doormat' || pending.namedText !== 'bob' || !/\/api\/named-print\?design=rear-entrance&name=bob&size=print$/.test(pending.placements.left) || pending.premadeItem !== 'welcome-mats/rear-entrance')
+    return `FAIL: the order carries ${JSON.stringify({ icon: pending && pending.productIcon, named: pending && pending.namedText, left: pending && pending.placements.left })}`;
+  // A named mat ordered blank is the plain print.
+  await page.goBack(); await T(page, 1500);
+  await page.evaluate((i) => occGo('mat', i), i); await T(page, 1200);
+  await page.fill('#matName', ''); await T(page, 900);
+  const blank = await page.evaluate(() => document.getElementById('matPic')?.getAttribute('src'));
+  await page.evaluate(() => occOrderMat()); await T(page, 1200);
+  const p2 = await page.evaluate(() => JSON.parse(localStorage.getItem('muggshotz_pending_order') || 'null'));
+  if (blank !== 'art/thanksgiving-mats/show/rear-entrance.jpg' || !p2 || p2.namedText || !/art\/thanksgiving-mats\/print\/rear-entrance\.jpg$/.test(p2.placements.left)) return `FAIL: blank went as ${JSON.stringify({ blank, named: p2 && p2.namedText, left: p2 && p2.placements.left })}`;
+  return 'PASS: the named mat offers a name field (14 letters), previews the name on the picture through the API, keeps it across the arrows, and orders the print with the name in its URL; left blank it orders the plain print';
 };
 
 // A test occasion with one of each "more" product, served in place of a file.

@@ -57,7 +57,9 @@ window.OCCASION = {
       { key: "gobble-till-you-wobble", label: "Gobble Till You Wobble" },
       { key: "howdy-pilgrim", label: "Howdy Pilgrim" },
       { key: "are-you-our-leader", label: "Are You Our Leader?" },
-      { key: "send-fred-out", label: "Just Send Fred Out" }
+      { key: "send-fred-out", label: "Just Send Fred Out" },
+      // A NAMED MAT (1 Nov 2026): the blank takes the customer's name (lib/named-designs.js).
+      { key: "rear-entrance", label: "Except Uncle ____", named: true, maxLen: 14, namedPrompt: "Whose name goes on the sign?", namedPlaceholder: "Bob" }
     ]
   },
 

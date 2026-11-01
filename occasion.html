@@ -62,6 +62,7 @@ button{font:inherit}
 .back:hover{border-color:var(--accent)}
 .big{position:relative;margin:4px 0 12px}
 .big img{display:block;width:100%;height:auto;border-radius:10px}
+.named{margin:12px 0 0}.named label{display:block;font-size:14px;color:var(--muted)}.named input{display:block;width:100%;max-width:360px;margin:6px 0 0;padding:10px 12px;font:600 18px/1.2 inherit;letter-spacing:.04em;text-transform:uppercase;border:1px solid var(--muted);border-radius:8px;background:var(--panel);color:var(--text)}.named .note{font-size:12px;color:var(--muted);margin:6px 0 0}
 .arr{position:absolute;top:50%;transform:translateY(-50%);width:40px;height:40px;border-radius:50%;background:rgba(13,10,18,.85);border:1px solid #3a2f49;color:var(--text);font-size:22px;cursor:pointer}
 .arr.l{left:-10px}.arr.r{right:-10px}
 .nm-big{text-align:center;font-size:20px;margin:0}
@@ -284,9 +285,35 @@ function matHtml(i) {
     + '<h2 id="viewTitle">' + esc(F.title) + '</h2><p class="line">' + (i + 1) + ' of ' + F.designs.length + '</p>'
     + '<div class="big"><img id="matPic" src="' + F.dir + '/show/' + d.key + '.jpg" width="' + F.show[0] + '" height="' + F.show[1] + '" alt="' + esc(d.label) + '"/>'
     + '<button class="arr l" aria-label="Previous" onclick="occStep(-1)">‹</button><button class="arr r" aria-label="Next" onclick="occStep(1)">›</button></div>'
+    + (d.named ? namedFieldHtml(d) : '')
     + '<p class="nm-big">' + esc(d.label) + '</p><p class="pr-big">' + esc(F.line) + ' · ' + $(fp) + ' · ' + shipWords(F.catalog) + '</p>'
     + '<button class="order" id="orderBtn" onclick="occOrderMat()">Order this mat · ' + $(fp) + '</button></div>';
 }
+
+// A NAMED MAT (Alyx, 1 Nov 2026: "the blank line will be an interface through
+// which the customer can enter the name of their choice"). A design marked
+// named: true has a blank in it (lib/named-designs.js); the field under the
+// picture takes the name, the server letters it in (api/named-print.js) for
+// the preview as they type, and the order carries the print's URL with the
+// name in it. The name is kept per design while they look round.
+const matNames = {};
+let namedTimer = null;
+function namedUrl(key, name, size) { return '/api/named-print?design=' + encodeURIComponent(key) + '&name=' + encodeURIComponent(name) + '&size=' + size; }
+function namedFieldHtml(d) {
+  const v = matNames[d.key] || '';
+  return '<div class="named"><label for="matName">' + esc(d.namedPrompt || 'Whose name goes on it?')
+    + '<input id="matName" type="text" maxlength="' + (d.maxLen || 14) + '" autocomplete="off" placeholder="' + esc(d.namedPlaceholder || '') + '" value="' + esc(v) + '" oninput="occName(\'' + d.key + '\', this.value)"/></label>'
+    + '<p class="note">Letters, numbers and spaces, up to ' + (d.maxLen || 14) + '. Leave it blank and the blank prints as it is.</p></div>';
+}
+window.occName = (key, v) => {
+  matNames[key] = v;
+  clearTimeout(namedTimer);
+  namedTimer = setTimeout(() => {
+    const F = O.featured, d = F.designs[view.i], pic = document.getElementById('matPic'); if (!d || d.key !== key || !pic) return;
+    const name = (matNames[key] || '').replace(/\s+/g, ' ').trim();
+    pic.src = name ? namedUrl(key, name, 'show') : F.dir + '/show/' + d.key + '.jpg';
+  }, 350);
+};
 
 // THE FRAME (Alyx, 3 Oct 2026: the Halloween frame "offered to all"): a choice
 // over the mugs, like the hand, offered when the holiday's mugs come in one.
@@ -794,7 +821,9 @@ function hand_off(pending) {
 }
 window.occOrderMat = () => {
   const F = O.featured, d = F.designs[view.i];
-  hand_off(Object.assign({ placements: { left: abs(F.dir + '/print/' + d.key + '.jpg'), front: null, right: null }, premadeItem: 'welcome-mats/' + d.key }, F.order));
+  const name = d.named ? (matNames[d.key] || '').replace(/\s+/g, ' ').trim() : '';
+  const print = name ? abs(namedUrl(d.key, name, 'print')) : abs(F.dir + '/print/' + d.key + '.jpg');
+  hand_off(Object.assign({ placements: { left: print, front: null, right: null }, premadeItem: 'welcome-mats/' + d.key }, name ? { namedText: name } : {}, F.order));
 };
 window.occAdd = key => {
   const d = SURPRISE_SETS[O.magicMugs.set].designs.find(x => x.key === key); if (!d || packPicks.length >= 24) return;

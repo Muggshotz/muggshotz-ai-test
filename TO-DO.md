@@ -397,6 +397,18 @@ five places the studio and order page said it now say "our printer".
   Where that stands (1 Nov): Halloween mats 24, placemats 0, mugs 24;
   Thanksgiving mats 19, placemats 9, mugs 9; Christmas mats 24, placemats
   3, mugs 0. Thanksgiving first, it has the clock.
+- **NAMED MATS, built 1 Nov** (Alyx: "the blank line will be an interface
+  through which the customer can enter the name of their choice ... It can
+  open up an awful lot of avenues"): a pre-made with a blank in it. The
+  design is marked `named: true` in the occasion file; the mat's view shows
+  a name field; api/named-print.js letters the name into the page picture
+  (the preview as they type) and into the print file (the URL the order
+  carries, fetched by the Printify order like any print); lib/named-designs.js
+  holds each design's blank as fractions of the picture and its longest name.
+  Bundled lib/fonts/Anton.ttf (OFL). First: rear-entrance, "Except Uncle
+  ____". A new named design is one entry there and one `named: true` line.
+  Next in the line, when Bud draws them: "Reserved for ____", "____'s Table",
+  a Christmas stocking with a name.
 - **Still to do**: the Christmas page the same way (24 mats, 3 placemats
   stored; its mugs, flyer, headline and free-try code to come).
 - **Filling a roster by colourway** (Alyx, 29 Oct): "if we ever run into a
