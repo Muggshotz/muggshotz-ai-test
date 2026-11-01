@@ -34,3 +34,4 @@ list is closed.
 | are-you-our-leader | five turkeys peering down over a wooden sign: ARE YOU OUR / LEADER? (Bud, 29 Oct; came as a PNG, saved as webp) |
 | have-you-seen-gary | HAVE YOU SEEN GARY? over five turkeys at the door, one holding a MISSING poster of Gary (Bud, 29 Oct; second version at 1602 x 982, the first came placemat-shaped) |
 | send-fred-out | JUST SEND FRED OUT, / AND THERE DOESN'T HAVE TO BE ANY TROUBLE. The Gary flock at the door again, holding up Fred's photo (Bud, 29 Oct; second version 31 Oct) |
+| horn-of-plenty | HORN OF PLENTY / GIVE THANKS: the cornucopia spilling out the relatives, grandma with the casserole, the uncle in the jersey, the kid, the dog, the teen on her phone, the baby, the pie (Claude's premise, 1 Nov; Bud lettered GIVE THANKS where the brief had PLENTY OF RELATIVES). Not on the page yet |
