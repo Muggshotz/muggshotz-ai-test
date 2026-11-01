@@ -392,6 +392,11 @@ five places the studio and order page said it now say "our printer".
   is approved (art/occasions/thanksgiving/README.md); its print file is
   Bud's. Two mat names are still Claude's placeholders (food-coma,
   pilgrim-toast); the Customs placemat ships in black (the flyer's).
+- **THE STANDARD IS 24** (Alyx, 1 Nov 2026: "a standard of 24 for all
+  categories"): every category on every holiday page carries 24 designs.
+  Where that stands (1 Nov): Halloween mats 24, placemats 0, mugs 24;
+  Thanksgiving mats 19, placemats 9, mugs 9; Christmas mats 24, placemats
+  3, mugs 0. Thanksgiving first, it has the clock.
 - **Still to do**: the Christmas page the same way (24 mats, 3 placemats
   stored; its mugs, flyer, headline and free-try code to come).
 - **Filling a roster by colourway** (Alyx, 29 Oct): "if we ever run into a
