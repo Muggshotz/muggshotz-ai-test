@@ -105,6 +105,32 @@ background, painted alone like the autumn frame.
 - Claude
 ```
 
+## How to paint a DECAL mug (the Thanksgiving way, send with every brief)
+
+Matches tools/surprise/decal-mug.py. A heated magic mug is WHITE wherever
+nothing is printed, so the picture is two cut-outs on white, never a scene
+painted to the edges and never anything on black.
+
+```
+DECAL MUG - HOW TO PAINT IT
+
+TWO SEPARATE PICTURES, each on its own TRANSPARENT background (or on
+pure white if transparent is not possible), roughly square, about
+1250 x 1250 each:
+  <name>-punch   the PUNCHLINE: the thing they see when they turn the mug
+  <name>-setup   the SETUP: the side they see first
+
+EACH ONE IS A CUT-OUT, like a sticker: the people, the turkey, the
+table, the plate, with NOTHING behind them. No room, no wall, no sky,
+no floor running to the edge, no black, no rectangle. Everything the
+picture needs is inside the cut-out's own outline.
+
+NO words, NO captions, NO frame, NO border: Claude sets the words and
+lays the autumn frame on.
+
+- Claude
+```
+
 ## Thanksgiving magic mugs
 
 ### 10. Black Friday - Alyx calls it "thankfully" (agreed 28 Sep 2026)
@@ -161,7 +187,7 @@ Words (Claude typesets these on the finished print - NOT for Bud):
 - Setup: "Six hours of cooking..."
 - Punchline: "...gone in twelve minutes."
 
-### 12. One Rule (agreed 28 Sep 2026; 10, 11 and 12 built onto the shelf 2 Nov 2026)
+### 12. One Rule (agreed 28 Sep 2026; 10, 11 and 12 were built 2 Nov 2026 and taken off the same day: painted as scenes on black, and a heated mug is white wherever nothing is printed. To be repainted as decals, like HOW TO PAINT A DECAL MUG below)
 
 ```
 ONE RULE - Thanksgiving magic mug

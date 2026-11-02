@@ -57,7 +57,7 @@ async function run(viewport, tag) {
   // All at once: the first turns, the rest are stills until tapped.
   await page.evaluate(() => premadesSetLayout('all')); await T(page, 2000);
   const all0 = await page.evaluate(() => [...document.querySelectorAll('#premadesMugsAll .pm-mug3d')].map((b) => b.classList.contains('live') ? 'live' : (b.querySelector('canvas') ? 'canvas' : 'still')));
-  ok('all at once: the first mug turns, every other is a still', all0[0] === 'live' && all0.slice(1).every((s) => s === 'still') && all0.length === 13, all0.join());
+  ok('all at once: the first mug turns, every other is a still', all0[0] === 'live' && all0.slice(1).every((s) => s === 'still') && all0.length === 10, all0.join());
   const cues = await page.evaluate(() => [...document.querySelectorAll('#premadesMugsAll .pm-mug3d')].map((b) => getComputedStyle(b.querySelector('.pm-spin-cue')).display !== 'none'));
   ok('every still says Click to spin, the turning one does not', !cues[0] && cues.slice(1).every(Boolean), cues.join());
   // Off screen it waits; back on screen it starts at -90 again. (The lit
