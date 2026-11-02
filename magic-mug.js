@@ -28,7 +28,11 @@ const SURPRISE_SETS={
     {key:'uncle-gerald',label:'Uncle Gerald',file:'uncle-gerald',frames:true},
     {key:'the-diet',label:'The Diet',file:'the-diet',frames:true},
     {key:'dark-meat',label:'Dark Meat',file:'dark-meat',frames:true},
-    {key:'rest-in-peas',label:'Rest in Peas',file:'rest-in-peas',frames:true}   // Bud, 1 Nov 2026
+    {key:'rest-in-peas',label:'Rest in Peas',file:'rest-in-peas',frames:true},   // Bud, 1 Nov 2026
+    // Briefed and painted 28 Sep 2026, built 2 Nov: two scenes in the set's own frame, the words typeset.
+    {key:'thankfully',label:'Black Friday',file:'thankfully'},
+    {key:'worththeweight',label:'Six Hours',file:'worththeweight'},
+    {key:'one-rule',label:'One Rule',file:'one-rule'}
   ]},
   // Raise the Dead (Bud, 28 Sep 2026): one continuous scene, a tree between
   // the setup and the punchline, its edges fading to white as the hot mug is.

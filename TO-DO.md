@@ -395,7 +395,7 @@ five places the studio and order page said it now say "our printer".
 - **THE STANDARD IS 24** (Alyx, 1 Nov 2026: "a standard of 24 for all
   categories"): every category on every holiday page carries 24 designs.
   Where that stands (1 Nov): Halloween mats 24, placemats 0, mugs 24;
-  Thanksgiving mats 20, placemats 9, mugs 10; Christmas mats 24, placemats
+  Thanksgiving mats 20, placemats 9, mugs 13; Christmas mats 24, placemats
   3, mugs 0. Thanksgiving first, it has the clock.
 - **NAMED MATS, built 1 Nov** (Alyx: "the blank line will be an interface
   through which the customer can enter the name of their choice ... It can

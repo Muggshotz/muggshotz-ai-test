@@ -161,7 +161,7 @@ Words (Claude typesets these on the finished print - NOT for Bud):
 - Setup: "Six hours of cooking..."
 - Punchline: "...gone in twelve minutes."
 
-### 12. One Rule (agreed 28 Sep 2026)
+### 12. One Rule (agreed 28 Sep 2026; 10, 11 and 12 built onto the shelf 2 Nov 2026)
 
 ```
 ONE RULE - Thanksgiving magic mug
