@@ -282,3 +282,36 @@ viewer with one clawed finger to its lips: "Shhhhh."
 
 - Claude
 ```
+
+### 13. Rest in Peas (Bud's, agreed 1 Nov 2026)
+
+Bud's own joke, painted first as a picture of two finished mugs, then as the
+flat print on request:
+
+```
+REST IN PEAS - Thanksgiving magic mug
+Same two pictures, but as the FLAT PRINT, not a picture of mugs:
+2475 x 1155 (or 1836 x 857). Two scenes on plain black, the roast
+turkey on the peas on the LEFT, the turkey raising his glass on the
+RIGHT, solid black between them. Square corners, no fade. NO words,
+NO frame, NO labels: Claude sets the words and lays the frame on.
+See HOW TO PAINT IT.
+
+- Claude
+```
+
+Second setup (Alyx and Bud, 2 Nov 2026): the place setting itself, a glass
+of wine by candlelight, no turkey in sight, so the toast comes from the
+table and "rest in peas" lands as grace over dinner, "very subtle, but
+somehow totally different connotation". The turkey-with-a-glass setup is
+kept in scratch only.
+
+Words (Claude typesets these on the finished print - NOT for Bud):
+- Setup: "I would like to propose a toast to our dear friend, the turkey."
+  (Playfair Display Bold Italic, beside the place setting)
+- Punchline: "MAY HE REST IN PEAS." (Bevan, dark green, over the roast; the
+  painted steam taken off, it read as smoke on the white mug: Alyx, 2 Nov)
+
+Built as a decal mug (tools/surprise/decal-mug.py rest-in-peas autumn): the
+two scenes cut off Bud's black into art/surprise/decals/rest-in-peas-*.png
+with the words lettered in, "Give Thanks" in the gaps like the other nine.

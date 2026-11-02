@@ -27,7 +27,8 @@ const SURPRISE_SETS={
     {key:'thankful',label:'Thankful',file:'thankful',frames:true},
     {key:'uncle-gerald',label:'Uncle Gerald',file:'uncle-gerald',frames:true},
     {key:'the-diet',label:'The Diet',file:'the-diet',frames:true},
-    {key:'dark-meat',label:'Dark Meat',file:'dark-meat',frames:true}
+    {key:'dark-meat',label:'Dark Meat',file:'dark-meat',frames:true},
+    {key:'rest-in-peas',label:'Rest in Peas',file:'rest-in-peas',frames:true}   // Bud, 1 Nov 2026
   ]},
   // Raise the Dead (Bud, 28 Sep 2026): one continuous scene, a tree between
   // the setup and the punchline, its edges fading to white as the hot mug is.

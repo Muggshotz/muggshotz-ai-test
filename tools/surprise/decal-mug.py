@@ -40,9 +40,10 @@ def unwhite(im):
     # Thanksgiving ones, 29 Sep 2026): the white that reaches the canvas
     # edge becomes transparent, feathered at its border; white inside the
     # picture (a sign, a sheet of paper) is left alone.
-    import numpy as np, cv2
+    import numpy as np
     a = np.asarray(im).copy()
     if a[..., 3].min() < 250: return im               # already transparent
+    import cv2                                        # only a solid-white decal needs it
     near = (a[..., :3].min(axis=2) > 238).astype(np.uint8)
     n, lab = cv2.connectedComponents(near, connectivity=4)
     edge = set(np.unique(np.concatenate([lab[0], lab[-1], lab[:, 0], lab[:, -1]]))) - {0}
