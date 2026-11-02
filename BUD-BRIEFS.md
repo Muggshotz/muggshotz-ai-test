@@ -133,7 +133,7 @@ lays the autumn frame on.
 
 ## Thanksgiving magic mugs
 
-### 10. Black Friday - Alyx calls it "thankfully" (agreed 28 Sep 2026)
+### 10. Black Friday - Alyx calls it "thankfully" (agreed 28 Sep 2026; repainted as two cut-outs 2 Nov 2026 and built as a decal mug, the words typeset: the heading in Bevan, the caption in Playfair Display Bold Italic)
 
 ```
 BLACK FRIDAY - Thanksgiving magic mug
@@ -161,7 +161,7 @@ Words (Claude typesets these on the finished print - NOT for Bud):
 - Punchline: Heading: BLACK FRIDAY:
 - Punchline: "...until the things that we don't have get cheap."
 
-### 11. Six Hours - Alyx calls it "worththeweight" (agreed 28 Sep 2026)
+### 11. Six Hours - Alyx calls it "worththeweight" (agreed 28 Sep 2026; repainted as two cut-outs 2 Nov 2026 and built as a decal mug)
 
 ```
 SIX HOURS - Thanksgiving magic mug
@@ -187,7 +187,7 @@ Words (Claude typesets these on the finished print - NOT for Bud):
 - Setup: "Six hours of cooking..."
 - Punchline: "...gone in twelve minutes."
 
-### 12. One Rule (agreed 28 Sep 2026; 10, 11 and 12 were built 2 Nov 2026 and taken off the same day: painted as scenes on black, and a heated mug is white wherever nothing is printed. To be repainted as decals, like HOW TO PAINT A DECAL MUG below)
+### 12. One Rule (agreed 28 Sep 2026; built as a scene on black 2 Nov 2026 and taken off the same day, since a heated mug is white wherever nothing is printed; repainted by Bud as two cut-outs the same day and built as a decal mug)
 
 ```
 ONE RULE - Thanksgiving magic mug

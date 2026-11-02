@@ -121,6 +121,12 @@ for sfx, st in STYLES.items():
             fr = Image.open(f).convert('RGBA'); out.paste(fr, (x, 0), fr)
         p = f'art/surprise/{name}{sfx}-print{hand}.png'
         out.save(p, optimize=True); print(p)
+        # The texture the shelf's turning 3D mug wears (magic-mug.js MUG3D.open:
+        # art/surprise/wrap/<file>.jpg), the right-handed print as a JPEG; it was
+        # holiday-mug.py's job and a decal mug never got one (2 Nov 2026).
+        if not hand:
+            os.makedirs('art/surprise/wrap', exist_ok=True)
+            out.save(f'art/surprise/wrap/{name}{sfx}.jpg', quality=88, optimize=True)
     subprocess.run([sys.executable, f'{here}/reveal-jpgs.py', name + sfx], check=True)
     subprocess.run([sys.executable, f'{here}/coldhot.py', f'art/surprise/{name}{sfx}-print.png', f'art/surprise/{name}{sfx}-coldhot.jpg'], check=True)
 tile = Image.new('RGB', (360, 360), 'white')

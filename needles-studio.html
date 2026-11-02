@@ -13261,7 +13261,7 @@ function surprisePrintUrl(){
   const file=surpriseFile(); if(!file)return null;
   return location.origin+'/art/surprise/'+file+'-print'+(selectedSurpriseHand==='left'?'-left':'')+'.png';
 }
-let premadesFrame='none';
+let premadesFrame='two';   // a frame each side by default (Alyx, 2 Nov 2026: "They just look better")
 // DECAL OR NO DECAL (Alyx, 7 Oct 2026: "the generator should offer it too"):
 // the shelf's choice between a design's full-panel file and its decal version
 // (magic-mug.js designShown); a decal mug travels as key~decal.

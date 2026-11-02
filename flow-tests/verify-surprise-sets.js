@@ -121,7 +121,8 @@ scenarios.theThreeListsAndTheFiles = async (page) => {
         const d = g.getImageData(0, 0, bw, bh).data; let a = bw, b = bh, e = 0, f = 0;
         for (let y = 0; y < bh; y += 3) for (let x = 0; x < bw; x += 3) { const i = (y * bw + x) * 4; if (d[i] < 235 || d[i + 1] < 235 || d[i + 2] < 235) { if (x < a) a = x; if (x > e) e = x; if (y < b) b = y; if (y > f) f = y; } }
         return e > a && f > b ? [x0 + a, y0 + b, e - a, f - b] : [x0, y0, bw, bh]; };
-      if (p && t) { const w = p.naturalWidth / 2, h = p.naturalHeight, tt = tiny(t, ...box(t, 0, 0, t.naturalWidth, t.naturalHeight));
+      if (p && t) { const w = Math.floor(p.naturalWidth / 2), h = p.naturalHeight,   // whole pixels: at 2475 / 2 the sampling read the wrong channels on odd rows (2 Nov 2026)
+        tt = tiny(t, ...box(t, 0, 0, t.naturalWidth, t.naturalHeight));
         row.punchlineLeft = diff(tiny(p, ...box(p, 0, 0, w, h)), tt) < diff(tiny(p, ...box(p, w, 0, w, h)), tt); }
       out.push(row);
     }
@@ -217,9 +218,9 @@ scenarios.thePanelAndTheOrder = async (page, log) => {
   // Taking one out and putting it back.
   await page.evaluate(() => document.querySelectorAll('#premadesTray .pm-traymug button')[2].click()); await T(page, 150);
   const out = await page.evaluate(() => ({ n: premadesMugs.length, keys: premadesMugs.join() }));
-  if (out.n !== 5 || out.keys !== 'golden-brown,golden-brown,thankful,uncle-gerald,golden-brown') return `FAIL: taking out the third mug left ${out.keys}`;
+  if (out.n !== 5 || out.keys !== 'golden-brown,golden-brown,thankful,uncle-gerald,golden-brown') return `FAIL: taking out the third mug left ${out.keys}`;   // all at once adds the plain mug; the frame is the one-at-a-time view's
   await page.evaluate(() => holidayAdd('dark-meat')); await T(page, 150);
-  const CHOSEN = ['golden-brown', 'golden-brown', 'thankful', 'uncle-gerald', 'golden-brown', 'dark-meat'];
+  const CHOSEN = ['golden-brown', 'golden-brown', 'thankful', 'uncle-gerald', 'golden-brown', 'dark-meat~two'];   // the last added one at a time: a frame each side, the default
   await tap(page, '#premadesHandGrid .btn-select[data-hand="left"]');
   await T(page, 500);
   log.apiCalls.length = 0;
@@ -289,7 +290,7 @@ scenarios.theFrames = async (page) => {
   await page.evaluate(() => premadesSetLayout('one'));
   await page.evaluate(() => holidayStep(SURPRISE_SETS.thanksgiving.designs.findIndex((d) => d.key === 'pardon'))); await T(page, 700);
   const btns = await page.evaluate(() => [...document.querySelectorAll('#premadesFrameGrid .btn-select')].map((b) => b.textContent + (b.classList.contains('selected') ? '*' : '')));
-  if (btns.join('|') !== 'No frame*|One frame|A frame each side') return `FAIL: the Pardon's frame buttons read ${JSON.stringify(btns)}`;
+  if (btns.join('|') !== 'No frame|One frame|A frame each side*') return `FAIL: the Pardon's frame buttons read ${JSON.stringify(btns)}; a frame each side is the default (2 Nov 2026)`;
   await page.evaluate(() => pickPremadesFrame('two')); await T(page, 600);
   const mug = await page.evaluate(() => document.querySelector('#premadesView .pm-mat .pm-mug3d').dataset.mug3d);
   if (mug !== 'thanksgiving-pardon-two') return `FAIL: A frame each side put ${mug} on the mug`;
@@ -418,8 +419,8 @@ scenarios.theJustOne = async (page) => {
   });
   await T(page, 2000);
   const b = bodies[bodies.length - 1];
-  if (!b || JSON.stringify(b.mugs) !== '["uncle-gerald"]' || b.setKey !== 'thanksgiving' || b.image) return `FAIL: checkout got ${JSON.stringify(b && { mugs: b.mugs, set: b.setKey, image: b.image })}`;
-  return 'PASS: Just this one on the shelf orders that one mug: the order page shows it at $19.95 and checks out thanksgiving / uncle-gerald';
+  if (!b || JSON.stringify(b.mugs) !== '["uncle-gerald~two"]' || b.setKey !== 'thanksgiving' || b.image) return `FAIL: checkout got ${JSON.stringify(b && { mugs: b.mugs, set: b.setKey, image: b.image })}`;
+  return 'PASS: Just this one on the shelf orders that one mug: the order page shows it at $19.95 and checks out thanksgiving / uncle-gerald, a frame each side by default';
 };
 
 scenarios.theFrontDoor = async (page) => {
